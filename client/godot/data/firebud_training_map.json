@@ -1,0 +1,94 @@
+{
+  "id": "firebud_training_yard",
+  "name": "火芽训练场",
+  "gridSize": [36, 34],
+  "tileSize": [80, 40],
+  "origin": [640, 110],
+  "spawnCell": [14, 12],
+  "spawnPoints": {
+    "default": [14, 12],
+    "from_village_gate": [29, 27]
+  },
+  "blockedCells": [
+    [3, 3],
+    [4, 3],
+    [4, 4],
+    [7, 4],
+    [8, 4],
+    [7, 5],
+    [2, 7],
+    [3, 7],
+    [9, 2],
+    [9, 3],
+    [14, 6],
+    [15, 6],
+    [15, 7],
+    [18, 11],
+    [19, 11],
+    [20, 12],
+    [11, 14],
+    [12, 15],
+    [21, 16],
+    [22, 16],
+    [23, 17]
+  ],
+  "decorCells": [
+    {"cell": [1, 2], "kind": "grass"},
+    {"cell": [2, 2], "kind": "grass"},
+    {"cell": [6, 2], "kind": "flower"},
+    {"cell": [6, 6], "kind": "grass"},
+    {"cell": [10, 6], "kind": "flower"},
+    {"cell": [13, 9], "kind": "grass"},
+    {"cell": [17, 13], "kind": "flower"},
+    {"cell": [24, 15], "kind": "grass"},
+    {"cell": [6, 17], "kind": "flower"},
+    {"cell": [28, 24], "kind": "grass"},
+    {"cell": [30, 28], "kind": "flower"}
+  ],
+  "interactionPoints": [
+    {
+      "id": "overlap_tester",
+      "name": "可重叠路人",
+      "kind": "npc",
+      "cell": [13, 12],
+      "action": "对话",
+      "dialog": ["可重叠路人：你可以直接走到我脚下。这类玩家、路人或触发点默认不挡路。"],
+      "option": "知道了"
+    },
+    {
+      "id": "block_tester",
+      "name": "挡路门卫",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [16, 12],
+      "action": "对话",
+      "dialog": ["挡路门卫：我占着这个格子，你只能走到旁边和我说话。"],
+      "option": "知道了"
+    },
+    {
+      "id": "trainer",
+      "name": "训练师阿土",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [5, 10],
+      "action": "对话",
+      "taskKey": "trainer_intro",
+      "taskText": "和训练师阿土对话",
+      "completedTaskText": "已认识训练师阿土",
+      "dialog": ["训练师阿土：新来的勇者，先记住一件事。点我这种角色时，要先走到身边，才能开始对话。"],
+      "completedDialog": ["训练师阿土：不错，你已经会靠近并对话了。后面我们再练战斗。"],
+      "option": "完成对话"
+    },
+    {
+      "id": "warp_to_village_gate",
+      "name": "村口木门",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [30, 28],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_training_yard"
+    }
+  ]
+}

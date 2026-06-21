@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pet/pet.gd" id="1_pet"]
+
+[node name="Pet" type="Node2D"]
+script = ExtResource("1_pet")
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.30, 0.68, 0.36, 1)
+polygon = PackedVector2Array(-13, -13, 13, -13, 13, 13, -13, 13)
+
+[node name="FacingMark" type="Polygon2D" parent="."]
+position = Vector2(0, -2)
+color = Color(0.96, 0.86, 0.40, 1)
+polygon = PackedVector2Array(0, -13, 7, -2, -7, -2)
+
+[node name="LeftFoot" type="Polygon2D" parent="."]
+position = Vector2(-8, 18)
+color = Color(0.86, 0.96, 0.50, 1)
+polygon = PackedVector2Array(-5, -3, 5, -3, 5, 3, -5, 3)
+
+[node name="RightFoot" type="Polygon2D" parent="."]
+position = Vector2(8, 18)
+color = Color(0.86, 0.96, 0.50, 1)
+polygon = PackedVector2Array(-5, -3, 5, -3, 5, 3, -5, 3)

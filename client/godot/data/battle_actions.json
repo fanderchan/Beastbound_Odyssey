@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "maxPetSkillSlots": 7,
+  "actions": [
+    {
+      "id": "player_attack",
+      "owner": "player",
+      "label": "攻击",
+      "command": "attack",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountSource": "actorAttack"
+      },
+      "stoneAgeReference": "BATTLE_COM_ATTACK"
+    },
+    {
+      "id": "player_defend",
+      "owner": "player",
+      "label": "防御",
+      "command": "defend",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": true
+      },
+      "effect": {
+        "type": "defend"
+      },
+      "stoneAgeReference": "BATTLE_COM_GUARD"
+    },
+    {
+      "id": "player_capture",
+      "owner": "player",
+      "label": "捕捉",
+      "command": "capture",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "capture"
+      },
+      "stoneAgeReference": "BATTLE_COM_CAPTURE"
+    },
+    {
+      "id": "spirit_grace_5",
+      "owner": "spirit",
+      "label": "恩惠精灵5",
+      "command": "spirit",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 34
+      },
+      "stoneAgeReference": "MAGIC_Recovery"
+    },
+    {
+      "id": "spirit_moist_5",
+      "owner": "spirit",
+      "label": "滋润精灵5",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 48
+      },
+      "stoneAgeReference": "MAGIC_OtherRecovery"
+    },
+    {
+      "id": "spirit_poison_5",
+      "owner": "spirit",
+      "label": "毒精灵5",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 18
+      },
+      "stoneAgeReference": "MAGIC_StatusChange"
+    },
+    {
+      "id": "spirit_poison_mist_5",
+      "owner": "spirit",
+      "label": "毒雾精灵5",
+      "command": "spirit",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 10
+      },
+      "stoneAgeReference": "MAGIC_StatusChange"
+    },
+    {
+      "id": "pet_attack",
+      "owner": "pet_skill",
+      "slot": 1,
+      "label": "攻击",
+      "command": "attack",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountSource": "actorAttack"
+      },
+      "stoneAgeReference": "PETSKILL_NormalAttack"
+    },
+    {
+      "id": "pet_defend",
+      "owner": "pet_skill",
+      "slot": 2,
+      "label": "防御",
+      "command": "defend",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": true
+      },
+      "effect": {
+        "type": "defend"
+      },
+      "stoneAgeReference": "PETSKILL_NormalGuard"
+    },
+    {
+      "id": "pet_bui_charge",
+      "owner": "pet_skill",
+      "slot": 3,
+      "label": "布伊冲撞",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 12
+      },
+      "stoneAgeReference": "PETSKILL_ChargeAttack"
+    },
+    {
+      "id": "item_heal_all_5",
+      "owner": "item",
+      "label": "群体草药5",
+      "command": "item",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 24
+      },
+      "stoneAgeReference": "ITEM_useMRecovery"
+    },
+    {
+      "id": "item_heal_single_5",
+      "owner": "item",
+      "label": "回复药5",
+      "command": "item",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 42
+      },
+      "stoneAgeReference": "ITEM_useRecovery"
+    },
+    {
+      "id": "item_poison_single_5",
+      "owner": "item",
+      "label": "毒粉5",
+      "command": "item",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 12
+      },
+      "stoneAgeReference": "ITEM_useStatusChange"
+    },
+    {
+      "id": "item_poison_all_5",
+      "owner": "item",
+      "label": "毒雾粉5",
+      "command": "item",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 7
+      },
+      "stoneAgeReference": "ITEM_useStatusChange"
+    }
+  ]
+}
