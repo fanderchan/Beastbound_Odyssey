@@ -67,6 +67,49 @@ static func effect_amount_bonus_for(action_id: String, fallback: int = 0) -> int
 	return fallback
 
 
+static func effect_type_for(action_id: String) -> String:
+	return str(effect_for(action_id).get("type", ""))
+
+
+static func effect_status_id_for(action_id: String, fallback: String = "") -> String:
+	var status_id := str(effect_for(action_id).get("statusId", ""))
+	return status_id if status_id != "" else fallback
+
+
+static func effect_status_turns_for(action_id: String, fallback: int = 0) -> int:
+	var effect := effect_for(action_id)
+	if effect.has("statusTurns"):
+		return maxi(1, int(effect.get("statusTurns", fallback)))
+	return fallback
+
+
+static func effect_status_potency_for(action_id: String, base_amount: int = 0, fallback: int = 0) -> int:
+	var effect := effect_for(action_id)
+	if effect.has("statusPotency"):
+		return maxi(0, int(effect.get("statusPotency", fallback)))
+	if effect.has("statusPotencyRatio"):
+		return maxi(0, int(ceil(float(base_amount) * float(effect.get("statusPotencyRatio", 0.0)))))
+	return fallback
+
+
+static func effect_status_hit_rate_for(action_id: String, fallback: float = 1.0) -> float:
+	var effect := effect_for(action_id)
+	if effect.has("statusHitRate"):
+		return clampf(float(effect.get("statusHitRate", fallback)), 0.0, 1.0)
+	return fallback
+
+
+static func effect_status_ids_for(action_id: String) -> Array[String]:
+	var result: Array[String] = []
+	var raw_ids = effect_for(action_id).get("statusIds", [])
+	if raw_ids is Array:
+		for value in raw_ids:
+			var status_id := str(value)
+			if status_id != "":
+				result.append(status_id)
+	return result
+
+
 static func effect_for(action_id: String) -> Dictionary:
 	var action := action_by_id(action_id)
 	if action.is_empty():
@@ -205,12 +248,51 @@ static func _validate_effect(action: Dictionary, effect: Dictionary, errors: Arr
 	var effect_type := str(effect.get("type", ""))
 	if effect_type == "":
 		errors.append("%s.effect.type 不能为空" % _action_name(action, -1))
+	if not ["damage", "heal", "poison", "status", "cleanse", "defend", "capture"].has(effect_type):
+		errors.append("%s.effect.type 无效: %s" % [_action_name(action, -1), effect_type])
 	if ["heal", "poison"].has(effect_type) and not effect.has("amount"):
 		errors.append("%s.%s 必须配置 amount" % [_action_name(action, -1), effect_type])
 	if effect.has("amount") and typeof(effect.get("amount")) != TYPE_FLOAT and typeof(effect.get("amount")) != TYPE_INT:
 		errors.append("%s.effect.amount 必须是数字" % _action_name(action, -1))
 	if effect.has("amountBonus") and typeof(effect.get("amountBonus")) != TYPE_FLOAT and typeof(effect.get("amountBonus")) != TYPE_INT:
 		errors.append("%s.effect.amountBonus 必须是数字" % _action_name(action, -1))
+	if ["poison", "status"].has(effect_type):
+		_validate_status_effect(action, effect, errors)
+	if effect_type == "cleanse":
+		_validate_cleanse_effect(action, effect, errors)
+
+
+static func _validate_status_effect(action: Dictionary, effect: Dictionary, errors: Array[String]) -> void:
+	var action_name := _action_name(action, -1)
+	var status_id := str(effect.get("statusId", ""))
+	if not ["poison", "sleep", "confusion", "stone"].has(status_id):
+		errors.append("%s.effect.statusId 无效: %s" % [action_name, status_id])
+	if not effect.has("statusTurns") or typeof(effect.get("statusTurns")) != TYPE_FLOAT and typeof(effect.get("statusTurns")) != TYPE_INT or int(effect.get("statusTurns", 0)) <= 0:
+		errors.append("%s.effect.statusTurns 必须是正数" % action_name)
+	if effect.has("statusPotency") and typeof(effect.get("statusPotency")) != TYPE_FLOAT and typeof(effect.get("statusPotency")) != TYPE_INT:
+		errors.append("%s.effect.statusPotency 必须是数字" % action_name)
+	if effect.has("statusPotencyRatio") and typeof(effect.get("statusPotencyRatio")) != TYPE_FLOAT and typeof(effect.get("statusPotencyRatio")) != TYPE_INT:
+		errors.append("%s.effect.statusPotencyRatio 必须是数字" % action_name)
+	if effect.has("statusHitRate"):
+		var hit_rate_type := typeof(effect.get("statusHitRate"))
+		if hit_rate_type != TYPE_FLOAT and hit_rate_type != TYPE_INT:
+			errors.append("%s.effect.statusHitRate 必须是数字" % action_name)
+		else:
+			var hit_rate := float(effect.get("statusHitRate", 0.0))
+			if hit_rate < 0.0 or hit_rate > 1.0:
+				errors.append("%s.effect.statusHitRate 必须在 0 到 1 之间" % action_name)
+
+
+static func _validate_cleanse_effect(action: Dictionary, effect: Dictionary, errors: Array[String]) -> void:
+	var action_name := _action_name(action, -1)
+	var raw_ids = effect.get("statusIds", [])
+	if not (raw_ids is Array) or (raw_ids as Array).is_empty():
+		errors.append("%s.effect.statusIds 必须是非空数组" % action_name)
+		return
+	for value in (raw_ids as Array):
+		var status_id := str(value)
+		if not ["poison", "sleep", "confusion", "stone"].has(status_id):
+			errors.append("%s.effect.statusIds 包含无效状态: %s" % [action_name, status_id])
 
 
 static func _validate_pet_skill_slot(action: Dictionary, max_pet_slots: int, seen_pet_slots: Dictionary, errors: Array[String]) -> void:
@@ -233,10 +315,14 @@ static func _validate_required_actions(seen_ids: Dictionary, errors: Array[Strin
 		"pet_attack",
 		"pet_defend",
 		"pet_bui_charge",
+		"pet_sleep_powder",
+		"pet_confuse_cry",
+		"pet_stone_gaze",
 		"item_heal_all_5",
 		"item_heal_single_5",
 		"item_poison_single_5",
 		"item_poison_all_5",
+		"item_cleanse_single_5",
 	]:
 		if not seen_ids.has(required_id):
 			errors.append("缺少当前战斗需要的动作: %s" % required_id)

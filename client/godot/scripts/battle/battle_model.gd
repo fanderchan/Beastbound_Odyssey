@@ -1,6 +1,9 @@
 extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
+const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
+const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const SIDE_ALLY := "ally"
 const SIDE_ENEMY := "enemy"
 const ROW_FRONT := "front"
@@ -15,13 +18,21 @@ const SPIRIT_POISON_ALL := "spirit_poison_mist_5"
 const PET_SKILL_ATTACK := "pet_attack"
 const PET_SKILL_DEFEND := "pet_defend"
 const PET_SKILL_BUI_CHARGE := "pet_bui_charge"
+const PET_SKILL_SLEEP_POWDER := "pet_sleep_powder"
+const PET_SKILL_CONFUSE_CRY := "pet_confuse_cry"
+const PET_SKILL_STONE_GAZE := "pet_stone_gaze"
 const ITEM_HEAL_ALL := "item_heal_all_5"
 const ITEM_HEAL_SINGLE := "item_heal_single_5"
 const ITEM_POISON_SINGLE := "item_poison_single_5"
 const ITEM_POISON_ALL := "item_poison_all_5"
+const ITEM_CLEANSE_SINGLE := "item_cleanse_single_5"
 const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
+const STATUS_POISON := BattleStatusModel.STATUS_POISON
+const STATUS_SLEEP := BattleStatusModel.STATUS_SLEEP
+const STATUS_CONFUSION := BattleStatusModel.STATUS_CONFUSION
+const STATUS_STONE := BattleStatusModel.STATUS_STONE
 
 
 static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
@@ -37,8 +48,8 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		"guardingActorIds": [],
 		"actors": [
 			_make_actor("ally_player", "见习猎人", SIDE_ALLY, "player", "ally.back.3", 120, 120, 70, 18),
-			_make_actor("ally_pet", "小布伊", SIDE_ALLY, "pet", "ally.front.3", 90, 90, 68, 14),
-			_make_actor("enemy_0", "野生乌力", SIDE_ENEMY, "wild_pet", "enemy.front.3", 80, 80, 48, 10),
+			_make_actor("ally_pet", "小布伊", SIDE_ALLY, "pet", "ally.front.3", 90, 90, 68, 14, 8, [], "bui_normal_red_fire10"),
+			_make_actor("enemy_0", "野生乌力", SIDE_ENEMY, "wild_pet", "enemy.front.3", 80, 80, 48, 10, 6, [], "wuli_normal_orange_fire10"),
 		],
 	}
 	return _with_default_player_pet_party(state)
@@ -50,6 +61,7 @@ static func default_item_bag() -> Dictionary:
 		ITEM_HEAL_SINGLE: 2,
 		ITEM_POISON_SINGLE: 2,
 		ITEM_POISON_ALL: 2,
+		ITEM_CLEANSE_SINGLE: 2,
 	}
 
 
@@ -89,7 +101,10 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 			72,
 			72,
 			70 + slot * 3,
-			5
+			5,
+			6,
+			[],
+			"wuli_normal_orange_fire10"
 		))
 	for slot in range(1, SLOTS_PER_ROW + 1):
 		actors.append(_make_actor(
@@ -101,7 +116,10 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 			80,
 			80,
 			46 + slot * 4,
-			5
+			5,
+			6,
+			[],
+			"wuli_normal_orange_fire10"
 		))
 	for slot in range(1, SLOTS_PER_ROW + 1):
 		var actor_id := "ally_front_%d" % slot
@@ -118,7 +136,10 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 			90,
 			90,
 			58 + slot * 5,
-			14
+			14,
+			6,
+			[],
+			"bui_normal_red_fire10"
 		))
 	for slot in range(1, SLOTS_PER_ROW + 1):
 		var actor_id := "ally_back_%d" % slot
@@ -143,21 +164,21 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 
 static func _stat_formula_test_actors() -> Array[Dictionary]:
 	return [
-		_make_actor("enemy_back_1", "高速乌力", SIDE_ENEMY, "wild_pet", "enemy.back.1", 170, 170, 118, 13, 8),
-		_make_actor("enemy_back_2", "普通乌力", SIDE_ENEMY, "wild_pet", "enemy.back.2", 170, 170, 62, 12, 8),
-		_make_actor("enemy_back_3", "慢速乌力", SIDE_ENEMY, "wild_pet", "enemy.back.3", 170, 170, 22, 12, 8),
-		_make_actor("enemy_back_4", "厚皮乌力", SIDE_ENEMY, "wild_pet", "enemy.back.4", 190, 190, 48, 10, 32),
-		_make_actor("enemy_back_5", "普通乌力B", SIDE_ENEMY, "wild_pet", "enemy.back.5", 170, 170, 54, 11, 8),
-		_make_actor("enemy_front_1", "快乌力", SIDE_ENEMY, "wild_pet", "enemy.front.1", 160, 160, 96, 12, 7),
-		_make_actor("enemy_front_2", "普通靶乌力", SIDE_ENEMY, "wild_pet", "enemy.front.2", 190, 190, 50, 10, 8),
-		_make_actor("enemy_front_3", "低防乌力", SIDE_ENEMY, "wild_pet", "enemy.front.3", 220, 220, 46, 10, 2),
-		_make_actor("enemy_front_4", "高防乌力", SIDE_ENEMY, "wild_pet", "enemy.front.4", 220, 220, 46, 10, 34),
-		_make_actor("enemy_front_5", "慢乌力", SIDE_ENEMY, "wild_pet", "enemy.front.5", 160, 160, 18, 10, 8),
-		_make_actor("ally_front_1", "高速布伊", SIDE_ALLY, "pet", "ally.front.1", 130, 130, 110, 15, 7),
-		_make_actor("ally_front_2", "普通布伊", SIDE_ALLY, "pet", "ally.front.2", 130, 130, 62, 15, 7),
-		_make_actor(PLAYER_PET_ID, "我的布伊", SIDE_ALLY, "pet", "ally.front.3", 140, 140, 72, 18, 8),
-		_make_actor("ally_front_4", "厚皮布伊", SIDE_ALLY, "pet", "ally.front.4", 150, 150, 45, 14, 28),
-		_make_actor("ally_front_5", "慢速布伊", SIDE_ALLY, "pet", "ally.front.5", 130, 130, 24, 15, 7),
+		_make_actor("enemy_back_1", "高速乌力", SIDE_ENEMY, "wild_pet", "enemy.back.1", 170, 170, 118, 13, 8, [], "wuli_normal_fast_wind10"),
+		_make_actor("enemy_back_2", "普通乌力", SIDE_ENEMY, "wild_pet", "enemy.back.2", 170, 170, 62, 12, 8, [], "wuli_normal_orange_fire10"),
+		_make_actor("enemy_back_3", "慢速乌力", SIDE_ENEMY, "wild_pet", "enemy.back.3", 170, 170, 22, 12, 8, [], "wuli_normal_orange_fire10"),
+		_make_actor("enemy_back_4", "厚皮乌力", SIDE_ENEMY, "wild_pet", "enemy.back.4", 190, 190, 48, 10, 32, [], "wuli_normal_tough_earth10"),
+		_make_actor("enemy_back_5", "普通乌力B", SIDE_ENEMY, "wild_pet", "enemy.back.5", 170, 170, 54, 11, 8, [], "wuli_normal_orange_fire10"),
+		_make_actor("enemy_front_1", "快乌力", SIDE_ENEMY, "wild_pet", "enemy.front.1", 160, 160, 96, 12, 7, [], "wuli_normal_fast_wind10"),
+		_make_actor("enemy_front_2", "普通靶乌力", SIDE_ENEMY, "wild_pet", "enemy.front.2", 190, 190, 50, 10, 8, [], "wuli_normal_orange_fire10"),
+		_make_actor("enemy_front_3", "低防乌力", SIDE_ENEMY, "wild_pet", "enemy.front.3", 220, 220, 46, 10, 2, [], "wuli_normal_orange_fire10"),
+		_make_actor("enemy_front_4", "高防乌力", SIDE_ENEMY, "wild_pet", "enemy.front.4", 220, 220, 46, 10, 34, [], "wuli_normal_tough_earth10"),
+		_make_actor("enemy_front_5", "慢乌力", SIDE_ENEMY, "wild_pet", "enemy.front.5", 160, 160, 18, 10, 8, [], "wuli_normal_orange_fire10"),
+		_make_actor("ally_front_1", "高速布伊", SIDE_ALLY, "pet", "ally.front.1", 130, 130, 110, 15, 7, [], "bui_normal_yellow_wind10"),
+		_make_actor("ally_front_2", "普通布伊", SIDE_ALLY, "pet", "ally.front.2", 130, 130, 62, 15, 7, [], "bui_normal_red_fire10"),
+		_make_actor(PLAYER_PET_ID, "我的布伊", SIDE_ALLY, "pet", "ally.front.3", 140, 140, 72, 18, 8, [], "bui_normal_red_fire10"),
+		_make_actor("ally_front_4", "厚皮布伊", SIDE_ALLY, "pet", "ally.front.4", 150, 150, 45, 14, 28, [], "bui_normal_thick_earth10"),
+		_make_actor("ally_front_5", "慢速布伊", SIDE_ALLY, "pet", "ally.front.5", 130, 130, 24, 15, 7, [], "bui_normal_red_fire10"),
 		_make_actor("ally_speed_fast", "高速猎人", SIDE_ALLY, "player", "ally.back.1", 150, 150, 130, 18, 9),
 		_make_actor("ally_speed_normal", "普通猎人", SIDE_ALLY, "player", "ally.back.2", 150, 150, 70, 18, 9),
 		_make_actor(PLAYER_ACTOR_ID, "我本人", SIDE_ALLY, "player", "ally.back.3", 160, 160, 72, 22, 10),
@@ -166,23 +187,43 @@ static func _stat_formula_test_actors() -> Array[Dictionary]:
 	]
 
 
-static func _make_actor(actor_id: String, actor_name: String, side: String, kind: String, slot_id: String, hp: int, max_hp: int, quick: int = 50, attack_power: int = 12, defense_power: int = 6) -> Dictionary:
-	return {
-		"id": actor_id,
-		"name": actor_name,
-		"side": side,
-		"kind": kind,
-		"slotId": slot_id,
+static func _make_actor(actor_id: String, actor_name: String, side: String, kind: String, slot_id: String, hp: int, max_hp: int, quick: int = 50, attack_power: int = 12, defense_power: int = 6, passive_skill_ids: Array = [], form_id: String = "") -> Dictionary:
+	var stat_overrides := {
 		"hp": hp,
 		"maxHp": max_hp,
 		"quick": quick,
 		"attack": attack_power,
 		"defense": defense_power,
-		"catchable": side == SIDE_ENEMY and kind == "wild_pet",
-		"captureDifficulty": 42,
-		"actionState": "idle",
-		"petBattleState": "battle" if kind == "pet" or kind == "wild_pet" else "",
 	}
+	var actor := PetTemplateCatalog.actor_from_form(form_id, actor_id, side, kind, slot_id, actor_name, stat_overrides) if form_id != "" else {}
+	if actor.is_empty():
+		actor = {
+			"id": actor_id,
+			"name": actor_name,
+			"side": side,
+			"kind": kind,
+			"slotId": slot_id,
+			"hp": hp,
+			"maxHp": max_hp,
+			"quick": quick,
+			"attack": attack_power,
+			"defense": defense_power,
+			"catchable": side == SIDE_ENEMY and kind == "wild_pet",
+			"captureDifficulty": 42,
+			"actionState": "idle",
+			"petBattleState": "battle" if kind == "pet" or kind == "wild_pet" else "",
+			"statuses": BattleStatusModel.empty_statuses(),
+			"statusResist": {},
+			"statusImmune": {},
+			"passiveSkillIds": _string_array(passive_skill_ids),
+		}
+	else:
+		actor["statuses"] = BattleStatusModel.empty_statuses()
+		actor["statusResist"] = {}
+		actor["statusImmune"] = {}
+		if not passive_skill_ids.is_empty():
+			actor["passiveSkillIds"] = _merged_string_array(actor.get("passiveSkillIds", []), passive_skill_ids)
+	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
 
 
 static func _with_default_player_pet_party(state: Dictionary) -> Dictionary:
@@ -200,16 +241,41 @@ static func default_player_pet_party(active_pet: Dictionary = {}) -> Array[Dicti
 	var active_quick := int(active_pet.get("quick", 68))
 	var active_attack := int(active_pet.get("attack", 14))
 	var active_defense := int(active_pet.get("defense", 8))
+	var active_passives := BattlePassiveCatalog.passive_ids_for_actor(active_pet)
+	var active_form_id := str(active_pet.get("formId", active_pet.get("templateId", "bui_normal_red_fire10")))
 	return [
-		_make_pet_party_entry("pet_bui_main", active_name, "bui", active_hp, active_max_hp, active_quick, active_attack, active_defense, PET_STATE_BATTLE, PLAYER_PET_ID),
-		_make_pet_party_entry("pet_bui_speed", "迅捷布伊", "bui_speed", 112, 112, 98, 16, 6, PET_STATE_STANDBY, ""),
-		_make_pet_party_entry("pet_bui_tough", "厚皮布伊", "bui_tough", 170, 170, 42, 15, 30, PET_STATE_STANDBY, ""),
-		_make_pet_party_entry("pet_bui_rest", "休息布伊", "bui_rest", 0, 130, 50, 15, 8, PET_STATE_REST, ""),
+		_make_pet_party_entry("pet_bui_main", active_name, active_form_id, active_hp, active_max_hp, active_quick, active_attack, active_defense, PET_STATE_BATTLE, PLAYER_PET_ID, active_passives, active_form_id, _pet_metadata_from_actor(active_pet)),
+		_make_pet_party_entry_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, ""),
+		_make_pet_party_entry_from_form("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", PET_STATE_STANDBY, ""),
+		_make_pet_party_entry_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, "", {"hp": 0, "maxHp": 130, "quick": 50, "attack": 15, "defense": 8}),
 	]
 
 
-static func _make_pet_party_entry(pet_id: String, pet_name: String, template_id: String, hp: int, max_hp: int, quick: int, attack_power: int, defense_power: int, state: String, actor_id: String) -> Dictionary:
-	return {
+static func _make_pet_party_entry_from_form(pet_id: String, pet_name: String, form_id: String, state: String, actor_id: String, stat_overrides: Dictionary = {}) -> Dictionary:
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	var stats = template.get("baseStats", {})
+	var stats_dict := stats as Dictionary if stats is Dictionary else {}
+	var max_hp := int(stat_overrides.get("maxHp", stats_dict.get("maxHp", 1)))
+	var hp := int(stat_overrides.get("hp", max_hp))
+	return _make_pet_party_entry(
+		pet_id,
+		pet_name if pet_name != "" else str(template.get("formName", "宠物")),
+		form_id,
+		hp,
+		max_hp,
+		int(stat_overrides.get("quick", stats_dict.get("agility", 50))),
+		int(stat_overrides.get("attack", stats_dict.get("attack", 12))),
+		int(stat_overrides.get("defense", stats_dict.get("defense", 6))),
+		state,
+		actor_id,
+		PetTemplateCatalog.passive_ids_for_form(form_id),
+		form_id,
+		_pet_metadata_from_template(template)
+	)
+
+
+static func _make_pet_party_entry(pet_id: String, pet_name: String, template_id: String, hp: int, max_hp: int, quick: int, attack_power: int, defense_power: int, state: String, actor_id: String, passive_skill_ids: Array = [], form_id: String = "", metadata: Dictionary = {}) -> Dictionary:
+	var entry := {
 		"petId": pet_id,
 		"templateId": template_id,
 		"actorId": actor_id,
@@ -220,7 +286,14 @@ static func _make_pet_party_entry(pet_id: String, pet_name: String, template_id:
 		"quick": quick,
 		"attack": attack_power,
 		"defense": defense_power,
+		"passiveSkillIds": _string_array(passive_skill_ids),
 	}
+	if form_id != "":
+		entry["formId"] = form_id
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+		if metadata.has(key):
+			entry[key] = metadata.get(key)
+	return entry
 
 
 static func player_pet_party(state: Dictionary) -> Array[Dictionary]:
@@ -276,6 +349,10 @@ static func _sync_player_pet_party_from_actor(state: Dictionary, actor: Dictiona
 		entry["quick"] = int(actor.get("quick", entry.get("quick", 50)))
 		entry["attack"] = int(actor.get("attack", entry.get("attack", 12)))
 		entry["defense"] = int(actor.get("defense", entry.get("defense", 6)))
+		entry["passiveSkillIds"] = BattlePassiveCatalog.passive_ids_for_actor(actor)
+		for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+			if actor.has(key):
+				entry[key] = actor.get(key)
 		if str(actor.get("petBattleState", "")) == PET_STATE_REST or str(actor.get("actionState", "")) == "launched" or not bool(actor.get("revivable", true)):
 			entry["state"] = PET_STATE_REST
 			entry["actorId"] = ""
@@ -370,6 +447,125 @@ static func set_actor_hp(state: Dictionary, actor_id: String, hp: int) -> Dictio
 	state["actors"] = actors
 	state = _sync_player_pet_party_from_actor(state, actor)
 	return state
+
+
+static func set_actor_status(state: Dictionary, actor_id: String, status_id: String, turns: int, potency: int = 0, source_id: String = "") -> Dictionary:
+	var actors: Array = state.get("actors", [])
+	var index := actor_index(state, actor_id)
+	if index < 0:
+		return state
+	var actor := actors[index] as Dictionary
+	actor = BattleStatusModel.apply_status(actor, status_id, turns, potency, source_id)
+	actors[index] = actor
+	state["actors"] = actors
+	return state
+
+
+static func clear_actor_status(state: Dictionary, actor_id: String, status_id: String) -> Dictionary:
+	var actors: Array = state.get("actors", [])
+	var index := actor_index(state, actor_id)
+	if index < 0:
+		return state
+	var actor := actors[index] as Dictionary
+	actor = BattleStatusModel.remove_status(actor, status_id)
+	actors[index] = actor
+	state["actors"] = actors
+	return state
+
+
+static func actor_statuses_for_trace(actor: Dictionary) -> Dictionary:
+	return BattleStatusModel.trace_statuses(actor)
+
+
+static func set_actor_status_resist(state: Dictionary, actor_id: String, status_id: String, resistance: float) -> Dictionary:
+	var actors: Array = state.get("actors", [])
+	var index := actor_index(state, actor_id)
+	if index < 0:
+		return state
+	var actor := actors[index] as Dictionary
+	var resist = actor.get("statusResist", {})
+	var next_resist := (resist as Dictionary).duplicate(true) if resist is Dictionary else {}
+	next_resist[status_id] = clampf(resistance, 0.0, 1.0)
+	actor["statusResist"] = next_resist
+	actors[index] = actor
+	state["actors"] = actors
+	return state
+
+
+static func actor_status_resist_for_trace(actor: Dictionary) -> Dictionary:
+	var result := {}
+	var resist = actor.get("statusResist", {})
+	if not (resist is Dictionary):
+		return result
+	for key in (resist as Dictionary).keys():
+		result[str(key)] = clampf(float((resist as Dictionary).get(key, 0.0)), 0.0, 1.0)
+	return result
+
+
+static func set_actor_status_immune(state: Dictionary, actor_id: String, status_id: String, immune: bool = true) -> Dictionary:
+	var actors: Array = state.get("actors", [])
+	var index := actor_index(state, actor_id)
+	if index < 0:
+		return state
+	var actor := actors[index] as Dictionary
+	var immune_value = actor.get("statusImmune", {})
+	var next_immune := (immune_value as Dictionary).duplicate(true) if immune_value is Dictionary else {}
+	next_immune[status_id] = immune
+	actor["statusImmune"] = next_immune
+	actors[index] = actor
+	state["actors"] = actors
+	return state
+
+
+static func actor_status_immune_for_trace(actor: Dictionary) -> Dictionary:
+	var result := {}
+	var immune_value = actor.get("statusImmune", {})
+	if not (immune_value is Dictionary):
+		return result
+	for key in (immune_value as Dictionary).keys():
+		result[str(key)] = bool((immune_value as Dictionary).get(key, false))
+	return result
+
+
+static func actor_passive_skill_ids_for_trace(actor: Dictionary) -> Array[String]:
+	return BattlePassiveCatalog.passive_ids_for_actor(actor)
+
+
+static func _string_array(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			var text := str(item)
+			if text != "":
+				result.append(text)
+	return result
+
+
+static func _merged_string_array(first, second) -> Array[String]:
+	var result: Array[String] = []
+	for source in [first, second]:
+		if source is Array:
+			for item in source:
+				var text := str(item)
+				if text != "" and not result.has(text):
+					result.append(text)
+	return result
+
+
+static func _pet_metadata_from_actor(actor: Dictionary) -> Dictionary:
+	var result := {}
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+		if actor.has(key):
+			result[key] = actor.get(key)
+	return result
+
+
+static func _pet_metadata_from_template(template: Dictionary) -> Dictionary:
+	var result := {}
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+		if template.has(key):
+			result[key] = template.get(key)
+	return result
 
 
 static func item_count(state: Dictionary, item_id: String) -> int:
@@ -594,6 +790,12 @@ static func _make_item_event(state: Dictionary, player_id: String, command: Dict
 		ITEM_POISON_ALL:
 			if BattleActionCatalog.action_is_all(item_id) and BattleActionCatalog.action_can_target_side(item_id, SIDE_ENEMY):
 				return _make_item_poison_all_event(state, player_id, sequence)
+		ITEM_CLEANSE_SINGLE:
+			var cleanse_target_id := str(command.get("allyTargetId", ""))
+			if not _is_living_side_actor(state, cleanse_target_id, SIDE_ALLY):
+				cleanse_target_id = best_ally_heal_target_id(state)
+			if BattleActionCatalog.action_can_target_side(item_id, SIDE_ALLY) and cleanse_target_id != "":
+				return _make_item_cleanse_event(state, player_id, cleanse_target_id, sequence)
 		_:
 			var ally_target_id := str(command.get("allyTargetId", ""))
 			if not _is_living_side_actor(state, ally_target_id, SIDE_ALLY):
@@ -603,11 +805,11 @@ static func _make_item_event(state: Dictionary, player_id: String, command: Dict
 	return {}
 
 
-static func _make_pet_command_event(state: Dictionary, pet_id: String, command_id: String, _command: Dictionary, enemy_target_id: String, sequence: int) -> Dictionary:
+static func _make_pet_command_event(state: Dictionary, pet_id: String, command_id: String, command: Dictionary, enemy_target_id: String, sequence: int) -> Dictionary:
 	match command_id:
 		"pet_skill":
 			if enemy_target_id != "":
-				return _make_skill_event(state, pet_id, enemy_target_id, sequence)
+				return _make_skill_event(state, pet_id, enemy_target_id, sequence, str(command.get("skillId", PET_SKILL_BUI_CHARGE)))
 		"defend":
 			return _make_defend_event(state, pet_id, sequence)
 		_:
@@ -630,18 +832,42 @@ static func _make_attack_event(state: Dictionary, attacker_id: String, target_id
 	}
 
 
-static func _make_skill_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+static func _make_skill_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, skill_id: String = PET_SKILL_BUI_CHARGE) -> Dictionary:
+	if skill_id == "":
+		skill_id = PET_SKILL_BUI_CHARGE
+	if BattleActionCatalog.effect_type_for(skill_id) == "status":
+		return _make_status_skill_event(state, attacker_id, target_id, sequence, skill_id)
 	return {
 		"type": "skill_attack",
 		"attackerId": attacker_id,
 		"targetId": target_id,
 		"targetSide": SIDE_ENEMY,
-		"damage": _skill_damage_for(state, attacker_id, target_id, PET_SKILL_BUI_CHARGE),
+		"damage": _skill_damage_for(state, attacker_id, target_id, skill_id),
 		"speed": _effective_action_speed(state, attacker_id, "pet_skill"),
 		"sequence": sequence,
-		"skillName": BattleActionCatalog.label_for(PET_SKILL_BUI_CHARGE, "布伊冲撞"),
+		"skillId": skill_id,
+		"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
 		"movementStyle": "melee",
 		"canLaunch": true,
+	}
+
+
+static func _make_status_skill_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, skill_id: String) -> Dictionary:
+	return {
+		"type": "skill_status",
+		"attackerId": attacker_id,
+		"targetId": target_id,
+		"targetSide": SIDE_ENEMY,
+		"speed": _effective_action_speed(state, attacker_id, "pet_skill"),
+		"sequence": sequence,
+		"skillId": skill_id,
+		"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
+		"statusId": BattleActionCatalog.effect_status_id_for(skill_id, ""),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(skill_id, 1),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(skill_id, 0, 0),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(skill_id, 1.0),
+		"movementStyle": "ranged_status",
+		"canLaunch": false,
 	}
 
 
@@ -684,6 +910,10 @@ static func _make_spirit_poison_event(state: Dictionary, attacker_id: String, ta
 		"sequence": sequence,
 		"skillName": BattleActionCatalog.label_for(SPIRIT_POISON_SINGLE, "毒精灵5"),
 		"spiritId": SPIRIT_POISON_SINGLE,
+		"statusId": BattleActionCatalog.effect_status_id_for(SPIRIT_POISON_SINGLE, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(SPIRIT_POISON_SINGLE, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(SPIRIT_POISON_SINGLE, BattleActionCatalog.effect_amount_for(SPIRIT_POISON_SINGLE, 18), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(SPIRIT_POISON_SINGLE, 18))),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(SPIRIT_POISON_SINGLE, 1.0),
 	}
 
 
@@ -698,6 +928,10 @@ static func _make_spirit_poison_all_event(state: Dictionary, attacker_id: String
 		"sequence": sequence,
 		"skillName": BattleActionCatalog.label_for(SPIRIT_POISON_ALL, "毒雾精灵5"),
 		"spiritId": SPIRIT_POISON_ALL,
+		"statusId": BattleActionCatalog.effect_status_id_for(SPIRIT_POISON_ALL, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(SPIRIT_POISON_ALL, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(SPIRIT_POISON_ALL, BattleActionCatalog.effect_amount_for(SPIRIT_POISON_ALL, 10), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(SPIRIT_POISON_ALL, 10))),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(SPIRIT_POISON_ALL, 1.0),
 	}
 
 
@@ -740,6 +974,10 @@ static func _make_item_poison_event(state: Dictionary, attacker_id: String, targ
 		"sequence": sequence,
 		"itemName": BattleActionCatalog.label_for(ITEM_POISON_SINGLE, "毒粉5"),
 		"itemId": ITEM_POISON_SINGLE,
+		"statusId": BattleActionCatalog.effect_status_id_for(ITEM_POISON_SINGLE, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(ITEM_POISON_SINGLE, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(ITEM_POISON_SINGLE, BattleActionCatalog.effect_amount_for(ITEM_POISON_SINGLE, 12), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(ITEM_POISON_SINGLE, 12))),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(ITEM_POISON_SINGLE, 1.0),
 	}
 
 
@@ -754,6 +992,24 @@ static func _make_item_poison_all_event(state: Dictionary, attacker_id: String, 
 		"sequence": sequence,
 		"itemName": BattleActionCatalog.label_for(ITEM_POISON_ALL, "毒雾粉5"),
 		"itemId": ITEM_POISON_ALL,
+		"statusId": BattleActionCatalog.effect_status_id_for(ITEM_POISON_ALL, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(ITEM_POISON_ALL, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(ITEM_POISON_ALL, BattleActionCatalog.effect_amount_for(ITEM_POISON_ALL, 7), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(ITEM_POISON_ALL, 7))),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(ITEM_POISON_ALL, 1.0),
+	}
+
+
+static func _make_item_cleanse_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+	return {
+		"type": "item_cleanse",
+		"attackerId": attacker_id,
+		"targetId": target_id,
+		"targetSide": SIDE_ALLY,
+		"speed": _effective_action_speed(state, attacker_id, "item"),
+		"sequence": sequence,
+		"itemName": BattleActionCatalog.label_for(ITEM_CLEANSE_SINGLE, "净化草5"),
+		"itemId": ITEM_CLEANSE_SINGLE,
+		"statusIds": BattleActionCatalog.effect_status_ids_for(ITEM_CLEANSE_SINGLE),
 	}
 
 
@@ -943,6 +1199,7 @@ static func capture_would_succeed(state: Dictionary, attacker_id: String, target
 static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictionary:
 	state["lastEventApplied"] = false
 	state["lastEventType"] = str(event.get("type", ""))
+	state["lastEventLedger"] = {}
 	state["lastDamage"] = 0
 	state["lastHeal"] = 0
 	state["lastTargetIds"] = []
@@ -950,8 +1207,27 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastCaptureSuccess"] = false
 	state["lastLaunch"] = false
 	state["lastLaunchMode"] = ""
+	state["lastStatusId"] = ""
+	state["lastStatusResult"] = ""
+	state["lastStatusChanges"] = []
+	state["lastStatusRoll"] = -1.0
+	state["lastStatusChance"] = -1.0
+	state["lastStatusResistance"] = 0.0
+	state["lastStatusResultPerTarget"] = {}
+	state["lastStatusRollPerTarget"] = {}
+	state["lastStatusChancePerTarget"] = {}
+	state["lastStatusResistancePerTarget"] = {}
 	state["lastParticipants"] = event.get("participantIds", [])
 	var event_type := str(event.get("type", ""))
+	if event_type == "status_tick":
+		return _apply_status_tick_event(state, event)
+	if event_type == "status_skip":
+		return _apply_status_skip_event(state, event, str(event.get("statusId", "")))
+	var blocking_status_id := _blocking_status_for_event_actor(state, event)
+	if blocking_status_id != "":
+		return _apply_status_skip_event(state, event, blocking_status_id)
+	if event_type == "skill_status":
+		return _apply_status_apply_event(state, event)
 	if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack":
 		return _apply_damage_event(state, event)
 	if event_type == "spirit_heal":
@@ -970,6 +1246,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_item_consuming_event(state, event, "_apply_spirit_poison_event")
 	if event_type == "item_poison_all":
 		return _apply_item_consuming_event(state, event, "_apply_spirit_poison_all_event")
+	if event_type == "item_cleanse":
+		return _apply_item_consuming_event(state, event, "_apply_item_cleanse_event")
 	if event_type == "capture":
 		return _apply_capture_event(state, event)
 	if event_type == "switch_pet":
@@ -991,6 +1269,8 @@ static func _apply_item_consuming_event(state: Dictionary, event: Dictionary, ap
 			next_state = _apply_spirit_poison_event(next_state, normalized)
 		"_apply_spirit_poison_all_event":
 			next_state = _apply_spirit_poison_all_event(next_state, normalized)
+		"_apply_item_cleanse_event":
+			next_state = _apply_item_cleanse_event(next_state, normalized)
 	if bool(next_state.get("lastEventApplied", false)):
 		next_state = consume_item(next_state, str(event.get("itemId", "")))
 	return next_state
@@ -1000,6 +1280,275 @@ static func _normalize_item_event(event: Dictionary) -> Dictionary:
 	var normalized := event.duplicate(true)
 	normalized["skillName"] = str(event.get("itemName", "物品"))
 	return normalized
+
+
+static func _blocking_status_for_event_actor(state: Dictionary, event: Dictionary) -> String:
+	var event_type := str(event.get("type", ""))
+	if event_type == "status_tick" or event_type == "status_skip":
+		return ""
+	var attacker_id := str(event.get("attackerId", ""))
+	if attacker_id == "":
+		return ""
+	var actor := actor_by_id(state, attacker_id)
+	if actor.is_empty() or int(actor.get("hp", 0)) <= 0:
+		return ""
+	return BattleStatusModel.blocking_status_id(actor)
+
+
+static func _apply_status_skip_event(state: Dictionary, event: Dictionary, status_id: String) -> Dictionary:
+	var actor_id := str(event.get("attackerId", event.get("targetId", "")))
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	var actor := actors[actor_index_value] as Dictionary
+	if int(actor.get("hp", 0)) <= 0:
+		return state
+	if status_id == "":
+		status_id = BattleStatusModel.blocking_status_id(actor)
+	if status_id == "":
+		return state
+	var previous_turns := BattleStatusModel.status_turns(actor, status_id)
+	actor = BattleStatusModel.decrement_status(actor, status_id)
+	actor["actionState"] = "status_%s" % status_id
+	actors[actor_index_value] = actor
+	state["actors"] = actors
+	state = _remove_guarding_actor(state, actor_id)
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = "status_skip"
+	state["lastAttackerId"] = actor_id
+	state["lastTargetId"] = actor_id
+	state["lastTargetIds"] = [actor_id]
+	state["lastParticipants"] = [actor_id]
+	state["lastStatusId"] = status_id
+	state["lastStatusResult"] = "skip"
+	state["lastStatusChanges"] = [{
+		"actorId": actor_id,
+		"statusId": status_id,
+		"change": "decrement",
+		"fromTurns": previous_turns,
+		"toTurns": BattleStatusModel.status_turns(actor, status_id),
+	}]
+	state["message"] = "%s 处于%s状态，无法行动。" % [
+		str(actor.get("name", "目标")),
+		BattleStatusModel.status_label(status_id),
+	]
+	return state
+
+
+static func _apply_status_tick_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var status_id := str(event.get("statusId", STATUS_POISON))
+	var target_id := str(event.get("targetId", ""))
+	var actors: Array = state.get("actors", [])
+	var target_index := actor_index(state, target_id)
+	if target_index < 0:
+		return state
+	var target := actors[target_index] as Dictionary
+	if int(target.get("hp", 0)) <= 0 or not BattleStatusModel.has_status(target, status_id):
+		return state
+	var potency := maxi(1, int(event.get("damage", BattleStatusModel.status_potency(target, status_id))))
+	var hp_before := int(target.get("hp", 0))
+	var next_hp := maxi(0, hp_before - potency)
+	var previous_turns := BattleStatusModel.status_turns(target, status_id)
+	target["hp"] = next_hp
+	target = BattleStatusModel.decrement_status(target, status_id)
+	if next_hp <= 0:
+		target["actionState"] = "down"
+	else:
+		target["actionState"] = "hit"
+	actors[target_index] = target
+	state["actors"] = actors
+	state = _sync_player_pet_party_from_actor(state, target)
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = "status_tick"
+	state["lastAttackerId"] = target_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastDamage"] = potency
+	state["lastEffectPerTarget"] = {target_id: potency}
+	state["lastParticipants"] = [target_id]
+	state["lastStatusId"] = status_id
+	state["lastStatusResult"] = "tick"
+	state["lastStatusChanges"] = [{
+		"actorId": target_id,
+		"statusId": status_id,
+		"change": "decrement",
+		"fromTurns": previous_turns,
+		"toTurns": BattleStatusModel.status_turns(target, status_id),
+	}]
+	state["message"] = "%s 因%s受到 %d 点伤害。" % [
+		str(target.get("name", "目标")),
+		BattleStatusModel.status_label(status_id),
+		potency,
+	]
+	if next_hp <= 0:
+		state["message"] += " %s 倒下了。" % str(target.get("name", "目标"))
+	return state
+
+
+static func _status_hit_check_for_event(state: Dictionary, event: Dictionary, target: Dictionary, status_id: String) -> Dictionary:
+	var immune := _status_immunity_for_actor(target, status_id)
+	if immune:
+		return {
+			"hit": false,
+			"result": "immune",
+			"chance": 0.0,
+			"roll": -1.0,
+			"resistance": _status_resistance_for_actor(target, status_id),
+			"immune": true,
+		}
+	var action_id := _status_action_id_for_event(event)
+	var base_rate := BattleActionCatalog.effect_status_hit_rate_for(action_id, 1.0) if action_id != "" else 1.0
+	if event.has("statusHitRate"):
+		base_rate = float(event.get("statusHitRate", base_rate))
+	var resistance := _status_resistance_for_actor(target, status_id)
+	var chance := clampf(base_rate - resistance, 0.0, 1.0)
+	var seed_text := "%s:status:%s:%s:%s:%s:%d:%d" % [
+		str(state.get("targetSeed", state.get("id", "battle"))),
+		action_id,
+		str(event.get("attackerId", "")),
+		str(target.get("id", "")),
+		status_id,
+		int(state.get("round", 1)),
+		int(event.get("sequence", 0)),
+	]
+	var roll := float(_stable_target_index(seed_text, 10000)) / 10000.0
+	var hit := roll < chance
+	return {
+		"hit": hit,
+		"result": "applied" if hit else "resisted",
+		"chance": chance,
+		"roll": roll,
+		"resistance": resistance,
+		"immune": false,
+	}
+
+
+static func _status_action_id_for_event(event: Dictionary) -> String:
+	for key in ["skillId", "spiritId", "itemId"]:
+		var value := str(event.get(key, ""))
+		if value != "":
+			return value
+	return ""
+
+
+static func _status_resistance_for_actor(actor: Dictionary, status_id: String) -> float:
+	var resist = actor.get("statusResist", {})
+	if not (resist is Dictionary):
+		return 0.0
+	var resist_dict := resist as Dictionary
+	if resist_dict.has(status_id):
+		return clampf(float(resist_dict.get(status_id, 0.0)), 0.0, 1.0)
+	return clampf(float(resist_dict.get("all", 0.0)), 0.0, 1.0)
+
+
+static func _status_immunity_for_actor(actor: Dictionary, status_id: String) -> bool:
+	var immune_value = actor.get("statusImmune", {})
+	if not (immune_value is Dictionary):
+		return false
+	var immune_dict := immune_value as Dictionary
+	if bool(immune_dict.get("all", false)):
+		return true
+	return bool(immune_dict.get(status_id, false))
+
+
+static func _write_single_status_check_to_state(state: Dictionary, status_check: Dictionary) -> Dictionary:
+	state["lastStatusRoll"] = float(status_check.get("roll", -1.0))
+	state["lastStatusChance"] = float(status_check.get("chance", -1.0))
+	state["lastStatusResistance"] = float(status_check.get("resistance", 0.0))
+	return state
+
+
+static func _apply_status_apply_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var attacker_id := str(event.get("attackerId", ""))
+	var target_side := str(event.get("targetSide", SIDE_ENEMY))
+	var target_id := str(event.get("targetId", ""))
+	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
+		return state
+	if not _is_living_side_actor(state, target_id, target_side):
+		target_id = _fallback_target_id(state, target_side, attacker_id, int(event.get("sequence", 0)))
+	if target_id == "":
+		return state
+	var status_id := str(event.get("statusId", ""))
+	if status_id == "":
+		return state
+	var turns := maxi(1, int(event.get("statusTurns", 1)))
+	var potency := maxi(0, int(event.get("statusPotency", 0)))
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	var target_index := actor_index(state, target_id)
+	if attacker_index < 0 or target_index < 0:
+		return state
+	var attacker := actors[attacker_index] as Dictionary
+	var target := actors[target_index] as Dictionary
+	var status_check := _status_hit_check_for_event(state, event, target, status_id)
+	var status_result := str(status_check.get("result", "resisted"))
+	var status_applied := status_result == "applied"
+	var removed_status_ids: Array[String] = []
+	if status_applied:
+		removed_status_ids = BattleStatusModel.statuses_removed_by_apply(target, status_id)
+	attacker["actionState"] = "skill"
+	if status_applied:
+		target = BattleStatusModel.apply_status(target, status_id, turns, potency, attacker_id)
+	target["actionState"] = "hit"
+	actors[attacker_index] = attacker
+	actors[target_index] = target
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastParticipants"] = [attacker_id]
+	state["lastStatusId"] = status_id
+	state["lastStatusResult"] = status_result
+	var status_changes: Array[Dictionary] = []
+	for removed_status_id in removed_status_ids:
+		status_changes.append({
+			"actorId": target_id,
+			"statusId": removed_status_id,
+			"change": "remove_overwritten",
+		})
+	status_changes.append({
+		"actorId": target_id,
+		"statusId": status_id,
+		"change": "apply" if status_applied else status_result,
+		"turns": turns if status_applied else 0,
+		"potency": potency if status_applied else 0,
+		"chance": float(status_check.get("chance", 0.0)),
+		"roll": float(status_check.get("roll", 0.0)),
+		"resistance": float(status_check.get("resistance", 0.0)),
+		"immune": bool(status_check.get("immune", false)),
+	})
+	state["lastStatusChanges"] = status_changes
+	state = _write_single_status_check_to_state(state, status_check)
+	var skill_name := str(event.get("skillName", "宠物技能"))
+	var target_name := str(target.get("name", "目标"))
+	var status_label := BattleStatusModel.status_label(status_id)
+	if status_applied:
+		state["message"] = "%s 使用%s，%s 陷入%s状态。" % [
+			str(attacker.get("name", "宠物")),
+			skill_name,
+			target_name,
+			status_label,
+		]
+	elif status_result == "immune":
+		state["message"] = "%s 使用%s，%s 免疫了%s。" % [
+			str(attacker.get("name", "宠物")),
+			skill_name,
+			target_name,
+			status_label,
+		]
+	else:
+		state["message"] = "%s 使用%s，%s 抵抗了%s。" % [
+			str(attacker.get("name", "宠物")),
+			skill_name,
+			target_name,
+			status_label,
+		]
+	return state
 
 
 static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -1014,6 +1563,26 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 
 	var target_side := str(event.get("targetSide", ""))
 	var target_id := str(event.get("targetId", ""))
+	var declared_target_id := target_id
+	var status_changes: Array[Dictionary] = []
+	var confusion_triggered := false
+	if BattleStatusModel.has_status(first_attacker, STATUS_CONFUSION):
+		var confused_target_id := _confusion_target_id(state, attacker_id, int(event.get("sequence", 0)))
+		if confused_target_id != "":
+			target_id = confused_target_id
+			var confused_target := actor_by_id(state, target_id)
+			target_side = str(confused_target.get("side", target_side))
+			var previous_turns := BattleStatusModel.status_turns(first_attacker, STATUS_CONFUSION)
+			state = _decrement_actor_status(state, attacker_id, STATUS_CONFUSION)
+			first_attacker = actor_by_id(state, str(participant_ids[0]))
+			status_changes.append({
+				"actorId": attacker_id,
+				"statusId": STATUS_CONFUSION,
+				"change": "decrement",
+				"fromTurns": previous_turns,
+				"toTurns": BattleStatusModel.status_turns(first_attacker, STATUS_CONFUSION),
+			})
+			confusion_triggered = true
 	if not _is_living_side_actor(state, target_id, target_side):
 		target_id = _fallback_target_id(state, target_side, attacker_id, int(event.get("sequence", 0)))
 	if target_id == "":
@@ -1027,6 +1596,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		var participant := actors[participant_index] as Dictionary
 		if int(participant.get("hp", 0)) <= 0:
 			continue
+		if BattleStatusModel.blocking_status_id(participant) != "":
+			continue
 		participant["actionState"] = "combo" if event_type == "combo_attack" else ("skill" if event_type == "skill_attack" else "attack")
 		actors[participant_index] = participant
 
@@ -1034,7 +1605,7 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	if target_index < 0:
 		return state
 	var target := actors[target_index] as Dictionary
-	var damage := maxi(1, int(event.get("damage", 1)))
+	var damage := _resolved_damage_for_event(state, event, target_id, declared_target_id, participant_ids)
 	var hp_before := int(target.get("hp", 0))
 	var next_hp := maxi(0, hp_before - damage)
 	var max_hp := maxi(1, int(target.get("maxHp", hp_before)))
@@ -1042,6 +1613,13 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	var launch_threshold := maxi(12, int(round(float(max_hp) * 0.18)))
 	var launched := bool(event.get("canLaunch", false)) and hp_before > 0 and next_hp <= 0 and overkill >= launch_threshold
 	target["hp"] = next_hp
+	if BattleStatusModel.has_status(target, STATUS_SLEEP):
+		target = BattleStatusModel.remove_status(target, STATUS_SLEEP)
+		status_changes.append({
+			"actorId": target_id,
+			"statusId": STATUS_SLEEP,
+			"change": "remove_on_damage",
+		})
 	if launched:
 		target["actionState"] = "launched"
 		target["launched"] = true
@@ -1059,9 +1637,15 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetId"] = target_id
 	state["lastTargetIds"] = [target_id]
 	state["lastDamage"] = damage
+	state["lastEffectPerTarget"] = {target_id: damage}
 	state["lastParticipants"] = participant_ids
 	state["lastLaunch"] = launched
 	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
+	if confusion_triggered:
+		state["lastStatusId"] = STATUS_CONFUSION
+		state["lastStatusResult"] = "confused_retarget"
+	if not status_changes.is_empty():
+		state["lastStatusChanges"] = status_changes
 
 	var target_name := str(target.get("name", "目标"))
 	if event_type == "combo_attack":
@@ -1081,6 +1665,29 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	elif next_hp <= 0:
 		state["message"] += " %s 倒下了。" % target_name
 	return state
+
+
+static func _resolved_damage_for_event(state: Dictionary, event: Dictionary, target_id: String, declared_target_id: String, participant_ids: Array) -> int:
+	if target_id == declared_target_id:
+		return maxi(1, int(event.get("damage", 1)))
+	var event_type := str(event.get("type", ""))
+	if event_type == "skill_attack":
+		return _skill_damage_for(state, str(event.get("attackerId", "")), target_id, str(event.get("skillId", PET_SKILL_BUI_CHARGE)))
+	if event_type == "combo_attack":
+		var living_participants: Array[String] = []
+		var total := 0
+		for participant_value in participant_ids:
+			var participant_id := str(participant_value)
+			if not _is_living_side_actor(state, participant_id, SIDE_ALLY):
+				continue
+			if BattleStatusModel.blocking_status_id(actor_by_id(state, participant_id)) != "":
+				continue
+			living_participants.append(participant_id)
+			total += _attack_damage_for(state, participant_id, target_id)
+		if living_participants.is_empty():
+			return maxi(1, int(event.get("damage", 1)))
+		return maxi(1, total + 8 * maxi(1, living_participants.size() - 1))
+	return _attack_damage_for(state, str(event.get("attackerId", "")), target_id)
 
 
 static func _launch_mode_for_event(event: Dictionary, target_id: String) -> String:
@@ -1155,6 +1762,10 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 			entry["quick"] = int(current_pet.get("quick", entry.get("quick", 50)))
 			entry["attack"] = int(current_pet.get("attack", entry.get("attack", 12)))
 			entry["defense"] = int(current_pet.get("defense", entry.get("defense", 6)))
+			entry["passiveSkillIds"] = BattlePassiveCatalog.passive_ids_for_actor(current_pet)
+			for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+				if current_pet.has(key):
+					entry[key] = current_pet.get(key)
 			entry["state"] = PET_STATE_STANDBY if int(current_pet.get("hp", 0)) > 0 and str(current_pet.get("petBattleState", "")) != PET_STATE_REST and bool(current_pet.get("revivable", true)) else PET_STATE_REST
 			party[index] = entry
 			break
@@ -1182,7 +1793,9 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 		int(selected_entry.get("maxHp", 1)),
 		int(selected_entry.get("quick", 50)),
 		int(selected_entry.get("attack", 12)),
-		int(selected_entry.get("defense", 6))
+		int(selected_entry.get("defense", 6)),
+		_string_array(selected_entry.get("passiveSkillIds", [])),
+		str(selected_entry.get("formId", selected_entry.get("templateId", "")))
 	)
 	next_pet["actionState"] = "switch_in"
 	next_pet["petBattleState"] = PET_STATE_BATTLE
@@ -1323,7 +1936,22 @@ static func _apply_spirit_poison_event(state: Dictionary, event: Dictionary) -> 
 	var damage := maxi(1, int(event.get("damage", 1)))
 	var next_hp := maxi(0, int(target.get("hp", 0)) - damage)
 	target["hp"] = next_hp
-	target["poisoned"] = true
+	var poison_status_id := str(event.get("statusId", STATUS_POISON))
+	var poison_turns := maxi(1, int(event.get("statusTurns", 3)))
+	var poison_tick_damage := maxi(1, int(event.get("statusPotency", _poison_tick_damage_for(damage))))
+	var status_check := _status_hit_check_for_event(state, event, target, poison_status_id) if next_hp > 0 else {
+		"hit": false,
+		"result": "target_down",
+		"chance": -1.0,
+		"roll": -1.0,
+		"resistance": _status_resistance_for_actor(target, poison_status_id),
+		"immune": false,
+	}
+	var status_result := str(status_check.get("result", "resisted")) if next_hp > 0 else "target_down"
+	var status_applied := status_result == "applied"
+	if status_applied:
+		target = BattleStatusModel.apply_status(target, poison_status_id, poison_turns, poison_tick_damage, attacker_id)
+	target["poisoned"] = BattleStatusModel.has_status(target, poison_status_id)
 	target["actionState"] = "down" if next_hp <= 0 else "hit"
 	actors[attacker_index] = attacker
 	actors[target_index] = target
@@ -1336,12 +1964,44 @@ static func _apply_spirit_poison_event(state: Dictionary, event: Dictionary) -> 
 	state["lastDamage"] = damage
 	state["lastEffectPerTarget"] = {target_id: damage}
 	state["lastParticipants"] = [attacker_id]
-	state["message"] = "%s 使用%s，%s 中毒并受到 %d 点伤害。" % [
-		str(attacker.get("name", "我方")),
-		str(event.get("skillName", "精灵")),
-		str(target.get("name", "目标")),
-		damage,
-	]
+	state["lastStatusId"] = poison_status_id
+	state["lastStatusResult"] = status_result
+	state["lastStatusChanges"] = [{
+		"actorId": target_id,
+		"statusId": poison_status_id,
+		"change": "apply" if status_applied else status_result,
+		"turns": poison_turns if status_applied else 0,
+		"potency": poison_tick_damage if status_applied else 0,
+		"chance": float(status_check.get("chance", -1.0)),
+		"roll": float(status_check.get("roll", -1.0)),
+		"resistance": float(status_check.get("resistance", 0.0)),
+		"immune": bool(status_check.get("immune", false)),
+	}]
+	state = _write_single_status_check_to_state(state, status_check)
+	var poison_status_label := BattleStatusModel.status_label(poison_status_id)
+	if status_applied:
+		state["message"] = "%s 使用%s，%s 中毒并受到 %d 点伤害。" % [
+			str(attacker.get("name", "我方")),
+			str(event.get("skillName", "精灵")),
+			str(target.get("name", "目标")),
+			damage,
+		]
+	elif status_result == "immune":
+		state["message"] = "%s 使用%s，%s 受到 %d 点伤害，但免疫%s。" % [
+			str(attacker.get("name", "我方")),
+			str(event.get("skillName", "精灵")),
+			str(target.get("name", "目标")),
+			damage,
+			poison_status_label,
+		]
+	else:
+		state["message"] = "%s 使用%s，%s 受到 %d 点伤害，但抵抗了%s。" % [
+			str(attacker.get("name", "我方")),
+			str(event.get("skillName", "精灵")),
+			str(target.get("name", "目标")),
+			damage,
+			poison_status_label,
+		]
 	if next_hp <= 0:
 		state["message"] += " %s 倒下了。" % str(target.get("name", "目标"))
 	return state
@@ -1359,22 +2019,70 @@ static func _apply_spirit_poison_all_event(state: Dictionary, event: Dictionary)
 	attacker["actionState"] = "spirit"
 	actors[attacker_index] = attacker
 	var damage := maxi(1, int(event.get("damage", 1)))
+	var poison_status_id := str(event.get("statusId", STATUS_POISON))
+	var poison_turns := maxi(1, int(event.get("statusTurns", 3)))
+	var poison_tick_damage := maxi(1, int(event.get("statusPotency", _poison_tick_damage_for(damage))))
 	var target_ids: Array[String] = []
 	var effect_per_target := {}
 	var total_damage := 0
+	var status_changes: Array[Dictionary] = []
+	var result_per_target := {}
+	var roll_per_target := {}
+	var chance_per_target := {}
+	var resistance_per_target := {}
+	var applied_count := 0
+	var resisted_count := 0
+	var immune_count := 0
+	var down_count := 0
 	for index in range(actors.size()):
 		var target := actors[index] as Dictionary
 		if str(target.get("side", "")) != SIDE_ENEMY or int(target.get("hp", 0)) <= 0:
 			continue
 		var next_hp := maxi(0, int(target.get("hp", 0)) - damage)
 		target["hp"] = next_hp
-		target["poisoned"] = true
+		var status_check := _status_hit_check_for_event(state, event, target, poison_status_id) if next_hp > 0 else {
+			"hit": false,
+			"result": "target_down",
+			"chance": -1.0,
+			"roll": -1.0,
+			"resistance": _status_resistance_for_actor(target, poison_status_id),
+			"immune": false,
+		}
+		var status_result := str(status_check.get("result", "resisted")) if next_hp > 0 else "target_down"
+		var status_applied := status_result == "applied"
+		if status_applied:
+			target = BattleStatusModel.apply_status(target, poison_status_id, poison_turns, poison_tick_damage, attacker_id)
+		target["poisoned"] = BattleStatusModel.has_status(target, poison_status_id)
 		target["actionState"] = "down" if next_hp <= 0 else "hit"
 		actors[index] = target
 		var target_id := str(target.get("id", ""))
 		target_ids.append(target_id)
 		effect_per_target[target_id] = damage
 		total_damage += damage
+		var result := "applied" if status_applied else status_result
+		if result == "applied":
+			applied_count += 1
+		elif result == "resisted":
+			resisted_count += 1
+		elif result == "immune":
+			immune_count += 1
+		else:
+			down_count += 1
+		result_per_target[target_id] = result
+		roll_per_target[target_id] = float(status_check.get("roll", -1.0))
+		chance_per_target[target_id] = float(status_check.get("chance", -1.0))
+		resistance_per_target[target_id] = float(status_check.get("resistance", 0.0))
+		status_changes.append({
+			"actorId": target_id,
+			"statusId": poison_status_id,
+			"change": "apply" if status_applied else result,
+			"turns": poison_turns if status_applied else 0,
+			"potency": poison_tick_damage if status_applied else 0,
+			"chance": float(status_check.get("chance", -1.0)),
+			"roll": float(status_check.get("roll", -1.0)),
+			"resistance": float(status_check.get("resistance", 0.0)),
+			"immune": bool(status_check.get("immune", false)),
+		})
 	state["actors"] = actors
 	state["phase"] = "round_events"
 	state["lastEventApplied"] = true
@@ -1384,10 +2092,89 @@ static func _apply_spirit_poison_all_event(state: Dictionary, event: Dictionary)
 	state["lastDamage"] = total_damage
 	state["lastEffectPerTarget"] = effect_per_target
 	state["lastParticipants"] = [attacker_id]
-	state["message"] = "%s 使用%s，敌方全体中毒。" % [
-		str(attacker.get("name", "我方")),
-		str(event.get("skillName", "精灵")),
-	]
+	state["lastStatusId"] = poison_status_id
+	if applied_count > 0 and resisted_count == 0 and immune_count == 0 and down_count == 0:
+		state["lastStatusResult"] = "applied"
+	elif applied_count == 0 and resisted_count > 0 and immune_count == 0 and down_count == 0:
+		state["lastStatusResult"] = "resisted"
+	elif applied_count == 0 and resisted_count == 0 and immune_count > 0 and down_count == 0:
+		state["lastStatusResult"] = "immune"
+	else:
+		state["lastStatusResult"] = "mixed"
+	state["lastStatusChanges"] = status_changes
+	state["lastStatusResultPerTarget"] = result_per_target
+	state["lastStatusRollPerTarget"] = roll_per_target
+	state["lastStatusChancePerTarget"] = chance_per_target
+	state["lastStatusResistancePerTarget"] = resistance_per_target
+	var all_poison_actor_name := str(attacker.get("name", "我方"))
+	var all_poison_skill_name := str(event.get("skillName", "精灵"))
+	if applied_count > 0 and resisted_count == 0 and immune_count == 0:
+		state["message"] = "%s 使用%s，敌方全体中毒。" % [all_poison_actor_name, all_poison_skill_name]
+	elif applied_count == 0 and immune_count > 0 and resisted_count == 0:
+		state["message"] = "%s 使用%s，敌方免疫了中毒。" % [all_poison_actor_name, all_poison_skill_name]
+	elif applied_count == 0 and resisted_count > 0:
+		state["message"] = "%s 使用%s，敌方抵抗了中毒。" % [all_poison_actor_name, all_poison_skill_name]
+	else:
+		state["message"] = "%s 使用%s，部分敌方中毒。" % [all_poison_actor_name, all_poison_skill_name]
+	return state
+
+
+static func _apply_item_cleanse_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var attacker_id := str(event.get("attackerId", ""))
+	var target_id := str(event.get("targetId", ""))
+	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
+		return state
+	if not _is_living_side_actor(state, target_id, SIDE_ALLY):
+		target_id = best_ally_heal_target_id(state)
+	if target_id == "":
+		return state
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	var target_index := actor_index(state, target_id)
+	if attacker_index < 0 or target_index < 0:
+		return state
+	var attacker := actors[attacker_index] as Dictionary
+	var target := actors[target_index] as Dictionary
+	attacker["actionState"] = "item"
+	var status_ids: Array = event.get("statusIds", [])
+	var removed_ids := BattleStatusModel.active_matching_status_ids(target, status_ids)
+	target = BattleStatusModel.remove_statuses(target, status_ids)
+	target["poisoned"] = BattleStatusModel.has_status(target, STATUS_POISON)
+	target["actionState"] = "heal" if not removed_ids.is_empty() else "idle"
+	actors[attacker_index] = attacker
+	actors[target_index] = target
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastParticipants"] = [attacker_id]
+	state["lastStatusId"] = "cleanse"
+	state["lastStatusResult"] = "cleansed" if not removed_ids.is_empty() else "no_status"
+	var status_changes: Array[Dictionary] = []
+	for removed_status_id in removed_ids:
+		status_changes.append({
+			"actorId": target_id,
+			"statusId": removed_status_id,
+			"change": "remove_cleanse",
+		})
+	state["lastStatusChanges"] = status_changes
+	var target_name := str(target.get("name", "目标"))
+	var item_name := str(event.get("itemName", "物品"))
+	if removed_ids.is_empty():
+		state["message"] = "%s 使用%s，%s 没有可解除的异常。" % [
+			str(attacker.get("name", "我方")),
+			item_name,
+			target_name,
+		]
+	else:
+		state["message"] = "%s 使用%s，解除了 %s 的%s。" % [
+			str(attacker.get("name", "我方")),
+			item_name,
+			target_name,
+			BattleStatusModel.status_labels_for(removed_ids),
+		]
 	return state
 
 
@@ -1450,6 +2237,28 @@ static func reset_action_states(state: Dictionary) -> Dictionary:
 	return state
 
 
+static func build_round_end_status_events(state: Dictionary) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	var actors: Array = state.get("actors", [])
+	for index in range(actors.size()):
+		var actor := actors[index] as Dictionary
+		if int(actor.get("hp", 0)) <= 0 or not BattleStatusModel.has_status(actor, STATUS_POISON):
+			continue
+		var actor_id := str(actor.get("id", ""))
+		events.append({
+			"type": "status_tick",
+			"statusId": STATUS_POISON,
+			"attackerId": actor_id,
+			"targetId": actor_id,
+			"targetSide": str(actor.get("side", "")),
+			"damage": maxi(1, BattleStatusModel.status_potency(actor, STATUS_POISON)),
+			"speed": 0,
+			"sequence": 10000 + index,
+			"canLaunch": false,
+		})
+	return events
+
+
 static func _ally_action_order(state: Dictionary) -> Array[String]:
 	var ordered: Array[String] = []
 	for preferred_id in ["ally_player", "ally_pet"]:
@@ -1488,6 +2297,8 @@ static func _damage_after_defense(state: Dictionary, raw_attack: int, target_id:
 	if target.is_empty():
 		return maxi(1, raw_attack)
 	var defense := maxi(0, int(target.get("defense", 0)))
+	if BattleStatusModel.has_status(target, STATUS_STONE):
+		defense *= 2
 	var reduced := raw_attack - int(round(float(defense) * defense_factor))
 	if is_actor_guarding(state, target_id):
 		reduced = int(floor(float(reduced) * 0.45))
@@ -1499,6 +2310,50 @@ static func is_actor_guarding(state: Dictionary, actor_id: String) -> bool:
 		if str(value) == actor_id:
 			return true
 	return false
+
+
+static func _remove_guarding_actor(state: Dictionary, actor_id: String) -> Dictionary:
+	var next_guarding: Array[String] = []
+	for value in state.get("guardingActorIds", []):
+		if str(value) != actor_id:
+			next_guarding.append(str(value))
+	state["guardingActorIds"] = next_guarding
+	return state
+
+
+static func _decrement_actor_status(state: Dictionary, actor_id: String, status_id: String) -> Dictionary:
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	var actor := actors[actor_index_value] as Dictionary
+	actor = BattleStatusModel.decrement_status(actor, status_id)
+	actors[actor_index_value] = actor
+	state["actors"] = actors
+	return state
+
+
+static func _confusion_target_id(state: Dictionary, attacker_id: String, sequence: int) -> String:
+	var attacker := actor_by_id(state, attacker_id)
+	if attacker.is_empty():
+		return ""
+	var same_side := str(attacker.get("side", ""))
+	var candidates := living_actor_ids(state, same_side)
+	if candidates.is_empty():
+		return ""
+	if candidates.size() > 1:
+		candidates.erase(attacker_id)
+	var seed_text := "%s:confusion:%s:%d:%d" % [
+		str(state.get("targetSeed", state.get("id", "battle"))),
+		attacker_id,
+		int(state.get("round", 1)),
+		sequence,
+	]
+	return candidates[_stable_target_index(seed_text, candidates.size())]
+
+
+static func _poison_tick_damage_for(base_damage: int) -> int:
+	return maxi(1, int(ceil(float(maxi(1, base_damage)) * 0.5)))
 
 
 static func _fallback_target_id(state: Dictionary, target_side: String, attacker_id: String = "", sequence: int = 0) -> String:

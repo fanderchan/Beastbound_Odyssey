@@ -104,7 +104,11 @@
       },
       "effect": {
         "type": "poison",
-        "amount": 18
+        "amount": 18,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.86
       },
       "stoneAgeReference": "MAGIC_StatusChange"
     },
@@ -122,7 +126,11 @@
       },
       "effect": {
         "type": "poison",
-        "amount": 10
+        "amount": 10,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.72
       },
       "stoneAgeReference": "MAGIC_StatusChange"
     },
@@ -183,6 +191,69 @@
       "stoneAgeReference": "PETSKILL_ChargeAttack"
     },
     {
+      "id": "pet_sleep_powder",
+      "owner": "pet_skill",
+      "slot": 4,
+      "label": "催眠粉",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "status",
+        "statusId": "sleep",
+        "statusTurns": 2,
+        "statusHitRate": 0.82
+      },
+      "stoneAgeReference": "PETSKILL_StatusChange"
+    },
+    {
+      "id": "pet_confuse_cry",
+      "owner": "pet_skill",
+      "slot": 5,
+      "label": "迷惑吼",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "status",
+        "statusId": "confusion",
+        "statusTurns": 2,
+        "statusHitRate": 0.78
+      },
+      "stoneAgeReference": "PETSKILL_StatusChange"
+    },
+    {
+      "id": "pet_stone_gaze",
+      "owner": "pet_skill",
+      "slot": 6,
+      "label": "石化凝视",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "status",
+        "statusId": "stone",
+        "statusTurns": 2,
+        "statusHitRate": 0.74
+      },
+      "stoneAgeReference": "PETSKILL_StatusChange"
+    },
+    {
       "id": "item_heal_all_5",
       "owner": "item",
       "label": "群体草药5",
@@ -232,7 +303,11 @@
       },
       "effect": {
         "type": "poison",
-        "amount": 12
+        "amount": 12,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.80
       },
       "stoneAgeReference": "ITEM_useStatusChange"
     },
@@ -250,9 +325,31 @@
       },
       "effect": {
         "type": "poison",
-        "amount": 7
+        "amount": 7,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.68
       },
       "stoneAgeReference": "ITEM_useStatusChange"
+    },
+    {
+      "id": "item_cleanse_single_5",
+      "owner": "item",
+      "label": "净化草5",
+      "command": "item",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "cleanse",
+        "statusIds": ["poison", "sleep", "confusion", "stone"]
+      },
+      "stoneAgeReference": "ITEM_useRecovery"
     }
   ]
 }

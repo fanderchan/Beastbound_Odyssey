@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "lines": [
+    {
+      "lineId": "bui",
+      "lineName": "布伊系",
+      "description": "小型兽类宠物，适合作为早期伙伴。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
+      "lineId": "wuli",
+      "lineName": "乌力系",
+      "description": "常见野生兽类，适合测试敌方、捕捉、状态抗性。",
+      "passiveSkillId": "wuli_hard_shell"
+    }
+  ],
+  "subtypes": [
+    {
+      "subtypeId": "bui_normal",
+      "subtypeName": "普通布伊",
+      "lineId": "bui",
+      "battleRole": "balanced_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"]
+    },
+    {
+      "subtypeId": "wuli_normal",
+      "subtypeName": "普通乌力",
+      "lineId": "wuli",
+      "battleRole": "wild_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    }
+  ],
+  "forms": [
+    {
+      "formId": "bui_normal_red_fire10",
+      "formName": "红色普通布伊",
+      "lineId": "bui",
+      "subtypeId": "bui_normal",
+      "elements": {
+        "fire": 10,
+        "water": 0,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "baseStats": {
+        "maxHp": 140,
+        "attack": 18,
+        "defense": 8,
+        "agility": 72
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 42
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
+      "formId": "bui_normal_yellow_wind10",
+      "formName": "黄色普通布伊",
+      "lineId": "bui",
+      "subtypeId": "bui_normal",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 0,
+        "wind": 10
+      },
+      "growthProfileId": "agility_high",
+      "baseStats": {
+        "maxHp": 130,
+        "attack": 15,
+        "defense": 7,
+        "agility": 110
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 44
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "bui_normal_thick_earth10",
+      "formName": "厚皮布伊",
+      "lineId": "bui",
+      "subtypeId": "bui_normal",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 10,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "baseStats": {
+        "maxHp": 150,
+        "attack": 14,
+        "defense": 28,
+        "agility": 45
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 46
+      },
+      "visual": {
+        "placeholderPalette": "bui_earth"
+      }
+    },
+    {
+      "formId": "wuli_normal_orange_fire10",
+      "formName": "普通乌力",
+      "lineId": "wuli",
+      "subtypeId": "wuli_normal",
+      "elements": {
+        "fire": 10,
+        "water": 0,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "baseStats": {
+        "maxHp": 170,
+        "attack": 12,
+        "defense": 8,
+        "agility": 62
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 42
+      },
+      "visual": {
+        "placeholderPalette": "wuli_orange"
+      }
+    },
+    {
+      "formId": "wuli_normal_fast_wind10",
+      "formName": "高速乌力",
+      "lineId": "wuli",
+      "subtypeId": "wuli_normal",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 0,
+        "wind": 10
+      },
+      "growthProfileId": "agility_high",
+      "baseStats": {
+        "maxHp": 170,
+        "attack": 13,
+        "defense": 8,
+        "agility": 118
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 48
+      },
+      "visual": {
+        "placeholderPalette": "wuli_fast"
+      }
+    },
+    {
+      "formId": "wuli_normal_tough_earth10",
+      "formName": "高防乌力",
+      "lineId": "wuli",
+      "subtypeId": "wuli_normal",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 10,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "baseStats": {
+        "maxHp": 220,
+        "attack": 10,
+        "defense": 34,
+        "agility": 46
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 55
+      },
+      "visual": {
+        "placeholderPalette": "wuli_tough"
+      }
+    }
+  ]
+}

@@ -7,6 +7,10 @@ const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
+const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
+const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
+const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const START_MAP_ID := "firebud_training_yard"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
@@ -15,6 +19,9 @@ const MAP_DATA_PATHS := {
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(218, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
+const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
+const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
+const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
 const BATTLE_GRID_TEMPLATE_SIZE := Vector2(1280.0, 720.0)
 const BATTLE_GRID_TEMPLATE_ORIGIN := Vector2(128.0, 338.4)
 const BATTLE_GRID_TEMPLATE_LANE_STEP := Vector2(152.0, 52.0)
@@ -51,6 +58,9 @@ var encounter_enter_button: Button
 var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
 var battle_command_title_label: Label
+var battle_command_button_grid: GridContainer
+var battle_passive_panel: Panel
+var battle_passive_label: Label
 var battle_message_panel: PanelContainer
 var battle_log_label: Label
 var battle_command_buttons: Dictionary = {}
@@ -94,9 +104,19 @@ var auto_battle_combo_motion_check: bool = false
 var auto_battle_switch_pet_check: bool = false
 var auto_battle_retarget_visual_check: bool = false
 var auto_battle_visual_timing_check: bool = false
+var auto_battle_event_ledger_check: bool = false
+var auto_battle_status_check: bool = false
+var auto_battle_status_skill_check: bool = false
+var auto_battle_status_hit_check: bool = false
+var auto_battle_status_rule_check: bool = false
+var auto_battle_passive_hover_check: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
+var battle_status_test: bool = false
+var battle_status_skill_test: bool = false
+var battle_status_hit_test: bool = false
+var battle_status_rule_test: bool = false
 var battle_combo_motion_preview: bool = false
 var battle_launch_preview_mode: String = ""
 var battle_debug_window_enabled: bool = false
@@ -126,10 +146,12 @@ var battle_selected_target_id: String = ""
 var battle_selected_ally_target_id: String = ""
 var battle_hover_target_id: String = ""
 var battle_hover_ally_target_id: String = ""
+var battle_hover_info_actor_id: String = ""
 var battle_target_mode: String = "enemy"
 var battle_command_owner: String = "player"
 var battle_pending_spirit_id: String = ""
 var battle_pending_item_id: String = ""
+var battle_pending_pet_skill_id: String = ""
 var battle_switch_pet_button_pet_ids: Dictionary = {}
 var battle_pending_player_command: Dictionary = {}
 var battle_pending_pet_command: Dictionary = {}
@@ -137,6 +159,7 @@ var battle_event_queue: Array[Dictionary] = []
 var battle_current_event: Dictionary = {}
 var battle_current_event_duration: float = 0.0
 var battle_current_event_actor_snapshots: Dictionary = {}
+var battle_round_end_status_processed: bool = false
 var battle_last_round_applied_events: int = 0
 var battle_last_round_event_types: Array[String] = []
 var battle_last_round_actor_order: Array[String] = []
@@ -149,6 +172,7 @@ var battle_last_event_damage: int = 0
 var battle_last_event_heal: int = 0
 var battle_last_event_launch: bool = false
 var battle_last_event_launch_mode: String = ""
+var battle_last_event_ledger: Dictionary = {}
 var battle_float_texts: Array[Dictionary] = []
 var battle_debug_window: Window
 var battle_debug_text: TextEdit
@@ -194,6 +218,18 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_retarget_visual_check")
 	elif auto_battle_visual_timing_check:
 		call_deferred("_run_auto_battle_visual_timing_check")
+	elif auto_battle_event_ledger_check:
+		call_deferred("_run_auto_battle_event_ledger_check")
+	elif auto_battle_status_check:
+		call_deferred("_run_auto_battle_status_check")
+	elif auto_battle_status_skill_check:
+		call_deferred("_run_auto_battle_status_skill_check")
+	elif auto_battle_status_hit_check:
+		call_deferred("_run_auto_battle_status_hit_check")
+	elif auto_battle_status_rule_check:
+		call_deferred("_run_auto_battle_status_rule_check")
+	elif auto_battle_passive_hover_check:
+		call_deferred("_run_auto_battle_passive_hover_check")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -250,6 +286,14 @@ func _ready() -> void:
 		call_deferred("_open_battle_formation_preview")
 	elif battle_stat_test:
 		call_deferred("_open_battle_stat_test")
+	elif battle_status_test:
+		call_deferred("_open_battle_status_test")
+	elif battle_status_skill_test:
+		call_deferred("_open_battle_status_skill_test")
+	elif battle_status_hit_test:
+		call_deferred("_open_battle_status_hit_test")
+	elif battle_status_rule_test:
+		call_deferred("_open_battle_status_rule_test")
 	elif battle_combo_motion_preview:
 		call_deferred("_open_battle_combo_motion_preview")
 	elif battle_launch_preview_mode != "":
@@ -336,12 +380,32 @@ func _apply_preview_window_args() -> void:
 			auto_battle_retarget_visual_check = true
 		elif arg == "--auto-battle-visual-timing-check":
 			auto_battle_visual_timing_check = true
+		elif arg == "--auto-battle-event-ledger-check":
+			auto_battle_event_ledger_check = true
+		elif arg == "--auto-battle-status-check":
+			auto_battle_status_check = true
+		elif arg == "--auto-battle-status-skill-check":
+			auto_battle_status_skill_check = true
+		elif arg == "--auto-battle-status-hit-check":
+			auto_battle_status_hit_check = true
+		elif arg == "--auto-battle-status-rule-check":
+			auto_battle_status_rule_check = true
+		elif arg == "--auto-battle-passive-hover-check":
+			auto_battle_passive_hover_check = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
 			battle_formation_preview = true
 		elif arg == "--battle-stat-test":
 			battle_stat_test = true
+		elif arg == "--battle-status-test":
+			battle_status_test = true
+		elif arg == "--battle-status-skill-test":
+			battle_status_skill_test = true
+		elif arg == "--battle-status-hit-test":
+			battle_status_hit_test = true
+		elif arg == "--battle-status-rule-test":
+			battle_status_rule_test = true
 		elif arg == "--battle-combo-motion-preview":
 			battle_combo_motion_preview = true
 		elif arg == "--battle-launch-straight-preview":
@@ -1148,6 +1212,8 @@ func _run_auto_battle_spirit_check() -> void:
 
 func _run_auto_battle_action_catalog_check() -> void:
 	var errors := BattleActionCatalog.validation_errors()
+	errors.append_array(BattlePassiveCatalog.validation_errors())
+	errors.append_array(PetTemplateCatalog.validation_errors())
 	var grace_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_GRACE_ALL)
 	var moist_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_MOIST_SINGLE)
 	var poison_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_SINGLE)
@@ -1459,6 +1525,626 @@ func _run_auto_battle_visual_timing_check() -> void:
 		str(flies_after_combo_hit),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_event_ledger_check() -> void:
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle event ledger check ready: status=failed started=false")
+		get_tree().quit(1)
+		return
+	var original_target_id := "enemy_front_3"
+	var second_target_id := "enemy_back_1"
+	battle_state = BattleModel.set_actor_hp(battle_state, original_target_id, 1)
+	battle_state = BattleModel.set_actor_hp(battle_state, second_target_id, 1)
+	battle_event_queue = [
+		{
+			"type": "attack",
+			"attackerId": "ally_attack_high",
+			"targetId": original_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"damage": 20,
+			"speed": 100,
+			"sequence": 0,
+			"movementStyle": "melee",
+			"canLaunch": false,
+		},
+		{
+			"type": "attack",
+			"attackerId": "ally_speed_normal",
+			"targetId": original_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"damage": 99,
+			"speed": 90,
+			"sequence": 1,
+			"movementStyle": "melee",
+			"canLaunch": false,
+		},
+		{
+			"type": "attack",
+			"attackerId": "ally_speed_slow",
+			"targetId": original_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"damage": 99,
+			"speed": 80,
+			"sequence": 2,
+			"movementStyle": "melee",
+			"canLaunch": false,
+		},
+	]
+	battle_last_round_applied_events = 0
+	battle_last_round_event_types.clear()
+	battle_last_round_actor_order.clear()
+	battle_last_round_speeds.clear()
+	battle_last_round_enemy_target_ids.clear()
+	battle_state["phase"] = "round_events"
+	_play_next_battle_event()
+	var first_ledger := battle_last_event_ledger.duplicate(true)
+	var first_display_target := str(battle_current_event.get("targetId", ""))
+	var expected_second_damage := BattleModel.attack_damage_preview_for(battle_state, "ally_speed_normal", second_target_id)
+
+	battle_action_timer = 0.01
+	_update_battle_animation(0.02)
+	await get_tree().process_frame
+	var second_ledger := battle_last_event_ledger.duplicate(true)
+	var second_display_target := str(battle_current_event.get("targetId", ""))
+	var expected_third_target := BattleModel.living_enemy_id(battle_state)
+
+	battle_action_timer = 0.01
+	_update_battle_animation(0.02)
+	await get_tree().process_frame
+	var third_ledger := battle_last_event_ledger.duplicate(true)
+	var third_display_target := str(battle_current_event.get("targetId", ""))
+
+	started = _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle event ledger check ready: status=failed restarted=false")
+		get_tree().quit(1)
+		return
+	var combo_target_id := "enemy_front_3"
+	battle_state = BattleModel.set_actor_hp(battle_state, combo_target_id, 18)
+	battle_event_queue = [{
+		"type": "combo_attack",
+		"attackerId": "ally_speed_fast",
+		"participantIds": ["ally_speed_fast", "ally_attack_high"],
+		"targetId": combo_target_id,
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 96,
+		"speed": 120,
+		"sequence": 3,
+		"movementStyle": "melee_combo",
+		"canLaunch": true,
+		"launchMode": "bounce",
+	}]
+	battle_state["phase"] = "round_events"
+	_play_next_battle_event()
+	var combo_ledger := battle_last_event_ledger.duplicate(true)
+	var combo_timeline := combo_ledger.get("timeline", {}) as Dictionary
+	var trace_has_ledger := false
+	if battle_trace_path != "":
+		var trace_file := FileAccess.open(battle_trace_path, FileAccess.READ)
+		if trace_file != null:
+			var trace_text := trace_file.get_as_text()
+			trace_file.close()
+			trace_has_ledger = trace_text.find("\"kind\":\"battle_event_ledger\"") >= 0
+
+	var first_ok := int(first_ledger.get("schemaVersion", 0)) == 1 and str(first_ledger.get("declaredTargetId", "")) == original_target_id and str(first_ledger.get("resolvedTargetId", "")) == original_target_id and first_display_target == original_target_id
+	var second_ok := bool(second_ledger.get("retargeted", false)) and str(second_ledger.get("declaredTargetId", "")) == original_target_id and str(second_ledger.get("resolvedTargetId", "")) == second_target_id and second_display_target == second_target_id and int(second_ledger.get("damage", 0)) == expected_second_damage
+	var third_ok := bool(third_ledger.get("retargeted", false)) and str(third_ledger.get("resolvedTargetId", "")) == expected_third_target and third_display_target == expected_third_target and expected_third_target != "" and expected_third_target != original_target_id and expected_third_target != second_target_id
+	var combo_ok := bool(combo_ledger.get("launch", false)) and str(combo_ledger.get("launchMode", "")) == "bounce" and float(combo_timeline.get("damageRevealProgress", 0.0)) > BATTLE_LAUNCH_TARGET_START_RATIO and float(combo_timeline.get("launchStartProgress", 0.0)) >= float(combo_timeline.get("damageRevealProgress", 0.0))
+	var status := "ok" if first_ok and second_ok and third_ok and combo_ok and trace_has_ledger else "failed"
+	print("battle event ledger check ready: status=%s first=%s second=%s third=%s combo=%s trace=%s second_damage=%d expected_second=%d third_target=%s reveal=%.2f launch_start=%.2f" % [
+		status,
+		str(first_ok),
+		str(second_ok),
+		str(third_ok),
+		str(combo_ok),
+		str(trace_has_ledger),
+		int(second_ledger.get("damage", 0)),
+		expected_second_damage,
+		expected_third_target,
+		float(combo_timeline.get("damageRevealProgress", 0.0)),
+		float(combo_timeline.get("launchStartProgress", 0.0)),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_status_check() -> void:
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle status check ready: status=failed started=false")
+		get_tree().quit(1)
+		return
+
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_front_3", BattleModel.STATUS_POISON, 3, 7, BattleModel.PLAYER_ACTOR_ID)
+	var poison_events := BattleModel.build_round_end_status_events(battle_state)
+	var poison_event := {}
+	for value in poison_events:
+		var candidate := value as Dictionary
+		if str(candidate.get("targetId", "")) == "enemy_front_3":
+			poison_event = candidate
+			break
+	var poison_before_hp := int(BattleModel.actor_by_id(battle_state, "enemy_front_3").get("hp", 0))
+	var poison_before_snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, poison_event)
+	var poison_ledger := BattleEventLedger.build_from_applied_state(battle_state, poison_event, poison_before_snapshots, _battle_event_timeline_for_applied_event(poison_event))
+	var poison_after := BattleModel.actor_by_id(battle_state, "enemy_front_3")
+	var poison_ok := (
+		str(poison_ledger.get("type", "")) == "status_tick"
+		and str(poison_ledger.get("statusId", "")) == BattleModel.STATUS_POISON
+		and int(poison_after.get("hp", 0)) == poison_before_hp - 7
+		and BattleStatusModel.status_turns(poison_after, BattleModel.STATUS_POISON) == 2
+	)
+
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_1", BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	var sleep_before_hp := int(BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID).get("hp", 0))
+	var sleep_event := {
+		"type": "attack",
+		"attackerId": "enemy_back_1",
+		"targetId": BattleModel.PLAYER_ACTOR_ID,
+		"targetSide": BattleModel.SIDE_ALLY,
+		"damage": 20,
+		"speed": 80,
+		"sequence": 1,
+		"movementStyle": "melee",
+		"canLaunch": true,
+	}
+	var sleep_before_snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, sleep_event)
+	var sleep_ledger := BattleEventLedger.build_from_applied_state(battle_state, sleep_event, sleep_before_snapshots, _battle_event_timeline_for_applied_event(sleep_event))
+	var sleep_after_actor := BattleModel.actor_by_id(battle_state, "enemy_back_1")
+	var sleep_ok := (
+		str(sleep_ledger.get("type", "")) == "status_skip"
+		and str(sleep_ledger.get("statusId", "")) == BattleModel.STATUS_SLEEP
+		and int(BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID).get("hp", 0)) == sleep_before_hp
+		and BattleStatusModel.status_turns(sleep_after_actor, BattleModel.STATUS_SLEEP) == 1
+	)
+
+	var plain_damage := BattleModel.attack_damage_preview_for(battle_state, "ally_attack_high", "enemy_back_4")
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_4", BattleModel.STATUS_STONE, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	var stone_damage := BattleModel.attack_damage_preview_for(battle_state, "ally_attack_high", "enemy_back_4")
+	var stone_ok := stone_damage < plain_damage
+
+	battle_state = BattleModel.set_actor_status(battle_state, "ally_speed_fast", BattleModel.STATUS_CONFUSION, 2, 0, "enemy_back_2")
+	var confusion_event := {
+		"type": "attack",
+		"attackerId": "ally_speed_fast",
+		"targetId": "enemy_front_1",
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 18,
+		"speed": 120,
+		"sequence": 2,
+		"movementStyle": "melee",
+		"canLaunch": false,
+	}
+	var confusion_before_snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, confusion_event)
+	var confusion_ledger := BattleEventLedger.build_from_applied_state(battle_state, confusion_event, confusion_before_snapshots, _battle_event_timeline_for_applied_event(confusion_event))
+	var confused_target := BattleModel.actor_by_id(battle_state, str(confusion_ledger.get("resolvedTargetId", "")))
+	var confusion_ok := (
+		str(confusion_ledger.get("statusResult", "")) == "confused_retarget"
+		and bool(confusion_ledger.get("retargeted", false))
+		and str(confused_target.get("side", "")) == BattleModel.SIDE_ALLY
+		and BattleStatusModel.status_turns(BattleModel.actor_by_id(battle_state, "ally_speed_fast"), BattleModel.STATUS_CONFUSION) == 1
+	)
+
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_front_2", BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	var wake_event := {
+		"type": "attack",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"targetId": "enemy_front_2",
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 1,
+		"speed": 100,
+		"sequence": 3,
+		"movementStyle": "melee",
+		"canLaunch": false,
+	}
+	battle_state = BattleModel.apply_battle_event(battle_state, wake_event)
+	var wake_target := BattleModel.actor_by_id(battle_state, "enemy_front_2")
+	var wake_ok := not BattleStatusModel.has_status(wake_target, BattleModel.STATUS_SLEEP)
+
+	var status := "ok" if poison_ok and sleep_ok and stone_ok and confusion_ok and wake_ok else "failed"
+	print("battle status check ready: status=%s poison=%s sleep=%s stone=%s confusion=%s wake=%s poison_hp=%d poison_turns=%d plain=%d stone=%d confused_target=%s" % [
+		status,
+		str(poison_ok),
+		str(sleep_ok),
+		str(stone_ok),
+		str(confusion_ok),
+		str(wake_ok),
+		int(poison_after.get("hp", 0)),
+		BattleStatusModel.status_turns(poison_after, BattleModel.STATUS_POISON),
+		plain_damage,
+		stone_damage,
+		str(confusion_ledger.get("resolvedTargetId", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_status_skill_check() -> void:
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle status skill check ready: status=failed started=false")
+		get_tree().quit(1)
+		return
+	_set_battle_command_owner("pet")
+	var labels_ok := false
+	if battle_command_buttons.has("defend") and battle_command_buttons.has("item") and battle_command_buttons.has("switch_pet"):
+		var sleep_button := battle_command_buttons["defend"] as Button
+		var confuse_button := battle_command_buttons["item"] as Button
+		var stone_button := battle_command_buttons["switch_pet"] as Button
+		labels_ok = (
+			sleep_button != null
+			and confuse_button != null
+			and stone_button != null
+			and sleep_button.text == "技4 催眠粉"
+			and confuse_button.text == "技5 迷惑吼"
+			and stone_button.text == "技6 石化凝视"
+		)
+	var sleep_result := _auto_apply_pet_status_skill_for_check(BattleModel.PET_SKILL_SLEEP_POWDER, "enemy_back_1", BattleModel.STATUS_SLEEP)
+	var confusion_result := _auto_apply_pet_status_skill_for_check(BattleModel.PET_SKILL_CONFUSE_CRY, "enemy_back_2", BattleModel.STATUS_CONFUSION)
+	var stone_result := _auto_apply_pet_status_skill_for_check(BattleModel.PET_SKILL_STONE_GAZE, "enemy_back_3", BattleModel.STATUS_STONE)
+	var sleep_ok := bool(sleep_result.get("ok", false))
+	var confusion_ok := bool(confusion_result.get("ok", false))
+	var stone_ok := bool(stone_result.get("ok", false))
+	var status := "ok" if labels_ok and sleep_ok and confusion_ok and stone_ok else "failed"
+	print("battle status skill check ready: status=%s labels=%s sleep=%s confusion=%s stone=%s sleep_event=%s confusion_event=%s stone_event=%s" % [
+		status,
+		str(labels_ok),
+		str(sleep_ok),
+		str(confusion_ok),
+		str(stone_ok),
+		str(sleep_result.get("eventType", "")),
+		str(confusion_result.get("eventType", "")),
+		str(stone_result.get("eventType", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_status_hit_check() -> void:
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle status hit check ready: status=failed started=false")
+		get_tree().quit(1)
+		return
+	var applied_result := _auto_apply_pet_status_hit_case(
+		BattleModel.PET_SKILL_SLEEP_POWDER,
+		"enemy_back_1",
+		BattleModel.STATUS_SLEEP,
+		0.0,
+		1.0,
+		"applied"
+	)
+	var resisted_result := _auto_apply_pet_status_hit_case(
+		BattleModel.PET_SKILL_CONFUSE_CRY,
+		"enemy_back_4",
+		BattleModel.STATUS_CONFUSION,
+		1.0,
+		BattleActionCatalog.effect_status_hit_rate_for(BattleModel.PET_SKILL_CONFUSE_CRY, 0.78),
+		"resisted"
+	)
+	var poison_result := _auto_apply_poison_resist_case()
+	var status := "ok" if bool(applied_result.get("ok", false)) and bool(resisted_result.get("ok", false)) and bool(poison_result.get("ok", false)) else "failed"
+	print("battle status hit check ready: status=%s applied=%s resisted=%s poison_resisted=%s applied_chance=%.2f resisted_chance=%.2f poison_chance=%.2f" % [
+		status,
+		str(applied_result.get("result", "")),
+		str(resisted_result.get("result", "")),
+		str(poison_result.get("result", "")),
+		float(applied_result.get("chance", -1.0)),
+		float(resisted_result.get("chance", -1.0)),
+		float(poison_result.get("chance", -1.0)),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_status_rule_check() -> void:
+	var cleanse_ok := await _auto_check_status_cleanse_item()
+	var overwrite_result := _auto_check_status_overwrite()
+	var immune_result := _auto_check_status_immunity()
+	var status := "ok" if cleanse_ok and bool(overwrite_result.get("ok", false)) and bool(immune_result.get("ok", false)) else "failed"
+	print("battle status rule check ready: status=%s cleanse=%s overwrite=%s immune=%s overwrite_result=%s immune_result=%s" % [
+		status,
+		str(cleanse_ok),
+		str(overwrite_result.get("ok", false)),
+		str(immune_result.get("ok", false)),
+		str(overwrite_result.get("result", "")),
+		str(immune_result.get("result", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_passive_hover_check() -> void:
+	var catalog_errors := BattlePassiveCatalog.validation_errors()
+	catalog_errors.append_array(PetTemplateCatalog.validation_errors())
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		print("battle passive hover check ready: status=failed started=false")
+		get_tree().quit(1)
+		return
+
+	var passive_actor := BattleModel.actor_by_id(battle_state, "enemy_front_4")
+	var hover_screen := _world_to_screen(_battle_slot_world_position(str(passive_actor.get("slotId", ""))))
+	_update_battle_hover_at_screen_point(hover_screen)
+	await get_tree().process_frame
+	var passive_text := battle_passive_label.text if battle_passive_label != null else ""
+	var passive_visible := battle_passive_panel != null and battle_passive_panel.visible
+	var passive_ok := (
+		catalog_errors.is_empty()
+		and passive_visible
+		and passive_text.find("硬壳体质：[被动技能] 根据地属性获得石化抗性；地属性达到10时免疫石化。") >= 0
+		and battle_passive_panel.z_index < battle_command_panel.z_index
+		and BattleModel.actor_passive_skill_ids_for_trace(passive_actor).has("wuli_hard_shell")
+	)
+
+	var command_visible_before := battle_command_panel != null and battle_command_panel.visible and not _battle_commands_locked()
+	var player_size_before := battle_command_panel.size
+	var player_columns_before := battle_command_button_grid.columns if battle_command_button_grid != null else 0
+	_on_battle_command_pressed("attack")
+	var selected_for_pet_menu := _auto_click_enemy_target("enemy_front_4")
+	await get_tree().process_frame
+	var pet_owner_at_menu := battle_command_owner
+	var pet_columns_at_menu := battle_command_button_grid.columns if battle_command_button_grid != null else -1
+	var pet_size_at_menu := battle_command_panel.size
+	var expected_pet_size_at_menu := _battle_command_panel_size(_layout_size())
+	var pet_position_at_menu := battle_command_panel.position
+	var pet_menu_layout_ok := (
+		selected_for_pet_menu
+		and battle_command_owner == "pet"
+		and battle_command_button_grid != null
+		and battle_command_button_grid.columns == 1
+		and pet_size_at_menu.distance_to(expected_pet_size_at_menu) < 1.0
+		and battle_command_panel.position.x + battle_command_panel.size.x <= _layout_size().x - 17.0
+	)
+	_on_battle_command_pressed("help")
+	await get_tree().process_frame
+	var player_return_layout_ok := (
+		battle_command_owner == "player"
+		and battle_command_button_grid != null
+		and battle_command_button_grid.columns == player_columns_before
+		and battle_command_panel.size.distance_to(player_size_before) < 1.0
+	)
+
+	_on_battle_command_pressed("defend")
+	var pet_command_open := battle_command_owner == "pet" and battle_command_panel != null and battle_command_panel.visible
+	_auto_submit_pet_defend_if_needed()
+	await get_tree().process_frame
+	var hidden_during_action := battle_command_panel != null and not battle_command_panel.visible and _battle_commands_locked()
+	var guard := 0
+	while guard < 1800 and battle_active and _battle_commands_locked():
+		guard += 1
+		await get_tree().process_frame
+	var visible_after_action := battle_active and battle_command_panel != null and battle_command_panel.visible and not _battle_commands_locked()
+	var status := "ok" if passive_ok and command_visible_before and pet_menu_layout_ok and player_return_layout_ok and pet_command_open and hidden_during_action and visible_after_action else "failed"
+	print("battle passive hover check ready: status=%s passive=%s before=%s pet_layout=%s player_return=%s pet_menu=%s hidden_action=%s visible_after=%s pet_owner=%s pet_columns=%d pet_size=%s expected_pet_size=%s pet_pos=%s viewport=%s selected=%s text=%s errors=%s" % [
+		status,
+		str(passive_ok),
+		str(command_visible_before),
+		str(pet_menu_layout_ok),
+		str(player_return_layout_ok),
+		str(pet_command_open),
+		str(hidden_during_action),
+		str(visible_after_action),
+		pet_owner_at_menu,
+		pet_columns_at_menu,
+		str(pet_size_at_menu),
+		str(expected_pet_size_at_menu),
+		str(pet_position_at_menu),
+		str(_layout_size()),
+		str(selected_for_pet_menu),
+		passive_text,
+		str(catalog_errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _auto_apply_pet_status_skill_for_check(skill_id: String, target_id: String, expected_status_id: String) -> Dictionary:
+	var events := BattleModel.build_player_pet_round_events(
+		battle_state,
+		{"command": "defend"},
+		{"command": "pet_skill", "targetId": target_id, "skillId": skill_id}
+	)
+	var skill_event := {}
+	for value in events:
+		var event := value as Dictionary
+		if str(event.get("type", "")) == "skill_status" and str(event.get("skillId", "")) == skill_id:
+			skill_event = event
+			break
+	if skill_event.is_empty():
+		return {"ok": false, "eventType": ""}
+	skill_event["statusHitRate"] = 1.0
+	var snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, skill_event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, skill_event, snapshots, _battle_event_timeline_for_applied_event(skill_event))
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	var applied_ok := (
+		str(ledger.get("type", "")) == "skill_status"
+		and str(ledger.get("statusId", "")) == expected_status_id
+		and str(ledger.get("statusResult", "")) == "applied"
+		and BattleStatusModel.has_status(target, expected_status_id)
+		and BattleStatusModel.status_turns(target, expected_status_id) == BattleActionCatalog.effect_status_turns_for(skill_id, 2)
+	)
+	return {
+		"ok": applied_ok,
+		"eventType": str(ledger.get("type", "")),
+	}
+
+
+func _auto_check_status_cleanse_item() -> bool:
+	var started := _start_stat_formula_test_battle()
+	await get_tree().process_frame
+	if not started:
+		return false
+	var target_id := "ally_speed_normal"
+	battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_POISON, 3, 6, "enemy_back_1")
+	battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_SLEEP, 2, 0, "enemy_back_1")
+	var before_count := BattleModel.item_count(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
+	_on_battle_command_pressed("item")
+	var menu_open := battle_command_owner == "item"
+	var button_label_ok := false
+	if battle_command_buttons.has("item"):
+		var cleanse_button := battle_command_buttons["item"] as Button
+		button_label_ok = cleanse_button != null and cleanse_button.text.begins_with("净化草5")
+	_on_battle_command_pressed("item")
+	var mode_ok := battle_target_mode == "ally_item_single" and battle_pending_item_id == BattleModel.ITEM_CLEANSE_SINGLE
+	var actor := BattleModel.actor_by_id(battle_state, target_id)
+	var selected := _select_battle_target_at_screen_point(_world_to_screen(_battle_slot_world_position(str(actor.get("slotId", "")))))
+	var pet_panel_open := battle_command_owner == "pet"
+	_auto_submit_pet_defend_if_needed()
+	var saw_event: bool = await _auto_wait_for_event_type("item_cleanse", 1200)
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	var after_count := BattleModel.item_count(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
+	return (
+		menu_open
+		and button_label_ok
+		and mode_ok
+		and selected
+		and pet_panel_open
+		and saw_event
+		and after_count == before_count - 1
+		and not BattleStatusModel.has_status(target, BattleModel.STATUS_POISON)
+		and not BattleStatusModel.has_status(target, BattleModel.STATUS_SLEEP)
+		and str(battle_last_event_ledger.get("statusResult", "")) == "cleansed"
+	)
+
+
+func _auto_check_status_overwrite() -> Dictionary:
+	if not _start_stat_formula_test_battle():
+		return {"ok": false, "result": "not_started"}
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_1", BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_PET_ID)
+	var event := _status_rule_skill_event(BattleModel.PET_SKILL_STONE_GAZE, "enemy_back_1", BattleModel.STATUS_STONE, 1, 1.0)
+	var snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, event, snapshots, _battle_event_timeline_for_applied_event(event))
+	var target := BattleModel.actor_by_id(battle_state, "enemy_back_1")
+	var saw_overwrite := false
+	for change_value in ledger.get("statusChanges", []):
+		var change := change_value as Dictionary
+		if str(change.get("statusId", "")) == BattleModel.STATUS_SLEEP and str(change.get("change", "")) == "remove_overwritten":
+			saw_overwrite = true
+	return {
+		"ok": str(ledger.get("statusResult", "")) == "applied"
+			and BattleStatusModel.has_status(target, BattleModel.STATUS_STONE)
+			and not BattleStatusModel.has_status(target, BattleModel.STATUS_SLEEP)
+			and saw_overwrite,
+		"result": str(ledger.get("statusResult", "")),
+	}
+
+
+func _auto_check_status_immunity() -> Dictionary:
+	if not _start_stat_formula_test_battle():
+		return {"ok": false, "result": "not_started"}
+	var passive_ids := BattleModel.actor_passive_skill_ids_for_trace(BattleModel.actor_by_id(battle_state, "enemy_front_4"))
+	var event := _status_rule_skill_event(BattleModel.PET_SKILL_STONE_GAZE, "enemy_front_4", BattleModel.STATUS_STONE, 2, 1.0)
+	var snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, event, snapshots, _battle_event_timeline_for_applied_event(event))
+	var target := BattleModel.actor_by_id(battle_state, "enemy_front_4")
+	return {
+		"ok": str(ledger.get("statusResult", "")) == "immune"
+			and passive_ids.has("wuli_hard_shell")
+			and not BattleStatusModel.has_status(target, BattleModel.STATUS_STONE),
+		"result": str(ledger.get("statusResult", "")),
+	}
+
+
+func _status_rule_skill_event(skill_id: String, target_id: String, status_id: String, sequence: int, hit_rate: float) -> Dictionary:
+	return {
+		"type": "skill_status",
+		"attackerId": BattleModel.PLAYER_PET_ID,
+		"targetId": target_id,
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"speed": 120,
+		"sequence": sequence,
+		"skillId": skill_id,
+		"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
+		"statusId": status_id,
+		"statusTurns": 2,
+		"statusPotency": 0,
+		"statusHitRate": hit_rate,
+		"movementStyle": "ranged_status",
+		"canLaunch": false,
+	}
+
+
+func _auto_apply_pet_status_hit_case(skill_id: String, target_id: String, expected_status_id: String, resistance: float, hit_rate: float, expected_result: String) -> Dictionary:
+	battle_state = BattleModel.set_actor_status_resist(battle_state, target_id, expected_status_id, resistance)
+	var events := BattleModel.build_player_pet_round_events(
+		battle_state,
+		{"command": "defend"},
+		{"command": "pet_skill", "targetId": target_id, "skillId": skill_id}
+	)
+	var skill_event := {}
+	for value in events:
+		var event := value as Dictionary
+		if str(event.get("type", "")) == "skill_status" and str(event.get("skillId", "")) == skill_id:
+			skill_event = event
+			break
+	if skill_event.is_empty():
+		return {"ok": false, "result": "missing_event"}
+	skill_event["statusHitRate"] = hit_rate
+	var snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, skill_event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, skill_event, snapshots, _battle_event_timeline_for_applied_event(skill_event))
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	var has_status := BattleStatusModel.has_status(target, expected_status_id)
+	var result := str(ledger.get("statusResult", ""))
+	var ok := (
+		str(ledger.get("type", "")) == "skill_status"
+		and str(ledger.get("statusId", "")) == expected_status_id
+		and result == expected_result
+		and has_status == (expected_result == "applied")
+	)
+	return {
+		"ok": ok,
+		"result": result,
+		"chance": float(ledger.get("statusChance", -1.0)),
+		"roll": float(ledger.get("statusRoll", -1.0)),
+	}
+
+
+func _auto_apply_poison_resist_case() -> Dictionary:
+	var target_id := "enemy_back_5"
+	battle_state = BattleModel.set_actor_status_resist(battle_state, target_id, BattleModel.STATUS_POISON, 1.0)
+	var before_hp := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", 0))
+	var poison_event := {
+		"type": "spirit_poison",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"targetId": target_id,
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 8,
+		"speed": 100,
+		"sequence": 77,
+		"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"),
+		"spiritId": BattleModel.SPIRIT_POISON_SINGLE,
+		"statusId": BattleModel.STATUS_POISON,
+		"statusTurns": 3,
+		"statusPotency": 4,
+		"statusHitRate": 0.6,
+	}
+	var snapshots := _battle_actor_snapshots_by_id()
+	battle_state = BattleModel.apply_battle_event(battle_state, poison_event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, poison_event, snapshots, _battle_event_timeline_for_applied_event(poison_event))
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	var after_hp := int(target.get("hp", 0))
+	var result := str(ledger.get("statusResult", ""))
+	var ok := (
+		str(ledger.get("type", "")) == "spirit_poison"
+		and result == "resisted"
+		and after_hp < before_hp
+		and not BattleStatusModel.has_status(target, BattleModel.STATUS_POISON)
+	)
+	return {
+		"ok": ok,
+		"result": result,
+		"chance": float(ledger.get("statusChance", -1.0)),
+		"roll": float(ledger.get("statusRoll", -1.0)),
+	}
 
 
 func _run_auto_battle_spirit_four_check() -> void:
@@ -2075,6 +2761,53 @@ func _open_battle_stat_test() -> void:
 	_start_stat_formula_test_battle()
 
 
+func _open_battle_status_test() -> void:
+	var started := _start_stat_formula_test_battle()
+	if not started:
+		return
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_front_3", BattleModel.STATUS_POISON, 3, 7, BattleModel.PLAYER_ACTOR_ID)
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_1", BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_2", BattleModel.STATUS_STONE, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	battle_state = BattleModel.set_actor_status(battle_state, "ally_speed_fast", BattleModel.STATUS_CONFUSION, 2, 0, "enemy_back_1")
+	_set_battle_message("异常状态测试战斗。")
+	_update_battle_debug_window(true)
+	queue_redraw()
+
+
+func _open_battle_status_skill_test() -> void:
+	var started := _start_stat_formula_test_battle()
+	if not started:
+		return
+	_set_battle_message("状态技能测试战斗。")
+	queue_redraw()
+
+
+func _open_battle_status_hit_test() -> void:
+	var started := _start_stat_formula_test_battle()
+	if not started:
+		return
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_back_2", BattleModel.STATUS_SLEEP, 0.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_back_4", BattleModel.STATUS_SLEEP, 1.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_front_1", BattleModel.STATUS_CONFUSION, 0.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_front_4", BattleModel.STATUS_CONFUSION, 1.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_back_2", BattleModel.STATUS_STONE, 0.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_front_5", BattleModel.STATUS_STONE, 1.0)
+	battle_state = BattleModel.set_actor_status_resist(battle_state, "enemy_back_5", BattleModel.STATUS_POISON, 1.0)
+	_set_battle_message("状态命中测试战斗。")
+	queue_redraw()
+
+
+func _open_battle_status_rule_test() -> void:
+	var started := _start_stat_formula_test_battle()
+	if not started:
+		return
+	battle_state = BattleModel.set_actor_status(battle_state, "ally_speed_normal", BattleModel.STATUS_POISON, 3, 6, "enemy_back_1")
+	battle_state = BattleModel.set_actor_status(battle_state, "ally_speed_normal", BattleModel.STATUS_SLEEP, 2, 0, "enemy_back_1")
+	battle_state = BattleModel.set_actor_status(battle_state, "enemy_back_1", BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_PET_ID)
+	_set_battle_message("状态规则测试战斗。")
+	queue_redraw()
+
+
 func _open_battle_combo_motion_preview() -> void:
 	var loaded := _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
@@ -2112,15 +2845,20 @@ func _open_battle_launch_preview(mode: String) -> void:
 		"launchMode": mode,
 		"duration": 1.46 if mode == "bounce" else 1.08,
 	}
+	var actor_snapshots := _battle_actor_snapshots_by_id()
 	battle_state = BattleModel.apply_battle_event(battle_state, event)
 	if not bool(battle_state.get("lastEventApplied", false)):
 		return
+	var event_timeline := _battle_event_timeline_for_applied_event(event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, event, actor_snapshots, event_timeline)
+	battle_state["lastEventLedger"] = ledger
 	battle_last_round_applied_events = 1
-	_record_battle_event(event)
-	_add_battle_event_feedback(event)
+	_record_battle_event(event, ledger)
+	battle_current_event = BattleEventLedger.playback_event(event, ledger)
+	battle_current_event_actor_snapshots = actor_snapshots
+	_add_battle_event_feedback(battle_current_event, ledger)
 	_set_battle_message(str(battle_state.get("message", "")))
-	battle_current_event = event.duplicate(true)
-	battle_action_timer = _battle_event_duration(event)
+	battle_action_timer = _battle_event_duration(battle_current_event)
 	battle_current_event_duration = battle_action_timer
 	_sync_battle_buttons()
 	queue_redraw()
@@ -2177,14 +2915,14 @@ func _set_battle_command_owner(owner: String) -> void:
 	if owner == "pet":
 		battle_command_title_label.text = "PET"
 		_apply_battle_button_labels({
-			"attack": "技1 %s" % BattleActionCatalog.pet_skill_label_for_slot(1, "攻击"),
-			"spirit": "技2 %s" % BattleActionCatalog.pet_skill_label_for_slot(2, "防御"),
-			"capture": "技3 %s" % BattleActionCatalog.pet_skill_label_for_slot(3, "布伊冲撞"),
+			"attack": _pet_skill_button_label(1),
+			"spirit": _pet_skill_button_label(2),
+			"capture": _pet_skill_button_label(3),
 			"help": "返回",
-			"defend": "技4",
-			"item": "技5",
-			"switch_pet": "技6",
-			"run": "技7",
+			"defend": _pet_skill_button_label(4),
+			"item": _pet_skill_button_label(5),
+			"switch_pet": _pet_skill_button_label(6),
+			"run": _pet_skill_button_label(7),
 		})
 	elif owner == "spirit":
 		battle_command_title_label.text = "精灵"
@@ -2206,7 +2944,7 @@ func _set_battle_command_owner(owner: String) -> void:
 			"capture": _battle_item_label(BattleModel.ITEM_POISON_SINGLE, "毒粉5"),
 			"help": "返回",
 			"defend": _battle_item_label(BattleModel.ITEM_POISON_ALL, "毒雾粉5"),
-			"item": "",
+			"item": _battle_item_label(BattleModel.ITEM_CLEANSE_SINGLE, "净化草5"),
 			"switch_pet": "",
 			"run": "",
 		})
@@ -2225,7 +2963,35 @@ func _set_battle_command_owner(owner: String) -> void:
 			"switch_pet": "换宠",
 			"run": "逃跑",
 		})
+	_sync_battle_command_layout()
 	_sync_battle_buttons()
+	_layout_hud()
+
+
+func _pet_skill_button_label(slot: int) -> String:
+	var action := BattleActionCatalog.pet_skill_action_for_slot(slot)
+	var label := str(action.get("label", ""))
+	return "技%d %s" % [slot, label] if label != "" else "技%d" % slot
+
+
+func _pet_skill_slot_for_command(command_id: String) -> int:
+	match command_id:
+		"attack":
+			return 1
+		"spirit":
+			return 2
+		"capture":
+			return 3
+		"defend":
+			return 4
+		"item":
+			return 5
+		"switch_pet":
+			return 6
+		"run":
+			return 7
+		_:
+			return 0
 
 
 func _apply_switch_pet_button_labels() -> void:
@@ -2274,6 +3040,69 @@ func _apply_battle_button_labels(labels: Dictionary) -> void:
 		var button := battle_command_buttons[command_id] as Button
 		if button != null:
 			button.text = str(labels[command_id])
+	_sync_battle_command_layout()
+
+
+func _sync_battle_command_layout() -> void:
+	if battle_command_button_grid == null:
+		return
+	var list_mode := battle_command_owner != "player"
+	battle_command_button_grid.columns = 1 if list_mode else 4
+	var visible_ids := _battle_command_visible_ids()
+	var ordered_ids := _battle_command_order_for_owner()
+	var button_size := _battle_command_button_size()
+	var child_index := 0
+	for command_id in ordered_ids:
+		if not battle_command_buttons.has(command_id):
+			continue
+		var ordered_button := battle_command_buttons[command_id] as Button
+		if ordered_button != null:
+			battle_command_button_grid.move_child(ordered_button, child_index)
+			child_index += 1
+	for command_id in BATTLE_COMMAND_BUTTON_ORDER:
+		if not battle_command_buttons.has(command_id):
+			continue
+		var button := battle_command_buttons[command_id] as Button
+		if button == null:
+			continue
+		button.visible = visible_ids.has(command_id)
+		button.custom_minimum_size = button_size
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if battle_command_panel != null:
+		battle_command_panel.custom_minimum_size = _battle_command_panel_size(_layout_size())
+
+
+func _battle_command_order_for_owner() -> Array[String]:
+	match battle_command_owner:
+		"pet":
+			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
+		"spirit":
+			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
+		"item":
+			return ["attack", "spirit", "capture", "defend", "item", "help", "switch_pet", "run"]
+		"switch_pet":
+			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
+		_:
+			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
+
+
+func _battle_command_visible_ids() -> Array[String]:
+	match battle_command_owner:
+		"pet":
+			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
+		"spirit":
+			return ["attack", "spirit", "capture", "defend", "help"]
+		"item":
+			return ["attack", "spirit", "capture", "defend", "item", "help"]
+		"switch_pet":
+			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
+		_:
+			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
+
+
+func _battle_command_button_size() -> Vector2:
+	return Vector2(70.0, 42.0) if battle_command_owner == "player" else Vector2(0.0, 40.0)
 
 
 func _battle_command_panel_is_top_right() -> bool:
@@ -2310,7 +3139,7 @@ func _battle_full_formation_screen_layout_ok() -> bool:
 
 
 func _battle_point_overlaps_panel(point: Vector2) -> bool:
-	for control in [battle_command_panel, battle_message_panel, top_panel]:
+	for control in [battle_command_panel, battle_passive_panel, battle_message_panel, top_panel]:
 		if control != null and control.visible:
 			if Rect2(control.global_position, control.size).has_point(point):
 				return true
@@ -2597,6 +3426,8 @@ func _build_hud() -> void:
 
 	battle_command_panel = _panel_container("BattleCommandPanel")
 	battle_command_panel.visible = false
+	battle_command_panel.z_index = 30
+	battle_command_panel.add_theme_stylebox_override("panel", _battle_command_panel_style())
 	var battle_column := VBoxContainer.new()
 	battle_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -2609,22 +3440,48 @@ func _build_hud() -> void:
 	battle_command_title_label.add_theme_font_size_override("font_size", 18)
 	battle_command_title_label.custom_minimum_size = Vector2(0, 24)
 	battle_column.add_child(battle_command_title_label)
-	_add_battle_button_row(battle_column, [
+	battle_command_button_grid = GridContainer.new()
+	battle_command_button_grid.name = "BattleCommandButtonGrid"
+	battle_command_button_grid.columns = 4
+	battle_command_button_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_command_button_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	battle_command_button_grid.add_theme_constant_override("h_separation", 8)
+	battle_command_button_grid.add_theme_constant_override("v_separation", 8)
+	battle_column.add_child(battle_command_button_grid)
+	_add_battle_buttons([
 		{"id": "attack", "label": "攻击"},
 		{"id": "spirit", "label": "精灵"},
 		{"id": "capture", "label": "捕捉"},
-		{"id": "help", "label": "help"},
-	])
-	_add_battle_button_row(battle_column, [
 		{"id": "defend", "label": "防御"},
 		{"id": "item", "label": "物品"},
 		{"id": "switch_pet", "label": "换宠"},
 		{"id": "run", "label": "逃跑"},
+		{"id": "help", "label": "help"},
 	])
 	hud_root.add_child(battle_command_panel)
 
+	battle_passive_panel = Panel.new()
+	battle_passive_panel.name = "BattlePassivePanel"
+	battle_passive_panel.visible = false
+	battle_passive_panel.z_index = 10
+	battle_passive_panel.clip_contents = true
+	battle_passive_panel.size = Vector2(560, 48)
+	battle_passive_panel.add_theme_stylebox_override("panel", _battle_passive_panel_style())
+	battle_passive_label = Label.new()
+	battle_passive_label.name = "BattlePassiveLabel"
+	battle_passive_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_passive_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_passive_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	battle_passive_label.add_theme_font_size_override("font_size", 18)
+	battle_passive_label.add_theme_color_override("font_color", Color(0.96, 0.9, 0.55, 1.0))
+	battle_passive_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_passive_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	battle_passive_panel.add_child(battle_passive_label)
+	hud_root.add_child(battle_passive_panel)
+
 	battle_message_panel = _panel_container("BattleMessagePanel")
 	battle_message_panel.visible = false
+	battle_message_panel.z_index = 20
 	var battle_message_box := VBoxContainer.new()
 	battle_message_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_message_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -2641,21 +3498,24 @@ func _build_hud() -> void:
 	hud_root.add_child(battle_message_panel)
 
 
-func _add_battle_button_row(parent: VBoxContainer, specs: Array) -> void:
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 8)
-	parent.add_child(row)
+func _add_battle_buttons(specs: Array) -> void:
 	for value in specs:
 		var spec := value as Dictionary
 		var button := Button.new()
 		var command_id := str(spec.get("id", ""))
 		button.text = str(spec.get("label", command_id))
-		button.custom_minimum_size = Vector2(70, 46)
+		button.custom_minimum_size = _battle_command_button_size()
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.clip_text = true
+		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		button.add_theme_stylebox_override("normal", _battle_command_button_style(Color(0.07, 0.09, 0.09, 0.54)))
+		button.add_theme_stylebox_override("hover", _battle_command_button_style(Color(0.12, 0.16, 0.16, 0.70)))
+		button.add_theme_stylebox_override("pressed", _battle_command_button_style(Color(0.16, 0.20, 0.19, 0.76)))
+		button.add_theme_stylebox_override("disabled", _battle_command_button_style(Color(0.05, 0.06, 0.06, 0.30)))
 		button.pressed.connect(_on_battle_command_pressed.bind(command_id))
-		row.add_child(button)
+		battle_command_button_grid.add_child(button)
 		battle_command_buttons[command_id] = button
+	_sync_battle_command_layout()
 
 
 func _open_battle_debug_window() -> void:
@@ -2825,7 +3685,7 @@ func _append_battle_debug_event_preview_lines(lines: Array[String]) -> void:
 
 
 func _battle_trace_enabled() -> bool:
-	return battle_stat_test or auto_battle_stat_formula_check or battle_debug_window_enabled
+	return battle_stat_test or battle_status_test or battle_status_skill_test or battle_status_hit_test or battle_status_rule_test or auto_battle_stat_formula_check or auto_battle_event_ledger_check or auto_battle_status_check or auto_battle_status_skill_check or auto_battle_status_hit_check or auto_battle_status_rule_check or auto_battle_passive_hover_check or battle_debug_window_enabled
 
 
 func _reset_battle_trace_file() -> void:
@@ -2880,6 +3740,10 @@ func _battle_trace_actor_snapshot(actor: Dictionary) -> Dictionary:
 		"attack": int(actor.get("attack", 0)),
 		"defense": int(actor.get("defense", 0)),
 		"agility": int(actor.get("quick", 0)),
+		"statuses": BattleModel.actor_statuses_for_trace(actor),
+		"statusResist": BattleModel.actor_status_resist_for_trace(actor),
+		"statusImmune": BattleModel.actor_status_immune_for_trace(actor),
+		"passiveSkillIds": BattleModel.actor_passive_skill_ids_for_trace(actor),
 	}
 
 
@@ -2917,6 +3781,34 @@ func _panel_style() -> StyleBoxFlat:
 	style.content_margin_right = 14
 	style.content_margin_top = 10
 	style.content_margin_bottom = 10
+	return style
+
+
+func _battle_command_panel_style() -> StyleBoxFlat:
+	var style := _panel_style()
+	style.bg_color = Color(0.10, 0.14, 0.14, 0.68)
+	style.border_color = Color(0.72, 0.56, 0.32, 0.82)
+	return style
+
+
+func _battle_passive_panel_style() -> StyleBoxFlat:
+	var style := _panel_style()
+	style.bg_color = Color(0.10, 0.14, 0.14, 0.50)
+	style.border_color = Color(0.72, 0.56, 0.32, 0.45)
+	style.set_border_width_all(1)
+	return style
+
+
+func _battle_command_button_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.border_color = Color(0.72, 0.56, 0.32, 0.18)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
 	return style
 
 
@@ -3112,8 +4004,10 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_selected_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
+	battle_hover_info_actor_id = ""
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_pet_skill_id = ""
 	battle_selected_ally_target_id = ""
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()
@@ -3121,6 +4015,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
 	battle_current_event_actor_snapshots.clear()
+	battle_round_end_status_processed = false
 	battle_state["guardingActorIds"] = []
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
@@ -3134,6 +4029,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_last_event_heal = 0
 	battle_last_event_launch = false
 	battle_last_event_launch_mode = ""
+	battle_last_event_ledger.clear()
 	battle_float_texts.clear()
 	_set_battle_command_owner("player")
 	if player != null:
@@ -3144,7 +4040,9 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		pet.clear_follow_target()
 		pet.visible = false
 	if battle_command_panel != null:
-		battle_command_panel.visible = true
+		battle_command_panel.visible = _battle_command_panel_should_be_visible()
+	if battle_passive_panel != null:
+		battle_passive_panel.visible = false
 	if battle_message_panel != null:
 		battle_message_panel.visible = true
 	if action_bar != null:
@@ -3167,16 +4065,19 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
+	battle_hover_info_actor_id = ""
 	battle_target_mode = "enemy"
 	battle_command_owner = "player"
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_pet_skill_id = ""
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()
 	battle_event_queue.clear()
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
 	battle_current_event_actor_snapshots.clear()
+	battle_round_end_status_processed = false
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
 	battle_last_round_actor_order.clear()
@@ -3189,10 +4090,15 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_last_event_heal = 0
 	battle_last_event_launch = false
 	battle_last_event_launch_mode = ""
+	battle_last_event_ledger.clear()
 	battle_float_texts.clear()
 	_set_battle_command_owner("player")
 	if battle_command_panel != null:
 		battle_command_panel.visible = false
+	if battle_passive_panel != null:
+		battle_passive_panel.visible = false
+	if battle_passive_label != null:
+		battle_passive_label.text = ""
 	if battle_message_panel != null:
 		battle_message_panel.visible = false
 	if action_bar != null:
@@ -3331,6 +4237,10 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 			command["targetSide"] = BattleModel.SIDE_ALLY
 			command["targetScope"] = "single"
 			command["allyTargetId"] = target_id
+		BattleModel.ITEM_CLEANSE_SINGLE:
+			command["targetSide"] = BattleModel.SIDE_ALLY
+			command["targetScope"] = "single"
+			command["allyTargetId"] = target_id
 		BattleModel.ITEM_POISON_SINGLE:
 			command["targetSide"] = BattleModel.SIDE_ENEMY
 			command["targetScope"] = "single"
@@ -3347,6 +4257,7 @@ func _open_spirit_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_pet_skill_id = ""
 	_set_battle_command_owner("spirit")
 	_set_battle_message("选择要使用的精灵。")
 
@@ -3355,6 +4266,7 @@ func _open_item_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
+	battle_pending_pet_skill_id = ""
 	_set_battle_command_owner("item")
 	_set_battle_message("选择要使用的物品。")
 
@@ -3363,6 +4275,7 @@ func _open_switch_pet_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
+	battle_pending_pet_skill_id = ""
 	battle_selected_target_id = ""
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
@@ -3474,6 +4387,8 @@ func _on_item_battle_command_pressed(command_id: String) -> void:
 			_begin_single_item_target_selection(BattleModel.ITEM_POISON_SINGLE)
 		"defend":
 			_submit_item_player_command(BattleModel.ITEM_POISON_ALL)
+		"item":
+			_begin_single_item_target_selection(BattleModel.ITEM_CLEANSE_SINGLE)
 		"help":
 			battle_pending_item_id = ""
 			battle_pending_spirit_id = ""
@@ -3488,24 +4403,26 @@ func _on_item_battle_command_pressed(command_id: String) -> void:
 			_set_battle_message("这个物品栏位暂未开放。")
 
 
-func _begin_pet_skill_target_selection() -> void:
+func _begin_pet_skill_target_selection(skill_id: String) -> void:
+	battle_pending_pet_skill_id = skill_id
 	battle_target_mode = "pet_enemy_skill"
 	battle_selected_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
-	_set_battle_message("%s：请选择敌方目标。" % BattleActionCatalog.label_for(BattleModel.PET_SKILL_BUI_CHARGE, "布伊冲撞"))
+	_set_battle_message("%s：请选择敌方目标。" % BattleActionCatalog.label_for(skill_id, "宠物技能"))
 	queue_redraw()
 
 
-func _begin_pet_attack_target_selection() -> void:
+func _begin_pet_attack_target_selection(skill_id: String = BattleModel.PET_SKILL_ATTACK) -> void:
 	if BattleModel.living_enemy_id(battle_state) == "":
 		_set_battle_message("没有可选择的目标。")
 		return
+	battle_pending_pet_skill_id = skill_id
 	battle_target_mode = "pet_enemy_attack"
 	battle_selected_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
-	_set_battle_message("%s：请选择敌方目标。" % BattleActionCatalog.label_for(BattleModel.PET_SKILL_ATTACK, "攻击"))
+	_set_battle_message("%s：请选择敌方目标。" % BattleActionCatalog.label_for(skill_id, "攻击"))
 	_sync_battle_buttons()
 	queue_redraw()
 
@@ -3524,38 +4441,49 @@ func _begin_spirit_target_selection() -> void:
 
 
 func _on_pet_battle_command_pressed(command_id: String) -> void:
-	match command_id:
+	if command_id == "help":
+		battle_pending_spirit_id = ""
+		battle_pending_item_id = ""
+		battle_pending_pet_skill_id = ""
+		battle_pending_player_command.clear()
+		battle_pending_pet_command.clear()
+		battle_selected_target_id = ""
+		battle_selected_ally_target_id = ""
+		battle_hover_target_id = ""
+		battle_hover_ally_target_id = ""
+		_set_battle_command_owner("player")
+		_set_battle_message("重新选择人物指令。")
+		return
+	var skill_action := BattleActionCatalog.pet_skill_action_for_slot(_pet_skill_slot_for_command(command_id))
+	var skill_id := str(skill_action.get("id", ""))
+	if skill_id == "":
+		_set_battle_message("这个宠物技能栏暂未开放。")
+		return
+	match str(skill_action.get("command", "")):
 		"attack":
-			_begin_pet_attack_target_selection()
-		"spirit":
-			_submit_pet_battle_command("defend")
-		"capture":
-			_begin_pet_skill_target_selection()
-		"help":
-			battle_pending_spirit_id = ""
-			battle_pending_item_id = ""
-			battle_pending_player_command.clear()
-			battle_pending_pet_command.clear()
-			battle_selected_target_id = ""
-			battle_selected_ally_target_id = ""
-			battle_hover_target_id = ""
-			battle_hover_ally_target_id = ""
-			_set_battle_command_owner("player")
-			_set_battle_message("重新选择人物指令。")
+			_begin_pet_attack_target_selection(skill_id)
+		"defend":
+			_submit_pet_battle_command("defend", "", skill_id)
+		"pet_skill":
+			_begin_pet_skill_target_selection(skill_id)
 		_:
 			_set_battle_message("这个宠物技能栏暂未开放。")
 
 
-func _submit_pet_battle_command(command_id: String, target_id: String = "") -> void:
+func _submit_pet_battle_command(command_id: String, target_id: String = "", skill_id: String = "") -> void:
 	if command_id == "attack" or command_id == "pet_skill":
 		battle_selected_target_id = target_id
 		if battle_selected_target_id == "":
 			_set_battle_message("没有可选择的目标。")
 			return
+	if skill_id == "":
+		skill_id = battle_pending_pet_skill_id
 	battle_pending_pet_command = {
 		"command": command_id,
 		"targetId": battle_selected_target_id,
+		"skillId": skill_id,
 	}
+	battle_pending_pet_skill_id = ""
 	_battle_start_pending_round()
 
 
@@ -3587,10 +4515,12 @@ func _battle_start_pending_round() -> void:
 		battle_pending_player_command,
 		battle_pending_pet_command
 	)
+	battle_round_end_status_processed = false
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_pet_skill_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
 	battle_selected_target_id = ""
@@ -3604,8 +4534,8 @@ func _battle_start_pending_round() -> void:
 		_set_battle_command_owner("player")
 		_set_battle_message("没有可行动的单位。")
 		return
-	_set_battle_command_owner("player")
 	battle_state["phase"] = "round_events"
+	_set_battle_command_owner("player")
 	_play_next_battle_event()
 
 
@@ -3625,6 +4555,7 @@ func _battle_start_round(command_id: String) -> void:
 	}
 	_refresh_battle_target_seed()
 	battle_event_queue = BattleModel.build_player_pet_round_events(battle_state, player_command, pet_command)
+	battle_round_end_status_processed = false
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
 	battle_last_round_actor_order.clear()
@@ -3637,6 +4568,21 @@ func _battle_start_round(command_id: String) -> void:
 	_play_next_battle_event()
 
 
+func _start_round_end_status_events_if_needed() -> bool:
+	if battle_round_end_status_processed:
+		return false
+	if battle_state.is_empty() or BattleModel.living_enemy_id(battle_state) == "" or BattleModel.living_ally_id(battle_state) == "":
+		return false
+	battle_round_end_status_processed = true
+	var status_events := BattleModel.build_round_end_status_events(battle_state)
+	if status_events.is_empty():
+		return false
+	battle_event_queue = status_events
+	battle_state["phase"] = "round_events"
+	_play_next_battle_event()
+	return true
+
+
 func _play_next_battle_event() -> void:
 	while battle_active and not battle_event_queue.is_empty():
 		var event := battle_event_queue.pop_front() as Dictionary
@@ -3646,15 +4592,18 @@ func _play_next_battle_event() -> void:
 		if not bool(battle_state.get("lastEventApplied", false)):
 			battle_current_event_actor_snapshots.clear()
 			continue
+		var event_timeline := _battle_event_timeline_for_applied_event(event)
+		var ledger := BattleEventLedger.build_from_applied_state(battle_state, event, actor_snapshots, event_timeline)
+		battle_state["lastEventLedger"] = ledger
 		battle_last_round_applied_events += 1
-		_record_battle_event(event)
-		_add_battle_event_feedback(event)
+		_record_battle_event(event, ledger)
+		battle_current_event = BattleEventLedger.playback_event(event, ledger)
+		_add_battle_event_feedback(battle_current_event, ledger)
 		_set_battle_message(str(battle_state.get("message", "")))
 		_sync_battle_target_selection()
 		if BattleModel.living_enemy_id(battle_state) == "" or BattleModel.living_ally_id(battle_state) == "":
 			battle_event_queue.clear()
 			battle_end_pending = true
-		battle_current_event = _battle_display_event_for_applied_event(event)
 		battle_current_event_actor_snapshots = actor_snapshots
 		battle_action_timer = _battle_event_duration(battle_current_event)
 		battle_current_event_duration = battle_action_timer
@@ -3667,6 +4616,8 @@ func _play_next_battle_event() -> void:
 		battle_action_timer = 0.2
 		_sync_battle_buttons()
 		queue_redraw()
+		return
+	if _start_round_end_status_events_if_needed():
 		return
 	battle_state["phase"] = "command"
 	battle_state["round"] = int(battle_state.get("round", 1)) + 1
@@ -3688,14 +4639,6 @@ func _play_next_battle_event() -> void:
 	queue_redraw()
 
 
-func _battle_display_event_for_applied_event(event: Dictionary) -> Dictionary:
-	var display_event := event.duplicate(true)
-	var actual_target_id := str(battle_state.get("lastTargetId", ""))
-	if actual_target_id != "":
-		display_event["targetId"] = actual_target_id
-	return display_event
-
-
 func _battle_actor_snapshots_by_id() -> Dictionary:
 	var snapshots := {}
 	for value in battle_state.get("actors", []):
@@ -3706,119 +4649,148 @@ func _battle_actor_snapshots_by_id() -> Dictionary:
 	return snapshots
 
 
-func _record_battle_event(event: Dictionary) -> void:
-	var event_type := str(battle_state.get("lastEventType", event.get("type", "")))
+func _record_battle_event(event: Dictionary, ledger: Dictionary = {}) -> void:
+	if ledger.is_empty():
+		ledger = BattleEventLedger.build_from_applied_state(battle_state, event, {}, _battle_event_timeline_for_applied_event(event))
+	battle_last_event_ledger = ledger.duplicate(true)
+	var event_type := str(ledger.get("type", event.get("type", "")))
 	battle_last_event_type = event_type
-	battle_last_event_target_id = str(battle_state.get("lastTargetId", ""))
+	battle_last_event_target_id = str(ledger.get("resolvedTargetId", ""))
 	battle_last_event_target_ids.clear()
-	for target_id_value in battle_state.get("lastTargetIds", []):
+	for target_id_value in ledger.get("targetIds", []):
 		var target_id := str(target_id_value)
 		if target_id != "":
 			battle_last_event_target_ids.append(target_id)
-	battle_last_event_damage = int(battle_state.get("lastDamage", 0))
-	battle_last_event_heal = int(battle_state.get("lastHeal", 0))
-	battle_last_event_launch = bool(battle_state.get("lastLaunch", false))
-	battle_last_event_launch_mode = str(battle_state.get("lastLaunchMode", ""))
+	battle_last_event_damage = int(ledger.get("damage", 0))
+	battle_last_event_heal = int(ledger.get("heal", 0))
+	battle_last_event_launch = bool(ledger.get("launch", false))
+	battle_last_event_launch_mode = str(ledger.get("launchMode", ""))
 	battle_last_round_event_types.append(event_type)
-	battle_last_round_speeds.append(int(event.get("speed", 0)))
+	battle_last_round_speeds.append(int(ledger.get("speed", event.get("speed", 0))))
 	var attacker_actor := BattleModel.actor_by_id(battle_state, str(event.get("attackerId", "")))
 	if not attacker_actor.is_empty() and str(attacker_actor.get("side", "")) == BattleModel.SIDE_ENEMY and str(event.get("targetSide", "")) == BattleModel.SIDE_ALLY:
-		var enemy_target_id := str(battle_state.get("lastTargetId", event.get("targetId", "")))
+		var enemy_target_id := str(ledger.get("resolvedTargetId", event.get("targetId", "")))
 		if enemy_target_id != "":
 			battle_last_round_enemy_target_ids.append(enemy_target_id)
-	var participants: Array = battle_state.get("lastParticipants", [])
+	var participants: Array = ledger.get("participantIds", [])
 	if participants.is_empty():
 		participants = [str(event.get("attackerId", ""))]
 	for participant_id in participants:
 		var actor_id := str(participant_id)
 		if actor_id != "":
 			battle_last_round_actor_order.append(actor_id)
+	var trace_entry := ledger.duplicate(true)
+	trace_entry["attackerName"] = str(attacker_actor.get("name", ""))
 	var target_actor := BattleModel.actor_by_id(battle_state, battle_last_event_target_id)
-	_append_battle_trace({
-		"kind": "battle_event",
-		"battleId": str(battle_state.get("id", "")),
-		"round": int(battle_state.get("round", 1)),
-		"type": event_type,
-		"attackerId": str(event.get("attackerId", "")),
-		"attackerName": str(attacker_actor.get("name", "")),
-		"targetId": battle_last_event_target_id,
-		"targetName": str(target_actor.get("name", "")),
-		"targetIds": battle_last_event_target_ids,
-		"speed": int(event.get("speed", 0)),
-		"damage": battle_last_event_damage,
-		"heal": battle_last_event_heal,
-		"launch": battle_last_event_launch,
-		"launchMode": battle_last_event_launch_mode,
-		"participants": battle_last_round_actor_order,
-	})
+	trace_entry["targetName"] = str(target_actor.get("name", ""))
+	_append_battle_trace(trace_entry)
 	_update_battle_debug_window(true)
 
 
-func _add_battle_event_feedback(event: Dictionary) -> void:
-	var event_type := str(battle_state.get("lastEventType", event.get("type", "")))
-	var target_id := str(battle_state.get("lastTargetId", ""))
+func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> void:
+	if ledger.is_empty():
+		ledger = battle_last_event_ledger
+	var event_type := str(ledger.get("type", event.get("type", "")))
+	var target_id := str(ledger.get("resolvedTargetId", ""))
 	if target_id == "":
 		return
 	if event_type == "capture":
 		var success := bool(battle_state.get("lastCaptureSuccess", false))
 		_add_battle_float_text(target_id, "捕获" if success else "挣脱", Color(0.56, 0.95, 1.0, 0.96) if success else Color(0.95, 0.88, 0.36, 0.96))
 		return
+	if event_type == "status_tick":
+		var status_id := str(ledger.get("statusId", event.get("statusId", "")))
+		var tick_damage := int(ledger.get("damage", 0))
+		if status_id == BattleModel.STATUS_POISON and tick_damage > 0:
+			_add_battle_float_text(target_id, "毒 -%d" % tick_damage, Color(0.68, 0.95, 0.34, 0.98))
+		return
+	if event_type == "status_skip":
+		var skip_status_id := str(ledger.get("statusId", event.get("statusId", "")))
+		var skip_text := BattleStatusModel.status_label(skip_status_id)
+		if skip_text != "":
+			_add_battle_float_text(target_id, skip_text, Color(0.72, 0.82, 1.0, 0.98))
+		return
+	if event_type == "skill_status":
+		var skill_status_id := str(ledger.get("statusId", event.get("statusId", "")))
+		var skill_status_text := BattleStatusModel.status_label(skill_status_id)
+		var skill_status_result := str(ledger.get("statusResult", event.get("statusResult", "")))
+		if skill_status_result == "immune":
+			_add_battle_float_text(target_id, "免疫", Color(0.84, 0.88, 0.98, 0.98))
+		elif skill_status_result == "resisted":
+			_add_battle_float_text(target_id, "抵抗", Color(0.76, 0.84, 0.92, 0.98))
+		elif skill_status_text != "":
+			_add_battle_float_text(target_id, skill_status_text, _battle_status_badge_color(skill_status_id))
+		return
 	if event_type == "spirit_heal":
-		var healed := int(battle_state.get("lastHeal", 0))
+		var healed := int(ledger.get("heal", 0))
 		if healed > 0:
 			_add_battle_float_text(target_id, "+%d" % healed, Color(0.56, 1.0, 0.66, 0.98))
 		return
 	if event_type == "item_heal":
-		var item_healed := int(battle_state.get("lastHeal", 0))
+		var item_healed := int(ledger.get("heal", 0))
 		if item_healed > 0:
 			_add_battle_float_text(target_id, "药 +%d" % item_healed, Color(0.62, 0.98, 0.72, 0.98))
 		return
+	if event_type == "item_cleanse":
+		var cleanse_text := "净化" if str(ledger.get("statusResult", "")) == "cleansed" else "无异常"
+		_add_battle_float_text(target_id, cleanse_text, Color(0.68, 0.96, 1.0, 0.98))
+		return
 	if event_type == "spirit_heal_all":
-		var heal_effects := battle_state.get("lastEffectPerTarget", {}) as Dictionary
-		for heal_target_id in battle_state.get("lastTargetIds", []):
+		var heal_effects := ledger.get("effectPerTarget", {}) as Dictionary
+		for heal_target_id in ledger.get("targetIds", []):
 			var heal_value := int(heal_effects.get(str(heal_target_id), 0))
 			if heal_value > 0:
 				_add_battle_float_text(str(heal_target_id), "+%d" % heal_value, Color(0.56, 1.0, 0.66, 0.98))
 		return
 	if event_type == "item_heal_all":
-		var item_heal_effects := battle_state.get("lastEffectPerTarget", {}) as Dictionary
-		for item_heal_target_id in battle_state.get("lastTargetIds", []):
+		var item_heal_effects := ledger.get("effectPerTarget", {}) as Dictionary
+		for item_heal_target_id in ledger.get("targetIds", []):
 			var item_heal_value := int(item_heal_effects.get(str(item_heal_target_id), 0))
 			if item_heal_value > 0:
 				_add_battle_float_text(str(item_heal_target_id), "药 +%d" % item_heal_value, Color(0.62, 0.98, 0.72, 0.98))
 		return
 	if event_type == "spirit_poison":
-		var poison_damage := int(battle_state.get("lastDamage", 0))
+		var poison_damage := int(ledger.get("damage", 0))
 		if poison_damage > 0:
-			_add_battle_float_text(target_id, "中毒 -%d" % poison_damage, Color(0.72, 0.95, 0.36, 0.98))
+			var poison_status_result := str(ledger.get("statusResult", ""))
+			var poison_text := "中毒 -%d" % poison_damage if poison_status_result == "applied" else (("免疫 -%d" % poison_damage) if poison_status_result == "immune" else "抵抗 -%d" % poison_damage)
+			_add_battle_float_text(target_id, poison_text, Color(0.72, 0.95, 0.36, 0.98))
 		return
 	if event_type == "item_poison":
-		var item_poison_damage := int(battle_state.get("lastDamage", 0))
+		var item_poison_damage := int(ledger.get("damage", 0))
 		if item_poison_damage > 0:
-			_add_battle_float_text(target_id, "毒粉 -%d" % item_poison_damage, Color(0.80, 0.92, 0.34, 0.98))
+			var item_poison_status_result := str(ledger.get("statusResult", ""))
+			var item_poison_text := "毒粉 -%d" % item_poison_damage if item_poison_status_result == "applied" else (("免疫 -%d" % item_poison_damage) if item_poison_status_result == "immune" else "抵抗 -%d" % item_poison_damage)
+			_add_battle_float_text(target_id, item_poison_text, Color(0.80, 0.92, 0.34, 0.98))
 		return
 	if event_type == "spirit_poison_all":
-		var poison_effects := battle_state.get("lastEffectPerTarget", {}) as Dictionary
-		for poison_target_id in battle_state.get("lastTargetIds", []):
+		var poison_effects := ledger.get("effectPerTarget", {}) as Dictionary
+		var poison_results := ledger.get("statusResultPerTarget", {}) as Dictionary
+		for poison_target_id in ledger.get("targetIds", []):
 			var poison_value := int(poison_effects.get(str(poison_target_id), 0))
 			if poison_value > 0:
-				_add_battle_float_text(str(poison_target_id), "中毒 -%d" % poison_value, Color(0.72, 0.95, 0.36, 0.98))
+				var poison_result := str(poison_results.get(str(poison_target_id), "applied"))
+				var poison_all_text := "中毒 -%d" % poison_value if poison_result == "applied" else (("免疫 -%d" % poison_value) if poison_result == "immune" else "抵抗 -%d" % poison_value)
+				_add_battle_float_text(str(poison_target_id), poison_all_text, Color(0.72, 0.95, 0.36, 0.98))
 		return
 	if event_type == "item_poison_all":
-		var item_poison_effects := battle_state.get("lastEffectPerTarget", {}) as Dictionary
-		for item_poison_target_id in battle_state.get("lastTargetIds", []):
+		var item_poison_effects := ledger.get("effectPerTarget", {}) as Dictionary
+		var item_poison_results := ledger.get("statusResultPerTarget", {}) as Dictionary
+		for item_poison_target_id in ledger.get("targetIds", []):
 			var item_poison_value := int(item_poison_effects.get(str(item_poison_target_id), 0))
 			if item_poison_value > 0:
-				_add_battle_float_text(str(item_poison_target_id), "毒粉 -%d" % item_poison_value, Color(0.80, 0.92, 0.34, 0.98))
+				var item_poison_result := str(item_poison_results.get(str(item_poison_target_id), "applied"))
+				var item_poison_all_text := "毒粉 -%d" % item_poison_value if item_poison_result == "applied" else (("免疫 -%d" % item_poison_value) if item_poison_result == "immune" else "抵抗 -%d" % item_poison_value)
+				_add_battle_float_text(str(item_poison_target_id), item_poison_all_text, Color(0.80, 0.92, 0.34, 0.98))
 		return
 	if event_type == "defend":
 		return
-	var damage := int(battle_state.get("lastDamage", 0))
+	var damage := int(ledger.get("damage", 0))
 	if damage <= 0:
 		return
 	var text := "-%d" % damage
 	var feedback_delay := _battle_event_duration(event) * _battle_event_result_reveal_progress(event) if _battle_event_delays_result(event) else 0.0
-	if battle_last_event_launch:
+	if bool(ledger.get("launch", false)):
 		text = "击飞 %s" % text
 	if event_type == "combo_attack":
 		text = "合击 %s" % text
@@ -3843,11 +4815,28 @@ func _add_battle_float_text(actor_id: String, text: String, color: Color, delay:
 		battle_float_texts.pop_front()
 
 
+func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
+	var duration := _battle_event_duration(event)
+	var delays_result := _battle_event_delays_result(event)
+	var reveal_progress := _battle_event_result_reveal_progress(event) if delays_result else 0.0
+	var launch_start := reveal_progress
+	return {
+		"durationSeconds": duration,
+		"delaysResult": delays_result,
+		"damageRevealProgress": reveal_progress,
+		"launchStartProgress": launch_start,
+	}
+
+
 func _battle_event_duration(event: Dictionary) -> float:
+	var timeline = event.get("timeline", {})
+	if timeline is Dictionary and (timeline as Dictionary).has("durationSeconds"):
+		return maxf(0.12, float((timeline as Dictionary).get("durationSeconds", 0.46)))
 	if event.has("duration"):
 		return maxf(0.12, float(event.get("duration", 0.46)))
 	if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
-		return 1.42 if battle_last_event_launch_mode == "bounce" else 1.08
+		var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
+		return 1.42 if launch_mode == "bounce" else 1.08
 	match str(event.get("type", "")):
 		"combo_attack":
 			var participant_ids: Array = event.get("participantIds", [str(event.get("attackerId", ""))])
@@ -3855,9 +4844,13 @@ func _battle_event_duration(event: Dictionary) -> float:
 			return BATTLE_COMBO_ACTION_SECONDS + BATTLE_COMBO_STAGGER_SECONDS * float(participant_count - 1) + BATTLE_COMBO_RETURN_PADDING_SECONDS
 		"skill_attack":
 			return 0.74
+		"skill_status":
+			return 0.58
 		"spirit_heal":
 			return 0.54
 		"item_heal":
+			return 0.54
+		"item_cleanse":
 			return 0.54
 		"spirit_heal_all", "spirit_poison_all":
 			return 0.66
@@ -3873,6 +4866,10 @@ func _battle_event_duration(event: Dictionary) -> float:
 			return 0.42
 		"defend":
 			return 0.40
+		"status_tick":
+			return 0.48
+		"status_skip":
+			return 0.36
 		"attack":
 			return 0.62
 		_:
@@ -3880,10 +4877,16 @@ func _battle_event_duration(event: Dictionary) -> float:
 
 
 func _battle_event_delays_result(event: Dictionary) -> bool:
+	var timeline = event.get("timeline", {})
+	if timeline is Dictionary and (timeline as Dictionary).has("delaysResult"):
+		return bool((timeline as Dictionary).get("delaysResult", false))
 	return ["attack", "skill_attack", "combo_attack"].has(str(event.get("type", "")))
 
 
 func _battle_event_result_reveal_progress(event: Dictionary) -> float:
+	var timeline = event.get("timeline", {})
+	if timeline is Dictionary and (timeline as Dictionary).has("damageRevealProgress"):
+		return clampf(float((timeline as Dictionary).get("damageRevealProgress", 0.0)), 0.0, 1.0)
 	var event_type := str(event.get("type", ""))
 	if event_type == "combo_attack":
 		var participant_ids: Array = event.get("participantIds", [str(event.get("attackerId", ""))])
@@ -3937,6 +4940,8 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 			return false
 		battle_selected_target_id = player_target_id
 		battle_hover_target_id = player_target_id
+		battle_hover_info_actor_id = player_target_id
+		_update_battle_passive_panel()
 		var player_target := BattleModel.actor_by_id(battle_state, player_target_id)
 		var command_id := "capture" if battle_target_mode == "player_capture_target" else "attack"
 		_set_battle_message("%s：%s" % [
@@ -3951,12 +4956,15 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		if pet_target_id == "":
 			return false
 		battle_selected_target_id = pet_target_id
+		battle_hover_info_actor_id = pet_target_id
+		_update_battle_passive_panel()
 		var pet_target := BattleModel.actor_by_id(battle_state, pet_target_id)
+		var pet_skill_id := battle_pending_pet_skill_id if battle_pending_pet_skill_id != "" else BattleModel.PET_SKILL_BUI_CHARGE
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.PET_SKILL_BUI_CHARGE, "布伊冲撞"),
+			BattleActionCatalog.label_for(pet_skill_id, "宠物技能"),
 			str(pet_target.get("name", "敌人")),
 		])
-		_submit_pet_battle_command("pet_skill", pet_target_id)
+		_submit_pet_battle_command("pet_skill", pet_target_id, pet_skill_id)
 		queue_redraw()
 		return true
 	if battle_target_mode == "pet_enemy_attack":
@@ -3965,12 +4973,15 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 			return false
 		battle_selected_target_id = pet_attack_target_id
 		battle_hover_target_id = pet_attack_target_id
+		battle_hover_info_actor_id = pet_attack_target_id
+		_update_battle_passive_panel()
 		var pet_attack_target := BattleModel.actor_by_id(battle_state, pet_attack_target_id)
+		var pet_attack_skill_id := battle_pending_pet_skill_id if battle_pending_pet_skill_id != "" else BattleModel.PET_SKILL_ATTACK
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.PET_SKILL_ATTACK, "攻击"),
+			BattleActionCatalog.label_for(pet_attack_skill_id, "攻击"),
 			str(pet_attack_target.get("name", "敌人")),
 		])
-		_submit_pet_battle_command("attack", pet_attack_target_id)
+		_submit_pet_battle_command("attack", pet_attack_target_id, pet_attack_skill_id)
 		queue_redraw()
 		return true
 	if battle_target_mode == "ally_spirit_single":
@@ -3981,6 +4992,8 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 				_set_battle_message("%s只能选择我方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"))
 			return false
 		battle_selected_ally_target_id = ally_id
+		battle_hover_info_actor_id = ally_id
+		_update_battle_passive_panel()
 		var ally_actor := BattleModel.actor_by_id(battle_state, ally_id)
 		_set_battle_message("%s：%s" % [
 			BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"),
@@ -3997,6 +5010,8 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 				_set_battle_message("%s只能选择敌方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"))
 			return false
 		battle_selected_target_id = poison_target_id
+		battle_hover_info_actor_id = poison_target_id
+		_update_battle_passive_panel()
 		var poison_target := BattleModel.actor_by_id(battle_state, poison_target_id)
 		_set_battle_message("%s：%s" % [
 			BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"),
@@ -4006,19 +5021,23 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		queue_redraw()
 		return true
 	if battle_target_mode == "ally_item_single":
+		var pending_item_id := battle_pending_item_id if battle_pending_item_id != "" else BattleModel.ITEM_HEAL_SINGLE
+		var pending_item_label := BattleActionCatalog.label_for(pending_item_id, "物品")
 		var item_ally_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ALLY)
 		if item_ally_id == "":
 			var item_enemy_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
 			if item_enemy_id != "":
-				_set_battle_message("%s只能选择我方单体。" % BattleActionCatalog.label_for(BattleModel.ITEM_HEAL_SINGLE, "回复药5"))
+				_set_battle_message("%s只能选择我方单体。" % pending_item_label)
 			return false
 		battle_selected_ally_target_id = item_ally_id
+		battle_hover_info_actor_id = item_ally_id
+		_update_battle_passive_panel()
 		var item_ally_actor := BattleModel.actor_by_id(battle_state, item_ally_id)
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.ITEM_HEAL_SINGLE, "回复药5"),
+			pending_item_label,
 			str(item_ally_actor.get("name", "我方")),
 		])
-		_submit_item_player_command(BattleModel.ITEM_HEAL_SINGLE, item_ally_id)
+		_submit_item_player_command(pending_item_id, item_ally_id)
 		queue_redraw()
 		return true
 	if battle_target_mode == "enemy_item_single":
@@ -4029,6 +5048,8 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 				_set_battle_message("%s只能选择敌方单体。" % BattleActionCatalog.label_for(BattleModel.ITEM_POISON_SINGLE, "毒粉5"))
 			return false
 		battle_selected_target_id = item_enemy_target_id
+		battle_hover_info_actor_id = item_enemy_target_id
+		_update_battle_passive_panel()
 		var item_enemy_target := BattleModel.actor_by_id(battle_state, item_enemy_target_id)
 		_set_battle_message("%s：%s" % [
 			BattleActionCatalog.label_for(BattleModel.ITEM_POISON_SINGLE, "毒粉5"),
@@ -4041,6 +5062,8 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 	if actor_id == "":
 		return false
 	battle_selected_target_id = actor_id
+	battle_hover_info_actor_id = actor_id
+	_update_battle_passive_panel()
 	var actor := BattleModel.actor_by_id(battle_state, actor_id)
 	_set_battle_message("目标：%s" % str(actor.get("name", "敌人")))
 	_sync_battle_buttons()
@@ -4051,11 +5074,17 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 func _update_battle_hover_at_screen_point(screen_point: Vector2) -> void:
 	var next_enemy_id := ""
 	var next_ally_id := ""
+	var next_info_id := ""
+	if battle_active and not _battle_point_overlaps_panel(screen_point):
+		next_info_id = _battle_actor_id_at_screen_point(screen_point, "")
 	if battle_active and not _battle_commands_locked() and not _battle_point_overlaps_panel(screen_point):
 		if _battle_target_mode_selects_enemy():
 			next_enemy_id = _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
 		elif _battle_target_mode_selects_ally():
 			next_ally_id = _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ALLY)
+	if next_info_id != battle_hover_info_actor_id:
+		battle_hover_info_actor_id = next_info_id
+		_update_battle_passive_panel()
 	if next_enemy_id != battle_hover_target_id or next_ally_id != battle_hover_ally_target_id:
 		battle_hover_target_id = next_enemy_id
 		battle_hover_ally_target_id = next_ally_id
@@ -4068,7 +5097,9 @@ func _battle_actor_id_at_screen_point(screen_point: Vector2, side_filter: String
 	var hit_radius := maxf(32.0, 48.0 * visual_scale)
 	for index in range(actors.size() - 1, -1, -1):
 		var actor := actors[index] as Dictionary
-		if str(actor.get("side", "")) != side_filter or int(actor.get("hp", 0)) <= 0:
+		if side_filter != "" and str(actor.get("side", "")) != side_filter:
+			continue
+		if int(actor.get("hp", 0)) <= 0:
 			continue
 		var actor_screen := _world_to_screen(_battle_slot_world_position(str(actor.get("slotId", ""))))
 		var hit_center := actor_screen + Vector2(0, -18.0 * visual_scale)
@@ -4096,6 +5127,28 @@ func _battle_actor_is_living_side(actor_id: String, side: String) -> bool:
 		return false
 	var actor := BattleModel.actor_by_id(battle_state, actor_id)
 	return not actor.is_empty() and str(actor.get("side", "")) == side and int(actor.get("hp", 0)) > 0
+
+
+func _battle_actor_is_living(actor_id: String) -> bool:
+	if actor_id == "":
+		return false
+	var actor := BattleModel.actor_by_id(battle_state, actor_id)
+	return not actor.is_empty() and int(actor.get("hp", 0)) > 0
+
+
+func _update_battle_passive_panel() -> void:
+	if battle_passive_panel == null or battle_passive_label == null:
+		return
+	if not battle_active or battle_hover_info_actor_id == "":
+		battle_passive_panel.visible = false
+		battle_passive_label.text = ""
+		return
+	var actor := BattleModel.actor_by_id(battle_state, battle_hover_info_actor_id)
+	var text := BattlePassiveCatalog.display_text_for_actor(actor)
+	battle_passive_label.text = text
+	battle_passive_panel.visible = false
+	_layout_hud()
+	battle_passive_panel.visible = text != ""
 
 
 func _battle_target_mode_selects_enemy() -> bool:
@@ -4126,6 +5179,8 @@ func _sync_battle_target_selection() -> void:
 		battle_selected_ally_target_id = ""
 		battle_hover_target_id = ""
 		battle_hover_ally_target_id = ""
+		battle_hover_info_actor_id = ""
+		_update_battle_passive_panel()
 		return
 	if not _battle_selected_target_is_valid():
 		battle_selected_target_id = ""
@@ -4135,6 +5190,9 @@ func _sync_battle_target_selection() -> void:
 		battle_hover_target_id = ""
 	if battle_hover_ally_target_id != "" and not _battle_actor_is_living_side(battle_hover_ally_target_id, BattleModel.SIDE_ALLY):
 		battle_hover_ally_target_id = ""
+	if battle_hover_info_actor_id != "" and not _battle_actor_is_living(battle_hover_info_actor_id):
+		battle_hover_info_actor_id = ""
+	_update_battle_passive_panel()
 
 
 func _set_battle_message(text: String) -> void:
@@ -4147,7 +5205,7 @@ func _set_battle_message(text: String) -> void:
 
 func _sync_battle_buttons() -> void:
 	if battle_command_panel != null:
-		battle_command_panel.visible = battle_active
+		battle_command_panel.visible = _battle_command_panel_should_be_visible()
 	if battle_message_panel != null:
 		battle_message_panel.visible = battle_active
 	if action_bar != null:
@@ -4162,17 +5220,18 @@ func _sync_battle_buttons() -> void:
 		if button != null:
 			button.disabled = not can_command
 			if battle_command_owner == "pet":
-				match str(command_id):
-					"attack":
-						button.disabled = not has_enemy or battle_target_mode == "pet_enemy_skill"
-					"spirit":
-						button.disabled = not can_command or battle_target_mode == "pet_enemy_skill"
-					"capture":
-						button.disabled = not has_enemy
-					"help":
-						button.disabled = not can_command
-					_:
+				if str(command_id) == "help":
+					button.disabled = not can_command
+				else:
+					var pet_slot := _pet_skill_slot_for_command(str(command_id))
+					var pet_action := BattleActionCatalog.pet_skill_action_for_slot(pet_slot)
+					var pet_action_id := str(pet_action.get("id", ""))
+					if pet_action_id == "" or battle_target_mode == "pet_enemy_skill" or battle_target_mode == "pet_enemy_attack":
 						button.disabled = true
+					elif BattleActionCatalog.action_can_target_side(pet_action_id, BattleModel.SIDE_ENEMY):
+						button.disabled = not has_enemy
+					else:
+						button.disabled = not can_command
 			elif battle_command_owner == "spirit":
 				match str(command_id):
 					"attack":
@@ -4197,6 +5256,8 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_SINGLE)
 					"defend":
 						button.disabled = not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_ALL)
+					"item":
+						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
 					"help":
 						button.disabled = not can_command
 					_:
@@ -4217,6 +5278,10 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not has_ally
 					"switch_pet":
 						button.disabled = BattleModel.switchable_pet_entries(battle_state).is_empty()
+
+
+func _battle_command_panel_should_be_visible() -> bool:
+	return battle_active and not _battle_commands_locked()
 
 
 func _battle_commands_locked() -> bool:
@@ -4246,12 +5311,15 @@ func _update_battle_animation(delta: float) -> void:
 			battle_enemy_response_pending = false
 			_battle_enemy_response()
 			return
+		if _start_round_end_status_events_if_needed():
+			return
 		battle_state["phase"] = "command"
 		_set_battle_command_owner("player")
 		battle_target_mode = "enemy"
 		battle_pending_player_command.clear()
 		battle_pending_pet_command.clear()
 		battle_pending_item_id = ""
+		battle_pending_pet_skill_id = ""
 		battle_state["guardingActorIds"] = []
 		battle_selected_target_id = ""
 		battle_selected_ally_target_id = ""
@@ -4428,7 +5496,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, dialog_panel, encounter_panel, battle_command_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -4485,8 +5553,9 @@ func _layout_hud() -> void:
 	)
 	encounter_panel.size = Vector2(dialog_width, dialog_height)
 
-	var battle_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
-	var battle_height := _battle_command_panel_height(viewport_size)
+	var battle_panel_size := _battle_command_panel_size(viewport_size)
+	var battle_width := battle_panel_size.x
+	var battle_height := battle_panel_size.y
 	var battle_x := viewport_size.x - battle_width - margin
 	var battle_y := margin
 	if battle_x < top_panel.position.x + top_panel.size.x + margin:
@@ -4496,7 +5565,19 @@ func _layout_hud() -> void:
 		battle_y
 	)
 	battle_command_panel.size = Vector2(battle_width, battle_height)
-	battle_command_panel.visible = battle_active
+	battle_command_panel.visible = _battle_command_panel_should_be_visible()
+
+	var passive_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
+	var passive_height := 48.0 if viewport_size.y >= 460.0 else 42.0
+	var passive_y := margin
+	if viewport_size.x < 980.0:
+		passive_y = top_panel.position.y + top_panel.size.y + 8.0
+	battle_passive_panel.position = Vector2((viewport_size.x - passive_width) * 0.5, passive_y)
+	battle_passive_panel.size = Vector2(passive_width, passive_height)
+	battle_passive_label.position = Vector2(14.0, 0.0)
+	battle_passive_label.size = Vector2(maxf(0.0, passive_width - 28.0), passive_height)
+	if battle_passive_panel.visible and battle_passive_label != null and battle_passive_label.text == "":
+		battle_passive_panel.visible = false
 
 	var message_width: float = minf(viewport_size.x - margin * 2.0, 390.0 if is_phone_shape else 560.0)
 	var message_height := 66.0
@@ -4541,7 +5622,16 @@ func _is_phone_shape(size: Vector2) -> bool:
 
 
 func _battle_command_panel_height(size: Vector2) -> float:
-	return 170.0 if size.y >= 460.0 else 158.0
+	return _battle_command_panel_size(size).y
+
+
+func _battle_command_panel_size(size: Vector2) -> Vector2:
+	var target_size := BATTLE_COMMAND_PLAYER_SIZE if battle_command_owner == "player" else BATTLE_COMMAND_MENU_SIZE
+	var width := minf(size.x - 36.0, target_size.x)
+	var height := minf(size.y - 36.0, target_size.y)
+	if battle_command_owner == "player" and size.y < 460.0:
+		height = minf(size.y - 36.0, 158.0)
+	return Vector2(maxf(248.0, width), maxf(158.0, height))
 
 
 func _movement_status_name() -> String:
@@ -4819,6 +5909,8 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if show_actor_name:
 		var font := ThemeDB.fallback_font
 		draw_string(font, pos + Vector2(-46.0 * visual_scale, name_offset), str(actor.get("name", "")), HORIZONTAL_ALIGNMENT_CENTER, 92.0 * visual_scale, maxi(10, int(round(15.0 * visual_scale))), Color(0.96, 0.93, 0.80, alpha))
+	if int(actor.get("hp", 0)) > 0:
+		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
 
 
 func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
@@ -4833,6 +5925,53 @@ func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
 		if not snapshot_actor.is_empty():
 			return snapshot_actor.duplicate(true)
 	return actor
+
+
+func _draw_battle_status_badges(actor: Dictionary, origin: Vector2, visual_scale: float, alpha: float) -> void:
+	var status_ids := BattleStatusModel.active_status_ids(actor)
+	if status_ids.is_empty():
+		return
+	var font := ThemeDB.fallback_font
+	var badge_size := maxf(15.0, 18.0 * visual_scale)
+	var spacing := badge_size + 2.0 * visual_scale
+	var start_x := -spacing * float(status_ids.size() - 1) * 0.5
+	for index in range(status_ids.size()):
+		var status_id := status_ids[index]
+		var badge_center := origin + Vector2(start_x + spacing * float(index), 0)
+		var fill := _battle_status_badge_color(status_id)
+		fill.a *= alpha
+		draw_circle(badge_center, badge_size * 0.5, Color(0.05, 0.07, 0.06, 0.72 * alpha))
+		draw_circle(badge_center, badge_size * 0.42, fill)
+		var text := _battle_status_badge_text(status_id)
+		draw_string(font, badge_center + Vector2(-badge_size * 0.48, badge_size * 0.25), text, HORIZONTAL_ALIGNMENT_CENTER, badge_size, maxi(9, int(round(12.0 * visual_scale))), Color(0.08, 0.08, 0.06, 0.95 * alpha))
+
+
+func _battle_status_badge_text(status_id: String) -> String:
+	match status_id:
+		BattleModel.STATUS_POISON:
+			return "毒"
+		BattleModel.STATUS_SLEEP:
+			return "眠"
+		BattleModel.STATUS_CONFUSION:
+			return "乱"
+		BattleModel.STATUS_STONE:
+			return "石"
+		_:
+			return "?"
+
+
+func _battle_status_badge_color(status_id: String) -> Color:
+	match status_id:
+		BattleModel.STATUS_POISON:
+			return Color(0.62, 0.90, 0.28, 0.95)
+		BattleModel.STATUS_SLEEP:
+			return Color(0.48, 0.68, 1.0, 0.95)
+		BattleModel.STATUS_CONFUSION:
+			return Color(0.96, 0.55, 0.85, 0.95)
+		BattleModel.STATUS_STONE:
+			return Color(0.72, 0.75, 0.70, 0.95)
+		_:
+			return Color(0.95, 0.88, 0.36, 0.95)
 
 
 func _draw_battle_float_texts() -> void:
@@ -5030,6 +6169,9 @@ func _battle_launch_attacker_lunge(progress: float) -> float:
 
 func _battle_launch_target_progress(progress: float) -> float:
 	var launch_start := _battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else BATTLE_LAUNCH_TARGET_START_RATIO
+	var timeline = battle_current_event.get("timeline", {}) if not battle_current_event.is_empty() else {}
+	if timeline is Dictionary and (timeline as Dictionary).has("launchStartProgress"):
+		launch_start = clampf(float((timeline as Dictionary).get("launchStartProgress", launch_start)), 0.0, 1.0)
 	if progress <= launch_start:
 		return 0.0
 	return clampf((progress - launch_start) / maxf(0.01, 1.0 - launch_start), 0.0, 1.0)
