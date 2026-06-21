@@ -84,9 +84,26 @@ static func runtime_template_for_form(form_id: String) -> Dictionary:
 	var result := form.duplicate(true)
 	result["lineName"] = str(line.get("lineName", ""))
 	result["subtypeName"] = str(subtype.get("subtypeName", ""))
-	result["activeSkillIds"] = _string_array(subtype.get("activeSkillIds", []))
+	result["activeSkillIds"] = active_skill_ids_for_form(form_id)
 	result["passiveSkillIds"] = passive_ids_for_form(form_id)
 	return result
+
+
+static func active_skill_ids_for_form(form_id: String) -> Array[String]:
+	var result: Array[String] = []
+	var form := form_by_id(form_id)
+	if form.is_empty():
+		return result
+	var subtype := subtype_by_id(str(form.get("subtypeId", "")))
+	return _string_array(subtype.get("activeSkillIds", []))
+
+
+static func active_skill_ids_for_actor(actor: Dictionary) -> Array[String]:
+	var result := _string_array(actor.get("activeSkillIds", []))
+	if not result.is_empty():
+		return result
+	var form_id := str(actor.get("formId", actor.get("templateId", "")))
+	return active_skill_ids_for_form(form_id)
 
 
 static func passive_ids_for_form(form_id: String) -> Array[String]:
@@ -99,6 +116,23 @@ static func passive_ids_for_form(form_id: String) -> Array[String]:
 	if passive_id != "":
 		result.append(passive_id)
 	return result
+
+
+static func pet_skill_action_for_actor_slot(actor: Dictionary, slot: int) -> Dictionary:
+	if actor.is_empty():
+		return {}
+	var action := BattleActionCatalog.pet_skill_action_for_slot(slot)
+	if action.is_empty():
+		return {}
+	var action_id := str(action.get("id", ""))
+	var active_skill_ids := active_skill_ids_for_actor(actor)
+	var has_template_source := (
+		actor.has("activeSkillIds")
+		or str(actor.get("formId", actor.get("templateId", ""))) != ""
+	)
+	if has_template_source and not active_skill_ids.has(action_id):
+		return {}
+	return action
 
 
 static func actor_from_form(form_id: String, actor_id: String, side: String, kind: String, slot_id: String, name_override: String = "", stat_overrides: Dictionary = {}) -> Dictionary:
@@ -219,10 +253,26 @@ static func _validate_subtype(value, index: int, line_ids: Dictionary, subtype_i
 	if not (raw_actions is Array) or (raw_actions as Array).is_empty():
 		errors.append("%s.activeSkillIds 必须是非空数组" % _subtype_name(subtype, index))
 	elif raw_actions is Array:
+		var seen_slots := {}
+		var action_ids := _string_array(raw_actions)
 		for action_value in raw_actions:
 			var action_id := str(action_value)
-			if action_id == "" or BattleActionCatalog.action_by_id(action_id).is_empty():
+			var action := BattleActionCatalog.action_by_id(action_id)
+			if action_id == "" or action.is_empty():
 				errors.append("%s.activeSkillIds 包含不存在的动作: %s" % [_subtype_name(subtype, index), action_id])
+				continue
+			if str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
+				errors.append("%s.activeSkillIds 只能引用宠物技能: %s" % [_subtype_name(subtype, index), action_id])
+			var slot := int(action.get("slot", 0))
+			if slot <= 0:
+				errors.append("%s.activeSkillIds 缺少有效技能槽: %s" % [_subtype_name(subtype, index), action_id])
+			elif seen_slots.has(slot):
+				errors.append("%s.activeSkillIds 技能槽重复: 技%d" % [_subtype_name(subtype, index), slot])
+			else:
+				seen_slots[slot] = true
+		for required_id in ["pet_attack", "pet_defend"]:
+			if not action_ids.has(required_id):
+				errors.append("%s.activeSkillIds 必须包含 %s" % [_subtype_name(subtype, index), required_id])
 
 
 static func _validate_form(value, index: int, line_ids: Dictionary, subtype_ids: Dictionary, form_ids: Dictionary, errors: Array[String]) -> void:

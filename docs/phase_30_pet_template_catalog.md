@@ -82,6 +82,7 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --battle-status-rule
 node tools/battle_action_catalog_check.mjs
 godot --headless --path client/godot --quit
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 300 -- --auto-battle-action-catalog-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 300 -- --auto-pet-template-catalog-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-battle-status-rule-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-passive-hover-check
 ```
@@ -91,6 +92,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 - 战斗行动目录。
 - 被动技能目录。
 - 宠物模板目录。
+- 亚种主动技能组进入 PET 菜单。
 - 种系必须且只能配置一个 `passiveSkillId`。
 - 属性四系合计必须为 10。
 - `高防乌力` 通过 `硬壳体质` 免疫石化。

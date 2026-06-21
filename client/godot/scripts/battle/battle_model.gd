@@ -33,6 +33,13 @@ const STATUS_POISON := BattleStatusModel.STATUS_POISON
 const STATUS_SLEEP := BattleStatusModel.STATUS_SLEEP
 const STATUS_CONFUSION := BattleStatusModel.STATUS_CONFUSION
 const STATUS_STONE := BattleStatusModel.STATUS_STONE
+const DODGE_MAX_RATE := 0.75
+const DODGE_DEX_DIVISOR := 0.02
+const CRITICAL_DEX_DIVISOR := 0.09
+const COUNTER_DEX_DIVISOR := 0.08
+const COUNTER_DAMAGE_FACTOR := 0.75
+const COMBATANT_COMBO_BASE_RATE := 0.50
+const MONSTER_COMBO_BASE_RATE := 0.20
 
 
 static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
@@ -1070,6 +1077,10 @@ static func _collapse_combo_events(state: Dictionary, entries: Array[Dictionary]
 	var index := 0
 	while index < entries.size():
 		var current := entries[index] as Dictionary
+		if not _combo_start_roll_succeeds(state, current):
+			events.append(current)
+			index += 1
+			continue
 		var combo_entries: Array[Dictionary] = [current]
 		var next_index := index + 1
 		while next_index < entries.size():
@@ -1098,22 +1109,85 @@ static func _can_join_combo_group(state: Dictionary, combo_entries: Array[Dictio
 	if str(first.get("targetSide", "")) != str(next.get("targetSide", "")):
 		return false
 	var seen_actor_ids: Array[String] = []
+	var combo_side := ""
 	for value in combo_entries:
 		var combo_entry := value as Dictionary
 		var combo_actor_id := str(combo_entry.get("attackerId", ""))
 		var combo_actor := actor_by_id(state, combo_actor_id)
-		if combo_actor.is_empty() or str(combo_actor.get("side", "")) != SIDE_ALLY:
+		if combo_actor.is_empty():
+			return false
+		var actor_side := str(combo_actor.get("side", ""))
+		if combo_side == "":
+			combo_side = actor_side
+		elif actor_side != combo_side:
 			return false
 		if seen_actor_ids.has(combo_actor_id):
 			return false
 		seen_actor_ids.append(combo_actor_id)
 	var next_actor_id := str(next.get("attackerId", ""))
 	var next_actor := actor_by_id(state, str(next.get("attackerId", "")))
-	if next_actor.is_empty() or str(next_actor.get("side", "")) != SIDE_ALLY:
+	if next_actor.is_empty() or str(next_actor.get("side", "")) != combo_side:
 		return false
 	if seen_actor_ids.has(next_actor_id):
 		return false
-	return _is_living_side_actor(state, next_actor_id, SIDE_ALLY)
+	return _is_living_side_actor(state, next_actor_id, combo_side)
+
+
+static func _combo_start_roll_succeeds(state: Dictionary, event: Dictionary) -> bool:
+	if str(event.get("type", "")) != "attack":
+		return false
+	var chance := combo_chance_for_event(state, event)
+	var seed_text := _battle_roll_seed(state, "combo", str(event.get("attackerId", "")), str(event.get("targetId", "")), int(event.get("sequence", 0)))
+	return _stable_roll(seed_text) < chance
+
+
+static func combo_chance_for_event(state: Dictionary, event: Dictionary) -> float:
+	if str(event.get("type", "")) != "attack":
+		return 0.0
+	var attacker := actor_by_id(state, str(event.get("attackerId", "")))
+	if attacker.is_empty():
+		return 0.0
+	if event.has("comboRateOverride"):
+		return clampf(_rate_value(event.get("comboRateOverride"), 0.0), 0.0, 1.0)
+	if attacker.has("comboRateOverride"):
+		return clampf(_rate_value(attacker.get("comboRateOverride"), 0.0), 0.0, 1.0)
+	var chance := combo_base_rate_for_actor(attacker)
+	chance += _rate_value(state.get("comboBonusRate", 0.0), 0.0)
+	var side_bonus_map = state.get("comboBonusRateBySide", {})
+	if side_bonus_map is Dictionary:
+		chance += _rate_value((side_bonus_map as Dictionary).get(str(attacker.get("side", "")), 0.0), 0.0)
+	chance += _rate_value(attacker.get("comboBonusRate", attacker.get("comboBonus", 0.0)), 0.0)
+	chance += _rate_value(event.get("comboBonusRate", event.get("comboBonus", 0.0)), 0.0)
+	return clampf(chance, 0.0, 1.0)
+
+
+static func combo_base_rate_for_actor(actor: Dictionary) -> float:
+	if actor.has("comboBaseRateOverride"):
+		return clampf(_rate_value(actor.get("comboBaseRateOverride"), COMBATANT_COMBO_BASE_RATE), 0.0, 1.0)
+	var combo_class := str(actor.get("comboClass", "")).to_lower()
+	if ["monster", "wild", "wild_pet", "enemy"].has(combo_class):
+		return MONSTER_COMBO_BASE_RATE
+	if ["combatant", "player", "pet", "pvp"].has(combo_class):
+		return COMBATANT_COMBO_BASE_RATE
+	var stoneage_type := str(actor.get("stoneAgeType", "")).to_lower()
+	if ["enemy", "char_typeenemy", "char_type_enemy"].has(stoneage_type):
+		return MONSTER_COMBO_BASE_RATE
+	if ["player", "pet", "char_typeplayer", "char_type_player", "char_typepet", "char_type_pet"].has(stoneage_type):
+		return COMBATANT_COMBO_BASE_RATE
+	var kind := str(actor.get("kind", "")).to_lower()
+	if ["wild_pet", "enemy", "wild", "monster"].has(kind):
+		return MONSTER_COMBO_BASE_RATE
+	return COMBATANT_COMBO_BASE_RATE
+
+
+static func _rate_value(value, fallback: float) -> float:
+	var value_type := typeof(value)
+	if value_type != TYPE_FLOAT and value_type != TYPE_INT:
+		return fallback
+	var rate := float(value)
+	if absf(rate) > 1.0:
+		rate *= 0.01
+	return rate
 
 
 static func _make_combo_event_from_group(combo_entries: Array[Dictionary]) -> Dictionary:
@@ -1218,6 +1292,11 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastStatusChancePerTarget"] = {}
 	state["lastStatusResistancePerTarget"] = {}
 	state["lastParticipants"] = event.get("participantIds", [])
+	state["lastDodged"] = false
+	state["lastCritical"] = false
+	state["lastCounterEvent"] = {}
+	state["lastCounterTriggered"] = false
+	state["lastReactionKind"] = ""
 	var event_type := str(event.get("type", ""))
 	if event_type == "status_tick":
 		return _apply_status_tick_event(state, event)
@@ -1228,7 +1307,7 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_status_skip_event(state, event, blocking_status_id)
 	if event_type == "skill_status":
 		return _apply_status_apply_event(state, event)
-	if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack":
+	if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
 		return _apply_damage_event(state, event)
 	if event_type == "spirit_heal":
 		return _apply_spirit_heal_event(state, event)
@@ -1605,8 +1684,43 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	if target_index < 0:
 		return state
 	var target := actors[target_index] as Dictionary
-	var damage := _resolved_damage_for_event(state, event, target_id, declared_target_id, participant_ids)
 	var hp_before := int(target.get("hp", 0))
+	var dodged := _damage_event_is_dodged(state, event, attacker_id, target_id)
+	var critical := false
+	var damage := 0
+	if dodged:
+		target["actionState"] = "dodge"
+		actors[target_index] = target
+		state["actors"] = actors
+		state["phase"] = "round_events"
+		state["lastEventApplied"] = true
+		state["lastAttackerId"] = attacker_id
+		state["lastTargetId"] = target_id
+		state["lastTargetIds"] = [target_id]
+		state["lastDamage"] = 0
+		state["lastEffectPerTarget"] = {target_id: 0}
+		state["lastParticipants"] = participant_ids
+		state["lastDodged"] = true
+		state["lastCritical"] = false
+		state["lastLaunch"] = false
+		state["lastLaunchMode"] = ""
+		state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, hp_before)
+		state["lastCounterTriggered"] = not (state["lastCounterEvent"] as Dictionary).is_empty()
+		state["lastReactionKind"] = "dodge"
+		var dodged_attacker_name := str(first_attacker.get("name", "我方"))
+		var dodged_target_name := str(target.get("name", "目标"))
+		if event_type == "counter_attack":
+			state["message"] = "%s 反击 %s，%s 回避了。" % [dodged_attacker_name, dodged_target_name, dodged_target_name]
+		elif event_type == "skill_attack":
+			state["message"] = "%s 使用%s，%s 回避了。" % [dodged_attacker_name, str(event.get("skillName", "技能")), dodged_target_name]
+		else:
+			state["message"] = "%s 攻击了 %s，%s 回避了。" % [dodged_attacker_name, dodged_target_name, dodged_target_name]
+		return state
+
+	damage = _resolved_damage_for_event(state, event, target_id, declared_target_id, participant_ids)
+	critical = _damage_event_is_critical(state, event, attacker_id, target_id)
+	if critical:
+		damage = _critical_damage_for(state, attacker_id, target_id, damage)
 	var next_hp := maxi(0, hp_before - damage)
 	var max_hp := maxi(1, int(target.get("maxHp", hp_before)))
 	var overkill := damage - hp_before
@@ -1641,6 +1755,11 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastParticipants"] = participant_ids
 	state["lastLaunch"] = launched
 	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
+	state["lastDodged"] = false
+	state["lastCritical"] = critical
+	state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, next_hp)
+	state["lastCounterTriggered"] = not (state["lastCounterEvent"] as Dictionary).is_empty()
+	state["lastReactionKind"] = "critical" if critical else ""
 	if confusion_triggered:
 		state["lastStatusId"] = STATUS_CONFUSION
 		state["lastStatusResult"] = "confused_retarget"
@@ -1658,8 +1777,12 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	elif event_type == "skill_attack":
 		var skill_name := str(event.get("skillName", "技能"))
 		state["message"] = "%s 使用%s，造成 %d 点伤害。" % [str(first_attacker.get("name", "伙伴")), skill_name, damage]
+	elif event_type == "counter_attack":
+		state["message"] = "%s 反击了 %s，造成 %d 点伤害。" % [str(first_attacker.get("name", "我方")), target_name, damage]
 	else:
 		state["message"] = "%s 攻击了 %s，造成 %d 点伤害。" % [str(first_attacker.get("name", "我方")), target_name, damage]
+	if critical:
+		state["message"] += " 触发幸运一击。"
 	if launched:
 		state["message"] += " %s 被击飞，进入休息状态，无法在本场战斗中复活。" % target_name
 	elif next_hp <= 0:
@@ -1688,6 +1811,149 @@ static func _resolved_damage_for_event(state: Dictionary, event: Dictionary, tar
 			return maxi(1, int(event.get("damage", 1)))
 		return maxi(1, total + 8 * maxi(1, living_participants.size() - 1))
 	return _attack_damage_for(state, str(event.get("attackerId", "")), target_id)
+
+
+static func _damage_event_is_dodged(state: Dictionary, event: Dictionary, attacker_id: String, target_id: String) -> bool:
+	if not _damage_event_allows_dodge(event):
+		return false
+	if event.has("forceDodge"):
+		return bool(event.get("forceDodge", false))
+	var target := actor_by_id(state, target_id)
+	if target.is_empty() or is_actor_guarding(state, target_id) or BattleStatusModel.blocking_status_id(target) != "":
+		return false
+	var chance := _dodge_rate_for(state, attacker_id, target_id)
+	var seed_text := _battle_roll_seed(state, "dodge", attacker_id, target_id, int(event.get("sequence", 0)))
+	return _stable_roll(seed_text) < chance
+
+
+static func _damage_event_allows_dodge(event: Dictionary) -> bool:
+	if not bool(event.get("canDodge", true)):
+		return false
+	return ["attack", "skill_attack", "counter_attack"].has(str(event.get("type", "")))
+
+
+static func _damage_event_is_critical(state: Dictionary, event: Dictionary, attacker_id: String, target_id: String) -> bool:
+	if not _damage_event_allows_critical(event):
+		return false
+	if event.has("forceCritical"):
+		return bool(event.get("forceCritical", false))
+	var chance := _critical_rate_for(state, attacker_id, target_id)
+	var seed_text := _battle_roll_seed(state, "critical", attacker_id, target_id, int(event.get("sequence", 0)))
+	return _stable_roll(seed_text) < chance
+
+
+static func _damage_event_allows_critical(event: Dictionary) -> bool:
+	if not bool(event.get("canCritical", true)):
+		return false
+	return ["attack", "skill_attack", "counter_attack"].has(str(event.get("type", "")))
+
+
+static func _counter_event_after_damage(state: Dictionary, event: Dictionary, attacker_id: String, target_id: String, target_side: String, hp_before: int, hp_after: int) -> Dictionary:
+	if str(event.get("type", "")) != "attack" or bool(event.get("isCounter", false)):
+		return {}
+	if event.has("canCounter") and not bool(event.get("canCounter", true)):
+		return {}
+	if hp_before <= 0 or hp_after <= 0:
+		return {}
+	var attacker := actor_by_id(state, attacker_id)
+	var counter_actor := actor_by_id(state, target_id)
+	if attacker.is_empty() or counter_actor.is_empty():
+		return {}
+	if int(attacker.get("hp", 0)) <= 0 or int(counter_actor.get("hp", 0)) <= 0:
+		return {}
+	if BattleStatusModel.blocking_status_id(counter_actor) != "":
+		return {}
+	var chance := _counter_rate_for(state, target_id, attacker_id)
+	var sequence := int(event.get("sequence", 0))
+	var seed_text := _battle_roll_seed(state, "counter", target_id, attacker_id, sequence)
+	if _stable_roll(seed_text) >= chance:
+		return {}
+	return {
+		"type": "counter_attack",
+		"attackerId": target_id,
+		"targetId": attacker_id,
+		"targetSide": str(attacker.get("side", target_side)),
+		"damage": _counter_damage_for(state, target_id, attacker_id),
+		"speed": int(event.get("speed", 0)),
+		"sequence": sequence + 500,
+		"movementStyle": "melee",
+		"canLaunch": true,
+		"isCounter": true,
+	}
+
+
+static func _dodge_rate_for(state: Dictionary, attacker_id: String, target_id: String) -> float:
+	var target := actor_by_id(state, target_id)
+	if target.has("dodgeRateOverride"):
+		return clampf(float(target.get("dodgeRateOverride", 0.0)), 0.0, 1.0)
+	if target.has("evasionRateOverride"):
+		return clampf(float(target.get("evasionRateOverride", 0.0)), 0.0, 1.0)
+	var chance_percent := _quick_contest_percent(state, target_id, attacker_id, DODGE_DEX_DIVISOR)
+	chance_percent += float(target.get("luck", 0))
+	chance_percent += float(target.get("dodgeBonus", target.get("evasionBonus", 0.0)))
+	return clampf(chance_percent / 100.0, 0.0001, DODGE_MAX_RATE)
+
+
+static func _critical_rate_for(state: Dictionary, attacker_id: String, target_id: String) -> float:
+	var attacker := actor_by_id(state, attacker_id)
+	if attacker.has("criticalRateOverride"):
+		return clampf(float(attacker.get("criticalRateOverride", 0.0)), 0.0, 1.0)
+	var chance_percent := _quick_contest_percent(state, attacker_id, target_id, CRITICAL_DEX_DIVISOR)
+	chance_percent += float(attacker.get("luck", 0))
+	chance_percent += float(attacker.get("criticalBonus", 0.0))
+	return clampf(chance_percent / 100.0, 0.0, 1.0)
+
+
+static func _counter_rate_for(state: Dictionary, counter_actor_id: String, target_id: String) -> float:
+	var counter_actor := actor_by_id(state, counter_actor_id)
+	if counter_actor.has("counterRateOverride"):
+		return clampf(float(counter_actor.get("counterRateOverride", 0.0)), 0.0, 1.0)
+	var chance_percent := _quick_contest_percent(state, counter_actor_id, target_id, COUNTER_DEX_DIVISOR)
+	chance_percent += float(counter_actor.get("luck", 0))
+	chance_percent += float(counter_actor.get("counterBonus", 0.0))
+	return clampf(chance_percent / 100.0, 0.0, 1.0)
+
+
+static func _quick_contest_percent(state: Dictionary, favored_actor_id: String, opposing_actor_id: String, divisor: float) -> float:
+	var favored := actor_by_id(state, favored_actor_id)
+	var opposing := actor_by_id(state, opposing_actor_id)
+	if favored.is_empty() or opposing.is_empty():
+		return 0.0
+	var favored_quick := maxf(1.0, float(favored.get("quick", 50)))
+	var opposing_quick := maxf(1.0, float(opposing.get("quick", 50)))
+	var big := maxf(favored_quick, opposing_quick)
+	var small := minf(favored_quick, opposing_quick)
+	var ratio := 1.0 if favored_quick >= opposing_quick else small / big
+	var work := maxf(0.0, (big - small) / maxf(0.001, divisor))
+	return sqrt(work) * ratio
+
+
+static func _critical_damage_for(state: Dictionary, attacker_id: String, target_id: String, base_damage: int) -> int:
+	var attacker := actor_by_id(state, attacker_id)
+	var target := actor_by_id(state, target_id)
+	var attacker_level := maxf(1.0, float(attacker.get("level", 1)))
+	var target_level := maxf(1.0, float(target.get("level", 1)))
+	var defense_bonus := float(target.get("defense", 0)) * attacker_level / target_level * 0.5
+	return maxi(base_damage + 1, base_damage + int(round(defense_bonus)))
+
+
+static func _counter_damage_for(state: Dictionary, counter_actor_id: String, target_id: String) -> int:
+	return maxi(1, int(round(float(_attack_damage_for(state, counter_actor_id, target_id)) * COUNTER_DAMAGE_FACTOR)))
+
+
+static func _battle_roll_seed(state: Dictionary, purpose: String, attacker_id: String, target_id: String, sequence: int) -> String:
+	return "%s:%s:r%d:s%d:%s:%s" % [
+		str(state.get("targetSeed", state.get("id", "battle"))),
+		purpose,
+		int(state.get("round", 1)),
+		sequence,
+		attacker_id,
+		target_id,
+	]
+
+
+static func _stable_roll(seed_text: String) -> float:
+	return float(_stable_target_index(seed_text, 10000)) / 10000.0
 
 
 static func _launch_mode_for_event(event: Dictionary, target_id: String) -> String:

@@ -41,6 +41,10 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 		"damage": int(state.get("lastDamage", 0)),
 		"heal": int(state.get("lastHeal", 0)),
 		"effectPerTarget": effect_per_target,
+		"dodged": bool(state.get("lastDodged", false)),
+		"critical": bool(state.get("lastCritical", false)),
+		"counterTriggered": bool(state.get("lastCounterTriggered", false)),
+		"reactionKind": str(state.get("lastReactionKind", "")),
 		"launch": bool(state.get("lastLaunch", false)),
 		"launchMode": str(state.get("lastLaunchMode", "")),
 		"canLaunch": bool(source_event.get("canLaunch", false)),
@@ -85,6 +89,10 @@ static func playback_event(source_event: Dictionary, ledger: Dictionary) -> Dict
 	event["damage"] = int(ledger.get("damage", event.get("damage", 0)))
 	event["heal"] = int(ledger.get("heal", event.get("heal", 0)))
 	event["effectPerTarget"] = ledger.get("effectPerTarget", {}).duplicate(true)
+	event["dodged"] = bool(ledger.get("dodged", false))
+	event["critical"] = bool(ledger.get("critical", false))
+	event["counterTriggered"] = bool(ledger.get("counterTriggered", false))
+	event["reactionKind"] = str(ledger.get("reactionKind", event.get("reactionKind", "")))
 	event["launch"] = bool(ledger.get("launch", false))
 	event["launchMode"] = str(ledger.get("launchMode", event.get("launchMode", "")))
 	event["statusId"] = str(ledger.get("statusId", event.get("statusId", "")))

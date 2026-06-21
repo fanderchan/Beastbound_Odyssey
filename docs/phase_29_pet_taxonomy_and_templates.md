@@ -181,7 +181,14 @@ client/godot/data/pet_templates.json
   "subtypeName": "普通布伊",
   "lineId": "bui",
   "battleRole": "balanced_pet",
-  "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"]
+  "activeSkillIds": [
+    "pet_attack",
+    "pet_defend",
+    "pet_bui_charge",
+    "pet_sleep_powder",
+    "pet_confuse_cry",
+    "pet_stone_gaze"
+  ]
 }
 ```
 
