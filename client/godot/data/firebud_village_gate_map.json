@@ -105,6 +105,17 @@
       "action": "对话",
       "dialog": ["村口守望者：这里是火芽村入口。真正的村庄和战斗区，后面再一点点接上。"],
       "option": "知道了"
+    },
+    {
+      "id": "firebud_shopkeeper",
+      "name": "杂货商阿芸",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [6, 15],
+      "action": "买卖",
+      "shopId": "firebud_item_shop",
+      "dialog": ["杂货商阿芸：路上要多备点肉、药和捕捉工具。要买还是要卖，都可以在这里办。"],
+      "option": "买卖"
     }
   ]
 }

@@ -47,6 +47,32 @@ static func rewards_for_state(state: Dictionary) -> Array[Dictionary]:
 	return _merged_rewards(result)
 
 
+static func stone_coins_for_state(state: Dictionary) -> int:
+	if state.has("forcedStoneCoinsReward"):
+		return maxi(0, int(state.get("forcedStoneCoinsReward", 0)))
+	var table := table_for_state(state)
+	if table.is_empty():
+		return 0
+	var raw_coin_reward = table.get("stoneCoins", {})
+	if not (raw_coin_reward is Dictionary):
+		return 0
+	var coin_reward := raw_coin_reward as Dictionary
+	var chance := clampf(float(coin_reward.get("chance", 1.0)), 0.0, 1.0)
+	var table_id := str(table.get("id", ""))
+	var seed_text := "%s:reward:%s:stoneCoins" % [
+		str(state.get("targetSeed", state.get("id", "battle"))),
+		table_id,
+	]
+	if chance < 1.0 and _stable_roll(seed_text) >= chance:
+		return 0
+	var min_count := maxi(0, int(coin_reward.get("min", coin_reward.get("count", 0))))
+	var max_count := maxi(min_count, int(coin_reward.get("max", min_count)))
+	var count := min_count
+	if max_count > min_count:
+		count += _stable_target_index("%s:count" % seed_text, max_count - min_count + 1)
+	return count
+
+
 static func table_for_state(state: Dictionary) -> Dictionary:
 	var group_id := str(state.get("sourceEncounterGroupId", ""))
 	if group_id != "":

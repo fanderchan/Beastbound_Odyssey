@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "shops": [
+    {
+      "id": "firebud_item_shop",
+      "label": "火芽杂货铺",
+      "items": [
+        {
+          "itemId": "item_meat_small",
+          "buyPrice": 8
+        },
+        {
+          "itemId": "item_heal_single_5",
+          "buyPrice": 18
+        },
+        {
+          "itemId": "item_heal_all_5",
+          "buyPrice": 28
+        },
+        {
+          "itemId": "item_poison_single_5",
+          "buyPrice": 22
+        },
+        {
+          "itemId": "item_poison_all_5",
+          "buyPrice": 36
+        },
+        {
+          "itemId": "item_cleanse_single_5",
+          "buyPrice": 16
+        },
+        {
+          "itemId": "capture_rope_basic",
+          "buyPrice": 14
+        },
+        {
+          "itemId": "capture_net",
+          "buyPrice": 32
+        },
+        {
+          "itemId": "capture_net_reinforced",
+          "buyPrice": 68
+        }
+      ]
+    }
+  ]
+}

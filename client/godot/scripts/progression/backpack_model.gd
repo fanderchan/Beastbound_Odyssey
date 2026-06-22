@@ -155,6 +155,20 @@ static func item_count(slots: Array[Dictionary], item_id: String) -> int:
 	return total
 
 
+static func available_capacity_for(slots: Array[Dictionary], item_id: String) -> int:
+	if item_for_id(item_id).is_empty():
+		return 0
+	var total := 0
+	var stack_limit := stack_limit_for(item_id)
+	for slot in normalize_slots(slots):
+		var slot_item_id := str(slot.get("itemId", ""))
+		if slot_item_id == item_id:
+			total += maxi(0, stack_limit - maxi(0, int(slot.get("count", 0))))
+		elif slot_item_id == "":
+			total += stack_limit
+	return total
+
+
 static func counts_for_context(slots: Array[Dictionary], context: String) -> Dictionary:
 	var result := {}
 	for slot in normalize_slots(slots):

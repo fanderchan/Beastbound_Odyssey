@@ -4,6 +4,11 @@
     {
       "id": "default_wild",
       "fallback": true,
+      "stoneCoins": {
+        "min": 8,
+        "max": 14,
+        "chance": 1.0
+      },
       "rewards": [
         {
           "itemId": "item_meat_small",
@@ -15,6 +20,11 @@
     },
     {
       "id": "firebud_grass_01",
+      "stoneCoins": {
+        "min": 12,
+        "max": 24,
+        "chance": 1.0
+      },
       "rewards": [
         {
           "itemId": "item_meat_small",

@@ -1,0 +1,100 @@
+extends RefCounted
+
+const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
+
+const DATA_PATH := "res://data/item_shops.json"
+const DEFAULT_SHOP_ID := "firebud_item_shop"
+
+
+static func shops() -> Array[Dictionary]:
+	var parsed := _data()
+	var raw_shops = parsed.get("shops", [])
+	var result: Array[Dictionary] = []
+	if raw_shops is Array:
+		for value in raw_shops:
+			if value is Dictionary and str((value as Dictionary).get("id", "")) != "":
+				result.append(value as Dictionary)
+	return result
+
+
+static func shop_for_id(shop_id: String) -> Dictionary:
+	for shop in shops():
+		if str(shop.get("id", "")) == shop_id:
+			return shop
+	return {}
+
+
+static func label_for(shop_id: String) -> String:
+	var shop := shop_for_id(shop_id)
+	return str(shop.get("label", "道具店")) if not shop.is_empty() else "道具店"
+
+
+static func entries_for(shop_id: String) -> Array[Dictionary]:
+	var shop := shop_for_id(shop_id)
+	var raw_entries = shop.get("items", [])
+	var result: Array[Dictionary] = []
+	if raw_entries is Array:
+		for value in raw_entries:
+			if not (value is Dictionary):
+				continue
+			var entry := value as Dictionary
+			var item_id := str(entry.get("itemId", ""))
+			if item_id == "" or BackpackModel.item_for_id(item_id).is_empty():
+				continue
+			result.append(entry)
+	return result
+
+
+static func entry_for(shop_id: String, item_id: String) -> Dictionary:
+	for entry in entries_for(shop_id):
+		if str(entry.get("itemId", "")) == item_id:
+			return entry
+	return {}
+
+
+static func buyable_entries_for(shop_id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry in entries_for(shop_id):
+		if is_buyable(shop_id, str(entry.get("itemId", ""))):
+			result.append(entry)
+	return result
+
+
+static func is_buyable(shop_id: String, item_id: String) -> bool:
+	var entry := entry_for(shop_id, item_id)
+	return not entry.is_empty() and bool(entry.get("buyable", true)) and buy_price_for(shop_id, item_id) > 0
+
+
+static func is_sellable(shop_id: String, item_id: String) -> bool:
+	var entry := entry_for(shop_id, item_id)
+	if entry.is_empty():
+		return false
+	return bool(entry.get("sellable", true)) and sell_price_for(shop_id, item_id) > 0
+
+
+static func buy_price_for(shop_id: String, item_id: String) -> int:
+	var entry := entry_for(shop_id, item_id)
+	if entry.is_empty():
+		return 0
+	return maxi(0, int(entry.get("buyPrice", 0)))
+
+
+static func sell_price_for(shop_id: String, item_id: String) -> int:
+	var entry := entry_for(shop_id, item_id)
+	if entry.is_empty():
+		return 0
+	if entry.has("sellPrice"):
+		return maxi(0, int(entry.get("sellPrice", 0)))
+	var buy_price := buy_price_for(shop_id, item_id)
+	return maxi(1, int(floor(float(buy_price) * 0.5))) if buy_price > 0 else 0
+
+
+static func price_line_for(shop_id: String, item_id: String) -> String:
+	return "购买单价: %d石币    出售单价: %d石币" % [buy_price_for(shop_id, item_id), sell_price_for(shop_id, item_id)]
+
+
+static func _data() -> Dictionary:
+	if not FileAccess.file_exists(DATA_PATH):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
+	return parsed as Dictionary if parsed is Dictionary else {}

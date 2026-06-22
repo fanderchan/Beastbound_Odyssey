@@ -6,6 +6,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 
 const SAVE_PATH := "user://player_profile.json"
 const PROFILE_SCHEMA_VERSION := 1
@@ -20,6 +21,8 @@ const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
+const DEFAULT_STONE_COINS := 120
+const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
@@ -38,6 +41,7 @@ static func default_profile() -> Dictionary:
 		"activePetInstanceId": "pet_bui_main",
 		"nextPetInstanceSerial": 5,
 		"nextPetDropSerial": 1,
+		"stoneCoins": DEFAULT_STONE_COINS,
 		"petInstances": [
 			_pet_instance_from_form("pet_bui_main", "我的布伊", "bui_normal_red_fire10", PET_STATE_BATTLE, 1),
 			_pet_instance_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, 1),
@@ -158,6 +162,92 @@ static func with_battle_item_inventory(profile: Dictionary, inventory: Dictionar
 	normalized[BACKPACK_SLOTS_KEY] = slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
 	return normalized
+
+
+static func stone_coins(profile: Dictionary) -> int:
+	return maxi(0, int(normalize_profile(profile).get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+
+
+static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[STONE_COINS_KEY] = maxi(0, amount)
+	return normalized
+
+
+static func buy_shop_item(profile: Dictionary, shop_id: String, item_id: String, amount: int = 1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id)
+	var buy_amount := maxi(1, amount)
+	if not ShopCatalogModel.is_buyable(shop_id, item_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 暂时不能购买。" % item_label,
+		}
+	var price := ShopCatalogModel.buy_price_for(shop_id, item_id)
+	var total_price := price * buy_amount
+	if stone_coins(normalized) < total_price:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "石币不够。",
+		}
+	var add_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), [{
+		"itemId": item_id,
+		"count": buy_amount,
+	}])
+	if _item_amount_count(add_result.get("added", []), item_id) < buy_amount:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "背包已满。",
+		}
+	var next_slots: Array[Dictionary] = add_result.get("slots", [])
+	normalized[BACKPACK_SLOTS_KEY] = next_slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
+	normalized[STONE_COINS_KEY] = stone_coins(normalized) - total_price
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "购买%s x%d，花费%d石币。" % [item_label, buy_amount, total_price],
+		"itemId": item_id,
+		"amount": buy_amount,
+		"price": total_price,
+	}
+
+
+static func sell_shop_item(profile: Dictionary, shop_id: String, item_id: String, amount: int = 1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id)
+	var sell_amount := maxi(1, amount)
+	if not ShopCatalogModel.is_sellable(shop_id, item_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 不能出售。" % item_label,
+		}
+	if BackpackModel.item_count(backpack_slots(normalized), item_id) < sell_amount:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 数量不够。" % item_label,
+		}
+	var price := ShopCatalogModel.sell_price_for(shop_id, item_id)
+	var total_price := price * sell_amount
+	var next_slots := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, sell_amount)
+	normalized[BACKPACK_SLOTS_KEY] = next_slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
+	normalized[STONE_COINS_KEY] = stone_coins(normalized) + total_price
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "出售%s x%d，获得%d石币。" % [item_label, sell_amount, total_price],
+		"itemId": item_id,
+		"amount": sell_amount,
+		"price": total_price,
+	}
 
 
 static func _capture_tool_inventory_from_slots(slots: Array[Dictionary]) -> Dictionary:
@@ -1078,6 +1168,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			)
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
+	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
 
 	var seen_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
 	var captured_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
@@ -1229,6 +1320,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	next_profile = _with_codex_forms_seen_from_battle(next_profile, state)
 	var result := result_override if result_override != "" else battle_result_for_state(state)
 	var exp_reward := battle_exp_reward(state) if result == "victory" else 0
+	var stone_coins_reward := BattleRewardCatalog.stone_coins_for_state(state) if result == "victory" else 0
 	var level_up_lines: Array[String] = []
 	var item_rewards: Array[Dictionary] = []
 	var lost_item_rewards: Array[Dictionary] = []
@@ -1251,6 +1343,8 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 			break
 		next_profile["petInstances"] = instances
 	if result == "victory":
+		if stone_coins_reward > 0:
+			next_profile[STONE_COINS_KEY] = stone_coins(next_profile) + stone_coins_reward
 		var reward_result := BackpackModel.add_items(
 			BackpackModel.normalize_slots(next_profile.get(BACKPACK_SLOTS_KEY, [])),
 			BattleRewardCatalog.rewards_for_state(state)
@@ -1273,18 +1367,22 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"profile": next_profile,
 		"result": result,
 		"expReward": exp_reward,
+		"stoneCoinsReward": stone_coins_reward,
 		"itemRewards": item_rewards,
 		"lostItemRewards": lost_item_rewards,
 		"capturedPets": captured_instances,
-		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards),
+		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward),
 	}
 
 
-static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = []) -> Array[String]:
+static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0) -> Array[String]:
 	var lines: Array[String] = []
 	match result:
 		"victory":
-			lines.append("战斗胜利，获得 %d 经验。" % exp_reward)
+			if stone_coins_reward > 0:
+				lines.append("战斗胜利，获得 %d 经验、%d 石币。" % [exp_reward, stone_coins_reward])
+			else:
+				lines.append("战斗胜利，获得 %d 经验。" % exp_reward)
 			var second_parts: Array[String] = []
 			var active_pet := _active_profile_pet(profile)
 			if not active_pet.is_empty() and exp_reward > 0:
@@ -1330,6 +1428,18 @@ static func _item_amount_array(value) -> Array[Dictionary]:
 					"count": count,
 				})
 	return result
+
+
+static func _item_amount_count(value, item_id: String) -> int:
+	var total := 0
+	if value is Array:
+		for entry_value in value:
+			if not (entry_value is Dictionary):
+				continue
+			var entry := entry_value as Dictionary
+			if str(entry.get("itemId", "")) == item_id:
+				total += maxi(0, int(entry.get("count", 0)))
+	return total
 
 
 static func _captured_pet_log_part(captured: Dictionary) -> String:

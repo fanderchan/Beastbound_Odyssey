@@ -14,6 +14,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
@@ -92,6 +93,24 @@ var backpack_close_button: Button
 var backpack_slot_buttons: Array[Button] = []
 var backpack_selected_slot_index: int = 0
 var backpack_pending_use_item_id: String = ""
+var shop_panel: PanelContainer
+var shop_title_label: Label
+var shop_coin_label: Label
+var shop_buy_button: Button
+var shop_sell_button: Button
+var shop_list_container: VBoxContainer
+var shop_detail_label: Label
+var shop_quantity_minus_button: Button
+var shop_quantity_spinbox: SpinBox
+var shop_quantity_plus_button: Button
+var shop_quantity_max_button: Button
+var shop_action_button: Button
+var shop_close_button: Button
+var shop_item_buttons: Dictionary = {}
+var shop_active_id: String = ShopCatalogModel.DEFAULT_SHOP_ID
+var shop_mode: String = "buy"
+var shop_selected_item_id: String = ""
+var shop_quantity: int = 1
 var pet_panel: PanelContainer
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
@@ -179,9 +198,11 @@ var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
+var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
+var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
@@ -351,12 +372,16 @@ func _ready() -> void:
 		call_deferred("_run_auto_backpack_check")
 	elif auto_backpack_world_use_check:
 		call_deferred("_run_auto_backpack_world_use_check")
+	elif auto_shop_check:
+		call_deferred("_run_auto_shop_check")
 	elif auto_battle_reward_check:
 		call_deferred("_run_auto_battle_reward_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
 		call_deferred("_run_backpack_world_use_preview")
+	elif shop_preview:
+		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
 		call_deferred("_run_battle_reward_preview")
 	elif pet_management_preview:
@@ -575,12 +600,16 @@ func _apply_preview_window_args() -> void:
 			auto_backpack_check = true
 		elif arg == "--auto-backpack-world-use-check":
 			auto_backpack_world_use_check = true
+		elif arg == "--auto-shop-check":
+			auto_shop_check = true
 		elif arg == "--auto-battle-reward-check":
 			auto_battle_reward_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
 			backpack_world_use_preview = true
+		elif arg == "--shop-preview":
+			shop_preview = true
 		elif arg == "--battle-reward-preview":
 			battle_reward_preview = true
 		elif arg == "--pet-management-preview":
@@ -3388,31 +3417,210 @@ func _run_auto_backpack_world_use_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_shop_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+
+
+func _run_auto_shop_check() -> void:
+	profile_save_enabled = false
+	var shop_id := ShopCatalogModel.DEFAULT_SHOP_ID
+	var base_profile := PlayerProgressModel.default_profile()
+	var catalog_ok := (
+		not ShopCatalogModel.shop_for_id(shop_id).is_empty()
+		and ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 8
+		and ShopCatalogModel.sell_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 4
+		and ShopCatalogModel.is_sellable(shop_id, BattleModel.ITEM_POISON_ALL)
+	)
+	var default_coin_ok := PlayerProgressModel.stone_coins(base_profile) == PlayerProgressModel.DEFAULT_STONE_COINS
+
+	var before_buy_coins := PlayerProgressModel.stone_coins(base_profile)
+	var before_buy_meat := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.ITEM_MEAT_SMALL)
+	var buy_result := PlayerProgressModel.buy_shop_item(base_profile, shop_id, BattleModel.ITEM_MEAT_SMALL, 3)
+	var buy_profile := buy_result.get("profile", {}) as Dictionary
+	var buy_ok := (
+		bool(buy_result.get("ok", false))
+		and int(buy_result.get("amount", 0)) == 3
+		and PlayerProgressModel.stone_coins(buy_profile) == before_buy_coins - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) * 3
+		and PlayerProgressModel.backpack_item_count(buy_profile, BattleModel.ITEM_MEAT_SMALL) == before_buy_meat + 3
+		and str(buy_result.get("message", "")).find("x3") >= 0
+	)
+
+	var bulk_buy_profile := PlayerProgressModel.with_stone_coins(base_profile, 999)
+	var bulk_buy_result := PlayerProgressModel.buy_shop_item(bulk_buy_profile, shop_id, BattleModel.ITEM_MEAT_SMALL, 99)
+	var bulk_buy_after := bulk_buy_result.get("profile", {}) as Dictionary
+	var bulk_buy_ok := (
+		bool(bulk_buy_result.get("ok", false))
+		and int(bulk_buy_result.get("amount", 0)) == 99
+		and PlayerProgressModel.backpack_item_count(bulk_buy_after, BattleModel.ITEM_MEAT_SMALL) == PlayerProgressModel.backpack_item_count(bulk_buy_profile, BattleModel.ITEM_MEAT_SMALL) + 99
+		and PlayerProgressModel.stone_coins(bulk_buy_after) == 999 - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) * 99
+	)
+
+	var no_money_profile := PlayerProgressModel.with_stone_coins(base_profile, 0)
+	var no_money_result := PlayerProgressModel.buy_shop_item(no_money_profile, shop_id, BattleModel.CAPTURE_TOOL_NET_REINFORCED)
+	var no_money_ok := (
+		not bool(no_money_result.get("ok", false))
+		and str(no_money_result.get("message", "")) == "石币不够。"
+		and PlayerProgressModel.stone_coins(no_money_result.get("profile", {}) as Dictionary) == 0
+	)
+
+	var full_profile := PlayerProgressModel.with_stone_coins(base_profile, 999)
+	var full_slots := BackpackModel.set_item_count(
+		PlayerProgressModel.backpack_slots(full_profile),
+		BattleModel.ITEM_MEAT_SMALL,
+		BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
+	)
+	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
+	var full_result := PlayerProgressModel.buy_shop_item(full_profile, shop_id, BattleModel.CAPTURE_TOOL_NET)
+	var full_ok := not bool(full_result.get("ok", false)) and str(full_result.get("message", "")) == "背包已满。"
+
+	var before_sell_coins := PlayerProgressModel.stone_coins(base_profile)
+	var before_sell_meat := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.ITEM_MEAT_SMALL)
+	var sell_result := PlayerProgressModel.sell_shop_item(base_profile, shop_id, BattleModel.ITEM_MEAT_SMALL, 2)
+	var sell_profile := sell_result.get("profile", {}) as Dictionary
+	var sell_ok := (
+		bool(sell_result.get("ok", false))
+		and int(sell_result.get("amount", 0)) == 2
+		and PlayerProgressModel.stone_coins(sell_profile) == before_sell_coins + ShopCatalogModel.sell_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) * 2
+		and PlayerProgressModel.backpack_item_count(sell_profile, BattleModel.ITEM_MEAT_SMALL) == before_sell_meat - 2
+		and str(sell_result.get("message", "")).find("x2") >= 0
+	)
+
+	var bulk_sell_profile := PlayerProgressModel.with_stone_coins(base_profile, 0)
+	bulk_sell_profile = PlayerProgressModel.with_backpack_slots(
+		bulk_sell_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(bulk_sell_profile), BattleModel.ITEM_MEAT_SMALL, 120)
+	)
+	var bulk_sell_result := PlayerProgressModel.sell_shop_item(bulk_sell_profile, shop_id, BattleModel.ITEM_MEAT_SMALL, 99)
+	var bulk_sell_after := bulk_sell_result.get("profile", {}) as Dictionary
+	var bulk_sell_ok := (
+		bool(bulk_sell_result.get("ok", false))
+		and int(bulk_sell_result.get("amount", 0)) == 99
+		and PlayerProgressModel.backpack_item_count(bulk_sell_after, BattleModel.ITEM_MEAT_SMALL) == 21
+		and PlayerProgressModel.stone_coins(bulk_sell_after) == ShopCatalogModel.sell_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) * 99
+	)
+
+	var empty_sell_profile := PlayerProgressModel.with_backpack_slots(
+		base_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(base_profile), BattleModel.ITEM_MEAT_SMALL, 0)
+	)
+	var empty_sell_result := PlayerProgressModel.sell_shop_item(empty_sell_profile, shop_id, BattleModel.ITEM_MEAT_SMALL)
+	var empty_sell_ok := (
+		not bool(empty_sell_result.get("ok", false))
+		and str(empty_sell_result.get("message", "")).find("数量不够") >= 0
+		and PlayerProgressModel.backpack_item_count(empty_sell_result.get("profile", {}) as Dictionary, BattleModel.ITEM_MEAT_SMALL) == 0
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var shopkeeper := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
+	var npc_found := loaded and not shopkeeper.is_empty()
+	if npc_found:
+		_open_interaction_dialog(shopkeeper)
+		await get_tree().process_frame
+		_confirm_dialog_action()
+		await get_tree().process_frame
+	var meat_button_text := str((shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) as Button).text) if shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) is Button else ""
+	var shop_panel_ok := (
+		npc_found
+		and shop_panel != null
+		and shop_panel.visible
+		and shop_buy_button != null
+		and shop_buy_button.button_pressed
+		and shop_action_button != null
+		and shop_action_button.text.begins_with("购买 x1")
+		and shop_coin_label != null
+		and shop_coin_label.text.find("石币") >= 0
+		and meat_button_text.find("8石币") >= 0
+		and meat_button_text.find("买 ") < 0
+	)
+	_set_shop_quantity(3)
+	await get_tree().process_frame
+	var quantity_ui_ok := (
+		shop_quantity_spinbox != null
+		and int(shop_quantity_spinbox.value) == 3
+		and shop_action_button != null
+		and shop_action_button.text.find("购买 x3") >= 0
+		and shop_action_button.text.find("24石币") >= 0
+	)
+	_set_shop_mode("sell")
+	await get_tree().process_frame
+	var sell_meat_button_text := str((shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) as Button).text) if shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) is Button else ""
+	var sell_tab_ok := (
+		shop_sell_button != null
+		and shop_sell_button.button_pressed
+		and shop_action_button != null
+		and shop_action_button.text.begins_with("出售 x1")
+		and sell_meat_button_text.find("可卖 4石币") >= 0
+	)
+	_close_shop_panel()
+
+	var reward_state := _battle_reward_test_state("battle_reward_check", base_profile)
+	var reward_result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "victory")
+	var reward_profile := reward_result.get("profile", {}) as Dictionary
+	var stone_reward := maxi(0, int(reward_result.get("stoneCoinsReward", 0)))
+	var reward_log := _battle_result_log_text(reward_result)
+	var reward_coin_ok := (
+		stone_reward > 0
+		and PlayerProgressModel.stone_coins(reward_profile) == PlayerProgressModel.stone_coins(base_profile) + stone_reward
+		and reward_log.find("石币") >= 0
+	)
+
+	var status := "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and quantity_ui_ok and sell_tab_ok and reward_coin_ok else "failed"
+	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s quantity_ui=%s sell_tab=%s reward_coin=%s coins=%d reward=%d" % [
+		status,
+		str(catalog_ok),
+		str(default_coin_ok),
+		str(buy_ok),
+		str(bulk_buy_ok),
+		str(no_money_ok),
+		str(full_ok),
+		str(sell_ok),
+		str(bulk_sell_ok),
+		str(empty_sell_ok),
+		str(shop_panel_ok),
+		str(quantity_ui_ok),
+		str(sell_tab_ok),
+		str(reward_coin_ok),
+		PlayerProgressModel.stone_coins(reward_profile),
+		stone_reward,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_reward_check() -> void:
 	profile_save_enabled = false
 	var base_profile := PlayerProgressModel.default_profile()
 	var reward_state := _battle_reward_test_state("battle_reward_check", base_profile)
 	var before_meat := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.ITEM_MEAT_SMALL)
 	var before_rope := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var before_coins := PlayerProgressModel.stone_coins(base_profile)
 	var result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "victory")
 	var result_profile := result.get("profile", {}) as Dictionary
 	var rewards: Array = result.get("itemRewards", [])
 	var lost_rewards: Array = result.get("lostItemRewards", [])
 	var reward_meat := _item_amount_count(rewards, BattleModel.ITEM_MEAT_SMALL)
 	var reward_rope := _item_amount_count(rewards, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var reward_coins := maxi(0, int(result.get("stoneCoinsReward", 0)))
 	var after_meat := PlayerProgressModel.backpack_item_count(result_profile, BattleModel.ITEM_MEAT_SMALL)
 	var after_rope := PlayerProgressModel.backpack_item_count(result_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var after_coins := PlayerProgressModel.stone_coins(result_profile)
 	var log_text := _battle_result_log_text(result)
 	var reward_ok := (
 		str(result.get("result", "")) == "victory"
 		and reward_meat >= 1
 		and reward_rope == 1
+		and reward_coins > 0
 		and after_meat == before_meat + reward_meat
 		and after_rope == before_rope + reward_rope
+		and after_coins == before_coins + reward_coins
 		and lost_rewards is Array
 		and (lost_rewards as Array).is_empty()
 		and log_text.find("获得 肉") >= 0
 		and log_text.find("初级捕捉绳") >= 0
+		and log_text.find("石币") >= 0
 	)
 
 	var full_profile := PlayerProgressModel.default_profile()
@@ -3437,16 +3645,19 @@ func _run_auto_battle_reward_check() -> void:
 		escape_rewards is Array
 		and (escape_rewards as Array).is_empty()
 		and PlayerProgressModel.backpack_item_count(escape_profile, BattleModel.ITEM_MEAT_SMALL) == before_meat
+		and int(escape_result.get("stoneCoinsReward", 0)) == 0
+		and PlayerProgressModel.stone_coins(escape_profile) == before_coins
 	)
 
 	var status := "ok" if reward_ok and full_block_ok and escape_ok else "failed"
-	print("battle reward check ready: status=%s reward=%s full=%s escape=%s meat=%d rope=%d log=%s full_log=%s" % [
+	print("battle reward check ready: status=%s reward=%s full=%s escape=%s meat=%d rope=%d coins=%d log=%s full_log=%s" % [
 		status,
 		str(reward_ok),
 		str(full_block_ok),
 		str(escape_ok),
 		reward_meat,
 		reward_rope,
+		reward_coins,
 		log_text.replace("\n", " / "),
 		full_log.replace("\n", " / "),
 	])
@@ -5639,6 +5850,117 @@ func _build_hud() -> void:
 	backpack_target_scroll.add_child(backpack_target_container)
 	hud_root.add_child(backpack_panel)
 
+	shop_panel = _panel_container("ShopPanel")
+	shop_panel.visible = false
+	shop_panel.z_index = 24
+	var shop_column := VBoxContainer.new()
+	shop_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shop_column.add_theme_constant_override("separation", 8)
+	shop_panel.add_child(shop_column)
+
+	var shop_header := HBoxContainer.new()
+	shop_header.add_theme_constant_override("separation", 10)
+	shop_column.add_child(shop_header)
+	shop_title_label = Label.new()
+	shop_title_label.text = "道具店"
+	shop_title_label.add_theme_font_size_override("font_size", 21)
+	shop_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_header.add_child(shop_title_label)
+	shop_coin_label = Label.new()
+	shop_coin_label.text = "石币 0"
+	shop_coin_label.add_theme_font_size_override("font_size", 17)
+	shop_coin_label.custom_minimum_size = Vector2(112, 0)
+	shop_header.add_child(shop_coin_label)
+	shop_close_button = Button.new()
+	shop_close_button.text = "关闭"
+	shop_close_button.custom_minimum_size = Vector2(92, 44)
+	shop_close_button.pressed.connect(_close_shop_panel)
+	shop_header.add_child(shop_close_button)
+
+	var shop_tabs := HBoxContainer.new()
+	shop_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_tabs.add_theme_constant_override("separation", 8)
+	shop_column.add_child(shop_tabs)
+	shop_buy_button = Button.new()
+	shop_buy_button.text = "购买"
+	shop_buy_button.toggle_mode = true
+	shop_buy_button.custom_minimum_size = Vector2(0, 42)
+	shop_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_buy_button.pressed.connect(func() -> void:
+		_set_shop_mode("buy")
+	)
+	shop_tabs.add_child(shop_buy_button)
+	shop_sell_button = Button.new()
+	shop_sell_button.text = "出售"
+	shop_sell_button.toggle_mode = true
+	shop_sell_button.custom_minimum_size = Vector2(0, 42)
+	shop_sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_sell_button.pressed.connect(func() -> void:
+		_set_shop_mode("sell")
+	)
+	shop_tabs.add_child(shop_sell_button)
+
+	var shop_scroll := ScrollContainer.new()
+	shop_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shop_column.add_child(shop_scroll)
+	shop_list_container = VBoxContainer.new()
+	shop_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_list_container.add_theme_constant_override("separation", 7)
+	shop_scroll.add_child(shop_list_container)
+
+	shop_detail_label = Label.new()
+	shop_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	shop_detail_label.custom_minimum_size = Vector2(0, 78)
+	shop_detail_label.add_theme_font_size_override("font_size", 16)
+	shop_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_column.add_child(shop_detail_label)
+	var shop_quantity_row := HBoxContainer.new()
+	shop_quantity_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_quantity_row.add_theme_constant_override("separation", 8)
+	shop_column.add_child(shop_quantity_row)
+	shop_quantity_minus_button = Button.new()
+	shop_quantity_minus_button.text = "-"
+	shop_quantity_minus_button.custom_minimum_size = Vector2(56, 44)
+	shop_quantity_minus_button.pressed.connect(func() -> void:
+		_set_shop_quantity(shop_quantity - 1)
+	)
+	shop_quantity_row.add_child(shop_quantity_minus_button)
+	shop_quantity_spinbox = SpinBox.new()
+	shop_quantity_spinbox.min_value = 1
+	shop_quantity_spinbox.max_value = 999
+	shop_quantity_spinbox.step = 1
+	shop_quantity_spinbox.value = 1
+	shop_quantity_spinbox.rounded = true
+	shop_quantity_spinbox.custom_minimum_size = Vector2(118, 44)
+	shop_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_quantity_spinbox.value_changed.connect(func(value: float) -> void:
+		_set_shop_quantity(int(value))
+	)
+	shop_quantity_row.add_child(shop_quantity_spinbox)
+	shop_quantity_plus_button = Button.new()
+	shop_quantity_plus_button.text = "+"
+	shop_quantity_plus_button.custom_minimum_size = Vector2(56, 44)
+	shop_quantity_plus_button.pressed.connect(func() -> void:
+		_set_shop_quantity(shop_quantity + 1)
+	)
+	shop_quantity_row.add_child(shop_quantity_plus_button)
+	shop_quantity_max_button = Button.new()
+	shop_quantity_max_button.text = "最大"
+	shop_quantity_max_button.custom_minimum_size = Vector2(86, 44)
+	shop_quantity_max_button.pressed.connect(func() -> void:
+		_set_shop_quantity(_shop_quantity_max(shop_selected_item_id))
+	)
+	shop_quantity_row.add_child(shop_quantity_max_button)
+	shop_action_button = Button.new()
+	shop_action_button.text = "购买"
+	shop_action_button.custom_minimum_size = Vector2(0, 46)
+	shop_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_action_button.pressed.connect(_on_shop_action_pressed)
+	shop_column.add_child(shop_action_button)
+	hud_root.add_child(shop_panel)
+
 	pet_panel = _panel_container("PetPanel")
 	pet_panel.visible = false
 	pet_panel.z_index = 24
@@ -6334,6 +6656,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_clear_pending_interaction()
 	_close_dialog()
 	_close_backpack_panel()
+	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
@@ -6382,6 +6705,10 @@ func _set_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_ce
 
 func _set_interaction_target(item: Dictionary) -> void:
 	_close_dialog()
+	_close_backpack_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
 	pending_interaction = item.duplicate(true)
 	has_pending_interaction = true
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -6691,6 +7018,7 @@ func _open_backpack_panel() -> void:
 		return
 	_close_dialog()
 	_close_encounter()
+	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	backpack_panel.visible = true
@@ -6826,12 +7154,214 @@ func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 		_refresh_pet_panel()
 
 
+func _open_shop_panel(next_shop_id: String = "") -> void:
+	if battle_active:
+		return
+	var resolved_shop_id := next_shop_id if next_shop_id != "" else ShopCatalogModel.DEFAULT_SHOP_ID
+	if ShopCatalogModel.shop_for_id(resolved_shop_id).is_empty():
+		resolved_shop_id = ShopCatalogModel.DEFAULT_SHOP_ID
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	shop_active_id = resolved_shop_id
+	shop_mode = "buy"
+	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
+	shop_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_shop_panel()
+	_layout_hud()
+
+
+func _close_shop_panel() -> void:
+	if shop_panel != null:
+		shop_panel.visible = false
+	shop_selected_item_id = ""
+	if hud_root != null:
+		_layout_hud()
+
+
+func _set_shop_mode(next_mode: String) -> void:
+	shop_mode = "sell" if next_mode == "sell" else "buy"
+	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
+	shop_quantity = 1
+	_refresh_shop_panel()
+
+
+func _select_shop_item(item_id: String) -> void:
+	shop_selected_item_id = item_id
+	shop_quantity = 1
+	_refresh_shop_panel()
+
+
+func _refresh_shop_panel() -> void:
+	if shop_panel == null or shop_list_container == null or shop_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	if shop_title_label != null:
+		shop_title_label.text = ShopCatalogModel.label_for(shop_active_id)
+	if shop_coin_label != null:
+		shop_coin_label.text = "石币 %d" % PlayerProgressModel.stone_coins(player_profile)
+	if shop_buy_button != null:
+		shop_buy_button.button_pressed = shop_mode == "buy"
+	if shop_sell_button != null:
+		shop_sell_button.button_pressed = shop_mode == "sell"
+	var valid_ids := _shop_item_ids_for_mode(shop_mode)
+	if shop_selected_item_id == "" or not valid_ids.has(shop_selected_item_id):
+		shop_selected_item_id = valid_ids[0] if not valid_ids.is_empty() else ""
+	for child in shop_list_container.get_children():
+		child.queue_free()
+	shop_item_buttons.clear()
+	if valid_ids.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "暂无可%s的道具" % ("出售" if shop_mode == "sell" else "购买")
+		empty_label.add_theme_font_size_override("font_size", 16)
+		shop_list_container.add_child(empty_label)
+	else:
+		for item_id in valid_ids:
+			var button := Button.new()
+			button.toggle_mode = true
+			button.button_pressed = item_id == shop_selected_item_id
+			button.text = _shop_item_button_text(item_id)
+			button.custom_minimum_size = Vector2(0, 58)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.pressed.connect(func() -> void:
+				_select_shop_item(item_id)
+			)
+			shop_list_container.add_child(button)
+			shop_item_buttons[item_id] = button
+	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
+	shop_detail_label.text = _shop_detail_text(shop_selected_item_id)
+	_refresh_shop_quantity_controls()
+	if shop_action_button != null:
+		shop_action_button.text = _shop_action_text()
+		shop_action_button.disabled = shop_selected_item_id == "" or _shop_quantity_max(shop_selected_item_id) <= 0
+
+
+func _shop_item_ids_for_mode(mode: String) -> Array[String]:
+	var result: Array[String] = []
+	if mode == "sell":
+		var counts := BackpackModel.counts_by_item(PlayerProgressModel.backpack_slots(player_profile))
+		for entry in ShopCatalogModel.entries_for(shop_active_id):
+			var item_id := str(entry.get("itemId", ""))
+			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0:
+				result.append(item_id)
+	else:
+		for entry in ShopCatalogModel.buyable_entries_for(shop_active_id):
+			var item_id := str(entry.get("itemId", ""))
+			if item_id != "":
+				result.append(item_id)
+	return result
+
+
+func _first_shop_item_id_for_mode(mode: String) -> String:
+	var ids := _shop_item_ids_for_mode(mode)
+	return ids[0] if not ids.is_empty() else ""
+
+
+func _shop_item_button_text(item_id: String) -> String:
+	var count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
+	if shop_mode == "sell":
+		return "%s\n可卖 %d石币    持有 %d" % [
+			BackpackModel.menu_label_for(item_id),
+			ShopCatalogModel.sell_price_for(shop_active_id, item_id),
+			count,
+		]
+	return "%s\n%d石币    持有 %d" % [
+		BackpackModel.menu_label_for(item_id),
+		ShopCatalogModel.buy_price_for(shop_active_id, item_id),
+		count,
+	]
+
+
+func _shop_detail_text(item_id: String) -> String:
+	if item_id == "":
+		return "请选择道具。"
+	var count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
+	var lines: Array[String] = []
+	lines.append("%s x%d" % [BackpackModel.label_for(item_id), count])
+	lines.append("购买单价: %d石币    出售单价: %d石币" % [
+		ShopCatalogModel.buy_price_for(shop_active_id, item_id),
+		ShopCatalogModel.sell_price_for(shop_active_id, item_id),
+	])
+	return "\n".join(lines)
+
+
+func _shop_quantity_max(item_id: String) -> int:
+	if item_id == "":
+		return 0
+	if shop_mode == "sell":
+		return PlayerProgressModel.backpack_item_count(player_profile, item_id)
+	var buy_price := ShopCatalogModel.buy_price_for(shop_active_id, item_id)
+	if buy_price <= 0:
+		return 0
+	var affordable := int(floor(float(PlayerProgressModel.stone_coins(player_profile)) / float(buy_price)))
+	var capacity := BackpackModel.available_capacity_for(PlayerProgressModel.backpack_slots(player_profile), item_id)
+	return mini(999, mini(affordable, capacity))
+
+
+func _clamped_shop_quantity(value: int, item_id: String) -> int:
+	var max_quantity := _shop_quantity_max(item_id)
+	if max_quantity <= 0:
+		return 1
+	return clampi(value, 1, max_quantity)
+
+
+func _set_shop_quantity(value: int) -> void:
+	shop_quantity = _clamped_shop_quantity(value, shop_selected_item_id)
+	_refresh_shop_panel()
+
+
+func _refresh_shop_quantity_controls() -> void:
+	var max_quantity := _shop_quantity_max(shop_selected_item_id)
+	var controls_enabled := shop_selected_item_id != "" and max_quantity > 0
+	if shop_quantity_spinbox != null:
+		shop_quantity_spinbox.set_block_signals(true)
+		shop_quantity_spinbox.min_value = 1
+		shop_quantity_spinbox.max_value = maxf(1.0, float(max_quantity))
+		shop_quantity_spinbox.value = float(shop_quantity)
+		shop_quantity_spinbox.editable = controls_enabled
+		shop_quantity_spinbox.set_block_signals(false)
+	if shop_quantity_minus_button != null:
+		shop_quantity_minus_button.disabled = not controls_enabled or shop_quantity <= 1
+	if shop_quantity_plus_button != null:
+		shop_quantity_plus_button.disabled = not controls_enabled or shop_quantity >= max_quantity
+	if shop_quantity_max_button != null:
+		shop_quantity_max_button.disabled = not controls_enabled or shop_quantity >= max_quantity
+
+
+func _shop_action_text() -> String:
+	if shop_selected_item_id == "":
+		return "出售" if shop_mode == "sell" else "购买"
+	var unit_price := ShopCatalogModel.sell_price_for(shop_active_id, shop_selected_item_id) if shop_mode == "sell" else ShopCatalogModel.buy_price_for(shop_active_id, shop_selected_item_id)
+	var total_price := unit_price * shop_quantity
+	if shop_mode == "sell":
+		return "出售 x%d（%d石币）" % [shop_quantity, total_price]
+	return "购买 x%d（%d石币）" % [shop_quantity, total_price]
+
+
+func _on_shop_action_pressed() -> void:
+	if shop_selected_item_id == "":
+		return
+	var result := PlayerProgressModel.sell_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity) if shop_mode == "sell" else PlayerProgressModel.buy_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	if shop_mode == "sell" and PlayerProgressModel.backpack_item_count(player_profile, shop_selected_item_id) <= 0:
+		shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
+	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
+	_refresh_shop_panel()
+
+
 func _open_pet_panel() -> void:
 	if battle_active:
 		return
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_shop_panel()
 	_close_codex_panel()
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
@@ -6855,6 +7385,7 @@ func _open_codex_panel() -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_shop_panel()
 	_close_pet_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
@@ -8679,6 +9210,10 @@ func _confirm_dialog_action() -> void:
 	if _has_incomplete_task(active_dialog_interaction):
 		_mark_task_completed(active_dialog_interaction)
 		_update_dialog_text()
+	elif str(active_dialog_interaction.get("shopId", "")) != "":
+		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
+		_close_dialog()
+		_open_shop_panel(next_shop_id)
 	else:
 		_close_dialog()
 
@@ -8689,7 +9224,7 @@ func _update_dialog_text() -> void:
 	dialog_name_label.text = str(active_dialog_interaction.get("name", "交互"))
 	dialog_body_label.text = _dialog_body_for(active_dialog_interaction)
 	dialog_option_button.text = str(active_dialog_interaction.get("option", "知道了"))
-	if not _has_incomplete_task(active_dialog_interaction):
+	if not _has_incomplete_task(active_dialog_interaction) and str(active_dialog_interaction.get("shopId", "")) == "":
 		dialog_option_button.text = "知道了"
 
 
@@ -8812,7 +9347,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, shop_panel, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -8882,6 +9417,17 @@ func _layout_hud() -> void:
 	if battle_active:
 		backpack_panel.visible = false
 	if backpack_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)
+	var shop_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, 620.0)
+	shop_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), shop_width)
+	shop_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), shop_height)
+	shop_panel.position = Vector2((viewport_size.x - shop_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - shop_height) * 0.5))
+	shop_panel.size = Vector2(shop_width, shop_height)
+	if battle_active:
+		shop_panel.visible = false
+	if shop_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	pet_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
