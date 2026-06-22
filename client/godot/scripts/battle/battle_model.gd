@@ -3,6 +3,7 @@ extends RefCounted
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const SIDE_ALLY := "ally"
 const SIDE_ENEMY := "enemy"
@@ -26,6 +27,10 @@ const ITEM_HEAL_SINGLE := "item_heal_single_5"
 const ITEM_POISON_SINGLE := "item_poison_single_5"
 const ITEM_POISON_ALL := "item_poison_all_5"
 const ITEM_CLEANSE_SINGLE := "item_cleanse_single_5"
+const CAPTURE_TOOL_EMPTY_HAND := "empty_hand"
+const CAPTURE_TOOL_ROPE_BASIC := "capture_rope_basic"
+const CAPTURE_TOOL_NET := "capture_net"
+const CAPTURE_TOOL_NET_REINFORCED := "capture_net_reinforced"
 const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
@@ -74,6 +79,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		"targetSeed": "local_wild_battle",
 		"message": "%s 出现了%s。" % [zone_name, enemy_name],
 		"itemBag": default_item_bag(),
+		"captureToolBag": CaptureToolCatalog.starting_inventory(),
 		"guardingActorIds": [],
 		"actors": [
 			_make_actor("ally_player", "见习猎人", SIDE_ALLY, "player", "ally.back.3", 120, 120, 70, 18),
@@ -112,6 +118,7 @@ static func create_stat_formula_test_battle(encounter_zone: Dictionary) -> Dicti
 		"targetSeed": "stat_formula_test",
 		"message": "%s 数值验证战斗。旁路日志会记录速度和伤害公式。" % zone_name,
 		"itemBag": default_item_bag(),
+		"captureToolBag": CaptureToolCatalog.starting_inventory(),
 		"guardingActorIds": [],
 		"actors": _stat_formula_test_actors(),
 	}
@@ -691,6 +698,32 @@ static func consume_item(state: Dictionary, item_id: String) -> Dictionary:
 	return set_item_count(state, item_id, item_count(state, item_id) - 1)
 
 
+static func capture_tool_inventory(state: Dictionary) -> Dictionary:
+	return CaptureToolCatalog.normalize_inventory(state.get("captureToolBag", {}))
+
+
+static func capture_tool_count(state: Dictionary, tool_id: String) -> int:
+	return CaptureToolCatalog.count_for(capture_tool_inventory(state), tool_id)
+
+
+static func has_capture_tool(state: Dictionary, tool_id: String) -> bool:
+	return CaptureToolCatalog.can_use(capture_tool_inventory(state), tool_id)
+
+
+static func set_capture_tool_count(state: Dictionary, tool_id: String, count: int) -> Dictionary:
+	var normalized_tool_id := CaptureToolCatalog.normalized_tool_id(tool_id)
+	var inventory := capture_tool_inventory(state)
+	if CaptureToolCatalog.is_consumable(normalized_tool_id):
+		inventory[normalized_tool_id] = maxi(0, count)
+	state["captureToolBag"] = CaptureToolCatalog.normalize_inventory(inventory)
+	return state
+
+
+static func consume_capture_tool(state: Dictionary, tool_id: String) -> Dictionary:
+	state["captureToolBag"] = CaptureToolCatalog.consume(capture_tool_inventory(state), tool_id)
+	return state
+
+
 static func living_enemy_id(state: Dictionary) -> String:
 	return first_living_actor_id(state, SIDE_ENEMY)
 
@@ -838,7 +871,7 @@ static func _make_player_command_event(state: Dictionary, player_id: String, com
 	match command_id:
 		"capture":
 			if enemy_target_id != "":
-				return _make_capture_event(state, player_id, enemy_target_id, sequence)
+				return _make_capture_event(state, player_id, enemy_target_id, sequence, str(command.get("captureToolId", CAPTURE_TOOL_EMPTY_HAND)))
 		"spirit":
 			return _make_spirit_event(state, player_id, command, enemy_target_id, sequence)
 		"item":
@@ -1139,7 +1172,10 @@ static func _make_switch_pet_event(state: Dictionary, actor_id: String, pet_id: 
 	}
 
 
-static func _make_capture_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+static func _make_capture_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, tool_id: String = CAPTURE_TOOL_EMPTY_HAND) -> Dictionary:
+	var capture_tool_id := CaptureToolCatalog.normalized_tool_id(tool_id)
+	if not has_capture_tool(state, capture_tool_id):
+		return {}
 	return {
 		"type": "capture",
 		"attackerId": attacker_id,
@@ -1147,7 +1183,11 @@ static func _make_capture_event(state: Dictionary, attacker_id: String, target_i
 		"targetSide": SIDE_ENEMY,
 		"speed": _effective_action_speed(state, attacker_id, "capture"),
 		"sequence": sequence,
-		"success": capture_would_succeed(state, attacker_id, target_id),
+		"captureToolId": capture_tool_id,
+		"captureToolLabel": CaptureToolCatalog.full_name_for(capture_tool_id),
+		"captureChance": capture_chance(state, attacker_id, target_id, capture_tool_id),
+		"captureRoll": capture_roll(state, attacker_id, target_id, capture_tool_id, sequence),
+		"success": capture_would_succeed(state, attacker_id, target_id, capture_tool_id, sequence),
 	}
 
 
@@ -1350,17 +1390,49 @@ static func _effective_action_speed(state: Dictionary, actor_id: String, command
 			return base
 
 
-static func capture_would_succeed(state: Dictionary, attacker_id: String, target_id: String) -> bool:
+static func capture_chance(state: Dictionary, attacker_id: String, target_id: String, capture_tool_id: String = CAPTURE_TOOL_EMPTY_HAND) -> float:
 	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
-		return false
+		return 0.0
 	var target := actor_by_id(state, target_id)
 	if target.is_empty() or not bool(target.get("catchable", false)):
-		return false
+		return 0.0
 	var max_hp := maxf(1.0, float(target.get("maxHp", 1)))
 	var hp_ratio := clampf(float(target.get("hp", 0)) / max_hp, 0.0, 1.0)
 	var difficulty := clampf(float(target.get("captureDifficulty", 42)) / 100.0, 0.0, 0.9)
-	var chance := 0.78 - hp_ratio * 0.55 - difficulty * 0.18
-	return chance >= 0.42
+	var chance := 0.42 - hp_ratio * 0.22 - difficulty * 0.12
+	chance += CaptureToolCatalog.chance_bonus_for(capture_tool_id)
+	chance += _capture_status_bonus_for_actor(target)
+	return clampf(chance, 0.05, 0.95)
+
+
+static func capture_roll(state: Dictionary, attacker_id: String, target_id: String, capture_tool_id: String = CAPTURE_TOOL_EMPTY_HAND, sequence: int = 0) -> float:
+	var seed_text := "%s:%s" % [
+		_battle_roll_seed(state, "capture", attacker_id, target_id, sequence),
+		CaptureToolCatalog.normalized_tool_id(capture_tool_id),
+	]
+	return _stable_roll(seed_text)
+
+
+static func capture_would_succeed(state: Dictionary, attacker_id: String, target_id: String, capture_tool_id: String = CAPTURE_TOOL_EMPTY_HAND, sequence: int = 0) -> bool:
+	if not has_capture_tool(state, capture_tool_id):
+		return false
+	var chance := capture_chance(state, attacker_id, target_id, capture_tool_id)
+	if chance <= 0.0:
+		return false
+	return capture_roll(state, attacker_id, target_id, capture_tool_id, sequence) < chance
+
+
+static func _capture_status_bonus_for_actor(actor: Dictionary) -> float:
+	var bonus := 0.0
+	if BattleStatusModel.has_status(actor, STATUS_SLEEP):
+		bonus += 0.18
+	if BattleStatusModel.has_status(actor, STATUS_STONE):
+		bonus += 0.16
+	if BattleStatusModel.has_status(actor, STATUS_CONFUSION):
+		bonus += 0.10
+	if BattleStatusModel.has_status(actor, STATUS_POISON):
+		bonus += 0.05
+	return bonus
 
 
 static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -1372,6 +1444,9 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastTargetIds"] = []
 	state["lastEffectPerTarget"] = {}
 	state["lastCaptureSuccess"] = false
+	state["lastCaptureToolId"] = CAPTURE_TOOL_EMPTY_HAND
+	state["lastCaptureChance"] = -1.0
+	state["lastCaptureRoll"] = -1.0
 	state["lastLaunch"] = false
 	state["lastLaunchMode"] = ""
 	state["lastStatusId"] = ""
@@ -2071,19 +2146,32 @@ static func _apply_capture_event(state: Dictionary, event: Dictionary) -> Dictio
 		return state
 	var attacker := actors[attacker_index] as Dictionary
 	var target := actors[target_index] as Dictionary
+	var capture_tool_id := CaptureToolCatalog.normalized_tool_id(str(event.get("captureToolId", CAPTURE_TOOL_EMPTY_HAND)))
+	var capture_tool_name := CaptureToolCatalog.full_name_for(capture_tool_id)
 	attacker["actionState"] = "capture"
 	var success := bool(event.get("success", false))
 	if success:
 		target["hp"] = 0
 		target["actionState"] = "captured"
 		target["captured"] = true
-		state["message"] = "%s 捕捉了 %s。" % [str(attacker.get("name", "我方")), str(target.get("name", "目标"))]
+		if capture_tool_id == CAPTURE_TOOL_EMPTY_HAND:
+			state["message"] = "%s 空手捕捉了 %s。" % [str(attacker.get("name", "我方")), str(target.get("name", "目标"))]
+		else:
+			state["message"] = "%s 使用%s捕捉了 %s。" % [str(attacker.get("name", "我方")), capture_tool_name, str(target.get("name", "目标"))]
 	else:
 		target["actionState"] = "hit"
-		state["message"] = "%s 抛出捕捉石，%s 挣脱了。" % [str(attacker.get("name", "我方")), str(target.get("name", "目标"))]
+		if capture_tool_id == CAPTURE_TOOL_EMPTY_HAND:
+			state["message"] = "%s 空手尝试捕捉 %s，%s 挣脱了。" % [
+				str(attacker.get("name", "我方")),
+				str(target.get("name", "目标")),
+				str(target.get("name", "目标")),
+			]
+		else:
+			state["message"] = "%s 抛出%s，%s 挣脱了。" % [str(attacker.get("name", "我方")), capture_tool_name, str(target.get("name", "目标"))]
 	actors[attacker_index] = attacker
 	actors[target_index] = target
 	state["actors"] = actors
+	state = consume_capture_tool(state, capture_tool_id)
 	state = _sync_player_pet_party_from_actor(state, target)
 	state["phase"] = "round_events"
 	state["lastEventApplied"] = true
@@ -2091,6 +2179,9 @@ static func _apply_capture_event(state: Dictionary, event: Dictionary) -> Dictio
 	state["lastTargetId"] = target_id
 	state["lastTargetIds"] = [target_id]
 	state["lastCaptureSuccess"] = success
+	state["lastCaptureToolId"] = capture_tool_id
+	state["lastCaptureChance"] = float(event.get("captureChance", capture_chance(state, attacker_id, target_id, capture_tool_id)))
+	state["lastCaptureRoll"] = float(event.get("captureRoll", capture_roll(state, attacker_id, target_id, capture_tool_id, int(event.get("sequence", 0)))))
 	return state
 
 

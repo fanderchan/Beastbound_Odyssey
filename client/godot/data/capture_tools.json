@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "tools": [
+    {
+      "id": "empty_hand",
+      "label": "空手",
+      "fullName": "空手捕捉",
+      "menuLabel": "空手",
+      "consumable": false,
+      "startingCount": 0,
+      "chanceBonus": 0.0
+    },
+    {
+      "id": "capture_rope_basic",
+      "label": "初级绳",
+      "fullName": "初级捕捉绳",
+      "menuLabel": "初级绳",
+      "consumable": true,
+      "startingCount": 5,
+      "chanceBonus": 0.12
+    },
+    {
+      "id": "capture_net",
+      "label": "捕捉网",
+      "fullName": "捕捉网",
+      "menuLabel": "捕捉网",
+      "consumable": true,
+      "startingCount": 3,
+      "chanceBonus": 0.22
+    },
+    {
+      "id": "capture_net_reinforced",
+      "label": "强化网",
+      "fullName": "强化捕捉网",
+      "menuLabel": "强化网",
+      "consumable": true,
+      "startingCount": 1,
+      "chanceBonus": 0.34
+    }
+  ]
+}

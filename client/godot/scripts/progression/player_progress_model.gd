@@ -2,6 +2,7 @@ extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
+const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
 const SAVE_PATH := "user://player_profile.json"
@@ -17,6 +18,7 @@ const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
+const CAPTURE_TOOLS_KEY := "captureTools"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 
@@ -40,6 +42,7 @@ static func default_profile() -> Dictionary:
 			_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, 1),
 		],
 		"groundPetDrops": [],
+		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
 	}
@@ -90,6 +93,20 @@ static func storage_pet_instances(profile: Dictionary) -> Array[Dictionary]:
 		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 			result.append(instance)
 	return result
+
+
+static func capture_tool_inventory(profile: Dictionary) -> Dictionary:
+	return CaptureToolCatalog.normalize_inventory(normalize_profile(profile).get(CAPTURE_TOOLS_KEY, {}))
+
+
+static func capture_tool_count(profile: Dictionary, tool_id: String) -> int:
+	return CaptureToolCatalog.count_for(capture_tool_inventory(profile), tool_id)
+
+
+static func with_capture_tool_inventory(profile: Dictionary, inventory: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(inventory)
+	return normalized
 
 
 static func all_pet_instances(profile: Dictionary) -> Array[Dictionary]:
@@ -907,6 +924,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 				if not drop.is_empty():
 					drops.append(drop)
 	normalized["groundPetDrops"] = drops
+	normalized[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(normalized.get(CAPTURE_TOOLS_KEY, {}))
 
 	var seen_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
 	var captured_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
@@ -932,6 +950,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var next_state := state.duplicate(true)
 	var normalized := normalize_profile(profile)
+	next_state["captureToolBag"] = capture_tool_inventory(normalized)
 	next_state = _apply_profile_player_to_battle_state(normalized, next_state)
 	var party := pet_party_for_battle(normalized)
 	next_state["petParty"] = party
@@ -1046,6 +1065,7 @@ static func battle_result_for_state(state: Dictionary) -> String:
 
 static func apply_battle_result(profile: Dictionary, state: Dictionary, result_override: String = "") -> Dictionary:
 	var next_profile := normalize_profile(profile)
+	next_profile[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(state.get("captureToolBag", next_profile.get(CAPTURE_TOOLS_KEY, {})))
 	next_profile = _merge_battle_pet_party(next_profile, state)
 	next_profile = _with_codex_forms_seen_from_battle(next_profile, state)
 	var result := result_override if result_override != "" else battle_result_for_state(state)

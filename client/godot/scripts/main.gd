@@ -10,6 +10,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const START_MAP_ID := "firebud_training_yard"
@@ -128,6 +129,7 @@ var auto_battle_speed_check: bool = false
 var auto_battle_feedback_check: bool = false
 var auto_battle_combo_check: bool = false
 var auto_battle_capture_check: bool = false
+var auto_capture_tools_check: bool = false
 var auto_battle_spirit_check: bool = false
 var auto_battle_pet_command_check: bool = false
 var auto_battle_pet_target_check: bool = false
@@ -170,6 +172,7 @@ var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
 var pet_encounter_table_preview: bool = false
 var pet_capture_feedback_preview: bool = false
+var capture_tools_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -217,6 +220,7 @@ var battle_target_mode: String = "enemy"
 var battle_command_owner: String = "player"
 var battle_pending_spirit_id: String = ""
 var battle_pending_item_id: String = ""
+var battle_pending_capture_tool_id: String = ""
 var battle_pending_pet_skill_id: String = ""
 var battle_switch_pet_button_pet_ids: Dictionary = {}
 var battle_pending_player_command: Dictionary = {}
@@ -339,6 +343,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_encounter_table_preview")
 	elif pet_capture_feedback_preview:
 		call_deferred("_run_pet_capture_feedback_preview")
+	elif capture_tools_preview:
+		call_deferred("_run_capture_tools_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -355,6 +361,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_combo_check")
 	elif auto_battle_capture_check:
 		call_deferred("_run_auto_battle_capture_check")
+	elif auto_capture_tools_check:
+		call_deferred("_run_auto_capture_tools_check")
 	elif auto_battle_spirit_check:
 		call_deferred("_run_auto_battle_spirit_check")
 	elif auto_battle_pet_command_check:
@@ -461,6 +469,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_combo_check = true
 		elif arg == "--auto-battle-capture-check":
 			auto_battle_capture_check = true
+		elif arg == "--auto-capture-tools-check":
+			auto_capture_tools_check = true
 		elif arg == "--auto-battle-spirit-check":
 			auto_battle_spirit_check = true
 		elif arg == "--auto-battle-pet-command-check":
@@ -545,6 +555,8 @@ func _apply_preview_window_args() -> void:
 			pet_encounter_table_preview = true
 		elif arg == "--pet-capture-feedback-preview":
 			pet_capture_feedback_preview = true
+		elif arg == "--capture-tools-preview":
+			capture_tools_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -1302,6 +1314,8 @@ func _run_auto_battle_combo_check() -> void:
 
 
 func _run_auto_battle_capture_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -1311,7 +1325,10 @@ func _run_auto_battle_capture_check() -> void:
 	var target_id := BattleModel.living_enemy_id(battle_state)
 	if target_id != "":
 		battle_state = BattleModel.set_actor_hp(battle_state, target_id, 12)
+		battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+		_force_capture_seed_for_result(BattleModel.CAPTURE_TOOL_NET_REINFORCED, true)
 	_on_battle_command_pressed("capture")
+	_on_battle_command_pressed("defend")
 	_auto_click_enemy_target(target_id)
 	_auto_submit_pet_defend_if_needed()
 	var capture_event_seen := false
@@ -1346,6 +1363,126 @@ func _run_auto_battle_capture_check() -> void:
 		str(returned_to_map),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_capture_tools_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	if zone_found:
+		_start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var menu_open_ok := false
+	if target_id != "":
+		_on_battle_command_pressed("capture")
+		var empty_button := battle_command_buttons.get("attack") as Button
+		var rope_button := battle_command_buttons.get("spirit") as Button
+		var net_button := battle_command_buttons.get("capture") as Button
+		var reinforced_button := battle_command_buttons.get("defend") as Button
+		menu_open_ok = (
+			battle_command_owner == "capture"
+			and empty_button != null and empty_button.text == "空手"
+			and rope_button != null and rope_button.text == "初级绳 x5"
+			and net_button != null and net_button.text == "捕捉网 x3"
+			and reinforced_button != null and reinforced_button.text == "强化网 x1"
+		)
+
+	var model_state := PlayerProgressModel.apply_profile_to_battle_state(
+		PlayerProgressModel.default_profile(),
+		BattleModel.create_wild_battle({"id": "capture_tools_model", "name": "捕捉道具模型"})
+	)
+	var model_target_id := BattleModel.living_enemy_id(model_state)
+	var before_empty := BattleModel.capture_tool_inventory(model_state).duplicate(true)
+	var empty_event := {
+		"type": "capture",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"targetId": model_target_id,
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+		"success": false,
+		"speed": 100,
+		"sequence": 1,
+	}
+	var empty_after_state := BattleModel.apply_battle_event(model_state.duplicate(true), empty_event)
+	var empty_no_consume_ok := BattleModel.capture_tool_inventory(empty_after_state) == before_empty
+
+	var rope_before := BattleModel.capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var rope_event := empty_event.duplicate(true)
+	rope_event["captureToolId"] = BattleModel.CAPTURE_TOOL_ROPE_BASIC
+	rope_event["success"] = false
+	var rope_after_state := BattleModel.apply_battle_event(model_state.duplicate(true), rope_event)
+	var rope_fail_consumes_ok := BattleModel.capture_tool_count(rope_after_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == rope_before - 1
+
+	var low_state := model_state.duplicate(true)
+	low_state = BattleModel.set_actor_hp(low_state, model_target_id, 10)
+	var empty_chance := BattleModel.capture_chance(low_state, BattleModel.PLAYER_ACTOR_ID, model_target_id, BattleModel.CAPTURE_TOOL_EMPTY_HAND)
+	var rope_chance := BattleModel.capture_chance(low_state, BattleModel.PLAYER_ACTOR_ID, model_target_id, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var net_chance := BattleModel.capture_chance(low_state, BattleModel.PLAYER_ACTOR_ID, model_target_id, BattleModel.CAPTURE_TOOL_NET)
+	var reinforced_chance := BattleModel.capture_chance(low_state, BattleModel.PLAYER_ACTOR_ID, model_target_id, BattleModel.CAPTURE_TOOL_NET_REINFORCED)
+	var sleep_state := BattleModel.set_actor_status(low_state.duplicate(true), model_target_id, BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	var sleep_chance := BattleModel.capture_chance(sleep_state, BattleModel.PLAYER_ACTOR_ID, model_target_id, BattleModel.CAPTURE_TOOL_NET_REINFORCED)
+	var chance_order_ok := empty_chance < rope_chance and rope_chance < net_chance and net_chance < reinforced_chance and sleep_chance > reinforced_chance
+
+	if target_id != "":
+		battle_state = BattleModel.set_actor_hp(battle_state, target_id, 8)
+		battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_SLEEP, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+		_force_capture_seed_for_result(BattleModel.CAPTURE_TOOL_NET_REINFORCED, true)
+		_on_battle_command_pressed("defend")
+		_auto_click_enemy_target(target_id)
+		_auto_submit_pet_defend_if_needed()
+	var saw_capture: bool = await _auto_wait_for_event_type("capture", 1200)
+	var ui_success_ok := saw_capture and bool(battle_state.get("lastCaptureSuccess", false)) and str(battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
+	var reinforced_consumed_ok := PlayerProgressModel.capture_tool_count(player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
+	var status := "ok" if loaded and zone_found and menu_open_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s menu=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f log=%s" % [
+		status,
+		str(menu_open_ok),
+		str(empty_no_consume_ok),
+		str(rope_fail_consumes_ok),
+		str(chance_order_ok),
+		str(ui_success_ok),
+		str(reinforced_consumed_ok),
+		empty_chance,
+		rope_chance,
+		net_chance,
+		reinforced_chance,
+		sleep_chance,
+		float(battle_state.get("lastCaptureRoll", -1.0)),
+		str(battle_state.get("message", "")).replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_capture_tools_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if not loaded or zones.is_empty():
+		return
+	_start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	if target_id != "":
+		battle_state = BattleModel.set_actor_hp(battle_state, target_id, 22)
+	_open_capture_command_menu()
+
+
+func _force_capture_seed_for_result(tool_id: String, expected_success: bool) -> void:
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var player_id := BattleModel.player_actor_id(battle_state)
+	if target_id == "" or player_id == "":
+		return
+	for index in range(80):
+		var seed := "phase48_capture_%s_%d" % [tool_id, index]
+		battle_state["targetSeed"] = seed
+		var succeeds := BattleModel.capture_would_succeed(battle_state, player_id, target_id, tool_id, 0)
+		if succeeds == expected_success:
+			battle_state["forcedTargetSeed"] = seed
+			return
 
 
 func _run_auto_battle_spirit_check() -> void:
@@ -4606,6 +4743,18 @@ func _set_battle_command_owner(owner: String) -> void:
 			"switch_pet": "",
 			"run": "",
 		})
+	elif owner == "capture":
+		battle_command_title_label.text = "捕捉"
+		_apply_battle_button_labels({
+			"attack": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_EMPTY_HAND),
+			"spirit": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_ROPE_BASIC),
+			"capture": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_NET),
+			"help": "返回",
+			"defend": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_NET_REINFORCED),
+			"item": "",
+			"switch_pet": "",
+			"run": "",
+		})
 	elif owner == "switch_pet":
 		battle_command_title_label.text = "换宠"
 		_apply_switch_pet_button_labels()
@@ -4704,6 +4853,13 @@ func _battle_item_label(item_id: String, fallback: String) -> String:
 	]
 
 
+func _capture_tool_button_label(tool_id: String) -> String:
+	var label := CaptureToolCatalog.menu_label_for(tool_id)
+	if not CaptureToolCatalog.is_consumable(tool_id):
+		return label
+	return "%s x%d" % [label, BattleModel.capture_tool_count(battle_state, tool_id)]
+
+
 func _apply_battle_button_labels(labels: Dictionary) -> void:
 	for command_id in labels.keys():
 		if not battle_command_buttons.has(command_id):
@@ -4752,6 +4908,8 @@ func _battle_command_order_for_owner() -> Array[String]:
 			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
 		"item":
 			return ["attack", "spirit", "capture", "defend", "item", "help", "switch_pet", "run"]
+		"capture":
+			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
 		"switch_pet":
 			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
 		_:
@@ -4766,6 +4924,8 @@ func _battle_command_visible_ids() -> Array[String]:
 			return ["attack", "spirit", "capture", "defend", "help"]
 		"item":
 			return ["attack", "spirit", "capture", "defend", "item", "help"]
+		"capture":
+			return ["attack", "spirit", "capture", "defend", "help"]
 		"switch_pet":
 			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
 		_:
@@ -5886,6 +6046,11 @@ func _start_battle_from_encounter() -> void:
 func _refresh_battle_target_seed() -> void:
 	if battle_state.is_empty():
 		return
+	var forced_seed := str(battle_state.get("forcedTargetSeed", ""))
+	if forced_seed != "":
+		battle_state["targetSeed"] = forced_seed
+		battle_state.erase("forcedTargetSeed")
+		return
 	battle_state["targetSeed"] = "%s:%d:%d" % [
 		str(battle_state.get("id", "battle")),
 		int(battle_state.get("round", 1)),
@@ -5914,6 +6079,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_hover_info_actor_id = ""
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	battle_selected_ally_target_id = ""
 	battle_pending_player_command.clear()
@@ -5977,6 +6143,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_command_owner = "player"
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()
@@ -6033,6 +6200,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		_end_battle(true)
 		_set_world_log_message("战斗结束。")
 		return {}
+	_sync_profile_capture_tools_from_battle_state(false)
 	var ended_state := battle_state.duplicate(true)
 	var result := PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
 	player_profile = result.get("profile", player_profile)
@@ -6044,6 +6212,14 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	_end_battle(true)
 	_set_world_log_message("\n".join(log_lines))
 	return result
+
+
+func _sync_profile_capture_tools_from_battle_state(save_after: bool = true) -> void:
+	if battle_state.is_empty():
+		return
+	player_profile = PlayerProgressModel.with_capture_tool_inventory(player_profile, BattleModel.capture_tool_inventory(battle_state))
+	if save_after and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
 
 
 func _set_world_log_message(text: String) -> void:
@@ -6529,6 +6705,9 @@ func _on_battle_command_pressed(command_id: String) -> void:
 	if battle_command_owner == "item":
 		_on_item_battle_command_pressed(command_id)
 		return
+	if battle_command_owner == "capture":
+		_on_capture_battle_command_pressed(command_id)
+		return
 	if battle_command_owner == "switch_pet":
 		_on_switch_pet_battle_command_pressed(command_id)
 		return
@@ -6542,7 +6721,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		"spirit":
 			_open_spirit_command_menu()
 		"capture":
-			_begin_player_enemy_target_selection("capture")
+			_open_capture_command_menu()
 		"item":
 			_open_item_command_menu()
 		"switch_pet":
@@ -6582,6 +6761,8 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 		"targetId": battle_selected_target_id,
 		"allyTargetId": battle_selected_ally_target_id,
 	}
+	if command_id == "capture":
+		battle_pending_player_command["captureToolId"] = CaptureToolCatalog.normalized_tool_id(battle_pending_capture_tool_id)
 	_open_pet_command_or_start_round()
 
 
@@ -6589,6 +6770,7 @@ func _submit_spirit_player_command(spirit_id: String, target_id: String = "") ->
 	battle_target_mode = "enemy"
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
 	var command := {
 		"command": "spirit",
 		"spiritId": spirit_id,
@@ -6619,6 +6801,7 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
+	battle_pending_capture_tool_id = ""
 	var command := {
 		"command": "item",
 		"itemId": item_id,
@@ -6653,6 +6836,7 @@ func _open_spirit_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	_set_battle_command_owner("spirit")
 	_set_battle_message("选择要使用的精灵。")
@@ -6662,15 +6846,31 @@ func _open_item_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	_set_battle_command_owner("item")
 	_set_battle_message("选择要使用的物品。")
+
+
+func _open_capture_command_menu() -> void:
+	battle_target_mode = "enemy"
+	battle_pending_item_id = ""
+	battle_pending_spirit_id = ""
+	battle_pending_capture_tool_id = ""
+	battle_pending_pet_skill_id = ""
+	battle_selected_target_id = ""
+	battle_selected_ally_target_id = ""
+	battle_hover_target_id = ""
+	battle_hover_ally_target_id = ""
+	_set_battle_command_owner("capture")
+	_set_battle_message("选择捕捉方式。")
 
 
 func _open_switch_pet_command_menu() -> void:
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	battle_selected_target_id = ""
 	battle_selected_ally_target_id = ""
@@ -6678,6 +6878,61 @@ func _open_switch_pet_command_menu() -> void:
 	battle_hover_ally_target_id = ""
 	_set_battle_command_owner("switch_pet")
 	_set_battle_message("选择待机宠物。")
+
+
+func _capture_tool_id_for_command(command_id: String) -> String:
+	match command_id:
+		"attack":
+			return BattleModel.CAPTURE_TOOL_EMPTY_HAND
+		"spirit":
+			return BattleModel.CAPTURE_TOOL_ROPE_BASIC
+		"capture":
+			return BattleModel.CAPTURE_TOOL_NET
+		"defend":
+			return BattleModel.CAPTURE_TOOL_NET_REINFORCED
+		_:
+			return ""
+
+
+func _on_capture_battle_command_pressed(command_id: String) -> void:
+	if command_id == "help":
+		battle_pending_capture_tool_id = ""
+		battle_target_mode = "enemy"
+		battle_selected_target_id = ""
+		battle_selected_ally_target_id = ""
+		battle_hover_target_id = ""
+		battle_hover_ally_target_id = ""
+		_set_battle_command_owner("player")
+		_set_battle_message("重新选择人物指令。")
+		return
+	var tool_id := _capture_tool_id_for_command(command_id)
+	if tool_id == "":
+		_set_battle_message("这个捕捉方式暂未开放。")
+		return
+	if not BattleModel.has_capture_tool(battle_state, tool_id):
+		_set_battle_message("%s 不够了。" % CaptureToolCatalog.full_name_for(tool_id))
+		_sync_battle_buttons()
+		return
+	_begin_capture_target_selection(tool_id)
+
+
+func _begin_capture_target_selection(tool_id: String) -> void:
+	if BattleModel.living_enemy_id(battle_state) == "":
+		_set_battle_message("没有可选择的目标。")
+		return
+	battle_pending_capture_tool_id = CaptureToolCatalog.normalized_tool_id(tool_id)
+	battle_selected_target_id = ""
+	battle_hover_target_id = ""
+	battle_hover_ally_target_id = ""
+	battle_target_mode = "player_capture_target"
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), target_id, battle_pending_capture_tool_id)
+	_set_battle_message("%s：请选择目标。机会：%s。" % [
+		CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
+		CaptureToolCatalog.chance_tier(chance),
+	])
+	_sync_battle_buttons()
+	queue_redraw()
 
 
 func _on_switch_pet_battle_command_pressed(command_id: String) -> void:
@@ -6840,6 +7095,7 @@ func _on_pet_battle_command_pressed(command_id: String) -> void:
 	if command_id == "help":
 		battle_pending_spirit_id = ""
 		battle_pending_item_id = ""
+		battle_pending_capture_tool_id = ""
 		battle_pending_pet_skill_id = ""
 		battle_pending_player_command.clear()
 		battle_pending_pet_command.clear()
@@ -6916,6 +7172,7 @@ func _battle_start_pending_round() -> void:
 	battle_pending_pet_command.clear()
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
 	battle_pending_pet_skill_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
@@ -6985,6 +7242,8 @@ func _play_next_battle_event() -> void:
 		var actor_snapshots := _battle_actor_snapshots_by_id()
 		battle_state = BattleModel.apply_battle_event(battle_state, event)
 		battle_state["phase"] = "round_events"
+		if str(event.get("type", "")) == "capture" and bool(battle_state.get("lastEventApplied", false)):
+			_sync_profile_capture_tools_from_battle_state()
 		if not bool(battle_state.get("lastEventApplied", false)):
 			battle_current_event_actor_snapshots.clear()
 			continue
@@ -7366,10 +7625,15 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		_update_battle_passive_panel()
 		var player_target := BattleModel.actor_by_id(battle_state, player_target_id)
 		var command_id := "capture" if battle_target_mode == "player_capture_target" else "attack"
-		_set_battle_message("%s：%s" % [
-			"捕捉" if command_id == "capture" else "攻击",
-			str(player_target.get("name", "敌人")),
-		])
+		if command_id == "capture":
+			var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), player_target_id, battle_pending_capture_tool_id)
+			_set_battle_message("%s：%s，机会：%s。" % [
+				CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
+				str(player_target.get("name", "敌人")),
+				CaptureToolCatalog.chance_tier(chance),
+			])
+		else:
+			_set_battle_message("攻击：%s" % str(player_target.get("name", "敌人")))
 		_submit_player_battle_command(command_id, player_target_id)
 		queue_redraw()
 		return true
@@ -7680,6 +7944,20 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_ALL)
 					"item":
 						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
+					"help":
+						button.disabled = not can_command
+					_:
+						button.disabled = true
+			elif battle_command_owner == "capture":
+				match str(command_id):
+					"attack":
+						button.disabled = not has_enemy
+					"spirit":
+						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+					"capture":
+						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_NET)
+					"defend":
+						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED)
 					"help":
 						button.disabled = not can_command
 					_:
