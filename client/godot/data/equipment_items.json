@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "slots": [
+    {
+      "id": "weapon",
+      "label": "武器"
+    },
+    {
+      "id": "body",
+      "label": "防具"
+    }
+  ],
+  "items": [
+    {
+      "id": "weapon_wooden_club",
+      "label": "木棒",
+      "menuLabel": "木棒",
+      "slot": "weapon",
+      "stats": {
+        "attack": 6
+      },
+      "description": "训练用的短木棒，轻便可靠。"
+    },
+    {
+      "id": "weapon_stone_axe",
+      "label": "石斧",
+      "menuLabel": "石斧",
+      "slot": "weapon",
+      "stats": {
+        "attack": 11,
+        "quick": -2
+      },
+      "description": "锋利但偏重的石斧，适合想打得更疼的新手。"
+    },
+    {
+      "id": "armor_hide_vest",
+      "label": "兽皮背心",
+      "menuLabel": "兽皮背心",
+      "slot": "body",
+      "stats": {
+        "defense": 5
+      },
+      "description": "用厚皮缝成的背心，能挡住一点野外擦伤。"
+    }
+  ]
+}

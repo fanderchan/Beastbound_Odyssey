@@ -42,6 +42,24 @@
           "buyPrice": 68
         }
       ]
+    },
+    {
+      "id": "firebud_equipment_shop",
+      "label": "火芽装备铺",
+      "items": [
+        {
+          "itemId": "weapon_wooden_club",
+          "buyPrice": 45
+        },
+        {
+          "itemId": "weapon_stone_axe",
+          "buyPrice": 82
+        },
+        {
+          "itemId": "armor_hide_vest",
+          "buyPrice": 60
+        }
+      ]
     }
   ]
 }

@@ -116,6 +116,17 @@
       "shopId": "firebud_item_shop",
       "dialog": ["杂货商阿芸：路上要多备点肉、药和捕捉工具。要买还是要卖，都可以在这里办。"],
       "option": "买卖"
+    },
+    {
+      "id": "firebud_equipment_keeper",
+      "name": "装备商阿石",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [7, 16],
+      "action": "买卖",
+      "shopId": "firebud_equipment_shop",
+      "dialog": ["装备商阿石：木棒、石斧和背心都在这里。先挑一件顺手的。"],
+      "option": "买卖"
     }
   ]
 }

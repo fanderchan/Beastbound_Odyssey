@@ -12,11 +12,13 @@ const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd"
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
+const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
@@ -210,12 +212,14 @@ var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
+var auto_equipment_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
+var equipment_quest_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -392,6 +396,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_chain_check")
 	elif auto_quest_ui_check:
 		call_deferred("_run_auto_quest_ui_check")
+	elif auto_equipment_check:
+		call_deferred("_run_auto_equipment_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
@@ -404,6 +410,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_preview")
 	elif quest_ui_preview:
 		call_deferred("_run_quest_ui_preview")
+	elif equipment_quest_preview:
+		call_deferred("_run_equipment_quest_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -628,6 +636,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_chain_check = true
 		elif arg == "--auto-quest-ui-check":
 			auto_quest_ui_check = true
+		elif arg == "--auto-equipment-check":
+			auto_equipment_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
@@ -640,6 +650,8 @@ func _apply_preview_window_args() -> void:
 			quest_preview = true
 		elif arg == "--quest-ui-preview":
 			quest_ui_preview = true
+		elif arg == "--equipment-quest-preview":
+			equipment_quest_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -3625,6 +3637,111 @@ func _run_auto_shop_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_check() -> void:
+	profile_save_enabled = false
+	var validation_ok := EquipmentModel.validation_errors().is_empty()
+	var base_profile := PlayerProgressModel.default_profile()
+	var catalog_ok := (
+		EquipmentModel.is_equipment("weapon_wooden_club")
+		and EquipmentModel.slot_for("weapon_wooden_club") == EquipmentModel.SLOT_WEAPON
+		and EquipmentModel.stat_bonus_text_for("weapon_wooden_club").find("攻击 +6") >= 0
+		and not ShopCatalogModel.shop_for_id(FIREBUD_EQUIPMENT_SHOP_ID).is_empty()
+		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club") == 45
+	)
+
+	var buy_result := PlayerProgressModel.buy_shop_item(base_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	var buy_profile := buy_result.get("profile", {}) as Dictionary
+	var buy_ok := (
+		bool(buy_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(buy_profile, "weapon_wooden_club") == 1
+		and PlayerProgressModel.stone_coins(buy_profile) == PlayerProgressModel.DEFAULT_STONE_COINS - 45
+	)
+	var equip_result := PlayerProgressModel.equip_item(buy_profile, "weapon_wooden_club")
+	var equip_profile := equip_result.get("profile", {}) as Dictionary
+	var bonus := PlayerProgressModel.equipment_stat_bonus(equip_profile)
+	var equip_ok := (
+		bool(equip_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(equip_profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		and int(bonus.get("attack", 0)) == 6
+	)
+	var equipped_state := _battle_reward_test_state("equipment_battle_check", equip_profile)
+	var player_actor := BattleModel.actor_by_id(equipped_state, BattleModel.PLAYER_ACTOR_ID)
+	var battle_bonus_ok := (
+		not player_actor.is_empty()
+		and int(player_actor.get("attack", 0)) == 24
+		and str((player_actor.get("equipmentSlots", {}) as Dictionary).get(EquipmentModel.SLOT_WEAPON, "")) == "weapon_wooden_club"
+	)
+	var sell_block_result := PlayerProgressModel.sell_shop_item(equip_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	var sell_block_ok := (
+		not bool(sell_block_result.get("ok", false))
+		and str(sell_block_result.get("message", "")).find("先卸下") >= 0
+		and PlayerProgressModel.backpack_item_count(sell_block_result.get("profile", {}) as Dictionary, "weapon_wooden_club") == 1
+	)
+	var unequip_result := PlayerProgressModel.unequip_slot(equip_profile, EquipmentModel.SLOT_WEAPON)
+	var unequip_profile := unequip_result.get("profile", {}) as Dictionary
+	var sell_after_result := PlayerProgressModel.sell_shop_item(unequip_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	var sell_after_profile := sell_after_result.get("profile", {}) as Dictionary
+	var sell_after_ok := (
+		bool(unequip_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(unequip_profile, EquipmentModel.SLOT_WEAPON) == ""
+		and bool(sell_after_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(sell_after_profile, "weapon_wooden_club") == 0
+	)
+
+	player_profile = buy_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_wooden_club")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var ui_detail_ok := (
+		backpack_detail_label != null
+		and backpack_detail_label.text.find("装备槽: 武器") >= 0
+		and backpack_detail_label.text.find("攻击 +6") >= 0
+		and backpack_use_button != null
+		and backpack_use_button.visible
+		and backpack_use_button.text == "装备"
+	)
+	_on_backpack_use_pressed()
+	await get_tree().process_frame
+	var ui_equip_ok := (
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		and backpack_use_button != null
+		and backpack_use_button.text == "卸下"
+		and world_log_message.find("装备木棒") >= 0
+	)
+	_close_backpack_panel()
+
+	player_profile = equip_profile
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	_set_shop_mode("sell")
+	await get_tree().process_frame
+	var sell_ui_ok := (
+		shop_panel != null
+		and shop_panel.visible
+		and _shop_sellable_count("weapon_wooden_club") == 0
+		and not shop_item_buttons.has("weapon_wooden_club")
+	)
+	_close_shop_panel()
+
+	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and sell_block_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and sell_ui_ok else "failed"
+	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s sell_block=%s sell_after=%s ui_detail=%s ui_equip=%s sell_ui=%s attack=%d coins=%d" % [
+		status,
+		str(validation_ok),
+		str(catalog_ok),
+		str(buy_ok),
+		str(equip_ok),
+		str(battle_bonus_ok),
+		str(sell_block_ok),
+		str(sell_after_ok),
+		str(ui_detail_ok),
+		str(ui_equip_ok),
+		str(sell_ui_ok),
+		int(player_actor.get("attack", 0)),
+		PlayerProgressModel.stone_coins(sell_after_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_reward_check() -> void:
 	profile_save_enabled = false
 	var base_profile := PlayerProgressModel.default_profile()
@@ -3723,6 +3840,29 @@ func _run_quest_ui_preview() -> void:
 		_update_hud_text()
 
 
+func _run_equipment_quest_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase55：装备铺、木棒装备、买肉后使用肉任务链。")
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	await get_tree().create_timer(0.8).timeout
+	var buy_result := PlayerProgressModel.buy_shop_item(player_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	player_profile = buy_result.get("profile", player_profile)
+	_set_world_log_message(str(buy_result.get("message", "")))
+	_close_shop_panel()
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_wooden_club")
+	_open_backpack_panel()
+	await get_tree().create_timer(0.8).timeout
+	_on_backpack_use_pressed()
+	await get_tree().create_timer(0.8).timeout
+	_close_backpack_panel()
+	_open_quest_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
 func _run_auto_quest_chain_check() -> void:
 	profile_save_enabled = false
 	var validation_ok := QuestModel.validation_errors().is_empty()
@@ -3750,6 +3890,10 @@ func _run_auto_quest_chain_check() -> void:
 	)
 
 	var before_rope := PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var before_buy_meat := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
+	var before_buy_coins := PlayerProgressModel.stone_coins(profile)
+	var buy_result := PlayerProgressModel.buy_shop_item(profile, ShopCatalogModel.DEFAULT_SHOP_ID, BattleModel.ITEM_MEAT_SMALL)
+	profile = buy_result.get("profile", profile)
 	var buy_event := PlayerProgressModel.record_quest_event(profile, {
 		"type": "buy_item",
 		"shopId": ShopCatalogModel.DEFAULT_SHOP_ID,
@@ -3760,10 +3904,77 @@ func _run_auto_quest_chain_check() -> void:
 	var buy_claim := PlayerProgressModel.claim_active_quest(profile)
 	profile = buy_claim.get("profile", profile)
 	var buy_ok := (
-		bool(buy_event.get("ready", false))
+		bool(buy_result.get("ok", false))
+		and bool(buy_event.get("ready", false))
 		and bool(buy_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_use_meat"
+		and PlayerProgressModel.stone_coins(profile) == before_buy_coins - ShopCatalogModel.buy_price_for(ShopCatalogModel.DEFAULT_SHOP_ID, BattleModel.ITEM_MEAT_SMALL)
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_buy_meat + 1
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == before_rope + 1
+	)
+
+	var before_use_coins := PlayerProgressModel.stone_coins(profile)
+	var before_use_meat := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
+	var use_result := PlayerProgressModel.use_world_pet_heal_item(profile, BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
+	profile = use_result.get("profile", profile)
+	var use_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "use_world_item",
+		"itemId": BattleModel.ITEM_MEAT_SMALL,
+		"targetType": "pet",
+		"amount": 1,
+	})
+	profile = use_event.get("profile", profile)
+	var use_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = use_claim.get("profile", profile)
+	var use_ok := (
+		bool(use_result.get("ok", false))
+		and bool(use_event.get("ready", false))
+		and bool(use_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_weapon"
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_use_meat - 1
+		and PlayerProgressModel.stone_coins(profile) == before_use_coins + 15
+	)
+
+	var before_weapon_coins := PlayerProgressModel.stone_coins(profile)
+	var buy_weapon_result := PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	profile = buy_weapon_result.get("profile", profile)
+	var buy_weapon_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "buy_item",
+		"shopId": FIREBUD_EQUIPMENT_SHOP_ID,
+		"itemId": "weapon_wooden_club",
+		"amount": 1,
+	})
+	profile = buy_weapon_event.get("profile", profile)
+	var buy_weapon_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = buy_weapon_claim.get("profile", profile)
+	var buy_weapon_ok := (
+		bool(buy_weapon_result.get("ok", false))
+		and bool(buy_weapon_event.get("ready", false))
+		and bool(buy_weapon_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_equip_weapon"
+		and PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club") == 1
+		and PlayerProgressModel.stone_coins(profile) == before_weapon_coins - ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	)
+
+	var before_equip_medicine := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var equip_result := PlayerProgressModel.equip_item(profile, "weapon_wooden_club")
+	profile = equip_result.get("profile", profile)
+	var equip_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "equip_item",
+		"itemId": "weapon_wooden_club",
+		"slot": EquipmentModel.SLOT_WEAPON,
+		"amount": 1,
+	})
+	profile = equip_event.get("profile", profile)
+	var equip_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = equip_claim.get("profile", profile)
+	var equip_ok := (
+		bool(equip_result.get("ok", false))
+		and bool(equip_event.get("ready", false))
+		and bool(equip_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_equip_medicine + 1
 	)
 
 	var before_victory_coins := PlayerProgressModel.stone_coins(profile)
@@ -3824,14 +4035,17 @@ func _run_auto_quest_chain_check() -> void:
 			and world_log_message.find("完成任务「认识训练师」") >= 0
 			and _current_task_text().find("补给准备") >= 0
 		)
-	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d" % [
+	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
 		str(talk_ready_ok),
 		str(talk_claim_ok),
 		str(buy_ok),
+		str(use_ok),
+		str(buy_weapon_ok),
+		str(equip_ok),
 		str(victory_ok),
 		str(capture_ok),
 		str(ui_open_ok),
@@ -3841,6 +4055,7 @@ func _run_auto_quest_chain_check() -> void:
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET),
+		PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club"),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -3902,13 +4117,83 @@ func _run_auto_quest_ui_check() -> void:
 	await get_tree().process_frame
 	var shop_route_ok := has_pending_interaction and str(pending_interaction.get("id", "")) == "firebud_shopkeeper"
 
-	var buy_event := PlayerProgressModel.record_quest_event(buy_profile, {
+	var buy_action := PlayerProgressModel.buy_shop_item(buy_profile, ShopCatalogModel.DEFAULT_SHOP_ID, BattleModel.ITEM_MEAT_SMALL)
+	var bought_profile := buy_action.get("profile", buy_profile) as Dictionary
+	var buy_event := PlayerProgressModel.record_quest_event(bought_profile, {
 		"type": "buy_item",
 		"shopId": ShopCatalogModel.DEFAULT_SHOP_ID,
 		"itemId": BattleModel.ITEM_MEAT_SMALL,
 		"amount": 1,
 	})
-	var battle_profile: Dictionary = PlayerProgressModel.claim_active_quest(buy_event.get("profile", {}) as Dictionary).get("profile", {})
+	var use_profile: Dictionary = PlayerProgressModel.claim_active_quest(buy_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = use_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var use_route_ok := (
+		backpack_panel != null
+		and backpack_panel.visible
+		and world_log_message.find("随身包") >= 0
+		and _current_task_text().find("给宠物喂肉") >= 0
+	)
+
+	var use_action := PlayerProgressModel.use_world_pet_heal_item(use_profile, BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
+	var used_profile := use_action.get("profile", use_profile) as Dictionary
+	var use_event := PlayerProgressModel.record_quest_event(used_profile, {
+		"type": "use_world_item",
+		"itemId": BattleModel.ITEM_MEAT_SMALL,
+		"targetType": "pet",
+		"amount": 1,
+	})
+	var weapon_profile: Dictionary = PlayerProgressModel.claim_active_quest(use_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = weapon_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var equipment_shop_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "firebud_equipment_keeper"
+		and _current_task_text().find("准备武器") >= 0
+	)
+
+	var buy_weapon_action := PlayerProgressModel.buy_shop_item(weapon_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	var bought_weapon_profile := buy_weapon_action.get("profile", weapon_profile) as Dictionary
+	var buy_weapon_event := PlayerProgressModel.record_quest_event(bought_weapon_profile, {
+		"type": "buy_item",
+		"shopId": FIREBUD_EQUIPMENT_SHOP_ID,
+		"itemId": "weapon_wooden_club",
+		"amount": 1,
+	})
+	var equip_profile: Dictionary = PlayerProgressModel.claim_active_quest(buy_weapon_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = equip_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var equip_route_ok := (
+		backpack_panel != null
+		and backpack_panel.visible
+		and world_log_message.find("随身包") >= 0
+		and _current_task_text().find("装备木棒") >= 0
+	)
+
+	var equip_action := PlayerProgressModel.equip_item(equip_profile, "weapon_wooden_club")
+	var equipped_profile := equip_action.get("profile", equip_profile) as Dictionary
+	var equip_event := PlayerProgressModel.record_quest_event(equipped_profile, {
+		"type": "equip_item",
+		"itemId": "weapon_wooden_club",
+		"slot": EquipmentModel.SLOT_WEAPON,
+		"amount": 1,
+	})
+	var battle_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
 	player_profile = battle_profile
 	_clear_navigation_state()
 	_load_map("firebud_village_gate", "from_training_yard")
@@ -3939,14 +4224,17 @@ func _run_auto_quest_ui_check() -> void:
 		and world_log_message == "历史记录13"
 	)
 
-	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(trainer_route_ok),
 		str(buy_detail_ok),
 		str(cross_map_route_ok),
 		str(shop_route_ok),
+		str(use_route_ok),
+		str(equipment_shop_route_ok),
+		str(equip_route_ok),
 		str(battle_route_ok),
 		str(log_scroll_ok),
 		_current_task_text(),
@@ -7463,16 +7751,31 @@ func _refresh_backpack_panel() -> void:
 		backpack_grid.add_child(button)
 		backpack_slot_buttons.append(button)
 	var selected_slot := slots[backpack_selected_slot_index] if backpack_selected_slot_index < slots.size() else {}
-	backpack_detail_label.text = "\n".join(BackpackModel.detail_lines_for_slot(selected_slot))
 	var selected_item_id := str(selected_slot.get("itemId", ""))
+	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
+	if EquipmentModel.is_equipment(selected_item_id):
+		detail_lines.append_array(EquipmentModel.detail_lines_for_item(selected_item_id))
+		var equipped_slot := PlayerProgressModel.equipped_slot_for_item(player_profile, selected_item_id)
+		if equipped_slot != "":
+			detail_lines.append("当前: 已装备")
+	backpack_detail_label.text = "\n".join(detail_lines)
 	var can_world_use := (
 		selected_item_id != ""
 		and BackpackModel.item_can_world_pet_heal(selected_item_id)
 		and BackpackModel.item_count(slots, selected_item_id) > 0
 	)
+	var can_equip := (
+		selected_item_id != ""
+		and EquipmentModel.is_equipment(selected_item_id)
+		and BackpackModel.item_count(slots, selected_item_id) > 0
+	)
 	if backpack_use_button != null:
-		backpack_use_button.visible = can_world_use
-		backpack_use_button.disabled = not can_world_use
+		backpack_use_button.visible = can_world_use or can_equip
+		backpack_use_button.disabled = not (can_world_use or can_equip)
+		if can_equip:
+			backpack_use_button.text = "卸下" if PlayerProgressModel.equipped_slot_for_item(player_profile, selected_item_id) != "" else "装备"
+		else:
+			backpack_use_button.text = "使用"
 	if not can_world_use or backpack_pending_use_item_id != selected_item_id:
 		backpack_pending_use_item_id = ""
 		_clear_backpack_target_buttons()
@@ -7503,8 +7806,36 @@ func _selected_backpack_item_id() -> String:
 	return str(_selected_backpack_slot().get("itemId", ""))
 
 
+func _backpack_slot_index_for_item(item_id: String) -> int:
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	for index in range(slots.size()):
+		if str((slots[index] as Dictionary).get("itemId", "")) == item_id:
+			return index
+	return -1
+
+
 func _on_backpack_use_pressed() -> void:
 	var item_id := _selected_backpack_item_id()
+	if EquipmentModel.is_equipment(item_id):
+		var equipped_slot := PlayerProgressModel.equipped_slot_for_item(player_profile, item_id)
+		var result := PlayerProgressModel.unequip_slot(player_profile, equipped_slot) if equipped_slot != "" else PlayerProgressModel.equip_item(player_profile, item_id)
+		player_profile = result.get("profile", player_profile)
+		var log_lines: Array[String] = [str(result.get("message", ""))]
+		if bool(result.get("ok", false)) and equipped_slot == "":
+			log_lines.append_array(_record_quest_event_and_maybe_claim({
+				"type": "equip_item",
+				"itemId": str(result.get("itemId", item_id)),
+				"slot": str(result.get("slot", "")),
+				"amount": 1,
+			}))
+		if bool(result.get("ok", false)) and profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message("\n".join(log_lines))
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		if status_label != null:
+			_update_hud_text()
+		return
 	if not BackpackModel.item_can_world_pet_heal(item_id):
 		return
 	backpack_pending_use_item_id = item_id
@@ -7548,9 +7879,17 @@ func _refresh_backpack_target_buttons(item_id: String) -> void:
 func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
+	var log_lines: Array[String] = [str(result.get("message", ""))]
+	if bool(result.get("ok", false)):
+		log_lines.append_array(_record_quest_event_and_maybe_claim({
+			"type": "use_world_item",
+			"itemId": str(result.get("itemId", item_id)),
+			"targetType": "pet",
+			"amount": 1,
+		}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
-	_set_world_log_message(str(result.get("message", "")))
+	_set_world_log_message("\n".join(log_lines))
 	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
 	_refresh_backpack_panel()
 	if pet_panel != null and pet_panel.visible:
@@ -7649,7 +7988,7 @@ func _shop_item_ids_for_mode(mode: String) -> Array[String]:
 		var counts := BackpackModel.counts_by_item(PlayerProgressModel.backpack_slots(player_profile))
 		for entry in ShopCatalogModel.entries_for(shop_active_id):
 			var item_id := str(entry.get("itemId", ""))
-			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0:
+			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0 and _shop_sellable_count(item_id) > 0:
 				result.append(item_id)
 	else:
 		for entry in ShopCatalogModel.buyable_entries_for(shop_active_id):
@@ -7689,14 +8028,25 @@ func _shop_detail_text(item_id: String) -> String:
 		ShopCatalogModel.buy_price_for(shop_active_id, item_id),
 		ShopCatalogModel.sell_price_for(shop_active_id, item_id),
 	])
+	if EquipmentModel.is_equipment(item_id):
+		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
+		if PlayerProgressModel.equipped_slot_for_item(player_profile, item_id) != "":
+			lines.append("当前: 已装备，出售前需要先卸下")
 	return "\n".join(lines)
+
+
+func _shop_sellable_count(item_id: String) -> int:
+	var count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
+	if EquipmentModel.is_equipment(item_id) and PlayerProgressModel.equipped_slot_for_item(player_profile, item_id) != "":
+		count -= 1
+	return maxi(0, count)
 
 
 func _shop_quantity_max(item_id: String) -> int:
 	if item_id == "":
 		return 0
 	if shop_mode == "sell":
-		return PlayerProgressModel.backpack_item_count(player_profile, item_id)
+		return _shop_sellable_count(item_id)
 	var buy_price := ShopCatalogModel.buy_price_for(shop_active_id, item_id)
 	if buy_price <= 0:
 		return 0
@@ -7898,6 +8248,10 @@ func _active_quest_navigation_target() -> Dictionary:
 			return _navigation_target_for_interaction_id(str(objective.get("targetId", QuestModel.turn_in_id_for(quest))))
 		"buy_item":
 			return _navigation_target_for_shop(str(objective.get("shopId", "")))
+		"use_world_item":
+			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
+		"equip_item":
+			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
 		"battle_victory":
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"capture_pet":
@@ -7947,6 +8301,9 @@ func _route_to_quest_target(target: Dictionary) -> void:
 				_set_world_log_message("正在前往%s。" % label)
 			else:
 				_set_world_log_message("暂时无法前往%s。" % label)
+		"backpack":
+			_open_backpack_panel()
+			_set_world_log_message("请在随身包完成：%s。" % label)
 
 
 func _navigation_target_for_interaction_id(interaction_id: String) -> Dictionary:
@@ -7982,6 +8339,14 @@ func _navigation_target_for_shop(shop_id: String) -> Dictionary:
 					"interaction": item,
 				}
 	return {}
+
+
+func _navigation_target_for_backpack(label: String) -> Dictionary:
+	return {
+		"kind": "backpack",
+		"mapId": "",
+		"label": label if label != "" else "随身包",
+	}
 
 
 func _navigation_target_for_encounter_group(group_id: String) -> Dictionary:

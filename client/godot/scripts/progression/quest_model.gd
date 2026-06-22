@@ -195,12 +195,19 @@ static func progress_amount_for_event(quest: Dictionary, event: Dictionary) -> i
 		"buy_item":
 			if not _matches_string_filter(objective, event, "shopId"):
 				return 0
-			var item_id := str(event.get("itemId", ""))
-			var required_item_id := str(objective.get("itemId", ""))
-			var item_ids := _string_array(objective.get("itemIds", []))
-			if required_item_id != "" and item_id != required_item_id:
+			if not _matches_item_filter(objective, event):
 				return 0
-			if not item_ids.is_empty() and not item_ids.has(item_id):
+			return maxi(1, int(event.get("amount", 1)))
+		"use_world_item":
+			if not _matches_item_filter(objective, event):
+				return 0
+			if not _matches_string_filter(objective, event, "targetType"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"equip_item":
+			if not _matches_item_filter(objective, event):
+				return 0
+			if not _matches_string_filter(objective, event, "slot"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"battle_victory":
@@ -252,6 +259,17 @@ static func validation_errors() -> Array[String]:
 static func _matches_string_filter(filter_source: Dictionary, event: Dictionary, key: String) -> bool:
 	var required := str(filter_source.get(key, ""))
 	return required == "" or str(event.get(key, "")) == required
+
+
+static func _matches_item_filter(filter_source: Dictionary, event: Dictionary) -> bool:
+	var item_id := str(event.get("itemId", ""))
+	var required_item_id := str(filter_source.get("itemId", ""))
+	var item_ids := _string_array(filter_source.get("itemIds", []))
+	if required_item_id != "" and item_id != required_item_id:
+		return false
+	if not item_ids.is_empty() and not item_ids.has(item_id):
+		return false
+	return true
 
 
 static func _string_array(value) -> Array[String]:

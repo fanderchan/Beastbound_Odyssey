@@ -5,6 +5,7 @@ const SLOT_LIMIT := 15
 const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
+const CONTEXT_EQUIPMENT := "equipment"
 
 
 static func items() -> Array[Dictionary]:
@@ -295,6 +296,8 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 		context_labels.append("世界可用")
 	if contexts.has(CONTEXT_CAPTURE):
 		context_labels.append("捕捉")
+	if contexts.has(CONTEXT_EQUIPMENT):
+		context_labels.append("装备")
 	if context_labels.is_empty():
 		context_labels.append("暂不可用")
 	return [

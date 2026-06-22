@@ -36,14 +36,80 @@
       "objective": {
         "type": "buy_item",
         "shopId": "firebud_item_shop",
+        "itemId": "item_meat_small",
         "count": 1,
-        "text": "在火芽杂货铺购买任意补给"
+        "text": "在火芽杂货铺购买肉"
       },
       "rewards": {
         "stoneCoins": 0,
         "items": [
           {
             "itemId": "capture_rope_basic",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_use_meat"
+    },
+    {
+      "id": "quest_use_meat",
+      "title": "给宠物喂肉",
+      "giverId": "firebud_shopkeeper",
+      "turnInId": "firebud_shopkeeper",
+      "autoClaimOnReady": true,
+      "summary": "打开随身包，对队伍宠物使用肉。",
+      "objective": {
+        "type": "use_world_item",
+        "itemId": "item_meat_small",
+        "targetType": "pet",
+        "count": 1,
+        "text": "在随身包里对队伍宠物使用肉"
+      },
+      "rewards": {
+        "stoneCoins": 15,
+        "items": []
+      },
+      "nextQuestId": "quest_buy_weapon"
+    },
+    {
+      "id": "quest_buy_weapon",
+      "title": "准备武器",
+      "giverId": "firebud_shopkeeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "去火芽装备铺购买一把木棒。",
+      "objective": {
+        "type": "buy_item",
+        "shopId": "firebud_equipment_shop",
+        "itemId": "weapon_wooden_club",
+        "count": 1,
+        "text": "在火芽装备铺购买木棒"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
+      "nextQuestId": "quest_equip_weapon"
+    },
+    {
+      "id": "quest_equip_weapon",
+      "title": "装备木棒",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "打开随身包，选中木棒并装备。",
+      "objective": {
+        "type": "equip_item",
+        "itemId": "weapon_wooden_club",
+        "slot": "weapon",
+        "count": 1,
+        "text": "在随身包里装备木棒"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
             "count": 1
           }
         ]
