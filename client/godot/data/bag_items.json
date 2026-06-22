@@ -8,8 +8,12 @@
       "menuLabel": "肉",
       "stackLimit": 20,
       "startingCount": 6,
-      "useContexts": ["battle_item"],
-      "battleActionId": "item_meat_small"
+      "useContexts": ["battle_item", "world_pet_heal"],
+      "battleActionId": "item_meat_small",
+      "worldUse": {
+        "type": "pet_heal",
+        "amount": 28
+      }
     },
     {
       "id": "item_heal_all_5",
@@ -26,8 +30,12 @@
       "menuLabel": "回复药5",
       "stackLimit": 20,
       "startingCount": 2,
-      "useContexts": ["battle_item"],
-      "battleActionId": "item_heal_single_5"
+      "useContexts": ["battle_item", "world_pet_heal"],
+      "battleActionId": "item_heal_single_5",
+      "worldUse": {
+        "type": "pet_heal",
+        "amount": 42
+      }
     },
     {
       "id": "item_poison_single_5",

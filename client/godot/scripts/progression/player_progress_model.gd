@@ -541,6 +541,81 @@ static func heal_pet(profile: Dictionary, instance_id: String) -> Dictionary:
 	}
 
 
+static func use_world_pet_heal_item(profile: Dictionary, item_id: String, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id)
+	if not BackpackModel.item_can_world_pet_heal(item_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 不能这样使用。" % item_label,
+		}
+	if BackpackModel.item_count(backpack_slots(normalized), item_id) <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 不够了。" % item_label,
+		}
+
+	var instances: Array = normalized.get("petInstances", [])
+	var found := false
+	var healed_name := "宠物"
+	var healed_amount := 0
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		found = true
+		healed_name = str(instance.get("name", "宠物"))
+		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "只能对队伍宠物使用。",
+			}
+		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+		if hp >= max_hp:
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 生命已满。" % healed_name,
+			}
+		healed_amount = mini(BackpackModel.world_heal_amount_for(item_id), max_hp - hp)
+		instance["hp"] = hp + healed_amount
+		instances[index] = instance
+		break
+	if not found:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+	if healed_amount <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 不能这样使用。" % item_label,
+		}
+
+	normalized["petInstances"] = instances
+	var next_slots := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, 1)
+	normalized[BACKPACK_SLOTS_KEY] = next_slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 使用%s，恢复%d生命。" % [healed_name, item_label, healed_amount],
+		"heal": healed_amount,
+		"itemId": item_id,
+		"petId": instance_id,
+	}
+
+
 static func rest_recovery_amount_for_instance(instance: Dictionary) -> int:
 	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
 	return maxi(1, int(ceil(float(max_hp) * PET_REST_RECOVERY_RATIO)))

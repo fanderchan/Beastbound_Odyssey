@@ -85,9 +85,13 @@ var codex_menu_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: Label
+var backpack_use_button: Button
+var backpack_target_scroll: ScrollContainer
+var backpack_target_container: VBoxContainer
 var backpack_close_button: Button
 var backpack_slot_buttons: Array[Button] = []
 var backpack_selected_slot_index: int = 0
+var backpack_pending_use_item_id: String = ""
 var pet_panel: PanelContainer
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
@@ -174,8 +178,10 @@ var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_backpack_check: bool = false
+var auto_backpack_world_use_check: bool = false
 var auto_battle_reward_check: bool = false
 var backpack_preview: bool = false
+var backpack_world_use_preview: bool = false
 var battle_reward_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
@@ -343,10 +349,14 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif auto_backpack_check:
 		call_deferred("_run_auto_backpack_check")
+	elif auto_backpack_world_use_check:
+		call_deferred("_run_auto_backpack_world_use_check")
 	elif auto_battle_reward_check:
 		call_deferred("_run_auto_battle_reward_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
+	elif backpack_world_use_preview:
+		call_deferred("_run_backpack_world_use_preview")
 	elif battle_reward_preview:
 		call_deferred("_run_battle_reward_preview")
 	elif pet_management_preview:
@@ -563,10 +573,14 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--auto-backpack-check":
 			auto_backpack_check = true
+		elif arg == "--auto-backpack-world-use-check":
+			auto_backpack_world_use_check = true
 		elif arg == "--auto-battle-reward-check":
 			auto_battle_reward_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
+		elif arg == "--backpack-world-use-preview":
+			backpack_world_use_preview = true
 		elif arg == "--battle-reward-preview":
 			battle_reward_preview = true
 		elif arg == "--pet-management-preview":
@@ -3182,6 +3196,14 @@ func _run_backpack_preview() -> void:
 	_open_backpack_panel()
 
 
+func _run_backpack_world_use_preview() -> void:
+	profile_save_enabled = false
+	player_profile = _profile_with_pet_hp(PlayerProgressModel.default_profile(), "pet_bui_main", 68)
+	backpack_selected_slot_index = 0
+	_open_backpack_panel()
+	_on_backpack_use_pressed()
+
+
 func _run_battle_reward_preview() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -3191,6 +3213,20 @@ func _run_battle_reward_preview() -> void:
 	_set_world_log_message(_battle_result_log_text(result))
 	backpack_selected_slot_index = 0
 	_open_backpack_panel()
+
+
+func _profile_with_pet_hp(profile: Dictionary, instance_id: String, hp: int) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	var instances: Array = next_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) == instance_id:
+			instance["hp"] = hp
+		instances[index] = instance
+	next_profile["petInstances"] = instances
+	return PlayerProgressModel.normalize_profile(next_profile)
 
 
 func _run_auto_backpack_check() -> void:
@@ -3273,6 +3309,81 @@ func _run_auto_backpack_check() -> void:
 		str(item_menu_ok),
 		str(capture_menu_ok),
 		str(meat_consumed_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_backpack_world_use_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var base_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
+	var max_hp := maxi(1, int(base_pet.get("maxHp", 1)))
+	var start_hp := maxi(1, max_hp - 60)
+	player_profile = _profile_with_pet_hp(player_profile, "pet_bui_main", start_hp)
+	var start_state := str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").get("state", ""))
+	var context_ok := (
+		BackpackModel.item_has_context(BattleModel.ITEM_MEAT_SMALL, BackpackModel.CONTEXT_BATTLE_ITEM)
+		and BackpackModel.item_has_context(BattleModel.ITEM_MEAT_SMALL, BackpackModel.CONTEXT_WORLD_PET_HEAL)
+		and BackpackModel.item_has_context(BattleModel.ITEM_HEAL_SINGLE, BackpackModel.CONTEXT_WORLD_PET_HEAL)
+		and not BackpackModel.item_has_context(BattleModel.CAPTURE_TOOL_NET, BackpackModel.CONTEXT_WORLD_PET_HEAL)
+	)
+
+	backpack_selected_slot_index = 0
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var detail_ok := (
+		backpack_detail_label != null
+		and backpack_detail_label.text.find("战斗可用") >= 0
+		and backpack_detail_label.text.find("世界可用") >= 0
+	)
+	var use_button_ok := backpack_use_button != null and backpack_use_button.visible and not backpack_use_button.disabled and backpack_use_button.text == "使用"
+	_on_backpack_use_pressed()
+	await get_tree().process_frame
+	var target_ok := (
+		backpack_target_scroll != null
+		and backpack_target_scroll.visible
+		and backpack_target_container != null
+		and backpack_target_container.get_child_count() >= PlayerProgressModel.party_pet_instances(player_profile).size()
+	)
+	var before_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+	_use_backpack_item_on_pet(BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
+	await get_tree().process_frame
+	var after_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
+	var expected_hp := mini(max_hp, start_hp + BackpackModel.world_heal_amount_for(BattleModel.ITEM_MEAT_SMALL))
+	var world_use_ok := (
+		PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == before_meat - 1
+		and int(after_pet.get("hp", 0)) == expected_hp
+		and str(after_pet.get("state", "")) == start_state
+		and world_log_message.find("恢复") >= 0
+	)
+
+	player_profile = _profile_with_pet_hp(player_profile, "pet_bui_main", max_hp)
+	var before_medicine := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_HEAL_SINGLE)
+	var full_result := PlayerProgressModel.use_world_pet_heal_item(player_profile, BattleModel.ITEM_HEAL_SINGLE, "pet_bui_main")
+	player_profile = full_result.get("profile", player_profile)
+	var full_block_ok := (
+		not bool(full_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_HEAL_SINGLE) == before_medicine
+		and str(full_result.get("message", "")).find("生命已满") >= 0
+	)
+
+	_select_backpack_slot(7)
+	await get_tree().process_frame
+	var capture_hidden_ok := backpack_use_button != null and not backpack_use_button.visible and backpack_detail_label.text.find("捕捉") >= 0
+	_close_backpack_panel()
+	var status := "ok" if context_ok and detail_ok and use_button_ok and target_ok and world_use_ok and full_block_ok and capture_hidden_ok else "failed"
+	print("backpack world use check ready: status=%s context=%s detail=%s use_button=%s targets=%s world_use=%s full_block=%s capture_hidden=%s hp=%d/%d meat=%d" % [
+		status,
+		str(context_ok),
+		str(detail_ok),
+		str(use_button_ok),
+		str(target_ok),
+		str(world_use_ok),
+		str(full_block_ok),
+		str(capture_hidden_ok),
+		int(after_pet.get("hp", 0)),
+		max_hp,
+		PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -5510,6 +5621,22 @@ func _build_hud() -> void:
 	backpack_detail_label.custom_minimum_size = Vector2(0, 72)
 	backpack_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_column.add_child(backpack_detail_label)
+	backpack_use_button = Button.new()
+	backpack_use_button.text = "使用"
+	backpack_use_button.visible = false
+	backpack_use_button.custom_minimum_size = Vector2(0, 44)
+	backpack_use_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_use_button.pressed.connect(_on_backpack_use_pressed)
+	backpack_column.add_child(backpack_use_button)
+	backpack_target_scroll = ScrollContainer.new()
+	backpack_target_scroll.visible = false
+	backpack_target_scroll.custom_minimum_size = Vector2(0, 112)
+	backpack_target_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_column.add_child(backpack_target_scroll)
+	backpack_target_container = VBoxContainer.new()
+	backpack_target_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_target_container.add_theme_constant_override("separation", 6)
+	backpack_target_scroll.add_child(backpack_target_container)
 	hud_root.add_child(backpack_panel)
 
 	pet_panel = _panel_container("PetPanel")
@@ -6573,6 +6700,7 @@ func _open_backpack_panel() -> void:
 
 
 func _close_backpack_panel() -> void:
+	backpack_pending_use_item_id = ""
 	if backpack_panel != null:
 		backpack_panel.visible = false
 	if hud_root != null:
@@ -6605,6 +6733,22 @@ func _refresh_backpack_panel() -> void:
 		backpack_slot_buttons.append(button)
 	var selected_slot := slots[backpack_selected_slot_index] if backpack_selected_slot_index < slots.size() else {}
 	backpack_detail_label.text = "\n".join(BackpackModel.detail_lines_for_slot(selected_slot))
+	var selected_item_id := str(selected_slot.get("itemId", ""))
+	var can_world_use := (
+		selected_item_id != ""
+		and BackpackModel.item_can_world_pet_heal(selected_item_id)
+		and BackpackModel.item_count(slots, selected_item_id) > 0
+	)
+	if backpack_use_button != null:
+		backpack_use_button.visible = can_world_use
+		backpack_use_button.disabled = not can_world_use
+	if not can_world_use or backpack_pending_use_item_id != selected_item_id:
+		backpack_pending_use_item_id = ""
+		_clear_backpack_target_buttons()
+		if backpack_target_scroll != null:
+			backpack_target_scroll.visible = false
+	else:
+		_refresh_backpack_target_buttons(selected_item_id)
 
 
 func _backpack_grid_columns() -> int:
@@ -6613,7 +6757,73 @@ func _backpack_grid_columns() -> int:
 
 func _select_backpack_slot(slot_index: int) -> void:
 	backpack_selected_slot_index = clampi(slot_index, 0, BackpackModel.SLOT_LIMIT - 1)
+	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
+
+
+func _selected_backpack_slot() -> Dictionary:
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	if backpack_selected_slot_index < 0 or backpack_selected_slot_index >= slots.size():
+		return {}
+	return slots[backpack_selected_slot_index]
+
+
+func _selected_backpack_item_id() -> String:
+	return str(_selected_backpack_slot().get("itemId", ""))
+
+
+func _on_backpack_use_pressed() -> void:
+	var item_id := _selected_backpack_item_id()
+	if not BackpackModel.item_can_world_pet_heal(item_id):
+		return
+	backpack_pending_use_item_id = item_id
+	_refresh_backpack_panel()
+
+
+func _clear_backpack_target_buttons() -> void:
+	if backpack_target_container == null:
+		return
+	for child in backpack_target_container.get_children():
+		child.queue_free()
+
+
+func _refresh_backpack_target_buttons(item_id: String) -> void:
+	if backpack_target_scroll == null or backpack_target_container == null:
+		return
+	_clear_backpack_target_buttons()
+	backpack_target_scroll.visible = true
+	var pets := PlayerProgressModel.party_pet_instances(player_profile)
+	if pets.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "没有队伍宠物"
+		empty_label.add_theme_font_size_override("font_size", 15)
+		backpack_target_container.add_child(empty_label)
+		return
+	for pet in pets:
+		var max_hp := maxi(1, int(pet.get("maxHp", 1)))
+		var hp := clampi(int(pet.get("hp", max_hp)), 0, max_hp)
+		var button := Button.new()
+		button.text = "%s\n生命 %d/%d" % [str(pet.get("name", "宠物")), hp, max_hp]
+		button.custom_minimum_size = Vector2(0, 52)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.disabled = hp >= max_hp or not BackpackModel.item_can_world_pet_heal(item_id)
+		var instance_id := str(pet.get("instanceId", ""))
+		button.pressed.connect(func() -> void:
+			_use_backpack_item_on_pet(item_id, instance_id)
+		)
+		backpack_target_container.add_child(button)
+
+
+func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
+	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
+	_refresh_backpack_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
 
 
 func _open_pet_panel() -> void:

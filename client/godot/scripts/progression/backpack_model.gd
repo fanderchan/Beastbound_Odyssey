@@ -4,6 +4,7 @@ const DATA_PATH := "res://data/bag_items.json"
 const SLOT_LIMIT := 15
 const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
+const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
 
 
 static func items() -> Array[Dictionary]:
@@ -80,6 +81,23 @@ static func battle_action_id_for(item_id: String) -> String:
 static func capture_tool_id_for(item_id: String) -> String:
 	var item := item_for_id(item_id)
 	return str(item.get("captureToolId", ""))
+
+
+static func world_use_for(item_id: String) -> Dictionary:
+	var item := item_for_id(item_id)
+	var raw_world_use = item.get("worldUse", {})
+	return raw_world_use as Dictionary if raw_world_use is Dictionary else {}
+
+
+static func world_heal_amount_for(item_id: String) -> int:
+	var world_use := world_use_for(item_id)
+	if str(world_use.get("type", "")) != "pet_heal":
+		return 0
+	return maxi(0, int(world_use.get("amount", 0)))
+
+
+static func item_can_world_pet_heal(item_id: String) -> bool:
+	return item_has_context(item_id, CONTEXT_WORLD_PET_HEAL) and world_heal_amount_for(item_id) > 0
 
 
 static func starting_slots() -> Array[Dictionary]:
@@ -258,7 +276,9 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 	var contexts := use_contexts_for(item_id)
 	var context_labels: Array[String] = []
 	if contexts.has(CONTEXT_BATTLE_ITEM):
-		context_labels.append("战斗物品")
+		context_labels.append("战斗可用")
+	if contexts.has(CONTEXT_WORLD_PET_HEAL):
+		context_labels.append("世界可用")
 	if contexts.has(CONTEXT_CAPTURE):
 		context_labels.append("捕捉")
 	if context_labels.is_empty():
