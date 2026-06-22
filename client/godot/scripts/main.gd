@@ -158,6 +158,7 @@ var auto_pet_stable_check: bool = false
 var auto_pet_drop_pickup_check: bool = false
 var auto_pet_codex_detail_check: bool = false
 var auto_pet_codex_list_check: bool = false
+var auto_pet_encounter_table_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
@@ -165,6 +166,7 @@ var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
 var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
+var pet_encounter_table_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -309,6 +311,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_codex_detail_check")
 	elif auto_pet_codex_list_check:
 		call_deferred("_run_auto_pet_codex_list_check")
+	elif auto_pet_encounter_table_check:
+		call_deferred("_run_auto_pet_encounter_table_check")
 	elif auto_pet_storage_capture_check:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
@@ -323,6 +327,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_codex_preview")
 	elif pet_codex_list_preview:
 		call_deferred("_run_pet_codex_list_preview")
+	elif pet_encounter_table_preview:
+		call_deferred("_run_pet_encounter_table_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -503,6 +509,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_codex_detail_check = true
 		elif arg == "--auto-pet-codex-list-check":
 			auto_pet_codex_list_check = true
+		elif arg == "--auto-pet-encounter-table-check":
+			auto_pet_encounter_table_check = true
 		elif arg == "--auto-pet-storage-capture-check":
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
@@ -517,6 +525,8 @@ func _apply_preview_window_args() -> void:
 			pet_codex_preview = true
 		elif arg == "--pet-codex-list-preview":
 			pet_codex_list_preview = true
+		elif arg == "--pet-encounter-table-preview":
+			pet_encounter_table_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -2702,6 +2712,117 @@ func _run_auto_pet_codex_list_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_encounter_table_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var zone: Dictionary = zones[0] as Dictionary if zone_found else {}
+	var pool := EncounterModel.wild_pet_pool(zone) if zone_found else []
+	var form_ids: Array[String] = []
+	for entry in pool:
+		form_ids.append(str((entry as Dictionary).get("formId", "")))
+	var pool_ok := (
+		form_ids.has("wuli_normal_orange_fire10")
+		and form_ids.has("wuli_normal_fast_wind10")
+		and form_ids.has("wuli_normal_tough_earth10")
+	)
+
+	var default_state := BattleModel.create_wild_battle(zone)
+	var default_enemy := BattleModel.actor_by_id(default_state, "enemy_0")
+	var default_ok := (
+		str(default_enemy.get("formId", "")) == "wuli_normal_orange_fire10"
+		and str(default_enemy.get("name", "")) == "野生乌力"
+		and int(default_enemy.get("maxHp", 0)) == 80
+		and str(default_state.get("message", "")).find("野生乌力") >= 0
+	)
+
+	var forced_fast_zone := zone.duplicate(true)
+	forced_fast_zone["selectedWildPet"] = {
+		"formId": "wuli_normal_fast_wind10",
+		"name": "高速乌力",
+		"level": 3,
+		"levelMin": 1,
+		"levelMax": 3,
+		"battleStats": {
+			"maxHp": 92,
+			"attack": 11,
+			"defense": 6,
+			"agility": 88,
+		},
+	}
+	var forced_fast_state := BattleModel.create_wild_battle(forced_fast_zone)
+	var forced_fast_enemy := BattleModel.actor_by_id(forced_fast_state, "enemy_0")
+	var forced_fast_ok := (
+		str(forced_fast_enemy.get("formId", "")) == "wuli_normal_fast_wind10"
+		and str(forced_fast_enemy.get("name", "")) == "高速乌力"
+		and int(forced_fast_enemy.get("level", 0)) == 3
+		and int(forced_fast_enemy.get("quick", 0)) == 88
+	)
+
+	var seeded_rng := RandomNumberGenerator.new()
+	seeded_rng.seed = 45
+	var rolled_ids: Array[String] = []
+	for _index in range(160):
+		var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, seeded_rng)
+		var selected = selected_zone.get("selectedWildPet", {})
+		if selected is Dictionary:
+			var selected_id := str((selected as Dictionary).get("formId", ""))
+			if selected_id != "" and not rolled_ids.has(selected_id):
+				rolled_ids.append(selected_id)
+	var rng_pool_ok := (
+		rolled_ids.has("wuli_normal_orange_fire10")
+		and rolled_ids.has("wuli_normal_fast_wind10")
+		and rolled_ids.has("wuli_normal_tough_earth10")
+	)
+
+	var forced_tough_zone := zone.duplicate(true)
+	forced_tough_zone["selectedWildPet"] = {
+		"formId": "wuli_normal_tough_earth10",
+		"name": "高防乌力",
+		"level": 2,
+		"levelMin": 2,
+		"levelMax": 3,
+		"battleStats": {
+			"maxHp": 110,
+			"attack": 9,
+			"defense": 18,
+			"agility": 36,
+		},
+	}
+	_trigger_encounter(forced_tough_zone)
+	await get_tree().process_frame
+	_start_battle_from_encounter()
+	await get_tree().process_frame
+	var battle_enemy := BattleModel.actor_by_id(battle_state, "enemy_0")
+	var battle_forced_ok := battle_active and str(battle_enemy.get("formId", "")) == "wuli_normal_tough_earth10"
+	var battle_result := _finish_battle_and_return_to_world("escape")
+	await get_tree().process_frame
+	var codex_entry := PlayerProgressModel.codex_entry_for_form(player_profile, "wuli_normal_tough_earth10")
+	var codex_seen_ok := (
+		str(battle_result.get("result", "")) == "escape"
+		and bool(codex_entry.get("seen", false))
+		and not bool(codex_entry.get("captured", false))
+	)
+
+	var status := "ok" if loaded and zone_found and pool_ok and default_ok and forced_fast_ok and rng_pool_ok and battle_forced_ok and codex_seen_ok else "failed"
+	print("pet encounter table check ready: status=%s loaded=%s zone=%s pool=%s default=%s forced_fast=%s rng_pool=%s battle_forced=%s codex_seen=%s rolled=%s log=%s" % [
+		status,
+		str(loaded),
+		str(zone_found),
+		str(pool_ok),
+		str(default_ok),
+		str(forced_fast_ok),
+		str(rng_pool_ok),
+		str(battle_forced_ok),
+		str(codex_seen_ok),
+		",".join(rolled_ids),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_storage_capture_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -2807,6 +2928,35 @@ func _run_pet_codex_list_preview() -> void:
 	codex_selected_form_id = "wuli_normal_fast_wind10"
 	_open_codex_panel()
 	_select_codex_form("wuli_normal_fast_wind10")
+
+
+func _run_pet_encounter_table_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	if not _load_map("firebud_village_gate", "from_training_yard"):
+		return
+	var zones := EncounterModel.encounter_zones(map_data)
+	if zones.is_empty():
+		return
+	var zone := (zones[0] as Dictionary).duplicate(true)
+	zone["selectedWildPet"] = {
+		"formId": "wuli_normal_fast_wind10",
+		"name": "高速乌力",
+		"level": 3,
+		"levelMin": 1,
+		"levelMax": 3,
+		"battleStats": {
+			"maxHp": 92,
+			"attack": 11,
+			"defense": 6,
+			"agility": 88,
+		},
+	}
+	var preview_cell := EncounterModel.first_walkable_cell(map_data, zone)
+	player.global_position = IsoMapModel.grid_to_world(map_data, preview_cell)
+	last_checked_player_cell = preview_cell
+	_update_camera_position(true)
+	_trigger_encounter(zone)
 
 
 func _run_auto_battle_status_check() -> void:
@@ -5509,7 +5659,7 @@ func _close_encounter() -> void:
 func _start_battle_from_encounter() -> void:
 	if not encounter_active or active_encounter_zone.is_empty():
 		return
-	var zone := active_encounter_zone.duplicate(true)
+	var zone := EncounterModel.zone_with_selected_wild_pet(active_encounter_zone, encounter_rng)
 	_start_battle(BattleModel.create_wild_battle(zone))
 
 

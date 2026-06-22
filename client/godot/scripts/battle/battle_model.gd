@@ -44,19 +44,41 @@ const MONSTER_COMBO_BASE_RATE := 0.20
 
 static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 	var zone_name := str(encounter_zone.get("name", "野外"))
+	var wild_pet := _wild_pet_entry_for_zone(encounter_zone)
+	var enemy_form_id := str(wild_pet.get("formId", "wuli_normal_orange_fire10"))
+	var enemy_name := _wild_pet_name(wild_pet, enemy_form_id)
+	var enemy_stats := _wild_pet_battle_stats(wild_pet, enemy_form_id)
+	var enemy_level := maxi(1, int(wild_pet.get("level", wild_pet.get("levelMin", 1))))
+	var enemy_actor := _make_actor(
+		"enemy_0",
+		enemy_name,
+		SIDE_ENEMY,
+		"wild_pet",
+		"enemy.front.3",
+		int(enemy_stats.get("hp", enemy_stats.get("maxHp", 80))),
+		int(enemy_stats.get("maxHp", 80)),
+		int(enemy_stats.get("quick", enemy_stats.get("agility", 48))),
+		int(enemy_stats.get("attack", 10)),
+		int(enemy_stats.get("defense", 6)),
+		[],
+		enemy_form_id
+	)
+	enemy_actor["level"] = enemy_level
 	var state := {
 		"id": "local_wild_battle",
 		"round": 1,
 		"phase": "command",
 		"sourceZoneId": str(encounter_zone.get("id", "")),
+		"sourceEncounterGroupId": str(encounter_zone.get("encounterGroupId", "")),
+		"selectedWildPet": wild_pet,
 		"targetSeed": "local_wild_battle",
-		"message": "%s 出现了野生乌力。" % zone_name,
+		"message": "%s 出现了%s。" % [zone_name, enemy_name],
 		"itemBag": default_item_bag(),
 		"guardingActorIds": [],
 		"actors": [
 			_make_actor("ally_player", "见习猎人", SIDE_ALLY, "player", "ally.back.3", 120, 120, 70, 18),
 			_make_actor("ally_pet", "小布伊", SIDE_ALLY, "pet", "ally.front.3", 90, 90, 68, 14, 8, [], "bui_normal_red_fire10"),
-			_make_actor("enemy_0", "野生乌力", SIDE_ENEMY, "wild_pet", "enemy.front.3", 80, 80, 48, 10, 6, [], "wuli_normal_orange_fire10"),
+			enemy_actor,
 		],
 	}
 	return _with_default_player_pet_party(state)
@@ -231,6 +253,77 @@ static func _make_actor(actor_id: String, actor_name: String, side: String, kind
 		if not passive_skill_ids.is_empty():
 			actor["passiveSkillIds"] = _merged_string_array(actor.get("passiveSkillIds", []), passive_skill_ids)
 	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
+
+
+static func _wild_pet_entry_for_zone(encounter_zone: Dictionary) -> Dictionary:
+	var selected = encounter_zone.get("selectedWildPet", {})
+	if selected is Dictionary:
+		var selected_entry := _normalized_wild_pet_entry(selected as Dictionary)
+		if not selected_entry.is_empty():
+			return selected_entry
+	var raw_pool = encounter_zone.get("wildPetPool", [])
+	if raw_pool is Array:
+		for value in raw_pool:
+			if value is Dictionary:
+				var entry := _normalized_wild_pet_entry(value as Dictionary)
+				if not entry.is_empty():
+					return entry
+	return _normalized_wild_pet_entry({
+		"formId": "wuli_normal_orange_fire10",
+		"name": "野生乌力",
+		"level": 1,
+		"battleStats": {
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 6,
+			"agility": 48,
+		},
+	})
+
+
+static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
+	var form_id := str(value.get("formId", value.get("templateId", ""))).strip_edges()
+	if form_id == "" or PetTemplateCatalog.runtime_template_for_form(form_id).is_empty():
+		return {}
+	var level_min := maxi(1, int(value.get("levelMin", value.get("level", 1))))
+	var level_max := maxi(level_min, int(value.get("levelMax", value.get("level", level_min))))
+	var level := clampi(int(value.get("level", level_min)), level_min, level_max)
+	var entry := {
+		"formId": form_id,
+		"name": str(value.get("name", "")),
+		"weight": maxf(0.0, float(value.get("weight", 1.0))),
+		"levelMin": level_min,
+		"levelMax": level_max,
+		"level": level,
+	}
+	var stats = value.get("battleStats", {})
+	if stats is Dictionary:
+		entry["battleStats"] = (stats as Dictionary).duplicate(true)
+	return entry
+
+
+static func _wild_pet_name(entry: Dictionary, form_id: String) -> String:
+	var name := str(entry.get("name", "")).strip_edges()
+	if name != "":
+		return name
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	return str(template.get("formName", "野生宠物"))
+
+
+static func _wild_pet_battle_stats(entry: Dictionary, form_id: String) -> Dictionary:
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	var base_stats = template.get("baseStats", {})
+	var base_stats_dict := base_stats as Dictionary if base_stats is Dictionary else {}
+	var stats = entry.get("battleStats", {})
+	var stats_dict := stats as Dictionary if stats is Dictionary else {}
+	var max_hp := int(stats_dict.get("maxHp", base_stats_dict.get("maxHp", 80)))
+	return {
+		"hp": int(stats_dict.get("hp", max_hp)),
+		"maxHp": max_hp,
+		"attack": int(stats_dict.get("attack", base_stats_dict.get("attack", 10))),
+		"defense": int(stats_dict.get("defense", base_stats_dict.get("defense", 6))),
+		"quick": int(stats_dict.get("quick", stats_dict.get("agility", base_stats_dict.get("agility", 48)))),
+	}
 
 
 static func _with_default_player_pet_party(state: Dictionary) -> Dictionary:

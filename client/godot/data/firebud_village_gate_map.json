@@ -40,6 +40,47 @@
       "rects": [[11, 15, 6, 4]],
       "encounterRate": 0.35,
       "encounterGroupId": "firebud_grass_01",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "野生乌力",
+          "weight": 70,
+          "levelMin": 1,
+          "levelMax": 2,
+          "battleStats": {
+            "maxHp": 80,
+            "attack": 10,
+            "defense": 6,
+            "agility": 48
+          }
+        },
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "高速乌力",
+          "weight": 20,
+          "levelMin": 1,
+          "levelMax": 3,
+          "battleStats": {
+            "maxHp": 92,
+            "attack": 11,
+            "defense": 6,
+            "agility": 88
+          }
+        },
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "高防乌力",
+          "weight": 10,
+          "levelMin": 2,
+          "levelMax": 3,
+          "battleStats": {
+            "maxHp": 110,
+            "attack": 9,
+            "defense": 18,
+            "agility": 36
+          }
+        }
+      ],
       "previewText": "草丛里传来细碎的脚步声。"
     }
   ],
