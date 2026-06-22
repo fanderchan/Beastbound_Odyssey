@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "slotLimit": 15,
+  "items": [
+    {
+      "id": "item_meat_small",
+      "label": "肉",
+      "menuLabel": "肉",
+      "stackLimit": 20,
+      "startingCount": 6,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_meat_small"
+    },
+    {
+      "id": "item_heal_all_5",
+      "label": "群体草药5",
+      "menuLabel": "群体草药5",
+      "stackLimit": 20,
+      "startingCount": 2,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_heal_all_5"
+    },
+    {
+      "id": "item_heal_single_5",
+      "label": "回复药5",
+      "menuLabel": "回复药5",
+      "stackLimit": 20,
+      "startingCount": 2,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_heal_single_5"
+    },
+    {
+      "id": "item_poison_single_5",
+      "label": "毒粉5",
+      "menuLabel": "毒粉5",
+      "stackLimit": 20,
+      "startingCount": 2,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_poison_single_5"
+    },
+    {
+      "id": "item_poison_all_5",
+      "label": "毒雾粉5",
+      "menuLabel": "毒雾粉5",
+      "stackLimit": 20,
+      "startingCount": 2,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_poison_all_5"
+    },
+    {
+      "id": "item_cleanse_single_5",
+      "label": "净化草5",
+      "menuLabel": "净化草5",
+      "stackLimit": 20,
+      "startingCount": 2,
+      "useContexts": ["battle_item"],
+      "battleActionId": "item_cleanse_single_5"
+    },
+    {
+      "id": "capture_rope_basic",
+      "label": "初级捕捉绳",
+      "menuLabel": "初级绳",
+      "stackLimit": 20,
+      "startingCount": 5,
+      "useContexts": ["capture"],
+      "captureToolId": "capture_rope_basic"
+    },
+    {
+      "id": "capture_net",
+      "label": "捕捉网",
+      "menuLabel": "捕捉网",
+      "stackLimit": 20,
+      "startingCount": 3,
+      "useContexts": ["capture"],
+      "captureToolId": "capture_net"
+    },
+    {
+      "id": "capture_net_reinforced",
+      "label": "强化网",
+      "menuLabel": "强化网",
+      "stackLimit": 20,
+      "startingCount": 1,
+      "useContexts": ["capture"],
+      "captureToolId": "capture_net_reinforced"
+    }
+  ]
+}

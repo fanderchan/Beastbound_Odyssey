@@ -318,6 +318,7 @@ static func _validate_required_actions(seen_ids: Dictionary, errors: Array[Strin
 		"pet_sleep_powder",
 		"pet_confuse_cry",
 		"pet_stone_gaze",
+		"item_meat_small",
 		"item_heal_all_5",
 		"item_heal_single_5",
 		"item_poison_single_5",

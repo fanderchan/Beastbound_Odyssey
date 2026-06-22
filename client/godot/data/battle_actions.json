@@ -254,6 +254,24 @@
       "stoneAgeReference": "PETSKILL_StatusChange"
     },
     {
+      "id": "item_meat_small",
+      "owner": "item",
+      "label": "肉",
+      "command": "item",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 28
+      },
+      "stoneAgeReference": "ITEM_useRecovery"
+    },
+    {
       "id": "item_heal_all_5",
       "owner": "item",
       "label": "群体草药5",

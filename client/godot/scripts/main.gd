@@ -10,6 +10,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
@@ -19,7 +20,7 @@ const MAP_DATA_PATHS := {
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
-const ACTION_BAR_SIZE := Vector2(342, 86)
+const ACTION_BAR_SIZE := Vector2(420, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
@@ -78,8 +79,15 @@ var battle_log_label: Label
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
+var bag_menu_button: Button
 var pet_menu_button: Button
 var codex_menu_button: Button
+var backpack_panel: PanelContainer
+var backpack_grid: GridContainer
+var backpack_detail_label: Label
+var backpack_close_button: Button
+var backpack_slot_buttons: Array[Button] = []
+var backpack_selected_slot_index: int = 0
 var pet_panel: PanelContainer
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
@@ -165,6 +173,8 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_backpack_check: bool = false
+var backpack_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -329,6 +339,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_backpack_check:
+		call_deferred("_run_auto_backpack_check")
+	elif backpack_preview:
+		call_deferred("_run_backpack_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -541,6 +555,10 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-backpack-check":
+			auto_backpack_check = true
+		elif arg == "--backpack-preview":
+			backpack_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -3147,6 +3165,97 @@ func _run_pet_codex_list_preview() -> void:
 	_select_codex_form("wuli_normal_fast_wind10")
 
 
+func _run_backpack_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	backpack_selected_slot_index = 0
+	_open_backpack_panel()
+
+
+func _run_auto_backpack_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	var slot_limit_ok := slots.size() == BackpackModel.SLOT_LIMIT
+	var meat_default_ok := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == 6
+	var stacked_slots := BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 25)
+	var meat_stack_slots := 0
+	for slot in stacked_slots:
+		if str(slot.get("itemId", "")) == BattleModel.ITEM_MEAT_SMALL:
+			meat_stack_slots += 1
+	var stack_ok := meat_stack_slots == 2 and BackpackModel.item_count(stacked_slots, BattleModel.ITEM_MEAT_SMALL) == 25
+	var battle_counts := PlayerProgressModel.backpack_counts_for_context(player_profile, BackpackModel.CONTEXT_BATTLE_ITEM)
+	var capture_counts := PlayerProgressModel.backpack_counts_for_context(player_profile, BackpackModel.CONTEXT_CAPTURE)
+	var context_ok := (
+		int(battle_counts.get(BattleModel.ITEM_MEAT_SMALL, 0)) == 6
+		and not battle_counts.has(BattleModel.CAPTURE_TOOL_NET_REINFORCED)
+		and int(capture_counts.get(BattleModel.CAPTURE_TOOL_NET_REINFORCED, 0)) == 1
+		and not capture_counts.has(BattleModel.ITEM_MEAT_SMALL)
+	)
+
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var panel_ok := (
+		backpack_panel != null
+		and backpack_panel.visible
+		and backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
+		and not backpack_slot_buttons.is_empty()
+		and backpack_slot_buttons[0].text.find("肉") >= 0
+	)
+	_close_backpack_panel()
+
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var item_menu_ok := false
+	var capture_menu_ok := false
+	var meat_consumed_ok := false
+	if zone_found:
+		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+		await get_tree().process_frame
+		_on_battle_command_pressed("item")
+		var item_texts := _battle_visible_button_texts()
+		item_menu_ok = (
+			battle_command_owner == "item"
+			and _button_text_for_battle_command("switch_pet").find("肉 x6") >= 0
+			and not _texts_contain(item_texts, "强化网")
+		)
+		_on_battle_command_pressed("help")
+		_on_battle_command_pressed("capture")
+		var capture_texts := _battle_visible_button_texts()
+		capture_menu_ok = (
+			battle_command_owner == "capture"
+			and _button_text_for_battle_command("defend").find("强化网 x1") >= 0
+			and not _texts_contain(capture_texts, "肉")
+		)
+		_on_battle_command_pressed("help")
+		_auto_injure_living_side(BattleModel.SIDE_ALLY, 36)
+		var before_meat := BattleModel.item_count(battle_state, BattleModel.ITEM_MEAT_SMALL)
+		_on_battle_command_pressed("item")
+		_on_battle_command_pressed("switch_pet")
+		var meat_mode_ok := battle_target_mode == "ally_item_single"
+		var target_actor := BattleModel.actor_by_id(battle_state, "ally_back_2")
+		var selected := _select_battle_target_at_screen_point(_world_to_screen(_battle_slot_world_position(str(target_actor.get("slotId", "")))))
+		_auto_submit_pet_defend_if_needed()
+		var saw_meat_event: bool = await _auto_wait_for_event_type("item_heal", 1200)
+		var after_meat := BattleModel.item_count(battle_state, BattleModel.ITEM_MEAT_SMALL)
+		var profile_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
+	var status := "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
+	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+		status,
+		str(slot_limit_ok),
+		str(meat_default_ok),
+		str(stack_ok),
+		str(context_ok),
+		str(panel_ok),
+		str(item_menu_ok),
+		str(capture_menu_ok),
+		str(meat_consumed_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_pet_encounter_table_preview() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -3935,6 +4044,8 @@ func _run_auto_battle_spirit_four_check() -> void:
 
 
 func _run_auto_battle_item_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -3959,6 +4070,8 @@ func _run_auto_battle_item_check() -> void:
 
 
 func _run_auto_battle_item_count_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -4740,7 +4853,7 @@ func _set_battle_command_owner(owner: String) -> void:
 			"help": "返回",
 			"defend": _battle_item_label(BattleModel.ITEM_POISON_ALL, "毒雾粉5"),
 			"item": _battle_item_label(BattleModel.ITEM_CLEANSE_SINGLE, "净化草5"),
-			"switch_pet": "",
+			"switch_pet": _battle_item_label(BattleModel.ITEM_MEAT_SMALL, "肉"),
 			"run": "",
 		})
 	elif owner == "capture":
@@ -4860,6 +4973,29 @@ func _capture_tool_button_label(tool_id: String) -> String:
 	return "%s x%d" % [label, BattleModel.capture_tool_count(battle_state, tool_id)]
 
 
+func _button_text_for_battle_command(command_id: String) -> String:
+	var button = battle_command_buttons.get(command_id, null)
+	if button is Button:
+		return (button as Button).text
+	return ""
+
+
+func _battle_visible_button_texts() -> Array[String]:
+	var result: Array[String] = []
+	for command_id in _battle_command_visible_ids():
+		var text := _button_text_for_battle_command(command_id)
+		if text != "":
+			result.append(text)
+	return result
+
+
+func _texts_contain(texts: Array[String], needle: String) -> bool:
+	for text in texts:
+		if text.find(needle) >= 0:
+			return true
+	return false
+
+
 func _apply_battle_button_labels(labels: Dictionary) -> void:
 	for command_id in labels.keys():
 		if not battle_command_buttons.has(command_id):
@@ -4907,7 +5043,7 @@ func _battle_command_order_for_owner() -> Array[String]:
 		"spirit":
 			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
 		"item":
-			return ["attack", "spirit", "capture", "defend", "item", "help", "switch_pet", "run"]
+			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "help", "run"]
 		"capture":
 			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
 		"switch_pet":
@@ -4923,7 +5059,7 @@ func _battle_command_visible_ids() -> Array[String]:
 		"spirit":
 			return ["attack", "spirit", "capture", "defend", "help"]
 		"item":
-			return ["attack", "spirit", "capture", "defend", "item", "help"]
+			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "help"]
 		"capture":
 			return ["attack", "spirit", "capture", "defend", "help"]
 		"switch_pet":
@@ -5188,6 +5324,11 @@ func _build_hud() -> void:
 	ring_button.custom_minimum_size = Vector2(76, MIN_TOUCH_BUTTON_SIZE.y)
 	ring_button.pressed.connect(_toggle_pet_ring)
 	action_row.add_child(ring_button)
+	bag_menu_button = Button.new()
+	bag_menu_button.text = "背包"
+	bag_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	bag_menu_button.pressed.connect(_open_backpack_panel)
+	action_row.add_child(bag_menu_button)
 	pet_menu_button = Button.new()
 	pet_menu_button.text = "宠物"
 	pet_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -5199,6 +5340,47 @@ func _build_hud() -> void:
 	codex_menu_button.pressed.connect(_open_codex_panel)
 	action_row.add_child(codex_menu_button)
 	hud_root.add_child(action_bar)
+
+	backpack_panel = _panel_container("BackpackPanel")
+	backpack_panel.visible = false
+	backpack_panel.z_index = 24
+	var backpack_column := VBoxContainer.new()
+	backpack_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	backpack_column.add_theme_constant_override("separation", 8)
+	backpack_panel.add_child(backpack_column)
+
+	var backpack_header := HBoxContainer.new()
+	backpack_header.add_theme_constant_override("separation", 10)
+	backpack_column.add_child(backpack_header)
+	var backpack_title := Label.new()
+	backpack_title.text = "随身包"
+	backpack_title.add_theme_font_size_override("font_size", 21)
+	backpack_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_header.add_child(backpack_title)
+	backpack_close_button = Button.new()
+	backpack_close_button.text = "关闭"
+	backpack_close_button.custom_minimum_size = Vector2(92, 44)
+	backpack_close_button.pressed.connect(_close_backpack_panel)
+	backpack_header.add_child(backpack_close_button)
+
+	var backpack_scroll := ScrollContainer.new()
+	backpack_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	backpack_column.add_child(backpack_scroll)
+	backpack_grid = GridContainer.new()
+	backpack_grid.columns = 5
+	backpack_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_grid.add_theme_constant_override("h_separation", 7)
+	backpack_grid.add_theme_constant_override("v_separation", 7)
+	backpack_scroll.add_child(backpack_grid)
+	backpack_detail_label = Label.new()
+	backpack_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	backpack_detail_label.add_theme_font_size_override("font_size", 16)
+	backpack_detail_label.custom_minimum_size = Vector2(0, 72)
+	backpack_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_column.add_child(backpack_detail_label)
+	hud_root.add_child(backpack_panel)
 
 	pet_panel = _panel_container("PetPanel")
 	pet_panel.visible = false
@@ -5894,6 +6076,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 
 	_clear_pending_interaction()
 	_close_dialog()
+	_close_backpack_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
@@ -6061,6 +6244,7 @@ func _refresh_battle_target_seed() -> void:
 func _start_battle(next_battle_state: Dictionary) -> void:
 	_clear_navigation_state()
 	_close_dialog()
+	_close_backpack_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_encounter()
@@ -6200,6 +6384,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		_end_battle(true)
 		_set_world_log_message("战斗结束。")
 		return {}
+	_sync_profile_battle_items_from_battle_state(false)
 	_sync_profile_capture_tools_from_battle_state(false)
 	var ended_state := battle_state.duplicate(true)
 	var result := PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
@@ -6222,6 +6407,17 @@ func _sync_profile_capture_tools_from_battle_state(save_after: bool = true) -> v
 		PlayerProgressModel.save_profile(player_profile)
 
 
+func _sync_profile_battle_items_from_battle_state(save_after: bool = true) -> void:
+	if battle_state.is_empty():
+		return
+	var bag = battle_state.get("itemBag", {})
+	if not (bag is Dictionary):
+		return
+	player_profile = PlayerProgressModel.with_battle_item_inventory(player_profile, bag as Dictionary)
+	if save_after and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
 func _set_world_log_message(text: String) -> void:
 	world_log_message = text.strip_edges()
 	if battle_log_label != null:
@@ -6233,11 +6429,69 @@ func _set_world_log_message(text: String) -> void:
 	queue_redraw()
 
 
+func _open_backpack_panel() -> void:
+	if battle_active:
+		return
+	_close_dialog()
+	_close_encounter()
+	_close_pet_panel()
+	_close_codex_panel()
+	backpack_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_backpack_panel()
+	_layout_hud()
+
+
+func _close_backpack_panel() -> void:
+	if backpack_panel != null:
+		backpack_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_backpack_panel() -> void:
+	if backpack_panel == null or backpack_grid == null or backpack_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	backpack_selected_slot_index = clampi(backpack_selected_slot_index, 0, maxi(0, slots.size() - 1))
+	backpack_grid.columns = _backpack_grid_columns()
+	for child in backpack_grid.get_children():
+		child.queue_free()
+	backpack_slot_buttons.clear()
+	for index in range(BackpackModel.SLOT_LIMIT):
+		var slot := slots[index] if index < slots.size() else {}
+		var button := Button.new()
+		button.text = BackpackModel.slot_label(slot)
+		button.toggle_mode = true
+		button.button_pressed = index == backpack_selected_slot_index
+		button.custom_minimum_size = Vector2(0, 62)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var slot_index := index
+		button.pressed.connect(func() -> void:
+			_select_backpack_slot(slot_index)
+		)
+		backpack_grid.add_child(button)
+		backpack_slot_buttons.append(button)
+	var selected_slot := slots[backpack_selected_slot_index] if backpack_selected_slot_index < slots.size() else {}
+	backpack_detail_label.text = "\n".join(BackpackModel.detail_lines_for_slot(selected_slot))
+
+
+func _backpack_grid_columns() -> int:
+	return 3 if _is_phone_shape(_layout_size()) else 5
+
+
+func _select_backpack_slot(slot_index: int) -> void:
+	backpack_selected_slot_index = clampi(slot_index, 0, BackpackModel.SLOT_LIMIT - 1)
+	_refresh_backpack_panel()
+
+
 func _open_pet_panel() -> void:
 	if battle_active:
 		return
 	_close_dialog()
 	_close_encounter()
+	_close_backpack_panel()
 	_close_codex_panel()
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
@@ -6260,6 +6514,7 @@ func _open_codex_panel() -> void:
 		return
 	_close_dialog()
 	_close_encounter()
+	_close_backpack_panel()
 	_close_pet_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
@@ -6816,6 +7071,10 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 			command["targetSide"] = BattleModel.SIDE_ALLY
 			command["targetScope"] = "single"
 			command["allyTargetId"] = target_id
+		BattleModel.ITEM_MEAT_SMALL:
+			command["targetSide"] = BattleModel.SIDE_ALLY
+			command["targetScope"] = "single"
+			command["allyTargetId"] = target_id
 		BattleModel.ITEM_CLEANSE_SINGLE:
 			command["targetSide"] = BattleModel.SIDE_ALLY
 			command["targetScope"] = "single"
@@ -7040,6 +7299,8 @@ func _on_item_battle_command_pressed(command_id: String) -> void:
 			_submit_item_player_command(BattleModel.ITEM_POISON_ALL)
 		"item":
 			_begin_single_item_target_selection(BattleModel.ITEM_CLEANSE_SINGLE)
+		"switch_pet":
+			_begin_single_item_target_selection(BattleModel.ITEM_MEAT_SMALL)
 		"help":
 			battle_pending_item_id = ""
 			battle_pending_spirit_id = ""
@@ -7242,8 +7503,11 @@ func _play_next_battle_event() -> void:
 		var actor_snapshots := _battle_actor_snapshots_by_id()
 		battle_state = BattleModel.apply_battle_event(battle_state, event)
 		battle_state["phase"] = "round_events"
-		if str(event.get("type", "")) == "capture" and bool(battle_state.get("lastEventApplied", false)):
-			_sync_profile_capture_tools_from_battle_state()
+		if bool(battle_state.get("lastEventApplied", false)):
+			if str(event.get("type", "")) == "capture":
+				_sync_profile_capture_tools_from_battle_state()
+			elif _battle_event_consumes_item(str(event.get("type", ""))):
+				_sync_profile_battle_items_from_battle_state()
 		if not bool(battle_state.get("lastEventApplied", false)):
 			battle_current_event_actor_snapshots.clear()
 			continue
@@ -7505,6 +7769,16 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		"damageRevealProgress": reveal_progress,
 		"launchStartProgress": launch_start,
 	}
+
+
+func _battle_event_consumes_item(event_type: String) -> bool:
+	return [
+		"item_heal",
+		"item_heal_all",
+		"item_poison",
+		"item_poison_all",
+		"item_cleanse",
+	].has(event_type)
 
 
 func _battle_event_duration(event: Dictionary) -> float:
@@ -7944,6 +8218,8 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_ALL)
 					"item":
 						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
+					"switch_pet":
+						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_MEAT_SMALL)
 					"help":
 						button.disabled = not can_command
 					_:
@@ -8196,7 +8472,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -8259,6 +8535,15 @@ func _layout_hud() -> void:
 	var pet_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_PANEL_MAX_SIZE.y)
 	pet_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_width)
 	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_height)
+	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	backpack_panel.size = Vector2(pet_width, pet_height)
+	if backpack_grid != null:
+		backpack_grid.columns = _backpack_grid_columns()
+	if battle_active:
+		backpack_panel.visible = false
+	if backpack_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	pet_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
 	pet_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:

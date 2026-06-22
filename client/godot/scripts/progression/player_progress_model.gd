@@ -2,6 +2,7 @@ extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
+const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
@@ -18,6 +19,7 @@ const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
+const BACKPACK_SLOTS_KEY := "backpackSlots"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
@@ -42,6 +44,7 @@ static func default_profile() -> Dictionary:
 			_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, 1),
 		],
 		"groundPetDrops": [],
+		"backpackSlots": BackpackModel.starting_slots(),
 		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
@@ -96,7 +99,7 @@ static func storage_pet_instances(profile: Dictionary) -> Array[Dictionary]:
 
 
 static func capture_tool_inventory(profile: Dictionary) -> Dictionary:
-	return CaptureToolCatalog.normalize_inventory(normalize_profile(profile).get(CAPTURE_TOOLS_KEY, {}))
+	return _capture_tool_inventory_from_slots(backpack_slots(profile))
 
 
 static func capture_tool_count(profile: Dictionary, tool_id: String) -> int:
@@ -105,8 +108,70 @@ static func capture_tool_count(profile: Dictionary, tool_id: String) -> int:
 
 static func with_capture_tool_inventory(profile: Dictionary, inventory: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	normalized[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(inventory)
+	var slots := BackpackModel.set_counts_for_context(
+		BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])),
+		BackpackModel.CONTEXT_CAPTURE,
+		CaptureToolCatalog.normalize_inventory(inventory)
+	)
+	normalized[BACKPACK_SLOTS_KEY] = slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
 	return normalized
+
+
+static func backpack_slots(profile: Dictionary) -> Array[Dictionary]:
+	return BackpackModel.normalize_slots(normalize_profile(profile).get(BACKPACK_SLOTS_KEY, []))
+
+
+static func backpack_item_count(profile: Dictionary, item_id: String) -> int:
+	return BackpackModel.item_count(backpack_slots(profile), item_id)
+
+
+static func backpack_counts_for_context(profile: Dictionary, context: String) -> Dictionary:
+	var normalized_slots := backpack_slots(profile)
+	if context == BackpackModel.CONTEXT_CAPTURE:
+		return _capture_tool_inventory_from_slots(normalized_slots)
+	if context == BackpackModel.CONTEXT_BATTLE_ITEM:
+		return _battle_item_inventory_from_slots(normalized_slots)
+	return BackpackModel.counts_for_context(normalized_slots, context)
+
+
+static func with_backpack_slots(profile: Dictionary, slots: Array[Dictionary]) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var normalized_slots := BackpackModel.normalize_slots(slots)
+	normalized[BACKPACK_SLOTS_KEY] = normalized_slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(normalized_slots)
+	return normalized
+
+
+static func battle_item_inventory(profile: Dictionary) -> Dictionary:
+	return _battle_item_inventory_from_slots(backpack_slots(profile))
+
+
+static func with_battle_item_inventory(profile: Dictionary, inventory: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var slots := BackpackModel.set_counts_for_context(
+		BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])),
+		BackpackModel.CONTEXT_BATTLE_ITEM,
+		inventory
+	)
+	normalized[BACKPACK_SLOTS_KEY] = slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
+	return normalized
+
+
+static func _capture_tool_inventory_from_slots(slots: Array[Dictionary]) -> Dictionary:
+	var result := CaptureToolCatalog.starting_inventory()
+	for key in result.keys():
+		var tool_id := str(key)
+		result[tool_id] = BackpackModel.item_count(slots, tool_id)
+	return CaptureToolCatalog.normalize_inventory(result)
+
+
+static func _battle_item_inventory_from_slots(slots: Array[Dictionary]) -> Dictionary:
+	var result := {}
+	for item_id in BackpackModel.item_ids_for_context(BackpackModel.CONTEXT_BATTLE_ITEM):
+		result[item_id] = BackpackModel.item_count(slots, item_id)
+	return result
 
 
 static func all_pet_instances(profile: Dictionary) -> Array[Dictionary]:
@@ -924,7 +989,19 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 				if not drop.is_empty():
 					drops.append(drop)
 	normalized["groundPetDrops"] = drops
-	normalized[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(normalized.get(CAPTURE_TOOLS_KEY, {}))
+	var has_backpack_slots := normalized.has(BACKPACK_SLOTS_KEY) and normalized.get(BACKPACK_SLOTS_KEY) is Array
+	var backpack_slots_value := BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, []))
+	if not has_backpack_slots:
+		backpack_slots_value = BackpackModel.starting_slots()
+		var legacy_capture_tools = normalized.get(CAPTURE_TOOLS_KEY, null)
+		if legacy_capture_tools is Dictionary:
+			backpack_slots_value = BackpackModel.set_counts_for_context(
+				backpack_slots_value,
+				BackpackModel.CONTEXT_CAPTURE,
+				CaptureToolCatalog.normalize_inventory(legacy_capture_tools as Dictionary)
+			)
+	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 
 	var seen_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
 	var captured_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
@@ -950,6 +1027,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var next_state := state.duplicate(true)
 	var normalized := normalize_profile(profile)
+	next_state["itemBag"] = battle_item_inventory(normalized)
 	next_state["captureToolBag"] = capture_tool_inventory(normalized)
 	next_state = _apply_profile_player_to_battle_state(normalized, next_state)
 	var party := pet_party_for_battle(normalized)
@@ -1065,7 +1143,12 @@ static func battle_result_for_state(state: Dictionary) -> String:
 
 static func apply_battle_result(profile: Dictionary, state: Dictionary, result_override: String = "") -> Dictionary:
 	var next_profile := normalize_profile(profile)
-	next_profile[CAPTURE_TOOLS_KEY] = CaptureToolCatalog.normalize_inventory(state.get("captureToolBag", next_profile.get(CAPTURE_TOOLS_KEY, {})))
+	var state_item_bag = state.get("itemBag", _battle_item_inventory_from_slots(backpack_slots(next_profile)))
+	if state_item_bag is Dictionary:
+		next_profile = with_battle_item_inventory(next_profile, state_item_bag as Dictionary)
+	var state_capture_tool_bag = state.get("captureToolBag", _capture_tool_inventory_from_slots(backpack_slots(next_profile)))
+	if state_capture_tool_bag is Dictionary:
+		next_profile = with_capture_tool_inventory(next_profile, state_capture_tool_bag as Dictionary)
 	next_profile = _merge_battle_pet_party(next_profile, state)
 	next_profile = _with_codex_forms_seen_from_battle(next_profile, state)
 	var result := result_override if result_override != "" else battle_result_for_state(state)

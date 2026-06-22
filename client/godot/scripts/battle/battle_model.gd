@@ -24,6 +24,7 @@ const PET_SKILL_CONFUSE_CRY := "pet_confuse_cry"
 const PET_SKILL_STONE_GAZE := "pet_stone_gaze"
 const ITEM_HEAL_ALL := "item_heal_all_5"
 const ITEM_HEAL_SINGLE := "item_heal_single_5"
+const ITEM_MEAT_SMALL := "item_meat_small"
 const ITEM_POISON_SINGLE := "item_poison_single_5"
 const ITEM_POISON_ALL := "item_poison_all_5"
 const ITEM_CLEANSE_SINGLE := "item_cleanse_single_5"
@@ -92,6 +93,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 
 static func default_item_bag() -> Dictionary:
 	return {
+		ITEM_MEAT_SMALL: 6,
 		ITEM_HEAL_ALL: 2,
 		ITEM_HEAL_SINGLE: 2,
 		ITEM_POISON_SINGLE: 2,
@@ -934,7 +936,7 @@ static func _make_item_event(state: Dictionary, player_id: String, command: Dict
 			if not _is_living_side_actor(state, ally_target_id, SIDE_ALLY):
 				ally_target_id = best_ally_heal_target_id(state)
 			if BattleActionCatalog.action_can_target_side(item_id, SIDE_ALLY) and ally_target_id != "":
-				return _make_item_heal_event(state, player_id, ally_target_id, sequence)
+				return _make_item_heal_event(state, player_id, ally_target_id, sequence, item_id)
 	return {}
 
 
@@ -1068,17 +1070,17 @@ static func _make_spirit_poison_all_event(state: Dictionary, attacker_id: String
 	}
 
 
-static func _make_item_heal_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+static func _make_item_heal_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, item_id: String = ITEM_HEAL_SINGLE) -> Dictionary:
 	return {
 		"type": "item_heal",
 		"attackerId": attacker_id,
 		"targetId": target_id,
 		"targetSide": SIDE_ALLY,
-		"heal": BattleActionCatalog.effect_amount_for(ITEM_HEAL_SINGLE, 42),
+		"heal": BattleActionCatalog.effect_amount_for(item_id, 42),
 		"speed": _effective_action_speed(state, attacker_id, "item"),
 		"sequence": sequence,
-		"itemName": BattleActionCatalog.label_for(ITEM_HEAL_SINGLE, "回复药5"),
-		"itemId": ITEM_HEAL_SINGLE,
+		"itemName": BattleActionCatalog.label_for(item_id, "回复药5"),
+		"itemId": item_id,
 	}
 
 
