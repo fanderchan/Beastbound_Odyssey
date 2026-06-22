@@ -160,6 +160,7 @@ var auto_pet_drop_pickup_check: bool = false
 var auto_pet_codex_detail_check: bool = false
 var auto_pet_codex_list_check: bool = false
 var auto_pet_encounter_table_check: bool = false
+var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
@@ -168,6 +169,7 @@ var pet_drop_preview: bool = false
 var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
 var pet_encounter_table_preview: bool = false
+var pet_capture_feedback_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -317,6 +319,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_codex_list_check")
 	elif auto_pet_encounter_table_check:
 		call_deferred("_run_auto_pet_encounter_table_check")
+	elif auto_pet_capture_feedback_check:
+		call_deferred("_run_auto_pet_capture_feedback_check")
 	elif auto_pet_storage_capture_check:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
@@ -333,6 +337,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_codex_list_preview")
 	elif pet_encounter_table_preview:
 		call_deferred("_run_pet_encounter_table_preview")
+	elif pet_capture_feedback_preview:
+		call_deferred("_run_pet_capture_feedback_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -519,6 +525,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_codex_list_check = true
 		elif arg == "--auto-pet-encounter-table-check":
 			auto_pet_encounter_table_check = true
+		elif arg == "--auto-pet-capture-feedback-check":
+			auto_pet_capture_feedback_check = true
 		elif arg == "--auto-pet-storage-capture-check":
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
@@ -535,6 +543,8 @@ func _apply_preview_window_args() -> void:
 			pet_codex_list_preview = true
 		elif arg == "--pet-encounter-table-preview":
 			pet_encounter_table_preview = true
+		elif arg == "--pet-capture-feedback-preview":
+			pet_capture_feedback_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -3027,6 +3037,122 @@ func _run_pet_encounter_table_preview() -> void:
 	last_checked_player_cell = preview_cell
 	_update_camera_position(true)
 	_trigger_encounter(zone)
+
+
+func _run_auto_pet_capture_feedback_check() -> void:
+	profile_save_enabled = false
+	var standby_profile := PlayerProgressModel.default_profile()
+	var standby_before_party := PlayerProgressModel.party_pet_instances(standby_profile).size()
+	var standby_result := _pet_capture_feedback_result(standby_profile, "pet_capture_feedback_party")
+	var standby_after_profile := standby_result.get("profile", {}) as Dictionary
+	var standby_captured := _first_captured_pet_from_result(standby_result)
+	var standby_log := _battle_result_log_text(standby_result)
+	var standby_join_ok := (
+		not standby_captured.is_empty()
+		and str(standby_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and PlayerProgressModel.party_pet_instances(standby_after_profile).size() == standby_before_party + 1
+		and standby_log.find("捕捉了野生乌力 Lv1，已加入队伍。") >= 0
+	)
+
+	var storage_profile := PlayerProgressModel.default_profile()
+	var storage_instances: Array = storage_profile.get("petInstances", [])
+	storage_instances.append(PlayerProgressModel.create_pet_instance_from_form(
+		"pet_bui_feedback_extra",
+		"备用布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		1
+	))
+	storage_profile["petInstances"] = storage_instances
+	storage_profile = PlayerProgressModel.normalize_profile(storage_profile)
+	var storage_before_party := PlayerProgressModel.party_pet_instances(storage_profile).size()
+	var storage_before_storage := PlayerProgressModel.storage_pet_instances(storage_profile).size()
+	var storage_result := _pet_capture_feedback_result(storage_profile, "pet_capture_feedback_storage")
+	var storage_after_profile := storage_result.get("profile", {}) as Dictionary
+	var storage_captured := _first_captured_pet_from_result(storage_result)
+	var storage_log := _battle_result_log_text(storage_result)
+	var storage_destination_ok := (
+		not storage_captured.is_empty()
+		and str(storage_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and PlayerProgressModel.party_pet_instances(storage_after_profile).size() == PlayerProgressModel.PARTY_LIMIT
+		and PlayerProgressModel.storage_pet_instances(storage_after_profile).size() == storage_before_storage + 1
+		and storage_log.find("捕捉了野生乌力 Lv1，队伍已满，已送入兽栏。") >= 0
+	)
+	var status := "ok" if standby_join_ok and storage_destination_ok else "failed"
+	print("pet capture feedback check ready: status=%s standby=%s storage=%s standby_before_party=%d storage_before_party=%d storage_before_storage=%d standby_log=%s storage_log=%s" % [
+		status,
+		str(standby_join_ok),
+		str(storage_destination_ok),
+		standby_before_party,
+		storage_before_party,
+		storage_before_storage,
+		standby_log.replace("\n", " / "),
+		storage_log.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_pet_capture_feedback_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var result := _pet_capture_feedback_result(player_profile, "pet_capture_feedback_preview")
+	player_profile = result.get("profile", player_profile)
+	_set_world_log_message(_battle_result_log_text(result))
+	_update_hud_text()
+
+
+func _pet_capture_feedback_result(profile: Dictionary, zone_id: String) -> Dictionary:
+	var capture_state := _pet_capture_feedback_state(zone_id)
+	capture_state = PlayerProgressModel.apply_profile_to_battle_state(profile, capture_state)
+	return PlayerProgressModel.apply_battle_result(profile, capture_state, "victory")
+
+
+func _pet_capture_feedback_state(zone_id: String) -> Dictionary:
+	var capture_state := BattleModel.create_wild_battle({
+		"id": zone_id,
+		"name": "捕捉反馈验证",
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "野生乌力",
+			"level": 1,
+			"battleStats": {
+				"maxHp": 80,
+				"attack": 10,
+				"defense": 6,
+				"agility": 48,
+			},
+		},
+	})
+	var actors: Array = capture_state.get("actors", [])
+	for index in range(actors.size()):
+		if not (actors[index] is Dictionary):
+			continue
+		var actor := (actors[index] as Dictionary).duplicate(true)
+		if str(actor.get("id", "")) != "enemy_0":
+			continue
+		actor["captured"] = true
+		actor["hp"] = 0
+		actors[index] = actor
+		break
+	capture_state["actors"] = actors
+	return capture_state
+
+
+func _first_captured_pet_from_result(result: Dictionary) -> Dictionary:
+	var captured_values = result.get("capturedPets", [])
+	if not (captured_values is Array):
+		return {}
+	for value in captured_values:
+		if value is Dictionary:
+			return value as Dictionary
+	return {}
+
+
+func _battle_result_log_text(result: Dictionary) -> String:
+	var log_lines: Array[String] = []
+	for line in result.get("logLines", []):
+		log_lines.append(str(line))
+	return "\n".join(log_lines)
 
 
 func _run_auto_battle_status_check() -> void:

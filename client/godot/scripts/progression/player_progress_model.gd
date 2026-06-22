@@ -1099,10 +1099,10 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 			if not active_pet.is_empty() and exp_reward > 0:
 				second_parts.append("%s获得经验" % str(active_pet.get("name", "宠物")))
 			if not captured_instances.is_empty():
-				var names: Array[String] = []
+				var captured_parts: Array[String] = []
 				for captured in captured_instances:
-					names.append(str(captured.get("name", "宠物")))
-				second_parts.append("捕捉了%s" % "、".join(names))
+					captured_parts.append(_captured_pet_log_part(captured))
+				second_parts.append("；".join(captured_parts))
 			if not second_parts.is_empty():
 				lines.append("。".join(second_parts) + "。")
 		"defeat":
@@ -1116,6 +1116,13 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 			break
 		lines.append(line)
 	return lines
+
+
+static func _captured_pet_log_part(captured: Dictionary) -> String:
+	var pet_name := str(captured.get("name", "宠物"))
+	var level := maxi(1, int(captured.get("level", 1)))
+	var destination := "队伍已满，已送入兽栏" if str(captured.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE else "已加入队伍"
+	return "捕捉了%s Lv%d，%s" % [pet_name, level, destination]
 
 
 static func battle_exp_reward(state: Dictionary) -> int:
