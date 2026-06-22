@@ -18,7 +18,7 @@ const MAP_DATA_PATHS := {
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
-const ACTION_BAR_SIZE := Vector2(306, 86)
+const ACTION_BAR_SIZE := Vector2(342, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
@@ -78,6 +78,7 @@ var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
 var pet_menu_button: Button
+var codex_menu_button: Button
 var pet_panel: PanelContainer
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
@@ -98,6 +99,12 @@ var pet_close_button: Button
 var pet_selected_instance_id: String = ""
 var pet_detail_mode: String = PET_DETAIL_MODE_INSTANCE
 var pet_list_buttons: Dictionary = {}
+var codex_panel: PanelContainer
+var codex_list_container: VBoxContainer
+var codex_detail_label: Label
+var codex_close_button: Button
+var codex_selected_form_id: String = ""
+var codex_list_buttons: Dictionary = {}
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -150,12 +157,14 @@ var auto_pet_recovery_check: bool = false
 var auto_pet_stable_check: bool = false
 var auto_pet_drop_pickup_check: bool = false
 var auto_pet_codex_detail_check: bool = false
+var auto_pet_codex_list_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
 var pet_codex_preview: bool = false
+var pet_codex_list_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -298,6 +307,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_drop_pickup_check")
 	elif auto_pet_codex_detail_check:
 		call_deferred("_run_auto_pet_codex_detail_check")
+	elif auto_pet_codex_list_check:
+		call_deferred("_run_auto_pet_codex_list_check")
 	elif auto_pet_storage_capture_check:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
@@ -310,6 +321,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_drop_preview")
 	elif pet_codex_preview:
 		call_deferred("_run_pet_codex_preview")
+	elif pet_codex_list_preview:
+		call_deferred("_run_pet_codex_list_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -488,6 +501,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_drop_pickup_check = true
 		elif arg == "--auto-pet-codex-detail-check":
 			auto_pet_codex_detail_check = true
+		elif arg == "--auto-pet-codex-list-check":
+			auto_pet_codex_list_check = true
 		elif arg == "--auto-pet-storage-capture-check":
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
@@ -500,6 +515,8 @@ func _apply_preview_window_args() -> void:
 			pet_drop_preview = true
 		elif arg == "--pet-codex-preview":
 			pet_codex_preview = true
+		elif arg == "--pet-codex-list-preview":
+			pet_codex_list_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -2574,6 +2591,117 @@ func _run_auto_pet_codex_detail_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_codex_list_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	codex_selected_form_id = ""
+	_open_codex_panel()
+	await get_tree().process_frame
+	var entries := PlayerProgressModel.codex_entries(player_profile)
+	var buttons_ready := (
+		codex_menu_button != null
+		and codex_menu_button.text == "图鉴"
+		and codex_panel != null
+		and codex_panel.visible
+		and codex_list_buttons.size() == entries.size()
+		and entries.size() == PetTemplateCatalog.forms().size()
+	)
+	var default_entry := PlayerProgressModel.codex_entry_for_form(player_profile, "bui_normal_red_fire10")
+	var default_owned_ok := (
+		bool(default_entry.get("seen", false))
+		and bool(default_entry.get("captured", false))
+		and int(default_entry.get("ownedCount", 0)) == 2
+	)
+
+	_select_codex_form("bui_normal_yellow_wind10")
+	await get_tree().process_frame
+	var yellow_text := codex_detail_label.text if codex_detail_label != null else ""
+	var yellow_ok := (
+		yellow_text.find("图鉴：黄色普通布伊") >= 0
+		and yellow_text.find("记录：已捕捉") >= 0
+		and yellow_text.find("持有 1") >= 0
+		and yellow_text.find("成长倾向：敏捷") >= 0
+		and yellow_text.find("bui_normal_yellow_wind10") < 0
+		and yellow_text.find("agility_high") < 0
+	)
+	var unseen_button = codex_list_buttons.get("wuli_normal_fast_wind10", null)
+	var unseen_button_text := (unseen_button as Button).text if unseen_button is Button else ""
+	var unseen_button_ok := unseen_button_text.find("？？？") >= 0 and unseen_button_text.find("高速乌力") < 0
+
+	var empty_profile := PlayerProgressModel.default_profile()
+	empty_profile["petInstances"] = []
+	empty_profile["activePetInstanceId"] = ""
+	empty_profile[PlayerProgressModel.PET_CODEX_SEEN_FORM_IDS_KEY] = []
+	empty_profile[PlayerProgressModel.PET_CODEX_CAPTURED_FORM_IDS_KEY] = []
+	player_profile = PlayerProgressModel.normalize_profile(empty_profile)
+	codex_selected_form_id = "wuli_normal_fast_wind10"
+	_refresh_codex_panel()
+	await get_tree().process_frame
+	var hidden_text := codex_detail_label.text if codex_detail_label != null else ""
+	var hidden_ok := (
+		hidden_text.find("图鉴：？？？") >= 0
+		and hidden_text.find("记录：未遇见") >= 0
+		and hidden_text.find("高速乌力") < 0
+		and hidden_text.find("wuli_normal_fast_wind10") < 0
+	)
+
+	player_profile = PlayerProgressModel.record_codex_seen(player_profile, "wuli_normal_fast_wind10")
+	_refresh_codex_panel()
+	await get_tree().process_frame
+	var seen_text := codex_detail_label.text if codex_detail_label != null else ""
+	var seen_ok := (
+		seen_text.find("图鉴：高速乌力") >= 0
+		and seen_text.find("记录：已遇见") >= 0
+		and seen_text.find("已捕捉") < 0
+		and seen_text.find("wuli_normal_fast_wind10") < 0
+	)
+
+	var seen_result := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), BattleModel.create_wild_battle({
+		"id": "codex_seen_check",
+		"name": "图鉴遇见验证",
+	}), "escape")
+	var seen_profile := seen_result.get("profile", {}) as Dictionary
+	var wild_seen_entry := PlayerProgressModel.codex_entry_for_form(seen_profile, "wuli_normal_orange_fire10")
+	var battle_seen_ok := bool(wild_seen_entry.get("seen", false)) and not bool(wild_seen_entry.get("captured", false))
+
+	var capture_state := BattleModel.create_wild_battle({
+		"id": "codex_capture_check",
+		"name": "图鉴捕捉验证",
+	})
+	var actors: Array = capture_state.get("actors", [])
+	for index in range(actors.size()):
+		if not (actors[index] is Dictionary):
+			continue
+		var actor := actors[index] as Dictionary
+		if str(actor.get("id", "")) == "enemy_0":
+			actor["captured"] = true
+			actor["hp"] = 0
+			actors[index] = actor
+	capture_state["actors"] = actors
+	var capture_result := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state, "victory")
+	var capture_profile := capture_result.get("profile", {}) as Dictionary
+	var wild_capture_entry := PlayerProgressModel.codex_entry_for_form(capture_profile, "wuli_normal_orange_fire10")
+	var battle_capture_ok := (
+		bool(wild_capture_entry.get("seen", false))
+		and bool(wild_capture_entry.get("captured", false))
+		and int(wild_capture_entry.get("ownedCount", 0)) == 1
+	)
+
+	var status := "ok" if buttons_ready and default_owned_ok and yellow_ok and unseen_button_ok and hidden_ok and seen_ok and battle_seen_ok and battle_capture_ok else "failed"
+	print("pet codex list check ready: status=%s buttons=%s default_owned=%s yellow=%s unseen_button=%s hidden=%s seen=%s battle_seen=%s battle_capture=%s" % [
+		status,
+		str(buttons_ready),
+		str(default_owned_ok),
+		str(yellow_ok),
+		str(unseen_button_ok),
+		str(hidden_ok),
+		str(seen_ok),
+		str(battle_seen_ok),
+		str(battle_capture_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_storage_capture_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -2670,6 +2798,15 @@ func _run_pet_codex_preview() -> void:
 	pet_detail_mode = PET_DETAIL_MODE_CODEX
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
+
+
+func _run_pet_codex_list_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.record_codex_seen(player_profile, "wuli_normal_fast_wind10")
+	codex_selected_form_id = "wuli_normal_fast_wind10"
+	_open_codex_panel()
+	_select_codex_form("wuli_normal_fast_wind10")
 
 
 func _run_auto_battle_status_check() -> void:
@@ -4509,7 +4646,7 @@ func _build_hud() -> void:
 
 	action_bar = _panel_container("ActionBar")
 	var action_row := HBoxContainer.new()
-	action_row.add_theme_constant_override("separation", 10)
+	action_row.add_theme_constant_override("separation", 6)
 	action_bar.add_child(action_row)
 	stop_button = Button.new()
 	stop_button.text = "停"
@@ -4518,14 +4655,19 @@ func _build_hud() -> void:
 	action_row.add_child(stop_button)
 	ring_button = Button.new()
 	ring_button.text = "驯宠戒"
-	ring_button.custom_minimum_size = Vector2(98, MIN_TOUCH_BUTTON_SIZE.y)
+	ring_button.custom_minimum_size = Vector2(76, MIN_TOUCH_BUTTON_SIZE.y)
 	ring_button.pressed.connect(_toggle_pet_ring)
 	action_row.add_child(ring_button)
 	pet_menu_button = Button.new()
 	pet_menu_button.text = "宠物"
-	pet_menu_button.custom_minimum_size = Vector2(82, MIN_TOUCH_BUTTON_SIZE.y)
+	pet_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	pet_menu_button.pressed.connect(_open_pet_panel)
 	action_row.add_child(pet_menu_button)
+	codex_menu_button = Button.new()
+	codex_menu_button.text = "图鉴"
+	codex_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	codex_menu_button.pressed.connect(_open_codex_panel)
+	action_row.add_child(codex_menu_button)
 	hud_root.add_child(action_bar)
 
 	pet_panel = _panel_container("PetPanel")
@@ -4639,6 +4781,56 @@ func _build_hud() -> void:
 	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
 	pet_button_row.add_child(pet_drop_button)
 	hud_root.add_child(pet_panel)
+
+	codex_panel = _panel_container("CodexPanel")
+	codex_panel.visible = false
+	codex_panel.z_index = 24
+	var codex_column := VBoxContainer.new()
+	codex_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	codex_column.add_theme_constant_override("separation", 8)
+	codex_panel.add_child(codex_column)
+
+	var codex_header := HBoxContainer.new()
+	codex_header.add_theme_constant_override("separation", 10)
+	codex_column.add_child(codex_header)
+	var codex_title := Label.new()
+	codex_title.text = "图鉴"
+	codex_title.add_theme_font_size_override("font_size", 21)
+	codex_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_header.add_child(codex_title)
+	codex_close_button = Button.new()
+	codex_close_button.text = "关闭"
+	codex_close_button.custom_minimum_size = Vector2(92, 44)
+	codex_close_button.pressed.connect(_close_codex_panel)
+	codex_header.add_child(codex_close_button)
+
+	var codex_body := HBoxContainer.new()
+	codex_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	codex_body.add_theme_constant_override("separation", 10)
+	codex_column.add_child(codex_body)
+
+	var codex_scroll := ScrollContainer.new()
+	codex_scroll.custom_minimum_size = Vector2(236, 0)
+	codex_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	codex_body.add_child(codex_scroll)
+	codex_list_container = VBoxContainer.new()
+	codex_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_list_container.add_theme_constant_override("separation", 7)
+	codex_scroll.add_child(codex_list_container)
+
+	var codex_detail_scroll := ScrollContainer.new()
+	codex_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	codex_body.add_child(codex_detail_scroll)
+	codex_detail_label = Label.new()
+	codex_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	codex_detail_label.add_theme_font_size_override("font_size", 16)
+	codex_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	codex_detail_scroll.add_child(codex_detail_label)
+	hud_root.add_child(codex_panel)
 
 	pet_rename_panel = _panel_container("PetRenamePanel")
 	pet_rename_panel.visible = false
@@ -5173,6 +5365,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_clear_pending_interaction()
 	_close_dialog()
 	_close_pet_panel()
+	_close_codex_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -5334,6 +5527,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_clear_navigation_state()
 	_close_dialog()
 	_close_pet_panel()
+	_close_codex_panel()
 	_close_encounter()
 	world_log_message = ""
 	battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
@@ -5498,6 +5692,7 @@ func _open_pet_panel() -> void:
 		return
 	_close_dialog()
 	_close_encounter()
+	_close_codex_panel()
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
 	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
@@ -5512,6 +5707,88 @@ func _close_pet_panel() -> void:
 	_close_pet_rename_panel()
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_codex_panel() -> void:
+	if battle_active:
+		return
+	_close_dialog()
+	_close_encounter()
+	_close_pet_panel()
+	codex_panel.visible = true
+	_refresh_codex_panel()
+	_layout_hud()
+
+
+func _close_codex_panel() -> void:
+	if codex_panel != null:
+		codex_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_codex_panel() -> void:
+	if codex_panel == null or codex_list_container == null or codex_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var entries := PlayerProgressModel.codex_entries(player_profile)
+	for child in codex_list_container.get_children():
+		child.queue_free()
+	codex_list_buttons.clear()
+
+	var selected_exists := false
+	for entry in entries:
+		if str(entry.get("formId", "")) == codex_selected_form_id:
+			selected_exists = true
+			break
+	if not selected_exists:
+		codex_selected_form_id = _preferred_codex_form_id(entries)
+
+	for entry in entries:
+		_add_codex_list_button(entry)
+	codex_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines_for_form(player_profile, codex_selected_form_id))
+
+
+func _preferred_codex_form_id(entries: Array[Dictionary]) -> String:
+	var first_form_id := ""
+	for entry in entries:
+		var form_id := str(entry.get("formId", ""))
+		if first_form_id == "":
+			first_form_id = form_id
+		if bool(entry.get("captured", false)):
+			return form_id
+	for entry in entries:
+		if bool(entry.get("seen", false)):
+			return str(entry.get("formId", ""))
+	return first_form_id
+
+
+func _add_codex_list_button(entry: Dictionary) -> void:
+	var form_id := str(entry.get("formId", ""))
+	if form_id == "":
+		return
+	var button := Button.new()
+	var marker := "▶ " if form_id == codex_selected_form_id else ""
+	var display_name := str(entry.get("formName", "宠物")) if bool(entry.get("seen", false)) else "？？？"
+	button.text = "%s%s\n%s" % [
+		marker,
+		display_name,
+		str(entry.get("recordLabel", "未遇见")),
+	]
+	button.custom_minimum_size = Vector2(214, 58)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.pressed.connect(func() -> void:
+		_select_codex_form(form_id)
+	)
+	codex_list_container.add_child(button)
+	codex_list_buttons[form_id] = button
+
+
+func _select_codex_form(form_id: String) -> void:
+	if PlayerProgressModel.codex_entry_for_form(player_profile, form_id).is_empty():
+		return
+	codex_selected_form_id = form_id
+	_refresh_codex_panel()
 
 
 func _refresh_pet_panel() -> void:
@@ -7271,7 +7548,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, pet_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -7339,6 +7616,15 @@ func _layout_hud() -> void:
 	if battle_active:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	var codex_width := pet_width
+	var codex_height := pet_height
+	codex_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	codex_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		codex_panel.visible = false
+	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)

@@ -17,6 +17,8 @@ const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
+const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
+const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 
 
 static func default_profile() -> Dictionary:
@@ -38,6 +40,8 @@ static func default_profile() -> Dictionary:
 			_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, 1),
 		],
 		"groundPetDrops": [],
+		"petCodexSeenFormIds": [],
+		"petCodexCapturedFormIds": [],
 	}
 
 
@@ -120,6 +124,79 @@ static func ground_pet_drop_pet(drop: Dictionary) -> Dictionary:
 	if pet_value is Dictionary:
 		return _normalize_pet_instance(pet_value as Dictionary)
 	return {}
+
+
+static func codex_entries(profile: Dictionary) -> Array[Dictionary]:
+	var normalized := normalize_profile(profile)
+	var seen_ids := _string_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
+	var captured_ids := _string_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
+	var owned_counts := _owned_pet_form_counts(normalized)
+	var result: Array[Dictionary] = []
+	for form in PetTemplateCatalog.forms():
+		var form_id := str(form.get("formId", ""))
+		if form_id == "":
+			continue
+		var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+		if template.is_empty():
+			continue
+		var owned_count := int(owned_counts.get(form_id, 0))
+		var captured := captured_ids.has(form_id) or owned_count > 0
+		var seen := captured or seen_ids.has(form_id)
+		result.append({
+			"formId": form_id,
+			"formName": str(template.get("formName", "宠物")),
+			"lineName": str(template.get("lineName", "未知种系")),
+			"subtypeName": str(template.get("subtypeName", "未知亚种")),
+			"seen": seen,
+			"captured": captured,
+			"ownedCount": owned_count,
+			"recordLabel": codex_record_label(seen, captured, owned_count),
+		})
+	return result
+
+
+static func codex_entry_for_form(profile: Dictionary, form_id: String) -> Dictionary:
+	for entry in codex_entries(profile):
+		if str(entry.get("formId", "")) == form_id:
+			return entry
+	return {}
+
+
+static func codex_record_label(seen: bool, captured: bool, owned_count: int = 0) -> String:
+	if captured:
+		return "已捕捉    持有 %d" % maxi(0, owned_count)
+	if seen:
+		return "已遇见"
+	return "未遇见"
+
+
+static func pet_codex_detail_lines_for_form(profile: Dictionary, form_id: String) -> Array[String]:
+	var entry := codex_entry_for_form(profile, form_id)
+	if entry.is_empty():
+		return ["暂无图鉴资料。"]
+	if not bool(entry.get("seen", false)):
+		return [
+			"图鉴：？？？",
+			"记录：未遇见",
+		]
+	var instance := create_pet_instance_from_form(
+		"pet_codex_preview",
+		str(entry.get("formName", "宠物")),
+		form_id,
+		PET_STATE_STANDBY,
+		1
+	)
+	var lines := pet_codex_detail_lines(instance)
+	lines.insert(1, "记录：%s" % str(entry.get("recordLabel", "未遇见")))
+	return lines
+
+
+static func record_codex_seen(profile: Dictionary, form_id: String) -> Dictionary:
+	return normalize_profile(_with_codex_form_recorded(profile, form_id, false))
+
+
+static func record_codex_captured(profile: Dictionary, form_id: String) -> Dictionary:
+	return normalize_profile(_with_codex_form_recorded(profile, form_id, true))
 
 
 static func can_set_active_pet(profile: Dictionary, instance_id: String) -> Dictionary:
@@ -831,6 +908,14 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 					drops.append(drop)
 	normalized["groundPetDrops"] = drops
 
+	var seen_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
+	var captured_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
+	for form_id in captured_form_ids:
+		if not seen_form_ids.has(form_id):
+			seen_form_ids.append(form_id)
+	normalized[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_form_ids
+	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
+
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
 		var active_index := _pet_instance_index(instances, active_id)
@@ -940,6 +1025,7 @@ static func battle_result_for_state(state: Dictionary) -> String:
 static func apply_battle_result(profile: Dictionary, state: Dictionary, result_override: String = "") -> Dictionary:
 	var next_profile := normalize_profile(profile)
 	next_profile = _merge_battle_pet_party(next_profile, state)
+	next_profile = _with_codex_forms_seen_from_battle(next_profile, state)
 	var result := result_override if result_override != "" else battle_result_for_state(state)
 	var exp_reward := battle_exp_reward(state) if result == "victory" else 0
 	var level_up_lines: Array[String] = []
@@ -967,6 +1053,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		var instances: Array = next_profile.get("petInstances", [])
 		for captured in captured_instances:
 			instances.append(captured)
+			next_profile = _with_codex_form_recorded(next_profile, str(captured.get("formId", "")), true)
 		next_profile["petInstances"] = instances
 		next_profile["nextPetInstanceSerial"] = _next_serial_from_instances(_pet_instances(next_profile))
 	next_profile = normalize_profile(next_profile)
@@ -1069,6 +1156,45 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 			break
 	next_profile["petInstances"] = instances
 	return next_profile
+
+
+static func _with_codex_forms_seen_from_battle(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	for actor in _actors(state):
+		if str(actor.get("side", "")) != "enemy":
+			continue
+		var form_id := str(actor.get("formId", actor.get("templateId", "")))
+		if form_id == "":
+			continue
+		next_profile = _with_codex_form_recorded(next_profile, form_id, bool(actor.get("captured", false)))
+	return next_profile
+
+
+static func _with_codex_form_recorded(profile: Dictionary, form_id: String, captured: bool) -> Dictionary:
+	var normalized_form_id := form_id.strip_edges()
+	if normalized_form_id == "" or PetTemplateCatalog.runtime_template_for_form(normalized_form_id).is_empty():
+		return profile.duplicate(true)
+	var next_profile := profile.duplicate(true)
+	var seen_ids := _valid_unique_form_id_array(next_profile.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
+	if not seen_ids.has(normalized_form_id):
+		seen_ids.append(normalized_form_id)
+	next_profile[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_ids
+	if captured:
+		var captured_ids := _valid_unique_form_id_array(next_profile.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
+		if not captured_ids.has(normalized_form_id):
+			captured_ids.append(normalized_form_id)
+		next_profile[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_ids
+	return next_profile
+
+
+static func _owned_pet_form_counts(profile: Dictionary) -> Dictionary:
+	var counts := {}
+	for instance in _pet_instances(profile):
+		var form_id := str(instance.get("formId", instance.get("templateId", "")))
+		if form_id == "":
+			continue
+		counts[form_id] = int(counts.get(form_id, 0)) + 1
+	return counts
 
 
 static func _captured_pet_instances_from_state(profile: Dictionary, state: Dictionary) -> Array[Dictionary]:
@@ -1324,4 +1450,15 @@ static func _string_array(value) -> Array[String]:
 			var text := str(item)
 			if text != "":
 				result.append(text)
+	return result
+
+
+static func _valid_unique_form_id_array(value) -> Array[String]:
+	var result: Array[String] = []
+	for form_id in _string_array(value):
+		if result.has(form_id):
+			continue
+		if PetTemplateCatalog.runtime_template_for_form(form_id).is_empty():
+			continue
+		result.append(form_id)
 	return result
