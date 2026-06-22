@@ -254,7 +254,7 @@ static func default_player_pet_party(active_pet: Dictionary = {}) -> Array[Dicti
 		_make_pet_party_entry("pet_bui_main", active_name, active_form_id, active_hp, active_max_hp, active_quick, active_attack, active_defense, PET_STATE_BATTLE, PLAYER_PET_ID, active_passives, active_form_id, _pet_metadata_from_actor(active_pet)),
 		_make_pet_party_entry_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, ""),
 		_make_pet_party_entry_from_form("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", PET_STATE_STANDBY, ""),
-		_make_pet_party_entry_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, "", {"hp": 0, "maxHp": 130, "quick": 50, "attack": 15, "defense": 8}),
+		_make_pet_party_entry_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, "", {"maxHp": 130, "quick": 50, "attack": 15, "defense": 8}),
 	]
 
 

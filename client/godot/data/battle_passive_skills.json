@@ -4,7 +4,7 @@
     {
       "id": "bui_resistant_skin",
       "label": "抗性皮肤",
-      "description": "[被动技能] 根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。",
+      "description": "根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。",
       "effect": {
         "type": "element_scaled_status_resist",
         "scalePerPoint": 0.01,
@@ -19,7 +19,7 @@
     {
       "id": "wuli_hard_shell",
       "label": "硬壳体质",
-      "description": "[被动技能] 根据地属性获得石化抗性；地属性达到10时免疫石化。",
+      "description": "根据地属性获得石化抗性；地属性达到10时免疫石化。",
       "effect": {
         "type": "element_scaled_status_resist",
         "scalePerPoint": 0.1,
@@ -32,7 +32,7 @@
     {
       "id": "stone_immunity",
       "label": "石化免疫",
-      "description": "[被动技能] 免疫一切石化状态。",
+      "description": "免疫一切石化状态。",
       "effect": {
         "statusImmune": ["stone"]
       }
@@ -40,7 +40,7 @@
     {
       "id": "poison_resistance",
       "label": "毒素抗性",
-      "description": "[被动技能] 降低中毒命中的概率。",
+      "description": "降低中毒命中的概率。",
       "effect": {
         "statusResist": {
           "poison": 0.35
@@ -50,7 +50,7 @@
     {
       "id": "quick_instinct",
       "label": "迅捷本能",
-      "description": "[被动技能] 行动判断时更容易抢先出手。",
+      "description": "行动判断时更容易抢先出手。",
       "effect": {}
     }
   ]

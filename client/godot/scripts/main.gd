@@ -18,8 +18,10 @@ const MAP_DATA_PATHS := {
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
-const ACTION_BAR_SIZE := Vector2(218, 86)
+const ACTION_BAR_SIZE := Vector2(306, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
+const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
+const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
@@ -72,6 +74,16 @@ var battle_log_label: Label
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
+var pet_menu_button: Button
+var pet_panel: PanelContainer
+var pet_list_container: VBoxContainer
+var pet_detail_scroll: ScrollContainer
+var pet_detail_label: Label
+var pet_state_cycle_button: Button
+var pet_stable_button: Button
+var pet_close_button: Button
+var pet_selected_instance_id: String = ""
+var pet_list_buttons: Dictionary = {}
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -118,7 +130,11 @@ var auto_battle_status_rule_check: bool = false
 var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
 var auto_battle_result_check: bool = false
+var auto_pet_management_check: bool = false
+var auto_pet_stable_check: bool = false
+var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var pet_management_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -247,8 +263,16 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_reaction_check")
 	elif auto_battle_result_check:
 		call_deferred("_run_auto_battle_result_check")
+	elif auto_pet_management_check:
+		call_deferred("_run_auto_pet_management_check")
+	elif auto_pet_stable_check:
+		call_deferred("_run_auto_pet_stable_check")
+	elif auto_pet_storage_capture_check:
+		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif pet_management_preview:
+		call_deferred("_run_pet_management_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -415,8 +439,16 @@ func _apply_preview_window_args() -> void:
 			auto_battle_reaction_check = true
 		elif arg == "--auto-battle-result-check":
 			auto_battle_result_check = true
+		elif arg == "--auto-pet-management-check":
+			auto_pet_management_check = true
+		elif arg == "--auto-pet-stable-check":
+			auto_pet_stable_check = true
+		elif arg == "--auto-pet-storage-capture-check":
+			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--pet-management-preview":
+			pet_management_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -1900,6 +1932,256 @@ func _run_auto_battle_result_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_management_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	_open_pet_panel()
+	await get_tree().process_frame
+	var opened := pet_panel != null and pet_panel.visible
+	var selected_default := pet_selected_instance_id == "pet_bui_main"
+	_select_pet_instance("pet_bui_rest")
+	await get_tree().process_frame
+	var rest_detail := pet_detail_label.text if pet_detail_label != null else ""
+	var button_y_rest := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -1.0
+	var rest_to_battle_ready := pet_state_cycle_button != null and not pet_state_cycle_button.disabled and pet_state_cycle_button.text == "战斗" and rest_detail.find("当前不会参加战斗") < 0
+	_on_pet_state_cycle_pressed()
+	await get_tree().process_frame
+	var rest_battle := (
+		str(player_profile.get("activePetInstanceId", "")) == "pet_bui_rest"
+		and str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest").get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE
+	)
+	var button_y_battle := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -2.0
+	var battle_to_standby_ready := pet_state_cycle_button != null and not pet_state_cycle_button.disabled and pet_state_cycle_button.text == "待机"
+	_on_pet_state_cycle_pressed()
+	await get_tree().process_frame
+	var rest_standby := (
+		str(player_profile.get("activePetInstanceId", "")) == ""
+		and str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+	)
+	var no_pet_battle_state := PlayerProgressModel.apply_profile_to_battle_state(player_profile, BattleModel.create_wild_battle({
+		"id": "pet_management_no_pet_check",
+		"name": "无宠出战验证",
+	}))
+	var no_pet_battle_ok := BattleModel.actor_by_id(no_pet_battle_state, BattleModel.PLAYER_PET_ID).is_empty() and BattleModel.controlled_pet_id(no_pet_battle_state) == ""
+	var button_y_standby := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -3.0
+	_select_pet_instance("pet_bui_speed")
+	await get_tree().process_frame
+	var detail_text := pet_detail_label.text if pet_detail_label != null else ""
+	var detail_ok := detail_text.find("黄色普通布伊") >= 0 and detail_text.find("10风") >= 0 and detail_text.find("成长") < 0
+	var standby_to_rest_ready := pet_state_cycle_button != null and not pet_state_cycle_button.disabled and pet_state_cycle_button.text == "休息"
+	_on_pet_state_cycle_pressed()
+	await get_tree().process_frame
+	var speed_rest := str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed").get("state", "")) == PlayerProgressModel.PET_STATE_REST
+	var speed_rest_to_battle_ready := pet_state_cycle_button != null and not pet_state_cycle_button.disabled and pet_state_cycle_button.text == "战斗"
+	_on_pet_state_cycle_pressed()
+	await get_tree().process_frame
+	var active_after := PlayerProgressModel.active_pet(player_profile)
+	var switched := str(player_profile.get("activePetInstanceId", "")) == "pet_bui_speed" and str(active_after.get("name", "")) == "黄色普通布伊"
+	var button_text_clean := ["战斗", "待机", "休息"].has(pet_state_cycle_button.text if pet_state_cycle_button != null else "")
+	var button_y_stable := absf(button_y_rest - button_y_battle) < 1.0 and absf(button_y_rest - button_y_standby) < 1.0
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "pet_management_check",
+		"name": "宠物管理验证",
+	}))
+	await get_tree().process_frame
+	var battle_pet := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
+	var battle_reads_active := str(battle_pet.get("name", "")) == "黄色普通布伊" and str(battle_pet.get("instanceId", "")) == "pet_bui_speed"
+	_end_battle(true)
+	var status := "ok" if opened and selected_default and rest_to_battle_ready and rest_battle and battle_to_standby_ready and rest_standby and no_pet_battle_ok and detail_ok and standby_to_rest_ready and speed_rest and speed_rest_to_battle_ready and button_text_clean and button_y_stable and switched and battle_reads_active else "failed"
+	print("pet management check ready: status=%s opened=%s selected=%s rest_to_battle=%s rest_battle=%s battle_to_standby=%s rest_standby=%s no_pet_battle=%s detail=%s standby_to_rest=%s speed_rest=%s speed_rest_to_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s active=%s" % [
+		status,
+		str(opened),
+		str(selected_default),
+		str(rest_to_battle_ready),
+		str(rest_battle),
+		str(battle_to_standby_ready),
+		str(rest_standby),
+		str(no_pet_battle_ok),
+		str(detail_ok),
+		str(standby_to_rest_ready),
+		str(speed_rest),
+		str(speed_rest_to_battle_ready),
+		str(button_text_clean),
+		str(button_y_stable),
+		str(switched),
+		str(battle_reads_active),
+		str(player_profile.get("activePetInstanceId", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_stable_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	_open_pet_panel()
+	await get_tree().process_frame
+	_select_pet_instance("pet_bui_tough")
+	await get_tree().process_frame
+	var before_party := PlayerProgressModel.party_pet_instances(player_profile).size()
+	var store_button_ready := pet_stable_button != null and pet_stable_button.visible and not pet_stable_button.disabled and pet_stable_button.text == "存入"
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var tough_stored := (
+		str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough").get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and PlayerProgressModel.party_pet_instances(player_profile).size() == before_party - 1
+		and pet_stable_button != null
+		and pet_stable_button.text == "取出"
+	)
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var tough_withdrawn := (
+		str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and PlayerProgressModel.party_pet_instances(player_profile).size() == before_party
+		and pet_stable_button != null
+		and pet_stable_button.text == "存入"
+	)
+	_select_pet_instance("pet_bui_main")
+	await get_tree().process_frame
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var main_stored := (
+		str(player_profile.get("activePetInstanceId", "")) == ""
+		and str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and pet_stable_button != null
+		and pet_stable_button.text == "取出"
+	)
+	var no_pet_state := PlayerProgressModel.apply_profile_to_battle_state(player_profile, BattleModel.create_wild_battle({
+		"id": "pet_stable_no_pet_check",
+		"name": "兽栏无宠验证",
+	}))
+	var no_pet_battle_ok := BattleModel.actor_by_id(no_pet_state, BattleModel.PLAYER_PET_ID).is_empty() and BattleModel.controlled_pet_id(no_pet_state) == ""
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var main_withdrawn_standby := (
+		str(player_profile.get("activePetInstanceId", "")) == ""
+		and str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and pet_stable_button != null
+		and pet_stable_button.text == "存入"
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var instances: Array = player_profile.get("petInstances", [])
+	instances.append(PlayerProgressModel.create_pet_instance_from_form(
+		"pet_bui_extra",
+		"备用布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		1
+	))
+	instances.append(PlayerProgressModel.create_pet_instance_from_form(
+		"pet_bui_full_storage",
+		"兽栏布伊",
+		"bui_normal_yellow_wind10",
+		PlayerProgressModel.PET_STATE_STORAGE,
+		1
+	))
+	player_profile["petInstances"] = instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	pet_selected_instance_id = "pet_bui_full_storage"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_full_storage")
+	await get_tree().process_frame
+	var full_before_party := PlayerProgressModel.party_pet_instances(player_profile).size()
+	var full_button_ready := pet_stable_button != null and pet_stable_button.visible and not pet_stable_button.disabled and pet_stable_button.text == "取出"
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var full_blocked := (
+		str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_full_storage").get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and PlayerProgressModel.party_pet_instances(player_profile).size() == full_before_party
+		and world_log_message == "队伍已满。"
+		and pet_stable_button != null
+		and pet_stable_button.text == "取出"
+	)
+	var status := "ok" if store_button_ready and tough_stored and tough_withdrawn and main_stored and no_pet_battle_ok and main_withdrawn_standby and full_button_ready and full_blocked else "failed"
+	print("pet stable check ready: status=%s store_button=%s tough_stored=%s tough_withdrawn=%s main_stored=%s no_pet_battle=%s main_withdrawn=%s full_button=%s full_blocked=%s before_party=%d full_party=%d log=%s" % [
+		status,
+		str(store_button_ready),
+		str(tough_stored),
+		str(tough_withdrawn),
+		str(main_stored),
+		str(no_pet_battle_ok),
+		str(main_withdrawn_standby),
+		str(full_button_ready),
+		str(full_blocked),
+		before_party,
+		full_before_party,
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_storage_capture_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var instances: Array = player_profile.get("petInstances", [])
+	instances.append(PlayerProgressModel.create_pet_instance_from_form(
+		"pet_bui_extra",
+		"备用布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		1
+	))
+	player_profile["petInstances"] = instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var before_party := PlayerProgressModel.party_pet_instances(player_profile).size()
+	var before_storage := PlayerProgressModel.storage_pet_instances(player_profile).size()
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "pet_storage_capture_check",
+		"name": "兽栏捕捉验证",
+	}))
+	await get_tree().process_frame
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var target_actor := BattleModel.actor_by_id(battle_state, target_id)
+	var started := battle_active and target_id != "" and not target_actor.is_empty()
+	if started:
+		battle_state = BattleModel.apply_battle_event(battle_state, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"success": true,
+			"speed": 100,
+			"sequence": 1,
+		})
+	var result := _finish_battle_and_return_to_world()
+	await get_tree().process_frame
+	var after_party := PlayerProgressModel.party_pet_instances(player_profile).size()
+	var after_storage := PlayerProgressModel.storage_pet_instances(player_profile)
+	var storage_count_ok := before_party == PlayerProgressModel.PARTY_LIMIT and after_party == PlayerProgressModel.PARTY_LIMIT and after_storage.size() == before_storage + 1
+	var captured_storage_ok := false
+	for instance in after_storage:
+		if str(instance.get("instanceId", "")).begins_with("pet_captured_") and str(instance.get("formId", "")).begins_with("wuli_"):
+			captured_storage_ok = true
+			break
+	var result_ok := str(result.get("result", "")) == "victory" and world_log_message.find("捕捉") >= 0
+	var exited_ok := not battle_active and player != null and player.visible
+	var status := "ok" if started and storage_count_ok and captured_storage_ok and result_ok and exited_ok else "failed"
+	print("pet storage capture check ready: status=%s started=%s storage_count=%s captured_storage=%s result=%s exited=%s before_party=%d after_party=%d before_storage=%d after_storage=%d log=%s" % [
+		status,
+		str(started),
+		str(storage_count_ok),
+		str(captured_storage_ok),
+		str(result_ok),
+		str(exited_ok),
+		before_party,
+		after_party,
+		before_storage,
+		after_storage.size(),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_pet_management_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = "pet_bui_speed"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_speed")
+
+
 func _run_auto_battle_status_check() -> void:
 	var started := _start_stat_formula_test_battle()
 	await get_tree().process_frame
@@ -2143,7 +2425,7 @@ func _run_auto_battle_passive_hover_check() -> void:
 		catalog_errors.is_empty()
 		and passive_visible
 		and passive_text_fit_ok
-		and passive_text.find("抗性皮肤：[被动技能] 根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。") >= 0
+		and passive_text.find("被动技能: [抗性皮肤] 根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。") >= 0
 		and battle_passive_panel.z_index < battle_command_panel.z_index
 		and BattleModel.actor_passive_skill_ids_for_trace(passive_actor).has("bui_resistant_skin")
 	)
@@ -2182,7 +2464,7 @@ func _run_auto_battle_passive_hover_check() -> void:
 	await get_tree().process_frame
 	var hidden_during_action := battle_command_panel != null and not battle_command_panel.visible and _battle_commands_locked()
 	var guard := 0
-	while guard < 1800 and battle_active and _battle_commands_locked():
+	while guard < 2400 and battle_active and (_battle_commands_locked() or battle_command_panel == null or not battle_command_panel.visible):
 		guard += 1
 		await get_tree().process_frame
 	var visible_after_action := battle_active and battle_command_panel != null and battle_command_panel.visible and not _battle_commands_locked()
@@ -3747,7 +4029,83 @@ func _build_hud() -> void:
 	ring_button.custom_minimum_size = Vector2(98, MIN_TOUCH_BUTTON_SIZE.y)
 	ring_button.pressed.connect(_toggle_pet_ring)
 	action_row.add_child(ring_button)
+	pet_menu_button = Button.new()
+	pet_menu_button.text = "宠物"
+	pet_menu_button.custom_minimum_size = Vector2(82, MIN_TOUCH_BUTTON_SIZE.y)
+	pet_menu_button.pressed.connect(_open_pet_panel)
+	action_row.add_child(pet_menu_button)
 	hud_root.add_child(action_bar)
+
+	pet_panel = _panel_container("PetPanel")
+	pet_panel.visible = false
+	pet_panel.z_index = 24
+	var pet_column := VBoxContainer.new()
+	pet_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_column.add_theme_constant_override("separation", 8)
+	pet_panel.add_child(pet_column)
+
+	var pet_header := HBoxContainer.new()
+	pet_header.add_theme_constant_override("separation", 10)
+	pet_column.add_child(pet_header)
+	var pet_title := Label.new()
+	pet_title.text = "宠物"
+	pet_title.add_theme_font_size_override("font_size", 21)
+	pet_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_header.add_child(pet_title)
+	pet_close_button = Button.new()
+	pet_close_button.text = "关闭"
+	pet_close_button.custom_minimum_size = Vector2(92, 44)
+	pet_close_button.pressed.connect(_close_pet_panel)
+	pet_header.add_child(pet_close_button)
+
+	var pet_body := HBoxContainer.new()
+	pet_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_body.add_theme_constant_override("separation", 10)
+	pet_column.add_child(pet_body)
+
+	var pet_scroll := ScrollContainer.new()
+	pet_scroll.custom_minimum_size = Vector2(218, 0)
+	pet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_body.add_child(pet_scroll)
+	pet_list_container = VBoxContainer.new()
+	pet_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_list_container.add_theme_constant_override("separation", 7)
+	pet_scroll.add_child(pet_list_container)
+
+	var pet_detail_column := VBoxContainer.new()
+	pet_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_detail_column.add_theme_constant_override("separation", 8)
+	pet_body.add_child(pet_detail_column)
+	pet_detail_scroll = ScrollContainer.new()
+	pet_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_detail_column.add_child(pet_detail_scroll)
+	pet_detail_label = Label.new()
+	pet_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pet_detail_label.add_theme_font_size_override("font_size", 16)
+	pet_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	pet_detail_scroll.add_child(pet_detail_label)
+	var pet_button_row := HBoxContainer.new()
+	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_button_row.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_child(pet_button_row)
+	pet_state_cycle_button = Button.new()
+	pet_state_cycle_button.text = "休息"
+	pet_state_cycle_button.custom_minimum_size = Vector2(0, 48)
+	pet_state_cycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_state_cycle_button.pressed.connect(_on_pet_state_cycle_pressed)
+	pet_button_row.add_child(pet_state_cycle_button)
+	pet_stable_button = Button.new()
+	pet_stable_button.text = "存入"
+	pet_stable_button.custom_minimum_size = Vector2(0, 48)
+	pet_stable_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_stable_button.pressed.connect(_on_pet_stable_pressed)
+	pet_button_row.add_child(pet_stable_button)
+	hud_root.add_child(pet_panel)
 
 	dialog_panel = _panel_container("DialogPanel")
 	dialog_panel.visible = false
@@ -4230,6 +4588,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 
 	_clear_pending_interaction()
 	_close_dialog()
+	_close_pet_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -4387,6 +4746,7 @@ func _refresh_battle_target_seed() -> void:
 func _start_battle(next_battle_state: Dictionary) -> void:
 	_clear_navigation_state()
 	_close_dialog()
+	_close_pet_panel()
 	_close_encounter()
 	world_log_message = ""
 	battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
@@ -4544,6 +4904,151 @@ func _set_world_log_message(text: String) -> void:
 	if hud_root != null:
 		_layout_hud()
 	queue_redraw()
+
+
+func _open_pet_panel() -> void:
+	if battle_active:
+		return
+	_close_dialog()
+	_close_encounter()
+	pet_panel.visible = true
+	var active := PlayerProgressModel.active_pet(player_profile)
+	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
+		pet_selected_instance_id = str(active.get("instanceId", ""))
+	_refresh_pet_panel()
+	_layout_hud()
+
+
+func _close_pet_panel() -> void:
+	if pet_panel != null:
+		pet_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_pet_panel() -> void:
+	if pet_panel == null or pet_list_container == null or pet_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	for child in pet_list_container.get_children():
+		child.queue_free()
+	pet_list_buttons.clear()
+
+	_add_pet_section_label("队伍")
+	for instance in PlayerProgressModel.party_pet_instances(player_profile):
+		_add_pet_list_button(instance)
+	var storage := PlayerProgressModel.storage_pet_instances(player_profile)
+	if not storage.is_empty():
+		_add_pet_section_label("兽栏")
+		for instance in storage:
+			_add_pet_list_button(instance)
+
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		var active := PlayerProgressModel.active_pet(player_profile)
+		if not active.is_empty():
+			pet_selected_instance_id = str(active.get("instanceId", ""))
+			selected = active
+	if selected.is_empty():
+		for instance in PlayerProgressModel.all_pet_instances(player_profile):
+			pet_selected_instance_id = str(instance.get("instanceId", ""))
+			selected = instance
+			break
+	pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+	if pet_state_cycle_button != null:
+		var selected_state := str(selected.get("state", ""))
+		var target_state := PlayerProgressModel.cycled_pet_state(selected_state)
+		if target_state == "":
+			pet_state_cycle_button.disabled = true
+			pet_state_cycle_button.visible = false
+		else:
+			pet_state_cycle_button.visible = true
+			var state_check := PlayerProgressModel.can_cycle_pet_state(player_profile, pet_selected_instance_id)
+			pet_state_cycle_button.disabled = not bool(state_check.get("ok", false))
+			pet_state_cycle_button.text = _pet_state_button_label(target_state)
+	if pet_stable_button != null:
+		if selected.is_empty():
+			pet_stable_button.visible = false
+			pet_stable_button.disabled = true
+		else:
+			pet_stable_button.visible = true
+			pet_stable_button.disabled = false
+			var stable_state := str(selected.get("state", ""))
+			pet_stable_button.text = "取出" if stable_state == PlayerProgressModel.PET_STATE_STORAGE else "存入"
+
+
+func _pet_state_button_label(state: String) -> String:
+	match state:
+		PlayerProgressModel.PET_STATE_BATTLE:
+			return "战斗"
+		PlayerProgressModel.PET_STATE_STANDBY:
+			return "待机"
+		PlayerProgressModel.PET_STATE_REST:
+			return "休息"
+		_:
+			return ""
+
+
+func _add_pet_section_label(text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 16)
+	pet_list_container.add_child(label)
+
+
+func _add_pet_list_button(instance: Dictionary) -> void:
+	var instance_id := str(instance.get("instanceId", ""))
+	if instance_id == "":
+		return
+	var button := Button.new()
+	var marker := "▶ " if instance_id == pet_selected_instance_id else ""
+	var active_marker := "主 " if str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE else ""
+	button.text = "%s%s%s\nLv%d  %s" % [
+		marker,
+		active_marker,
+		str(instance.get("name", "宠物")),
+		int(instance.get("level", 1)),
+		PlayerProgressModel.state_label(str(instance.get("state", ""))),
+	]
+	button.custom_minimum_size = Vector2(196, 58)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.pressed.connect(func() -> void:
+		_select_pet_instance(instance_id)
+	)
+	pet_list_container.add_child(button)
+	pet_list_buttons[instance_id] = button
+
+
+func _select_pet_instance(instance_id: String) -> void:
+	if PlayerProgressModel.pet_instance_by_id(player_profile, instance_id).is_empty():
+		return
+	pet_selected_instance_id = instance_id
+	_refresh_pet_panel()
+
+
+func _on_pet_state_cycle_pressed() -> void:
+	var result := PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_stable_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	var result := {}
+	if str(selected.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE:
+		result = PlayerProgressModel.withdraw_pet(player_profile, pet_selected_instance_id)
+	else:
+		result = PlayerProgressModel.store_pet(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
 
 
 func _on_battle_command_pressed(command_id: String) -> void:
@@ -5949,7 +6454,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, pet_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -5967,6 +6472,8 @@ func _layout_hud() -> void:
 
 	var is_phone_shape := _is_phone_shape(viewport_size)
 	var margin := 18.0
+	var action_width: float = minf(viewport_size.x - margin * 2.0, ACTION_BAR_SIZE.x)
+	var action_size := Vector2(action_width, ACTION_BAR_SIZE.y)
 	var top_max_width := 300.0 if battle_active else 520.0
 	var top_width: float = minf(viewport_size.x - margin * 2.0, top_max_width)
 	top_panel.position = Vector2(margin, margin)
@@ -5979,17 +6486,17 @@ func _layout_hud() -> void:
 		side_panel.visible = false
 		action_bar.visible = true
 		if viewport_size.y > viewport_size.x:
-			action_bar.position = Vector2(maxf(margin, (viewport_size.x - ACTION_BAR_SIZE.x) * 0.5), viewport_size.y - 104.0)
+			action_bar.position = Vector2(maxf(margin, (viewport_size.x - action_width) * 0.5), viewport_size.y - 104.0)
 		else:
 			action_bar.position = Vector2(margin, viewport_size.y - 104.0)
-		action_bar.size = ACTION_BAR_SIZE
+		action_bar.size = action_size
 	else:
 		side_panel.visible = true
 		action_bar.visible = true
 		side_panel.position = Vector2(viewport_size.x - 286.0, margin)
 		side_panel.size = Vector2(268, 128)
-		action_bar.position = Vector2(viewport_size.x - 224.0, viewport_size.y - 104.0)
-		action_bar.size = ACTION_BAR_SIZE
+		action_bar.position = Vector2(viewport_size.x - action_width - margin, viewport_size.y - 104.0)
+		action_bar.size = action_size
 
 	var dialog_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
 	var dialog_height := DIALOG_PANEL_HEIGHT
@@ -6005,6 +6512,17 @@ func _layout_hud() -> void:
 		maxf(margin + 68.0, viewport_size.y - dialog_height - reserved_bottom)
 	)
 	encounter_panel.size = Vector2(dialog_width, dialog_height)
+
+	var pet_width: float = minf(viewport_size.x - margin * 2.0, PET_PANEL_MAX_SIZE.x)
+	var pet_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_PANEL_MAX_SIZE.y)
+	pet_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_width)
+	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_height)
+	pet_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	pet_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		pet_panel.visible = false
+	if pet_panel.visible and action_bar != null:
+		action_bar.visible = false
 
 	var battle_panel_size := _battle_command_panel_size(viewport_size)
 	var battle_width := battle_panel_size.x

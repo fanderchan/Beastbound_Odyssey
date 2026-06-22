@@ -261,7 +261,7 @@ client/godot/data/pet_templates.json
 {
   "id": "bui_resistant_skin",
   "label": "抗性皮肤",
-  "description": "[被动技能] 根据地水火风属性分别获得对应异常抗性。",
+  "description": "根据地水火风属性分别获得对应异常抗性。",
   "effect": {
     "type": "element_scaled_status_resist",
     "scalePerPoint": 0.01,
@@ -322,7 +322,7 @@ client/godot/data/pet_templates.json
 玩家文案：
 
 ```text
-抗性皮肤：[被动技能] 根据地水火风属性分别获得对应异常抗性。
+被动技能: [抗性皮肤] 根据地水火风属性分别获得对应异常抗性。
 ```
 
 第一版规则：
@@ -389,7 +389,7 @@ pet_bui_charge
 玩家文案：
 
 ```text
-硬壳体质：[被动技能] 根据地属性获得石化抗性；地属性达到10时免疫石化。
+被动技能: [硬壳体质] 根据地属性获得石化抗性；地属性达到10时免疫石化。
 ```
 
 第一版规则：

@@ -49,10 +49,10 @@ static func display_lines_for_actor(actor: Dictionary) -> Array[String]:
 		if passive.is_empty():
 			continue
 		var label := str(passive.get("label", ""))
-		var description := str(passive.get("description", ""))
+		var description := _clean_description(str(passive.get("description", "")))
 		if label == "" or description == "":
 			continue
-		lines.append("%s：%s" % [label, description])
+		lines.append("被动技能: [%s] %s" % [label, description])
 	return lines
 
 
@@ -218,6 +218,13 @@ static func _validate_passive_effect(passive: Dictionary, effect: Dictionary, er
 
 static func _valid_status_id(status_id: String) -> bool:
 	return ["poison", "sleep", "confusion", "stone"].has(status_id)
+
+
+static func _clean_description(description: String) -> String:
+	var text := description.strip_edges()
+	if text.begins_with("[被动技能]"):
+		text = text.substr("[被动技能]".length()).strip_edges()
+	return text
 
 
 static func _passive_name(passive: Dictionary, index: int) -> String:
