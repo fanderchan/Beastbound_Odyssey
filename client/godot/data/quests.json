@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "firstQuestId": "quest_intro_talk",
+  "quests": [
+    {
+      "id": "quest_intro_talk",
+      "title": "认识训练师",
+      "giverId": "trainer",
+      "turnInId": "trainer",
+      "autoClaimOnReady": true,
+      "summary": "先和训练师阿土打个招呼。",
+      "objective": {
+        "type": "talk",
+        "targetId": "trainer",
+        "count": 1,
+        "text": "和训练师阿土对话"
+      },
+      "rewards": {
+        "stoneCoins": 20,
+        "items": [
+          {
+            "itemId": "item_meat_small",
+            "count": 2
+          }
+        ]
+      },
+      "nextQuestId": "quest_buy_supply"
+    },
+    {
+      "id": "quest_buy_supply",
+      "title": "补给准备",
+      "giverId": "trainer",
+      "turnInId": "firebud_shopkeeper",
+      "autoClaimOnReady": true,
+      "summary": "出村前先买一份补给。",
+      "objective": {
+        "type": "buy_item",
+        "shopId": "firebud_item_shop",
+        "count": 1,
+        "text": "在火芽杂货铺购买任意补给"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "capture_rope_basic",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_first_victory"
+    },
+    {
+      "id": "quest_first_victory",
+      "title": "村外试炼",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "去村外草丛赢下一场战斗。",
+      "objective": {
+        "type": "battle_victory",
+        "encounterGroupId": "firebud_grass_01",
+        "count": 1,
+        "text": "在村外草丛赢得一场战斗"
+      },
+      "rewards": {
+        "stoneCoins": 30,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_capture_wuli"
+    },
+    {
+      "id": "quest_capture_wuli",
+      "title": "捕捉乌力",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "捕捉一只乌力系宠物。",
+      "objective": {
+        "type": "capture_pet",
+        "lineId": "wuli",
+        "count": 1,
+        "text": "捕捉任意乌力系宠物"
+      },
+      "rewards": {
+        "stoneCoins": 60,
+        "items": [
+          {
+            "itemId": "capture_net",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": ""
+    }
+  ]
+}

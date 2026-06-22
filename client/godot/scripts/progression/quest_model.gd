@@ -1,0 +1,264 @@
+extends RefCounted
+
+const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
+
+const DATA_PATH := "res://data/quests.json"
+const STATUS_ACTIVE := "active"
+const STATUS_READY := "ready"
+const STATUS_CLAIMED := "claimed"
+
+
+static func catalog() -> Dictionary:
+	if not FileAccess.file_exists(DATA_PATH):
+		return {}
+	var text := FileAccess.get_file_as_string(DATA_PATH)
+	var parsed = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	return parsed as Dictionary
+
+
+static func quests() -> Array[Dictionary]:
+	var parsed := catalog()
+	var raw_quests = parsed.get("quests", [])
+	var result: Array[Dictionary] = []
+	if raw_quests is Array:
+		for value in raw_quests:
+			if value is Dictionary:
+				var quest := value as Dictionary
+				if str(quest.get("id", "")) != "":
+					result.append(quest)
+	return result
+
+
+static func quest_for_id(quest_id: String) -> Dictionary:
+	for quest in quests():
+		if str(quest.get("id", "")) == quest_id:
+			return quest
+	return {}
+
+
+static func first_quest_id() -> String:
+	var parsed := catalog()
+	var first_id := str(parsed.get("firstQuestId", ""))
+	if not quest_for_id(first_id).is_empty():
+		return first_id
+	var loaded := quests()
+	return str(loaded[0].get("id", "")) if not loaded.is_empty() else ""
+
+
+static func next_quest_id(quest: Dictionary) -> String:
+	var next_id := str(quest.get("nextQuestId", ""))
+	return next_id if not quest_for_id(next_id).is_empty() else ""
+
+
+static func title_for(quest: Dictionary) -> String:
+	return str(quest.get("title", "任务"))
+
+
+static func giver_id_for(quest: Dictionary) -> String:
+	return str(quest.get("giverId", ""))
+
+
+static func turn_in_id_for(quest: Dictionary) -> String:
+	var turn_in_id := str(quest.get("turnInId", ""))
+	return turn_in_id if turn_in_id != "" else giver_id_for(quest)
+
+
+static func auto_claim_on_ready(quest: Dictionary) -> bool:
+	return bool(quest.get("autoClaimOnReady", false))
+
+
+static func objective_for(quest: Dictionary) -> Dictionary:
+	var objective = quest.get("objective", {})
+	return objective as Dictionary if objective is Dictionary else {}
+
+
+static func objective_required_count(quest: Dictionary) -> int:
+	return maxi(1, int(objective_for(quest).get("count", 1)))
+
+
+static func objective_text_for(quest: Dictionary) -> String:
+	var objective := objective_for(quest)
+	var text := str(objective.get("text", ""))
+	return text if text != "" else title_for(quest)
+
+
+static func reward_stone_coins(quest: Dictionary) -> int:
+	var rewards = quest.get("rewards", {})
+	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
+	return maxi(0, int(reward_dict.get("stoneCoins", 0)))
+
+
+static func reward_items(quest: Dictionary) -> Array[Dictionary]:
+	var rewards = quest.get("rewards", {})
+	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
+	var raw_items = reward_dict.get("items", [])
+	var result: Array[Dictionary] = []
+	if raw_items is Array:
+		for value in raw_items:
+			if not (value is Dictionary):
+				continue
+			var item := value as Dictionary
+			var item_id := str(item.get("itemId", ""))
+			var count := maxi(0, int(item.get("count", 0)))
+			if item_id != "" and count > 0:
+				result.append({
+					"itemId": item_id,
+					"count": count,
+				})
+	return result
+
+
+static func reward_text(quest: Dictionary) -> String:
+	var parts: Array[String] = []
+	var coins := reward_stone_coins(quest)
+	if coins > 0:
+		parts.append("%d石币" % coins)
+	for item in reward_items(quest):
+		parts.append("%s x%d" % [
+			BackpackModel.label_for(str(item.get("itemId", ""))),
+			maxi(0, int(item.get("count", 0))),
+		])
+	return "、".join(parts)
+
+
+static func normalize_state(value, quest_id: String = "") -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var quest := quest_for_id(quest_id)
+	var required := objective_required_count(quest) if not quest.is_empty() else 1
+	var progress := clampi(int(raw.get("progress", 0)), 0, required)
+	var status := str(raw.get("status", STATUS_ACTIVE))
+	if not [STATUS_ACTIVE, STATUS_READY, STATUS_CLAIMED].has(status):
+		status = STATUS_ACTIVE
+	if status == STATUS_CLAIMED:
+		progress = required
+	elif progress >= required:
+		status = STATUS_READY
+	return {
+		"status": status,
+		"progress": progress,
+	}
+
+
+static func normalize_states(value) -> Dictionary:
+	var result := {}
+	var raw := value as Dictionary if value is Dictionary else {}
+	for quest in quests():
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "" or not raw.has(quest_id):
+			continue
+		result[quest_id] = normalize_state(raw.get(quest_id, {}), quest_id)
+	return result
+
+
+static func first_unfinished_quest_id(states: Dictionary) -> String:
+	for quest in quests():
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := normalize_state(states.get(quest_id, {}), quest_id)
+		if not states.has(quest_id) or str(state.get("status", STATUS_ACTIVE)) != STATUS_CLAIMED:
+			return quest_id
+	return ""
+
+
+static func progress_text_for_state(quest: Dictionary, state: Dictionary) -> String:
+	if quest.is_empty():
+		return "当前没有任务"
+	var normalized := normalize_state(state, str(quest.get("id", "")))
+	var status := str(normalized.get("status", STATUS_ACTIVE))
+	if status == STATUS_CLAIMED:
+		return "%s  已完成" % title_for(quest)
+	if status == STATUS_READY:
+		return "%s  可领取" % title_for(quest)
+	return "%s  %d/%d" % [
+		title_for(quest),
+		int(normalized.get("progress", 0)),
+		objective_required_count(quest),
+	]
+
+
+static func progress_amount_for_event(quest: Dictionary, event: Dictionary) -> int:
+	if quest.is_empty():
+		return 0
+	var objective := objective_for(quest)
+	var objective_type := str(objective.get("type", ""))
+	var event_type := str(event.get("type", ""))
+	if objective_type == "" or objective_type != event_type:
+		return 0
+	match objective_type:
+		"talk":
+			if not _matches_string_filter(objective, event, "targetId"):
+				return 0
+			return 1
+		"buy_item":
+			if not _matches_string_filter(objective, event, "shopId"):
+				return 0
+			var item_id := str(event.get("itemId", ""))
+			var required_item_id := str(objective.get("itemId", ""))
+			var item_ids := _string_array(objective.get("itemIds", []))
+			if required_item_id != "" and item_id != required_item_id:
+				return 0
+			if not item_ids.is_empty() and not item_ids.has(item_id):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"battle_victory":
+			if not _matches_string_filter(objective, event, "encounterGroupId"):
+				return 0
+			return 1
+		"capture_pet":
+			if not _matches_string_filter(objective, event, "lineId"):
+				return 0
+			if not _matches_string_filter(objective, event, "formId"):
+				return 0
+			var prefix := str(objective.get("formIdPrefix", ""))
+			if prefix != "" and not str(event.get("formId", "")).begins_with(prefix):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+	return 0
+
+
+static func validation_errors() -> Array[String]:
+	var errors: Array[String] = []
+	var parsed := catalog()
+	if parsed.is_empty():
+		errors.append("quests.json 缺失或不是 JSON 对象")
+		return errors
+	if int(parsed.get("schemaVersion", 0)) != 1:
+		errors.append("quests.json schemaVersion 当前必须是 1")
+	var ids := {}
+	for index in range(quests().size()):
+		var quest := quests()[index]
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			errors.append("quests[%d].id 不能为空" % index)
+		elif ids.has(quest_id):
+			errors.append("任务 ID 重复: %s" % quest_id)
+		else:
+			ids[quest_id] = true
+		if title_for(quest) == "":
+			errors.append("%s.title 不能为空" % quest_id)
+		var objective := objective_for(quest)
+		if str(objective.get("type", "")) == "":
+			errors.append("%s.objective.type 不能为空" % quest_id)
+	for quest in quests():
+		var next_id := str(quest.get("nextQuestId", ""))
+		if next_id != "" and not ids.has(next_id):
+			errors.append("%s.nextQuestId 指向不存在任务: %s" % [str(quest.get("id", "")), next_id])
+	return errors
+
+
+static func _matches_string_filter(filter_source: Dictionary, event: Dictionary, key: String) -> bool:
+	var required := str(filter_source.get(key, ""))
+	return required == "" or str(event.get(key, "")) == required
+
+
+static func _string_array(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			var text := str(item)
+			if text != "":
+				result.append(text)
+	return result

@@ -72,12 +72,8 @@
       "movementCollision": "block",
       "cell": [5, 10],
       "action": "对话",
-      "taskKey": "trainer_intro",
-      "taskText": "和训练师阿土对话",
-      "completedTaskText": "已认识训练师阿土",
-      "dialog": ["训练师阿土：新来的勇者，先记住一件事。点我这种角色时，要先走到身边，才能开始对话。"],
-      "completedDialog": ["训练师阿土：不错，你已经会靠近并对话了。后面我们再练战斗。"],
-      "option": "完成对话"
+      "dialog": ["训练师阿土：新来的勇者，先从最简单的开始。和人说话、买补给、打一场胜仗，再试着捕捉乌力。"],
+      "option": "知道了"
     },
     {
       "id": "warp_to_village_gate",

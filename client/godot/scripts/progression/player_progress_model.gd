@@ -6,6 +6,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 
 const SAVE_PATH := "user://player_profile.json"
@@ -25,6 +26,8 @@ const DEFAULT_STONE_COINS := 120
 const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const CAPTURE_TOOLS_KEY := "captureTools"
+const ACTIVE_QUEST_ID_KEY := "activeQuestId"
+const QUEST_STATES_KEY := "questStates"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 
@@ -51,6 +54,8 @@ static func default_profile() -> Dictionary:
 		"groundPetDrops": [],
 		"backpackSlots": BackpackModel.starting_slots(),
 		"captureTools": CaptureToolCatalog.starting_inventory(),
+		"activeQuestId": QuestModel.first_quest_id(),
+		"questStates": {},
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
 	}
@@ -174,6 +179,163 @@ static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 	return normalized
 
 
+static func active_quest_id(profile: Dictionary) -> String:
+	return str(normalize_profile(profile).get(ACTIVE_QUEST_ID_KEY, ""))
+
+
+static func active_quest(profile: Dictionary) -> Dictionary:
+	return QuestModel.quest_for_id(active_quest_id(profile))
+
+
+static func active_quest_state(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	var states := _quest_states(normalized)
+	return QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+
+
+static func active_quest_auto_claim(profile: Dictionary) -> bool:
+	return QuestModel.auto_claim_on_ready(active_quest(profile))
+
+
+static func active_quest_turn_in_id(profile: Dictionary) -> String:
+	return QuestModel.turn_in_id_for(active_quest(profile))
+
+
+static func can_claim_active_quest(profile: Dictionary) -> bool:
+	var quest := active_quest(profile)
+	if quest.is_empty():
+		return false
+	return str(active_quest_state(profile).get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_READY
+
+
+static func quest_progress_text(profile: Dictionary) -> String:
+	var normalized := normalize_profile(profile)
+	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty():
+		return "当前没有任务"
+	return QuestModel.progress_text_for_state(quest, _quest_states(normalized).get(quest_id, {}))
+
+
+static func quest_reward_text(profile: Dictionary) -> String:
+	var quest := active_quest(profile)
+	if quest.is_empty():
+		return ""
+	return QuestModel.reward_text(quest)
+
+
+static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty():
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": false,
+			"questId": "",
+			"message": "",
+		}
+	var states := _quest_states(normalized)
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": str(state.get("status", "")) == QuestModel.STATUS_READY,
+			"questId": quest_id,
+			"message": "",
+		}
+	var progress_amount := QuestModel.progress_amount_for_event(quest, event)
+	if progress_amount <= 0:
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": false,
+			"questId": quest_id,
+			"message": "",
+		}
+	var required := QuestModel.objective_required_count(quest)
+	var next_progress := clampi(int(state.get("progress", 0)) + progress_amount, 0, required)
+	state["progress"] = next_progress
+	var ready := next_progress >= required
+	if ready:
+		state["status"] = QuestModel.STATUS_READY
+	states[quest_id] = state
+	normalized[QUEST_STATES_KEY] = states
+	normalized = normalize_profile(normalized)
+	var message := "任务完成：%s。" % QuestModel.title_for(quest) if ready else "任务更新：%s。" % QuestModel.progress_text_for_state(quest, state)
+	return {
+		"profile": normalized,
+		"changed": true,
+		"ready": ready,
+		"questId": quest_id,
+		"title": QuestModel.title_for(quest),
+		"message": message,
+	}
+
+
+static func claim_active_quest(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "当前没有可领取的任务奖励。",
+		}
+	var states := _quest_states(normalized)
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_READY:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "任务还没有完成。",
+		}
+	var reward_items := QuestModel.reward_items(quest)
+	var reward_result := BackpackModel.add_items(
+		BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])),
+		reward_items
+	)
+	var lost: Array = reward_result.get("lost", [])
+	if lost is Array and not (lost as Array).is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "背包空间不足，无法领取任务奖励。",
+		}
+	normalized[BACKPACK_SLOTS_KEY] = reward_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
+	var coins := QuestModel.reward_stone_coins(quest)
+	if coins > 0:
+		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
+	state["status"] = QuestModel.STATUS_CLAIMED
+	state["progress"] = QuestModel.objective_required_count(quest)
+	states[quest_id] = state
+	var next_id := QuestModel.next_quest_id(quest)
+	if next_id != "":
+		if not states.has(next_id):
+			states[next_id] = QuestModel.normalize_state({}, next_id)
+		normalized[ACTIVE_QUEST_ID_KEY] = next_id
+	else:
+		normalized[ACTIVE_QUEST_ID_KEY] = ""
+	normalized[QUEST_STATES_KEY] = states
+	normalized = normalize_profile(normalized)
+	var reward_text := QuestModel.reward_text(quest)
+	var message := "完成任务「%s」。" % QuestModel.title_for(quest)
+	if reward_text != "":
+		message = "完成任务「%s」，获得%s。" % [QuestModel.title_for(quest), reward_text]
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": message,
+		"questId": quest_id,
+		"nextQuestId": next_id,
+	}
+
+
 static func buy_shop_item(profile: Dictionary, shop_id: String, item_id: String, amount: int = 1) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var item_label := BackpackModel.label_for(item_id)
@@ -263,6 +425,10 @@ static func _battle_item_inventory_from_slots(slots: Array[Dictionary]) -> Dicti
 	for item_id in BackpackModel.item_ids_for_context(BackpackModel.CONTEXT_BATTLE_ITEM):
 		result[item_id] = BackpackModel.item_count(slots, item_id)
 	return result
+
+
+static func _quest_states(profile: Dictionary) -> Dictionary:
+	return QuestModel.normalize_states(profile.get(QUEST_STATES_KEY, {}))
 
 
 static func all_pet_instances(profile: Dictionary) -> Array[Dictionary]:
@@ -1169,6 +1335,24 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+
+	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
+	var quest_states := QuestModel.normalize_states(normalized.get(QUEST_STATES_KEY, {}))
+	var active_quest_id_value := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	if active_quest_id_value != "":
+		var active_state := QuestModel.normalize_state(quest_states.get(active_quest_id_value, {}), active_quest_id_value)
+		if QuestModel.quest_for_id(active_quest_id_value).is_empty() or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			active_quest_id_value = ""
+		else:
+			quest_states[active_quest_id_value] = active_state
+	if active_quest_id_value == "":
+		active_quest_id_value = QuestModel.first_unfinished_quest_id(quest_states)
+		if active_quest_id_value == "" and not had_quest_data:
+			active_quest_id_value = QuestModel.first_quest_id()
+	if active_quest_id_value != "" and not quest_states.has(active_quest_id_value):
+		quest_states[active_quest_id_value] = QuestModel.normalize_state({}, active_quest_id_value)
+	normalized[ACTIVE_QUEST_ID_KEY] = active_quest_id_value
+	normalized[QUEST_STATES_KEY] = quest_states
 
 	var seen_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
 	var captured_form_ids := _valid_unique_form_id_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))

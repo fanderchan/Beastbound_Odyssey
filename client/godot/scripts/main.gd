@@ -14,6 +14,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const MAP_DATA_PATHS := {
@@ -21,10 +22,11 @@ const MAP_DATA_PATHS := {
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
-const ACTION_BAR_SIZE := Vector2(420, 86)
+const ACTION_BAR_SIZE := Vector2(496, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
+const WORLD_LOG_MAX_LINES := 80
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
@@ -76,13 +78,14 @@ var battle_command_button_grid: GridContainer
 var battle_passive_panel: Panel
 var battle_passive_label: Label
 var battle_message_panel: PanelContainer
-var battle_log_label: Label
+var battle_log_label: RichTextLabel
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
 var bag_menu_button: Button
 var pet_menu_button: Button
 var codex_menu_button: Button
+var quest_menu_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: Label
@@ -137,6 +140,11 @@ var codex_detail_label: Label
 var codex_close_button: Button
 var codex_selected_form_id: String = ""
 var codex_list_buttons: Dictionary = {}
+var quest_panel: PanelContainer
+var quest_title_label: Label
+var quest_detail_label: Label
+var quest_route_button: Button
+var quest_close_button: Button
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -200,10 +208,14 @@ var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
 var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
+var auto_quest_chain_check: bool = false
+var auto_quest_ui_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
+var quest_preview: bool = false
+var quest_ui_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -228,6 +240,7 @@ var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
 var profile_save_enabled: bool = true
 var world_log_message: String = ""
+var world_log_history: Array[String] = []
 var pet_rest_recovery_elapsed: float = 0.0
 var pet_drop_expire_elapsed: float = 0.0
 var current_path_cells: Array[Vector2i] = []
@@ -289,7 +302,6 @@ var battle_debug_last_text: String = ""
 var battle_trace_path: String = ""
 var last_checked_player_cell: Vector2i = Vector2i.ZERO
 var encounter_rng := RandomNumberGenerator.new()
-var task_flags: Dictionary = {}
 
 
 func _ready() -> void:
@@ -376,6 +388,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_shop_check")
 	elif auto_battle_reward_check:
 		call_deferred("_run_auto_battle_reward_check")
+	elif auto_quest_chain_check:
+		call_deferred("_run_auto_quest_chain_check")
+	elif auto_quest_ui_check:
+		call_deferred("_run_auto_quest_ui_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
@@ -384,6 +400,10 @@ func _ready() -> void:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
 		call_deferred("_run_battle_reward_preview")
+	elif quest_preview:
+		call_deferred("_run_quest_preview")
+	elif quest_ui_preview:
+		call_deferred("_run_quest_ui_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -604,6 +624,10 @@ func _apply_preview_window_args() -> void:
 			auto_shop_check = true
 		elif arg == "--auto-battle-reward-check":
 			auto_battle_reward_check = true
+		elif arg == "--auto-quest-chain-check":
+			auto_quest_chain_check = true
+		elif arg == "--auto-quest-ui-check":
+			auto_quest_ui_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
@@ -612,6 +636,10 @@ func _apply_preview_window_args() -> void:
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
 			battle_reward_preview = true
+		elif arg == "--quest-preview":
+			quest_preview = true
+		elif arg == "--quest-ui-preview":
+			quest_ui_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -886,6 +914,10 @@ func _run_auto_pet_follow_check() -> void:
 
 
 func _run_auto_npc_interaction_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	if status_label != null:
+		_update_hud_text()
 	var trainer := InteractionModel.find_by_id(map_data, "trainer")
 	var trainer_found := not trainer.is_empty()
 	var clicked_trainer := false
@@ -897,10 +929,11 @@ func _run_auto_npc_interaction_check() -> void:
 		guard += 1
 		await get_tree().physics_frame
 	var dialog_opened := _dialog_is_open() and str(active_dialog_interaction.get("id", "")) == "trainer"
-	var task_was_incomplete := trainer_found and not _is_task_completed(trainer)
+	var quest_was_intro := PlayerProgressModel.active_quest_id(player_profile) == "quest_intro_talk"
 	_confirm_dialog_action()
 	await get_tree().process_frame
-	var task_complete := trainer_found and _is_task_completed(trainer)
+	var quest_advanced := PlayerProgressModel.active_quest_id(player_profile) == "quest_buy_supply"
+	var quest_log_ok := world_log_message.find("完成任务「认识训练师」") >= 0
 	var player_close := false
 	if trainer_found:
 		var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -910,13 +943,15 @@ func _run_auto_npc_interaction_check() -> void:
 	var not_on_trainer := true
 	if trainer_found:
 		not_on_trainer = IsoMapModel.world_to_grid(map_data, player.global_position) != InteractionModel.cell_for(trainer)
-	var status := "ok" if trainer_found and clicked_trainer and dialog_opened and task_was_incomplete and task_complete and player_close and trainer_blocks and not_on_trainer else "failed"
-	print("npc interaction check ready: status=%s trainer_found=%s clicked_trainer=%s dialog_opened=%s task_complete=%s player_close=%s trainer_blocks=%s not_on_trainer=%s" % [
+	var status := "ok" if trainer_found and clicked_trainer and dialog_opened and quest_was_intro and quest_advanced and quest_log_ok and player_close and trainer_blocks and not_on_trainer else "failed"
+	print("npc interaction check ready: status=%s trainer_found=%s clicked_trainer=%s dialog_opened=%s quest_intro=%s quest_advanced=%s quest_log=%s player_close=%s trainer_blocks=%s not_on_trainer=%s" % [
 		status,
 		str(trainer_found),
 		str(clicked_trainer),
 		str(dialog_opened),
-		str(task_complete),
+		str(quest_was_intro),
+		str(quest_advanced),
+		str(quest_log_ok),
 		str(player_close),
 		str(trainer_blocks),
 		str(not_on_trainer),
@@ -3664,6 +3699,262 @@ func _run_auto_battle_reward_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_quest_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_training_yard")
+	var trainer := InteractionModel.find_by_id(map_data, "trainer")
+	if not trainer.is_empty():
+		_open_interaction_dialog(trainer)
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_quest_ui_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_training_yard")
+	for index in range(10):
+		_set_world_log_message("历史消息%d：战斗、奖励和任务提示会保留在这里。" % [index + 1])
+	_open_quest_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_auto_quest_chain_check() -> void:
+	profile_save_enabled = false
+	var validation_ok := QuestModel.validation_errors().is_empty()
+	var profile := PlayerProgressModel.default_profile()
+	var start_ok := (
+		PlayerProgressModel.active_quest_id(profile) == "quest_intro_talk"
+		and PlayerProgressModel.quest_progress_text(profile).find("认识训练师") >= 0
+	)
+
+	var before_intro_coins := PlayerProgressModel.stone_coins(profile)
+	var before_intro_meat := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
+	var talk_result := PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "trainer",
+	})
+	profile = talk_result.get("profile", profile)
+	var talk_ready_ok := bool(talk_result.get("changed", false)) and bool(talk_result.get("ready", false)) and PlayerProgressModel.can_claim_active_quest(profile)
+	var talk_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = talk_claim.get("profile", profile)
+	var talk_claim_ok := (
+		bool(talk_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
+		and PlayerProgressModel.stone_coins(profile) == before_intro_coins + 20
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_intro_meat + 2
+	)
+
+	var before_rope := PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var buy_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "buy_item",
+		"shopId": ShopCatalogModel.DEFAULT_SHOP_ID,
+		"itemId": BattleModel.ITEM_MEAT_SMALL,
+		"amount": 1,
+	})
+	profile = buy_event.get("profile", profile)
+	var buy_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = buy_claim.get("profile", profile)
+	var buy_ok := (
+		bool(buy_event.get("ready", false))
+		and bool(buy_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == before_rope + 1
+	)
+
+	var before_victory_coins := PlayerProgressModel.stone_coins(profile)
+	var before_medicine := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var victory_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_01",
+	})
+	profile = victory_event.get("profile", profile)
+	var victory_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = victory_claim.get("profile", profile)
+	var victory_ok := (
+		bool(victory_event.get("ready", false))
+		and bool(victory_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_capture_wuli"
+		and PlayerProgressModel.stone_coins(profile) == before_victory_coins + 30
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_medicine + 1
+	)
+
+	var before_capture_coins := PlayerProgressModel.stone_coins(profile)
+	var before_net := PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET)
+	var capture_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "capture_pet",
+		"formId": "wuli_normal_orange_fire10",
+		"lineId": "wuli",
+		"amount": 1,
+	})
+	profile = capture_event.get("profile", profile)
+	var capture_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = capture_claim.get("profile", profile)
+	var capture_ok := (
+		bool(capture_event.get("ready", false))
+		and bool(capture_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == ""
+		and PlayerProgressModel.stone_coins(profile) == before_capture_coins + 60
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET) == before_net + 1
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_training_yard")
+	var trainer := InteractionModel.find_by_id(map_data, "trainer")
+	var ui_open_ok := false
+	var ui_advance_ok := false
+	if loaded and not trainer.is_empty():
+		_open_interaction_dialog(trainer)
+		await get_tree().process_frame
+		ui_open_ok = (
+			_dialog_is_open()
+			and dialog_option_button != null
+			and dialog_option_button.text == "完成"
+			and dialog_body_label != null
+			and dialog_body_label.text.find("任务：认识训练师") >= 0
+		)
+		_confirm_dialog_action()
+		await get_tree().process_frame
+		ui_advance_ok = (
+			PlayerProgressModel.active_quest_id(player_profile) == "quest_buy_supply"
+			and world_log_message.find("完成任务「认识训练师」") >= 0
+			and _current_task_text().find("补给准备") >= 0
+		)
+	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d" % [
+		status,
+		str(validation_ok),
+		str(start_ok),
+		str(talk_ready_ok),
+		str(talk_claim_ok),
+		str(buy_ok),
+		str(victory_ok),
+		str(capture_ok),
+		str(ui_open_ok),
+		str(ui_advance_ok),
+		PlayerProgressModel.quest_progress_text(profile),
+		PlayerProgressModel.stone_coins(profile),
+		PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL),
+		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
+		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_quest_ui_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	var panel_ok := (
+		loaded
+		and quest_panel != null
+		and quest_panel.visible
+		and quest_menu_button != null
+		and quest_menu_button.text == "任务"
+		and quest_title_label != null
+		and quest_title_label.text == "认识训练师"
+		and quest_detail_label != null
+		and quest_detail_label.text.find("和训练师阿土对话") >= 0
+		and quest_detail_label.text.find("奖励") >= 0
+		and quest_route_button != null
+		and not quest_route_button.disabled
+	)
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var trainer_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "trainer"
+		and quest_panel != null
+		and not quest_panel.visible
+		and world_log_message.find("训练师阿土") >= 0
+	)
+
+	var intro_event := PlayerProgressModel.record_quest_event(PlayerProgressModel.default_profile(), {
+		"type": "talk",
+		"targetId": "trainer",
+	})
+	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = buy_profile
+	_clear_navigation_state()
+	_load_map("firebud_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	var buy_detail_ok := quest_detail_label != null and quest_detail_label.text.find("火芽杂货铺") >= 0
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var cross_map_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "warp_to_village_gate"
+		and world_log_message.find("村口木门") >= 0
+	)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var shop_route_ok := has_pending_interaction and str(pending_interaction.get("id", "")) == "firebud_shopkeeper"
+
+	var buy_event := PlayerProgressModel.record_quest_event(buy_profile, {
+		"type": "buy_item",
+		"shopId": ShopCatalogModel.DEFAULT_SHOP_ID,
+		"itemId": BattleModel.ITEM_MEAT_SMALL,
+		"amount": 1,
+	})
+	var battle_profile: Dictionary = PlayerProgressModel.claim_active_quest(buy_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = battle_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var battle_route_ok := (
+		has_target_cell
+		and EncounterModel.zone_contains_cell(EncounterModel.zone_for_cell(map_data, target_cell), target_cell)
+		and _current_task_text().find("村外试炼") >= 0
+	)
+
+	world_log_history.clear()
+	world_log_message = ""
+	for index in range(14):
+		_set_world_log_message("历史记录%d" % index)
+	await get_tree().process_frame
+	var log_text := battle_log_label.text if battle_log_label != null else ""
+	var log_scroll_ok := (
+		battle_message_panel != null
+		and battle_message_panel.visible
+		and battle_log_label != null
+		and battle_log_label.scroll_active
+		and battle_log_label.scroll_following
+		and log_text.find("历史记录0") >= 0
+		and log_text.find("历史记录13") >= 0
+		and world_log_message == "历史记录13"
+	)
+
+	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+		status,
+		str(panel_ok),
+		str(trainer_route_ok),
+		str(buy_detail_ok),
+		str(cross_map_route_ok),
+		str(shop_route_ok),
+		str(battle_route_ok),
+		str(log_scroll_ok),
+		_current_task_text(),
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _battle_reward_test_state(zone_id: String, profile: Dictionary = {}) -> Dictionary:
 	var reward_state := BattleModel.create_wild_battle({
 		"id": zone_id,
@@ -5791,6 +6082,11 @@ func _build_hud() -> void:
 	codex_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	codex_menu_button.pressed.connect(_open_codex_panel)
 	action_row.add_child(codex_menu_button)
+	quest_menu_button = Button.new()
+	quest_menu_button.text = "任务"
+	quest_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	quest_menu_button.pressed.connect(_open_quest_panel)
+	action_row.add_child(quest_menu_button)
 	hud_root.add_child(action_bar)
 
 	backpack_panel = _panel_container("BackpackPanel")
@@ -6123,6 +6419,48 @@ func _build_hud() -> void:
 	codex_detail_scroll.add_child(codex_detail_label)
 	hud_root.add_child(codex_panel)
 
+	quest_panel = _panel_container("QuestPanel")
+	quest_panel.visible = false
+	quest_panel.z_index = 24
+	var quest_column := VBoxContainer.new()
+	quest_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	quest_column.add_theme_constant_override("separation", 10)
+	quest_panel.add_child(quest_column)
+
+	var quest_header := HBoxContainer.new()
+	quest_header.add_theme_constant_override("separation", 10)
+	quest_column.add_child(quest_header)
+	quest_title_label = Label.new()
+	quest_title_label.text = "任务"
+	quest_title_label.add_theme_font_size_override("font_size", 21)
+	quest_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_header.add_child(quest_title_label)
+	quest_close_button = Button.new()
+	quest_close_button.text = "关闭"
+	quest_close_button.custom_minimum_size = Vector2(92, 44)
+	quest_close_button.pressed.connect(_close_quest_panel)
+	quest_header.add_child(quest_close_button)
+
+	var quest_detail_scroll := ScrollContainer.new()
+	quest_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	quest_column.add_child(quest_detail_scroll)
+	quest_detail_label = Label.new()
+	quest_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	quest_detail_label.add_theme_font_size_override("font_size", 17)
+	quest_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	quest_detail_scroll.add_child(quest_detail_label)
+
+	quest_route_button = Button.new()
+	quest_route_button.text = "自动寻路"
+	quest_route_button.custom_minimum_size = Vector2(0, 48)
+	quest_route_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_route_button.pressed.connect(_on_quest_route_pressed)
+	quest_column.add_child(quest_route_button)
+	hud_root.add_child(quest_panel)
+
 	pet_rename_panel = _panel_container("PetRenamePanel")
 	pet_rename_panel.visible = false
 	pet_rename_panel.z_index = 36
@@ -6294,11 +6632,15 @@ func _build_hud() -> void:
 	battle_message_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_message_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	battle_message_panel.add_child(battle_message_box)
-	battle_log_label = Label.new()
+	battle_log_label = RichTextLabel.new()
 	battle_log_label.name = "BattleLog"
 	battle_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_log_label.scroll_active = true
+	battle_log_label.scroll_following = true
+	battle_log_label.fit_content = false
+	battle_log_label.selection_enabled = false
 	battle_log_label.add_theme_font_size_override("font_size", 18)
-	battle_log_label.add_theme_color_override("font_color", Color(0.95, 0.86, 0.28, 1.0))
+	battle_log_label.add_theme_color_override("default_color", Color(0.95, 0.86, 0.28, 1.0))
 	battle_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_log_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	battle_log_label.custom_minimum_size = Vector2(0, 42)
@@ -6659,6 +7001,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -6709,6 +7052,7 @@ func _set_interaction_target(item: Dictionary) -> void:
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	pending_interaction = item.duplicate(true)
 	has_pending_interaction = true
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -6831,6 +7175,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_backpack_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	_close_encounter()
 	world_log_message = ""
 	battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
@@ -6973,11 +7318,14 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	var ended_state := battle_state.duplicate(true)
 	var result := PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
 	player_profile = result.get("profile", player_profile)
-	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
 	var log_lines: Array[String] = []
 	for line in result.get("logLines", []):
 		log_lines.append(str(line))
+	var quest_lines := _quest_messages_for_battle_result(ended_state, result)
+	for line in quest_lines:
+		log_lines.append(line)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
 	_end_battle(true)
 	_set_world_log_message("\n".join(log_lines))
 	return result
@@ -7002,12 +7350,66 @@ func _sync_profile_battle_items_from_battle_state(save_after: bool = true) -> vo
 		PlayerProgressModel.save_profile(player_profile)
 
 
+func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictionary) -> Array[String]:
+	var messages: Array[String] = []
+	if str(result.get("result", "")) == "victory":
+		var group_id := str(ended_state.get("sourceEncounterGroupId", ended_state.get("encounterGroupId", "")))
+		messages.append_array(_record_quest_event_and_maybe_claim({
+			"type": "battle_victory",
+			"encounterGroupId": group_id,
+		}))
+	var captured_values = result.get("capturedPets", [])
+	if captured_values is Array:
+		for value in captured_values:
+			if not (value is Dictionary):
+				continue
+			var captured := value as Dictionary
+			messages.append_array(_record_quest_event_and_maybe_claim({
+				"type": "capture_pet",
+				"formId": str(captured.get("formId", "")),
+				"lineId": str(captured.get("lineId", "")),
+				"amount": 1,
+			}))
+	return messages
+
+
+func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
+	var messages: Array[String] = []
+	var progress_result := PlayerProgressModel.record_quest_event(player_profile, event)
+	player_profile = progress_result.get("profile", player_profile)
+	if not bool(progress_result.get("changed", false)):
+		return messages
+	if bool(progress_result.get("ready", false)) and PlayerProgressModel.active_quest_auto_claim(player_profile):
+		var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
+		player_profile = claim_result.get("profile", player_profile)
+		messages.append(str(claim_result.get("message", "")))
+	else:
+		messages.append(str(progress_result.get("message", "")))
+	var filtered: Array[String] = []
+	for message in messages:
+		var text := message.strip_edges()
+		if text != "":
+			filtered.append(text)
+	return filtered
+
+
 func _set_world_log_message(text: String) -> void:
-	world_log_message = text.strip_edges()
+	var stripped := text.strip_edges()
+	world_log_message = stripped
+	if stripped != "":
+		for raw_line in stripped.split("\n", false):
+			var line := str(raw_line).strip_edges()
+			if line != "":
+				world_log_history.append(line)
+	while world_log_history.size() > WORLD_LOG_MAX_LINES:
+		world_log_history.pop_front()
+	var display_text := "\n".join(world_log_history)
 	if battle_log_label != null:
-		battle_log_label.text = world_log_message
+		battle_log_label.text = display_text
+		battle_log_label.scroll_following = true
+		battle_log_label.call_deferred("scroll_to_line", maxi(0, battle_log_label.get_line_count() - 1))
 	if battle_message_panel != null:
-		battle_message_panel.visible = world_log_message != "" or battle_active
+		battle_message_panel.visible = display_text != "" or battle_active
 	if hud_root != null:
 		_layout_hud()
 	queue_redraw()
@@ -7021,6 +7423,7 @@ func _open_backpack_panel() -> void:
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	backpack_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_backpack_panel()
@@ -7165,6 +7568,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_backpack_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	shop_active_id = resolved_shop_id
 	shop_mode = "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
@@ -7346,13 +7750,23 @@ func _on_shop_action_pressed() -> void:
 		return
 	var result := PlayerProgressModel.sell_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity) if shop_mode == "sell" else PlayerProgressModel.buy_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity)
 	player_profile = result.get("profile", player_profile)
+	var log_lines: Array[String] = [str(result.get("message", ""))]
+	if bool(result.get("ok", false)) and shop_mode == "buy":
+		log_lines.append_array(_record_quest_event_and_maybe_claim({
+			"type": "buy_item",
+			"shopId": shop_active_id,
+			"itemId": str(result.get("itemId", shop_selected_item_id)),
+			"amount": maxi(1, int(result.get("amount", shop_quantity))),
+		}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
-	_set_world_log_message(str(result.get("message", "")))
+	_set_world_log_message("\n".join(log_lines))
 	if shop_mode == "sell" and PlayerProgressModel.backpack_item_count(player_profile, shop_selected_item_id) <= 0:
 		shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
 	_refresh_shop_panel()
+	if status_label != null:
+		_update_hud_text()
 
 
 func _open_pet_panel() -> void:
@@ -7363,6 +7777,7 @@ func _open_pet_panel() -> void:
 	_close_backpack_panel()
 	_close_shop_panel()
 	_close_codex_panel()
+	_close_quest_panel()
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
 	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
@@ -7387,6 +7802,7 @@ func _open_codex_panel() -> void:
 	_close_backpack_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_quest_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
 	_layout_hud()
@@ -7397,6 +7813,268 @@ func _close_codex_panel() -> void:
 		codex_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_quest_panel() -> void:
+	if battle_active:
+		return
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	quest_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_quest_panel()
+	_layout_hud()
+
+
+func _close_quest_panel() -> void:
+	if quest_panel != null:
+		quest_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_quest_panel() -> void:
+	if quest_panel == null or quest_title_label == null or quest_detail_label == null:
+		return
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	if quest.is_empty():
+		quest_title_label.text = "任务"
+		quest_detail_label.text = "当前没有任务。\n可以继续探索、捕捉宠物，或等待新的任务链开放。"
+		if quest_route_button != null:
+			quest_route_button.text = "自动寻路"
+			quest_route_button.disabled = true
+		return
+	quest_title_label.text = QuestModel.title_for(quest)
+	var objective := QuestModel.objective_for(quest)
+	var state := PlayerProgressModel.active_quest_state(player_profile)
+	var reward_text := PlayerProgressModel.quest_reward_text(player_profile)
+	var progress := int(state.get("progress", 0))
+	var required := QuestModel.objective_required_count(quest)
+	var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
+	var status_text := "进行中"
+	if status == QuestModel.STATUS_READY:
+		status_text = "可领取"
+	elif status == QuestModel.STATUS_CLAIMED:
+		status_text = "已完成"
+	var lines: Array[String] = [
+		"任务：%s" % QuestModel.title_for(quest),
+		"状态：%s" % status_text,
+		"目标：%s" % QuestModel.objective_text_for(quest),
+		"进度：%d/%d" % [progress, required],
+	]
+	if reward_text != "":
+		lines.append("奖励：%s" % reward_text)
+	var route_hint := _quest_route_hint(quest, objective)
+	if route_hint != "":
+		lines.append("地点：%s" % route_hint)
+	quest_detail_label.text = "\n".join(lines)
+	if quest_route_button != null:
+		quest_route_button.text = "自动寻路"
+		quest_route_button.disabled = _active_quest_navigation_target().is_empty()
+
+
+func _on_quest_route_pressed() -> void:
+	var target := _active_quest_navigation_target()
+	if target.is_empty():
+		_set_world_log_message("当前任务没有可寻路目标。")
+		return
+	_close_quest_panel()
+	_route_to_quest_target(target)
+
+
+func _active_quest_navigation_target() -> Dictionary:
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	if quest.is_empty():
+		return {}
+	if PlayerProgressModel.can_claim_active_quest(player_profile):
+		return _navigation_target_for_interaction_id(QuestModel.turn_in_id_for(quest))
+	var objective := QuestModel.objective_for(quest)
+	match str(objective.get("type", "")):
+		"talk":
+			return _navigation_target_for_interaction_id(str(objective.get("targetId", QuestModel.turn_in_id_for(quest))))
+		"buy_item":
+			return _navigation_target_for_shop(str(objective.get("shopId", "")))
+		"battle_victory":
+			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
+		"capture_pet":
+			return _navigation_target_for_capture_objective(objective)
+	return {}
+
+
+func _quest_route_hint(quest: Dictionary, objective: Dictionary) -> String:
+	var target := _active_quest_navigation_target()
+	if target.is_empty():
+		return ""
+	var map_id := str(target.get("mapId", ""))
+	var map_name := _map_name_for_id(map_id)
+	var label := str(target.get("label", "目标"))
+	if map_name == "":
+		return label
+	return "%s / %s" % [map_name, label]
+
+
+func _route_to_quest_target(target: Dictionary) -> void:
+	var target_map_id := str(target.get("mapId", ""))
+	var label := str(target.get("label", "目标"))
+	if target_map_id != "" and target_map_id != current_map_id:
+		var warp := _warp_to_map(current_map_id, target_map_id)
+		if warp.is_empty():
+			_set_world_log_message("目标在%s，当前地图暂时找不到通路。" % _map_name_for_id(target_map_id))
+			return
+		_set_interaction_target(warp)
+		_set_world_log_message("正在前往%s。" % str(warp.get("name", label)))
+		return
+	match str(target.get("kind", "")):
+		"interaction":
+			var interaction = target.get("interaction", {})
+			if interaction is Dictionary and not (interaction as Dictionary).is_empty():
+				_set_interaction_target(interaction as Dictionary)
+				_set_world_log_message("正在前往%s。" % label)
+		"encounter_zone":
+			var cell: Vector2i = target.get("cell", IsoMapModel.spawn_cell(map_data))
+			_close_dialog()
+			_close_encounter()
+			_close_backpack_panel()
+			_close_shop_panel()
+			_close_pet_panel()
+			_close_codex_panel()
+			_close_quest_panel()
+			if _set_move_target_cell(cell, IsoMapModel.grid_to_world(map_data, cell), cell):
+				_set_world_log_message("正在前往%s。" % label)
+			else:
+				_set_world_log_message("暂时无法前往%s。" % label)
+
+
+func _navigation_target_for_interaction_id(interaction_id: String) -> Dictionary:
+	if interaction_id == "":
+		return {}
+	for map_id in MAP_DATA_PATHS.keys():
+		var loaded_map := _map_data_for_id(str(map_id))
+		var item := InteractionModel.find_by_id(loaded_map, interaction_id)
+		if not item.is_empty():
+			return {
+				"kind": "interaction",
+				"mapId": str(map_id),
+				"label": str(item.get("name", "目标")),
+				"interaction": item,
+			}
+	return {}
+
+
+func _navigation_target_for_shop(shop_id: String) -> Dictionary:
+	if shop_id == "":
+		return {}
+	for map_id in MAP_DATA_PATHS.keys():
+		var loaded_map := _map_data_for_id(str(map_id))
+		for value in InteractionModel.interaction_points(loaded_map):
+			if not (value is Dictionary):
+				continue
+			var item := value as Dictionary
+			if str(item.get("shopId", "")) == shop_id:
+				return {
+					"kind": "interaction",
+					"mapId": str(map_id),
+					"label": str(item.get("name", "商店")),
+					"interaction": item,
+				}
+	return {}
+
+
+func _navigation_target_for_encounter_group(group_id: String) -> Dictionary:
+	if group_id == "":
+		return {}
+	for map_id in MAP_DATA_PATHS.keys():
+		var loaded_map := _map_data_for_id(str(map_id))
+		for value in EncounterModel.encounter_zones(loaded_map):
+			if not (value is Dictionary):
+				continue
+			var zone := value as Dictionary
+			if str(zone.get("encounterGroupId", "")) != group_id:
+				continue
+			var cell := EncounterModel.first_walkable_cell(loaded_map, zone)
+			return {
+				"kind": "encounter_zone",
+				"mapId": str(map_id),
+				"label": str(zone.get("name", "野外")),
+				"zone": zone,
+				"cell": cell,
+			}
+	return {}
+
+
+func _navigation_target_for_capture_objective(objective: Dictionary) -> Dictionary:
+	for map_id in MAP_DATA_PATHS.keys():
+		var loaded_map := _map_data_for_id(str(map_id))
+		for value in EncounterModel.encounter_zones(loaded_map):
+			if not (value is Dictionary):
+				continue
+			var zone := value as Dictionary
+			if not _zone_matches_capture_objective(zone, objective):
+				continue
+			var cell := EncounterModel.first_walkable_cell(loaded_map, zone)
+			return {
+				"kind": "encounter_zone",
+				"mapId": str(map_id),
+				"label": str(zone.get("name", "野外")),
+				"zone": zone,
+				"cell": cell,
+			}
+	return {}
+
+
+func _zone_matches_capture_objective(zone: Dictionary, objective: Dictionary) -> bool:
+	var required_line_id := str(objective.get("lineId", ""))
+	var required_form_id := str(objective.get("formId", ""))
+	var required_prefix := str(objective.get("formIdPrefix", ""))
+	var pool = zone.get("wildPetPool", [])
+	if not (pool is Array):
+		return false
+	for value in pool:
+		if not (value is Dictionary):
+			continue
+		var entry := value as Dictionary
+		var form_id := str(entry.get("formId", ""))
+		if form_id == "":
+			continue
+		if required_form_id != "" and form_id != required_form_id:
+			continue
+		if required_prefix != "" and not form_id.begins_with(required_prefix):
+			continue
+		if required_line_id != "":
+			var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+			if str(template.get("lineId", "")) != required_line_id:
+				continue
+		return true
+	return false
+
+
+func _warp_to_map(from_map_id: String, to_map_id: String) -> Dictionary:
+	var loaded_map := _map_data_for_id(from_map_id)
+	for value in InteractionModel.interaction_points(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		if InteractionModel.is_warp(item) and str(item.get("toMap", "")) == to_map_id:
+			return item
+	return {}
+
+
+func _map_data_for_id(map_id: String) -> Dictionary:
+	if map_id == current_map_id and not map_data.is_empty():
+		return map_data
+	var map_path := str(MAP_DATA_PATHS.get(map_id, ""))
+	if map_path == "":
+		return {}
+	return IsoMapModel.load_map(map_path)
+
+
+func _map_name_for_id(map_id: String) -> String:
+	var loaded_map := _map_data_for_id(map_id)
+	return str(loaded_map.get("name", map_id))
 
 
 func _refresh_codex_panel() -> void:
@@ -9207,10 +9885,32 @@ func _dialog_is_open() -> bool:
 func _confirm_dialog_action() -> void:
 	if active_dialog_interaction.is_empty():
 		return
-	if _has_incomplete_task(active_dialog_interaction):
-		_mark_task_completed(active_dialog_interaction)
-		_update_dialog_text()
-	elif str(active_dialog_interaction.get("shopId", "")) != "":
+	if _active_dialog_can_claim_quest():
+		var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
+		player_profile = claim_result.get("profile", player_profile)
+		if bool(claim_result.get("ok", false)) and profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message(str(claim_result.get("message", "")))
+		if bool(claim_result.get("ok", false)):
+			_close_dialog()
+		else:
+			_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		return
+	var quest_messages := _record_quest_event_and_maybe_claim({
+		"type": "talk",
+		"targetId": str(active_dialog_interaction.get("id", "")),
+	})
+	if not quest_messages.is_empty():
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message("\n".join(quest_messages))
+		_close_dialog()
+		if status_label != null:
+			_update_hud_text()
+		return
+	if str(active_dialog_interaction.get("shopId", "")) != "":
 		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
 		_close_dialog()
 		_open_shop_panel(next_shop_id)
@@ -9223,48 +9923,83 @@ func _update_dialog_text() -> void:
 		return
 	dialog_name_label.text = str(active_dialog_interaction.get("name", "交互"))
 	dialog_body_label.text = _dialog_body_for(active_dialog_interaction)
-	dialog_option_button.text = str(active_dialog_interaction.get("option", "知道了"))
-	if not _has_incomplete_task(active_dialog_interaction) and str(active_dialog_interaction.get("shopId", "")) == "":
-		dialog_option_button.text = "知道了"
+	dialog_option_button.text = _dialog_option_text(active_dialog_interaction)
 
 
 func _dialog_body_for(item: Dictionary) -> String:
-	var field := "completedDialog" if _is_task_completed(item) else "dialog"
-	var lines: Array = item.get(field, item.get("dialog", []))
+	var lines: Array = item.get("dialog", [])
 	if lines.is_empty():
 		return "%s：暂时没有更多内容。" % str(item.get("name", "这里"))
 	var text_parts: Array[String] = []
 	for line in lines:
 		text_parts.append(str(line))
+	var quest_hint := _dialog_quest_hint_for(item)
+	if quest_hint != "":
+		text_parts.append("")
+		text_parts.append(quest_hint)
 	return "\n".join(text_parts)
 
 
-func _has_incomplete_task(item: Dictionary) -> bool:
-	var task_key := str(item.get("taskKey", ""))
-	return task_key != "" and not bool(task_flags.get(task_key, false))
+func _dialog_option_text(item: Dictionary) -> String:
+	if _active_dialog_can_claim_quest():
+		return "领取奖励"
+	if _active_dialog_matches_talk_quest(item):
+		return "完成"
+	if str(item.get("shopId", "")) != "":
+		return str(item.get("option", "买卖"))
+	return str(item.get("option", "知道了"))
 
 
-func _is_task_completed(item: Dictionary) -> bool:
-	var task_key := str(item.get("taskKey", ""))
-	return task_key != "" and bool(task_flags.get(task_key, false))
+func _active_dialog_can_claim_quest() -> bool:
+	if active_dialog_interaction.is_empty():
+		return false
+	if not PlayerProgressModel.can_claim_active_quest(player_profile):
+		return false
+	return PlayerProgressModel.active_quest_turn_in_id(player_profile) == str(active_dialog_interaction.get("id", ""))
 
 
-func _mark_task_completed(item: Dictionary) -> void:
-	var task_key := str(item.get("taskKey", ""))
-	if task_key != "":
-		task_flags[task_key] = true
+func _active_dialog_matches_talk_quest(item: Dictionary) -> bool:
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	if quest.is_empty():
+		return false
+	var state := PlayerProgressModel.active_quest_state(player_profile)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return false
+	return QuestModel.progress_amount_for_event(quest, {
+		"type": "talk",
+		"targetId": str(item.get("id", "")),
+	}) > 0
+
+
+func _dialog_quest_hint_for(item: Dictionary) -> String:
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	if quest.is_empty():
+		return ""
+	var item_id := str(item.get("id", ""))
+	var objective := QuestModel.objective_for(quest)
+	var relevant := false
+	if item_id == QuestModel.giver_id_for(quest) or item_id == QuestModel.turn_in_id_for(quest):
+		relevant = true
+	if str(objective.get("targetId", "")) == item_id:
+		relevant = true
+	if str(item.get("shopId", "")) != "" and str(objective.get("shopId", "")) == str(item.get("shopId", "")):
+		relevant = true
+	if not relevant:
+		return ""
+	var lines: Array[String] = []
+	if PlayerProgressModel.can_claim_active_quest(player_profile) and item_id == QuestModel.turn_in_id_for(quest):
+		lines.append("任务完成：%s" % QuestModel.title_for(quest))
+	else:
+		lines.append("任务：%s" % QuestModel.title_for(quest))
+		lines.append(QuestModel.objective_text_for(quest))
+	var reward_text := PlayerProgressModel.quest_reward_text(player_profile)
+	if reward_text != "":
+		lines.append("奖励：%s" % reward_text)
+	return "\n".join(lines)
 
 
 func _current_task_text() -> String:
-	for value in InteractionModel.interaction_points(map_data):
-		var item := value as Dictionary
-		var task_key := str(item.get("taskKey", ""))
-		if task_key == "":
-			continue
-		if bool(task_flags.get(task_key, false)):
-			return str(item.get("completedTaskText", "已完成"))
-		return str(item.get("taskText", "继续探索"))
-	return "探索%s" % str(map_data.get("name", "当前地图"))
+	return PlayerProgressModel.quest_progress_text(player_profile)
 
 
 func _toggle_pet_ring() -> void:
@@ -9347,7 +10082,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, shop_panel, pet_panel, codex_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -9446,6 +10181,13 @@ func _layout_hud() -> void:
 	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
+	quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	quest_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		quest_panel.visible = false
+	if quest_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
 	var rename_height := 162.0
 	pet_rename_panel.position = Vector2((viewport_size.x - rename_width) * 0.5, maxf(margin + 92.0, (viewport_size.y - rename_height) * 0.5))
@@ -9483,8 +10225,11 @@ func _layout_hud() -> void:
 		battle_passive_panel.visible = false
 
 	var message_width: float = minf(viewport_size.x - margin * 2.0, 390.0 if is_phone_shape else 560.0)
-	var message_height := 66.0
-	battle_message_panel.position = Vector2(margin, viewport_size.y - message_height - margin)
+	var message_height := 112.0 if is_phone_shape else 126.0
+	var message_y := viewport_size.y - message_height - margin
+	if is_phone_shape and action_bar != null and action_bar.visible:
+		message_y = action_bar.position.y - message_height - 8.0
+	battle_message_panel.position = Vector2(margin, maxf(margin + 68.0, message_y))
 	battle_message_panel.size = Vector2(message_width, message_height)
 	battle_message_panel.visible = battle_active or world_log_message != ""
 
