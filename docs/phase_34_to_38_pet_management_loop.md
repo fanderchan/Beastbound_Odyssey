@@ -141,7 +141,6 @@ godot --path client/godot --scene res://scenes/Main.tscn
 ## 后续
 
 - 宠物改名。
-- 宠物治疗和休息恢复。
 - 宠物放生。
 - 宠物详情图鉴化。
 - 本地存档迁移到服务器存档。

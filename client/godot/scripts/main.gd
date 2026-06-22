@@ -22,6 +22,7 @@ const ACTION_BAR_SIZE := Vector2(306, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
+const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
@@ -80,6 +81,7 @@ var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
 var pet_state_cycle_button: Button
+var pet_heal_button: Button
 var pet_stable_button: Button
 var pet_rename_button: Button
 var pet_rename_panel: PanelContainer
@@ -138,6 +140,7 @@ var auto_battle_reaction_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_pet_management_check: bool = false
 var auto_pet_rename_check: bool = false
+var auto_pet_recovery_check: bool = false
 var auto_pet_stable_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
@@ -158,6 +161,7 @@ var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
 var profile_save_enabled: bool = true
 var world_log_message: String = ""
+var pet_rest_recovery_elapsed: float = 0.0
 var current_path_cells: Array[Vector2i] = []
 var current_path_is_direct: bool = false
 var pet_follow_enabled: bool = false
@@ -275,6 +279,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_management_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
+	elif auto_pet_recovery_check:
+		call_deferred("_run_auto_pet_recovery_check")
 	elif auto_pet_stable_check:
 		call_deferred("_run_auto_pet_stable_check")
 	elif auto_pet_storage_capture_check:
@@ -455,6 +461,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_management_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
+		elif arg == "--auto-pet-recovery-check":
+			auto_pet_recovery_check = true
 		elif arg == "--auto-pet-stable-check":
 			auto_pet_stable_check = true
 		elif arg == "--auto-pet-storage-capture-check":
@@ -2102,6 +2110,111 @@ func _run_auto_pet_rename_check() -> void:
 		str(blank_blocked),
 		str(long_blocked),
 		str(battle_reads_rename),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_recovery_check() -> void:
+	profile_save_enabled = false
+	pet_rest_recovery_elapsed = 0.0
+	player_profile = PlayerProgressModel.default_profile()
+	var instances: Array = player_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		match str(instance.get("instanceId", "")):
+			"pet_bui_speed":
+				instance["state"] = PlayerProgressModel.PET_STATE_STORAGE
+				instance["hp"] = 30
+			"pet_bui_rest":
+				instance["state"] = PlayerProgressModel.PET_STATE_REST
+				instance["hp"] = 20
+			"pet_bui_tough":
+				instance["state"] = PlayerProgressModel.PET_STATE_STANDBY
+				instance["hp"] = 20
+		instances[index] = instance
+	player_profile["petInstances"] = instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	pet_selected_instance_id = "pet_bui_speed"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_speed")
+	await get_tree().process_frame
+	var heal_button_ready := pet_heal_button != null and pet_heal_button.visible and not pet_heal_button.disabled and pet_heal_button.text == "治疗"
+	_on_pet_heal_pressed()
+	await get_tree().process_frame
+	var healed_storage := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed")
+	var storage_healed := (
+		str(healed_storage.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and int(healed_storage.get("hp", 0)) == int(healed_storage.get("maxHp", 1))
+		and world_log_message.find("已治疗") >= 0
+	)
+	var heal_log := world_log_message
+
+	instances = player_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		match str(instance.get("instanceId", "")):
+			"pet_bui_speed":
+				instance["state"] = PlayerProgressModel.PET_STATE_STORAGE
+				instance["hp"] = 30
+			"pet_bui_rest":
+				instance["state"] = PlayerProgressModel.PET_STATE_REST
+				instance["hp"] = 20
+			"pet_bui_tough":
+				instance["state"] = PlayerProgressModel.PET_STATE_STANDBY
+				instance["hp"] = 20
+		instances[index] = instance
+	player_profile["petInstances"] = instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_select_pet_instance("pet_bui_rest")
+	await get_tree().process_frame
+	var rest_before := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest")
+	var rest_before_hp := int(rest_before.get("hp", 0))
+	var rest_expected_heal := PlayerProgressModel.rest_recovery_amount_for_instance(rest_before)
+	var tick_result := _apply_pet_rest_recovery_tick(false, true)
+	await get_tree().process_frame
+	var rest_after := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest")
+	var speed_after_tick := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed")
+	var tough_after_tick := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var rest_expected_hp := mini(int(rest_before.get("maxHp", 1)), rest_before_hp + rest_expected_heal)
+	var rest_recovered := (
+		bool(tick_result.get("ok", false))
+		and int(tick_result.get("healedCount", 0)) == 1
+		and int(rest_after.get("hp", 0)) == rest_expected_hp
+		and str(rest_after.get("state", "")) == PlayerProgressModel.PET_STATE_REST
+	)
+	var storage_no_recover := (
+		str(speed_after_tick.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and int(speed_after_tick.get("hp", 0)) == 30
+	)
+	var standby_no_recover := (
+		str(tough_after_tick.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and int(tough_after_tick.get("hp", 0)) == 20
+	)
+	var detail_refreshed := pet_detail_label != null and pet_detail_label.text.find("生命：%d/" % rest_expected_hp) >= 0
+	var no_recovery_log := world_log_message == heal_log
+	var timer_before_hp := int(rest_after.get("hp", 0))
+	_update_pet_rest_recovery(PET_REST_RECOVER_INTERVAL_SECONDS)
+	await get_tree().process_frame
+	var timer_after := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest")
+	var timer_recovered := int(timer_after.get("hp", 0)) > timer_before_hp
+	var status := "ok" if heal_button_ready and storage_healed and rest_recovered and storage_no_recover and standby_no_recover and detail_refreshed and no_recovery_log and timer_recovered else "failed"
+	print("pet recovery check ready: status=%s heal_button=%s storage_healed=%s rest_recovered=%s storage_no_recover=%s standby_no_recover=%s detail=%s quiet=%s timer=%s rest_hp=%d timer_hp=%d log=%s" % [
+		status,
+		str(heal_button_ready),
+		str(storage_healed),
+		str(rest_recovered),
+		str(storage_no_recover),
+		str(standby_no_recover),
+		str(detail_refreshed),
+		str(no_recovery_log),
+		str(timer_recovered),
+		rest_expected_hp,
+		int(timer_after.get("hp", 0)),
 		world_log_message.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -4021,6 +4134,7 @@ func _process(delta: float) -> void:
 	_update_camera_position(false)
 	_update_pending_interaction()
 	_update_encounter_zone_check()
+	_update_pet_rest_recovery(delta)
 	if has_target_marker and not player.is_auto_moving() and player.global_position.distance_to(target_marker) <= 6.0:
 		has_target_marker = false
 		has_target_cell = false
@@ -4204,6 +4318,12 @@ func _build_hud() -> void:
 	pet_state_cycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_state_cycle_button.pressed.connect(_on_pet_state_cycle_pressed)
 	pet_button_row.add_child(pet_state_cycle_button)
+	pet_heal_button = Button.new()
+	pet_heal_button.text = "治疗"
+	pet_heal_button.custom_minimum_size = Vector2(0, 48)
+	pet_heal_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_heal_button.pressed.connect(_on_pet_heal_pressed)
+	pet_button_row.add_child(pet_heal_button)
 	pet_stable_button = Button.new()
 	pet_stable_button.text = "存入"
 	pet_stable_button.custom_minimum_size = Vector2(0, 48)
@@ -5124,6 +5244,9 @@ func _refresh_pet_panel() -> void:
 			var state_check := PlayerProgressModel.can_cycle_pet_state(player_profile, pet_selected_instance_id)
 			pet_state_cycle_button.disabled = not bool(state_check.get("ok", false))
 			pet_state_cycle_button.text = _pet_state_button_label(target_state)
+	if pet_heal_button != null:
+		pet_heal_button.visible = not selected.is_empty()
+		pet_heal_button.disabled = selected.is_empty()
 	if pet_stable_button != null:
 		if selected.is_empty():
 			pet_stable_button.visible = false
@@ -5196,6 +5319,15 @@ func _on_pet_state_cycle_pressed() -> void:
 	_refresh_pet_panel()
 
 
+func _on_pet_heal_pressed() -> void:
+	var result := PlayerProgressModel.heal_pet(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
 func _on_pet_stable_pressed() -> void:
 	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	if selected.is_empty():
@@ -5245,6 +5377,36 @@ func _on_pet_rename_confirmed() -> void:
 func _close_pet_rename_panel() -> void:
 	if pet_rename_panel != null:
 		pet_rename_panel.visible = false
+
+
+func _update_pet_rest_recovery(delta: float) -> void:
+	if delta <= 0.0 or player_profile.is_empty():
+		return
+	pet_rest_recovery_elapsed += delta
+	if pet_rest_recovery_elapsed < PET_REST_RECOVER_INTERVAL_SECONDS:
+		return
+	var tick_count := mini(3, int(floor(pet_rest_recovery_elapsed / PET_REST_RECOVER_INTERVAL_SECONDS)))
+	pet_rest_recovery_elapsed = fmod(pet_rest_recovery_elapsed, PET_REST_RECOVER_INTERVAL_SECONDS)
+	var recovered := false
+	for _tick in range(tick_count):
+		var result := _apply_pet_rest_recovery_tick(false, false)
+		recovered = recovered or bool(result.get("ok", false))
+	if recovered:
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+
+
+func _apply_pet_rest_recovery_tick(save_after: bool = true, refresh_panel: bool = true) -> Dictionary:
+	var result := PlayerProgressModel.apply_rest_recovery_tick(player_profile)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		if save_after and profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		if refresh_panel and pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+	return result
 
 
 func _on_battle_command_pressed(command_id: String) -> void:

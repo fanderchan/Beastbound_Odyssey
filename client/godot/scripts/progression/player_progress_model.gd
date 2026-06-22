@@ -12,6 +12,7 @@ const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
 const PARTY_LIMIT := 5
 const PET_NAME_MAX_LENGTH := 8
+const PET_REST_RECOVERY_RATIO := 0.05
 
 
 static func default_profile() -> Dictionary:
@@ -293,6 +294,94 @@ static func rename_pet(profile: Dictionary, instance_id: String, raw_name: Strin
 		"profile": normalized,
 		"message": "%s 已改名为%s。" % [old_name, pet_name],
 		"name": pet_name,
+	}
+
+
+static func can_heal_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。"}
+	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+	var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+	if hp >= max_hp:
+		return {"ok": false, "message": "%s 生命已满。" % str(instance.get("name", "宠物"))}
+	return {"ok": true, "message": "%s 可以治疗。" % str(instance.get("name", "宠物"))}
+
+
+static func heal_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_heal_pet(normalized, instance_id)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "不能治疗。")),
+		}
+	var healed_name := "宠物"
+	var healed_amount := 0
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+		healed_name = str(instance.get("name", "宠物"))
+		healed_amount = maxi(0, max_hp - hp)
+		instance["hp"] = max_hp
+		instances[index] = instance
+		break
+	normalized["petInstances"] = instances
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": healed_amount > 0,
+		"profile": normalized,
+		"message": "%s 已治疗。" % healed_name,
+		"heal": healed_amount,
+	}
+
+
+static func rest_recovery_amount_for_instance(instance: Dictionary) -> int:
+	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+	return maxi(1, int(ceil(float(max_hp) * PET_REST_RECOVERY_RATIO)))
+
+
+static func apply_rest_recovery_tick(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instances: Array = normalized.get("petInstances", [])
+	var healed_count := 0
+	var total_heal := 0
+	var recovered_ids: Array[String] = []
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_REST:
+			instances[index] = instance
+			continue
+		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+		if hp >= max_hp:
+			instances[index] = instance
+			continue
+		var healed := mini(rest_recovery_amount_for_instance(instance), max_hp - hp)
+		instance["hp"] = hp + healed
+		instances[index] = instance
+		healed_count += 1
+		total_heal += healed
+		recovered_ids.append(str(instance.get("instanceId", "")))
+	normalized["petInstances"] = instances
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": healed_count > 0,
+		"profile": normalized,
+		"healedCount": healed_count,
+		"totalHeal": total_heal,
+		"petIds": recovered_ids,
 	}
 
 
