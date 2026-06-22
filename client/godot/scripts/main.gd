@@ -143,6 +143,7 @@ var auto_battle_combo_motion_check: bool = false
 var auto_battle_switch_pet_check: bool = false
 var auto_battle_retarget_visual_check: bool = false
 var auto_battle_visual_timing_check: bool = false
+var auto_battle_label_check: bool = false
 var auto_battle_event_ledger_check: bool = false
 var auto_battle_status_check: bool = false
 var auto_battle_status_skill_check: bool = false
@@ -176,6 +177,7 @@ var battle_status_hit_test: bool = false
 var battle_status_rule_test: bool = false
 var battle_combo_motion_preview: bool = false
 var battle_launch_preview_mode: String = ""
+var battle_label_preview: bool = false
 var battle_debug_window_enabled: bool = false
 var current_map_id: String = START_MAP_ID
 var map_data: Dictionary = {}
@@ -281,6 +283,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_retarget_visual_check")
 	elif auto_battle_visual_timing_check:
 		call_deferred("_run_auto_battle_visual_timing_check")
+	elif auto_battle_label_check:
+		call_deferred("_run_auto_battle_label_check")
 	elif auto_battle_event_ledger_check:
 		call_deferred("_run_auto_battle_event_ledger_check")
 	elif auto_battle_status_check:
@@ -383,6 +387,8 @@ func _ready() -> void:
 		call_deferred("_open_battle_preview")
 	elif battle_formation_preview:
 		call_deferred("_open_battle_formation_preview")
+	elif battle_label_preview:
+		call_deferred("_open_battle_label_preview")
 	elif battle_stat_test:
 		call_deferred("_open_battle_stat_test")
 	elif battle_status_test:
@@ -479,6 +485,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_retarget_visual_check = true
 		elif arg == "--auto-battle-visual-timing-check":
 			auto_battle_visual_timing_check = true
+		elif arg == "--auto-battle-label-check":
+			auto_battle_label_check = true
 		elif arg == "--auto-battle-event-ledger-check":
 			auto_battle_event_ledger_check = true
 		elif arg == "--auto-battle-status-check":
@@ -531,6 +539,8 @@ func _apply_preview_window_args() -> void:
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
 			battle_formation_preview = true
+		elif arg == "--battle-label-preview":
+			battle_label_preview = true
 		elif arg == "--battle-stat-test":
 			battle_stat_test = true
 		elif arg == "--battle-status-test":
@@ -986,17 +996,23 @@ func _run_auto_battle_check() -> void:
 	_on_battle_command_pressed("attack")
 	_auto_click_enemy_target(enemy_id)
 	_auto_submit_pet_attack_if_needed()
-	await get_tree().process_frame
-	var enemy_after := int(BattleModel.actor_by_id(battle_state, enemy_id).get("hp", 0)) if enemy_id != "" else 0
-	var attack_reduced_hp := enemy_before > 0 and enemy_after < enemy_before
-	var attack_state_seen := battle_action_timer > 0.0
-	var player_state := str(BattleModel.actor_by_id(battle_state, "ally_player").get("actionState", ""))
-	var player_attacked := player_state == "attack" or player_state == "combo"
+	var enemy_after := enemy_before
+	var ally_hp_after := ally_hp_before
+	var attack_state_seen := false
 	for _frame in range(480):
 		await get_tree().process_frame
-		if battle_active and not _battle_commands_locked():
+		enemy_after = int(BattleModel.actor_by_id(battle_state, enemy_id).get("hp", 0)) if enemy_id != "" else enemy_after
+		ally_hp_after = _battle_side_total_hp(BattleModel.SIDE_ALLY)
+		attack_state_seen = attack_state_seen or battle_action_timer > 0.0
+		if enemy_after < enemy_before and ally_hp_after < ally_hp_before:
 			break
-	var ally_hp_after := _battle_side_total_hp(BattleModel.SIDE_ALLY)
+	var attack_reduced_hp := enemy_before > 0 and enemy_after < enemy_before
+	var player_attacked := attack_reduced_hp
+	for _frame in range(480):
+		await get_tree().process_frame
+		ally_hp_after = _battle_side_total_hp(BattleModel.SIDE_ALLY)
+		if (battle_active and not _battle_commands_locked()) or not battle_active:
+			break
 	var enemy_countered := ally_hp_after < ally_hp_before
 	_on_battle_command_pressed("run")
 	await get_tree().process_frame
@@ -1008,7 +1024,7 @@ func _run_auto_battle_check() -> void:
 	await get_tree().process_frame
 	var victory_target_id := BattleModel.living_enemy_id(battle_state)
 	if victory_target_id != "":
-		battle_state = BattleModel.set_actor_hp(battle_state, victory_target_id, 18)
+		battle_state = BattleModel.set_actor_hp(battle_state, victory_target_id, 1)
 	_on_battle_command_pressed("attack")
 	_auto_click_enemy_target(victory_target_id)
 	_auto_submit_pet_attack_if_needed()
@@ -1697,6 +1713,60 @@ func _run_auto_battle_visual_timing_check() -> void:
 		str(waits_at_old_launch_time),
 		str(waits_before_combo_hit),
 		str(flies_after_combo_hit),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_label_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var zone := (zones[0] as Dictionary).duplicate(true) if zone_found else {}
+	if zone_found:
+		zone["selectedWildPet"] = {
+			"formId": "wuli_normal_fast_wind10",
+			"name": "高速乌力",
+			"level": 3,
+			"levelMin": 1,
+			"levelMax": 3,
+			"battleStats": {
+				"maxHp": 92,
+				"attack": 11,
+				"defense": 6,
+				"agility": 88,
+			},
+		}
+		_start_battle(BattleModel.create_wild_battle(zone))
+	await get_tree().process_frame
+	var player_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var pet_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
+	var enemy_actor := BattleModel.actor_by_id(battle_state, "enemy_0")
+	var player_ok := (
+		str(player_actor.get("name", "")) == "见习猎人"
+		and int(player_actor.get("level", 0)) == 1
+		and _battle_actor_label(player_actor) == "见习猎人 Lv1"
+	)
+	var pet_ok := (
+		str(pet_actor.get("name", "")) == "我的布伊"
+		and int(pet_actor.get("level", 0)) == 1
+		and _battle_actor_label(pet_actor) == "我的布伊 Lv1"
+	)
+	var enemy_ok := (
+		str(enemy_actor.get("name", "")) == "高速乌力"
+		and int(enemy_actor.get("level", 0)) == 3
+		and _battle_actor_label(enemy_actor) == "高速乌力 Lv3"
+	)
+	var status := "ok" if loaded and zone_found and battle_active and player_ok and pet_ok and enemy_ok else "failed"
+	print("battle label check ready: status=%s player=%s pet=%s enemy=%s player_label=%s pet_label=%s enemy_label=%s" % [
+		status,
+		str(player_ok),
+		str(pet_ok),
+		str(enemy_ok),
+		_battle_actor_label(player_actor),
+		_battle_actor_label(pet_actor),
+		_battle_actor_label(enemy_actor),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -4181,6 +4251,30 @@ func _open_battle_preview() -> void:
 	if not loaded or zones.is_empty():
 		return
 	_start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
+
+
+func _open_battle_label_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if not loaded or zones.is_empty():
+		return
+	var zone := (zones[0] as Dictionary).duplicate(true)
+	zone["selectedWildPet"] = {
+		"formId": "wuli_normal_fast_wind10",
+		"name": "高速乌力",
+		"level": 3,
+		"levelMin": 1,
+		"levelMax": 3,
+		"battleStats": {
+			"maxHp": 92,
+			"attack": 11,
+			"defense": 6,
+			"agility": 88,
+		},
+	}
+	_start_battle(BattleModel.create_wild_battle(zone))
 
 
 func _open_battle_formation_preview() -> void:
@@ -8144,10 +8238,29 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			hp_actor["hp"] = maxi(1, int(actor.get("launchHpBefore", actor.get("maxHp", 1))))
 		_draw_battle_hp_bar(hp_actor, pos + Vector2(0, hp_offset), alpha, visual_scale)
 	if show_actor_name:
-		var font := ThemeDB.fallback_font
-		draw_string(font, pos + Vector2(-46.0 * visual_scale, name_offset), str(actor.get("name", "")), HORIZONTAL_ALIGNMENT_CENTER, 92.0 * visual_scale, maxi(10, int(round(15.0 * visual_scale))), Color(0.96, 0.93, 0.80, alpha))
+		_draw_battle_actor_label(actor, pos + Vector2(0, name_offset), visual_scale, alpha, large_formation)
 	if int(actor.get("hp", 0)) > 0:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
+
+
+func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: float, alpha: float, compact: bool) -> void:
+	var label := _battle_actor_label(actor)
+	if label == "":
+		return
+	var font := ThemeDB.fallback_font
+	var label_width := (104.0 if compact else 132.0) * visual_scale
+	var font_size := maxi(10, int(round((13.0 if compact else 15.0) * visual_scale)))
+	var origin := center + Vector2(-label_width * 0.5, 0)
+	draw_string(font, origin + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.05, 0.06, 0.05, 0.72 * alpha))
+	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.96, 0.93, 0.80, alpha))
+
+
+func _battle_actor_label(actor: Dictionary) -> String:
+	var actor_name := str(actor.get("name", "")).strip_edges()
+	if actor_name == "":
+		return ""
+	var level := maxi(1, int(actor.get("level", 1)))
+	return "%s Lv%d" % [actor_name, level]
 
 
 func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:

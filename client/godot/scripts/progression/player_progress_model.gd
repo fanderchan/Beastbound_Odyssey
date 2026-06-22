@@ -932,6 +932,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var next_state := state.duplicate(true)
 	var normalized := normalize_profile(profile)
+	next_state = _apply_profile_player_to_battle_state(normalized, next_state)
 	var party := pet_party_for_battle(normalized)
 	next_state["petParty"] = party
 	var active_entry := _active_party_entry(party)
@@ -951,6 +952,27 @@ static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary
 			break
 	if not replaced:
 		actors.append(active_actor)
+	next_state["actors"] = actors
+	return next_state
+
+
+static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var next_state := state.duplicate(true)
+	var player = profile.get("player", {})
+	var player_dict := player as Dictionary if player is Dictionary else {}
+	var actors: Array = next_state.get("actors", [])
+	for index in range(actors.size()):
+		if not (actors[index] is Dictionary):
+			continue
+		var actor := (actors[index] as Dictionary).duplicate(true)
+		if str(actor.get("id", "")) != "ally_player":
+			continue
+		actor["name"] = str(player_dict.get("name", actor.get("name", "见习猎人")))
+		actor["level"] = maxi(1, int(player_dict.get("level", actor.get("level", 1))))
+		actor["exp"] = maxi(0, int(player_dict.get("exp", 0)))
+		actor["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(actor.get("level", 1))))))
+		actors[index] = actor
+		break
 	next_state["actors"] = actors
 	return next_state
 
