@@ -84,6 +84,7 @@ var pet_state_cycle_button: Button
 var pet_heal_button: Button
 var pet_stable_button: Button
 var pet_rename_button: Button
+var pet_drop_button: Button
 var pet_rename_panel: PanelContainer
 var pet_rename_title_label: Label
 var pet_rename_input: LineEdit
@@ -142,10 +143,12 @@ var auto_pet_management_check: bool = false
 var auto_pet_rename_check: bool = false
 var auto_pet_recovery_check: bool = false
 var auto_pet_stable_check: bool = false
+var auto_pet_drop_pickup_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
+var pet_drop_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -162,6 +165,7 @@ var player_profile: Dictionary = {}
 var profile_save_enabled: bool = true
 var world_log_message: String = ""
 var pet_rest_recovery_elapsed: float = 0.0
+var pet_drop_expire_elapsed: float = 0.0
 var current_path_cells: Array[Vector2i] = []
 var current_path_is_direct: bool = false
 var pet_follow_enabled: bool = false
@@ -283,6 +287,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_recovery_check")
 	elif auto_pet_stable_check:
 		call_deferred("_run_auto_pet_stable_check")
+	elif auto_pet_drop_pickup_check:
+		call_deferred("_run_auto_pet_drop_pickup_check")
 	elif auto_pet_storage_capture_check:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
@@ -291,6 +297,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
+	elif pet_drop_preview:
+		call_deferred("_run_pet_drop_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -465,6 +473,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_recovery_check = true
 		elif arg == "--auto-pet-stable-check":
 			auto_pet_stable_check = true
+		elif arg == "--auto-pet-drop-pickup-check":
+			auto_pet_drop_pickup_check = true
 		elif arg == "--auto-pet-storage-capture-check":
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
@@ -473,6 +483,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
+		elif arg == "--pet-drop-preview":
+			pet_drop_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -2321,6 +2333,152 @@ func _run_auto_pet_stable_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_drop_pickup_check() -> void:
+	profile_save_enabled = false
+	pet_drop_expire_elapsed = 0.0
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	_open_pet_panel()
+	await get_tree().process_frame
+	_select_pet_instance("pet_bui_main")
+	await get_tree().process_frame
+	var before_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
+	var drop_button_ready := pet_drop_button != null and pet_drop_button.visible and not pet_drop_button.disabled and pet_drop_button.text == "丢弃"
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	_on_pet_drop_pressed()
+	await get_tree().process_frame
+	var dropped := _ground_pet_drop_for_instance_id("pet_bui_main")
+	var dropped_pet := PlayerProgressModel.ground_pet_drop_pet(dropped)
+	var dropped_cell := PlayerProgressModel.ground_pet_drop_cell(dropped) if not dropped.is_empty() else Vector2i.ZERO
+	var drop_near := maxi(absi(dropped_cell.x - player_cell.x), absi(dropped_cell.y - player_cell.y)) == 1
+	var drop_public := str(dropped.get("pickupMode", "")) == PlayerProgressModel.PET_DROP_PICKUP_PUBLIC
+	var drop_ttl := int(dropped.get("expiresAtSec", 0)) - int(dropped.get("createdAtSec", 0)) == PlayerProgressModel.PET_DROP_TTL_SECONDS
+	var drop_preserved_id := str(dropped_pet.get("instanceId", "")) == str(before_pet.get("instanceId", ""))
+	var active_cleared := str(player_profile.get("activePetInstanceId", "")) == ""
+	var removed_from_team := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").is_empty()
+	var drop_log_ok := world_log_message.find("被丢在地上") >= 0
+	_pickup_ground_pet_drop(str(dropped.get("dropId", "")))
+	await get_tree().process_frame
+	var picked_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
+	var pickup_ok := (
+		not picked_pet.is_empty()
+		and str(picked_pet.get("instanceId", "")) == "pet_bui_main"
+		and str(picked_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(player_profile.get("activePetInstanceId", "")) == ""
+		and _ground_pet_drop_for_instance_id("pet_bui_main").is_empty()
+		and world_log_message.find("回到队伍") >= 0
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var high_instances: Array = []
+	high_instances.append(PlayerProgressModel.create_pet_instance_from_form(
+		"pet_high_level",
+		"高阶布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		7
+	))
+	player_profile["petInstances"] = high_instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var check_now := int(Time.get_unix_time_from_system())
+	var high_drop_result := PlayerProgressModel.drop_pet(player_profile, "pet_high_level", current_map_id, player_cell + Vector2i(1, 0), check_now)
+	player_profile = high_drop_result.get("profile", player_profile)
+	var high_drop_id := str(high_drop_result.get("dropId", ""))
+	_pickup_ground_pet_drop(high_drop_id)
+	await get_tree().process_frame
+	var high_blocked := (
+		PlayerProgressModel.pet_instance_by_id(player_profile, "pet_high_level").is_empty()
+		and not PlayerProgressModel.ground_pet_drop_by_id(player_profile, high_drop_id).is_empty()
+		and world_log_message == "不能拾取超过自己5级以上的宠物。"
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var full_drop_result := PlayerProgressModel.drop_pet(player_profile, "pet_bui_speed", current_map_id, player_cell + Vector2i(0, 1), check_now)
+	player_profile = full_drop_result.get("profile", player_profile)
+	var full_drop_id := str(full_drop_result.get("dropId", ""))
+	var full_instances: Array = player_profile.get("petInstances", [])
+	full_instances.append(PlayerProgressModel.create_pet_instance_from_form("pet_full_a", "满队布伊甲", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 1))
+	full_instances.append(PlayerProgressModel.create_pet_instance_from_form("pet_full_b", "满队布伊乙", "bui_normal_yellow_wind10", PlayerProgressModel.PET_STATE_STANDBY, 1))
+	player_profile["petInstances"] = full_instances
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_pickup_ground_pet_drop(full_drop_id)
+	await get_tree().process_frame
+	var full_blocked := (
+		PlayerProgressModel.party_pet_instances(player_profile).size() == PlayerProgressModel.PARTY_LIMIT
+		and not PlayerProgressModel.ground_pet_drop_by_id(player_profile, full_drop_id).is_empty()
+		and world_log_message == "队伍已满。"
+	)
+
+	var expire_profile := PlayerProgressModel.default_profile()
+	var expire_drop_result := PlayerProgressModel.drop_pet(expire_profile, "pet_bui_tough", current_map_id, player_cell + Vector2i(-1, 0), 1000)
+	var expire_result := PlayerProgressModel.expire_ground_pet_drops(expire_drop_result.get("profile", expire_profile), 1600)
+	var expire_ok := (
+		bool(expire_result.get("ok", false))
+		and int(expire_result.get("expiredCount", 0)) == 1
+		and PlayerProgressModel.ground_pet_drops(expire_result.get("profile", {})).is_empty()
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var fill_drops: Array = []
+	var fill_serial := 1
+	var fill_now := int(Time.get_unix_time_from_system())
+	for offset in IsoMapModel.NEIGHBORS_8:
+		var fill_cell: Vector2i = player_cell + offset
+		if not IsoMapModel.is_walkable(map_data, fill_cell):
+			continue
+		var fill_pet := PlayerProgressModel.create_pet_instance_from_form(
+			"pet_floor_%d" % fill_serial,
+			"地面布伊%d" % fill_serial,
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_STANDBY,
+			1
+		)
+		fill_drops.append({
+			"dropId": "ground_fill_%d" % fill_serial,
+			"ownerId": PlayerProgressModel.LOCAL_PLAYER_ID,
+			"pickupMode": PlayerProgressModel.PET_DROP_PICKUP_PUBLIC,
+			"mapId": current_map_id,
+			"cell": [fill_cell.x, fill_cell.y],
+			"createdAtSec": fill_now,
+			"expiresAtSec": fill_now + PlayerProgressModel.PET_DROP_TTL_SECONDS,
+			"pet": fill_pet,
+		})
+		fill_serial += 1
+	player_profile["groundPetDrops"] = fill_drops
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	pet_selected_instance_id = "pet_bui_tough"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_tough")
+	await get_tree().process_frame
+	_on_pet_drop_pressed()
+	await get_tree().process_frame
+	var floor_full_blocked := (
+		fill_drops.size() > 0
+		and world_log_message == "地面太满了"
+		and not PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough").is_empty()
+	)
+
+	var status := "ok" if drop_button_ready and drop_near and drop_public and drop_ttl and drop_preserved_id and active_cleared and removed_from_team and drop_log_ok and pickup_ok and high_blocked and full_blocked and expire_ok and floor_full_blocked else "failed"
+	print("pet drop pickup check ready: status=%s button=%s near=%s public=%s ttl=%s id=%s active_clear=%s removed=%s drop_log=%s pickup=%s high_block=%s full_block=%s expire=%s floor_full=%s log=%s" % [
+		status,
+		str(drop_button_ready),
+		str(drop_near),
+		str(drop_public),
+		str(drop_ttl),
+		str(drop_preserved_id),
+		str(active_cleared),
+		str(removed_from_team),
+		str(drop_log_ok),
+		str(pickup_ok),
+		str(high_blocked),
+		str(full_blocked),
+		str(expire_ok),
+		str(floor_full_blocked),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_storage_capture_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -2398,6 +2556,16 @@ func _run_pet_rename_preview() -> void:
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
 	_on_pet_rename_pressed()
+
+
+func _run_pet_drop_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var drop_cell := player_cell + Vector2i(1, 0)
+	var result := PlayerProgressModel.drop_pet(player_profile, "pet_bui_speed", current_map_id, drop_cell, int(Time.get_unix_time_from_system()))
+	player_profile = result.get("profile", player_profile)
+	_set_world_log_message(str(result.get("message", "")))
 
 
 func _run_auto_battle_status_check() -> void:
@@ -4135,6 +4303,7 @@ func _process(delta: float) -> void:
 	_update_pending_interaction()
 	_update_encounter_zone_check()
 	_update_pet_rest_recovery(delta)
+	_update_ground_pet_drop_expiration(delta)
 	if has_target_marker and not player.is_auto_moving() and player.global_position.distance_to(target_marker) <= 6.0:
 		has_target_marker = false
 		has_target_cell = false
@@ -4336,6 +4505,12 @@ func _build_hud() -> void:
 	pet_rename_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_rename_button.pressed.connect(_on_pet_rename_pressed)
 	pet_button_row.add_child(pet_rename_button)
+	pet_drop_button = Button.new()
+	pet_drop_button.text = "丢弃"
+	pet_drop_button.custom_minimum_size = Vector2(0, 48)
+	pet_drop_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
+	pet_button_row.add_child(pet_drop_button)
 	hud_root.add_child(pet_panel)
 
 	pet_rename_panel = _panel_container("PetRenamePanel")
@@ -4858,6 +5033,10 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 		return
 
 	var world_point := _screen_to_world(screen_point)
+	var ground_drop := _find_ground_pet_drop_at_world_point(world_point)
+	if not ground_drop.is_empty():
+		_set_interaction_target(_ground_pet_interaction_for_drop(ground_drop))
+		return
 	var interaction := InteractionModel.find_at_world_point(map_data, world_point)
 	if not interaction.is_empty():
 		_set_interaction_target(interaction)
@@ -4939,6 +5118,9 @@ func _update_pending_interaction() -> void:
 
 
 func _complete_interaction(item: Dictionary) -> void:
+	if str(item.get("kind", "")) == "ground_pet_drop":
+		_pickup_ground_pet_drop(str(item.get("dropId", "")))
+		return
 	if InteractionModel.is_warp(item):
 		_transfer_from_warp(item)
 		return
@@ -5259,6 +5441,11 @@ func _refresh_pet_panel() -> void:
 	if pet_rename_button != null:
 		pet_rename_button.visible = not selected.is_empty()
 		pet_rename_button.disabled = selected.is_empty()
+	if pet_drop_button != null:
+		pet_drop_button.visible = not selected.is_empty()
+		var drop_check := PlayerProgressModel.can_drop_pet(player_profile, pet_selected_instance_id)
+		pet_drop_button.disabled = selected.is_empty() or not bool(drop_check.get("ok", false))
+		pet_drop_button.text = "丢弃"
 
 
 func _pet_state_button_label(state: String) -> String:
@@ -5374,6 +5561,114 @@ func _on_pet_rename_confirmed() -> void:
 	_set_world_log_message(str(result.get("message", "")))
 
 
+func _on_pet_drop_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	var cell_result := _available_pet_drop_cell_result()
+	if not bool(cell_result.get("ok", false)):
+		_set_world_log_message("地面太满了")
+		return
+	var drop_cell := cell_result.get("cell", Vector2i.ZERO) as Vector2i
+	var result := PlayerProgressModel.drop_pet(
+		player_profile,
+		pet_selected_instance_id,
+		current_map_id,
+		drop_cell,
+		int(Time.get_unix_time_from_system())
+	)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_selected_instance_id = ""
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_close_pet_rename_panel()
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _available_pet_drop_cell_result() -> Dictionary:
+	if player == null or map_data.is_empty():
+		return {"ok": false}
+	var candidates: Array[Vector2i] = []
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var occupied := _ground_pet_occupied_cell_lookup(current_map_id)
+	for offset in IsoMapModel.NEIGHBORS_8:
+		var cell: Vector2i = player_cell + offset
+		if not IsoMapModel.is_walkable(map_data, cell):
+			continue
+		if occupied.has(IsoMapModel.cell_key(cell)):
+			continue
+		candidates.append(cell)
+	if candidates.is_empty():
+		return {"ok": false}
+	return {
+		"ok": true,
+		"cell": candidates[encounter_rng.randi_range(0, candidates.size() - 1)],
+	}
+
+
+func _ground_pet_occupied_cell_lookup(map_id: String) -> Dictionary:
+	var lookup: Dictionary = {}
+	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, map_id):
+		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
+		lookup[IsoMapModel.cell_key(cell)] = true
+	return lookup
+
+
+func _ground_pet_drop_for_instance_id(instance_id: String) -> Dictionary:
+	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+		var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
+		if str(pet_instance.get("instanceId", "")) == instance_id:
+			return drop
+	return {}
+
+
+func _find_ground_pet_drop_at_world_point(world_point: Vector2, hit_radius: float = 34.0) -> Dictionary:
+	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
+	var best_drop: Dictionary = {}
+	var best_distance := INF
+	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
+		var marker_point := _ground_pet_marker_world_position(drop)
+		var distance := world_point.distance_to(marker_point)
+		if cell == clicked_cell:
+			distance = minf(distance, hit_radius * 0.5)
+		if distance <= hit_radius and distance < best_distance:
+			best_drop = drop
+			best_distance = distance
+	return best_drop
+
+
+func _ground_pet_interaction_for_drop(drop: Dictionary) -> Dictionary:
+	var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
+	var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
+	return {
+		"id": "ground_pet:%s" % str(drop.get("dropId", "")),
+		"dropId": str(drop.get("dropId", "")),
+		"kind": "ground_pet_drop",
+		"name": str(pet_instance.get("name", "宠物")),
+		"cell": [cell.x, cell.y],
+		"blocksMovement": false,
+	}
+
+
+func _ground_pet_marker_world_position(drop: Dictionary) -> Vector2:
+	return IsoMapModel.grid_to_world(map_data, PlayerProgressModel.ground_pet_drop_cell(drop)) + Vector2(0, -16)
+
+
+func _pickup_ground_pet_drop(drop_id: String) -> void:
+	var result := PlayerProgressModel.pickup_ground_pet(player_profile, drop_id, int(Time.get_unix_time_from_system()))
+	player_profile = result.get("profile", player_profile)
+	if (bool(result.get("ok", false)) or bool(result.get("changed", false))) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	if bool(result.get("ok", false)):
+		pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+	_set_world_log_message(str(result.get("message", "")))
+
+
 func _close_pet_rename_panel() -> void:
 	if pet_rename_panel != null:
 		pet_rename_panel.visible = false
@@ -5407,6 +5702,24 @@ func _apply_pet_rest_recovery_tick(save_after: bool = true, refresh_panel: bool 
 		if refresh_panel and pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 	return result
+
+
+func _update_ground_pet_drop_expiration(delta: float) -> void:
+	if delta <= 0.0 or player_profile.is_empty():
+		return
+	pet_drop_expire_elapsed += delta
+	if pet_drop_expire_elapsed < 1.0:
+		return
+	pet_drop_expire_elapsed = 0.0
+	var result := PlayerProgressModel.expire_ground_pet_drops(player_profile, int(Time.get_unix_time_from_system()))
+	if not bool(result.get("ok", false)):
+		return
+	player_profile = result.get("profile", player_profile)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+	_set_world_log_message("地上的宠物离开了。")
 
 
 func _on_battle_command_pressed(command_id: String) -> void:
@@ -7064,6 +7377,7 @@ func _draw_isometric_map() -> void:
 	_draw_encounter_zones()
 	_draw_decor_cells()
 	_draw_interaction_points()
+	_draw_ground_pet_drops()
 	_draw_path_line()
 
 
@@ -7725,6 +8039,52 @@ func _draw_interaction_points() -> void:
 			draw_circle(marker + Vector2(0, -9), 8.0, Color(0.99, 0.76, 0.46, 0.98))
 			draw_rect(Rect2(marker + Vector2(-8, -1), Vector2(16, 20)), body_color, true)
 			draw_line(marker + Vector2(-13, 8), marker + Vector2(13, 8), trim_color, 3.0)
+
+
+func _draw_ground_pet_drops() -> void:
+	var font := ThemeDB.fallback_font
+	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
+		var center := IsoMapModel.grid_to_world(map_data, cell)
+		var marker := _ground_pet_marker_world_position(drop)
+		var selected := (
+			has_pending_interaction
+			and str(pending_interaction.get("kind", "")) == "ground_pet_drop"
+			and str(pending_interaction.get("dropId", "")) == str(drop.get("dropId", ""))
+		)
+		if selected:
+			_draw_iso_tile(center, Color(0.97, 0.75, 0.22, 0.18), Color(0.98, 0.80, 0.28, 0.7))
+			draw_arc(marker + Vector2(0, 12), 24.0, 0.0, TAU, 32, Color(1.0, 0.82, 0.25, 0.95), 3.0, true)
+		var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
+		var body_color := _ground_pet_body_color(pet_instance)
+		var trim_color := Color(1.0, 0.86, 0.42, 0.96)
+		draw_circle(marker + Vector2(0, 22), 20.0, Color(0.0, 0.0, 0.0, 0.22))
+		draw_circle(marker + Vector2(0, 0), 17.0, body_color)
+		draw_polygon(PackedVector2Array([
+			marker + Vector2(-10, -12),
+			marker + Vector2(-2, -29),
+			marker + Vector2(3, -12),
+		]), PackedColorArray([trim_color, trim_color, trim_color]))
+		draw_circle(marker + Vector2(-6, -3), 3.0, Color(0.08, 0.10, 0.09, 0.95))
+		draw_line(marker + Vector2(-11, 12), marker + Vector2(11, 12), trim_color, 3.0, true)
+		var name := str(pet_instance.get("name", "宠物"))
+		draw_string(font, marker + Vector2(-48, -38), name, HORIZONTAL_ALIGNMENT_CENTER, 96.0, 14, Color(0.07, 0.09, 0.08, 0.72))
+		draw_string(font, marker + Vector2(-48, -39), name, HORIZONTAL_ALIGNMENT_CENTER, 96.0, 14, Color(0.98, 0.92, 0.72, 0.96))
+
+
+func _ground_pet_body_color(instance: Dictionary) -> Color:
+	var elements = instance.get("elements", {})
+	if elements is Dictionary:
+		var element_dict := elements as Dictionary
+		if int(element_dict.get("fire", 0)) >= 5:
+			return Color(0.84, 0.37, 0.25, 0.98)
+		if int(element_dict.get("water", 0)) >= 5:
+			return Color(0.28, 0.55, 0.86, 0.98)
+		if int(element_dict.get("earth", 0)) >= 5:
+			return Color(0.62, 0.50, 0.28, 0.98)
+		if int(element_dict.get("wind", 0)) >= 5:
+			return Color(0.45, 0.76, 0.43, 0.98)
+	return Color(0.72, 0.58, 0.38, 0.98)
 
 
 func _draw_path_line() -> void:

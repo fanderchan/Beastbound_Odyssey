@@ -13,6 +13,10 @@ const PET_STATE_STORAGE := "storage"
 const PARTY_LIMIT := 5
 const PET_NAME_MAX_LENGTH := 8
 const PET_REST_RECOVERY_RATIO := 0.05
+const PET_DROP_TTL_SECONDS := 600
+const PET_PICKUP_LEVEL_MARGIN := 5
+const PET_DROP_PICKUP_PUBLIC := "public"
+const LOCAL_PLAYER_ID := "local_player"
 
 
 static func default_profile() -> Dictionary:
@@ -26,12 +30,14 @@ static func default_profile() -> Dictionary:
 		},
 		"activePetInstanceId": "pet_bui_main",
 		"nextPetInstanceSerial": 5,
+		"nextPetDropSerial": 1,
 		"petInstances": [
 			_pet_instance_from_form("pet_bui_main", "我的布伊", "bui_normal_red_fire10", PET_STATE_BATTLE, 1),
 			_pet_instance_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, 1),
 			_pet_instance_from_form("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", PET_STATE_STANDBY, 1),
 			_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, 1),
 		],
+		"groundPetDrops": [],
 	}
 
 
@@ -84,6 +90,36 @@ static func storage_pet_instances(profile: Dictionary) -> Array[Dictionary]:
 
 static func all_pet_instances(profile: Dictionary) -> Array[Dictionary]:
 	return _pet_instances(normalize_profile(profile))
+
+
+static func ground_pet_drops(profile: Dictionary) -> Array[Dictionary]:
+	return _ground_pet_drops(normalize_profile(profile))
+
+
+static func ground_pet_drops_on_map(profile: Dictionary, map_id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for drop in ground_pet_drops(profile):
+		if str(drop.get("mapId", "")) == map_id:
+			result.append(drop)
+	return result
+
+
+static func ground_pet_drop_by_id(profile: Dictionary, drop_id: String) -> Dictionary:
+	for drop in ground_pet_drops(profile):
+		if str(drop.get("dropId", "")) == drop_id:
+			return drop
+	return {}
+
+
+static func ground_pet_drop_cell(drop: Dictionary) -> Vector2i:
+	return _drop_cell(drop)
+
+
+static func ground_pet_drop_pet(drop: Dictionary) -> Dictionary:
+	var pet_value = drop.get("pet", {})
+	if pet_value is Dictionary:
+		return _normalize_pet_instance(pet_value as Dictionary)
+	return {}
 
 
 static func can_set_active_pet(profile: Dictionary, instance_id: String) -> Dictionary:
@@ -427,6 +463,183 @@ static func withdraw_pet(profile: Dictionary, instance_id: String) -> Dictionary
 	}
 
 
+static func can_drop_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+		return {"ok": false, "message": "兽栏里的宠物不能直接丢弃。"}
+	return {"ok": true, "message": "%s 可以丢弃。" % str(instance.get("name", "宠物"))}
+
+
+static func drop_pet(profile: Dictionary, instance_id: String, map_id: String, cell: Vector2i, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_drop_pet(normalized, instance_id)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "不能丢弃。")),
+		}
+	if map_id == "":
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "当前位置不能丢弃宠物。",
+		}
+
+	var instances: Array = normalized.get("petInstances", [])
+	var next_instances: Array = []
+	var dropped_pet: Dictionary = {}
+	for value in instances:
+		if not (value is Dictionary):
+			continue
+		var instance := (value as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) == instance_id:
+			dropped_pet = instance
+			continue
+		next_instances.append(instance)
+	if dropped_pet.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+
+	dropped_pet["state"] = PET_STATE_STANDBY
+	var created_at := _safe_now_sec(now_sec)
+	var serial := maxi(1, int(normalized.get("nextPetDropSerial", 1)))
+	var drops: Array = normalized.get("groundPetDrops", [])
+	var drop_id := "ground_pet_%d" % serial
+	while _ground_pet_drop_index(drops, drop_id) >= 0:
+		serial += 1
+		drop_id = "ground_pet_%d" % serial
+	var drop := _normalize_ground_pet_drop({
+		"dropId": drop_id,
+		"ownerId": LOCAL_PLAYER_ID,
+		"pickupMode": PET_DROP_PICKUP_PUBLIC,
+		"mapId": map_id,
+		"cell": [cell.x, cell.y],
+		"createdAtSec": created_at,
+		"expiresAtSec": created_at + PET_DROP_TTL_SECONDS,
+		"pet": dropped_pet,
+	})
+	drops.append(drop)
+
+	normalized["petInstances"] = next_instances
+	normalized["groundPetDrops"] = drops
+	normalized["nextPetDropSerial"] = serial + 1
+	if str(normalized.get("activePetInstanceId", "")) == instance_id:
+		normalized["activePetInstanceId"] = ""
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 被丢在地上。" % str(dropped_pet.get("name", "宠物")),
+		"dropId": drop_id,
+	}
+
+
+static func can_pickup_ground_pet(profile: Dictionary, drop_id: String, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var now := _safe_now_sec(now_sec)
+	var drop := ground_pet_drop_by_id(normalized, drop_id)
+	if drop.is_empty():
+		return {"ok": false, "message": "这只宠物已经离开了。"}
+	if _ground_pet_drop_expired(drop, now):
+		return {"ok": false, "message": "这只宠物已经离开了。"}
+	if _party_visible_instance_count(normalized) >= PARTY_LIMIT:
+		return {"ok": false, "message": "队伍已满。"}
+	var pet := ground_pet_drop_pet(drop)
+	var player = normalized.get("player", {})
+	var player_dict := player as Dictionary if player is Dictionary else {}
+	var player_level := maxi(1, int(player_dict.get("level", 1)))
+	var pet_level := maxi(1, int(pet.get("level", 1)))
+	if pet_level > player_level + PET_PICKUP_LEVEL_MARGIN:
+		return {"ok": false, "message": "不能拾取超过自己5级以上的宠物。"}
+	return {"ok": true, "message": "%s 可以拾取。" % str(pet.get("name", "宠物"))}
+
+
+static func pickup_ground_pet(profile: Dictionary, drop_id: String, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var expired := expire_ground_pet_drops(normalized, now_sec)
+	normalized = expired.get("profile", normalized)
+	if bool(expired.get("ok", false)) and ground_pet_drop_by_id(normalized, drop_id).is_empty():
+		return {
+			"ok": false,
+			"changed": true,
+			"profile": normalized,
+			"message": "这只宠物已经离开了。",
+		}
+	var check := can_pickup_ground_pet(normalized, drop_id, now_sec)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"changed": bool(expired.get("ok", false)),
+			"profile": normalized,
+			"message": str(check.get("message", "不能拾取。")),
+		}
+
+	var drops: Array = normalized.get("groundPetDrops", [])
+	var picked_pet: Dictionary = {}
+	for index in range(drops.size()):
+		if not (drops[index] is Dictionary):
+			continue
+		var drop := drops[index] as Dictionary
+		if str(drop.get("dropId", "")) != drop_id:
+			continue
+		picked_pet = ground_pet_drop_pet(drop)
+		drops.remove_at(index)
+		break
+	if picked_pet.is_empty():
+		return {
+			"ok": false,
+			"changed": bool(expired.get("ok", false)),
+			"profile": normalized,
+			"message": "这只宠物已经离开了。",
+		}
+
+	picked_pet["state"] = PET_STATE_STANDBY
+	var instances: Array = normalized.get("petInstances", [])
+	instances.append(picked_pet)
+	normalized["petInstances"] = instances
+	normalized["groundPetDrops"] = drops
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"changed": true,
+		"profile": normalized,
+		"message": "%s 回到队伍。" % str(picked_pet.get("name", "宠物")),
+		"instanceId": str(picked_pet.get("instanceId", "")),
+	}
+
+
+static func expire_ground_pet_drops(profile: Dictionary, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var now := _safe_now_sec(now_sec)
+	var active_drops: Array = []
+	var expired_count := 0
+	for drop in _ground_pet_drops(normalized):
+		if _ground_pet_drop_expired(drop, now):
+			expired_count += 1
+			continue
+		active_drops.append(drop)
+	if expired_count <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"expiredCount": 0,
+		}
+	normalized["groundPetDrops"] = active_drops
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"expiredCount": expired_count,
+	}
+
+
 static func state_label(state: String) -> String:
 	match state:
 		PET_STATE_BATTLE:
@@ -528,17 +741,28 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	player_dict["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(player_dict.get("level", 1))))))
 	normalized["player"] = player_dict
 
-	var instances: Array[Dictionary] = []
 	var raw_instances = normalized.get("petInstances", [])
+	var has_instance_array := raw_instances is Array
+	var instances: Array[Dictionary] = []
 	if raw_instances is Array:
 		for value in raw_instances:
 			if value is Dictionary:
 				var instance := _normalize_pet_instance(value as Dictionary)
 				if not instance.is_empty():
 					instances.append(instance)
-	if instances.is_empty():
+	if instances.is_empty() and not has_instance_array:
 		instances = default_profile().get("petInstances", [])
 	normalized["petInstances"] = instances
+
+	var drops: Array[Dictionary] = []
+	var raw_drops = normalized.get("groundPetDrops", [])
+	if raw_drops is Array:
+		for value in raw_drops:
+			if value is Dictionary:
+				var drop := _normalize_ground_pet_drop(value as Dictionary)
+				if not drop.is_empty():
+					drops.append(drop)
+	normalized["groundPetDrops"] = drops
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
@@ -549,6 +773,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 		active_id = _first_battle_pet_id({"petInstances": instances})
 	normalized["activePetInstanceId"] = active_id
 	normalized["nextPetInstanceSerial"] = maxi(int(normalized.get("nextPetInstanceSerial", instances.size() + 1)), _next_serial_from_instances(instances))
+	normalized["nextPetDropSerial"] = maxi(int(normalized.get("nextPetDropSerial", 1)), _next_drop_serial_from_drops(drops))
 	return normalized
 
 
@@ -873,6 +1098,72 @@ static func _pet_instances(profile: Dictionary) -> Array[Dictionary]:
 	return instances
 
 
+static func _ground_pet_drops(profile: Dictionary) -> Array[Dictionary]:
+	var drops: Array[Dictionary] = []
+	var raw_drops = profile.get("groundPetDrops", [])
+	if raw_drops is Array:
+		for value in raw_drops:
+			if value is Dictionary:
+				drops.append(value as Dictionary)
+	return drops
+
+
+static func _normalize_ground_pet_drop(value: Dictionary) -> Dictionary:
+	var drop := value.duplicate(true)
+	var pet_value = drop.get("pet", {})
+	if not (pet_value is Dictionary):
+		return {}
+	var pet := _normalize_pet_instance(pet_value as Dictionary)
+	if pet.is_empty():
+		return {}
+	pet["state"] = PET_STATE_STANDBY
+
+	var drop_id := str(drop.get("dropId", ""))
+	if drop_id == "":
+		drop_id = "ground_%s" % str(pet.get("instanceId", "pet"))
+	var map_id := str(drop.get("mapId", ""))
+	if map_id == "":
+		return {}
+	var cell := _drop_cell(drop)
+	var created_at := maxi(0, int(drop.get("createdAtSec", 0)))
+	var expires_at := int(drop.get("expiresAtSec", created_at + PET_DROP_TTL_SECONDS))
+	if expires_at <= 0:
+		expires_at = created_at + PET_DROP_TTL_SECONDS
+	return {
+		"dropId": drop_id,
+		"ownerId": str(drop.get("ownerId", LOCAL_PLAYER_ID)),
+		"pickupMode": str(drop.get("pickupMode", PET_DROP_PICKUP_PUBLIC)),
+		"mapId": map_id,
+		"cell": [cell.x, cell.y],
+		"createdAtSec": created_at,
+		"expiresAtSec": expires_at,
+		"pet": pet,
+	}
+
+
+static func _drop_cell(drop: Dictionary) -> Vector2i:
+	var cell_value = drop.get("cell", [0, 0])
+	if cell_value is Array:
+		var cell_array := cell_value as Array
+		if cell_array.size() >= 2:
+			return Vector2i(int(cell_array[0]), int(cell_array[1]))
+	return Vector2i.ZERO
+
+
+static func _ground_pet_drop_index(drops: Array, drop_id: String) -> int:
+	for index in range(drops.size()):
+		if not (drops[index] is Dictionary):
+			continue
+		if str((drops[index] as Dictionary).get("dropId", "")) == drop_id:
+			return index
+	return -1
+
+
+static func _ground_pet_drop_expired(drop: Dictionary, now_sec: int) -> bool:
+	var expires_at := int(drop.get("expiresAtSec", 0))
+	return expires_at > 0 and now_sec >= expires_at
+
+
 static func _actors(state: Dictionary) -> Array[Dictionary]:
 	var actors: Array[Dictionary] = []
 	var raw_actors = state.get("actors", [])
@@ -939,6 +1230,24 @@ static func _next_serial_from_instances(instances: Array[Dictionary]) -> int:
 		var maybe_number := int(parts[parts.size() - 1])
 		max_serial = maxi(max_serial, maybe_number)
 	return max_serial + 1
+
+
+static func _next_drop_serial_from_drops(drops: Array[Dictionary]) -> int:
+	var max_serial := 0
+	for drop in drops:
+		var drop_id := str(drop.get("dropId", ""))
+		var parts := drop_id.split("_")
+		if parts.is_empty():
+			continue
+		var maybe_number := int(parts[parts.size() - 1])
+		max_serial = maxi(max_serial, maybe_number)
+	return max_serial + 1
+
+
+static func _safe_now_sec(now_sec: int) -> int:
+	if now_sec >= 0:
+		return now_sec
+	return int(Time.get_unix_time_from_system())
 
 
 static func _string_array(value) -> Array[String]:
