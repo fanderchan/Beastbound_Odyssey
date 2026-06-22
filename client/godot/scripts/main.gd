@@ -23,6 +23,8 @@ const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
+const PET_DETAIL_MODE_INSTANCE := "instance"
+const PET_DETAIL_MODE_CODEX := "codex"
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
@@ -80,6 +82,8 @@ var pet_panel: PanelContainer
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
+var pet_detail_instance_button: Button
+var pet_detail_codex_button: Button
 var pet_state_cycle_button: Button
 var pet_heal_button: Button
 var pet_stable_button: Button
@@ -92,6 +96,7 @@ var pet_rename_confirm_button: Button
 var pet_rename_cancel_button: Button
 var pet_close_button: Button
 var pet_selected_instance_id: String = ""
+var pet_detail_mode: String = PET_DETAIL_MODE_INSTANCE
 var pet_list_buttons: Dictionary = {}
 var game_camera: Camera2D
 var auto_movement_check: bool = false
@@ -144,11 +149,13 @@ var auto_pet_rename_check: bool = false
 var auto_pet_recovery_check: bool = false
 var auto_pet_stable_check: bool = false
 var auto_pet_drop_pickup_check: bool = false
+var auto_pet_codex_detail_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
+var pet_codex_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -289,6 +296,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_stable_check")
 	elif auto_pet_drop_pickup_check:
 		call_deferred("_run_auto_pet_drop_pickup_check")
+	elif auto_pet_codex_detail_check:
+		call_deferred("_run_auto_pet_codex_detail_check")
 	elif auto_pet_storage_capture_check:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
@@ -299,6 +308,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_rename_preview")
 	elif pet_drop_preview:
 		call_deferred("_run_pet_drop_preview")
+	elif pet_codex_preview:
+		call_deferred("_run_pet_codex_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -475,6 +486,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_stable_check = true
 		elif arg == "--auto-pet-drop-pickup-check":
 			auto_pet_drop_pickup_check = true
+		elif arg == "--auto-pet-codex-detail-check":
+			auto_pet_codex_detail_check = true
 		elif arg == "--auto-pet-storage-capture-check":
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
@@ -485,6 +498,8 @@ func _apply_preview_window_args() -> void:
 			pet_rename_preview = true
 		elif arg == "--pet-drop-preview":
 			pet_drop_preview = true
+		elif arg == "--pet-codex-preview":
+			pet_codex_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -2479,6 +2494,86 @@ func _run_auto_pet_drop_pickup_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_codex_detail_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	pet_detail_mode = PET_DETAIL_MODE_INSTANCE
+	_open_pet_panel()
+	await get_tree().process_frame
+	_select_pet_instance("pet_bui_speed")
+	await get_tree().process_frame
+	var instance_text := pet_detail_label.text if pet_detail_label != null else ""
+	var instance_button_y := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -1.0
+	var tabs_ready := (
+		pet_detail_instance_button != null
+		and pet_detail_codex_button != null
+		and pet_detail_instance_button.visible
+		and pet_detail_codex_button.visible
+		and pet_detail_instance_button.text == "个体"
+		and pet_detail_codex_button.text == "图鉴"
+		and pet_detail_instance_button.button_pressed
+		and not pet_detail_codex_button.button_pressed
+	)
+	var instance_ok := (
+		instance_text.find("黄色普通布伊") >= 0
+		and instance_text.find("Lv1") >= 0
+		and instance_text.find("生命：130/130") >= 0
+		and instance_text.find("经验：0/120") >= 0
+		and instance_text.find("成长") < 0
+	)
+
+	_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
+	await get_tree().process_frame
+	var codex_text := pet_detail_label.text if pet_detail_label != null else ""
+	var codex_button_y := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -2.0
+	var codex_buttons_ok := (
+		pet_detail_instance_button != null
+		and pet_detail_codex_button != null
+		and not pet_detail_instance_button.button_pressed
+		and pet_detail_codex_button.button_pressed
+	)
+	var codex_ok := (
+		codex_text.find("图鉴：黄色普通布伊") >= 0
+		and codex_text.find("种系：布伊系") >= 0
+		and codex_text.find("亚种：普通布伊") >= 0
+		and codex_text.find("形态：黄色普通布伊") >= 0
+		and codex_text.find("属性：10风") >= 0
+		and codex_text.find("成长倾向：敏捷") >= 0
+		and codex_text.find("基础能力：生命 130") >= 0
+		and codex_text.find("捕捉：可捕捉") >= 0
+		and codex_text.find("可用技能：攻击、防御") >= 0
+		and codex_text.find("被动技能: [抗性皮肤]") >= 0
+	)
+	var raw_hidden := codex_text.find("bui_normal_yellow_wind10") < 0 and codex_text.find("agility_high") < 0
+	var action_y_stable := absf(instance_button_y - codex_button_y) < 1.0
+
+	_set_pet_detail_mode(PET_DETAIL_MODE_INSTANCE)
+	await get_tree().process_frame
+	var returned_text := pet_detail_label.text if pet_detail_label != null else ""
+	var returned_ok := (
+		pet_detail_instance_button != null
+		and pet_detail_codex_button != null
+		and pet_detail_instance_button.button_pressed
+		and not pet_detail_codex_button.button_pressed
+		and returned_text == instance_text
+	)
+	var growth_mix_label_ok := PlayerProgressModel.growth_profile_label("attack_agility") == "攻击 / 敏捷"
+	var status := "ok" if tabs_ready and instance_ok and codex_buttons_ok and codex_ok and raw_hidden and action_y_stable and returned_ok and growth_mix_label_ok else "failed"
+	print("pet codex detail check ready: status=%s tabs=%s instance=%s codex_buttons=%s codex=%s raw_hidden=%s action_y=%s returned=%s mixed_growth=%s" % [
+		status,
+		str(tabs_ready),
+		str(instance_ok),
+		str(codex_buttons_ok),
+		str(codex_ok),
+		str(raw_hidden),
+		str(action_y_stable),
+		str(returned_ok),
+		str(growth_mix_label_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_storage_capture_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -2566,6 +2661,15 @@ func _run_pet_drop_preview() -> void:
 	var result := PlayerProgressModel.drop_pet(player_profile, "pet_bui_speed", current_map_id, drop_cell, int(Time.get_unix_time_from_system()))
 	player_profile = result.get("profile", player_profile)
 	_set_world_log_message(str(result.get("message", "")))
+
+
+func _run_pet_codex_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = "pet_bui_speed"
+	pet_detail_mode = PET_DETAIL_MODE_CODEX
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_speed")
 
 
 func _run_auto_battle_status_check() -> void:
@@ -4467,6 +4571,29 @@ func _build_hud() -> void:
 	pet_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pet_detail_column.add_theme_constant_override("separation", 8)
 	pet_body.add_child(pet_detail_column)
+	var pet_detail_mode_row := HBoxContainer.new()
+	pet_detail_mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_mode_row.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_child(pet_detail_mode_row)
+	pet_detail_instance_button = Button.new()
+	pet_detail_instance_button.text = "个体"
+	pet_detail_instance_button.toggle_mode = true
+	pet_detail_instance_button.button_pressed = true
+	pet_detail_instance_button.custom_minimum_size = Vector2(0, 40)
+	pet_detail_instance_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_instance_button.pressed.connect(func() -> void:
+		_set_pet_detail_mode(PET_DETAIL_MODE_INSTANCE)
+	)
+	pet_detail_mode_row.add_child(pet_detail_instance_button)
+	pet_detail_codex_button = Button.new()
+	pet_detail_codex_button.text = "图鉴"
+	pet_detail_codex_button.toggle_mode = true
+	pet_detail_codex_button.custom_minimum_size = Vector2(0, 40)
+	pet_detail_codex_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_codex_button.pressed.connect(func() -> void:
+		_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
+	)
+	pet_detail_mode_row.add_child(pet_detail_codex_button)
 	pet_detail_scroll = ScrollContainer.new()
 	pet_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -4949,6 +5076,7 @@ func _build_theme() -> Theme:
 	var theme := Theme.new()
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray([
+		"Heiti SC",
 		"PingFang SC",
 		"STHeiti",
 		"Hiragino Sans GB",
@@ -5414,7 +5542,18 @@ func _refresh_pet_panel() -> void:
 			pet_selected_instance_id = str(instance.get("instanceId", ""))
 			selected = instance
 			break
-	pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+	if pet_detail_mode == PET_DETAIL_MODE_CODEX:
+		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines(selected))
+	else:
+		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+	if pet_detail_instance_button != null:
+		pet_detail_instance_button.visible = not selected.is_empty()
+		pet_detail_instance_button.disabled = selected.is_empty()
+		pet_detail_instance_button.button_pressed = pet_detail_mode == PET_DETAIL_MODE_INSTANCE
+	if pet_detail_codex_button != null:
+		pet_detail_codex_button.visible = not selected.is_empty()
+		pet_detail_codex_button.disabled = selected.is_empty()
+		pet_detail_codex_button.button_pressed = pet_detail_mode == PET_DETAIL_MODE_CODEX
 	if pet_state_cycle_button != null:
 		var selected_state := str(selected.get("state", ""))
 		var target_state := PlayerProgressModel.cycled_pet_state(selected_state)
@@ -5458,6 +5597,13 @@ func _pet_state_button_label(state: String) -> String:
 			return "休息"
 		_:
 			return ""
+
+
+func _set_pet_detail_mode(mode: String) -> void:
+	if mode != PET_DETAIL_MODE_INSTANCE and mode != PET_DETAIL_MODE_CODEX:
+		return
+	pet_detail_mode = mode
+	_refresh_pet_panel()
 
 
 func _add_pet_section_label(text: String) -> void:

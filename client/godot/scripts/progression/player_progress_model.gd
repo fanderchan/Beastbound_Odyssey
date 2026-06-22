@@ -726,6 +726,73 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 	return lines
 
 
+static func pet_codex_detail_lines(instance: Dictionary) -> Array[String]:
+	if instance.is_empty():
+		return ["请选择宠物。"]
+	var form_id := str(instance.get("formId", instance.get("templateId", "")))
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return ["暂无图鉴资料。"]
+	var lines: Array[String] = []
+	lines.append("图鉴：%s" % str(template.get("formName", "宠物")))
+	lines.append("种系：%s    亚种：%s" % [
+		str(template.get("lineName", "未知种系")),
+		str(template.get("subtypeName", "未知亚种")),
+	])
+	lines.append("形态：%s" % str(template.get("formName", "未知形态")))
+	lines.append("属性：%s" % element_summary_for_instance(template))
+	lines.append("成长倾向：%s" % growth_profile_label(str(template.get("growthProfileId", ""))))
+	var stats = template.get("baseStats", {})
+	if stats is Dictionary:
+		var stats_dict := stats as Dictionary
+		lines.append("基础能力：生命 %d    攻击 %d    防御 %d    敏捷 %d" % [
+			int(stats_dict.get("maxHp", 0)),
+			int(stats_dict.get("attack", 0)),
+			int(stats_dict.get("defense", 0)),
+			int(stats_dict.get("agility", 0)),
+		])
+	var capture = template.get("capture", {})
+	if capture is Dictionary:
+		var capture_dict := capture as Dictionary
+		var capture_label := "可捕捉" if bool(capture_dict.get("catchable", false)) else "不可捕捉"
+		if capture_dict.has("difficulty"):
+			capture_label += "    难度 %d" % int(capture_dict.get("difficulty", 0))
+		lines.append("捕捉：%s" % capture_label)
+	var line := PetTemplateCatalog.line_by_id(str(template.get("lineId", "")))
+	var description := str(line.get("description", "")).strip_edges()
+	if description != "":
+		lines.append("种系说明：%s" % description)
+	var skill_labels := active_skill_labels_for_instance(template)
+	lines.append("可用技能：%s" % ("、".join(skill_labels) if not skill_labels.is_empty() else "无"))
+	var passive_lines := passive_lines_for_instance(template)
+	if passive_lines.is_empty():
+		lines.append("被动技能: 无")
+	else:
+		for passive_line in passive_lines:
+			lines.append(passive_line)
+	return lines
+
+
+static func growth_profile_label(profile_id: String) -> String:
+	var normalized := profile_id.to_lower()
+	if normalized == "":
+		return "未记录"
+	if normalized == "balanced":
+		return "均衡"
+	var labels: Array[String] = []
+	if normalized.find("attack") >= 0:
+		labels.append("攻击")
+	if normalized.find("agility") >= 0 or normalized.find("quick") >= 0 or normalized.find("speed") >= 0:
+		labels.append("敏捷")
+	if normalized.find("defense") >= 0:
+		labels.append("防御")
+	if normalized.find("hp") >= 0 or normalized.find("health") >= 0 or normalized.find("stamina") >= 0 or normalized.find("survival") >= 0:
+		labels.append("生命")
+	if labels.is_empty():
+		return "未记录"
+	return " / ".join(labels)
+
+
 static func create_pet_instance_from_form(instance_id: String, pet_name: String, form_id: String, state: String, level: int, stat_overrides: Dictionary = {}) -> Dictionary:
 	return _pet_instance_from_form(instance_id, pet_name, form_id, state, level, stat_overrides)
 
