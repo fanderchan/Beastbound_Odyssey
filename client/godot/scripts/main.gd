@@ -81,6 +81,12 @@ var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
 var pet_state_cycle_button: Button
 var pet_stable_button: Button
+var pet_rename_button: Button
+var pet_rename_panel: PanelContainer
+var pet_rename_title_label: Label
+var pet_rename_input: LineEdit
+var pet_rename_confirm_button: Button
+var pet_rename_cancel_button: Button
 var pet_close_button: Button
 var pet_selected_instance_id: String = ""
 var pet_list_buttons: Dictionary = {}
@@ -131,10 +137,12 @@ var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_pet_management_check: bool = false
+var auto_pet_rename_check: bool = false
 var auto_pet_stable_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var pet_management_preview: bool = false
+var pet_rename_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_stat_test: bool = false
@@ -265,6 +273,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_result_check")
 	elif auto_pet_management_check:
 		call_deferred("_run_auto_pet_management_check")
+	elif auto_pet_rename_check:
+		call_deferred("_run_auto_pet_rename_check")
 	elif auto_pet_stable_check:
 		call_deferred("_run_auto_pet_stable_check")
 	elif auto_pet_storage_capture_check:
@@ -273,6 +283,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
+	elif pet_rename_preview:
+		call_deferred("_run_pet_rename_preview")
 	elif auto_map_transfer_check:
 		call_deferred("_run_auto_map_transfer_check")
 	elif auto_battle_formation_check:
@@ -441,6 +453,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_result_check = true
 		elif arg == "--auto-pet-management-check":
 			auto_pet_management_check = true
+		elif arg == "--auto-pet-rename-check":
+			auto_pet_rename_check = true
 		elif arg == "--auto-pet-stable-check":
 			auto_pet_stable_check = true
 		elif arg == "--auto-pet-storage-capture-check":
@@ -449,6 +463,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
+		elif arg == "--pet-rename-preview":
+			pet_rename_preview = true
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -2011,6 +2027,86 @@ func _run_auto_pet_management_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_pet_rename_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	_open_pet_panel()
+	await get_tree().process_frame
+	_select_pet_instance("pet_bui_speed")
+	await get_tree().process_frame
+	var rename_button_ready := pet_rename_button != null and pet_rename_button.visible and not pet_rename_button.disabled and pet_rename_button.text == "改名"
+	_on_pet_rename_pressed()
+	await get_tree().process_frame
+	var rename_panel_open := (
+		pet_rename_panel != null
+		and pet_rename_panel.visible
+		and pet_rename_input != null
+		and pet_rename_input.text == "黄色普通布伊"
+		and pet_rename_input.max_length == PlayerProgressModel.PET_NAME_MAX_LENGTH
+	)
+	if pet_rename_input != null:
+		pet_rename_input.text = "小风布伊"
+	_on_pet_rename_confirmed()
+	await get_tree().process_frame
+	var speed := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed")
+	var list_text := ""
+	var speed_button = pet_list_buttons.get("pet_bui_speed", null)
+	if speed_button is Button:
+		list_text = (speed_button as Button).text
+	var renamed_speed := (
+		str(speed.get("name", "")) == "小风布伊"
+		and pet_rename_panel != null
+		and not pet_rename_panel.visible
+		and pet_detail_label != null
+		and pet_detail_label.text.find("小风布伊") >= 0
+		and str(list_text).find("小风布伊") >= 0
+	)
+	_on_pet_rename_pressed()
+	await get_tree().process_frame
+	if pet_rename_input != null:
+		pet_rename_input.text = "   "
+	_on_pet_rename_confirmed()
+	await get_tree().process_frame
+	var blank_blocked := (
+		str(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed").get("name", "")) == "小风布伊"
+		and pet_rename_panel != null
+		and pet_rename_panel.visible
+		and world_log_message == "名字不能为空。"
+	)
+	var long_check := PlayerProgressModel.can_rename_pet(player_profile, "pet_bui_speed", "一二三四五六七八九")
+	var long_blocked := not bool(long_check.get("ok", false)) and str(long_check.get("message", "")) == "名字最多 %d 个字。" % PlayerProgressModel.PET_NAME_MAX_LENGTH
+	_close_pet_rename_panel()
+	_select_pet_instance("pet_bui_main")
+	await get_tree().process_frame
+	_on_pet_rename_pressed()
+	await get_tree().process_frame
+	if pet_rename_input != null:
+		pet_rename_input.text = "小火布伊"
+	_on_pet_rename_confirmed()
+	await get_tree().process_frame
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "pet_rename_battle_check",
+		"name": "宠物改名验证",
+	}))
+	await get_tree().process_frame
+	var battle_pet := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
+	var battle_reads_rename := str(battle_pet.get("name", "")) == "小火布伊" and str(battle_pet.get("instanceId", "")) == "pet_bui_main"
+	_end_battle(true)
+	var status := "ok" if rename_button_ready and rename_panel_open and renamed_speed and blank_blocked and long_blocked and battle_reads_rename else "failed"
+	print("pet rename check ready: status=%s button=%s panel=%s renamed=%s blank_blocked=%s long_blocked=%s battle_name=%s log=%s" % [
+		status,
+		str(rename_button_ready),
+		str(rename_panel_open),
+		str(renamed_speed),
+		str(blank_blocked),
+		str(long_blocked),
+		str(battle_reads_rename),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_stable_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -2180,6 +2276,15 @@ func _run_pet_management_preview() -> void:
 	pet_selected_instance_id = "pet_bui_speed"
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
+
+
+func _run_pet_rename_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = "pet_bui_speed"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_speed")
+	_on_pet_rename_pressed()
 
 
 func _run_auto_battle_status_check() -> void:
@@ -4105,7 +4210,52 @@ func _build_hud() -> void:
 	pet_stable_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_stable_button.pressed.connect(_on_pet_stable_pressed)
 	pet_button_row.add_child(pet_stable_button)
+	pet_rename_button = Button.new()
+	pet_rename_button.text = "改名"
+	pet_rename_button.custom_minimum_size = Vector2(0, 48)
+	pet_rename_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_rename_button.pressed.connect(_on_pet_rename_pressed)
+	pet_button_row.add_child(pet_rename_button)
 	hud_root.add_child(pet_panel)
+
+	pet_rename_panel = _panel_container("PetRenamePanel")
+	pet_rename_panel.visible = false
+	pet_rename_panel.z_index = 36
+	pet_rename_panel.add_theme_stylebox_override("panel", _pet_rename_panel_style())
+	var rename_column := VBoxContainer.new()
+	rename_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rename_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rename_column.add_theme_constant_override("separation", 10)
+	pet_rename_panel.add_child(rename_column)
+	pet_rename_title_label = Label.new()
+	pet_rename_title_label.text = "宠物改名"
+	pet_rename_title_label.add_theme_font_size_override("font_size", 20)
+	rename_column.add_child(pet_rename_title_label)
+	pet_rename_input = LineEdit.new()
+	pet_rename_input.placeholder_text = "新名字"
+	pet_rename_input.max_length = PlayerProgressModel.PET_NAME_MAX_LENGTH
+	pet_rename_input.custom_minimum_size = Vector2(0, 46)
+	pet_rename_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_rename_input.text_submitted.connect(func(_submitted_text: String) -> void:
+		_on_pet_rename_confirmed()
+	)
+	rename_column.add_child(pet_rename_input)
+	var rename_button_row := HBoxContainer.new()
+	rename_button_row.alignment = BoxContainer.ALIGNMENT_END
+	rename_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rename_button_row.add_theme_constant_override("separation", 8)
+	rename_column.add_child(rename_button_row)
+	pet_rename_cancel_button = Button.new()
+	pet_rename_cancel_button.text = "取消"
+	pet_rename_cancel_button.custom_minimum_size = Vector2(96, 44)
+	pet_rename_cancel_button.pressed.connect(_close_pet_rename_panel)
+	rename_button_row.add_child(pet_rename_cancel_button)
+	pet_rename_confirm_button = Button.new()
+	pet_rename_confirm_button.text = "确定"
+	pet_rename_confirm_button.custom_minimum_size = Vector2(96, 44)
+	pet_rename_confirm_button.pressed.connect(_on_pet_rename_confirmed)
+	rename_button_row.add_child(pet_rename_confirm_button)
+	hud_root.add_child(pet_rename_panel)
 
 	dialog_panel = _panel_container("DialogPanel")
 	dialog_panel.visible = false
@@ -4537,6 +4687,13 @@ func _panel_style() -> StyleBoxFlat:
 	return style
 
 
+func _pet_rename_panel_style() -> StyleBoxFlat:
+	var style := _panel_style()
+	style.bg_color = Color(0.10, 0.14, 0.14, 0.96)
+	style.border_color = Color(0.84, 0.62, 0.32, 0.96)
+	return style
+
+
 func _battle_command_panel_style() -> StyleBoxFlat:
 	var style := _panel_style()
 	style.bg_color = Color(0.10, 0.14, 0.14, 0.68)
@@ -4922,6 +5079,7 @@ func _open_pet_panel() -> void:
 func _close_pet_panel() -> void:
 	if pet_panel != null:
 		pet_panel.visible = false
+	_close_pet_rename_panel()
 	if hud_root != null:
 		_layout_hud()
 
@@ -4975,6 +5133,9 @@ func _refresh_pet_panel() -> void:
 			pet_stable_button.disabled = false
 			var stable_state := str(selected.get("state", ""))
 			pet_stable_button.text = "取出" if stable_state == PlayerProgressModel.PET_STATE_STORAGE else "存入"
+	if pet_rename_button != null:
+		pet_rename_button.visible = not selected.is_empty()
+		pet_rename_button.disabled = selected.is_empty()
 
 
 func _pet_state_button_label(state: String) -> String:
@@ -5049,6 +5210,41 @@ func _on_pet_stable_pressed() -> void:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
+
+
+func _on_pet_rename_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	if pet_rename_panel == null or pet_rename_input == null:
+		return
+	pet_rename_title_label.text = "宠物改名"
+	pet_rename_input.text = str(selected.get("name", "宠物"))
+	pet_rename_panel.visible = true
+	_layout_hud()
+	pet_rename_input.grab_focus()
+	pet_rename_input.select_all()
+
+
+func _on_pet_rename_confirmed() -> void:
+	if pet_rename_panel == null or pet_rename_input == null:
+		return
+	var result := PlayerProgressModel.rename_pet(player_profile, pet_selected_instance_id, pet_rename_input.text)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_close_pet_rename_panel()
+		_refresh_pet_panel()
+	else:
+		pet_rename_input.text = str(result.get("name", pet_rename_input.text))
+		pet_rename_input.grab_focus()
+	_set_world_log_message(str(result.get("message", "")))
+
+
+func _close_pet_rename_panel() -> void:
+	if pet_rename_panel != null:
+		pet_rename_panel.visible = false
 
 
 func _on_battle_command_pressed(command_id: String) -> void:
@@ -6454,7 +6650,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, pet_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, pet_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -6523,6 +6719,13 @@ func _layout_hud() -> void:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
 		action_bar.visible = false
+
+	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
+	var rename_height := 162.0
+	pet_rename_panel.position = Vector2((viewport_size.x - rename_width) * 0.5, maxf(margin + 92.0, (viewport_size.y - rename_height) * 0.5))
+	pet_rename_panel.size = Vector2(rename_width, rename_height)
+	if battle_active:
+		pet_rename_panel.visible = false
 
 	var battle_panel_size := _battle_command_panel_size(viewport_size)
 	var battle_width := battle_panel_size.x

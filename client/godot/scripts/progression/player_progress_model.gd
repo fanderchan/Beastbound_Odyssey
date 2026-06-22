@@ -11,6 +11,7 @@ const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
 const PARTY_LIMIT := 5
+const PET_NAME_MAX_LENGTH := 8
 
 
 static func default_profile() -> Dictionary:
@@ -236,6 +237,62 @@ static func store_pet(profile: Dictionary, instance_id: String) -> Dictionary:
 		"ok": true,
 		"profile": normalized,
 		"message": "%s 已存入兽栏。" % str(changed.get("name", "宠物")),
+	}
+
+
+static func clean_pet_name(raw_name: String) -> String:
+	var pet_name := raw_name.replace("\r", "").replace("\n", "").replace("\t", " ").strip_edges()
+	while pet_name.find("  ") >= 0:
+		pet_name = pet_name.replace("  ", " ")
+	return pet_name
+
+
+static func can_rename_pet(profile: Dictionary, instance_id: String, raw_name: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。", "name": ""}
+	var pet_name := clean_pet_name(raw_name)
+	if pet_name == "":
+		return {"ok": false, "message": "名字不能为空。", "name": pet_name}
+	if pet_name.length() > PET_NAME_MAX_LENGTH:
+		return {"ok": false, "message": "名字最多 %d 个字。" % PET_NAME_MAX_LENGTH, "name": pet_name}
+	if pet_name == str(instance.get("name", "")):
+		return {"ok": false, "message": "名字没有变化。", "name": pet_name}
+	return {"ok": true, "message": "%s 可以改名。" % str(instance.get("name", "宠物")), "name": pet_name}
+
+
+static func rename_pet(profile: Dictionary, instance_id: String, raw_name: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_rename_pet(normalized, instance_id, raw_name)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "不能改名。")),
+			"name": str(check.get("name", "")),
+		}
+	var pet_name := str(check.get("name", ""))
+	var old_name := "宠物"
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		old_name = str(instance.get("name", "宠物"))
+		instance["name"] = pet_name
+		instances[index] = instance
+		break
+	normalized["petInstances"] = instances
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 已改名为%s。" % [old_name, pet_name],
+		"name": pet_name,
 	}
 
 
