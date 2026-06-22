@@ -174,6 +174,66 @@ static func consume(slots: Array[Dictionary], item_id: String, amount: int = 1) 
 	return set_item_count(slots, item_id, item_count(slots, item_id) - maxi(1, amount))
 
 
+static func add_items(slots: Array[Dictionary], rewards: Array[Dictionary]) -> Dictionary:
+	var next_slots := normalize_slots(slots)
+	var added: Array[Dictionary] = []
+	var lost: Array[Dictionary] = []
+	for reward in rewards:
+		var item_id := str(reward.get("itemId", ""))
+		var count := maxi(0, int(reward.get("count", 0)))
+		if item_id == "" or count <= 0 or item_for_id(item_id).is_empty():
+			continue
+		var add_result := _add_single_item(next_slots, item_id, count)
+		next_slots = add_result.get("slots", next_slots)
+		var added_count := maxi(0, int(add_result.get("addedCount", 0)))
+		var lost_count := maxi(0, count - added_count)
+		if added_count > 0:
+			added.append({
+				"itemId": item_id,
+				"count": added_count,
+			})
+		if lost_count > 0:
+			lost.append({
+				"itemId": item_id,
+				"count": lost_count,
+			})
+	return {
+		"slots": normalize_slots(next_slots),
+		"added": merge_item_amounts(added),
+		"lost": merge_item_amounts(lost),
+	}
+
+
+static func merge_item_amounts(entries: Array[Dictionary]) -> Array[Dictionary]:
+	var order: Array[String] = []
+	var counts := {}
+	for entry in entries:
+		var item_id := str(entry.get("itemId", ""))
+		var count := maxi(0, int(entry.get("count", 0)))
+		if item_id == "" or count <= 0:
+			continue
+		if not counts.has(item_id):
+			order.append(item_id)
+		counts[item_id] = int(counts.get(item_id, 0)) + count
+	var result: Array[Dictionary] = []
+	for item_id in order:
+		result.append({
+			"itemId": item_id,
+			"count": maxi(0, int(counts.get(item_id, 0))),
+		})
+	return result
+
+
+static func item_amounts_text(entries: Array[Dictionary]) -> String:
+	var parts: Array[String] = []
+	for entry in merge_item_amounts(entries):
+		var item_id := str(entry.get("itemId", ""))
+		var count := maxi(0, int(entry.get("count", 0)))
+		if item_id != "" and count > 0:
+			parts.append("%s x%d" % [label_for(item_id), count])
+	return "、".join(parts)
+
+
 static func counts_by_item(slots: Array[Dictionary]) -> Dictionary:
 	var result := {}
 	for slot in normalize_slots(slots):
@@ -208,6 +268,42 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 		"用途: %s" % " / ".join(context_labels),
 		"堆叠: %d" % stack_limit_for(item_id),
 	]
+
+
+static func _add_single_item(slots: Array[Dictionary], item_id: String, count: int) -> Dictionary:
+	var next_slots := normalize_slots(slots)
+	var remaining := maxi(0, count)
+	var stack_limit := stack_limit_for(item_id)
+	for index in range(next_slots.size()):
+		if remaining <= 0:
+			break
+		var slot := next_slots[index]
+		if str(slot.get("itemId", "")) != item_id:
+			continue
+		var current_count := maxi(0, int(slot.get("count", 0)))
+		var room := maxi(0, stack_limit - current_count)
+		if room <= 0:
+			continue
+		var move_count := mini(room, remaining)
+		slot["count"] = current_count + move_count
+		next_slots[index] = slot
+		remaining -= move_count
+	for index in range(next_slots.size()):
+		if remaining <= 0:
+			break
+		var slot := next_slots[index]
+		if str(slot.get("itemId", "")) != "":
+			continue
+		var move_count := mini(stack_limit, remaining)
+		next_slots[index] = {
+			"itemId": item_id,
+			"count": move_count,
+		}
+		remaining -= move_count
+	return {
+		"slots": next_slots,
+		"addedCount": count - remaining,
+	}
 
 
 static func _data() -> Dictionary:

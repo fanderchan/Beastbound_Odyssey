@@ -174,7 +174,9 @@ var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_backpack_check: bool = false
+var auto_battle_reward_check: bool = false
 var backpack_preview: bool = false
+var battle_reward_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -341,8 +343,12 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif auto_backpack_check:
 		call_deferred("_run_auto_backpack_check")
+	elif auto_battle_reward_check:
+		call_deferred("_run_auto_battle_reward_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
+	elif battle_reward_preview:
+		call_deferred("_run_battle_reward_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -557,8 +563,12 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--auto-backpack-check":
 			auto_backpack_check = true
+		elif arg == "--auto-battle-reward-check":
+			auto_battle_reward_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
+		elif arg == "--battle-reward-preview":
+			battle_reward_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -3172,6 +3182,17 @@ func _run_backpack_preview() -> void:
 	_open_backpack_panel()
 
 
+func _run_battle_reward_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var reward_state := _battle_reward_test_state("battle_reward_preview", player_profile)
+	var result := PlayerProgressModel.apply_battle_result(player_profile, reward_state, "victory")
+	player_profile = result.get("profile", player_profile)
+	_set_world_log_message(_battle_result_log_text(result))
+	backpack_selected_slot_index = 0
+	_open_backpack_panel()
+
+
 func _run_auto_backpack_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -3254,6 +3275,115 @@ func _run_auto_backpack_check() -> void:
 		str(meat_consumed_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_reward_check() -> void:
+	profile_save_enabled = false
+	var base_profile := PlayerProgressModel.default_profile()
+	var reward_state := _battle_reward_test_state("battle_reward_check", base_profile)
+	var before_meat := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.ITEM_MEAT_SMALL)
+	var before_rope := PlayerProgressModel.backpack_item_count(base_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "victory")
+	var result_profile := result.get("profile", {}) as Dictionary
+	var rewards: Array = result.get("itemRewards", [])
+	var lost_rewards: Array = result.get("lostItemRewards", [])
+	var reward_meat := _item_amount_count(rewards, BattleModel.ITEM_MEAT_SMALL)
+	var reward_rope := _item_amount_count(rewards, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var after_meat := PlayerProgressModel.backpack_item_count(result_profile, BattleModel.ITEM_MEAT_SMALL)
+	var after_rope := PlayerProgressModel.backpack_item_count(result_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var log_text := _battle_result_log_text(result)
+	var reward_ok := (
+		str(result.get("result", "")) == "victory"
+		and reward_meat >= 1
+		and reward_rope == 1
+		and after_meat == before_meat + reward_meat
+		and after_rope == before_rope + reward_rope
+		and lost_rewards is Array
+		and (lost_rewards as Array).is_empty()
+		and log_text.find("获得 肉") >= 0
+		and log_text.find("初级捕捉绳") >= 0
+	)
+
+	var full_profile := PlayerProgressModel.default_profile()
+	var full_slots := BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(full_profile), BattleModel.ITEM_MEAT_SMALL, BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL))
+	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
+	var full_reward_state := _battle_reward_test_state("battle_reward_check", full_profile)
+	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_reward_state, "victory")
+	var full_lost: Array = full_result.get("lostItemRewards", [])
+	var full_log := _battle_result_log_text(full_result)
+	var full_block_ok := (
+		full_lost is Array
+		and not (full_lost as Array).is_empty()
+		and _item_amount_count(full_lost, BattleModel.ITEM_MEAT_SMALL) >= 1
+		and _item_amount_count(full_lost, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 1
+		and full_log.find("背包已满，未获得") >= 0
+	)
+
+	var escape_result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "escape")
+	var escape_rewards: Array = escape_result.get("itemRewards", [])
+	var escape_profile := escape_result.get("profile", {}) as Dictionary
+	var escape_ok := (
+		escape_rewards is Array
+		and (escape_rewards as Array).is_empty()
+		and PlayerProgressModel.backpack_item_count(escape_profile, BattleModel.ITEM_MEAT_SMALL) == before_meat
+	)
+
+	var status := "ok" if reward_ok and full_block_ok and escape_ok else "failed"
+	print("battle reward check ready: status=%s reward=%s full=%s escape=%s meat=%d rope=%d log=%s full_log=%s" % [
+		status,
+		str(reward_ok),
+		str(full_block_ok),
+		str(escape_ok),
+		reward_meat,
+		reward_rope,
+		log_text.replace("\n", " / "),
+		full_log.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _battle_reward_test_state(zone_id: String, profile: Dictionary = {}) -> Dictionary:
+	var reward_state := BattleModel.create_wild_battle({
+		"id": zone_id,
+		"name": "奖励验证",
+		"encounterGroupId": "firebud_grass_01",
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "野生乌力",
+			"level": 1,
+			"battleStats": {
+				"maxHp": 80,
+				"attack": 10,
+				"defense": 6,
+				"agility": 48,
+			},
+		},
+	})
+	if not profile.is_empty():
+		reward_state = PlayerProgressModel.apply_profile_to_battle_state(profile, reward_state)
+	reward_state["targetSeed"] = zone_id
+	var actors: Array = reward_state.get("actors", [])
+	for index in range(actors.size()):
+		if not (actors[index] is Dictionary):
+			continue
+		var actor := actors[index] as Dictionary
+		if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+			actor["hp"] = 0
+			actors[index] = actor
+	reward_state["actors"] = actors
+	return reward_state
+
+
+func _item_amount_count(value, item_id: String) -> int:
+	var total := 0
+	if value is Array:
+		for entry_value in value:
+			if not (entry_value is Dictionary):
+				continue
+			var entry := entry_value as Dictionary
+			if str(entry.get("itemId", "")) == item_id:
+				total += maxi(0, int(entry.get("count", 0)))
+	return total
 
 
 func _run_pet_encounter_table_preview() -> void:

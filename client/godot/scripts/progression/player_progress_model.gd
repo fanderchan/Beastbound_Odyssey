@@ -3,6 +3,7 @@ extends RefCounted
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
+const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
@@ -1154,6 +1155,8 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	var result := result_override if result_override != "" else battle_result_for_state(state)
 	var exp_reward := battle_exp_reward(state) if result == "victory" else 0
 	var level_up_lines: Array[String] = []
+	var item_rewards: Array[Dictionary] = []
+	var lost_item_rewards: Array[Dictionary] = []
 	if exp_reward > 0:
 		var player = next_profile.get("player", {}) as Dictionary
 		var player_award := _award_exp(player, exp_reward)
@@ -1172,6 +1175,14 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 				level_up_lines.append("%s 升到 Lv%d。" % [str(instance.get("name", "宠物")), int((pet_award.get("entry", {}) as Dictionary).get("level", 1))])
 			break
 		next_profile["petInstances"] = instances
+	if result == "victory":
+		var reward_result := BackpackModel.add_items(
+			BackpackModel.normalize_slots(next_profile.get(BACKPACK_SLOTS_KEY, [])),
+			BattleRewardCatalog.rewards_for_state(state)
+		)
+		next_profile = with_backpack_slots(next_profile, reward_result.get("slots", []))
+		item_rewards = _item_amount_array(reward_result.get("added", []))
+		lost_item_rewards = _item_amount_array(reward_result.get("lost", []))
 
 	var captured_instances := _captured_pet_instances_from_state(next_profile, state)
 	if not captured_instances.is_empty():
@@ -1187,12 +1198,14 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"profile": next_profile,
 		"result": result,
 		"expReward": exp_reward,
+		"itemRewards": item_rewards,
+		"lostItemRewards": lost_item_rewards,
 		"capturedPets": captured_instances,
-		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile),
+		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards),
 	}
 
 
-static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary) -> Array[String]:
+static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = []) -> Array[String]:
 	var lines: Array[String] = []
 	match result:
 		"victory":
@@ -1208,6 +1221,12 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 				second_parts.append("；".join(captured_parts))
 			if not second_parts.is_empty():
 				lines.append("。".join(second_parts) + "。")
+			var item_reward_text := BackpackModel.item_amounts_text(item_rewards)
+			if item_reward_text != "":
+				lines.append("获得 %s。" % item_reward_text)
+			var lost_item_reward_text := BackpackModel.item_amounts_text(lost_item_rewards)
+			if lost_item_reward_text != "":
+				lines.append("背包已满，未获得 %s。" % lost_item_reward_text)
 		"defeat":
 			lines.append("战斗失败。")
 		"escape":
@@ -1215,10 +1234,27 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 		_:
 			lines.append("战斗结束。")
 	for line in level_up_lines:
-		if lines.size() >= 2:
+		if lines.size() >= 4:
 			break
 		lines.append(line)
 	return lines
+
+
+static func _item_amount_array(value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if value is Array:
+		for entry_value in value:
+			if not (entry_value is Dictionary):
+				continue
+			var entry := entry_value as Dictionary
+			var item_id := str(entry.get("itemId", ""))
+			var count := maxi(0, int(entry.get("count", 0)))
+			if item_id != "" and count > 0:
+				result.append({
+					"itemId": item_id,
+					"count": count,
+				})
+	return result
 
 
 static func _captured_pet_log_part(captured: Dictionary) -> String:
