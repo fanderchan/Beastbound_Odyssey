@@ -130,6 +130,7 @@ var battle_log_label: RichTextLabel
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
+var quick_slot_buttons: Array[Button] = []
 var player_status_menu_button: Button
 var bag_menu_button: Button
 var equipment_menu_button: Button
@@ -144,6 +145,8 @@ var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: RichTextLabel
 var backpack_use_button: Button
+var backpack_quick_bind_row: HBoxContainer
+var backpack_quick_bind_buttons: Array[Button] = []
 var backpack_target_scroll: ScrollContainer
 var backpack_target_container: VBoxContainer
 var backpack_close_button: Button
@@ -341,6 +344,7 @@ var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
 var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
+var auto_quick_slot_check: bool = false
 var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
@@ -356,6 +360,7 @@ var auto_equipment_durability_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
+var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var equipment_requirement_preview: bool = false
@@ -586,6 +591,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_backpack_check")
 	elif auto_backpack_world_use_check:
 		call_deferred("_run_auto_backpack_world_use_check")
+	elif auto_quick_slot_check:
+		call_deferred("_run_auto_quick_slot_check")
 	elif auto_shop_check:
 		call_deferred("_run_auto_shop_check")
 	elif auto_battle_reward_check:
@@ -616,6 +623,8 @@ func _ready() -> void:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
 		call_deferred("_run_backpack_world_use_preview")
+	elif quick_slot_preview:
+		call_deferred("_run_quick_slot_preview")
 	elif player_status_preview:
 		call_deferred("_run_player_status_preview")
 	elif player_stat_points_preview:
@@ -901,6 +910,8 @@ func _apply_preview_window_args() -> void:
 			auto_backpack_check = true
 		elif arg == "--auto-backpack-world-use-check":
 			auto_backpack_world_use_check = true
+		elif arg == "--auto-quick-slot-check":
+			auto_quick_slot_check = true
 		elif arg == "--auto-shop-check":
 			auto_shop_check = true
 		elif arg == "--auto-battle-reward-check":
@@ -931,6 +942,8 @@ func _apply_preview_window_args() -> void:
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
 			backpack_world_use_preview = true
+		elif arg == "--quick-slot-preview":
+			quick_slot_preview = true
 		elif arg == "--player-status-preview":
 			player_status_preview = true
 		elif arg == "--player-stat-points-preview":
@@ -1053,6 +1066,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 		_update_camera_position(true)
 	if status_label != null:
 		_update_hud_text()
+	_refresh_quick_bar()
 	queue_redraw()
 	return true
 
@@ -6088,6 +6102,19 @@ func _run_chat_panel_preview() -> void:
 		_update_hud_text()
 
 
+func _run_quick_slot_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _quick_slot_test_profile(true)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_move_player_to_encounter_cell(Vector2i(11, 15))
+	_set_world_log_message("Phase78：底部快捷槽可直接使用世界道具。")
+	_refresh_quick_bar()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_auto_battle_settings_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7157,6 +7184,126 @@ func _run_auto_chat_panel_check() -> void:
 		chat_messages.size(),
 		str(chat_panel != null and chat_panel.visible),
 		chat_log_label.text.replace("\n", " / ") if chat_log_label != null else "",
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _quick_slot_test_profile(with_quick_slots: bool = true) -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var slots := PlayerProgressModel.backpack_slots(profile)
+	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 2)
+	slots = BackpackModel.set_item_count(slots, "encounter_stone_high", 1)
+	profile = PlayerProgressModel.with_backpack_slots(profile, slots)
+	var instances: Array = profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) == "pet_bui_main":
+			var max_hp := maxi(1, int(instance.get("maxHp", 100)))
+			instance["hp"] = maxi(1, max_hp - 35)
+			instances[index] = instance
+			break
+	profile["petInstances"] = instances
+	if with_quick_slots:
+		profile = PlayerProgressModel.with_quick_slot_item(profile, 0, BattleModel.ITEM_MEAT_SMALL)
+		profile = PlayerProgressModel.with_quick_slot_item(profile, 1, "encounter_stone_high")
+	return PlayerProgressModel.normalize_profile(profile)
+
+
+func _move_player_to_encounter_cell(cell: Vector2i) -> void:
+	if player == null or map_data.is_empty():
+		return
+	var target_cell := cell
+	var zone := EncounterModel.zone_for_cell(map_data, target_cell)
+	if zone.is_empty():
+		for value in EncounterModel.encounter_zones(map_data):
+			if value is Dictionary:
+				var candidate := EncounterModel.first_walkable_cell(map_data, value as Dictionary)
+				if IsoMapModel.is_inside(map_data, candidate):
+					target_cell = candidate
+					break
+	player.global_position = IsoMapModel.grid_to_world(map_data, target_cell)
+	player.clear_move_target()
+
+
+func _run_auto_quick_slot_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _quick_slot_test_profile(false)
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var meat_index := _backpack_slot_index_for_item(BattleModel.ITEM_MEAT_SMALL)
+	if meat_index >= 0:
+		_select_backpack_slot(meat_index)
+	await get_tree().process_frame
+	var bind_row_ok := (
+		backpack_quick_bind_row != null
+		and backpack_quick_bind_row.visible
+		and backpack_quick_bind_buttons.size() == PlayerProgressModel.QUICK_SLOT_COUNT
+		and not backpack_quick_bind_buttons[0].disabled
+	)
+	_on_backpack_quick_bind_pressed(0)
+	await get_tree().process_frame
+	var meat_bound_ok := PlayerProgressModel.quick_slots(player_profile)[0] == BattleModel.ITEM_MEAT_SMALL
+	var stone_index := _backpack_slot_index_for_item("encounter_stone_high")
+	if stone_index >= 0:
+		_select_backpack_slot(stone_index)
+	await get_tree().process_frame
+	_on_backpack_quick_bind_pressed(1)
+	await get_tree().process_frame
+	var stone_bound_ok := PlayerProgressModel.quick_slots(player_profile)[1] == "encounter_stone_high"
+	_close_backpack_panel()
+	await get_tree().process_frame
+	var before_hp := int(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").get("hp", 0))
+	var before_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+	_on_quick_slot_pressed(0)
+	await get_tree().process_frame
+	var after_hp := int(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main").get("hp", 0))
+	var after_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+	var heal_ok := (
+		after_hp > before_hp
+		and after_meat == before_meat - 1
+		and PlayerProgressModel.quick_slots(player_profile)[0] == BattleModel.ITEM_MEAT_SMALL
+		and quick_slot_buttons.size() >= 1
+		and quick_slot_buttons[0].text.find("肉") >= 0
+	)
+	_move_player_to_encounter_cell(Vector2i(11, 15))
+	var before_stone := PlayerProgressModel.backpack_item_count(player_profile, "encounter_stone_high")
+	_on_quick_slot_pressed(1)
+	await get_tree().process_frame
+	var after_stone := PlayerProgressModel.backpack_item_count(player_profile, "encounter_stone_high")
+	var stone_ok := (
+		before_stone == 1
+		and after_stone == 0
+		and _encounter_stone_active()
+		and PlayerProgressModel.quick_slots(player_profile)[1] == ""
+		and quick_slot_buttons.size() >= 2
+		and quick_slot_buttons[1].disabled
+	)
+	var invalid_profile := PlayerProgressModel.with_quick_slot_item(player_profile, 2, "weapon_wooden_club")
+	var invalid_ok := PlayerProgressModel.quick_slots(invalid_profile)[2] == ""
+	var status := "ok" if loaded and bind_row_ok and meat_bound_ok and stone_bound_ok and heal_ok and stone_ok and invalid_ok else "failed"
+	print("quick slot check ready: status=%s loaded=%s bind_row=%s meat_bound=%s stone_bound=%s heal=%s stone=%s invalid=%s hp=%d->%d meat=%d->%d stone=%d->%d active=%s quick=%s log=%s" % [
+		status,
+		str(loaded),
+		str(bind_row_ok),
+		str(meat_bound_ok),
+		str(stone_bound_ok),
+		str(heal_ok),
+		str(stone_ok),
+		str(invalid_ok),
+		before_hp,
+		after_hp,
+		before_meat,
+		after_meat,
+		before_stone,
+		after_stone,
+		str(_encounter_stone_active()),
+		str(PlayerProgressModel.quick_slots(player_profile)),
+		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -9942,6 +10089,17 @@ func _build_hud() -> void:
 	ring_button.custom_minimum_size = Vector2(76, MIN_TOUCH_BUTTON_SIZE.y)
 	ring_button.pressed.connect(_toggle_pet_ring)
 	action_row.add_child(ring_button)
+	quick_slot_buttons.clear()
+	for index in range(PlayerProgressModel.QUICK_SLOT_COUNT):
+		var quick_button := Button.new()
+		quick_button.custom_minimum_size = Vector2(72, MIN_TOUCH_BUTTON_SIZE.y)
+		quick_button.add_theme_font_size_override("font_size", 13)
+		var quick_index := index
+		quick_button.pressed.connect(func() -> void:
+			_on_quick_slot_pressed(quick_index)
+		)
+		action_row.add_child(quick_button)
+		quick_slot_buttons.append(quick_button)
 	player_status_menu_button = Button.new()
 	player_status_menu_button.text = "状态"
 	player_status_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -10112,6 +10270,24 @@ func _build_hud() -> void:
 	backpack_use_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_use_button.pressed.connect(_on_backpack_use_pressed)
 	backpack_column.add_child(backpack_use_button)
+	backpack_quick_bind_row = HBoxContainer.new()
+	backpack_quick_bind_row.visible = false
+	backpack_quick_bind_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_quick_bind_row.add_theme_constant_override("separation", 8)
+	backpack_column.add_child(backpack_quick_bind_row)
+	backpack_quick_bind_buttons.clear()
+	for index in range(PlayerProgressModel.QUICK_SLOT_COUNT):
+		var quick_bind_button := Button.new()
+		quick_bind_button.text = "快捷%d" % [index + 1]
+		quick_bind_button.custom_minimum_size = Vector2(0, 40)
+		quick_bind_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		quick_bind_button.add_theme_font_size_override("font_size", 15)
+		var quick_bind_index := index
+		quick_bind_button.pressed.connect(func() -> void:
+			_on_backpack_quick_bind_pressed(quick_bind_index)
+		)
+		backpack_quick_bind_row.add_child(quick_bind_button)
+		backpack_quick_bind_buttons.append(quick_bind_button)
 	backpack_target_scroll = ScrollContainer.new()
 	backpack_target_scroll.visible = false
 	backpack_target_scroll.custom_minimum_size = Vector2(0, 112)
@@ -12252,6 +12428,11 @@ func _refresh_backpack_panel() -> void:
 		and BackpackModel.item_can_world_encounter_stone(selected_item_id)
 		and BackpackModel.item_count(slots, selected_item_id) > 0
 	)
+	var can_quick_bind := (
+		selected_item_id != ""
+		and PlayerProgressModel.item_can_quick_use(selected_item_id)
+		and BackpackModel.item_count(slots, selected_item_id) > 0
+	)
 	var can_equip := (
 		selected_item_id != ""
 		and is_selected_equipment
@@ -12265,6 +12446,12 @@ func _refresh_backpack_panel() -> void:
 			backpack_use_button.text = "装备"
 		else:
 			backpack_use_button.text = "使用"
+	if backpack_quick_bind_row != null:
+		backpack_quick_bind_row.visible = can_quick_bind
+	for index in range(backpack_quick_bind_buttons.size()):
+		var quick_bind_button := backpack_quick_bind_buttons[index]
+		quick_bind_button.disabled = not can_quick_bind
+		quick_bind_button.text = "快捷%d" % [index + 1]
 	if not can_world_use or backpack_pending_use_item_id != selected_item_id:
 		backpack_pending_use_item_id = ""
 		_clear_backpack_target_buttons()
@@ -12282,6 +12469,106 @@ func _select_backpack_slot(slot_index: int) -> void:
 	backpack_selected_slot_index = clampi(slot_index, 0, BackpackModel.SLOT_LIMIT - 1)
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
+
+
+func _refresh_quick_bar() -> void:
+	if quick_slot_buttons.is_empty():
+		return
+	var slots := PlayerProgressModel.quick_slots(player_profile)
+	for index in range(quick_slot_buttons.size()):
+		var button := quick_slot_buttons[index]
+		var item_id := slots[index] if index < slots.size() else ""
+		if item_id == "":
+			button.text = "快%d\n-" % [index + 1]
+			button.disabled = true
+			continue
+		var count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
+		button.text = "%s\nx%d" % [BackpackModel.menu_label_for(item_id), count]
+		button.disabled = battle_active or encounter_active or count <= 0
+
+
+func _on_backpack_quick_bind_pressed(slot_index: int) -> void:
+	var item_id := _selected_backpack_item_id()
+	if item_id == "" or not PlayerProgressModel.item_can_quick_use(item_id):
+		return
+	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
+		_set_world_log_message("%s 不够了。" % BackpackModel.label_for(item_id))
+		return
+	player_profile = PlayerProgressModel.with_quick_slot_item(player_profile, slot_index, item_id)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message("%s 已绑定到快捷%d。" % [BackpackModel.label_for(item_id), slot_index + 1])
+	_refresh_backpack_panel()
+	_refresh_quick_bar()
+
+
+func _on_quick_slot_pressed(slot_index: int) -> void:
+	if battle_active or encounter_active:
+		return
+	var slots := PlayerProgressModel.quick_slots(player_profile)
+	if slot_index < 0 or slot_index >= slots.size():
+		return
+	var item_id := str(slots[slot_index])
+	if item_id == "":
+		return
+	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
+		player_profile = PlayerProgressModel.clear_quick_slot(player_profile, slot_index)
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message("快捷%d没有可用道具。" % [slot_index + 1])
+		_refresh_quick_bar()
+		return
+	if BackpackModel.item_can_world_encounter_stone(item_id):
+		_use_backpack_encounter_stone(item_id)
+		_clear_empty_quick_slot_item(item_id)
+		_refresh_quick_bar()
+		return
+	if BackpackModel.item_can_world_pet_heal(item_id):
+		var target_id := _quick_pet_heal_target_id(item_id)
+		if target_id == "":
+			_set_world_log_message("队伍宠物生命已满。")
+			return
+		_use_world_pet_heal_item_and_log(item_id, target_id)
+		_clear_empty_quick_slot_item(item_id)
+		_refresh_quick_bar()
+
+
+func _quick_pet_heal_target_id(item_id: String) -> String:
+	if not BackpackModel.item_can_world_pet_heal(item_id):
+		return ""
+	var party := PlayerProgressModel.party_pet_instances(player_profile)
+	var active_id := str(player_profile.get("activePetInstanceId", ""))
+	for pet in party:
+		if str(pet.get("instanceId", "")) != active_id:
+			continue
+		var active_max_hp := maxi(1, int(pet.get("maxHp", 1)))
+		var active_hp := clampi(int(pet.get("hp", active_max_hp)), 0, active_max_hp)
+		if active_hp < active_max_hp:
+			return active_id
+	for pet in party:
+		var max_hp := maxi(1, int(pet.get("maxHp", 1)))
+		var hp := clampi(int(pet.get("hp", max_hp)), 0, max_hp)
+		if hp < max_hp:
+			return str(pet.get("instanceId", ""))
+	return ""
+
+
+func _clear_empty_quick_slot_item(item_id: String) -> void:
+	if item_id == "" or PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0:
+		return
+	var slots := PlayerProgressModel.quick_slots(player_profile)
+	var changed := false
+	for index in range(slots.size()):
+		if slots[index] == item_id:
+			slots[index] = ""
+			changed = true
+	if not changed:
+		return
+	var normalized := PlayerProgressModel.normalize_profile(player_profile)
+	normalized[PlayerProgressModel.QUICK_SLOTS_KEY] = slots
+	player_profile = PlayerProgressModel.normalize_profile(normalized)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
 
 
 func _equipment_compare_detail_lines(item_id: String) -> Array[String]:
@@ -12440,6 +12727,7 @@ func _use_backpack_encounter_stone(item_id: String) -> void:
 		PlayerProgressModel.save_profile(player_profile)
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
+	_refresh_quick_bar()
 	if status_label != null:
 		_update_hud_text()
 
@@ -12532,6 +12820,14 @@ func _refresh_backpack_target_buttons(item_id: String) -> void:
 
 
 func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
+	_use_world_pet_heal_item_and_log(item_id, instance_id)
+	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
+	_refresh_backpack_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+
+
+func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> bool:
 	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -12545,10 +12841,8 @@ func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message("\n".join(log_lines))
-	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
-	_refresh_backpack_panel()
-	if pet_panel != null and pet_panel.visible:
-		_refresh_pet_panel()
+	_refresh_quick_bar()
+	return bool(result.get("ok", false))
 
 
 func _open_shop_panel(next_shop_id: String = "") -> void:
@@ -12789,6 +13083,7 @@ func _on_shop_repair_pressed() -> void:
 		_refresh_equipment_panel()
 	if player_status_panel != null and player_status_panel.visible:
 		_refresh_player_status_panel()
+	_refresh_quick_bar()
 	if status_label != null:
 		_update_hud_text()
 
@@ -17217,6 +17512,7 @@ func _update_hud_text() -> void:
 		]
 	if player_status_panel != null and player_status_panel.visible:
 		_refresh_player_status_panel()
+	_refresh_quick_bar()
 
 
 func _layout_size() -> Vector2:

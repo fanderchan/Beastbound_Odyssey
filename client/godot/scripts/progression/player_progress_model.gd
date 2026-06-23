@@ -50,6 +50,8 @@ const PLAYER_STAT_POINT_GAINS := {
 }
 const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
+const QUICK_SLOTS_KEY := "quickSlots"
+const QUICK_SLOT_COUNT := 3
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
 const EQUIPMENT_SLOTS_VERSION_KEY := "equipmentSlotsVersion"
 const EQUIPMENT_SLOTS_VERSION := 3
@@ -97,6 +99,7 @@ static func default_profile() -> Dictionary:
 		],
 		"groundPetDrops": [],
 		"backpackSlots": BackpackModel.starting_slots(),
+		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
 		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
 		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
@@ -251,6 +254,28 @@ static func with_backpack_slots(profile: Dictionary, slots: Array[Dictionary]) -
 	normalized[BACKPACK_SLOTS_KEY] = normalized_slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(normalized_slots)
 	return normalize_profile(normalized)
+
+
+static func quick_slots(profile: Dictionary) -> Array[String]:
+	return _normalize_quick_slots(normalize_profile(profile).get(QUICK_SLOTS_KEY, []))
+
+
+static func item_can_quick_use(item_id: String) -> bool:
+	return BackpackModel.item_can_world_pet_heal(item_id) or BackpackModel.item_can_world_encounter_stone(item_id)
+
+
+static func with_quick_slot_item(profile: Dictionary, slot_index: int, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if slot_index < 0 or slot_index >= QUICK_SLOT_COUNT:
+		return normalized
+	var slots := quick_slots(normalized)
+	slots[slot_index] = item_id if item_can_quick_use(item_id) else ""
+	normalized[QUICK_SLOTS_KEY] = slots
+	return normalize_profile(normalized)
+
+
+static func clear_quick_slot(profile: Dictionary, slot_index: int) -> Dictionary:
+	return with_quick_slot_item(profile, slot_index, "")
 
 
 static func equipment_slots(profile: Dictionary) -> Dictionary:
@@ -2464,6 +2489,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			)
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
+	normalized[QUICK_SLOTS_KEY] = _normalize_quick_slots(normalized.get(QUICK_SLOTS_KEY, []))
 	var equipment_slots_version := int(normalized.get(EQUIPMENT_SLOTS_VERSION_KEY, 1))
 	var equipment_slots_value := _normalize_equipment_slots(normalized.get(EQUIPMENT_SLOTS_KEY, {}))
 	var equipment_starter_set_version := int(normalized.get(EQUIPMENT_STARTER_SET_VERSION_KEY, 0))
@@ -2552,6 +2578,19 @@ static func _normalize_record_point(value) -> Dictionary:
 		"spawnName": spawn_name,
 		"label": label,
 	}
+
+
+static func _normalize_quick_slots(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for raw_item_id in value:
+			var item_id := str(raw_item_id).strip_edges()
+			result.append(item_id if item_can_quick_use(item_id) else "")
+			if result.size() >= QUICK_SLOT_COUNT:
+				break
+	while result.size() < QUICK_SLOT_COUNT:
+		result.append("")
+	return result
 
 
 static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
