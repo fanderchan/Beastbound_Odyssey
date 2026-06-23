@@ -72,6 +72,12 @@ Open the 10v10 formation preview directly from this directory:
 godot --path . --scene res://scenes/Main.tscn -- --battle-preview-10v10
 ```
 
+Open the 10v10 auto-battle observation preview directly from this directory:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
+```
+
 Manual 10v10 checks:
 
 - Player target choice: press `攻击`, hover an enemy to show the ring, then click/tap that enemy.

@@ -92,6 +92,7 @@ var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
 var battle_command_title_label: Label
 var battle_auto_button: Button
+var battle_auto_stop_button: Button
 var battle_command_button_grid: GridContainer
 var battle_passive_panel: Panel
 var battle_passive_label: Label
@@ -189,6 +190,7 @@ var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
 var auto_battle_auto_attack_check: bool = false
+var auto_battle_auto_10v10_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
@@ -258,6 +260,7 @@ var pet_capture_feedback_preview: bool = false
 var capture_tools_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
+var battle_auto_10v10_preview: bool = false
 var battle_stat_test: bool = false
 var battle_status_test: bool = false
 var battle_status_skill_test: bool = false
@@ -367,6 +370,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_action_catalog_check")
 	elif auto_battle_auto_attack_check:
 		call_deferred("_run_auto_battle_auto_attack_check")
+	elif auto_battle_auto_10v10_check:
+		call_deferred("_run_auto_battle_auto_10v10_check")
 	elif auto_battle_item_check:
 		call_deferred("_run_auto_battle_item_check")
 	elif auto_battle_item_count_check:
@@ -531,6 +536,8 @@ func _ready() -> void:
 		call_deferred("_open_battle_preview")
 	elif battle_formation_preview:
 		call_deferred("_open_battle_formation_preview")
+	elif battle_auto_10v10_preview:
+		call_deferred("_open_battle_auto_10v10_preview")
 	elif battle_label_preview:
 		call_deferred("_open_battle_label_preview")
 	elif battle_stat_test:
@@ -587,6 +594,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_check = true
 		elif arg == "--auto-battle-auto-attack-check":
 			auto_battle_auto_attack_check = true
+		elif arg == "--auto-battle-auto-10v10-check":
+			auto_battle_auto_10v10_check = true
 		elif arg == "--auto-battle-formation-check":
 			auto_battle_formation_check = true
 		elif arg == "--auto-battle-target-check":
@@ -725,6 +734,8 @@ func _apply_preview_window_args() -> void:
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
 			battle_formation_preview = true
+		elif arg == "--battle-auto-10v10-preview":
+			battle_auto_10v10_preview = true
 		elif arg == "--battle-label-preview":
 			battle_label_preview = true
 		elif arg == "--battle-stat-test":
@@ -1266,16 +1277,21 @@ func _run_auto_battle_auto_attack_check() -> void:
 	battle_auto_attack_player_submissions = 0
 	battle_auto_attack_pet_submissions = 0
 	_set_battle_auto_attack_enabled(true, false)
-	var auto_button_on := battle_auto_button != null and battle_auto_button.visible and battle_auto_button.button_pressed and battle_auto_button.text == "自动"
+	var auto_button_on := battle_auto_button != null and battle_auto_button.visible and battle_auto_button.button_pressed and battle_auto_button.text == "停止"
 	var player_submitted := false
 	var pet_submitted := false
 	var round_events_seen := false
+	var enemy_damaged_seen := false
+	var stop_button_seen := false
 	for _frame in range(900):
 		await get_tree().process_frame
 		player_submitted = player_submitted or battle_auto_attack_player_submissions > 0
 		pet_submitted = pet_submitted or battle_auto_attack_pet_submissions > 0
 		round_events_seen = round_events_seen or battle_last_round_applied_events > 0 or battle_last_round_actor_order.has(BattleModel.PLAYER_ACTOR_ID) or battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
-		if player_submitted and pet_submitted and round_events_seen:
+		stop_button_seen = stop_button_seen or (battle_auto_stop_button != null and battle_auto_stop_button.visible and battle_auto_stop_button.text == "停止")
+		if target_found:
+			enemy_damaged_seen = enemy_damaged_seen or int(BattleModel.actor_by_id(battle_state, target_id).get("hp", enemy_before)) < enemy_before
+		if player_submitted and pet_submitted and round_events_seen and enemy_damaged_seen:
 			break
 	var enemy_after := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", enemy_before)) if target_found else enemy_before
 	_set_battle_auto_attack_enabled(false, false)
@@ -1291,14 +1307,15 @@ func _run_auto_battle_auto_attack_check() -> void:
 	)
 	var auto_button_off := battle_auto_button != null and not battle_auto_button.button_pressed
 	var auto_damaged_enemy := target_found and enemy_after < enemy_before
-	var status := "ok" if loaded and zone_found and battle_started and target_found and auto_button_on and player_submitted and pet_submitted and round_events_seen and auto_damaged_enemy and auto_button_off and no_new_after_off else "failed"
-	print("battle auto attack check ready: status=%s loaded=%s zone_found=%s battle_started=%s target=%s button_on=%s player_submitted=%s pet_submitted=%s round_events=%s enemy_before=%d enemy_after=%d button_off=%s no_new_after_off=%s player_submissions=%d pet_submissions=%d" % [
+	var status := "ok" if loaded and zone_found and battle_started and target_found and auto_button_on and stop_button_seen and player_submitted and pet_submitted and round_events_seen and auto_damaged_enemy and auto_button_off and no_new_after_off else "failed"
+	print("battle auto attack check ready: status=%s loaded=%s zone_found=%s battle_started=%s target=%s button_on=%s stop_button=%s player_submitted=%s pet_submitted=%s round_events=%s enemy_before=%d enemy_after=%d button_off=%s no_new_after_off=%s player_submissions=%d pet_submissions=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
 		str(battle_started),
 		target_id,
 		str(auto_button_on),
+		str(stop_button_seen),
 		str(player_submitted),
 		str(pet_submitted),
 		str(round_events_seen),
@@ -1308,6 +1325,81 @@ func _run_auto_battle_auto_attack_check() -> void:
 		str(no_new_after_off),
 		battle_auto_attack_player_submissions,
 		battle_auto_attack_pet_submissions,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_auto_10v10_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	if zone_found:
+		_start_battle(_create_auto_10v10_observation_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	var ally_count := BattleModel.living_actor_count(battle_state, BattleModel.SIDE_ALLY)
+	var enemy_count := BattleModel.living_actor_count(battle_state, BattleModel.SIDE_ENEMY)
+	var formation_ok := battle_active and ally_count == 10 and enemy_count == 10
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var planned_events := BattleModel.build_player_pet_round_events(
+		battle_state.duplicate(true),
+		{"command": "attack", "targetId": target_id, "allyTargetId": BattleModel.PLAYER_ACTOR_ID},
+		{"command": "attack", "targetId": target_id}
+	)
+	var planned_combo := false
+	var planned_npc_allies: Array[String] = []
+	for event_value in planned_events:
+		var event := event_value as Dictionary
+		if str(event.get("type", "")) == "combo_attack":
+			planned_combo = true
+		var participants: Array = event.get("participantIds", [])
+		if participants.is_empty():
+			participants = [str(event.get("attackerId", ""))]
+		for participant_value in participants:
+			var actor_id := str(participant_value)
+			var actor := BattleModel.actor_by_id(battle_state, actor_id)
+			if not actor.is_empty() and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and actor_id != BattleModel.PLAYER_ACTOR_ID and actor_id != BattleModel.PLAYER_PET_ID and not planned_npc_allies.has(actor_id):
+				planned_npc_allies.append(actor_id)
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	_set_battle_auto_attack_enabled(true, false)
+	var auto_button_on := battle_auto_button != null and battle_auto_button.visible and battle_auto_button.button_pressed
+	var stop_button_seen := false
+	var seen_combo := false
+	var seen_npc_allies: Array[String] = []
+	var seen_player := false
+	var seen_pet := false
+	for _frame in range(1800):
+		await get_tree().process_frame
+		stop_button_seen = stop_button_seen or (battle_auto_stop_button != null and battle_auto_stop_button.visible and battle_auto_stop_button.text == "停止")
+		seen_combo = seen_combo or battle_last_round_event_types.has("combo_attack") or battle_last_event_type == "combo_attack"
+		seen_player = seen_player or battle_last_round_actor_order.has(BattleModel.PLAYER_ACTOR_ID)
+		seen_pet = seen_pet or battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
+		for actor_id_value in battle_last_round_actor_order:
+			var actor_id := str(actor_id_value)
+			var actor := BattleModel.actor_by_id(battle_state, actor_id)
+			if not actor.is_empty() and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and actor_id != BattleModel.PLAYER_ACTOR_ID and actor_id != BattleModel.PLAYER_PET_ID and not seen_npc_allies.has(actor_id):
+				seen_npc_allies.append(actor_id)
+		if seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3:
+			break
+	var status := "ok" if loaded and zone_found and formation_ok and target_id != "" and planned_combo and planned_npc_allies.size() >= 3 and auto_button_on and stop_button_seen and seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3 else "failed"
+	print("battle auto 10v10 check ready: status=%s loaded=%s zone_found=%s formation=%s target=%s planned_combo=%s planned_npc_allies=%d button_on=%s stop_button=%s seen_combo=%s seen_player=%s seen_pet=%s seen_npc_allies=%d actor_order=%s events=%s" % [
+		status,
+		str(loaded),
+		str(zone_found),
+		str(formation_ok),
+		target_id,
+		str(planned_combo),
+		planned_npc_allies.size(),
+		str(auto_button_on),
+		str(stop_button_seen),
+		str(seen_combo),
+		str(seen_player),
+		str(seen_pet),
+		seen_npc_allies.size(),
+		",".join(battle_last_round_actor_order),
+		",".join(battle_last_round_event_types),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -6047,6 +6139,33 @@ func _open_battle_formation_preview() -> void:
 	_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
 
 
+func _open_battle_auto_10v10_preview() -> void:
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if not loaded or zones.is_empty():
+		return
+	_start_battle(_create_auto_10v10_observation_battle(zones[0] as Dictionary))
+
+
+func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:
+	var state := BattleModel.create_formation_preview_battle(zone)
+	state["id"] = "local_auto_10v10_observation_battle"
+	state["targetSeed"] = "local_auto_10v10_observation_battle"
+	state["message"] = "10v10练级观察。"
+	var actors: Array = state.get("actors", [])
+	for index in range(actors.size()):
+		var actor := actors[index] as Dictionary
+		if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+			var max_hp := 520
+			actor["maxHp"] = max_hp
+			actor["hp"] = max_hp
+			actor["attack"] = maxi(6, int(actor.get("attack", 5)))
+			actor["defense"] = maxi(8, int(actor.get("defense", 6)))
+			actors[index] = actor
+	state["actors"] = actors
+	return state
+
+
 func _open_battle_stat_test() -> void:
 	_start_stat_formula_test_battle()
 
@@ -6280,6 +6399,10 @@ func _on_battle_auto_button_pressed() -> void:
 	_set_battle_auto_attack_enabled(battle_auto_button.button_pressed)
 
 
+func _on_battle_auto_stop_button_pressed() -> void:
+	_set_battle_auto_attack_enabled(false)
+
+
 func _set_battle_auto_attack_enabled(enabled: bool, show_message: bool = true) -> void:
 	battle_auto_attack_enabled = enabled
 	battle_auto_attack_delay = 0.0
@@ -6290,12 +6413,15 @@ func _set_battle_auto_attack_enabled(enabled: bool, show_message: bool = true) -
 
 
 func _sync_battle_auto_button() -> void:
-	if battle_auto_button == null:
-		return
-	battle_auto_button.visible = battle_active
-	battle_auto_button.disabled = not battle_active
-	battle_auto_button.text = "自动"
-	battle_auto_button.button_pressed = battle_auto_attack_enabled
+	if battle_auto_button != null:
+		battle_auto_button.visible = battle_active
+		battle_auto_button.disabled = not battle_active
+		battle_auto_button.text = "停止" if battle_auto_attack_enabled else "自动"
+		battle_auto_button.button_pressed = battle_auto_attack_enabled
+	if battle_auto_stop_button != null:
+		var command_panel_visible := battle_command_panel != null and battle_command_panel.visible
+		battle_auto_stop_button.visible = battle_active and battle_auto_attack_enabled and not command_panel_visible
+		battle_auto_stop_button.disabled = not battle_active
 
 
 func _update_battle_auto_attack(delta: float) -> void:
@@ -6558,7 +6684,7 @@ func _battle_full_formation_screen_layout_ok() -> bool:
 
 
 func _battle_point_overlaps_panel(point: Vector2) -> bool:
-	for control in [battle_command_panel, battle_passive_panel, battle_message_panel, top_panel]:
+	for control in [battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel, top_panel]:
 		if control != null and control.visible:
 			if Rect2(control.global_position, control.size).has_point(point):
 				return true
@@ -7392,6 +7518,21 @@ func _build_hud() -> void:
 		{"id": "help", "label": "help"},
 	])
 	hud_root.add_child(battle_command_panel)
+	battle_auto_stop_button = Button.new()
+	battle_auto_stop_button.name = "BattleAutoStopButton"
+	battle_auto_stop_button.text = "停止"
+	battle_auto_stop_button.visible = false
+	battle_auto_stop_button.z_index = 31
+	battle_auto_stop_button.custom_minimum_size = Vector2(86, 44)
+	battle_auto_stop_button.clip_text = true
+	battle_auto_stop_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	battle_auto_stop_button.add_theme_font_size_override("font_size", 17)
+	battle_auto_stop_button.add_theme_stylebox_override("normal", _battle_command_button_style(Color(0.20, 0.08, 0.07, 0.82)))
+	battle_auto_stop_button.add_theme_stylebox_override("hover", _battle_command_button_style(Color(0.28, 0.10, 0.08, 0.90)))
+	battle_auto_stop_button.add_theme_stylebox_override("pressed", _battle_command_button_style(Color(0.34, 0.13, 0.10, 0.95)))
+	battle_auto_stop_button.add_theme_stylebox_override("disabled", _battle_command_button_style(Color(0.05, 0.06, 0.06, 0.30)))
+	battle_auto_stop_button.pressed.connect(_on_battle_auto_stop_button_pressed)
+	hud_root.add_child(battle_auto_stop_button)
 
 	battle_passive_panel = Panel.new()
 	battle_passive_panel.name = "BattlePassivePanel"
@@ -11283,7 +11424,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -11423,6 +11564,11 @@ func _layout_hud() -> void:
 	)
 	battle_command_panel.size = Vector2(battle_width, battle_height)
 	battle_command_panel.visible = _battle_command_panel_should_be_visible()
+	if battle_auto_stop_button != null:
+		var stop_size := Vector2(86.0, 44.0)
+		battle_auto_stop_button.position = Vector2(viewport_size.x - stop_size.x - margin, margin)
+		battle_auto_stop_button.size = stop_size
+	_sync_battle_auto_button()
 
 	var passive_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
 	var passive_height := BATTLE_PASSIVE_PANEL_HEIGHT if viewport_size.y >= 460.0 else BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT
