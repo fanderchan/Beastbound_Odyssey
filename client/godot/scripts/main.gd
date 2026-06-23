@@ -10,6 +10,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -25,6 +26,8 @@ const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
+const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
+const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
@@ -364,6 +367,7 @@ var auto_backpack_filter_check: bool = false
 var auto_quick_slot_check: bool = false
 var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
+var auto_equipment_drop_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_quest_reward_choice_check: bool = false
@@ -394,6 +398,7 @@ var equipment_durability_visual_preview: bool = false
 var equipment_slot_detail_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
+var equipment_drop_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var quest_reward_choice_preview: bool = false
@@ -634,6 +639,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_shop_check")
 	elif auto_battle_reward_check:
 		call_deferred("_run_auto_battle_reward_check")
+	elif auto_equipment_drop_check:
+		call_deferred("_run_auto_equipment_drop_check")
 	elif auto_quest_chain_check:
 		call_deferred("_run_auto_quest_chain_check")
 	elif auto_quest_ui_check:
@@ -694,6 +701,8 @@ func _ready() -> void:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
 		call_deferred("_run_battle_reward_preview")
+	elif equipment_drop_preview:
+		call_deferred("_run_equipment_drop_preview")
 	elif quest_preview:
 		call_deferred("_run_quest_preview")
 	elif quest_ui_preview:
@@ -991,6 +1000,8 @@ func _apply_preview_window_args() -> void:
 			auto_shop_check = true
 		elif arg == "--auto-battle-reward-check":
 			auto_battle_reward_check = true
+		elif arg == "--auto-equipment-drop-check":
+			auto_equipment_drop_check = true
 		elif arg == "--auto-quest-chain-check":
 			auto_quest_chain_check = true
 		elif arg == "--auto-quest-ui-check":
@@ -1051,6 +1062,8 @@ func _apply_preview_window_args() -> void:
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
 			battle_reward_preview = true
+		elif arg == "--equipment-drop-preview":
+			equipment_drop_preview = true
 		elif arg == "--quest-preview":
 			quest_preview = true
 		elif arg == "--quest-ui-preview":
@@ -5219,6 +5232,25 @@ func _run_battle_reward_preview() -> void:
 	_open_backpack_panel()
 
 
+func _run_equipment_drop_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var drop_case := _equipment_drop_case_for_profile(player_profile, "equipment_drop_preview")
+	if drop_case.is_empty():
+		_load_map("firebud_village_gate", "from_training_yard")
+		_set_world_log_message("未找到装备碎片掉落种子。")
+		return
+	var result := drop_case.get("result", {}) as Dictionary
+	player_profile = result.get("profile", player_profile) as Dictionary
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message(_battle_result_log_text(result))
+	var fragment_id := str(drop_case.get("fragmentId", EQUIP_FRAG_WOOD_BASIC_ID))
+	backpack_selected_slot_index = _backpack_slot_index_for_item(fragment_id)
+	_open_backpack_panel()
+
+
 func _profile_with_pet_hp(profile: Dictionary, instance_id: String, hp: int) -> Dictionary:
 	var next_profile := profile.duplicate(true)
 	var instances: Array = next_profile.get("petInstances", [])
@@ -5250,7 +5282,8 @@ func _run_auto_backpack_check() -> void:
 	var context_ok := (
 		int(battle_counts.get(BattleModel.ITEM_MEAT_SMALL, 0)) == 6
 		and not battle_counts.has(BattleModel.CAPTURE_TOOL_NET_REINFORCED)
-		and int(capture_counts.get(BattleModel.CAPTURE_TOOL_NET_REINFORCED, 0)) == 1
+		and int(capture_counts.get(BattleModel.CAPTURE_TOOL_NET_REINFORCED, 0)) == 0
+		and int(capture_counts.get(BattleModel.CAPTURE_TOOL_NET, 0)) == 3
 		and not capture_counts.has(BattleModel.ITEM_MEAT_SMALL)
 	)
 
@@ -5284,9 +5317,13 @@ func _run_auto_backpack_check() -> void:
 		_on_battle_command_pressed("help")
 		_on_battle_command_pressed("capture")
 		var capture_texts := _battle_visible_button_texts()
+		var reinforced_button = battle_command_buttons.get("defend", null)
+		var reinforced_disabled := reinforced_button is Button and (reinforced_button as Button).disabled
 		capture_menu_ok = (
 			battle_command_owner == "capture"
-			and _button_text_for_battle_command("defend").find("强化网 x1") >= 0
+			and _texts_contain(capture_texts, "捕捉网 x3")
+			and _button_text_for_battle_command("defend").find("强化网 x0") >= 0
+			and reinforced_disabled
 			and not _texts_contain(capture_texts, "肉")
 		)
 		_on_battle_command_pressed("help")
@@ -6571,6 +6608,129 @@ func _run_auto_battle_reward_check() -> void:
 		full_log.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_equipment_drop_check() -> void:
+	profile_save_enabled = false
+	var table := BattleRewardCatalog.table_for_id("firebud_grass_01")
+	var table_drop_ok := false
+	for reward in table.get("rewards", []):
+		if not (reward is Dictionary):
+			continue
+		var reward_dict := reward as Dictionary
+		var item_id := str(reward_dict.get("itemId", ""))
+		if _is_equipment_fragment_id(item_id) and float(reward_dict.get("chance", 1.0)) < 1.0:
+			table_drop_ok = true
+			break
+	var item_detail_lines := BackpackModel.detail_lines_for_slot({
+		"itemId": EQUIP_FRAG_WOOD_BASIC_ID,
+		"count": 1,
+	})
+	var item_detail_text := "\n".join(item_detail_lines)
+	var item_data_ok := (
+		BackpackModel.stack_limit_for(EQUIP_FRAG_WOOD_BASIC_ID) == 99
+		and BackpackModel.stack_limit_for(EQUIP_FRAG_HIDE_BASIC_ID) == 99
+		and item_detail_text.find("暂不可用") >= 0
+		and item_detail_text.find("装备合成材料") >= 0
+	)
+
+	var base_profile := PlayerProgressModel.default_profile()
+	var drop_case := _equipment_drop_case_for_profile(base_profile, "equipment_drop_check")
+	var drop_result := drop_case.get("result", {}) as Dictionary
+	var drop_profile := drop_result.get("profile", base_profile) as Dictionary
+	var rewards: Array = drop_result.get("itemRewards", [])
+	var reward_fragment_count := _equipment_fragment_count(rewards)
+	var fragment_id := str(drop_case.get("fragmentId", ""))
+	var before_fragment := PlayerProgressModel.backpack_item_count(base_profile, fragment_id)
+	var after_fragment := PlayerProgressModel.backpack_item_count(drop_profile, fragment_id)
+	var drop_log := _battle_result_log_text(drop_result)
+	var drop_ok := (
+		not drop_case.is_empty()
+		and fragment_id != ""
+		and reward_fragment_count > 0
+		and after_fragment == before_fragment + _item_amount_count(rewards, fragment_id)
+		and drop_log.find("获得") >= 0
+		and drop_log.find("碎片") >= 0
+	)
+
+	var full_profile := PlayerProgressModel.default_profile()
+	var full_slots := BackpackModel.set_item_count(
+		PlayerProgressModel.backpack_slots(full_profile),
+		BattleModel.ITEM_MEAT_SMALL,
+		BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
+	)
+	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
+	var full_state := _battle_reward_test_state(str(drop_case.get("seed", "equipment_drop_check_full")), full_profile)
+	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_state, "victory")
+	var full_lost: Array = full_result.get("lostItemRewards", [])
+	var full_log := _battle_result_log_text(full_result)
+	var full_block_ok := (
+		_equipment_fragment_count(full_lost) > 0
+		and PlayerProgressModel.backpack_item_count(full_result.get("profile", full_profile) as Dictionary, fragment_id) == 0
+		and full_log.find("背包已满，未获得") >= 0
+		and full_log.find("碎片") >= 0
+	)
+
+	var status := "ok" if table_drop_ok and item_data_ok and drop_ok and full_block_ok else "failed"
+	print("equipment drop check ready: status=%s table=%s item=%s drop=%s full=%s seed=%s fragment=%s rewards=%s lost=%s log=%s full_log=%s detail=%s" % [
+		status,
+		str(table_drop_ok),
+		str(item_data_ok),
+		str(drop_ok),
+		str(full_block_ok),
+		str(drop_case.get("seed", "")),
+		fragment_id,
+		BackpackModel.item_amounts_text(rewards),
+		BackpackModel.item_amounts_text(full_lost),
+		drop_log.replace("\n", " / "),
+		full_log.replace("\n", " / "),
+		item_detail_text.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _equipment_drop_case_for_profile(profile: Dictionary, seed_prefix: String) -> Dictionary:
+	for index in range(400):
+		var seed := "%s_%03d" % [seed_prefix, index]
+		var state := _battle_reward_test_state(seed, profile)
+		var result := PlayerProgressModel.apply_battle_result(profile, state, "victory")
+		var rewards: Array = result.get("itemRewards", [])
+		var fragment_id := _first_equipment_fragment_id(rewards)
+		if fragment_id != "":
+			return {
+				"seed": seed,
+				"state": state,
+				"result": result,
+				"fragmentId": fragment_id,
+			}
+	return {}
+
+
+func _first_equipment_fragment_id(rewards: Array) -> String:
+	for reward in rewards:
+		if not (reward is Dictionary):
+			continue
+		var item_id := str((reward as Dictionary).get("itemId", ""))
+		if _is_equipment_fragment_id(item_id):
+			return item_id
+	return ""
+
+
+func _equipment_fragment_count(value) -> int:
+	var total := 0
+	if value is Array:
+		for entry_value in value:
+			if not (entry_value is Dictionary):
+				continue
+			var entry := entry_value as Dictionary
+			var item_id := str(entry.get("itemId", ""))
+			if _is_equipment_fragment_id(item_id):
+				total += maxi(0, int(entry.get("count", 0)))
+	return total
+
+
+func _is_equipment_fragment_id(item_id: String) -> bool:
+	return item_id == EQUIP_FRAG_WOOD_BASIC_ID or item_id == EQUIP_FRAG_HIDE_BASIC_ID
 
 
 func _run_quest_preview() -> void:

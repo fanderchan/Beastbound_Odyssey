@@ -43,6 +43,18 @@
           "min": 1,
           "max": 1,
           "chance": 0.35
+        },
+        {
+          "itemId": "equip_frag_wood_basic",
+          "min": 1,
+          "max": 1,
+          "chance": 0.12
+        },
+        {
+          "itemId": "equip_frag_hide_basic",
+          "min": 1,
+          "max": 1,
+          "chance": 0.08
         }
       ]
     }

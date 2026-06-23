@@ -333,6 +333,9 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 			int(roundf(world_encounter_interval_for(item_id))),
 			int(roundf(world_encounter_duration_for(item_id) / 60.0)),
 		])
+	var description := str(item_for_id(item_id).get("description", "")).strip_edges()
+	if description != "":
+		lines.append("说明: %s" % description)
 	return lines
 
 
