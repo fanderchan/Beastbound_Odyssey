@@ -396,6 +396,7 @@ var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var quest_reward_choice_preview: bool = false
+var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
 var chat_panel_preview: bool = false
@@ -696,6 +697,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_ui_preview")
 	elif quest_reward_choice_preview:
 		call_deferred("_run_quest_reward_choice_preview")
+	elif quest_equipment_tutorial_preview:
+		call_deferred("_run_quest_equipment_tutorial_preview")
 	elif task_tracker_route_preview:
 		call_deferred("_run_task_tracker_route_preview")
 	elif map_panel_preview:
@@ -1049,6 +1052,8 @@ func _apply_preview_window_args() -> void:
 			quest_ui_preview = true
 		elif arg == "--quest-reward-choice-preview":
 			quest_reward_choice_preview = true
+		elif arg == "--quest-equipment-tutorial-preview":
+			quest_equipment_tutorial_preview = true
 		elif arg == "--task-tracker-route-preview":
 			task_tracker_route_preview = true
 		elif arg == "--map-panel-preview":
@@ -6599,6 +6604,44 @@ func _run_quest_reward_choice_preview() -> void:
 		_update_hud_text()
 
 
+func _run_quest_equipment_tutorial_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _quest_equipment_tutorial_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase87：换装后进入战斗，使用装备提供的毒精灵1。")
+	_open_quest_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _quest_equipment_tutorial_profile() -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var states := {}
+	for quest_id in [
+		"quest_intro_talk",
+		"quest_buy_supply",
+		"quest_use_meat",
+		"quest_buy_weapon",
+		"quest_equip_weapon",
+		"quest_buy_spirit_armor",
+		"quest_equip_spirit_armor",
+	]:
+		var quest := QuestModel.quest_for_id(quest_id)
+		states[quest_id] = {
+			"status": QuestModel.STATUS_CLAIMED,
+			"progress": QuestModel.objective_required_count(quest),
+		}
+	states["quest_use_poison_spirit"] = {
+		"status": QuestModel.STATUS_ACTIVE,
+		"progress": 0,
+	}
+	profile[PlayerProgressModel.QUEST_STATES_KEY] = states
+	profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = "quest_use_poison_spirit"
+	return PlayerProgressModel.normalize_profile(profile)
+
+
 func _run_task_tracker_route_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7257,10 +7300,109 @@ func _run_auto_quest_chain_check() -> void:
 		bool(equip_result.get("ok", false))
 		and bool(equip_event.get("ready", false))
 		and bool(equip_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_spirit_armor"
 		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_equip_medicine + 1
 	)
+
+	var before_armor_coins := PlayerProgressModel.stone_coins(profile)
+	var buy_armor_result := PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "armor_toxin_wrap")
+	profile = buy_armor_result.get("profile", profile)
+	var buy_armor_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "buy_item",
+		"shopId": FIREBUD_EQUIPMENT_SHOP_ID,
+		"itemId": "armor_toxin_wrap",
+		"amount": 1,
+	})
+	profile = buy_armor_event.get("profile", profile)
+	var buy_armor_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = buy_armor_claim.get("profile", profile)
+	var buy_armor_ok := (
+		bool(buy_armor_result.get("ok", false))
+		and bool(buy_armor_event.get("ready", false))
+		and bool(buy_armor_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_equip_spirit_armor"
+		and PlayerProgressModel.backpack_item_count(profile, "armor_toxin_wrap") == 1
+		and PlayerProgressModel.stone_coins(profile) == before_armor_coins - ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "armor_toxin_wrap")
+	)
+
+	var before_armor_equip_medicine := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var equip_armor_result := PlayerProgressModel.equip_item(profile, "armor_toxin_wrap")
+	profile = equip_armor_result.get("profile", profile)
+	var equip_armor_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "equip_item",
+		"itemId": "armor_toxin_wrap",
+		"slot": EquipmentModel.SLOT_BODY,
+		"amount": 1,
+	})
+	profile = equip_armor_event.get("profile", profile)
+	var equip_armor_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = equip_armor_claim.get("profile", profile)
+	var equipped_spirits := PlayerProgressModel.equipment_spirit_ids(profile)
+	var equip_armor_ok := (
+		bool(equip_armor_result.get("ok", false))
+		and bool(equip_armor_event.get("ready", false))
+		and bool(equip_armor_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_use_poison_spirit"
+		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_BODY) == "armor_toxin_wrap"
+		and equipped_spirits.has(BattleModel.SPIRIT_POISON_1)
+		and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_1)
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_armor_equip_medicine + 1
+	)
+
+	var before_spirit_coins := PlayerProgressModel.stone_coins(profile)
+	var spirit_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "use_spirit",
+		"spiritId": BattleModel.SPIRIT_POISON_1,
+		"eventType": "spirit_poison",
+		"amount": 1,
+	})
+	profile = spirit_event.get("profile", profile)
+	var spirit_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = spirit_claim.get("profile", profile)
+	var spirit_ok := (
+		bool(spirit_event.get("ready", false))
+		and bool(spirit_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.stone_coins(profile) == before_spirit_coins + 20
+	)
+
+	player_profile = _quest_equipment_tutorial_profile()
+	world_log_history.clear()
+	world_log_message = ""
+	var spirit_hook_loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var spirit_hook_zones := EncounterModel.encounter_zones(map_data)
+	var spirit_hook_ok := false
+	if spirit_hook_loaded and not spirit_hook_zones.is_empty():
+		_start_battle(BattleModel.create_stat_formula_test_battle(spirit_hook_zones[0] as Dictionary))
+		var enemy_ids := BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY)
+		var target_id := str(enemy_ids[0]) if not enemy_ids.is_empty() else ""
+		if target_id != "":
+			var poison_event := {
+				"type": "spirit_poison",
+				"attackerId": BattleModel.PLAYER_ACTOR_ID,
+				"targetId": target_id,
+				"targetSide": BattleModel.SIDE_ENEMY,
+				"damage": 6,
+				"speed": 70,
+				"sequence": 1,
+				"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
+				"spiritId": BattleModel.SPIRIT_POISON_1,
+				"statusId": BattleModel.STATUS_POISON,
+				"statusTurns": 3,
+				"statusPotency": 3,
+				"statusHitRate": 1.0,
+			}
+			var snapshots := _battle_actor_snapshots_by_id()
+			battle_state = BattleModel.apply_battle_event(battle_state, poison_event)
+			var ledger := BattleEventLedger.build_from_applied_state(battle_state, poison_event, snapshots, _battle_event_timeline_for_applied_event(poison_event))
+			_record_battle_event(poison_event, ledger)
+			spirit_hook_ok = (
+				PlayerProgressModel.active_quest_id(player_profile) == "quest_first_victory"
+				and world_log_message.find("完成任务「释放毒精灵」") >= 0
+			)
+	battle_active = false
+	battle_state = {}
 
 	var before_victory_coins := PlayerProgressModel.stone_coins(profile)
 	var before_medicine := PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
@@ -7321,7 +7463,8 @@ func _run_auto_quest_chain_check() -> void:
 			and _current_task_text().find("补给准备") >= 0
 		)
 	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d" % [
+	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and spirit_ok and spirit_hook_ok else "failed"
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -7331,6 +7474,10 @@ func _run_auto_quest_chain_check() -> void:
 		str(use_ok),
 		str(buy_weapon_ok),
 		str(equip_ok),
+		str(buy_armor_ok),
+		str(equip_armor_ok),
+		str(spirit_ok),
+		str(spirit_hook_ok),
 		str(victory_ok),
 		str(capture_ok),
 		str(ui_open_ok),
@@ -7341,6 +7488,7 @@ func _run_auto_quest_chain_check() -> void:
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET),
 		PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club"),
+		PlayerProgressModel.backpack_item_count(profile, "armor_toxin_wrap"),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -7478,8 +7626,53 @@ func _run_auto_quest_ui_check() -> void:
 		"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
 		"amount": 1,
 	})
-	var battle_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
-	player_profile = battle_profile
+	var armor_buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = armor_buy_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var armor_shop_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "firebud_equipment_keeper"
+		and _current_task_text().find("认识装备精灵") >= 0
+	)
+
+	var buy_armor_action := PlayerProgressModel.buy_shop_item(armor_buy_profile, FIREBUD_EQUIPMENT_SHOP_ID, "armor_toxin_wrap")
+	var bought_armor_profile := buy_armor_action.get("profile", armor_buy_profile) as Dictionary
+	var buy_armor_event := PlayerProgressModel.record_quest_event(bought_armor_profile, {
+		"type": "buy_item",
+		"shopId": FIREBUD_EQUIPMENT_SHOP_ID,
+		"itemId": "armor_toxin_wrap",
+		"amount": 1,
+	})
+	var armor_equip_profile: Dictionary = PlayerProgressModel.claim_active_quest(buy_armor_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = armor_equip_profile
+	_clear_navigation_state()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	_on_quest_route_pressed()
+	await get_tree().process_frame
+	var armor_equip_route_ok := (
+		backpack_panel != null
+		and backpack_panel.visible
+		and world_log_message.find("随身包") >= 0
+		and _current_task_text().find("换装改变精灵") >= 0
+	)
+
+	var equip_armor_action := PlayerProgressModel.equip_item(armor_equip_profile, "armor_toxin_wrap")
+	var equipped_armor_profile := equip_armor_action.get("profile", armor_equip_profile) as Dictionary
+	var equip_armor_event := PlayerProgressModel.record_quest_event(equipped_armor_profile, {
+		"type": "equip_item",
+		"itemId": "armor_toxin_wrap",
+		"slot": EquipmentModel.SLOT_BODY,
+		"amount": 1,
+	})
+	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_armor_event.get("profile", {}) as Dictionary).get("profile", {})
+	player_profile = spirit_profile
 	_clear_navigation_state()
 	_load_map("firebud_village_gate", "from_training_yard")
 	_open_quest_panel()
@@ -7489,7 +7682,7 @@ func _run_auto_quest_ui_check() -> void:
 	var battle_route_ok := (
 		has_target_cell
 		and EncounterModel.zone_contains_cell(EncounterModel.zone_for_cell(map_data, target_cell), target_cell)
-		and _current_task_text().find("村外试炼") >= 0
+		and _current_task_text().find("释放毒精灵") >= 0
 	)
 
 	world_log_history.clear()
@@ -7509,8 +7702,8 @@ func _run_auto_quest_ui_check() -> void:
 		and world_log_message == "历史记录13"
 	)
 
-	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and armor_shop_route_ok and armor_equip_route_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s armor_shop=%s armor_equip=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(trainer_route_ok),
@@ -7520,6 +7713,8 @@ func _run_auto_quest_ui_check() -> void:
 		str(use_route_ok),
 		str(equipment_shop_route_ok),
 		str(equip_route_ok),
+		str(armor_shop_route_ok),
+		str(armor_equip_route_ok),
 		str(battle_route_ok),
 		str(log_scroll_ok),
 		_current_task_text(),
@@ -14237,6 +14432,13 @@ func _on_shop_action_pressed() -> void:
 			var equip_result := PlayerProgressModel.equip_item(player_profile, shop_selected_item_id)
 			player_profile = equip_result.get("profile", player_profile)
 			log_lines.append(str(equip_result.get("message", "")))
+			if bool(equip_result.get("ok", false)):
+				log_lines.append_array(_record_quest_event_and_maybe_claim({
+					"type": "equip_item",
+					"itemId": str(equip_result.get("itemId", shop_selected_item_id)),
+					"slot": str(equip_result.get("slot", "")),
+					"amount": 1,
+				}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message("\n".join(log_lines))
@@ -15792,6 +15994,8 @@ func _active_quest_navigation_target() -> Dictionary:
 			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
 		"equip_item":
 			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
+		"use_spirit":
+			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"battle_victory":
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"capture_pet":
@@ -17341,7 +17545,30 @@ func _record_battle_event(event: Dictionary, ledger: Dictionary = {}) -> void:
 	var target_actor := BattleModel.actor_by_id(battle_state, battle_last_event_target_id)
 	trace_entry["targetName"] = str(target_actor.get("name", ""))
 	_append_battle_trace(trace_entry)
+	_record_quest_spirit_event_from_battle(event, ledger, event_type)
 	_update_battle_debug_window(true)
+
+
+func _record_quest_spirit_event_from_battle(event: Dictionary, ledger: Dictionary, event_type: String) -> void:
+	if not event_type.begins_with("spirit_"):
+		return
+	var attacker_id := str(ledger.get("attackerId", event.get("attackerId", "")))
+	if attacker_id != BattleModel.player_actor_id(battle_state):
+		return
+	var spirit_id := str(ledger.get("spiritId", event.get("spiritId", "")))
+	if spirit_id == "":
+		return
+	var quest_messages := _record_quest_event_and_maybe_claim({
+		"type": "use_spirit",
+		"spiritId": spirit_id,
+		"eventType": event_type,
+		"amount": 1,
+	})
+	if quest_messages.is_empty():
+		return
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message("\n".join(quest_messages))
 
 
 func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> void:

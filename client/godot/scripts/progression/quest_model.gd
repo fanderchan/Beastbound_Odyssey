@@ -289,6 +289,12 @@ static func progress_amount_for_event(quest: Dictionary, event: Dictionary) -> i
 			if not _matches_string_filter(objective, event, "slot"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
+		"use_spirit":
+			if not _matches_string_filter(objective, event, "spiritId"):
+				return 0
+			if not _matches_string_filter(objective, event, "eventType"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
 		"battle_victory":
 			if not _matches_string_filter(objective, event, "encounterGroupId"):
 				return 0

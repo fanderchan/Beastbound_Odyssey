@@ -114,6 +114,72 @@
           }
         ]
       },
+      "nextQuestId": "quest_buy_spirit_armor"
+    },
+    {
+      "id": "quest_buy_spirit_armor",
+      "title": "认识装备精灵",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "购买一件会改变人物可用精灵的装备。",
+      "objective": {
+        "type": "buy_item",
+        "shopId": "firebud_equipment_shop",
+        "itemId": "armor_toxin_wrap",
+        "count": 1,
+        "text": "在火芽装备铺购买毒藤布衣"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
+      "nextQuestId": "quest_equip_spirit_armor"
+    },
+    {
+      "id": "quest_equip_spirit_armor",
+      "title": "换装改变精灵",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "把水纹衣换成毒藤布衣，观察人物精灵变化。",
+      "objective": {
+        "type": "equip_item",
+        "itemId": "armor_toxin_wrap",
+        "slot": "body",
+        "count": 1,
+        "text": "在随身包里装备毒藤布衣"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_use_poison_spirit"
+    },
+    {
+      "id": "quest_use_poison_spirit",
+      "title": "释放毒精灵",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "进入战斗，使用毒藤布衣提供的毒精灵1。",
+      "objective": {
+        "type": "use_spirit",
+        "spiritId": "spirit_poison_1",
+        "eventType": "spirit_poison",
+        "encounterGroupId": "firebud_grass_01",
+        "count": 1,
+        "text": "在战斗中使用毒精灵1"
+      },
+      "rewards": {
+        "stoneCoins": 20,
+        "items": []
+      },
       "nextQuestId": "quest_first_victory"
     },
     {
