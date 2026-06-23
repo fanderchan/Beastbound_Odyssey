@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
+const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 
 const DATA_PATH := "res://data/quests.json"
 const STATUS_ACTIVE := "active"
@@ -202,6 +203,39 @@ static func reward_text(quest: Dictionary) -> String:
 	return "、".join(parts)
 
 
+static func reward_equipment_detail_lines(quest: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	lines.append_array(_reward_equipment_detail_lines_for_items(reward_items(quest), ""))
+	for choice in reward_choices(quest):
+		var choice_label := str(choice.get("label", reward_bundle_text(choice)))
+		lines.append_array(_reward_equipment_detail_lines_for_items(choice.get("items", []), "自选「%s」" % choice_label))
+	return lines
+
+
+static func _reward_equipment_detail_lines_for_items(raw_items, prefix: String = "") -> Array[String]:
+	var lines: Array[String] = []
+	var items := _normalized_reward_items(raw_items)
+	for item in items:
+		var item_id := str(item.get("itemId", ""))
+		if not EquipmentModel.is_equipment(item_id):
+			continue
+		var count := maxi(0, int(item.get("count", 0)))
+		var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id, item_id))
+		var parts: Array[String] = [
+			"%s x%d" % [item_label, count],
+			EquipmentModel.slot_label_for(EquipmentModel.slot_for(item_id)),
+		]
+		var stat_text := EquipmentModel.stat_bonus_text_for(item_id)
+		if stat_text != "":
+			parts.append(stat_text)
+		var spirit_text := EquipmentModel.spirit_text_for(item_id)
+		if spirit_text != "":
+			parts.append("精灵 %s" % spirit_text)
+		var detail := " / ".join(parts)
+		lines.append("%s：%s" % [prefix, detail] if prefix != "" else detail)
+	return lines
+
+
 static func normalize_state(value, quest_id: String = "") -> Dictionary:
 	var raw := value as Dictionary if value is Dictionary else {}
 	var quest := quest_for_id(quest_id)
@@ -334,6 +368,7 @@ static func validation_errors() -> Array[String]:
 		var objective := objective_for(quest)
 		if str(objective.get("type", "")) == "":
 			errors.append("%s.objective.type 不能为空" % quest_id)
+		errors.append_array(_reward_item_validation_errors(reward_items(quest), "%s.rewards.items" % quest_id))
 		var choice_ids := {}
 		for choice in reward_choices(quest):
 			var choice_id := str(choice.get("id", ""))
@@ -345,10 +380,20 @@ static func validation_errors() -> Array[String]:
 				choice_ids[choice_id] = true
 			if reward_bundle_text(choice) == "":
 				errors.append("%s.rewards.choices.%s 奖励不能为空" % [quest_id, choice_id])
+			errors.append_array(_reward_item_validation_errors(choice.get("items", []), "%s.rewards.choices.%s.items" % [quest_id, choice_id]))
 	for quest in quests():
 		var next_id := str(quest.get("nextQuestId", ""))
 		if next_id != "" and not ids.has(next_id):
 			errors.append("%s.nextQuestId 指向不存在任务: %s" % [str(quest.get("id", "")), next_id])
+	return errors
+
+
+static func _reward_item_validation_errors(raw_items, path: String) -> Array[String]:
+	var errors: Array[String] = []
+	for item in _normalized_reward_items(raw_items):
+		var item_id := str(item.get("itemId", ""))
+		if BackpackModel.item_for_id(item_id).is_empty():
+			errors.append("%s 包含不存在的物品: %s" % [path, item_id])
 	return errors
 
 

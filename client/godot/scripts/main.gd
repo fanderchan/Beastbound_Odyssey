@@ -367,6 +367,7 @@ var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_quest_reward_choice_check: bool = false
+var auto_quest_equipment_reward_check: bool = false
 var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_chat_panel_check: bool = false
@@ -639,6 +640,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_ui_check")
 	elif auto_quest_reward_choice_check:
 		call_deferred("_run_auto_quest_reward_choice_check")
+	elif auto_quest_equipment_reward_check:
+		call_deferred("_run_auto_quest_equipment_reward_check")
 	elif auto_task_tracker_route_check:
 		call_deferred("_run_auto_task_tracker_route_check")
 	elif auto_map_panel_check:
@@ -994,6 +997,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_ui_check = true
 		elif arg == "--auto-quest-reward-choice-check":
 			auto_quest_reward_choice_check = true
+		elif arg == "--auto-quest-equipment-reward-check":
+			auto_quest_equipment_reward_check = true
 		elif arg == "--auto-task-tracker-route-check":
 			auto_task_tracker_route_check = true
 		elif arg == "--auto-map-panel-check":
@@ -7351,6 +7356,7 @@ func _run_auto_quest_chain_check() -> void:
 	)
 
 	var before_spirit_coins := PlayerProgressModel.stone_coins(profile)
+	var before_blessed_club := PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club")
 	var spirit_event := PlayerProgressModel.record_quest_event(profile, {
 		"type": "use_spirit",
 		"spiritId": BattleModel.SPIRIT_POISON_1,
@@ -7365,6 +7371,8 @@ func _run_auto_quest_chain_check() -> void:
 		and bool(spirit_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
 		and PlayerProgressModel.stone_coins(profile) == before_spirit_coins + 20
+		and PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club") == before_blessed_club + 1
+		and str(spirit_claim.get("message", "")).find("祝木棒") >= 0
 	)
 
 	player_profile = _quest_equipment_tutorial_profile()
@@ -7464,7 +7472,7 @@ func _run_auto_quest_chain_check() -> void:
 		)
 	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -7489,6 +7497,7 @@ func _run_auto_quest_chain_check() -> void:
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET),
 		PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club"),
 		PlayerProgressModel.backpack_item_count(profile, "armor_toxin_wrap"),
+		PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club"),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -7677,6 +7686,14 @@ func _run_auto_quest_ui_check() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_open_quest_panel()
 	await get_tree().process_frame
+	var spirit_reward_detail_text := quest_detail_label.text if quest_detail_label != null else ""
+	var spirit_reward_detail_ok := (
+		spirit_reward_detail_text.find("奖励装备") >= 0
+		and spirit_reward_detail_text.find("祝木棒 x1") >= 0
+		and spirit_reward_detail_text.find("右手武器") >= 0
+		and spirit_reward_detail_text.find("攻击 +4") >= 0
+		and spirit_reward_detail_text.find("恩惠精灵1") >= 0
+	)
 	_on_quest_route_pressed()
 	await get_tree().process_frame
 	var battle_route_ok := (
@@ -7702,8 +7719,8 @@ func _run_auto_quest_ui_check() -> void:
 		and world_log_message == "历史记录13"
 	)
 
-	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and armor_shop_route_ok and armor_equip_route_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s armor_shop=%s armor_equip=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status := "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and armor_shop_route_ok and armor_equip_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s armor_shop=%s armor_equip=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(trainer_route_ok),
@@ -7715,6 +7732,7 @@ func _run_auto_quest_ui_check() -> void:
 		str(equip_route_ok),
 		str(armor_shop_route_ok),
 		str(armor_equip_route_ok),
+		str(spirit_reward_detail_ok),
 		str(battle_route_ok),
 		str(log_scroll_ok),
 		_current_task_text(),
@@ -7858,6 +7876,73 @@ func _run_auto_quest_reward_choice_check() -> void:
 		PlayerProgressModel.stone_coins(ui_profile),
 		ui_log_after_claim,
 		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_quest_equipment_reward_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var quest := QuestModel.quest_for_id("quest_use_poison_spirit")
+	var reward_details := QuestModel.reward_equipment_detail_lines(quest)
+	var reward_text := QuestModel.reward_text(quest)
+	var data_ok := (
+		not quest.is_empty()
+		and reward_text.find("祝木棒 x1") >= 0
+		and reward_details.size() == 1
+		and reward_details[0].find("右手武器") >= 0
+		and reward_details[0].find("攻击 +4") >= 0
+		and reward_details[0].find("恩惠精灵1") >= 0
+	)
+
+	var model_profile := _quest_equipment_tutorial_profile()
+	var before_count := PlayerProgressModel.backpack_item_count(model_profile, "weapon_blessed_club")
+	var spirit_event := PlayerProgressModel.record_quest_event(model_profile, {
+		"type": "use_spirit",
+		"spiritId": BattleModel.SPIRIT_POISON_1,
+		"eventType": "spirit_poison",
+		"amount": 1,
+	})
+	var ready_profile := spirit_event.get("profile", model_profile) as Dictionary
+	var claim := PlayerProgressModel.claim_active_quest(ready_profile)
+	var claimed_profile := claim.get("profile", ready_profile) as Dictionary
+	var model_ok := (
+		bool(spirit_event.get("ready", false))
+		and bool(claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(claimed_profile) == "quest_first_victory"
+		and PlayerProgressModel.backpack_item_count(claimed_profile, "weapon_blessed_club") == before_count + 1
+		and str(claim.get("message", "")).find("祝木棒") >= 0
+	)
+
+	player_profile = _quest_equipment_tutorial_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	var detail_text := quest_detail_label.text if quest_detail_label != null else ""
+	var panel_ok := (
+		loaded
+		and quest_panel != null
+		and quest_panel.visible
+		and quest_title_label != null
+		and quest_title_label.text == "释放毒精灵"
+		and detail_text.find("奖励：20石币、祝木棒 x1") >= 0
+		and detail_text.find("奖励装备") >= 0
+		and detail_text.find("祝木棒 x1") >= 0
+		and detail_text.find("右手武器") >= 0
+		and detail_text.find("攻击 +4") >= 0
+		and detail_text.find("恩惠精灵1") >= 0
+	)
+
+	var status := "ok" if data_ok and model_ok and panel_ok else "failed"
+	print("quest equipment reward check ready: status=%s data=%s model=%s panel=%s count=%d msg=%s detail=%s" % [
+		status,
+		str(data_ok),
+		str(model_ok),
+		str(panel_ok),
+		PlayerProgressModel.backpack_item_count(claimed_profile, "weapon_blessed_club"),
+		str(claim.get("message", "")),
+		detail_text.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -15703,6 +15788,11 @@ func _refresh_quest_panel() -> void:
 	]
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
+	var reward_equipment_lines := QuestModel.reward_equipment_detail_lines(quest)
+	if not reward_equipment_lines.is_empty():
+		lines.append("奖励装备：")
+		for reward_equipment_line in reward_equipment_lines:
+			lines.append("- %s" % reward_equipment_line)
 	var route_hint := _quest_route_hint(quest, objective)
 	if route_hint != "":
 		lines.append("地点：%s" % route_hint)
@@ -18536,6 +18626,11 @@ func _dialog_quest_hint_for(item: Dictionary) -> String:
 	var reward_text := PlayerProgressModel.quest_reward_text(player_profile)
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
+	var reward_equipment_lines := QuestModel.reward_equipment_detail_lines(quest)
+	if not reward_equipment_lines.is_empty():
+		lines.append("奖励装备：")
+		for reward_equipment_line in reward_equipment_lines:
+			lines.append("- %s" % reward_equipment_line)
 	return "\n".join(lines)
 
 
