@@ -4,7 +4,7 @@ Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2
 
 ## 当前阶段
 
-Phase58 是 Godot 4.7 战斗自动攻击原型阶段：
+Phase60 是 Godot 4.7 练级伙伴 demo 阶段：
 
 - 45 度/等距起步地图。
 - 第二张地图：`火芽村入口`。
@@ -39,9 +39,21 @@ Phase58 是 Godot 4.7 战斗自动攻击原型阶段：
 - `精灵` 会打开人物精灵菜单：`恩惠精灵5`、`滋润精灵5`、`毒精灵5`、`毒雾精灵5`。
 - 人物指令后，同一个右上面板会切换成受控宠物的 `宠物` 面板。
 - 宠物面板已有 `技1 攻击`、`技2 防御`、`技3 布伊冲撞`；敌方目标技能走同一套悬停/点击/触摸选目标流程。
-- 战斗面板标题行新增短按钮 `自动`；开启后人物和受控宠物会自动对第一个存活敌人普通攻击，关闭后停止继续提交自动指令。
+- 战斗面板标题行保留短按钮 `自动`；开启后人物和受控宠物会按 `内挂设置` 自动提交指令。
 - 自动开启后会显示 `停止`；回合播放导致指令面板隐藏时，也会保留独立浮动 `停止` 按钮。
 - 自动攻击开关会在本次客户端运行期间跨战斗保留，方便后续挂机遇敌循环衔接。
+- 动作栏新增 `内挂` 入口，设置面板使用滚动内容区。
+- 人物内挂动作区分 `首回合` 和 `一般回合`，可选攻击、防御、精灵和当前战斗物品。
+- 宠物内挂动作区分 `首回合` 和 `一般回合`，并且只按 `技1` 到 `技7` 选择；`技2 防御` 仍然是一个技能槽，不是独立宠物动作。
+- 内挂支持目标策略：第一个活着、生命比例最低、当前生命最低。
+- 内挂支持人物/宠物血线自动回血，并可按优先级选择 `滋润精灵5`、`肉`、`回复药5`、`恩惠精灵5`、`群体草药5`。
+- 回血道具会检查当前战斗数量；前一个来源不可用时会继续尝试下一个来源。
+- 动作栏新增 `伙伴` 入口，可加入、移除、加满或清空练级伙伴。
+- 最多加入 4 个陪练伙伴；进入草丛后会形成最多 5 人 5 宠的练级队。
+- 陪练伙伴和陪练宠在加入时复制当前人物/出战宠，之后独立保存和成长。
+- 有陪练时，草丛遇敌会生成 10 个敌方野怪，方便测试 10v10 自动练级和合击频率。
+- 陪练人物和陪练宠默认自动攻击，目标顺序按敌方前排 1-5、后排 1-5。
+- 胜利结算会给陪练人物和陪练宠经验，并按简单成长规则升级加点。
 - `--battle-auto-10v10-preview` 会打开 10v10 练级观察战斗，敌方血量加厚；点 `自动` 后可以观察其他友方 AI 和合击频率。
 - 人物、精灵、宠物技能、物品的标签、效果、目标规则都声明在 `client/godot/data/battle_actions.json`。
 - 精灵目标规则使用明确布尔字段表达全体、我方、敌方、是否需要点选。
@@ -122,6 +134,18 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --battle-preview
 godot --path client/godot --scene res://scenes/Main.tscn -- --battle-preview-10v10
 ```
 
+内挂设置预览：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --auto-battle-settings-preview
+```
+
+练级伙伴 demo：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --training-partner-demo
+```
+
 10v10 手工检查：
 
 - 人物选目标：按 `攻击`，鼠标悬停敌人会显示目标圈，然后点击/触摸该敌人。
@@ -185,6 +209,8 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1200 -- --auto-battle-pet-command-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-pet-target-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-training-partner-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-skill-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-hit-check

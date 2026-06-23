@@ -2,6 +2,8 @@ extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
+const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
@@ -9,6 +11,7 @@ const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
+const TrainingPartnerModel := preload("res://scripts/progression/training_partner_model.gd")
 
 const SAVE_PATH := "user://player_profile.json"
 const PROFILE_SCHEMA_VERSION := 1
@@ -41,6 +44,8 @@ const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
+const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
+const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
 
 
 static func default_profile() -> Dictionary:
@@ -71,6 +76,8 @@ static func default_profile() -> Dictionary:
 		"questStates": {},
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
+		"autoBattleSettings": AutoBattleSettingsModel.default_settings(),
+		"trainingPartners": [],
 	}
 
 
@@ -329,6 +336,80 @@ static func with_battle_item_inventory(profile: Dictionary, inventory: Dictionar
 	normalized[BACKPACK_SLOTS_KEY] = slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
 	return normalized
+
+
+static func auto_battle_settings(profile: Dictionary) -> Dictionary:
+	return AutoBattleSettingsModel.normalize_settings(normalize_profile(profile).get(AUTO_BATTLE_SETTINGS_KEY, {}))
+
+
+static func with_auto_battle_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(settings)
+	return normalize_profile(normalized)
+
+
+static func training_partners(profile: Dictionary) -> Array[Dictionary]:
+	return TrainingPartnerModel.normalize_partners(normalize_profile(profile).get(TRAINING_PARTNERS_KEY, []))
+
+
+static func training_partner_count(profile: Dictionary) -> int:
+	return training_partners(profile).size()
+
+
+static func with_training_partner_count(profile: Dictionary, count: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var target_count := TrainingPartnerModel.clamp_partner_count(count)
+	var partners := TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
+	while partners.size() > target_count:
+		partners.pop_back()
+	while partners.size() < target_count:
+		partners.append(_create_training_partner_from_profile(normalized, partners.size()))
+	normalized[TRAINING_PARTNERS_KEY] = partners
+	return normalize_profile(normalized)
+
+
+static func training_partner_summary_lines(profile: Dictionary) -> Array[String]:
+	return TrainingPartnerModel.summary_lines(training_partners(profile))
+
+
+static func _create_training_partner_from_profile(profile: Dictionary, index: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var player = normalized.get("player", {}) as Dictionary
+	var summary := player_stat_summary(normalized)
+	var current = summary.get("current", {}) as Dictionary
+	var partner := {
+		"partnerId": TrainingPartnerModel.partner_id_for_index(index),
+		"name": TrainingPartnerModel.partner_name_for_index(index),
+		"level": maxi(1, int(player.get("level", 1))),
+		"exp": 0,
+		"nextExp": exp_to_next_level(maxi(1, int(player.get("level", 1)))),
+		"hp": maxi(1, int(current.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)))),
+		"maxHp": maxi(1, int(current.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)))),
+		"attack": maxi(1, int(current.get("attack", DEFAULT_PLAYER_BATTLE_STATS.get("attack", 18)))),
+		"defense": maxi(1, int(current.get("defense", DEFAULT_PLAYER_BATTLE_STATS.get("defense", 6)))),
+		"quick": maxi(1, int(current.get("quick", DEFAULT_PLAYER_BATTLE_STATS.get("quick", 70)))),
+		"slotNumber": TrainingPartnerModel.slot_number_for_index(index),
+	}
+	var active := _active_profile_pet(normalized)
+	if active.is_empty():
+		active = _pet_instance_from_form(
+			"training_partner_source_pet",
+			"布伊",
+			"bui_normal_red_fire10",
+			PET_STATE_BATTLE,
+			maxi(1, int(player.get("level", 1)))
+		)
+	var pet := active.duplicate(true)
+	pet["name"] = TrainingPartnerModel.partner_pet_name_for_index(index, str(active.get("name", "布伊")))
+	pet["level"] = maxi(1, int(active.get("level", partner.get("level", 1))))
+	pet["exp"] = 0
+	pet["nextExp"] = exp_to_next_level(int(pet.get("level", 1)))
+	pet["hp"] = maxi(1, int(active.get("maxHp", active.get("hp", 90))))
+	pet["maxHp"] = maxi(1, int(active.get("maxHp", active.get("hp", 90))))
+	for key in ["attack", "defense", "quick"]:
+		pet[key] = maxi(1, int(active.get(key, 1)))
+	partner["pet"] = pet
+	return TrainingPartnerModel.normalize_partner(partner, index)
 
 
 static func stone_coins(profile: Dictionary) -> int:
@@ -1567,6 +1648,8 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			seen_form_ids.append(form_id)
 	normalized[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_form_ids
 	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
+	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}))
+	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
@@ -1592,21 +1675,11 @@ static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary
 	var active_entry := _active_party_entry(party)
 	if active_entry.is_empty():
 		next_state["actors"] = _actors_without_id(next_state, "ally_pet")
-		return next_state
-	var active_actor := actor_from_pet_instance(active_entry, "ally_pet", "ally", "ally.front.3")
-	if active_actor.is_empty():
-		return next_state
-	var actors: Array = next_state.get("actors", [])
-	var replaced := false
-	for index in range(actors.size()):
-		var actor := actors[index] as Dictionary
-		if str(actor.get("id", "")) == "ally_pet":
-			actors[index] = active_actor
-			replaced = true
-			break
-	if not replaced:
-		actors.append(active_actor)
-	next_state["actors"] = actors
+	else:
+		var active_actor := actor_from_pet_instance(active_entry, "ally_pet", "ally", "ally.front.3")
+		if not active_actor.is_empty():
+			next_state["actors"] = _actors_with_replaced_actor(next_state, active_actor)
+	next_state = _apply_training_partners_to_battle_state(normalized, next_state)
 	return next_state
 
 
@@ -1692,6 +1765,64 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
 
 
+static func _apply_training_partners_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var next_state := state.duplicate(true)
+	var partners := training_partners(profile)
+	for index in range(partners.size()):
+		var partner := partners[index]
+		var slot_number := TrainingPartnerModel.slot_number_for_index(index)
+		var partner_actor := _training_partner_actor(partner, index, slot_number)
+		if not partner_actor.is_empty():
+			next_state["actors"] = _actors_with_replaced_actor(next_state, partner_actor)
+		var pet_actor := _training_partner_pet_actor(partner, index, slot_number)
+		if not pet_actor.is_empty():
+			next_state["actors"] = _actors_with_replaced_actor(next_state, pet_actor)
+	return next_state
+
+
+static func _training_partner_actor(partner: Dictionary, index: int, slot_number: int) -> Dictionary:
+	var max_hp := maxi(1, int(partner.get("maxHp", 120)))
+	return {
+		"id": "ally_training_partner_%d" % [index + 1],
+		"trainingPartnerId": str(partner.get("partnerId", TrainingPartnerModel.partner_id_for_index(index))),
+		"name": str(partner.get("name", TrainingPartnerModel.partner_name_for_index(index))),
+		"side": "ally",
+		"kind": "player",
+		"slotId": "ally.back.%d" % slot_number,
+		"level": maxi(1, int(partner.get("level", 1))),
+		"exp": maxi(0, int(partner.get("exp", 0))),
+		"nextExp": maxi(1, int(partner.get("nextExp", exp_to_next_level(int(partner.get("level", 1)))))),
+		"hp": clampi(int(partner.get("hp", max_hp)), 1, max_hp),
+		"maxHp": max_hp,
+		"attack": maxi(1, int(partner.get("attack", 18))),
+		"defense": maxi(1, int(partner.get("defense", 6))),
+		"quick": maxi(1, int(partner.get("quick", 70))),
+		"actionState": "idle",
+		"statuses": BattleStatusModel.empty_statuses(),
+		"statusResist": {},
+		"statusImmune": {},
+	}
+
+
+static func _training_partner_pet_actor(partner: Dictionary, index: int, slot_number: int) -> Dictionary:
+	var pet = partner.get("pet", {})
+	if not (pet is Dictionary):
+		return {}
+	var pet_dict := (pet as Dictionary).duplicate(true)
+	pet_dict["instanceId"] = "training_partner_pet_%d" % [index + 1]
+	pet_dict["state"] = PET_STATE_BATTLE
+	var actor := actor_from_pet_instance(
+		pet_dict,
+		"ally_training_partner_pet_%d" % [index + 1],
+		"ally",
+		"ally.front.%d" % slot_number
+	)
+	if actor.is_empty():
+		return {}
+	actor["trainingPartnerId"] = str(partner.get("partnerId", TrainingPartnerModel.partner_id_for_index(index)))
+	return actor
+
+
 static func battle_result_for_state(state: Dictionary) -> String:
 	var living_enemies := 0
 	var living_allies := 0
@@ -1735,6 +1866,8 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		var active_id := str(next_profile.get("activePetInstanceId", ""))
 		var instances: Array = next_profile.get("petInstances", [])
 		for index in range(instances.size()):
+			if not (instances[index] is Dictionary):
+				continue
 			var instance := instances[index] as Dictionary
 			if str(instance.get("instanceId", "")) != active_id:
 				continue
@@ -1744,6 +1877,10 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 				level_up_lines.append("%s 升到 Lv%d。" % [str(instance.get("name", "宠物")), int((pet_award.get("entry", {}) as Dictionary).get("level", 1))])
 			break
 		next_profile["petInstances"] = instances
+		var partner_award := _award_training_partner_exp(next_profile, exp_reward)
+		next_profile = partner_award.get("profile", next_profile)
+		for line in partner_award.get("levelUpLines", []):
+			level_up_lines.append(str(line))
 	if result == "victory":
 		if stone_coins_reward > 0:
 			next_profile[STONE_COINS_KEY] = stone_coins(next_profile) + stone_coins_reward
@@ -1888,6 +2025,60 @@ static func _award_exp(entry: Dictionary, amount: int) -> Dictionary:
 		"entry": next_entry,
 		"leveled": leveled,
 	}
+
+
+static func _award_training_partner_exp(profile: Dictionary, amount: int) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	var partners := training_partners(next_profile)
+	var lines: Array[String] = []
+	for index in range(partners.size()):
+		var partner := partners[index]
+		var before_level := maxi(1, int(partner.get("level", 1)))
+		var partner_award := _award_exp(partner, amount)
+		partner = partner_award.get("entry", partner)
+		var after_level := maxi(1, int(partner.get("level", before_level)))
+		if after_level > before_level:
+			partner = _grow_training_partner_stats(partner, after_level - before_level)
+			lines.append("%s 升到 Lv%d。" % [str(partner.get("name", TrainingPartnerModel.partner_name_for_index(index))), after_level])
+		var pet = partner.get("pet", {})
+		if pet is Dictionary:
+			var pet_dict := (pet as Dictionary).duplicate(true)
+			var pet_before_level := maxi(1, int(pet_dict.get("level", 1)))
+			var pet_award := _award_exp(pet_dict, amount)
+			pet_dict = pet_award.get("entry", pet_dict)
+			var pet_after_level := maxi(1, int(pet_dict.get("level", pet_before_level)))
+			if pet_after_level > pet_before_level:
+				pet_dict = _grow_training_partner_pet_stats(pet_dict, pet_after_level - pet_before_level)
+				lines.append("%s 升到 Lv%d。" % [str(pet_dict.get("name", "陪练宠物")), pet_after_level])
+			partner["pet"] = pet_dict
+		partners[index] = TrainingPartnerModel.normalize_partner(partner, index)
+	next_profile[TRAINING_PARTNERS_KEY] = partners
+	return {
+		"profile": normalize_profile(next_profile),
+		"levelUpLines": lines,
+	}
+
+
+static func _grow_training_partner_stats(partner: Dictionary, levels: int) -> Dictionary:
+	var next_partner := partner.duplicate(true)
+	var level_count := maxi(0, levels)
+	next_partner["maxHp"] = maxi(1, int(next_partner.get("maxHp", 120)) + level_count * 8)
+	next_partner["hp"] = maxi(1, int(next_partner.get("hp", next_partner.get("maxHp", 120))) + level_count * 8)
+	next_partner["attack"] = maxi(1, int(next_partner.get("attack", 18)) + level_count * 2)
+	next_partner["defense"] = maxi(1, int(next_partner.get("defense", 6)) + level_count)
+	next_partner["quick"] = maxi(1, int(next_partner.get("quick", 70)) + level_count)
+	return next_partner
+
+
+static func _grow_training_partner_pet_stats(pet: Dictionary, levels: int) -> Dictionary:
+	var next_pet := pet.duplicate(true)
+	var level_count := maxi(0, levels)
+	next_pet["maxHp"] = maxi(1, int(next_pet.get("maxHp", 90)) + level_count * 7)
+	next_pet["hp"] = maxi(1, int(next_pet.get("hp", next_pet.get("maxHp", 90))) + level_count * 7)
+	next_pet["attack"] = maxi(1, int(next_pet.get("attack", 14)) + level_count * 2)
+	next_pet["defense"] = maxi(1, int(next_pet.get("defense", 8)) + level_count)
+	next_pet["quick"] = maxi(1, int(next_pet.get("quick", 68)) + level_count)
+	return next_pet
 
 
 static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> Dictionary:
@@ -2127,6 +2318,20 @@ static func _actors_without_id(state: Dictionary, actor_id: String) -> Array[Dic
 	for actor in _actors(state):
 		if str(actor.get("id", "")) != actor_id:
 			result.append(actor)
+	return result
+
+
+static func _actors_with_replaced_actor(state: Dictionary, next_actor: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var next_id := str(next_actor.get("id", ""))
+	var next_slot := str(next_actor.get("slotId", ""))
+	for actor in _actors(state):
+		var actor_id := str(actor.get("id", ""))
+		var actor_slot := str(actor.get("slotId", ""))
+		if actor_id == next_id or (next_slot != "" and actor_slot == next_slot):
+			continue
+		result.append(actor)
+	result.append(next_actor)
 	return result
 
 

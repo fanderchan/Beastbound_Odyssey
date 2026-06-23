@@ -10,6 +10,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
@@ -24,7 +25,7 @@ const MAP_DATA_PATHS := {
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
-const ACTION_BAR_SIZE := Vector2(496, 86)
+const ACTION_BAR_SIZE := Vector2(566, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
@@ -56,6 +57,10 @@ const BATTLE_LAUNCH_TARGET_START_RATIO := 0.30
 const BATTLE_LAUNCH_ATTACK_RETURN_RATIO := 0.58
 const BATTLE_BOUNCE_EDGE_RATIO := 0.42
 const BATTLE_BOUNCE_ROLL_RATIO := 0.76
+const BATTLE_LAUNCH_STRAIGHT_SECONDS := 1.45
+const BATTLE_LAUNCH_BOUNCE_SECONDS := 1.95
+const BATTLE_LAUNCH_FINISH_HOLD_RATIO := 0.86
+const BATTLE_AUTO_ROUND_SETTLE_DELAY := 0.24
 const ENCOUNTER_POST_BATTLE_GRACE_SECONDS := 1.0
 const ENCOUNTER_SAFE_STEPS := 2
 const ENCOUNTER_STONE_LOW_ID := "encounter_stone_low"
@@ -106,6 +111,8 @@ var equipment_menu_button: Button
 var pet_menu_button: Button
 var codex_menu_button: Button
 var quest_menu_button: Button
+var training_partner_menu_button: Button
+var auto_settings_menu_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: Label
@@ -173,6 +180,17 @@ var quest_title_label: Label
 var quest_detail_label: Label
 var quest_route_button: Button
 var quest_close_button: Button
+var training_partner_panel: PanelContainer
+var training_partner_label: Label
+var training_partner_add_button: Button
+var training_partner_remove_button: Button
+var training_partner_fill_button: Button
+var training_partner_clear_button: Button
+var training_partner_close_button: Button
+var auto_settings_panel: PanelContainer
+var auto_settings_content: VBoxContainer
+var auto_settings_close_button: Button
+var auto_settings_controls: Dictionary = {}
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -191,6 +209,8 @@ var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
 var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
+var auto_battle_settings_check: bool = false
+var auto_training_partner_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
@@ -261,6 +281,8 @@ var capture_tools_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
+var auto_battle_settings_preview: bool = false
+var training_partner_demo: bool = false
 var battle_stat_test: bool = false
 var battle_status_test: bool = false
 var battle_status_skill_test: bool = false
@@ -316,6 +338,7 @@ var battle_event_queue: Array[Dictionary] = []
 var battle_current_event: Dictionary = {}
 var battle_current_event_duration: float = 0.0
 var battle_current_event_actor_snapshots: Dictionary = {}
+var battle_event_advance_pending: bool = false
 var battle_round_end_status_processed: bool = false
 var battle_last_round_applied_events: int = 0
 var battle_last_round_event_types: Array[String] = []
@@ -330,6 +353,7 @@ var battle_last_event_heal: int = 0
 var battle_last_event_launch: bool = false
 var battle_last_event_launch_mode: String = ""
 var battle_last_event_ledger: Dictionary = {}
+var battle_recorded_event_sequence: int = 0
 var battle_float_texts: Array[Dictionary] = []
 var battle_debug_window: Window
 var battle_debug_text: TextEdit
@@ -372,6 +396,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_auto_attack_check")
 	elif auto_battle_auto_10v10_check:
 		call_deferred("_run_auto_battle_auto_10v10_check")
+	elif auto_battle_settings_check:
+		call_deferred("_run_auto_battle_settings_check")
+	elif auto_training_partner_check:
+		call_deferred("_run_auto_training_partner_check")
 	elif auto_battle_item_check:
 		call_deferred("_run_auto_battle_item_check")
 	elif auto_battle_item_count_check:
@@ -538,6 +566,10 @@ func _ready() -> void:
 		call_deferred("_open_battle_formation_preview")
 	elif battle_auto_10v10_preview:
 		call_deferred("_open_battle_auto_10v10_preview")
+	elif auto_battle_settings_preview:
+		call_deferred("_run_auto_battle_settings_preview")
+	elif training_partner_demo:
+		call_deferred("_run_training_partner_demo")
 	elif battle_label_preview:
 		call_deferred("_open_battle_label_preview")
 	elif battle_stat_test:
@@ -596,6 +628,10 @@ func _apply_preview_window_args() -> void:
 			auto_battle_auto_attack_check = true
 		elif arg == "--auto-battle-auto-10v10-check":
 			auto_battle_auto_10v10_check = true
+		elif arg == "--auto-battle-settings-check":
+			auto_battle_settings_check = true
+		elif arg == "--auto-training-partner-check":
+			auto_training_partner_check = true
 		elif arg == "--auto-battle-formation-check":
 			auto_battle_formation_check = true
 		elif arg == "--auto-battle-target-check":
@@ -736,6 +772,10 @@ func _apply_preview_window_args() -> void:
 			battle_formation_preview = true
 		elif arg == "--battle-auto-10v10-preview":
 			battle_auto_10v10_preview = true
+		elif arg == "--auto-battle-settings-preview":
+			auto_battle_settings_preview = true
+		elif arg == "--training-partner-demo":
+			training_partner_demo = true
 		elif arg == "--battle-label-preview":
 			battle_label_preview = true
 		elif arg == "--battle-stat-test":
@@ -1400,6 +1440,311 @@ func _run_auto_battle_auto_10v10_check() -> void:
 		seen_npc_allies.size(),
 		",".join(battle_last_round_actor_order),
 		",".join(battle_last_round_event_types),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_settings_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	var default_ok := (
+		str(settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, "")) == AutoBattleSettingsModel.ACTION_ATTACK
+		and int(settings.get(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY, 0)) == 1
+		and bool(settings.get(AutoBattleSettingsModel.HEALING_ENABLED_KEY, false))
+	)
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL
+	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
+	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 3
+	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.TARGET_MODE_KEY] = AutoBattleSettingsModel.TARGET_LOWEST_HP
+	settings[AutoBattleSettingsModel.HEALING_ENABLED_KEY] = false
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	_open_auto_settings_panel()
+	await get_tree().process_frame
+	var panel_ok := (
+		auto_settings_panel != null
+		and auto_settings_panel.visible
+		and auto_settings_controls.has(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY)
+		and auto_settings_controls.has(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY)
+		and auto_settings_controls.has("healPriority0")
+	)
+	_close_auto_settings_panel()
+
+	var started := _start_stat_formula_test_battle()
+	if started:
+		var target_id := BattleModel.living_enemy_id(battle_state)
+		if target_id != "":
+			battle_state = _set_battle_actor_fields(battle_state, target_id, {"maxHp": 520, "hp": 520, "actionState": "idle"})
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	_set_battle_auto_attack_enabled(true, false)
+	var saw_first_spirit := false
+	var saw_first_pet_skill := false
+	for _frame in range(1200):
+		await get_tree().process_frame
+		saw_first_spirit = saw_first_spirit or battle_last_round_event_types.has("spirit_poison_all") or battle_last_event_type == "spirit_poison_all"
+		saw_first_pet_skill = saw_first_pet_skill or battle_last_round_event_types.has("skill_attack") or battle_last_event_type == "skill_attack"
+		if saw_first_spirit and saw_first_pet_skill:
+			break
+	_set_battle_auto_attack_enabled(false, false)
+
+	var normal_started := _start_stat_formula_test_battle()
+	if normal_started:
+		battle_state["round"] = 2
+		var normal_target_id := BattleModel.living_enemy_id(battle_state)
+		if normal_target_id != "":
+			battle_state = _set_battle_actor_fields(battle_state, normal_target_id, {"maxHp": 520, "hp": 520, "actionState": "idle"})
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	_set_battle_auto_attack_enabled(true, false)
+	var saw_normal_round := false
+	var saw_normal_player := false
+	var saw_normal_pet := false
+	for _frame in range(1200):
+		await get_tree().process_frame
+		if int(battle_state.get("round", 1)) >= 2:
+			saw_normal_round = true
+			saw_normal_player = saw_normal_player or battle_auto_attack_player_submissions >= 1
+			saw_normal_pet = saw_normal_pet or battle_auto_attack_pet_submissions >= 1
+		if saw_normal_round and saw_normal_player and saw_normal_pet:
+			break
+	_set_battle_auto_attack_enabled(false, false)
+	var strategy_ok := started and normal_started and saw_first_spirit and saw_first_pet_skill and saw_normal_round and saw_normal_player and saw_normal_pet
+
+	player_profile = PlayerProgressModel.default_profile()
+	settings = PlayerProgressModel.auto_battle_settings(player_profile)
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_GRACE
+	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
+	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.HEALING_ENABLED_KEY] = false
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	var first_once_loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var first_once_zones := EncounterModel.encounter_zones(map_data)
+	var first_once_started := first_once_loaded and not first_once_zones.is_empty()
+	if first_once_started:
+		_start_battle(BattleModel.create_wild_battle(first_once_zones[0] as Dictionary))
+		var once_target_id := BattleModel.living_enemy_id(battle_state)
+		if once_target_id != "":
+			battle_state = _set_battle_actor_fields(battle_state, once_target_id, {"maxHp": 960, "hp": 960, "actionState": "idle"})
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 80)
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	var first_once_last_sequence := battle_recorded_event_sequence
+	var first_once_grace_count := 0
+	var first_once_round_advanced := false
+	var first_once_player_attack_after_grace := false
+	_set_battle_auto_attack_enabled(true, false)
+	for _frame in range(2600):
+		await get_tree().process_frame
+		if int(battle_state.get("round", 1)) >= 2:
+			first_once_round_advanced = true
+		if battle_recorded_event_sequence != first_once_last_sequence:
+			first_once_last_sequence = battle_recorded_event_sequence
+			var once_event_type := str(battle_last_event_ledger.get("type", battle_last_event_type))
+			var once_attacker_id := str(battle_last_event_ledger.get("attackerId", ""))
+			var once_round := int(battle_last_event_ledger.get("round", int(battle_state.get("round", 1))))
+			if once_attacker_id == BattleModel.PLAYER_ACTOR_ID:
+				if once_event_type == "spirit_heal_all":
+					first_once_grace_count += 1
+				elif once_event_type == "attack" and once_round >= 2:
+					first_once_player_attack_after_grace = true
+		if first_once_round_advanced and first_once_player_attack_after_grace and first_once_grace_count >= 1:
+			break
+	_set_battle_auto_attack_enabled(false, false)
+	var first_once_ok := first_once_started and first_once_round_advanced and first_once_grace_count == 1 and first_once_player_attack_after_grace
+	var first_once_final_phase := str(battle_state.get("phase", ""))
+	var first_once_final_round := int(battle_state.get("round", 0))
+	var first_once_final_timer := battle_action_timer
+	var first_once_final_queue := battle_event_queue.size()
+	var first_once_final_event := str(battle_last_event_ledger.get("type", battle_last_event_type))
+
+	player_profile = PlayerProgressModel.default_profile()
+	settings = PlayerProgressModel.auto_battle_settings(player_profile)
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
+	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
+	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.HEALING_ENABLED_KEY] = true
+	settings[AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY] = 90
+	settings[AutoBattleSettingsModel.PET_HP_PERCENT_KEY] = 40
+	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
+		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
+		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
+		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE,
+		AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL,
+	]
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	var heal_started := _start_stat_formula_test_battle()
+	if heal_started:
+		battle_state = BattleModel.set_item_count(battle_state, BattleModel.ITEM_MEAT_SMALL, 0)
+		battle_state = BattleModel.set_item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE, 1)
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 30)
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	var heal_item_before := BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE)
+	_set_battle_auto_attack_enabled(true, false)
+	var saw_item_heal: bool = await _auto_wait_for_event_type("item_heal", 1200)
+	_set_battle_auto_attack_enabled(false, false)
+	var heal_item_after := BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE)
+	var heal_ok := heal_started and saw_item_heal and heal_item_before == 1 and heal_item_after == 0
+
+	var status := "ok" if default_ok and panel_ok and strategy_ok and first_once_ok and heal_ok else "failed"
+	print("battle auto settings check ready: status=%s default=%s panel=%s strategy=%s first_spirit=%s first_pet_skill=%s normal_round=%s normal_player=%s normal_pet=%s first_once=%s first_once_grace_count=%d first_once_round=%s first_once_attack=%s first_once_final_phase=%s first_once_final_round=%d first_once_final_timer=%.3f first_once_final_queue=%d first_once_final_event=%s heal=%s heal_item_before=%d heal_item_after=%d" % [
+		status,
+		str(default_ok),
+		str(panel_ok),
+		str(strategy_ok),
+		str(saw_first_spirit),
+		str(saw_first_pet_skill),
+		str(saw_normal_round),
+		str(saw_normal_player),
+		str(saw_normal_pet),
+		str(first_once_ok),
+		first_once_grace_count,
+		str(first_once_round_advanced),
+		str(first_once_player_attack_after_grace),
+		first_once_final_phase,
+		first_once_final_round,
+		first_once_final_timer,
+		first_once_final_queue,
+		first_once_final_event,
+		str(heal_ok),
+		heal_item_before,
+		heal_item_after,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_training_partner_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, 4)
+	var partner_count_ok := PlayerProgressModel.training_partner_count(player_profile) == 4
+	var initial_partners := PlayerProgressModel.training_partners(player_profile)
+	var clone_attack := int((initial_partners[0] as Dictionary).get("attack", 0)) if not initial_partners.is_empty() else 0
+	var changed_player_profile := player_profile.duplicate(true)
+	var changed_player = changed_player_profile.get("player", {}) as Dictionary
+	changed_player["level"] = 8
+	changed_player_profile["player"] = changed_player
+	changed_player_profile = PlayerProgressModel.normalize_profile(changed_player_profile)
+	var cloned_independent_ok := not initial_partners.is_empty() and int((PlayerProgressModel.training_partners(changed_player_profile)[0] as Dictionary).get("attack", -1)) == clone_attack
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := not zones.is_empty()
+	if loaded and zone_found:
+		active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zones[0] as Dictionary, encounter_rng)
+		_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
+		battle_state["comboBonusRateBySide"] = {BattleModel.SIDE_ALLY: 1.0}
+		var actors: Array = battle_state.get("actors", [])
+		for actor_index in range(actors.size()):
+			if not (actors[actor_index] is Dictionary):
+				continue
+			var actor := (actors[actor_index] as Dictionary).duplicate(true)
+			if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+				actor["quick"] = 1
+				actor["maxHp"] = maxi(460, int(actor.get("maxHp", 80)))
+				actor["hp"] = int(actor.get("maxHp", 460))
+				actors[actor_index] = actor
+		battle_state["actors"] = actors
+	var ally_count_ok := battle_active and BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ALLY) == 10
+	var enemy_count_ok := battle_active and BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ENEMY) == 10
+	var slots_ok := battle_active and BattleModel.occupied_slots_are_unique(battle_state)
+	var enemy_order := BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY)
+	var expected_enemy_order: Array[String] = [
+		"enemy_front_1",
+		"enemy_front_2",
+		"enemy_front_3",
+		"enemy_front_4",
+		"enemy_front_5",
+		"enemy_back_1",
+		"enemy_back_2",
+		"enemy_back_3",
+		"enemy_back_4",
+		"enemy_back_5",
+	]
+	var target_order_ok := enemy_order == expected_enemy_order and BattleModel.living_enemy_id(battle_state) == "enemy_front_1"
+	var expected_actor_ids: Array[String] = []
+	for index in range(4):
+		expected_actor_ids.append("ally_training_partner_%d" % [index + 1])
+		expected_actor_ids.append("ally_training_partner_pet_%d" % [index + 1])
+	var actors_present := true
+	for actor_id in expected_actor_ids:
+		if BattleModel.actor_by_id(battle_state, actor_id).is_empty():
+			actors_present = false
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var planned_actor_ids: Array[String] = []
+	if target_id != "":
+		var planned_events := BattleModel.build_player_pet_round_events(
+			battle_state,
+			{"command": "attack", "targetId": target_id},
+			{"command": "attack", "targetId": target_id}
+		)
+		for event in planned_events:
+			if str(event.get("type", "")) == "combo_attack":
+				for participant_id in event.get("participantIds", []):
+					planned_actor_ids.append(str(participant_id))
+			else:
+				planned_actor_ids.append(str(event.get("attackerId", "")))
+	var planned_ai_ok := planned_actor_ids.has(BattleModel.PLAYER_ACTOR_ID) and planned_actor_ids.has(BattleModel.PLAYER_PET_ID)
+	for actor_id in expected_actor_ids:
+		planned_ai_ok = planned_ai_ok and planned_actor_ids.has(actor_id)
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	_set_battle_auto_attack_enabled(true, false)
+	var seen_combo := false
+	var seen_partner_actor := false
+	var seen_partner_pet := false
+	for _frame in range(1600):
+		await get_tree().process_frame
+		seen_combo = seen_combo or battle_last_round_event_types.has("combo_attack") or battle_last_event_type == "combo_attack"
+		for actor_id in battle_last_round_actor_order:
+			var actor_id_text := str(actor_id)
+			seen_partner_actor = seen_partner_actor or (actor_id_text.begins_with("ally_training_partner_") and not actor_id_text.begins_with("ally_training_partner_pet_"))
+			seen_partner_pet = seen_partner_pet or actor_id_text.begins_with("ally_training_partner_pet_")
+		if seen_combo and seen_partner_actor and seen_partner_pet:
+			break
+	_set_battle_auto_attack_enabled(false, false)
+	var battle_auto_ok := battle_auto_attack_player_submissions >= 1 and battle_auto_attack_pet_submissions >= 1
+	var reward_state := battle_state.duplicate(true)
+	var reward_actors: Array = reward_state.get("actors", [])
+	for actor_index in range(reward_actors.size()):
+		if not (reward_actors[actor_index] is Dictionary):
+			continue
+		var actor := (reward_actors[actor_index] as Dictionary).duplicate(true)
+		if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+			actor["hp"] = 0
+		reward_actors[actor_index] = actor
+	reward_state["actors"] = reward_actors
+	var reward_result := PlayerProgressModel.apply_battle_result(player_profile, reward_state, "victory")
+	var reward_profile := reward_result.get("profile", player_profile) as Dictionary
+	var reward_partners := PlayerProgressModel.training_partners(reward_profile)
+	var partner_exp_ok := reward_partners.size() == 4
+	for partner in reward_partners:
+		partner_exp_ok = partner_exp_ok and int(partner.get("level", 1)) > 1
+		var pet = partner.get("pet", {})
+		partner_exp_ok = partner_exp_ok and pet is Dictionary and int((pet as Dictionary).get("level", 1)) > 1
+	var status := "ok" if partner_count_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok else "failed"
+	print("training partner check ready: status=%s count=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s planned=%s" % [
+		status,
+		str(partner_count_ok),
+		str(cloned_independent_ok),
+		str(loaded),
+		str(zone_found),
+		str(ally_count_ok),
+		str(enemy_count_ok),
+		str(slots_ok),
+		str(target_order_ok),
+		str(actors_present),
+		str(planned_ai_ok),
+		str(battle_auto_ok),
+		str(seen_combo),
+		str(seen_partner_actor),
+		str(seen_partner_pet),
+		str(partner_exp_ok),
+		",".join(planned_actor_ids),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -2172,20 +2517,38 @@ func _run_auto_battle_visual_timing_check() -> void:
 	var waits_at_old_launch_time := _battle_launch_target_progress(BATTLE_LAUNCH_TARGET_START_RATIO + 0.03) <= 0.0
 	var waits_before_combo_hit := _battle_launch_target_progress(maxf(0.0, combo_reveal - 0.02)) <= 0.0
 	var flies_after_combo_hit := _battle_launch_target_progress(minf(0.98, combo_reveal + 0.08)) > 0.0
+	var finishes_before_event_end := _battle_launch_target_progress(0.96) >= 0.99
+	var holds_until_event_end := _battle_launch_target_progress(0.995) >= 0.99
 	var combo_target_after := BattleModel.actor_by_id(battle_state, target_id)
 	var combo_visual_before_hit := _battle_actor_for_visual_draw(combo_target_after)
-	var combo_launch_timing_ok := combo_reveal > BATTLE_LAUNCH_TARGET_START_RATIO and waits_at_old_launch_time and waits_before_combo_hit and flies_after_combo_hit and int(combo_visual_before_hit.get("hp", 0)) == 18
+	var combo_launch_timing_ok := combo_reveal > BATTLE_LAUNCH_TARGET_START_RATIO and waits_at_old_launch_time and waits_before_combo_hit and flies_after_combo_hit and finishes_before_event_end and holds_until_event_end and int(combo_visual_before_hit.get("hp", 0)) == 18
+	battle_action_timer = 0.01
+	battle_event_advance_pending = false
+	_update_battle_animation(0.02)
+	var final_frame_hold_ok := battle_event_advance_pending and not battle_current_event.is_empty() and _battle_current_event_progress() >= 0.99
+	_update_battle_animation(0.0)
+	var advances_after_final_frame := not battle_event_advance_pending and battle_current_event.is_empty() and str(battle_state.get("phase", "")) == "command"
+	battle_auto_attack_enabled = true
+	battle_auto_attack_delay = 0.0
+	_finish_battle_round_and_open_commands()
+	var auto_settle_ok := battle_auto_attack_delay >= BATTLE_AUTO_ROUND_SETTLE_DELAY - 0.001
+	battle_auto_attack_enabled = false
 
-	var status := "ok" if delayed_hp_ok and combo_launch_timing_ok else "failed"
-	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s reveal=%.2f combo_reveal=%.2f waits_old=%s waits_before=%s flies_after=%s" % [
+	var status := "ok" if delayed_hp_ok and combo_launch_timing_ok and final_frame_hold_ok and advances_after_final_frame and auto_settle_ok else "failed"
+	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s final_frame=%s advance_after_final=%s auto_settle=%s reveal=%.2f combo_reveal=%.2f waits_old=%s waits_before=%s flies_after=%s finish_before_end=%s hold_end=%s" % [
 		status,
 		str(delayed_hp_ok),
 		str(combo_launch_timing_ok),
+		str(final_frame_hold_ok),
+		str(advances_after_final_frame),
+		str(auto_settle_ok),
 		reveal_progress,
 		combo_reveal,
 		str(waits_at_old_launch_time),
 		str(waits_before_combo_hit),
 		str(flies_after_combo_hit),
+		str(finishes_before_event_end),
+		str(holds_until_event_end),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -4249,6 +4612,46 @@ func _run_quest_ui_preview() -> void:
 		_update_hud_text()
 
 
+func _run_auto_battle_settings_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL
+	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
+	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 3
+	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
+	settings[AutoBattleSettingsModel.TARGET_MODE_KEY] = AutoBattleSettingsModel.TARGET_LOWEST_HP_PERCENT
+	settings[AutoBattleSettingsModel.HEALING_ENABLED_KEY] = true
+	settings[AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY] = 70
+	settings[AutoBattleSettingsModel.PET_HP_PERCENT_KEY] = 55
+	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
+		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
+		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
+		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE,
+		AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL,
+	]
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	_open_auto_settings_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_training_partner_demo() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	_load_map("firebud_village_gate", "from_training_yard")
+	player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+	battle_auto_attack_enabled = true
+	_set_world_log_message("已加入4个陪练伙伴。进入草丛遇敌后，可点战斗里的自动观察练级。")
+	_open_training_partner_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_equipment_quest_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -5737,7 +6140,7 @@ func _run_auto_battle_launch_check() -> void:
 		return
 	var target_id := "enemy_front_3"
 	battle_state = BattleModel.set_actor_hp(battle_state, target_id, 18)
-	battle_state = BattleModel.apply_battle_event(battle_state, {
+	var straight_event := {
 		"type": "attack",
 		"attackerId": "ally_attack_high",
 		"targetId": target_id,
@@ -5750,14 +6153,16 @@ func _run_auto_battle_launch_check() -> void:
 		"launchMode": "straight",
 		"forceDodge": false,
 		"forceCritical": false,
-	})
+	}
+	battle_state = BattleModel.apply_battle_event(battle_state, straight_event)
 	var straight_target := BattleModel.actor_by_id(battle_state, target_id)
 	var straight_launch := bool(battle_state.get("lastLaunch", false)) and str(straight_target.get("actionState", "")) == "launched" and not bool(straight_target.get("revivable", true)) and str(battle_state.get("lastLaunchMode", "")) == "straight" and str(straight_target.get("petBattleState", "")) == "rest"
+	var straight_duration_ok := _battle_event_duration(straight_event) >= BATTLE_LAUNCH_STRAIGHT_SECONDS - 0.001
 
 	started = _start_stat_formula_test_battle()
 	await get_tree().process_frame
 	battle_state = BattleModel.set_actor_hp(battle_state, target_id, 18)
-	battle_state = BattleModel.apply_battle_event(battle_state, {
+	var bounce_event := {
 		"type": "attack",
 		"attackerId": "ally_attack_high",
 		"targetId": target_id,
@@ -5770,9 +6175,11 @@ func _run_auto_battle_launch_check() -> void:
 		"launchMode": "bounce",
 		"forceDodge": false,
 		"forceCritical": false,
-	})
+	}
+	battle_state = BattleModel.apply_battle_event(battle_state, bounce_event)
 	var bounce_target := BattleModel.actor_by_id(battle_state, target_id)
 	var bounce_launch := bool(battle_state.get("lastLaunch", false)) and str(bounce_target.get("actionState", "")) == "launched" and not bool(bounce_target.get("revivable", true)) and str(battle_state.get("lastLaunchMode", "")) == "bounce" and str(bounce_target.get("petBattleState", "")) == "rest"
+	var bounce_duration_ok := _battle_event_duration(bounce_event) >= BATTLE_LAUNCH_BOUNCE_SECONDS - 0.001
 
 	started = _start_stat_formula_test_battle()
 	await get_tree().process_frame
@@ -5792,19 +6199,25 @@ func _run_auto_battle_launch_check() -> void:
 	var poison_no_launch := not bool(battle_state.get("lastLaunch", false)) and str(poison_target.get("actionState", "")) != "launched"
 	var target_waits_for_hit := _battle_launch_target_progress(BATTLE_LAUNCH_TARGET_START_RATIO - 0.02) <= 0.0
 	var target_moves_after_hit := _battle_launch_target_progress(BATTLE_LAUNCH_TARGET_START_RATIO + 0.08) > 0.05
+	var target_finishes_before_end := _battle_launch_target_progress(0.96) >= 0.99
+	var target_holds_until_end := _battle_launch_target_progress(0.995) >= 0.99
 	var attacker_reaches_contact := _battle_launch_attacker_lunge(BATTLE_LAUNCH_HIT_RATIO) >= 0.99
 	var previous_launch_mode := battle_last_event_launch_mode
 	battle_last_event_launch_mode = "bounce"
 	var bounce_rotation_ok := absf(_battle_launch_rotation_for_progress(0.86)) > TAU * 1.8
 	battle_last_event_launch_mode = previous_launch_mode
-	var timeline_ok := target_waits_for_hit and target_moves_after_hit and attacker_reaches_contact and bounce_rotation_ok
-	var status := "ok" if straight_launch and bounce_launch and poison_no_launch and timeline_ok else "failed"
-	print("battle launch check ready: status=%s straight=%s bounce=%s poison_no_launch=%s timeline=%s straight_state=%s bounce_state=%s poison_state=%s" % [
+	var timeline_ok := target_waits_for_hit and target_moves_after_hit and target_finishes_before_end and target_holds_until_end and attacker_reaches_contact and bounce_rotation_ok
+	var duration_ok := straight_duration_ok and bounce_duration_ok
+	var status := "ok" if straight_launch and bounce_launch and poison_no_launch and timeline_ok and duration_ok else "failed"
+	print("battle launch check ready: status=%s straight=%s bounce=%s poison_no_launch=%s timeline=%s duration=%s finish_before_end=%s hold_end=%s straight_state=%s bounce_state=%s poison_state=%s" % [
 		status,
 		str(straight_launch),
 		str(bounce_launch),
 		str(poison_no_launch),
 		str(timeline_ok),
+		str(duration_ok),
+		str(target_finishes_before_end),
+		str(target_holds_until_end),
 		str(straight_target.get("actionState", "")),
 		str(bounce_target.get("actionState", "")),
 		str(poison_target.get("actionState", "")),
@@ -6252,7 +6665,7 @@ func _open_battle_launch_preview(mode: String) -> void:
 		"movementStyle": "melee",
 		"canLaunch": true,
 		"launchMode": mode,
-		"duration": 1.46 if mode == "bounce" else 1.08,
+		"duration": _battle_launch_duration_for_mode(mode),
 		"forceDodge": false,
 		"forceCritical": false,
 	}
@@ -6296,7 +6709,10 @@ func _start_stat_formula_test_battle() -> bool:
 	var zones := EncounterModel.encounter_zones(map_data)
 	if not loaded or zones.is_empty():
 		return false
+	var previous_profile := player_profile.duplicate(true)
+	player_profile = PlayerProgressModel.default_profile()
 	_start_battle(BattleModel.create_stat_formula_test_battle(zones[0] as Dictionary))
+	player_profile = previous_profile
 	return true
 
 
@@ -6433,37 +6849,217 @@ func _update_battle_auto_attack(delta: float) -> void:
 		battle_auto_attack_delay = maxf(0.0, battle_auto_attack_delay - delta)
 		return
 	if battle_command_owner == "player":
-		_submit_battle_auto_player_attack()
+		_submit_battle_auto_player_action()
 	elif battle_command_owner == "pet":
-		_submit_battle_auto_pet_attack()
+		_submit_battle_auto_pet_action()
 
 
-func _submit_battle_auto_player_attack() -> bool:
+func _submit_battle_auto_player_action() -> bool:
 	if not battle_active or battle_command_owner != "player" or _battle_commands_locked():
 		return false
-	var target_id := BattleModel.living_enemy_id(battle_state)
-	if target_id == "":
-		return false
-	_submit_player_battle_command("attack", target_id)
+	var settings := _battle_auto_settings()
+	if _battle_auto_try_submit_heal(settings):
+		battle_auto_attack_player_submissions += 1
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		return true
+	var action_key := AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY if _battle_auto_is_first_round() else AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY
+	var action_id := str(settings.get(action_key, AutoBattleSettingsModel.ACTION_ATTACK))
+	if not _battle_auto_submit_player_action_id(action_id, settings):
+		if not _battle_auto_submit_player_action_id(AutoBattleSettingsModel.ACTION_ATTACK, settings):
+			return false
 	battle_auto_attack_player_submissions += 1
 	battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 	return true
 
 
-func _submit_battle_auto_pet_attack() -> bool:
+func _submit_battle_auto_pet_action() -> bool:
 	if not battle_active or battle_command_owner != "pet" or _battle_commands_locked():
 		return false
-	var target_id := BattleModel.living_enemy_id(battle_state)
-	if target_id == "":
-		return false
-	var skill_action := _controlled_pet_skill_action_for_slot(1)
-	var skill_id := str(skill_action.get("id", BattleModel.PET_SKILL_ATTACK))
+	var settings := _battle_auto_settings()
+	var slot_key := AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY if _battle_auto_is_first_round() else AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY
+	var slot := AutoBattleSettingsModel.normalized_pet_skill_slot(settings.get(slot_key, 1))
+	var skill_action := _controlled_pet_skill_action_for_slot(slot)
+	if skill_action.is_empty():
+		skill_action = _controlled_pet_skill_action_for_slot(1)
+	var skill_id := str(skill_action.get("id", ""))
 	if skill_id == "":
 		skill_id = BattleModel.PET_SKILL_ATTACK
-	_submit_pet_battle_command("attack", target_id, skill_id)
+	var command_id := str(skill_action.get("command", "attack"))
+	match command_id:
+		"defend":
+			_submit_pet_battle_command("defend", "", skill_id)
+		"pet_skill":
+			var skill_target_id := _battle_auto_enemy_target_id(settings)
+			if skill_target_id == "":
+				return false
+			_submit_pet_battle_command("pet_skill", skill_target_id, skill_id)
+		_:
+			var target_id := _battle_auto_enemy_target_id(settings)
+			if target_id == "":
+				return false
+			_submit_pet_battle_command("attack", target_id, skill_id)
 	battle_auto_attack_pet_submissions += 1
 	battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 	return true
+
+
+func _battle_auto_settings() -> Dictionary:
+	return PlayerProgressModel.auto_battle_settings(player_profile)
+
+
+func _battle_auto_is_first_round() -> bool:
+	return int(battle_state.get("round", 1)) <= 1
+
+
+func _battle_auto_submit_player_action_id(action_id: String, settings: Dictionary) -> bool:
+	match AutoBattleSettingsModel.normalized_player_action_id(action_id):
+		AutoBattleSettingsModel.ACTION_DEFEND:
+			_submit_player_battle_command("defend")
+			return true
+		AutoBattleSettingsModel.ACTION_SPIRIT_GRACE:
+			_submit_spirit_player_command(BattleModel.SPIRIT_GRACE_ALL)
+			return true
+		AutoBattleSettingsModel.ACTION_SPIRIT_MOIST:
+			var moist_target_id := _battle_auto_best_ally_target_id()
+			if moist_target_id == "":
+				return false
+			_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_SINGLE, moist_target_id)
+			return true
+		AutoBattleSettingsModel.ACTION_SPIRIT_POISON:
+			var poison_target_id := _battle_auto_enemy_target_id(settings)
+			if poison_target_id == "":
+				return false
+			_submit_spirit_player_command(BattleModel.SPIRIT_POISON_SINGLE, poison_target_id)
+			return true
+		AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL:
+			if BattleModel.living_enemy_id(battle_state) == "":
+				return false
+			_submit_spirit_player_command(BattleModel.SPIRIT_POISON_ALL)
+			return true
+		AutoBattleSettingsModel.ACTION_ITEM_MEAT:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, _battle_auto_best_ally_target_id())
+		AutoBattleSettingsModel.ACTION_ITEM_HEAL_SINGLE:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_HEAL_SINGLE, _battle_auto_best_ally_target_id())
+		AutoBattleSettingsModel.ACTION_ITEM_HEAL_ALL:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_HEAL_ALL)
+		AutoBattleSettingsModel.ACTION_ITEM_POISON:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_POISON_SINGLE, _battle_auto_enemy_target_id(settings))
+		AutoBattleSettingsModel.ACTION_ITEM_POISON_ALL:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_POISON_ALL)
+		AutoBattleSettingsModel.ACTION_ITEM_CLEANSE:
+			return _battle_auto_submit_item_action(BattleModel.ITEM_CLEANSE_SINGLE, _battle_auto_best_ally_target_id())
+		_:
+			var target_id := _battle_auto_enemy_target_id(settings)
+			if target_id == "":
+				return false
+			_submit_player_battle_command("attack", target_id)
+			return true
+
+
+func _battle_auto_try_submit_heal(settings: Dictionary) -> bool:
+	if not bool(settings.get(AutoBattleSettingsModel.HEALING_ENABLED_KEY, true)):
+		return false
+	var target_id := _battle_auto_heal_target_id(settings)
+	if target_id == "":
+		return false
+	for source_id in AutoBattleSettingsModel.normalized_heal_priority(settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, [])):
+		match str(source_id):
+			AutoBattleSettingsModel.HEAL_SPIRIT_MOIST:
+				_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_SINGLE, target_id)
+				return true
+			AutoBattleSettingsModel.HEAL_SPIRIT_GRACE:
+				_submit_spirit_player_command(BattleModel.SPIRIT_GRACE_ALL)
+				return true
+			AutoBattleSettingsModel.HEAL_ITEM_MEAT:
+				if _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, target_id):
+					return true
+			AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE:
+				if _battle_auto_submit_item_action(BattleModel.ITEM_HEAL_SINGLE, target_id):
+					return true
+			AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL:
+				if _battle_auto_submit_item_action(BattleModel.ITEM_HEAL_ALL):
+					return true
+	return false
+
+
+func _battle_auto_submit_item_action(item_id: String, target_id: String = "") -> bool:
+	if not BattleModel.has_item(battle_state, item_id):
+		return false
+	var requires_selection := BattleActionCatalog.action_requires_selection(item_id)
+	if requires_selection and target_id == "":
+		return false
+	_submit_item_player_command(item_id, target_id)
+	return true
+
+
+func _battle_auto_heal_target_id(settings: Dictionary) -> String:
+	var candidates: Array[Dictionary] = []
+	_append_battle_auto_heal_candidate(candidates, BattleModel.player_actor_id(battle_state), int(settings.get(AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY, 45)))
+	_append_battle_auto_heal_candidate(candidates, BattleModel.controlled_pet_id(battle_state), int(settings.get(AutoBattleSettingsModel.PET_HP_PERCENT_KEY, 45)))
+	if candidates.is_empty():
+		return ""
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_percent := float(a.get("hpPercent", 1.0))
+		var b_percent := float(b.get("hpPercent", 1.0))
+		if not is_equal_approx(a_percent, b_percent):
+			return a_percent < b_percent
+		return int(a.get("missingHp", 0)) > int(b.get("missingHp", 0))
+	)
+	return str(candidates[0].get("actorId", ""))
+
+
+func _append_battle_auto_heal_candidate(candidates: Array[Dictionary], actor_id: String, threshold_percent: int) -> void:
+	if actor_id == "":
+		return
+	var actor := BattleModel.actor_by_id(battle_state, actor_id)
+	if actor.is_empty():
+		return
+	var max_hp := maxi(1, int(actor.get("maxHp", 1)))
+	var hp := clampi(int(actor.get("hp", max_hp)), 0, max_hp)
+	if hp <= 0 or hp >= max_hp:
+		return
+	var hp_percent := float(hp) / float(max_hp)
+	if hp_percent > float(clampi(threshold_percent, 1, 100)) / 100.0:
+		return
+	candidates.append({
+		"actorId": actor_id,
+		"hpPercent": hp_percent,
+		"missingHp": max_hp - hp,
+	})
+
+
+func _battle_auto_best_ally_target_id() -> String:
+	var target_id := BattleModel.best_ally_heal_target_id(battle_state)
+	if target_id != "":
+		return target_id
+	return BattleModel.player_actor_id(battle_state)
+
+
+func _battle_auto_enemy_target_id(settings: Dictionary) -> String:
+	var target_mode := str(settings.get(AutoBattleSettingsModel.TARGET_MODE_KEY, AutoBattleSettingsModel.TARGET_FIRST_LIVING))
+	match AutoBattleSettingsModel.normalized_target_mode(target_mode):
+		AutoBattleSettingsModel.TARGET_LOWEST_HP:
+			return _battle_auto_lowest_enemy_target_id(false)
+		AutoBattleSettingsModel.TARGET_LOWEST_HP_PERCENT:
+			return _battle_auto_lowest_enemy_target_id(true)
+		_:
+			return BattleModel.living_enemy_id(battle_state)
+
+
+func _battle_auto_lowest_enemy_target_id(by_percent: bool) -> String:
+	var best_id := ""
+	var best_score := INF
+	for actor_id in BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY):
+		var actor := BattleModel.actor_by_id(battle_state, actor_id)
+		if actor.is_empty():
+			continue
+		var hp := maxi(0, int(actor.get("hp", 0)))
+		var max_hp := maxi(1, int(actor.get("maxHp", 1)))
+		var score := float(hp) / float(max_hp) if by_percent else float(hp)
+		if score < best_score:
+			best_score = score
+			best_id = actor_id
+	return best_id
 
 
 func _controlled_pet_actor() -> Dictionary:
@@ -6894,9 +7490,15 @@ func _build_hud() -> void:
 	hud_root.add_child(side_panel)
 
 	action_bar = _panel_container("ActionBar")
+	var action_scroll := ScrollContainer.new()
+	action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	action_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	action_bar.add_child(action_scroll)
 	var action_row := HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 6)
-	action_bar.add_child(action_row)
+	action_scroll.add_child(action_row)
 	stop_button = Button.new()
 	stop_button.text = "挂机"
 	stop_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -6932,6 +7534,16 @@ func _build_hud() -> void:
 	quest_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	quest_menu_button.pressed.connect(_open_quest_panel)
 	action_row.add_child(quest_menu_button)
+	training_partner_menu_button = Button.new()
+	training_partner_menu_button.text = "伙伴"
+	training_partner_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	training_partner_menu_button.pressed.connect(_open_training_partner_panel)
+	action_row.add_child(training_partner_menu_button)
+	auto_settings_menu_button = Button.new()
+	auto_settings_menu_button.text = "内挂"
+	auto_settings_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	auto_settings_menu_button.pressed.connect(_open_auto_settings_panel)
+	action_row.add_child(auto_settings_menu_button)
 	hud_root.add_child(action_bar)
 
 	backpack_panel = _panel_container("BackpackPanel")
@@ -7353,6 +7965,95 @@ func _build_hud() -> void:
 	quest_route_button.pressed.connect(_on_quest_route_pressed)
 	quest_column.add_child(quest_route_button)
 	hud_root.add_child(quest_panel)
+
+	training_partner_panel = _panel_container("TrainingPartnerPanel")
+	training_partner_panel.visible = false
+	training_partner_panel.z_index = 24
+	var training_partner_column := VBoxContainer.new()
+	training_partner_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	training_partner_column.add_theme_constant_override("separation", 10)
+	training_partner_panel.add_child(training_partner_column)
+	var training_partner_header := HBoxContainer.new()
+	training_partner_header.add_theme_constant_override("separation", 10)
+	training_partner_column.add_child(training_partner_header)
+	var training_partner_title := Label.new()
+	training_partner_title.text = "练级伙伴"
+	training_partner_title.add_theme_font_size_override("font_size", 21)
+	training_partner_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_header.add_child(training_partner_title)
+	training_partner_close_button = Button.new()
+	training_partner_close_button.text = "关闭"
+	training_partner_close_button.custom_minimum_size = Vector2(92, 44)
+	training_partner_close_button.pressed.connect(_close_training_partner_panel)
+	training_partner_header.add_child(training_partner_close_button)
+	training_partner_label = Label.new()
+	training_partner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	training_partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	training_partner_label.add_theme_font_size_override("font_size", 16)
+	training_partner_column.add_child(training_partner_label)
+	var training_partner_button_row := HBoxContainer.new()
+	training_partner_button_row.add_theme_constant_override("separation", 8)
+	training_partner_column.add_child(training_partner_button_row)
+	training_partner_add_button = Button.new()
+	training_partner_add_button.text = "加入"
+	training_partner_add_button.custom_minimum_size = Vector2(0, 46)
+	training_partner_add_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_add_button.pressed.connect(_on_training_partner_add_pressed)
+	training_partner_button_row.add_child(training_partner_add_button)
+	training_partner_remove_button = Button.new()
+	training_partner_remove_button.text = "移除"
+	training_partner_remove_button.custom_minimum_size = Vector2(0, 46)
+	training_partner_remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_remove_button.pressed.connect(_on_training_partner_remove_pressed)
+	training_partner_button_row.add_child(training_partner_remove_button)
+	training_partner_fill_button = Button.new()
+	training_partner_fill_button.text = "加满"
+	training_partner_fill_button.custom_minimum_size = Vector2(0, 46)
+	training_partner_fill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_fill_button.pressed.connect(_on_training_partner_fill_pressed)
+	training_partner_button_row.add_child(training_partner_fill_button)
+	training_partner_clear_button = Button.new()
+	training_partner_clear_button.text = "清空"
+	training_partner_clear_button.custom_minimum_size = Vector2(0, 46)
+	training_partner_clear_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_clear_button.pressed.connect(_on_training_partner_clear_pressed)
+	training_partner_button_row.add_child(training_partner_clear_button)
+	hud_root.add_child(training_partner_panel)
+
+	auto_settings_panel = _panel_container("AutoBattleSettingsPanel")
+	auto_settings_panel.visible = false
+	auto_settings_panel.z_index = 24
+	var auto_settings_column := VBoxContainer.new()
+	auto_settings_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	auto_settings_column.add_theme_constant_override("separation", 8)
+	auto_settings_panel.add_child(auto_settings_column)
+
+	var auto_settings_header := HBoxContainer.new()
+	auto_settings_header.add_theme_constant_override("separation", 10)
+	auto_settings_column.add_child(auto_settings_header)
+	var auto_settings_title := Label.new()
+	auto_settings_title.text = "内挂设置"
+	auto_settings_title.add_theme_font_size_override("font_size", 21)
+	auto_settings_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_header.add_child(auto_settings_title)
+	auto_settings_close_button = Button.new()
+	auto_settings_close_button.text = "关闭"
+	auto_settings_close_button.custom_minimum_size = Vector2(92, 44)
+	auto_settings_close_button.pressed.connect(_close_auto_settings_panel)
+	auto_settings_header.add_child(auto_settings_close_button)
+
+	var auto_settings_scroll := ScrollContainer.new()
+	auto_settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	auto_settings_column.add_child(auto_settings_scroll)
+	auto_settings_content = VBoxContainer.new()
+	auto_settings_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_content.add_theme_constant_override("separation", 8)
+	auto_settings_scroll.add_child(auto_settings_content)
+	hud_root.add_child(auto_settings_panel)
 
 	pet_rename_panel = _panel_container("PetRenamePanel")
 	pet_rename_panel.visible = false
@@ -8060,7 +8761,13 @@ func _trigger_encounter(zone: Dictionary) -> void:
 	_clear_navigation_state()
 	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng)
 	encounter_active = true
-	_start_battle(BattleModel.create_wild_battle(active_encounter_zone))
+	_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
+
+
+func _battle_state_for_encounter_zone(zone: Dictionary) -> Dictionary:
+	if PlayerProgressModel.training_partner_count(player_profile) > 0:
+		return BattleModel.create_training_partner_battle(zone)
+	return BattleModel.create_wild_battle(zone)
 
 
 func _update_encounter_grace(delta: float) -> void:
@@ -8120,6 +8827,8 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	_close_encounter()
 	world_log_message = ""
 	battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
@@ -8146,6 +8855,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
 	battle_current_event_actor_snapshots.clear()
+	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
 	battle_state["guardingActorIds"] = []
 	battle_last_round_applied_events = 0
@@ -8161,6 +8871,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_last_event_launch = false
 	battle_last_event_launch_mode = ""
 	battle_last_event_ledger.clear()
+	battle_recorded_event_sequence = 0
 	battle_float_texts.clear()
 	_set_battle_command_owner("player")
 	if player != null:
@@ -8210,6 +8921,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
 	battle_current_event_actor_snapshots.clear()
+	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
@@ -8224,6 +8936,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_last_event_launch = false
 	battle_last_event_launch_mode = ""
 	battle_last_event_ledger.clear()
+	battle_recorded_event_sequence = 0
 	battle_float_texts.clear()
 	_set_battle_command_owner("player")
 	if battle_command_panel != null:
@@ -8374,6 +9087,8 @@ func _open_backpack_panel() -> void:
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	backpack_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_backpack_panel()
@@ -8399,6 +9114,8 @@ func _open_equipment_panel() -> void:
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	equipment_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_equipment_panel()
@@ -8796,6 +9513,8 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	shop_active_id = resolved_shop_id
 	shop_mode = "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
@@ -9009,6 +9728,8 @@ func _open_pet_panel() -> void:
 	_close_shop_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
 	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
@@ -9036,6 +9757,8 @@ func _open_codex_panel() -> void:
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
 	_layout_hud()
@@ -9059,6 +9782,8 @@ func _open_quest_panel() -> void:
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
 	quest_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_quest_panel()
@@ -9070,6 +9795,327 @@ func _close_quest_panel() -> void:
 		quest_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_training_partner_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_auto_settings_panel()
+	training_partner_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_training_partner_panel()
+	_layout_hud()
+
+
+func _close_training_partner_panel() -> void:
+	if training_partner_panel != null:
+		training_partner_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_training_partner_panel() -> void:
+	if training_partner_panel == null or training_partner_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var count := PlayerProgressModel.training_partner_count(player_profile)
+	var lines: Array[String] = []
+	lines.append("队伍：%d/4" % count)
+	lines.append("草丛遇敌时，会组成最多 5 人 5 宠的练级队。")
+	lines.append("陪练会复制加入时的人物和出战宠属性，之后独立获得经验。")
+	lines.append("")
+	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
+	training_partner_label.text = "\n".join(lines)
+	if training_partner_add_button != null:
+		training_partner_add_button.disabled = count >= 4
+	if training_partner_remove_button != null:
+		training_partner_remove_button.disabled = count <= 0
+	if training_partner_fill_button != null:
+		training_partner_fill_button.disabled = count >= 4
+	if training_partner_clear_button != null:
+		training_partner_clear_button.disabled = count <= 0
+
+
+func _set_training_partner_count(count: int) -> void:
+	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, count)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	var next_count := PlayerProgressModel.training_partner_count(player_profile)
+	_set_world_log_message("练级伙伴 %d/4。" % next_count)
+	_refresh_training_partner_panel()
+	_update_hud_text()
+
+
+func _on_training_partner_add_pressed() -> void:
+	_set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) + 1)
+
+
+func _on_training_partner_remove_pressed() -> void:
+	_set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) - 1)
+
+
+func _on_training_partner_fill_pressed() -> void:
+	_set_training_partner_count(4)
+
+
+func _on_training_partner_clear_pressed() -> void:
+	_set_training_partner_count(0)
+
+
+func _open_auto_settings_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_training_partner_panel()
+	auto_settings_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_auto_settings_panel()
+	_layout_hud()
+
+
+func _close_auto_settings_panel() -> void:
+	if auto_settings_panel != null:
+		auto_settings_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_auto_settings_panel() -> void:
+	if auto_settings_panel == null or auto_settings_content == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	auto_settings_controls.clear()
+	for child in auto_settings_content.get_children():
+		child.queue_free()
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	_add_auto_settings_section("人物动作")
+	_add_auto_settings_option(
+		"首回合",
+		AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY,
+		AutoBattleSettingsModel.player_action_options(),
+		str(settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
+	)
+	_add_auto_settings_option(
+		"一般回合",
+		AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY,
+		AutoBattleSettingsModel.player_action_options(),
+		str(settings.get(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
+	)
+	_add_auto_settings_section("宠物动作")
+	_add_auto_settings_pet_slot_option(
+		"首回合",
+		AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY,
+		int(settings.get(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY, 1))
+	)
+	_add_auto_settings_pet_slot_option(
+		"一般回合",
+		AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY,
+		int(settings.get(AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY, 1))
+	)
+	_add_auto_settings_section("目标与回血")
+	_add_auto_settings_option(
+		"攻击目标",
+		AutoBattleSettingsModel.TARGET_MODE_KEY,
+		AutoBattleSettingsModel.target_mode_options(),
+		str(settings.get(AutoBattleSettingsModel.TARGET_MODE_KEY, AutoBattleSettingsModel.TARGET_FIRST_LIVING))
+	)
+	_add_auto_settings_checkbox(
+		"自动回血",
+		AutoBattleSettingsModel.HEALING_ENABLED_KEY,
+		bool(settings.get(AutoBattleSettingsModel.HEALING_ENABLED_KEY, true))
+	)
+	_add_auto_settings_spinbox(
+		"人物血线",
+		AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY,
+		int(settings.get(AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY, 45)),
+		"%"
+	)
+	_add_auto_settings_spinbox(
+		"宠物血线",
+		AutoBattleSettingsModel.PET_HP_PERCENT_KEY,
+		int(settings.get(AutoBattleSettingsModel.PET_HP_PERCENT_KEY, 45)),
+		"%"
+	)
+	_add_auto_settings_section("回血优先级")
+	var heal_priority := _auto_settings_heal_priority_slots(settings)
+	for index in range(AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS):
+		_add_auto_settings_heal_option(index, str(heal_priority[index]))
+
+
+func _add_auto_settings_section(text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(0.95, 0.86, 0.48, 1.0))
+	label.custom_minimum_size = Vector2(0, 26)
+	auto_settings_content.add_child(label)
+
+
+func _add_auto_settings_option(label_text: String, key: String, options: Array[Dictionary], selected_id: String) -> OptionButton:
+	var row := _auto_settings_row(label_text)
+	var option := OptionButton.new()
+	option.custom_minimum_size = Vector2(0, 40)
+	option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	option.add_theme_font_size_override("font_size", 15)
+	var selected_index := 0
+	for index in range(options.size()):
+		var option_entry := options[index] as Dictionary
+		var option_id := str(option_entry.get("id", ""))
+		option.add_item(str(option_entry.get("label", option_id)), index)
+		option.set_item_metadata(index, option_id)
+		if option_id == selected_id:
+			selected_index = index
+	option.select(selected_index)
+	option.item_selected.connect(func(index: int) -> void:
+		_set_auto_settings_value(key, str(option.get_item_metadata(index)))
+	)
+	row.add_child(option)
+	auto_settings_controls[key] = option
+	return option
+
+
+func _add_auto_settings_pet_slot_option(label_text: String, key: String, selected_slot: int) -> OptionButton:
+	var options := _auto_settings_pet_slot_options()
+	var selected_id := str(AutoBattleSettingsModel.normalized_pet_skill_slot(selected_slot))
+	return _add_auto_settings_option(label_text, key, options, selected_id)
+
+
+func _add_auto_settings_checkbox(label_text: String, key: String, value: bool) -> CheckBox:
+	var row := _auto_settings_row(label_text)
+	var checkbox := CheckBox.new()
+	checkbox.text = "开启"
+	checkbox.button_pressed = value
+	checkbox.custom_minimum_size = Vector2(0, 40)
+	checkbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	checkbox.add_theme_font_size_override("font_size", 15)
+	checkbox.toggled.connect(func(pressed: bool) -> void:
+		_set_auto_settings_value(key, pressed)
+	)
+	row.add_child(checkbox)
+	auto_settings_controls[key] = checkbox
+	return checkbox
+
+
+func _add_auto_settings_spinbox(label_text: String, key: String, value: int, suffix: String = "") -> SpinBox:
+	var row := _auto_settings_row(label_text)
+	var spinbox := SpinBox.new()
+	spinbox.min_value = AutoBattleSettingsModel.MIN_HP_PERCENT
+	spinbox.max_value = AutoBattleSettingsModel.MAX_HP_PERCENT
+	spinbox.step = 1
+	spinbox.rounded = true
+	spinbox.value = float(clampi(value, AutoBattleSettingsModel.MIN_HP_PERCENT, AutoBattleSettingsModel.MAX_HP_PERCENT))
+	spinbox.suffix = suffix
+	spinbox.custom_minimum_size = Vector2(0, 40)
+	spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spinbox.add_theme_font_size_override("font_size", 15)
+	spinbox.value_changed.connect(func(next_value: float) -> void:
+		_set_auto_settings_value(key, int(next_value))
+	)
+	row.add_child(spinbox)
+	auto_settings_controls[key] = spinbox
+	return spinbox
+
+
+func _add_auto_settings_heal_option(index: int, selected_source_id: String) -> OptionButton:
+	var options := _auto_settings_heal_source_options()
+	var row_label := "优先%d" % [index + 1]
+	var row := _auto_settings_row(row_label)
+	var option := OptionButton.new()
+	option.custom_minimum_size = Vector2(0, 40)
+	option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	option.add_theme_font_size_override("font_size", 15)
+	var selected_index := 0
+	for option_index in range(options.size()):
+		var option_entry := options[option_index] as Dictionary
+		var option_id := str(option_entry.get("id", ""))
+		option.add_item(str(option_entry.get("label", option_id)), option_index)
+		option.set_item_metadata(option_index, option_id)
+		if option_id == selected_source_id:
+			selected_index = option_index
+	option.select(selected_index)
+	option.item_selected.connect(func(option_index: int) -> void:
+		_set_auto_settings_heal_priority(index, str(option.get_item_metadata(option_index)))
+	)
+	row.add_child(option)
+	auto_settings_controls["healPriority%d" % index] = option
+	return option
+
+
+func _auto_settings_row(label_text: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 8)
+	auto_settings_content.add_child(row)
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(96, 40)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 15)
+	row.add_child(label)
+	return row
+
+
+func _auto_settings_pet_slot_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	for slot in range(AutoBattleSettingsModel.MIN_PET_SKILL_SLOT, AutoBattleSettingsModel.MAX_PET_SKILL_SLOT + 1):
+		var label := BattleActionCatalog.pet_skill_label_for_slot(slot, "未配置")
+		options.append({
+			"id": str(slot),
+			"label": "技%d %s" % [slot, label],
+		})
+	return options
+
+
+func _auto_settings_heal_source_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	for option in AutoBattleSettingsModel.heal_source_options():
+		if str(option.get("id", "")) != AutoBattleSettingsModel.HEAL_NONE:
+			options.append(option)
+	return options
+
+
+func _auto_settings_heal_priority_slots(settings: Dictionary) -> Array[String]:
+	var priority := AutoBattleSettingsModel.normalized_heal_priority(settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, []))
+	while priority.size() < AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS:
+		priority.append(AutoBattleSettingsModel.HEAL_ITEM_MEAT)
+	return priority.slice(0, AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS)
+
+
+func _set_auto_settings_value(key: String, value) -> void:
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	settings[key] = int(value) if key == AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY or key == AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY else value
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
+func _set_auto_settings_heal_priority(index: int, source_id: String) -> void:
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	var priority := _auto_settings_heal_priority_slots(settings)
+	if index >= 0 and index < priority.size():
+		priority[index] = AutoBattleSettingsModel.normalized_heal_source(source_id)
+	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = priority
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_refresh_auto_settings_panel()
 
 
 func _refresh_quest_panel() -> void:
@@ -10298,6 +11344,7 @@ func _start_round_end_status_events_if_needed() -> bool:
 
 
 func _play_next_battle_event() -> void:
+	battle_event_advance_pending = false
 	while battle_active and not battle_event_queue.is_empty():
 		var event := battle_event_queue.pop_front() as Dictionary
 		var actor_snapshots := _battle_actor_snapshots_by_id()
@@ -10341,22 +11388,32 @@ func _play_next_battle_event() -> void:
 		return
 	if _start_round_end_status_events_if_needed():
 		return
+	_finish_battle_round_and_open_commands()
+
+
+func _finish_battle_round_and_open_commands() -> void:
 	battle_state["phase"] = "command"
 	battle_state["round"] = int(battle_state.get("round", 1)) + 1
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
 	battle_current_event_actor_snapshots.clear()
+	battle_event_advance_pending = false
 	_set_battle_command_owner("player")
 	battle_target_mode = "enemy"
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()
+	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
+	battle_pending_pet_skill_id = ""
 	battle_state["guardingActorIds"] = []
 	battle_selected_target_id = ""
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
 	_sync_battle_target_selection()
+	if battle_auto_attack_enabled:
+		battle_auto_attack_delay = maxf(battle_auto_attack_delay, BATTLE_AUTO_ROUND_SETTLE_DELAY)
 	_sync_battle_buttons()
 	queue_redraw()
 
@@ -10387,6 +11444,7 @@ func _set_battle_actor_fields(state: Dictionary, actor_id: String, fields: Dicti
 func _record_battle_event(event: Dictionary, ledger: Dictionary = {}) -> void:
 	if ledger.is_empty():
 		ledger = BattleEventLedger.build_from_applied_state(battle_state, event, {}, _battle_event_timeline_for_applied_event(event))
+	battle_recorded_event_sequence += 1
 	battle_last_event_ledger = ledger.duplicate(true)
 	var event_type := str(ledger.get("type", event.get("type", "")))
 	battle_last_event_type = event_type
@@ -10581,20 +11639,30 @@ func _battle_event_consumes_item(event_type: String) -> bool:
 	].has(event_type)
 
 
+func _battle_launch_duration_for_mode(launch_mode: String) -> float:
+	return BATTLE_LAUNCH_BOUNCE_SECONDS if launch_mode == "bounce" else BATTLE_LAUNCH_STRAIGHT_SECONDS
+
+
+func _battle_combo_last_hit_seconds(participant_count: int) -> float:
+	return BATTLE_COMBO_STAGGER_SECONDS * float(maxi(1, participant_count) - 1) + BATTLE_COMBO_ACTION_SECONDS * BATTLE_COMBO_APPROACH_RATIO + 0.06
+
+
 func _battle_event_duration(event: Dictionary) -> float:
 	var timeline = event.get("timeline", {})
 	if timeline is Dictionary and (timeline as Dictionary).has("durationSeconds"):
 		return maxf(0.12, float((timeline as Dictionary).get("durationSeconds", 0.46)))
 	if event.has("duration"):
 		return maxf(0.12, float(event.get("duration", 0.46)))
-	if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
-		var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
-		return 1.42 if launch_mode == "bounce" else 1.08
 	match str(event.get("type", "")):
 		"combo_attack":
 			var participant_ids: Array = event.get("participantIds", [str(event.get("attackerId", ""))])
 			var participant_count := maxi(1, participant_ids.size())
-			return BATTLE_COMBO_ACTION_SECONDS + BATTLE_COMBO_STAGGER_SECONDS * float(participant_count - 1) + BATTLE_COMBO_RETURN_PADDING_SECONDS
+			var duration := BATTLE_COMBO_ACTION_SECONDS + BATTLE_COMBO_STAGGER_SECONDS * float(participant_count - 1) + BATTLE_COMBO_RETURN_PADDING_SECONDS
+			if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
+				var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
+				var launch_tail_seconds := _battle_launch_duration_for_mode(launch_mode) * (1.0 - BATTLE_LAUNCH_TARGET_START_RATIO)
+				duration = maxf(duration, _battle_combo_last_hit_seconds(participant_count) + launch_tail_seconds)
+			return duration
 		"skill_attack":
 			return 0.74
 		"counter_attack":
@@ -10626,8 +11694,14 @@ func _battle_event_duration(event: Dictionary) -> float:
 		"status_skip":
 			return 0.36
 		"attack":
+			if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
+				var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
+				return _battle_launch_duration_for_mode(launch_mode)
 			return 0.62
 		_:
+			if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
+				var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
+				return _battle_launch_duration_for_mode(launch_mode)
 			return 0.46
 
 
@@ -10646,9 +11720,8 @@ func _battle_event_result_reveal_progress(event: Dictionary) -> float:
 	if event_type == "combo_attack":
 		var participant_ids: Array = event.get("participantIds", [str(event.get("attackerId", ""))])
 		var participant_count := maxi(1, participant_ids.size())
-		var last_hit_seconds := BATTLE_COMBO_STAGGER_SECONDS * float(participant_count - 1) + BATTLE_COMBO_ACTION_SECONDS * BATTLE_COMBO_APPROACH_RATIO
 		var duration := _battle_event_duration(event)
-		return clampf((last_hit_seconds + 0.06) / maxf(0.01, duration), 0.18, 0.88)
+		return clampf(_battle_combo_last_hit_seconds(participant_count) / maxf(0.01, duration), 0.18, 0.88)
 	if bool(event.get("canLaunch", false)):
 		return BATTLE_LAUNCH_TARGET_START_RATIO
 	if event_type == "attack" or event_type == "skill_attack" or event_type == "counter_attack":
@@ -11069,40 +12142,43 @@ func _battle_commands_locked() -> bool:
 
 func _update_battle_animation(delta: float) -> void:
 	_update_battle_float_texts(delta)
+	if battle_event_advance_pending:
+		battle_event_advance_pending = false
+		_advance_battle_after_current_event()
+		return
 	if battle_action_timer <= 0.0:
+		if str(battle_state.get("phase", "command")) == "round_events":
+			_advance_battle_after_current_event()
 		return
 	battle_action_timer = maxf(0.0, battle_action_timer - delta)
-	if battle_action_timer <= 0.0:
-		battle_state = BattleModel.reset_action_states(battle_state)
-		battle_current_event.clear()
-		battle_current_event_duration = 0.0
-		battle_current_event_actor_snapshots.clear()
-		_sync_battle_target_selection()
-		if battle_end_pending:
-			_finish_battle_and_return_to_world()
+	if battle_action_timer <= 0.001:
+		battle_action_timer = 0.0
+		if battle_current_event.is_empty():
+			_advance_battle_after_current_event()
 			return
-		if not battle_event_queue.is_empty():
-			_play_next_battle_event()
-			return
-		if battle_enemy_response_pending:
-			battle_enemy_response_pending = false
-			_battle_enemy_response()
-			return
-		if _start_round_end_status_events_if_needed():
-			return
-		battle_state["phase"] = "command"
-		_set_battle_command_owner("player")
-		battle_target_mode = "enemy"
-		battle_pending_player_command.clear()
-		battle_pending_pet_command.clear()
-		battle_pending_item_id = ""
-		battle_pending_pet_skill_id = ""
-		battle_state["guardingActorIds"] = []
-		battle_selected_target_id = ""
-		battle_selected_ally_target_id = ""
-		battle_hover_target_id = ""
-		battle_hover_ally_target_id = ""
-		_sync_battle_buttons()
+		battle_event_advance_pending = true
+		queue_redraw()
+
+
+func _advance_battle_after_current_event() -> void:
+	battle_state = BattleModel.reset_action_states(battle_state)
+	battle_current_event.clear()
+	battle_current_event_duration = 0.0
+	battle_current_event_actor_snapshots.clear()
+	_sync_battle_target_selection()
+	if battle_end_pending:
+		_finish_battle_and_return_to_world()
+		return
+	if not battle_event_queue.is_empty():
+		_play_next_battle_event()
+		return
+	if battle_enemy_response_pending:
+		battle_enemy_response_pending = false
+		_battle_enemy_response()
+		return
+	if _start_round_end_status_events_if_needed():
+		return
+	_finish_battle_round_and_open_commands()
 
 
 func _update_battle_float_texts(delta: float) -> void:
@@ -11424,7 +12500,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -11433,7 +12509,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel]:
+	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -11544,6 +12620,20 @@ func _layout_hud() -> void:
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
+	training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	training_partner_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		training_partner_panel.visible = false
+	if training_partner_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	auto_settings_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		auto_settings_panel.visible = false
+	if auto_settings_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
 	var rename_height := 162.0
 	pet_rename_panel.position = Vector2((viewport_size.x - rename_width) * 0.5, maxf(margin + 92.0, (viewport_size.y - rename_height) * 0.5))
@@ -11617,9 +12707,15 @@ func _update_hud_text() -> void:
 		status_label.text = "万兽纪元  |  %s" % [move_name]
 	else:
 		status_label.text = "万兽纪元  |  %s  |  %s  |  %s" % [str(map_data.get("name", "未知地图")), layout_name, move_name]
-	if has_pending_interaction:
-		target_text = str(pending_interaction.get("name", "交互点"))
-	detail_label.text = "坐标  %d,%d\n目标  %s\n任务  -  %s" % [player_cell.x, player_cell.y, target_text, _current_task_text()]
+		if has_pending_interaction:
+			target_text = str(pending_interaction.get("name", "交互点"))
+		detail_label.text = "坐标  %d,%d\n目标  %s\n伙伴  %d/4\n任务  -  %s" % [
+			player_cell.x,
+			player_cell.y,
+			target_text,
+			PlayerProgressModel.training_partner_count(player_profile),
+			_current_task_text(),
+		]
 
 
 func _layout_size() -> Vector2:
@@ -12205,7 +13301,8 @@ func _battle_launch_target_progress(progress: float) -> float:
 		launch_start = clampf(float((timeline as Dictionary).get("launchStartProgress", launch_start)), 0.0, 1.0)
 	if progress <= launch_start:
 		return 0.0
-	return clampf((progress - launch_start) / maxf(0.01, 1.0 - launch_start), 0.0, 1.0)
+	var remaining_progress := (progress - launch_start) / maxf(0.01, 1.0 - launch_start)
+	return clampf(remaining_progress / BATTLE_LAUNCH_FINISH_HOLD_RATIO, 0.0, 1.0)
 
 
 func _battle_combo_participant_lunge(actor_id: String, participant_ids: Array, progress: float) -> float:

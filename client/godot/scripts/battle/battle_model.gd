@@ -91,6 +91,18 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 	return _with_default_player_pet_party(state)
 
 
+static func create_training_partner_battle(encounter_zone: Dictionary, enemy_count: int = 10) -> Dictionary:
+	var state := create_wild_battle(encounter_zone)
+	var allies: Array[Dictionary] = []
+	for actor in _actors(state):
+		if str(actor.get("side", "")) == SIDE_ALLY:
+			allies.append(actor)
+	state["id"] = "local_training_partner_battle"
+	state["message"] = "%s 出现了一群野生宠物。" % str(encounter_zone.get("name", "野外"))
+	state["actors"] = _training_partner_enemy_group_actors(encounter_zone, enemy_count) + allies
+	return _with_default_player_pet_party(state)
+
+
 static func default_item_bag() -> Dictionary:
 	return {
 		ITEM_MEAT_SMALL: 6,
@@ -197,6 +209,40 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 			52 + slot * 6,
 			18
 		))
+	return actors
+
+
+static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, enemy_count: int) -> Array[Dictionary]:
+	var wild_pet := _wild_pet_entry_for_zone(encounter_zone)
+	var form_id := str(wild_pet.get("formId", "wuli_normal_orange_fire10"))
+	var base_name := _wild_pet_name(wild_pet, form_id)
+	var base_stats := _wild_pet_battle_stats(wild_pet, form_id)
+	var enemy_level := maxi(1, int(wild_pet.get("level", wild_pet.get("levelMin", 1))))
+	var actors: Array[Dictionary] = []
+	var count := clampi(enemy_count, 1, SLOTS_PER_ROW * 2)
+	for index in range(count):
+		var front_row := index < SLOTS_PER_ROW
+		var slot := index + 1 if front_row else index - SLOTS_PER_ROW + 1
+		var row := ROW_FRONT if front_row else ROW_BACK
+		var actor_id := "enemy_%s_%d" % [row, slot]
+		var name := "%s%d" % [base_name, index + 1]
+		var max_hp := maxi(1, int(base_stats.get("maxHp", 80)) + index * 4)
+		var actor := _make_actor(
+			actor_id,
+			name,
+			SIDE_ENEMY,
+			"wild_pet",
+			slot_id(SIDE_ENEMY, row, slot),
+			int(base_stats.get("hp", max_hp)),
+			max_hp,
+			int(base_stats.get("quick", base_stats.get("agility", 48))) + (index % SLOTS_PER_ROW) * 2,
+			int(base_stats.get("attack", 10)),
+			int(base_stats.get("defense", 6)),
+			[],
+			form_id
+		)
+		actor["level"] = enemy_level
+		actors.append(actor)
 	return actors
 
 
@@ -524,6 +570,16 @@ static func side_actor_count(state: Dictionary, side: String) -> int:
 
 static func fills_full_formation(state: Dictionary) -> bool:
 	return state.get("actors", []).size() == 20 and side_actor_count(state, SIDE_ALLY) == 10 and side_actor_count(state, SIDE_ENEMY) == 10 and occupied_slots_are_unique(state)
+
+
+static func _actors(state: Dictionary) -> Array[Dictionary]:
+	var actors: Array[Dictionary] = []
+	var raw_actors = state.get("actors", [])
+	if raw_actors is Array:
+		for value in raw_actors:
+			if value is Dictionary:
+				actors.append(value as Dictionary)
+	return actors
 
 
 static func actor_index(state: Dictionary, actor_id: String) -> int:

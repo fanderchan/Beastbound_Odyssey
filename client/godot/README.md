@@ -16,7 +16,7 @@ godot --headless --path . --quit
 
 ## Current Slice
 
-Phase 58 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, battle auto-attack toggle, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
+Phase 60 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, battle auto-battle settings, training partners, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
 
 - Mouse click-to-pathfind on PC.
 - Touch tap-to-pathfind on mobile.
@@ -36,7 +36,16 @@ Phase 58 contains a minimal isometric exploration, encounter loop, hang-up walki
 - The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
 - Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
 - Battle commands arranged as `攻击` / `精灵` / `捕捉` / `help` and `防御` / `物品` / `换宠` / `逃跑`.
-- The battle panel has a short `自动` toggle that auto-submits normal attacks for the player and controlled pet against the first living enemy.
+- The battle panel has a short `自动` toggle that auto-submits player and controlled-pet commands from `内挂设置`.
+- The world action bar has a `内挂` settings panel.
+- Player auto actions distinguish `首回合` and `一般回合`.
+- Pet auto actions distinguish `首回合` and `一般回合`, and select `技1` through `技7` instead of hardcoding pet defense as a separate action.
+- Auto healing can watch player/pet HP thresholds and try heal sources in priority order.
+- The world action bar has a `伙伴` panel for adding, removing, filling, or clearing up to four training partners.
+- Training partners clone the current player and active pet when added, then persist and grow independently.
+- Grass encounters with training partners become 10v10 training battles: 5 humans plus 5 pets against 10 wild enemies.
+- Training partner humans and pets use default attack AI against enemy slots from front 1-5, then back 1-5.
+- Victory rewards grant EXP to training partner humans and pets with a simple stat-growth rule.
 - Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
 - 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.
 - The controlled human placeholder uses a distinct red/gold color in the ally formation.
@@ -78,6 +87,18 @@ Open the 10v10 auto-battle observation preview directly from this directory:
 godot --path . --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
 ```
 
+Open the auto-battle settings preview directly from this directory:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --auto-battle-settings-preview
+```
+
+Open the training-partner grass demo directly from this directory:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --training-partner-demo
+```
+
 Manual 10v10 checks:
 
 - Player target choice: press `攻击`, hover an enemy to show the ring, then click/tap that enemy.
@@ -101,4 +122,6 @@ godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1200 -- --
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1200 -- --auto-battle-pet-command-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-pet-target-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
+godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
+godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-training-partner-check
 ```
