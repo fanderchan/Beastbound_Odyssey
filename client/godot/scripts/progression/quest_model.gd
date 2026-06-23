@@ -93,7 +93,80 @@ static func reward_stone_coins(quest: Dictionary) -> int:
 static func reward_items(quest: Dictionary) -> Array[Dictionary]:
 	var rewards = quest.get("rewards", {})
 	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
-	var raw_items = reward_dict.get("items", [])
+	return _normalized_reward_items(reward_dict.get("items", []))
+
+
+static func reward_choices(quest: Dictionary) -> Array[Dictionary]:
+	var rewards = quest.get("rewards", {})
+	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
+	var raw_choices = reward_dict.get("choices", reward_dict.get("choiceRewards", []))
+	var result: Array[Dictionary] = []
+	if raw_choices is Array:
+		for index in range((raw_choices as Array).size()):
+			var value = (raw_choices as Array)[index]
+			if not (value is Dictionary):
+				continue
+			var choice := value as Dictionary
+			var choice_id := str(choice.get("id", "choice_%d" % index))
+			var choice_items := _normalized_reward_items(choice.get("items", []))
+			var choice_coins := maxi(0, int(choice.get("stoneCoins", 0)))
+			if choice_id == "" or (choice_items.is_empty() and choice_coins <= 0):
+				continue
+			var normalized := {
+				"id": choice_id,
+				"label": str(choice.get("label", "")),
+				"stoneCoins": choice_coins,
+				"items": choice_items,
+			}
+			if str(normalized.get("label", "")) == "":
+				normalized["label"] = reward_bundle_text(normalized)
+			result.append(normalized)
+	return result
+
+
+static func has_reward_choices(quest: Dictionary) -> bool:
+	return not reward_choices(quest).is_empty()
+
+
+static func reward_choice_for_id(quest: Dictionary, choice_id: String) -> Dictionary:
+	for choice in reward_choices(quest):
+		if str(choice.get("id", "")) == choice_id:
+			return choice
+	return {}
+
+
+static func reward_bundle_text(reward_bundle: Dictionary) -> String:
+	var parts: Array[String] = []
+	var coins := maxi(0, int(reward_bundle.get("stoneCoins", 0)))
+	if coins > 0:
+		parts.append("%d石币" % coins)
+	var raw_items = reward_bundle.get("items", [])
+	if raw_items is Array:
+		for item in _normalized_reward_items(raw_items):
+			parts.append("%s x%d" % [
+				BackpackModel.label_for(str(item.get("itemId", ""))),
+				maxi(0, int(item.get("count", 0))),
+			])
+	return "、".join(parts)
+
+
+static func reward_claim_text(quest: Dictionary, selected_choice: Dictionary = {}) -> String:
+	var fixed := {
+		"stoneCoins": reward_stone_coins(quest),
+		"items": reward_items(quest),
+	}
+	var parts: Array[String] = []
+	var fixed_text := reward_bundle_text(fixed)
+	if fixed_text != "":
+		parts.append(fixed_text)
+	if not selected_choice.is_empty():
+		var choice_text := reward_bundle_text(selected_choice)
+		if choice_text != "":
+			parts.append(choice_text)
+	return "、".join(parts)
+
+
+static func _normalized_reward_items(raw_items) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if raw_items is Array:
 		for value in raw_items:
@@ -120,6 +193,12 @@ static func reward_text(quest: Dictionary) -> String:
 			BackpackModel.label_for(str(item.get("itemId", ""))),
 			maxi(0, int(item.get("count", 0))),
 		])
+	var choices := reward_choices(quest)
+	if not choices.is_empty():
+		var choice_labels: Array[String] = []
+		for choice in choices:
+			choice_labels.append(str(choice.get("label", reward_bundle_text(choice))))
+		parts.append("自选：%s" % " / ".join(choice_labels))
 	return "、".join(parts)
 
 
@@ -249,6 +328,17 @@ static func validation_errors() -> Array[String]:
 		var objective := objective_for(quest)
 		if str(objective.get("type", "")) == "":
 			errors.append("%s.objective.type 不能为空" % quest_id)
+		var choice_ids := {}
+		for choice in reward_choices(quest):
+			var choice_id := str(choice.get("id", ""))
+			if choice_id == "":
+				errors.append("%s.rewards.choices.id 不能为空" % quest_id)
+			elif choice_ids.has(choice_id):
+				errors.append("%s.rewards.choices ID 重复: %s" % [quest_id, choice_id])
+			else:
+				choice_ids[choice_id] = true
+			if reward_bundle_text(choice) == "":
+				errors.append("%s.rewards.choices.%s 奖励不能为空" % [quest_id, choice_id])
 	for quest in quests():
 		var next_id := str(quest.get("nextQuestId", ""))
 		if next_id != "" and not ids.has(next_id):

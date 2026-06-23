@@ -145,7 +145,7 @@
       "title": "捕捉乌力",
       "giverId": "village_guard",
       "turnInId": "village_guard",
-      "autoClaimOnReady": true,
+      "autoClaimOnReady": false,
       "summary": "捕捉一只乌力系宠物。",
       "objective": {
         "type": "capture_pet",
@@ -155,10 +155,37 @@
       },
       "rewards": {
         "stoneCoins": 60,
-        "items": [
+        "items": [],
+        "choices": [
           {
-            "itemId": "capture_net",
-            "count": 1
+            "id": "capture_net_pack",
+            "label": "捕捉网 x2",
+            "items": [
+              {
+                "itemId": "capture_net",
+                "count": 2
+              }
+            ]
+          },
+          {
+            "id": "rope_pack",
+            "label": "初级捕捉绳 x4",
+            "items": [
+              {
+                "itemId": "capture_rope_basic",
+                "count": 4
+              }
+            ]
+          },
+          {
+            "id": "heal_pack",
+            "label": "回复药5 x3",
+            "items": [
+              {
+                "itemId": "item_heal_single_5",
+                "count": 3
+              }
+            ]
           }
         ]
       },

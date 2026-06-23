@@ -1135,7 +1135,12 @@ static func active_quest_state(profile: Dictionary) -> Dictionary:
 
 
 static func active_quest_auto_claim(profile: Dictionary) -> bool:
-	return QuestModel.auto_claim_on_ready(active_quest(profile))
+	var quest := active_quest(profile)
+	return QuestModel.auto_claim_on_ready(quest) and not QuestModel.has_reward_choices(quest)
+
+
+static func active_quest_has_reward_choices(profile: Dictionary) -> bool:
+	return QuestModel.has_reward_choices(active_quest(profile))
 
 
 static func active_quest_turn_in_id(profile: Dictionary) -> String:
@@ -1216,7 +1221,7 @@ static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictio
 	}
 
 
-static func claim_active_quest(profile: Dictionary) -> Dictionary:
+static func claim_active_quest(profile: Dictionary, reward_choice_id: String = "") -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
 	var quest := QuestModel.quest_for_id(quest_id)
@@ -1235,6 +1240,22 @@ static func claim_active_quest(profile: Dictionary) -> Dictionary:
 			"message": "任务还没有完成。",
 		}
 	var reward_items := QuestModel.reward_items(quest)
+	var choice := {}
+	var choices := QuestModel.reward_choices(quest)
+	if not choices.is_empty():
+		choice = QuestModel.reward_choice_for_id(quest, reward_choice_id)
+		if choice.is_empty():
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "请选择任务奖励。",
+				"requiresChoice": true,
+			}
+		var choice_items = choice.get("items", [])
+		if choice_items is Array:
+			for item in choice_items:
+				if item is Dictionary:
+					reward_items.append((item as Dictionary).duplicate(true))
 	var reward_result := BackpackModel.add_items(
 		BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])),
 		reward_items
@@ -1248,7 +1269,7 @@ static func claim_active_quest(profile: Dictionary) -> Dictionary:
 		}
 	normalized[BACKPACK_SLOTS_KEY] = reward_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
-	var coins := QuestModel.reward_stone_coins(quest)
+	var coins := QuestModel.reward_stone_coins(quest) + maxi(0, int(choice.get("stoneCoins", 0)))
 	if coins > 0:
 		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
 	state["status"] = QuestModel.STATUS_CLAIMED
@@ -1263,7 +1284,7 @@ static func claim_active_quest(profile: Dictionary) -> Dictionary:
 		normalized[ACTIVE_QUEST_ID_KEY] = ""
 	normalized[QUEST_STATES_KEY] = states
 	normalized = normalize_profile(normalized)
-	var reward_text := QuestModel.reward_text(quest)
+	var reward_text := QuestModel.reward_claim_text(quest, choice)
 	var message := "完成任务「%s」。" % QuestModel.title_for(quest)
 	if reward_text != "":
 		message = "完成任务「%s」，获得%s。" % [QuestModel.title_for(quest), reward_text]
@@ -1273,6 +1294,7 @@ static func claim_active_quest(profile: Dictionary) -> Dictionary:
 		"message": message,
 		"questId": quest_id,
 		"nextQuestId": next_id,
+		"rewardChoiceId": str(choice.get("id", "")),
 	}
 
 

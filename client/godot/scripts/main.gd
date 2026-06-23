@@ -228,8 +228,11 @@ var codex_list_buttons: Dictionary = {}
 var quest_panel: PanelContainer
 var quest_title_label: Label
 var quest_detail_label: Label
+var quest_reward_choice_option: OptionButton
+var quest_claim_button: Button
 var quest_route_button: Button
 var quest_close_button: Button
+var quest_selected_reward_choice_id: String = ""
 var training_partner_panel: PanelContainer
 var training_partner_label: Label
 var training_partner_add_button: Button
@@ -320,6 +323,7 @@ var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
+var auto_quest_reward_choice_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
@@ -336,6 +340,7 @@ var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
+var quest_reward_choice_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
@@ -563,6 +568,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_chain_check")
 	elif auto_quest_ui_check:
 		call_deferred("_run_auto_quest_ui_check")
+	elif auto_quest_reward_choice_check:
+		call_deferred("_run_auto_quest_reward_choice_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
 	elif auto_player_status_check:
@@ -595,6 +602,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_preview")
 	elif quest_ui_preview:
 		call_deferred("_run_quest_ui_preview")
+	elif quest_reward_choice_preview:
+		call_deferred("_run_quest_reward_choice_preview")
 	elif equipment_quest_preview:
 		call_deferred("_run_equipment_quest_preview")
 	elif equipment_swap_preview:
@@ -866,6 +875,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_chain_check = true
 		elif arg == "--auto-quest-ui-check":
 			auto_quest_ui_check = true
+		elif arg == "--auto-quest-reward-choice-check":
+			auto_quest_reward_choice_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
 		elif arg == "--auto-player-status-check":
@@ -898,6 +909,8 @@ func _apply_preview_window_args() -> void:
 			quest_preview = true
 		elif arg == "--quest-ui-preview":
 			quest_ui_preview = true
+		elif arg == "--quest-reward-choice-preview":
+			quest_reward_choice_preview = true
 		elif arg == "--equipment-quest-preview":
 			equipment_quest_preview = true
 		elif arg == "--equipment-swap-preview":
@@ -5994,6 +6007,18 @@ func _run_quest_ui_preview() -> void:
 		_update_hud_text()
 
 
+func _run_quest_reward_choice_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _quest_reward_choice_ready_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase75：任务已完成，请选择一份奖励。")
+	_open_quest_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_auto_battle_settings_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -6550,14 +6575,14 @@ func _run_auto_quest_chain_check() -> void:
 		"amount": 1,
 	})
 	profile = capture_event.get("profile", profile)
-	var capture_claim := PlayerProgressModel.claim_active_quest(profile)
+	var capture_claim := PlayerProgressModel.claim_active_quest(profile, "capture_net_pack")
 	profile = capture_claim.get("profile", profile)
 	var capture_ok := (
 		bool(capture_event.get("ready", false))
 		and bool(capture_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == ""
 		and PlayerProgressModel.stone_coins(profile) == before_capture_coins + 60
-		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET) == before_net + 1
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET) == before_net + 2
 	)
 
 	player_profile = PlayerProgressModel.default_profile()
@@ -6785,6 +6810,145 @@ func _run_auto_quest_ui_check() -> void:
 		str(battle_route_ok),
 		str(log_scroll_ok),
 		_current_task_text(),
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _quest_reward_choice_ready_profile() -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var states := {}
+	for quest in QuestModel.quests():
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "" or quest_id == "quest_capture_wuli":
+			continue
+		states[quest_id] = {
+			"status": QuestModel.STATUS_CLAIMED,
+			"progress": QuestModel.objective_required_count(quest),
+		}
+	var capture_quest := QuestModel.quest_for_id("quest_capture_wuli")
+	states["quest_capture_wuli"] = {
+		"status": QuestModel.STATUS_READY,
+		"progress": QuestModel.objective_required_count(capture_quest),
+	}
+	profile["activeQuestId"] = "quest_capture_wuli"
+	profile["questStates"] = states
+	return PlayerProgressModel.normalize_profile(profile)
+
+
+func _run_auto_quest_reward_choice_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var quest := QuestModel.quest_for_id("quest_capture_wuli")
+	var choices := QuestModel.reward_choices(quest)
+	var data_ok: bool = (
+		not quest.is_empty()
+		and not QuestModel.auto_claim_on_ready(quest)
+		and choices.size() == 3
+		and QuestModel.reward_text(quest).find("自选") >= 0
+		and QuestModel.reward_choice_for_id(quest, "rope_pack").get("label", "") == "初级捕捉绳 x4"
+	)
+
+	var model_profile := _quest_reward_choice_ready_profile()
+	var model_before_rope := PlayerProgressModel.backpack_item_count(model_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var model_before_coins := PlayerProgressModel.stone_coins(model_profile)
+	var no_choice := PlayerProgressModel.claim_active_quest(model_profile)
+	var rope_claim := PlayerProgressModel.claim_active_quest(_quest_reward_choice_ready_profile(), "rope_pack")
+	var rope_profile := rope_claim.get("profile", model_profile) as Dictionary
+	var model_ok: bool = (
+		not PlayerProgressModel.active_quest_auto_claim(model_profile)
+		and not bool(no_choice.get("ok", false))
+		and bool(no_choice.get("requiresChoice", false))
+		and bool(rope_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(rope_profile) == ""
+		and PlayerProgressModel.backpack_item_count(rope_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == model_before_rope + 4
+		and PlayerProgressModel.stone_coins(rope_profile) == model_before_coins + 60
+		and str(rope_claim.get("message", "")).find("初级捕捉绳") >= 0
+	)
+
+	var ui_ready_profile := _quest_reward_choice_ready_profile()
+	var ui_before_rope := PlayerProgressModel.backpack_item_count(ui_ready_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
+	var ui_before_coins := PlayerProgressModel.stone_coins(ui_ready_profile)
+	player_profile = ui_ready_profile
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_quest_panel()
+	await get_tree().process_frame
+	var panel_ok: bool = (
+		loaded
+		and quest_panel != null
+		and quest_panel.visible
+		and quest_title_label != null
+		and quest_title_label.text == "捕捉乌力"
+		and quest_detail_label != null
+		and quest_detail_label.text.find("自选") >= 0
+		and quest_reward_choice_option != null
+		and quest_reward_choice_option.visible
+		and quest_reward_choice_option.item_count == 3
+		and quest_claim_button != null
+		and quest_claim_button.visible
+		and not quest_claim_button.disabled
+	)
+	if panel_ok:
+		quest_reward_choice_option.select(1)
+		_on_quest_reward_choice_selected(1)
+		_on_quest_claim_pressed()
+		await get_tree().process_frame
+	var ui_profile := player_profile
+	var ui_log_after_claim := world_log_message
+	var ui_claim_ok: bool = (
+		PlayerProgressModel.active_quest_id(ui_profile) == ""
+		and PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == ui_before_rope + 4
+		and PlayerProgressModel.stone_coins(ui_profile) == ui_before_coins + 60
+		and ui_log_after_claim.find("初级捕捉绳") >= 0
+	)
+
+	player_profile = _quest_reward_choice_ready_profile()
+	_close_quest_panel()
+	var guard := InteractionModel.find_by_id(map_data, "village_guard")
+	var dialog_ok: bool = false
+	var dialog_opened_quest: bool = false
+	if not guard.is_empty():
+		_open_interaction_dialog(guard)
+		await get_tree().process_frame
+		dialog_ok = (
+			_dialog_is_open()
+			and dialog_option_button != null
+			and dialog_option_button.text == "选择奖励"
+			and dialog_body_label != null
+			and dialog_body_label.text.find("任务面板") >= 0
+		)
+		_confirm_dialog_action()
+		await get_tree().process_frame
+		dialog_opened_quest = (
+			not _dialog_is_open()
+			and quest_panel != null
+			and quest_panel.visible
+			and world_log_message.find("请选择任务奖励") >= 0
+		)
+
+	var status := "ok" if data_ok and model_ok and panel_ok and ui_claim_ok and dialog_ok and dialog_opened_quest else "failed"
+	print("quest reward choice check ready: status=%s data=%s model=%s panel=%s ui_claim=%s dialog=%s dialog_open=%s choices=%d no_choice_ok=%s no_choice_req=%s rope_ok=%s rope_active=%s model_rope=%d model_coins=%d model_msg=%s selected=%s active=%s rope=%d coins=%d ui_log=%s log=%s" % [
+		status,
+		str(data_ok),
+		str(model_ok),
+		str(panel_ok),
+		str(ui_claim_ok),
+		str(dialog_ok),
+		str(dialog_opened_quest),
+		choices.size(),
+		str(bool(no_choice.get("ok", false))),
+		str(bool(no_choice.get("requiresChoice", false))),
+		str(bool(rope_claim.get("ok", false))),
+		PlayerProgressModel.active_quest_id(rope_profile),
+		PlayerProgressModel.backpack_item_count(rope_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
+		PlayerProgressModel.stone_coins(rope_profile),
+		str(rope_claim.get("message", "")),
+		quest_selected_reward_choice_id,
+		PlayerProgressModel.active_quest_id(ui_profile),
+		PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
+		PlayerProgressModel.stone_coins(ui_profile),
+		ui_log_after_claim,
 		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -10142,6 +10306,21 @@ func _build_hud() -> void:
 	quest_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	quest_detail_scroll.add_child(quest_detail_label)
 
+	quest_reward_choice_option = OptionButton.new()
+	quest_reward_choice_option.visible = false
+	quest_reward_choice_option.custom_minimum_size = Vector2(0, 44)
+	quest_reward_choice_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_reward_choice_option.item_selected.connect(_on_quest_reward_choice_selected)
+	quest_column.add_child(quest_reward_choice_option)
+
+	quest_claim_button = Button.new()
+	quest_claim_button.text = "领取奖励"
+	quest_claim_button.visible = false
+	quest_claim_button.custom_minimum_size = Vector2(0, 48)
+	quest_claim_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_claim_button.pressed.connect(_on_quest_claim_pressed)
+	quest_column.add_child(quest_claim_button)
+
 	quest_route_button = Button.new()
 	quest_route_button.text = "自动寻路"
 	quest_route_button.custom_minimum_size = Vector2(0, 48)
@@ -13332,6 +13511,7 @@ func _refresh_quest_panel() -> void:
 	if quest.is_empty():
 		quest_title_label.text = "任务"
 		quest_detail_label.text = "当前没有任务。\n可以继续探索、捕捉宠物，或等待新的任务链开放。"
+		_set_quest_reward_controls({}, "")
 		if quest_route_button != null:
 			quest_route_button.text = "自动寻路"
 			quest_route_button.disabled = true
@@ -13360,9 +13540,66 @@ func _refresh_quest_panel() -> void:
 	if route_hint != "":
 		lines.append("地点：%s" % route_hint)
 	quest_detail_label.text = "\n".join(lines)
+	_set_quest_reward_controls(quest, status)
 	if quest_route_button != null:
 		quest_route_button.text = "自动寻路"
 		quest_route_button.disabled = _active_quest_navigation_target().is_empty()
+
+
+func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
+	var can_claim := status == QuestModel.STATUS_READY and PlayerProgressModel.can_claim_active_quest(player_profile)
+	var choices: Array[Dictionary] = []
+	if not quest.is_empty():
+		choices = QuestModel.reward_choices(quest)
+	if quest_reward_choice_option != null:
+		quest_reward_choice_option.visible = can_claim and not choices.is_empty()
+		quest_reward_choice_option.clear()
+		var selected_index := 0
+		if not choices.is_empty():
+			var selected_id := quest_selected_reward_choice_id
+			var valid_selected := false
+			for index in range(choices.size()):
+				var choice := choices[index]
+				var choice_id := str(choice.get("id", ""))
+				quest_reward_choice_option.add_item(str(choice.get("label", QuestModel.reward_bundle_text(choice))))
+				quest_reward_choice_option.set_item_metadata(index, choice_id)
+				if choice_id == selected_id:
+					selected_index = index
+					valid_selected = true
+			if not valid_selected:
+				selected_id = str(choices[0].get("id", ""))
+				selected_index = 0
+			quest_selected_reward_choice_id = selected_id
+			quest_reward_choice_option.select(selected_index)
+		else:
+			quest_selected_reward_choice_id = ""
+	if quest_claim_button != null:
+		quest_claim_button.visible = can_claim
+		quest_claim_button.disabled = not can_claim or (not choices.is_empty() and quest_selected_reward_choice_id == "")
+		quest_claim_button.text = "领取奖励"
+
+
+func _on_quest_reward_choice_selected(index: int) -> void:
+	if quest_reward_choice_option == null or index < 0 or index >= quest_reward_choice_option.item_count:
+		return
+	quest_selected_reward_choice_id = str(quest_reward_choice_option.get_item_metadata(index))
+	if quest_claim_button != null:
+		quest_claim_button.disabled = quest_selected_reward_choice_id == ""
+
+
+func _on_quest_claim_pressed() -> void:
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	var choice_id := quest_selected_reward_choice_id if QuestModel.has_reward_choices(quest) else ""
+	var claim_result := PlayerProgressModel.claim_active_quest(player_profile, choice_id)
+	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(claim_result.get("message", "")))
+	if bool(claim_result.get("ok", false)):
+		quest_selected_reward_choice_id = ""
+	_refresh_quest_panel()
+	if status_label != null:
+		_update_hud_text()
 
 
 func _on_quest_route_pressed() -> void:
@@ -15650,6 +15887,11 @@ func _confirm_dialog_action() -> void:
 	if active_dialog_interaction.is_empty():
 		return
 	if _active_dialog_can_claim_quest():
+		if PlayerProgressModel.active_quest_has_reward_choices(player_profile):
+			_close_dialog()
+			_open_quest_panel()
+			_set_world_log_message("请选择任务奖励。")
+			return
 		var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
 		player_profile = claim_result.get("profile", player_profile)
 		if bool(claim_result.get("ok", false)) and profile_save_enabled:
@@ -15734,6 +15976,8 @@ func _dialog_body_for(item: Dictionary) -> String:
 
 func _dialog_option_text(item: Dictionary) -> String:
 	if _active_dialog_can_claim_quest():
+		if PlayerProgressModel.active_quest_has_reward_choices(player_profile):
+			return "选择奖励"
 		return "领取奖励"
 	if _active_dialog_matches_talk_quest(item):
 		return "完成"
@@ -15867,6 +16111,8 @@ func _dialog_quest_hint_for(item: Dictionary) -> String:
 	var lines: Array[String] = []
 	if PlayerProgressModel.can_claim_active_quest(player_profile) and item_id == QuestModel.turn_in_id_for(quest):
 		lines.append("任务完成：%s" % QuestModel.title_for(quest))
+		if QuestModel.has_reward_choices(quest):
+			lines.append("请在任务面板选择奖励。")
 	else:
 		lines.append("任务：%s" % QuestModel.title_for(quest))
 		lines.append(QuestModel.objective_text_for(quest))
