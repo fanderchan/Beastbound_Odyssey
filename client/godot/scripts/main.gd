@@ -362,6 +362,7 @@ var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_durability_check: bool = false
+var auto_equipment_durability_visual_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
@@ -370,6 +371,7 @@ var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var equipment_requirement_preview: bool = false
 var equipment_durability_preview: bool = false
+var equipment_durability_visual_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -628,6 +630,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_equipment_durability_check:
 		call_deferred("_run_auto_equipment_durability_check")
+	elif auto_equipment_durability_visual_check:
+		call_deferred("_run_auto_equipment_durability_visual_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -644,6 +648,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_requirement_preview")
 	elif equipment_durability_preview:
 		call_deferred("_run_equipment_durability_preview")
+	elif equipment_durability_visual_preview:
+		call_deferred("_run_equipment_durability_visual_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -955,6 +961,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_requirement_check = true
 		elif arg == "--auto-equipment-durability-check":
 			auto_equipment_durability_check = true
+		elif arg == "--auto-equipment-durability-visual-check":
+			auto_equipment_durability_visual_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -971,6 +979,8 @@ func _apply_preview_window_args() -> void:
 			equipment_requirement_preview = true
 		elif arg == "--equipment-durability-preview":
 			equipment_durability_preview = true
+		elif arg == "--equipment-durability-visual-preview":
+			equipment_durability_visual_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5946,6 +5956,45 @@ func _run_auto_equipment_durability_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_durability_visual_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var profile := PlayerProgressModel.default_profile()
+	var durability := PlayerProgressModel.equipment_durability(profile)
+	durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = 0
+	durability[EquipmentModel.SLOT_BODY] = 12
+	profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	player_profile = PlayerProgressModel.normalize_profile(profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_open_equipment_panel()
+	await get_tree().process_frame
+
+	var broken_button := equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, null) as Button
+	var body_button := equipment_slot_buttons.get(EquipmentModel.SLOT_BODY, null) as Button
+	var broken_text := broken_button.text if broken_button != null else ""
+	var body_text := body_button.text if body_button != null else ""
+	var broken_color := broken_button.get_theme_color("font_color") if broken_button != null else Color.WHITE
+	var body_color := body_button.get_theme_color("font_color") if body_button != null else Color.WHITE
+	var detail_text := equipment_detail_label.text if equipment_detail_label != null else ""
+	var broken_text_ok := broken_text.find("0/30") >= 0 and broken_text.find("损") >= 0
+	var body_text_ok := body_text.find("12/30") >= 0
+	var broken_color_ok := broken_button != null and broken_button.has_theme_color_override("font_color") and broken_color.r > broken_color.g and broken_color.r > broken_color.b
+	var body_color_ok := body_button != null and body_button.has_theme_color_override("font_color") and body_color.r > body_color.b and body_color.g > body_color.b
+	var detail_ok := detail_text.find("耐久: 0/30") >= 0 and detail_text.find("已损坏") >= 0
+	var status := "ok" if broken_text_ok and body_text_ok and broken_color_ok and body_color_ok and detail_ok else "failed"
+	print("equipment durability visual check ready: status=%s broken_text=%s body_text=%s broken_color=%s body_color=%s detail=%s" % [
+		status,
+		str(broken_text_ok),
+		str(body_text_ok),
+		str(broken_color_ok),
+		str(body_color_ok),
+		str(detail_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -6647,6 +6696,23 @@ func _run_equipment_durability_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase74：右手武器损坏，可在装备铺修理。")
 	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_durability_visual_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var durability := PlayerProgressModel.equipment_durability(player_profile)
+	durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = 0
+	durability[EquipmentModel.SLOT_BODY] = 12
+	player_profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_set_world_log_message("Phase81：装备格直接显示耐久，损坏红字、磨损黄字。")
+	_open_equipment_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -12466,7 +12532,7 @@ func _refresh_equipment_panel() -> void:
 		var button := Button.new()
 		button.toggle_mode = true
 		button.button_pressed = slot_id == equipment_selected_slot_id
-		button.add_theme_font_size_override("font_size", 15)
+		button.add_theme_font_size_override("font_size", 14)
 		var slot_rect := _equipment_slot_anchor_rect(slot_id)
 		button.anchor_left = slot_rect.position.x
 		button.anchor_top = slot_rect.position.y
@@ -12478,8 +12544,9 @@ func _refresh_equipment_panel() -> void:
 		button.offset_bottom = 0
 		button.text = "%s\n%s" % [
 			EquipmentModel.slot_label_for(slot_id),
-			EquipmentModel.menu_label_for(item_id, "-") if item_id != "" else "-",
+			_equipment_slot_button_item_text(slot_id, item_id),
 		]
+		_apply_equipment_slot_button_color(button, slot_id, item_id)
 		var selected_slot_id := slot_id
 		button.pressed.connect(func() -> void:
 			_select_equipment_slot(selected_slot_id)
@@ -12487,6 +12554,41 @@ func _refresh_equipment_panel() -> void:
 		equipment_grid.add_child(button)
 		equipment_slot_buttons[slot_id] = button
 	_refresh_equipment_detail()
+
+
+func _equipment_slot_button_item_text(slot_id: String, item_id: String) -> String:
+	if item_id == "":
+		return "-"
+	var item_label := EquipmentModel.menu_label_for(item_id, "-")
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	if max_durability <= 0:
+		return item_label
+	var current := clampi(int(PlayerProgressModel.equipment_durability(player_profile).get(slot_id, max_durability)), 0, max_durability)
+	return "%s %s%d/%d" % [
+		item_label,
+		"损" if current <= 0 else "",
+		current,
+		max_durability,
+	]
+
+
+func _apply_equipment_slot_button_color(button: Button, slot_id: String, item_id: String) -> void:
+	if item_id == "":
+		return
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	if max_durability <= 0:
+		return
+	var current := clampi(int(PlayerProgressModel.equipment_durability(player_profile).get(slot_id, max_durability)), 0, max_durability)
+	if current <= 0:
+		var broken_color := Color(1.0, 0.36, 0.30, 1.0)
+		button.add_theme_color_override("font_color", broken_color)
+		button.add_theme_color_override("font_hover_color", broken_color.lightened(0.10))
+		button.add_theme_color_override("font_pressed_color", broken_color)
+	elif current < max_durability:
+		var worn_color := Color(1.0, 0.86, 0.42, 1.0)
+		button.add_theme_color_override("font_color", worn_color)
+		button.add_theme_color_override("font_hover_color", worn_color.lightened(0.08))
+		button.add_theme_color_override("font_pressed_color", worn_color)
 
 
 func _refresh_equipment_stats() -> void:
