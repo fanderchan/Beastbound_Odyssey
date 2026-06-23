@@ -109,6 +109,7 @@ var action_bar: PanelContainer
 var dialog_panel: PanelContainer
 var status_label: Label
 var detail_label: Label
+var task_route_button: Button
 var dialog_name_label: Label
 var dialog_body_label: Label
 var dialog_option_button: Button
@@ -353,6 +354,7 @@ var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_quest_reward_choice_check: bool = false
+var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_equipment_check: bool = false
@@ -373,6 +375,7 @@ var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var quest_reward_choice_preview: bool = false
+var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
 var chat_panel_preview: bool = false
 var equipment_quest_preview: bool = false
@@ -609,6 +612,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_ui_check")
 	elif auto_quest_reward_choice_check:
 		call_deferred("_run_auto_quest_reward_choice_check")
+	elif auto_task_tracker_route_check:
+		call_deferred("_run_auto_task_tracker_route_check")
 	elif auto_map_panel_check:
 		call_deferred("_run_auto_map_panel_check")
 	elif auto_chat_panel_check:
@@ -649,6 +654,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_ui_preview")
 	elif quest_reward_choice_preview:
 		call_deferred("_run_quest_reward_choice_preview")
+	elif task_tracker_route_preview:
+		call_deferred("_run_task_tracker_route_preview")
 	elif map_panel_preview:
 		call_deferred("_run_map_panel_preview")
 	elif chat_panel_preview:
@@ -932,6 +939,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_ui_check = true
 		elif arg == "--auto-quest-reward-choice-check":
 			auto_quest_reward_choice_check = true
+		elif arg == "--auto-task-tracker-route-check":
+			auto_task_tracker_route_check = true
 		elif arg == "--auto-map-panel-check":
 			auto_map_panel_check = true
 		elif arg == "--auto-chat-panel-check":
@@ -972,6 +981,8 @@ func _apply_preview_window_args() -> void:
 			quest_ui_preview = true
 		elif arg == "--quest-reward-choice-preview":
 			quest_reward_choice_preview = true
+		elif arg == "--task-tracker-route-preview":
+			task_tracker_route_preview = true
 		elif arg == "--map-panel-preview":
 			map_panel_preview = true
 		elif arg == "--chat-panel-preview":
@@ -6172,6 +6183,17 @@ func _run_quest_reward_choice_preview() -> void:
 		_update_hud_text()
 
 
+func _run_task_tracker_route_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_training_yard")
+	_set_world_log_message("Phase80：右上任务追踪可直接寻路。")
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_map_panel_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7142,6 +7164,47 @@ func _run_auto_quest_reward_choice_check() -> void:
 		PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
 		PlayerProgressModel.stone_coins(ui_profile),
 		ui_log_after_claim,
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_task_tracker_route_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_training_yard")
+	await get_tree().process_frame
+	var button_ready := (
+		task_route_button != null
+		and side_panel != null
+		and side_panel.visible
+		and task_route_button.visible
+		and not task_route_button.disabled
+		and detail_label != null
+		and detail_label.text.find("认识训练师") >= 0
+	)
+	_on_task_tracker_route_pressed()
+	await get_tree().process_frame
+	var route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "trainer"
+		and world_log_message.find("训练师阿土") >= 0
+	)
+	var disabled_after_route := task_route_button != null and task_route_button.disabled
+	_clear_pending_interaction()
+	await get_tree().process_frame
+	var reenabled_after_clear := task_route_button != null and not task_route_button.disabled
+	var status := "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear else "failed"
+	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s pending=%s log=%s" % [
+		status,
+		str(loaded),
+		str(button_ready),
+		str(route_ok),
+		str(disabled_after_route),
+		str(reenabled_after_clear),
+		str(pending_interaction.get("id", "")),
 		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -10159,11 +10222,23 @@ func _build_hud() -> void:
 	hud_root.add_child(top_panel)
 
 	side_panel = _panel_container("SidePanel")
+	var side_column := VBoxContainer.new()
+	side_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side_column.add_theme_constant_override("separation", 6)
+	side_panel.add_child(side_column)
 	detail_label = Label.new()
 	detail_label.name = "DetailLabel"
 	detail_label.add_theme_font_size_override("font_size", 17)
 	detail_label.text = "伙伴  -  待加入\n任务  -  火芽营地\n阶段  -  初次移动"
-	side_panel.add_child(detail_label)
+	detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side_column.add_child(detail_label)
+	task_route_button = Button.new()
+	task_route_button.text = "寻路"
+	task_route_button.custom_minimum_size = Vector2(0, 38)
+	task_route_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	task_route_button.pressed.connect(_on_task_tracker_route_pressed)
+	side_column.add_child(task_route_button)
 	hud_root.add_child(side_panel)
 
 	action_bar = _panel_container("ActionBar")
@@ -14509,6 +14584,25 @@ func _on_quest_route_pressed() -> void:
 	_route_to_quest_target(target)
 
 
+func _on_task_tracker_route_pressed() -> void:
+	var target := _active_quest_navigation_target()
+	if target.is_empty():
+		_set_world_log_message("当前任务没有可寻路目标。")
+		_refresh_task_route_button()
+		return
+	_route_to_quest_target(target)
+	_refresh_task_route_button()
+
+
+func _refresh_task_route_button() -> void:
+	if task_route_button == null:
+		return
+	var has_target := not _active_quest_navigation_target().is_empty()
+	task_route_button.disabled = battle_active or encounter_active or has_pending_interaction or _dialog_is_open() or _world_menu_is_open() or not has_target
+	task_route_button.visible = not battle_active
+	task_route_button.text = "寻路"
+
+
 func _refresh_map_panel() -> void:
 	if map_panel == null or map_texture_rect == null or map_detail_label == null or map_marker_container == null:
 		return
@@ -17455,7 +17549,7 @@ func _layout_hud() -> void:
 		side_panel.visible = true
 		action_bar.visible = true
 		side_panel.position = Vector2(viewport_size.x - 286.0, margin)
-		side_panel.size = Vector2(268, 128)
+		side_panel.size = Vector2(268, 168)
 		action_bar.position = Vector2(viewport_size.x - action_width - margin, viewport_size.y - 104.0)
 		action_bar.size = action_size
 
@@ -17652,6 +17746,7 @@ func _update_hud_text() -> void:
 			PlayerProgressModel.training_partner_count(player_profile),
 			_current_task_text(),
 		]
+	_refresh_task_route_button()
 	if player_status_panel != null and player_status_panel.visible:
 		_refresh_player_status_panel()
 	_refresh_quick_bar()
