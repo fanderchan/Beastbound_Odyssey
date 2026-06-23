@@ -286,6 +286,10 @@ static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
 	return _equipment_spirit_ids_from_slots(equipment_slots(profile))
 
 
+static func equipment_spirit_source_entries(profile: Dictionary) -> Array[Dictionary]:
+	return _equipment_spirit_source_entries_from_slots(equipment_slots(profile))
+
+
 static func equipment_change_preview(profile: Dictionary, item_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	if not EquipmentModel.is_equipment(item_id):
@@ -1188,6 +1192,35 @@ static func _equipment_spirit_ids_from_slots(slots: Dictionary) -> Array[String]
 			if not result.has(spirit_id):
 				result.append(spirit_id)
 	return _sorted_player_spirit_ids(result)
+
+
+static func _equipment_spirit_source_entries_from_slots(slots: Dictionary) -> Array[Dictionary]:
+	var source_lookup := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		for spirit_id in EquipmentModel.spirit_ids_for(item_id):
+			if spirit_id == "":
+				continue
+			if not source_lookup.has(spirit_id):
+				source_lookup[spirit_id] = []
+			var sources := source_lookup[spirit_id] as Array
+			sources.append({
+				"slotId": slot_id,
+				"slotLabel": EquipmentModel.slot_label_for(slot_id),
+				"itemId": item_id,
+				"itemLabel": EquipmentModel.label_for(item_id, item_id),
+			})
+			source_lookup[spirit_id] = sources
+	var result: Array[Dictionary] = []
+	for spirit_id in _sorted_player_spirit_ids(_string_array(source_lookup.keys())):
+		result.append({
+			"spiritId": spirit_id,
+			"spiritLabel": BattleActionCatalog.label_for(spirit_id, spirit_id),
+			"sources": source_lookup.get(spirit_id, []),
+		})
+	return result
 
 
 static func _sorted_player_spirit_ids(spirit_ids: Array[String]) -> Array[String]:

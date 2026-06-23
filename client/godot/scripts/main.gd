@@ -126,6 +126,7 @@ var battle_log_label: RichTextLabel
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
+var player_status_menu_button: Button
 var bag_menu_button: Button
 var equipment_menu_button: Button
 var pet_menu_button: Button
@@ -143,6 +144,10 @@ var backpack_close_button: Button
 var backpack_slot_buttons: Array[Button] = []
 var backpack_selected_slot_index: int = 0
 var backpack_pending_use_item_id: String = ""
+var player_status_panel: PanelContainer
+var player_status_detail_label: RichTextLabel
+var player_status_equipment_button: Button
+var player_status_close_button: Button
 var equipment_panel: PanelContainer
 var equipment_grid: Control
 var equipment_stats_label: Label
@@ -313,9 +318,11 @@ var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_equipment_check: bool = false
+var auto_player_status_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
+var player_status_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -549,12 +556,16 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_ui_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
+	elif auto_player_status_check:
+		call_deferred("_run_auto_player_status_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
 		call_deferred("_run_backpack_world_use_preview")
+	elif player_status_preview:
+		call_deferred("_run_player_status_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -836,12 +847,16 @@ func _apply_preview_window_args() -> void:
 			auto_quest_ui_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
+		elif arg == "--auto-player-status-check":
+			auto_player_status_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
 			backpack_world_use_preview = true
+		elif arg == "--player-status-preview":
+			player_status_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5397,6 +5412,67 @@ func _run_auto_equipment_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_player_status_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_player_status_panel()
+	await get_tree().process_frame
+	var text := player_status_detail_label.text if player_status_detail_label != null else ""
+	var menu_ok := player_status_menu_button != null and player_status_menu_button.text == "状态"
+	var panel_ok := player_status_panel != null and player_status_panel.visible
+	var stats_ok := (
+		text.find("见习猎人") >= 0
+		and text.find("Lv1") >= 0
+		and text.find("生命: 120/128") >= 0
+		and text.find("生命 120+8=128") >= 0
+		and text.find("攻击 18+14=32") >= 0
+		and text.find("防御 6+6=12") >= 0
+		and text.find("敏捷 70+7=77") >= 0
+	)
+	var bonus_ok := (
+		text.find("生命 +8") >= 0
+		and text.find("攻击 +14") >= 0
+		and text.find("防御 +6") >= 0
+		and text.find("敏捷 +7") >= 0
+	)
+	var spirits_ok := (
+		text.find("恩惠精灵1") >= 0
+		and text.find("练习长枪") >= 0
+		and text.find("滋润精灵1") >= 0
+		and text.find("水纹衣") >= 0
+		and text.find("毒精灵1") >= 0
+		and text.find("火芽护符") >= 0
+		and text.find("毒雾精灵1") >= 0
+		and text.find("风纹戒指") >= 0
+	)
+	var record_ok := text.find("火芽村出生点") >= 0
+	_on_player_status_equipment_pressed()
+	await get_tree().process_frame
+	var equipment_route_ok := (
+		player_status_panel != null
+		and not player_status_panel.visible
+		and equipment_panel != null
+		and equipment_panel.visible
+		and equipment_stats_label != null
+		and equipment_stats_label.text.find("攻击 18+14=32") >= 0
+	)
+	var status := "ok" if menu_ok and panel_ok and stats_ok and bonus_ok and spirits_ok and record_ok and equipment_route_ok else "failed"
+	print("player status check ready: status=%s menu=%s panel=%s stats=%s bonus=%s spirits=%s record=%s equipment_route=%s" % [
+		status,
+		str(menu_ok),
+		str(panel_ok),
+		str(stats_ok),
+		str(bonus_ok),
+		str(spirits_ok),
+		str(record_ok),
+		str(equipment_route_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -5970,6 +6046,17 @@ func _run_equipment_compare_preview() -> void:
 	_set_world_log_message("换装预览：毒藤布衣会替换水纹衣，红色表示减少或失去。")
 	backpack_selected_slot_index = _backpack_slot_index_for_item("armor_toxin_wrap")
 	_open_backpack_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_player_status_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase71：人物状态总览。")
+	_open_player_status_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -9134,6 +9221,11 @@ func _build_hud() -> void:
 	ring_button.custom_minimum_size = Vector2(76, MIN_TOUCH_BUTTON_SIZE.y)
 	ring_button.pressed.connect(_toggle_pet_ring)
 	action_row.add_child(ring_button)
+	player_status_menu_button = Button.new()
+	player_status_menu_button.text = "状态"
+	player_status_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	player_status_menu_button.pressed.connect(_open_player_status_panel)
+	action_row.add_child(player_status_menu_button)
 	bag_menu_button = Button.new()
 	bag_menu_button.text = "背包"
 	bag_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -9170,6 +9262,50 @@ func _build_hud() -> void:
 	auto_settings_menu_button.pressed.connect(_open_auto_settings_panel)
 	action_row.add_child(auto_settings_menu_button)
 	hud_root.add_child(action_bar)
+
+	player_status_panel = _panel_container("PlayerStatusPanel")
+	player_status_panel.visible = false
+	player_status_panel.z_index = 24
+	var player_status_column := VBoxContainer.new()
+	player_status_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	player_status_column.add_theme_constant_override("separation", 8)
+	player_status_panel.add_child(player_status_column)
+
+	var player_status_header := HBoxContainer.new()
+	player_status_header.add_theme_constant_override("separation", 10)
+	player_status_column.add_child(player_status_header)
+	var player_status_title := Label.new()
+	player_status_title.text = "人物状态"
+	player_status_title.add_theme_font_size_override("font_size", 21)
+	player_status_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_header.add_child(player_status_title)
+	player_status_close_button = Button.new()
+	player_status_close_button.text = "关闭"
+	player_status_close_button.custom_minimum_size = Vector2(92, 44)
+	player_status_close_button.pressed.connect(_close_player_status_panel)
+	player_status_header.add_child(player_status_close_button)
+
+	var player_status_scroll := ScrollContainer.new()
+	player_status_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	player_status_column.add_child(player_status_scroll)
+	player_status_detail_label = RichTextLabel.new()
+	player_status_detail_label.bbcode_enabled = true
+	player_status_detail_label.fit_content = true
+	player_status_detail_label.scroll_active = false
+	player_status_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_status_detail_label.add_theme_font_size_override("font_size", 16)
+	player_status_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_scroll.add_child(player_status_detail_label)
+
+	player_status_equipment_button = Button.new()
+	player_status_equipment_button.text = "装备"
+	player_status_equipment_button.custom_minimum_size = Vector2(0, 44)
+	player_status_equipment_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_equipment_button.pressed.connect(_on_player_status_equipment_pressed)
+	player_status_column.add_child(player_status_equipment_button)
+	hud_root.add_child(player_status_panel)
 
 	backpack_panel = _panel_container("BackpackPanel")
 	backpack_panel.visible = false
@@ -10856,6 +10992,7 @@ func _open_backpack_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_shop_panel()
 	_close_equipment_panel()
 	_close_pet_panel()
@@ -10884,6 +11021,7 @@ func _open_equipment_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_shop_panel()
 	_close_pet_panel()
@@ -10903,6 +11041,127 @@ func _close_equipment_panel() -> void:
 		equipment_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_player_status_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	player_status_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_player_status_panel()
+	_layout_hud()
+
+
+func _close_player_status_panel() -> void:
+	if player_status_panel != null:
+		player_status_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _on_player_status_equipment_pressed() -> void:
+	_close_player_status_panel()
+	_open_equipment_panel()
+
+
+func _refresh_player_status_panel() -> void:
+	if player_status_panel == null or player_status_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var player_dict := player_profile.get("player", {}) as Dictionary
+	var summary := PlayerProgressModel.player_stat_summary(player_profile)
+	var base := summary.get("base", {}) as Dictionary
+	var bonus := summary.get("bonus", {}) as Dictionary
+	var current := summary.get("current", {}) as Dictionary
+	var current_max_hp := maxi(1, int(current.get("maxHp", player_dict.get("maxHp", 1))))
+	var current_hp := clampi(int(player_dict.get("hp", current_max_hp)), 0, current_max_hp)
+	var level := maxi(1, int(player_dict.get("level", 1)))
+	var exp := maxi(0, int(player_dict.get("exp", 0)))
+	var next_exp := maxi(1, int(player_dict.get("nextExp", PlayerProgressModel.exp_to_next_level(level))))
+	var lines: Array[String] = [
+		"[color=#d7c36a]%s  Lv%d[/color]" % [_bbcode_escape(str(player_dict.get("name", "见习猎人"))), level],
+		"生命: %d/%d    经验: %d/%d" % [current_hp, current_max_hp, exp, next_exp],
+		"",
+		"[color=#d7c36a]四维[/color]",
+		_player_status_stat_line("maxHp", base, bonus, current),
+		_player_status_stat_line("attack", base, bonus, current),
+		_player_status_stat_line("defense", base, bonus, current),
+		_player_status_stat_line("quick", base, bonus, current),
+		"",
+		"[color=#d7c36a]装备加成[/color]",
+		_player_status_bonus_line(bonus),
+		"",
+		"[color=#d7c36a]可用精灵[/color]",
+	]
+	var spirit_entries := PlayerProgressModel.equipment_spirit_source_entries(player_profile)
+	if spirit_entries.is_empty():
+		lines.append("无")
+	else:
+		for entry in spirit_entries:
+			lines.append("%s：%s" % [
+				_bbcode_escape(str(entry.get("spiritLabel", "精灵"))),
+				_bbcode_escape(_equipment_spirit_sources_text(entry)),
+			])
+	var point := PlayerProgressModel.record_point(player_profile)
+	lines.append("")
+	lines.append("[color=#d7c36a]记录点[/color]")
+	lines.append(str(point.get("label", "记录点")))
+	player_status_detail_label.text = "\n".join(lines)
+
+
+func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
+	var base_value := int(base.get(stat_key, 0))
+	var bonus_value := int(bonus.get(stat_key, 0))
+	var label := EquipmentModel.stat_label_for(stat_key)
+	if bonus_value == 0:
+		return "%s %d" % [label, base_value]
+	return "%s %d%s%d=%d" % [
+		label,
+		base_value,
+		"+" if bonus_value > 0 else "",
+		bonus_value,
+		int(current.get(stat_key, base_value + bonus_value)),
+	]
+
+
+func _player_status_bonus_line(bonus: Dictionary) -> String:
+	var parts: Array[String] = []
+	for stat_key in EquipmentModel.STAT_KEYS:
+		var bonus_value := int(bonus.get(stat_key, 0))
+		if bonus_value == 0:
+			continue
+		parts.append("%s %s%d" % [
+			EquipmentModel.stat_label_for(stat_key),
+			"+" if bonus_value > 0 else "",
+			bonus_value,
+		])
+	return "无" if parts.is_empty() else "    ".join(parts)
+
+
+func _equipment_spirit_sources_text(entry: Dictionary) -> String:
+	var parts: Array[String] = []
+	var sources: Array = entry.get("sources", [])
+	for source_value in sources:
+		if not (source_value is Dictionary):
+			continue
+		var source := source_value as Dictionary
+		var item_label := str(source.get("itemLabel", "装备"))
+		if item_label != "" and not parts.has(item_label):
+			parts.append(item_label)
+	return "未知装备" if parts.is_empty() else "、".join(parts)
 
 
 func _refresh_equipment_panel() -> void:
@@ -11342,6 +11601,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 		resolved_shop_id = ShopCatalogModel.DEFAULT_SHOP_ID
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_pet_panel()
@@ -11675,6 +11935,7 @@ func _open_pet_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -11705,6 +11966,7 @@ func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = Pet
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -11946,6 +12208,7 @@ func _open_codex_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -11972,6 +12235,7 @@ func _open_quest_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -11999,6 +12263,7 @@ func _open_training_partner_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -12074,6 +12339,7 @@ func _open_auto_settings_panel() -> void:
 	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
+	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
@@ -12697,6 +12963,7 @@ func _route_to_quest_target(target: Dictionary) -> void:
 			var cell: Vector2i = target.get("cell", IsoMapModel.spawn_cell(map_data))
 			_close_dialog()
 			_close_encounter()
+			_close_player_status_panel()
 			_close_backpack_panel()
 			_close_equipment_panel()
 			_close_shop_panel()
@@ -15323,7 +15590,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -15332,7 +15599,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -15393,6 +15660,13 @@ func _layout_hud() -> void:
 	var pet_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_PANEL_MAX_SIZE.y)
 	pet_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_width)
 	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_height)
+	player_status_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	player_status_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		player_status_panel.visible = false
+	if player_status_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
 	backpack_panel.size = Vector2(pet_width, pet_height)
 	if backpack_grid != null:
@@ -15546,6 +15820,8 @@ func _update_hud_text() -> void:
 			PlayerProgressModel.training_partner_count(player_profile),
 			_current_task_text(),
 		]
+	if player_status_panel != null and player_status_panel.visible:
+		_refresh_player_status_panel()
 
 
 func _layout_size() -> Vector2:
