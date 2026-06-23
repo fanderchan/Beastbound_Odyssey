@@ -377,6 +377,7 @@ var auto_player_stat_points_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_durability_check: bool = false
 var auto_equipment_durability_visual_check: bool = false
+var auto_equipment_slot_detail_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
@@ -388,6 +389,7 @@ var equipment_requirement_preview: bool = false
 var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
+var equipment_slot_detail_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -656,6 +658,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_durability_check")
 	elif auto_equipment_durability_visual_check:
 		call_deferred("_run_auto_equipment_durability_visual_check")
+	elif auto_equipment_slot_detail_check:
+		call_deferred("_run_auto_equipment_slot_detail_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -678,6 +682,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_durability_preview")
 	elif equipment_durability_visual_preview:
 		call_deferred("_run_equipment_durability_visual_preview")
+	elif equipment_slot_detail_preview:
+		call_deferred("_run_equipment_slot_detail_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -999,6 +1005,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_durability_check = true
 		elif arg == "--auto-equipment-durability-visual-check":
 			auto_equipment_durability_visual_check = true
+		elif arg == "--auto-equipment-slot-detail-check":
+			auto_equipment_slot_detail_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -1021,6 +1029,8 @@ func _apply_preview_window_args() -> void:
 			equipment_durability_preview = true
 		elif arg == "--equipment-durability-visual-preview":
 			equipment_durability_visual_preview = true
+		elif arg == "--equipment-slot-detail-preview":
+			equipment_slot_detail_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -6202,6 +6212,55 @@ func _run_auto_equipment_durability_visual_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_slot_detail_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_BODY
+	_open_equipment_panel()
+	await get_tree().process_frame
+	var occupied_text := equipment_detail_label.text if equipment_detail_label != null else ""
+	var occupied_detail_ok := (
+		occupied_text.find("水纹衣") >= 0
+		and occupied_text.find("来源精灵: 滋润精灵1（水纹衣）") >= 0
+		and occupied_text.find("卸下影响") >= 0
+		and occupied_text.find("防御 -4") >= 0
+		and occupied_text.find("失去 滋润精灵1") >= 0
+	)
+
+	var empty_profile := PlayerProgressModel.without_equipment(PlayerProgressModel.default_profile())
+	var empty_slots := PlayerProgressModel.backpack_slots(empty_profile)
+	var add_result := BackpackModel.add_items(empty_slots, [
+		{"itemId": "weapon_wooden_club", "count": 1},
+		{"itemId": "weapon_blessed_club", "count": 1},
+	])
+	empty_profile = PlayerProgressModel.with_backpack_slots(empty_profile, add_result.get("slots", empty_slots))
+	player_profile = empty_profile
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_refresh_equipment_panel()
+	await get_tree().process_frame
+	var empty_text := equipment_detail_label.text if equipment_detail_label != null else ""
+	var empty_detail_ok := (
+		empty_text.find("未装备") >= 0
+		and empty_text.find("推荐可装备") >= 0
+		and empty_text.find("木棒 x1") >= 0
+		and empty_text.find("攻击 +6") >= 0
+		and empty_text.find("祝木棒 x1") >= 0
+		and empty_text.find("获得 恩惠精灵1") >= 0
+		and equipment_unequip_button != null
+		and not equipment_unequip_button.visible
+	)
+	var status := "ok" if occupied_detail_ok and empty_detail_ok else "failed"
+	print("equipment slot detail check ready: status=%s occupied=%s empty=%s" % [
+		status,
+		str(occupied_detail_ok),
+		str(empty_detail_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -6949,6 +7008,24 @@ func _run_equipment_durability_visual_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
 	_set_world_log_message("Phase81：装备格直接显示耐久，损坏红字、磨损黄字。")
+	_open_equipment_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_slot_detail_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.without_equipment(PlayerProgressModel.default_profile())
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	var add_result := BackpackModel.add_items(slots, [
+		{"itemId": "weapon_wooden_club", "count": 1},
+		{"itemId": "weapon_blessed_club", "count": 1},
+	])
+	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, add_result.get("slots", slots))
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_set_world_log_message("Phase85：空装备槽会推荐背包里的可装备物品。")
 	_open_equipment_panel()
 	await get_tree().create_timer(1.0).timeout
 
@@ -13023,16 +13100,166 @@ func _refresh_equipment_detail() -> void:
 	]
 	if item_id == "":
 		lines.append("未装备")
+		lines.append_array(_equipment_slot_recommendation_lines(equipment_selected_slot_id))
 	else:
 		lines.append(EquipmentModel.label_for(item_id))
 		var durability_text := PlayerProgressModel.equipment_slot_durability_text(player_profile, equipment_selected_slot_id)
 		if durability_text != "":
 			lines.append(durability_text)
 		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
+		lines.append_array(_equipment_current_spirit_source_lines(equipment_selected_slot_id, item_id))
+		lines.append_array(_equipment_unequip_impact_lines(equipment_selected_slot_id))
 	equipment_detail_label.text = "\n".join(lines)
 	if equipment_unequip_button != null:
 		equipment_unequip_button.visible = item_id != ""
 		equipment_unequip_button.disabled = item_id == ""
+
+
+func _equipment_slot_recommendation_lines(slot_id: String) -> Array[String]:
+	var lines: Array[String] = [
+		"",
+		"推荐可装备:",
+	]
+	var counts := BackpackModel.counts_by_item(PlayerProgressModel.backpack_slots(player_profile))
+	var candidates: Array[Dictionary] = []
+	for item_id_value in counts.keys():
+		var item_id := str(item_id_value)
+		var count := int(counts.get(item_id_value, 0))
+		if count <= 0:
+			continue
+		if not EquipmentModel.is_equipment(item_id) or EquipmentModel.slot_for(item_id) != slot_id:
+			continue
+		var equip_check := PlayerProgressModel.can_equip_item(player_profile, item_id)
+		if not bool(equip_check.get("ok", false)):
+			continue
+		candidates.append({
+			"itemId": item_id,
+			"count": count,
+			"label": EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id)),
+			"score": _equipment_recommendation_score(item_id),
+		})
+	if candidates.is_empty():
+		lines.append("背包中没有可装备的推荐物品。")
+		return lines
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_score := int(a.get("score", 0))
+		var b_score := int(b.get("score", 0))
+		if a_score != b_score:
+			return a_score > b_score
+		return str(a.get("label", "")).naturalnocasecmp_to(str(b.get("label", ""))) < 0
+	)
+	var limit := mini(4, candidates.size())
+	for index in range(limit):
+		var candidate := candidates[index]
+		var item_id := str(candidate.get("itemId", ""))
+		lines.append("- %s x%d：%s" % [
+			str(candidate.get("label", "装备")),
+			int(candidate.get("count", 0)),
+			_equipment_plain_change_text_for(item_id),
+		])
+	if candidates.size() > limit:
+		lines.append("还有%d件可装备物品。" % (candidates.size() - limit))
+	return lines
+
+
+func _equipment_recommendation_score(item_id: String) -> int:
+	var stats := EquipmentModel.stats_for(item_id)
+	var score := 0
+	for stat_key in EquipmentModel.STAT_KEYS:
+		score += int(stats.get(stat_key, 0))
+	score += EquipmentModel.spirit_ids_for(item_id).size() * 20
+	return score
+
+
+func _equipment_plain_change_text_for(item_id: String) -> String:
+	var preview := PlayerProgressModel.equipment_change_preview(player_profile, item_id)
+	if preview.is_empty():
+		return "无变化"
+	if bool(preview.get("unchanged", false)):
+		return "已装备"
+	var parts: Array[String] = []
+	for change_value in preview.get("statChanges", []):
+		if not (change_value is Dictionary):
+			continue
+		var change := change_value as Dictionary
+		var delta := int(change.get("delta", 0))
+		if delta == 0:
+			continue
+		parts.append("%s %s%d" % [
+			str(change.get("label", "")),
+			"+" if delta > 0 else "",
+			delta,
+		])
+	for spirit_id in preview.get("gainedSpiritIds", []):
+		parts.append("获得 %s" % BattleActionCatalog.label_for(str(spirit_id), str(spirit_id)))
+	for spirit_id in preview.get("lostSpiritIds", []):
+		parts.append("失去 %s" % BattleActionCatalog.label_for(str(spirit_id), str(spirit_id)))
+	return "无变化" if parts.is_empty() else "、".join(parts)
+
+
+func _equipment_current_spirit_source_lines(slot_id: String, item_id: String) -> Array[String]:
+	var spirit_ids := EquipmentModel.spirit_ids_for(item_id)
+	if spirit_ids.is_empty():
+		return []
+	if _equipment_slot_is_broken(slot_id, item_id):
+		return ["来源精灵: 装备已损坏，精灵暂不可用。"]
+	var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id))
+	var parts: Array[String] = []
+	for spirit_id in spirit_ids:
+		parts.append("%s（%s）" % [
+			BattleActionCatalog.label_for(str(spirit_id), str(spirit_id)),
+			item_label,
+		])
+	return ["来源精灵: %s" % "、".join(parts)]
+
+
+func _equipment_unequip_impact_lines(slot_id: String) -> Array[String]:
+	var after_profile := _equipment_profile_without_slot(player_profile, slot_id)
+	var before_summary := PlayerProgressModel.player_stat_summary(player_profile)
+	var after_summary := PlayerProgressModel.player_stat_summary(after_profile)
+	var before_bonus := before_summary.get("bonus", {}) as Dictionary
+	var after_bonus := after_summary.get("bonus", {}) as Dictionary
+	var stat_parts: Array[String] = []
+	for stat_key in EquipmentModel.STAT_KEYS:
+		var delta := int(after_bonus.get(stat_key, 0)) - int(before_bonus.get(stat_key, 0))
+		if delta == 0:
+			continue
+		stat_parts.append("%s %s%d" % [
+			EquipmentModel.stat_label_for(stat_key),
+			"+" if delta > 0 else "",
+			delta,
+		])
+	var before_spirits := PlayerProgressModel.equipment_spirit_ids(player_profile)
+	var after_spirits := PlayerProgressModel.equipment_spirit_ids(after_profile)
+	var spirit_parts: Array[String] = []
+	for spirit_id in before_spirits:
+		if not after_spirits.has(spirit_id):
+			spirit_parts.append("失去 %s" % BattleActionCatalog.label_for(spirit_id, spirit_id))
+	return [
+		"",
+		"卸下影响",
+		"属性: %s" % ("无变化" if stat_parts.is_empty() else "、".join(stat_parts)),
+		"精灵: %s" % ("无变化" if spirit_parts.is_empty() else "、".join(spirit_parts)),
+	]
+
+
+func _equipment_profile_without_slot(profile: Dictionary, slot_id: String) -> Dictionary:
+	var normalized := PlayerProgressModel.normalize_profile(profile)
+	var slots := PlayerProgressModel.equipment_slots(normalized)
+	var durability := PlayerProgressModel.equipment_durability(normalized)
+	slots.erase(slot_id)
+	durability.erase(slot_id)
+	normalized[PlayerProgressModel.EQUIPMENT_SLOTS_KEY] = slots
+	normalized[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	return PlayerProgressModel.normalize_profile(normalized)
+
+
+func _equipment_slot_is_broken(slot_id: String, item_id: String) -> bool:
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	if max_durability <= 0:
+		return false
+	var current := clampi(int(PlayerProgressModel.equipment_durability(player_profile).get(slot_id, max_durability)), 0, max_durability)
+	return current <= 0
 
 
 func _select_equipment_slot(slot_id: String) -> void:
