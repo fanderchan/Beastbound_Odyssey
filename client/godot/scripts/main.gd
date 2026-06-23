@@ -133,6 +133,8 @@ var battle_passive_panel: Panel
 var battle_passive_label: Label
 var battle_message_panel: PanelContainer
 var battle_log_label: RichTextLabel
+var battle_message_expand_button: Button
+var battle_message_clear_button: Button
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
@@ -365,6 +367,7 @@ var auto_quest_reward_choice_check: bool = false
 var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_chat_panel_check: bool = false
+var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
@@ -389,6 +392,7 @@ var quest_reward_choice_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
 var chat_panel_preview: bool = false
+var world_log_panel_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
@@ -428,6 +432,7 @@ var player_profile: Dictionary = {}
 var profile_save_enabled: bool = true
 var world_log_message: String = ""
 var world_log_history: Array[String] = []
+var battle_message_expanded: bool = false
 var pet_rest_recovery_elapsed: float = 0.0
 var pet_drop_expire_elapsed: float = 0.0
 var current_path_cells: Array[Vector2i] = []
@@ -631,6 +636,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_map_panel_check")
 	elif auto_chat_panel_check:
 		call_deferred("_run_auto_chat_panel_check")
+	elif auto_world_log_panel_check:
+		call_deferred("_run_auto_world_log_panel_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
 	elif auto_player_status_check:
@@ -679,6 +686,8 @@ func _ready() -> void:
 		call_deferred("_run_map_panel_preview")
 	elif chat_panel_preview:
 		call_deferred("_run_chat_panel_preview")
+	elif world_log_panel_preview:
+		call_deferred("_run_world_log_panel_preview")
 	elif equipment_quest_preview:
 		call_deferred("_run_equipment_quest_preview")
 	elif equipment_swap_preview:
@@ -966,6 +975,8 @@ func _apply_preview_window_args() -> void:
 			auto_map_panel_check = true
 		elif arg == "--auto-chat-panel-check":
 			auto_chat_panel_check = true
+		elif arg == "--auto-world-log-panel-check":
+			auto_world_log_panel_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
 		elif arg == "--auto-player-status-check":
@@ -1014,6 +1025,8 @@ func _apply_preview_window_args() -> void:
 			map_panel_preview = true
 		elif arg == "--chat-panel-preview":
 			chat_panel_preview = true
+		elif arg == "--world-log-panel-preview":
+			world_log_panel_preview = true
 		elif arg == "--equipment-quest-preview":
 			equipment_quest_preview = true
 		elif arg == "--equipment-swap-preview":
@@ -6374,6 +6387,21 @@ func _run_chat_panel_preview() -> void:
 		_update_hud_text()
 
 
+func _run_world_log_panel_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	for index in range(18):
+		_set_world_log_message("Phase83 历史消息%d：战斗、奖励和任务提示可展开查看。" % [index + 1])
+	battle_message_expanded = true
+	_refresh_battle_message_controls()
+	_layout_hud()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_quick_slot_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7514,6 +7542,64 @@ func _run_auto_chat_panel_check() -> void:
 		chat_messages.size(),
 		str(chat_panel != null and chat_panel.visible),
 		chat_log_label.text.replace("\n", " / ") if chat_log_label != null else "",
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_world_log_panel_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	battle_message_expanded = false
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	for index in range(20):
+		_set_world_log_message("日志历史%d" % [index + 1])
+	await get_tree().process_frame
+	var collapsed_size := battle_message_panel.size if battle_message_panel != null else Vector2.ZERO
+	var collapsed_ok := (
+		battle_message_panel != null
+		and battle_message_panel.visible
+		and battle_log_label != null
+		and battle_log_label.scroll_active
+		and battle_log_label.scroll_following
+		and battle_message_expand_button != null
+		and battle_message_expand_button.text == "展开"
+		and battle_message_clear_button != null
+		and not battle_message_clear_button.disabled
+		and battle_log_label.text.find("日志历史1") >= 0
+		and battle_log_label.text.find("日志历史20") >= 0
+	)
+	_toggle_battle_message_expanded()
+	await get_tree().process_frame
+	var expanded_size := battle_message_panel.size if battle_message_panel != null else Vector2.ZERO
+	var expanded_ok := (
+		battle_message_expanded
+		and battle_message_expand_button != null
+		and battle_message_expand_button.text == "收起"
+		and expanded_size.y > collapsed_size.y + 40.0
+		and expanded_size.x >= collapsed_size.x
+	)
+	_clear_world_log_panel()
+	await get_tree().process_frame
+	var clear_ok := (
+		world_log_history.is_empty()
+		and world_log_message == ""
+		and battle_log_label != null
+		and battle_log_label.text == ""
+		and battle_message_clear_button != null
+		and battle_message_clear_button.disabled
+		and battle_message_panel != null
+		and not battle_message_panel.visible
+	)
+	var status := "ok" if collapsed_ok and expanded_ok and clear_ok else "failed"
+	print("world log panel check ready: status=%s collapsed=%s expanded=%s clear=%s collapsed_size=%s expanded_size=%s" % [
+		status,
+		str(collapsed_ok),
+		str(expanded_ok),
+		str(clear_ok),
+		str(collapsed_size),
+		str(expanded_size),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -11544,7 +11630,29 @@ func _build_hud() -> void:
 	var battle_message_box := VBoxContainer.new()
 	battle_message_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_message_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	battle_message_box.add_theme_constant_override("separation", 4)
 	battle_message_panel.add_child(battle_message_box)
+	var battle_message_header := HBoxContainer.new()
+	battle_message_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_message_header.add_theme_constant_override("separation", 6)
+	battle_message_box.add_child(battle_message_header)
+	var battle_message_title := Label.new()
+	battle_message_title.text = "消息"
+	battle_message_title.add_theme_font_size_override("font_size", 13)
+	battle_message_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_message_header.add_child(battle_message_title)
+	battle_message_expand_button = Button.new()
+	battle_message_expand_button.text = "展开"
+	battle_message_expand_button.custom_minimum_size = Vector2(54, 28)
+	battle_message_expand_button.add_theme_font_size_override("font_size", 13)
+	battle_message_expand_button.pressed.connect(_toggle_battle_message_expanded)
+	battle_message_header.add_child(battle_message_expand_button)
+	battle_message_clear_button = Button.new()
+	battle_message_clear_button.text = "清空"
+	battle_message_clear_button.custom_minimum_size = Vector2(54, 28)
+	battle_message_clear_button.add_theme_font_size_override("font_size", 13)
+	battle_message_clear_button.pressed.connect(_clear_world_log_panel)
+	battle_message_header.add_child(battle_message_clear_button)
 	battle_log_label = RichTextLabel.new()
 	battle_log_label.name = "BattleLog"
 	battle_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -12434,9 +12542,34 @@ func _set_world_log_message(text: String) -> void:
 		battle_log_label.call_deferred("scroll_to_line", maxi(0, battle_log_label.get_line_count() - 1))
 	if battle_message_panel != null:
 		battle_message_panel.visible = display_text != "" or battle_active
+	_refresh_battle_message_controls()
 	if hud_root != null:
 		_layout_hud()
 	queue_redraw()
+
+
+func _toggle_battle_message_expanded() -> void:
+	battle_message_expanded = not battle_message_expanded
+	_refresh_battle_message_controls()
+	_layout_hud()
+
+
+func _clear_world_log_panel() -> void:
+	world_log_history.clear()
+	world_log_message = ""
+	if battle_log_label != null:
+		battle_log_label.text = ""
+	if battle_message_panel != null:
+		battle_message_panel.visible = battle_active
+	_refresh_battle_message_controls()
+	_layout_hud()
+
+
+func _refresh_battle_message_controls() -> void:
+	if battle_message_expand_button != null:
+		battle_message_expand_button.text = "收起" if battle_message_expanded else "展开"
+	if battle_message_clear_button != null:
+		battle_message_clear_button.disabled = world_log_history.is_empty()
 
 
 func _open_backpack_panel() -> void:
@@ -18042,12 +18175,15 @@ func _layout_hud() -> void:
 
 	var message_width: float = minf(viewport_size.x - margin * 2.0, 390.0 if is_phone_shape else 560.0)
 	var message_height := 112.0 if is_phone_shape else 126.0
+	if battle_message_expanded:
+		message_width = minf(viewport_size.x - margin * 2.0, 520.0 if is_phone_shape else 760.0)
+		message_height = minf(viewport_size.y - margin * 2.0, 260.0 if is_phone_shape else 330.0)
 	var message_y := viewport_size.y - message_height - margin
 	if is_phone_shape and action_bar != null and action_bar.visible:
 		message_y = action_bar.position.y - message_height - 8.0
 	battle_message_panel.position = Vector2(margin, maxf(margin + 68.0, message_y))
 	battle_message_panel.size = Vector2(message_width, message_height)
-	battle_message_panel.visible = (battle_active or world_log_message != "") and (battle_active or not world_menu_open)
+	battle_message_panel.visible = (battle_active or world_log_message != "" or not world_log_history.is_empty()) and (battle_active or not world_menu_open)
 
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())
