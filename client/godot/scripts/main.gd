@@ -132,6 +132,7 @@ var equipment_menu_button: Button
 var pet_menu_button: Button
 var codex_menu_button: Button
 var quest_menu_button: Button
+var map_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
 var backpack_panel: PanelContainer
@@ -233,6 +234,12 @@ var quest_claim_button: Button
 var quest_route_button: Button
 var quest_close_button: Button
 var quest_selected_reward_choice_id: String = ""
+var map_panel: PanelContainer
+var map_texture_rect: TextureRect
+var map_detail_label: Label
+var map_marker_container: VBoxContainer
+var map_close_button: Button
+var map_marker_buttons: Dictionary = {}
 var training_partner_panel: PanelContainer
 var training_partner_label: Label
 var training_partner_add_button: Button
@@ -324,6 +331,7 @@ var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_quest_reward_choice_check: bool = false
+var auto_map_panel_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
@@ -341,6 +349,7 @@ var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var quest_reward_choice_preview: bool = false
+var map_panel_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
@@ -570,6 +579,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_ui_check")
 	elif auto_quest_reward_choice_check:
 		call_deferred("_run_auto_quest_reward_choice_check")
+	elif auto_map_panel_check:
+		call_deferred("_run_auto_map_panel_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
 	elif auto_player_status_check:
@@ -604,6 +615,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_ui_preview")
 	elif quest_reward_choice_preview:
 		call_deferred("_run_quest_reward_choice_preview")
+	elif map_panel_preview:
+		call_deferred("_run_map_panel_preview")
 	elif equipment_quest_preview:
 		call_deferred("_run_equipment_quest_preview")
 	elif equipment_swap_preview:
@@ -877,6 +890,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_ui_check = true
 		elif arg == "--auto-quest-reward-choice-check":
 			auto_quest_reward_choice_check = true
+		elif arg == "--auto-map-panel-check":
+			auto_map_panel_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
 		elif arg == "--auto-player-status-check":
@@ -911,6 +926,8 @@ func _apply_preview_window_args() -> void:
 			quest_ui_preview = true
 		elif arg == "--quest-reward-choice-preview":
 			quest_reward_choice_preview = true
+		elif arg == "--map-panel-preview":
+			map_panel_preview = true
 		elif arg == "--equipment-quest-preview":
 			equipment_quest_preview = true
 		elif arg == "--equipment-swap-preview":
@@ -6019,6 +6036,18 @@ func _run_quest_reward_choice_preview() -> void:
 		_update_hud_text()
 
 
+func _run_map_panel_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase76：打开地图，选择标记可自动寻路。")
+	_open_map_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_auto_battle_settings_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -6949,6 +6978,72 @@ func _run_auto_quest_reward_choice_check() -> void:
 		PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
 		PlayerProgressModel.stone_coins(ui_profile),
 		ui_log_after_claim,
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_map_panel_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_map_panel()
+	await get_tree().process_frame
+	var texture_ok := map_texture_rect != null and map_texture_rect.texture != null
+	var detail_ok := map_detail_label != null and map_detail_label.text.find("火芽村入口") >= 0 and map_detail_label.text.find("坐标") >= 0
+	var marker_ok := (
+		map_panel != null
+		and map_panel.visible
+		and map_marker_buttons.has("interaction:firebud_doctor")
+		and map_marker_buttons.has("interaction:firebud_equipment_keeper")
+		and map_marker_buttons.has("zone:village_grass")
+	)
+	var doctor_target := {
+		"kind": "interaction",
+		"mapId": current_map_id,
+		"label": "村医阿萝",
+		"interaction": InteractionModel.find_by_id(map_data, "firebud_doctor"),
+	}
+	_on_map_marker_pressed(doctor_target)
+	await get_tree().process_frame
+	var doctor_route_ok := (
+		not map_panel.visible
+		and has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "firebud_doctor"
+		and world_log_message.find("村医阿萝") >= 0
+	)
+	_clear_pending_interaction()
+	_open_map_panel()
+	await get_tree().process_frame
+	var zone := EncounterModel.zone_for_cell(map_data, Vector2i(11, 15))
+	var zone_target := {
+		"kind": "encounter_zone",
+		"mapId": current_map_id,
+		"label": "村外草丛",
+		"zone": zone,
+		"cell": EncounterModel.first_walkable_cell(map_data, zone),
+	}
+	_on_map_marker_pressed(zone_target)
+	await get_tree().process_frame
+	var zone_route_ok := (
+		not map_panel.visible
+		and has_target_cell
+		and EncounterModel.zone_contains_cell(zone, target_cell)
+		and world_log_message.find("村外草丛") >= 0
+	)
+	var status := "ok" if loaded and texture_ok and detail_ok and marker_ok and doctor_route_ok and zone_route_ok else "failed"
+	print("map panel check ready: status=%s loaded=%s texture=%s detail=%s markers=%s doctor=%s zone=%s marker_count=%d target=%s log=%s" % [
+		status,
+		str(loaded),
+		str(texture_ok),
+		str(detail_ok),
+		str(marker_ok),
+		str(doctor_route_ok),
+		str(zone_route_ok),
+		map_marker_buttons.size(),
+		str(target_cell),
 		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -9765,6 +9860,11 @@ func _build_hud() -> void:
 	quest_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	quest_menu_button.pressed.connect(_open_quest_panel)
 	action_row.add_child(quest_menu_button)
+	map_menu_button = Button.new()
+	map_menu_button.text = "地图"
+	map_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	map_menu_button.pressed.connect(_open_map_panel)
+	action_row.add_child(map_menu_button)
 	training_partner_menu_button = Button.new()
 	training_partner_menu_button.text = "伙伴"
 	training_partner_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -10328,6 +10428,52 @@ func _build_hud() -> void:
 	quest_route_button.pressed.connect(_on_quest_route_pressed)
 	quest_column.add_child(quest_route_button)
 	hud_root.add_child(quest_panel)
+
+	map_panel = _panel_container("MapPanel")
+	map_panel.visible = false
+	map_panel.z_index = 24
+	var map_column := VBoxContainer.new()
+	map_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_column.add_theme_constant_override("separation", 8)
+	map_panel.add_child(map_column)
+
+	var map_header := HBoxContainer.new()
+	map_header.add_theme_constant_override("separation", 10)
+	map_column.add_child(map_header)
+	var map_title_label := Label.new()
+	map_title_label.text = "地图"
+	map_title_label.add_theme_font_size_override("font_size", 21)
+	map_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_header.add_child(map_title_label)
+	map_close_button = Button.new()
+	map_close_button.text = "关闭"
+	map_close_button.custom_minimum_size = Vector2(92, 44)
+	map_close_button.pressed.connect(_close_map_panel)
+	map_header.add_child(map_close_button)
+
+	map_texture_rect = TextureRect.new()
+	map_texture_rect.custom_minimum_size = Vector2(0, 210)
+	map_texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	map_column.add_child(map_texture_rect)
+
+	map_detail_label = Label.new()
+	map_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	map_detail_label.add_theme_font_size_override("font_size", 15)
+	map_detail_label.custom_minimum_size = Vector2(0, 58)
+	map_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_column.add_child(map_detail_label)
+
+	var map_marker_scroll := ScrollContainer.new()
+	map_marker_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_marker_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_column.add_child(map_marker_scroll)
+	map_marker_container = VBoxContainer.new()
+	map_marker_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_marker_container.add_theme_constant_override("separation", 7)
+	map_marker_scroll.add_child(map_marker_container)
+	hud_root.add_child(map_panel)
 
 	training_partner_panel = _panel_container("TrainingPartnerPanel")
 	training_partner_panel.visible = false
@@ -11031,6 +11177,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_map_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -11085,6 +11232,7 @@ func _set_interaction_target(item: Dictionary) -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_map_panel()
 	pending_interaction = item.duplicate(true)
 	has_pending_interaction = true
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -12888,6 +13036,7 @@ func _open_quest_panel() -> void:
 	_close_pet_panel()
 	_close_pet_skill_panel()
 	_close_codex_panel()
+	_close_map_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	quest_panel.visible = true
@@ -12899,6 +13048,34 @@ func _open_quest_panel() -> void:
 func _close_quest_panel() -> void:
 	if quest_panel != null:
 		quest_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _open_map_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	map_panel.visible = true
+	_refresh_map_panel()
+	_layout_hud()
+
+
+func _close_map_panel() -> void:
+	if map_panel != null:
+		map_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
 
@@ -12917,6 +13094,7 @@ func _open_training_partner_panel() -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_map_panel()
 	_close_auto_settings_panel()
 	training_partner_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
@@ -13609,6 +13787,187 @@ func _on_quest_route_pressed() -> void:
 		return
 	_close_quest_panel()
 	_route_to_quest_target(target)
+
+
+func _refresh_map_panel() -> void:
+	if map_panel == null or map_texture_rect == null or map_detail_label == null or map_marker_container == null:
+		return
+	map_texture_rect.texture = _map_minimap_texture()
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var target_text := "无"
+	if has_target_cell:
+		target_text = "%d,%d" % [target_cell.x, target_cell.y]
+	map_detail_label.text = "地图：%s\n坐标：%d,%d    目标：%s" % [
+		str(map_data.get("name", "未知地图")),
+		player_cell.x,
+		player_cell.y,
+		target_text,
+	]
+	for child in map_marker_container.get_children():
+		child.queue_free()
+	map_marker_buttons.clear()
+	for target in _map_targets_for_current_map():
+		var captured_target := target.duplicate(true)
+		var button := Button.new()
+		button.text = _map_target_button_text(captured_target)
+		button.custom_minimum_size = Vector2(0, 42)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 15)
+		button.pressed.connect(func() -> void:
+			_on_map_marker_pressed(captured_target)
+		)
+		map_marker_container.add_child(button)
+		map_marker_buttons[str(captured_target.get("id", captured_target.get("label", "")))] = button
+	if map_marker_buttons.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "当前地图暂无可寻路标记。"
+		empty_label.add_theme_font_size_override("font_size", 15)
+		map_marker_container.add_child(empty_label)
+
+
+func _map_targets_for_current_map() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for value in InteractionModel.interaction_points(map_data):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		var item_id := str(item.get("id", ""))
+		if item_id == "":
+			continue
+		result.append({
+			"id": "interaction:%s" % item_id,
+			"kind": "interaction",
+			"mapId": current_map_id,
+			"label": str(item.get("name", "交互点")),
+			"interaction": item,
+		})
+	for value in EncounterModel.encounter_zones(map_data):
+		if not (value is Dictionary):
+			continue
+		var zone := value as Dictionary
+		var zone_id := str(zone.get("id", ""))
+		if zone_id == "":
+			continue
+		result.append({
+			"id": "zone:%s" % zone_id,
+			"kind": "encounter_zone",
+			"mapId": current_map_id,
+			"label": str(zone.get("name", "野外")),
+			"zone": zone,
+			"cell": EncounterModel.first_walkable_cell(map_data, zone),
+		})
+	return result
+
+
+func _map_target_button_text(target: Dictionary) -> String:
+	var kind := str(target.get("kind", ""))
+	var label := str(target.get("label", "目标"))
+	match kind:
+		"interaction":
+			var interaction = target.get("interaction", {})
+			if interaction is Dictionary:
+				var action := str((interaction as Dictionary).get("action", ""))
+				return "%s%s" % [label, " / %s" % action if action != "" else ""]
+		"encounter_zone":
+			return "%s / 草丛" % label
+	return label
+
+
+func _on_map_marker_pressed(target: Dictionary) -> void:
+	if target.is_empty():
+		return
+	_close_map_panel()
+	_route_to_quest_target(target)
+
+
+func _map_minimap_texture() -> Texture2D:
+	var image_width := 420
+	var image_height := 220
+	var image := Image.create(image_width, image_height, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.05, 0.08, 0.08, 0.92))
+	var grid := IsoMapModel.grid_size(map_data)
+	if grid.x <= 0 or grid.y <= 0:
+		return ImageTexture.create_from_image(image)
+	var margin := 10
+	var cell_size := maxi(4, mini(int(floor(float(image_width - margin * 2) / float(grid.x))), int(floor(float(image_height - margin * 2) / float(grid.y)))))
+	var map_pixel_size := Vector2i(cell_size * grid.x, cell_size * grid.y)
+	var origin_pixel := Vector2i(
+		int(floor(float(image_width - map_pixel_size.x) * 0.5)),
+		int(floor(float(image_height - map_pixel_size.y) * 0.5))
+	)
+	var blocked := IsoMapModel.blocked_lookup(map_data)
+	var interaction_blocked := IsoMapModel.interaction_blocked_lookup(map_data)
+	var decor := _map_decor_lookup()
+	var zone_lookup := _map_encounter_zone_lookup()
+	for y in range(grid.y):
+		for x in range(grid.x):
+			var cell := Vector2i(x, y)
+			var key := IsoMapModel.cell_key(cell)
+			var color := Color(0.19, 0.30, 0.27, 0.96)
+			if zone_lookup.has(key):
+				color = Color(0.28, 0.45, 0.25, 0.98)
+			if decor.has(key):
+				color = Color(0.25, 0.42, 0.30, 0.98)
+			if blocked.has(key) or interaction_blocked.has(key):
+				color = Color(0.12, 0.13, 0.12, 0.98)
+			_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, cell), color)
+	for target in _map_targets_for_current_map():
+		var marker_cell := _map_target_cell(target)
+		if IsoMapModel.is_inside(map_data, marker_cell):
+			_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, marker_cell), Color(0.90, 0.70, 0.32, 1.0))
+	if has_target_cell and IsoMapModel.is_inside(map_data, target_cell):
+		_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, target_cell), Color(1.0, 0.88, 0.20, 1.0))
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	if IsoMapModel.is_inside(map_data, player_cell):
+		_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, player_cell), Color(0.24, 0.56, 0.95, 1.0))
+	return ImageTexture.create_from_image(image)
+
+
+func _map_target_cell(target: Dictionary) -> Vector2i:
+	match str(target.get("kind", "")):
+		"interaction":
+			var interaction = target.get("interaction", {})
+			if interaction is Dictionary:
+				return InteractionModel.cell_for(interaction as Dictionary)
+		"encounter_zone":
+			return target.get("cell", IsoMapModel.spawn_cell(map_data)) as Vector2i
+	return IsoMapModel.spawn_cell(map_data)
+
+
+func _map_decor_lookup() -> Dictionary:
+	var lookup := {}
+	var decor_cells: Array = map_data.get("decorCells", [])
+	for value in decor_cells:
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		var cell_array: Array = item.get("cell", [0, 0])
+		lookup[IsoMapModel.cell_key(Vector2i(int(cell_array[0]), int(cell_array[1])))] = true
+	return lookup
+
+
+func _map_encounter_zone_lookup() -> Dictionary:
+	var lookup := {}
+	for value in EncounterModel.encounter_zones(map_data):
+		if not (value is Dictionary):
+			continue
+		for cell in EncounterModel.cells_for_zone(value as Dictionary):
+			lookup[IsoMapModel.cell_key(cell)] = true
+	return lookup
+
+
+func _map_cell_rect(origin_pixel: Vector2i, cell_size: int, cell: Vector2i) -> Rect2i:
+	return Rect2i(origin_pixel + Vector2i(cell.x * cell_size, cell.y * cell_size), Vector2i(maxi(1, cell_size - 1), maxi(1, cell_size - 1)))
+
+
+func _fill_image_rect(image: Image, rect: Rect2i, color: Color) -> void:
+	var start_x := clampi(rect.position.x, 0, image.get_width())
+	var start_y := clampi(rect.position.y, 0, image.get_height())
+	var end_x := clampi(rect.position.x + rect.size.x, 0, image.get_width())
+	var end_y := clampi(rect.position.y + rect.size.y, 0, image.get_height())
+	for y in range(start_y, end_y):
+		for x in range(start_x, end_x):
+			image.set_pixel(x, y, color)
 
 
 func _active_quest_navigation_target() -> Dictionary:
@@ -16303,7 +16662,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -16312,7 +16671,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -16438,6 +16797,13 @@ func _layout_hud() -> void:
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
+	map_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	map_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		map_panel.visible = false
+	if map_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	training_partner_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
@@ -16500,7 +16866,7 @@ func _layout_hud() -> void:
 		message_y = action_bar.position.y - message_height - 8.0
 	battle_message_panel.position = Vector2(margin, maxf(margin + 68.0, message_y))
 	battle_message_panel.size = Vector2(message_width, message_height)
-	battle_message_panel.visible = battle_active or world_log_message != ""
+	battle_message_panel.visible = (battle_active or world_log_message != "") and (battle_active or not world_menu_open)
 
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())
