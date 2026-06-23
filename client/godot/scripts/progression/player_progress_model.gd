@@ -138,6 +138,23 @@ static func storage_pet_instances(profile: Dictionary) -> Array[Dictionary]:
 	return result
 
 
+static func mark_pet_seen(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		instance["isNew"] = false
+		instances[index] = instance
+		break
+	normalized["petInstances"] = instances
+	return normalize_profile(normalized)
+
+
 static func capture_tool_inventory(profile: Dictionary) -> Dictionary:
 	return _capture_tool_inventory_from_slots(backpack_slots(profile))
 
@@ -1366,6 +1383,48 @@ static func drop_pet(profile: Dictionary, instance_id: String, map_id: String, c
 	}
 
 
+static func can_clear_storage_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
+		return {"ok": false, "message": "只有兽栏里的宠物可以清理。"}
+	return {"ok": true, "message": "%s 可以清理。" % str(instance.get("name", "宠物"))}
+
+
+static func clear_storage_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_clear_storage_pet(normalized, instance_id)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "不能清理。")),
+		}
+	var instances: Array = normalized.get("petInstances", [])
+	var next_instances: Array = []
+	var removed_pet: Dictionary = {}
+	for value in instances:
+		if not (value is Dictionary):
+			continue
+		var instance := (value as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) == instance_id:
+			removed_pet = instance
+			continue
+		next_instances.append(instance)
+	normalized["petInstances"] = next_instances
+	if str(normalized.get("activePetInstanceId", "")) == instance_id:
+		normalized["activePetInstanceId"] = ""
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": not removed_pet.is_empty(),
+		"profile": normalized,
+		"message": "%s 已清理。" % str(removed_pet.get("name", "宠物")) if not removed_pet.is_empty() else "没有找到这只宠物。",
+		"removedCount": 1 if not removed_pet.is_empty() else 0,
+	}
+
+
 static func can_pickup_ground_pet(profile: Dictionary, drop_id: String, now_sec: int = -1) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var now := _safe_now_sec(now_sec)
@@ -1531,6 +1590,7 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		int(instance.get("defense", 0)),
 		int(instance.get("quick", 0)),
 	])
+	lines.append(PetPowerModel.combat_power_label_for_pet(instance))
 	lines.append("经验：%d/%d" % [
 		int(instance.get("exp", 0)),
 		int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1))))),
@@ -2288,6 +2348,8 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 			continue
 		var combat_power := PetPowerModel.combat_power_for_pet(captured)
 		captured["combatPower"] = combat_power
+		captured["capturedSerial"] = serial - 1
+		captured["isNew"] = true
 		if auto_discard_enabled and combat_power < auto_discard_threshold:
 			captured["discardThreshold"] = auto_discard_threshold
 			auto_discarded_instances.append(captured)
@@ -2360,9 +2422,12 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["quick"] = int(instance.get("quick", stats_dict.get("agility", 50)))
 	instance["attack"] = int(instance.get("attack", stats_dict.get("attack", 12)))
 	instance["defense"] = int(instance.get("defense", stats_dict.get("defense", 6)))
+	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
+	instance["isNew"] = bool(instance.get("isNew", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
+	instance["combatPower"] = PetPowerModel.combat_power_for_pet(instance)
 	return instance
 
 

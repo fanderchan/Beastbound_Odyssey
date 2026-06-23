@@ -38,6 +38,18 @@ const WORLD_LOG_MAX_LINES := 80
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
+const PET_FILTER_ALL := "all"
+const PET_FILTER_PARTY := "party"
+const PET_FILTER_STORAGE := "storage"
+const PET_FILTER_LEVEL_ONE := "level_one"
+const PET_FILTER_LOW_POWER := "low_power"
+const PET_FILTER_NEW := "new"
+const PET_SORT_DEFAULT := "default"
+const PET_SORT_LEVEL := "level"
+const PET_SORT_POWER := "power"
+const PET_SORT_SPECIES := "species"
+const PET_SORT_CAPTURED := "captured"
+const PET_LOW_POWER_FILTER_THRESHOLD := 31
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
@@ -155,6 +167,9 @@ var shop_mode: String = "buy"
 var shop_selected_item_id: String = ""
 var shop_quantity: int = 1
 var pet_panel: PanelContainer
+var pet_filter_option: OptionButton
+var pet_sort_option: OptionButton
+var pet_sort_direction_button: Button
 var pet_list_container: VBoxContainer
 var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
@@ -173,6 +188,10 @@ var pet_rename_cancel_button: Button
 var pet_close_button: Button
 var pet_selected_instance_id: String = ""
 var pet_detail_mode: String = PET_DETAIL_MODE_INSTANCE
+var pet_filter_mode: String = PET_FILTER_ALL
+var pet_sort_mode: String = PET_SORT_DEFAULT
+var pet_sort_descending: bool = true
+var pet_clear_confirm_instance_id: String = ""
 var pet_list_buttons: Dictionary = {}
 var codex_panel: PanelContainer
 var codex_list_container: VBoxContainer
@@ -357,6 +376,7 @@ var battle_current_event_actor_snapshots: Dictionary = {}
 var battle_event_advance_pending: bool = false
 var battle_round_end_status_processed: bool = false
 var battle_player_zero_hp_seen: bool = false
+var battle_auto_capture_success_seen: bool = false
 var battle_last_round_applied_events: int = 0
 var battle_last_round_event_types: Array[String] = []
 var battle_last_round_actor_order: Array[String] = []
@@ -1944,6 +1964,54 @@ func _run_auto_capture_settings_check() -> void:
 	var no_target_escape_ok := no_target_submit and not battle_active
 	await get_tree().process_frame
 
+	var success_message_settings := settings.duplicate(true)
+	success_message_settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_EQ
+	success_message_settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 1
+	success_message_settings[AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY] = AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+	player_profile = PlayerProgressModel.with_auto_capture_settings(PlayerProgressModel.default_profile(), success_message_settings)
+	_start_battle(BattleModel.create_training_partner_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng), 2))
+	await get_tree().process_frame
+	var success_enemy_ids := BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY)
+	if success_enemy_ids.size() >= 2:
+		battle_state = _set_battle_actor_fields(battle_state, str(success_enemy_ids[0]), {
+			"level": 1,
+			"hp": 1,
+			"maxHp": 170,
+			"captured": false,
+		})
+		battle_state = _set_battle_actor_fields(battle_state, str(success_enemy_ids[1]), {
+			"level": 5,
+			"hp": 170,
+			"maxHp": 170,
+			"captured": false,
+		})
+	var success_escape_target_id := str(success_enemy_ids[0]) if not success_enemy_ids.is_empty() else ""
+	if success_escape_target_id != "":
+		battle_state = BattleModel.apply_battle_event(battle_state, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": success_escape_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+			"success": true,
+			"sequence": 2,
+			"speed": 100,
+		})
+	battle_auto_capture_success_seen = bool(battle_state.get("lastCaptureSuccess", false))
+	battle_state["phase"] = "command"
+	battle_event_queue.clear()
+	battle_action_timer = 0.0
+	battle_end_pending = false
+	_set_battle_command_owner("player")
+	var success_no_target_submit := _submit_battle_auto_player_action()
+	await get_tree().process_frame
+	var success_no_target_message_ok := (
+		success_no_target_submit
+		and not battle_active
+		and world_log_message.find("捕获成功。没有符合条件的捕捉目标，自动逃跑。") >= 0
+	)
+	await get_tree().process_frame
+
 	var full_profile := _auto_capture_full_pet_profile()
 	var full_state := PlayerProgressModel.apply_profile_to_battle_state(full_profile, BattleModel.create_wild_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)))
 	var full_target_id := BattleModel.living_enemy_id(full_state)
@@ -2000,7 +2068,7 @@ func _run_auto_capture_settings_check() -> void:
 		var selected_level := int(selected_pet.get("level", 0))
 		if selected_level < 1 or selected_level > 10:
 			gm_random_levels_ok = false
-	var gm_random_battle_state := BattleModel.create_training_partner_battle(gm_selected_zone, gm_random_count) if gm_random_count > 1 else BattleModel.create_wild_battle(gm_selected_zone)
+	var gm_random_battle_state := BattleModel.create_training_partner_battle(gm_selected_zone, gm_random_count) if gm_random_count >= 1 else {}
 	var gm_random_battle_count_ok := BattleModel.side_actor_count(gm_random_battle_state, BattleModel.SIDE_ENEMY) == gm_random_count
 	var gm_random_formation_ok := BattleModel.uses_10v10_formation(gm_random_battle_state)
 	var gm_two_slot_state := BattleModel.create_training_partner_battle(gm_random_zone, 2) if not gm_random_zone.is_empty() else {}
@@ -2024,8 +2092,8 @@ func _run_auto_capture_settings_check() -> void:
 		and gm_random_formation_ok
 		and gm_two_slot_ok
 	)
-	var status := "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
-	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
+	var status := "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
 		status,
 		str(normalized_ok),
 		str(power_ok),
@@ -2039,6 +2107,7 @@ func _run_auto_capture_settings_check() -> void:
 		str(heal_hold_no_ally_attack_ok),
 		str(heal_hold_pet_defend_seen),
 		str(no_target_escape_ok),
+		str(success_no_target_message_ok),
 		target_id,
 		str(target_match_ok),
 		str(target_actor.get("catchable", false)),
@@ -3482,8 +3551,77 @@ func _run_auto_pet_management_check() -> void:
 	var battle_pet := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
 	var battle_reads_active := str(battle_pet.get("name", "")) == "黄色普通布伊" and str(battle_pet.get("instanceId", "")) == "pet_bui_speed"
 	_end_battle(true)
-	var status := "ok" if opened and selected_default and rest_to_battle_ready and rest_battle and battle_to_standby_ready and rest_standby and no_pet_battle_ok and detail_ok and standby_to_rest_ready and speed_rest and speed_rest_to_battle_ready and button_text_clean and button_y_stable and switched and battle_reads_active else "failed"
-	print("pet management check ready: status=%s opened=%s selected=%s rest_to_battle=%s rest_battle=%s battle_to_standby=%s rest_standby=%s no_pet_battle=%s detail=%s standby_to_rest=%s speed_rest=%s speed_rest_to_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s active=%s" % [
+
+	var enhancement_profile := PlayerProgressModel.default_profile()
+	var enhancement_instances: Array = enhancement_profile.get("petInstances", [])
+	var new_storage_pet := PlayerProgressModel.create_pet_instance_from_form("pet_manage_new", "新乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STORAGE, 1, {
+		"hp": 20,
+		"maxHp": 20,
+		"attack": 3,
+		"defense": 2,
+		"quick": 4,
+	})
+	new_storage_pet["isNew"] = true
+	new_storage_pet["capturedSerial"] = 20
+	var low_storage_pet := PlayerProgressModel.create_pet_instance_from_form("pet_manage_low", "低战乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STORAGE, 1, {
+		"hp": 24,
+		"maxHp": 24,
+		"attack": 4,
+		"defense": 2,
+		"quick": 5,
+	})
+	low_storage_pet["capturedSerial"] = 19
+	var high_storage_pet := PlayerProgressModel.create_pet_instance_from_form("pet_manage_high", "强乌力", "wuli_normal_fast_wind10", PlayerProgressModel.PET_STATE_STORAGE, 2, {
+		"hp": 180,
+		"maxHp": 180,
+		"attack": 30,
+		"defense": 24,
+		"quick": 70,
+	})
+	high_storage_pet["capturedSerial"] = 18
+	enhancement_instances.append(new_storage_pet)
+	enhancement_instances.append(low_storage_pet)
+	enhancement_instances.append(high_storage_pet)
+	enhancement_profile["petInstances"] = enhancement_instances
+	player_profile = PlayerProgressModel.normalize_profile(enhancement_profile)
+	pet_selected_instance_id = ""
+	pet_filter_mode = PET_FILTER_ALL
+	pet_sort_mode = PET_SORT_POWER
+	_open_pet_panel()
+	await get_tree().process_frame
+	var sorted_visible := _pet_panel_visible_instances()
+	var power_sort_ok := sorted_visible.size() >= 2 and PetPowerModel.combat_power_for_pet(sorted_visible[0]) >= PetPowerModel.combat_power_for_pet(sorted_visible[sorted_visible.size() - 1])
+	var direction_initial_ok := pet_sort_direction_button != null and pet_sort_direction_button.text == "降"
+	_on_pet_sort_direction_pressed()
+	await get_tree().process_frame
+	var sorted_visible_asc := _pet_panel_visible_instances()
+	var power_sort_asc_ok := sorted_visible_asc.size() >= 2 and PetPowerModel.combat_power_for_pet(sorted_visible_asc[0]) <= PetPowerModel.combat_power_for_pet(sorted_visible_asc[sorted_visible_asc.size() - 1])
+	var direction_toggle_ok := pet_sort_direction_button != null and pet_sort_direction_button.text == "升"
+	var sort_direction_ok := direction_initial_ok and power_sort_asc_ok and direction_toggle_ok
+	var enhancement_list_text := ""
+	for child in pet_list_container.get_children():
+		if child is Button:
+			enhancement_list_text += (child as Button).text + "\n"
+	var list_power_new_ok := enhancement_list_text.find("战力") >= 0 and enhancement_list_text.find("新 新乌力") >= 0
+	var detail_power_ok := (pet_detail_label.text if pet_detail_label != null else "").find("战力") >= 0
+	pet_filter_mode = PET_FILTER_STORAGE
+	pet_sort_mode = PET_SORT_DEFAULT
+	_refresh_pet_panel()
+	await get_tree().process_frame
+	var storage_filter_ok := _pet_panel_visible_instances().size() == 3
+	_select_pet_instance("pet_manage_new")
+	await get_tree().process_frame
+	var new_seen_ok := not bool(PlayerProgressModel.pet_instance_by_id(player_profile, "pet_manage_new").get("isNew", true))
+	_on_pet_drop_pressed()
+	await get_tree().process_frame
+	var storage_clear_confirm_ok := not PlayerProgressModel.pet_instance_by_id(player_profile, "pet_manage_new").is_empty() and pet_drop_button != null and pet_drop_button.text == "确认"
+	_on_pet_drop_pressed()
+	await get_tree().process_frame
+	var storage_clear_ok := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_manage_new").is_empty()
+	var management_enhanced_ok := power_sort_ok and sort_direction_ok and list_power_new_ok and detail_power_ok and storage_filter_ok and new_seen_ok and storage_clear_confirm_ok and storage_clear_ok
+
+	var status := "ok" if opened and selected_default and rest_to_battle_ready and rest_battle and battle_to_standby_ready and rest_standby and no_pet_battle_ok and detail_ok and standby_to_rest_ready and speed_rest and speed_rest_to_battle_ready and button_text_clean and button_y_stable and switched and battle_reads_active and management_enhanced_ok else "failed"
+	print("pet management check ready: status=%s opened=%s selected=%s rest_to_battle=%s rest_battle=%s battle_to_standby=%s rest_standby=%s no_pet_battle=%s detail=%s standby_to_rest=%s speed_rest=%s speed_rest_to_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s enhanced=%s sort=%s sort_direction=%s list_power_new=%s detail_power=%s storage_filter=%s new_seen=%s clear_confirm=%s clear=%s active=%s" % [
 		status,
 		str(opened),
 		str(selected_default),
@@ -3500,6 +3638,15 @@ func _run_auto_pet_management_check() -> void:
 		str(button_y_stable),
 		str(switched),
 		str(battle_reads_active),
+		str(management_enhanced_ok),
+		str(power_sort_ok),
+		str(sort_direction_ok),
+		str(list_power_new_ok),
+		str(detail_power_ok),
+		str(storage_filter_ok),
+		str(new_seen_ok),
+		str(storage_clear_confirm_ok),
+		str(storage_clear_ok),
 		str(player_profile.get("activePetInstanceId", "")),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -7545,8 +7692,7 @@ func _submit_battle_auto_player_action() -> bool:
 		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 		return true
 	if _battle_auto_capture_no_target_action() == AutoCaptureSettingsModel.NO_TARGET_ESCAPE:
-		_set_battle_message("自动捉宠：没有符合条件目标，自动逃跑。")
-		_battle_escape()
+		_battle_auto_capture_escape_without_target()
 		battle_auto_attack_player_submissions += 1
 		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 		return true
@@ -7764,6 +7910,16 @@ func _battle_auto_capture_no_target_action() -> String:
 	if not bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false)):
 		return AutoCaptureSettingsModel.NO_TARGET_BATTLE
 	return AutoCaptureSettingsModel.normalized_no_target_action(str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, AutoCaptureSettingsModel.NO_TARGET_ESCAPE)))
+
+
+func _battle_auto_capture_escape_without_target() -> void:
+	var message := "捕获成功。没有符合条件的捕捉目标，自动逃跑。" if battle_auto_capture_success_seen else "自动捉宠：没有符合条件目标，自动逃跑。"
+	_set_battle_message(message)
+	_battle_escape()
+	if world_log_message != "":
+		_set_world_log_message("%s\n%s" % [message, world_log_message])
+	else:
+		_set_world_log_message(message)
 
 
 func _battle_auto_capture_target_id(settings: Dictionary) -> String:
@@ -8627,10 +8783,45 @@ func _build_hud() -> void:
 	pet_body.add_theme_constant_override("separation", 10)
 	pet_column.add_child(pet_body)
 
+	var pet_left_column := VBoxContainer.new()
+	pet_left_column.custom_minimum_size = Vector2(232, 0)
+	pet_left_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_left_column.add_theme_constant_override("separation", 7)
+	pet_body.add_child(pet_left_column)
+	var pet_manage_row := HBoxContainer.new()
+	pet_manage_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_manage_row.add_theme_constant_override("separation", 6)
+	pet_left_column.add_child(pet_manage_row)
+	pet_filter_option = _pet_management_option(_pet_filter_options(), pet_filter_mode)
+	pet_filter_option.custom_minimum_size = Vector2(0, 40)
+	pet_filter_option.item_selected.connect(func(index: int) -> void:
+		pet_filter_mode = str(pet_filter_option.get_item_metadata(index))
+		pet_clear_confirm_instance_id = ""
+		_refresh_pet_panel()
+	)
+	pet_manage_row.add_child(pet_filter_option)
+	pet_sort_option = _pet_management_option(_pet_sort_options(), pet_sort_mode)
+	pet_sort_option.custom_minimum_size = Vector2(0, 40)
+	pet_sort_option.item_selected.connect(func(index: int) -> void:
+		var next_sort_mode := str(pet_sort_option.get_item_metadata(index))
+		if next_sort_mode != pet_sort_mode:
+			pet_sort_mode = next_sort_mode
+			pet_sort_descending = _pet_default_sort_descending(pet_sort_mode)
+		else:
+			pet_sort_mode = next_sort_mode
+		pet_clear_confirm_instance_id = ""
+		_refresh_pet_panel()
+	)
+	pet_manage_row.add_child(pet_sort_option)
+	pet_sort_direction_button = Button.new()
+	pet_sort_direction_button.custom_minimum_size = Vector2(42, 40)
+	pet_sort_direction_button.add_theme_font_size_override("font_size", 15)
+	pet_sort_direction_button.pressed.connect(_on_pet_sort_direction_pressed)
+	pet_manage_row.add_child(pet_sort_direction_button)
 	var pet_scroll := ScrollContainer.new()
-	pet_scroll.custom_minimum_size = Vector2(218, 0)
+	pet_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_body.add_child(pet_scroll)
+	pet_left_column.add_child(pet_scroll)
 	pet_list_container = VBoxContainer.new()
 	pet_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_list_container.add_theme_constant_override("separation", 7)
@@ -9730,6 +9921,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
 	battle_player_zero_hp_seen = false
+	battle_auto_capture_success_seen = false
 	battle_state["guardingActorIds"] = []
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
@@ -9797,6 +9989,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
 	battle_player_zero_hp_seen = false
+	battle_auto_capture_success_seen = false
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
 	battle_last_round_actor_order.clear()
@@ -11620,27 +11813,39 @@ func _refresh_pet_panel() -> void:
 	for child in pet_list_container.get_children():
 		child.queue_free()
 	pet_list_buttons.clear()
+	_sync_pet_management_options()
 
-	_add_pet_section_label("队伍")
-	for instance in PlayerProgressModel.party_pet_instances(player_profile):
-		_add_pet_list_button(instance)
-	var storage := PlayerProgressModel.storage_pet_instances(player_profile)
-	if not storage.is_empty():
-		_add_pet_section_label("兽栏")
-		for instance in storage:
-			_add_pet_list_button(instance)
+	var visible_instances := _pet_panel_visible_instances()
+	if visible_instances.is_empty():
+		_add_pet_section_label("没有符合条件的宠物。")
+	if pet_selected_instance_id != "" and not _pet_panel_has_instance(visible_instances, pet_selected_instance_id):
+		pet_selected_instance_id = ""
 
 	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	if selected.is_empty():
 		var active := PlayerProgressModel.active_pet(player_profile)
-		if not active.is_empty():
+		if not active.is_empty() and _pet_panel_has_instance(visible_instances, str(active.get("instanceId", ""))):
 			pet_selected_instance_id = str(active.get("instanceId", ""))
 			selected = active
 	if selected.is_empty():
-		for instance in PlayerProgressModel.all_pet_instances(player_profile):
+		for instance in visible_instances:
 			pet_selected_instance_id = str(instance.get("instanceId", ""))
 			selected = instance
 			break
+	if pet_sort_mode == PET_SORT_DEFAULT and pet_filter_mode == PET_FILTER_ALL:
+		_add_pet_section_label("队伍")
+		for instance in PlayerProgressModel.party_pet_instances(player_profile):
+			if _pet_panel_instance_passes_filter(instance):
+				_add_pet_list_button(instance)
+		var storage := PlayerProgressModel.storage_pet_instances(player_profile)
+		if not storage.is_empty():
+			_add_pet_section_label("兽栏")
+			for instance in storage:
+				if _pet_panel_instance_passes_filter(instance):
+					_add_pet_list_button(instance)
+	else:
+		for instance in visible_instances:
+			_add_pet_list_button(instance)
 	if pet_detail_mode == PET_DETAIL_MODE_CODEX:
 		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines(selected))
 	else:
@@ -11681,9 +11886,170 @@ func _refresh_pet_panel() -> void:
 		pet_rename_button.disabled = selected.is_empty()
 	if pet_drop_button != null:
 		pet_drop_button.visible = not selected.is_empty()
-		var drop_check := PlayerProgressModel.can_drop_pet(player_profile, pet_selected_instance_id)
-		pet_drop_button.disabled = selected.is_empty() or not bool(drop_check.get("ok", false))
-		pet_drop_button.text = "丢弃"
+		var selected_state := str(selected.get("state", ""))
+		if selected_state == PlayerProgressModel.PET_STATE_STORAGE:
+			pet_drop_button.disabled = selected.is_empty()
+			pet_drop_button.text = "确认" if pet_clear_confirm_instance_id == pet_selected_instance_id else "清理"
+		else:
+			var drop_check := PlayerProgressModel.can_drop_pet(player_profile, pet_selected_instance_id)
+			pet_drop_button.disabled = selected.is_empty() or not bool(drop_check.get("ok", false))
+			pet_drop_button.text = "丢弃"
+
+
+func _pet_filter_options() -> Array[Dictionary]:
+	return [
+		{"id": PET_FILTER_ALL, "label": "全部"},
+		{"id": PET_FILTER_PARTY, "label": "队伍"},
+		{"id": PET_FILTER_STORAGE, "label": "兽栏"},
+		{"id": PET_FILTER_LEVEL_ONE, "label": "Lv1"},
+		{"id": PET_FILTER_LOW_POWER, "label": "低战力"},
+		{"id": PET_FILTER_NEW, "label": "新"},
+	]
+
+
+func _pet_sort_options() -> Array[Dictionary]:
+	return [
+		{"id": PET_SORT_DEFAULT, "label": "默认"},
+		{"id": PET_SORT_LEVEL, "label": "等级"},
+		{"id": PET_SORT_POWER, "label": "战力"},
+		{"id": PET_SORT_SPECIES, "label": "种类"},
+		{"id": PET_SORT_CAPTURED, "label": "捕获"},
+	]
+
+
+func _pet_management_option(options: Array[Dictionary], selected_id: String) -> OptionButton:
+	var option := OptionButton.new()
+	option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	option.add_theme_font_size_override("font_size", 15)
+	var selected_index := 0
+	for index in range(options.size()):
+		var entry := options[index] as Dictionary
+		var option_id := str(entry.get("id", ""))
+		option.add_item(str(entry.get("label", option_id)), index)
+		option.set_item_metadata(index, option_id)
+		if option_id == selected_id:
+			selected_index = index
+	option.select(selected_index)
+	return option
+
+
+func _sync_pet_management_options() -> void:
+	_select_option_by_metadata(pet_filter_option, pet_filter_mode)
+	_select_option_by_metadata(pet_sort_option, pet_sort_mode)
+	_sync_pet_sort_direction_button()
+
+
+func _sync_pet_sort_direction_button() -> void:
+	if pet_sort_direction_button == null:
+		return
+	pet_sort_direction_button.disabled = pet_sort_mode == PET_SORT_DEFAULT
+	pet_sort_direction_button.text = "降" if pet_sort_descending else "升"
+	pet_sort_direction_button.tooltip_text = "降序" if pet_sort_descending else "升序"
+
+
+func _pet_default_sort_descending(sort_mode: String) -> bool:
+	return sort_mode != PET_SORT_SPECIES
+
+
+func _on_pet_sort_direction_pressed() -> void:
+	if pet_sort_mode == PET_SORT_DEFAULT:
+		return
+	pet_sort_descending = not pet_sort_descending
+	pet_clear_confirm_instance_id = ""
+	_refresh_pet_panel()
+
+
+func _select_option_by_metadata(option: OptionButton, selected_id: String) -> void:
+	if option == null:
+		return
+	for index in range(option.get_item_count()):
+		if str(option.get_item_metadata(index)) == selected_id:
+			option.select(index)
+			return
+
+
+func _pet_panel_visible_instances() -> Array[Dictionary]:
+	var instances: Array[Dictionary] = []
+	for instance in PlayerProgressModel.all_pet_instances(player_profile):
+		if _pet_panel_instance_passes_filter(instance):
+			instances.append(instance)
+	if pet_sort_mode == PET_SORT_DEFAULT:
+		return instances
+	instances.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return _pet_panel_sort_before(a, b)
+	)
+	return instances
+
+
+func _pet_panel_instance_passes_filter(instance: Dictionary) -> bool:
+	match pet_filter_mode:
+		PET_FILTER_PARTY:
+			return str(instance.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE
+		PET_FILTER_STORAGE:
+			return str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		PET_FILTER_LEVEL_ONE:
+			return int(instance.get("level", 1)) == 1
+		PET_FILTER_LOW_POWER:
+			return PetPowerModel.combat_power_for_pet(instance) < PET_LOW_POWER_FILTER_THRESHOLD
+		PET_FILTER_NEW:
+			return bool(instance.get("isNew", false))
+		_:
+			return true
+
+
+func _pet_panel_sort_before(a: Dictionary, b: Dictionary) -> bool:
+	var result := false
+	match pet_sort_mode:
+		PET_SORT_LEVEL:
+			var a_level := int(a.get("level", 1))
+			var b_level := int(b.get("level", 1))
+			if a_level != b_level:
+				result = a_level > b_level
+				return result if pet_sort_descending else not result
+		PET_SORT_POWER:
+			var a_power := PetPowerModel.combat_power_for_pet(a)
+			var b_power := PetPowerModel.combat_power_for_pet(b)
+			if a_power != b_power:
+				result = a_power > b_power
+				return result if pet_sort_descending else not result
+		PET_SORT_SPECIES:
+			var a_species := "%s:%s:%s" % [str(a.get("lineName", "")), str(a.get("subtypeName", "")), str(a.get("formName", ""))]
+			var b_species := "%s:%s:%s" % [str(b.get("lineName", "")), str(b.get("subtypeName", "")), str(b.get("formName", ""))]
+			if a_species != b_species:
+				result = a_species > b_species
+				return result if pet_sort_descending else not result
+		PET_SORT_CAPTURED:
+			var a_serial := int(a.get("capturedSerial", 0))
+			var b_serial := int(b.get("capturedSerial", 0))
+			if a_serial != b_serial:
+				result = a_serial > b_serial
+				return result if pet_sort_descending else not result
+	var a_state_order := _pet_panel_state_order(str(a.get("state", "")))
+	var b_state_order := _pet_panel_state_order(str(b.get("state", "")))
+	if a_state_order != b_state_order:
+		return a_state_order < b_state_order
+	return str(a.get("name", "")) < str(b.get("name", ""))
+
+
+func _pet_panel_state_order(state: String) -> int:
+	match state:
+		PlayerProgressModel.PET_STATE_BATTLE:
+			return 0
+		PlayerProgressModel.PET_STATE_STANDBY:
+			return 1
+		PlayerProgressModel.PET_STATE_REST:
+			return 2
+		PlayerProgressModel.PET_STATE_STORAGE:
+			return 3
+		_:
+			return 9
+
+
+func _pet_panel_has_instance(instances: Array[Dictionary], instance_id: String) -> bool:
+	for instance in instances:
+		if str(instance.get("instanceId", "")) == instance_id:
+			return true
+	return false
 
 
 func _pet_state_button_label(state: String) -> String:
@@ -11719,12 +12085,15 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 	var button := Button.new()
 	var marker := "▶ " if instance_id == pet_selected_instance_id else ""
 	var active_marker := "主 " if str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE else ""
-	button.text = "%s%s%s\nLv%d  %s" % [
+	var new_marker := "新 " if bool(instance.get("isNew", false)) else ""
+	button.text = "%s%s%s%s\nLv%d  %s  战力%d" % [
 		marker,
 		active_marker,
+		new_marker,
 		str(instance.get("name", "宠物")),
 		int(instance.get("level", 1)),
 		PlayerProgressModel.state_label(str(instance.get("state", ""))),
+		PetPowerModel.combat_power_for_pet(instance),
 	]
 	button.custom_minimum_size = Vector2(196, 58)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -11736,9 +12105,15 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 
 
 func _select_pet_instance(instance_id: String) -> void:
-	if PlayerProgressModel.pet_instance_by_id(player_profile, instance_id).is_empty():
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+	if selected.is_empty():
 		return
 	pet_selected_instance_id = instance_id
+	pet_clear_confirm_instance_id = ""
+	if bool(selected.get("isNew", false)):
+		player_profile = PlayerProgressModel.mark_pet_seen(player_profile, instance_id)
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
 	_refresh_pet_panel()
 
 
@@ -11810,6 +12185,9 @@ func _on_pet_drop_pressed() -> void:
 	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	if selected.is_empty():
 		return
+	if str(selected.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE:
+		_on_pet_clear_storage_pressed()
+		return
 	var cell_result := _available_pet_drop_cell_result()
 	if not bool(cell_result.get("ok", false)):
 		_set_world_log_message("地面太满了")
@@ -11828,6 +12206,28 @@ func _on_pet_drop_pressed() -> void:
 		if profile_save_enabled:
 			PlayerProgressModel.save_profile(player_profile)
 	_close_pet_rename_panel()
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_clear_storage_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	if str(selected.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE:
+		return
+	if pet_clear_confirm_instance_id != pet_selected_instance_id:
+		pet_clear_confirm_instance_id = pet_selected_instance_id
+		_set_world_log_message("再点一次清理 %s。" % str(selected.get("name", "宠物")))
+		_refresh_pet_panel()
+		return
+	var result := PlayerProgressModel.clear_storage_pet(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_selected_instance_id = ""
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	pet_clear_confirm_instance_id = ""
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -12536,6 +12936,8 @@ func _play_next_battle_event() -> void:
 		battle_state["phase"] = "round_events"
 		if bool(battle_state.get("lastEventApplied", false)):
 			if str(event.get("type", "")) == "capture":
+				if bool(battle_state.get("lastCaptureSuccess", false)):
+					battle_auto_capture_success_seen = true
 				_sync_profile_capture_tools_from_battle_state()
 			elif _battle_event_consumes_item(str(event.get("type", ""))):
 				_sync_profile_battle_items_from_battle_state()
