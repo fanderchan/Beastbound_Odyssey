@@ -185,6 +185,18 @@
       "description": "锋利但偏重的石斧，适合想打得更疼的新手。"
     },
     {
+      "id": "weapon_bone_blade",
+      "label": "骨刃",
+      "menuLabel": "骨刃",
+      "slot": "right_hand_weapon",
+      "requiredLevel": 3,
+      "stats": {
+        "attack": 16,
+        "quick": 1
+      },
+      "description": "打磨过的兽骨短刃，需要更熟练的猎人才拿得稳。"
+    },
+    {
       "id": "armor_hide_vest",
       "label": "兽皮背心",
       "menuLabel": "兽皮背心",

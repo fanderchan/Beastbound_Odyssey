@@ -424,6 +424,32 @@ static func player_stat_summary(profile: Dictionary, base_stats: Dictionary = {}
 	}
 
 
+static func can_equip_item(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id))
+	if not EquipmentModel.is_equipment(item_id):
+		return {
+			"ok": false,
+			"message": "%s 不能装备。" % item_label,
+		}
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	var required_level := EquipmentModel.required_level_for(item_id)
+	if player_level < required_level:
+		return {
+			"ok": false,
+			"message": "%s 需要 Lv%d 才能装备。" % [item_label, required_level],
+			"requiredLevel": required_level,
+			"playerLevel": player_level,
+		}
+	return {
+		"ok": true,
+		"message": "%s 可以装备。" % item_label,
+		"requiredLevel": required_level,
+		"playerLevel": player_level,
+	}
+
+
 static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id))
@@ -438,6 +464,13 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 			"ok": false,
 			"profile": normalized,
 			"message": "没有%s。" % item_label,
+		}
+	var equip_check := can_equip_item(normalized, item_id)
+	if not bool(equip_check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(equip_check.get("message", "暂时不能装备。")),
 		}
 	var slot_id := EquipmentModel.slot_for(item_id)
 	if slot_id == "":

@@ -116,6 +116,10 @@
           "buyPrice": 82
         },
         {
+          "itemId": "weapon_bone_blade",
+          "buyPrice": 110
+        },
+        {
           "itemId": "armor_hide_vest",
           "buyPrice": 60
         }

@@ -244,6 +244,14 @@
       "useContexts": ["equipment"]
     },
     {
+      "id": "weapon_bone_blade",
+      "label": "骨刃",
+      "menuLabel": "骨刃",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
       "id": "armor_hide_vest",
       "label": "兽皮背心",
       "menuLabel": "兽皮背心",

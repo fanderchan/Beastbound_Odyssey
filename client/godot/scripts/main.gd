@@ -322,11 +322,13 @@ var auto_quest_ui_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
+var auto_equipment_requirement_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
+var equipment_requirement_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -564,6 +566,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_status_check")
 	elif auto_player_stat_points_check:
 		call_deferred("_run_auto_player_stat_points_check")
+	elif auto_equipment_requirement_check:
+		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -574,6 +578,8 @@ func _ready() -> void:
 		call_deferred("_run_player_status_preview")
 	elif player_stat_points_preview:
 		call_deferred("_run_player_stat_points_preview")
+	elif equipment_requirement_preview:
+		call_deferred("_run_equipment_requirement_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -859,6 +865,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_status_check = true
 		elif arg == "--auto-player-stat-points-check":
 			auto_player_stat_points_check = true
+		elif arg == "--auto-equipment-requirement-check":
+			auto_equipment_requirement_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -869,6 +877,8 @@ func _apply_preview_window_args() -> void:
 			player_status_preview = true
 		elif arg == "--player-stat-points-preview":
 			player_stat_points_preview = true
+		elif arg == "--equipment-requirement-preview":
+			equipment_requirement_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5578,6 +5588,85 @@ func _run_auto_player_stat_points_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_requirement_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var bone_item := BackpackModel.item_for_id("weapon_bone_blade")
+	var bone_contexts: Array = bone_item.get("useContexts", [])
+	var catalog_ok: bool = (
+		EquipmentModel.required_level_for("weapon_bone_blade") == 3
+		and EquipmentModel.detail_lines_for_item("weapon_bone_blade").has("需求: Lv3")
+		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade") == 110
+		and bone_contexts.has(BackpackModel.CONTEXT_EQUIPMENT)
+	)
+	var low_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	var buy_result := PlayerProgressModel.buy_shop_item(low_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
+	var bought_profile := buy_result.get("profile", {}) as Dictionary
+	var low_check := PlayerProgressModel.can_equip_item(bought_profile, "weapon_bone_blade")
+	var low_equip_result := PlayerProgressModel.equip_item(bought_profile, "weapon_bone_blade")
+	var low_block_ok: bool = (
+		bool(buy_result.get("ok", false))
+		and not bool(low_check.get("ok", true))
+		and int(low_check.get("requiredLevel", 0)) == 3
+		and int(low_check.get("playerLevel", 0)) == 1
+		and str(low_equip_result.get("message", "")).find("Lv3") >= 0
+		and not bool(low_equip_result.get("ok", true))
+		and PlayerProgressModel.backpack_item_count(low_equip_result.get("profile", bought_profile), "weapon_bone_blade") == 1
+		and PlayerProgressModel.equipped_item_id(low_equip_result.get("profile", bought_profile), EquipmentModel.SLOT_RIGHT_HAND_WEAPON) != "weapon_bone_blade"
+	)
+	var high_profile := bought_profile.duplicate(true)
+	var high_player := high_profile.get("player", {}) as Dictionary
+	high_player["level"] = 3
+	high_player["nextExp"] = PlayerProgressModel.exp_to_next_level(3)
+	high_profile["player"] = high_player
+	high_profile = PlayerProgressModel.normalize_profile(high_profile)
+	var high_equip_result := PlayerProgressModel.equip_item(high_profile, "weapon_bone_blade")
+	var high_equip_profile := high_equip_result.get("profile", {}) as Dictionary
+	var high_summary := PlayerProgressModel.player_stat_summary(high_equip_profile)
+	var high_current := high_summary.get("current", {}) as Dictionary
+	var high_ok: bool = (
+		bool(high_equip_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(high_equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_bone_blade"
+		and PlayerProgressModel.backpack_item_count(high_equip_profile, "weapon_bone_blade") == 0
+		and PlayerProgressModel.backpack_item_count(high_equip_profile, "weapon_stone_dagger") == 1
+		and int(high_current.get("attack", 0)) == 43
+	)
+
+	player_profile = bought_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_bone_blade")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var bag_text := backpack_detail_label.text if backpack_detail_label != null else ""
+	var bag_button_ok: bool = (
+		backpack_use_button != null
+		and backpack_use_button.visible
+		and backpack_use_button.disabled
+		and backpack_use_button.text == "装备"
+	)
+	var bag_detail_ok: bool = bag_text.find("需求: Lv3") >= 0 and bag_text.find("未满足") >= 0
+	_close_backpack_panel()
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	_select_shop_item("weapon_bone_blade")
+	await get_tree().process_frame
+	var shop_text := shop_detail_label.text if shop_detail_label != null else ""
+	var shop_detail_ok: bool = shop_text.find("骨刃") >= 0 and shop_text.find("需求: Lv3") >= 0 and shop_text.find("当前 Lv1：未满足") >= 0
+	var status := "ok" if catalog_ok and low_block_ok and high_ok and bag_button_ok and bag_detail_ok and shop_detail_ok else "failed"
+	print("equipment requirement check ready: status=%s catalog=%s low_block=%s high=%s bag_button=%s bag_detail=%s shop_detail=%s attack=%d low_message=%s" % [
+		status,
+		str(catalog_ok),
+		str(low_block_ok),
+		str(high_ok),
+		str(bag_button_ok),
+		str(bag_detail_ok),
+		str(shop_detail_ok),
+		int(high_current.get("attack", 0)),
+		str(low_equip_result.get("message", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -6187,6 +6276,20 @@ func _run_player_stat_points_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase72：升级属性点与手动加点。")
 	_open_player_status_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_requirement_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	var buy_result := PlayerProgressModel.buy_shop_item(player_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
+	player_profile = buy_result.get("profile", player_profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase73：骨刃需要 Lv3 才能装备。")
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_bone_blade")
+	_open_backpack_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -11493,9 +11596,11 @@ func _refresh_backpack_panel() -> void:
 	var selected_item_id := str(selected_slot.get("itemId", ""))
 	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
 	if EquipmentModel.is_equipment(selected_item_id):
+		detail_lines.append_array(_equipment_detail_lines_with_requirement_status(selected_item_id, true))
 		detail_lines.append_array(_equipment_compare_detail_lines(selected_item_id))
-		detail_lines.append_array(EquipmentModel.detail_lines_for_item(selected_item_id))
 	backpack_detail_label.text = "\n".join(detail_lines)
+	var is_selected_equipment := EquipmentModel.is_equipment(selected_item_id)
+	var equip_check := PlayerProgressModel.can_equip_item(player_profile, selected_item_id) if is_selected_equipment else {}
 	var can_world_use := (
 		selected_item_id != ""
 		and BackpackModel.item_can_world_pet_heal(selected_item_id)
@@ -11508,13 +11613,14 @@ func _refresh_backpack_panel() -> void:
 	)
 	var can_equip := (
 		selected_item_id != ""
-		and EquipmentModel.is_equipment(selected_item_id)
+		and is_selected_equipment
 		and BackpackModel.item_count(slots, selected_item_id) > 0
+		and bool(equip_check.get("ok", false))
 	)
 	if backpack_use_button != null:
-		backpack_use_button.visible = can_world_use or can_world_encounter_stone or can_equip
+		backpack_use_button.visible = can_world_use or can_world_encounter_stone or is_selected_equipment
 		backpack_use_button.disabled = not (can_world_use or can_world_encounter_stone or can_equip)
-		if can_equip:
+		if is_selected_equipment:
 			backpack_use_button.text = "装备"
 		else:
 			backpack_use_button.text = "使用"
@@ -11581,6 +11687,41 @@ func _equipment_compare_detail_lines(item_id: String) -> Array[String]:
 	impact_parts.append("精灵: %s" % ("无变化" if spirit_parts.is_empty() else "、".join(spirit_parts)))
 	lines.append("影响: %s" % "；".join(impact_parts))
 	return lines
+
+
+func _equipment_detail_lines_with_requirement_status(item_id: String, use_bbcode: bool = false) -> Array[String]:
+	var lines := EquipmentModel.detail_lines_for_item(item_id)
+	var status_lines := _equipment_requirement_status_lines(item_id, use_bbcode)
+	if status_lines.is_empty():
+		return lines
+	var requirement_text := EquipmentModel.requirement_text_for(item_id)
+	var insert_index := -1
+	for index in range(lines.size()):
+		if str(lines[index]) == requirement_text:
+			insert_index = index + 1
+			break
+	if insert_index < 0:
+		lines.append_array(status_lines)
+	else:
+		for offset in range(status_lines.size()):
+			lines.insert(insert_index + offset, status_lines[offset])
+	return lines
+
+
+func _equipment_requirement_status_lines(item_id: String, use_bbcode: bool = false) -> Array[String]:
+	if not EquipmentModel.is_equipment(item_id):
+		return []
+	var required_level := EquipmentModel.required_level_for(item_id)
+	if required_level <= 1:
+		return []
+	var player_dict := PlayerProgressModel.normalize_profile(player_profile).get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player_dict.get("level", 1)))
+	var met := player_level >= required_level
+	var text := "当前 Lv%d：%s" % [player_level, "已满足" if met else "未满足"]
+	if use_bbcode:
+		var color := EQUIPMENT_COMPARE_GAIN_COLOR if met else EQUIPMENT_COMPARE_LOSS_COLOR
+		text = "[color=%s]%s[/color]" % [color, _bbcode_escape(text)]
+	return ["需求状态: %s" % text]
 
 
 func _colored_equipment_delta(text: String, delta: int) -> String:
@@ -11908,7 +12049,7 @@ func _shop_detail_text(item_id: String) -> String:
 		ShopCatalogModel.sell_price_for(shop_active_id, item_id),
 	])
 	if EquipmentModel.is_equipment(item_id):
-		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
+		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, false))
 	return "\n".join(lines)
 
 
