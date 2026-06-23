@@ -211,6 +211,65 @@ static func mark_pet_seen(profile: Dictionary, instance_id: String) -> Dictionar
 	return normalize_profile(normalized)
 
 
+static func can_move_party_pet(profile: Dictionary, instance_id: String, direction: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var step := -1 if direction < 0 else 1 if direction > 0 else 0
+	if step == 0:
+		return {"ok": false, "message": "没有可调整的方向。"}
+	var instances: Array = normalized.get("petInstances", [])
+	var selected_index := _pet_instance_index(instances, instance_id)
+	if selected_index < 0:
+		return {"ok": false, "message": "宠物不存在。"}
+	var selected := instances[selected_index] as Dictionary
+	if str(selected.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+		return {"ok": false, "message": "兽栏宠物不能调整队伍顺序。"}
+	var party_positions: Array[int] = []
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := instances[index] as Dictionary
+		if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
+			party_positions.append(index)
+	var party_order_index := party_positions.find(selected_index)
+	if party_order_index < 0:
+		return {"ok": false, "message": "宠物不在队伍中。"}
+	var target_order_index := party_order_index + step
+	if target_order_index < 0:
+		return {"ok": false, "message": "%s 已在队伍最前。" % str(selected.get("name", "宠物"))}
+	if target_order_index >= party_positions.size():
+		return {"ok": false, "message": "%s 已在队伍最后。" % str(selected.get("name", "宠物"))}
+	return {
+		"ok": true,
+		"selectedIndex": selected_index,
+		"targetIndex": party_positions[target_order_index],
+	}
+
+
+static func move_party_pet(profile: Dictionary, instance_id: String, direction: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_move_party_pet(normalized, instance_id, direction)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "暂时不能调整。")),
+		}
+	var instances: Array = normalized.get("petInstances", [])
+	var selected_index := int(check.get("selectedIndex", -1))
+	var target_index := int(check.get("targetIndex", -1))
+	var selected := (instances[selected_index] as Dictionary).duplicate(true)
+	var target := (instances[target_index] as Dictionary).duplicate(true)
+	instances[selected_index] = target
+	instances[target_index] = selected
+	normalized["petInstances"] = instances
+	var direction_text := "上移" if direction < 0 else "下移"
+	return {
+		"ok": true,
+		"profile": normalize_profile(normalized),
+		"message": "%s 已%s。" % [str(selected.get("name", "宠物")), direction_text],
+	}
+
+
 static func capture_tool_inventory(profile: Dictionary) -> Dictionary:
 	return _capture_tool_inventory_from_slots(backpack_slots(profile))
 

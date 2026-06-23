@@ -197,6 +197,8 @@ var pet_detail_instance_button: Button
 var pet_detail_codex_button: Button
 var pet_state_cycle_button: Button
 var pet_stable_button: Button
+var pet_party_up_button: Button
+var pet_party_down_button: Button
 var pet_rename_button: Button
 var pet_drop_button: Button
 var pet_rename_panel: PanelContainer
@@ -330,6 +332,7 @@ var auto_battle_reaction_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_pet_management_check: bool = false
 var auto_pet_rename_check: bool = false
+var auto_pet_order_check: bool = false
 var auto_pet_recovery_check: bool = false
 var auto_pet_stable_check: bool = false
 var auto_pet_drop_pickup_check: bool = false
@@ -378,6 +381,7 @@ var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
+var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
 var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
@@ -563,6 +567,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_management_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
+	elif auto_pet_order_check:
+		call_deferred("_run_auto_pet_order_check")
 	elif auto_pet_recovery_check:
 		call_deferred("_run_auto_pet_recovery_check")
 	elif auto_pet_stable_check:
@@ -659,6 +665,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
+	elif pet_order_preview:
+		call_deferred("_run_pet_order_preview")
 	elif pet_drop_preview:
 		call_deferred("_run_pet_drop_preview")
 	elif pet_codex_preview:
@@ -882,6 +890,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_management_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
+		elif arg == "--auto-pet-order-check":
+			auto_pet_order_check = true
 		elif arg == "--auto-pet-recovery-check":
 			auto_pet_recovery_check = true
 		elif arg == "--auto-pet-stable-check":
@@ -978,6 +988,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
+		elif arg == "--pet-order-preview":
+			pet_order_preview = true
 		elif arg == "--pet-drop-preview":
 			pet_drop_preview = true
 		elif arg == "--pet-codex-preview":
@@ -3054,6 +3066,8 @@ func _run_auto_battle_pet_target_check() -> void:
 
 
 func _run_auto_battle_switch_pet_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -3838,6 +3852,77 @@ func _run_auto_pet_management_check() -> void:
 		str(storage_clear_confirm_ok),
 		str(storage_clear_ok),
 		str(player_profile.get("activePetInstanceId", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _party_order_ids() -> Array[String]:
+	var result: Array[String] = []
+	for instance in PlayerProgressModel.party_pet_instances(player_profile):
+		result.append(str(instance.get("instanceId", "")))
+	return result
+
+
+func _run_auto_pet_order_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_selected_instance_id = ""
+	pet_filter_mode = PET_FILTER_ALL
+	pet_sort_mode = PET_SORT_DEFAULT
+	pet_sort_descending = true
+	_open_pet_panel()
+	await get_tree().process_frame
+	_select_pet_instance("pet_bui_speed")
+	await get_tree().process_frame
+	var initial_order := _party_order_ids()
+	var up_button_ready := pet_party_up_button != null and pet_party_up_button.visible and not pet_party_up_button.disabled
+	var down_button_ready := pet_party_down_button != null and pet_party_down_button.visible and not pet_party_down_button.disabled
+	_on_pet_party_move_pressed(-1)
+	await get_tree().process_frame
+	var after_up := _party_order_ids()
+	var up_ok := (
+		after_up.size() >= 2
+		and after_up[0] == "pet_bui_speed"
+		and after_up[1] == "pet_bui_main"
+		and pet_selected_instance_id == "pet_bui_speed"
+		and world_log_message.find("上移") >= 0
+	)
+	_on_pet_party_move_pressed(1)
+	await get_tree().process_frame
+	var after_down := _party_order_ids()
+	var down_ok := after_down == initial_order and world_log_message.find("下移") >= 0
+	_select_pet_instance("pet_bui_main")
+	await get_tree().process_frame
+	var first_up_disabled := pet_party_up_button != null and pet_party_up_button.disabled
+	_select_pet_instance("pet_bui_rest")
+	await get_tree().process_frame
+	var last_down_disabled := pet_party_down_button != null and pet_party_down_button.disabled
+	pet_sort_mode = PET_SORT_POWER
+	_refresh_pet_panel()
+	await get_tree().process_frame
+	var sorted_disabled := (
+		pet_party_up_button != null
+		and pet_party_down_button != null
+		and pet_party_up_button.disabled
+		and pet_party_down_button.disabled
+	)
+	var model_block := PlayerProgressModel.can_move_party_pet(player_profile, "pet_bui_main", -1)
+	var model_boundary_ok := not bool(model_block.get("ok", false)) and str(model_block.get("message", "")).find("最前") >= 0
+	var status := "ok" if up_button_ready and down_button_ready and up_ok and down_ok and first_up_disabled and last_down_disabled and sorted_disabled and model_boundary_ok else "failed"
+	print("pet order check ready: status=%s up_button=%s down_button=%s up=%s down=%s first_up_disabled=%s last_down_disabled=%s sorted_disabled=%s model_boundary=%s initial=%s up_order=%s down_order=%s log=%s" % [
+		status,
+		str(up_button_ready),
+		str(down_button_ready),
+		str(up_ok),
+		str(down_ok),
+		str(first_up_disabled),
+		str(last_down_disabled),
+		str(sorted_disabled),
+		str(model_boundary_ok),
+		str(initial_order),
+		str(after_up),
+		str(after_down),
+		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -4862,6 +4947,18 @@ func _run_pet_management_preview() -> void:
 	pet_selected_instance_id = "pet_bui_speed"
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
+
+
+func _run_pet_order_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	pet_filter_mode = PET_FILTER_ALL
+	pet_sort_mode = PET_SORT_DEFAULT
+	pet_sort_descending = true
+	pet_selected_instance_id = "pet_bui_speed"
+	_open_pet_panel()
+	_select_pet_instance("pet_bui_speed")
+	_set_world_log_message("Phase79：队伍宠物可调整上移 / 下移。")
 
 
 func _run_pet_rename_preview() -> void:
@@ -10576,6 +10673,26 @@ func _build_hud() -> void:
 	pet_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	pet_detail_scroll.add_child(pet_detail_label)
+	var pet_order_row := HBoxContainer.new()
+	pet_order_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_order_row.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_child(pet_order_row)
+	pet_party_up_button = Button.new()
+	pet_party_up_button.text = "上移"
+	pet_party_up_button.custom_minimum_size = Vector2(0, 42)
+	pet_party_up_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_party_up_button.pressed.connect(func() -> void:
+		_on_pet_party_move_pressed(-1)
+	)
+	pet_order_row.add_child(pet_party_up_button)
+	pet_party_down_button = Button.new()
+	pet_party_down_button.text = "下移"
+	pet_party_down_button.custom_minimum_size = Vector2(0, 42)
+	pet_party_down_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_party_down_button.pressed.connect(func() -> void:
+		_on_pet_party_move_pressed(1)
+	)
+	pet_order_row.add_child(pet_party_down_button)
 	var pet_button_row := HBoxContainer.new()
 	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_button_row.add_theme_constant_override("separation", 8)
@@ -14917,6 +15034,22 @@ func _refresh_pet_panel() -> void:
 			pet_stable_button.disabled = false
 			var stable_state := str(selected.get("state", ""))
 			pet_stable_button.text = "取出" if stable_state == PlayerProgressModel.PET_STATE_STORAGE else "存入"
+	if pet_party_up_button != null and pet_party_down_button != null:
+		var can_show_order := not selected.is_empty()
+		var can_edit_order := (
+			can_show_order
+			and pet_sort_mode == PET_SORT_DEFAULT
+			and (pet_filter_mode == PET_FILTER_ALL or pet_filter_mode == PET_FILTER_PARTY)
+			and str(selected.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE
+		)
+		var up_check := PlayerProgressModel.can_move_party_pet(player_profile, pet_selected_instance_id, -1) if can_edit_order else {}
+		var down_check := PlayerProgressModel.can_move_party_pet(player_profile, pet_selected_instance_id, 1) if can_edit_order else {}
+		pet_party_up_button.visible = can_show_order
+		pet_party_down_button.visible = can_show_order
+		pet_party_up_button.disabled = not can_edit_order or not bool(up_check.get("ok", false))
+		pet_party_down_button.disabled = not can_edit_order or not bool(down_check.get("ok", false))
+		pet_party_up_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
+		pet_party_down_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
 	if pet_rename_button != null:
 		pet_rename_button.visible = not selected.is_empty()
 		pet_rename_button.disabled = selected.is_empty()
@@ -15185,6 +15318,15 @@ func _on_pet_stable_pressed() -> void:
 		result = PlayerProgressModel.withdraw_pet(player_profile, pet_selected_instance_id)
 	else:
 		result = PlayerProgressModel.store_pet(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_party_move_pressed(direction: int) -> void:
+	var result := PlayerProgressModel.move_party_pet(player_profile, pet_selected_instance_id, direction)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
