@@ -4,7 +4,7 @@ Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2
 
 ## 当前阶段
 
-Phase60 是 Godot 4.7 练级伙伴 demo 阶段：
+Phase62 是 Godot 4.7 GM 10v10 完整客户端测试地图阶段：
 
 - 45 度/等距起步地图。
 - 第二张地图：`火芽村入口`。
@@ -20,6 +20,7 @@ Phase60 是 Godot 4.7 练级伙伴 demo 阶段：
 - 战斗结束回地图后有 1 秒遇敌保护，避免刚回地图立刻再次遇敌。
 - 动作栏 `挂机` 会在遇敌区内自动来回走动，复用自然遇敌逻辑。
 - 火芽杂货铺出售初级 / 中级 / 高级遇敌石，站在遇敌区使用后按 3 / 2 / 1 秒固定触发遇敌。
+- 动作栏 `挂机` 在来回走动或遇敌石生效时会变为 `停`；停止会同时清掉自动移动和遇敌石。
 - 战斗指令面板使用用户指定布局：
   `攻击` / `精灵` / `捕捉` / `help`，下一排是 `防御` / `物品` / `换宠` / `逃跑`。
 - 旧石器战斗方向：指令在右上，敌方在左上，我方在右下。
@@ -48,13 +49,17 @@ Phase60 是 Godot 4.7 练级伙伴 demo 阶段：
 - 内挂支持目标策略：第一个活着、生命比例最低、当前生命最低。
 - 内挂支持人物/宠物血线自动回血，并可按优先级选择 `滋润精灵5`、`肉`、`回复药5`、`恩惠精灵5`、`群体草药5`。
 - 回血道具会检查当前战斗数量；前一个来源不可用时会继续尝试下一个来源。
+- `内挂设置` 新增 `挂机` 页签，第一版只保留 `低血停止`。
+- `低血停止` 默认 `0%`，表示人物战斗中倒下过就停止挂机；回世界后人物生命保底为 `1`。
+- `低血停止` 只判断人物生命，不判断宠物生命；也可设置为 `不停止`。
 - 动作栏新增 `伙伴` 入口，可加入、移除、加满或清空练级伙伴。
 - 最多加入 4 个陪练伙伴；进入草丛后会形成最多 5 人 5 宠的练级队。
 - 陪练伙伴和陪练宠在加入时复制当前人物/出战宠，之后独立保存和成长。
 - 有陪练时，草丛遇敌会生成 10 个敌方野怪，方便测试 10v10 自动练级和合击频率。
 - 陪练人物和陪练宠默认自动攻击，目标顺序按敌方前排 1-5、后排 1-5。
 - 胜利结算会给陪练人物和陪练宠经验，并按简单成长规则升级加点。
-- `--battle-auto-10v10-preview` 会打开 10v10 练级观察战斗，敌方血量加厚；点 `自动` 后可以观察其他友方 AI 和合击频率。
+- `--full-client-preview --gm-10v10-map` 会用完整客户端进入 `GM练级测试场`，测试草丛固定出现 10 只野生宠物。
+- `--battle-auto-10v10-preview` 会打开 10v10 练级观察战斗，敌方血量加厚，并直接开启自动攻击，方便观察其他友方 AI 和合击频率。
 - 人物、精灵、宠物技能、物品的标签、效果、目标规则都声明在 `client/godot/data/battle_actions.json`。
 - 精灵目标规则使用明确布尔字段表达全体、我方、敌方、是否需要点选。
 - `物品` 会打开由同一行动目录驱动的测试物品菜单。
@@ -118,9 +123,29 @@ Phase60 是 Godot 4.7 练级伙伴 demo 阶段：
 
 ## 运行
 
+完整版功能测试入口：
+
 ```sh
-godot --path client/godot
+godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-preview
 ```
+
+`--full-client-preview` 不会打开局部测试场景，也不会隐藏已有系统；它等价于进入当前完整客户端，只是让测试链接语义更明确。以后做整体验收优先用这个入口。
+
+GM 10v10 完整客户端测试地图：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-preview --gm-10v10-map
+```
+
+这个入口仍然是完整客户端，只是出生在 `GM练级测试场`。该地图草丛遇敌率为 100%，每场固定 10 只野生宠物；我方人数用动作栏 `伙伴` 自己加满。
+
+不带测试参数的正常启动也可以：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn
+```
+
+下面这些 `--xxx-preview` 是局部预览入口，只用于快速打开某个功能点，不代表完整客户端缺少其他功能：
 
 2 单位战斗预览：
 
@@ -134,6 +159,12 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --battle-preview
 godot --path client/godot --scene res://scenes/Main.tscn -- --battle-preview-10v10
 ```
 
+10v10 自动练级观察预览：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
+```
+
 内挂设置预览：
 
 ```sh
@@ -144,6 +175,12 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --auto-battle-settin
 
 ```sh
 godot --path client/godot --scene res://scenes/Main.tscn -- --training-partner-demo
+```
+
+挂机设置预览：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --hang-settings-preview
 ```
 
 10v10 手工检查：
@@ -211,6 +248,8 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-training-partner-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-settings-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-gm-10v10-map-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-skill-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1400 -- --auto-battle-status-hit-check

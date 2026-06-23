@@ -14,15 +14,18 @@ const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
+const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
+const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
+	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
@@ -188,9 +191,12 @@ var training_partner_fill_button: Button
 var training_partner_clear_button: Button
 var training_partner_close_button: Button
 var auto_settings_panel: PanelContainer
+var auto_settings_battle_tab_button: Button
+var auto_settings_hang_tab_button: Button
 var auto_settings_content: VBoxContainer
 var auto_settings_close_button: Button
 var auto_settings_controls: Dictionary = {}
+var auto_settings_active_tab: String = "battle"
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -211,6 +217,8 @@ var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
 var auto_battle_settings_check: bool = false
 var auto_training_partner_check: bool = false
+var auto_hang_settings_check: bool = false
+var auto_gm_10v10_map_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
@@ -283,6 +291,7 @@ var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
 var auto_battle_settings_preview: bool = false
 var training_partner_demo: bool = false
+var hang_settings_preview: bool = false
 var battle_stat_test: bool = false
 var battle_status_test: bool = false
 var battle_status_skill_test: bool = false
@@ -293,6 +302,8 @@ var battle_launch_preview_mode: String = ""
 var battle_label_preview: bool = false
 var battle_debug_window_enabled: bool = false
 var current_map_id: String = START_MAP_ID
+var startup_map_id: String = START_MAP_ID
+var startup_spawn_name: String = "default"
 var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
 var profile_save_enabled: bool = true
@@ -340,6 +351,7 @@ var battle_current_event_duration: float = 0.0
 var battle_current_event_actor_snapshots: Dictionary = {}
 var battle_event_advance_pending: bool = false
 var battle_round_end_status_processed: bool = false
+var battle_player_zero_hp_seen: bool = false
 var battle_last_round_applied_events: int = 0
 var battle_last_round_event_types: Array[String] = []
 var battle_last_round_actor_order: Array[String] = []
@@ -379,7 +391,7 @@ var encounter_rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	_apply_preview_window_args()
 	player_profile = PlayerProgressModel.load_profile()
-	_load_map(START_MAP_ID)
+	_load_map(startup_map_id, startup_spawn_name)
 	get_tree().root.size_changed.connect(_layout_hud)
 	encounter_rng.randomize()
 	_spawn_player()
@@ -400,6 +412,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_settings_check")
 	elif auto_training_partner_check:
 		call_deferred("_run_auto_training_partner_check")
+	elif auto_hang_settings_check:
+		call_deferred("_run_auto_hang_settings_check")
+	elif auto_gm_10v10_map_check:
+		call_deferred("_run_auto_gm_10v10_map_check")
 	elif auto_battle_item_check:
 		call_deferred("_run_auto_battle_item_check")
 	elif auto_battle_item_count_check:
@@ -570,6 +586,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_settings_preview")
 	elif training_partner_demo:
 		call_deferred("_run_training_partner_demo")
+	elif hang_settings_preview:
+		call_deferred("_run_hang_settings_preview")
 	elif battle_label_preview:
 		call_deferred("_open_battle_label_preview")
 	elif battle_stat_test:
@@ -594,6 +612,11 @@ func _apply_preview_window_args() -> void:
 			pass
 		elif arg == "--preview-mobile-portrait":
 			pass
+		elif arg == "--full-client-preview":
+			pass
+		elif arg == "--gm-10v10-map":
+			startup_map_id = GM_10V10_MAP_ID
+			startup_spawn_name = "default"
 		elif arg == "--auto-movement-check":
 			auto_movement_check = true
 		elif arg == "--auto-mouse-click-check":
@@ -632,6 +655,10 @@ func _apply_preview_window_args() -> void:
 			auto_battle_settings_check = true
 		elif arg == "--auto-training-partner-check":
 			auto_training_partner_check = true
+		elif arg == "--auto-hang-settings-check":
+			auto_hang_settings_check = true
+		elif arg == "--auto-gm-10v10-map-check":
+			auto_gm_10v10_map_check = true
 		elif arg == "--auto-battle-formation-check":
 			auto_battle_formation_check = true
 		elif arg == "--auto-battle-target-check":
@@ -776,6 +803,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_settings_preview = true
 		elif arg == "--training-partner-demo":
 			training_partner_demo = true
+		elif arg == "--hang-settings-preview":
+			hang_settings_preview = true
 		elif arg == "--battle-label-preview":
 			battle_label_preview = true
 		elif arg == "--battle-stat-test":
@@ -1216,6 +1245,52 @@ func _run_auto_encounter_check() -> void:
 		encounter_grace_remaining,
 		str(zone.get("id", "")),
 		str(player_cell),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_gm_10v10_map_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded: bool = _load_map(GM_10V10_MAP_ID)
+	await get_tree().process_frame
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	var zone: Dictionary = zones[0] as Dictionary if zone_found else {}
+	var enemy_count_rule := EncounterModel.enemy_count(zone, 1) if zone_found else 0
+	var rate_ok := zone_found and EncounterModel.encounter_rate(zone) >= 0.999
+	var spawn_cell := IsoMapModel.spawn_cell(map_data) if loaded else Vector2i.ZERO
+	var spawn_in_zone := zone_found and EncounterModel.zone_contains_cell(zone, spawn_cell)
+	if zone_found:
+		_trigger_encounter(zone)
+	await get_tree().process_frame
+	var no_partner_enemy_count := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ENEMY) if battle_active else 0
+	var no_partner_ally_count := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ALLY) if battle_active else 0
+	var no_partner_ok := battle_active and no_partner_enemy_count == 10 and no_partner_ally_count == 2
+	_end_battle(true)
+	await get_tree().process_frame
+	player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+	if zone_found:
+		_trigger_encounter(zone)
+	await get_tree().process_frame
+	var partner_enemy_count := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ENEMY) if battle_active else 0
+	var partner_ally_count := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ALLY) if battle_active else 0
+	var partner_ok := battle_active and partner_enemy_count == 10 and partner_ally_count == 10
+	var source_group_ok := str(battle_state.get("sourceEncounterGroupId", "")) == "gm_10v10_grass" if battle_active else false
+	var status := "ok" if loaded and current_map_id == GM_10V10_MAP_ID and zone_found and enemy_count_rule == 10 and rate_ok and spawn_in_zone and no_partner_ok and partner_ok and source_group_ok else "failed"
+	print("gm 10v10 map check ready: status=%s loaded=%s map=%s zone=%s enemy_rule=%d rate_ok=%s spawn_in_zone=%s no_partner=%d/%d partner=%d/%d source_group=%s" % [
+		status,
+		str(loaded),
+		current_map_id,
+		str(zone.get("id", "")),
+		enemy_count_rule,
+		str(rate_ok),
+		str(spawn_in_zone),
+		no_partner_ally_count,
+		no_partner_enemy_count,
+		partner_ally_count,
+		partner_enemy_count,
+		str(source_group_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -2513,6 +2588,19 @@ func _run_auto_battle_visual_timing_check() -> void:
 	battle_event_queue = [combo_event]
 	battle_state["phase"] = "round_events"
 	_play_next_battle_event()
+	var combo_participant := BattleModel.actor_by_id(battle_state, "ally_speed_fast")
+	var combo_home_start := _battle_slot_world_position(str(combo_participant.get("slotId", "")))
+	battle_action_timer = battle_current_event_duration * 0.50
+	var combo_home_mid := _battle_slot_world_position(str(combo_participant.get("slotId", "")))
+	var combo_offset_mid := _battle_actor_event_offset(combo_participant, combo_home_mid, _battle_actor_visual_scale())
+	battle_action_timer = battle_current_event_duration * 0.18
+	var combo_home_late := _battle_slot_world_position(str(combo_participant.get("slotId", "")))
+	var slot_stable_ok := combo_home_start.distance_to(combo_home_mid) <= 0.01 and combo_home_start.distance_to(combo_home_late) <= 0.01 and combo_offset_mid.length() > 2.0
+	var no_fixed_lunge_ok := (
+		_battle_actor_state_offset("attack", BattleModel.SIDE_ALLY, _battle_actor_visual_scale()).length() <= 0.01
+		and _battle_actor_state_offset("combo", BattleModel.SIDE_ALLY, _battle_actor_visual_scale()).length() <= 0.01
+		and _battle_actor_state_offset("skill", BattleModel.SIDE_ALLY, _battle_actor_visual_scale()).length() <= 0.01
+	)
 	var combo_reveal := _battle_event_result_reveal_progress(battle_current_event)
 	var waits_at_old_launch_time := _battle_launch_target_progress(BATTLE_LAUNCH_TARGET_START_RATIO + 0.03) <= 0.0
 	var waits_before_combo_hit := _battle_launch_target_progress(maxf(0.0, combo_reveal - 0.02)) <= 0.0
@@ -2520,6 +2608,7 @@ func _run_auto_battle_visual_timing_check() -> void:
 	var finishes_before_event_end := _battle_launch_target_progress(0.96) >= 0.99
 	var holds_until_event_end := _battle_launch_target_progress(0.995) >= 0.99
 	var combo_target_after := BattleModel.actor_by_id(battle_state, target_id)
+	battle_action_timer = battle_current_event_duration * minf(1.0, 1.0 - combo_reveal + 0.02)
 	var combo_visual_before_hit := _battle_actor_for_visual_draw(combo_target_after)
 	var combo_launch_timing_ok := combo_reveal > BATTLE_LAUNCH_TARGET_START_RATIO and waits_at_old_launch_time and waits_before_combo_hit and flies_after_combo_hit and finishes_before_event_end and holds_until_event_end and int(combo_visual_before_hit.get("hp", 0)) == 18
 	battle_action_timer = 0.01
@@ -2534,11 +2623,13 @@ func _run_auto_battle_visual_timing_check() -> void:
 	var auto_settle_ok := battle_auto_attack_delay >= BATTLE_AUTO_ROUND_SETTLE_DELAY - 0.001
 	battle_auto_attack_enabled = false
 
-	var status := "ok" if delayed_hp_ok and combo_launch_timing_ok and final_frame_hold_ok and advances_after_final_frame and auto_settle_ok else "failed"
-	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s final_frame=%s advance_after_final=%s auto_settle=%s reveal=%.2f combo_reveal=%.2f waits_old=%s waits_before=%s flies_after=%s finish_before_end=%s hold_end=%s" % [
+	var status := "ok" if delayed_hp_ok and combo_launch_timing_ok and slot_stable_ok and no_fixed_lunge_ok and final_frame_hold_ok and advances_after_final_frame and auto_settle_ok else "failed"
+	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s slot_stable=%s no_fixed_lunge=%s final_frame=%s advance_after_final=%s auto_settle=%s reveal=%.2f combo_reveal=%.2f waits_old=%s waits_before=%s flies_after=%s finish_before_end=%s hold_end=%s" % [
 		status,
 		str(delayed_hp_ok),
 		str(combo_launch_timing_ok),
+		str(slot_stable_ok),
+		str(no_fixed_lunge_ok),
 		str(final_frame_hold_ok),
 		str(advances_after_final_frame),
 		str(auto_settle_ok),
@@ -2594,12 +2685,32 @@ func _run_auto_battle_label_check() -> void:
 		and int(enemy_actor.get("level", 0)) == 3
 		and _battle_actor_label(enemy_actor) == "高速乌力 Lv3"
 	)
-	var status := "ok" if loaded and zone_found and battle_active and player_ok and pet_ok and enemy_ok else "failed"
-	print("battle label check ready: status=%s player=%s pet=%s enemy=%s player_label=%s pet_label=%s enemy_label=%s" % [
+	player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+	if zone_found:
+		_start_battle(_battle_state_for_encounter_zone(zone))
+	await get_tree().process_frame
+	var large_actors: Array = battle_state.get("actors", []) if battle_active else []
+	var large_count_ok := large_actors.size() == 20
+	var large_labels_ok := large_count_ok
+	var large_visible_ok := large_count_ok
+	for value in large_actors:
+		if not (value is Dictionary):
+			large_labels_ok = false
+			large_visible_ok = false
+			continue
+		var large_actor := value as Dictionary
+		var label := _battle_actor_label(large_actor)
+		large_labels_ok = large_labels_ok and label != "" and label.find(" Lv") >= 0
+		large_visible_ok = large_visible_ok and _battle_should_show_actor_label(large_actor)
+	var status := "ok" if loaded and zone_found and battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok else "failed"
+	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s player_label=%s pet_label=%s enemy_label=%s" % [
 		status,
 		str(player_ok),
 		str(pet_ok),
 		str(enemy_ok),
+		str(large_count_ok),
+		str(large_labels_ok),
+		str(large_visible_ok),
 		_battle_actor_label(player_actor),
 		_battle_actor_label(pet_actor),
 		_battle_actor_label(enemy_actor),
@@ -4639,6 +4750,146 @@ func _run_auto_battle_settings_preview() -> void:
 		_update_hud_text()
 
 
+func _run_hang_settings_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	auto_settings_active_tab = "hang"
+	_open_auto_settings_panel()
+	_set_world_log_message("挂机设置已打开。")
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_auto_hang_settings_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var default_settings := PlayerProgressModel.hang_settings(player_profile)
+	var default_ok := int(default_settings.get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, -99)) == HangSettingsModel.STOP_ON_DEATH
+	var custom_settings := default_settings.duplicate(true)
+	custom_settings[HangSettingsModel.LOW_HP_STOP_PERCENT_KEY] = 30
+	player_profile = PlayerProgressModel.with_hang_settings(player_profile, custom_settings)
+	var custom_ok := int(PlayerProgressModel.hang_settings(player_profile).get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, 0)) == 30
+
+	auto_settings_active_tab = "hang"
+	_open_auto_settings_panel()
+	await get_tree().process_frame
+	var panel_ok := (
+		auto_settings_panel != null
+		and auto_settings_panel.visible
+		and auto_settings_hang_tab_button != null
+		and auto_settings_hang_tab_button.button_pressed
+		and auto_settings_controls.has(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY)
+		and auto_settings_controls.has("hangStartButton")
+		and not auto_settings_controls.has(AutoBattleSettingsModel.HEALING_ENABLED_KEY)
+	)
+	_close_auto_settings_panel()
+
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var zone := zones[0] as Dictionary if zone_found else {}
+	var cells := EncounterModel.cells_for_zone(zone) if zone_found else []
+	if not cells.is_empty() and player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+
+	player_profile = PlayerProgressModel.default_profile()
+	_set_hang_mode(true)
+	encounter_stone_item_id = ENCOUNTER_STONE_LOW_ID
+	encounter_stone_interval = 3.0
+	encounter_stone_remaining = 100.0
+	encounter_stone_elapsed = 1.0
+	if zone_found:
+		_start_battle(BattleModel.create_wild_battle(zone))
+		battle_player_zero_hp_seen = true
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 0)
+		_finish_battle_and_return_to_world("defeat")
+	var death_stop_ok := (
+		zone_found
+		and not hang_mode_active
+		and not _encounter_stone_active()
+		and PlayerProgressModel.player_hp(player_profile) == 1
+		and world_log_message.find("人物倒下过，挂机已停止。") >= 0
+	)
+
+	player_profile = PlayerProgressModel.with_hang_settings(PlayerProgressModel.default_profile(), {
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY: 30,
+	})
+	_set_hang_mode(true)
+	if zone_found:
+		_start_battle(BattleModel.create_wild_battle(zone))
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 100)
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_PET_ID, 1)
+		_finish_battle_and_return_to_world("victory")
+	var pet_ignored_ok := (
+		zone_found
+		and hang_mode_active
+		and world_log_message.find("挂机已停止") < 0
+	)
+	_stop_hang_activity("", true)
+
+	player_profile = PlayerProgressModel.with_hang_settings(PlayerProgressModel.default_profile(), {
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY: 30,
+	})
+	_set_hang_mode(true)
+	if zone_found:
+		_start_battle(BattleModel.create_wild_battle(zone))
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 20)
+		_finish_battle_and_return_to_world("victory")
+	var low_stop_ok := (
+		zone_found
+		and not hang_mode_active
+		and world_log_message.find("人物生命低于30%，挂机已停止。") >= 0
+	)
+
+	player_profile = PlayerProgressModel.with_hang_settings(PlayerProgressModel.default_profile(), {
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY: HangSettingsModel.STOP_NEVER,
+	})
+	encounter_stone_item_id = ENCOUNTER_STONE_LOW_ID
+	encounter_stone_interval = 3.0
+	encounter_stone_remaining = 100.0
+	encounter_stone_elapsed = 1.0
+	if zone_found:
+		_start_battle(BattleModel.create_wild_battle(zone))
+		battle_player_zero_hp_seen = true
+		battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 0)
+		_finish_battle_and_return_to_world("defeat")
+	var never_ok := (
+		zone_found
+		and _encounter_stone_active()
+		and PlayerProgressModel.player_hp(player_profile) == 1
+		and world_log_message.find("挂机已停止") < 0
+	)
+	_stop_hang_activity("", true)
+
+	encounter_stone_item_id = ENCOUNTER_STONE_LOW_ID
+	encounter_stone_interval = 3.0
+	encounter_stone_remaining = 100.0
+	encounter_stone_elapsed = 1.0
+	_on_hang_button_pressed()
+	var manual_stop_ok := not _encounter_stone_active() and not hang_mode_active and stop_button != null and stop_button.text == "挂机"
+
+	var status := "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok else "failed"
+	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s hp=%d" % [
+		status,
+		str(default_ok),
+		str(custom_ok),
+		str(panel_ok),
+		str(zone_found),
+		str(death_stop_ok),
+		str(pet_ignored_ok),
+		str(low_stop_ok),
+		str(never_ok),
+		str(manual_stop_ok),
+		PlayerProgressModel.player_hp(player_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_training_partner_demo() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -6558,6 +6809,7 @@ func _open_battle_auto_10v10_preview() -> void:
 	if not loaded or zones.is_empty():
 		return
 	_start_battle(_create_auto_10v10_observation_battle(zones[0] as Dictionary))
+	_set_battle_auto_attack_enabled(true, false)
 
 
 func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:
@@ -8045,6 +8297,28 @@ func _build_hud() -> void:
 	auto_settings_close_button.pressed.connect(_close_auto_settings_panel)
 	auto_settings_header.add_child(auto_settings_close_button)
 
+	var auto_settings_tab_row := HBoxContainer.new()
+	auto_settings_tab_row.add_theme_constant_override("separation", 8)
+	auto_settings_column.add_child(auto_settings_tab_row)
+	auto_settings_battle_tab_button = Button.new()
+	auto_settings_battle_tab_button.text = "战斗"
+	auto_settings_battle_tab_button.toggle_mode = true
+	auto_settings_battle_tab_button.custom_minimum_size = Vector2(0, 42)
+	auto_settings_battle_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_battle_tab_button.pressed.connect(func() -> void:
+		_set_auto_settings_tab("battle")
+	)
+	auto_settings_tab_row.add_child(auto_settings_battle_tab_button)
+	auto_settings_hang_tab_button = Button.new()
+	auto_settings_hang_tab_button.text = "挂机"
+	auto_settings_hang_tab_button.toggle_mode = true
+	auto_settings_hang_tab_button.custom_minimum_size = Vector2(0, 42)
+	auto_settings_hang_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_hang_tab_button.pressed.connect(func() -> void:
+		_set_auto_settings_tab("hang")
+	)
+	auto_settings_tab_row.add_child(auto_settings_hang_tab_button)
+
 	var auto_settings_scroll := ScrollContainer.new()
 	auto_settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	auto_settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -8765,8 +9039,11 @@ func _trigger_encounter(zone: Dictionary) -> void:
 
 
 func _battle_state_for_encounter_zone(zone: Dictionary) -> Dictionary:
-	if PlayerProgressModel.training_partner_count(player_profile) > 0:
-		return BattleModel.create_training_partner_battle(zone)
+	var has_training_partners := PlayerProgressModel.training_partner_count(player_profile) > 0
+	var fallback_enemy_count := 10 if has_training_partners else 1
+	var enemy_count := EncounterModel.enemy_count(zone, fallback_enemy_count)
+	if enemy_count > 1:
+		return BattleModel.create_training_partner_battle(zone, enemy_count)
 	return BattleModel.create_wild_battle(zone)
 
 
@@ -8857,6 +9134,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_current_event_actor_snapshots.clear()
 	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
+	battle_player_zero_hp_seen = false
 	battle_state["guardingActorIds"] = []
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
@@ -8923,6 +9201,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_current_event_actor_snapshots.clear()
 	battle_event_advance_pending = false
 	battle_round_end_status_processed = false
+	battle_player_zero_hp_seen = false
 	battle_last_round_applied_events = 0
 	battle_last_round_event_types.clear()
 	battle_last_round_actor_order.clear()
@@ -8951,6 +9230,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 		battle_log_label.text = world_log_message
 	if action_bar != null:
 		action_bar.visible = true
+	_sync_hang_button_text()
 	if player != null:
 		player.visible = true
 		if player.has_method("set_controls_enabled"):
@@ -8976,7 +9256,9 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		return {}
 	_sync_profile_battle_items_from_battle_state(false)
 	_sync_profile_capture_tools_from_battle_state(false)
+	_update_battle_player_zero_hp_seen()
 	var ended_state := battle_state.duplicate(true)
+	var hang_stop_message := _hang_stop_message_for_battle_result(ended_state)
 	var result := PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = []
@@ -8985,11 +9267,56 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	var quest_lines := _quest_messages_for_battle_result(ended_state, result)
 	for line in quest_lines:
 		log_lines.append(line)
+	if hang_stop_message != "":
+		_stop_hang_activity("", true)
+		log_lines.append(hang_stop_message)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 	_end_battle(true)
 	_set_world_log_message("\n".join(log_lines))
 	return result
+
+
+func _battle_player_actor_from_state(state: Dictionary) -> Dictionary:
+	return BattleModel.actor_by_id(state, BattleModel.PLAYER_ACTOR_ID)
+
+
+func _battle_player_hp_from_state(state: Dictionary) -> int:
+	var actor := _battle_player_actor_from_state(state)
+	return int(actor.get("hp", 0)) if not actor.is_empty() else 0
+
+
+func _battle_player_max_hp_from_state(state: Dictionary) -> int:
+	var actor := _battle_player_actor_from_state(state)
+	return maxi(1, int(actor.get("maxHp", 1))) if not actor.is_empty() else 1
+
+
+func _update_battle_player_zero_hp_seen() -> void:
+	if battle_state.is_empty():
+		return
+	if _battle_player_hp_from_state(battle_state) <= 0:
+		battle_player_zero_hp_seen = true
+
+
+func _hang_activity_active() -> bool:
+	return hang_mode_active or _encounter_stone_active()
+
+
+func _hang_stop_message_for_battle_result(ended_state: Dictionary) -> String:
+	if not _hang_activity_active():
+		return ""
+	var settings := PlayerProgressModel.hang_settings(player_profile)
+	var threshold := int(settings.get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, HangSettingsModel.STOP_ON_DEATH))
+	if threshold == HangSettingsModel.STOP_NEVER:
+		return ""
+	var player_hp := _battle_player_hp_from_state(ended_state)
+	var player_max_hp := _battle_player_max_hp_from_state(ended_state)
+	if threshold == HangSettingsModel.STOP_ON_DEATH:
+		return "人物倒下过，挂机已停止。" if battle_player_zero_hp_seen or player_hp <= 0 else ""
+	var hp_percent := float(maxi(0, player_hp)) / float(player_max_hp) * 100.0
+	if hp_percent < float(threshold):
+		return "人物生命低于%d%%，挂机已停止。" % threshold
+	return ""
 
 
 func _sync_profile_capture_tools_from_battle_state(save_after: bool = true) -> void:
@@ -9400,6 +9727,7 @@ func _activate_encounter_stone(item_id: String) -> void:
 	encounter_stone_remaining = BackpackModel.world_encounter_duration_for(item_id)
 	encounter_stone_elapsed = 0.0
 	_set_hang_mode(false)
+	_sync_hang_button_text()
 	_set_world_log_message("%s 已生效，站在遇敌区域每%d秒遇敌。" % [
 		BackpackModel.label_for(item_id),
 		int(roundf(encounter_stone_interval)),
@@ -9416,6 +9744,7 @@ func _clear_encounter_stone_effect(show_message: bool = false) -> void:
 	encounter_stone_interval = 0.0
 	encounter_stone_remaining = 0.0
 	encounter_stone_elapsed = 0.0
+	_sync_hang_button_text()
 	if show_message:
 		_set_world_log_message("%s 效果结束。" % item_label)
 
@@ -9904,6 +10233,14 @@ func _refresh_auto_settings_panel() -> void:
 	auto_settings_controls.clear()
 	for child in auto_settings_content.get_children():
 		child.queue_free()
+	_apply_auto_settings_tab_buttons()
+	if auto_settings_active_tab == "hang":
+		_refresh_hang_settings_tab()
+	else:
+		_refresh_auto_battle_settings_tab()
+
+
+func _refresh_auto_battle_settings_tab() -> void:
 	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
 	_add_auto_settings_section("人物动作")
 	_add_auto_settings_option(
@@ -9957,6 +10294,61 @@ func _refresh_auto_settings_panel() -> void:
 	var heal_priority := _auto_settings_heal_priority_slots(settings)
 	for index in range(AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS):
 		_add_auto_settings_heal_option(index, str(heal_priority[index]))
+
+
+func _refresh_hang_settings_tab() -> void:
+	var settings := PlayerProgressModel.hang_settings(player_profile)
+	_add_auto_settings_section("挂机")
+	_add_auto_settings_option(
+		"低血停止",
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY,
+		HangSettingsModel.low_hp_stop_options(),
+		str(settings.get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, HangSettingsModel.STOP_ON_DEATH))
+	)
+	var button_row := HBoxContainer.new()
+	button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button_row.add_theme_constant_override("separation", 8)
+	auto_settings_content.add_child(button_row)
+	var save_button := Button.new()
+	save_button.text = "保存"
+	save_button.custom_minimum_size = Vector2(0, 44)
+	save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_button.pressed.connect(func() -> void:
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message("挂机设置已保存。")
+	)
+	button_row.add_child(save_button)
+	auto_settings_controls["hangSaveButton"] = save_button
+	var start_button := Button.new()
+	start_button.text = "开始挂机"
+	start_button.custom_minimum_size = Vector2(0, 44)
+	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	start_button.pressed.connect(func() -> void:
+		_close_auto_settings_panel()
+		_start_hang_walk()
+	)
+	button_row.add_child(start_button)
+	auto_settings_controls["hangStartButton"] = start_button
+	var close_button := Button.new()
+	close_button.text = "关闭"
+	close_button.custom_minimum_size = Vector2(0, 44)
+	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	close_button.pressed.connect(_close_auto_settings_panel)
+	button_row.add_child(close_button)
+	auto_settings_controls["hangCloseButton"] = close_button
+
+
+func _set_auto_settings_tab(tab: String) -> void:
+	auto_settings_active_tab = "hang" if tab == "hang" else "battle"
+	_refresh_auto_settings_panel()
+
+
+func _apply_auto_settings_tab_buttons() -> void:
+	if auto_settings_battle_tab_button != null:
+		auto_settings_battle_tab_button.button_pressed = auto_settings_active_tab == "battle"
+	if auto_settings_hang_tab_button != null:
+		auto_settings_hang_tab_button.button_pressed = auto_settings_active_tab == "hang"
 
 
 func _add_auto_settings_section(text: String) -> void:
@@ -10099,9 +10491,21 @@ func _auto_settings_heal_priority_slots(settings: Dictionary) -> Array[String]:
 
 
 func _set_auto_settings_value(key: String, value) -> void:
+	if key == HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
+		_set_hang_settings_value(key, value)
+		return
 	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
 	settings[key] = int(value) if key == AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY or key == AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY else value
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
+func _set_hang_settings_value(key: String, value) -> void:
+	var settings := PlayerProgressModel.hang_settings(player_profile)
+	if key == HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
+		settings[key] = HangSettingsModel.normalized_low_hp_stop_percent(value)
+	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 
@@ -11349,6 +11753,7 @@ func _play_next_battle_event() -> void:
 		var event := battle_event_queue.pop_front() as Dictionary
 		var actor_snapshots := _battle_actor_snapshots_by_id()
 		battle_state = BattleModel.apply_battle_event(battle_state, event)
+		_update_battle_player_zero_hp_seen()
 		battle_state["phase"] = "round_events"
 		if bool(battle_state.get("lastEventApplied", false)):
 			if str(event.get("type", "")) == "capture":
@@ -12399,8 +12804,8 @@ func _world_to_screen(world_point: Vector2) -> Vector2:
 func _on_hang_button_pressed() -> void:
 	if player == null:
 		return
-	if hang_mode_active or player.is_auto_moving():
-		_stop_auto_move()
+	if hang_mode_active or player.is_auto_moving() or _encounter_stone_active():
+		_stop_hang_activity("挂机已停止。")
 		return
 	_start_hang_walk()
 
@@ -12420,6 +12825,7 @@ func _start_hang_walk() -> void:
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_clear_encounter_stone_effect(false)
 	_set_hang_mode(true)
 	_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
 
@@ -12437,7 +12843,7 @@ func _sync_hang_button_text() -> void:
 		return
 	if battle_active:
 		stop_button.text = "停"
-	elif hang_mode_active or (player != null and player.is_auto_moving()):
+	elif hang_mode_active or _encounter_stone_active() or (player != null and player.is_auto_moving()):
 		stop_button.text = "停"
 	else:
 		stop_button.text = "挂机"
@@ -12456,13 +12862,11 @@ func _update_hang_walk(delta: float) -> void:
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
 	if zone.is_empty():
-		_stop_auto_move()
-		_set_world_log_message("已离开遇敌区域，挂机停止。")
+		_stop_hang_activity("已离开遇敌区域，挂机停止。", false)
 		return
 	var next_cell := _next_hang_walk_cell(player_cell, zone)
 	if next_cell == player_cell:
-		_stop_auto_move()
-		_set_world_log_message("附近没有可走的遇敌格，挂机停止。")
+		_stop_hang_activity("附近没有可走的遇敌格，挂机停止。", false)
 		return
 	_set_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
 	has_target_marker = false
@@ -12484,11 +12888,19 @@ func _next_hang_walk_cell(player_cell: Vector2i, zone: Dictionary) -> Vector2i:
 
 
 func _stop_auto_move() -> void:
+	_stop_hang_activity("", false)
+
+
+func _stop_hang_activity(message: String = "", clear_stone: bool = true) -> void:
 	_set_hang_mode(false)
 	if player != null:
 		player.clear_move_target()
 	_clear_navigation_state()
+	if clear_stone:
+		_clear_encounter_stone_effect(false)
 	_sync_hang_button_text()
+	if message != "":
+		_set_world_log_message(message)
 
 
 func _clear_navigation_state() -> void:
@@ -12929,7 +13341,8 @@ func _draw_battle_formation_slot_anchors() -> void:
 
 func _draw_battle_actor(actor: Dictionary) -> void:
 	actor = _battle_actor_for_visual_draw(actor)
-	var pos := _battle_slot_world_position(str(actor.get("slotId", "")))
+	var home_pos := _battle_slot_world_position(str(actor.get("slotId", "")))
+	var pos := home_pos
 	var actor_id := str(actor.get("id", ""))
 	var side := str(actor.get("side", ""))
 	var kind := str(actor.get("kind", ""))
@@ -12939,30 +13352,18 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		return
 	var visual_scale := _battle_actor_visual_scale()
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
-	pos += _battle_actor_event_offset(actor, pos, visual_scale)
 	var large_formation: bool = (battle_state.get("actors", []) as Array).size() > 10
-	var show_actor_name := not large_formation or str(battle_state.get("id", "")) == "local_stat_formula_test_battle"
-	var compact_labels := _layout_size().y < 460.0
+	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
+	pos += event_offset
+	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
+		_draw_battle_actor_home_shadow(actor, home_pos, visual_scale, side, kind)
+	var show_actor_name := _battle_should_show_actor_label(actor)
+	var compact_labels := large_formation or _layout_size().y < 460.0
 	var hp_offset := (-42.0 if large_formation else (-54.0 if compact_labels else -82.0)) * visual_scale
-	var name_offset := (-70.0 if compact_labels else -94.0) * visual_scale
-	if state == "attack":
-		pos += (Vector2(-22, -12) if side == BattleModel.SIDE_ALLY else Vector2(22, 12)) * visual_scale
-	elif state == "combo":
-		pos += (Vector2(-30, -18) if side == BattleModel.SIDE_ALLY else Vector2(30, 18)) * visual_scale
-	elif state == "skill":
-		pos += (Vector2(-36, -22) if side == BattleModel.SIDE_ALLY else Vector2(36, 22)) * visual_scale
-	elif state == "spirit":
-		pos += Vector2(-18, -18) * visual_scale
-	elif state == "capture":
-		pos += Vector2(-14, -20) * visual_scale
-	elif state == "hit":
-		pos += Vector2(sin(battle_action_timer * 80.0) * 5.0 * visual_scale, 0)
-	elif state == "dodge":
-		pos += (Vector2(18, -8) if side == BattleModel.SIDE_ALLY else Vector2(-18, 8)) * visual_scale
-	elif state == "launched":
+	var name_offset := (-62.0 if large_formation else (-70.0 if compact_labels else -94.0)) * visual_scale
+	pos += _battle_actor_state_offset(state, side, visual_scale)
+	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
-	elif state == "down" or state == "captured":
-		pos += Vector2(0, 16) * visual_scale
 	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else (0.32 if state == "down" else 1.0))
 	draw_circle(pos + Vector2(0, 28) * visual_scale, 28.0 * visual_scale, Color(0.0, 0.0, 0.0, 0.20 * alpha))
 	if _battle_target_mode_selects_enemy() and str(actor.get("id", "")) == battle_hover_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
@@ -13015,9 +13416,25 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			hp_actor["hp"] = maxi(1, int(actor.get("launchHpBefore", actor.get("maxHp", 1))))
 		_draw_battle_hp_bar(hp_actor, pos + Vector2(0, hp_offset), alpha, visual_scale)
 	if show_actor_name:
-		_draw_battle_actor_label(actor, pos + Vector2(0, name_offset), visual_scale, alpha, large_formation)
+		_draw_battle_actor_label(actor, pos + Vector2(0, name_offset), visual_scale, alpha, compact_labels)
 	if int(actor.get("hp", 0)) > 0:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
+
+
+func _draw_battle_actor_home_shadow(actor: Dictionary, home_pos: Vector2, visual_scale: float, side: String, kind: String) -> void:
+	var alpha := 0.34
+	var color := Color(0.40, 0.74, 1.0, alpha)
+	if kind == "pet":
+		color = Color(0.54, 0.95, 0.58, alpha)
+	elif kind == "wild_pet":
+		color = Color(1.0, 0.62, 0.34, alpha)
+	elif side == BattleModel.SIDE_ALLY:
+		color = Color(0.45, 0.78, 1.0, alpha)
+	var center := home_pos + Vector2(0, 28.0) * visual_scale
+	var radius := 20.0 * visual_scale
+	draw_circle(center, radius, Color(0.02, 0.03, 0.03, 0.14))
+	draw_circle(center, radius * 0.62, Color(color.r, color.g, color.b, 0.10))
+	draw_arc(center, radius, 0.0, PI * 2.0, 28, color, maxf(1.5, 2.4 * visual_scale), true)
 
 
 func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: float, alpha: float, compact: bool) -> void:
@@ -13025,8 +13442,8 @@ func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: 
 	if label == "":
 		return
 	var font := ThemeDB.fallback_font
-	var label_width := (104.0 if compact else 132.0) * visual_scale
-	var font_size := maxi(10, int(round((13.0 if compact else 15.0) * visual_scale)))
+	var label_width := (112.0 if compact else 132.0) * visual_scale
+	var font_size := maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))
 	var origin := center + Vector2(-label_width * 0.5, 0)
 	draw_string(font, origin + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.05, 0.06, 0.05, 0.72 * alpha))
 	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.96, 0.93, 0.80, alpha))
@@ -13038,6 +13455,10 @@ func _battle_actor_label(actor: Dictionary) -> String:
 		return ""
 	var level := maxi(1, int(actor.get("level", 1)))
 	return "%s Lv%d" % [actor_name, level]
+
+
+func _battle_should_show_actor_label(actor: Dictionary) -> bool:
+	return _battle_actor_label(actor) != ""
 
 
 func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
@@ -13137,6 +13558,22 @@ func _draw_battle_guard_ring(pos: Vector2, visual_scale: float) -> void:
 
 func _battle_actor_is_current_launch_target(actor_id: String) -> bool:
 	return battle_last_event_launch and not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
+
+
+func _battle_actor_state_offset(state: String, side: String, visual_scale: float) -> Vector2:
+	match state:
+		"spirit":
+			return Vector2(-18, -18) * visual_scale
+		"capture":
+			return Vector2(-14, -20) * visual_scale
+		"hit":
+			return Vector2(sin(battle_action_timer * 80.0) * 5.0 * visual_scale, 0)
+		"dodge":
+			return (Vector2(18, -8) if side == BattleModel.SIDE_ALLY else Vector2(-18, 8)) * visual_scale
+		"down", "captured":
+			return Vector2(0, 16) * visual_scale
+		_:
+			return Vector2.ZERO
 
 
 func _battle_rotated_visual_offset(offset: Vector2, visual_scale: float, rotation_angle: float) -> Vector2:

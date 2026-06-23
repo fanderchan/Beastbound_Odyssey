@@ -1,0 +1,118 @@
+{
+  "id": "gm_10v10_training_ground",
+  "name": "GM练级测试场",
+  "gridSize": [28, 24],
+  "tileSize": [80, 40],
+  "origin": [560, 110],
+  "spawnCell": [13, 15],
+  "spawnPoints": {
+    "default": [13, 15]
+  },
+  "blockedCells": [
+    [5, 5],
+    [6, 5],
+    [21, 5],
+    [22, 5],
+    [4, 18],
+    [5, 18],
+    [22, 18],
+    [23, 18]
+  ],
+  "decorCells": [
+    {"cell": [10, 12], "kind": "grass"},
+    {"cell": [11, 12], "kind": "grass"},
+    {"cell": [12, 12], "kind": "grass"},
+    {"cell": [13, 12], "kind": "grass"},
+    {"cell": [14, 12], "kind": "grass"},
+    {"cell": [15, 12], "kind": "grass"},
+    {"cell": [16, 12], "kind": "grass"},
+    {"cell": [10, 13], "kind": "grass"},
+    {"cell": [12, 13], "kind": "flower"},
+    {"cell": [14, 13], "kind": "grass"},
+    {"cell": [16, 13], "kind": "flower"},
+    {"cell": [10, 14], "kind": "grass"},
+    {"cell": [11, 14], "kind": "grass"},
+    {"cell": [12, 14], "kind": "grass"},
+    {"cell": [13, 14], "kind": "grass"},
+    {"cell": [14, 14], "kind": "grass"},
+    {"cell": [15, 14], "kind": "grass"},
+    {"cell": [16, 14], "kind": "grass"},
+    {"cell": [11, 17], "kind": "flower"},
+    {"cell": [18, 16], "kind": "flower"}
+  ],
+  "encounterZones": [
+    {
+      "id": "gm_10v10_grass",
+      "name": "GM练级草丛",
+      "rects": [[10, 12, 7, 5]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "encounterGroupId": "gm_10v10_grass",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "野生乌力",
+          "weight": 50,
+          "levelMin": 1,
+          "levelMax": 3,
+          "battleStats": {
+            "maxHp": 120,
+            "attack": 11,
+            "defense": 7,
+            "agility": 48
+          }
+        },
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "高速乌力",
+          "weight": 25,
+          "levelMin": 1,
+          "levelMax": 3,
+          "battleStats": {
+            "maxHp": 118,
+            "attack": 11,
+            "defense": 6,
+            "agility": 88
+          }
+        },
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "厚皮乌力",
+          "weight": 25,
+          "levelMin": 2,
+          "levelMax": 4,
+          "battleStats": {
+            "maxHp": 145,
+            "attack": 10,
+            "defense": 18,
+            "agility": 36
+          }
+        }
+      ],
+      "previewText": "GM测试草丛会固定出现十只野生宠物。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "gm_return_training_yard",
+      "name": "返回训练场",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [8, 16],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_training_yard",
+      "toSpawn": "default"
+    },
+    {
+      "id": "gm_note",
+      "name": "GM记录员",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [18, 14],
+      "action": "对话",
+      "dialog": ["GM记录员：这片草丛固定出现十只野生宠物，适合配合陪练伙伴测试10v10练级。"],
+      "option": "知道了"
+    }
+  ]
+}

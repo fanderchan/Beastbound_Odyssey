@@ -8,6 +8,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
+const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
@@ -45,6 +46,7 @@ const QUEST_STATES_KEY := "questStates"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
+const HANG_SETTINGS_KEY := HangSettingsModel.SETTINGS_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
 
 
@@ -56,6 +58,8 @@ static func default_profile() -> Dictionary:
 			"level": 1,
 			"exp": 0,
 			"nextExp": exp_to_next_level(1),
+			"hp": DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120),
+			"maxHp": DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120),
 		},
 		"activePetInstanceId": "pet_bui_main",
 		"nextPetInstanceSerial": 5,
@@ -77,6 +81,7 @@ static func default_profile() -> Dictionary:
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
 		"autoBattleSettings": AutoBattleSettingsModel.default_settings(),
+		"hangSettings": HangSettingsModel.default_settings(),
 		"trainingPartners": [],
 	}
 
@@ -191,15 +196,7 @@ static func equipped_slot_for_item(profile: Dictionary, item_id: String) -> Stri
 
 
 static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
-	var result := {}
-	for slot_id in EquipmentModel.slot_ids():
-		var item_id := str(equipment_slots(profile).get(slot_id, ""))
-		if item_id == "":
-			continue
-		var stats := EquipmentModel.stats_for(item_id)
-		for key in EquipmentModel.STAT_KEYS:
-			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
-	return result
+	return _equipment_stat_bonus_from_slots(equipment_slots(profile))
 
 
 static func player_base_stats() -> Dictionary:
@@ -345,6 +342,38 @@ static func auto_battle_settings(profile: Dictionary) -> Dictionary:
 static func with_auto_battle_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(settings)
+	return normalize_profile(normalized)
+
+
+static func hang_settings(profile: Dictionary) -> Dictionary:
+	return HangSettingsModel.normalize_settings(normalize_profile(profile).get(HANG_SETTINGS_KEY, {}))
+
+
+static func with_hang_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(settings)
+	return normalize_profile(normalized)
+
+
+static func player_hp(profile: Dictionary) -> int:
+	var normalized := normalize_profile(profile)
+	var player = normalized.get("player", {})
+	var player_dict := player as Dictionary if player is Dictionary else {}
+	return clampi(int(player_dict.get("hp", player_max_hp(normalized))), 1, player_max_hp(normalized))
+
+
+static func player_max_hp(profile: Dictionary) -> int:
+	var normalized := normalize_profile(profile)
+	var player = normalized.get("player", {})
+	var player_dict := player as Dictionary if player is Dictionary else {}
+	return maxi(1, int(player_dict.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))))
+
+
+static func with_player_hp(profile: Dictionary, hp: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var player = normalized.get("player", {}) as Dictionary
+	player["hp"] = clampi(hp, 1, player_max_hp(normalized))
+	normalized["player"] = player
 	return normalize_profile(normalized)
 
 
@@ -685,6 +714,18 @@ static func _normalize_equipment_slots(value) -> Dictionary:
 		if EquipmentModel.slot_for(item_id) != slot_id:
 			continue
 		result[slot_id] = item_id
+	return result
+
+
+static func _equipment_stat_bonus_from_slots(slots: Dictionary) -> Dictionary:
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		var stats := EquipmentModel.stats_for(item_id)
+		for key in EquipmentModel.STAT_KEYS:
+			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
 	return result
 
 
@@ -1617,11 +1658,17 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			var equipped_item_id_value := str(equipment_slots_value.get(slot_id, ""))
 			if equipped_item_id_value != "" and BackpackModel.item_count(backpack_slots_value, equipped_item_id_value) > 0:
 				backpack_slots_value = BackpackModel.consume(backpack_slots_value, equipped_item_id_value, 1)
-		normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
-		normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
+	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value)
+	var player_max_hp := maxi(1, int(DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)) + int(player_bonus.get("maxHp", 0)))
+	player_dict = normalized.get("player", {}) as Dictionary
+	player_dict["maxHp"] = player_max_hp
+	player_dict["hp"] = clampi(int(player_dict.get("hp", player_max_hp)), 1, player_max_hp)
+	normalized["player"] = player_dict
 
 	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
 	var quest_states := QuestModel.normalize_states(normalized.get(QUEST_STATES_KEY, {}))
@@ -1649,6 +1696,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_form_ids
 	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
 	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}))
+	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
@@ -1704,7 +1752,7 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		var current := summary.get("current", {}) as Dictionary
 		var current_max_hp := maxi(1, int(current.get("maxHp", previous_max_hp)))
 		actor["maxHp"] = current_max_hp
-		actor["hp"] = clampi(previous_hp + current_max_hp - previous_max_hp, 1, current_max_hp)
+		actor["hp"] = clampi(int(player_dict.get("hp", previous_hp + current_max_hp - previous_max_hp)), 1, current_max_hp)
 		for key in ["attack", "defense", "quick"]:
 			actor[key] = maxi(1, int(current.get(key, actor.get(key, 1))))
 		actor["equipmentSlots"] = equipment_slots(profile)
@@ -1849,6 +1897,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	var state_capture_tool_bag = state.get("captureToolBag", _capture_tool_inventory_from_slots(backpack_slots(next_profile)))
 	if state_capture_tool_bag is Dictionary:
 		next_profile = with_capture_tool_inventory(next_profile, state_capture_tool_bag as Dictionary)
+	next_profile = _merge_battle_player(next_profile, state)
 	next_profile = _merge_battle_pet_party(next_profile, state)
 	next_profile = _with_codex_forms_seen_from_battle(next_profile, state)
 	var result := result_override if result_override != "" else battle_result_for_state(state)
@@ -2101,6 +2150,20 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 			instances[index] = instance
 			break
 	next_profile["petInstances"] = instances
+	return next_profile
+
+
+static func _merge_battle_player(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	for actor in _actors(state):
+		if str(actor.get("id", "")) != "ally_player":
+			continue
+		var player = next_profile.get("player", {}) as Dictionary
+		var max_hp := maxi(1, int(actor.get("maxHp", player.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)))))
+		player["maxHp"] = max_hp
+		player["hp"] = clampi(maxi(1, int(actor.get("hp", player.get("hp", max_hp)))), 1, max_hp)
+		next_profile["player"] = player
+		return next_profile
 	return next_profile
 
 

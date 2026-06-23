@@ -61,6 +61,10 @@ static func encounter_rate(zone: Dictionary) -> float:
 	return clampf(float(zone.get("encounterRate", 0.0)), 0.0, 1.0)
 
 
+static func enemy_count(zone: Dictionary, fallback: int = 1) -> int:
+	return clampi(int(zone.get("enemyCount", fallback)), 1, 10)
+
+
 static func wild_pet_pool(zone: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var raw_pool = zone.get("wildPetPool", [])

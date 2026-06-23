@@ -14,9 +14,33 @@ godot --path .
 godot --headless --path . --quit
 ```
 
+## Full Client Testing
+
+Use this entry for full feature acceptance. It opens the normal client and does not hide previously built systems:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --full-client-preview
+```
+
+Use this entry when validating 10v10 with the full client:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --full-client-preview --gm-10v10-map
+```
+
+This starts on `GM练级测试场`. Its grass encounters are 100% rate and fixed to 10 wild enemies; fill the ally side from the normal `伙伴` panel.
+
+No arguments is also a full-client run:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn
+```
+
+The `--xxx-preview` entries below are local previews for one feature area. They are useful for quick checks, but they are not evidence that the full client has lost older feature points.
+
 ## Current Slice
 
-Phase 60 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, battle auto-battle settings, training partners, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
+Phase 62 contains a minimal isometric exploration, encounter loop, GM 10v10 test map, hang-up walking prototype, encounter stones, hang-up stop settings, 10v10 formation, local battle-command, battle auto-battle settings, training partners, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
 
 - Mouse click-to-pathfind on PC.
 - Touch tap-to-pathfind on mobile.
@@ -35,17 +59,22 @@ Phase 60 contains a minimal isometric exploration, encounter loop, hang-up walki
 - A 1-second post-battle encounter grace window after returning to the map.
 - The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
 - Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
+- The action-bar `挂机` button changes to `停` during hang-up walking or active encounter-stone effects, and stopping clears both auto movement and encounter-stone effects.
 - Battle commands arranged as `攻击` / `精灵` / `捕捉` / `help` and `防御` / `物品` / `换宠` / `逃跑`.
 - The battle panel has a short `自动` toggle that auto-submits player and controlled-pet commands from `内挂设置`.
 - The world action bar has a `内挂` settings panel.
 - Player auto actions distinguish `首回合` and `一般回合`.
 - Pet auto actions distinguish `首回合` and `一般回合`, and select `技1` through `技7` instead of hardcoding pet defense as a separate action.
 - Auto healing can watch player/pet HP thresholds and try heal sources in priority order.
+- The `内挂设置` panel has a `挂机` tab whose first version only contains `低血停止`.
+- `低血停止` defaults to `0%`: if the player fell to 0 HP during battle, hang-up stops after returning to the map, while the world profile keeps at least 1 HP.
+- Hang-up low-HP stopping checks only the player, not the pet, and can be set to `不停止`.
 - The world action bar has a `伙伴` panel for adding, removing, filling, or clearing up to four training partners.
 - Training partners clone the current player and active pet when added, then persist and grow independently.
 - Grass encounters with training partners become 10v10 training battles: 5 humans plus 5 pets against 10 wild enemies.
 - Training partner humans and pets use default attack AI against enemy slots from front 1-5, then back 1-5.
 - Victory rewards grant EXP to training partner humans and pets with a simple stat-growth rule.
+- `--full-client-preview --gm-10v10-map` starts the full client on `GM练级测试场`, where grass encounters always contain 10 wild enemies.
 - Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
 - 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.
 - The controlled human placeholder uses a distinct red/gold color in the ally formation.
@@ -87,6 +116,8 @@ Open the 10v10 auto-battle observation preview directly from this directory:
 godot --path . --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
 ```
 
+This preview starts auto battle immediately and keeps the `停止` button visible while actions play.
+
 Open the auto-battle settings preview directly from this directory:
 
 ```sh
@@ -97,6 +128,12 @@ Open the training-partner grass demo directly from this directory:
 
 ```sh
 godot --path . --scene res://scenes/Main.tscn -- --training-partner-demo
+```
+
+Open the hang-up settings preview directly from this directory:
+
+```sh
+godot --path . --scene res://scenes/Main.tscn -- --hang-settings-preview
 ```
 
 Manual 10v10 checks:
@@ -124,4 +161,6 @@ godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-training-partner-check
+godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-settings-check
+godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-gm-10v10-map-check
 ```

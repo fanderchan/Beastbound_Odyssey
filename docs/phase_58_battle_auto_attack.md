@@ -45,7 +45,7 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --battle-preview
 godot --path client/godot --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
 ```
 
-这个预览会把敌方血量加厚，方便连续观察自动普攻、其他友方 AI 和合击频率。进入后点右上 `自动` 开始。
+这个预览会把敌方血量加厚，并直接开启自动攻击，方便连续观察自动普攻、其他友方 AI 和合击频率；右上按钮会显示 `停止`。
 
 ## 自测命令
 
