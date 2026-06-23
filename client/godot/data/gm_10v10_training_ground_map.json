@@ -37,6 +37,18 @@
     {"cell": [14, 14], "kind": "grass"},
     {"cell": [15, 14], "kind": "grass"},
     {"cell": [16, 14], "kind": "grass"},
+    {"cell": [18, 11], "kind": "grass"},
+    {"cell": [19, 11], "kind": "grass"},
+    {"cell": [20, 11], "kind": "grass"},
+    {"cell": [21, 11], "kind": "grass"},
+    {"cell": [18, 12], "kind": "grass"},
+    {"cell": [19, 12], "kind": "flower"},
+    {"cell": [20, 12], "kind": "grass"},
+    {"cell": [21, 12], "kind": "grass"},
+    {"cell": [18, 13], "kind": "grass"},
+    {"cell": [19, 13], "kind": "grass"},
+    {"cell": [20, 13], "kind": "grass"},
+    {"cell": [21, 13], "kind": "flower"},
     {"cell": [11, 17], "kind": "flower"},
     {"cell": [18, 16], "kind": "flower"}
   ],
@@ -47,6 +59,7 @@
       "rects": [[10, 12, 7, 5]],
       "encounterRate": 1.0,
       "enemyCount": 10,
+      "formationTemplate": "10v10",
       "encounterGroupId": "gm_10v10_grass",
       "wildPetPool": [
         {
@@ -90,6 +103,21 @@
         }
       ],
       "previewText": "GM测试草丛会固定出现十只野生宠物。"
+    },
+    {
+      "id": "gm_codex_capture_grass",
+      "name": "GM图鉴捕捉草丛",
+      "rects": [[18, 11, 4, 3]],
+      "encounterRate": 1.0,
+      "enemyCountMin": 1,
+      "enemyCountMax": 5,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "gm_codex_capture_grass",
+      "wildPetPoolSource": "codex_catchable",
+      "individualWildPets": true,
+      "levelMin": 1,
+      "levelMax": 10,
+      "previewText": "GM图鉴捕捉草丛会随机出现1到5只任意可捕捉图鉴宠物，每只等级1到10。"
     }
   ],
   "interactionPoints": [

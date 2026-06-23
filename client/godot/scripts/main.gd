@@ -11,10 +11,12 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
+const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
@@ -193,6 +195,7 @@ var training_partner_close_button: Button
 var auto_settings_panel: PanelContainer
 var auto_settings_battle_tab_button: Button
 var auto_settings_hang_tab_button: Button
+var auto_settings_capture_tab_button: Button
 var auto_settings_content: VBoxContainer
 var auto_settings_close_button: Button
 var auto_settings_controls: Dictionary = {}
@@ -216,6 +219,7 @@ var auto_battle_check: bool = false
 var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
 var auto_battle_settings_check: bool = false
+var auto_capture_settings_check: bool = false
 var auto_training_partner_check: bool = false
 var auto_hang_settings_check: bool = false
 var auto_gm_10v10_map_check: bool = false
@@ -290,6 +294,7 @@ var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
 var auto_battle_settings_preview: bool = false
+var auto_capture_settings_preview: bool = false
 var training_partner_demo: bool = false
 var hang_settings_preview: bool = false
 var battle_stat_test: bool = false
@@ -410,6 +415,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_auto_10v10_check")
 	elif auto_battle_settings_check:
 		call_deferred("_run_auto_battle_settings_check")
+	elif auto_capture_settings_check:
+		call_deferred("_run_auto_capture_settings_check")
 	elif auto_training_partner_check:
 		call_deferred("_run_auto_training_partner_check")
 	elif auto_hang_settings_check:
@@ -584,6 +591,8 @@ func _ready() -> void:
 		call_deferred("_open_battle_auto_10v10_preview")
 	elif auto_battle_settings_preview:
 		call_deferred("_run_auto_battle_settings_preview")
+	elif auto_capture_settings_preview:
+		call_deferred("_run_auto_capture_settings_preview")
 	elif training_partner_demo:
 		call_deferred("_run_training_partner_demo")
 	elif hang_settings_preview:
@@ -653,6 +662,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_auto_10v10_check = true
 		elif arg == "--auto-battle-settings-check":
 			auto_battle_settings_check = true
+		elif arg == "--auto-capture-settings-check":
+			auto_capture_settings_check = true
 		elif arg == "--auto-training-partner-check":
 			auto_training_partner_check = true
 		elif arg == "--auto-hang-settings-check":
@@ -801,6 +812,8 @@ func _apply_preview_window_args() -> void:
 			battle_auto_10v10_preview = true
 		elif arg == "--auto-battle-settings-preview":
 			auto_battle_settings_preview = true
+		elif arg == "--auto-capture-settings-preview":
+			auto_capture_settings_preview = true
 		elif arg == "--training-partner-demo":
 			training_partner_demo = true
 		elif arg == "--hang-settings-preview":
@@ -865,6 +878,16 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 		_update_hud_text()
 	queue_redraw()
 	return true
+
+
+func _encounter_zone_by_id(zone_id: String) -> Dictionary:
+	for value in EncounterModel.encounter_zones(map_data):
+		if not (value is Dictionary):
+			continue
+		var zone := value as Dictionary
+		if str(zone.get("id", "")) == zone_id:
+			return zone
+	return {}
 
 
 func _run_auto_movement_check() -> void:
@@ -1277,8 +1300,42 @@ func _run_auto_gm_10v10_map_check() -> void:
 	var partner_ally_count := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ALLY) if battle_active else 0
 	var partner_ok := battle_active and partner_enemy_count == 10 and partner_ally_count == 10
 	var source_group_ok := str(battle_state.get("sourceEncounterGroupId", "")) == "gm_10v10_grass" if battle_active else false
-	var status := "ok" if loaded and current_map_id == GM_10V10_MAP_ID and zone_found and enemy_count_rule == 10 and rate_ok and spawn_in_zone and no_partner_ok and partner_ok and source_group_ok else "failed"
-	print("gm 10v10 map check ready: status=%s loaded=%s map=%s zone=%s enemy_rule=%d rate_ok=%s spawn_in_zone=%s no_partner=%d/%d partner=%d/%d source_group=%s" % [
+	var random_zone := _encounter_zone_by_id("gm_codex_capture_grass")
+	var random_pool := EncounterModel.wild_pet_pool(random_zone) if not random_zone.is_empty() else []
+	var random_selected_zone := EncounterModel.zone_with_selected_wild_pet(random_zone, encounter_rng) if not random_zone.is_empty() else {}
+	var random_selected_pets: Array = random_selected_zone.get("selectedWildPets", [])
+	var random_count := EncounterModel.enemy_count(random_selected_zone, 1) if not random_selected_zone.is_empty() else 0
+	var random_levels_ok := random_count >= 1 and random_count <= 5 and random_selected_pets.size() == random_count
+	for selected_pet_value in random_selected_pets:
+		var selected_pet := selected_pet_value as Dictionary if selected_pet_value is Dictionary else {}
+		var selected_level := int(selected_pet.get("level", 0))
+		if selected_level < 1 or selected_level > 10:
+			random_levels_ok = false
+	var random_battle_state := BattleModel.create_training_partner_battle(random_selected_zone, random_count) if random_count >= 1 else {}
+	var random_battle_count_ok := BattleModel.side_actor_count(random_battle_state, BattleModel.SIDE_ENEMY) == random_count
+	var random_formation_ok := not random_battle_state.is_empty() and BattleModel.uses_10v10_formation(random_battle_state)
+	var random_two_slot_state := BattleModel.create_training_partner_battle(random_zone, 2) if not random_zone.is_empty() else {}
+	var random_two_slot_ok := (
+		not random_two_slot_state.is_empty()
+		and BattleModel.uses_10v10_formation(random_two_slot_state)
+		and str(BattleModel.actor_by_id(random_two_slot_state, "enemy_front_1").get("slotId", "")) == "enemy.front.1"
+		and str(BattleModel.actor_by_id(random_two_slot_state, "enemy_front_2").get("slotId", "")) == "enemy.front.2"
+		and BattleModel.actor_by_id(random_two_slot_state, "enemy_front_3").is_empty()
+	)
+	var random_zone_ok := (
+		not random_zone.is_empty()
+		and int(random_zone.get("enemyCountMin", 0)) == 1
+		and int(random_zone.get("enemyCountMax", 0)) == 5
+		and str(random_zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10
+		and bool(random_zone.get("individualWildPets", false))
+		and random_pool.size() >= PetTemplateCatalog.forms().size()
+		and random_levels_ok
+		and random_battle_count_ok
+		and random_formation_ok
+		and random_two_slot_ok
+	)
+	var status := "ok" if loaded and current_map_id == GM_10V10_MAP_ID and zone_found and enemy_count_rule == 10 and rate_ok and spawn_in_zone and no_partner_ok and partner_ok and source_group_ok and random_zone_ok else "failed"
+	print("gm 10v10 map check ready: status=%s loaded=%s map=%s zone=%s enemy_rule=%d rate_ok=%s spawn_in_zone=%s no_partner=%d/%d partner=%d/%d source_group=%s random_zone=%s random_pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s random_two_slots=%s" % [
 		status,
 		str(loaded),
 		current_map_id,
@@ -1291,6 +1348,13 @@ func _run_auto_gm_10v10_map_check() -> void:
 		partner_ally_count,
 		partner_enemy_count,
 		str(source_group_ok),
+		str(random_zone_ok),
+		random_pool.size(),
+		random_count,
+		str(random_levels_ok),
+		str(random_battle_count_ok),
+		str(random_formation_ok),
+		str(random_two_slot_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -1693,6 +1757,333 @@ func _run_auto_battle_settings_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_capture_settings_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
+	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_ALL
+	settings[AutoCaptureSettingsModel.HP_PERCENT_KEY] = 100
+	settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_LT
+	settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 999
+	settings[AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY] = BattleModel.CAPTURE_TOOL_NET_REINFORCED
+	settings[AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY] = AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+	settings[AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY] = AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
+	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
+	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
+	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+	settings = PlayerProgressModel.auto_capture_settings(player_profile)
+
+	var normalized_ok := (
+		bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
+		and str(settings.get(AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY, "")) == AutoCaptureSettingsModel.COMPARATOR_LT
+		and int(settings.get(AutoCaptureSettingsModel.LEVEL_VALUE_KEY, 0)) == 999
+		and str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
+		and str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, "")) == AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+		and int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, 0)) == AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
+	)
+	var power_ok := (
+		CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_EMPTY_HAND) == 1
+		and CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 3
+		and CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_NET) == 6
+		and CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 10
+	)
+	var fallback_tool := CaptureToolCatalog.best_available_fallback_tool(BattleModel.CAPTURE_TOOL_NET_REINFORCED, {
+		BattleModel.CAPTURE_TOOL_ROPE_BASIC: 2,
+		BattleModel.CAPTURE_TOOL_NET: 1,
+		BattleModel.CAPTURE_TOOL_NET_REINFORCED: 0,
+	})
+	var fallback_ok := fallback_tool == BattleModel.CAPTURE_TOOL_NET
+	var combat_power := PetPowerModel.combat_power_for_stats({
+		"maxHp": 80,
+		"attack": 10,
+		"defense": 6,
+		"agility": 48,
+	})
+	var power_formula_ok := combat_power == 84
+
+	var auto_zone := {
+		"id": "auto_capture_test",
+		"name": "自动捕捉测试",
+		"enemyCount": 1,
+		"wildPetPoolSource": "codex_catchable",
+		"levelMin": 1,
+		"levelMax": 10,
+	}
+	var selected_auto_zone := EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)
+	_start_battle(BattleModel.create_wild_battle(selected_auto_zone))
+	await get_tree().process_frame
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var target_actor := BattleModel.actor_by_id(battle_state, target_id)
+	var target_match_ok := _battle_auto_capture_actor_matches(target_actor, settings)
+	var space_ok := _battle_auto_has_capture_space()
+	var chosen_tool := CaptureToolCatalog.best_available_fallback_tool(
+		str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID)),
+		BattleModel.capture_tool_inventory(battle_state)
+	)
+	var submit_pet_actor_id := BattleModel.controlled_pet_id(battle_state)
+	var submit_ok := false
+	var submit_last_sequence := battle_recorded_event_sequence
+	if target_id != "":
+		submit_ok = _battle_auto_try_submit_capture()
+	var submit_capture_seen := false
+	var submit_capture_tool_ok := false
+	var submit_pet_defend_seen := submit_pet_actor_id == ""
+	for _frame in range(900):
+		if battle_recorded_event_sequence != submit_last_sequence:
+			submit_last_sequence = battle_recorded_event_sequence
+			var event_type := str(battle_last_event_ledger.get("type", battle_last_event_type))
+			var attacker_id := str(battle_last_event_ledger.get("attackerId", ""))
+			if event_type == "capture":
+				submit_capture_seen = true
+				submit_capture_tool_ok = str(battle_state.get("lastCaptureToolId", "")) == chosen_tool
+			if event_type == "defend" and attacker_id == submit_pet_actor_id:
+				submit_pet_defend_seen = true
+			if submit_capture_seen and submit_pet_defend_seen:
+				break
+		await get_tree().process_frame
+	var pending_capture_ok := (
+		submit_ok
+		and submit_capture_seen
+		and submit_capture_tool_ok
+		and submit_pet_defend_seen
+	)
+	_end_battle(true)
+	await get_tree().process_frame
+
+	var capture_partner_profile := PlayerProgressModel.with_training_partner_count(player_profile, 4)
+	var capture_partner_state := PlayerProgressModel.apply_profile_to_battle_state(
+		capture_partner_profile,
+		BattleModel.create_training_partner_battle(selected_auto_zone, 2)
+	)
+	var capture_partner_target_id := BattleModel.living_enemy_id(capture_partner_state)
+	var capture_partner_events := BattleModel.build_player_pet_round_events(
+		capture_partner_state,
+		{
+			"command": "capture",
+			"targetId": capture_partner_target_id,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+		},
+		{
+			"command": "defend",
+			"targetId": "",
+			"skillId": BattleModel.PET_SKILL_DEFEND,
+		}
+	)
+	var capture_partner_defend_count := 0
+	var capture_partner_hold_ok := capture_partner_target_id != "" and BattleModel.uses_10v10_formation(capture_partner_state)
+	for capture_event_value in capture_partner_events:
+		var capture_event := capture_event_value as Dictionary
+		var event_type := str(capture_event.get("type", ""))
+		var attacker := BattleModel.actor_by_id(capture_partner_state, str(capture_event.get("attackerId", "")))
+		var attacker_side := str(attacker.get("side", ""))
+		if attacker_side == BattleModel.SIDE_ALLY and event_type == "defend":
+			capture_partner_defend_count += 1
+		if attacker_side == BattleModel.SIDE_ALLY and str(capture_event.get("targetSide", "")) == BattleModel.SIDE_ENEMY and ["attack", "skill_attack", "combo_attack"].has(event_type):
+			capture_partner_hold_ok = false
+	capture_partner_hold_ok = capture_partner_hold_ok and capture_partner_defend_count >= 9
+
+	var heal_hold_profile := PlayerProgressModel.with_training_partner_count(player_profile, 4)
+	var heal_settings := PlayerProgressModel.auto_battle_settings(heal_hold_profile)
+	heal_settings[AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY] = 90
+	heal_settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
+		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
+		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
+	]
+	heal_hold_profile = PlayerProgressModel.with_auto_battle_settings(heal_hold_profile, heal_settings)
+	player_profile = heal_hold_profile
+	var heal_hold_state := PlayerProgressModel.apply_profile_to_battle_state(
+		heal_hold_profile,
+		BattleModel.create_training_partner_battle(selected_auto_zone, 3)
+	)
+	_start_battle(heal_hold_state)
+	await get_tree().process_frame
+	battle_state = BattleModel.set_actor_hp(battle_state, BattleModel.PLAYER_ACTOR_ID, 20)
+	var heal_hold_submit := _submit_battle_auto_player_action()
+	var heal_hold_marked := (
+		heal_hold_submit
+		and bool(battle_pending_player_command.get("captureHold", false))
+		and str(battle_pending_player_command.get("command", "")) != "capture"
+	)
+	var heal_hold_pet_submit := _submit_battle_auto_pet_action()
+	var heal_hold_events: Array[Dictionary] = []
+	if not battle_current_event.is_empty():
+		heal_hold_events.append(battle_current_event.duplicate(true))
+	for heal_event_value in battle_event_queue:
+		if heal_event_value is Dictionary:
+			heal_hold_events.append((heal_event_value as Dictionary).duplicate(true))
+	var heal_hold_no_ally_attack_ok := heal_hold_submit and heal_hold_marked and heal_hold_pet_submit
+	var heal_hold_pet_defend_seen := BattleModel.controlled_pet_id(battle_state) == ""
+	var heal_hold_partner_defend_count := 0
+	for heal_event_value in heal_hold_events:
+		var heal_event := heal_event_value as Dictionary
+		var heal_event_type := str(heal_event.get("type", ""))
+		var heal_attacker_id := str(heal_event.get("attackerId", ""))
+		var heal_attacker := BattleModel.actor_by_id(battle_state, heal_attacker_id)
+		var heal_attacker_side := str(heal_attacker.get("side", ""))
+		if heal_attacker_id == BattleModel.controlled_pet_id(battle_state) and heal_event_type == "defend":
+			heal_hold_pet_defend_seen = true
+		if heal_attacker_side == BattleModel.SIDE_ALLY and heal_event_type == "defend" and heal_attacker_id != BattleModel.PLAYER_ACTOR_ID and heal_attacker_id != BattleModel.controlled_pet_id(battle_state):
+			heal_hold_partner_defend_count += 1
+		if heal_attacker_side == BattleModel.SIDE_ALLY and str(heal_event.get("targetSide", "")) == BattleModel.SIDE_ENEMY and ["attack", "skill_attack", "combo_attack"].has(heal_event_type):
+			heal_hold_no_ally_attack_ok = false
+	heal_hold_no_ally_attack_ok = heal_hold_no_ally_attack_ok and heal_hold_pet_defend_seen and heal_hold_partner_defend_count >= 8
+	_end_battle(true)
+	await get_tree().process_frame
+
+	var no_target_settings := settings.duplicate(true)
+	no_target_settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_EQ
+	no_target_settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 999
+	no_target_settings[AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY] = AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, no_target_settings)
+	_start_battle(BattleModel.create_wild_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)))
+	await get_tree().process_frame
+	var no_target_submit := _submit_battle_auto_player_action()
+	await get_tree().process_frame
+	var no_target_escape_ok := no_target_submit and not battle_active
+	await get_tree().process_frame
+
+	var full_profile := _auto_capture_full_pet_profile()
+	var full_state := PlayerProgressModel.apply_profile_to_battle_state(full_profile, BattleModel.create_wild_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)))
+	var full_target_id := BattleModel.living_enemy_id(full_state)
+	if full_target_id != "":
+		full_state = BattleModel.apply_battle_event(full_state, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": full_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+			"success": true,
+			"sequence": 1,
+			"speed": 100,
+		})
+	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_state, "victory")
+	var full_message_ok := (
+		(full_result.get("lostCapturedPets", []) as Array).size() == 1
+		and "\n".join(full_result.get("logLines", [])).find("兽栏和宠物栏满，请清理") >= 0
+	)
+
+	var discard_profile := PlayerProgressModel.with_auto_capture_settings(PlayerProgressModel.default_profile(), {
+		AutoCaptureSettingsModel.ENABLED_KEY: true,
+		AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY: true,
+		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY: 9999,
+	})
+	var discard_state := PlayerProgressModel.apply_profile_to_battle_state(discard_profile, BattleModel.create_wild_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)))
+	var discard_target_id := BattleModel.living_enemy_id(discard_state)
+	if discard_target_id != "":
+		discard_state = BattleModel.apply_battle_event(discard_state, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": discard_target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+			"success": true,
+			"sequence": 1,
+			"speed": 100,
+		})
+	var discard_result := PlayerProgressModel.apply_battle_result(discard_profile, discard_state, "victory")
+	var discard_ok := (
+		(discard_result.get("autoDiscardedPets", []) as Array).size() == 1
+		and (discard_result.get("capturedPets", []) as Array).is_empty()
+	)
+
+	var loaded_gm := _load_map(GM_10V10_MAP_ID)
+	var gm_random_zone := _encounter_zone_by_id("gm_codex_capture_grass")
+	var gm_pool := EncounterModel.wild_pet_pool(gm_random_zone) if not gm_random_zone.is_empty() else []
+	var gm_selected_zone := EncounterModel.zone_with_selected_wild_pet(gm_random_zone, encounter_rng) if not gm_random_zone.is_empty() else {}
+	var gm_selected_pets: Array = gm_selected_zone.get("selectedWildPets", [])
+	var gm_random_count := EncounterModel.enemy_count(gm_selected_zone, 1) if not gm_selected_zone.is_empty() else 0
+	var gm_random_levels_ok := gm_random_count >= 1 and gm_random_count <= 5 and gm_selected_pets.size() == gm_random_count
+	for selected_pet_value in gm_selected_pets:
+		var selected_pet := selected_pet_value as Dictionary if selected_pet_value is Dictionary else {}
+		var selected_level := int(selected_pet.get("level", 0))
+		if selected_level < 1 or selected_level > 10:
+			gm_random_levels_ok = false
+	var gm_random_battle_state := BattleModel.create_training_partner_battle(gm_selected_zone, gm_random_count) if gm_random_count > 1 else BattleModel.create_wild_battle(gm_selected_zone)
+	var gm_random_battle_count_ok := BattleModel.side_actor_count(gm_random_battle_state, BattleModel.SIDE_ENEMY) == gm_random_count
+	var gm_random_formation_ok := BattleModel.uses_10v10_formation(gm_random_battle_state)
+	var gm_two_slot_state := BattleModel.create_training_partner_battle(gm_random_zone, 2) if not gm_random_zone.is_empty() else {}
+	var gm_two_slot_ok := (
+		not gm_two_slot_state.is_empty()
+		and BattleModel.uses_10v10_formation(gm_two_slot_state)
+		and str(BattleModel.actor_by_id(gm_two_slot_state, "enemy_front_1").get("slotId", "")) == "enemy.front.1"
+		and str(BattleModel.actor_by_id(gm_two_slot_state, "enemy_front_2").get("slotId", "")) == "enemy.front.2"
+		and BattleModel.actor_by_id(gm_two_slot_state, "enemy_front_3").is_empty()
+	)
+	var gm_random_ok := (
+		loaded_gm
+		and not gm_random_zone.is_empty()
+		and int(gm_random_zone.get("enemyCountMin", 0)) == 1
+		and int(gm_random_zone.get("enemyCountMax", 0)) == 5
+		and str(gm_random_zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10
+		and bool(gm_random_zone.get("individualWildPets", false))
+		and gm_pool.size() >= PetTemplateCatalog.forms().size()
+		and gm_random_levels_ok
+		and gm_random_battle_count_ok
+		and gm_random_formation_ok
+		and gm_two_slot_ok
+	)
+	var status := "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
+		status,
+		str(normalized_ok),
+		str(power_ok),
+		str(fallback_ok),
+		str(power_formula_ok),
+		str(pending_capture_ok),
+		str(submit_capture_seen),
+		str(submit_capture_tool_ok),
+		str(submit_pet_defend_seen),
+		str(capture_partner_hold_ok),
+		str(heal_hold_no_ally_attack_ok),
+		str(heal_hold_pet_defend_seen),
+		str(no_target_escape_ok),
+		target_id,
+		str(target_match_ok),
+		str(target_actor.get("catchable", false)),
+		int(target_actor.get("hp", 0)),
+		int(target_actor.get("maxHp", 0)),
+		int(target_actor.get("level", 0)),
+		str(space_ok),
+		chosen_tool,
+		str(full_message_ok),
+		str(discard_ok),
+		str(gm_random_ok),
+		gm_pool.size(),
+		gm_random_count,
+		str(gm_random_levels_ok),
+		str(gm_random_battle_count_ok),
+		str(gm_random_formation_ok),
+		str(gm_two_slot_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _auto_capture_full_pet_profile() -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var base_pet := PlayerProgressModel.pet_instance_by_id(profile, "pet_bui_main")
+	var instances: Array = []
+	for index in range(PlayerProgressModel.PARTY_LIMIT):
+		var pet_instance := base_pet.duplicate(true)
+		pet_instance["instanceId"] = "auto_full_party_%d" % index
+		pet_instance["petId"] = pet_instance["instanceId"]
+		pet_instance["name"] = "满队布伊%d" % [index + 1]
+		pet_instance["state"] = PlayerProgressModel.PET_STATE_BATTLE if index == 0 else PlayerProgressModel.PET_STATE_STANDBY
+		instances.append(pet_instance)
+	for index in range(PlayerProgressModel.STORAGE_LIMIT):
+		var storage_pet := base_pet.duplicate(true)
+		storage_pet["instanceId"] = "auto_full_storage_%d" % index
+		storage_pet["petId"] = storage_pet["instanceId"]
+		storage_pet["name"] = "满栏布伊%d" % [index + 1]
+		storage_pet["state"] = PlayerProgressModel.PET_STATE_STORAGE
+		instances.append(storage_pet)
+	profile["petInstances"] = instances
+	profile["activePetInstanceId"] = "auto_full_party_0"
+	profile["nextPetInstanceSerial"] = 1000
+	return PlayerProgressModel.normalize_profile(profile)
+
+
 func _run_auto_training_partner_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -1710,7 +2101,7 @@ func _run_auto_training_partner_check() -> void:
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found := not zones.is_empty()
 	if loaded and zone_found:
-		active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zones[0] as Dictionary, encounter_rng)
+		active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zones[0] as Dictionary, encounter_rng, _encounter_enemy_count_fallback())
 		_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
 		battle_state["comboBonusRateBySide"] = {BattleModel.SIDE_ALLY: 1.0}
 		var actors: Array = battle_state.get("actors", [])
@@ -2062,6 +2453,10 @@ func _run_auto_battle_combo_check() -> void:
 func _run_auto_battle_capture_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_backpack_slots(
+		player_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(player_profile), BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+	)
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -2114,6 +2509,10 @@ func _run_auto_battle_capture_check() -> void:
 func _run_auto_capture_tools_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_backpack_slots(
+		player_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(player_profile), BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+	)
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -4750,6 +5149,30 @@ func _run_auto_battle_settings_preview() -> void:
 		_update_hud_text()
 
 
+func _run_auto_capture_settings_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
+	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_ALL
+	settings[AutoCaptureSettingsModel.HP_PERCENT_KEY] = 100
+	settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_LT
+	settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 999
+	settings[AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY] = BattleModel.CAPTURE_TOOL_NET_REINFORCED
+	settings[AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY] = AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+	settings[AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY] = AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
+	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
+	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
+	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+	auto_settings_active_tab = "capture"
+	_open_auto_settings_panel()
+	_set_world_log_message("自动捉宠设置已打开。")
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_hang_settings_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7110,7 +7533,20 @@ func _submit_battle_auto_player_action() -> bool:
 	if not battle_active or battle_command_owner != "player" or _battle_commands_locked():
 		return false
 	var settings := _battle_auto_settings()
+	var capture_settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	var capture_hold_target_id := _battle_auto_capture_hold_target_id(capture_settings)
 	if _battle_auto_try_submit_heal(settings):
+		_battle_mark_pending_capture_hold(capture_hold_target_id)
+		battle_auto_attack_player_submissions += 1
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		return true
+	if _battle_auto_try_submit_capture():
+		battle_auto_attack_player_submissions += 1
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		return true
+	if _battle_auto_capture_no_target_action() == AutoCaptureSettingsModel.NO_TARGET_ESCAPE:
+		_set_battle_message("自动捉宠：没有符合条件目标，自动逃跑。")
+		_battle_escape()
 		battle_auto_attack_player_submissions += 1
 		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 		return true
@@ -7127,6 +7563,13 @@ func _submit_battle_auto_player_action() -> bool:
 func _submit_battle_auto_pet_action() -> bool:
 	if not battle_active or battle_command_owner != "pet" or _battle_commands_locked():
 		return false
+	if _battle_auto_capture_enabled() and (str(battle_pending_player_command.get("command", "")) == "capture" or bool(battle_pending_player_command.get("captureHold", false))):
+		var capture_settings := PlayerProgressModel.auto_capture_settings(player_profile)
+		if not _battle_auto_submit_capture_pet_action(capture_settings):
+			return false
+		battle_auto_attack_pet_submissions += 1
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		return true
 	var settings := _battle_auto_settings()
 	var slot_key := AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY if _battle_auto_is_first_round() else AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY
 	var slot := AutoBattleSettingsModel.normalized_pet_skill_slot(settings.get(slot_key, 1))
@@ -7232,6 +7675,147 @@ func _battle_auto_try_submit_heal(settings: Dictionary) -> bool:
 				if _battle_auto_submit_item_action(BattleModel.ITEM_HEAL_ALL):
 					return true
 	return false
+
+
+func _battle_auto_try_submit_capture() -> bool:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	if not bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false)):
+		return false
+	var target_id := _battle_auto_capture_target_id(settings)
+	if target_id == "":
+		return false
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	if not _battle_auto_has_capture_space():
+		_set_battle_message("兽栏和宠物栏满，请清理")
+		return false
+	var inventory := BattleModel.capture_tool_inventory(battle_state)
+	var preferred_tool_id := str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID))
+	var tool_id := CaptureToolCatalog.best_available_fallback_tool(preferred_tool_id, inventory)
+	if not BattleModel.has_capture_tool(battle_state, tool_id):
+		_set_battle_message("%s 不够了。" % CaptureToolCatalog.full_name_for(tool_id))
+		return false
+	battle_pending_capture_tool_id = tool_id
+	battle_selected_target_id = target_id
+	var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), target_id, tool_id)
+	_set_battle_message("自动捕捉：%s 捕捉%s，机会：%s。" % [
+		CaptureToolCatalog.full_name_for(tool_id),
+		str(target.get("name", "敌人")),
+		CaptureToolCatalog.chance_tier(chance),
+	])
+	_submit_player_battle_command("capture", target_id)
+	if _battle_auto_capture_enabled() and battle_command_owner == "pet":
+		_battle_auto_submit_capture_pet_action(settings)
+	return true
+
+
+func _battle_auto_capture_hold_target_id(settings: Dictionary) -> String:
+	if not bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false)):
+		return ""
+	if not _battle_auto_has_capture_space():
+		return ""
+	return _battle_auto_capture_target_id(settings)
+
+
+func _battle_mark_pending_capture_hold(target_id: String) -> void:
+	if target_id == "" or battle_pending_player_command.is_empty():
+		return
+	battle_pending_player_command["captureHold"] = true
+	battle_pending_player_command["captureHoldTargetId"] = target_id
+	if str(battle_pending_player_command.get("targetId", "")) == "":
+		battle_pending_player_command["targetId"] = target_id
+
+
+func _battle_auto_submit_capture_pet_action(settings: Dictionary) -> bool:
+	var slot := AutoCaptureSettingsModel.normalized_pet_skill_slot(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT))
+	var skill_action := _controlled_pet_skill_action_for_slot(slot)
+	if skill_action.is_empty():
+		skill_action = _controlled_pet_skill_action_for_slot(AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT)
+	if skill_action.is_empty():
+		_submit_pet_battle_command("defend", "", BattleModel.PET_SKILL_DEFEND)
+		return true
+	var skill_id := str(skill_action.get("id", ""))
+	if skill_id == "":
+		skill_id = BattleModel.PET_SKILL_DEFEND
+	match str(skill_action.get("command", "defend")):
+		"defend":
+			_submit_pet_battle_command("defend", "", skill_id)
+			return true
+		"pet_skill":
+			var skill_target_id := _battle_auto_enemy_target_id(_battle_auto_settings())
+			if skill_target_id == "":
+				return false
+			_submit_pet_battle_command("pet_skill", skill_target_id, skill_id)
+			return true
+		_:
+			var target_id := _battle_auto_enemy_target_id(_battle_auto_settings())
+			if target_id == "":
+				return false
+			_submit_pet_battle_command("attack", target_id, skill_id)
+			return true
+
+
+func _battle_auto_capture_enabled() -> bool:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	return bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
+
+
+func _battle_auto_capture_no_target_action() -> String:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	if not bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false)):
+		return AutoCaptureSettingsModel.NO_TARGET_BATTLE
+	return AutoCaptureSettingsModel.normalized_no_target_action(str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, AutoCaptureSettingsModel.NO_TARGET_ESCAPE)))
+
+
+func _battle_auto_capture_target_id(settings: Dictionary) -> String:
+	for actor_id in BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY):
+		var actor := BattleModel.actor_by_id(battle_state, actor_id)
+		if _battle_auto_capture_actor_matches(actor, settings):
+			return actor_id
+	return ""
+
+
+func _battle_auto_capture_actor_matches(actor: Dictionary, settings: Dictionary) -> bool:
+	if actor.is_empty():
+		return false
+	if not bool(actor.get("catchable", false)) or bool(actor.get("captured", false)):
+		return false
+	var hp := clampi(int(actor.get("hp", 0)), 0, maxi(1, int(actor.get("maxHp", 1))))
+	if hp <= 0:
+		return false
+	var max_hp := maxi(1, int(actor.get("maxHp", 1)))
+	var hp_percent := int(ceil(float(hp) / float(max_hp) * 100.0))
+	var threshold_percent := clampi(int(settings.get(AutoCaptureSettingsModel.HP_PERCENT_KEY, AutoCaptureSettingsModel.MAX_HP_PERCENT)), AutoCaptureSettingsModel.MIN_HP_PERCENT, AutoCaptureSettingsModel.MAX_HP_PERCENT)
+	if hp_percent > threshold_percent:
+		return false
+	var level := maxi(1, int(actor.get("level", 1)))
+	if not AutoCaptureSettingsModel.level_matches(
+		level,
+		str(settings.get(AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY, AutoCaptureSettingsModel.COMPARATOR_EQ)),
+		int(settings.get(AutoCaptureSettingsModel.LEVEL_VALUE_KEY, AutoCaptureSettingsModel.MIN_LEVEL))
+	):
+		return false
+	if str(settings.get(AutoCaptureSettingsModel.TARGET_MODE_KEY, AutoCaptureSettingsModel.TARGET_ALL)) == AutoCaptureSettingsModel.TARGET_ALL:
+		return true
+	var target_form_id := str(settings.get(AutoCaptureSettingsModel.TARGET_FORM_ID_KEY, ""))
+	var manual_text := AutoCaptureSettingsModel.clean_manual_text(str(settings.get(AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY, "")))
+	if target_form_id == "" and manual_text == "":
+		return false
+	if target_form_id != "" and str(actor.get("formId", actor.get("templateId", ""))) == target_form_id:
+		return true
+	if manual_text == "":
+		return false
+	var needle := manual_text.to_lower()
+	for key in ["name", "formName", "formId", "templateId", "lineName", "subtypeName"]:
+		if str(actor.get(key, "")).to_lower().find(needle) >= 0:
+			return true
+	return false
+
+
+func _battle_auto_has_capture_space() -> bool:
+	return (
+		PlayerProgressModel.party_pet_instances(player_profile).size() < PlayerProgressModel.PARTY_LIMIT
+		or PlayerProgressModel.storage_pet_instances(player_profile).size() < PlayerProgressModel.STORAGE_LIMIT
+	)
 
 
 func _battle_auto_submit_item_action(item_id: String, target_id: String = "") -> bool:
@@ -8318,6 +8902,15 @@ func _build_hud() -> void:
 		_set_auto_settings_tab("hang")
 	)
 	auto_settings_tab_row.add_child(auto_settings_hang_tab_button)
+	auto_settings_capture_tab_button = Button.new()
+	auto_settings_capture_tab_button.text = "捕捉"
+	auto_settings_capture_tab_button.toggle_mode = true
+	auto_settings_capture_tab_button.custom_minimum_size = Vector2(0, 42)
+	auto_settings_capture_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_capture_tab_button.pressed.connect(func() -> void:
+		_set_auto_settings_tab("capture")
+	)
+	auto_settings_tab_row.add_child(auto_settings_capture_tab_button)
 
 	var auto_settings_scroll := ScrollContainer.new()
 	auto_settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -9033,16 +9626,18 @@ func _trigger_encounter(zone: Dictionary) -> void:
 		return
 	player.clear_move_target()
 	_clear_navigation_state()
-	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng)
+	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
 	encounter_active = true
 	_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
 
 
+func _encounter_enemy_count_fallback() -> int:
+	return 10 if PlayerProgressModel.training_partner_count(player_profile) > 0 else 1
+
+
 func _battle_state_for_encounter_zone(zone: Dictionary) -> Dictionary:
-	var has_training_partners := PlayerProgressModel.training_partner_count(player_profile) > 0
-	var fallback_enemy_count := 10 if has_training_partners else 1
-	var enemy_count := EncounterModel.enemy_count(zone, fallback_enemy_count)
-	if enemy_count > 1:
+	var enemy_count := EncounterModel.enemy_count(zone, _encounter_enemy_count_fallback())
+	if enemy_count > 1 or str(zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10:
 		return BattleModel.create_training_partner_battle(zone, enemy_count)
 	return BattleModel.create_wild_battle(zone)
 
@@ -9077,8 +9672,8 @@ func _close_encounter() -> void:
 func _start_battle_from_encounter() -> void:
 	if not encounter_active or active_encounter_zone.is_empty():
 		return
-	var zone := EncounterModel.zone_with_selected_wild_pet(active_encounter_zone, encounter_rng)
-	_start_battle(BattleModel.create_wild_battle(zone))
+	var zone := EncounterModel.zone_with_selected_wild_pet(active_encounter_zone, encounter_rng, _encounter_enemy_count_fallback())
+	_start_battle(_battle_state_for_encounter_zone(zone))
 
 
 func _refresh_battle_target_seed() -> void:
@@ -10236,6 +10831,8 @@ func _refresh_auto_settings_panel() -> void:
 	_apply_auto_settings_tab_buttons()
 	if auto_settings_active_tab == "hang":
 		_refresh_hang_settings_tab()
+	elif auto_settings_active_tab == "capture":
+		_refresh_auto_capture_settings_tab()
 	else:
 		_refresh_auto_battle_settings_tab()
 
@@ -10339,8 +10936,110 @@ func _refresh_hang_settings_tab() -> void:
 	auto_settings_controls["hangCloseButton"] = close_button
 
 
+func _refresh_auto_capture_settings_tab() -> void:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	_add_auto_settings_section("自动捉宠")
+	_add_auto_settings_checkbox(
+		"自动捉宠",
+		AutoCaptureSettingsModel.ENABLED_KEY,
+		bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
+	)
+	_add_auto_settings_option(
+		"目标",
+		AutoCaptureSettingsModel.TARGET_MODE_KEY,
+		AutoCaptureSettingsModel.target_mode_options(),
+		str(settings.get(AutoCaptureSettingsModel.TARGET_MODE_KEY, AutoCaptureSettingsModel.TARGET_ALL))
+	)
+	_add_auto_settings_option(
+		"图鉴",
+		AutoCaptureSettingsModel.TARGET_FORM_ID_KEY,
+		_auto_capture_form_options(),
+		str(settings.get(AutoCaptureSettingsModel.TARGET_FORM_ID_KEY, ""))
+	)
+	_add_auto_settings_line_edit(
+		"手动输入",
+		AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY,
+		str(settings.get(AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY, ""))
+	)
+	_add_auto_settings_section("捕捉条件")
+	_add_auto_settings_int_spinbox(
+		"血量低于",
+		AutoCaptureSettingsModel.HP_PERCENT_KEY,
+		int(settings.get(AutoCaptureSettingsModel.HP_PERCENT_KEY, AutoCaptureSettingsModel.MAX_HP_PERCENT)),
+		AutoCaptureSettingsModel.MIN_HP_PERCENT,
+		AutoCaptureSettingsModel.MAX_HP_PERCENT,
+		"%"
+	)
+	var level_row := _auto_settings_row("等级")
+	var comparator := OptionButton.new()
+	comparator.custom_minimum_size = Vector2(86, 40)
+	comparator.add_theme_font_size_override("font_size", 15)
+	var comparator_options := AutoCaptureSettingsModel.level_comparator_options()
+	var selected_comparator := str(settings.get(AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY, AutoCaptureSettingsModel.COMPARATOR_EQ))
+	var selected_comparator_index := 0
+	for index in range(comparator_options.size()):
+		var option_entry := comparator_options[index] as Dictionary
+		var option_id := str(option_entry.get("id", ""))
+		comparator.add_item(str(option_entry.get("label", option_id)), index)
+		comparator.set_item_metadata(index, option_id)
+		if option_id == selected_comparator:
+			selected_comparator_index = index
+	comparator.select(selected_comparator_index)
+	comparator.item_selected.connect(func(index: int) -> void:
+		_set_auto_settings_value(AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY, str(comparator.get_item_metadata(index)))
+	)
+	level_row.add_child(comparator)
+	auto_settings_controls[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = comparator
+	var level_spinbox := SpinBox.new()
+	level_spinbox.min_value = AutoCaptureSettingsModel.MIN_LEVEL
+	level_spinbox.max_value = AutoCaptureSettingsModel.MAX_LEVEL
+	level_spinbox.step = 1
+	level_spinbox.rounded = true
+	level_spinbox.prefix = "Lv"
+	level_spinbox.value = float(clampi(int(settings.get(AutoCaptureSettingsModel.LEVEL_VALUE_KEY, AutoCaptureSettingsModel.MIN_LEVEL)), AutoCaptureSettingsModel.MIN_LEVEL, AutoCaptureSettingsModel.MAX_LEVEL))
+	level_spinbox.custom_minimum_size = Vector2(0, 40)
+	level_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	level_spinbox.add_theme_font_size_override("font_size", 15)
+	level_spinbox.value_changed.connect(func(next_value: float) -> void:
+		_set_auto_settings_value(AutoCaptureSettingsModel.LEVEL_VALUE_KEY, int(next_value))
+	)
+	level_row.add_child(level_spinbox)
+	auto_settings_controls[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = level_spinbox
+	_add_auto_settings_section("工具与筛选")
+	_add_auto_settings_option(
+		"工具优先",
+		AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY,
+		AutoCaptureSettingsModel.capture_tool_options(),
+		str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID))
+	)
+	_add_auto_settings_option(
+		"无匹配时",
+		AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY,
+		AutoCaptureSettingsModel.no_target_action_options(),
+		str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, AutoCaptureSettingsModel.NO_TARGET_ESCAPE))
+	)
+	_add_auto_settings_pet_slot_option(
+		"宠物技能",
+		AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY,
+		int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT))
+	)
+	_add_auto_settings_checkbox(
+		"低战力丢弃",
+		AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
+		bool(settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, true))
+	)
+	_add_auto_settings_int_spinbox(
+		"丢弃低于",
+		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
+		int(settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)),
+		AutoCaptureSettingsModel.MIN_POWER,
+		AutoCaptureSettingsModel.MAX_POWER,
+		"战力"
+	)
+
+
 func _set_auto_settings_tab(tab: String) -> void:
-	auto_settings_active_tab = "hang" if tab == "hang" else "battle"
+	auto_settings_active_tab = tab if ["battle", "hang", "capture"].has(tab) else "battle"
 	_refresh_auto_settings_panel()
 
 
@@ -10349,6 +11048,8 @@ func _apply_auto_settings_tab_buttons() -> void:
 		auto_settings_battle_tab_button.button_pressed = auto_settings_active_tab == "battle"
 	if auto_settings_hang_tab_button != null:
 		auto_settings_hang_tab_button.button_pressed = auto_settings_active_tab == "hang"
+	if auto_settings_capture_tab_button != null:
+		auto_settings_capture_tab_button.button_pressed = auto_settings_active_tab == "capture"
 
 
 func _add_auto_settings_section(text: String) -> void:
@@ -10406,13 +11107,17 @@ func _add_auto_settings_checkbox(label_text: String, key: String, value: bool) -
 
 
 func _add_auto_settings_spinbox(label_text: String, key: String, value: int, suffix: String = "") -> SpinBox:
+	return _add_auto_settings_int_spinbox(label_text, key, value, AutoBattleSettingsModel.MIN_HP_PERCENT, AutoBattleSettingsModel.MAX_HP_PERCENT, suffix)
+
+
+func _add_auto_settings_int_spinbox(label_text: String, key: String, value: int, min_value: int, max_value: int, suffix: String = "") -> SpinBox:
 	var row := _auto_settings_row(label_text)
 	var spinbox := SpinBox.new()
-	spinbox.min_value = AutoBattleSettingsModel.MIN_HP_PERCENT
-	spinbox.max_value = AutoBattleSettingsModel.MAX_HP_PERCENT
+	spinbox.min_value = min_value
+	spinbox.max_value = max_value
 	spinbox.step = 1
 	spinbox.rounded = true
-	spinbox.value = float(clampi(value, AutoBattleSettingsModel.MIN_HP_PERCENT, AutoBattleSettingsModel.MAX_HP_PERCENT))
+	spinbox.value = float(clampi(value, min_value, max_value))
 	spinbox.suffix = suffix
 	spinbox.custom_minimum_size = Vector2(0, 40)
 	spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -10423,6 +11128,22 @@ func _add_auto_settings_spinbox(label_text: String, key: String, value: int, suf
 	row.add_child(spinbox)
 	auto_settings_controls[key] = spinbox
 	return spinbox
+
+
+func _add_auto_settings_line_edit(label_text: String, key: String, value: String) -> LineEdit:
+	var row := _auto_settings_row(label_text)
+	var line_edit := LineEdit.new()
+	line_edit.text = value
+	line_edit.placeholder_text = "可输入名字或图鉴ID"
+	line_edit.custom_minimum_size = Vector2(0, 40)
+	line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line_edit.add_theme_font_size_override("font_size", 15)
+	line_edit.text_changed.connect(func(next_text: String) -> void:
+		_set_auto_settings_value(key, next_text)
+	)
+	row.add_child(line_edit)
+	auto_settings_controls[key] = line_edit
+	return line_edit
 
 
 func _add_auto_settings_heal_option(index: int, selected_source_id: String) -> OptionButton:
@@ -10490,13 +11211,63 @@ func _auto_settings_heal_priority_slots(settings: Dictionary) -> Array[String]:
 	return priority.slice(0, AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS)
 
 
+func _auto_capture_form_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = [{
+		"id": "",
+		"label": "未指定",
+	}]
+	for form in PetTemplateCatalog.forms():
+		var form_id := str(form.get("formId", ""))
+		if form_id == "":
+			continue
+		options.append({
+			"id": form_id,
+			"label": str(form.get("formName", form_id)),
+		})
+	return options
+
+
 func _set_auto_settings_value(key: String, value) -> void:
 	if key == HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
 		_set_hang_settings_value(key, value)
 		return
+	if _auto_capture_settings_keys().has(key):
+		_set_auto_capture_settings_value(key, value)
+		return
 	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
 	settings[key] = int(value) if key == AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY or key == AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY else value
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
+func _auto_capture_settings_keys() -> Array[String]:
+	return [
+		AutoCaptureSettingsModel.ENABLED_KEY,
+		AutoCaptureSettingsModel.TARGET_MODE_KEY,
+		AutoCaptureSettingsModel.TARGET_FORM_ID_KEY,
+		AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY,
+		AutoCaptureSettingsModel.HP_PERCENT_KEY,
+		AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY,
+		AutoCaptureSettingsModel.LEVEL_VALUE_KEY,
+		AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY,
+		AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY,
+		AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY,
+		AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
+		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
+	]
+
+
+func _set_auto_capture_settings_value(key: String, value) -> void:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	match key:
+		AutoCaptureSettingsModel.ENABLED_KEY, AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY:
+			settings[key] = bool(value)
+		AutoCaptureSettingsModel.HP_PERCENT_KEY, AutoCaptureSettingsModel.LEVEL_VALUE_KEY, AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY:
+			settings[key] = int(value)
+		_:
+			settings[key] = str(value)
+	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 
@@ -11668,10 +12439,18 @@ func _battle_start_pending_round() -> void:
 		return
 	var player_command_id := str(battle_pending_player_command.get("command", ""))
 	if player_command_id != "switch_pet" and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
-		battle_pending_pet_command = {
-			"command": "attack",
-			"targetId": battle_selected_target_id,
-		}
+		if bool(battle_pending_player_command.get("captureHold", false)):
+			battle_pending_pet_command = {
+				"command": "defend",
+				"targetId": "",
+				"skillId": BattleModel.PET_SKILL_DEFEND,
+				"captureHold": true,
+			}
+		else:
+			battle_pending_pet_command = {
+				"command": "attack",
+				"targetId": battle_selected_target_id,
+			}
 	_refresh_battle_target_seed()
 	battle_event_queue = BattleModel.build_player_pet_round_events(
 		battle_state,
@@ -13352,7 +14131,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		return
 	var visual_scale := _battle_actor_visual_scale()
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
-	var large_formation: bool = (battle_state.get("actors", []) as Array).size() > 10
+	var large_formation := _battle_uses_10v10_formation_template()
 	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
 	pos += event_offset
 	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
@@ -13770,13 +14549,16 @@ func _smooth_unit(value: float) -> float:
 
 
 func _battle_actor_visual_scale() -> float:
-	var actors: Array = battle_state.get("actors", [])
 	var scale := 1.0
-	if actors.size() > 10:
+	if _battle_uses_10v10_formation_template():
 		scale = 0.74
 	if _layout_size().y < 460.0:
 		scale *= 0.84
 	return scale
+
+
+func _battle_uses_10v10_formation_template() -> bool:
+	return BattleModel.uses_10v10_formation(battle_state)
 
 
 func _draw_battle_hp_bar(actor: Dictionary, center: Vector2, alpha: float, visual_scale: float) -> void:
@@ -13799,7 +14581,7 @@ func _battle_slot_world_position(slot_id: String) -> Vector2:
 	var slot_offset := clampi(slot_index - 1, 0, 4)
 	var message_top := viewport_size.y - 66.0 - 18.0
 	var safe_bottom := message_top - 26.0
-	var large_formation: bool = (battle_state.get("actors", []) as Array).size() > 10
+	var large_formation := _battle_uses_10v10_formation_template()
 	var step_x := 54.0 if large_formation else 34.0
 	var step_y := 28.0 if large_formation else 18.0
 	if viewport_size.y < 460.0:

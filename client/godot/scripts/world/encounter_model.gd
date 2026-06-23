@@ -1,6 +1,7 @@
 extends RefCounted
 
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
+const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
 
 static func encounter_zones(map_data: Dictionary) -> Array:
@@ -62,11 +63,22 @@ static func encounter_rate(zone: Dictionary) -> float:
 
 
 static func enemy_count(zone: Dictionary, fallback: int = 1) -> int:
+	if zone.has("selectedEnemyCount"):
+		return clampi(int(zone.get("selectedEnemyCount", fallback)), 1, 10)
 	return clampi(int(zone.get("enemyCount", fallback)), 1, 10)
 
 
 static func wild_pet_pool(zone: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
+	if str(zone.get("wildPetPoolSource", "")) == "codex_catchable":
+		var sourced_pool := PetTemplateCatalog.catchable_wild_pet_pool(
+			maxi(1, int(zone.get("levelMin", 1))),
+			maxi(1, int(zone.get("levelMax", zone.get("levelMin", 1))))
+		)
+		for value in sourced_pool:
+			var sourced_entry := _normalized_wild_pet_entry(value)
+			if not sourced_entry.is_empty():
+				result.append(sourced_entry)
 	var raw_pool = zone.get("wildPetPool", [])
 	if raw_pool is Array:
 		for value in raw_pool:
@@ -112,10 +124,27 @@ static func selected_wild_pet(zone: Dictionary, rng: RandomNumberGenerator) -> D
 	return _with_selected_level(pool[pool.size() - 1], rng)
 
 
-static func zone_with_selected_wild_pet(zone: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+static func zone_with_selected_wild_pet(zone: Dictionary, rng: RandomNumberGenerator, fallback_enemy_count: int = 1) -> Dictionary:
 	var next_zone := zone.duplicate(true)
-	next_zone["selectedWildPet"] = selected_wild_pet(zone, rng)
+	var count := _selected_enemy_count(zone, rng, fallback_enemy_count)
+	next_zone["selectedEnemyCount"] = count
+	var selected_pets: Array[Dictionary] = []
+	if bool(zone.get("individualWildPets", false)):
+		for _index in range(count):
+			selected_pets.append(selected_wild_pet(zone, rng))
+	if selected_pets.is_empty():
+		selected_pets.append(selected_wild_pet(zone, rng))
+	next_zone["selectedWildPet"] = selected_pets[0]
+	next_zone["selectedWildPets"] = selected_pets
 	return next_zone
+
+
+static func _selected_enemy_count(zone: Dictionary, rng: RandomNumberGenerator, fallback_enemy_count: int = 1) -> int:
+	if zone.has("enemyCountMin") or zone.has("enemyCountMax"):
+		var min_count := clampi(int(zone.get("enemyCountMin", zone.get("enemyCount", 1))), 1, 10)
+		var max_count := clampi(int(zone.get("enemyCountMax", min_count)), min_count, 10)
+		return rng.randi_range(min_count, max_count)
+	return enemy_count(zone, fallback_enemy_count)
 
 
 static func _with_selected_level(entry: Dictionary, rng: RandomNumberGenerator) -> Dictionary:

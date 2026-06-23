@@ -4,11 +4,13 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
+const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
@@ -21,6 +23,7 @@ const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
 const PARTY_LIMIT := 5
+const STORAGE_LIMIT := 20
 const PET_NAME_MAX_LENGTH := 8
 const PET_REST_RECOVERY_RATIO := 0.05
 const PET_DROP_TTL_SECONDS := 600
@@ -46,6 +49,7 @@ const QUEST_STATES_KEY := "questStates"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
+const AUTO_CAPTURE_SETTINGS_KEY := AutoCaptureSettingsModel.SETTINGS_KEY
 const HANG_SETTINGS_KEY := HangSettingsModel.SETTINGS_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
 
@@ -81,6 +85,7 @@ static func default_profile() -> Dictionary:
 		"petCodexSeenFormIds": [],
 		"petCodexCapturedFormIds": [],
 		"autoBattleSettings": AutoBattleSettingsModel.default_settings(),
+		"autoCaptureSettings": AutoCaptureSettingsModel.default_settings(),
 		"hangSettings": HangSettingsModel.default_settings(),
 		"trainingPartners": [],
 	}
@@ -342,6 +347,16 @@ static func auto_battle_settings(profile: Dictionary) -> Dictionary:
 static func with_auto_battle_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(settings)
+	return normalize_profile(normalized)
+
+
+static func auto_capture_settings(profile: Dictionary) -> Dictionary:
+	return AutoCaptureSettingsModel.normalize_settings(normalize_profile(profile).get(AUTO_CAPTURE_SETTINGS_KEY, {}))
+
+
+static func with_auto_capture_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(settings)
 	return normalize_profile(normalized)
 
 
@@ -970,6 +985,8 @@ static func can_store_pet(profile: Dictionary, instance_id: String) -> Dictionar
 		return {"ok": false, "message": "没有找到这只宠物。"}
 	if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 		return {"ok": false, "message": "%s 已在兽栏。" % str(instance.get("name", "宠物"))}
+	if _storage_instance_count(normalized) >= STORAGE_LIMIT:
+		return {"ok": false, "message": "兽栏已满。"}
 	return {"ok": true, "message": "%s 可以存入兽栏。" % str(instance.get("name", "宠物"))}
 
 
@@ -1696,6 +1713,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_form_ids
 	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
 	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}))
+	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(normalized.get(AUTO_CAPTURE_SETTINGS_KEY, {}))
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 
@@ -1941,7 +1959,10 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		item_rewards = _item_amount_array(reward_result.get("added", []))
 		lost_item_rewards = _item_amount_array(reward_result.get("lost", []))
 
-	var captured_instances := _captured_pet_instances_from_state(next_profile, state)
+	var capture_result := _captured_pet_result_from_state(next_profile, state)
+	var captured_instances: Array[Dictionary] = capture_result.get("capturedPets", [])
+	var lost_captured_instances: Array[Dictionary] = capture_result.get("lostCapturedPets", [])
+	var auto_discarded_instances: Array[Dictionary] = capture_result.get("autoDiscardedPets", [])
 	if not captured_instances.is_empty():
 		var instances: Array = next_profile.get("petInstances", [])
 		for captured in captured_instances:
@@ -1959,11 +1980,13 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"itemRewards": item_rewards,
 		"lostItemRewards": lost_item_rewards,
 		"capturedPets": captured_instances,
-		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward),
+		"lostCapturedPets": lost_captured_instances,
+		"autoDiscardedPets": auto_discarded_instances,
+		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward, lost_captured_instances, auto_discarded_instances),
 	}
 
 
-static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0) -> Array[String]:
+static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0, lost_captured_instances: Array[Dictionary] = [], auto_discarded_instances: Array[Dictionary] = []) -> Array[String]:
 	var lines: Array[String] = []
 	match result:
 		"victory":
@@ -1982,6 +2005,13 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 				second_parts.append("；".join(captured_parts))
 			if not second_parts.is_empty():
 				lines.append("。".join(second_parts) + "。")
+			if not auto_discarded_instances.is_empty():
+				var discard_parts: Array[String] = []
+				for discarded in auto_discarded_instances:
+					discard_parts.append(_auto_discarded_pet_log_part(discarded))
+				lines.append("；".join(discard_parts) + "。")
+			if not lost_captured_instances.is_empty():
+				lines.append("兽栏和宠物栏满，请清理。")
 			var item_reward_text := BackpackModel.item_amounts_text(item_rewards)
 			if item_reward_text != "":
 				lines.append("获得 %s。" % item_reward_text)
@@ -2035,6 +2065,14 @@ static func _captured_pet_log_part(captured: Dictionary) -> String:
 	var level := maxi(1, int(captured.get("level", 1)))
 	var destination := "队伍已满，已送入兽栏" if str(captured.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE else "已加入队伍"
 	return "捕捉了%s Lv%d，%s" % [pet_name, level, destination]
+
+
+static func _auto_discarded_pet_log_part(captured: Dictionary) -> String:
+	var pet_name := str(captured.get("name", "宠物"))
+	var level := maxi(1, int(captured.get("level", 1)))
+	var power := maxi(0, int(captured.get("combatPower", PetPowerModel.combat_power_for_pet(captured))))
+	var threshold := maxi(0, int(captured.get("discardThreshold", AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)))
+	return "%s Lv%d 战力%d低于%d，已自动丢弃" % [pet_name, level, power, threshold]
 
 
 static func battle_exp_reward(state: Dictionary) -> int:
@@ -2207,9 +2245,22 @@ static func _owned_pet_form_counts(profile: Dictionary) -> Dictionary:
 
 
 static func _captured_pet_instances_from_state(profile: Dictionary, state: Dictionary) -> Array[Dictionary]:
+	return _captured_pet_result_from_state(profile, state).get("capturedPets", [])
+
+
+static func _captured_pet_result_from_state(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var captured_instances: Array[Dictionary] = []
+	var lost_captured_instances: Array[Dictionary] = []
+	var auto_discarded_instances: Array[Dictionary] = []
 	var serial := maxi(int(profile.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(profile)))
 	var occupied_party_count := _party_visible_instance_count(profile)
+	var occupied_storage_count := _storage_instance_count(profile)
+	var capture_settings := auto_capture_settings(profile)
+	var auto_discard_enabled := (
+		bool(capture_settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
+		and bool(capture_settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, true))
+	)
+	var auto_discard_threshold := maxi(0, int(capture_settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)))
 	for actor in _actors(state):
 		if not bool(actor.get("captured", false)):
 			continue
@@ -2218,8 +2269,14 @@ static func _captured_pet_instances_from_state(profile: Dictionary, state: Dicti
 			continue
 		var instance_id := "pet_captured_%d" % serial
 		serial += 1
-		var state_name := PET_STATE_STANDBY if occupied_party_count < PARTY_LIMIT else PET_STATE_STORAGE
-		occupied_party_count += 1
+		var state_name := PET_STATE_STANDBY
+		var can_keep := true
+		if occupied_party_count < PARTY_LIMIT:
+			state_name = PET_STATE_STANDBY
+		elif occupied_storage_count < STORAGE_LIMIT:
+			state_name = PET_STATE_STORAGE
+		else:
+			can_keep = false
 		var captured := _pet_instance_from_form(instance_id, str(actor.get("name", actor.get("formName", "宠物"))), form_id, state_name, maxi(1, int(actor.get("level", 1))), {
 			"hp": maxi(1, int(actor.get("maxHp", actor.get("hp", 1)))),
 			"maxHp": int(actor.get("maxHp", 1)),
@@ -2227,8 +2284,27 @@ static func _captured_pet_instances_from_state(profile: Dictionary, state: Dicti
 			"attack": int(actor.get("attack", 12)),
 			"defense": int(actor.get("defense", 6)),
 		})
+		if captured.is_empty():
+			continue
+		var combat_power := PetPowerModel.combat_power_for_pet(captured)
+		captured["combatPower"] = combat_power
+		if auto_discard_enabled and combat_power < auto_discard_threshold:
+			captured["discardThreshold"] = auto_discard_threshold
+			auto_discarded_instances.append(captured)
+			continue
+		if not can_keep:
+			lost_captured_instances.append(captured)
+			continue
 		captured_instances.append(captured)
-	return captured_instances
+		if state_name == PET_STATE_STORAGE:
+			occupied_storage_count += 1
+		else:
+			occupied_party_count += 1
+	return {
+		"capturedPets": captured_instances,
+		"lostCapturedPets": lost_captured_instances,
+		"autoDiscardedPets": auto_discarded_instances,
+	}
 
 
 static func _pet_instance_from_form(instance_id: String, pet_name: String, form_id: String, state: String, level: int, stat_overrides: Dictionary = {}) -> Dictionary:
@@ -2424,6 +2500,14 @@ static func _party_visible_instance_count(profile: Dictionary) -> int:
 	var count := 0
 	for instance in _pet_instances(profile):
 		if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
+			count += 1
+	return count
+
+
+static func _storage_instance_count(profile: Dictionary) -> int:
+	var count := 0
+	for instance in _pet_instances(profile):
+		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 			count += 1
 	return count
 

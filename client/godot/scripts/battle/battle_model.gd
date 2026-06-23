@@ -10,6 +10,7 @@ const SIDE_ENEMY := "enemy"
 const ROW_FRONT := "front"
 const ROW_BACK := "back"
 const SLOTS_PER_ROW := 5
+const FORMATION_TEMPLATE_10V10 := "10v10"
 const PLAYER_ACTOR_ID := "ally_player"
 const PLAYER_PET_ID := "ally_pet"
 const SPIRIT_GRACE_ALL := "spirit_grace_5"
@@ -98,6 +99,7 @@ static func create_training_partner_battle(encounter_zone: Dictionary, enemy_cou
 		if str(actor.get("side", "")) == SIDE_ALLY:
 			allies.append(actor)
 	state["id"] = "local_training_partner_battle"
+	state["formationTemplate"] = FORMATION_TEMPLATE_10V10
 	state["message"] = "%s 出现了一群野生宠物。" % str(encounter_zone.get("name", "野外"))
 	state["actors"] = _training_partner_enemy_group_actors(encounter_zone, enemy_count) + allies
 	return _with_default_player_pet_party(state)
@@ -117,6 +119,7 @@ static func default_item_bag() -> Dictionary:
 static func create_formation_preview_battle(encounter_zone: Dictionary) -> Dictionary:
 	var state := create_wild_battle(encounter_zone)
 	state["id"] = "local_formation_preview_battle"
+	state["formationTemplate"] = FORMATION_TEMPLATE_10V10
 	state["message"] = "双方阵型展开。"
 	state["actors"] = _formation_preview_actors()
 	return _with_default_player_pet_party(state)
@@ -126,6 +129,7 @@ static func create_stat_formula_test_battle(encounter_zone: Dictionary) -> Dicti
 	var zone_name := str(encounter_zone.get("name", "野外"))
 	var state := {
 		"id": "local_stat_formula_test_battle",
+		"formationTemplate": FORMATION_TEMPLATE_10V10,
 		"round": 1,
 		"phase": "command",
 		"sourceZoneId": str(encounter_zone.get("id", "")),
@@ -213,26 +217,27 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 
 
 static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, enemy_count: int) -> Array[Dictionary]:
-	var wild_pet := _wild_pet_entry_for_zone(encounter_zone)
-	var form_id := str(wild_pet.get("formId", "wuli_normal_orange_fire10"))
-	var base_name := _wild_pet_name(wild_pet, form_id)
-	var base_stats := _wild_pet_battle_stats(wild_pet, form_id)
-	var enemy_level := maxi(1, int(wild_pet.get("level", wild_pet.get("levelMin", 1))))
 	var actors: Array[Dictionary] = []
 	var count := clampi(enemy_count, 1, SLOTS_PER_ROW * 2)
 	for index in range(count):
-		var front_row := index < SLOTS_PER_ROW
-		var slot := index + 1 if front_row else index - SLOTS_PER_ROW + 1
+		var battle_slot_number := index + 1
+		var wild_pet := _wild_pet_entry_for_zone_index(encounter_zone, index)
+		var form_id := str(wild_pet.get("formId", "wuli_normal_orange_fire10"))
+		var base_name := _wild_pet_name(wild_pet, form_id)
+		var base_stats := _wild_pet_battle_stats(wild_pet, form_id)
+		var enemy_level := maxi(1, int(wild_pet.get("level", wild_pet.get("levelMin", 1))))
+		var front_row := battle_slot_number <= SLOTS_PER_ROW
+		var slot := battle_slot_number if front_row else battle_slot_number - SLOTS_PER_ROW
 		var row := ROW_FRONT if front_row else ROW_BACK
 		var actor_id := "enemy_%s_%d" % [row, slot]
-		var name := "%s%d" % [base_name, index + 1]
+		var name := "%s%d" % [base_name, battle_slot_number]
 		var max_hp := maxi(1, int(base_stats.get("maxHp", 80)) + index * 4)
 		var actor := _make_actor(
 			actor_id,
 			name,
 			SIDE_ENEMY,
 			"wild_pet",
-			slot_id(SIDE_ENEMY, row, slot),
+			slot_id_for_number(SIDE_ENEMY, battle_slot_number),
 			int(base_stats.get("hp", max_hp)),
 			max_hp,
 			int(base_stats.get("quick", base_stats.get("agility", 48))) + (index % SLOTS_PER_ROW) * 2,
@@ -244,6 +249,17 @@ static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, ene
 		actor["level"] = enemy_level
 		actors.append(actor)
 	return actors
+
+
+static func slot_id_for_number(side: String, battle_slot_number: int) -> String:
+	var number := clampi(battle_slot_number, 1, SLOTS_PER_ROW * 2)
+	var row := ROW_FRONT if number <= SLOTS_PER_ROW else ROW_BACK
+	var row_slot := number if row == ROW_FRONT else number - SLOTS_PER_ROW
+	return slot_id(side, row, row_slot)
+
+
+static func uses_10v10_formation(state: Dictionary) -> bool:
+	return str(state.get("formationTemplate", "")) == FORMATION_TEMPLATE_10V10
 
 
 static func _stat_formula_test_actors() -> Array[Dictionary]:
@@ -334,6 +350,17 @@ static func _wild_pet_entry_for_zone(encounter_zone: Dictionary) -> Dictionary:
 			"agility": 48,
 		},
 	})
+
+
+static func _wild_pet_entry_for_zone_index(encounter_zone: Dictionary, index: int) -> Dictionary:
+	var selected_values = encounter_zone.get("selectedWildPets", [])
+	if selected_values is Array:
+		var selected_array := selected_values as Array
+		if index >= 0 and index < selected_array.size() and selected_array[index] is Dictionary:
+			var selected_entry := _normalized_wild_pet_entry(selected_array[index] as Dictionary)
+			if not selected_entry.is_empty():
+				return selected_entry
+	return _wild_pet_entry_for_zone(encounter_zone)
 
 
 static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
@@ -855,6 +882,7 @@ static func build_player_pet_round_events(state: Dictionary, player_command: Dic
 	var player_id := player_actor_id(state)
 	var pet_id := controlled_pet_id(state)
 	var player_command_id := str(player_command.get("command", "attack"))
+	var allied_ai_should_hold := player_command_id == "capture" or bool(player_command.get("captureHold", false)) or bool(pet_command.get("captureHold", false))
 	if player_id != "":
 		var player_event := _make_player_command_event(state, player_id, player_command_id, player_command, enemy_target_id, sequence)
 		if not player_event.is_empty():
@@ -871,6 +899,10 @@ static func build_player_pet_round_events(state: Dictionary, player_command: Dic
 
 	for ally_id in living_actor_ids(state, SIDE_ALLY):
 		if ally_id == player_id or ally_id == pet_id:
+			continue
+		if allied_ai_should_hold:
+			entries.append(_make_defend_event(state, ally_id, sequence))
+			sequence += 1
 			continue
 		var npc_target_id := enemy_target_id if enemy_target_id != "" else living_enemy_id(state)
 		if npc_target_id != "":
@@ -894,6 +926,10 @@ static func _guarding_actor_ids_for_commands(state: Dictionary, player_command: 
 	var pet_id := controlled_pet_id(state)
 	if pet_id != "" and str(pet_command.get("command", "")) == "defend":
 		ids.append(pet_id)
+	if str(player_command.get("command", "")) == "capture" or bool(player_command.get("captureHold", false)) or bool(pet_command.get("captureHold", false)):
+		for ally_id in living_actor_ids(state, SIDE_ALLY):
+			if ally_id != player_id and not ids.has(ally_id):
+				ids.append(ally_id)
 	return ids
 
 

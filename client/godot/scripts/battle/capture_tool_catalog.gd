@@ -13,6 +13,18 @@ static func ordered_tool_ids() -> Array[String]:
 	return result
 
 
+static func tool_ids_by_power(descending: bool = true) -> Array[String]:
+	var ids := ordered_tool_ids()
+	ids.sort_custom(func(left: String, right: String) -> bool:
+		var left_power := capture_power_for(left)
+		var right_power := capture_power_for(right)
+		if left_power == right_power:
+			return left < right
+		return left_power > right_power if descending else left_power < right_power
+	)
+	return ids
+
+
 static func tool_for_id(tool_id: String) -> Dictionary:
 	var tool := _raw_tool_for_id(tool_id)
 	return tool if not tool.is_empty() else _empty_hand_tool()
@@ -54,6 +66,11 @@ static func chance_bonus_for(tool_id: String) -> float:
 	return clampf(float(tool.get("chanceBonus", 0.0)), 0.0, 0.8)
 
 
+static func capture_power_for(tool_id: String) -> int:
+	var tool := tool_for_id(normalized_tool_id(tool_id))
+	return clampi(int(tool.get("capturePower", 1)), 1, 100)
+
+
 static func is_consumable(tool_id: String) -> bool:
 	var normalized := normalized_tool_id(tool_id)
 	if normalized == EMPTY_HAND_ID:
@@ -92,6 +109,27 @@ static func count_for(inventory: Dictionary, tool_id: String) -> int:
 static func can_use(inventory: Dictionary, tool_id: String) -> bool:
 	var normalized := normalized_tool_id(tool_id)
 	return normalized == EMPTY_HAND_ID or count_for(inventory, normalized) > 0
+
+
+static func fallback_tool_ids_for(preferred_tool_id: String, inventory: Dictionary, include_unusable: bool = false) -> Array[String]:
+	var preferred := normalized_tool_id(preferred_tool_id)
+	var max_power := capture_power_for(preferred)
+	var result: Array[String] = []
+	for tool_id in tool_ids_by_power(true):
+		if capture_power_for(tool_id) > max_power:
+			continue
+		if not include_unusable and not can_use(inventory, tool_id):
+			continue
+		if not result.has(tool_id):
+			result.append(tool_id)
+	if not result.has(EMPTY_HAND_ID):
+		result.append(EMPTY_HAND_ID)
+	return result
+
+
+static func best_available_fallback_tool(preferred_tool_id: String, inventory: Dictionary) -> String:
+	var candidates := fallback_tool_ids_for(preferred_tool_id, inventory, false)
+	return candidates[0] if not candidates.is_empty() else EMPTY_HAND_ID
 
 
 static func consume(inventory: Dictionary, tool_id: String) -> Dictionary:
@@ -143,5 +181,6 @@ static func _empty_hand_tool() -> Dictionary:
 		"menuLabel": "空手",
 		"consumable": false,
 		"startingCount": 0,
+		"capturePower": 1,
 		"chanceBonus": 0.0,
 	}

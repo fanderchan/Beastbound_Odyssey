@@ -50,6 +50,38 @@ static func forms() -> Array[Dictionary]:
 	return result
 
 
+static func catchable_wild_pet_pool(level_min: int = 1, level_max: int = 1) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var min_level := maxi(1, level_min)
+	var max_level := maxi(min_level, level_max)
+	for form in forms():
+		var form_id := str(form.get("formId", ""))
+		if form_id == "":
+			continue
+		var capture = form.get("capture", {})
+		var capture_dict := capture as Dictionary if capture is Dictionary else {}
+		if not bool(capture_dict.get("catchable", true)):
+			continue
+		var entry := {
+			"formId": form_id,
+			"name": str(form.get("wildName", form.get("formName", "野生宠物"))),
+			"weight": maxf(0.0, float(form.get("encounterWeight", 1.0))),
+			"levelMin": min_level,
+			"levelMax": max_level,
+		}
+		var stats = form.get("baseStats", {})
+		if stats is Dictionary:
+			var stats_dict := stats as Dictionary
+			entry["battleStats"] = {
+				"maxHp": int(stats_dict.get("maxHp", 1)),
+				"attack": int(stats_dict.get("attack", 12)),
+				"defense": int(stats_dict.get("defense", 6)),
+				"agility": int(stats_dict.get("agility", 50)),
+			}
+		result.append(entry)
+	return result
+
+
 static func line_by_id(line_id: String) -> Dictionary:
 	for line in lines():
 		if str(line.get("lineId", "")) == line_id:
