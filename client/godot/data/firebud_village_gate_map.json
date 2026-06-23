@@ -147,6 +147,18 @@
       "option": "买卖"
     },
     {
+      "id": "firebud_pet_skill_trainer",
+      "name": "宠技训练师阿拓",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [8, 16],
+      "action": "训练",
+      "actionType": "pet_skill_trainer",
+      "trainerId": "firebud_pet_skill_trainer",
+      "dialog": ["宠技训练师阿拓：宠物学会的技能，可以整理到技1到技7。想换哪个技位，就在这里调整。"],
+      "option": "训练"
+    },
+    {
       "id": "firebud_equipment_keeper",
       "name": "装备商阿石",
       "kind": "npc",

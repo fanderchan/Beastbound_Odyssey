@@ -17,6 +17,7 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
+const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
@@ -185,6 +186,22 @@ var pet_rename_input: LineEdit
 var pet_rename_confirm_button: Button
 var pet_rename_cancel_button: Button
 var pet_close_button: Button
+var pet_skill_button: Button
+var pet_skill_panel: PanelContainer
+var pet_skill_title_label: Label
+var pet_skill_pet_option: OptionButton
+var pet_skill_slot_grid: GridContainer
+var pet_skill_detail_label: Label
+var pet_skill_move_up_button: Button
+var pet_skill_move_down_button: Button
+var pet_skill_forget_button: Button
+var pet_skill_learn_option: OptionButton
+var pet_skill_learn_button: Button
+var pet_skill_close_button: Button
+var pet_skill_slot_buttons: Dictionary = {}
+var pet_skill_selected_slot: int = 1
+var pet_skill_training_mode: bool = false
+var pet_skill_trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID
 var pet_selected_instance_id: String = ""
 var pet_detail_mode: String = PET_DETAIL_MODE_INSTANCE
 var pet_filter_mode: String = PET_FILTER_ALL
@@ -284,6 +301,7 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_pet_skill_training_check: bool = false
 var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
 var auto_backpack_check: bool = false
@@ -309,6 +327,7 @@ var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
 var pet_encounter_table_preview: bool = false
 var pet_capture_feedback_preview: bool = false
+var pet_skill_training_preview: bool = false
 var capture_tools_preview: bool = false
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
@@ -505,6 +524,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_pet_skill_training_check:
+		call_deferred("_run_auto_pet_skill_training_check")
 	elif auto_village_healer_check:
 		call_deferred("_run_auto_village_healer_check")
 	elif auto_record_point_check:
@@ -555,6 +576,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_encounter_table_preview")
 	elif pet_capture_feedback_preview:
 		call_deferred("_run_pet_capture_feedback_preview")
+	elif pet_skill_training_preview:
+		call_deferred("_run_pet_skill_training_preview")
 	elif capture_tools_preview:
 		call_deferred("_run_capture_tools_preview")
 	elif auto_map_transfer_check:
@@ -784,6 +807,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-pet-skill-training-check":
+			auto_pet_skill_training_check = true
 		elif arg == "--auto-village-healer-check":
 			auto_village_healer_check = true
 		elif arg == "--auto-record-point-check":
@@ -834,6 +859,8 @@ func _apply_preview_window_args() -> void:
 			pet_encounter_table_preview = true
 		elif arg == "--pet-capture-feedback-preview":
 			pet_capture_feedback_preview = true
+		elif arg == "--pet-skill-training-preview":
+			pet_skill_training_preview = true
 		elif arg == "--capture-tools-preview":
 			capture_tools_preview = true
 		elif arg == "--battle-preview":
@@ -2764,6 +2791,7 @@ func _run_auto_battle_spirit_check() -> void:
 func _run_auto_battle_action_catalog_check() -> void:
 	var errors := BattleActionCatalog.validation_errors()
 	errors.append_array(BattlePassiveCatalog.validation_errors())
+	errors.append_array(PetSkillTrainingModel.validation_errors())
 	errors.append_array(PetTemplateCatalog.validation_errors())
 	var grace_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_GRACE_ALL)
 	var moist_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_MOIST_SINGLE)
@@ -2783,7 +2811,10 @@ func _run_auto_battle_action_catalog_check() -> void:
 	item_rules_ok = item_rules_ok and bool(item_heal_rule.get("requiresSelection", false)) and bool(item_heal_rule.get("canTargetAlly", false)) and not bool(item_heal_rule.get("canTargetEnemy", true))
 	item_rules_ok = item_rules_ok and bool(item_poison_rule.get("requiresSelection", false)) and bool(item_poison_rule.get("canTargetEnemy", false)) and not bool(item_poison_rule.get("canTargetAlly", true))
 	item_rules_ok = item_rules_ok and bool(item_poison_all_rule.get("isAll", false)) and bool(item_poison_all_rule.get("canTargetEnemy", false)) and not bool(item_poison_all_rule.get("canTargetAlly", true))
-	var pet_slot_ok := str(BattleActionCatalog.pet_skill_action_for_slot(3).get("id", "")) == BattleModel.PET_SKILL_BUI_CHARGE
+	var pet_slot_ok := (
+		str(BattleActionCatalog.pet_skill_action_for_slot(3).get("id", "")) == BattleModel.PET_SKILL_BUI_CHARGE
+		and str(BattleActionCatalog.pet_skill_action_for_slot(7).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
+	)
 	var status := "ok" if errors.is_empty() and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok else "failed"
 	print("battle action catalog check ready: status=%s errors=%d spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s" % [
 		status,
@@ -6719,6 +6750,7 @@ func _run_auto_battle_passive_hover_check() -> void:
 func _run_auto_pet_template_catalog_check() -> void:
 	var catalog_errors := BattleActionCatalog.validation_errors()
 	catalog_errors.append_array(BattlePassiveCatalog.validation_errors())
+	catalog_errors.append_array(PetSkillTrainingModel.validation_errors())
 	catalog_errors.append_array(PetTemplateCatalog.validation_errors())
 	var bui_actor := BattlePassiveCatalog.apply_actor_passive_effects(PetTemplateCatalog.actor_from_form(
 		"bui_normal_red_fire10",
@@ -6817,6 +6849,141 @@ func _run_auto_pet_template_catalog_check() -> void:
 	if not catalog_errors.is_empty():
 		print("pet template catalog errors: %s" % str(catalog_errors))
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_skill_training_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	player_profile[PlayerProgressModel.STONE_COINS_KEY] = 200
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	pet_selected_instance_id = "pet_bui_main"
+	var catalog_errors := BattleActionCatalog.validation_errors()
+	catalog_errors.append_array(PetSkillTrainingModel.validation_errors())
+	catalog_errors.append_array(PetTemplateCatalog.validation_errors())
+	var trainer_found := not InteractionModel.find_by_id(IsoMapModel.load_map(MAP_DATA_PATHS["firebud_village_gate"]), "firebud_pet_skill_trainer").is_empty()
+	var before_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var default_slots := PlayerProgressModel.pet_skill_slots_for_instance(before_pet)
+	var default_slots_ok := (
+		default_slots.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		and str(default_slots[0]) == BattleModel.PET_SKILL_ATTACK
+		and str(default_slots[1]) == BattleModel.PET_SKILL_DEFEND
+		and str(default_slots[5]) == BattleModel.PET_SKILL_STONE_GAZE
+		and str(default_slots[6]) == ""
+	)
+	var before_coins := PlayerProgressModel.stone_coins(player_profile)
+	var learn_result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	player_profile = learn_result.get("profile", player_profile)
+	var after_learn_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var after_learn_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_learn_pet)
+	var after_learn_skills = after_learn_pet.get("activeSkillIds", [])
+	var learned_focus := after_learn_skills is Array and (after_learn_skills as Array).has(BattleModel.PET_SKILL_FOCUS_BITE)
+	var learn_ok := (
+		bool(learn_result.get("ok", false))
+		and PlayerProgressModel.stone_coins(player_profile) == before_coins - PetSkillTrainingModel.skill_cost(BattleModel.PET_SKILL_FOCUS_BITE)
+		and learned_focus
+		and str(after_learn_slots[6]) == BattleModel.PET_SKILL_FOCUS_BITE
+	)
+	var move_result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, 7, -1)
+	player_profile = move_result.get("profile", player_profile)
+	var after_move_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var after_move_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_move_pet)
+	var move_ok := (
+		bool(move_result.get("ok", false))
+		and str(after_move_slots[5]) == BattleModel.PET_SKILL_FOCUS_BITE
+		and str(after_move_slots[6]) == BattleModel.PET_SKILL_STONE_GAZE
+	)
+	var actor := PlayerProgressModel.actor_from_pet_instance(after_move_pet, BattleModel.PLAYER_PET_ID, BattleModel.SIDE_ALLY, "ally.front.3")
+	var actor_slot_ok := str(PetTemplateCatalog.pet_skill_action_for_actor_slot(actor, 6).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
+	pet_skill_selected_slot = 6
+	_open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	var panel_ok := (
+		pet_skill_panel != null
+		and pet_skill_panel.visible
+		and pet_skill_learn_button != null
+		and pet_skill_forget_button != null
+		and pet_skill_forget_button.visible
+		and not pet_skill_forget_button.disabled
+	)
+	_close_pet_skill_panel()
+	var battle_slot_ok := false
+	var button_label_ok := false
+	var loaded := _load_map("firebud_village_gate", "doctor_record")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if loaded and not zones.is_empty():
+		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+		var battle_pet := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
+		battle_slot_ok = str(PetTemplateCatalog.pet_skill_action_for_actor_slot(battle_pet, 6).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
+		_set_battle_command_owner("pet")
+		button_label_ok = _button_text_for_battle_command("switch_pet").find("集中咬击") >= 0
+	var forget_result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE)
+	player_profile = forget_result.get("profile", player_profile)
+	var after_forget_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var after_forget_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_forget_pet)
+	var after_forget_skills = after_forget_pet.get("activeSkillIds", [])
+	var forgotten_skills = after_forget_pet.get("forgottenSkillIds", [])
+	var forget_ok := (
+		bool(forget_result.get("ok", false))
+		and after_forget_skills is Array
+		and not (after_forget_skills as Array).has(BattleModel.PET_SKILL_FOCUS_BITE)
+		and forgotten_skills is Array
+		and (forgotten_skills as Array).has(BattleModel.PET_SKILL_FOCUS_BITE)
+		and not after_forget_slots.has(BattleModel.PET_SKILL_FOCUS_BITE)
+		and str(after_forget_slots[5]) == ""
+	)
+	var status := "ok" if catalog_errors.is_empty() and trainer_found and default_slots_ok and learn_ok and move_ok and actor_slot_ok and battle_slot_ok and button_label_ok and panel_ok and forget_ok else "failed"
+	print("pet skill training check ready: status=%s errors=%d trainer=%s default=%s learn=%s move=%s forget=%s actor_slot=%s battle_slot=%s button=%s panel=%s slots=%s afterForgetSlots=%s" % [
+		status,
+		catalog_errors.size(),
+		str(trainer_found),
+		str(default_slots_ok),
+		str(learn_ok),
+		str(move_ok),
+		str(forget_ok),
+		str(actor_slot_ok),
+		str(battle_slot_ok),
+		str(button_label_ok),
+		str(panel_ok),
+		str(after_move_slots),
+		str(after_forget_slots),
+	])
+	if not catalog_errors.is_empty():
+		print("pet skill training errors: %s" % str(catalog_errors))
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_pet_skill_training_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	player_profile[PlayerProgressModel.STONE_COINS_KEY] = 200
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	pet_selected_instance_id = "pet_bui_main"
+	_load_map("firebud_village_gate", "doctor_record")
+	_set_world_log_message("Phase68：宠技训练。")
+	await get_tree().create_timer(0.45).timeout
+	_open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	pet_skill_selected_slot = 7
+	_refresh_pet_skill_panel()
+	await get_tree().create_timer(0.85).timeout
+	var learn_result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	player_profile = learn_result.get("profile", player_profile)
+	pet_skill_selected_slot = int(learn_result.get("slot", 7))
+	_set_world_log_message(str(learn_result.get("message", "")))
+	_refresh_pet_skill_panel()
+	await get_tree().create_timer(0.95).timeout
+	var move_result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, pet_skill_selected_slot, -1)
+	player_profile = move_result.get("profile", player_profile)
+	pet_skill_selected_slot = int(move_result.get("slot", pet_skill_selected_slot))
+	_set_world_log_message(str(move_result.get("message", "")))
+	_refresh_pet_skill_panel()
+	await get_tree().create_timer(0.9).timeout
+	_close_pet_skill_panel()
+	var zones := EncounterModel.encounter_zones(map_data)
+	if not zones.is_empty():
+		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+		await get_tree().create_timer(0.45).timeout
+		_submit_player_battle_command("defend")
+		await get_tree().create_timer(1.8).timeout
+	get_tree().quit(0)
 
 
 func _auto_apply_pet_status_skill_for_check(skill_id: String, target_id: String, expected_status_id: String) -> Dictionary:
@@ -9189,6 +9356,14 @@ func _build_hud() -> void:
 	pet_rename_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_rename_button.pressed.connect(_on_pet_rename_pressed)
 	pet_button_row.add_child(pet_rename_button)
+	pet_skill_button = Button.new()
+	pet_skill_button.text = "宠技"
+	pet_skill_button.custom_minimum_size = Vector2(0, 48)
+	pet_skill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_skill_button.pressed.connect(func() -> void:
+		_open_pet_skill_panel(false)
+	)
+	pet_button_row.add_child(pet_skill_button)
 	pet_drop_button = Button.new()
 	pet_drop_button.text = "丢弃"
 	pet_drop_button.custom_minimum_size = Vector2(0, 48)
@@ -9196,6 +9371,7 @@ func _build_hud() -> void:
 	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
 	pet_button_row.add_child(pet_drop_button)
 	hud_root.add_child(pet_panel)
+	_create_pet_skill_panel()
 
 	codex_panel = _panel_container("CodexPanel")
 	codex_panel.visible = false
@@ -9988,6 +10164,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
@@ -10041,6 +10218,7 @@ func _set_interaction_target(item: Dictionary) -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	pending_interaction = item.duplicate(true)
@@ -10184,6 +10362,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -10513,6 +10692,7 @@ func _open_backpack_panel() -> void:
 	_close_shop_panel()
 	_close_equipment_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -10540,6 +10720,7 @@ func _open_equipment_panel() -> void:
 	_close_backpack_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -10941,6 +11122,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -11147,6 +11329,123 @@ func _on_shop_action_pressed() -> void:
 		_update_hud_text()
 
 
+func _create_pet_skill_panel() -> void:
+	pet_skill_panel = _panel_container("PetSkillPanel")
+	pet_skill_panel.visible = false
+	pet_skill_panel.z_index = 25
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 8)
+	pet_skill_panel.add_child(column)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	column.add_child(header)
+	pet_skill_title_label = Label.new()
+	pet_skill_title_label.text = "宠物技能"
+	pet_skill_title_label.add_theme_font_size_override("font_size", 21)
+	pet_skill_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(pet_skill_title_label)
+	pet_skill_close_button = Button.new()
+	pet_skill_close_button.text = "关闭"
+	pet_skill_close_button.custom_minimum_size = Vector2(92, 44)
+	pet_skill_close_button.pressed.connect(_close_pet_skill_panel)
+	header.add_child(pet_skill_close_button)
+
+	var selector_row := HBoxContainer.new()
+	selector_row.add_theme_constant_override("separation", 8)
+	column.add_child(selector_row)
+	var selector_label := Label.new()
+	selector_label.text = "宠物"
+	selector_label.custom_minimum_size = Vector2(52, 40)
+	selector_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	selector_row.add_child(selector_label)
+	pet_skill_pet_option = OptionButton.new()
+	pet_skill_pet_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_skill_pet_option.custom_minimum_size = Vector2(0, 40)
+	pet_skill_pet_option.item_selected.connect(_on_pet_skill_pet_selected)
+	selector_row.add_child(pet_skill_pet_option)
+
+	var body := HBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 10)
+	column.add_child(body)
+
+	pet_skill_slot_grid = GridContainer.new()
+	pet_skill_slot_grid.columns = 2
+	pet_skill_slot_grid.custom_minimum_size = Vector2(250, 0)
+	pet_skill_slot_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_skill_slot_grid.add_theme_constant_override("h_separation", 8)
+	pet_skill_slot_grid.add_theme_constant_override("v_separation", 8)
+	body.add_child(pet_skill_slot_grid)
+	for slot in range(1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1):
+		var button := Button.new()
+		button.toggle_mode = true
+		button.custom_minimum_size = Vector2(118, 54)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 15)
+		button.pressed.connect(_select_pet_skill_slot.bind(slot))
+		pet_skill_slot_grid.add_child(button)
+		pet_skill_slot_buttons[slot] = button
+
+	var detail_column := VBoxContainer.new()
+	detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_column.add_theme_constant_override("separation", 8)
+	body.add_child(detail_column)
+	var detail_scroll := ScrollContainer.new()
+	detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_column.add_child(detail_scroll)
+	pet_skill_detail_label = Label.new()
+	pet_skill_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pet_skill_detail_label.add_theme_font_size_override("font_size", 16)
+	pet_skill_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_scroll.add_child(pet_skill_detail_label)
+
+	var move_row := HBoxContainer.new()
+	move_row.add_theme_constant_override("separation", 8)
+	detail_column.add_child(move_row)
+	pet_skill_move_up_button = Button.new()
+	pet_skill_move_up_button.text = "上移"
+	pet_skill_move_up_button.custom_minimum_size = Vector2(0, 44)
+	pet_skill_move_up_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_skill_move_up_button.pressed.connect(func() -> void:
+		_on_pet_skill_move_pressed(-1)
+	)
+	move_row.add_child(pet_skill_move_up_button)
+	pet_skill_move_down_button = Button.new()
+	pet_skill_move_down_button.text = "下移"
+	pet_skill_move_down_button.custom_minimum_size = Vector2(0, 44)
+	pet_skill_move_down_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_skill_move_down_button.pressed.connect(func() -> void:
+		_on_pet_skill_move_pressed(1)
+	)
+	move_row.add_child(pet_skill_move_down_button)
+	pet_skill_forget_button = Button.new()
+	pet_skill_forget_button.text = "遗忘"
+	pet_skill_forget_button.custom_minimum_size = Vector2(0, 44)
+	pet_skill_forget_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_skill_forget_button.pressed.connect(_on_pet_skill_forget_pressed)
+	move_row.add_child(pet_skill_forget_button)
+
+	var learn_row := HBoxContainer.new()
+	learn_row.add_theme_constant_override("separation", 8)
+	detail_column.add_child(learn_row)
+	pet_skill_learn_option = OptionButton.new()
+	pet_skill_learn_option.custom_minimum_size = Vector2(0, 44)
+	pet_skill_learn_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	learn_row.add_child(pet_skill_learn_option)
+	pet_skill_learn_button = Button.new()
+	pet_skill_learn_button.text = "学习"
+	pet_skill_learn_button.custom_minimum_size = Vector2(96, 44)
+	pet_skill_learn_button.pressed.connect(_on_pet_skill_learn_pressed)
+	learn_row.add_child(pet_skill_learn_button)
+	hud_root.add_child(pet_skill_panel)
+
+
 func _open_pet_panel() -> void:
 	if battle_active:
 		return
@@ -11156,6 +11455,7 @@ func _open_pet_panel() -> void:
 	_close_backpack_panel()
 	_close_equipment_panel()
 	_close_shop_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -11176,6 +11476,247 @@ func _close_pet_panel() -> void:
 		_layout_hud()
 
 
+func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	pet_skill_training_mode = training_mode
+	pet_skill_trainer_id = trainer_id if trainer_id != "" else PetSkillTrainingModel.DEFAULT_TRAINER_ID
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
+		var active := PlayerProgressModel.active_pet(player_profile)
+		if not active.is_empty():
+			pet_selected_instance_id = str(active.get("instanceId", ""))
+		else:
+			for instance in PlayerProgressModel.all_pet_instances(player_profile):
+				pet_selected_instance_id = str(instance.get("instanceId", ""))
+				break
+	pet_skill_selected_slot = clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	pet_skill_panel.visible = true
+	_refresh_pet_skill_panel()
+	_layout_hud()
+
+
+func _close_pet_skill_panel() -> void:
+	if pet_skill_panel != null:
+		pet_skill_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_pet_skill_panel() -> void:
+	if pet_skill_panel == null or pet_skill_pet_option == null or pet_skill_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var all_instances := PlayerProgressModel.all_pet_instances(player_profile)
+	if pet_selected_instance_id != "" and PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
+		pet_selected_instance_id = ""
+	if pet_selected_instance_id == "" and not all_instances.is_empty():
+		pet_selected_instance_id = str(all_instances[0].get("instanceId", ""))
+	if pet_skill_title_label != null:
+		pet_skill_title_label.text = "%s：%s" % ["宠技训练" if pet_skill_training_mode else "宠物技能", PetSkillTrainingModel.trainer_label(pet_skill_trainer_id) if pet_skill_training_mode else "技能槽"]
+	_sync_pet_skill_pet_option(all_instances)
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	_refresh_pet_skill_slots(selected)
+	_refresh_pet_skill_detail(selected)
+	_refresh_pet_skill_learn_controls(selected)
+
+
+func _sync_pet_skill_pet_option(instances: Array[Dictionary]) -> void:
+	pet_skill_pet_option.clear()
+	var selected_index := 0
+	for index in range(instances.size()):
+		var instance := instances[index]
+		var instance_id := str(instance.get("instanceId", ""))
+		var label := "%s Lv%d %s" % [
+			str(instance.get("name", "宠物")),
+			int(instance.get("level", 1)),
+			PlayerProgressModel.state_label(str(instance.get("state", PlayerProgressModel.PET_STATE_STANDBY))),
+		]
+		pet_skill_pet_option.add_item(label, index)
+		pet_skill_pet_option.set_item_metadata(index, instance_id)
+		if instance_id == pet_selected_instance_id:
+			selected_index = index
+	if pet_skill_pet_option.get_item_count() > 0:
+		pet_skill_pet_option.select(selected_index)
+	pet_skill_pet_option.disabled = pet_skill_pet_option.get_item_count() <= 1
+
+
+func _refresh_pet_skill_slots(selected: Dictionary) -> void:
+	var options := PlayerProgressModel.pet_skill_slot_options_for_instance(selected) if not selected.is_empty() else []
+	for slot in range(1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1):
+		var button = pet_skill_slot_buttons.get(slot, null)
+		if button == null:
+			continue
+		var button_ref := button as Button
+		var label := "未配置"
+		var skill_id := ""
+		if slot - 1 < options.size():
+			var option := options[slot - 1] as Dictionary
+			label = str(option.get("label", "未配置"))
+			skill_id = str(option.get("skillId", ""))
+		button_ref.text = "技%d\n%s" % [slot, label]
+		button_ref.disabled = selected.is_empty()
+		button_ref.button_pressed = slot == pet_skill_selected_slot
+		button_ref.tooltip_text = label if skill_id != "" else "空技能位"
+
+
+func _refresh_pet_skill_detail(selected: Dictionary) -> void:
+	if selected.is_empty():
+		pet_skill_detail_label.text = "请选择宠物。"
+		_sync_pet_skill_move_buttons(selected, "")
+		return
+	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var slots := PlayerProgressModel.pet_skill_slots_for_instance(selected)
+	var skill_id := str(slots[slot - 1]) if slot - 1 < slots.size() else ""
+	var lines: Array[String] = []
+	lines.append("%s  Lv%d  %s" % [
+		str(selected.get("name", "宠物")),
+		int(selected.get("level", 1)),
+		PlayerProgressModel.state_label(str(selected.get("state", PlayerProgressModel.PET_STATE_STANDBY))),
+	])
+	lines.append("当前：技%d" % slot)
+	if skill_id == "":
+		lines.append("技能：未配置")
+	else:
+		lines.append("技能：%s" % BattleActionCatalog.label_for(skill_id, skill_id))
+		lines.append("说明：%s" % PetSkillTrainingModel.skill_description(skill_id))
+		var effect_type := BattleActionCatalog.effect_type_for(skill_id)
+		if effect_type == "damage":
+			lines.append("效果：物理伤害 +%d" % BattleActionCatalog.effect_amount_bonus_for(skill_id, 0))
+		elif effect_type == "status":
+			lines.append("效果：异常状态，命中率约%d%%" % int(round(BattleActionCatalog.effect_status_hit_rate_for(skill_id, 1.0) * 100.0)))
+		elif effect_type == "defend":
+			lines.append("效果：本回合防御。")
+	lines.append("石币：%d" % PlayerProgressModel.stone_coins(player_profile))
+	pet_skill_detail_label.text = "\n".join(lines)
+	_sync_pet_skill_move_buttons(selected, skill_id)
+
+
+func _sync_pet_skill_move_buttons(selected: Dictionary, skill_id: String) -> void:
+	var has_skill := not selected.is_empty() and skill_id != ""
+	if pet_skill_move_up_button != null:
+		pet_skill_move_up_button.disabled = not has_skill or pet_skill_selected_slot <= 1
+	if pet_skill_move_down_button != null:
+		pet_skill_move_down_button.disabled = not has_skill or pet_skill_selected_slot >= PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+	if pet_skill_forget_button != null:
+		pet_skill_forget_button.visible = pet_skill_training_mode
+		var forget_check := PlayerProgressModel.can_forget_pet_skill(player_profile, pet_selected_instance_id, skill_id) if pet_skill_training_mode and has_skill else {"ok": false, "message": "请选择要遗忘的技能。"}
+		pet_skill_forget_button.disabled = not bool(forget_check.get("ok", false))
+		pet_skill_forget_button.tooltip_text = str(forget_check.get("message", ""))
+
+
+func _refresh_pet_skill_learn_controls(selected: Dictionary) -> void:
+	if pet_skill_learn_option == null or pet_skill_learn_button == null:
+		return
+	pet_skill_learn_option.visible = pet_skill_training_mode
+	pet_skill_learn_button.visible = pet_skill_training_mode
+	if not pet_skill_training_mode:
+		return
+	pet_skill_learn_option.clear()
+	var learnable_count := 0
+	if not selected.is_empty():
+		for option in PlayerProgressModel.learnable_pet_skill_options(player_profile, pet_selected_instance_id, pet_skill_trainer_id):
+			if bool(option.get("learned", false)):
+				continue
+			var skill_id := str(option.get("id", ""))
+			if skill_id == "":
+				continue
+			var cost := int(option.get("cost", PetSkillTrainingModel.DEFAULT_COST))
+			pet_skill_learn_option.add_item("%s  %d石币" % [str(option.get("label", skill_id)), cost], learnable_count)
+			pet_skill_learn_option.set_item_metadata(learnable_count, skill_id)
+			learnable_count += 1
+	if learnable_count == 0:
+		pet_skill_learn_option.add_item("没有可学技能", 0)
+		pet_skill_learn_option.set_item_metadata(0, "")
+		pet_skill_learn_button.disabled = true
+	else:
+		pet_skill_learn_option.select(0)
+		pet_skill_learn_button.disabled = selected.is_empty() or not _pet_skill_has_empty_slot(selected)
+
+
+func _pet_skill_has_empty_slot(instance: Dictionary) -> bool:
+	for option in PlayerProgressModel.pet_skill_slot_options_for_instance(instance):
+		if str(option.get("skillId", "")) == "":
+			return true
+	return false
+
+
+func _on_pet_skill_pet_selected(index: int) -> void:
+	if pet_skill_pet_option == null or index < 0 or index >= pet_skill_pet_option.get_item_count():
+		return
+	pet_selected_instance_id = str(pet_skill_pet_option.get_item_metadata(index))
+	pet_skill_selected_slot = 1
+	_refresh_pet_skill_panel()
+
+
+func _select_pet_skill_slot(slot: int) -> void:
+	pet_skill_selected_slot = clampi(slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	_refresh_pet_skill_panel()
+
+
+func _on_pet_skill_move_pressed(direction: int) -> void:
+	var result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, pet_skill_selected_slot, direction)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_skill_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+
+
+func _on_pet_skill_learn_pressed() -> void:
+	if pet_skill_learn_option == null or pet_skill_learn_option.get_item_count() <= 0:
+		return
+	var index := pet_skill_learn_option.selected
+	var skill_id := str(pet_skill_learn_option.get_item_metadata(index))
+	if skill_id == "":
+		return
+	var result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, skill_id, pet_skill_trainer_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_skill_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+
+
+func _on_pet_skill_forget_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	var slots := PlayerProgressModel.pet_skill_slots_for_instance(selected)
+	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var skill_id := str(slots[slot - 1]) if slot - 1 < slots.size() else ""
+	if skill_id == "":
+		return
+	var result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, skill_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_skill_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+
+
 func _open_codex_panel() -> void:
 	if battle_active:
 		return
@@ -11186,6 +11727,7 @@ func _open_codex_panel() -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -11211,6 +11753,7 @@ func _open_quest_panel() -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -11237,6 +11780,7 @@ func _open_training_partner_panel() -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_auto_settings_panel()
@@ -11311,6 +11855,7 @@ func _open_auto_settings_panel() -> void:
 	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
+	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_training_partner_panel()
@@ -11693,8 +12238,9 @@ func _auto_settings_row(label_text: String) -> HBoxContainer:
 
 func _auto_settings_pet_slot_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
+	var active_pet := PlayerProgressModel.active_pet(player_profile)
 	for slot in range(AutoBattleSettingsModel.MIN_PET_SKILL_SLOT, AutoBattleSettingsModel.MAX_PET_SKILL_SLOT + 1):
-		var label := BattleActionCatalog.pet_skill_label_for_slot(slot, "未配置")
+		var label := PlayerProgressModel.pet_skill_slot_label_for_instance(active_pet, slot, "未配置") if not active_pet.is_empty() else BattleActionCatalog.pet_skill_label_for_slot(slot, "未配置")
 		options.append({
 			"id": str(slot),
 			"label": "技%d %s" % [slot, label],
@@ -12194,6 +12740,9 @@ func _refresh_pet_panel() -> void:
 	if pet_rename_button != null:
 		pet_rename_button.visible = not selected.is_empty()
 		pet_rename_button.disabled = selected.is_empty()
+	if pet_skill_button != null:
+		pet_skill_button.visible = not selected.is_empty()
+		pet_skill_button.disabled = selected.is_empty()
 	if pet_drop_button != null:
 		pet_drop_button.visible = not selected.is_empty()
 		var selected_state := str(selected.get("state", ""))
@@ -14151,6 +14700,11 @@ func _confirm_dialog_action() -> void:
 	if _active_dialog_is_record_point():
 		_save_record_point_from_dialog()
 		return
+	if _active_dialog_is_pet_skill_trainer():
+		var trainer_id := str(active_dialog_interaction.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID))
+		_close_dialog()
+		_open_pet_skill_panel(true, trainer_id)
+		return
 	if str(active_dialog_interaction.get("shopId", "")) != "":
 		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
 		_close_dialog()
@@ -14198,6 +14752,8 @@ func _dialog_option_text(item: Dictionary) -> String:
 		return str(item.get("option", "治疗队伍"))
 	if _dialog_item_is_record_point(item):
 		return str(item.get("option", "保存"))
+	if _dialog_item_is_pet_skill_trainer(item):
+		return str(item.get("option", "训练"))
 	if str(item.get("shopId", "")) != "":
 		return str(item.get("option", "买卖"))
 	return str(item.get("option", "知道了"))
@@ -14217,6 +14773,14 @@ func _active_dialog_is_record_point() -> bool:
 
 func _dialog_item_is_record_point(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == "record_point" or str(item.get("kind", "")) == "record_point"
+
+
+func _active_dialog_is_pet_skill_trainer() -> bool:
+	return _dialog_item_is_pet_skill_trainer(active_dialog_interaction)
+
+
+func _dialog_item_is_pet_skill_trainer(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == "pet_skill_trainer"
 
 
 func _dialog_record_point_hint_for(item: Dictionary) -> String:
@@ -14504,7 +15068,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -14513,7 +15077,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -14606,6 +15170,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	pet_skill_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	pet_skill_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		pet_skill_panel.visible = false
+	if pet_skill_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var codex_width := pet_width

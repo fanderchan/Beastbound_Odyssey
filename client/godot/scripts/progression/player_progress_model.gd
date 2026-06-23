@@ -11,6 +11,7 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
+const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
@@ -22,6 +23,7 @@ const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
+const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
 const PARTY_LIMIT := 5
 const STORAGE_LIMIT := 20
 const PET_NAME_MAX_LENGTH := 8
@@ -411,6 +413,216 @@ static func with_auto_capture_settings(profile: Dictionary, settings: Dictionary
 	var normalized := normalize_profile(profile)
 	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(settings)
 	return normalize_profile(normalized)
+
+
+static func pet_skill_slots_for_instance(instance: Dictionary) -> Array[String]:
+	return PetTemplateCatalog.normalized_skill_slots(instance.get("activeSkillIds", []), instance.get("petSkillSlots", []))
+
+
+static func pet_skill_slot_label_for_instance(instance: Dictionary, slot: int, fallback: String = "未配置") -> String:
+	var safe_slot := clampi(slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var slots := pet_skill_slots_for_instance(instance)
+	if safe_slot - 1 < 0 or safe_slot - 1 >= slots.size():
+		return fallback
+	var skill_id := str(slots[safe_slot - 1])
+	return BattleActionCatalog.label_for(skill_id, fallback) if skill_id != "" else fallback
+
+
+static func pet_skill_slot_options_for_instance(instance: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var slots := pet_skill_slots_for_instance(instance)
+	for slot in range(1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1):
+		var skill_id := str(slots[slot - 1]) if slot - 1 < slots.size() else ""
+		result.append({
+			"slot": slot,
+			"skillId": skill_id,
+			"label": BattleActionCatalog.label_for(skill_id, "未配置") if skill_id != "" else "未配置",
+		})
+	return result
+
+
+static func learnable_pet_skill_options(profile: Dictionary, instance_id: String, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> Array[Dictionary]:
+	var instance := pet_instance_by_id(profile, instance_id)
+	if instance.is_empty():
+		return []
+	var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+	var result: Array[Dictionary] = []
+	for option in PetSkillTrainingModel.skill_options_for_trainer(trainer_id):
+		var skill_id := str(option.get("id", ""))
+		var next_option := option.duplicate(true)
+		next_option["learned"] = learned.has(skill_id)
+		next_option["canLearn"] = skill_id != "" and not learned.has(skill_id)
+		result.append(next_option)
+	return result
+
+
+static func learn_pet_skill(profile: Dictionary, instance_id: String, skill_id: String, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var normalized_skill_id := skill_id.strip_edges()
+	var offered := PetSkillTrainingModel.trainer_skill_ids(trainer_id)
+	if not offered.has(normalized_skill_id):
+		return {"ok": false, "profile": normalized, "message": "这个训练师不会教该技能。"}
+	var action := BattleActionCatalog.action_by_id(normalized_skill_id)
+	if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
+		return {"ok": false, "profile": normalized, "message": "该技能不能作为宠物技能学习。"}
+	var cost := PetSkillTrainingModel.skill_cost(normalized_skill_id)
+	if stone_coins(normalized) < cost:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "石币不足，需要%d石币。" % cost,
+		}
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+		if learned.has(normalized_skill_id):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 已经学会%s。" % [str(instance.get("name", "宠物")), BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id)],
+			}
+		var slots := pet_skill_slots_for_instance(instance)
+		var empty_slot := _first_empty_pet_skill_slot(slots)
+		if empty_slot <= 0:
+			return {"ok": false, "profile": normalized, "message": "技能栏满，请先调整。"}
+		learned.append(normalized_skill_id)
+		slots[empty_slot - 1] = normalized_skill_id
+		var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
+		forgotten.erase(normalized_skill_id)
+		instance["activeSkillIds"] = learned
+		instance["forgottenSkillIds"] = forgotten
+		instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, slots)
+		instances[index] = instance
+		normalized["petInstances"] = instances
+		normalized[STONE_COINS_KEY] = maxi(0, stone_coins(normalized) - cost)
+		normalized = normalize_profile(normalized)
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": "%s 学会了%s。" % [str(instance.get("name", "宠物")), BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id)],
+			"skillId": normalized_skill_id,
+			"slot": empty_slot,
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
+static func can_forget_pet_skill(profile: Dictionary, instance_id: String, skill_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var normalized_skill_id := skill_id.strip_edges()
+	if normalized_skill_id == "":
+		return {"ok": false, "profile": normalized, "message": "请选择要遗忘的技能。"}
+	if PET_BASE_SKILL_IDS.has(normalized_skill_id):
+		return {"ok": false, "profile": normalized, "message": "攻击和防御不能遗忘。"}
+	var action := BattleActionCatalog.action_by_id(normalized_skill_id)
+	if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
+		return {"ok": false, "profile": normalized, "message": "该技能不能遗忘。"}
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+	var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+	if not learned.has(normalized_skill_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 没有学会%s。" % [
+				str(instance.get("name", "宠物")),
+				BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id),
+			],
+		}
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 可以遗忘%s。" % [
+			str(instance.get("name", "宠物")),
+			BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id),
+		],
+	}
+
+
+static func forget_pet_skill(profile: Dictionary, instance_id: String, skill_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_forget_pet_skill(normalized, instance_id, skill_id)
+	if not bool(check.get("ok", false)):
+		return check
+	var normalized_skill_id := skill_id.strip_edges()
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+		learned.erase(normalized_skill_id)
+		var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
+		if not forgotten.has(normalized_skill_id):
+			forgotten.append(normalized_skill_id)
+		var slots := pet_skill_slots_for_instance(instance)
+		for slot_index in range(slots.size()):
+			if str(slots[slot_index]) == normalized_skill_id:
+				slots[slot_index] = ""
+		instance["activeSkillIds"] = learned
+		instance["forgottenSkillIds"] = forgotten
+		instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, slots)
+		instances[index] = instance
+		normalized["petInstances"] = instances
+		normalized = normalize_profile(normalized)
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": "%s 遗忘了%s。" % [
+				str(instance.get("name", "宠物")),
+				BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id),
+			],
+			"skillId": normalized_skill_id,
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
+static func move_pet_skill_slot(profile: Dictionary, instance_id: String, slot: int, direction: int) -> Dictionary:
+	var target_slot := clampi(slot + direction, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	return swap_pet_skill_slots(profile, instance_id, slot, target_slot)
+
+
+static func swap_pet_skill_slots(profile: Dictionary, instance_id: String, slot_a: int, slot_b: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var safe_a := clampi(slot_a, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var safe_b := clampi(slot_b, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	if safe_a == safe_b:
+		return {"ok": false, "profile": normalized, "message": "已经在这个技能位。"}
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		var slots := pet_skill_slots_for_instance(instance)
+		if safe_a - 1 >= slots.size() or str(slots[safe_a - 1]) == "":
+			return {"ok": false, "profile": normalized, "message": "这个技能位还没有技能。"}
+		var skill_id := str(slots[safe_a - 1])
+		var temp := str(slots[safe_b - 1]) if safe_b - 1 < slots.size() else ""
+		slots[safe_b - 1] = skill_id
+		slots[safe_a - 1] = temp
+		instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(instance.get("activeSkillIds", []), slots)
+		instances[index] = instance
+		normalized["petInstances"] = instances
+		normalized = normalize_profile(normalized)
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": "%s 已移动到技%d。" % [BattleActionCatalog.label_for(skill_id, skill_id), safe_b],
+			"slot": safe_b,
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
 
 
 static func hang_settings(profile: Dictionary) -> Dictionary:
@@ -1642,10 +1854,20 @@ static func element_summary_for_instance(instance: Dictionary) -> String:
 
 static func active_skill_labels_for_instance(instance: Dictionary) -> Array[String]:
 	var labels: Array[String] = []
-	for skill_id in _string_array(instance.get("activeSkillIds", [])):
+	for skill_id in _valid_unique_pet_skill_ids(instance.get("activeSkillIds", [])):
 		var label := BattleActionCatalog.label_for(skill_id, skill_id)
 		if label != "":
 			labels.append(label)
+	return labels
+
+
+static func pet_skill_slot_labels_for_instance(instance: Dictionary) -> Array[String]:
+	var labels: Array[String] = []
+	for option in pet_skill_slot_options_for_instance(instance):
+		var skill_id := str(option.get("skillId", ""))
+		if skill_id == "":
+			continue
+		labels.append("技%d %s" % [int(option.get("slot", 1)), str(option.get("label", skill_id))])
 	return labels
 
 
@@ -1680,8 +1902,8 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		int(instance.get("exp", 0)),
 		int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1))))),
 	])
-	var skill_labels := active_skill_labels_for_instance(instance)
-	lines.append("主动技能：%s" % ("、".join(skill_labels) if not skill_labels.is_empty() else "无"))
+	var slot_labels := pet_skill_slot_labels_for_instance(instance)
+	lines.append("技能槽：%s" % ("、".join(slot_labels) if not slot_labels.is_empty() else "无"))
 	var passive_lines := passive_lines_for_instance(instance)
 	if passive_lines.is_empty():
 		lines.append("被动技能: 无")
@@ -1991,6 +2213,8 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 	actor["level"] = int(instance.get("level", 1))
 	actor["exp"] = int(instance.get("exp", 0))
 	actor["nextExp"] = int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1)))))
+	actor["activeSkillIds"] = _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+	actor["petSkillSlots"] = pet_skill_slots_for_instance(instance)
 	actor["petBattleState"] = PET_STATE_BATTLE
 	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
 
@@ -2382,7 +2606,7 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 			var instance := instances[index] as Dictionary
 			if str(instance.get("instanceId", "")) != instance_id:
 				continue
-			for key in ["name", "state", "hp", "maxHp", "quick", "attack", "defense", "formId", "templateId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "passiveSkillIds"]:
+			for key in ["name", "state", "hp", "maxHp", "quick", "attack", "defense", "formId", "templateId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "forgottenSkillIds", "passiveSkillIds"]:
 				if entry.has(key):
 					instance[key] = entry.get(key)
 			instances[index] = instance
@@ -2533,7 +2757,7 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		"attack": int(stat_overrides.get("attack", stats_dict.get("attack", 12))),
 		"defense": int(stat_overrides.get("defense", stats_dict.get("defense", 6))),
 	}
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
 	return _normalize_pet_instance(instance)
@@ -2564,9 +2788,24 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["defense"] = int(instance.get("defense", stats_dict.get("defense", 6)))
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
+	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
+	for base_skill_id in PET_BASE_SKILL_IDS:
+		forgotten.erase(base_skill_id)
+	var learned: Array[String] = []
+	for skill_id in _valid_unique_pet_skill_ids(template.get("activeSkillIds", [])):
+		if PET_BASE_SKILL_IDS.has(skill_id) or not forgotten.has(skill_id):
+			learned.append(skill_id)
+	for skill_id in _valid_unique_pet_skill_ids(instance.get("activeSkillIds", [])):
+		if forgotten.has(skill_id):
+			continue
+		if not learned.has(skill_id):
+			learned.append(skill_id)
+	instance["activeSkillIds"] = learned
+	instance["forgottenSkillIds"] = forgotten
+	instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, instance.get("petSkillSlots", template.get("petSkillSlots", [])))
 	instance["combatPower"] = PetPowerModel.combat_power_for_pet(instance)
 	return instance
 
@@ -2763,6 +3002,25 @@ static func _string_array(value) -> Array[String]:
 			if text != "":
 				result.append(text)
 	return result
+
+
+static func _valid_unique_pet_skill_ids(value) -> Array[String]:
+	var result: Array[String] = []
+	for skill_id in _string_array(value):
+		if result.has(skill_id):
+			continue
+		var action := BattleActionCatalog.action_by_id(skill_id)
+		if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
+			continue
+		result.append(skill_id)
+	return result
+
+
+static func _first_empty_pet_skill_slot(slots: Array[String]) -> int:
+	for index in range(PetTemplateCatalog.MAX_PET_SKILL_SLOTS):
+		if index >= slots.size() or str(slots[index]) == "":
+			return index + 1
+	return 0
 
 
 static func _valid_unique_form_id_array(value) -> Array[String]:

@@ -5,6 +5,7 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 
 const TEMPLATES_PATH := "res://data/pet_templates.json"
 const ELEMENT_IDS := ["fire", "water", "earth", "wind"]
+const MAX_PET_SKILL_SLOTS := BattleActionCatalog.MAX_PET_SKILL_SLOTS_FALLBACK
 
 
 static func catalog() -> Dictionary:
@@ -118,6 +119,7 @@ static func runtime_template_for_form(form_id: String) -> Dictionary:
 	result["subtypeName"] = str(subtype.get("subtypeName", ""))
 	result["activeSkillIds"] = active_skill_ids_for_form(form_id)
 	result["passiveSkillIds"] = passive_ids_for_form(form_id)
+	result["petSkillSlots"] = default_skill_slots_for_form(form_id)
 	return result
 
 
@@ -133,9 +135,63 @@ static func active_skill_ids_for_form(form_id: String) -> Array[String]:
 static func active_skill_ids_for_actor(actor: Dictionary) -> Array[String]:
 	var result := _string_array(actor.get("activeSkillIds", []))
 	if not result.is_empty():
-		return result
+		return _valid_unique_pet_skill_ids(result)
 	var form_id := str(actor.get("formId", actor.get("templateId", "")))
 	return active_skill_ids_for_form(form_id)
+
+
+static func default_skill_slots_for_form(form_id: String) -> Array[String]:
+	return normalized_skill_slots(active_skill_ids_for_form(form_id), [])
+
+
+static func normalized_skill_slots_for_actor(actor: Dictionary) -> Array[String]:
+	var learned := active_skill_ids_for_actor(actor)
+	return normalized_skill_slots(learned, actor.get("petSkillSlots", []))
+
+
+static func normalized_skill_slots(learned_skill_ids, raw_slots) -> Array[String]:
+	var learned := _valid_unique_pet_skill_ids(_string_array(learned_skill_ids))
+	var slots := _empty_skill_slots()
+	var used := {}
+	if raw_slots is Array:
+		var raw_array := raw_slots as Array
+		for index in range(mini(MAX_PET_SKILL_SLOTS, raw_array.size())):
+			var skill_id := str(raw_array[index])
+			if skill_id == "" or used.has(skill_id) or not learned.has(skill_id):
+				continue
+			if not _is_pet_skill_id(skill_id):
+				continue
+			slots[index] = skill_id
+			used[skill_id] = true
+	for skill_id in learned:
+		if used.has(skill_id):
+			continue
+		var action := BattleActionCatalog.action_by_id(skill_id)
+		var preferred_slot := int(action.get("slot", 0))
+		if preferred_slot >= 1 and preferred_slot <= MAX_PET_SKILL_SLOTS and str(slots[preferred_slot - 1]) == "":
+			slots[preferred_slot - 1] = skill_id
+			used[skill_id] = true
+			continue
+		var empty_index := _first_empty_slot_index(slots)
+		if empty_index >= 0:
+			slots[empty_index] = skill_id
+			used[skill_id] = true
+	return slots
+
+
+static func skill_id_for_actor_slot(actor: Dictionary, slot: int) -> String:
+	var safe_slot := clampi(slot, 1, MAX_PET_SKILL_SLOTS)
+	var slots := normalized_skill_slots_for_actor(actor)
+	if safe_slot - 1 < 0 or safe_slot - 1 >= slots.size():
+		return ""
+	return str(slots[safe_slot - 1])
+
+
+static func pet_skill_label_for_actor_slot(actor: Dictionary, slot: int, fallback: String = "") -> String:
+	var skill_id := skill_id_for_actor_slot(actor, slot)
+	if skill_id == "":
+		return fallback
+	return BattleActionCatalog.label_for(skill_id, fallback)
 
 
 static func passive_ids_for_form(form_id: String) -> Array[String]:
@@ -153,16 +209,18 @@ static func passive_ids_for_form(form_id: String) -> Array[String]:
 static func pet_skill_action_for_actor_slot(actor: Dictionary, slot: int) -> Dictionary:
 	if actor.is_empty():
 		return {}
-	var action := BattleActionCatalog.pet_skill_action_for_slot(slot)
+	var skill_id := skill_id_for_actor_slot(actor, slot)
+	if skill_id == "":
+		return {}
+	var action := BattleActionCatalog.action_by_id(skill_id)
 	if action.is_empty():
 		return {}
-	var action_id := str(action.get("id", ""))
 	var active_skill_ids := active_skill_ids_for_actor(actor)
 	var has_template_source := (
 		actor.has("activeSkillIds")
 		or str(actor.get("formId", actor.get("templateId", ""))) != ""
 	)
-	if has_template_source and not active_skill_ids.has(action_id):
+	if has_template_source and not active_skill_ids.has(skill_id):
 		return {}
 	return action
 
@@ -203,6 +261,7 @@ static func actor_from_form(form_id: String, actor_id: String, side: String, kin
 		"growthProfileId": str(template.get("growthProfileId", "")),
 		"elements": _elements_for_template(template),
 		"activeSkillIds": _string_array(template.get("activeSkillIds", [])),
+		"petSkillSlots": _string_array(template.get("petSkillSlots", [])),
 		"passiveSkillIds": _string_array(template.get("passiveSkillIds", [])),
 	}
 
@@ -378,6 +437,34 @@ static func _elements_for_template(template: Dictionary) -> Dictionary:
 		for element_id in ELEMENT_IDS:
 			result[element_id] = int((raw_elements as Dictionary).get(element_id, 0))
 	return result
+
+
+static func _empty_skill_slots() -> Array[String]:
+	var result: Array[String] = []
+	for _index in range(MAX_PET_SKILL_SLOTS):
+		result.append("")
+	return result
+
+
+static func _first_empty_slot_index(slots: Array[String]) -> int:
+	for index in range(slots.size()):
+		if str(slots[index]) == "":
+			return index
+	return -1
+
+
+static func _valid_unique_pet_skill_ids(values: Array[String]) -> Array[String]:
+	var result: Array[String] = []
+	for skill_id in values:
+		if skill_id == "" or result.has(skill_id) or not _is_pet_skill_id(skill_id):
+			continue
+		result.append(skill_id)
+	return result
+
+
+static func _is_pet_skill_id(skill_id: String) -> bool:
+	var action := BattleActionCatalog.action_by_id(skill_id)
+	return not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_PET_SKILL
 
 
 static func _string_array(value) -> Array[String]:

@@ -254,6 +254,25 @@
       "stoneAgeReference": "PETSKILL_StatusChange"
     },
     {
+      "id": "pet_focus_bite",
+      "owner": "pet_skill",
+      "slot": 7,
+      "label": "集中咬击",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 18
+      },
+      "stoneAgeReference": "PETSKILL_ChargeAttack"
+    },
+    {
       "id": "item_meat_small",
       "owner": "item",
       "label": "肉",

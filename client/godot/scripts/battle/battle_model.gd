@@ -23,6 +23,7 @@ const PET_SKILL_BUI_CHARGE := "pet_bui_charge"
 const PET_SKILL_SLEEP_POWDER := "pet_sleep_powder"
 const PET_SKILL_CONFUSE_CRY := "pet_confuse_cry"
 const PET_SKILL_STONE_GAZE := "pet_stone_gaze"
+const PET_SKILL_FOCUS_BITE := "pet_focus_bite"
 const ITEM_HEAL_ALL := "item_heal_all_5"
 const ITEM_HEAL_SINGLE := "item_heal_single_5"
 const ITEM_MEAT_SMALL := "item_meat_small"
@@ -472,7 +473,7 @@ static func _make_pet_party_entry(pet_id: String, pet_name: String, template_id:
 	}
 	if form_id != "":
 		entry["formId"] = form_id
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots"]:
 		if metadata.has(key):
 			entry[key] = metadata.get(key)
 	return entry
@@ -532,7 +533,7 @@ static func _sync_player_pet_party_from_actor(state: Dictionary, actor: Dictiona
 		entry["attack"] = int(actor.get("attack", entry.get("attack", 12)))
 		entry["defense"] = int(actor.get("defense", entry.get("defense", 6)))
 		entry["passiveSkillIds"] = BattlePassiveCatalog.passive_ids_for_actor(actor)
-		for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+		for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots"]:
 			if actor.has(key):
 				entry[key] = actor.get(key)
 		if str(actor.get("petBattleState", "")) == PET_STATE_REST or str(actor.get("actionState", "")) == "launched" or not bool(actor.get("revivable", true)):
@@ -746,7 +747,7 @@ static func _merged_string_array(first, second) -> Array[String]:
 
 static func _pet_metadata_from_actor(actor: Dictionary) -> Dictionary:
 	var result := {}
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots"]:
 		if actor.has(key):
 			result[key] = actor.get(key)
 	return result
@@ -754,7 +755,7 @@ static func _pet_metadata_from_actor(actor: Dictionary) -> Dictionary:
 
 static func _pet_metadata_from_template(template: Dictionary) -> Dictionary:
 	var result := {}
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots"]:
 		if template.has(key):
 			result[key] = template.get(key)
 	return result
@@ -2311,7 +2312,7 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 			entry["attack"] = int(current_pet.get("attack", entry.get("attack", 12)))
 			entry["defense"] = int(current_pet.get("defense", entry.get("defense", 6)))
 			entry["passiveSkillIds"] = BattlePassiveCatalog.passive_ids_for_actor(current_pet)
-			for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds"]:
+			for key in ["templateId", "formId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots"]:
 				if current_pet.has(key):
 					entry[key] = current_pet.get(key)
 			entry["state"] = PET_STATE_STANDBY if int(current_pet.get("hp", 0)) > 0 and str(current_pet.get("petBattleState", "")) != PET_STATE_REST and bool(current_pet.get("revivable", true)) else PET_STATE_REST
@@ -2345,6 +2346,9 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 		_string_array(selected_entry.get("passiveSkillIds", [])),
 		str(selected_entry.get("formId", selected_entry.get("templateId", "")))
 	)
+	for key in ["activeSkillIds", "petSkillSlots", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements"]:
+		if selected_entry.has(key):
+			next_pet[key] = selected_entry.get(key)
 	next_pet["actionState"] = "switch_in"
 	next_pet["petBattleState"] = PET_STATE_BATTLE
 	if active_pet_index >= 0:
