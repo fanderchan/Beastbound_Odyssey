@@ -36,6 +36,10 @@ const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const WORLD_LOG_MAX_LINES := 80
+const CHAT_MAX_MESSAGES := 120
+const CHAT_CHANNEL_SYSTEM := "system"
+const CHAT_CHANNEL_NEARBY := "nearby"
+const CHAT_CHANNEL_TEAM := "team"
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
@@ -133,6 +137,7 @@ var pet_menu_button: Button
 var codex_menu_button: Button
 var quest_menu_button: Button
 var map_menu_button: Button
+var chat_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
 var backpack_panel: PanelContainer
@@ -240,6 +245,16 @@ var map_detail_label: Label
 var map_marker_container: VBoxContainer
 var map_close_button: Button
 var map_marker_buttons: Dictionary = {}
+var chat_panel: PanelContainer
+var chat_system_button: Button
+var chat_nearby_button: Button
+var chat_team_button: Button
+var chat_log_label: RichTextLabel
+var chat_input: LineEdit
+var chat_send_button: Button
+var chat_close_button: Button
+var chat_active_channel: String = "system"
+var chat_messages: Array[Dictionary] = []
 var training_partner_panel: PanelContainer
 var training_partner_label: Label
 var training_partner_add_button: Button
@@ -332,6 +347,7 @@ var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_quest_reward_choice_check: bool = false
 var auto_map_panel_check: bool = false
+var auto_chat_panel_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
@@ -350,6 +366,7 @@ var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var quest_reward_choice_preview: bool = false
 var map_panel_preview: bool = false
+var chat_panel_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
@@ -581,6 +598,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_reward_choice_check")
 	elif auto_map_panel_check:
 		call_deferred("_run_auto_map_panel_check")
+	elif auto_chat_panel_check:
+		call_deferred("_run_auto_chat_panel_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
 	elif auto_player_status_check:
@@ -617,6 +636,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_reward_choice_preview")
 	elif map_panel_preview:
 		call_deferred("_run_map_panel_preview")
+	elif chat_panel_preview:
+		call_deferred("_run_chat_panel_preview")
 	elif equipment_quest_preview:
 		call_deferred("_run_equipment_quest_preview")
 	elif equipment_swap_preview:
@@ -892,6 +913,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_reward_choice_check = true
 		elif arg == "--auto-map-panel-check":
 			auto_map_panel_check = true
+		elif arg == "--auto-chat-panel-check":
+			auto_chat_panel_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
 		elif arg == "--auto-player-status-check":
@@ -928,6 +951,8 @@ func _apply_preview_window_args() -> void:
 			quest_reward_choice_preview = true
 		elif arg == "--map-panel-preview":
 			map_panel_preview = true
+		elif arg == "--chat-panel-preview":
+			chat_panel_preview = true
 		elif arg == "--equipment-quest-preview":
 			equipment_quest_preview = true
 		elif arg == "--equipment-swap-preview":
@@ -6048,6 +6073,21 @@ func _run_map_panel_preview() -> void:
 		_update_hud_text()
 
 
+func _run_chat_panel_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	chat_messages.clear()
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase77：系统消息进入系统频道。")
+	_append_chat_message(CHAT_CHANNEL_NEARBY, "附近频道测试消息。", "见习猎人")
+	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "陪练伙伴1")
+	_open_chat_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_auto_battle_settings_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -7045,6 +7085,78 @@ func _run_auto_map_panel_check() -> void:
 		map_marker_buttons.size(),
 		str(target_cell),
 		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_chat_panel_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	chat_messages.clear()
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("系统频道测试")
+	_open_chat_panel()
+	await get_tree().process_frame
+	var system_ok := (
+		chat_panel != null
+		and chat_panel.visible
+		and chat_system_button != null
+		and chat_system_button.button_pressed
+		and chat_input != null
+		and not chat_input.editable
+		and chat_send_button != null
+		and chat_send_button.disabled
+		and chat_log_label != null
+		and chat_log_label.text.find("系统频道测试") >= 0
+	)
+	_set_chat_channel(CHAT_CHANNEL_NEARBY)
+	await get_tree().process_frame
+	if chat_input != null:
+		chat_input.text = "你好"
+	_on_chat_send_pressed()
+	await get_tree().process_frame
+	var nearby_ok := (
+		chat_nearby_button != null
+		and chat_nearby_button.button_pressed
+		and chat_input != null
+		and chat_input.editable
+		and chat_input.text == ""
+		and chat_send_button != null
+		and not chat_send_button.disabled
+		and chat_log_label != null
+		and chat_log_label.text.find("见习猎人") >= 0
+		and chat_log_label.text.find("你好") >= 0
+	)
+	_set_chat_channel(CHAT_CHANNEL_TEAM)
+	_append_chat_message(CHAT_CHANNEL_TEAM, "集合", "陪练伙伴1")
+	await get_tree().process_frame
+	var team_ok := (
+		chat_team_button != null
+		and chat_team_button.button_pressed
+		and chat_log_label != null
+		and chat_log_label.text.find("陪练伙伴1") >= 0
+		and chat_log_label.text.find("集合") >= 0
+	)
+	_set_chat_channel(CHAT_CHANNEL_SYSTEM)
+	await get_tree().process_frame
+	var system_persist_ok := chat_log_label != null and chat_log_label.text.find("系统频道测试") >= 0
+	for index in range(CHAT_MAX_MESSAGES + 3):
+		_append_chat_message(CHAT_CHANNEL_SYSTEM, "滚动消息%d" % index, "系统")
+	var capped_ok := chat_messages.size() <= CHAT_MAX_MESSAGES
+	var status := "ok" if loaded and system_ok and nearby_ok and team_ok and system_persist_ok and capped_ok else "failed"
+	print("chat panel check ready: status=%s loaded=%s system=%s nearby=%s team=%s system_persist=%s capped=%s count=%d visible=%s log=%s" % [
+		status,
+		str(loaded),
+		str(system_ok),
+		str(nearby_ok),
+		str(team_ok),
+		str(system_persist_ok),
+		str(capped_ok),
+		chat_messages.size(),
+		str(chat_panel != null and chat_panel.visible),
+		chat_log_label.text.replace("\n", " / ") if chat_log_label != null else "",
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -9865,6 +9977,11 @@ func _build_hud() -> void:
 	map_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	map_menu_button.pressed.connect(_open_map_panel)
 	action_row.add_child(map_menu_button)
+	chat_menu_button = Button.new()
+	chat_menu_button.text = "聊天"
+	chat_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	chat_menu_button.pressed.connect(_open_chat_panel)
+	action_row.add_child(chat_menu_button)
 	training_partner_menu_button = Button.new()
 	training_partner_menu_button.text = "伙伴"
 	training_partner_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -10474,6 +10591,73 @@ func _build_hud() -> void:
 	map_marker_container.add_theme_constant_override("separation", 7)
 	map_marker_scroll.add_child(map_marker_container)
 	hud_root.add_child(map_panel)
+
+	chat_panel = _panel_container("ChatPanel")
+	chat_panel.visible = false
+	chat_panel.z_index = 24
+	var chat_column := VBoxContainer.new()
+	chat_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_column.add_theme_constant_override("separation", 8)
+	chat_panel.add_child(chat_column)
+
+	var chat_header := HBoxContainer.new()
+	chat_header.add_theme_constant_override("separation", 10)
+	chat_column.add_child(chat_header)
+	var chat_title_label := Label.new()
+	chat_title_label.text = "聊天"
+	chat_title_label.add_theme_font_size_override("font_size", 21)
+	chat_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_header.add_child(chat_title_label)
+	chat_close_button = Button.new()
+	chat_close_button.text = "关闭"
+	chat_close_button.custom_minimum_size = Vector2(92, 44)
+	chat_close_button.pressed.connect(_close_chat_panel)
+	chat_header.add_child(chat_close_button)
+
+	var chat_tab_row := HBoxContainer.new()
+	chat_tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_tab_row.add_theme_constant_override("separation", 8)
+	chat_column.add_child(chat_tab_row)
+	chat_system_button = _chat_channel_button("系统", CHAT_CHANNEL_SYSTEM)
+	chat_tab_row.add_child(chat_system_button)
+	chat_nearby_button = _chat_channel_button("附近", CHAT_CHANNEL_NEARBY)
+	chat_tab_row.add_child(chat_nearby_button)
+	chat_team_button = _chat_channel_button("队伍", CHAT_CHANNEL_TEAM)
+	chat_tab_row.add_child(chat_team_button)
+
+	var chat_scroll := ScrollContainer.new()
+	chat_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_column.add_child(chat_scroll)
+	chat_log_label = RichTextLabel.new()
+	chat_log_label.bbcode_enabled = false
+	chat_log_label.fit_content = true
+	chat_log_label.scroll_active = false
+	chat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	chat_log_label.add_theme_font_size_override("font_size", 16)
+	chat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_scroll.add_child(chat_log_label)
+
+	var chat_input_row := HBoxContainer.new()
+	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_input_row.add_theme_constant_override("separation", 8)
+	chat_column.add_child(chat_input_row)
+	chat_input = LineEdit.new()
+	chat_input.placeholder_text = "输入消息"
+	chat_input.max_length = 80
+	chat_input.custom_minimum_size = Vector2(0, 44)
+	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_input.text_submitted.connect(func(_text: String) -> void:
+		_on_chat_send_pressed()
+	)
+	chat_input_row.add_child(chat_input)
+	chat_send_button = Button.new()
+	chat_send_button.text = "发送"
+	chat_send_button.custom_minimum_size = Vector2(92, 44)
+	chat_send_button.pressed.connect(_on_chat_send_pressed)
+	chat_input_row.add_child(chat_send_button)
+	hud_root.add_child(chat_panel)
 
 	training_partner_panel = _panel_container("TrainingPartnerPanel")
 	training_partner_panel.visible = false
@@ -11178,6 +11362,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_map_panel()
+	_close_chat_panel()
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -11233,6 +11418,7 @@ func _set_interaction_target(item: Dictionary) -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_map_panel()
+	_close_chat_panel()
 	pending_interaction = item.duplicate(true)
 	has_pending_interaction = true
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -11681,6 +11867,7 @@ func _set_world_log_message(text: String) -> void:
 			var line := str(raw_line).strip_edges()
 			if line != "":
 				world_log_history.append(line)
+				_append_chat_message(CHAT_CHANNEL_SYSTEM, line, "系统")
 	while world_log_history.size() > WORLD_LOG_MAX_LINES:
 		world_log_history.pop_front()
 	var display_text := "\n".join(world_log_history)
@@ -13037,6 +13224,7 @@ func _open_quest_panel() -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_map_panel()
+	_close_chat_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	quest_panel.visible = true
@@ -13068,6 +13256,7 @@ func _open_map_panel() -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_chat_panel()
 	map_panel.visible = true
 	_refresh_map_panel()
 	_layout_hud()
@@ -13078,6 +13267,124 @@ func _close_map_panel() -> void:
 		map_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_chat_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	chat_panel.visible = true
+	_refresh_chat_panel()
+	_layout_hud()
+
+
+func _close_chat_panel() -> void:
+	if chat_panel != null:
+		chat_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _chat_channel_button(label: String, channel: String) -> Button:
+	var button := Button.new()
+	button.text = label
+	button.toggle_mode = true
+	button.custom_minimum_size = Vector2(0, 42)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 16)
+	button.pressed.connect(func() -> void:
+		_set_chat_channel(channel)
+	)
+	return button
+
+
+func _chat_channel_is_valid(channel: String) -> bool:
+	return channel == CHAT_CHANNEL_SYSTEM or channel == CHAT_CHANNEL_NEARBY or channel == CHAT_CHANNEL_TEAM
+
+
+func _set_chat_channel(channel: String) -> void:
+	chat_active_channel = channel if _chat_channel_is_valid(channel) else CHAT_CHANNEL_SYSTEM
+	_refresh_chat_panel()
+
+
+func _append_chat_message(channel: String, text: String, author: String = "") -> void:
+	var stripped := text.strip_edges()
+	if stripped == "":
+		return
+	var normalized_channel := channel if _chat_channel_is_valid(channel) else CHAT_CHANNEL_SYSTEM
+	chat_messages.append({
+		"channel": normalized_channel,
+		"author": author.strip_edges(),
+		"text": stripped,
+	})
+	while chat_messages.size() > CHAT_MAX_MESSAGES:
+		chat_messages.pop_front()
+	if chat_panel != null and chat_panel.visible:
+		_refresh_chat_panel()
+
+
+func _refresh_chat_panel() -> void:
+	if chat_panel == null:
+		return
+	if chat_system_button != null:
+		chat_system_button.button_pressed = chat_active_channel == CHAT_CHANNEL_SYSTEM
+	if chat_nearby_button != null:
+		chat_nearby_button.button_pressed = chat_active_channel == CHAT_CHANNEL_NEARBY
+	if chat_team_button != null:
+		chat_team_button.button_pressed = chat_active_channel == CHAT_CHANNEL_TEAM
+	var lines: Array[String] = []
+	for value in chat_messages:
+		if not (value is Dictionary):
+			continue
+		var message := value as Dictionary
+		if str(message.get("channel", "")) != chat_active_channel:
+			continue
+		var author := str(message.get("author", "")).strip_edges()
+		var text := str(message.get("text", "")).strip_edges()
+		if text == "":
+			continue
+		lines.append("%s：%s" % [author, text] if author != "" else text)
+	if lines.is_empty():
+		lines.append("暂无消息。")
+	if chat_log_label != null:
+		chat_log_label.text = "\n".join(lines)
+	if chat_input != null:
+		var can_send := chat_active_channel != CHAT_CHANNEL_SYSTEM
+		chat_input.editable = can_send
+		chat_input.placeholder_text = "输入消息" if can_send else "系统频道不可输入"
+	if chat_send_button != null:
+		chat_send_button.disabled = chat_active_channel == CHAT_CHANNEL_SYSTEM
+
+
+func _on_chat_send_pressed() -> void:
+	if chat_active_channel == CHAT_CHANNEL_SYSTEM or chat_input == null:
+		return
+	var text := chat_input.text.strip_edges()
+	if text == "":
+		return
+	_append_chat_message(chat_active_channel, text, _local_player_name())
+	chat_input.text = ""
+	_refresh_chat_panel()
+
+
+func _local_player_name() -> String:
+	var player_value = player_profile.get("player", {})
+	if player_value is Dictionary:
+		return str((player_value as Dictionary).get("name", "见习猎人"))
+	return "见习猎人"
 
 
 func _open_training_partner_panel() -> void:
@@ -13095,6 +13402,7 @@ func _open_training_partner_panel() -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_map_panel()
+	_close_chat_panel()
 	_close_auto_settings_panel()
 	training_partner_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
@@ -16662,7 +16970,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -16671,7 +16979,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -16802,6 +17110,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		map_panel.visible = false
 	if map_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	chat_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	chat_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		chat_panel.visible = false
+	if chat_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
