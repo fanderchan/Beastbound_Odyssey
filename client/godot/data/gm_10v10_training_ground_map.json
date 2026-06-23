@@ -49,6 +49,18 @@
     {"cell": [19, 13], "kind": "grass"},
     {"cell": [20, 13], "kind": "grass"},
     {"cell": [21, 13], "kind": "flower"},
+    {"cell": [3, 7], "kind": "grass"},
+    {"cell": [4, 7], "kind": "grass"},
+    {"cell": [5, 7], "kind": "grass"},
+    {"cell": [6, 7], "kind": "flower"},
+    {"cell": [3, 8], "kind": "grass"},
+    {"cell": [4, 8], "kind": "grass"},
+    {"cell": [5, 8], "kind": "flower"},
+    {"cell": [6, 8], "kind": "grass"},
+    {"cell": [3, 9], "kind": "grass"},
+    {"cell": [4, 9], "kind": "flower"},
+    {"cell": [5, 9], "kind": "grass"},
+    {"cell": [6, 9], "kind": "grass"},
     {"cell": [11, 17], "kind": "flower"},
     {"cell": [18, 16], "kind": "flower"}
   ],
@@ -118,6 +130,59 @@
       "levelMin": 1,
       "levelMax": 10,
       "previewText": "GM图鉴捕捉草丛会随机出现1到5只任意可捕捉图鉴宠物，每只等级1到10。"
+    },
+    {
+      "id": "gm_high_knockaway_grass",
+      "name": "GM高级击飞草丛",
+      "rects": [[3, 7, 4, 3]],
+      "encounterRate": 1.0,
+      "enemyCountMin": 1,
+      "enemyCountMax": 5,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "gm_high_knockaway_grass",
+      "individualWildPets": true,
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "狂暴乌力",
+          "weight": 45,
+          "levelMin": 120,
+          "levelMax": 140,
+          "battleStats": {
+            "maxHp": 1550,
+            "attack": 860,
+            "defense": 96,
+            "agility": 168
+          }
+        },
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "迅猛乌力",
+          "weight": 35,
+          "levelMin": 120,
+          "levelMax": 140,
+          "battleStats": {
+            "maxHp": 1380,
+            "attack": 780,
+            "defense": 86,
+            "agility": 230
+          }
+        },
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "厚甲乌力",
+          "weight": 20,
+          "levelMin": 120,
+          "levelMax": 140,
+          "battleStats": {
+            "maxHp": 1780,
+            "attack": 920,
+            "defense": 140,
+            "agility": 126
+          }
+        }
+      ],
+      "previewText": "GM高级击飞草丛会随机出现1到5只120到140级怪物，适合测试击飞回记录点。"
     }
   ],
   "interactionPoints": [

@@ -2000,7 +2000,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		target["actionState"] = "launched"
 		target["launched"] = true
 		target["revivable"] = false
-		target["petBattleState"] = "rest"
+		if str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet":
+			target["petBattleState"] = "rest"
 		target["launchHpBefore"] = hp_before
 	else:
 		target["actionState"] = "down" if next_hp <= 0 else "hit"
@@ -2046,7 +2047,10 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	if critical:
 		state["message"] += " 触发幸运一击。"
 	if launched:
-		state["message"] += " %s 被击飞，进入休息状态，无法在本场战斗中复活。" % target_name
+		if str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet":
+			state["message"] += " %s 被击飞，进入休息状态，无法在本场战斗中复活。" % target_name
+		else:
+			state["message"] += " %s 被击飞。" % target_name
 	elif next_hp <= 0:
 		state["message"] += " %s 倒下了。" % target_name
 	return state

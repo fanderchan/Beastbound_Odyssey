@@ -285,6 +285,7 @@ var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_village_healer_check: bool = false
+var auto_record_point_check: bool = false
 var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
 var auto_shop_check: bool = false
@@ -316,6 +317,7 @@ var auto_battle_settings_preview: bool = false
 var auto_capture_settings_preview: bool = false
 var training_partner_demo: bool = false
 var hang_settings_preview: bool = false
+var record_point_knockaway_demo: bool = false
 var battle_stat_test: bool = false
 var battle_status_test: bool = false
 var battle_status_skill_test: bool = false
@@ -505,6 +507,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif auto_village_healer_check:
 		call_deferred("_run_auto_village_healer_check")
+	elif auto_record_point_check:
+		call_deferred("_run_auto_record_point_check")
 	elif auto_backpack_check:
 		call_deferred("_run_auto_backpack_check")
 	elif auto_backpack_world_use_check:
@@ -619,6 +623,8 @@ func _ready() -> void:
 		call_deferred("_run_training_partner_demo")
 	elif hang_settings_preview:
 		call_deferred("_run_hang_settings_preview")
+	elif record_point_knockaway_demo:
+		call_deferred("_run_record_point_knockaway_demo")
 	elif battle_label_preview:
 		call_deferred("_open_battle_label_preview")
 	elif battle_stat_test:
@@ -780,6 +786,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--auto-village-healer-check":
 			auto_village_healer_check = true
+		elif arg == "--auto-record-point-check":
+			auto_record_point_check = true
 		elif arg == "--auto-backpack-check":
 			auto_backpack_check = true
 		elif arg == "--auto-backpack-world-use-check":
@@ -842,6 +850,8 @@ func _apply_preview_window_args() -> void:
 			training_partner_demo = true
 		elif arg == "--hang-settings-preview":
 			hang_settings_preview = true
+		elif arg == "--record-point-knockaway-demo":
+			record_point_knockaway_demo = true
 		elif arg == "--battle-label-preview":
 			battle_label_preview = true
 		elif arg == "--battle-stat-test":
@@ -3917,6 +3927,138 @@ func _run_auto_village_healer_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_record_point_check() -> void:
+	profile_save_enabled = false
+	var loaded := _load_map("firebud_village_gate")
+	player_profile = PlayerProgressModel.default_profile()
+	var record_item := InteractionModel.find_by_id(map_data, "firebud_record_pillar")
+	var record_found := loaded and not record_item.is_empty() and _dialog_item_is_record_point(record_item)
+	if record_found:
+		_open_interaction_dialog(record_item)
+	await get_tree().process_frame
+	var dialog_opened := _dialog_is_open() and str(active_dialog_interaction.get("id", "")) == "firebud_record_pillar"
+	var dialog_text := dialog_body_label.text if dialog_body_label != null else ""
+	var dialog_hint_ok := dialog_text.find("当前记录点") >= 0
+	var dialog_button_ok := dialog_option_button != null and dialog_option_button.text == "保存"
+	if dialog_opened:
+		_confirm_dialog_action()
+	await get_tree().process_frame
+	var saved_point := PlayerProgressModel.record_point(player_profile)
+	var saved_ok := (
+		str(saved_point.get("mapId", "")) == "firebud_village_gate"
+		and str(saved_point.get("spawnName", "")) == "doctor_record"
+		and str(saved_point.get("label", "")) == "火芽村医旁记录点"
+		and world_log_message.find("记录点已保存") >= 0
+	)
+
+	var normal_state := _record_point_test_battle_state(false)
+	var normal_result := _finish_record_point_test_battle(normal_state)
+	var normal_no_return := (
+		str(normal_result.get("result", "")) == "defeat"
+		and current_map_id == GM_10V10_MAP_ID
+		and str(normal_result.get("log", "")).find("回到记录点") < 0
+	)
+
+	var knocked_state := _record_point_test_battle_state(true)
+	var knocked_result := _finish_record_point_test_battle(knocked_state)
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
+	var knocked_return := (
+		str(knocked_result.get("result", "")) == "defeat"
+		and current_map_id == "firebud_village_gate"
+		and player_cell == Vector2i(10, 17)
+		and str(knocked_result.get("log", "")).find("回到记录点") >= 0
+	)
+
+	var high_zone := _encounter_zone_by_id("gm_high_knockaway_grass")
+	if high_zone.is_empty():
+		_load_map(GM_10V10_MAP_ID)
+		high_zone = _encounter_zone_by_id("gm_high_knockaway_grass")
+	var high_selected := EncounterModel.zone_with_selected_wild_pet(high_zone, encounter_rng) if not high_zone.is_empty() else {}
+	var high_pets: Array = high_selected.get("selectedWildPets", [])
+	var high_count := EncounterModel.enemy_count(high_selected, 1) if not high_selected.is_empty() else 0
+	var high_ok := (
+		not high_zone.is_empty()
+		and high_count >= 1
+		and high_count <= 5
+		and high_pets.size() == high_count
+	)
+	for pet_value in high_pets:
+		var selected_pet := pet_value as Dictionary if pet_value is Dictionary else {}
+		var selected_level := int(selected_pet.get("level", 0))
+		if selected_level < 120 or selected_level > 140:
+			high_ok = false
+
+	var status := "ok" if record_found and dialog_opened and dialog_hint_ok and dialog_button_ok and saved_ok and normal_no_return and knocked_return and high_ok else "failed"
+	print("record point check ready: status=%s record=%s dialog=%s hint=%s button=%s saved=%s normal_no_return=%s knocked_return=%s high=%s high_count=%d cell=%s log=%s" % [
+		status,
+		str(record_found),
+		str(dialog_opened),
+		str(dialog_hint_ok),
+		str(dialog_button_ok),
+		str(saved_ok),
+		str(normal_no_return),
+		str(knocked_return),
+		str(high_ok),
+		high_count,
+		str(player_cell),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _record_point_test_battle_state(knocked: bool) -> Dictionary:
+	var state := {
+		"id": "record_point_test_battle",
+		"round": 1,
+		"phase": "command",
+		"message": "记录点测试战斗。",
+		"actors": [
+			{
+				"id": BattleModel.PLAYER_ACTOR_ID,
+				"name": "见习猎人",
+				"side": BattleModel.SIDE_ALLY,
+				"kind": "player",
+				"slotId": "ally.back.3",
+				"hp": 0,
+				"maxHp": 120,
+				"quick": 70,
+				"attack": 18,
+				"defense": 6,
+				"actionState": "launched" if knocked else "down",
+				"launched": knocked,
+				"revivable": not knocked,
+				"statuses": BattleStatusModel.empty_statuses(),
+			},
+			{
+				"id": "enemy_front_1",
+				"name": "高级乌力",
+				"side": BattleModel.SIDE_ENEMY,
+				"kind": "wild_pet",
+				"slotId": "enemy.front.1",
+				"hp": 999,
+				"maxHp": 999,
+				"quick": 120,
+				"attack": 400,
+				"defense": 50,
+				"actionState": "idle",
+				"statuses": BattleStatusModel.empty_statuses(),
+			},
+		],
+	}
+	if knocked:
+		state["lastLaunch"] = true
+	return state
+
+
+func _finish_record_point_test_battle(state: Dictionary) -> Dictionary:
+	_load_map(GM_10V10_MAP_ID)
+	battle_state = state.duplicate(true)
+	battle_active = true
+	var result := _finish_battle_and_return_to_world()
+	result["log"] = world_log_message
+	return result
+
+
 func _village_healer_check_profile(coins: int) -> Dictionary:
 	var profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), coins)
 	profile = PlayerProgressModel.with_player_hp(profile, 10)
@@ -5576,6 +5718,61 @@ func _run_training_partner_demo() -> void:
 	_open_training_partner_panel()
 	if status_label != null:
 		_update_hud_text()
+
+
+func _run_record_point_knockaway_demo() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	encounter_rng.seed = 67067
+	player_profile = PlayerProgressModel.with_record_point(
+		PlayerProgressModel.default_profile(),
+		"firebud_village_gate",
+		"doctor_record",
+		"火芽村医旁记录点"
+	)
+	player_profile = _profile_without_active_battle_pet(player_profile)
+	var loaded := _load_map(GM_10V10_MAP_ID)
+	var zone := _encounter_zone_by_id("gm_high_knockaway_grass")
+	if not loaded or zone.is_empty():
+		_set_world_log_message("GM高级击飞草丛未找到。")
+		await get_tree().create_timer(1.2).timeout
+		get_tree().quit(1)
+		return
+	var cell := EncounterModel.first_walkable_cell(map_data, zone)
+	if player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, cell)
+		player.clear_move_target()
+	last_checked_player_cell = cell
+	_update_camera_position(true)
+	_set_world_log_message("GM高级击飞草丛：等待怪物击飞并回到记录点。")
+	queue_redraw()
+	await get_tree().create_timer(0.8).timeout
+	_trigger_encounter(zone)
+	await get_tree().process_frame
+	var elapsed := 0.0
+	while battle_active and elapsed < 12.0:
+		if not _battle_commands_locked() and battle_command_owner == "player":
+			_submit_player_battle_command("defend")
+		await get_tree().create_timer(0.1).timeout
+		elapsed += 0.1
+	await get_tree().create_timer(2.0).timeout
+	get_tree().quit(0 if current_map_id == "firebud_village_gate" else 1)
+
+
+func _profile_without_active_battle_pet(profile: Dictionary) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	var instances: Array = next_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("state", PlayerProgressModel.PET_STATE_STANDBY)) == PlayerProgressModel.PET_STATE_BATTLE:
+			instance["state"] = PlayerProgressModel.PET_STATE_STANDBY
+		instances[index] = instance
+	next_profile["petInstances"] = instances
+	next_profile["activePetInstanceId"] = ""
+	return PlayerProgressModel.normalize_profile(next_profile)
 
 
 func _run_equipment_quest_preview() -> void:
@@ -10146,6 +10343,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	_update_battle_player_zero_hp_seen()
 	var ended_state := battle_state.duplicate(true)
 	var hang_stop_message := _hang_stop_message_for_battle_result(ended_state)
+	var player_knocked_away := PlayerProgressModel.battle_actor_knocked_away(ended_state, BattleModel.PLAYER_ACTOR_ID)
 	var result := PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = []
@@ -10159,9 +10357,25 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		log_lines.append(hang_stop_message)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
-	_end_battle(true)
+	if player_knocked_away:
+		_return_player_to_record_point_after_knockaway(log_lines)
+	else:
+		_end_battle(true)
 	_set_world_log_message("\n".join(log_lines))
 	return result
+
+
+func _return_player_to_record_point_after_knockaway(log_lines: Array[String]) -> void:
+	var point := PlayerProgressModel.record_point(player_profile)
+	var map_id := str(point.get("mapId", PlayerProgressModel.DEFAULT_RECORD_POINT_MAP_ID))
+	var spawn_name := str(point.get("spawnName", PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME))
+	var label := str(point.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
+	if not _load_map(map_id, spawn_name):
+		map_id = PlayerProgressModel.DEFAULT_RECORD_POINT_MAP_ID
+		spawn_name = PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME
+		label = PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL
+		_load_map(map_id, spawn_name)
+	log_lines.append("见习猎人被击飞，回到记录点「%s」。" % label)
 
 
 func _battle_player_actor_from_state(state: Dictionary) -> Dictionary:
@@ -13934,6 +14148,9 @@ func _confirm_dialog_action() -> void:
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 		return
+	if _active_dialog_is_record_point():
+		_save_record_point_from_dialog()
+		return
 	if str(active_dialog_interaction.get("shopId", "")) != "":
 		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
 		_close_dialog()
@@ -13961,6 +14178,10 @@ func _dialog_body_for(item: Dictionary) -> String:
 	if healer_hint != "":
 		text_parts.append("")
 		text_parts.append(healer_hint)
+	var record_hint := _dialog_record_point_hint_for(item)
+	if record_hint != "":
+		text_parts.append("")
+		text_parts.append(record_hint)
 	var quest_hint := _dialog_quest_hint_for(item)
 	if quest_hint != "":
 		text_parts.append("")
@@ -13975,6 +14196,8 @@ func _dialog_option_text(item: Dictionary) -> String:
 		return "完成"
 	if _dialog_item_is_healer(item):
 		return str(item.get("option", "治疗队伍"))
+	if _dialog_item_is_record_point(item):
+		return str(item.get("option", "保存"))
 	if str(item.get("shopId", "")) != "":
 		return str(item.get("option", "买卖"))
 	return str(item.get("option", "知道了"))
@@ -13986,6 +14209,56 @@ func _active_dialog_is_healer() -> bool:
 
 func _dialog_item_is_healer(item: Dictionary) -> bool:
 	return bool(item.get("healer", false)) or str(item.get("actionType", "")) == "healer"
+
+
+func _active_dialog_is_record_point() -> bool:
+	return _dialog_item_is_record_point(active_dialog_interaction)
+
+
+func _dialog_item_is_record_point(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == "record_point" or str(item.get("kind", "")) == "record_point"
+
+
+func _dialog_record_point_hint_for(item: Dictionary) -> String:
+	if not _dialog_item_is_record_point(item):
+		return ""
+	var current_point := PlayerProgressModel.record_point(player_profile)
+	var current_label := str(current_point.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
+	var next_point := _record_point_data_for_dialog(item)
+	var next_label := str(next_point.get("label", "记录点"))
+	return "当前记录点：%s\n保存为：%s" % [current_label, next_label]
+
+
+func _record_point_data_for_dialog(item: Dictionary) -> Dictionary:
+	var data = item.get("recordPoint", {})
+	if data is Dictionary:
+		var value := data as Dictionary
+		return {
+			"mapId": str(value.get("mapId", current_map_id)),
+			"spawnName": str(value.get("spawnName", "default")),
+			"label": str(value.get("label", item.get("name", "记录点"))),
+		}
+	return {
+		"mapId": current_map_id,
+		"spawnName": "default",
+		"label": str(item.get("name", "记录点")),
+	}
+
+
+func _save_record_point_from_dialog() -> void:
+	var point := _record_point_data_for_dialog(active_dialog_interaction)
+	player_profile = PlayerProgressModel.with_record_point(
+		player_profile,
+		str(point.get("mapId", current_map_id)),
+		str(point.get("spawnName", "default")),
+		str(point.get("label", "记录点"))
+	)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message("记录点已保存：%s。" % str(PlayerProgressModel.record_point(player_profile).get("label", "记录点")))
+	_update_dialog_text()
+	if status_label != null:
+		_update_hud_text()
 
 
 func _dialog_healer_hint_for(item: Dictionary) -> String:
@@ -15264,6 +15537,11 @@ func _draw_interaction_points() -> void:
 			draw_line(marker + Vector2(14, 14), marker + Vector2(14, -10), Color(0.73, 0.54, 0.34, 0.95), 5.0)
 			draw_line(marker + Vector2(-14, -10), marker + Vector2(14, -10), Color(0.90, 0.72, 0.43, 0.95), 5.0)
 			draw_circle(marker + Vector2(0, 4), 4.0, Color(1.0, 0.86, 0.42, 0.95))
+		elif item_kind == "record_point":
+			draw_rect(Rect2(marker + Vector2(-7, -26), Vector2(14, 36)), Color(0.56, 0.62, 0.66, 0.98), true)
+			draw_line(marker + Vector2(-13, -18), marker + Vector2(13, -18), Color(0.95, 0.82, 0.46, 0.95), 4.0)
+			draw_circle(marker + Vector2(0, -31), 9.0, Color(0.98, 0.78, 0.34, 0.98))
+			draw_arc(marker + Vector2(0, -31), 13.0, 0.0, TAU, 24, Color(0.55, 0.79, 1.0, 0.76), 2.0, true)
 		else:
 			var blocks_movement := InteractionModel.blocks_movement(item)
 			var body_color := Color(0.74, 0.36, 0.25, 0.98) if blocks_movement else Color(0.22, 0.58, 0.66, 0.98)

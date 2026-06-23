@@ -7,7 +7,8 @@
   "spawnCell": [3, 15],
   "spawnPoints": {
     "default": [3, 15],
-    "from_training_yard": [3, 15]
+    "from_training_yard": [3, 15],
+    "doctor_record": [10, 17]
   },
   "blockedCells": [
     [8, 4],
@@ -111,12 +112,28 @@
       "name": "村医阿萝",
       "kind": "npc",
       "movementCollision": "block",
-      "cell": [5, 16],
+      "cell": [9, 16],
       "action": "治疗",
       "actionType": "healer",
       "healer": true,
       "dialog": ["村医阿萝：受伤了就来，我给你和随行宠物处理。"],
       "option": "治疗队伍"
+    },
+    {
+      "id": "firebud_record_pillar",
+      "name": "记录点柱",
+      "kind": "record_point",
+      "movementCollision": "block",
+      "cell": [10, 16],
+      "action": "记录",
+      "actionType": "record_point",
+      "recordPoint": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "label": "火芽村医旁记录点"
+      },
+      "dialog": ["记录点柱：是否将这里保存为当前记录点？"],
+      "option": "保存"
     },
     {
       "id": "firebud_shopkeeper",

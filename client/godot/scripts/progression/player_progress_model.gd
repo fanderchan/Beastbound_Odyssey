@@ -53,6 +53,10 @@ const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
 const AUTO_CAPTURE_SETTINGS_KEY := AutoCaptureSettingsModel.SETTINGS_KEY
 const HANG_SETTINGS_KEY := HangSettingsModel.SETTINGS_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
+const RECORD_POINT_KEY := "recordPoint"
+const DEFAULT_RECORD_POINT_MAP_ID := "firebud_village_gate"
+const DEFAULT_RECORD_POINT_SPAWN_NAME := "default"
+const DEFAULT_RECORD_POINT_LABEL := "火芽村出生点"
 
 
 static func default_profile() -> Dictionary:
@@ -89,6 +93,7 @@ static func default_profile() -> Dictionary:
 		"autoCaptureSettings": AutoCaptureSettingsModel.default_settings(),
 		"hangSettings": HangSettingsModel.default_settings(),
 		"trainingPartners": [],
+		"recordPoint": default_record_point(),
 	}
 
 
@@ -110,6 +115,36 @@ static func save_profile(profile: Dictionary) -> bool:
 	file.store_string(JSON.stringify(normalized, "\t"))
 	file.close()
 	return true
+
+
+static func default_record_point() -> Dictionary:
+	return {
+		"mapId": DEFAULT_RECORD_POINT_MAP_ID,
+		"spawnName": DEFAULT_RECORD_POINT_SPAWN_NAME,
+		"label": DEFAULT_RECORD_POINT_LABEL,
+	}
+
+
+static func record_point(profile: Dictionary) -> Dictionary:
+	return _normalize_record_point(normalize_profile(profile).get(RECORD_POINT_KEY, {}))
+
+
+static func with_record_point(profile: Dictionary, map_id: String, spawn_name: String, label: String = "") -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[RECORD_POINT_KEY] = _normalize_record_point({
+		"mapId": map_id,
+		"spawnName": spawn_name,
+		"label": label,
+	})
+	return normalize_profile(normalized)
+
+
+static func battle_actor_knocked_away(state: Dictionary, actor_id: String) -> bool:
+	for actor in _actors(state):
+		if str(actor.get("id", "")) != actor_id:
+			continue
+		return bool(actor.get("launched", false)) or str(actor.get("actionState", "")) == "launched" or not bool(actor.get("revivable", true))
+	return false
 
 
 static func active_pet(profile: Dictionary) -> Dictionary:
@@ -1826,6 +1861,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(normalized.get(AUTO_CAPTURE_SETTINGS_KEY, {}))
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
+	normalized[RECORD_POINT_KEY] = _normalize_record_point(normalized.get(RECORD_POINT_KEY, {}))
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
@@ -1838,6 +1874,24 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized["nextPetInstanceSerial"] = maxi(int(normalized.get("nextPetInstanceSerial", instances.size() + 1)), _next_serial_from_instances(instances))
 	normalized["nextPetDropSerial"] = maxi(int(normalized.get("nextPetDropSerial", 1)), _next_drop_serial_from_drops(drops))
 	return normalized
+
+
+static func _normalize_record_point(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	var map_id := str(source.get("mapId", DEFAULT_RECORD_POINT_MAP_ID)).strip_edges()
+	var spawn_name := str(source.get("spawnName", DEFAULT_RECORD_POINT_SPAWN_NAME)).strip_edges()
+	var label := str(source.get("label", "")).strip_edges()
+	if map_id == "":
+		map_id = DEFAULT_RECORD_POINT_MAP_ID
+	if spawn_name == "":
+		spawn_name = DEFAULT_RECORD_POINT_SPAWN_NAME
+	if label == "":
+		label = DEFAULT_RECORD_POINT_LABEL
+	return {
+		"mapId": map_id,
+		"spawnName": spawn_name,
+		"label": label,
+	}
 
 
 static func apply_profile_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
