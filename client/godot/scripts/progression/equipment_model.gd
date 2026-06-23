@@ -11,6 +11,7 @@ const SLOT_RIGHT_HAND_WEAPON := "right_hand_weapon"
 const SLOT_HANDS := "hands"
 const SLOT_FEET := "feet"
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
+const DEFAULT_DURABILITY_MAX := 30
 
 
 static func slots() -> Array[Dictionary]:
@@ -125,6 +126,12 @@ static func requirement_text_for(item_id: String) -> String:
 	return "需求: Lv%d" % required_level if required_level > 1 else ""
 
 
+static func max_durability_for(item_id: String) -> int:
+	if not is_equipment(item_id):
+		return 0
+	return maxi(1, int(item_for_id(item_id).get("durabilityMax", DEFAULT_DURABILITY_MAX)))
+
+
 static func stat_bonus_text_for(item_id: String) -> String:
 	var stats := stats_for(item_id)
 	var parts: Array[String] = []
@@ -150,6 +157,9 @@ static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var requirement_text := requirement_text_for(item_id)
 	if requirement_text != "":
 		lines.append(requirement_text)
+	var durability_max := max_durability_for(item_id)
+	if durability_max > 0:
+		lines.append("耐久上限: %d" % durability_max)
 	var stat_text := stat_bonus_text_for(item_id)
 	if stat_text != "":
 		lines.append("效果: %s" % stat_text)
@@ -187,6 +197,8 @@ static func validation_errors() -> Array[String]:
 			errors.append("%s.slot 指向不存在装备槽: %s" % [item_id, slot_id])
 		if int(item.get("requiredLevel", 1)) < 1:
 			errors.append("%s.requiredLevel 必须大于等于 1" % item_id)
+		if int(item.get("durabilityMax", DEFAULT_DURABILITY_MAX)) < 1:
+			errors.append("%s.durabilityMax 必须大于等于 1" % item_id)
 		var raw_spirits = item.get("spiritIds", [])
 		if raw_spirits is Array:
 			for value in raw_spirits:

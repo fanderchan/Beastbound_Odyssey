@@ -170,6 +170,7 @@ var shop_quantity_spinbox: SpinBox
 var shop_quantity_plus_button: Button
 var shop_quantity_max_button: Button
 var shop_action_button: Button
+var shop_repair_button: Button
 var shop_close_button: Button
 var shop_item_buttons: Dictionary = {}
 var shop_active_id: String = ShopCatalogModel.DEFAULT_SHOP_ID
@@ -323,12 +324,14 @@ var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
 var auto_equipment_requirement_check: bool = false
+var auto_equipment_durability_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var equipment_requirement_preview: bool = false
+var equipment_durability_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -568,6 +571,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_stat_points_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
+	elif auto_equipment_durability_check:
+		call_deferred("_run_auto_equipment_durability_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -580,6 +585,8 @@ func _ready() -> void:
 		call_deferred("_run_player_stat_points_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
+	elif equipment_durability_preview:
+		call_deferred("_run_equipment_durability_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -867,6 +874,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_stat_points_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
+		elif arg == "--auto-equipment-durability-check":
+			auto_equipment_durability_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -879,6 +888,8 @@ func _apply_preview_window_args() -> void:
 			player_stat_points_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
+		elif arg == "--equipment-durability-preview":
+			equipment_durability_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5667,6 +5678,97 @@ func _run_auto_equipment_requirement_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_durability_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var base_profile := PlayerProgressModel.default_profile()
+	var base_durability := PlayerProgressModel.equipment_durability(base_profile)
+	var default_durability_ok := int(base_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
+	var wear_result := PlayerProgressModel.apply_equipment_wear(base_profile, 1)
+	var worn_profile := wear_result.get("profile", {}) as Dictionary
+	var worn_durability := PlayerProgressModel.equipment_durability(worn_profile)
+	var wear_ok := (
+		bool(wear_result.get("changed", false))
+		and int(worn_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX - 1
+	)
+	var broken_profile := base_profile.duplicate(true)
+	var broken_durability := PlayerProgressModel.equipment_durability(broken_profile)
+	broken_durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = 0
+	broken_profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = broken_durability
+	broken_profile = PlayerProgressModel.normalize_profile(broken_profile)
+	var broken_summary := PlayerProgressModel.player_stat_summary(broken_profile)
+	var broken_current := broken_summary.get("current", {}) as Dictionary
+	var broken_ok := (
+		int(broken_current.get("attack", 0)) == 27
+		and PlayerProgressModel.equipment_slot_durability_text(broken_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON).find("已损坏") >= 0
+	)
+	var quote := PlayerProgressModel.equipment_repair_quote(broken_profile)
+	var repair_result := PlayerProgressModel.repair_all_equipment(broken_profile)
+	var repaired_profile := repair_result.get("profile", {}) as Dictionary
+	var repaired_summary := PlayerProgressModel.player_stat_summary(repaired_profile)
+	var repaired_current := repaired_summary.get("current", {}) as Dictionary
+	var repair_ok := (
+		int(quote.get("missingDurability", 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
+		and int(quote.get("cost", 0)) == 6
+		and bool(repair_result.get("ok", false))
+		and PlayerProgressModel.stone_coins(repaired_profile) == PlayerProgressModel.DEFAULT_STONE_COINS - 6
+		and int(PlayerProgressModel.equipment_durability(repaired_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
+		and int(repaired_current.get("attack", 0)) == 32
+	)
+	var battle_state := _battle_reward_test_state("equipment_durability_battle", base_profile)
+	var battle_result := PlayerProgressModel.apply_battle_result(base_profile, battle_state, "victory")
+	var battle_profile := battle_result.get("profile", {}) as Dictionary
+	var battle_durability_ok := int(PlayerProgressModel.equipment_durability(battle_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX - 1
+
+	player_profile = broken_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_equipment_panel()
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_refresh_equipment_panel()
+	await get_tree().process_frame
+	var equipment_detail := equipment_detail_label.text if equipment_detail_label != null else ""
+	var equipment_ui_ok := (
+		equipment_detail.find("耐久: 0/30") >= 0
+		and equipment_detail.find("已损坏") >= 0
+		and equipment_stats_label != null
+		and equipment_stats_label.text.find("攻击 18+9=27") >= 0
+	)
+	_close_equipment_panel()
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	await get_tree().process_frame
+	var repair_button_ready := (
+		shop_repair_button != null
+		and shop_repair_button.visible
+		and not shop_repair_button.disabled
+		and shop_repair_button.text == "修理 6石币"
+	)
+	_on_shop_repair_pressed()
+	await get_tree().process_frame
+	var repair_button_done := (
+		world_log_message.find("装备修理完成") >= 0
+		and shop_repair_button != null
+		and shop_repair_button.visible
+		and shop_repair_button.disabled
+		and int(PlayerProgressModel.equipment_durability(player_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
+	)
+	var status := "ok" if default_durability_ok and wear_ok and broken_ok and repair_ok and battle_durability_ok and equipment_ui_ok and repair_button_ready and repair_button_done else "failed"
+	print("equipment durability check ready: status=%s default=%s wear=%s broken=%s repair=%s battle=%s equipment_ui=%s repair_ready=%s repair_done=%s attack_broken=%d coins=%d" % [
+		status,
+		str(default_durability_ok),
+		str(wear_ok),
+		str(broken_ok),
+		str(repair_ok),
+		str(battle_durability_ok),
+		str(equipment_ui_ok),
+		str(repair_button_ready),
+		str(repair_button_done),
+		int(broken_current.get("attack", 0)),
+		PlayerProgressModel.stone_coins(player_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -6290,6 +6392,21 @@ func _run_equipment_requirement_preview() -> void:
 	_set_world_log_message("Phase73：骨刃需要 Lv3 才能装备。")
 	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_bone_blade")
 	_open_backpack_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_durability_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var durability := PlayerProgressModel.equipment_durability(player_profile)
+	durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = 0
+	player_profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase74：右手武器损坏，可在装备铺修理。")
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -9723,6 +9840,13 @@ func _build_hud() -> void:
 		_set_shop_mode("sell")
 	)
 	shop_tabs.add_child(shop_sell_button)
+	shop_repair_button = Button.new()
+	shop_repair_button.text = "修理"
+	shop_repair_button.visible = false
+	shop_repair_button.custom_minimum_size = Vector2(0, 42)
+	shop_repair_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_repair_button.pressed.connect(_on_shop_repair_pressed)
+	shop_tabs.add_child(shop_repair_button)
 
 	var shop_scroll := ScrollContainer.new()
 	shop_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -11545,6 +11669,9 @@ func _refresh_equipment_detail() -> void:
 		lines.append("未装备")
 	else:
 		lines.append(EquipmentModel.label_for(item_id))
+		var durability_text := PlayerProgressModel.equipment_slot_durability_text(player_profile, equipment_selected_slot_id)
+		if durability_text != "":
+			lines.append(durability_text)
 		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
 	equipment_detail_label.text = "\n".join(lines)
 	if equipment_unequip_button != null:
@@ -12000,6 +12127,13 @@ func _refresh_shop_panel() -> void:
 	if shop_action_button != null:
 		shop_action_button.text = _shop_action_text()
 		shop_action_button.disabled = shop_selected_item_id == "" or _shop_quantity_max(shop_selected_item_id) <= 0
+	if shop_repair_button != null:
+		var repair_quote := PlayerProgressModel.equipment_repair_quote(player_profile)
+		var missing_durability := int(repair_quote.get("missingDurability", 0))
+		var repair_cost := int(repair_quote.get("cost", 0))
+		shop_repair_button.visible = shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
+		shop_repair_button.text = "修理 %d石币" % repair_cost if missing_durability > 0 else "修理"
+		shop_repair_button.disabled = missing_durability <= 0 or PlayerProgressModel.stone_coins(player_profile) < repair_cost
 
 
 func _shop_item_ids_for_mode(mode: String) -> Array[String]:
@@ -12126,6 +12260,21 @@ func _on_shop_action_pressed() -> void:
 		shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
 	_refresh_shop_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _on_shop_repair_pressed() -> void:
+	var result := PlayerProgressModel.repair_all_equipment(player_profile)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_shop_panel()
+	if equipment_panel != null and equipment_panel.visible:
+		_refresh_equipment_panel()
+	if player_status_panel != null and player_status_panel.visible:
+		_refresh_player_status_panel()
 	if status_label != null:
 		_update_hud_text()
 
@@ -15937,15 +16086,16 @@ func _layout_hud() -> void:
 	var action_size := Vector2(action_width, ACTION_BAR_SIZE.y)
 	var top_max_width := 300.0 if battle_active else 520.0
 	var top_width: float = minf(viewport_size.x - margin * 2.0, top_max_width)
+	var world_menu_open := _world_menu_is_open()
 	top_panel.position = Vector2(margin, margin)
 	top_panel.size = Vector2(top_width, 56)
 
 	if battle_active:
 		side_panel.visible = false
 		action_bar.visible = false
-	elif is_phone_shape:
+	elif is_phone_shape or world_menu_open:
 		side_panel.visible = false
-		action_bar.visible = true
+		action_bar.visible = not world_menu_open
 		if viewport_size.y > viewport_size.x:
 			action_bar.position = Vector2(maxf(margin, (viewport_size.x - action_width) * 0.5), viewport_size.y - 104.0)
 		else:
