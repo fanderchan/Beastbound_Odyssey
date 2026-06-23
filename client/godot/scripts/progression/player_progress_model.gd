@@ -41,6 +41,13 @@ const DEFAULT_PLAYER_BATTLE_STATS := {
 	"defense": 6,
 	"quick": 70,
 }
+const PLAYER_STAT_POINTS_PER_LEVEL := 3
+const PLAYER_STAT_POINT_GAINS := {
+	"maxHp": 4,
+	"attack": 1,
+	"defense": 1,
+	"quick": 1,
+}
 const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
@@ -71,6 +78,8 @@ static func default_profile() -> Dictionary:
 			"level": 1,
 			"exp": 0,
 			"nextExp": exp_to_next_level(1),
+			"baseStats": DEFAULT_PLAYER_BATTLE_STATS.duplicate(true),
+			"statPoints": 0,
 			"hp": DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120),
 			"maxHp": DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120),
 		},
@@ -341,12 +350,65 @@ static func equipment_change_preview(profile: Dictionary, item_id: String) -> Di
 	}
 
 
-static func player_base_stats() -> Dictionary:
-	return DEFAULT_PLAYER_BATTLE_STATS.duplicate(true)
+static func player_base_stats(profile: Dictionary = {}) -> Dictionary:
+	if profile.is_empty():
+		return DEFAULT_PLAYER_BATTLE_STATS.duplicate(true)
+	var player = profile.get("player", {})
+	return _player_base_stats_from_player(player as Dictionary if player is Dictionary else {})
+
+
+static func player_stat_points(profile: Dictionary) -> int:
+	var normalized := normalize_profile(profile)
+	var player = normalized.get("player", {})
+	var player_dict := player as Dictionary if player is Dictionary else {}
+	return maxi(0, int(player_dict.get("statPoints", 0)))
+
+
+static func player_stat_point_gain_for(stat_key: String) -> int:
+	return maxi(1, int(PLAYER_STAT_POINT_GAINS.get(stat_key, 1)))
+
+
+static func allocate_player_stat_point(profile: Dictionary, stat_key: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var key := stat_key.strip_edges()
+	if not PLAYER_STAT_KEYS.has(key):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "不能分配这个属性。",
+		}
+	var player := normalized.get("player", {}) as Dictionary
+	var points := maxi(0, int(player.get("statPoints", 0)))
+	if points <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有可分配属性点。",
+		}
+	var base_stats := _player_base_stats_from_player(player)
+	var gain := player_stat_point_gain_for(key)
+	base_stats[key] = maxi(1, int(base_stats.get(key, DEFAULT_PLAYER_BATTLE_STATS.get(key, 1))) + gain)
+	player["baseStats"] = base_stats
+	player["statPoints"] = points - 1
+	if key == "maxHp":
+		player["hp"] = maxi(1, int(player.get("hp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + gain)
+	normalized["player"] = player
+	normalized = normalize_profile(normalized)
+	var label := EquipmentModel.stat_label_for(key)
+	var normalized_player := normalized.get("player", {}) as Dictionary
+	var normalized_base := normalized_player.get("baseStats", {}) as Dictionary
+	var current_base := int(normalized_base.get(key, base_stats.get(key, 0)))
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 提升到 %d。" % [label, current_base],
+		"statKey": key,
+		"gain": gain,
+	}
 
 
 static func player_stat_summary(profile: Dictionary, base_stats: Dictionary = {}) -> Dictionary:
-	var normalized_base := _normalize_player_stat_values(base_stats if not base_stats.is_empty() else DEFAULT_PLAYER_BATTLE_STATS)
+	var normalized_base := _normalize_player_stat_values(base_stats if not base_stats.is_empty() else player_base_stats(profile))
 	var raw_bonus := equipment_stat_bonus(profile)
 	var normalized_bonus := {}
 	var current := {}
@@ -1252,6 +1314,13 @@ static func _normalize_player_stat_values(value: Dictionary) -> Dictionary:
 	return result
 
 
+static func _player_base_stats_from_player(player: Dictionary) -> Dictionary:
+	var raw_base = player.get("baseStats", {})
+	if raw_base is Dictionary:
+		return _normalize_player_stat_values(raw_base as Dictionary)
+	return DEFAULT_PLAYER_BATTLE_STATS.duplicate(true)
+
+
 static func _player_base_stats_from_actor(actor: Dictionary) -> Dictionary:
 	var result := {}
 	for key in PLAYER_STAT_KEYS:
@@ -2143,6 +2212,8 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	player_dict["level"] = maxi(1, int(player_dict.get("level", 1)))
 	player_dict["exp"] = maxi(0, int(player_dict.get("exp", 0)))
 	player_dict["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(player_dict.get("level", 1))))))
+	player_dict["baseStats"] = _player_base_stats_from_player(player_dict)
+	player_dict["statPoints"] = maxi(0, int(player_dict.get("statPoints", 0)))
 	normalized["player"] = player_dict
 
 	var raw_instances = normalized.get("petInstances", [])
@@ -2197,11 +2268,13 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
-	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value)
-	var player_max_hp := maxi(1, int(DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)) + int(player_bonus.get("maxHp", 0)))
 	player_dict = normalized.get("player", {}) as Dictionary
+	var player_base_stats := _player_base_stats_from_player(player_dict)
+	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value)
+	var player_max_hp := maxi(1, int(player_base_stats.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + int(player_bonus.get("maxHp", 0)))
 	player_dict["maxHp"] = player_max_hp
 	player_dict["hp"] = clampi(int(player_dict.get("hp", player_max_hp)), 1, player_max_hp)
+	player_dict["baseStats"] = player_base_stats
 	normalized["player"] = player_dict
 
 	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
@@ -2302,7 +2375,7 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		actor["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(actor.get("level", 1))))))
 		var previous_max_hp := maxi(1, int(actor.get("maxHp", 1)))
 		var previous_hp := clampi(int(actor.get("hp", previous_max_hp)), 0, previous_max_hp)
-		var summary := player_stat_summary(profile, _player_base_stats_from_actor(actor))
+		var summary := player_stat_summary(profile)
 		var current := summary.get("current", {}) as Dictionary
 		var current_max_hp := maxi(1, int(current.get("maxHp", previous_max_hp)))
 		actor["maxHp"] = current_max_hp
@@ -2466,9 +2539,17 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	if exp_reward > 0:
 		var player = next_profile.get("player", {}) as Dictionary
 		var player_award := _award_exp(player, exp_reward)
-		next_profile["player"] = player_award.get("entry", player)
+		var awarded_player := player_award.get("entry", player) as Dictionary
+		var player_levels_gained := maxi(0, int(player_award.get("levelsGained", 0)))
+		if player_levels_gained > 0:
+			awarded_player["statPoints"] = maxi(0, int(awarded_player.get("statPoints", 0))) + player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL
+		next_profile["player"] = awarded_player
 		if bool(player_award.get("leveled", false)):
-			level_up_lines.append("%s 升到 Lv%d。" % [str(player.get("name", "见习猎人")), int((player_award.get("entry", {}) as Dictionary).get("level", 1))])
+			level_up_lines.append("%s 升到 Lv%d，获得%d属性点。" % [
+				str(player.get("name", "见习猎人")),
+				int(awarded_player.get("level", 1)),
+				player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL,
+			])
 		var active_id := str(next_profile.get("activePetInstanceId", ""))
 		var instances: Array = next_profile.get("petInstances", [])
 		for index in range(instances.size()):
@@ -2672,6 +2753,7 @@ static func exp_to_next_level(level: int) -> int:
 static func _award_exp(entry: Dictionary, amount: int) -> Dictionary:
 	var next_entry := entry.duplicate(true)
 	var level := maxi(1, int(next_entry.get("level", 1)))
+	var start_level := level
 	var exp := maxi(0, int(next_entry.get("exp", 0))) + maxi(0, amount)
 	var next_exp := maxi(1, int(next_entry.get("nextExp", exp_to_next_level(level))))
 	var leveled := false
@@ -2686,6 +2768,7 @@ static func _award_exp(entry: Dictionary, amount: int) -> Dictionary:
 	return {
 		"entry": next_entry,
 		"leveled": leveled,
+		"levelsGained": maxi(0, level - start_level),
 	}
 
 

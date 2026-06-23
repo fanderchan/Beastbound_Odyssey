@@ -146,6 +146,8 @@ var backpack_selected_slot_index: int = 0
 var backpack_pending_use_item_id: String = ""
 var player_status_panel: PanelContainer
 var player_status_detail_label: RichTextLabel
+var player_status_points_label: Label
+var player_status_stat_point_buttons: Dictionary = {}
 var player_status_equipment_button: Button
 var player_status_close_button: Button
 var equipment_panel: PanelContainer
@@ -319,10 +321,12 @@ var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_equipment_check: bool = false
 var auto_player_status_check: bool = false
+var auto_player_stat_points_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var player_status_preview: bool = false
+var player_stat_points_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var quest_preview: bool = false
@@ -558,6 +562,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_check")
 	elif auto_player_status_check:
 		call_deferred("_run_auto_player_status_check")
+	elif auto_player_stat_points_check:
+		call_deferred("_run_auto_player_stat_points_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -566,6 +572,8 @@ func _ready() -> void:
 		call_deferred("_run_backpack_world_use_preview")
 	elif player_status_preview:
 		call_deferred("_run_player_status_preview")
+	elif player_stat_points_preview:
+		call_deferred("_run_player_stat_points_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -849,6 +857,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_check = true
 		elif arg == "--auto-player-status-check":
 			auto_player_status_check = true
+		elif arg == "--auto-player-stat-points-check":
+			auto_player_stat_points_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -857,6 +867,8 @@ func _apply_preview_window_args() -> void:
 			backpack_world_use_preview = true
 		elif arg == "--player-status-preview":
 			player_status_preview = true
+		elif arg == "--player-stat-points-preview":
+			player_stat_points_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5473,6 +5485,99 @@ func _run_auto_player_status_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_player_stat_points_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var profile := PlayerProgressModel.default_profile()
+	var player := profile.get("player", {}) as Dictionary
+	player["exp"] = PlayerProgressModel.exp_to_next_level(1) - 1
+	profile["player"] = player
+	var reward_state := _battle_reward_test_state("player_stat_points_check", profile)
+	var reward_result := PlayerProgressModel.apply_battle_result(profile, reward_state, "victory")
+	var leveled_profile := reward_result.get("profile", {}) as Dictionary
+	var leveled_player := leveled_profile.get("player", {}) as Dictionary
+	var level_ok := (
+		int(leveled_player.get("level", 1)) == 2
+		and PlayerProgressModel.player_stat_points(leveled_profile) == PlayerProgressModel.PLAYER_STAT_POINTS_PER_LEVEL
+		and _battle_result_log_text(reward_result).find("属性点") >= 0
+	)
+	var attack_result := PlayerProgressModel.allocate_player_stat_point(leveled_profile, "attack")
+	var after_attack := attack_result.get("profile", {}) as Dictionary
+	var hp_result := PlayerProgressModel.allocate_player_stat_point(after_attack, "maxHp")
+	var after_hp := hp_result.get("profile", {}) as Dictionary
+	var defense_result := PlayerProgressModel.allocate_player_stat_point(after_hp, "defense")
+	var allocated_profile := defense_result.get("profile", {}) as Dictionary
+	var allocated_summary := PlayerProgressModel.player_stat_summary(allocated_profile)
+	var allocated_base := allocated_summary.get("base", {}) as Dictionary
+	var allocated_current := allocated_summary.get("current", {}) as Dictionary
+	var allocated_player := allocated_profile.get("player", {}) as Dictionary
+	var allocation_ok := (
+		bool(attack_result.get("ok", false))
+		and bool(hp_result.get("ok", false))
+		and bool(defense_result.get("ok", false))
+		and PlayerProgressModel.player_stat_points(allocated_profile) == 0
+		and int(allocated_base.get("attack", 0)) == 19
+		and int(allocated_current.get("attack", 0)) == 33
+		and int(allocated_base.get("maxHp", 0)) == 124
+		and int(allocated_current.get("maxHp", 0)) == 132
+		and int(allocated_player.get("hp", 0)) == 124
+		and int(allocated_base.get("defense", 0)) == 7
+		and int(allocated_current.get("defense", 0)) == 13
+	)
+	var battle_state := _battle_reward_test_state("player_stat_points_battle", allocated_profile)
+	var player_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var battle_ok := (
+		int(player_actor.get("attack", 0)) == 33
+		and int(player_actor.get("maxHp", 0)) == 132
+		and int(player_actor.get("defense", 0)) == 13
+	)
+	player_profile = after_hp
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_player_status_panel()
+	await get_tree().process_frame
+	var status_text := player_status_detail_label.text if player_status_detail_label != null else ""
+	var attack_button := player_status_stat_point_buttons.get("attack") as Button
+	var hp_button := player_status_stat_point_buttons.get("maxHp") as Button
+	var points_label_ok := player_status_points_label != null and player_status_points_label.text == "可分配属性点：1"
+	var before_ui_ok := (
+		points_label_ok
+		and status_text.find("生命: 124/132") >= 0
+		and status_text.find("生命 124+8=132") >= 0
+		and status_text.find("攻击 19+14=33") >= 0
+		and attack_button != null
+		and attack_button.text == "攻击 +1"
+		and not attack_button.disabled
+		and hp_button != null
+		and hp_button.text == "生命 +4"
+	)
+	_on_player_status_allocate_pressed("defense")
+	await get_tree().process_frame
+	var final_text := player_status_detail_label.text if player_status_detail_label != null else ""
+	var defense_button := player_status_stat_point_buttons.get("defense") as Button
+	var final_points_label_ok := player_status_points_label != null and player_status_points_label.text == "可分配属性点：0"
+	var final_ui_ok := (
+		final_points_label_ok
+		and final_text.find("防御 7+6=13") >= 0
+		and defense_button != null
+		and defense_button.disabled
+	)
+	var status := "ok" if level_ok and allocation_ok and battle_ok and before_ui_ok and final_ui_ok else "failed"
+	print("player stat points check ready: status=%s level=%s allocation=%s battle=%s before_ui=%s final_ui=%s points=%d attack=%d max_hp=%d defense=%d" % [
+		status,
+		str(level_ok),
+		str(allocation_ok),
+		str(battle_ok),
+		str(before_ui_ok),
+		str(final_ui_ok),
+		PlayerProgressModel.player_stat_points(player_profile),
+		int(allocated_current.get("attack", 0)),
+		int(allocated_current.get("maxHp", 0)),
+		int(allocated_current.get("defense", 0)),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_encounter_loop_check() -> void:
 	profile_save_enabled = false
 	encounter_rng.seed = 57057
@@ -6056,6 +6161,31 @@ func _run_player_status_preview() -> void:
 	player_profile = PlayerProgressModel.default_profile()
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase71：人物状态总览。")
+	_open_player_status_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_player_stat_points_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var player := player_profile.get("player", {}) as Dictionary
+	player["level"] = 2
+	player["exp"] = 24
+	player["nextExp"] = PlayerProgressModel.exp_to_next_level(2)
+	player["statPoints"] = 1
+	player["baseStats"] = {
+		"maxHp": 124,
+		"attack": 19,
+		"defense": 6,
+		"quick": 70,
+	}
+	player["hp"] = 124
+	player_profile["player"] = player
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase72：升级属性点与手动加点。")
 	_open_player_status_panel()
 	await get_tree().create_timer(1.0).timeout
 
@@ -9299,6 +9429,31 @@ func _build_hud() -> void:
 	player_status_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	player_status_scroll.add_child(player_status_detail_label)
 
+	player_status_points_label = Label.new()
+	player_status_points_label.text = "可分配属性点：0"
+	player_status_points_label.add_theme_font_size_override("font_size", 15)
+	player_status_points_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_column.add_child(player_status_points_label)
+
+	var player_status_point_grid := GridContainer.new()
+	player_status_point_grid.columns = 2
+	player_status_point_grid.add_theme_constant_override("h_separation", 8)
+	player_status_point_grid.add_theme_constant_override("v_separation", 8)
+	player_status_point_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_column.add_child(player_status_point_grid)
+	player_status_stat_point_buttons.clear()
+	for stat_key in PlayerProgressModel.PLAYER_STAT_KEYS:
+		var stat_button := Button.new()
+		stat_button.custom_minimum_size = Vector2(0, 40)
+		stat_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_button.add_theme_font_size_override("font_size", 15)
+		var captured_key := stat_key
+		stat_button.pressed.connect(func() -> void:
+			_on_player_status_allocate_pressed(captured_key)
+		)
+		player_status_point_grid.add_child(stat_button)
+		player_status_stat_point_buttons[stat_key] = stat_button
+
 	player_status_equipment_button = Button.new()
 	player_status_equipment_button.text = "装备"
 	player_status_equipment_button.custom_minimum_size = Vector2(0, 44)
@@ -11077,6 +11232,16 @@ func _on_player_status_equipment_pressed() -> void:
 	_open_equipment_panel()
 
 
+func _on_player_status_allocate_pressed(stat_key: String) -> void:
+	var result := PlayerProgressModel.allocate_player_stat_point(player_profile, stat_key)
+	player_profile = result.get("profile", player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_refresh_player_status_panel()
+	_update_hud_text()
+
+
 func _refresh_player_status_panel() -> void:
 	if player_status_panel == null or player_status_detail_label == null:
 		return
@@ -11091,6 +11256,7 @@ func _refresh_player_status_panel() -> void:
 	var level := maxi(1, int(player_dict.get("level", 1)))
 	var exp := maxi(0, int(player_dict.get("exp", 0)))
 	var next_exp := maxi(1, int(player_dict.get("nextExp", PlayerProgressModel.exp_to_next_level(level))))
+	var stat_points := PlayerProgressModel.player_stat_points(player_profile)
 	var lines: Array[String] = [
 		"[color=#d7c36a]%s  Lv%d[/color]" % [_bbcode_escape(str(player_dict.get("name", "见习猎人"))), level],
 		"生命: %d/%d    经验: %d/%d" % [current_hp, current_max_hp, exp, next_exp],
@@ -11120,6 +11286,17 @@ func _refresh_player_status_panel() -> void:
 	lines.append("[color=#d7c36a]记录点[/color]")
 	lines.append(str(point.get("label", "记录点")))
 	player_status_detail_label.text = "\n".join(lines)
+	if player_status_points_label != null:
+		player_status_points_label.text = "可分配属性点：%d" % stat_points
+	for stat_key in player_status_stat_point_buttons.keys():
+		var button := player_status_stat_point_buttons.get(stat_key) as Button
+		if button == null:
+			continue
+		button.text = "%s +%d" % [
+			EquipmentModel.stat_label_for(str(stat_key)),
+			PlayerProgressModel.player_stat_point_gain_for(str(stat_key)),
+		]
+		button.disabled = stat_points <= 0
 
 
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
