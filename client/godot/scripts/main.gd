@@ -49,6 +49,11 @@ const PET_FILTER_STORAGE := "storage"
 const PET_FILTER_LEVEL_ONE := "level_one"
 const PET_FILTER_LOW_POWER := "low_power"
 const PET_FILTER_NEW := "new"
+const BACKPACK_FILTER_ALL := "all"
+const BACKPACK_FILTER_WORLD := "world"
+const BACKPACK_FILTER_BATTLE := "battle"
+const BACKPACK_FILTER_CAPTURE := "capture"
+const BACKPACK_FILTER_EQUIPMENT := "equipment"
 const PET_SORT_DEFAULT := "default"
 const PET_SORT_LEVEL := "level"
 const PET_SORT_POWER := "power"
@@ -152,7 +157,9 @@ var backpack_target_scroll: ScrollContainer
 var backpack_target_container: VBoxContainer
 var backpack_close_button: Button
 var backpack_slot_buttons: Array[Button] = []
+var backpack_filter_buttons: Dictionary = {}
 var backpack_selected_slot_index: int = 0
+var backpack_filter: String = BACKPACK_FILTER_ALL
 var backpack_pending_use_item_id: String = ""
 var player_status_panel: PanelContainer
 var player_status_detail_label: RichTextLabel
@@ -348,6 +355,7 @@ var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
 var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
+var auto_backpack_filter_check: bool = false
 var auto_quick_slot_check: bool = false
 var auto_shop_check: bool = false
 var auto_battle_reward_check: bool = false
@@ -366,6 +374,7 @@ var auto_equipment_durability_visual_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
+var backpack_filter_preview: bool = false
 var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
@@ -602,6 +611,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_backpack_check")
 	elif auto_backpack_world_use_check:
 		call_deferred("_run_auto_backpack_world_use_check")
+	elif auto_backpack_filter_check:
+		call_deferred("_run_auto_backpack_filter_check")
 	elif auto_quick_slot_check:
 		call_deferred("_run_auto_quick_slot_check")
 	elif auto_shop_check:
@@ -638,6 +649,8 @@ func _ready() -> void:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
 		call_deferred("_run_backpack_world_use_preview")
+	elif backpack_filter_preview:
+		call_deferred("_run_backpack_filter_preview")
 	elif quick_slot_preview:
 		call_deferred("_run_quick_slot_preview")
 	elif player_status_preview:
@@ -933,6 +946,8 @@ func _apply_preview_window_args() -> void:
 			auto_backpack_check = true
 		elif arg == "--auto-backpack-world-use-check":
 			auto_backpack_world_use_check = true
+		elif arg == "--auto-backpack-filter-check":
+			auto_backpack_filter_check = true
 		elif arg == "--auto-quick-slot-check":
 			auto_quick_slot_check = true
 		elif arg == "--auto-shop-check":
@@ -969,6 +984,8 @@ func _apply_preview_window_args() -> void:
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
 			backpack_world_use_preview = true
+		elif arg == "--backpack-filter-preview":
+			backpack_filter_preview = true
 		elif arg == "--quick-slot-preview":
 			quick_slot_preview = true
 		elif arg == "--player-status-preview":
@@ -5034,6 +5051,17 @@ func _run_backpack_world_use_preview() -> void:
 	_on_backpack_use_pressed()
 
 
+func _run_backpack_filter_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _backpack_filter_test_profile()
+	backpack_selected_slot_index = 0
+	_set_world_log_message("Phase82：随身包可按用途筛选。")
+	_open_backpack_panel()
+	_set_backpack_filter(BACKPACK_FILTER_WORLD)
+
+
 func _run_battle_reward_preview() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -5214,6 +5242,82 @@ func _run_auto_backpack_world_use_check() -> void:
 		int(after_pet.get("hp", 0)),
 		max_hp,
 		PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _backpack_filter_test_profile() -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var add_result := BackpackModel.add_items(PlayerProgressModel.backpack_slots(profile), [
+		{"itemId": "weapon_wooden_club", "count": 1},
+		{"itemId": ENCOUNTER_STONE_LOW_ID, "count": 1},
+		{"itemId": BattleModel.CAPTURE_TOOL_NET_REINFORCED, "count": 1},
+	])
+	return PlayerProgressModel.with_backpack_slots(profile, add_result.get("slots", []))
+
+
+func _run_auto_backpack_filter_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _backpack_filter_test_profile()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var all_ok := (
+		backpack_filter == BACKPACK_FILTER_ALL
+		and backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
+		and backpack_filter_buttons.has(BACKPACK_FILTER_ALL)
+		and (backpack_filter_buttons.get(BACKPACK_FILTER_ALL) as Button).button_pressed
+	)
+
+	_set_backpack_filter(BACKPACK_FILTER_BATTLE)
+	await get_tree().process_frame
+	var battle_text := _backpack_button_texts()
+	var battle_ok := (
+		battle_text.find("肉") >= 0
+		and battle_text.find("群体草药") >= 0
+		and battle_text.find("初级绳") < 0
+		and battle_text.find("木棒") < 0
+	)
+
+	_set_backpack_filter(BACKPACK_FILTER_WORLD)
+	await get_tree().process_frame
+	var world_text := _backpack_button_texts()
+	var world_ok := (
+		world_text.find("肉") >= 0
+		and world_text.find("初级遇敌石") >= 0
+		and world_text.find("初级绳") < 0
+		and world_text.find("木棒") < 0
+	)
+
+	_set_backpack_filter(BACKPACK_FILTER_CAPTURE)
+	await get_tree().process_frame
+	var capture_text := _backpack_button_texts()
+	var capture_ok := (
+		capture_text.find("初级绳") >= 0
+		and capture_text.find("强化网") >= 0
+		and capture_text.find("肉") < 0
+		and capture_text.find("木棒") < 0
+	)
+
+	_set_backpack_filter(BACKPACK_FILTER_EQUIPMENT)
+	await get_tree().process_frame
+	var equipment_text := _backpack_button_texts()
+	var equipment_ok := (
+		equipment_text.find("木棒") >= 0
+		and equipment_text.find("肉") < 0
+		and backpack_slot_buttons.size() < BackpackModel.SLOT_LIMIT
+	)
+	var status := "ok" if all_ok and battle_ok and world_ok and capture_ok and equipment_ok else "failed"
+	print("backpack filter check ready: status=%s all=%s battle=%s world=%s capture=%s equipment=%s buttons=%d" % [
+		status,
+		str(all_ok),
+		str(battle_ok),
+		str(world_ok),
+		str(capture_ok),
+		str(equipment_ok),
+		backpack_slot_buttons.size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -10482,6 +10586,25 @@ func _build_hud() -> void:
 	backpack_close_button.pressed.connect(_close_backpack_panel)
 	backpack_header.add_child(backpack_close_button)
 
+	var backpack_filter_row := HBoxContainer.new()
+	backpack_filter_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_filter_row.add_theme_constant_override("separation", 6)
+	backpack_column.add_child(backpack_filter_row)
+	backpack_filter_buttons.clear()
+	for option in _backpack_filter_options():
+		var filter_id := str(option.get("id", BACKPACK_FILTER_ALL))
+		var filter_button := Button.new()
+		filter_button.text = str(option.get("label", filter_id))
+		filter_button.toggle_mode = true
+		filter_button.custom_minimum_size = Vector2(0, 34)
+		filter_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filter_button.add_theme_font_size_override("font_size", 14)
+		filter_button.pressed.connect(func() -> void:
+			_set_backpack_filter(filter_id)
+		)
+		backpack_filter_row.add_child(filter_button)
+		backpack_filter_buttons[filter_id] = filter_button
+
 	var backpack_scroll := ScrollContainer.new()
 	backpack_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -12684,27 +12807,56 @@ func _refresh_backpack_panel() -> void:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	var slots := PlayerProgressModel.backpack_slots(player_profile)
-	backpack_selected_slot_index = clampi(backpack_selected_slot_index, 0, maxi(0, slots.size() - 1))
+	var visible_indices := _backpack_visible_slot_indices(slots)
+	if visible_indices.is_empty():
+		backpack_selected_slot_index = 0
+	elif not visible_indices.has(backpack_selected_slot_index):
+		backpack_selected_slot_index = int(visible_indices[0])
+	else:
+		backpack_selected_slot_index = clampi(backpack_selected_slot_index, 0, maxi(0, slots.size() - 1))
+	_refresh_backpack_filter_buttons()
 	backpack_grid.columns = _backpack_grid_columns()
 	for child in backpack_grid.get_children():
 		child.queue_free()
 	backpack_slot_buttons.clear()
-	for index in range(BackpackModel.SLOT_LIMIT):
-		var slot := slots[index] if index < slots.size() else {}
-		var button := Button.new()
-		button.text = BackpackModel.slot_label(slot)
-		button.toggle_mode = true
-		button.button_pressed = index == backpack_selected_slot_index
-		button.custom_minimum_size = Vector2(0, 62)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var slot_index := index
-		button.pressed.connect(func() -> void:
-			_select_backpack_slot(slot_index)
-		)
-		backpack_grid.add_child(button)
-		backpack_slot_buttons.append(button)
-	var selected_slot := slots[backpack_selected_slot_index] if backpack_selected_slot_index < slots.size() else {}
+	if visible_indices.is_empty():
+		backpack_grid.columns = 1
+		var empty_label := Label.new()
+		empty_label.text = "没有符合筛选的道具"
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		empty_label.custom_minimum_size = Vector2(0, 62)
+		backpack_grid.add_child(empty_label)
+	else:
+		for index in visible_indices:
+			var slot := slots[index] if index < slots.size() else {}
+			var button := Button.new()
+			button.text = BackpackModel.slot_label(slot)
+			button.toggle_mode = true
+			button.button_pressed = index == backpack_selected_slot_index
+			button.custom_minimum_size = Vector2(0, 62)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var slot_index := index
+			button.pressed.connect(func() -> void:
+				_select_backpack_slot(slot_index)
+			)
+			backpack_grid.add_child(button)
+			backpack_slot_buttons.append(button)
+	var selected_slot := {}
+	if not visible_indices.is_empty() and backpack_selected_slot_index < slots.size():
+		selected_slot = slots[backpack_selected_slot_index]
 	var selected_item_id := str(selected_slot.get("itemId", ""))
+	if visible_indices.is_empty():
+		backpack_detail_label.text = "当前筛选：%s\n没有符合条件的道具。" % _backpack_filter_label_for(backpack_filter)
+		if backpack_use_button != null:
+			backpack_use_button.visible = false
+		if backpack_quick_bind_row != null:
+			backpack_quick_bind_row.visible = false
+		backpack_pending_use_item_id = ""
+		_clear_backpack_target_buttons()
+		if backpack_target_scroll != null:
+			backpack_target_scroll.visible = false
+		return
 	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
 	if EquipmentModel.is_equipment(selected_item_id):
 		detail_lines.append_array(_equipment_detail_lines_with_requirement_status(selected_item_id, true))
@@ -12753,6 +12905,87 @@ func _refresh_backpack_panel() -> void:
 			backpack_target_scroll.visible = false
 	else:
 		_refresh_backpack_target_buttons(selected_item_id)
+
+
+func _backpack_filter_options() -> Array[Dictionary]:
+	return [
+		{"id": BACKPACK_FILTER_ALL, "label": "全部"},
+		{"id": BACKPACK_FILTER_WORLD, "label": "世界"},
+		{"id": BACKPACK_FILTER_BATTLE, "label": "战斗"},
+		{"id": BACKPACK_FILTER_CAPTURE, "label": "捕捉"},
+		{"id": BACKPACK_FILTER_EQUIPMENT, "label": "装备"},
+	]
+
+
+func _backpack_filter_ids() -> Array[String]:
+	var result: Array[String] = []
+	for option in _backpack_filter_options():
+		result.append(str(option.get("id", "")))
+	return result
+
+
+func _backpack_filter_label_for(filter_id: String) -> String:
+	for option in _backpack_filter_options():
+		if str(option.get("id", "")) == filter_id:
+			return str(option.get("label", filter_id))
+	return filter_id
+
+
+func _refresh_backpack_filter_buttons() -> void:
+	if not _backpack_filter_ids().has(backpack_filter):
+		backpack_filter = BACKPACK_FILTER_ALL
+	for option in _backpack_filter_options():
+		var filter_id := str(option.get("id", ""))
+		var button := backpack_filter_buttons.get(filter_id, null) as Button
+		if button == null:
+			continue
+		button.button_pressed = filter_id == backpack_filter
+
+
+func _set_backpack_filter(filter_id: String) -> void:
+	if not _backpack_filter_ids().has(filter_id):
+		filter_id = BACKPACK_FILTER_ALL
+	if backpack_filter == filter_id:
+		_refresh_backpack_filter_buttons()
+		return
+	backpack_filter = filter_id
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+
+
+func _backpack_button_texts() -> String:
+	var parts: Array[String] = []
+	for button in backpack_slot_buttons:
+		if button != null:
+			parts.append(button.text)
+	return "\n".join(parts)
+
+
+func _backpack_visible_slot_indices(slots: Array[Dictionary]) -> Array[int]:
+	var result: Array[int] = []
+	for index in range(BackpackModel.SLOT_LIMIT):
+		var slot := slots[index] if index < slots.size() else {}
+		if _backpack_slot_matches_filter(slot):
+			result.append(index)
+	return result
+
+
+func _backpack_slot_matches_filter(slot: Dictionary) -> bool:
+	if backpack_filter == BACKPACK_FILTER_ALL:
+		return true
+	var item_id := str(slot.get("itemId", ""))
+	if item_id == "":
+		return false
+	match backpack_filter:
+		BACKPACK_FILTER_WORLD:
+			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_HEAL) or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_ENCOUNTER_STONE)
+		BACKPACK_FILTER_BATTLE:
+			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_BATTLE_ITEM)
+		BACKPACK_FILTER_CAPTURE:
+			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_CAPTURE)
+		BACKPACK_FILTER_EQUIPMENT:
+			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_EQUIPMENT) or EquipmentModel.is_equipment(item_id)
+	return true
 
 
 func _backpack_grid_columns() -> int:
