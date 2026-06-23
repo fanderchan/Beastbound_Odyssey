@@ -51,4 +51,5 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-quest-ui-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-battle-reward-check
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie .run/godot/phase55_equipment_quest.png --quit-after 240 -- --equipment-quest-preview
+godot --path client/godot --scene res://scenes/Main.tscn --write-movie .run/godot/phase55_equipment_swap.png --quit-after 420 -- --equipment-swap-preview
 ```

@@ -228,6 +228,7 @@ var battle_reward_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var equipment_quest_preview: bool = false
+var equipment_swap_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -420,6 +421,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_ui_preview")
 	elif equipment_quest_preview:
 		call_deferred("_run_equipment_quest_preview")
+	elif equipment_swap_preview:
+		call_deferred("_run_equipment_swap_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -660,6 +663,8 @@ func _apply_preview_window_args() -> void:
 			quest_ui_preview = true
 		elif arg == "--equipment-quest-preview":
 			equipment_quest_preview = true
+		elif arg == "--equipment-swap-preview":
+			equipment_swap_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -3906,6 +3911,44 @@ func _run_equipment_quest_preview() -> void:
 	await get_tree().create_timer(0.8).timeout
 	_close_backpack_panel()
 	_open_equipment_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_swap_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("装备交换预览：木棒先装备，石斧再换上。")
+	var wood_buy_result := PlayerProgressModel.buy_shop_item(player_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	player_profile = wood_buy_result.get("profile", player_profile)
+	var axe_buy_result := PlayerProgressModel.buy_shop_item(player_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_stone_axe")
+	player_profile = axe_buy_result.get("profile", player_profile)
+	_set_world_log_message("%s\n%s" % [str(wood_buy_result.get("message", "")), str(axe_buy_result.get("message", ""))])
+
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_wooden_club")
+	_open_backpack_panel()
+	await get_tree().create_timer(0.8).timeout
+	_on_backpack_use_pressed()
+	await get_tree().create_timer(0.7).timeout
+	_close_backpack_panel()
+	_open_equipment_panel()
+	await get_tree().create_timer(0.9).timeout
+
+	_close_equipment_panel()
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_stone_axe")
+	_open_backpack_panel()
+	await get_tree().create_timer(0.8).timeout
+	_on_backpack_use_pressed()
+	await get_tree().create_timer(0.8).timeout
+	_close_backpack_panel()
+	_open_equipment_panel()
+	await get_tree().create_timer(0.9).timeout
+
+	_close_equipment_panel()
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_wooden_club")
+	_open_backpack_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
