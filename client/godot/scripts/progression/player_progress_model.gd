@@ -9,6 +9,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
+const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
@@ -494,6 +495,109 @@ static func repair_all_equipment(profile: Dictionary) -> Dictionary:
 		"profile": normalized,
 		"message": "装备修理完成，花费%d石币。" % cost,
 		"cost": cost,
+	}
+
+
+static func can_synthesize_equipment(profile: Dictionary, recipe_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var recipe := EquipmentSynthesisModel.recipe_for_id(recipe_id)
+	if recipe.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "配方不存在。",
+		}
+	var output_item_id := EquipmentSynthesisModel.output_item_id(recipe)
+	var output_count := EquipmentSynthesisModel.output_count(recipe)
+	if output_item_id == "" or not EquipmentModel.is_equipment(output_item_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "配方产物无效。",
+		}
+	var slots := backpack_slots(normalized)
+	var missing: Array[Dictionary] = []
+	for material in EquipmentSynthesisModel.material_entries(recipe):
+		var item_id := str(material.get("itemId", ""))
+		var need_count := maxi(0, int(material.get("count", 0)))
+		var held_count := BackpackModel.item_count(slots, item_id)
+		if held_count < need_count:
+			missing.append({
+				"itemId": item_id,
+				"count": need_count - held_count,
+			})
+	if not missing.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "材料不足：%s。" % BackpackModel.item_amounts_text(missing),
+			"missingItems": missing,
+		}
+	var cost := EquipmentSynthesisModel.stone_cost(recipe)
+	if stone_coins(normalized) < cost:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "石币不够。",
+			"missingCoins": cost - stone_coins(normalized),
+		}
+	var slots_after_materials := _consume_item_amounts(slots, EquipmentSynthesisModel.material_entries(recipe))
+	var add_result := BackpackModel.add_items(slots_after_materials, [{
+		"itemId": output_item_id,
+		"count": output_count,
+	}])
+	if _item_amount_count(add_result.get("added", []), output_item_id) < output_count:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "背包空间不足，无法合成%s。" % EquipmentModel.label_for(output_item_id, BackpackModel.label_for(output_item_id)),
+		}
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 可以合成。" % EquipmentSynthesisModel.output_label_for_recipe(recipe),
+		"recipeId": recipe_id,
+		"outputItemId": output_item_id,
+		"outputCount": output_count,
+		"materials": EquipmentSynthesisModel.material_entries(recipe),
+		"stoneCost": cost,
+	}
+
+
+static func synthesize_equipment(profile: Dictionary, recipe_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_synthesize_equipment(normalized, recipe_id)
+	if not bool(check.get("ok", false)):
+		return check
+	var recipe := EquipmentSynthesisModel.recipe_for_id(recipe_id)
+	var output_item_id := EquipmentSynthesisModel.output_item_id(recipe)
+	var output_count := EquipmentSynthesisModel.output_count(recipe)
+	var materials := EquipmentSynthesisModel.material_entries(recipe)
+	var next_slots := _consume_item_amounts(backpack_slots(normalized), materials)
+	var add_result := BackpackModel.add_items(next_slots, [{
+		"itemId": output_item_id,
+		"count": output_count,
+	}])
+	next_slots = add_result.get("slots", next_slots)
+	var cost := EquipmentSynthesisModel.stone_cost(recipe)
+	normalized[BACKPACK_SLOTS_KEY] = next_slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
+	normalized[STONE_COINS_KEY] = stone_coins(normalized) - cost
+	normalized = normalize_profile(normalized)
+	var cost_text := "、%d石币" % cost if cost > 0 else ""
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "合成%s，消耗%s%s。" % [
+			EquipmentModel.label_for(output_item_id, BackpackModel.label_for(output_item_id)),
+			BackpackModel.item_amounts_text(materials),
+			cost_text,
+		],
+		"recipeId": recipe_id,
+		"outputItemId": output_item_id,
+		"outputCount": output_count,
+		"materials": materials,
+		"stoneCost": cost,
 	}
 
 
@@ -1471,6 +1575,16 @@ static func _capture_tool_inventory_from_slots(slots: Array[Dictionary]) -> Dict
 		var tool_id := str(key)
 		result[tool_id] = BackpackModel.item_count(slots, tool_id)
 	return CaptureToolCatalog.normalize_inventory(result)
+
+
+static func _consume_item_amounts(slots: Array[Dictionary], entries: Array[Dictionary]) -> Array[Dictionary]:
+	var next_slots := BackpackModel.normalize_slots(slots)
+	for entry in entries:
+		var item_id := str(entry.get("itemId", ""))
+		var count := maxi(0, int(entry.get("count", 0)))
+		if item_id != "" and count > 0:
+			next_slots = BackpackModel.consume(next_slots, item_id, count)
+	return BackpackModel.normalize_slots(next_slots)
 
 
 static func _battle_item_inventory_from_slots(slots: Array[Dictionary]) -> Dictionary:

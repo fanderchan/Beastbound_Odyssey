@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "craft_hardwood_club",
+      "label": "硬木棒",
+      "category": "weapon",
+      "outputItemId": "weapon_hardwood_club",
+      "outputCount": 1,
+      "stoneCost": 20,
+      "successRate": 1.0,
+      "materials": [
+        {
+          "itemId": "equip_frag_wood_basic",
+          "count": 3
+        }
+      ],
+      "description": "用木质碎片压实打磨的初级右手武器。"
+    },
+    {
+      "id": "craft_stitched_hide_vest",
+      "label": "缝皮背心",
+      "category": "armor",
+      "outputItemId": "armor_stitched_hide_vest",
+      "outputCount": 1,
+      "stoneCost": 18,
+      "successRate": 1.0,
+      "materials": [
+        {
+          "itemId": "equip_frag_hide_basic",
+          "count": 3
+        }
+      ],
+      "description": "用皮革碎片缝补加固的初级衣服。"
+    }
+  ]
+}

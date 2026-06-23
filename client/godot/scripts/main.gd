@@ -16,6 +16,7 @@ const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_captur
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
+const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
@@ -177,9 +178,18 @@ var equipment_grid: Control
 var equipment_stats_label: Label
 var equipment_detail_label: Label
 var equipment_unequip_button: Button
+var equipment_synthesis_open_button: Button
 var equipment_close_button: Button
 var equipment_slot_buttons: Dictionary = {}
 var equipment_selected_slot_id: String = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+var equipment_synthesis_panel: PanelContainer
+var equipment_synthesis_list_container: VBoxContainer
+var equipment_synthesis_detail_label: RichTextLabel
+var equipment_synthesis_action_button: Button
+var equipment_synthesis_back_button: Button
+var equipment_synthesis_close_button: Button
+var equipment_synthesis_recipe_buttons: Dictionary = {}
+var equipment_synthesis_selected_recipe_id: String = ""
 var shop_panel: PanelContainer
 var shop_title_label: Label
 var shop_coin_label: Label
@@ -384,6 +394,7 @@ var auto_equipment_requirement_check: bool = false
 var auto_equipment_durability_check: bool = false
 var auto_equipment_durability_visual_check: bool = false
 var auto_equipment_slot_detail_check: bool = false
+var auto_equipment_synthesis_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
@@ -396,6 +407,7 @@ var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
 var equipment_slot_detail_preview: bool = false
+var equipment_synthesis_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var equipment_drop_preview: bool = false
@@ -673,6 +685,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_durability_visual_check")
 	elif auto_equipment_slot_detail_check:
 		call_deferred("_run_auto_equipment_slot_detail_check")
+	elif auto_equipment_synthesis_check:
+		call_deferred("_run_auto_equipment_synthesis_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -697,6 +711,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_durability_visual_preview")
 	elif equipment_slot_detail_preview:
 		call_deferred("_run_equipment_slot_detail_preview")
+	elif equipment_synthesis_preview:
+		call_deferred("_run_equipment_synthesis_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -1034,6 +1050,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_durability_visual_check = true
 		elif arg == "--auto-equipment-slot-detail-check":
 			auto_equipment_slot_detail_check = true
+		elif arg == "--auto-equipment-synthesis-check":
+			auto_equipment_synthesis_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -1058,6 +1076,8 @@ func _apply_preview_window_args() -> void:
 			equipment_durability_visual_preview = true
 		elif arg == "--equipment-slot-detail-preview":
 			equipment_slot_detail_preview = true
+		elif arg == "--equipment-synthesis-preview":
+			equipment_synthesis_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -5995,6 +6015,134 @@ func _run_auto_equipment_check() -> void:
 		PlayerProgressModel.stone_coins(sell_after_profile),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_equipment_synthesis_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var catalog_errors := EquipmentSynthesisModel.validation_errors()
+	var catalog_ok := catalog_errors.is_empty()
+	var recipe_id := "craft_hardwood_club"
+	var recipe := EquipmentSynthesisModel.recipe_for_id(recipe_id)
+	var output_id := EquipmentSynthesisModel.output_item_id(recipe)
+	var recipe_ok := (
+		not recipe.is_empty()
+		and output_id == "weapon_hardwood_club"
+		and EquipmentModel.is_equipment(output_id)
+		and BackpackModel.item_for_id(output_id).has("useContexts")
+		and EquipmentSynthesisModel.material_text(recipe).find("初级木质碎片 x3") >= 0
+	)
+
+	var base_profile := PlayerProgressModel.default_profile()
+	var missing_check := PlayerProgressModel.can_synthesize_equipment(base_profile, recipe_id)
+	var missing_ok := (
+		not bool(missing_check.get("ok", false))
+		and str(missing_check.get("message", "")).find("材料不足") >= 0
+	)
+
+	var material_profile := _profile_with_item_count(base_profile, EQUIP_FRAG_WOOD_BASIC_ID, 3)
+	material_profile = PlayerProgressModel.with_stone_coins(material_profile, 50)
+	var success_result := PlayerProgressModel.synthesize_equipment(material_profile, recipe_id)
+	var success_profile := success_result.get("profile", {}) as Dictionary
+	var success_ok := (
+		bool(success_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(success_profile, EQUIP_FRAG_WOOD_BASIC_ID) == 0
+		and PlayerProgressModel.backpack_item_count(success_profile, output_id) == 1
+		and PlayerProgressModel.stone_coins(success_profile) == 30
+		and str(success_result.get("message", "")).find("合成硬木棒") >= 0
+	)
+	var equip_result := PlayerProgressModel.equip_item(success_profile, output_id)
+	var equip_profile := equip_result.get("profile", {}) as Dictionary
+	var equip_ok := (
+		bool(equip_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == output_id
+		and PlayerProgressModel.backpack_item_count(equip_profile, output_id) == 0
+		and int((PlayerProgressModel.equipment_stat_bonus(equip_profile)).get("attack", 0)) >= 9
+	)
+
+	var coin_profile := _profile_with_item_count(base_profile, EQUIP_FRAG_WOOD_BASIC_ID, 3)
+	coin_profile = PlayerProgressModel.with_stone_coins(coin_profile, 0)
+	var coin_check := PlayerProgressModel.can_synthesize_equipment(coin_profile, recipe_id)
+	var coin_ok := (
+		not bool(coin_check.get("ok", false))
+		and str(coin_check.get("message", "")).find("石币不够") >= 0
+	)
+
+	var full_counts := {}
+	full_counts[BattleModel.ITEM_MEAT_SMALL] = BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL) * 14
+	full_counts[EQUIP_FRAG_WOOD_BASIC_ID] = 99
+	var full_slots := BackpackModel.slots_from_counts(full_counts)
+	var full_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
+	full_profile = PlayerProgressModel.with_stone_coins(full_profile, 50)
+	var full_check := PlayerProgressModel.can_synthesize_equipment(full_profile, recipe_id)
+	var full_ok := (
+		not bool(full_check.get("ok", false))
+		and str(full_check.get("message", "")).find("背包空间不足") >= 0
+	)
+
+	player_profile = material_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_synthesis_selected_recipe_id = recipe_id
+	_open_equipment_synthesis_panel()
+	await get_tree().process_frame
+	var ui_detail_text := equipment_synthesis_detail_label.text if equipment_synthesis_detail_label != null else ""
+	var ui_ready_ok := (
+		equipment_synthesis_panel != null
+		and equipment_synthesis_panel.visible
+		and equipment_synthesis_action_button != null
+		and not equipment_synthesis_action_button.disabled
+		and ui_detail_text.find("硬木棒") >= 0
+		and ui_detail_text.find("初级木质碎片 3/3") >= 0
+		and ui_detail_text.find("攻击 +4") >= 0
+	)
+	_on_equipment_synthesis_pressed()
+	await get_tree().process_frame
+	var ui_result_ok := (
+		PlayerProgressModel.backpack_item_count(player_profile, output_id) == 1
+		and PlayerProgressModel.backpack_item_count(player_profile, EQUIP_FRAG_WOOD_BASIC_ID) == 0
+		and world_log_message.find("合成硬木棒") >= 0
+		and equipment_synthesis_action_button != null
+		and equipment_synthesis_action_button.disabled
+	)
+	_close_equipment_synthesis_panel()
+
+	var status := "ok" if catalog_ok and recipe_ok and missing_ok and success_ok and equip_ok and coin_ok and full_ok and ui_ready_ok and ui_result_ok else "failed"
+	print("equipment synthesis check ready: status=%s catalog=%s recipe=%s missing=%s success=%s equip=%s coin=%s full=%s ui_ready=%s ui_result=%s output=%s errors=%s log=%s" % [
+		status,
+		str(catalog_ok),
+		str(recipe_ok),
+		str(missing_ok),
+		str(success_ok),
+		str(equip_ok),
+		str(coin_ok),
+		str(full_ok),
+		str(ui_ready_ok),
+		str(ui_result_ok),
+		output_id,
+		" | ".join(catalog_errors),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_equipment_synthesis_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	player_profile = _profile_with_item_count(player_profile, EQUIP_FRAG_WOOD_BASIC_ID, 3)
+	player_profile = _profile_with_item_count(player_profile, EQUIP_FRAG_HIDE_BASIC_ID, 3)
+	player_profile = PlayerProgressModel.with_stone_coins(player_profile, 80)
+	equipment_synthesis_selected_recipe_id = "craft_hardwood_club"
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("装备合成材料已准备。")
+	_open_equipment_synthesis_panel()
+
+
+func _profile_with_item_count(profile: Dictionary, item_id: String, count: int) -> Dictionary:
+	var slots := BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(profile), item_id, count)
+	return PlayerProgressModel.with_backpack_slots(profile, slots)
 
 
 func _run_auto_player_status_check() -> void:
@@ -11525,14 +11673,98 @@ func _build_hud() -> void:
 	equipment_detail_label.custom_minimum_size = Vector2(0, 88)
 	equipment_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_column.add_child(equipment_detail_label)
+	var equipment_action_row := HBoxContainer.new()
+	equipment_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_action_row.add_theme_constant_override("separation", 8)
+	equipment_column.add_child(equipment_action_row)
 	equipment_unequip_button = Button.new()
 	equipment_unequip_button.text = "卸下"
 	equipment_unequip_button.visible = false
 	equipment_unequip_button.custom_minimum_size = Vector2(0, 44)
 	equipment_unequip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_unequip_button.pressed.connect(_on_equipment_unequip_pressed)
-	equipment_column.add_child(equipment_unequip_button)
+	equipment_action_row.add_child(equipment_unequip_button)
+	equipment_synthesis_open_button = Button.new()
+	equipment_synthesis_open_button.text = "合成"
+	equipment_synthesis_open_button.custom_minimum_size = Vector2(0, 44)
+	equipment_synthesis_open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_synthesis_open_button.pressed.connect(_open_equipment_synthesis_panel)
+	equipment_action_row.add_child(equipment_synthesis_open_button)
 	hud_root.add_child(equipment_panel)
+
+	equipment_synthesis_panel = _panel_container("EquipmentSynthesisPanel")
+	equipment_synthesis_panel.visible = false
+	equipment_synthesis_panel.z_index = 24
+	var synthesis_column := VBoxContainer.new()
+	synthesis_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	synthesis_column.add_theme_constant_override("separation", 8)
+	equipment_synthesis_panel.add_child(synthesis_column)
+
+	var synthesis_header := HBoxContainer.new()
+	synthesis_header.add_theme_constant_override("separation", 10)
+	synthesis_column.add_child(synthesis_header)
+	var synthesis_title := Label.new()
+	synthesis_title.text = "装备合成"
+	synthesis_title.add_theme_font_size_override("font_size", 21)
+	synthesis_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_header.add_child(synthesis_title)
+	equipment_synthesis_close_button = Button.new()
+	equipment_synthesis_close_button.text = "关闭"
+	equipment_synthesis_close_button.custom_minimum_size = Vector2(92, 44)
+	equipment_synthesis_close_button.pressed.connect(_close_equipment_synthesis_panel)
+	synthesis_header.add_child(equipment_synthesis_close_button)
+
+	var synthesis_body := HBoxContainer.new()
+	synthesis_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	synthesis_body.add_theme_constant_override("separation", 10)
+	synthesis_column.add_child(synthesis_body)
+
+	var synthesis_list_scroll := ScrollContainer.new()
+	synthesis_list_scroll.custom_minimum_size = Vector2(236, 0)
+	synthesis_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	synthesis_body.add_child(synthesis_list_scroll)
+	equipment_synthesis_list_container = VBoxContainer.new()
+	equipment_synthesis_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_synthesis_list_container.add_theme_constant_override("separation", 7)
+	synthesis_list_scroll.add_child(equipment_synthesis_list_container)
+
+	var synthesis_detail_column := VBoxContainer.new()
+	synthesis_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	synthesis_detail_column.add_theme_constant_override("separation", 8)
+	synthesis_body.add_child(synthesis_detail_column)
+	var synthesis_detail_scroll := ScrollContainer.new()
+	synthesis_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	synthesis_detail_column.add_child(synthesis_detail_scroll)
+	equipment_synthesis_detail_label = RichTextLabel.new()
+	equipment_synthesis_detail_label.bbcode_enabled = true
+	equipment_synthesis_detail_label.fit_content = true
+	equipment_synthesis_detail_label.scroll_active = false
+	equipment_synthesis_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	equipment_synthesis_detail_label.add_theme_font_size_override("font_size", 16)
+	equipment_synthesis_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_detail_scroll.add_child(equipment_synthesis_detail_label)
+
+	var synthesis_button_row := HBoxContainer.new()
+	synthesis_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synthesis_button_row.add_theme_constant_override("separation", 8)
+	synthesis_detail_column.add_child(synthesis_button_row)
+	equipment_synthesis_back_button = Button.new()
+	equipment_synthesis_back_button.text = "装备栏"
+	equipment_synthesis_back_button.custom_minimum_size = Vector2(0, 46)
+	equipment_synthesis_back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_synthesis_back_button.pressed.connect(_open_equipment_panel)
+	synthesis_button_row.add_child(equipment_synthesis_back_button)
+	equipment_synthesis_action_button = Button.new()
+	equipment_synthesis_action_button.text = "合成"
+	equipment_synthesis_action_button.custom_minimum_size = Vector2(0, 46)
+	equipment_synthesis_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_synthesis_action_button.pressed.connect(_on_equipment_synthesis_pressed)
+	synthesis_button_row.add_child(equipment_synthesis_action_button)
+	hud_root.add_child(equipment_synthesis_panel)
 
 	shop_panel = _panel_container("ShopPanel")
 	shop_panel.visible = false
@@ -13367,6 +13599,7 @@ func _open_equipment_panel() -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_equipment_synthesis_panel(false)
 	equipment_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_equipment_panel()
@@ -13376,7 +13609,41 @@ func _open_equipment_panel() -> void:
 func _close_equipment_panel() -> void:
 	if equipment_panel != null:
 		equipment_panel.visible = false
+	_close_equipment_synthesis_panel(false)
 	if hud_root != null:
+		_layout_hud()
+
+
+func _open_equipment_synthesis_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	if equipment_synthesis_panel != null:
+		equipment_synthesis_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_equipment_synthesis_panel()
+	_layout_hud()
+
+
+func _close_equipment_synthesis_panel(update_layout: bool = true) -> void:
+	if equipment_synthesis_panel != null:
+		equipment_synthesis_panel.visible = false
+	if update_layout and hud_root != null:
 		_layout_hud()
 
 
@@ -13847,6 +14114,110 @@ func _on_equipment_unequip_pressed() -> void:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _refresh_equipment_synthesis_panel() -> void:
+	if equipment_synthesis_panel == null or equipment_synthesis_list_container == null or equipment_synthesis_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var recipes := EquipmentSynthesisModel.recipes()
+	if equipment_synthesis_selected_recipe_id == "" or EquipmentSynthesisModel.recipe_for_id(equipment_synthesis_selected_recipe_id).is_empty():
+		equipment_synthesis_selected_recipe_id = str(recipes[0].get("id", "")) if not recipes.is_empty() else ""
+	for child in equipment_synthesis_list_container.get_children():
+		child.queue_free()
+	equipment_synthesis_recipe_buttons.clear()
+	if recipes.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "暂无合成配方"
+		empty_label.add_theme_font_size_override("font_size", 16)
+		equipment_synthesis_list_container.add_child(empty_label)
+	else:
+		for recipe in recipes:
+			var recipe_id := str(recipe.get("id", ""))
+			var button := Button.new()
+			button.toggle_mode = true
+			button.button_pressed = recipe_id == equipment_synthesis_selected_recipe_id
+			button.text = "%s\n%s" % [
+				EquipmentSynthesisModel.output_label_for_recipe(recipe),
+				EquipmentSynthesisModel.material_text(recipe),
+			]
+			button.custom_minimum_size = Vector2(0, 62)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.add_theme_font_size_override("font_size", 15)
+			button.pressed.connect(func() -> void:
+				_select_equipment_synthesis_recipe(recipe_id)
+			)
+			equipment_synthesis_list_container.add_child(button)
+			equipment_synthesis_recipe_buttons[recipe_id] = button
+	var selected_recipe := EquipmentSynthesisModel.recipe_for_id(equipment_synthesis_selected_recipe_id)
+	equipment_synthesis_detail_label.text = _equipment_synthesis_detail_text(selected_recipe)
+	if equipment_synthesis_action_button != null:
+		var can_synthesize := false
+		if not selected_recipe.is_empty():
+			can_synthesize = bool(PlayerProgressModel.can_synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id).get("ok", false))
+		equipment_synthesis_action_button.disabled = not can_synthesize
+		equipment_synthesis_action_button.text = "合成"
+
+
+func _select_equipment_synthesis_recipe(recipe_id: String) -> void:
+	equipment_synthesis_selected_recipe_id = recipe_id
+	_refresh_equipment_synthesis_panel()
+
+
+func _equipment_synthesis_detail_text(recipe: Dictionary) -> String:
+	if recipe.is_empty():
+		return "请选择配方。"
+	var recipe_id := str(recipe.get("id", ""))
+	var output_item_id := EquipmentSynthesisModel.output_item_id(recipe)
+	var check := PlayerProgressModel.can_synthesize_equipment(player_profile, recipe_id)
+	var lines: Array[String] = []
+	lines.append("[color=#d7c36a]配方[/color] %s" % _bbcode_escape(str(recipe.get("label", EquipmentSynthesisModel.output_label_for_recipe(recipe)))))
+	lines.append("成品: %s" % _bbcode_escape(EquipmentSynthesisModel.output_text(recipe)))
+	lines.append("成功率: %d%%" % int(roundf(EquipmentSynthesisModel.success_rate(recipe) * 100.0)))
+	var description := str(recipe.get("description", "")).strip_edges()
+	if description != "":
+		lines.append("说明: %s" % _bbcode_escape(description))
+	lines.append("")
+	lines.append("[color=#d7c36a]材料[/color]")
+	for material in EquipmentSynthesisModel.material_entries(recipe):
+		var item_id := str(material.get("itemId", ""))
+		var need_count := maxi(0, int(material.get("count", 0)))
+		var held_count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
+		var color := EQUIPMENT_COMPARE_GAIN_COLOR if held_count >= need_count else EQUIPMENT_COMPARE_LOSS_COLOR
+		lines.append("[color=%s]%s %d/%d[/color]" % [
+			color,
+			_bbcode_escape(BackpackModel.label_for(item_id, item_id)),
+			held_count,
+			need_count,
+		])
+	var cost := EquipmentSynthesisModel.stone_cost(recipe)
+	var coins := PlayerProgressModel.stone_coins(player_profile)
+	var coin_color := EQUIPMENT_COMPARE_GAIN_COLOR if coins >= cost else EQUIPMENT_COMPARE_LOSS_COLOR
+	lines.append("[color=%s]石币 %d/%d[/color]" % [coin_color, coins, cost])
+	lines.append("")
+	lines.append("[color=#d7c36a]成品详情[/color]")
+	for detail_line in EquipmentModel.detail_lines_for_item(output_item_id):
+		lines.append(_bbcode_escape(detail_line))
+	lines.append("")
+	lines.append_array(_equipment_compare_detail_lines(output_item_id))
+	lines.append("")
+	var status_color := EQUIPMENT_COMPARE_GAIN_COLOR if bool(check.get("ok", false)) else EQUIPMENT_COMPARE_LOSS_COLOR
+	lines.append("[color=%s]%s[/color]" % [status_color, _bbcode_escape(str(check.get("message", "")))])
+	return "\n".join(lines)
+
+
+func _on_equipment_synthesis_pressed() -> void:
+	if equipment_synthesis_selected_recipe_id == "":
+		return
+	var result := PlayerProgressModel.synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_equipment_synthesis_panel()
+	_refresh_quick_bar()
 	if status_label != null:
 		_update_hud_text()
 
@@ -18984,7 +19355,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [player_status_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -19067,6 +19438,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		equipment_panel.visible = false
 	if equipment_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	equipment_synthesis_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	equipment_synthesis_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		equipment_synthesis_panel.visible = false
+	if equipment_synthesis_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)

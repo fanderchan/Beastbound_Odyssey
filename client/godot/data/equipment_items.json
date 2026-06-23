@@ -197,6 +197,17 @@
       "description": "打磨过的兽骨短刃，需要更熟练的猎人才拿得稳。"
     },
     {
+      "id": "weapon_hardwood_club",
+      "label": "硬木棒",
+      "menuLabel": "硬木棒",
+      "slot": "right_hand_weapon",
+      "stats": {
+        "attack": 9
+      },
+      "durabilityMax": 34,
+      "description": "由木质碎片压实打磨的短棒，比普通木棒更结实。"
+    },
+    {
       "id": "armor_hide_vest",
       "label": "兽皮背心",
       "menuLabel": "兽皮背心",
@@ -205,6 +216,18 @@
         "defense": 5
       },
       "description": "用厚皮缝成的背心，能挡住一点野外擦伤。"
+    },
+    {
+      "id": "armor_stitched_hide_vest",
+      "label": "缝皮背心",
+      "menuLabel": "缝皮背心",
+      "slot": "body",
+      "stats": {
+        "maxHp": 6,
+        "defense": 7
+      },
+      "durabilityMax": 34,
+      "description": "用皮革碎片补强的背心，适合早期练级。"
     }
   ]
 }
