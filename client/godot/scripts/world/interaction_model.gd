@@ -2,6 +2,12 @@ extends RefCounted
 
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 
+const FACILITY_HEALER := "healer"
+const FACILITY_ITEM_SHOP := "item_shop"
+const FACILITY_EQUIPMENT_SHOP := "equipment_shop"
+const FACILITY_RECORD_POINT := "record_point"
+const FACILITY_TRAINER := "trainer"
+
 
 static func interaction_points(map_data: Dictionary) -> Array:
 	return map_data.get("interactionPoints", [])
@@ -26,6 +32,65 @@ static func blocks_movement(item: Dictionary) -> bool:
 
 static func is_warp(item: Dictionary) -> bool:
 	return str(item.get("kind", "")) == "warp"
+
+
+static func facility_type_for(item: Dictionary) -> String:
+	var explicit_type := str(item.get("facilityType", "")).strip_edges()
+	if explicit_type != "":
+		return explicit_type
+	var kind := str(item.get("kind", "")).strip_edges()
+	var action_type := str(item.get("actionType", "")).strip_edges()
+	if kind == FACILITY_RECORD_POINT or action_type == FACILITY_RECORD_POINT:
+		return FACILITY_RECORD_POINT
+	if action_type == FACILITY_HEALER or bool(item.get("healer", false)):
+		return FACILITY_HEALER
+	if action_type == "pet_skill_trainer" or str(item.get("trainerId", "")) != "":
+		return FACILITY_TRAINER
+	var shop_id := str(item.get("shopId", ""))
+	if shop_id != "":
+		if shop_id.find("equipment") >= 0:
+			return FACILITY_EQUIPMENT_SHOP
+		return FACILITY_ITEM_SHOP
+	return ""
+
+
+static func facility_label_for(item: Dictionary) -> String:
+	var explicit_label := str(item.get("facilityLabel", "")).strip_edges()
+	if explicit_label != "":
+		return explicit_label
+	match facility_type_for(item):
+		FACILITY_HEALER:
+			return "村医"
+		FACILITY_ITEM_SHOP:
+			return "杂货"
+		FACILITY_EQUIPMENT_SHOP:
+			return "装备"
+		FACILITY_RECORD_POINT:
+			return "记录"
+		FACILITY_TRAINER:
+			return "训练"
+	return ""
+
+
+static func is_facility(item: Dictionary) -> bool:
+	return facility_type_for(item) != ""
+
+
+static func facility_sort_rank_for(item: Dictionary) -> int:
+	match facility_type_for(item):
+		FACILITY_HEALER:
+			return 10
+		FACILITY_ITEM_SHOP:
+			return 20
+		FACILITY_EQUIPMENT_SHOP:
+			return 30
+		FACILITY_RECORD_POINT:
+			return 40
+		FACILITY_TRAINER:
+			return 50
+	if is_warp(item):
+		return 80
+	return 70
 
 
 static func interaction_goal_cell_for(map_data: Dictionary, player_cell: Vector2i, item: Dictionary) -> Vector2i:

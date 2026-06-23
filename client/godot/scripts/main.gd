@@ -384,6 +384,7 @@ var auto_quest_reward_choice_check: bool = false
 var auto_quest_equipment_reward_check: bool = false
 var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
+var auto_facility_marker_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
@@ -417,6 +418,7 @@ var quest_reward_choice_preview: bool = false
 var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
+var facility_marker_preview: bool = false
 var chat_panel_preview: bool = false
 var world_log_panel_preview: bool = false
 var equipment_quest_preview: bool = false
@@ -665,6 +667,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_task_tracker_route_check")
 	elif auto_map_panel_check:
 		call_deferred("_run_auto_map_panel_check")
+	elif auto_facility_marker_check:
+		call_deferred("_run_auto_facility_marker_check")
 	elif auto_chat_panel_check:
 		call_deferred("_run_auto_chat_panel_check")
 	elif auto_world_log_panel_check:
@@ -731,6 +735,8 @@ func _ready() -> void:
 		call_deferred("_run_task_tracker_route_preview")
 	elif map_panel_preview:
 		call_deferred("_run_map_panel_preview")
+	elif facility_marker_preview:
+		call_deferred("_run_facility_marker_preview")
 	elif chat_panel_preview:
 		call_deferred("_run_chat_panel_preview")
 	elif world_log_panel_preview:
@@ -1030,6 +1036,8 @@ func _apply_preview_window_args() -> void:
 			auto_task_tracker_route_check = true
 		elif arg == "--auto-map-panel-check":
 			auto_map_panel_check = true
+		elif arg == "--auto-facility-marker-check":
+			auto_facility_marker_check = true
 		elif arg == "--auto-chat-panel-check":
 			auto_chat_panel_check = true
 		elif arg == "--auto-world-log-panel-check":
@@ -1096,6 +1104,8 @@ func _apply_preview_window_args() -> void:
 			task_tracker_route_preview = true
 		elif arg == "--map-panel-preview":
 			map_panel_preview = true
+		elif arg == "--facility-marker-preview":
+			facility_marker_preview = true
 		elif arg == "--chat-panel-preview":
 			chat_panel_preview = true
 		elif arg == "--world-log-panel-preview":
@@ -6929,6 +6939,28 @@ func _run_quest_equipment_tutorial_preview() -> void:
 		_update_hud_text()
 
 
+func _profile_with_active_quest(quest_id: String) -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var states := {}
+	for quest in QuestModel.quests():
+		var current_quest_id := str(quest.get("id", ""))
+		if current_quest_id == "":
+			continue
+		if current_quest_id == quest_id:
+			states[current_quest_id] = {
+				"status": QuestModel.STATUS_ACTIVE,
+				"progress": 0,
+			}
+			break
+		states[current_quest_id] = {
+			"status": QuestModel.STATUS_CLAIMED,
+			"progress": QuestModel.objective_required_count(quest),
+		}
+	profile[PlayerProgressModel.QUEST_STATES_KEY] = states
+	profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = quest_id
+	return PlayerProgressModel.normalize_profile(profile)
+
+
 func _quest_equipment_tutorial_profile() -> Dictionary:
 	var profile := PlayerProgressModel.default_profile()
 	var states := {}
@@ -6973,6 +7005,18 @@ func _run_map_panel_preview() -> void:
 	player_profile = PlayerProgressModel.default_profile()
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase76：打开地图，选择标记可自动寻路。")
+	_open_map_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_facility_marker_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _profile_with_active_quest("quest_buy_weapon")
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase91：设施已用短标签标记，任务寻路优先指向对应设施。")
 	_open_map_panel()
 	if status_label != null:
 		_update_hud_text()
@@ -8357,6 +8401,89 @@ func _run_auto_map_panel_check() -> void:
 		str(zone_route_ok),
 		map_marker_buttons.size(),
 		str(target_cell),
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_facility_marker_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var doctor := InteractionModel.find_by_id(map_data, "firebud_doctor")
+	var item_shop := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
+	var equipment_shop := InteractionModel.find_by_id(map_data, "firebud_equipment_keeper")
+	var record_point := InteractionModel.find_by_id(map_data, "firebud_record_pillar")
+	var pet_trainer := InteractionModel.find_by_id(map_data, "firebud_pet_skill_trainer")
+	var training_map := _map_data_for_id("firebud_training_yard")
+	var intro_trainer := InteractionModel.find_by_id(training_map, "trainer")
+	var facility_data_ok := (
+		InteractionModel.facility_label_for(doctor) == "村医"
+		and InteractionModel.facility_label_for(item_shop) == "杂货"
+		and InteractionModel.facility_label_for(equipment_shop) == "装备"
+		and InteractionModel.facility_label_for(record_point) == "记录"
+		and InteractionModel.facility_label_for(pet_trainer) == "训练"
+		and InteractionModel.facility_label_for(intro_trainer) == "训练"
+	)
+	_open_map_panel()
+	await get_tree().process_frame
+	var map_button_ok := (
+		map_marker_buttons.has("interaction:firebud_doctor")
+		and map_marker_buttons.has("interaction:firebud_shopkeeper")
+		and map_marker_buttons.has("interaction:firebud_equipment_keeper")
+		and map_marker_buttons.has("interaction:firebud_record_pillar")
+		and map_marker_buttons.has("interaction:firebud_pet_skill_trainer")
+		and str((map_marker_buttons["interaction:firebud_doctor"] as Button).text).find("【村医】") >= 0
+		and str((map_marker_buttons["interaction:firebud_shopkeeper"] as Button).text).find("【杂货】") >= 0
+		and str((map_marker_buttons["interaction:firebud_equipment_keeper"] as Button).text).find("【装备】") >= 0
+		and str((map_marker_buttons["interaction:firebud_record_pillar"] as Button).text).find("【记录】") >= 0
+		and str((map_marker_buttons["interaction:firebud_pet_skill_trainer"] as Button).text).find("【训练】") >= 0
+	)
+	var item_shop_target := _navigation_target_for_shop("firebud_item_shop")
+	var equipment_shop_target := _navigation_target_for_shop("firebud_equipment_shop")
+	var record_target := _navigation_target_for_interaction_id("firebud_record_pillar")
+	var trainer_target := _navigation_target_for_interaction_id("trainer")
+	var target_pick_ok := (
+		str(item_shop_target.get("facilityLabel", "")) == "杂货"
+		and str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_shopkeeper"
+		and str(equipment_shop_target.get("facilityLabel", "")) == "装备"
+		and str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_equipment_keeper"
+		and str(record_target.get("facilityLabel", "")) == "记录"
+		and str(trainer_target.get("facilityLabel", "")) == "训练"
+		and str(trainer_target.get("mapId", "")) == "firebud_training_yard"
+	)
+	player_profile = _profile_with_active_quest("quest_buy_supply")
+	var buy_supply_target := _active_quest_navigation_target()
+	player_profile = _profile_with_active_quest("quest_buy_weapon")
+	var buy_weapon_target := _active_quest_navigation_target()
+	var quest_target_ok := (
+		str(buy_supply_target.get("facilityLabel", "")) == "杂货"
+		and str((buy_supply_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_shopkeeper"
+		and str(buy_weapon_target.get("facilityLabel", "")) == "装备"
+		and str((buy_weapon_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_equipment_keeper"
+	)
+	_route_to_quest_target(buy_weapon_target)
+	await get_tree().process_frame
+	var route_ok := (
+		not map_panel.visible
+		and has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "firebud_equipment_keeper"
+		and world_log_message.find("装备商阿石") >= 0
+	)
+	var status := "ok" if loaded and facility_data_ok and map_button_ok and target_pick_ok and quest_target_ok and route_ok else "failed"
+	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s trainer_map=%s log=%s" % [
+		status,
+		str(loaded),
+		str(facility_data_ok),
+		str(map_button_ok),
+		str(target_pick_ok),
+		str(quest_target_ok),
+		str(route_ok),
+		str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
+		str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
+		str(trainer_target.get("mapId", "")),
 		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -16463,13 +16590,7 @@ func _map_targets_for_current_map() -> Array[Dictionary]:
 		var item_id := str(item.get("id", ""))
 		if item_id == "":
 			continue
-		result.append({
-			"id": "interaction:%s" % item_id,
-			"kind": "interaction",
-			"mapId": current_map_id,
-			"label": str(item.get("name", "交互点")),
-			"interaction": item,
-		})
+		result.append(_navigation_target_from_interaction(current_map_id, item))
 	for value in EncounterModel.encounter_zones(map_data):
 		if not (value is Dictionary):
 			continue
@@ -16484,19 +16605,35 @@ func _map_targets_for_current_map() -> Array[Dictionary]:
 			"label": str(zone.get("name", "野外")),
 			"zone": zone,
 			"cell": EncounterModel.first_walkable_cell(map_data, zone),
+			"sortRank": 90,
 		})
+	result.sort_custom(_map_target_less)
 	return result
+
+
+func _map_target_less(a: Dictionary, b: Dictionary) -> bool:
+	var rank_a := int(a.get("sortRank", 99))
+	var rank_b := int(b.get("sortRank", 99))
+	if rank_a != rank_b:
+		return rank_a < rank_b
+	var label_a := str(a.get("label", ""))
+	var label_b := str(b.get("label", ""))
+	if label_a != label_b:
+		return label_a < label_b
+	return str(a.get("id", "")) < str(b.get("id", ""))
 
 
 func _map_target_button_text(target: Dictionary) -> String:
 	var kind := str(target.get("kind", ""))
 	var label := str(target.get("label", "目标"))
+	var facility_label := str(target.get("facilityLabel", ""))
+	var prefix := "【%s】" % facility_label if facility_label != "" else ""
 	match kind:
 		"interaction":
 			var interaction = target.get("interaction", {})
 			if interaction is Dictionary:
 				var action := str((interaction as Dictionary).get("action", ""))
-				return "%s%s" % [label, " / %s" % action if action != "" else ""]
+				return "%s%s%s" % [prefix, label, " / %s" % action if action != "" else ""]
 		"encounter_zone":
 			return "%s / 草丛" % label
 	return label
@@ -16543,13 +16680,31 @@ func _map_minimap_texture() -> Texture2D:
 	for target in _map_targets_for_current_map():
 		var marker_cell := _map_target_cell(target)
 		if IsoMapModel.is_inside(map_data, marker_cell):
-			_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, marker_cell), Color(0.90, 0.70, 0.32, 1.0))
+			_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, marker_cell), _map_target_minimap_color(target))
 	if has_target_cell and IsoMapModel.is_inside(map_data, target_cell):
 		_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, target_cell), Color(1.0, 0.88, 0.20, 1.0))
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	if IsoMapModel.is_inside(map_data, player_cell):
 		_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, player_cell), Color(0.24, 0.56, 0.95, 1.0))
 	return ImageTexture.create_from_image(image)
+
+
+func _map_target_minimap_color(target: Dictionary) -> Color:
+	match str(target.get("facilityType", "")):
+		InteractionModel.FACILITY_HEALER:
+			return Color(0.48, 0.92, 0.66, 1.0)
+		InteractionModel.FACILITY_ITEM_SHOP:
+			return Color(1.0, 0.80, 0.36, 1.0)
+		InteractionModel.FACILITY_EQUIPMENT_SHOP:
+			return Color(0.90, 0.62, 0.32, 1.0)
+		InteractionModel.FACILITY_RECORD_POINT:
+			return Color(0.58, 0.80, 1.0, 1.0)
+		InteractionModel.FACILITY_TRAINER:
+			return Color(0.76, 0.66, 1.0, 1.0)
+	match str(target.get("kind", "")):
+		"encounter_zone":
+			return Color(0.48, 0.72, 0.32, 1.0)
+	return Color(0.90, 0.70, 0.32, 1.0)
 
 
 func _map_target_cell(target: Dictionary) -> Vector2i:
@@ -16630,7 +16785,7 @@ func _quest_route_hint(quest: Dictionary, objective: Dictionary) -> String:
 		return ""
 	var map_id := str(target.get("mapId", ""))
 	var map_name := _map_name_for_id(map_id)
-	var label := str(target.get("label", "目标"))
+	var label := _navigation_target_display_label(target)
 	if map_name == "":
 		return label
 	return "%s / %s" % [map_name, label]
@@ -16638,7 +16793,7 @@ func _quest_route_hint(quest: Dictionary, objective: Dictionary) -> String:
 
 func _route_to_quest_target(target: Dictionary) -> void:
 	var target_map_id := str(target.get("mapId", ""))
-	var label := str(target.get("label", "目标"))
+	var label := _navigation_target_display_label(target)
 	if target_map_id != "" and target_map_id != current_map_id:
 		var warp := _warp_to_map(current_map_id, target_map_id)
 		if warp.is_empty():
@@ -16673,6 +16828,30 @@ func _route_to_quest_target(target: Dictionary) -> void:
 			_set_world_log_message("请在随身包完成：%s。" % label)
 
 
+func _navigation_target_display_label(target: Dictionary) -> String:
+	var label := str(target.get("label", "目标"))
+	var facility_label := str(target.get("facilityLabel", ""))
+	if facility_label != "":
+		return "【%s】%s" % [facility_label, label]
+	return label
+
+
+func _navigation_target_from_interaction(map_id: String, item: Dictionary) -> Dictionary:
+	var facility_type := InteractionModel.facility_type_for(item)
+	var facility_label := InteractionModel.facility_label_for(item)
+	var item_id := str(item.get("id", ""))
+	return {
+		"id": "interaction:%s" % item_id,
+		"kind": "interaction",
+		"mapId": map_id,
+		"label": str(item.get("name", "目标")),
+		"facilityType": facility_type,
+		"facilityLabel": facility_label,
+		"interaction": item,
+		"sortRank": InteractionModel.facility_sort_rank_for(item),
+	}
+
+
 func _navigation_target_for_interaction_id(interaction_id: String) -> Dictionary:
 	if interaction_id == "":
 		return {}
@@ -16680,12 +16859,7 @@ func _navigation_target_for_interaction_id(interaction_id: String) -> Dictionary
 		var loaded_map := _map_data_for_id(str(map_id))
 		var item := InteractionModel.find_by_id(loaded_map, interaction_id)
 		if not item.is_empty():
-			return {
-				"kind": "interaction",
-				"mapId": str(map_id),
-				"label": str(item.get("name", "目标")),
-				"interaction": item,
-			}
+			return _navigation_target_from_interaction(str(map_id), item)
 	return {}
 
 
@@ -16699,12 +16873,7 @@ func _navigation_target_for_shop(shop_id: String) -> Dictionary:
 				continue
 			var item := value as Dictionary
 			if str(item.get("shopId", "")) == shop_id:
-				return {
-					"kind": "interaction",
-					"mapId": str(map_id),
-					"label": str(item.get("name", "商店")),
-					"interaction": item,
-				}
+				return _navigation_target_from_interaction(str(map_id), item)
 	return {}
 
 
@@ -20434,6 +20603,39 @@ func _draw_interaction_points() -> void:
 			draw_circle(marker + Vector2(0, -9), 8.0, Color(0.99, 0.76, 0.46, 0.98))
 			draw_rect(Rect2(marker + Vector2(-8, -1), Vector2(16, 20)), body_color, true)
 			draw_line(marker + Vector2(-13, 8), marker + Vector2(13, 8), trim_color, 3.0)
+		_draw_facility_marker_label(item, marker, selected)
+
+
+func _draw_facility_marker_label(item: Dictionary, marker: Vector2, selected: bool) -> void:
+	var facility_label := InteractionModel.facility_label_for(item)
+	if facility_label == "":
+		return
+	var font := ThemeDB.fallback_font
+	var font_size := 14
+	var label_width := maxf(42.0, float(facility_label.length()) * 18.0 + 18.0)
+	var label_rect := Rect2(marker + Vector2(-label_width * 0.5, -62.0), Vector2(label_width, 22.0))
+	var fill_color := _facility_marker_color(InteractionModel.facility_type_for(item), selected)
+	draw_rect(label_rect, Color(0.04, 0.07, 0.06, 0.72), true)
+	draw_rect(label_rect.grow(-2.0), fill_color, true)
+	draw_string(font, label_rect.position + Vector2(0.0, 16.0), facility_label, HORIZONTAL_ALIGNMENT_CENTER, label_rect.size.x, font_size, Color(0.98, 0.96, 0.86, 0.98))
+
+
+func _facility_marker_color(facility_type: String, selected: bool = false) -> Color:
+	var color := Color(0.42, 0.42, 0.36, 0.86)
+	match facility_type:
+		InteractionModel.FACILITY_HEALER:
+			color = Color(0.18, 0.52, 0.30, 0.88)
+		InteractionModel.FACILITY_ITEM_SHOP:
+			color = Color(0.58, 0.38, 0.12, 0.88)
+		InteractionModel.FACILITY_EQUIPMENT_SHOP:
+			color = Color(0.56, 0.28, 0.13, 0.88)
+		InteractionModel.FACILITY_RECORD_POINT:
+			color = Color(0.24, 0.42, 0.64, 0.88)
+		InteractionModel.FACILITY_TRAINER:
+			color = Color(0.40, 0.30, 0.62, 0.88)
+	if selected:
+		color = color.lightened(0.22)
+	return color
 
 
 func _draw_ground_pet_drops() -> void:

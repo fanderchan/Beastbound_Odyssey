@@ -71,6 +71,8 @@
       "kind": "npc",
       "movementCollision": "block",
       "cell": [5, 10],
+      "facilityType": "trainer",
+      "facilityLabel": "训练",
       "action": "对话",
       "dialog": ["训练师阿土：新来的勇者，先从最简单的开始。和人说话、买补给、打一场胜仗，再试着捕捉乌力。"],
       "option": "知道了"
