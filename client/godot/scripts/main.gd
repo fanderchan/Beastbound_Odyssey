@@ -153,6 +153,7 @@ var map_menu_button: Button
 var chat_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
+var qa_menu_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: RichTextLabel
@@ -300,6 +301,11 @@ var auto_settings_content: VBoxContainer
 var auto_settings_close_button: Button
 var auto_settings_controls: Dictionary = {}
 var auto_settings_active_tab: String = "battle"
+var qa_panel: PanelContainer
+var qa_entry_container: VBoxContainer
+var qa_detail_label: RichTextLabel
+var qa_close_button: Button
+var qa_entry_buttons: Dictionary = {}
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var auto_mouse_click_check: bool = false
@@ -385,6 +391,7 @@ var auto_quest_equipment_reward_check: bool = false
 var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_facility_marker_check: bool = false
+var auto_qa_panel_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
@@ -419,6 +426,7 @@ var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
 var facility_marker_preview: bool = false
+var qa_panel_preview: bool = false
 var chat_panel_preview: bool = false
 var world_log_panel_preview: bool = false
 var equipment_quest_preview: bool = false
@@ -669,6 +677,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_map_panel_check")
 	elif auto_facility_marker_check:
 		call_deferred("_run_auto_facility_marker_check")
+	elif auto_qa_panel_check:
+		call_deferred("_run_auto_qa_panel_check")
 	elif auto_chat_panel_check:
 		call_deferred("_run_auto_chat_panel_check")
 	elif auto_world_log_panel_check:
@@ -737,6 +747,8 @@ func _ready() -> void:
 		call_deferred("_run_map_panel_preview")
 	elif facility_marker_preview:
 		call_deferred("_run_facility_marker_preview")
+	elif qa_panel_preview:
+		call_deferred("_run_qa_panel_preview")
 	elif chat_panel_preview:
 		call_deferred("_run_chat_panel_preview")
 	elif world_log_panel_preview:
@@ -1038,6 +1050,8 @@ func _apply_preview_window_args() -> void:
 			auto_map_panel_check = true
 		elif arg == "--auto-facility-marker-check":
 			auto_facility_marker_check = true
+		elif arg == "--auto-qa-panel-check":
+			auto_qa_panel_check = true
 		elif arg == "--auto-chat-panel-check":
 			auto_chat_panel_check = true
 		elif arg == "--auto-world-log-panel-check":
@@ -1106,6 +1120,8 @@ func _apply_preview_window_args() -> void:
 			map_panel_preview = true
 		elif arg == "--facility-marker-preview":
 			facility_marker_preview = true
+		elif arg == "--qa-panel-preview":
+			qa_panel_preview = true
 		elif arg == "--chat-panel-preview":
 			chat_panel_preview = true
 		elif arg == "--world-log-panel-preview":
@@ -7022,6 +7038,18 @@ func _run_facility_marker_preview() -> void:
 		_update_hud_text()
 
 
+func _run_qa_panel_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map(GM_10V10_MAP_ID, "default")
+	_set_world_log_message("Phase92：GM/QA 面板集中整理手测入口和自测命令。")
+	_open_qa_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_chat_panel_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -8484,6 +8512,109 @@ func _run_auto_facility_marker_check() -> void:
 		str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str(trainer_target.get("mapId", "")),
+		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_qa_panel_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_qa_panel()
+	await get_tree().process_frame
+	var command_text := qa_detail_label.text if qa_detail_label != null else ""
+	var button_ok := (
+		qa_panel != null
+		and qa_panel.visible
+		and qa_entry_buttons.has("gm_10v10_grass")
+		and qa_entry_buttons.has("gm_capture_grass")
+		and qa_entry_buttons.has("open_backpack")
+		and qa_entry_buttons.has("open_item_shop")
+		and qa_entry_buttons.has("open_equipment_shop")
+		and qa_entry_buttons.has("open_equipment")
+		and qa_entry_buttons.has("open_quest")
+		and qa_entry_buttons.has("open_auto_battle")
+		and qa_entry_buttons.has("open_auto_capture")
+	)
+	var command_ok := (
+		command_text.find("--auto-backpack-check") >= 0
+		and command_text.find("--auto-shop-check") >= 0
+		and command_text.find("--auto-equipment-check") >= 0
+		and command_text.find("--auto-quest-ui-check") >= 0
+		and command_text.find("--auto-battle-auto-10v10-check") >= 0
+		and command_text.find("--auto-capture-settings-check") >= 0
+	)
+	_on_qa_entry_pressed("open_backpack")
+	await get_tree().process_frame
+	var backpack_ok := backpack_panel != null and backpack_panel.visible and qa_panel != null and not qa_panel.visible
+	_close_backpack_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_item_shop")
+	await get_tree().process_frame
+	var item_shop_ok := shop_panel != null and shop_panel.visible and shop_active_id == ShopCatalogModel.DEFAULT_SHOP_ID
+	_close_shop_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_equipment_shop")
+	await get_tree().process_frame
+	var equipment_shop_ok := shop_panel != null and shop_panel.visible and shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
+	_close_shop_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_equipment")
+	await get_tree().process_frame
+	var equipment_ok := equipment_panel != null and equipment_panel.visible
+	_close_equipment_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_quest")
+	await get_tree().process_frame
+	var quest_ok := quest_panel != null and quest_panel.visible
+	_close_quest_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_auto_capture")
+	await get_tree().process_frame
+	var auto_capture_ok := auto_settings_panel != null and auto_settings_panel.visible and auto_settings_active_tab == "capture"
+	_close_auto_settings_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("gm_10v10_grass")
+	await get_tree().process_frame
+	var zone_10v10 := _encounter_zone_by_id("gm_10v10_grass")
+	var gm_10v10_ok := (
+		current_map_id == GM_10V10_MAP_ID
+		and has_target_cell
+		and not zone_10v10.is_empty()
+		and EncounterModel.zone_contains_cell(zone_10v10, target_cell)
+		and world_log_message.find("GM练级草丛") >= 0
+	)
+	_open_qa_panel()
+	_on_qa_entry_pressed("gm_capture_grass")
+	await get_tree().process_frame
+	var capture_zone := _encounter_zone_by_id("gm_codex_capture_grass")
+	var gm_capture_ok := (
+		current_map_id == GM_10V10_MAP_ID
+		and has_target_cell
+		and not capture_zone.is_empty()
+		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
+		and world_log_message.find("GM图鉴捕捉草丛") >= 0
+	)
+	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and auto_capture_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s auto_capture=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+		status,
+		str(loaded),
+		str(button_ok),
+		str(command_ok),
+		str(backpack_ok),
+		str(item_shop_ok),
+		str(equipment_shop_ok),
+		str(equipment_ok),
+		str(quest_ok),
+		str(auto_capture_ok),
+		str(gm_10v10_ok),
+		str(gm_capture_ok),
+		qa_entry_buttons.size(),
+		current_map_id,
+		str(target_cell),
 		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -11593,6 +11724,11 @@ func _build_hud() -> void:
 	auto_settings_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	auto_settings_menu_button.pressed.connect(_open_auto_settings_panel)
 	action_row.add_child(auto_settings_menu_button)
+	qa_menu_button = Button.new()
+	qa_menu_button.text = "GM"
+	qa_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	qa_menu_button.pressed.connect(_open_qa_panel)
+	action_row.add_child(qa_menu_button)
 	hud_root.add_child(action_bar)
 
 	player_status_panel = _panel_container("PlayerStatusPanel")
@@ -12531,6 +12667,48 @@ func _build_hud() -> void:
 	auto_settings_content.add_theme_constant_override("separation", 8)
 	auto_settings_scroll.add_child(auto_settings_content)
 	hud_root.add_child(auto_settings_panel)
+
+	qa_panel = _panel_container("QAPanel")
+	qa_panel.visible = false
+	qa_panel.z_index = 24
+	var qa_column := VBoxContainer.new()
+	qa_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	qa_column.add_theme_constant_override("separation", 8)
+	qa_panel.add_child(qa_column)
+
+	var qa_header := HBoxContainer.new()
+	qa_header.add_theme_constant_override("separation", 10)
+	qa_column.add_child(qa_header)
+	var qa_title := Label.new()
+	qa_title.text = "GM/QA"
+	qa_title.add_theme_font_size_override("font_size", 21)
+	qa_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_header.add_child(qa_title)
+	qa_close_button = Button.new()
+	qa_close_button.text = "关闭"
+	qa_close_button.custom_minimum_size = Vector2(92, 44)
+	qa_close_button.pressed.connect(_close_qa_panel)
+	qa_header.add_child(qa_close_button)
+
+	var qa_scroll := ScrollContainer.new()
+	qa_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	qa_column.add_child(qa_scroll)
+	qa_entry_container = VBoxContainer.new()
+	qa_entry_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_entry_container.add_theme_constant_override("separation", 7)
+	qa_scroll.add_child(qa_entry_container)
+	qa_detail_label = RichTextLabel.new()
+	qa_detail_label.bbcode_enabled = true
+	qa_detail_label.fit_content = true
+	qa_detail_label.scroll_active = false
+	qa_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	qa_detail_label.add_theme_font_size_override("font_size", 14)
+	qa_detail_label.custom_minimum_size = Vector2(0, 112)
+	qa_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_column.add_child(qa_detail_label)
+	hud_root.add_child(qa_panel)
 
 	pet_rename_panel = _panel_container("PetRenamePanel")
 	pet_rename_panel.visible = false
@@ -15909,6 +16087,178 @@ func _close_auto_settings_panel() -> void:
 		auto_settings_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_qa_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	if qa_panel != null:
+		qa_panel.visible = true
+	_refresh_qa_panel()
+	_layout_hud()
+
+
+func _close_qa_panel(update_layout: bool = true) -> void:
+	if qa_panel != null:
+		qa_panel.visible = false
+	if update_layout and hud_root != null:
+		_layout_hud()
+
+
+func _refresh_qa_panel() -> void:
+	if qa_panel == null or qa_entry_container == null or qa_detail_label == null:
+		return
+	for child in qa_entry_container.get_children():
+		child.queue_free()
+	qa_entry_buttons.clear()
+	for entry in _qa_entry_definitions():
+		if entry.has("section"):
+			var section_label := Label.new()
+			section_label.text = str(entry.get("section", ""))
+			section_label.add_theme_font_size_override("font_size", 16)
+			section_label.add_theme_color_override("font_color", Color(0.91, 0.80, 0.43, 0.98))
+			qa_entry_container.add_child(section_label)
+			continue
+		var entry_id := str(entry.get("id", ""))
+		if entry_id == "":
+			continue
+		var button := Button.new()
+		button.text = "%s\n%s" % [str(entry.get("label", "入口")), str(entry.get("description", ""))]
+		button.custom_minimum_size = Vector2(0, 58)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 15)
+		button.pressed.connect(func() -> void:
+			_on_qa_entry_pressed(entry_id)
+		)
+		qa_entry_container.add_child(button)
+		qa_entry_buttons[entry_id] = button
+	qa_detail_label.text = _qa_command_summary_text()
+
+
+func _qa_entry_definitions() -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	entries.append({"section": "GM地图"})
+	entries.append({"id": "gm_map", "label": "进入GM测试场", "description": "完整客户端 + 三块专用测试草丛"})
+	entries.append({"id": "gm_10v10_grass", "label": "10V10草丛", "description": "固定10只，测练级、合击、自动战斗"})
+	entries.append({"id": "gm_capture_grass", "label": "捉宠草丛", "description": "随机图鉴宠，1-5只，Lv1-10"})
+	entries.append({"id": "gm_knockaway_grass", "label": "击飞草丛", "description": "120-140级怪，测记录点回城"})
+	entries.append({"id": "firebud_village", "label": "回火芽村", "description": "回到村口，测商店、村医、记录点"})
+	entries.append({"section": "功能面板"})
+	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、快捷栏、世界使用"})
+	entries.append({"id": "open_item_shop", "label": "杂货铺", "description": "购买、出售、数量输入"})
+	entries.append({"id": "open_equipment_shop", "label": "装备铺", "description": "装备购买预览、购买后装备"})
+	entries.append({"id": "open_equipment", "label": "装备栏", "description": "槽位详情、卸下、合成入口"})
+	entries.append({"id": "open_quest", "label": "任务", "description": "任务详情、奖励、自动寻路"})
+	entries.append({"id": "open_auto_battle", "label": "内挂战斗", "description": "人物/宠物首回合与一般回合策略"})
+	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
+	entries.append({"id": "open_partner", "label": "陪练伙伴", "description": "补满5人5宠测试合击"})
+	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴化详情"})
+	entries.append({"id": "open_codex", "label": "图鉴", "description": "已见、可捕、捕获记录"})
+	return entries
+
+
+func _qa_command_summary_text() -> String:
+	var lines: Array[String] = []
+	lines.append("[color=#d7c36a]常用自测命令[/color]")
+	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
+	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
+	lines.append("装备: --auto-equipment-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
+	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
+	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
+	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
+	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-qa-panel-check")
+	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
+	return "\n".join(lines)
+
+
+func _on_qa_entry_pressed(entry_id: String) -> void:
+	match entry_id:
+		"gm_map":
+			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
+		"gm_10v10_grass":
+			_qa_route_to_gm_zone("gm_10v10_grass")
+		"gm_capture_grass":
+			_qa_route_to_gm_zone("gm_codex_capture_grass")
+		"gm_knockaway_grass":
+			_qa_route_to_gm_zone("gm_high_knockaway_grass")
+		"firebud_village":
+			_qa_load_map("firebud_village_gate", "from_training_yard", "已回到火芽村入口。")
+		"open_backpack":
+			_close_qa_panel(false)
+			_open_backpack_panel()
+		"open_item_shop":
+			_close_qa_panel(false)
+			_open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+		"open_equipment_shop":
+			_close_qa_panel(false)
+			_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+		"open_equipment":
+			_close_qa_panel(false)
+			_open_equipment_panel()
+		"open_quest":
+			_close_qa_panel(false)
+			_open_quest_panel()
+		"open_auto_battle":
+			_qa_open_auto_settings("battle")
+		"open_auto_capture":
+			_qa_open_auto_settings("capture")
+		"open_partner":
+			_close_qa_panel(false)
+			_open_training_partner_panel()
+		"open_pet":
+			_close_qa_panel(false)
+			_open_pet_panel()
+		"open_codex":
+			_close_qa_panel(false)
+			_open_codex_panel()
+
+
+func _qa_open_auto_settings(tab_id: String) -> void:
+	auto_settings_active_tab = tab_id
+	_close_qa_panel(false)
+	_open_auto_settings_panel()
+
+
+func _qa_load_map(map_id: String, spawn_name: String, message: String) -> void:
+	_close_qa_panel(false)
+	if _load_map(map_id, spawn_name):
+		_set_world_log_message(message)
+	else:
+		_set_world_log_message("GM入口暂时无法载入地图。")
+	_layout_hud()
+
+
+func _qa_route_to_gm_zone(zone_id: String) -> void:
+	_close_qa_panel(false)
+	if current_map_id != GM_10V10_MAP_ID:
+		if not _load_map(GM_10V10_MAP_ID, "default"):
+			_set_world_log_message("GM测试场暂时无法载入。")
+			return
+	var zone := _encounter_zone_by_id(zone_id)
+	if zone.is_empty():
+		_set_world_log_message("GM测试草丛不存在：%s。" % zone_id)
+		return
+	var cell := EncounterModel.first_walkable_cell(map_data, zone)
+	if _set_move_target_cell(cell, IsoMapModel.grid_to_world(map_data, cell), cell):
+		_set_world_log_message("正在前往%s。" % str(zone.get("name", "GM草丛")))
+	else:
+		_set_world_log_message("暂时无法前往%s。" % str(zone.get("name", "GM草丛")))
+	_layout_hud()
 
 
 func _refresh_auto_settings_panel() -> void:
@@ -19515,7 +19865,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -19524,7 +19874,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, pet_rename_panel]:
+	for control in [player_status_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -19683,6 +20033,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		auto_settings_panel.visible = false
 	if auto_settings_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	qa_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	qa_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		qa_panel.visible = false
+	if qa_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
