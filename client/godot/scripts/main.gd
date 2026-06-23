@@ -176,7 +176,6 @@ var pet_detail_label: Label
 var pet_detail_instance_button: Button
 var pet_detail_codex_button: Button
 var pet_state_cycle_button: Button
-var pet_heal_button: Button
 var pet_stable_button: Button
 var pet_rename_button: Button
 var pet_drop_button: Button
@@ -285,6 +284,7 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_village_healer_check: bool = false
 var auto_backpack_check: bool = false
 var auto_backpack_world_use_check: bool = false
 var auto_shop_check: bool = false
@@ -503,6 +503,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_village_healer_check:
+		call_deferred("_run_auto_village_healer_check")
 	elif auto_backpack_check:
 		call_deferred("_run_auto_backpack_check")
 	elif auto_backpack_world_use_check:
@@ -776,6 +778,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-village-healer-check":
+			auto_village_healer_check = true
 		elif arg == "--auto-backpack-check":
 			auto_backpack_check = true
 		elif arg == "--auto-backpack-world-use-check":
@@ -2009,6 +2013,9 @@ func _run_auto_capture_settings_check() -> void:
 		success_no_target_submit
 		and not battle_active
 		and world_log_message.find("捕获成功。没有符合条件的捕捉目标，自动逃跑。") >= 0
+		and world_log_message.find("成功逃跑。") >= 0
+		and world_log_message.find("捕获") >= 0
+		and world_log_message.find("战力") >= 0
 	)
 	await get_tree().process_frame
 
@@ -2027,9 +2034,12 @@ func _run_auto_capture_settings_check() -> void:
 			"speed": 100,
 		})
 	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_state, "victory")
+	var full_log_text := "\n".join(full_result.get("logLines", []))
 	var full_message_ok := (
 		(full_result.get("lostCapturedPets", []) as Array).size() == 1
-		and "\n".join(full_result.get("logLines", [])).find("兽栏和宠物栏满，请清理") >= 0
+		and full_log_text.find("捕获") >= 0
+		and full_log_text.find("战力") >= 0
+		and full_log_text.find("兽栏和宠物栏满，请清理") >= 0
 	)
 
 	var discard_profile := PlayerProgressModel.with_auto_capture_settings(PlayerProgressModel.default_profile(), {
@@ -2051,9 +2061,13 @@ func _run_auto_capture_settings_check() -> void:
 			"speed": 100,
 		})
 	var discard_result := PlayerProgressModel.apply_battle_result(discard_profile, discard_state, "victory")
+	var discard_log_text := "\n".join(discard_result.get("logLines", []))
 	var discard_ok := (
 		(discard_result.get("autoDiscardedPets", []) as Array).size() == 1
 		and (discard_result.get("capturedPets", []) as Array).is_empty()
+		and discard_log_text.find("捕获") >= 0
+		and discard_log_text.find("战力") >= 0
+		and discard_log_text.find("已自动丢弃") >= 0
 	)
 
 	var loaded_gm := _load_map(GM_10V10_MAP_ID)
@@ -3471,7 +3485,12 @@ func _run_auto_battle_result_check() -> void:
 	var log_text := battle_log_label.text if battle_log_label != null else ""
 	var result_ok := str(result.get("result", "")) == "victory"
 	var exited_ok := not battle_active and player != null and player.visible
-	var log_ok := world_log_message.find("获得") >= 0 and world_log_message.find("捕捉") >= 0 and log_text == world_log_message
+	var log_ok := (
+		world_log_message.find("获得") >= 0
+		and world_log_message.find("捕获") >= 0
+		and world_log_message.find("战力") >= 0
+		and log_text == world_log_message
+	)
 	var exp_ok := int(after_player.get("exp", 0)) > before_exp or int(after_player.get("level", 1)) > int(profile_player.get("level", 1))
 	var pet_count_ok := after_pet_count == before_pet_count + 1
 	var panel_ok := battle_message_panel != null and battle_message_panel.visible and not battle_command_panel.visible
@@ -3735,6 +3754,8 @@ func _run_auto_pet_rename_check() -> void:
 func _run_auto_pet_recovery_check() -> void:
 	profile_save_enabled = false
 	pet_rest_recovery_elapsed = 0.0
+	world_log_message = ""
+	world_log_history.clear()
 	player_profile = PlayerProgressModel.default_profile()
 	var instances: Array = player_profile.get("petInstances", [])
 	for index in range(instances.size()):
@@ -3758,35 +3779,14 @@ func _run_auto_pet_recovery_check() -> void:
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
 	await get_tree().process_frame
-	var heal_button_ready := pet_heal_button != null and pet_heal_button.visible and not pet_heal_button.disabled and pet_heal_button.text == "治疗"
-	_on_pet_heal_pressed()
-	await get_tree().process_frame
-	var healed_storage := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed")
-	var storage_healed := (
-		str(healed_storage.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
-		and int(healed_storage.get("hp", 0)) == int(healed_storage.get("maxHp", 1))
-		and world_log_message.find("已治疗") >= 0
+	var pet_heal_removed := pet_panel != null and not _node_tree_has_button_text(pet_panel, "治疗")
+	var storage_before_rest := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_speed")
+	var storage_still_damaged := (
+		str(storage_before_rest.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and int(storage_before_rest.get("hp", 0)) == 30
 	)
 	var heal_log := world_log_message
 
-	instances = player_profile.get("petInstances", [])
-	for index in range(instances.size()):
-		if not (instances[index] is Dictionary):
-			continue
-		var instance := (instances[index] as Dictionary).duplicate(true)
-		match str(instance.get("instanceId", "")):
-			"pet_bui_speed":
-				instance["state"] = PlayerProgressModel.PET_STATE_STORAGE
-				instance["hp"] = 30
-			"pet_bui_rest":
-				instance["state"] = PlayerProgressModel.PET_STATE_REST
-				instance["hp"] = 20
-			"pet_bui_tough":
-				instance["state"] = PlayerProgressModel.PET_STATE_STANDBY
-				instance["hp"] = 20
-		instances[index] = instance
-	player_profile["petInstances"] = instances
-	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_select_pet_instance("pet_bui_rest")
 	await get_tree().process_frame
 	var rest_before := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest")
@@ -3819,11 +3819,11 @@ func _run_auto_pet_recovery_check() -> void:
 	await get_tree().process_frame
 	var timer_after := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_rest")
 	var timer_recovered := int(timer_after.get("hp", 0)) > timer_before_hp
-	var status := "ok" if heal_button_ready and storage_healed and rest_recovered and storage_no_recover and standby_no_recover and detail_refreshed and no_recovery_log and timer_recovered else "failed"
-	print("pet recovery check ready: status=%s heal_button=%s storage_healed=%s rest_recovered=%s storage_no_recover=%s standby_no_recover=%s detail=%s quiet=%s timer=%s rest_hp=%d timer_hp=%d log=%s" % [
+	var status := "ok" if pet_heal_removed and storage_still_damaged and rest_recovered and storage_no_recover and standby_no_recover and detail_refreshed and no_recovery_log and timer_recovered else "failed"
+	print("pet recovery check ready: status=%s heal_removed=%s storage_damaged=%s rest_recovered=%s storage_no_recover=%s standby_no_recover=%s detail=%s quiet=%s timer=%s rest_hp=%d timer_hp=%d log=%s" % [
 		status,
-		str(heal_button_ready),
-		str(storage_healed),
+		str(pet_heal_removed),
+		str(storage_still_damaged),
 		str(rest_recovered),
 		str(storage_no_recover),
 		str(standby_no_recover),
@@ -3835,6 +3835,111 @@ func _run_auto_pet_recovery_check() -> void:
 		world_log_message.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_village_healer_check() -> void:
+	profile_save_enabled = false
+	var loaded := _load_map("firebud_village_gate")
+	var healer := InteractionModel.find_by_id(map_data, "firebud_doctor")
+	var npc_found := loaded and not healer.is_empty() and _dialog_item_is_healer(healer)
+
+	var damaged_profile := _village_healer_check_profile(120)
+	var quote := PlayerProgressModel.village_healer_quote(damaged_profile)
+	var missing := int(quote.get("missingHp", 0))
+	var cost := int(quote.get("cost", 0))
+	var before_coins := PlayerProgressModel.stone_coins(damaged_profile)
+	var model_result := PlayerProgressModel.apply_village_healer(damaged_profile)
+	var healed_profile := model_result.get("profile", damaged_profile) as Dictionary
+	var player_full := PlayerProgressModel.player_hp(healed_profile) == PlayerProgressModel.player_max_hp(healed_profile)
+	var party_full := true
+	for instance in PlayerProgressModel.party_pet_instances(healed_profile):
+		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		if int(instance.get("hp", max_hp)) != max_hp:
+			party_full = false
+			break
+	var storage_pet := PlayerProgressModel.pet_instance_by_id(healed_profile, "pet_bui_tough")
+	var storage_untouched := (
+		str(storage_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+		and int(storage_pet.get("hp", 0)) == 12
+	)
+	var cost_ok := cost > 0 and PlayerProgressModel.stone_coins(healed_profile) == before_coins - cost
+	var model_message_ok := str(model_result.get("message", "")).find("村医治疗完成") >= 0
+	var model_ok := bool(model_result.get("ok", false)) and missing > 0 and player_full and party_full and storage_untouched and cost_ok and model_message_ok
+
+	var full_result := PlayerProgressModel.apply_village_healer(healed_profile)
+	var full_no_charge := (
+		not bool(full_result.get("ok", false))
+		and PlayerProgressModel.stone_coins(full_result.get("profile", healed_profile) as Dictionary) == PlayerProgressModel.stone_coins(healed_profile)
+		and str(full_result.get("message", "")).find("生命已满") >= 0
+	)
+	var poor_profile := _village_healer_check_profile(0)
+	var poor_before_hp := PlayerProgressModel.player_hp(poor_profile)
+	var poor_result := PlayerProgressModel.apply_village_healer(poor_profile)
+	var poor_fail := (
+		not bool(poor_result.get("ok", false))
+		and PlayerProgressModel.player_hp(poor_result.get("profile", poor_profile) as Dictionary) == poor_before_hp
+		and str(poor_result.get("message", "")).find("石币不足") >= 0
+	)
+
+	player_profile = _village_healer_check_profile(120)
+	if npc_found:
+		_open_interaction_dialog(healer)
+	await get_tree().process_frame
+	var dialog_opened := _dialog_is_open() and str(active_dialog_interaction.get("id", "")) == "firebud_doctor"
+	var dialog_text := dialog_body_label.text if dialog_body_label != null else ""
+	var dialog_shows_cost := dialog_text.find("预计费用") >= 0 and dialog_text.find("石币") >= 0
+	var dialog_button_ok := dialog_option_button != null and dialog_option_button.text == "治疗队伍"
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var dialog_healed := (
+		world_log_message.find("村医治疗完成") >= 0
+		and PlayerProgressModel.player_hp(player_profile) == PlayerProgressModel.player_max_hp(player_profile)
+		and (dialog_body_label.text if dialog_body_label != null else "").find("队伍生命已满") >= 0
+	)
+
+	var status := "ok" if npc_found and model_ok and full_no_charge and poor_fail and dialog_opened and dialog_shows_cost and dialog_button_ok and dialog_healed else "failed"
+	print("village healer check ready: status=%s npc=%s model=%s full=%s poor=%s dialog=%s cost_text=%s button=%s dialog_healed=%s missing=%d cost=%d coins_before=%d coins_after=%d log=%s" % [
+		status,
+		str(npc_found),
+		str(model_ok),
+		str(full_no_charge),
+		str(poor_fail),
+		str(dialog_opened),
+		str(dialog_shows_cost),
+		str(dialog_button_ok),
+		str(dialog_healed),
+		missing,
+		cost,
+		before_coins,
+		PlayerProgressModel.stone_coins(healed_profile),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _village_healer_check_profile(coins: int) -> Dictionary:
+	var profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), coins)
+	profile = PlayerProgressModel.with_player_hp(profile, 10)
+	var instances: Array = profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		match str(instance.get("instanceId", "")):
+			"pet_bui_main":
+				instance["hp"] = 30
+			"pet_bui_speed":
+				instance["state"] = PlayerProgressModel.PET_STATE_STANDBY
+				instance["hp"] = 40
+			"pet_bui_rest":
+				instance["state"] = PlayerProgressModel.PET_STATE_REST
+				instance["hp"] = 20
+			"pet_bui_tough":
+				instance["state"] = PlayerProgressModel.PET_STATE_STORAGE
+				instance["hp"] = 12
+		instances[index] = instance
+	profile["petInstances"] = instances
+	return PlayerProgressModel.normalize_profile(profile)
 
 
 func _run_auto_pet_stable_check() -> void:
@@ -5999,7 +6104,7 @@ func _run_auto_pet_capture_feedback_check() -> void:
 		not standby_captured.is_empty()
 		and str(standby_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 		and PlayerProgressModel.party_pet_instances(standby_after_profile).size() == standby_before_party + 1
-		and standby_log.find("捕捉了野生乌力 Lv1，已加入队伍。") >= 0
+		and standby_log.find("捕获野生乌力 Lv1，战力84，已加入队伍。") >= 0
 	)
 
 	var storage_profile := PlayerProgressModel.default_profile()
@@ -6024,7 +6129,7 @@ func _run_auto_pet_capture_feedback_check() -> void:
 		and str(storage_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
 		and PlayerProgressModel.party_pet_instances(storage_after_profile).size() == PlayerProgressModel.PARTY_LIMIT
 		and PlayerProgressModel.storage_pet_instances(storage_after_profile).size() == storage_before_storage + 1
-		and storage_log.find("捕捉了野生乌力 Lv1，队伍已满，已送入兽栏。") >= 0
+		and storage_log.find("捕获野生乌力 Lv1，战力84，队伍已满，已送入兽栏。") >= 0
 	)
 	var status := "ok" if standby_join_ok and storage_destination_ok else "failed"
 	print("pet capture feedback check ready: status=%s standby=%s storage=%s standby_before_party=%d storage_before_party=%d storage_before_storage=%d standby_log=%s storage_log=%s" % [
@@ -8875,12 +8980,6 @@ func _build_hud() -> void:
 	pet_state_cycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_state_cycle_button.pressed.connect(_on_pet_state_cycle_pressed)
 	pet_button_row.add_child(pet_state_cycle_button)
-	pet_heal_button = Button.new()
-	pet_heal_button.text = "治疗"
-	pet_heal_button.custom_minimum_size = Vector2(0, 48)
-	pet_heal_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_heal_button.pressed.connect(_on_pet_heal_pressed)
-	pet_button_row.add_child(pet_heal_button)
 	pet_stable_button = Button.new()
 	pet_stable_button.text = "存入"
 	pet_stable_button.custom_minimum_size = Vector2(0, 48)
@@ -11869,9 +11968,6 @@ func _refresh_pet_panel() -> void:
 			var state_check := PlayerProgressModel.can_cycle_pet_state(player_profile, pet_selected_instance_id)
 			pet_state_cycle_button.disabled = not bool(state_check.get("ok", false))
 			pet_state_cycle_button.text = _pet_state_button_label(target_state)
-	if pet_heal_button != null:
-		pet_heal_button.visible = not selected.is_empty()
-		pet_heal_button.disabled = selected.is_empty()
 	if pet_stable_button != null:
 		if selected.is_empty():
 			pet_stable_button.visible = false
@@ -11966,6 +12062,17 @@ func _select_option_by_metadata(option: OptionButton, selected_id: String) -> vo
 		if str(option.get_item_metadata(index)) == selected_id:
 			option.select(index)
 			return
+
+
+func _node_tree_has_button_text(root: Node, button_text: String) -> bool:
+	if root == null:
+		return false
+	if root is Button and (root as Button).text == button_text:
+		return true
+	for child in root.get_children():
+		if _node_tree_has_button_text(child, button_text):
+			return true
+	return false
 
 
 func _pet_panel_visible_instances() -> Array[Dictionary]:
@@ -12119,15 +12226,6 @@ func _select_pet_instance(instance_id: String) -> void:
 
 func _on_pet_state_cycle_pressed() -> void:
 	var result := PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
-	player_profile = result.get("profile", player_profile)
-	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
-	_set_world_log_message(str(result.get("message", "")))
-	_refresh_pet_panel()
-
-
-func _on_pet_heal_pressed() -> void:
-	var result := PlayerProgressModel.heal_pet(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
@@ -13824,6 +13922,18 @@ func _confirm_dialog_action() -> void:
 		if status_label != null:
 			_update_hud_text()
 		return
+	if _active_dialog_is_healer():
+		var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
+		player_profile = heal_result.get("profile", player_profile)
+		if bool(heal_result.get("ok", false)) and profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message(str(heal_result.get("message", "")))
+		_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		return
 	if str(active_dialog_interaction.get("shopId", "")) != "":
 		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
 		_close_dialog()
@@ -13847,6 +13957,10 @@ func _dialog_body_for(item: Dictionary) -> String:
 	var text_parts: Array[String] = []
 	for line in lines:
 		text_parts.append(str(line))
+	var healer_hint := _dialog_healer_hint_for(item)
+	if healer_hint != "":
+		text_parts.append("")
+		text_parts.append(healer_hint)
 	var quest_hint := _dialog_quest_hint_for(item)
 	if quest_hint != "":
 		text_parts.append("")
@@ -13859,9 +13973,33 @@ func _dialog_option_text(item: Dictionary) -> String:
 		return "领取奖励"
 	if _active_dialog_matches_talk_quest(item):
 		return "完成"
+	if _dialog_item_is_healer(item):
+		return str(item.get("option", "治疗队伍"))
 	if str(item.get("shopId", "")) != "":
 		return str(item.get("option", "买卖"))
 	return str(item.get("option", "知道了"))
+
+
+func _active_dialog_is_healer() -> bool:
+	return _dialog_item_is_healer(active_dialog_interaction)
+
+
+func _dialog_item_is_healer(item: Dictionary) -> bool:
+	return bool(item.get("healer", false)) or str(item.get("actionType", "")) == "healer"
+
+
+func _dialog_healer_hint_for(item: Dictionary) -> String:
+	if not _dialog_item_is_healer(item):
+		return ""
+	var quote := PlayerProgressModel.village_healer_quote(player_profile)
+	var missing := int(quote.get("missingHp", 0))
+	var cost := int(quote.get("cost", 0))
+	var coins := int(quote.get("stoneCoins", 0))
+	if missing <= 0:
+		return "队伍生命已满。\n石币 %d" % coins
+	if coins < cost:
+		return "需恢复 %d 生命。\n预计费用 %d 石币\n石币不足" % [missing, cost]
+	return "需恢复 %d 生命。\n预计费用 %d 石币\n石币 %d" % [missing, cost, coins]
 
 
 func _active_dialog_can_claim_quest() -> bool:
@@ -14146,7 +14284,7 @@ func _layout_hud() -> void:
 
 	var dialog_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
 	var dialog_height := DIALOG_PANEL_HEIGHT
-	var reserved_bottom := 116.0 if is_phone_shape else 24.0
+	var reserved_bottom := 160.0 if (is_phone_shape or (action_bar != null and action_bar.visible)) else 24.0
 	dialog_panel.position = Vector2(
 		(viewport_size.x - dialog_width) * 0.5,
 		maxf(margin + 68.0, viewport_size.y - dialog_height - reserved_bottom)

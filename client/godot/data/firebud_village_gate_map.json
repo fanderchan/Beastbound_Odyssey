@@ -107,6 +107,18 @@
       "option": "知道了"
     },
     {
+      "id": "firebud_doctor",
+      "name": "村医阿萝",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [5, 16],
+      "action": "治疗",
+      "actionType": "healer",
+      "healer": true,
+      "dialog": ["村医阿萝：受伤了就来，我给你和随行宠物处理。"],
+      "option": "治疗队伍"
+    },
+    {
       "id": "firebud_shopkeeper",
       "name": "杂货商阿芸",
       "kind": "npc",

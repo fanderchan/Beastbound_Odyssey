@@ -31,6 +31,7 @@ const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
 const DEFAULT_STONE_COINS := 120
+const VILLAGE_HEAL_HP_PER_COIN := 20
 const PLAYER_STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_PLAYER_BATTLE_STATS := {
 	"maxHp": 120,
@@ -481,6 +482,97 @@ static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	normalized[STONE_COINS_KEY] = maxi(0, amount)
 	return normalized
+
+
+static func village_healer_missing_hp(profile: Dictionary) -> int:
+	var normalized := normalize_profile(profile)
+	var missing := maxi(0, player_max_hp(normalized) - player_hp(normalized))
+	for instance in party_pet_instances(normalized):
+		missing += _missing_hp_for_pet_instance(instance)
+	return missing
+
+
+static func village_healer_cost_for_missing_hp(missing_hp: int) -> int:
+	var missing := maxi(0, missing_hp)
+	if missing <= 0:
+		return 0
+	return maxi(1, int(ceil(float(missing) / float(VILLAGE_HEAL_HP_PER_COIN))))
+
+
+static func village_healer_quote(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var missing := village_healer_missing_hp(normalized)
+	var cost := village_healer_cost_for_missing_hp(missing)
+	var coins := stone_coins(normalized)
+	var message := "队伍生命已满。"
+	if missing > 0 and coins < cost:
+		message = "石币不足，无法治疗。"
+	elif missing > 0:
+		message = "预计费用 %d 石币。" % cost
+	return {
+		"missingHp": missing,
+		"cost": cost,
+		"stoneCoins": coins,
+		"canHeal": missing > 0 and coins >= cost,
+		"message": message,
+	}
+
+
+static func apply_village_healer(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quote := village_healer_quote(normalized)
+	var missing := int(quote.get("missingHp", 0))
+	var cost := int(quote.get("cost", 0))
+	if missing <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "队伍生命已满。",
+			"heal": 0,
+			"cost": 0,
+		}
+	if stone_coins(normalized) < cost:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "石币不足，无法治疗。",
+			"heal": 0,
+			"cost": cost,
+		}
+
+	var healed_units := 0
+	var player = normalized.get("player", {}) as Dictionary
+	var player_max := player_max_hp(normalized)
+	if player_hp(normalized) < player_max:
+		player["hp"] = player_max
+		healed_units += 1
+	normalized["player"] = player
+
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+			instances[index] = instance
+			continue
+		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+		if hp < max_hp:
+			instance["hp"] = max_hp
+			healed_units += 1
+		instances[index] = instance
+	normalized["petInstances"] = instances
+	normalized[STONE_COINS_KEY] = stone_coins(normalized) - cost
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "村医治疗完成，恢复%d生命，花费%d石币。" % [missing, cost],
+		"heal": missing,
+		"cost": cost,
+		"healedUnits": healed_units,
+	}
 
 
 static func active_quest_id(profile: Dictionary) -> String:
@@ -1095,54 +1187,6 @@ static func rename_pet(profile: Dictionary, instance_id: String, raw_name: Strin
 	}
 
 
-static func can_heal_pet(profile: Dictionary, instance_id: String) -> Dictionary:
-	var normalized := normalize_profile(profile)
-	var instance := pet_instance_by_id(normalized, instance_id)
-	if instance.is_empty():
-		return {"ok": false, "message": "没有找到这只宠物。"}
-	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
-	var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
-	if hp >= max_hp:
-		return {"ok": false, "message": "%s 生命已满。" % str(instance.get("name", "宠物"))}
-	return {"ok": true, "message": "%s 可以治疗。" % str(instance.get("name", "宠物"))}
-
-
-static func heal_pet(profile: Dictionary, instance_id: String) -> Dictionary:
-	var normalized := normalize_profile(profile)
-	var check := can_heal_pet(normalized, instance_id)
-	if not bool(check.get("ok", false)):
-		return {
-			"ok": false,
-			"profile": normalized,
-			"message": str(check.get("message", "不能治疗。")),
-		}
-	var healed_name := "宠物"
-	var healed_amount := 0
-	var instances: Array = normalized.get("petInstances", [])
-	for index in range(instances.size()):
-		if not (instances[index] is Dictionary):
-			continue
-		var instance := (instances[index] as Dictionary).duplicate(true)
-		if str(instance.get("instanceId", "")) != instance_id:
-			instances[index] = instance
-			continue
-		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
-		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
-		healed_name = str(instance.get("name", "宠物"))
-		healed_amount = maxi(0, max_hp - hp)
-		instance["hp"] = max_hp
-		instances[index] = instance
-		break
-	normalized["petInstances"] = instances
-	normalized = normalize_profile(normalized)
-	return {
-		"ok": healed_amount > 0,
-		"profile": normalized,
-		"message": "%s 已治疗。" % healed_name,
-		"heal": healed_amount,
-	}
-
-
 static func use_world_pet_heal_item(profile: Dictionary, item_id: String, instance_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var item_label := BackpackModel.label_for(item_id)
@@ -1226,6 +1270,12 @@ static func use_world_pet_heal_item(profile: Dictionary, item_id: String, instan
 static func rest_recovery_amount_for_instance(instance: Dictionary) -> int:
 	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
 	return maxi(1, int(ceil(float(max_hp) * PET_REST_RECOVERY_RATIO)))
+
+
+static func _missing_hp_for_pet_instance(instance: Dictionary) -> int:
+	var max_hp := maxi(1, int(instance.get("maxHp", 1)))
+	var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
+	return maxi(0, max_hp - hp)
 
 
 static func apply_rest_recovery_tick(profile: Dictionary) -> Dictionary:
@@ -2071,7 +2121,10 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 					discard_parts.append(_auto_discarded_pet_log_part(discarded))
 				lines.append("；".join(discard_parts) + "。")
 			if not lost_captured_instances.is_empty():
-				lines.append("兽栏和宠物栏满，请清理。")
+				var lost_parts: Array[String] = []
+				for lost in lost_captured_instances:
+					lost_parts.append(_lost_captured_pet_log_part(lost))
+				lines.append("；".join(lost_parts) + "。")
 			var item_reward_text := BackpackModel.item_amounts_text(item_rewards)
 			if item_reward_text != "":
 				lines.append("获得 %s。" % item_reward_text)
@@ -2080,15 +2133,36 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 				lines.append("背包已满，未获得 %s。" % lost_item_reward_text)
 		"defeat":
 			lines.append("战斗失败。")
+			_append_capture_result_lines(lines, captured_instances, lost_captured_instances, auto_discarded_instances)
 		"escape":
 			lines.append("成功逃跑。")
+			_append_capture_result_lines(lines, captured_instances, lost_captured_instances, auto_discarded_instances)
 		_:
 			lines.append("战斗结束。")
+			_append_capture_result_lines(lines, captured_instances, lost_captured_instances, auto_discarded_instances)
 	for line in level_up_lines:
 		if lines.size() >= 4:
 			break
 		lines.append(line)
 	return lines
+
+
+static func _append_capture_result_lines(lines: Array[String], captured_instances: Array[Dictionary], lost_captured_instances: Array[Dictionary], auto_discarded_instances: Array[Dictionary]) -> void:
+	if not captured_instances.is_empty():
+		var captured_parts: Array[String] = []
+		for captured in captured_instances:
+			captured_parts.append(_captured_pet_log_part(captured))
+		lines.append("；".join(captured_parts) + "。")
+	if not auto_discarded_instances.is_empty():
+		var discard_parts: Array[String] = []
+		for discarded in auto_discarded_instances:
+			discard_parts.append(_auto_discarded_pet_log_part(discarded))
+		lines.append("；".join(discard_parts) + "。")
+	if not lost_captured_instances.is_empty():
+		var lost_parts: Array[String] = []
+		for lost in lost_captured_instances:
+			lost_parts.append(_lost_captured_pet_log_part(lost))
+		lines.append("；".join(lost_parts) + "。")
 
 
 static func _item_amount_array(value) -> Array[Dictionary]:
@@ -2123,16 +2197,28 @@ static func _item_amount_count(value, item_id: String) -> int:
 static func _captured_pet_log_part(captured: Dictionary) -> String:
 	var pet_name := str(captured.get("name", "宠物"))
 	var level := maxi(1, int(captured.get("level", 1)))
+	var power := _captured_pet_power(captured)
 	var destination := "队伍已满，已送入兽栏" if str(captured.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE else "已加入队伍"
-	return "捕捉了%s Lv%d，%s" % [pet_name, level, destination]
+	return "捕获%s Lv%d，战力%d，%s" % [pet_name, level, power, destination]
+
+
+static func _lost_captured_pet_log_part(captured: Dictionary) -> String:
+	var pet_name := str(captured.get("name", "宠物"))
+	var level := maxi(1, int(captured.get("level", 1)))
+	var power := _captured_pet_power(captured)
+	return "捕获%s Lv%d，战力%d，但兽栏和宠物栏满，请清理" % [pet_name, level, power]
 
 
 static func _auto_discarded_pet_log_part(captured: Dictionary) -> String:
 	var pet_name := str(captured.get("name", "宠物"))
 	var level := maxi(1, int(captured.get("level", 1)))
-	var power := maxi(0, int(captured.get("combatPower", PetPowerModel.combat_power_for_pet(captured))))
+	var power := _captured_pet_power(captured)
 	var threshold := maxi(0, int(captured.get("discardThreshold", AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)))
-	return "%s Lv%d 战力%d低于%d，已自动丢弃" % [pet_name, level, power, threshold]
+	return "捕获%s Lv%d，战力%d，低于%d，已自动丢弃" % [pet_name, level, power, threshold]
+
+
+static func _captured_pet_power(captured: Dictionary) -> int:
+	return maxi(0, int(captured.get("combatPower", PetPowerModel.combat_power_for_pet(captured))))
 
 
 static func battle_exp_reward(state: Dictionary) -> int:
