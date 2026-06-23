@@ -60,6 +60,38 @@
       "label": "火芽装备铺",
       "items": [
         {
+          "itemId": "accessory_firebud_charm",
+          "buyPrice": 38
+        },
+        {
+          "itemId": "accessory_wind_ring",
+          "buyPrice": 42
+        },
+        {
+          "itemId": "helm_leather_cap",
+          "buyPrice": 30
+        },
+        {
+          "itemId": "weapon_training_spear",
+          "buyPrice": 65
+        },
+        {
+          "itemId": "armor_moist_cloth",
+          "buyPrice": 78
+        },
+        {
+          "itemId": "weapon_stone_dagger",
+          "buyPrice": 36
+        },
+        {
+          "itemId": "gloves_hide",
+          "buyPrice": 28
+        },
+        {
+          "itemId": "boots_grass",
+          "buyPrice": 32
+        },
+        {
           "itemId": "weapon_wooden_club",
           "buyPrice": 45
         },

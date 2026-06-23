@@ -91,6 +91,24 @@
       "stoneAgeReference": "MAGIC_OtherRecovery"
     },
     {
+      "id": "spirit_moist_6",
+      "owner": "spirit",
+      "label": "滋润精灵6",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 62
+      },
+      "stoneAgeReference": "MAGIC_OtherRecovery"
+    },
+    {
       "id": "spirit_poison_5",
       "owner": "spirit",
       "label": "毒精灵5",

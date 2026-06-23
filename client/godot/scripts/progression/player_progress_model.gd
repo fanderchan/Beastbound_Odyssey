@@ -45,7 +45,9 @@ const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
 const EQUIPMENT_SLOTS_VERSION_KEY := "equipmentSlotsVersion"
-const EQUIPMENT_SLOTS_VERSION := 2
+const EQUIPMENT_SLOTS_VERSION := 3
+const EQUIPMENT_STARTER_SET_VERSION_KEY := "equipmentStarterSetVersion"
+const EQUIPMENT_STARTER_SET_VERSION := 1
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
@@ -84,8 +86,9 @@ static func default_profile() -> Dictionary:
 		],
 		"groundPetDrops": [],
 		"backpackSlots": BackpackModel.starting_slots(),
-		"equipmentSlots": {},
+		"equipmentSlots": starter_equipment_slots(),
 		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
+		"equipmentStarterSetVersion": EQUIPMENT_STARTER_SET_VERSION,
 		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"activeQuestId": QuestModel.first_quest_id(),
 		"questStates": {},
@@ -255,8 +258,32 @@ static func equipped_slot_for_item(profile: Dictionary, item_id: String) -> Stri
 	return ""
 
 
+static func starter_equipment_slots() -> Dictionary:
+	return {
+		EquipmentModel.SLOT_ACCESSORY_LEFT: "accessory_firebud_charm",
+		EquipmentModel.SLOT_ACCESSORY_RIGHT: "accessory_wind_ring",
+		EquipmentModel.SLOT_HEAD: "helm_leather_cap",
+		EquipmentModel.SLOT_LEFT_HAND_WEAPON: "weapon_training_spear",
+		EquipmentModel.SLOT_BODY: "armor_moist_cloth",
+		EquipmentModel.SLOT_RIGHT_HAND_WEAPON: "weapon_stone_dagger",
+		EquipmentModel.SLOT_HANDS: "gloves_hide",
+		EquipmentModel.SLOT_FEET: "boots_grass",
+	}
+
+
+static func without_equipment(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[EQUIPMENT_SLOTS_KEY] = {}
+	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = EQUIPMENT_STARTER_SET_VERSION
+	return normalize_profile(normalized)
+
+
 static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
 	return _equipment_stat_bonus_from_slots(equipment_slots(profile))
+
+
+static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
+	return _equipment_spirit_ids_from_slots(equipment_slots(profile))
 
 
 static func player_base_stats() -> Dictionary:
@@ -1097,6 +1124,36 @@ static func _equipment_stat_bonus_from_slots(slots: Dictionary) -> Dictionary:
 		var stats := EquipmentModel.stats_for(item_id)
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
+	return result
+
+
+static func _equipment_spirit_ids_from_slots(slots: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		for spirit_id in EquipmentModel.spirit_ids_for(item_id):
+			if not result.has(spirit_id):
+				result.append(spirit_id)
+	return _sorted_player_spirit_ids(result)
+
+
+static func _sorted_player_spirit_ids(spirit_ids: Array[String]) -> Array[String]:
+	var preferred_order: Array[String] = [
+		"spirit_grace_5",
+		"spirit_moist_6",
+		"spirit_moist_5",
+		"spirit_poison_5",
+		"spirit_poison_mist_5",
+	]
+	var result: Array[String] = []
+	for spirit_id in preferred_order:
+		if spirit_ids.has(spirit_id):
+			result.append(spirit_id)
+	for spirit_id in spirit_ids:
+		if not result.has(spirit_id):
+			result.append(spirit_id)
 	return result
 
 
@@ -2037,6 +2094,10 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	var equipment_slots_version := int(normalized.get(EQUIPMENT_SLOTS_VERSION_KEY, 1))
 	var equipment_slots_value := _normalize_equipment_slots(normalized.get(EQUIPMENT_SLOTS_KEY, {}))
+	var equipment_starter_set_version := int(normalized.get(EQUIPMENT_STARTER_SET_VERSION_KEY, 0))
+	if equipment_starter_set_version < EQUIPMENT_STARTER_SET_VERSION and equipment_slots_value.is_empty():
+		equipment_slots_value = starter_equipment_slots()
+		equipment_starter_set_version = EQUIPMENT_STARTER_SET_VERSION
 	if equipment_slots_version < EQUIPMENT_SLOTS_VERSION:
 		for slot_id in EquipmentModel.slot_ids():
 			var equipped_item_id_value := str(equipment_slots_value.get(slot_id, ""))
@@ -2046,6 +2107,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
+	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
 	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value)
 	var player_max_hp := maxi(1, int(DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120)) + int(player_bonus.get("maxHp", 0)))
@@ -2162,6 +2224,7 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		actor["equipmentSlots"] = equipment_slots(profile)
 		actor["equipmentStatBonus"] = summary.get("bonus", {})
 		actor["equipmentStatSummary"] = summary
+		actor["spiritIds"] = equipment_spirit_ids(profile)
 		actors[index] = actor
 		break
 	next_state["actors"] = actors

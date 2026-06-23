@@ -15,6 +15,7 @@ const PLAYER_ACTOR_ID := "ally_player"
 const PLAYER_PET_ID := "ally_pet"
 const SPIRIT_GRACE_ALL := "spirit_grace_5"
 const SPIRIT_MOIST_SINGLE := "spirit_moist_5"
+const SPIRIT_MOIST_6 := "spirit_moist_6"
 const SPIRIT_POISON_SINGLE := "spirit_poison_5"
 const SPIRIT_POISON_ALL := "spirit_poison_mist_5"
 const PET_SKILL_ATTACK := "pet_attack"
@@ -983,23 +984,23 @@ static func _make_player_command_event(state: Dictionary, player_id: String, com
 
 static func _make_spirit_event(state: Dictionary, player_id: String, command: Dictionary, enemy_target_id: String, sequence: int) -> Dictionary:
 	var spirit_id := str(command.get("spiritId", SPIRIT_MOIST_SINGLE))
-	match spirit_id:
-		SPIRIT_GRACE_ALL:
-			if BattleActionCatalog.action_is_all(spirit_id) and BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ALLY):
-				return _make_spirit_heal_all_event(state, player_id, sequence)
-		SPIRIT_POISON_SINGLE:
-			var target_id := str(command.get("targetId", enemy_target_id))
-			if BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ENEMY) and _is_living_side_actor(state, target_id, SIDE_ENEMY):
-				return _make_spirit_poison_event(state, player_id, target_id, sequence)
-		SPIRIT_POISON_ALL:
-			if BattleActionCatalog.action_is_all(spirit_id) and BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ENEMY):
-				return _make_spirit_poison_all_event(state, player_id, sequence)
-		_:
-			var ally_target_id := str(command.get("allyTargetId", ""))
-			if not _is_living_side_actor(state, ally_target_id, SIDE_ALLY):
-				ally_target_id = best_ally_heal_target_id(state)
-			if BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ALLY) and ally_target_id != "":
-				return _make_spirit_heal_event(state, player_id, ally_target_id, sequence)
+	if not actor_has_spirit(state, player_id, spirit_id):
+		return {}
+	var effect_type := BattleActionCatalog.effect_type_for(spirit_id)
+	if effect_type == "poison":
+		if BattleActionCatalog.action_is_all(spirit_id) and BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ENEMY):
+			return _make_spirit_poison_all_event(state, player_id, sequence, spirit_id)
+		var target_id := str(command.get("targetId", enemy_target_id))
+		if BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ENEMY) and _is_living_side_actor(state, target_id, SIDE_ENEMY):
+			return _make_spirit_poison_event(state, player_id, target_id, sequence, spirit_id)
+	elif effect_type == "heal":
+		if BattleActionCatalog.action_is_all(spirit_id) and BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ALLY):
+			return _make_spirit_heal_all_event(state, player_id, sequence, spirit_id)
+		var ally_target_id := str(command.get("allyTargetId", ""))
+		if not _is_living_side_actor(state, ally_target_id, SIDE_ALLY):
+			ally_target_id = best_ally_heal_target_id(state)
+		if BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ALLY) and ally_target_id != "":
+			return _make_spirit_heal_event(state, player_id, ally_target_id, sequence, spirit_id)
 	return {}
 
 
@@ -1099,67 +1100,69 @@ static func _make_status_skill_event(state: Dictionary, attacker_id: String, tar
 	}
 
 
-static func _make_spirit_heal_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+static func _make_spirit_heal_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, spirit_id: String = SPIRIT_MOIST_SINGLE) -> Dictionary:
 	return {
 		"type": "spirit_heal",
 		"attackerId": attacker_id,
 		"targetId": target_id,
 		"targetSide": SIDE_ALLY,
-		"heal": BattleActionCatalog.effect_amount_for(SPIRIT_MOIST_SINGLE, 48),
+		"heal": BattleActionCatalog.effect_amount_for(spirit_id, 48),
 		"speed": _effective_action_speed(state, attacker_id, "spirit"),
 		"sequence": sequence,
-		"skillName": BattleActionCatalog.label_for(SPIRIT_MOIST_SINGLE, "滋润精灵5"),
-		"spiritId": SPIRIT_MOIST_SINGLE,
+		"skillName": BattleActionCatalog.label_for(spirit_id, "滋润精灵"),
+		"spiritId": spirit_id,
 	}
 
 
-static func _make_spirit_heal_all_event(state: Dictionary, attacker_id: String, sequence: int) -> Dictionary:
+static func _make_spirit_heal_all_event(state: Dictionary, attacker_id: String, sequence: int, spirit_id: String = SPIRIT_GRACE_ALL) -> Dictionary:
 	return {
 		"type": "spirit_heal_all",
 		"attackerId": attacker_id,
 		"targetSide": SIDE_ALLY,
 		"targetIds": living_actor_ids(state, SIDE_ALLY),
-		"heal": BattleActionCatalog.effect_amount_for(SPIRIT_GRACE_ALL, 34),
+		"heal": BattleActionCatalog.effect_amount_for(spirit_id, 34),
 		"speed": _effective_action_speed(state, attacker_id, "spirit"),
 		"sequence": sequence,
-		"skillName": BattleActionCatalog.label_for(SPIRIT_GRACE_ALL, "恩惠精灵5"),
-		"spiritId": SPIRIT_GRACE_ALL,
+		"skillName": BattleActionCatalog.label_for(spirit_id, "恩惠精灵"),
+		"spiritId": spirit_id,
 	}
 
 
-static func _make_spirit_poison_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int) -> Dictionary:
+static func _make_spirit_poison_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, spirit_id: String = SPIRIT_POISON_SINGLE) -> Dictionary:
+	var amount := BattleActionCatalog.effect_amount_for(spirit_id, 18)
 	return {
 		"type": "spirit_poison",
 		"attackerId": attacker_id,
 		"targetId": target_id,
 		"targetSide": SIDE_ENEMY,
-		"damage": BattleActionCatalog.effect_amount_for(SPIRIT_POISON_SINGLE, 18),
+		"damage": amount,
 		"speed": _effective_action_speed(state, attacker_id, "spirit"),
 		"sequence": sequence,
-		"skillName": BattleActionCatalog.label_for(SPIRIT_POISON_SINGLE, "毒精灵5"),
-		"spiritId": SPIRIT_POISON_SINGLE,
-		"statusId": BattleActionCatalog.effect_status_id_for(SPIRIT_POISON_SINGLE, STATUS_POISON),
-		"statusTurns": BattleActionCatalog.effect_status_turns_for(SPIRIT_POISON_SINGLE, 3),
-		"statusPotency": BattleActionCatalog.effect_status_potency_for(SPIRIT_POISON_SINGLE, BattleActionCatalog.effect_amount_for(SPIRIT_POISON_SINGLE, 18), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(SPIRIT_POISON_SINGLE, 18))),
-		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(SPIRIT_POISON_SINGLE, 1.0),
+		"skillName": BattleActionCatalog.label_for(spirit_id, "毒精灵"),
+		"spiritId": spirit_id,
+		"statusId": BattleActionCatalog.effect_status_id_for(spirit_id, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(spirit_id, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(spirit_id, amount, _poison_tick_damage_for(amount)),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(spirit_id, 1.0),
 	}
 
 
-static func _make_spirit_poison_all_event(state: Dictionary, attacker_id: String, sequence: int) -> Dictionary:
+static func _make_spirit_poison_all_event(state: Dictionary, attacker_id: String, sequence: int, spirit_id: String = SPIRIT_POISON_ALL) -> Dictionary:
+	var amount := BattleActionCatalog.effect_amount_for(spirit_id, 10)
 	return {
 		"type": "spirit_poison_all",
 		"attackerId": attacker_id,
 		"targetSide": SIDE_ENEMY,
 		"targetIds": living_actor_ids(state, SIDE_ENEMY),
-		"damage": BattleActionCatalog.effect_amount_for(SPIRIT_POISON_ALL, 10),
+		"damage": amount,
 		"speed": _effective_action_speed(state, attacker_id, "spirit"),
 		"sequence": sequence,
-		"skillName": BattleActionCatalog.label_for(SPIRIT_POISON_ALL, "毒雾精灵5"),
-		"spiritId": SPIRIT_POISON_ALL,
-		"statusId": BattleActionCatalog.effect_status_id_for(SPIRIT_POISON_ALL, STATUS_POISON),
-		"statusTurns": BattleActionCatalog.effect_status_turns_for(SPIRIT_POISON_ALL, 3),
-		"statusPotency": BattleActionCatalog.effect_status_potency_for(SPIRIT_POISON_ALL, BattleActionCatalog.effect_amount_for(SPIRIT_POISON_ALL, 10), _poison_tick_damage_for(BattleActionCatalog.effect_amount_for(SPIRIT_POISON_ALL, 10))),
-		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(SPIRIT_POISON_ALL, 1.0),
+		"skillName": BattleActionCatalog.label_for(spirit_id, "毒雾精灵"),
+		"spiritId": spirit_id,
+		"statusId": BattleActionCatalog.effect_status_id_for(spirit_id, STATUS_POISON),
+		"statusTurns": BattleActionCatalog.effect_status_turns_for(spirit_id, 3),
+		"statusPotency": BattleActionCatalog.effect_status_potency_for(spirit_id, amount, _poison_tick_damage_for(amount)),
+		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(spirit_id, 1.0),
 	}
 
 
@@ -1448,6 +1451,16 @@ static func player_actor_id(state: Dictionary) -> String:
 	if _is_living_side_actor(state, "ally_back_3", SIDE_ALLY):
 		return "ally_back_3"
 	return living_ally_id(state)
+
+
+static func actor_spirit_ids(state: Dictionary, actor_id: String) -> Array[String]:
+	var actor := actor_by_id(state, actor_id)
+	return _string_array(actor.get("spiritIds", [])) if not actor.is_empty() else []
+
+
+static func actor_has_spirit(state: Dictionary, actor_id: String, spirit_id: String) -> bool:
+	var normalized_id := spirit_id.strip_edges()
+	return normalized_id != "" and actor_spirit_ids(state, actor_id).has(normalized_id)
 
 
 static func controlled_pet_id(state: Dictionary) -> String:

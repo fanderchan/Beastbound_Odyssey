@@ -15,6 +15,7 @@
 - 战斗玩家 actor 改为使用同一份属性汇总结果。
   - UI 当前属性和战斗实际属性保持一致。
   - 战斗 actor 会带上 `equipmentStatSummary`，供自测和后续服务端事件对齐。
+  - 后续装备精灵也会跟随 `equipmentSlots` 汇总到战斗 actor。
 
 ## 当前边界
 

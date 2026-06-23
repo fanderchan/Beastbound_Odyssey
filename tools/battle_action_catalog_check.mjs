@@ -18,6 +18,7 @@ const validElementIds = new Set(["fire", "water", "earth", "wind"]);
 const requiredRuntimeActions = [
   "spirit_grace_5",
   "spirit_moist_5",
+  "spirit_moist_6",
   "spirit_poison_5",
   "spirit_poison_mist_5",
   "pet_attack",

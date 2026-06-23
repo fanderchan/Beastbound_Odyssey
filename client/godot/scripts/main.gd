@@ -320,6 +320,7 @@ var quest_preview: bool = false
 var quest_ui_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
+var equipment_spirit_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -388,6 +389,7 @@ var battle_pending_item_id: String = ""
 var battle_pending_capture_tool_id: String = ""
 var battle_pending_pet_skill_id: String = ""
 var battle_switch_pet_button_pet_ids: Dictionary = {}
+var battle_spirit_button_spirit_ids: Dictionary = {}
 var battle_pending_player_command: Dictionary = {}
 var battle_pending_pet_command: Dictionary = {}
 var battle_event_queue: Array[Dictionary] = []
@@ -562,6 +564,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_quest_preview")
 	elif equipment_swap_preview:
 		call_deferred("_run_equipment_swap_preview")
+	elif equipment_spirit_preview:
+		call_deferred("_run_equipment_spirit_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -845,6 +849,8 @@ func _apply_preview_window_args() -> void:
 			equipment_quest_preview = true
 		elif arg == "--equipment-swap-preview":
 			equipment_swap_preview = true
+		elif arg == "--equipment-spirit-preview":
+			equipment_spirit_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -5147,7 +5153,35 @@ func _run_auto_shop_check() -> void:
 func _run_auto_equipment_check() -> void:
 	profile_save_enabled = false
 	var validation_ok := EquipmentModel.validation_errors().is_empty()
-	var base_profile := PlayerProgressModel.default_profile()
+	var starter_profile := PlayerProgressModel.default_profile()
+	var starter_slots := PlayerProgressModel.equipment_slots(starter_profile)
+	var starter_spirits := PlayerProgressModel.equipment_spirit_ids(starter_profile)
+	var starter_equipment_ok := (
+		starter_slots.size() == EquipmentModel.slot_ids().size()
+		and str(starter_slots.get(EquipmentModel.SLOT_ACCESSORY_LEFT, "")) == "accessory_firebud_charm"
+		and str(starter_slots.get(EquipmentModel.SLOT_ACCESSORY_RIGHT, "")) == "accessory_wind_ring"
+		and str(starter_slots.get(EquipmentModel.SLOT_HEAD, "")) == "helm_leather_cap"
+		and str(starter_slots.get(EquipmentModel.SLOT_LEFT_HAND_WEAPON, "")) == "weapon_training_spear"
+		and str(starter_slots.get(EquipmentModel.SLOT_BODY, "")) == "armor_moist_cloth"
+		and str(starter_slots.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, "")) == "weapon_stone_dagger"
+		and str(starter_slots.get(EquipmentModel.SLOT_HANDS, "")) == "gloves_hide"
+		and str(starter_slots.get(EquipmentModel.SLOT_FEET, "")) == "boots_grass"
+		and starter_spirits.has(BattleModel.SPIRIT_GRACE_ALL)
+		and starter_spirits.has(BattleModel.SPIRIT_MOIST_6)
+		and starter_spirits.has(BattleModel.SPIRIT_POISON_SINGLE)
+		and starter_spirits.has(BattleModel.SPIRIT_POISON_ALL)
+	)
+	var starter_battle_state := _battle_reward_test_state("equipment_spirit_check", starter_profile)
+	var starter_player_actor := BattleModel.actor_by_id(starter_battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var starter_actor_spirits := BattleModel.actor_spirit_ids(starter_battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var starter_battle_spirit_ok := (
+		not starter_player_actor.is_empty()
+		and starter_actor_spirits.has(BattleModel.SPIRIT_GRACE_ALL)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_MOIST_6)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_SINGLE)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_ALL)
+	)
+	var base_profile := PlayerProgressModel.without_equipment(starter_profile)
 	var catalog_ok := (
 		EquipmentModel.is_equipment("weapon_wooden_club")
 		and EquipmentModel.slot_for("weapon_wooden_club") == EquipmentModel.SLOT_RIGHT_HAND_WEAPON
@@ -5300,10 +5334,12 @@ func _run_auto_equipment_check() -> void:
 		and PlayerProgressModel.backpack_item_count(extra_sell_profile, "weapon_wooden_club") == 0
 	)
 
-	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
-	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
+	var status := "ok" if validation_ok and starter_equipment_ok and starter_battle_spirit_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
+	print("equipment check ready: status=%s validation=%s starter=%s starter_spirits=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
 		status,
 		str(validation_ok),
+		str(starter_equipment_ok),
+		str(starter_battle_spirit_ok),
 		str(catalog_ok),
 		str(buy_ok),
 		str(equip_ok),
@@ -5864,6 +5900,23 @@ func _run_equipment_swap_preview() -> void:
 	_close_equipment_panel()
 	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_wooden_club")
 	_open_backpack_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_spirit_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if loaded and not zones.is_empty():
+		_start_battle(BattleModel.create_stat_formula_test_battle(zones[0] as Dictionary))
+		await get_tree().process_frame
+		_open_spirit_command_menu()
+		_set_battle_message("当前装备提供的精灵。")
+	else:
+		_set_world_log_message("装备精灵预览：地图或遇敌区未找到。")
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -8030,6 +8083,7 @@ func _battle_buttons_match_request() -> bool:
 func _set_battle_command_owner(owner: String) -> void:
 	battle_command_owner = owner
 	battle_switch_pet_button_pet_ids.clear()
+	battle_spirit_button_spirit_ids.clear()
 	if battle_command_title_label == null:
 		return
 	if owner == "pet":
@@ -8046,16 +8100,7 @@ func _set_battle_command_owner(owner: String) -> void:
 		})
 	elif owner == "spirit":
 		battle_command_title_label.text = "精灵"
-		_apply_battle_button_labels({
-			"attack": BattleActionCatalog.label_for(BattleModel.SPIRIT_GRACE_ALL, "恩惠精灵5"),
-			"spirit": BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"),
-			"capture": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"),
-			"help": "返回",
-			"defend": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_ALL, "毒雾精灵5"),
-			"item": "",
-			"switch_pet": "",
-			"run": "",
-		})
+		_apply_spirit_button_labels()
 	elif owner == "item":
 		battle_command_title_label.text = "物品"
 		_apply_battle_button_labels({
@@ -8217,6 +8262,22 @@ func _battle_auto_settings() -> Dictionary:
 	return PlayerProgressModel.auto_battle_settings(player_profile)
 
 
+func _battle_player_has_spirit_id(spirit_id: String) -> bool:
+	var player_id := BattleModel.player_actor_id(battle_state)
+	return BattleModel.actor_has_spirit(battle_state, player_id, spirit_id) if player_id != "" else false
+
+
+func _battle_auto_submit_spirit_action(spirit_id: String, target_id: String = "") -> bool:
+	if not _battle_player_has_spirit_id(spirit_id):
+		return false
+	if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY) and not BattleActionCatalog.action_is_all(spirit_id) and target_id == "":
+		return false
+	if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY) and not BattleActionCatalog.action_is_all(spirit_id) and target_id == "":
+		return false
+	_submit_spirit_player_command(spirit_id, target_id)
+	return true
+
+
 func _battle_auto_is_first_round() -> bool:
 	return int(battle_state.get("round", 1)) <= 1
 
@@ -8227,25 +8288,27 @@ func _battle_auto_submit_player_action_id(action_id: String, settings: Dictionar
 			_submit_player_battle_command("defend")
 			return true
 		AutoBattleSettingsModel.ACTION_SPIRIT_GRACE:
-			_submit_spirit_player_command(BattleModel.SPIRIT_GRACE_ALL)
-			return true
+			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_GRACE_ALL)
 		AutoBattleSettingsModel.ACTION_SPIRIT_MOIST:
 			var moist_target_id := _battle_auto_best_ally_target_id()
 			if moist_target_id == "":
 				return false
-			_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_SINGLE, moist_target_id)
-			return true
+			var moist_id := BattleModel.SPIRIT_MOIST_6 if _battle_player_has_spirit_id(BattleModel.SPIRIT_MOIST_6) else BattleModel.SPIRIT_MOIST_SINGLE
+			return _battle_auto_submit_spirit_action(moist_id, moist_target_id)
+		AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_6:
+			var moist_6_target_id := _battle_auto_best_ally_target_id()
+			if moist_6_target_id == "":
+				return false
+			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_MOIST_6, moist_6_target_id)
 		AutoBattleSettingsModel.ACTION_SPIRIT_POISON:
 			var poison_target_id := _battle_auto_enemy_target_id(settings)
 			if poison_target_id == "":
 				return false
-			_submit_spirit_player_command(BattleModel.SPIRIT_POISON_SINGLE, poison_target_id)
-			return true
+			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_POISON_SINGLE, poison_target_id)
 		AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL:
 			if BattleModel.living_enemy_id(battle_state) == "":
 				return false
-			_submit_spirit_player_command(BattleModel.SPIRIT_POISON_ALL)
-			return true
+			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_POISON_ALL)
 		AutoBattleSettingsModel.ACTION_ITEM_MEAT:
 			return _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, _battle_auto_best_ally_target_id())
 		AutoBattleSettingsModel.ACTION_ITEM_HEAL_SINGLE:
@@ -8275,11 +8338,15 @@ func _battle_auto_try_submit_heal(settings: Dictionary) -> bool:
 	for source_id in AutoBattleSettingsModel.normalized_heal_priority(settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, [])):
 		match str(source_id):
 			AutoBattleSettingsModel.HEAL_SPIRIT_MOIST:
-				_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_SINGLE, target_id)
-				return true
+				var moist_id := BattleModel.SPIRIT_MOIST_6 if _battle_player_has_spirit_id(BattleModel.SPIRIT_MOIST_6) else BattleModel.SPIRIT_MOIST_SINGLE
+				if _battle_auto_submit_spirit_action(moist_id, target_id):
+					return true
+			AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_6:
+				if _battle_auto_submit_spirit_action(BattleModel.SPIRIT_MOIST_6, target_id):
+					return true
 			AutoBattleSettingsModel.HEAL_SPIRIT_GRACE:
-				_submit_spirit_player_command(BattleModel.SPIRIT_GRACE_ALL)
-				return true
+				if _battle_auto_submit_spirit_action(BattleModel.SPIRIT_GRACE_ALL):
+					return true
 			AutoBattleSettingsModel.HEAL_ITEM_MEAT:
 				if _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, target_id):
 					return true
@@ -8562,6 +8629,34 @@ func _pet_skill_slot_for_command(command_id: String) -> int:
 			return 0
 
 
+func _player_spirit_ids_for_battle() -> Array[String]:
+	var player_id := BattleModel.player_actor_id(battle_state)
+	return BattleModel.actor_spirit_ids(battle_state, player_id) if player_id != "" else []
+
+
+func _apply_spirit_button_labels() -> void:
+	var command_slots: Array[String] = ["attack", "spirit", "capture", "defend"]
+	var labels := {
+		"attack": "",
+		"spirit": "",
+		"capture": "",
+		"help": "返回",
+		"defend": "",
+		"item": "",
+		"switch_pet": "",
+		"run": "",
+	}
+	var spirit_ids := _player_spirit_ids_for_battle()
+	for index in range(mini(command_slots.size(), spirit_ids.size())):
+		var command_id := str(command_slots[index])
+		var spirit_id := str(spirit_ids[index])
+		battle_spirit_button_spirit_ids[command_id] = spirit_id
+		labels[command_id] = BattleActionCatalog.label_for(spirit_id, spirit_id)
+	if spirit_ids.is_empty():
+		labels["attack"] = "无精灵"
+	_apply_battle_button_labels(labels)
+
+
 func _apply_switch_pet_button_labels() -> void:
 	var command_slots := ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet"]
 	var labels := {
@@ -8692,7 +8787,14 @@ func _battle_command_visible_ids() -> Array[String]:
 		"pet":
 			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
 		"spirit":
-			return ["attack", "spirit", "capture", "defend", "help"]
+			var visible: Array[String] = []
+			for command_id in ["attack", "spirit", "capture", "defend"]:
+				if battle_spirit_button_spirit_ids.has(command_id):
+					visible.append(command_id)
+			if visible.is_empty():
+				visible.append("attack")
+			visible.append("help")
+			return visible
 		"item":
 			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "help"]
 		"capture":
@@ -11890,17 +11992,18 @@ func _refresh_auto_settings_panel() -> void:
 
 func _refresh_auto_battle_settings_tab() -> void:
 	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	var player_action_options := _auto_settings_player_action_options()
 	_add_auto_settings_section("人物动作")
 	_add_auto_settings_option(
 		"首回合",
 		AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY,
-		AutoBattleSettingsModel.player_action_options(),
+		player_action_options,
 		str(settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
 	)
 	_add_auto_settings_option(
 		"一般回合",
 		AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY,
-		AutoBattleSettingsModel.player_action_options(),
+		player_action_options,
 		str(settings.get(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
 	)
 	_add_auto_settings_section("宠物动作")
@@ -12248,11 +12351,37 @@ func _auto_settings_pet_slot_options() -> Array[Dictionary]:
 	return options
 
 
+func _auto_settings_player_action_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = [
+		{"id": AutoBattleSettingsModel.ACTION_ATTACK, "label": "攻击"},
+		{"id": AutoBattleSettingsModel.ACTION_DEFEND, "label": "防御"},
+	]
+	for spirit_id in PlayerProgressModel.equipment_spirit_ids(player_profile):
+		options.append({
+			"id": spirit_id,
+			"label": BattleActionCatalog.label_for(spirit_id, spirit_id),
+		})
+	for option in AutoBattleSettingsModel.player_action_options():
+		var option_id := str(option.get("id", ""))
+		if option_id.begins_with("item_"):
+			options.append(option)
+	return options
+
+
 func _auto_settings_heal_source_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
+	var equipped_spirits := PlayerProgressModel.equipment_spirit_ids(player_profile)
 	for option in AutoBattleSettingsModel.heal_source_options():
-		if str(option.get("id", "")) != AutoBattleSettingsModel.HEAL_NONE:
-			options.append(option)
+		var option_id := str(option.get("id", ""))
+		if option_id == AutoBattleSettingsModel.HEAL_NONE:
+			continue
+		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_MOIST and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_SINGLE):
+			continue
+		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_6 and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_6):
+			continue
+		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_GRACE and not equipped_spirits.has(BattleModel.SPIRIT_GRACE_ALL):
+			continue
+		options.append(option)
 	return options
 
 
@@ -13308,28 +13437,32 @@ func _submit_spirit_player_command(spirit_id: String, target_id: String = "") ->
 	battle_pending_spirit_id = ""
 	battle_pending_item_id = ""
 	battle_pending_capture_tool_id = ""
+	var player_id := BattleModel.player_actor_id(battle_state)
+	if not BattleModel.actor_has_spirit(battle_state, player_id, spirit_id):
+		_set_battle_message("当前装备没有提供%s。" % BattleActionCatalog.label_for(spirit_id, "精灵"))
+		_set_battle_command_owner("player")
+		return
 	var command := {
 		"command": "spirit",
 		"spiritId": spirit_id,
 		"targetId": battle_selected_target_id,
 		"allyTargetId": battle_selected_ally_target_id,
 	}
-	match spirit_id:
-		BattleModel.SPIRIT_GRACE_ALL:
-			command["targetSide"] = BattleModel.SIDE_ALLY
+	if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY):
+		command["targetSide"] = BattleModel.SIDE_ALLY
+		if BattleActionCatalog.action_is_all(spirit_id):
 			command["targetScope"] = "all"
-		BattleModel.SPIRIT_MOIST_SINGLE:
-			command["targetSide"] = BattleModel.SIDE_ALLY
+		else:
 			command["targetScope"] = "single"
 			command["allyTargetId"] = target_id
-		BattleModel.SPIRIT_POISON_SINGLE:
-			command["targetSide"] = BattleModel.SIDE_ENEMY
+	elif BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY):
+		command["targetSide"] = BattleModel.SIDE_ENEMY
+		if BattleActionCatalog.action_is_all(spirit_id):
+			command["targetScope"] = "all"
+		else:
 			command["targetScope"] = "single"
 			command["targetId"] = target_id
 			battle_selected_target_id = target_id
-		BattleModel.SPIRIT_POISON_ALL:
-			command["targetSide"] = BattleModel.SIDE_ENEMY
-			command["targetScope"] = "all"
 	battle_pending_player_command = command
 	_open_pet_command_or_start_round()
 
@@ -13517,7 +13650,7 @@ func _begin_single_spirit_target_selection(spirit_id: String) -> void:
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
-	if spirit_id == BattleModel.SPIRIT_MOIST_SINGLE:
+	if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY):
 		battle_target_mode = "ally_spirit_single"
 		_set_battle_message("%s：请选择我方单体。" % spirit_label)
 	else:
@@ -13528,27 +13661,32 @@ func _begin_single_spirit_target_selection(spirit_id: String) -> void:
 
 
 func _on_spirit_battle_command_pressed(command_id: String) -> void:
-	match command_id:
-		"attack":
-			_submit_spirit_player_command(BattleModel.SPIRIT_GRACE_ALL)
-		"spirit":
-			_begin_single_spirit_target_selection(BattleModel.SPIRIT_MOIST_SINGLE)
-		"capture":
-			_begin_single_spirit_target_selection(BattleModel.SPIRIT_POISON_SINGLE)
-		"defend":
-			_submit_spirit_player_command(BattleModel.SPIRIT_POISON_ALL)
-		"help":
-			battle_pending_spirit_id = ""
-			battle_pending_item_id = ""
-			battle_target_mode = "enemy"
-			battle_selected_target_id = ""
-			battle_selected_ally_target_id = ""
-			battle_hover_target_id = ""
-			battle_hover_ally_target_id = ""
-			_set_battle_command_owner("player")
-			_set_battle_message("重新选择人物指令。")
-		_:
-			_set_battle_message("这个精灵栏位暂未开放。")
+	if command_id == "help":
+		battle_pending_spirit_id = ""
+		battle_pending_item_id = ""
+		battle_target_mode = "enemy"
+		battle_selected_target_id = ""
+		battle_selected_ally_target_id = ""
+		battle_hover_target_id = ""
+		battle_hover_ally_target_id = ""
+		_set_battle_command_owner("player")
+		_set_battle_message("重新选择人物指令。")
+		return
+	var spirit_id := str(battle_spirit_button_spirit_ids.get(command_id, ""))
+	if spirit_id == "":
+		_set_battle_message("当前装备没有提供这个精灵。")
+		return
+	var player_id := BattleModel.player_actor_id(battle_state)
+	if not BattleModel.actor_has_spirit(battle_state, player_id, spirit_id):
+		_set_battle_message("当前装备没有提供%s。" % BattleActionCatalog.label_for(spirit_id, "精灵"))
+		_sync_battle_buttons()
+		return
+	if BattleActionCatalog.action_is_all(spirit_id):
+		_submit_spirit_player_command(spirit_id)
+	elif BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY) or BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY):
+		_begin_single_spirit_target_selection(spirit_id)
+	else:
+		_set_battle_message("这个精灵暂时无法使用。")
 
 
 func _begin_single_item_target_selection(item_id: String) -> void:
@@ -14269,17 +14407,17 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		if ally_id == "":
 			var enemy_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
 			if enemy_id != "":
-				_set_battle_message("%s只能选择我方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"))
+				_set_battle_message("%s只能选择我方单体。" % BattleActionCatalog.label_for(battle_pending_spirit_id, "精灵"))
 			return false
 		battle_selected_ally_target_id = ally_id
 		battle_hover_info_actor_id = ally_id
 		_update_battle_passive_panel()
 		var ally_actor := BattleModel.actor_by_id(battle_state, ally_id)
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"),
+			BattleActionCatalog.label_for(battle_pending_spirit_id, "精灵"),
 			str(ally_actor.get("name", "我方")),
 		])
-		_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_SINGLE, ally_id)
+		_submit_spirit_player_command(battle_pending_spirit_id, ally_id)
 		queue_redraw()
 		return true
 	if battle_target_mode == "enemy_spirit_single":
@@ -14287,17 +14425,17 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		if poison_target_id == "":
 			var ally_target_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ALLY)
 			if ally_target_id != "":
-				_set_battle_message("%s只能选择敌方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"))
+				_set_battle_message("%s只能选择敌方单体。" % BattleActionCatalog.label_for(battle_pending_spirit_id, "精灵"))
 			return false
 		battle_selected_target_id = poison_target_id
 		battle_hover_info_actor_id = poison_target_id
 		_update_battle_passive_panel()
 		var poison_target := BattleModel.actor_by_id(battle_state, poison_target_id)
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"),
+			BattleActionCatalog.label_for(battle_pending_spirit_id, "精灵"),
 			str(poison_target.get("name", "敌人")),
 		])
-		_submit_spirit_player_command(BattleModel.SPIRIT_POISON_SINGLE, poison_target_id)
+		_submit_spirit_player_command(battle_pending_spirit_id, poison_target_id)
 		queue_redraw()
 		return true
 	if battle_target_mode == "ally_item_single":
@@ -14514,18 +14652,17 @@ func _sync_battle_buttons() -> void:
 					else:
 						button.disabled = not can_command
 			elif battle_command_owner == "spirit":
-				match str(command_id):
-					"attack":
+				if str(command_id) == "help":
+					button.disabled = not can_command
+				else:
+					var spirit_id := str(battle_spirit_button_spirit_ids.get(str(command_id), ""))
+					if spirit_id == "":
+						button.disabled = true
+					elif BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY):
 						button.disabled = not has_ally
-					"spirit":
-						button.disabled = not has_ally
-					"capture":
+					elif BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY):
 						button.disabled = not has_enemy
-					"defend":
-						button.disabled = not has_enemy
-					"help":
-						button.disabled = not can_command
-					_:
+					else:
 						button.disabled = true
 			elif battle_command_owner == "item":
 				match str(command_id):

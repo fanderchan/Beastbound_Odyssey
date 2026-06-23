@@ -132,6 +132,70 @@
       }
     },
     {
+      "id": "accessory_firebud_charm",
+      "label": "火芽护符",
+      "menuLabel": "火芽护符",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "accessory_wind_ring",
+      "label": "风纹戒指",
+      "menuLabel": "风纹戒指",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "helm_leather_cap",
+      "label": "皮帽",
+      "menuLabel": "皮帽",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "weapon_training_spear",
+      "label": "练习长枪",
+      "menuLabel": "练习长枪",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "armor_moist_cloth",
+      "label": "水纹衣",
+      "menuLabel": "水纹衣",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "weapon_stone_dagger",
+      "label": "石刃短刀",
+      "menuLabel": "石刃短刀",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "gloves_hide",
+      "label": "兽皮手套",
+      "menuLabel": "兽皮手套",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "boots_grass",
+      "label": "草编靴",
+      "menuLabel": "草编靴",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
       "id": "weapon_wooden_club",
       "label": "木棒",
       "menuLabel": "木棒",

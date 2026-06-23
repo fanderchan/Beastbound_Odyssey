@@ -36,6 +36,90 @@
   ],
   "items": [
     {
+      "id": "accessory_firebud_charm",
+      "label": "火芽护符",
+      "menuLabel": "火芽护符",
+      "slot": "accessory_left",
+      "stats": {
+        "maxHp": 8
+      },
+      "spiritIds": ["spirit_poison_5"],
+      "description": "火芽村见习猎人的护符，附带毒精灵5。"
+    },
+    {
+      "id": "accessory_wind_ring",
+      "label": "风纹戒指",
+      "menuLabel": "风纹戒指",
+      "slot": "accessory_right",
+      "stats": {
+        "quick": 3
+      },
+      "spiritIds": ["spirit_poison_mist_5"],
+      "description": "刻着风纹的轻戒，附带毒雾精灵5。"
+    },
+    {
+      "id": "helm_leather_cap",
+      "label": "皮帽",
+      "menuLabel": "皮帽",
+      "slot": "head",
+      "stats": {
+        "defense": 2
+      },
+      "description": "轻便的皮帽，适合村外训练。"
+    },
+    {
+      "id": "weapon_training_spear",
+      "label": "练习长枪",
+      "menuLabel": "练习长枪",
+      "slot": "left_hand_weapon",
+      "stats": {
+        "attack": 7
+      },
+      "spiritIds": ["spirit_grace_5"],
+      "description": "训练用长枪，左手装备，附带恩惠精灵5。"
+    },
+    {
+      "id": "armor_moist_cloth",
+      "label": "水纹衣",
+      "menuLabel": "水纹衣",
+      "slot": "body",
+      "stats": {
+        "defense": 4
+      },
+      "spiritIds": ["spirit_moist_6"],
+      "description": "织有水纹的衣服，附带滋润精灵6。"
+    },
+    {
+      "id": "weapon_stone_dagger",
+      "label": "石刃短刀",
+      "menuLabel": "石刃短刀",
+      "slot": "right_hand_weapon",
+      "stats": {
+        "attack": 5
+      },
+      "description": "短小石刃，右手装备。"
+    },
+    {
+      "id": "gloves_hide",
+      "label": "兽皮手套",
+      "menuLabel": "兽皮手套",
+      "slot": "hands",
+      "stats": {
+        "attack": 2
+      },
+      "description": "粗糙但结实的兽皮手套。"
+    },
+    {
+      "id": "boots_grass",
+      "label": "草编靴",
+      "menuLabel": "草编靴",
+      "slot": "feet",
+      "stats": {
+        "quick": 4
+      },
+      "description": "轻便草编靴，适合在草丛里走动。"
+    },
+    {
       "id": "weapon_wooden_club",
       "label": "木棒",
       "menuLabel": "木棒",

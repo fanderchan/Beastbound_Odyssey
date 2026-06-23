@@ -310,6 +310,7 @@ static func _validate_required_actions(seen_ids: Dictionary, errors: Array[Strin
 	for required_id in [
 		"spirit_grace_5",
 		"spirit_moist_5",
+		"spirit_moist_6",
 		"spirit_poison_5",
 		"spirit_poison_mist_5",
 		"pet_attack",

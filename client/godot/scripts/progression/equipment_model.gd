@@ -1,6 +1,7 @@
 extends RefCounted
 
 const DATA_PATH := "res://data/equipment_items.json"
+const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const SLOT_ACCESSORY_LEFT := "accessory_left"
 const SLOT_ACCESSORY_RIGHT := "accessory_right"
 const SLOT_HEAD := "head"
@@ -92,6 +93,29 @@ static func stats_for(item_id: String) -> Dictionary:
 	return result
 
 
+static func spirit_ids_for(item_id: String) -> Array[String]:
+	var item := item_for_id(item_id)
+	var raw_spirits = item.get("spiritIds", [])
+	var result: Array[String] = []
+	if raw_spirits is Array:
+		for value in raw_spirits:
+			var spirit_id := str(value)
+			if spirit_id == "" or result.has(spirit_id):
+				continue
+			var action := BattleActionCatalog.action_by_id(spirit_id)
+			if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_SPIRIT:
+				continue
+			result.append(spirit_id)
+	return result
+
+
+static func spirit_text_for(item_id: String) -> String:
+	var parts: Array[String] = []
+	for spirit_id in spirit_ids_for(item_id):
+		parts.append(BattleActionCatalog.label_for(spirit_id, spirit_id))
+	return "、".join(parts)
+
+
 static func stat_bonus_text_for(item_id: String) -> String:
 	var stats := stats_for(item_id)
 	var parts: Array[String] = []
@@ -117,6 +141,9 @@ static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var stat_text := stat_bonus_text_for(item_id)
 	if stat_text != "":
 		lines.append("效果: %s" % stat_text)
+	var spirit_text := spirit_text_for(item_id)
+	if spirit_text != "":
+		lines.append("精灵: %s" % spirit_text)
 	var description := str(item.get("description", "")).strip_edges()
 	if description != "":
 		lines.append(description)
@@ -146,6 +173,13 @@ static func validation_errors() -> Array[String]:
 		var slot_id := str(item.get("slot", ""))
 		if slot_id == "" or not slot_ids_seen.has(slot_id):
 			errors.append("%s.slot 指向不存在装备槽: %s" % [item_id, slot_id])
+		var raw_spirits = item.get("spiritIds", [])
+		if raw_spirits is Array:
+			for value in raw_spirits:
+				var spirit_id := str(value)
+				var action := BattleActionCatalog.action_by_id(spirit_id)
+				if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_SPIRIT:
+					errors.append("%s.spiritIds 包含无效精灵: %s" % [item_id, spirit_id])
 	return errors
 
 
