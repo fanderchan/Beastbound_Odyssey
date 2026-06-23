@@ -1,8 +1,14 @@
 extends RefCounted
 
 const DATA_PATH := "res://data/equipment_items.json"
-const SLOT_WEAPON := "weapon"
+const SLOT_ACCESSORY_LEFT := "accessory_left"
+const SLOT_ACCESSORY_RIGHT := "accessory_right"
+const SLOT_HEAD := "head"
+const SLOT_LEFT_HAND_WEAPON := "left_hand_weapon"
 const SLOT_BODY := "body"
+const SLOT_RIGHT_HAND_WEAPON := "right_hand_weapon"
+const SLOT_HANDS := "hands"
+const SLOT_FEET := "feet"
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 
 

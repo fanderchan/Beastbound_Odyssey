@@ -2,12 +2,36 @@
   "schemaVersion": 1,
   "slots": [
     {
-      "id": "weapon",
-      "label": "武器"
+      "id": "accessory_left",
+      "label": "左饰品"
+    },
+    {
+      "id": "accessory_right",
+      "label": "右饰品"
+    },
+    {
+      "id": "head",
+      "label": "头盔"
+    },
+    {
+      "id": "left_hand_weapon",
+      "label": "左手武器"
     },
     {
       "id": "body",
-      "label": "防具"
+      "label": "衣服"
+    },
+    {
+      "id": "right_hand_weapon",
+      "label": "右手武器"
+    },
+    {
+      "id": "hands",
+      "label": "手套"
+    },
+    {
+      "id": "feet",
+      "label": "鞋子"
     }
   ],
   "items": [
@@ -15,7 +39,7 @@
       "id": "weapon_wooden_club",
       "label": "木棒",
       "menuLabel": "木棒",
-      "slot": "weapon",
+      "slot": "right_hand_weapon",
       "stats": {
         "attack": 6
       },
@@ -25,7 +49,7 @@
       "id": "weapon_stone_axe",
       "label": "石斧",
       "menuLabel": "石斧",
-      "slot": "weapon",
+      "slot": "right_hand_weapon",
       "stats": {
         "attack": 11,
         "quick": -2

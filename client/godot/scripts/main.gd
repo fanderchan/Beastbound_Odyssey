@@ -85,6 +85,7 @@ var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
 var bag_menu_button: Button
+var equipment_menu_button: Button
 var pet_menu_button: Button
 var codex_menu_button: Button
 var quest_menu_button: Button
@@ -98,6 +99,13 @@ var backpack_close_button: Button
 var backpack_slot_buttons: Array[Button] = []
 var backpack_selected_slot_index: int = 0
 var backpack_pending_use_item_id: String = ""
+var equipment_panel: PanelContainer
+var equipment_grid: Control
+var equipment_detail_label: Label
+var equipment_unequip_button: Button
+var equipment_close_button: Button
+var equipment_slot_buttons: Dictionary = {}
+var equipment_selected_slot_id: String = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
 var shop_panel: PanelContainer
 var shop_title_label: Label
 var shop_coin_label: Label
@@ -3643,7 +3651,7 @@ func _run_auto_equipment_check() -> void:
 	var base_profile := PlayerProgressModel.default_profile()
 	var catalog_ok := (
 		EquipmentModel.is_equipment("weapon_wooden_club")
-		and EquipmentModel.slot_for("weapon_wooden_club") == EquipmentModel.SLOT_WEAPON
+		and EquipmentModel.slot_for("weapon_wooden_club") == EquipmentModel.SLOT_RIGHT_HAND_WEAPON
 		and EquipmentModel.stat_bonus_text_for("weapon_wooden_club").find("攻击 +6") >= 0
 		and not ShopCatalogModel.shop_for_id(FIREBUD_EQUIPMENT_SHOP_ID).is_empty()
 		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club") == 45
@@ -3661,7 +3669,8 @@ func _run_auto_equipment_check() -> void:
 	var bonus := PlayerProgressModel.equipment_stat_bonus(equip_profile)
 	var equip_ok := (
 		bool(equip_result.get("ok", false))
-		and PlayerProgressModel.equipped_item_id(equip_profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.equipped_item_id(equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.backpack_item_count(equip_profile, "weapon_wooden_club") == 0
 		and int(bonus.get("attack", 0)) == 6
 	)
 	var equipped_state := _battle_reward_test_state("equipment_battle_check", equip_profile)
@@ -3669,21 +3678,31 @@ func _run_auto_equipment_check() -> void:
 	var battle_bonus_ok := (
 		not player_actor.is_empty()
 		and int(player_actor.get("attack", 0)) == 24
-		and str((player_actor.get("equipmentSlots", {}) as Dictionary).get(EquipmentModel.SLOT_WEAPON, "")) == "weapon_wooden_club"
+		and str((player_actor.get("equipmentSlots", {}) as Dictionary).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, "")) == "weapon_wooden_club"
 	)
-	var sell_block_result := PlayerProgressModel.sell_shop_item(equip_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
-	var sell_block_ok := (
-		not bool(sell_block_result.get("ok", false))
-		and str(sell_block_result.get("message", "")).find("先卸下") >= 0
-		and PlayerProgressModel.backpack_item_count(sell_block_result.get("profile", {}) as Dictionary, "weapon_wooden_club") == 1
+
+	var axe_buy_base_profile := PlayerProgressModel.with_stone_coins(equip_profile, 200)
+	var axe_buy_result := PlayerProgressModel.buy_shop_item(axe_buy_base_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_stone_axe")
+	var axe_buy_profile := axe_buy_result.get("profile", {}) as Dictionary
+	var swap_result := PlayerProgressModel.equip_item(axe_buy_profile, "weapon_stone_axe")
+	var swap_profile := swap_result.get("profile", {}) as Dictionary
+	var swap_ok := (
+		bool(axe_buy_result.get("ok", false))
+		and bool(swap_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(swap_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_stone_axe"
+		and PlayerProgressModel.backpack_item_count(swap_profile, "weapon_stone_axe") == 0
+		and PlayerProgressModel.backpack_item_count(swap_profile, "weapon_wooden_club") == 1
+		and str(swap_result.get("message", "")).find("换下木棒") >= 0
 	)
-	var unequip_result := PlayerProgressModel.unequip_slot(equip_profile, EquipmentModel.SLOT_WEAPON)
+
+	var unequip_result := PlayerProgressModel.unequip_slot(equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
 	var unequip_profile := unequip_result.get("profile", {}) as Dictionary
 	var sell_after_result := PlayerProgressModel.sell_shop_item(unequip_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
 	var sell_after_profile := sell_after_result.get("profile", {}) as Dictionary
 	var sell_after_ok := (
 		bool(unequip_result.get("ok", false))
-		and PlayerProgressModel.equipped_item_id(unequip_profile, EquipmentModel.SLOT_WEAPON) == ""
+		and PlayerProgressModel.equipped_item_id(unequip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == ""
+		and PlayerProgressModel.backpack_item_count(unequip_profile, "weapon_wooden_club") == 1
 		and bool(sell_after_result.get("ok", false))
 		and PlayerProgressModel.backpack_item_count(sell_after_profile, "weapon_wooden_club") == 0
 	)
@@ -3695,7 +3714,7 @@ func _run_auto_equipment_check() -> void:
 	await get_tree().process_frame
 	var ui_detail_ok := (
 		backpack_detail_label != null
-		and backpack_detail_label.text.find("装备槽: 武器") >= 0
+		and backpack_detail_label.text.find("装备槽: 右手武器") >= 0
 		and backpack_detail_label.text.find("攻击 +6") >= 0
 		and backpack_use_button != null
 		and backpack_use_button.visible
@@ -3704,38 +3723,65 @@ func _run_auto_equipment_check() -> void:
 	_on_backpack_use_pressed()
 	await get_tree().process_frame
 	var ui_equip_ok := (
-		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_wooden_club") == 0
 		and backpack_use_button != null
-		and backpack_use_button.text == "卸下"
+		and not backpack_use_button.visible
 		and world_log_message.find("装备木棒") >= 0
 	)
 	_close_backpack_panel()
 
 	player_profile = equip_profile
-	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
-	_set_shop_mode("sell")
+	_open_equipment_panel()
 	await get_tree().process_frame
-	var sell_ui_ok := (
-		shop_panel != null
-		and shop_panel.visible
-		and _shop_sellable_count("weapon_wooden_club") == 0
-		and not shop_item_buttons.has("weapon_wooden_club")
+	var equipment_panel_ok := (
+		equipment_panel != null
+		and equipment_panel.visible
+		and equipment_slot_buttons.has(EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+		and (equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON) as Button).text.find("木棒") >= 0
+		and equipment_detail_label != null
+		and equipment_detail_label.text.find("攻击 +6") >= 0
+		and equipment_unequip_button != null
+		and equipment_unequip_button.visible
 	)
-	_close_shop_panel()
+	_on_equipment_unequip_pressed()
+	await get_tree().process_frame
+	var equipment_unequip_ui_ok := (
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == ""
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_wooden_club") == 1
+		and equipment_unequip_button != null
+		and not equipment_unequip_button.visible
+	)
+	_close_equipment_panel()
 
-	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and sell_block_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and sell_ui_ok else "failed"
-	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s sell_block=%s sell_after=%s ui_detail=%s ui_equip=%s sell_ui=%s attack=%d coins=%d" % [
+	var extra_buy_profile := PlayerProgressModel.with_stone_coins(base_profile, 200)
+	extra_buy_profile = (PlayerProgressModel.buy_shop_item(extra_buy_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club", 2).get("profile", extra_buy_profile) as Dictionary)
+	var extra_equip_profile := PlayerProgressModel.equip_item(extra_buy_profile, "weapon_wooden_club").get("profile", {}) as Dictionary
+	var extra_sell_result := PlayerProgressModel.sell_shop_item(extra_equip_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club")
+	var extra_sell_profile := extra_sell_result.get("profile", {}) as Dictionary
+	var extra_sell_ok := (
+		PlayerProgressModel.equipped_item_id(extra_equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.backpack_item_count(extra_equip_profile, "weapon_wooden_club") == 1
+		and bool(extra_sell_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(extra_sell_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.backpack_item_count(extra_sell_profile, "weapon_wooden_club") == 0
+	)
+
+	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and extra_sell_ok else "failed"
+	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s extra_sell=%s attack=%d coins=%d" % [
 		status,
 		str(validation_ok),
 		str(catalog_ok),
 		str(buy_ok),
 		str(equip_ok),
 		str(battle_bonus_ok),
-		str(sell_block_ok),
+		str(swap_ok),
 		str(sell_after_ok),
 		str(ui_detail_ok),
 		str(ui_equip_ok),
-		str(sell_ui_ok),
+		str(equipment_panel_ok),
+		str(equipment_unequip_ui_ok),
+		str(extra_sell_ok),
 		int(player_actor.get("attack", 0)),
 		PlayerProgressModel.stone_coins(sell_after_profile),
 	])
@@ -3859,7 +3905,7 @@ func _run_equipment_quest_preview() -> void:
 	_on_backpack_use_pressed()
 	await get_tree().create_timer(0.8).timeout
 	_close_backpack_panel()
-	_open_quest_panel()
+	_open_equipment_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -3962,7 +4008,7 @@ func _run_auto_quest_chain_check() -> void:
 	var equip_event := PlayerProgressModel.record_quest_event(profile, {
 		"type": "equip_item",
 		"itemId": "weapon_wooden_club",
-		"slot": EquipmentModel.SLOT_WEAPON,
+		"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
 		"amount": 1,
 	})
 	profile = equip_event.get("profile", profile)
@@ -3973,7 +4019,7 @@ func _run_auto_quest_chain_check() -> void:
 		and bool(equip_event.get("ready", false))
 		and bool(equip_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
-		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_WEAPON) == "weapon_wooden_club"
+		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_equip_medicine + 1
 	)
 
@@ -4190,7 +4236,7 @@ func _run_auto_quest_ui_check() -> void:
 	var equip_event := PlayerProgressModel.record_quest_event(equipped_profile, {
 		"type": "equip_item",
 		"itemId": "weapon_wooden_club",
-		"slot": EquipmentModel.SLOT_WEAPON,
+		"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
 		"amount": 1,
 	})
 	var battle_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
@@ -6360,6 +6406,11 @@ func _build_hud() -> void:
 	bag_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	bag_menu_button.pressed.connect(_open_backpack_panel)
 	action_row.add_child(bag_menu_button)
+	equipment_menu_button = Button.new()
+	equipment_menu_button.text = "装备"
+	equipment_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	equipment_menu_button.pressed.connect(_open_equipment_panel)
+	action_row.add_child(equipment_menu_button)
 	pet_menu_button = Button.new()
 	pet_menu_button.text = "宠物"
 	pet_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -6433,6 +6484,48 @@ func _build_hud() -> void:
 	backpack_target_container.add_theme_constant_override("separation", 6)
 	backpack_target_scroll.add_child(backpack_target_container)
 	hud_root.add_child(backpack_panel)
+
+	equipment_panel = _panel_container("EquipmentPanel")
+	equipment_panel.visible = false
+	equipment_panel.z_index = 24
+	var equipment_column := VBoxContainer.new()
+	equipment_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	equipment_column.add_theme_constant_override("separation", 8)
+	equipment_panel.add_child(equipment_column)
+
+	var equipment_header := HBoxContainer.new()
+	equipment_header.add_theme_constant_override("separation", 10)
+	equipment_column.add_child(equipment_header)
+	var equipment_title := Label.new()
+	equipment_title.text = "装备"
+	equipment_title.add_theme_font_size_override("font_size", 21)
+	equipment_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_header.add_child(equipment_title)
+	equipment_close_button = Button.new()
+	equipment_close_button.text = "关闭"
+	equipment_close_button.custom_minimum_size = Vector2(92, 44)
+	equipment_close_button.pressed.connect(_close_equipment_panel)
+	equipment_header.add_child(equipment_close_button)
+
+	equipment_grid = Control.new()
+	equipment_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_grid.custom_minimum_size = Vector2(0, 246)
+	equipment_column.add_child(equipment_grid)
+	equipment_detail_label = Label.new()
+	equipment_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	equipment_detail_label.add_theme_font_size_override("font_size", 16)
+	equipment_detail_label.custom_minimum_size = Vector2(0, 98)
+	equipment_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_column.add_child(equipment_detail_label)
+	equipment_unequip_button = Button.new()
+	equipment_unequip_button.text = "卸下"
+	equipment_unequip_button.visible = false
+	equipment_unequip_button.custom_minimum_size = Vector2(0, 44)
+	equipment_unequip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_unequip_button.pressed.connect(_on_equipment_unequip_pressed)
+	equipment_column.add_child(equipment_unequip_button)
+	hud_root.add_child(equipment_panel)
 
 	shop_panel = _panel_container("ShopPanel")
 	shop_panel.visible = false
@@ -7286,6 +7379,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	_clear_pending_interaction()
 	_close_dialog()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
@@ -7337,6 +7431,7 @@ func _set_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_ce
 func _set_interaction_target(item: Dictionary) -> void:
 	_close_dialog()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
@@ -7461,6 +7556,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_clear_navigation_state()
 	_close_dialog()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
@@ -7709,6 +7805,7 @@ func _open_backpack_panel() -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_shop_panel()
+	_close_equipment_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
@@ -7724,6 +7821,123 @@ func _close_backpack_panel() -> void:
 		backpack_panel.visible = false
 	if hud_root != null:
 		_layout_hud()
+
+
+func _open_equipment_panel() -> void:
+	if battle_active:
+		return
+	_close_dialog()
+	_close_encounter()
+	_close_backpack_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	equipment_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_equipment_panel()
+	_layout_hud()
+
+
+func _close_equipment_panel() -> void:
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if hud_root != null:
+		_layout_hud()
+
+
+func _refresh_equipment_panel() -> void:
+	if equipment_panel == null or equipment_grid == null or equipment_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var equipped := PlayerProgressModel.equipment_slots(player_profile)
+	if equipment_selected_slot_id == "" or not EquipmentModel.slot_ids().has(equipment_selected_slot_id):
+		equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	for child in equipment_grid.get_children():
+		child.queue_free()
+	equipment_slot_buttons.clear()
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(equipped.get(slot_id, ""))
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_pressed = slot_id == equipment_selected_slot_id
+		button.add_theme_font_size_override("font_size", 15)
+		var slot_rect := _equipment_slot_anchor_rect(slot_id)
+		button.anchor_left = slot_rect.position.x
+		button.anchor_top = slot_rect.position.y
+		button.anchor_right = slot_rect.position.x + slot_rect.size.x
+		button.anchor_bottom = slot_rect.position.y + slot_rect.size.y
+		button.offset_left = 0
+		button.offset_top = 0
+		button.offset_right = 0
+		button.offset_bottom = 0
+		button.text = "%s\n%s" % [
+			EquipmentModel.slot_label_for(slot_id),
+			EquipmentModel.menu_label_for(item_id, "-") if item_id != "" else "-",
+		]
+		var selected_slot_id := slot_id
+		button.pressed.connect(func() -> void:
+			_select_equipment_slot(selected_slot_id)
+		)
+		equipment_grid.add_child(button)
+		equipment_slot_buttons[slot_id] = button
+	_refresh_equipment_detail()
+
+
+func _equipment_slot_anchor_rect(slot_id: String) -> Rect2:
+	match slot_id:
+		EquipmentModel.SLOT_ACCESSORY_LEFT:
+			return Rect2(0.02, 0.02, 0.27, 0.24)
+		EquipmentModel.SLOT_ACCESSORY_RIGHT:
+			return Rect2(0.32, 0.02, 0.27, 0.24)
+		EquipmentModel.SLOT_HEAD:
+			return Rect2(0.62, 0.16, 0.27, 0.24)
+		EquipmentModel.SLOT_LEFT_HAND_WEAPON:
+			return Rect2(0.22, 0.43, 0.24, 0.24)
+		EquipmentModel.SLOT_BODY:
+			return Rect2(0.48, 0.43, 0.24, 0.24)
+		EquipmentModel.SLOT_RIGHT_HAND_WEAPON:
+			return Rect2(0.74, 0.43, 0.24, 0.24)
+		EquipmentModel.SLOT_HANDS:
+			return Rect2(0.38, 0.72, 0.24, 0.24)
+		EquipmentModel.SLOT_FEET:
+			return Rect2(0.67, 0.72, 0.24, 0.24)
+	return Rect2(0.0, 0.0, 0.24, 0.24)
+
+
+func _refresh_equipment_detail() -> void:
+	if equipment_detail_label == null:
+		return
+	var equipped := PlayerProgressModel.equipment_slots(player_profile)
+	var item_id := str(equipped.get(equipment_selected_slot_id, ""))
+	var lines: Array[String] = [
+		"%s" % EquipmentModel.slot_label_for(equipment_selected_slot_id),
+	]
+	if item_id == "":
+		lines.append("未装备")
+	else:
+		lines.append(EquipmentModel.label_for(item_id))
+		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
+	equipment_detail_label.text = "\n".join(lines)
+	if equipment_unequip_button != null:
+		equipment_unequip_button.visible = item_id != ""
+		equipment_unequip_button.disabled = item_id == ""
+
+
+func _select_equipment_slot(slot_id: String) -> void:
+	equipment_selected_slot_id = slot_id
+	_refresh_equipment_panel()
+
+
+func _on_equipment_unequip_pressed() -> void:
+	var result := PlayerProgressModel.unequip_slot(player_profile, equipment_selected_slot_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_equipment_panel()
+	if status_label != null:
+		_update_hud_text()
 
 
 func _refresh_backpack_panel() -> void:
@@ -7755,9 +7969,6 @@ func _refresh_backpack_panel() -> void:
 	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
 	if EquipmentModel.is_equipment(selected_item_id):
 		detail_lines.append_array(EquipmentModel.detail_lines_for_item(selected_item_id))
-		var equipped_slot := PlayerProgressModel.equipped_slot_for_item(player_profile, selected_item_id)
-		if equipped_slot != "":
-			detail_lines.append("当前: 已装备")
 	backpack_detail_label.text = "\n".join(detail_lines)
 	var can_world_use := (
 		selected_item_id != ""
@@ -7773,7 +7984,7 @@ func _refresh_backpack_panel() -> void:
 		backpack_use_button.visible = can_world_use or can_equip
 		backpack_use_button.disabled = not (can_world_use or can_equip)
 		if can_equip:
-			backpack_use_button.text = "卸下" if PlayerProgressModel.equipped_slot_for_item(player_profile, selected_item_id) != "" else "装备"
+			backpack_use_button.text = "装备"
 		else:
 			backpack_use_button.text = "使用"
 	if not can_world_use or backpack_pending_use_item_id != selected_item_id:
@@ -7817,11 +8028,10 @@ func _backpack_slot_index_for_item(item_id: String) -> int:
 func _on_backpack_use_pressed() -> void:
 	var item_id := _selected_backpack_item_id()
 	if EquipmentModel.is_equipment(item_id):
-		var equipped_slot := PlayerProgressModel.equipped_slot_for_item(player_profile, item_id)
-		var result := PlayerProgressModel.unequip_slot(player_profile, equipped_slot) if equipped_slot != "" else PlayerProgressModel.equip_item(player_profile, item_id)
+		var result := PlayerProgressModel.equip_item(player_profile, item_id)
 		player_profile = result.get("profile", player_profile)
 		var log_lines: Array[String] = [str(result.get("message", ""))]
-		if bool(result.get("ok", false)) and equipped_slot == "":
+		if bool(result.get("ok", false)):
 			log_lines.append_array(_record_quest_event_and_maybe_claim({
 				"type": "equip_item",
 				"itemId": str(result.get("itemId", item_id)),
@@ -7905,6 +8115,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_pet_panel()
 	_close_codex_panel()
 	_close_quest_panel()
@@ -7988,7 +8199,7 @@ func _shop_item_ids_for_mode(mode: String) -> Array[String]:
 		var counts := BackpackModel.counts_by_item(PlayerProgressModel.backpack_slots(player_profile))
 		for entry in ShopCatalogModel.entries_for(shop_active_id):
 			var item_id := str(entry.get("itemId", ""))
-			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0 and _shop_sellable_count(item_id) > 0:
+			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0:
 				result.append(item_id)
 	else:
 		for entry in ShopCatalogModel.buyable_entries_for(shop_active_id):
@@ -8030,23 +8241,14 @@ func _shop_detail_text(item_id: String) -> String:
 	])
 	if EquipmentModel.is_equipment(item_id):
 		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
-		if PlayerProgressModel.equipped_slot_for_item(player_profile, item_id) != "":
-			lines.append("当前: 已装备，出售前需要先卸下")
 	return "\n".join(lines)
-
-
-func _shop_sellable_count(item_id: String) -> int:
-	var count := PlayerProgressModel.backpack_item_count(player_profile, item_id)
-	if EquipmentModel.is_equipment(item_id) and PlayerProgressModel.equipped_slot_for_item(player_profile, item_id) != "":
-		count -= 1
-	return maxi(0, count)
 
 
 func _shop_quantity_max(item_id: String) -> int:
 	if item_id == "":
 		return 0
 	if shop_mode == "sell":
-		return _shop_sellable_count(item_id)
+		return PlayerProgressModel.backpack_item_count(player_profile, item_id)
 	var buy_price := ShopCatalogModel.buy_price_for(shop_active_id, item_id)
 	if buy_price <= 0:
 		return 0
@@ -8125,6 +8327,7 @@ func _open_pet_panel() -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_shop_panel()
 	_close_codex_panel()
 	_close_quest_panel()
@@ -8150,6 +8353,7 @@ func _open_codex_panel() -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_quest_panel()
@@ -8171,6 +8375,7 @@ func _open_quest_panel() -> void:
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
+	_close_equipment_panel()
 	_close_shop_panel()
 	_close_pet_panel()
 	_close_codex_panel()
@@ -8293,6 +8498,7 @@ func _route_to_quest_target(target: Dictionary) -> void:
 			_close_dialog()
 			_close_encounter()
 			_close_backpack_panel()
+			_close_equipment_panel()
 			_close_shop_panel()
 			_close_pet_panel()
 			_close_codex_panel()
@@ -10447,7 +10653,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, backpack_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -10517,6 +10723,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		backpack_panel.visible = false
 	if backpack_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	equipment_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	equipment_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		equipment_panel.visible = false
+	if equipment_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)

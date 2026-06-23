@@ -101,7 +101,7 @@
       "objective": {
         "type": "equip_item",
         "itemId": "weapon_wooden_club",
-        "slot": "weapon",
+        "slot": "right_hand_weapon",
         "count": 1,
         "text": "在随身包里装备木棒"
       },

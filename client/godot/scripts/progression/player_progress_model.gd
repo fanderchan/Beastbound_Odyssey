@@ -27,6 +27,8 @@ const DEFAULT_STONE_COINS := 120
 const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
+const EQUIPMENT_SLOTS_VERSION_KEY := "equipmentSlotsVersion"
+const EQUIPMENT_SLOTS_VERSION := 2
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
@@ -56,6 +58,7 @@ static func default_profile() -> Dictionary:
 		"groundPetDrops": [],
 		"backpackSlots": BackpackModel.starting_slots(),
 		"equipmentSlots": {},
+		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
 		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"activeQuestId": QuestModel.first_quest_id(),
 		"questStates": {},
@@ -209,12 +212,35 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 		}
 	var slots := equipment_slots(normalized)
 	var previous_item_id := str(slots.get(slot_id, ""))
+	if previous_item_id == item_id:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 已经装备。" % item_label,
+		}
+	var backpack_after_take := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, 1)
+	if previous_item_id != "":
+		var return_result := BackpackModel.add_items(backpack_after_take, [{
+			"itemId": previous_item_id,
+			"count": 1,
+		}])
+		var lost: Array = return_result.get("lost", [])
+		if lost is Array and not (lost as Array).is_empty():
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "背包已满，无法换下%s。" % EquipmentModel.label_for(previous_item_id, BackpackModel.label_for(previous_item_id)),
+			}
+		backpack_after_take = return_result.get("slots", backpack_after_take)
 	slots[slot_id] = item_id
+	normalized[BACKPACK_SLOTS_KEY] = backpack_after_take
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_after_take)
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
+	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized = normalize_profile(normalized)
 	var message := "装备%s。" % item_label
 	if previous_item_id != "" and previous_item_id != item_id:
-		message = "卸下%s，装备%s。" % [EquipmentModel.label_for(previous_item_id, BackpackModel.label_for(previous_item_id)), item_label]
+		message = "装备%s，换下%s。" % [item_label, EquipmentModel.label_for(previous_item_id, BackpackModel.label_for(previous_item_id))]
 	return {
 		"ok": true,
 		"profile": normalized,
@@ -235,8 +261,22 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 			"profile": normalized,
 			"message": "%s 没有装备。" % EquipmentModel.slot_label_for(slot_id),
 		}
+	var add_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), [{
+		"itemId": item_id,
+		"count": 1,
+	}])
+	var lost: Array = add_result.get("lost", [])
+	if lost is Array and not (lost as Array).is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "背包已满，无法卸下%s。" % EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id)),
+		}
 	slots.erase(slot_id)
+	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
+	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized = normalize_profile(normalized)
 	return {
 		"ok": true,
@@ -490,12 +530,6 @@ static func sell_shop_item(profile: Dictionary, shop_id: String, item_id: String
 			"profile": normalized,
 			"message": "%s 数量不够。" % item_label,
 		}
-	if held_count - sell_amount < _equipped_count_for_item(normalized, item_id):
-		return {
-			"ok": false,
-			"profile": normalized,
-			"message": "请先卸下%s，再出售。" % item_label,
-		}
 	var price := ShopCatalogModel.sell_price_for(shop_id, item_id)
 	var total_price := price * sell_amount
 	var next_slots := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, sell_amount)
@@ -532,15 +566,7 @@ static func _quest_states(profile: Dictionary) -> Dictionary:
 	return QuestModel.normalize_states(profile.get(QUEST_STATES_KEY, {}))
 
 
-static func _equipped_count_for_item(profile: Dictionary, item_id: String) -> int:
-	var total := 0
-	for slot_id in EquipmentModel.slot_ids():
-		if str(equipment_slots(profile).get(slot_id, "")) == item_id:
-			total += 1
-	return total
-
-
-static func _normalize_equipment_slots(value, slots: Array[Dictionary]) -> Dictionary:
+static func _normalize_equipment_slots(value) -> Dictionary:
 	var result := {}
 	var raw := value as Dictionary if value is Dictionary else {}
 	for slot_id in EquipmentModel.slot_ids():
@@ -548,8 +574,6 @@ static func _normalize_equipment_slots(value, slots: Array[Dictionary]) -> Dicti
 		if item_id == "":
 			continue
 		if EquipmentModel.slot_for(item_id) != slot_id:
-			continue
-		if BackpackModel.item_count(slots, item_id) <= 0:
 			continue
 		result[slot_id] = item_id
 	return result
@@ -1463,7 +1487,17 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			)
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
-	normalized[EQUIPMENT_SLOTS_KEY] = _normalize_equipment_slots(normalized.get(EQUIPMENT_SLOTS_KEY, {}), backpack_slots_value)
+	var equipment_slots_version := int(normalized.get(EQUIPMENT_SLOTS_VERSION_KEY, 1))
+	var equipment_slots_value := _normalize_equipment_slots(normalized.get(EQUIPMENT_SLOTS_KEY, {}))
+	if equipment_slots_version < EQUIPMENT_SLOTS_VERSION:
+		for slot_id in EquipmentModel.slot_ids():
+			var equipped_item_id_value := str(equipment_slots_value.get(slot_id, ""))
+			if equipped_item_id_value != "" and BackpackModel.item_count(backpack_slots_value, equipped_item_id_value) > 0:
+				backpack_slots_value = BackpackModel.consume(backpack_slots_value, equipped_item_id_value, 1)
+		normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
+		normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
+	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
+	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
 
 	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
