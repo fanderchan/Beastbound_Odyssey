@@ -101,6 +101,7 @@ var backpack_selected_slot_index: int = 0
 var backpack_pending_use_item_id: String = ""
 var equipment_panel: PanelContainer
 var equipment_grid: Control
+var equipment_stats_label: Label
 var equipment_detail_label: Label
 var equipment_unequip_button: Button
 var equipment_close_button: Button
@@ -3672,17 +3673,27 @@ func _run_auto_equipment_check() -> void:
 	var equip_result := PlayerProgressModel.equip_item(buy_profile, "weapon_wooden_club")
 	var equip_profile := equip_result.get("profile", {}) as Dictionary
 	var bonus := PlayerProgressModel.equipment_stat_bonus(equip_profile)
+	var wood_stat_summary := PlayerProgressModel.player_stat_summary(equip_profile)
+	var wood_stat_base := wood_stat_summary.get("base", {}) as Dictionary
+	var wood_stat_bonus := wood_stat_summary.get("bonus", {}) as Dictionary
+	var wood_stat_current := wood_stat_summary.get("current", {}) as Dictionary
 	var equip_ok := (
 		bool(equip_result.get("ok", false))
 		and PlayerProgressModel.equipped_item_id(equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
 		and PlayerProgressModel.backpack_item_count(equip_profile, "weapon_wooden_club") == 0
 		and int(bonus.get("attack", 0)) == 6
+		and int(wood_stat_base.get("attack", 0)) == 18
+		and int(wood_stat_bonus.get("attack", 0)) == 6
+		and int(wood_stat_current.get("attack", 0)) == 24
 	)
 	var equipped_state := _battle_reward_test_state("equipment_battle_check", equip_profile)
 	var player_actor := BattleModel.actor_by_id(equipped_state, BattleModel.PLAYER_ACTOR_ID)
+	var battle_summary := player_actor.get("equipmentStatSummary", {}) as Dictionary
+	var battle_current := battle_summary.get("current", {}) as Dictionary
 	var battle_bonus_ok := (
 		not player_actor.is_empty()
 		and int(player_actor.get("attack", 0)) == 24
+		and int(battle_current.get("attack", 0)) == 24
 		and str((player_actor.get("equipmentSlots", {}) as Dictionary).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, "")) == "weapon_wooden_club"
 	)
 
@@ -3691,12 +3702,19 @@ func _run_auto_equipment_check() -> void:
 	var axe_buy_profile := axe_buy_result.get("profile", {}) as Dictionary
 	var swap_result := PlayerProgressModel.equip_item(axe_buy_profile, "weapon_stone_axe")
 	var swap_profile := swap_result.get("profile", {}) as Dictionary
+	var swap_stat_summary := PlayerProgressModel.player_stat_summary(swap_profile)
+	var swap_stat_bonus := swap_stat_summary.get("bonus", {}) as Dictionary
+	var swap_stat_current := swap_stat_summary.get("current", {}) as Dictionary
 	var swap_ok := (
 		bool(axe_buy_result.get("ok", false))
 		and bool(swap_result.get("ok", false))
 		and PlayerProgressModel.equipped_item_id(swap_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_stone_axe"
 		and PlayerProgressModel.backpack_item_count(swap_profile, "weapon_stone_axe") == 0
 		and PlayerProgressModel.backpack_item_count(swap_profile, "weapon_wooden_club") == 1
+		and int(swap_stat_bonus.get("attack", 0)) == 11
+		and int(swap_stat_bonus.get("quick", 0)) == -2
+		and int(swap_stat_current.get("attack", 0)) == 29
+		and int(swap_stat_current.get("quick", 0)) == 68
 		and str(swap_result.get("message", "")).find("换下木棒") >= 0
 	)
 
@@ -3744,6 +3762,8 @@ func _run_auto_equipment_check() -> void:
 		and equipment_panel.visible
 		and equipment_slot_buttons.has(EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
 		and (equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON) as Button).text.find("木棒") >= 0
+		and equipment_stats_label != null
+		and equipment_stats_label.text.find("攻击 18+6=24") >= 0
 		and equipment_detail_label != null
 		and equipment_detail_label.text.find("攻击 +6") >= 0
 		and equipment_unequip_button != null
@@ -3756,6 +3776,21 @@ func _run_auto_equipment_check() -> void:
 		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_wooden_club") == 1
 		and equipment_unequip_button != null
 		and not equipment_unequip_button.visible
+	)
+	_close_equipment_panel()
+
+	player_profile = swap_profile
+	_open_equipment_panel()
+	await get_tree().process_frame
+	var equipment_swap_panel_ok := (
+		equipment_panel != null
+		and equipment_panel.visible
+		and equipment_slot_buttons.has(EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+		and (equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON) as Button).text.find("石斧") >= 0
+		and equipment_stats_label != null
+		and equipment_stats_label.text.find("攻击 18+11=29") >= 0
+		and equipment_stats_label.text.find("敏捷 70-2=68") >= 0
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_wooden_club") == 1
 	)
 	_close_equipment_panel()
 
@@ -3772,8 +3807,8 @@ func _run_auto_equipment_check() -> void:
 		and PlayerProgressModel.backpack_item_count(extra_sell_profile, "weapon_wooden_club") == 0
 	)
 
-	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and extra_sell_ok else "failed"
-	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s extra_sell=%s attack=%d coins=%d" % [
+	var status := "ok" if validation_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
+	print("equipment check ready: status=%s validation=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
 		status,
 		str(validation_ok),
 		str(catalog_ok),
@@ -3786,6 +3821,7 @@ func _run_auto_equipment_check() -> void:
 		str(ui_equip_ok),
 		str(equipment_panel_ok),
 		str(equipment_unequip_ui_ok),
+		str(equipment_swap_panel_ok),
 		str(extra_sell_ok),
 		int(player_actor.get("attack", 0)),
 		PlayerProgressModel.stone_coins(sell_after_profile),
@@ -6551,14 +6587,20 @@ func _build_hud() -> void:
 	equipment_close_button.pressed.connect(_close_equipment_panel)
 	equipment_header.add_child(equipment_close_button)
 
+	equipment_stats_label = Label.new()
+	equipment_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	equipment_stats_label.add_theme_font_size_override("font_size", 15)
+	equipment_stats_label.custom_minimum_size = Vector2(0, 64)
+	equipment_stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_column.add_child(equipment_stats_label)
 	equipment_grid = Control.new()
 	equipment_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_grid.custom_minimum_size = Vector2(0, 246)
+	equipment_grid.custom_minimum_size = Vector2(0, 196)
 	equipment_column.add_child(equipment_grid)
 	equipment_detail_label = Label.new()
 	equipment_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	equipment_detail_label.add_theme_font_size_override("font_size", 16)
-	equipment_detail_label.custom_minimum_size = Vector2(0, 98)
+	equipment_detail_label.custom_minimum_size = Vector2(0, 88)
 	equipment_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_column.add_child(equipment_detail_label)
 	equipment_unequip_button = Button.new()
@@ -7894,6 +7936,7 @@ func _refresh_equipment_panel() -> void:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	var equipped := PlayerProgressModel.equipment_slots(player_profile)
+	_refresh_equipment_stats()
 	if equipment_selected_slot_id == "" or not EquipmentModel.slot_ids().has(equipment_selected_slot_id):
 		equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
 	for child in equipment_grid.get_children():
@@ -7925,6 +7968,35 @@ func _refresh_equipment_panel() -> void:
 		equipment_grid.add_child(button)
 		equipment_slot_buttons[slot_id] = button
 	_refresh_equipment_detail()
+
+
+func _refresh_equipment_stats() -> void:
+	if equipment_stats_label == null:
+		return
+	var summary := PlayerProgressModel.player_stat_summary(player_profile)
+	var base := summary.get("base", {}) as Dictionary
+	var bonus := summary.get("bonus", {}) as Dictionary
+	var current := summary.get("current", {}) as Dictionary
+	equipment_stats_label.text = "人物属性\n%s    %s\n%s    %s" % [
+		_equipment_stat_line_for("maxHp", base, bonus, current),
+		_equipment_stat_line_for("attack", base, bonus, current),
+		_equipment_stat_line_for("defense", base, bonus, current),
+		_equipment_stat_line_for("quick", base, bonus, current),
+	]
+
+
+func _equipment_stat_line_for(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
+	var base_value := int(base.get(stat_key, 0))
+	var bonus_value := int(bonus.get(stat_key, 0))
+	if bonus_value == 0:
+		return "%s %d" % [EquipmentModel.stat_label_for(stat_key), base_value]
+	return "%s %d%s%d=%d" % [
+		EquipmentModel.stat_label_for(stat_key),
+		base_value,
+		"+" if bonus_value > 0 else "",
+		bonus_value,
+		int(current.get(stat_key, base_value + bonus_value)),
+	]
 
 
 func _equipment_slot_anchor_rect(slot_id: String) -> Rect2:

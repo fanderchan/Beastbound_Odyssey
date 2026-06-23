@@ -24,6 +24,13 @@ const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
 const LOCAL_PLAYER_ID := "local_player"
 const DEFAULT_STONE_COINS := 120
+const PLAYER_STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
+const DEFAULT_PLAYER_BATTLE_STATS := {
+	"maxHp": 120,
+	"attack": 18,
+	"defense": 6,
+	"quick": 70,
+}
 const STONE_COINS_KEY := "stoneCoins"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
@@ -186,6 +193,27 @@ static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
 	return result
+
+
+static func player_base_stats() -> Dictionary:
+	return DEFAULT_PLAYER_BATTLE_STATS.duplicate(true)
+
+
+static func player_stat_summary(profile: Dictionary, base_stats: Dictionary = {}) -> Dictionary:
+	var normalized_base := _normalize_player_stat_values(base_stats if not base_stats.is_empty() else DEFAULT_PLAYER_BATTLE_STATS)
+	var raw_bonus := equipment_stat_bonus(profile)
+	var normalized_bonus := {}
+	var current := {}
+	for key in PLAYER_STAT_KEYS:
+		var base_value := int(normalized_base.get(key, DEFAULT_PLAYER_BATTLE_STATS.get(key, 1)))
+		var bonus_value := int(raw_bonus.get(key, 0))
+		normalized_bonus[key] = bonus_value
+		current[key] = maxi(1, base_value + bonus_value)
+	return {
+		"base": normalized_base,
+		"bonus": normalized_bonus,
+		"current": current,
+	}
 
 
 static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
@@ -576,6 +604,20 @@ static func _normalize_equipment_slots(value) -> Dictionary:
 		if EquipmentModel.slot_for(item_id) != slot_id:
 			continue
 		result[slot_id] = item_id
+	return result
+
+
+static func _normalize_player_stat_values(value: Dictionary) -> Dictionary:
+	var result := {}
+	for key in PLAYER_STAT_KEYS:
+		result[key] = maxi(1, int(value.get(key, DEFAULT_PLAYER_BATTLE_STATS.get(key, 1))))
+	return result
+
+
+static func _player_base_stats_from_actor(actor: Dictionary) -> Dictionary:
+	var result := {}
+	for key in PLAYER_STAT_KEYS:
+		result[key] = maxi(1, int(actor.get(key, DEFAULT_PLAYER_BATTLE_STATS.get(key, 1))))
 	return result
 
 
@@ -1583,18 +1625,18 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		actor["level"] = maxi(1, int(player_dict.get("level", actor.get("level", 1))))
 		actor["exp"] = maxi(0, int(player_dict.get("exp", 0)))
 		actor["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(actor.get("level", 1))))))
-		var bonus := equipment_stat_bonus(profile)
-		for key in EquipmentModel.STAT_KEYS:
-			var amount := int(bonus.get(key, 0))
-			if amount == 0:
-				continue
-			if key == "maxHp":
-				actor["maxHp"] = maxi(1, int(actor.get("maxHp", 1)) + amount)
-				actor["hp"] = clampi(int(actor.get("hp", actor.get("maxHp", 1))) + amount, 1, int(actor.get("maxHp", 1)))
-			else:
-				actor[key] = maxi(1, int(actor.get(key, 0)) + amount)
+		var previous_max_hp := maxi(1, int(actor.get("maxHp", 1)))
+		var previous_hp := clampi(int(actor.get("hp", previous_max_hp)), 0, previous_max_hp)
+		var summary := player_stat_summary(profile, _player_base_stats_from_actor(actor))
+		var current := summary.get("current", {}) as Dictionary
+		var current_max_hp := maxi(1, int(current.get("maxHp", previous_max_hp)))
+		actor["maxHp"] = current_max_hp
+		actor["hp"] = clampi(previous_hp + current_max_hp - previous_max_hp, 1, current_max_hp)
+		for key in ["attack", "defense", "quick"]:
+			actor[key] = maxi(1, int(current.get(key, actor.get(key, 1))))
 		actor["equipmentSlots"] = equipment_slots(profile)
-		actor["equipmentStatBonus"] = bonus
+		actor["equipmentStatBonus"] = summary.get("bonus", {})
+		actor["equipmentStatSummary"] = summary
 		actors[index] = actor
 		break
 	next_state["actors"] = actors

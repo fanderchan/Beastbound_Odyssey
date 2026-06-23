@@ -103,6 +103,10 @@ static func stat_bonus_text_for(item_id: String) -> String:
 	return "、".join(parts)
 
 
+static func stat_label_for(key: String) -> String:
+	return _stat_label_for(key)
+
+
 static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var item := item_for_id(item_id)
 	if item.is_empty():
