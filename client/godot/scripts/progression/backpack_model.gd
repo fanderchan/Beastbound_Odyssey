@@ -5,6 +5,7 @@ const SLOT_LIMIT := 15
 const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
+const CONTEXT_WORLD_ENCOUNTER_STONE := "world_encounter_stone"
 const CONTEXT_EQUIPMENT := "equipment"
 
 
@@ -99,6 +100,28 @@ static func world_heal_amount_for(item_id: String) -> int:
 
 static func item_can_world_pet_heal(item_id: String) -> bool:
 	return item_has_context(item_id, CONTEXT_WORLD_PET_HEAL) and world_heal_amount_for(item_id) > 0
+
+
+static func world_encounter_interval_for(item_id: String) -> float:
+	var world_use := world_use_for(item_id)
+	if str(world_use.get("type", "")) != "encounter_stone":
+		return 0.0
+	return maxf(0.0, float(world_use.get("intervalSeconds", 0.0)))
+
+
+static func world_encounter_duration_for(item_id: String) -> float:
+	var world_use := world_use_for(item_id)
+	if str(world_use.get("type", "")) != "encounter_stone":
+		return 0.0
+	return maxf(0.0, float(world_use.get("durationSeconds", 0.0)))
+
+
+static func item_can_world_encounter_stone(item_id: String) -> bool:
+	return (
+		item_has_context(item_id, CONTEXT_WORLD_ENCOUNTER_STONE)
+		and world_encounter_interval_for(item_id) > 0.0
+		and world_encounter_duration_for(item_id) > 0.0
+	)
 
 
 static func starting_slots() -> Array[Dictionary]:
@@ -292,7 +315,7 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 	var context_labels: Array[String] = []
 	if contexts.has(CONTEXT_BATTLE_ITEM):
 		context_labels.append("战斗可用")
-	if contexts.has(CONTEXT_WORLD_PET_HEAL):
+	if contexts.has(CONTEXT_WORLD_PET_HEAL) or contexts.has(CONTEXT_WORLD_ENCOUNTER_STONE):
 		context_labels.append("世界可用")
 	if contexts.has(CONTEXT_CAPTURE):
 		context_labels.append("捕捉")
@@ -300,11 +323,17 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 		context_labels.append("装备")
 	if context_labels.is_empty():
 		context_labels.append("暂不可用")
-	return [
+	var lines: Array[String] = [
 		"%s x%d" % [label_for(item_id), maxi(0, int(slot.get("count", 0)))],
 		"用途: %s" % " / ".join(context_labels),
 		"堆叠: %d" % stack_limit_for(item_id),
 	]
+	if item_can_world_encounter_stone(item_id):
+		lines.append("效果: 原地每%d秒遇敌，持续%d分钟。" % [
+			int(roundf(world_encounter_interval_for(item_id))),
+			int(roundf(world_encounter_duration_for(item_id) / 60.0)),
+		])
+	return lines
 
 
 static func _add_single_item(slots: Array[Dictionary], item_id: String, count: int) -> Dictionary:

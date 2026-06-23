@@ -38,7 +38,7 @@
       "id": "village_grass",
       "name": "村外草丛",
       "rects": [[11, 15, 6, 4]],
-      "encounterRate": 0.35,
+      "encounterRate": 0.09,
       "encounterGroupId": "firebud_grass_01",
       "wildPetPool": [
         {

@@ -55,6 +55,20 @@ const BATTLE_LAUNCH_TARGET_START_RATIO := 0.30
 const BATTLE_LAUNCH_ATTACK_RETURN_RATIO := 0.58
 const BATTLE_BOUNCE_EDGE_RATIO := 0.42
 const BATTLE_BOUNCE_ROLL_RATIO := 0.76
+const ENCOUNTER_POST_BATTLE_GRACE_SECONDS := 1.0
+const ENCOUNTER_SAFE_STEPS := 2
+const ENCOUNTER_STONE_LOW_ID := "encounter_stone_low"
+const ENCOUNTER_STONE_MID_ID := "encounter_stone_mid"
+const ENCOUNTER_STONE_HIGH_ID := "encounter_stone_high"
+const HANG_WALK_COOLDOWN_SECONDS := 0.14
+const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
+	Vector2i(1, -1),
+	Vector2i(-1, 1),
+	Vector2i(1, 0),
+	Vector2i(-1, 0),
+	Vector2i(0, 1),
+	Vector2i(0, -1),
+]
 
 var player: CharacterBody2D
 var pet
@@ -222,6 +236,7 @@ var auto_battle_reward_check: bool = false
 var auto_quest_chain_check: bool = false
 var auto_quest_ui_check: bool = false
 var auto_equipment_check: bool = false
+var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var shop_preview: bool = false
@@ -315,6 +330,15 @@ var battle_debug_text: TextEdit
 var battle_debug_last_text: String = ""
 var battle_trace_path: String = ""
 var last_checked_player_cell: Vector2i = Vector2i.ZERO
+var encounter_zone_step_count: int = 0
+var encounter_grace_remaining: float = 0.0
+var hang_mode_active: bool = false
+var hang_walk_direction_index: int = 0
+var hang_walk_cooldown: float = 0.0
+var encounter_stone_item_id: String = ""
+var encounter_stone_interval: float = 0.0
+var encounter_stone_remaining: float = 0.0
+var encounter_stone_elapsed: float = 0.0
 var encounter_rng := RandomNumberGenerator.new()
 
 
@@ -408,6 +432,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_ui_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
+	elif auto_encounter_loop_check:
+		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
@@ -650,6 +676,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_ui_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
+		elif arg == "--auto-encounter-loop-check":
+			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
@@ -718,6 +746,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
+	_set_hang_mode(false)
 	_clear_navigation_state()
 	_close_dialog()
 	_close_encounter()
@@ -1104,25 +1133,25 @@ func _run_auto_encounter_check() -> void:
 	if arrived_zone and not encounter_active:
 		_trigger_encounter(zone)
 	await get_tree().process_frame
-	var prompt_open: bool = encounter_active and encounter_panel.visible and str(active_encounter_zone.get("id", "")) == str(zone.get("id", ""))
+	var no_prompt: bool = not encounter_active and encounter_panel != null and not encounter_panel.visible
 	var movement_stopped: bool = not player.is_auto_moving()
-	_start_battle_from_encounter()
-	await get_tree().process_frame
 	var battle_started: bool = battle_active and battle_command_panel.visible and not encounter_panel.visible
 	_end_battle(true)
 	await get_tree().process_frame
 	var closed: bool = not encounter_active and not encounter_panel.visible and not battle_active
-	var status := "ok" if loaded and zone_found and target_in_zone and arrived_zone and prompt_open and movement_stopped and battle_started and closed else "failed"
-	print("encounter check ready: status=%s loaded=%s zone_found=%s target_in_zone=%s arrived_zone=%s prompt_open=%s movement_stopped=%s battle_started=%s closed=%s zone_id=%s final_cell=%s" % [
+	var grace_started := encounter_grace_remaining > 0.0 and encounter_grace_remaining <= ENCOUNTER_POST_BATTLE_GRACE_SECONDS
+	var status := "ok" if loaded and zone_found and target_in_zone and arrived_zone and no_prompt and movement_stopped and battle_started and closed and grace_started else "failed"
+	print("encounter check ready: status=%s loaded=%s zone_found=%s target_in_zone=%s arrived_zone=%s no_prompt=%s movement_stopped=%s battle_started=%s closed=%s grace=%.2f zone_id=%s final_cell=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
 		str(target_in_zone),
 		str(arrived_zone),
-		str(prompt_open),
+		str(no_prompt),
 		str(movement_stopped),
 		str(battle_started),
 		str(closed),
+		encounter_grace_remaining,
 		str(zone.get("id", "")),
 		str(player_cell),
 	])
@@ -1137,9 +1166,7 @@ func _run_auto_battle_check() -> void:
 	if zone_found:
 		_trigger_encounter(zone)
 	await get_tree().process_frame
-	var prompt_open: bool = encounter_active and encounter_panel.visible
-	_start_battle_from_encounter()
-	await get_tree().process_frame
+	var no_prompt: bool = encounter_panel != null and not encounter_panel.visible and not encounter_active
 	var battle_started: bool = battle_active and battle_command_panel.visible and not encounter_panel.visible
 	var buttons_ok := _battle_buttons_match_request()
 	var command_top_right := _battle_command_panel_is_top_right()
@@ -1167,14 +1194,13 @@ func _run_auto_battle_check() -> void:
 		ally_hp_after = _battle_side_total_hp(BattleModel.SIDE_ALLY)
 		if (battle_active and not _battle_commands_locked()) or not battle_active:
 			break
+	var round_resolved := (battle_active and not _battle_commands_locked()) or not battle_active
 	var enemy_countered := ally_hp_after < ally_hp_before
 	_on_battle_command_pressed("run")
 	await get_tree().process_frame
 	var escaped := not battle_active and player.visible and not battle_command_panel.visible
 	if zone_found:
 		_trigger_encounter(zone)
-	await get_tree().process_frame
-	_start_battle_from_encounter()
 	await get_tree().process_frame
 	var victory_target_id := BattleModel.living_enemy_id(battle_state)
 	if victory_target_id != "":
@@ -1187,12 +1213,12 @@ func _run_auto_battle_check() -> void:
 		if not battle_active:
 			break
 	var victory_exited := not battle_active and player.visible and not battle_command_panel.visible
-	var status := "ok" if loaded and zone_found and prompt_open and battle_started and buttons_ok and command_top_right and formation_ok and attack_reduced_hp and attack_state_seen and player_attacked and enemy_countered and escaped and victory_exited else "failed"
-	print("battle check ready: status=%s loaded=%s zone_found=%s prompt_open=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s enemy_countered=%s escaped=%s victory_exited=%s" % [
+	var status := "ok" if loaded and zone_found and no_prompt and battle_started and buttons_ok and command_top_right and formation_ok and attack_reduced_hp and attack_state_seen and player_attacked and round_resolved and escaped and victory_exited else "failed"
+	print("battle check ready: status=%s loaded=%s zone_found=%s no_prompt=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s round_resolved=%s enemy_countered=%s escaped=%s victory_exited=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
-		str(prompt_open),
+		str(no_prompt),
 		str(battle_started),
 		str(buttons_ok),
 		str(command_top_right),
@@ -1203,6 +1229,7 @@ func _run_auto_battle_check() -> void:
 		ally_hp_after,
 		str(attack_state_seen),
 		str(player_attacked),
+		str(round_resolved),
 		str(enemy_countered),
 		str(escaped),
 		str(victory_exited),
@@ -3494,6 +3521,7 @@ func _run_auto_shop_check() -> void:
 		and ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 8
 		and ShopCatalogModel.sell_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 4
 		and ShopCatalogModel.is_sellable(shop_id, BattleModel.ITEM_POISON_ALL)
+		and ShopCatalogModel.buy_price_for(shop_id, "encounter_stone_low") == 24
 	)
 	var default_coin_ok := PlayerProgressModel.stone_coins(base_profile) == PlayerProgressModel.DEFAULT_STONE_COINS
 
@@ -3825,6 +3853,133 @@ func _run_auto_equipment_check() -> void:
 		str(extra_sell_ok),
 		int(player_actor.get("attack", 0)),
 		PlayerProgressModel.stone_coins(sell_after_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_encounter_loop_check() -> void:
+	profile_save_enabled = false
+	encounter_rng.seed = 57057
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var zone: Dictionary = zones[0] as Dictionary if zone_found else {}
+	var cells := EncounterModel.cells_for_zone(zone) if zone_found else []
+	var cells_ok := cells.size() >= ENCOUNTER_SAFE_STEPS + 3
+	var rate_ok := zone_found and absf(EncounterModel.encounter_rate(zone) - 0.09) < 0.001
+	var encounter_stone_data_ok := (
+		BackpackModel.item_can_world_encounter_stone(ENCOUNTER_STONE_LOW_ID)
+		and BackpackModel.item_can_world_encounter_stone(ENCOUNTER_STONE_MID_ID)
+		and BackpackModel.item_can_world_encounter_stone(ENCOUNTER_STONE_HIGH_ID)
+		and is_equal_approx(BackpackModel.world_encounter_interval_for(ENCOUNTER_STONE_LOW_ID), 3.0)
+		and is_equal_approx(BackpackModel.world_encounter_interval_for(ENCOUNTER_STONE_MID_ID), 2.0)
+		and is_equal_approx(BackpackModel.world_encounter_interval_for(ENCOUNTER_STONE_HIGH_ID), 1.0)
+		and is_equal_approx(BackpackModel.world_encounter_duration_for(ENCOUNTER_STONE_LOW_ID), 600.0)
+	)
+	var shop_ok := (
+		ShopCatalogModel.buy_price_for(ShopCatalogModel.DEFAULT_SHOP_ID, ENCOUNTER_STONE_LOW_ID) == 24
+		and ShopCatalogModel.buy_price_for(ShopCatalogModel.DEFAULT_SHOP_ID, ENCOUNTER_STONE_MID_ID) == 42
+		and ShopCatalogModel.buy_price_for(ShopCatalogModel.DEFAULT_SHOP_ID, ENCOUNTER_STONE_HIGH_ID) == 72
+	)
+
+	var hang_started := false
+	var hang_stopped := false
+	if cells_ok:
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		encounter_grace_remaining = 999.0
+		_start_hang_walk()
+		_update_hang_walk(1.0)
+		hang_started = hang_mode_active and player.is_auto_moving() and stop_button != null and stop_button.text == "停"
+		_stop_auto_move()
+		hang_stopped = not hang_mode_active and not player.is_auto_moving() and stop_button != null and stop_button.text == "挂机"
+
+	var natural_direct := false
+	var natural_no_prompt := false
+	var grace_started := false
+	var grace_blocks := false
+	var grace_one_second := false
+	if cells_ok:
+		loaded = _load_map("firebud_village_gate", "from_training_yard")
+		var forced_zones: Array = map_data.get("encounterZones", [])
+		var forced_zone := (forced_zones[0] as Dictionary).duplicate(true)
+		forced_zone["encounterRate"] = 1.0
+		forced_zones[0] = forced_zone
+		map_data["encounterZones"] = forced_zones
+		zone = forced_zone
+		cells = EncounterModel.cells_for_zone(zone)
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		encounter_zone_step_count = 0
+		encounter_grace_remaining = 0.0
+		for index in range(1, ENCOUNTER_SAFE_STEPS + 2):
+			player.global_position = IsoMapModel.grid_to_world(map_data, cells[index] as Vector2i)
+			_update_encounter_zone_check()
+			await get_tree().process_frame
+			if battle_active:
+				break
+		natural_direct = battle_active and battle_command_panel != null and battle_command_panel.visible
+		natural_no_prompt = natural_direct and encounter_panel != null and not encounter_panel.visible and not encounter_active
+		_end_battle(true)
+		await get_tree().process_frame
+		grace_started = encounter_grace_remaining > 0.0 and encounter_grace_remaining <= ENCOUNTER_POST_BATTLE_GRACE_SECONDS
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[ENCOUNTER_SAFE_STEPS + 2] as Vector2i)
+		_update_encounter_zone_check()
+		await get_tree().process_frame
+		grace_blocks = not battle_active
+		encounter_grace_remaining = ENCOUNTER_POST_BATTLE_GRACE_SECONDS
+		_update_encounter_grace(0.99)
+		var grace_before_finish := encounter_grace_remaining > 0.0
+		_update_encounter_grace(0.02)
+		grace_one_second = grace_before_finish and encounter_grace_remaining <= 0.0
+
+	var stone_consumed := false
+	var stone_effect := false
+	var stone_wait := false
+	var stone_triggered := false
+	if zone_found:
+		_load_map("firebud_village_gate", "from_training_yard")
+		zones = EncounterModel.encounter_zones(map_data)
+		zone = zones[0] as Dictionary
+		cells = EncounterModel.cells_for_zone(zone)
+		player_profile = PlayerProgressModel.default_profile()
+		player_profile = PlayerProgressModel.with_backpack_slots(
+			player_profile,
+			BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(player_profile), ENCOUNTER_STONE_LOW_ID, 1)
+		)
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		encounter_grace_remaining = 0.0
+		var before_stones := PlayerProgressModel.backpack_item_count(player_profile, ENCOUNTER_STONE_LOW_ID)
+		_use_backpack_encounter_stone(ENCOUNTER_STONE_LOW_ID)
+		stone_consumed = PlayerProgressModel.backpack_item_count(player_profile, ENCOUNTER_STONE_LOW_ID) == before_stones - 1
+		stone_effect = _encounter_stone_active() and is_equal_approx(encounter_stone_interval, 3.0)
+		_update_stationary_encounter_stone(2.99)
+		stone_wait = not battle_active
+		_update_stationary_encounter_stone(0.02)
+		await get_tree().process_frame
+		stone_triggered = battle_active and encounter_panel != null and not encounter_panel.visible
+
+	var status := "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and natural_direct and natural_no_prompt and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
+	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s natural=%s no_prompt=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
+		status,
+		str(loaded),
+		str(zone_found),
+		str(cells_ok),
+		str(rate_ok),
+		str(encounter_stone_data_ok),
+		str(shop_ok),
+		str(hang_started),
+		str(hang_stopped),
+		str(natural_direct),
+		str(natural_no_prompt),
+		str(grace_started),
+		str(grace_blocks),
+		str(grace_one_second),
+		str(stone_consumed),
+		str(stone_effect),
+		str(stone_wait),
+		str(stone_triggered),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -6364,6 +6519,9 @@ func _process(delta: float) -> void:
 	_update_pet_follow()
 	_update_camera_position(false)
 	_update_pending_interaction()
+	_update_encounter_grace(delta)
+	_update_hang_walk(delta)
+	_update_stationary_encounter_stone(delta)
 	_update_encounter_zone_check()
 	_update_pet_rest_recovery(delta)
 	_update_ground_pet_drop_expiration(delta)
@@ -6372,6 +6530,7 @@ func _process(delta: float) -> void:
 		has_target_cell = false
 		current_path_is_direct = false
 		current_path_cells.clear()
+	_sync_hang_button_text()
 	_update_hud_text()
 	_update_battle_debug_window()
 	queue_redraw()
@@ -6471,9 +6630,9 @@ func _build_hud() -> void:
 	action_row.add_theme_constant_override("separation", 6)
 	action_bar.add_child(action_row)
 	stop_button = Button.new()
-	stop_button.text = "停"
+	stop_button.text = "挂机"
 	stop_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
-	stop_button.pressed.connect(_stop_auto_move)
+	stop_button.pressed.connect(_on_hang_button_pressed)
 	action_row.add_child(stop_button)
 	ring_button = Button.new()
 	ring_button.text = "驯宠戒"
@@ -7451,6 +7610,7 @@ func _set_click_move_target(screen_point: Vector2) -> void:
 	if encounter_active or battle_active:
 		return
 
+	_set_hang_mode(false)
 	var world_point := _screen_to_world(screen_point)
 	var ground_drop := _find_ground_pet_drop_at_world_point(world_point)
 	if not ground_drop.is_empty():
@@ -7514,6 +7674,7 @@ func _set_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_ce
 
 
 func _set_interaction_target(item: Dictionary) -> void:
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_backpack_panel()
 	_close_equipment_panel()
@@ -7567,39 +7728,47 @@ func _transfer_from_warp(item: Dictionary) -> void:
 
 
 func _update_encounter_zone_check() -> void:
-	if player == null or map_data.is_empty() or encounter_active or battle_active or _dialog_is_open() or has_pending_interaction:
+	if player == null or map_data.is_empty() or encounter_active or battle_active or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
+		return
+	if encounter_grace_remaining > 0.0:
 		return
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
-	if player.is_auto_moving():
-		return
 	if player_cell == last_checked_player_cell:
 		return
 	last_checked_player_cell = player_cell
 	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
 	if zone.is_empty():
+		encounter_zone_step_count = 0
+		return
+	encounter_zone_step_count += 1
+	if encounter_zone_step_count <= ENCOUNTER_SAFE_STEPS:
 		return
 	if encounter_rng.randf() <= EncounterModel.encounter_rate(zone):
 		_trigger_encounter(zone)
 
 
 func _trigger_encounter(zone: Dictionary) -> void:
-	if encounter_active or battle_active:
+	if encounter_active or battle_active or zone.is_empty():
 		return
 	player.clear_move_target()
 	_clear_navigation_state()
-	if player.has_method("set_controls_enabled"):
-		player.set_controls_enabled(false)
-	active_encounter_zone = zone.duplicate(true)
+	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng)
 	encounter_active = true
-	encounter_title_label.text = "发现野生宠物！"
-	var zone_name := str(zone.get("name", "野外"))
-	var preview_text := str(zone.get("previewText", "附近有野生宠物出现。"))
-	encounter_body_label.text = "%s\n%s" % [zone_name, preview_text]
-	encounter_enter_button.text = "进入战斗"
-	encounter_enter_button.disabled = false
-	encounter_retreat_button.text = "先撤退"
-	encounter_panel.visible = true
-	_layout_hud()
+	_start_battle(BattleModel.create_wild_battle(active_encounter_zone))
+
+
+func _update_encounter_grace(delta: float) -> void:
+	if encounter_grace_remaining <= 0.0:
+		return
+	encounter_grace_remaining = maxf(0.0, encounter_grace_remaining - delta)
+
+
+func _begin_post_battle_encounter_grace() -> void:
+	encounter_grace_remaining = ENCOUNTER_POST_BATTLE_GRACE_SECONDS
+	encounter_zone_step_count = 0
+	encounter_stone_elapsed = 0.0
+	if player != null and not map_data.is_empty():
+		last_checked_player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
 
 
 func _retreat_from_encounter() -> void:
@@ -7711,6 +7880,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 
 
 func _end_battle(_restore_world: bool = true) -> void:
+	var was_battle_active := battle_active
 	battle_active = false
 	battle_state.clear()
 	battle_action_timer = 0.0
@@ -7773,6 +7943,8 @@ func _end_battle(_restore_world: bool = true) -> void:
 		_layout_hud()
 	if status_label != null:
 		_update_hud_text()
+	if _restore_world and was_battle_active:
+		_begin_post_battle_encounter_grace()
 	_update_battle_debug_window(true)
 	queue_redraw()
 
@@ -7887,6 +8059,7 @@ func _set_world_log_message(text: String) -> void:
 func _open_backpack_panel() -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
 	_close_shop_panel()
@@ -7911,6 +8084,7 @@ func _close_backpack_panel() -> void:
 func _open_equipment_panel() -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
@@ -8090,14 +8264,19 @@ func _refresh_backpack_panel() -> void:
 		and BackpackModel.item_can_world_pet_heal(selected_item_id)
 		and BackpackModel.item_count(slots, selected_item_id) > 0
 	)
+	var can_world_encounter_stone := (
+		selected_item_id != ""
+		and BackpackModel.item_can_world_encounter_stone(selected_item_id)
+		and BackpackModel.item_count(slots, selected_item_id) > 0
+	)
 	var can_equip := (
 		selected_item_id != ""
 		and EquipmentModel.is_equipment(selected_item_id)
 		and BackpackModel.item_count(slots, selected_item_id) > 0
 	)
 	if backpack_use_button != null:
-		backpack_use_button.visible = can_world_use or can_equip
-		backpack_use_button.disabled = not (can_world_use or can_equip)
+		backpack_use_button.visible = can_world_use or can_world_encounter_stone or can_equip
+		backpack_use_button.disabled = not (can_world_use or can_world_encounter_stone or can_equip)
 		if can_equip:
 			backpack_use_button.text = "装备"
 		else:
@@ -8161,10 +8340,85 @@ func _on_backpack_use_pressed() -> void:
 		if status_label != null:
 			_update_hud_text()
 		return
+	if BackpackModel.item_can_world_encounter_stone(item_id):
+		_use_backpack_encounter_stone(item_id)
+		return
 	if not BackpackModel.item_can_world_pet_heal(item_id):
 		return
 	backpack_pending_use_item_id = item_id
 	_refresh_backpack_panel()
+
+
+func _use_backpack_encounter_stone(item_id: String) -> void:
+	var item_label := BackpackModel.label_for(item_id)
+	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
+		_set_world_log_message("%s 不够了。" % item_label)
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+	if zone.is_empty():
+		_set_world_log_message("需要站在遇敌区域，才能使用%s。" % item_label)
+		return
+	var slots := BackpackModel.consume(PlayerProgressModel.backpack_slots(player_profile), item_id, 1)
+	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, slots)
+	_activate_encounter_stone(item_id)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _activate_encounter_stone(item_id: String) -> void:
+	encounter_stone_item_id = item_id
+	encounter_stone_interval = BackpackModel.world_encounter_interval_for(item_id)
+	encounter_stone_remaining = BackpackModel.world_encounter_duration_for(item_id)
+	encounter_stone_elapsed = 0.0
+	_set_hang_mode(false)
+	_set_world_log_message("%s 已生效，站在遇敌区域每%d秒遇敌。" % [
+		BackpackModel.label_for(item_id),
+		int(roundf(encounter_stone_interval)),
+	])
+
+
+func _encounter_stone_active() -> bool:
+	return encounter_stone_item_id != "" and encounter_stone_interval > 0.0 and encounter_stone_remaining > 0.0
+
+
+func _clear_encounter_stone_effect(show_message: bool = false) -> void:
+	var item_label := BackpackModel.label_for(encounter_stone_item_id, "遇敌石")
+	encounter_stone_item_id = ""
+	encounter_stone_interval = 0.0
+	encounter_stone_remaining = 0.0
+	encounter_stone_elapsed = 0.0
+	if show_message:
+		_set_world_log_message("%s 效果结束。" % item_label)
+
+
+func _update_stationary_encounter_stone(delta: float) -> void:
+	if not _encounter_stone_active():
+		return
+	if encounter_active or battle_active:
+		return
+	encounter_stone_remaining = maxf(0.0, encounter_stone_remaining - delta)
+	if encounter_stone_remaining <= 0.0:
+		_clear_encounter_stone_effect(true)
+		return
+	if player == null or map_data.is_empty() or player.is_auto_moving() or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
+		encounter_stone_elapsed = 0.0
+		return
+	if encounter_grace_remaining > 0.0:
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+	if zone.is_empty():
+		encounter_stone_elapsed = 0.0
+		return
+	encounter_stone_elapsed += delta
+	if encounter_stone_elapsed >= encounter_stone_interval:
+		encounter_stone_elapsed = 0.0
+		_trigger_encounter(zone)
 
 
 func _clear_backpack_target_buttons() -> void:
@@ -8224,6 +8478,7 @@ func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 func _open_shop_panel(next_shop_id: String = "") -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	var resolved_shop_id := next_shop_id if next_shop_id != "" else ShopCatalogModel.DEFAULT_SHOP_ID
 	if ShopCatalogModel.shop_for_id(resolved_shop_id).is_empty():
 		resolved_shop_id = ShopCatalogModel.DEFAULT_SHOP_ID
@@ -8439,6 +8694,7 @@ func _on_shop_action_pressed() -> void:
 func _open_pet_panel() -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
@@ -8465,6 +8721,7 @@ func _close_pet_panel() -> void:
 func _open_codex_panel() -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
@@ -8487,6 +8744,7 @@ func _close_codex_panel() -> void:
 func _open_quest_panel() -> void:
 	if battle_active:
 		return
+	_set_hang_mode(false)
 	_close_dialog()
 	_close_encounter()
 	_close_backpack_panel()
@@ -10754,9 +11012,99 @@ func _world_to_screen(world_point: Vector2) -> Vector2:
 	)
 
 
+func _on_hang_button_pressed() -> void:
+	if player == null:
+		return
+	if hang_mode_active or player.is_auto_moving():
+		_stop_auto_move()
+		return
+	_start_hang_walk()
+
+
+func _start_hang_walk() -> void:
+	if player == null or map_data.is_empty() or battle_active or encounter_active:
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+	if zone.is_empty():
+		_set_world_log_message("需要站在遇敌区域，才能开始挂机。")
+		return
+	_close_dialog()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_set_hang_mode(true)
+	_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
+
+
+func _set_hang_mode(enabled: bool) -> void:
+	hang_mode_active = enabled
+	hang_walk_cooldown = 0.0
+	if not enabled:
+		hang_walk_direction_index = 0
+	_sync_hang_button_text()
+
+
+func _sync_hang_button_text() -> void:
+	if stop_button == null:
+		return
+	if battle_active:
+		stop_button.text = "停"
+	elif hang_mode_active or (player != null and player.is_auto_moving()):
+		stop_button.text = "停"
+	else:
+		stop_button.text = "挂机"
+
+
+func _update_hang_walk(delta: float) -> void:
+	if not hang_mode_active or player == null or map_data.is_empty() or battle_active or encounter_active:
+		return
+	if has_pending_interaction or _dialog_is_open() or _world_menu_is_open():
+		return
+	if player.is_auto_moving():
+		return
+	hang_walk_cooldown = maxf(0.0, hang_walk_cooldown - delta)
+	if hang_walk_cooldown > 0.0:
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+	if zone.is_empty():
+		_stop_auto_move()
+		_set_world_log_message("已离开遇敌区域，挂机停止。")
+		return
+	var next_cell := _next_hang_walk_cell(player_cell, zone)
+	if next_cell == player_cell:
+		_stop_auto_move()
+		_set_world_log_message("附近没有可走的遇敌格，挂机停止。")
+		return
+	_set_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
+	has_target_marker = false
+	has_target_cell = false
+	hang_walk_cooldown = HANG_WALK_COOLDOWN_SECONDS
+
+
+func _next_hang_walk_cell(player_cell: Vector2i, zone: Dictionary) -> Vector2i:
+	for attempt in range(HANG_WALK_DIRECTIONS.size()):
+		var direction_index := (hang_walk_direction_index + attempt) % HANG_WALK_DIRECTIONS.size()
+		var candidate := player_cell + HANG_WALK_DIRECTIONS[direction_index]
+		if (
+			IsoMapModel.can_step(map_data, player_cell, candidate)
+			and EncounterModel.zone_contains_cell(zone, candidate)
+		):
+			hang_walk_direction_index = (direction_index + 1) % HANG_WALK_DIRECTIONS.size()
+			return candidate
+	return player_cell
+
+
 func _stop_auto_move() -> void:
-	player.clear_move_target()
+	_set_hang_mode(false)
+	if player != null:
+		player.clear_move_target()
 	_clear_navigation_state()
+	_sync_hang_button_text()
 
 
 func _clear_navigation_state() -> void:
@@ -10773,6 +11121,13 @@ func _is_ui_point(point: Vector2) -> bool:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
 				return true
+	return false
+
+
+func _world_menu_is_open() -> bool:
+	for control in [backpack_panel, equipment_panel, shop_panel, pet_panel, codex_panel, quest_panel, pet_rename_panel]:
+		if control != null and control.visible:
+			return true
 	return false
 
 

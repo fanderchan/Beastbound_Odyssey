@@ -16,7 +16,7 @@ godot --headless --path . --quit
 
 ## Current Slice
 
-Phase 19 contains a minimal isometric exploration, encounter, 10v10 formation, local battle-command, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
+Phase 57 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
 
 - Mouse click-to-pathfind on PC.
 - Touch tap-to-pathfind on mobile.
@@ -31,8 +31,10 @@ Phase 19 contains a minimal isometric exploration, encounter, 10v10 formation, l
 - Arrival-gated dialog and a simple local task flag.
 - Clickable walk-on transfer points between `火芽训练场` and `火芽村入口`.
 - A visible grass encounter zone on `火芽村入口`.
-- A local encounter prompt with `进入战斗` and `先撤退`.
-- A local battle scene placeholder after `进入战斗`.
+- Natural walking in the encounter zone can directly enter battle without a confirmation prompt.
+- A 1-second post-battle encounter grace window after returning to the map.
+- The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
+- Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
 - Battle commands arranged as `攻击` / `精灵` / `捕捉` / `help` and `防御` / `物品` / `换宠` / `逃跑`.
 - Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
 - 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.

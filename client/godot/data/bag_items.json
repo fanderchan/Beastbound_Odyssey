@@ -88,9 +88,48 @@
       "label": "强化网",
       "menuLabel": "强化网",
       "stackLimit": 20,
-      "startingCount": 1,
+      "startingCount": 0,
       "useContexts": ["capture"],
       "captureToolId": "capture_net_reinforced"
+    },
+    {
+      "id": "encounter_stone_low",
+      "label": "初级遇敌石",
+      "menuLabel": "初级遇敌石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_encounter_stone"],
+      "worldUse": {
+        "type": "encounter_stone",
+        "intervalSeconds": 3,
+        "durationSeconds": 600
+      }
+    },
+    {
+      "id": "encounter_stone_mid",
+      "label": "中级遇敌石",
+      "menuLabel": "中级遇敌石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_encounter_stone"],
+      "worldUse": {
+        "type": "encounter_stone",
+        "intervalSeconds": 2,
+        "durationSeconds": 600
+      }
+    },
+    {
+      "id": "encounter_stone_high",
+      "label": "高级遇敌石",
+      "menuLabel": "高级遇敌石",
+      "stackLimit": 20,
+      "startingCount": 1,
+      "useContexts": ["world_encounter_stone"],
+      "worldUse": {
+        "type": "encounter_stone",
+        "intervalSeconds": 1,
+        "durationSeconds": 600
+      }
     },
     {
       "id": "weapon_wooden_club",

@@ -40,6 +40,18 @@
         {
           "itemId": "capture_net_reinforced",
           "buyPrice": 68
+        },
+        {
+          "itemId": "encounter_stone_low",
+          "buyPrice": 24
+        },
+        {
+          "itemId": "encounter_stone_mid",
+          "buyPrice": 42
+        },
+        {
+          "itemId": "encounter_stone_high",
+          "buyPrice": 72
         }
       ]
     },
