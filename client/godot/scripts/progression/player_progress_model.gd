@@ -286,6 +286,57 @@ static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
 	return _equipment_spirit_ids_from_slots(equipment_slots(profile))
 
 
+static func equipment_change_preview(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if not EquipmentModel.is_equipment(item_id):
+		return {}
+	var slot_id := EquipmentModel.slot_for(item_id)
+	if slot_id == "":
+		return {}
+	var before_slots := equipment_slots(normalized)
+	var current_item_id := str(before_slots.get(slot_id, ""))
+	var after_slots := before_slots.duplicate(true)
+	after_slots[slot_id] = item_id
+	var before_bonus := _equipment_stat_bonus_from_slots(before_slots)
+	var after_bonus := _equipment_stat_bonus_from_slots(after_slots)
+	var stat_changes: Array[Dictionary] = []
+	for key in EquipmentModel.STAT_KEYS:
+		var before_value := int(before_bonus.get(key, 0))
+		var after_value := int(after_bonus.get(key, 0))
+		var delta := after_value - before_value
+		if delta == 0:
+			continue
+		stat_changes.append({
+			"key": key,
+			"label": EquipmentModel.stat_label_for(key),
+			"before": before_value,
+			"after": after_value,
+			"delta": delta,
+		})
+	var before_spirits := _equipment_spirit_ids_from_slots(before_slots)
+	var after_spirits := _equipment_spirit_ids_from_slots(after_slots)
+	var gained_spirits: Array[String] = []
+	for spirit_id in after_spirits:
+		if not before_spirits.has(spirit_id):
+			gained_spirits.append(spirit_id)
+	var lost_spirits: Array[String] = []
+	for spirit_id in before_spirits:
+		if not after_spirits.has(spirit_id):
+			lost_spirits.append(spirit_id)
+	return {
+		"slot": slot_id,
+		"slotLabel": EquipmentModel.slot_label_for(slot_id),
+		"currentItemId": current_item_id,
+		"currentItemLabel": EquipmentModel.label_for(current_item_id, "无") if current_item_id != "" else "无",
+		"newItemId": item_id,
+		"newItemLabel": EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id)),
+		"statChanges": stat_changes,
+		"gainedSpiritIds": gained_spirits,
+		"lostSpiritIds": lost_spirits,
+		"unchanged": current_item_id == item_id and stat_changes.is_empty() and gained_spirits.is_empty() and lost_spirits.is_empty(),
+	}
+
+
 static func player_base_stats() -> Dictionary:
 	return DEFAULT_PLAYER_BATTLE_STATS.duplicate(true)
 
@@ -1141,6 +1192,10 @@ static func _equipment_spirit_ids_from_slots(slots: Dictionary) -> Array[String]
 
 static func _sorted_player_spirit_ids(spirit_ids: Array[String]) -> Array[String]:
 	var preferred_order: Array[String] = [
+		"spirit_grace_1",
+		"spirit_moist_1",
+		"spirit_poison_1",
+		"spirit_poison_mist_1",
 		"spirit_grace_5",
 		"spirit_moist_6",
 		"spirit_moist_5",

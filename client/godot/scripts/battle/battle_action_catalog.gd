@@ -308,6 +308,10 @@ static func _validate_pet_skill_slot(action: Dictionary, max_pet_slots: int, see
 
 static func _validate_required_actions(seen_ids: Dictionary, errors: Array[String]) -> void:
 	for required_id in [
+		"spirit_grace_1",
+		"spirit_moist_1",
+		"spirit_poison_1",
+		"spirit_poison_mist_1",
 		"spirit_grace_5",
 		"spirit_moist_5",
 		"spirit_moist_6",

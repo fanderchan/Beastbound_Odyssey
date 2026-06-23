@@ -16,6 +16,10 @@ const validEffectTypes = new Set(["damage", "heal", "poison", "status", "cleanse
 const validStatusIds = new Set(["poison", "sleep", "confusion", "stone"]);
 const validElementIds = new Set(["fire", "water", "earth", "wind"]);
 const requiredRuntimeActions = [
+  "spirit_grace_1",
+  "spirit_moist_1",
+  "spirit_poison_1",
+  "spirit_poison_mist_1",
   "spirit_grace_5",
   "spirit_moist_5",
   "spirit_moist_6",

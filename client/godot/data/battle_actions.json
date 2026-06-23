@@ -55,6 +55,86 @@
       "stoneAgeReference": "BATTLE_COM_CAPTURE"
     },
     {
+      "id": "spirit_grace_1",
+      "owner": "spirit",
+      "label": "恩惠精灵1",
+      "command": "spirit",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 12
+      },
+      "stoneAgeReference": "MAGIC_Recovery"
+    },
+    {
+      "id": "spirit_moist_1",
+      "owner": "spirit",
+      "label": "滋润精灵1",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 18
+      },
+      "stoneAgeReference": "MAGIC_OtherRecovery"
+    },
+    {
+      "id": "spirit_poison_1",
+      "owner": "spirit",
+      "label": "毒精灵1",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 6,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.76
+      },
+      "stoneAgeReference": "MAGIC_StatusChange"
+    },
+    {
+      "id": "spirit_poison_mist_1",
+      "owner": "spirit",
+      "label": "毒雾精灵1",
+      "command": "spirit",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "poison",
+        "amount": 3,
+        "statusId": "poison",
+        "statusTurns": 3,
+        "statusPotencyRatio": 0.5,
+        "statusHitRate": 0.64
+      },
+      "stoneAgeReference": "MAGIC_StatusChange"
+    },
+    {
       "id": "spirit_grace_5",
       "owner": "spirit",
       "label": "恩惠精灵5",

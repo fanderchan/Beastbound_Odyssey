@@ -196,6 +196,38 @@
       "useContexts": ["equipment"]
     },
     {
+      "id": "helm_dew_band",
+      "label": "露草头带",
+      "menuLabel": "露草头带",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "weapon_blessed_club",
+      "label": "祝木棒",
+      "menuLabel": "祝木棒",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "armor_toxin_wrap",
+      "label": "毒藤布衣",
+      "menuLabel": "毒藤布衣",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "boots_mist_sandals",
+      "label": "雾草鞋",
+      "menuLabel": "雾草鞋",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
       "id": "weapon_wooden_club",
       "label": "木棒",
       "menuLabel": "木棒",

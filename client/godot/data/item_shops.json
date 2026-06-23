@@ -92,6 +92,22 @@
           "buyPrice": 32
         },
         {
+          "itemId": "helm_dew_band",
+          "buyPrice": 34
+        },
+        {
+          "itemId": "weapon_blessed_club",
+          "buyPrice": 48
+        },
+        {
+          "itemId": "armor_toxin_wrap",
+          "buyPrice": 46
+        },
+        {
+          "itemId": "boots_mist_sandals",
+          "buyPrice": 38
+        },
+        {
           "itemId": "weapon_wooden_club",
           "buyPrice": 45
         },

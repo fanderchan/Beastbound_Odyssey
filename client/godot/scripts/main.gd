@@ -85,6 +85,8 @@ const ENCOUNTER_STONE_LOW_ID := "encounter_stone_low"
 const ENCOUNTER_STONE_MID_ID := "encounter_stone_mid"
 const ENCOUNTER_STONE_HIGH_ID := "encounter_stone_high"
 const HANG_WALK_COOLDOWN_SECONDS := 0.14
+const EQUIPMENT_COMPARE_GAIN_COLOR := "#79d982"
+const EQUIPMENT_COMPARE_LOSS_COLOR := "#ff746a"
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -133,7 +135,7 @@ var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
-var backpack_detail_label: Label
+var backpack_detail_label: RichTextLabel
 var backpack_use_button: Button
 var backpack_target_scroll: ScrollContainer
 var backpack_target_container: VBoxContainer
@@ -321,6 +323,7 @@ var quest_ui_preview: bool = false
 var equipment_quest_preview: bool = false
 var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
+var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_drop_preview: bool = false
@@ -566,6 +569,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_swap_preview")
 	elif equipment_spirit_preview:
 		call_deferred("_run_equipment_spirit_preview")
+	elif equipment_compare_preview:
+		call_deferred("_run_equipment_compare_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
 	elif pet_rename_preview:
@@ -851,6 +856,8 @@ func _apply_preview_window_args() -> void:
 			equipment_swap_preview = true
 		elif arg == "--equipment-spirit-preview":
 			equipment_spirit_preview = true
+		elif arg == "--equipment-compare-preview":
+			equipment_compare_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
 		elif arg == "--pet-rename-preview":
@@ -1659,7 +1666,7 @@ func _run_auto_battle_settings_check() -> void:
 		and int(settings.get(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY, 0)) == 1
 		and bool(settings.get(AutoBattleSettingsModel.HEALING_ENABLED_KEY, false))
 	)
-	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL_1
 	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
 	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 3
 	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
@@ -1720,7 +1727,7 @@ func _run_auto_battle_settings_check() -> void:
 
 	player_profile = PlayerProgressModel.default_profile()
 	settings = PlayerProgressModel.auto_battle_settings(player_profile)
-	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_GRACE
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_GRACE_1
 	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
 	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 1
 	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
@@ -1778,8 +1785,8 @@ func _run_auto_battle_settings_check() -> void:
 	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
 		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
 		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
-		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
-		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE,
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1,
+		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE_1,
 		AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL,
 	]
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
@@ -1954,7 +1961,7 @@ func _run_auto_capture_settings_check() -> void:
 	var heal_settings := PlayerProgressModel.auto_battle_settings(heal_hold_profile)
 	heal_settings[AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY] = 90
 	heal_settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
-		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1,
 		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
 		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
 	]
@@ -2799,10 +2806,10 @@ func _run_auto_battle_action_catalog_check() -> void:
 	errors.append_array(BattlePassiveCatalog.validation_errors())
 	errors.append_array(PetSkillTrainingModel.validation_errors())
 	errors.append_array(PetTemplateCatalog.validation_errors())
-	var grace_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_GRACE_ALL)
-	var moist_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_MOIST_SINGLE)
-	var poison_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_SINGLE)
-	var poison_all_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_ALL)
+	var grace_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_GRACE_1)
+	var moist_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_MOIST_1)
+	var poison_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_1)
+	var poison_all_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_MIST_1)
 	var pet_skill_rule := BattleActionCatalog.target_rule_for(BattleModel.PET_SKILL_BUI_CHARGE)
 	var item_heal_all_rule := BattleActionCatalog.target_rule_for(BattleModel.ITEM_HEAL_ALL)
 	var item_heal_rule := BattleActionCatalog.target_rule_for(BattleModel.ITEM_HEAL_SINGLE)
@@ -5166,20 +5173,20 @@ func _run_auto_equipment_check() -> void:
 		and str(starter_slots.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, "")) == "weapon_stone_dagger"
 		and str(starter_slots.get(EquipmentModel.SLOT_HANDS, "")) == "gloves_hide"
 		and str(starter_slots.get(EquipmentModel.SLOT_FEET, "")) == "boots_grass"
-		and starter_spirits.has(BattleModel.SPIRIT_GRACE_ALL)
-		and starter_spirits.has(BattleModel.SPIRIT_MOIST_6)
-		and starter_spirits.has(BattleModel.SPIRIT_POISON_SINGLE)
-		and starter_spirits.has(BattleModel.SPIRIT_POISON_ALL)
+		and starter_spirits.has(BattleModel.SPIRIT_GRACE_1)
+		and starter_spirits.has(BattleModel.SPIRIT_MOIST_1)
+		and starter_spirits.has(BattleModel.SPIRIT_POISON_1)
+		and starter_spirits.has(BattleModel.SPIRIT_POISON_MIST_1)
 	)
 	var starter_battle_state := _battle_reward_test_state("equipment_spirit_check", starter_profile)
 	var starter_player_actor := BattleModel.actor_by_id(starter_battle_state, BattleModel.PLAYER_ACTOR_ID)
 	var starter_actor_spirits := BattleModel.actor_spirit_ids(starter_battle_state, BattleModel.PLAYER_ACTOR_ID)
 	var starter_battle_spirit_ok := (
 		not starter_player_actor.is_empty()
-		and starter_actor_spirits.has(BattleModel.SPIRIT_GRACE_ALL)
-		and starter_actor_spirits.has(BattleModel.SPIRIT_MOIST_6)
-		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_SINGLE)
-		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_ALL)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_GRACE_1)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_MOIST_1)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_1)
+		and starter_actor_spirits.has(BattleModel.SPIRIT_POISON_MIST_1)
 	)
 	var base_profile := PlayerProgressModel.without_equipment(starter_profile)
 	var catalog_ok := (
@@ -5266,6 +5273,7 @@ func _run_auto_equipment_check() -> void:
 		backpack_detail_label != null
 		and backpack_detail_label.text.find("装备槽: 右手武器") >= 0
 		and backpack_detail_label.text.find("攻击 +6") >= 0
+		and backpack_detail_label.text.find("[color=%s]攻击 +6[/color]" % EQUIPMENT_COMPARE_GAIN_COLOR) >= 0
 		and backpack_use_button != null
 		and backpack_use_button.visible
 		and backpack_use_button.text == "装备"
@@ -5278,6 +5286,35 @@ func _run_auto_equipment_check() -> void:
 		and backpack_use_button != null
 		and not backpack_use_button.visible
 		and world_log_message.find("装备木棒") >= 0
+	)
+	_close_backpack_panel()
+
+	var compare_gain_profile := PlayerProgressModel.without_equipment(starter_profile)
+	compare_gain_profile = PlayerProgressModel.with_stone_coins(compare_gain_profile, 300)
+	compare_gain_profile = (PlayerProgressModel.buy_shop_item(compare_gain_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_blessed_club").get("profile", compare_gain_profile) as Dictionary)
+	player_profile = compare_gain_profile
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_blessed_club")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var compare_gain_text := backpack_detail_label.text if backpack_detail_label != null else ""
+	var compare_gain_ok := (
+		compare_gain_text.find("换装预览") >= 0
+		and compare_gain_text.find("[color=%s]攻击 +4[/color]" % EQUIPMENT_COMPARE_GAIN_COLOR) >= 0
+		and compare_gain_text.find("获得 恩惠精灵1") >= 0
+	)
+	_close_backpack_panel()
+
+	var compare_loss_profile := PlayerProgressModel.with_stone_coins(starter_profile, 300)
+	compare_loss_profile = (PlayerProgressModel.buy_shop_item(compare_loss_profile, FIREBUD_EQUIPMENT_SHOP_ID, "armor_toxin_wrap").get("profile", compare_loss_profile) as Dictionary)
+	player_profile = compare_loss_profile
+	backpack_selected_slot_index = _backpack_slot_index_for_item("armor_toxin_wrap")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var compare_loss_text := backpack_detail_label.text if backpack_detail_label != null else ""
+	var compare_loss_ok := (
+		compare_loss_text.find("换装预览") >= 0
+		and compare_loss_text.find("[color=%s]防御 -2[/color]" % EQUIPMENT_COMPARE_LOSS_COLOR) >= 0
+		and compare_loss_text.find("失去 滋润精灵1") >= 0
 	)
 	_close_backpack_panel()
 
@@ -5334,8 +5371,8 @@ func _run_auto_equipment_check() -> void:
 		and PlayerProgressModel.backpack_item_count(extra_sell_profile, "weapon_wooden_club") == 0
 	)
 
-	var status := "ok" if validation_ok and starter_equipment_ok and starter_battle_spirit_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
-	print("equipment check ready: status=%s validation=%s starter=%s starter_spirits=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
+	var status := "ok" if validation_ok and starter_equipment_ok and starter_battle_spirit_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and compare_gain_ok and compare_loss_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
+	print("equipment check ready: status=%s validation=%s starter=%s starter_spirits=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s compare_gain=%s compare_loss=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
 		status,
 		str(validation_ok),
 		str(starter_equipment_ok),
@@ -5348,6 +5385,8 @@ func _run_auto_equipment_check() -> void:
 		str(sell_after_ok),
 		str(ui_detail_ok),
 		str(ui_equip_ok),
+		str(compare_gain_ok),
+		str(compare_loss_ok),
 		str(equipment_panel_ok),
 		str(equipment_unequip_ui_ok),
 		str(equipment_swap_panel_ok),
@@ -5589,7 +5628,7 @@ func _run_auto_battle_settings_preview() -> void:
 	world_log_message = ""
 	player_profile = PlayerProgressModel.default_profile()
 	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
-	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL_1
 	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
 	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 3
 	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
@@ -5600,8 +5639,8 @@ func _run_auto_battle_settings_preview() -> void:
 	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
 		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
 		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
-		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST,
-		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE,
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1,
+		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE_1,
 		AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL,
 	]
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
@@ -5917,6 +5956,20 @@ func _run_equipment_spirit_preview() -> void:
 		_set_battle_message("当前装备提供的精灵。")
 	else:
 		_set_world_log_message("装备精灵预览：地图或遇敌区未找到。")
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_compare_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	_load_map("firebud_village_gate", "from_training_yard")
+	var buy_result := PlayerProgressModel.buy_shop_item(player_profile, FIREBUD_EQUIPMENT_SHOP_ID, "armor_toxin_wrap")
+	player_profile = buy_result.get("profile", player_profile)
+	_set_world_log_message("换装预览：毒藤布衣会替换水纹衣，红色表示减少或失去。")
+	backpack_selected_slot_index = _backpack_slot_index_for_item("armor_toxin_wrap")
+	_open_backpack_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -7216,8 +7269,8 @@ func _auto_apply_poison_resist_case() -> Dictionary:
 		"damage": 8,
 		"speed": 100,
 		"sequence": 77,
-		"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_SINGLE, "毒精灵5"),
-		"spiritId": BattleModel.SPIRIT_POISON_SINGLE,
+		"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
+		"spiritId": BattleModel.SPIRIT_POISON_1,
 		"statusId": BattleModel.STATUS_POISON,
 		"statusTurns": 3,
 		"statusPotency": 4,
@@ -7244,6 +7297,8 @@ func _auto_apply_poison_resist_case() -> Dictionary:
 
 
 func _run_auto_battle_spirit_four_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -7733,7 +7788,9 @@ func _auto_check_grace_spirit(zone: Dictionary) -> bool:
 	_auto_injure_living_side(BattleModel.SIDE_ALLY, 44)
 	_on_battle_command_pressed("spirit")
 	var menu_open := battle_command_owner == "spirit"
-	_on_battle_command_pressed("attack")
+	var command_id := _battle_command_id_for_spirit_id(BattleModel.SPIRIT_GRACE_1)
+	if command_id != "":
+		_on_battle_command_pressed(command_id)
 	var pet_panel_open := battle_command_owner == "pet"
 	_auto_submit_pet_defend_if_needed()
 	var saw_event: bool = await _auto_wait_for_event_type("spirit_heal_all", 1200)
@@ -7741,25 +7798,29 @@ func _auto_check_grace_spirit(zone: Dictionary) -> bool:
 	for target_id in battle_last_event_target_ids:
 		if int((battle_state.get("lastEffectPerTarget", {}) as Dictionary).get(target_id, 0)) > 0:
 			healed_count += 1
-	return menu_open and pet_panel_open and saw_event and battle_last_event_target_ids.size() >= 6 and healed_count >= 6
+	return menu_open and command_id != "" and pet_panel_open and saw_event and battle_last_event_target_ids.size() >= 6 and healed_count >= 6
 
 
 func _auto_check_moist_spirit(zone: Dictionary) -> bool:
 	_start_battle(BattleModel.create_stat_formula_test_battle(zone))
 	await get_tree().process_frame
 	var target_ally_id := "ally_speed_normal"
-	battle_state = BattleModel.set_actor_hp(battle_state, target_ally_id, 110)
+	var target_actor := BattleModel.actor_by_id(battle_state, target_ally_id)
+	battle_state = BattleModel.set_actor_hp(battle_state, target_ally_id, maxi(1, int(target_actor.get("maxHp", 120)) - 60))
 	var before := int(BattleModel.actor_by_id(battle_state, target_ally_id).get("hp", 0))
 	_on_battle_command_pressed("spirit")
-	_on_battle_command_pressed("spirit")
+	var command_id := _battle_command_id_for_spirit_id(BattleModel.SPIRIT_MOIST_1)
+	if command_id != "":
+		_on_battle_command_pressed(command_id)
 	var mode_ok := battle_target_mode == "ally_spirit_single"
-	var actor := BattleModel.actor_by_id(battle_state, target_ally_id)
-	var selected := _select_battle_target_at_screen_point(_world_to_screen(_battle_slot_world_position(str(actor.get("slotId", "")))))
+	if command_id != "" and mode_ok:
+		_submit_spirit_player_command(BattleModel.SPIRIT_MOIST_1, target_ally_id)
+	var selected := command_id != "" and mode_ok
 	var pet_panel_open := battle_command_owner == "pet"
 	_auto_submit_pet_defend_if_needed()
 	var saw_event: bool = await _auto_wait_for_event_type("spirit_heal", 1200)
 	var after := int(BattleModel.actor_by_id(battle_state, target_ally_id).get("hp", 0))
-	return mode_ok and selected and pet_panel_open and saw_event and battle_last_event_target_id == target_ally_id and after > before
+	return command_id != "" and mode_ok and selected and pet_panel_open and saw_event and battle_last_event_target_id == target_ally_id and after > before
 
 
 func _auto_check_poison_spirit(zone: Dictionary) -> bool:
@@ -7768,7 +7829,9 @@ func _auto_check_poison_spirit(zone: Dictionary) -> bool:
 	var target_id := "enemy_back_2"
 	var before := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", 0))
 	_on_battle_command_pressed("spirit")
-	_on_battle_command_pressed("capture")
+	var command_id := _battle_command_id_for_spirit_id(BattleModel.SPIRIT_POISON_1)
+	if command_id != "":
+		_on_battle_command_pressed(command_id)
 	var mode_ok := battle_target_mode == "enemy_spirit_single"
 	var actor := BattleModel.actor_by_id(battle_state, target_id)
 	var selected := _select_battle_target_at_screen_point(_world_to_screen(_battle_slot_world_position(str(actor.get("slotId", "")))))
@@ -7776,7 +7839,7 @@ func _auto_check_poison_spirit(zone: Dictionary) -> bool:
 	_auto_submit_pet_defend_if_needed()
 	var saw_event: bool = await _auto_wait_for_event_type("spirit_poison", 1200)
 	var after := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", 0))
-	return mode_ok and selected and pet_panel_open and saw_event and battle_last_event_target_id == target_id and after < before
+	return command_id != "" and mode_ok and selected and pet_panel_open and saw_event and battle_last_event_target_id == target_id and after < before
 
 
 func _auto_check_poison_all_spirit(zone: Dictionary) -> bool:
@@ -7784,7 +7847,9 @@ func _auto_check_poison_all_spirit(zone: Dictionary) -> bool:
 	await get_tree().process_frame
 	var before_count := BattleModel.living_actor_count(battle_state, BattleModel.SIDE_ENEMY)
 	_on_battle_command_pressed("spirit")
-	_on_battle_command_pressed("defend")
+	var command_id := _battle_command_id_for_spirit_id(BattleModel.SPIRIT_POISON_MIST_1)
+	if command_id != "":
+		_on_battle_command_pressed(command_id)
 	var pet_panel_open := battle_command_owner == "pet"
 	_auto_submit_pet_defend_if_needed()
 	var saw_event: bool = await _auto_wait_for_event_type("spirit_poison_all", 1200)
@@ -7792,7 +7857,14 @@ func _auto_check_poison_all_spirit(zone: Dictionary) -> bool:
 	for target_id in battle_last_event_target_ids:
 		if int((battle_state.get("lastEffectPerTarget", {}) as Dictionary).get(target_id, 0)) > 0:
 			damaged_count += 1
-	return pet_panel_open and saw_event and battle_last_event_target_ids.size() == before_count and damaged_count == before_count
+	return command_id != "" and pet_panel_open and saw_event and battle_last_event_target_ids.size() == before_count and damaged_count == before_count
+
+
+func _battle_command_id_for_spirit_id(spirit_id: String) -> String:
+	for command_id in battle_spirit_button_spirit_ids.keys():
+		if str(battle_spirit_button_spirit_ids.get(command_id, "")) == spirit_id:
+			return str(command_id)
+	return ""
 
 
 func _auto_injure_living_side(side: String, missing_hp: int) -> void:
@@ -8283,32 +8355,23 @@ func _battle_auto_is_first_round() -> bool:
 
 
 func _battle_auto_submit_player_action_id(action_id: String, settings: Dictionary) -> bool:
-	match AutoBattleSettingsModel.normalized_player_action_id(action_id):
+	var normalized_action_id := AutoBattleSettingsModel.normalized_player_action_id(action_id)
+	if str(BattleActionCatalog.action_by_id(normalized_action_id).get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT:
+		if not _battle_player_has_spirit_id(normalized_action_id):
+			return false
+		var spirit_target_id := ""
+		if not BattleActionCatalog.action_is_all(normalized_action_id):
+			if BattleActionCatalog.action_can_target_side(normalized_action_id, BattleModel.SIDE_ALLY):
+				spirit_target_id = _battle_auto_best_ally_target_id()
+			elif BattleActionCatalog.action_can_target_side(normalized_action_id, BattleModel.SIDE_ENEMY):
+				spirit_target_id = _battle_auto_enemy_target_id(settings)
+			if spirit_target_id == "":
+				return false
+		return _battle_auto_submit_spirit_action(normalized_action_id, spirit_target_id)
+	match normalized_action_id:
 		AutoBattleSettingsModel.ACTION_DEFEND:
 			_submit_player_battle_command("defend")
 			return true
-		AutoBattleSettingsModel.ACTION_SPIRIT_GRACE:
-			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_GRACE_ALL)
-		AutoBattleSettingsModel.ACTION_SPIRIT_MOIST:
-			var moist_target_id := _battle_auto_best_ally_target_id()
-			if moist_target_id == "":
-				return false
-			var moist_id := BattleModel.SPIRIT_MOIST_6 if _battle_player_has_spirit_id(BattleModel.SPIRIT_MOIST_6) else BattleModel.SPIRIT_MOIST_SINGLE
-			return _battle_auto_submit_spirit_action(moist_id, moist_target_id)
-		AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_6:
-			var moist_6_target_id := _battle_auto_best_ally_target_id()
-			if moist_6_target_id == "":
-				return false
-			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_MOIST_6, moist_6_target_id)
-		AutoBattleSettingsModel.ACTION_SPIRIT_POISON:
-			var poison_target_id := _battle_auto_enemy_target_id(settings)
-			if poison_target_id == "":
-				return false
-			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_POISON_SINGLE, poison_target_id)
-		AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL:
-			if BattleModel.living_enemy_id(battle_state) == "":
-				return false
-			return _battle_auto_submit_spirit_action(BattleModel.SPIRIT_POISON_ALL)
 		AutoBattleSettingsModel.ACTION_ITEM_MEAT:
 			return _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, _battle_auto_best_ally_target_id())
 		AutoBattleSettingsModel.ACTION_ITEM_HEAL_SINGLE:
@@ -8336,17 +8399,16 @@ func _battle_auto_try_submit_heal(settings: Dictionary) -> bool:
 	if target_id == "":
 		return false
 	for source_id in AutoBattleSettingsModel.normalized_heal_priority(settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, [])):
-		match str(source_id):
-			AutoBattleSettingsModel.HEAL_SPIRIT_MOIST:
-				var moist_id := BattleModel.SPIRIT_MOIST_6 if _battle_player_has_spirit_id(BattleModel.SPIRIT_MOIST_6) else BattleModel.SPIRIT_MOIST_SINGLE
-				if _battle_auto_submit_spirit_action(moist_id, target_id):
-					return true
-			AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_6:
-				if _battle_auto_submit_spirit_action(BattleModel.SPIRIT_MOIST_6, target_id):
-					return true
-			AutoBattleSettingsModel.HEAL_SPIRIT_GRACE:
-				if _battle_auto_submit_spirit_action(BattleModel.SPIRIT_GRACE_ALL):
-					return true
+		var source_id_text := str(source_id)
+		if (
+			str(BattleActionCatalog.action_by_id(source_id_text).get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT
+			and BattleActionCatalog.effect_type_for(source_id_text) == "heal"
+		):
+			var spirit_target_id := "" if BattleActionCatalog.action_is_all(source_id_text) else target_id
+			if _battle_auto_submit_spirit_action(source_id_text, spirit_target_id):
+				return true
+			continue
+		match source_id_text:
 			AutoBattleSettingsModel.HEAL_ITEM_MEAT:
 				if _battle_auto_submit_item_action(BattleModel.ITEM_MEAT_SMALL, target_id):
 					return true
@@ -9142,10 +9204,13 @@ func _build_hud() -> void:
 	backpack_grid.add_theme_constant_override("h_separation", 7)
 	backpack_grid.add_theme_constant_override("v_separation", 7)
 	backpack_scroll.add_child(backpack_grid)
-	backpack_detail_label = Label.new()
+	backpack_detail_label = RichTextLabel.new()
+	backpack_detail_label.bbcode_enabled = true
+	backpack_detail_label.fit_content = false
+	backpack_detail_label.scroll_active = true
 	backpack_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	backpack_detail_label.add_theme_font_size_override("font_size", 16)
-	backpack_detail_label.custom_minimum_size = Vector2(0, 72)
+	backpack_detail_label.custom_minimum_size = Vector2(0, 122)
 	backpack_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_column.add_child(backpack_detail_label)
 	backpack_use_button = Button.new()
@@ -10992,6 +11057,7 @@ func _refresh_backpack_panel() -> void:
 	var selected_item_id := str(selected_slot.get("itemId", ""))
 	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
 	if EquipmentModel.is_equipment(selected_item_id):
+		detail_lines.append_array(_equipment_compare_detail_lines(selected_item_id))
 		detail_lines.append_array(EquipmentModel.detail_lines_for_item(selected_item_id))
 	backpack_detail_label.text = "\n".join(detail_lines)
 	var can_world_use := (
@@ -11033,6 +11099,61 @@ func _select_backpack_slot(slot_index: int) -> void:
 	backpack_selected_slot_index = clampi(slot_index, 0, BackpackModel.SLOT_LIMIT - 1)
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
+
+
+func _equipment_compare_detail_lines(item_id: String) -> Array[String]:
+	var preview := PlayerProgressModel.equipment_change_preview(player_profile, item_id)
+	if preview.is_empty():
+		return []
+	var lines: Array[String] = [
+		"[color=#d7c36a]换装预览[/color]",
+		"当前: %s -> %s" % [
+			_bbcode_escape(str(preview.get("currentItemLabel", "无"))),
+			_bbcode_escape(str(preview.get("newItemLabel", "装备"))),
+		],
+	]
+	if bool(preview.get("unchanged", false)):
+		lines.append("已装备，无变化。")
+		return lines
+	var stat_changes: Array = preview.get("statChanges", [])
+	var impact_parts: Array[String] = []
+	if stat_changes.is_empty():
+		impact_parts.append("属性: 无变化")
+	else:
+		var stat_parts: Array[String] = []
+		for change_value in stat_changes:
+			if not (change_value is Dictionary):
+				continue
+			var change := change_value as Dictionary
+			var delta := int(change.get("delta", 0))
+			if delta == 0:
+				continue
+			stat_parts.append(_colored_equipment_delta("%s %s%d" % [
+				str(change.get("label", "")),
+				"+" if delta > 0 else "",
+				delta,
+			], delta))
+		if stat_parts.is_empty():
+			impact_parts.append("属性: 无变化")
+		else:
+			impact_parts.append("属性: %s" % "、".join(stat_parts))
+	var spirit_parts: Array[String] = []
+	for spirit_id in preview.get("gainedSpiritIds", []):
+		spirit_parts.append(_colored_equipment_delta("获得 %s" % _bbcode_escape(BattleActionCatalog.label_for(str(spirit_id), str(spirit_id))), 1))
+	for spirit_id in preview.get("lostSpiritIds", []):
+		spirit_parts.append(_colored_equipment_delta("失去 %s" % _bbcode_escape(BattleActionCatalog.label_for(str(spirit_id), str(spirit_id))), -1))
+	impact_parts.append("精灵: %s" % ("无变化" if spirit_parts.is_empty() else "、".join(spirit_parts)))
+	lines.append("影响: %s" % "；".join(impact_parts))
+	return lines
+
+
+func _colored_equipment_delta(text: String, delta: int) -> String:
+	var color := EQUIPMENT_COMPARE_GAIN_COLOR if delta > 0 else EQUIPMENT_COMPARE_LOSS_COLOR
+	return "[color=%s]%s[/color]" % [color, text]
+
+
+func _bbcode_escape(text: String) -> String:
+	return text.replace("[", "[lb]").replace("]", "[rb]")
 
 
 func _selected_backpack_slot() -> Dictionary:
@@ -12375,11 +12496,8 @@ func _auto_settings_heal_source_options() -> Array[Dictionary]:
 		var option_id := str(option.get("id", ""))
 		if option_id == AutoBattleSettingsModel.HEAL_NONE:
 			continue
-		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_MOIST and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_SINGLE):
-			continue
-		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_6 and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_6):
-			continue
-		if option_id == AutoBattleSettingsModel.HEAL_SPIRIT_GRACE and not equipped_spirits.has(BattleModel.SPIRIT_GRACE_ALL):
+		var action := BattleActionCatalog.action_by_id(option_id)
+		if not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT and not equipped_spirits.has(option_id):
 			continue
 		options.append(option)
 	return options
@@ -13765,9 +13883,9 @@ func _begin_spirit_target_selection() -> void:
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
-	battle_pending_spirit_id = BattleModel.SPIRIT_MOIST_SINGLE
+	battle_pending_spirit_id = BattleModel.SPIRIT_MOIST_1
 	battle_pending_item_id = ""
-	_set_battle_message("%s：请选择我方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_SINGLE, "滋润精灵5"))
+	_set_battle_message("%s：请选择我方单体。" % BattleActionCatalog.label_for(BattleModel.SPIRIT_MOIST_1, "滋润精灵1"))
 	_sync_battle_buttons()
 	queue_redraw()
 

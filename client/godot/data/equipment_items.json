@@ -43,8 +43,8 @@
       "stats": {
         "maxHp": 8
       },
-      "spiritIds": ["spirit_poison_5"],
-      "description": "火芽村见习猎人的护符，附带毒精灵5。"
+      "spiritIds": ["spirit_poison_1"],
+      "description": "火芽村见习猎人的护符，附带毒精灵1。"
     },
     {
       "id": "accessory_wind_ring",
@@ -54,8 +54,8 @@
       "stats": {
         "quick": 3
       },
-      "spiritIds": ["spirit_poison_mist_5"],
-      "description": "刻着风纹的轻戒，附带毒雾精灵5。"
+      "spiritIds": ["spirit_poison_mist_1"],
+      "description": "刻着风纹的轻戒，附带毒雾精灵1。"
     },
     {
       "id": "helm_leather_cap",
@@ -75,8 +75,8 @@
       "stats": {
         "attack": 7
       },
-      "spiritIds": ["spirit_grace_5"],
-      "description": "训练用长枪，左手装备，附带恩惠精灵5。"
+      "spiritIds": ["spirit_grace_1"],
+      "description": "训练用长枪，左手装备，附带恩惠精灵1。"
     },
     {
       "id": "armor_moist_cloth",
@@ -86,8 +86,8 @@
       "stats": {
         "defense": 4
       },
-      "spiritIds": ["spirit_moist_6"],
-      "description": "织有水纹的衣服，附带滋润精灵6。"
+      "spiritIds": ["spirit_moist_1"],
+      "description": "织有水纹的衣服，附带滋润精灵1。"
     },
     {
       "id": "weapon_stone_dagger",
@@ -118,6 +118,50 @@
         "quick": 4
       },
       "description": "轻便草编靴，适合在草丛里走动。"
+    },
+    {
+      "id": "helm_dew_band",
+      "label": "露草头带",
+      "menuLabel": "露草头带",
+      "slot": "head",
+      "stats": {
+        "defense": 1
+      },
+      "spiritIds": ["spirit_moist_1"],
+      "description": "用露草编成的头带，附带滋润精灵1。"
+    },
+    {
+      "id": "weapon_blessed_club",
+      "label": "祝木棒",
+      "menuLabel": "祝木棒",
+      "slot": "right_hand_weapon",
+      "stats": {
+        "attack": 4
+      },
+      "spiritIds": ["spirit_grace_1"],
+      "description": "刻有祈愿纹的木棒，附带恩惠精灵1。"
+    },
+    {
+      "id": "armor_toxin_wrap",
+      "label": "毒藤布衣",
+      "menuLabel": "毒藤布衣",
+      "slot": "body",
+      "stats": {
+        "defense": 2
+      },
+      "spiritIds": ["spirit_poison_1"],
+      "description": "缝入毒藤纤维的布衣，附带毒精灵1。"
+    },
+    {
+      "id": "boots_mist_sandals",
+      "label": "雾草鞋",
+      "menuLabel": "雾草鞋",
+      "slot": "feet",
+      "stats": {
+        "quick": 2
+      },
+      "spiritIds": ["spirit_poison_mist_1"],
+      "description": "轻薄的雾草鞋，附带毒雾精灵1。"
     },
     {
       "id": "weapon_wooden_club",

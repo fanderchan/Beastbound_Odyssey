@@ -13,11 +13,11 @@
 
 新档默认穿齐 8 个部位，便于第一版验证全身装备和战斗精灵来源：
 
-- 左饰品：`火芽护符`，生命 +8，附带 `毒精灵5`。
-- 右饰品：`风纹戒指`，敏捷 +3，附带 `毒雾精灵5`。
+- 左饰品：`火芽护符`，生命 +8，附带 `毒精灵1`。
+- 右饰品：`风纹戒指`，敏捷 +3，附带 `毒雾精灵1`。
 - 头盔：`皮帽`，防御 +2。
-- 左手武器：`练习长枪`，攻击 +7，附带 `恩惠精灵5`。
-- 衣服：`水纹衣`，防御 +4，附带 `滋润精灵6`。
+- 左手武器：`练习长枪`，攻击 +7，附带 `恩惠精灵1`。
+- 衣服：`水纹衣`，防御 +4，附带 `滋润精灵1`。
 - 右手武器：`石刃短刀`，攻击 +5。
 - 手套：`兽皮手套`，攻击 +2。
 - 鞋子：`草编靴`，敏捷 +4。
@@ -28,7 +28,7 @@
 - 进入战斗时，玩家 actor 会带上从装备汇总出的 `spiritIds`。
 - 精灵菜单不再固定显示 4 个硬编码按钮，而是按当前 actor 的 `spiritIds` 填充。
 - 内挂的人物动作和回血来源会过滤掉未装备的精灵。
-- `滋润精灵6` 新增为独立战斗动作，治疗量为 62。
+- 火芽阶段默认只提供 Lv1 精灵；更高等级精灵保留为后续装备数值阶段使用。
 
 ## 自测
 
@@ -36,7 +36,7 @@
 godot --headless --path client/godot --quit
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-equipment-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-settings-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6500 -- --auto-battle-spirit-four-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-action-catalog-check
 node tools/battle_action_catalog_check.mjs
 ```

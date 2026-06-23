@@ -1,9 +1,15 @@
 extends RefCounted
 
+const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
+
 const SETTINGS_KEY := "autoBattleSettings"
 
 const ACTION_ATTACK := "attack"
 const ACTION_DEFEND := "defend"
+const ACTION_SPIRIT_GRACE_1 := "spirit_grace_1"
+const ACTION_SPIRIT_MOIST_1 := "spirit_moist_1"
+const ACTION_SPIRIT_POISON_1 := "spirit_poison_1"
+const ACTION_SPIRIT_POISON_ALL_1 := "spirit_poison_mist_1"
 const ACTION_SPIRIT_GRACE := "spirit_grace_5"
 const ACTION_SPIRIT_MOIST := "spirit_moist_5"
 const ACTION_SPIRIT_MOIST_6 := "spirit_moist_6"
@@ -21,8 +27,10 @@ const TARGET_LOWEST_HP := "lowest_hp"
 const TARGET_LOWEST_HP_PERCENT := "lowest_hp_percent"
 
 const HEAL_NONE := "none"
+const HEAL_SPIRIT_MOIST_1 := ACTION_SPIRIT_MOIST_1
 const HEAL_SPIRIT_MOIST := ACTION_SPIRIT_MOIST
 const HEAL_SPIRIT_MOIST_6 := ACTION_SPIRIT_MOIST_6
+const HEAL_SPIRIT_GRACE_1 := ACTION_SPIRIT_GRACE_1
 const HEAL_SPIRIT_GRACE := ACTION_SPIRIT_GRACE
 const HEAL_ITEM_MEAT := ACTION_ITEM_MEAT
 const HEAL_ITEM_HEAL_SINGLE := ACTION_ITEM_HEAL_SINGLE
@@ -56,10 +64,10 @@ static func default_settings() -> Dictionary:
 		PLAYER_HP_PERCENT_KEY: 45,
 		PET_HP_PERCENT_KEY: 45,
 		HEAL_PRIORITY_KEY: [
-			HEAL_SPIRIT_MOIST,
+			HEAL_SPIRIT_MOIST_1,
 			HEAL_ITEM_MEAT,
 			HEAL_ITEM_HEAL_SINGLE,
-			HEAL_SPIRIT_GRACE,
+			HEAL_SPIRIT_GRACE_1,
 			HEAL_ITEM_HEAL_ALL,
 		],
 	}
@@ -85,6 +93,9 @@ static func normalized_player_action_id(action_id: String) -> String:
 	for option in player_action_options():
 		if str(option.get("id", "")) == normalized_id:
 			return normalized_id
+	var action := BattleActionCatalog.action_by_id(normalized_id)
+	if not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT:
+		return normalized_id
 	return ACTION_ATTACK
 
 
@@ -105,6 +116,13 @@ static func normalized_heal_source(source_id: String) -> String:
 	for option in heal_source_options():
 		if str(option.get("id", "")) == normalized_id:
 			return normalized_id
+	var action := BattleActionCatalog.action_by_id(normalized_id)
+	if (
+		not action.is_empty()
+		and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT
+		and BattleActionCatalog.effect_type_for(normalized_id) == "heal"
+	):
+		return normalized_id
 	return HEAL_NONE
 
 
@@ -133,6 +151,10 @@ static func player_action_options() -> Array[Dictionary]:
 	return [
 		{"id": ACTION_ATTACK, "label": "攻击"},
 		{"id": ACTION_DEFEND, "label": "防御"},
+		{"id": ACTION_SPIRIT_GRACE_1, "label": "恩惠精灵1"},
+		{"id": ACTION_SPIRIT_MOIST_1, "label": "滋润精灵1"},
+		{"id": ACTION_SPIRIT_POISON_1, "label": "毒精灵1"},
+		{"id": ACTION_SPIRIT_POISON_ALL_1, "label": "毒雾精灵1"},
 		{"id": ACTION_SPIRIT_GRACE, "label": "恩惠精灵5"},
 		{"id": ACTION_SPIRIT_MOIST, "label": "滋润精灵5"},
 		{"id": ACTION_SPIRIT_MOIST_6, "label": "滋润精灵6"},
@@ -158,10 +180,12 @@ static func target_mode_options() -> Array[Dictionary]:
 static func heal_source_options() -> Array[Dictionary]:
 	return [
 		{"id": HEAL_NONE, "label": "无"},
+		{"id": HEAL_SPIRIT_MOIST_1, "label": "滋润精灵1"},
 		{"id": HEAL_SPIRIT_MOIST, "label": "滋润精灵5"},
 		{"id": HEAL_SPIRIT_MOIST_6, "label": "滋润精灵6"},
 		{"id": HEAL_ITEM_MEAT, "label": "肉"},
 		{"id": HEAL_ITEM_HEAL_SINGLE, "label": "回复药5"},
+		{"id": HEAL_SPIRIT_GRACE_1, "label": "恩惠精灵1"},
 		{"id": HEAL_SPIRIT_GRACE, "label": "恩惠精灵5"},
 		{"id": HEAL_ITEM_HEAL_ALL, "label": "群体草药5"},
 	]
