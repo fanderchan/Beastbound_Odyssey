@@ -88,6 +88,17 @@ static func normalize_settings(value) -> Dictionary:
 	return normalized
 
 
+static func normalize_settings_for_available_spirits(value, available_spirit_ids: Array[String]) -> Dictionary:
+	var normalized := normalize_settings(value)
+	var available := _unique_string_array(available_spirit_ids)
+	for key in [PLAYER_FIRST_ROUND_ACTION_KEY, PLAYER_NORMAL_ACTION_KEY]:
+		var action_id := str(normalized.get(key, ACTION_ATTACK))
+		if _is_spirit_action(action_id) and not available.has(action_id):
+			normalized[key] = ACTION_ATTACK
+	normalized[HEAL_PRIORITY_KEY] = _heal_priority_for_available_spirits(normalized.get(HEAL_PRIORITY_KEY, []), available)
+	return normalized
+
+
 static func normalized_player_action_id(action_id: String) -> String:
 	var normalized_id := action_id.strip_edges()
 	for option in player_action_options():
@@ -144,6 +155,47 @@ static func normalized_heal_priority(value) -> Array[String]:
 			result.append(normalized_source)
 		if result.size() >= MAX_HEAL_PRIORITY_SLOTS:
 			break
+	return result
+
+
+static func _heal_priority_for_available_spirits(value, available_spirit_ids: Array[String]) -> Array[String]:
+	var result: Array[String] = []
+	for source_id in normalized_heal_priority(value):
+		var normalized_source := normalized_heal_source(str(source_id))
+		if _heal_source_allowed_for_available_spirits(normalized_source, available_spirit_ids) and not result.has(normalized_source):
+			result.append(normalized_source)
+		if result.size() >= MAX_HEAL_PRIORITY_SLOTS:
+			return result
+	for source_id in default_settings().get(HEAL_PRIORITY_KEY, []):
+		var normalized_source := normalized_heal_source(str(source_id))
+		if _heal_source_allowed_for_available_spirits(normalized_source, available_spirit_ids) and not result.has(normalized_source):
+			result.append(normalized_source)
+		if result.size() >= MAX_HEAL_PRIORITY_SLOTS:
+			break
+	if result.is_empty():
+		result.append(HEAL_ITEM_MEAT)
+	return result
+
+
+static func _heal_source_allowed_for_available_spirits(source_id: String, available_spirit_ids: Array[String]) -> bool:
+	if source_id == HEAL_NONE:
+		return false
+	if _is_spirit_action(source_id):
+		return available_spirit_ids.has(source_id)
+	return normalized_heal_source(source_id) != HEAL_NONE
+
+
+static func _is_spirit_action(action_id: String) -> bool:
+	var action := BattleActionCatalog.action_by_id(action_id)
+	return not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT
+
+
+static func _unique_string_array(values: Array[String]) -> Array[String]:
+	var result: Array[String] = []
+	for value in values:
+		var text := str(value)
+		if text != "" and not result.has(text):
+			result.append(text)
 	return result
 
 

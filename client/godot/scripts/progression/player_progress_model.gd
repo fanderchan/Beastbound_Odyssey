@@ -777,7 +777,13 @@ static func with_battle_item_inventory(profile: Dictionary, inventory: Dictionar
 
 
 static func auto_battle_settings(profile: Dictionary) -> Dictionary:
-	return AutoBattleSettingsModel.normalize_settings(normalize_profile(profile).get(AUTO_BATTLE_SETTINGS_KEY, {}))
+	var normalized := normalize_profile(profile)
+	var slots := normalized.get(EQUIPMENT_SLOTS_KEY, {}) as Dictionary
+	var durability := normalized.get(EQUIPMENT_DURABILITY_KEY, {}) as Dictionary
+	return AutoBattleSettingsModel.normalize_settings_for_available_spirits(
+		normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}),
+		_equipment_spirit_ids_from_slots(slots, durability)
+	)
 
 
 static func with_auto_battle_settings(profile: Dictionary, settings: Dictionary) -> Dictionary:
@@ -2602,7 +2608,10 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			seen_form_ids.append(form_id)
 	normalized[PET_CODEX_SEEN_FORM_IDS_KEY] = seen_form_ids
 	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
-	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings(normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}))
+	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings_for_available_spirits(
+		normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}),
+		_equipment_spirit_ids_from_slots(equipment_slots_value, equipment_durability_value)
+	)
 	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(normalized.get(AUTO_CAPTURE_SETTINGS_KEY, {}))
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))

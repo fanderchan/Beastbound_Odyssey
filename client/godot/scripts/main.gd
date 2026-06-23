@@ -319,6 +319,7 @@ var auto_battle_combo_check: bool = false
 var auto_battle_capture_check: bool = false
 var auto_capture_tools_check: bool = false
 var auto_battle_spirit_check: bool = false
+var auto_battle_spirit_source_check: bool = false
 var auto_battle_pet_command_check: bool = false
 var auto_battle_pet_target_check: bool = false
 var auto_battle_spirit_four_check: bool = false
@@ -417,6 +418,7 @@ var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
 var auto_battle_settings_preview: bool = false
+var battle_spirit_source_preview: bool = false
 var auto_capture_settings_preview: bool = false
 var training_partner_demo: bool = false
 var hang_settings_preview: bool = false
@@ -750,6 +752,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_capture_tools_check")
 	elif auto_battle_spirit_check:
 		call_deferred("_run_auto_battle_spirit_check")
+	elif auto_battle_spirit_source_check:
+		call_deferred("_run_auto_battle_spirit_source_check")
 	elif auto_battle_pet_command_check:
 		call_deferred("_run_auto_battle_pet_command_check")
 	elif auto_battle_pet_target_check:
@@ -790,6 +794,8 @@ func _ready() -> void:
 		call_deferred("_open_battle_auto_10v10_preview")
 	elif auto_battle_settings_preview:
 		call_deferred("_run_auto_battle_settings_preview")
+	elif battle_spirit_source_preview:
+		call_deferred("_run_battle_spirit_source_preview")
 	elif auto_capture_settings_preview:
 		call_deferred("_run_auto_capture_settings_preview")
 	elif training_partner_demo:
@@ -889,6 +895,8 @@ func _apply_preview_window_args() -> void:
 			auto_capture_tools_check = true
 		elif arg == "--auto-battle-spirit-check":
 			auto_battle_spirit_check = true
+		elif arg == "--auto-battle-spirit-source-check":
+			auto_battle_spirit_source_check = true
 		elif arg == "--auto-battle-pet-command-check":
 			auto_battle_pet_command_check = true
 		elif arg == "--auto-battle-pet-target-check":
@@ -1085,6 +1093,8 @@ func _apply_preview_window_args() -> void:
 			battle_auto_10v10_preview = true
 		elif arg == "--auto-battle-settings-preview":
 			auto_battle_settings_preview = true
+		elif arg == "--battle-spirit-source-preview":
+			battle_spirit_source_preview = true
 		elif arg == "--auto-capture-settings-preview":
 			auto_capture_settings_preview = true
 		elif arg == "--training-partner-demo":
@@ -3001,6 +3011,97 @@ func _run_auto_battle_spirit_check() -> void:
 		ally_after,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_spirit_source_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_1
+	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_1
+	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
+		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1,
+		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE_1,
+		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
+	]
+	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
+	var configured_settings := PlayerProgressModel.auto_battle_settings(player_profile)
+	var configured_ok := (
+		str(configured_settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, "")) == AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_1
+		and (configured_settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, []) as Array).has(AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1)
+	)
+
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_auto_settings_panel()
+	await get_tree().process_frame
+	var first_action_option := auto_settings_controls.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, null) as OptionButton
+	var heal_priority_option := auto_settings_controls.get("healPriority0", null) as OptionButton
+	var settings_label_ok := (
+		_option_button_has_item_text(first_action_option, "滋润精灵1（水纹衣）")
+		and _option_button_has_item_text(heal_priority_option, "滋润精灵1（水纹衣）")
+		and _option_button_has_item_text(first_action_option, "恩惠精灵1（练习长枪）")
+	)
+	_close_auto_settings_panel()
+
+	var zones := EncounterModel.encounter_zones(map_data)
+	var battle_menu_ok := false
+	if not zones.is_empty():
+		_start_battle(BattleModel.create_stat_formula_test_battle(zones[0] as Dictionary))
+		await get_tree().process_frame
+		_on_battle_command_pressed("spirit")
+		await get_tree().process_frame
+		var visible_texts := _battle_visible_button_texts()
+		battle_menu_ok = (
+			battle_command_owner == "spirit"
+			and _texts_contain(visible_texts, "滋润精灵1（水纹衣）")
+			and _texts_contain(visible_texts, "恩惠精灵1（练习长枪）")
+		)
+
+	var unequip_result := PlayerProgressModel.unequip_slot(player_profile, EquipmentModel.SLOT_BODY)
+	var unequipped_profile := unequip_result.get("profile", player_profile) as Dictionary
+	var unequipped_settings := PlayerProgressModel.auto_battle_settings(unequipped_profile)
+	var unequipped_priority: Array = unequipped_settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, [])
+	var unequip_sanitize_ok := (
+		bool(unequip_result.get("ok", false))
+		and str(unequipped_settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, "")) == AutoBattleSettingsModel.ACTION_ATTACK
+		and str(unequipped_settings.get(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY, "")) == AutoBattleSettingsModel.ACTION_ATTACK
+		and not unequipped_priority.has(AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1)
+		and unequipped_priority.has(AutoBattleSettingsModel.HEAL_SPIRIT_GRACE_1)
+	)
+
+	var broken_profile := player_profile.duplicate(true)
+	var durability := PlayerProgressModel.equipment_durability(broken_profile)
+	durability[EquipmentModel.SLOT_BODY] = 0
+	broken_profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	broken_profile = PlayerProgressModel.normalize_profile(broken_profile)
+	var broken_settings := PlayerProgressModel.auto_battle_settings(broken_profile)
+	var broken_priority: Array = broken_settings.get(AutoBattleSettingsModel.HEAL_PRIORITY_KEY, [])
+	var broken_sanitize_ok := (
+		not PlayerProgressModel.equipment_spirit_ids(broken_profile).has(AutoBattleSettingsModel.ACTION_SPIRIT_MOIST_1)
+		and str(broken_settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, "")) == AutoBattleSettingsModel.ACTION_ATTACK
+		and not broken_priority.has(AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1)
+	)
+	var status := "ok" if configured_ok and settings_label_ok and battle_menu_ok and unequip_sanitize_ok and broken_sanitize_ok else "failed"
+	print("battle spirit source check ready: status=%s configured=%s settings_label=%s battle_menu=%s unequip_sanitize=%s broken_sanitize=%s" % [
+		status,
+		str(configured_ok),
+		str(settings_label_ok),
+		str(battle_menu_ok),
+		str(unequip_sanitize_ok),
+		str(broken_sanitize_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _option_button_has_item_text(option: OptionButton, needle: String) -> bool:
+	if option == null:
+		return false
+	for index in range(option.item_count):
+		if option.get_item_text(index).find(needle) >= 0:
+			return true
+	return false
 
 
 func _run_auto_battle_action_catalog_check() -> void:
@@ -6589,6 +6690,23 @@ func _run_auto_battle_settings_preview() -> void:
 	_open_auto_settings_panel()
 	if status_label != null:
 		_update_hud_text()
+
+
+func _run_battle_spirit_source_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if loaded and not zones.is_empty():
+		_start_battle(BattleModel.create_stat_formula_test_battle(zones[0] as Dictionary))
+		await get_tree().process_frame
+		_open_spirit_command_menu()
+		_set_battle_message("Phase86：精灵按钮显示来源装备。")
+	else:
+		_set_world_log_message("精灵来源预览：地图或遇敌区未找到。")
+	await get_tree().create_timer(1.0).timeout
 
 
 func _run_auto_capture_settings_preview() -> void:
@@ -10266,7 +10384,7 @@ func _apply_spirit_button_labels() -> void:
 		var command_id := str(command_slots[index])
 		var spirit_id := str(spirit_ids[index])
 		battle_spirit_button_spirit_ids[command_id] = spirit_id
-		labels[command_id] = BattleActionCatalog.label_for(spirit_id, spirit_id)
+		labels[command_id] = _equipment_spirit_label_with_source(spirit_id)
 	if spirit_ids.is_empty():
 		labels["attack"] = "无精灵"
 	_apply_battle_button_labels(labels)
@@ -12965,6 +13083,21 @@ func _equipment_spirit_sources_text(entry: Dictionary) -> String:
 	return "未知装备" if parts.is_empty() else "、".join(parts)
 
 
+func _equipment_spirit_sources_for_id(spirit_id: String) -> String:
+	for entry in PlayerProgressModel.equipment_spirit_source_entries(player_profile):
+		if str(entry.get("spiritId", "")) == spirit_id:
+			return _equipment_spirit_sources_text(entry as Dictionary)
+	return ""
+
+
+func _equipment_spirit_label_with_source(spirit_id: String) -> String:
+	var label := BattleActionCatalog.label_for(spirit_id, spirit_id)
+	var source_text := _equipment_spirit_sources_for_id(spirit_id)
+	if source_text == "" or source_text == "未知装备":
+		return label
+	return "%s（%s）" % [label, source_text]
+
+
 func _refresh_equipment_panel() -> void:
 	if equipment_panel == null or equipment_grid == null or equipment_detail_label == null:
 		return
@@ -15218,7 +15351,7 @@ func _auto_settings_player_action_options() -> Array[Dictionary]:
 	for spirit_id in PlayerProgressModel.equipment_spirit_ids(player_profile):
 		options.append({
 			"id": spirit_id,
-			"label": BattleActionCatalog.label_for(spirit_id, spirit_id),
+			"label": _equipment_spirit_label_with_source(spirit_id),
 		})
 	for option in AutoBattleSettingsModel.player_action_options():
 		var option_id := str(option.get("id", ""))
@@ -15235,9 +15368,15 @@ func _auto_settings_heal_source_options() -> Array[Dictionary]:
 		if option_id == AutoBattleSettingsModel.HEAL_NONE:
 			continue
 		var action := BattleActionCatalog.action_by_id(option_id)
-		if not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT and not equipped_spirits.has(option_id):
-			continue
-		options.append(option)
+		if not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_SPIRIT:
+			if not equipped_spirits.has(option_id):
+				continue
+			options.append({
+				"id": option_id,
+				"label": _equipment_spirit_label_with_source(option_id),
+			})
+		else:
+			options.append(option)
 	return options
 
 
