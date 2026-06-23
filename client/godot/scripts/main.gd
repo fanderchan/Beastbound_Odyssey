@@ -183,11 +183,12 @@ var shop_coin_label: Label
 var shop_buy_button: Button
 var shop_sell_button: Button
 var shop_list_container: VBoxContainer
-var shop_detail_label: Label
+var shop_detail_label: RichTextLabel
 var shop_quantity_minus_button: Button
 var shop_quantity_spinbox: SpinBox
 var shop_quantity_plus_button: Button
 var shop_quantity_max_button: Button
+var shop_equip_after_buy_button: Button
 var shop_action_button: Button
 var shop_repair_button: Button
 var shop_close_button: Button
@@ -196,6 +197,7 @@ var shop_active_id: String = ShopCatalogModel.DEFAULT_SHOP_ID
 var shop_mode: String = "buy"
 var shop_selected_item_id: String = ""
 var shop_quantity: int = 1
+var shop_equip_after_buy: bool = false
 var pet_panel: PanelContainer
 var pet_filter_option: OptionButton
 var pet_sort_option: OptionButton
@@ -369,6 +371,7 @@ var auto_map_panel_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
+var auto_equipment_shop_preview_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
 var auto_equipment_requirement_check: bool = false
@@ -382,6 +385,7 @@ var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var equipment_requirement_preview: bool = false
+var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
 var shop_preview: bool = false
@@ -640,6 +644,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_world_log_panel_check")
 	elif auto_equipment_check:
 		call_deferred("_run_auto_equipment_check")
+	elif auto_equipment_shop_preview_check:
+		call_deferred("_run_auto_equipment_shop_preview_check")
 	elif auto_player_status_check:
 		call_deferred("_run_auto_player_status_check")
 	elif auto_player_stat_points_check:
@@ -666,6 +672,8 @@ func _ready() -> void:
 		call_deferred("_run_player_stat_points_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
+	elif equipment_shop_preview:
+		call_deferred("_run_equipment_shop_preview")
 	elif equipment_durability_preview:
 		call_deferred("_run_equipment_durability_preview")
 	elif equipment_durability_visual_preview:
@@ -979,6 +987,8 @@ func _apply_preview_window_args() -> void:
 			auto_world_log_panel_check = true
 		elif arg == "--auto-equipment-check":
 			auto_equipment_check = true
+		elif arg == "--auto-equipment-shop-preview-check":
+			auto_equipment_shop_preview_check = true
 		elif arg == "--auto-player-status-check":
 			auto_player_status_check = true
 		elif arg == "--auto-player-stat-points-check":
@@ -1005,6 +1015,8 @@ func _apply_preview_window_args() -> void:
 			player_stat_points_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
+		elif arg == "--equipment-shop-preview":
+			equipment_shop_preview = true
 		elif arg == "--equipment-durability-preview":
 			equipment_durability_preview = true
 		elif arg == "--equipment-durability-visual-preview":
@@ -5509,6 +5521,84 @@ func _run_auto_shop_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_shop_preview_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	_select_shop_item("weapon_stone_axe")
+	await get_tree().process_frame
+	var detail_text := shop_detail_label.text if shop_detail_label != null else ""
+	var detail_ok := (
+		detail_text.find("换装预览") >= 0
+		and detail_text.find("当前: 石刃短刀 -> 石斧") >= 0
+		and detail_text.find("[color=%s]攻击 +6[/color]" % EQUIPMENT_COMPARE_GAIN_COLOR) >= 0
+		and detail_text.find("[color=%s]敏捷 -2[/color]" % EQUIPMENT_COMPARE_LOSS_COLOR) >= 0
+		and shop_detail_label != null
+		and shop_detail_label.bbcode_enabled
+	)
+	var direct_button_ready_ok := (
+		shop_equip_after_buy_button != null
+		and shop_equip_after_buy_button.visible
+		and not shop_equip_after_buy_button.disabled
+		and not shop_equip_after_buy_button.button_pressed
+		and shop_action_button != null
+		and shop_action_button.text.begins_with("购买 x1")
+	)
+	_on_shop_action_pressed()
+	await get_tree().process_frame
+	var buy_only_ok := (
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_stone_dagger"
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_stone_axe") == 1
+		and world_log_message.find("购买石斧") >= 0
+	)
+	if shop_equip_after_buy_button != null:
+		shop_equip_after_buy_button.button_pressed = true
+	_on_shop_equip_after_buy_pressed()
+	await get_tree().process_frame
+	var direct_action_ok := (
+		shop_equip_after_buy
+		and shop_action_button != null
+		and shop_action_button.text.begins_with("购买并装备 x1")
+	)
+	_on_shop_action_pressed()
+	await get_tree().process_frame
+	var direct_buy_ok := (
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_stone_axe"
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_stone_axe") == 1
+		and PlayerProgressModel.backpack_item_count(player_profile, "weapon_stone_dagger") == 1
+		and world_log_message.find("购买石斧") >= 0
+		and world_log_message.find("装备石斧，换下石刃短刀") >= 0
+	)
+	_select_shop_item("weapon_bone_blade")
+	await get_tree().process_frame
+	var bone_text := shop_detail_label.text if shop_detail_label != null else ""
+	var requirement_block_ok := (
+		bone_text.find("需求: Lv3") >= 0
+		and bone_text.find("当前 Lv1") >= 0
+		and shop_equip_after_buy_button != null
+		and shop_equip_after_buy_button.visible
+		and shop_equip_after_buy_button.disabled
+		and shop_equip_after_buy_button.text.find("未满足") >= 0
+	)
+	var status := "ok" if detail_ok and direct_button_ready_ok and buy_only_ok and direct_action_ok and direct_buy_ok and requirement_block_ok else "failed"
+	print("equipment shop preview check ready: status=%s detail=%s button=%s buy_only=%s direct_action=%s direct_buy=%s requirement=%s equipped=%s axe_count=%d dagger_count=%d" % [
+		status,
+		str(detail_ok),
+		str(direct_button_ready_ok),
+		str(buy_only_ok),
+		str(direct_action_ok),
+		str(direct_buy_ok),
+		str(requirement_block_ok),
+		PlayerProgressModel.equipped_item_id(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON),
+		PlayerProgressModel.backpack_item_count(player_profile, "weapon_stone_axe"),
+		PlayerProgressModel.backpack_item_count(player_profile, "weapon_stone_dagger"),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_equipment_check() -> void:
 	profile_save_enabled = false
 	var validation_ok := EquipmentModel.validation_errors().is_empty()
@@ -6763,6 +6853,21 @@ func _run_equipment_compare_preview() -> void:
 	_set_world_log_message("换装预览：毒藤布衣会替换水纹衣，红色表示减少或失去。")
 	backpack_selected_slot_index = _backpack_slot_index_for_item("armor_toxin_wrap")
 	_open_backpack_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_shop_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("目标Phase72：装备商店显示换装预览，可选择购买后装备。")
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	_select_shop_item("weapon_stone_axe")
+	if shop_equip_after_buy_button != null:
+		shop_equip_after_buy_button.button_pressed = true
+	_on_shop_equip_after_buy_pressed()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -10861,12 +10966,23 @@ func _build_hud() -> void:
 	shop_list_container.add_theme_constant_override("separation", 7)
 	shop_scroll.add_child(shop_list_container)
 
-	shop_detail_label = Label.new()
+	shop_detail_label = RichTextLabel.new()
+	shop_detail_label.bbcode_enabled = true
 	shop_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	shop_detail_label.custom_minimum_size = Vector2(0, 78)
+	shop_detail_label.fit_content = false
+	shop_detail_label.scroll_active = true
+	shop_detail_label.custom_minimum_size = Vector2(0, 126)
 	shop_detail_label.add_theme_font_size_override("font_size", 16)
 	shop_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_column.add_child(shop_detail_label)
+	shop_equip_after_buy_button = Button.new()
+	shop_equip_after_buy_button.text = "购买后装备"
+	shop_equip_after_buy_button.toggle_mode = true
+	shop_equip_after_buy_button.visible = false
+	shop_equip_after_buy_button.custom_minimum_size = Vector2(0, 40)
+	shop_equip_after_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_equip_after_buy_button.pressed.connect(_on_shop_equip_after_buy_pressed)
+	shop_column.add_child(shop_equip_after_buy_button)
 	var shop_quantity_row := HBoxContainer.new()
 	shop_quantity_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_quantity_row.add_theme_constant_override("separation", 8)
@@ -13544,12 +13660,14 @@ func _set_shop_mode(next_mode: String) -> void:
 	shop_mode = "sell" if next_mode == "sell" else "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
 	shop_quantity = 1
+	shop_equip_after_buy = false
 	_refresh_shop_panel()
 
 
 func _select_shop_item(item_id: String) -> void:
 	shop_selected_item_id = item_id
 	shop_quantity = 1
+	shop_equip_after_buy = false
 	_refresh_shop_panel()
 
 
@@ -13592,6 +13710,7 @@ func _refresh_shop_panel() -> void:
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
 	shop_detail_label.text = _shop_detail_text(shop_selected_item_id)
 	_refresh_shop_quantity_controls()
+	_refresh_shop_equip_after_buy_button()
 	if shop_action_button != null:
 		shop_action_button.text = _shop_action_text()
 		shop_action_button.disabled = shop_selected_item_id == "" or _shop_quantity_max(shop_selected_item_id) <= 0
@@ -13651,7 +13770,8 @@ func _shop_detail_text(item_id: String) -> String:
 		ShopCatalogModel.sell_price_for(shop_active_id, item_id),
 	])
 	if EquipmentModel.is_equipment(item_id):
-		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, false))
+		lines.append_array(_equipment_compare_detail_lines(item_id))
+		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, true))
 	return "\n".join(lines)
 
 
@@ -13698,6 +13818,36 @@ func _refresh_shop_quantity_controls() -> void:
 		shop_quantity_max_button.disabled = not controls_enabled or shop_quantity >= max_quantity
 
 
+func _refresh_shop_equip_after_buy_button() -> void:
+	if shop_equip_after_buy_button == null:
+		return
+	var is_buy_equipment := shop_mode == "buy" and EquipmentModel.is_equipment(shop_selected_item_id)
+	shop_equip_after_buy_button.visible = is_buy_equipment
+	if not is_buy_equipment:
+		shop_equip_after_buy = false
+		shop_equip_after_buy_button.button_pressed = false
+		shop_equip_after_buy_button.disabled = true
+		return
+	var equip_check := PlayerProgressModel.can_equip_item(player_profile, shop_selected_item_id)
+	var can_buy := _shop_quantity_max(shop_selected_item_id) > 0
+	var can_equip := bool(equip_check.get("ok", false))
+	if not can_buy or not can_equip:
+		shop_equip_after_buy = false
+	shop_equip_after_buy_button.disabled = not can_buy or not can_equip
+	shop_equip_after_buy_button.button_pressed = shop_equip_after_buy
+	shop_equip_after_buy_button.text = "购买后装备" if can_equip else "购买后装备（未满足）"
+
+
+func _on_shop_equip_after_buy_pressed() -> void:
+	if shop_equip_after_buy_button == null or shop_equip_after_buy_button.disabled:
+		shop_equip_after_buy = false
+	else:
+		shop_equip_after_buy = shop_equip_after_buy_button.button_pressed
+	_refresh_shop_equip_after_buy_button()
+	if shop_action_button != null:
+		shop_action_button.text = _shop_action_text()
+
+
 func _shop_action_text() -> String:
 	if shop_selected_item_id == "":
 		return "出售" if shop_mode == "sell" else "购买"
@@ -13705,6 +13855,8 @@ func _shop_action_text() -> String:
 	var total_price := unit_price * shop_quantity
 	if shop_mode == "sell":
 		return "出售 x%d（%d石币）" % [shop_quantity, total_price]
+	if shop_equip_after_buy and EquipmentModel.is_equipment(shop_selected_item_id):
+		return "购买并装备 x%d（%d石币）" % [shop_quantity, total_price]
 	return "购买 x%d（%d石币）" % [shop_quantity, total_price]
 
 
@@ -13721,12 +13873,18 @@ func _on_shop_action_pressed() -> void:
 			"itemId": str(result.get("itemId", shop_selected_item_id)),
 			"amount": maxi(1, int(result.get("amount", shop_quantity))),
 		}))
+		if shop_equip_after_buy and EquipmentModel.is_equipment(shop_selected_item_id):
+			var equip_result := PlayerProgressModel.equip_item(player_profile, shop_selected_item_id)
+			player_profile = equip_result.get("profile", player_profile)
+			log_lines.append(str(equip_result.get("message", "")))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message("\n".join(log_lines))
 	if shop_mode == "sell" and PlayerProgressModel.backpack_item_count(player_profile, shop_selected_item_id) <= 0:
 		shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
+	if shop_mode != "buy" or not EquipmentModel.is_equipment(shop_selected_item_id):
+		shop_equip_after_buy = false
 	_refresh_shop_panel()
 	if status_label != null:
 		_update_hud_text()
