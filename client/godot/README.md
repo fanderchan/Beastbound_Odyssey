@@ -16,7 +16,7 @@ godot --headless --path . --quit
 
 ## Current Slice
 
-Phase 57 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
+Phase 58 contains a minimal isometric exploration, encounter loop, hang-up walking prototype, encounter stones, 10v10 formation, local battle-command, battle auto-attack toggle, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
 
 - Mouse click-to-pathfind on PC.
 - Touch tap-to-pathfind on mobile.
@@ -36,6 +36,7 @@ Phase 57 contains a minimal isometric exploration, encounter loop, hang-up walki
 - The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
 - Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
 - Battle commands arranged as `攻击` / `精灵` / `捕捉` / `help` and `防御` / `物品` / `换宠` / `逃跑`.
+- The battle panel has a short `自动` toggle that auto-submits normal attacks for the player and controlled pet against the first living enemy.
 - Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
 - 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.
 - The controlled human placeholder uses a distinct red/gold color in the ally formation.
@@ -49,8 +50,8 @@ Phase 57 contains a minimal isometric exploration, encounter loop, hang-up walki
 - `捕捉` can catch a weakened wild enemy.
 - In 10v10, only `见习猎人` and `小布伊` are player-controlled; the other allies use simple attack AI.
 - `精灵` opens the player spirit menu: `恩惠精灵5`, `滋润精灵5`, `毒精灵5`, `毒雾精灵5`.
-- After the player command, the same command panel switches to `PET`.
-- PET mode exposes `技1 攻击`, `技2 防御`, and `技3 布伊冲撞`; PET enemy skills use the same hover/click or tap target-selection flow.
+- After the player command, the same command panel switches to `宠物`.
+- Pet mode exposes `技1 攻击`, `技2 防御`, and `技3 布伊冲撞`; pet enemy skills use the same hover/click or tap target-selection flow.
 - Current player, spirit, pet-skill, and item labels/effects/target rules are declared in `data/battle_actions.json`.
 - The action catalog uses explicit booleans for all-target, ally-target, enemy-target, selection-required, and self-only behavior.
 - `物品` opens a test item menu with `群体草药5`, `回复药5`, `毒粉5`, and `毒雾粉5`.

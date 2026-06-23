@@ -35,6 +35,7 @@ const PET_DETAIL_MODE_CODEX := "codex"
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
+const BATTLE_AUTO_ATTACK_STEP_DELAY := 0.16
 const BATTLE_PASSIVE_LABEL_FONT_SIZE := 15
 const BATTLE_PASSIVE_MAX_LINES := 2
 const BATTLE_PASSIVE_PANEL_HEIGHT := 64.0
@@ -90,6 +91,7 @@ var encounter_enter_button: Button
 var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
 var battle_command_title_label: Label
+var battle_auto_button: Button
 var battle_command_button_grid: GridContainer
 var battle_passive_panel: Panel
 var battle_passive_label: Label
@@ -186,6 +188,7 @@ var auto_npc_collision_check: bool = false
 var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
+var auto_battle_auto_attack_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
@@ -339,6 +342,10 @@ var encounter_stone_item_id: String = ""
 var encounter_stone_interval: float = 0.0
 var encounter_stone_remaining: float = 0.0
 var encounter_stone_elapsed: float = 0.0
+var battle_auto_attack_enabled: bool = false
+var battle_auto_attack_delay: float = 0.0
+var battle_auto_attack_player_submissions: int = 0
+var battle_auto_attack_pet_submissions: int = 0
 var encounter_rng := RandomNumberGenerator.new()
 
 
@@ -358,6 +365,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_encounter_check")
 	elif auto_battle_action_catalog_check:
 		call_deferred("_run_auto_battle_action_catalog_check")
+	elif auto_battle_auto_attack_check:
+		call_deferred("_run_auto_battle_auto_attack_check")
 	elif auto_battle_item_check:
 		call_deferred("_run_auto_battle_item_check")
 	elif auto_battle_item_count_check:
@@ -576,6 +585,8 @@ func _apply_preview_window_args() -> void:
 			auto_encounter_check = true
 		elif arg == "--auto-battle-check":
 			auto_battle_check = true
+		elif arg == "--auto-battle-auto-attack-check":
+			auto_battle_auto_attack_check = true
 		elif arg == "--auto-battle-formation-check":
 			auto_battle_formation_check = true
 		elif arg == "--auto-battle-target-check":
@@ -1237,6 +1248,70 @@ func _run_auto_battle_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_battle_auto_attack_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	if zone_found:
+		_trigger_encounter(zones[0] as Dictionary)
+	await get_tree().process_frame
+	var battle_started := battle_active and battle_command_panel != null and battle_command_panel.visible
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	var target_found := target_id != ""
+	if target_found:
+		battle_state = _set_battle_actor_fields(battle_state, target_id, {"maxHp": 220, "hp": 220, "actionState": "idle"})
+	var enemy_before := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", 0)) if target_found else 0
+	battle_auto_attack_player_submissions = 0
+	battle_auto_attack_pet_submissions = 0
+	_set_battle_auto_attack_enabled(true, false)
+	var auto_button_on := battle_auto_button != null and battle_auto_button.visible and battle_auto_button.button_pressed and battle_auto_button.text == "自动"
+	var player_submitted := false
+	var pet_submitted := false
+	var round_events_seen := false
+	for _frame in range(900):
+		await get_tree().process_frame
+		player_submitted = player_submitted or battle_auto_attack_player_submissions > 0
+		pet_submitted = pet_submitted or battle_auto_attack_pet_submissions > 0
+		round_events_seen = round_events_seen or battle_last_round_applied_events > 0 or battle_last_round_actor_order.has(BattleModel.PLAYER_ACTOR_ID) or battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
+		if player_submitted and pet_submitted and round_events_seen:
+			break
+	var enemy_after := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", enemy_before)) if target_found else enemy_before
+	_set_battle_auto_attack_enabled(false, false)
+	var player_submissions_after_off := battle_auto_attack_player_submissions
+	var pet_submissions_after_off := battle_auto_attack_pet_submissions
+	for _frame in range(360):
+		await get_tree().process_frame
+		if battle_active and not _battle_commands_locked():
+			break
+	var no_new_after_off := (
+		battle_auto_attack_player_submissions == player_submissions_after_off
+		and battle_auto_attack_pet_submissions == pet_submissions_after_off
+	)
+	var auto_button_off := battle_auto_button != null and not battle_auto_button.button_pressed
+	var auto_damaged_enemy := target_found and enemy_after < enemy_before
+	var status := "ok" if loaded and zone_found and battle_started and target_found and auto_button_on and player_submitted and pet_submitted and round_events_seen and auto_damaged_enemy and auto_button_off and no_new_after_off else "failed"
+	print("battle auto attack check ready: status=%s loaded=%s zone_found=%s battle_started=%s target=%s button_on=%s player_submitted=%s pet_submitted=%s round_events=%s enemy_before=%d enemy_after=%d button_off=%s no_new_after_off=%s player_submissions=%d pet_submissions=%d" % [
+		status,
+		str(loaded),
+		str(zone_found),
+		str(battle_started),
+		target_id,
+		str(auto_button_on),
+		str(player_submitted),
+		str(pet_submitted),
+		str(round_events_seen),
+		enemy_before,
+		enemy_after,
+		str(auto_button_off),
+		str(no_new_after_off),
+		battle_auto_attack_player_submissions,
+		battle_auto_attack_pet_submissions,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_formation_check() -> void:
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
@@ -1730,7 +1805,7 @@ func _run_auto_battle_pet_command_check() -> void:
 	var target_before := int(BattleModel.actor_by_id(battle_state, target_id).get("hp", 0)) if target_id != "" else 0
 	_on_battle_command_pressed("attack")
 	_auto_click_enemy_target(target_id)
-	var pet_panel_open := battle_command_owner == "pet" and battle_command_title_label.text == "PET"
+	var pet_panel_open := battle_command_owner == "pet" and battle_command_title_label.text == "宠物"
 	var pet_labels_ok := false
 	if battle_command_buttons.has("attack") and battle_command_buttons.has("capture") and battle_command_buttons.has("switch_pet") and battle_command_buttons.has("run"):
 		var skill_one := battle_command_buttons["attack"] as Button
@@ -6132,7 +6207,7 @@ func _set_battle_command_owner(owner: String) -> void:
 	if battle_command_title_label == null:
 		return
 	if owner == "pet":
-		battle_command_title_label.text = "PET"
+		battle_command_title_label.text = "宠物"
 		_apply_battle_button_labels({
 			"attack": _pet_skill_button_label(1),
 			"spirit": _pet_skill_button_label(2),
@@ -6183,7 +6258,7 @@ func _set_battle_command_owner(owner: String) -> void:
 		battle_command_title_label.text = "换宠"
 		_apply_switch_pet_button_labels()
 	else:
-		battle_command_title_label.text = "PLAYER"
+		battle_command_title_label.text = "人物"
 		_apply_battle_button_labels({
 			"attack": "攻击",
 			"spirit": "精灵",
@@ -6197,6 +6272,72 @@ func _set_battle_command_owner(owner: String) -> void:
 	_sync_battle_command_layout()
 	_sync_battle_buttons()
 	_layout_hud()
+
+
+func _on_battle_auto_button_pressed() -> void:
+	if battle_auto_button == null:
+		return
+	_set_battle_auto_attack_enabled(battle_auto_button.button_pressed)
+
+
+func _set_battle_auto_attack_enabled(enabled: bool, show_message: bool = true) -> void:
+	battle_auto_attack_enabled = enabled
+	battle_auto_attack_delay = 0.0
+	if show_message and battle_active:
+		_set_battle_message("自动攻击开启。" if battle_auto_attack_enabled else "自动攻击关闭。")
+	_sync_battle_auto_button()
+	_sync_battle_buttons()
+
+
+func _sync_battle_auto_button() -> void:
+	if battle_auto_button == null:
+		return
+	battle_auto_button.visible = battle_active
+	battle_auto_button.disabled = not battle_active
+	battle_auto_button.text = "自动"
+	battle_auto_button.button_pressed = battle_auto_attack_enabled
+
+
+func _update_battle_auto_attack(delta: float) -> void:
+	if not battle_auto_attack_enabled or not battle_active:
+		return
+	if _battle_commands_locked():
+		return
+	if battle_auto_attack_delay > 0.0:
+		battle_auto_attack_delay = maxf(0.0, battle_auto_attack_delay - delta)
+		return
+	if battle_command_owner == "player":
+		_submit_battle_auto_player_attack()
+	elif battle_command_owner == "pet":
+		_submit_battle_auto_pet_attack()
+
+
+func _submit_battle_auto_player_attack() -> bool:
+	if not battle_active or battle_command_owner != "player" or _battle_commands_locked():
+		return false
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	if target_id == "":
+		return false
+	_submit_player_battle_command("attack", target_id)
+	battle_auto_attack_player_submissions += 1
+	battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+	return true
+
+
+func _submit_battle_auto_pet_attack() -> bool:
+	if not battle_active or battle_command_owner != "pet" or _battle_commands_locked():
+		return false
+	var target_id := BattleModel.living_enemy_id(battle_state)
+	if target_id == "":
+		return false
+	var skill_action := _controlled_pet_skill_action_for_slot(1)
+	var skill_id := str(skill_action.get("id", BattleModel.PET_SKILL_ATTACK))
+	if skill_id == "":
+		skill_id = BattleModel.PET_SKILL_ATTACK
+	_submit_pet_battle_command("attack", target_id, skill_id)
+	battle_auto_attack_pet_submissions += 1
+	battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+	return true
 
 
 func _controlled_pet_actor() -> Dictionary:
@@ -6512,6 +6653,7 @@ func _path_has_same_screen_y(path_cells: Array[Vector2i]) -> bool:
 func _process(delta: float) -> void:
 	if battle_active:
 		_update_battle_animation(delta)
+		_update_battle_auto_attack(delta)
 		_update_hud_text()
 		_update_battle_debug_window()
 		queue_redraw()
@@ -7201,13 +7343,36 @@ func _build_hud() -> void:
 	battle_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	battle_column.add_theme_constant_override("separation", 8)
 	battle_command_panel.add_child(battle_column)
+	var battle_header := HBoxContainer.new()
+	battle_header.name = "BattleCommandHeader"
+	battle_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_header.add_theme_constant_override("separation", 8)
+	battle_column.add_child(battle_header)
+	var battle_auto_left_spacer := Control.new()
+	battle_auto_left_spacer.custom_minimum_size = Vector2(70, 30)
+	battle_header.add_child(battle_auto_left_spacer)
 	battle_command_title_label = Label.new()
 	battle_command_title_label.name = "BattleCommandTitle"
-	battle_command_title_label.text = "PLAYER"
+	battle_command_title_label.text = "人物"
 	battle_command_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	battle_command_title_label.add_theme_font_size_override("font_size", 18)
 	battle_command_title_label.custom_minimum_size = Vector2(0, 24)
-	battle_column.add_child(battle_command_title_label)
+	battle_command_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_header.add_child(battle_command_title_label)
+	battle_auto_button = Button.new()
+	battle_auto_button.name = "BattleAutoButton"
+	battle_auto_button.text = "自动"
+	battle_auto_button.toggle_mode = true
+	battle_auto_button.custom_minimum_size = Vector2(70, 30)
+	battle_auto_button.clip_text = true
+	battle_auto_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	battle_auto_button.add_theme_font_size_override("font_size", 15)
+	battle_auto_button.add_theme_stylebox_override("normal", _battle_command_button_style(Color(0.07, 0.09, 0.09, 0.54)))
+	battle_auto_button.add_theme_stylebox_override("hover", _battle_command_button_style(Color(0.12, 0.16, 0.16, 0.70)))
+	battle_auto_button.add_theme_stylebox_override("pressed", _battle_command_button_style(Color(0.22, 0.28, 0.24, 0.82)))
+	battle_auto_button.add_theme_stylebox_override("disabled", _battle_command_button_style(Color(0.05, 0.06, 0.06, 0.30)))
+	battle_auto_button.pressed.connect(_on_battle_auto_button_pressed)
+	battle_header.add_child(battle_auto_button)
 	battle_command_button_grid = GridContainer.new()
 	battle_command_button_grid.name = "BattleCommandButtonGrid"
 	battle_command_button_grid.columns = 4
@@ -7820,6 +7985,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_refresh_battle_target_seed()
 	battle_active = true
 	battle_action_timer = 0.0
+	battle_auto_attack_delay = 0.0
 	battle_end_pending = false
 	battle_enemy_response_pending = false
 	battle_command_owner = "player"
@@ -10659,6 +10825,7 @@ func _set_battle_message(text: String) -> void:
 func _sync_battle_buttons() -> void:
 	if battle_command_panel != null:
 		battle_command_panel.visible = _battle_command_panel_should_be_visible()
+	_sync_battle_auto_button()
 	if battle_message_panel != null:
 		battle_message_panel.visible = battle_active or world_log_message != ""
 	if action_bar != null:
