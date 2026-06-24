@@ -430,6 +430,7 @@ var auto_player_stat_points_check: bool = false
 var auto_player_rebirth_preview_check: bool = false
 var auto_player_rebirth_execute_check: bool = false
 var auto_equipment_requirement_check: bool = false
+var auto_equipment_inactive_after_rebirth_check: bool = false
 var auto_equipment_durability_check: bool = false
 var auto_equipment_durability_visual_check: bool = false
 var auto_equipment_slot_detail_check: bool = false
@@ -444,6 +445,7 @@ var player_stat_points_preview: bool = false
 var player_rebirth_preview: bool = false
 var equipment_requirement_preview: bool = false
 var equipment_rebirth_requirement_preview: bool = false
+var equipment_inactive_after_rebirth_preview: bool = false
 var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
@@ -752,6 +754,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_rebirth_execute_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
+	elif auto_equipment_inactive_after_rebirth_check:
+		call_deferred("_run_auto_equipment_inactive_after_rebirth_check")
 	elif auto_equipment_durability_check:
 		call_deferred("_run_auto_equipment_durability_check")
 	elif auto_equipment_durability_visual_check:
@@ -780,6 +784,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_requirement_preview")
 	elif equipment_rebirth_requirement_preview:
 		call_deferred("_run_equipment_rebirth_requirement_preview")
+	elif equipment_inactive_after_rebirth_preview:
+		call_deferred("_run_equipment_inactive_after_rebirth_preview")
 	elif equipment_shop_preview:
 		call_deferred("_run_equipment_shop_preview")
 	elif equipment_durability_preview:
@@ -1184,6 +1190,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_rebirth_execute_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
+		elif arg == "--auto-equipment-inactive-after-rebirth-check":
+			auto_equipment_inactive_after_rebirth_check = true
 		elif arg == "--auto-equipment-durability-check":
 			auto_equipment_durability_check = true
 		elif arg == "--auto-equipment-durability-visual-check":
@@ -1212,6 +1220,8 @@ func _apply_preview_window_args() -> void:
 			equipment_requirement_preview = true
 		elif arg == "--equipment-rebirth-requirement-preview":
 			equipment_rebirth_requirement_preview = true
+		elif arg == "--equipment-inactive-after-rebirth-preview":
+			equipment_inactive_after_rebirth_preview = true
 		elif arg == "--equipment-shop-preview":
 			equipment_shop_preview = true
 		elif arg == "--equipment-durability-preview":
@@ -7103,6 +7113,91 @@ func _run_auto_equipment_requirement_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_equipment_inactive_after_rebirth_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	var player_dict := profile.get("player", {}) as Dictionary
+	player_dict["level"] = 80
+	player_dict["exp"] = 0
+	player_dict["nextExp"] = PlayerProgressModel.exp_to_next_level(80)
+	player_dict["baseStats"] = {
+		"maxHp": 220,
+		"attack": 45,
+		"defense": 30,
+		"quick": 90,
+	}
+	player_dict["hp"] = 220
+	profile["player"] = player_dict
+	profile = PlayerProgressModel.with_rebirth_quest_completed(profile, 1, true)
+	var buy_result := PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
+	var bought_profile := buy_result.get("profile", profile) as Dictionary
+	var equip_result := PlayerProgressModel.equip_item(bought_profile, "weapon_bone_blade")
+	var equipped_profile := equip_result.get("profile", bought_profile) as Dictionary
+	var before_bonus := PlayerProgressModel.equipment_stat_bonus(equipped_profile)
+	var before_active_state := PlayerProgressModel.equipment_slot_active_state(equipped_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var before_ok := (
+		bool(buy_result.get("ok", false))
+		and bool(equip_result.get("ok", false))
+		and PlayerProgressModel.equipped_item_id(equipped_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_bone_blade"
+		and bool(before_active_state.get("active", false))
+		and int(before_bonus.get("attack", 0)) == 25
+	)
+	var execute_result := PlayerProgressModel.execute_rebirth(equipped_profile)
+	var reborn_profile := execute_result.get("profile", equipped_profile) as Dictionary
+	var reborn_bonus := PlayerProgressModel.equipment_stat_bonus(reborn_profile)
+	var reborn_summary := PlayerProgressModel.player_stat_summary(reborn_profile)
+	var reborn_summary_bonus := reborn_summary.get("bonus", {}) as Dictionary
+	var after_active_state := PlayerProgressModel.equipment_slot_active_state(reborn_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var battle_state := _battle_reward_test_state("inactive_equipment_after_rebirth", reborn_profile)
+	var player_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var battle_bonus := player_actor.get("equipmentStatBonus", {}) as Dictionary
+	var model_ok := (
+		bool(execute_result.get("ok", false))
+		and PlayerProgressModel.rebirth_count(reborn_profile) == 1
+		and int((reborn_profile.get("player", {}) as Dictionary).get("level", 0)) == 1
+		and PlayerProgressModel.equipped_item_id(reborn_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_bone_blade"
+		and not bool(after_active_state.get("active", true))
+		and not bool(after_active_state.get("broken", true))
+		and not bool(after_active_state.get("requirementOk", true))
+		and str(after_active_state.get("message", "")).find("暂不生效") >= 0
+		and int(reborn_bonus.get("attack", 0)) == 9
+		and int(reborn_summary_bonus.get("attack", 0)) == 9
+		and int(battle_bonus.get("attack", 0)) == 9
+	)
+
+	player_profile = reborn_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_open_equipment_panel()
+	await get_tree().process_frame
+	var detail_text := equipment_detail_label.text if equipment_detail_label != null else ""
+	var slot_button := equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, null) as Button
+	var ui_ok := (
+		equipment_panel != null
+		and equipment_panel.visible
+		and detail_text.find("骨刃") >= 0
+		and detail_text.find("需求未满足") >= 0
+		and detail_text.find("暂不生效") >= 0
+		and detail_text.find("需求: Lv3") >= 0
+		and slot_button != null
+		and slot_button.has_theme_color_override("font_color")
+	)
+	var status := "ok" if before_ok and model_ok and ui_ok else "failed"
+	print("equipment inactive after rebirth check ready: status=%s before=%s model=%s ui=%s before_attack_bonus=%d after_attack_bonus=%d battle_attack_bonus=%d detail=%s" % [
+		status,
+		str(before_ok),
+		str(model_ok),
+		str(ui_ok),
+		int(before_bonus.get("attack", 0)),
+		int(reborn_bonus.get("attack", 0)),
+		int(battle_bonus.get("attack", 0)),
+		detail_text.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_equipment_durability_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -8259,6 +8354,34 @@ func _run_equipment_rebirth_requirement_preview() -> void:
 	_set_world_log_message("Phase95：转纹骨斧需要一转后才能装备。")
 	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
 	_select_shop_item("weapon_rebirth_bone_axe")
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_inactive_after_rebirth_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	var player_dict := profile.get("player", {}) as Dictionary
+	player_dict["level"] = 80
+	player_dict["exp"] = 0
+	player_dict["nextExp"] = PlayerProgressModel.exp_to_next_level(80)
+	player_dict["baseStats"] = {
+		"maxHp": 220,
+		"attack": 45,
+		"defense": 30,
+		"quick": 90,
+	}
+	player_dict["hp"] = 220
+	profile["player"] = player_dict
+	profile = PlayerProgressModel.with_rebirth_quest_completed(profile, 1, true)
+	profile = PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade").get("profile", profile) as Dictionary
+	profile = PlayerProgressModel.equip_item(profile, "weapon_bone_blade").get("profile", profile) as Dictionary
+	player_profile = PlayerProgressModel.execute_rebirth(profile).get("profile", profile) as Dictionary
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase96：转生后未满足需求的装备保留在槽位，但暂不生效。")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_open_equipment_panel()
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -15318,7 +15441,12 @@ func _apply_equipment_slot_button_color(button: Button, slot_id: String, item_id
 	if max_durability <= 0:
 		return
 	var current := clampi(int(PlayerProgressModel.equipment_durability(player_profile).get(slot_id, max_durability)), 0, max_durability)
-	if current <= 0:
+	if not _equipment_slot_meets_requirements_for_ui(slot_id, item_id):
+		var inactive_color := Color(1.0, 0.54, 0.42, 1.0)
+		button.add_theme_color_override("font_color", inactive_color)
+		button.add_theme_color_override("font_hover_color", inactive_color.lightened(0.10))
+		button.add_theme_color_override("font_pressed_color", inactive_color)
+	elif current <= 0:
 		var broken_color := Color(1.0, 0.36, 0.30, 1.0)
 		button.add_theme_color_override("font_color", broken_color)
 		button.add_theme_color_override("font_hover_color", broken_color.lightened(0.10))
@@ -15396,7 +15524,9 @@ func _refresh_equipment_detail() -> void:
 		var durability_text := PlayerProgressModel.equipment_slot_durability_text(player_profile, equipment_selected_slot_id)
 		if durability_text != "":
 			lines.append(durability_text)
-		lines.append_array(EquipmentModel.detail_lines_for_item(item_id))
+		if not _equipment_slot_meets_requirements_for_ui(equipment_selected_slot_id, item_id):
+			lines.append("需求未满足，装备暂不生效。")
+		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, false))
 		lines.append_array(_equipment_current_spirit_source_lines(equipment_selected_slot_id, item_id))
 		lines.append_array(_equipment_unequip_impact_lines(equipment_selected_slot_id))
 	equipment_detail_label.text = "\n".join(lines)
@@ -15493,6 +15623,8 @@ func _equipment_current_spirit_source_lines(slot_id: String, item_id: String) ->
 		return []
 	if _equipment_slot_is_broken(slot_id, item_id):
 		return ["来源精灵: 装备已损坏，精灵暂不可用。"]
+	if not _equipment_slot_meets_requirements_for_ui(slot_id, item_id):
+		return ["来源精灵: 需求未满足，精灵暂不可用。"]
 	var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id))
 	var parts: Array[String] = []
 	for spirit_id in spirit_ids:
@@ -15550,6 +15682,13 @@ func _equipment_slot_is_broken(slot_id: String, item_id: String) -> bool:
 		return false
 	var current := clampi(int(PlayerProgressModel.equipment_durability(player_profile).get(slot_id, max_durability)), 0, max_durability)
 	return current <= 0
+
+
+func _equipment_slot_meets_requirements_for_ui(_slot_id: String, item_id: String) -> bool:
+	return (
+		_player_level_for_ui() >= EquipmentModel.required_level_for(item_id)
+		and _player_rebirth_for_ui() >= EquipmentModel.required_rebirth_for(item_id)
+	)
 
 
 func _select_equipment_slot(slot_id: String) -> void:
@@ -16104,6 +16243,8 @@ func _equipment_stat_bonus_for_ui(slots: Dictionary, durability: Dictionary) -> 
 		var item_id := str(slots.get(slot_id, ""))
 		if item_id == "" or _equipment_slot_is_broken_for_ui(slot_id, item_id, durability):
 			continue
+		if not _equipment_slot_meets_requirements_for_ui(slot_id, item_id):
+			continue
 		var stats := EquipmentModel.stats_for(item_id)
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
@@ -16115,6 +16256,8 @@ func _equipment_spirit_ids_for_ui(slots: Dictionary, durability: Dictionary) -> 
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
 		if item_id == "" or _equipment_slot_is_broken_for_ui(slot_id, item_id, durability):
+			continue
+		if not _equipment_slot_meets_requirements_for_ui(slot_id, item_id):
 			continue
 		for spirit_id in EquipmentModel.spirit_ids_for(item_id):
 			if spirit_id != "" and not result.has(spirit_id):
@@ -17598,7 +17741,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("[color=#d7c36a]常用自测命令[/color]")
 	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
 	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
-	lines.append("装备: --auto-equipment-check / --auto-equipment-requirement-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
+	lines.append("装备: --auto-equipment-check / --auto-equipment-requirement-check / --auto-equipment-inactive-after-rebirth-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")

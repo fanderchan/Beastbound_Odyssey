@@ -454,15 +454,78 @@ static func without_equipment(profile: Dictionary) -> Dictionary:
 
 
 static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
-	return _equipment_stat_bonus_from_slots(equipment_slots(profile), equipment_durability(profile))
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	return _equipment_stat_bonus_from_slots(
+		equipment_slots(normalized),
+		equipment_durability(normalized),
+		player_level,
+		rebirth_count(normalized)
+	)
 
 
 static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
-	return _equipment_spirit_ids_from_slots(equipment_slots(profile), equipment_durability(profile))
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	return _equipment_spirit_ids_from_slots(
+		equipment_slots(normalized),
+		equipment_durability(normalized),
+		player_level,
+		rebirth_count(normalized)
+	)
 
 
 static func equipment_spirit_source_entries(profile: Dictionary) -> Array[Dictionary]:
-	return _equipment_spirit_source_entries_from_slots(equipment_slots(profile), equipment_durability(profile))
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	return _equipment_spirit_source_entries_from_slots(
+		equipment_slots(normalized),
+		equipment_durability(normalized),
+		player_level,
+		rebirth_count(normalized)
+	)
+
+
+static func equipment_item_requirement_state(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	var player_rebirth := rebirth_count(normalized)
+	return _equipment_requirement_state_for_values(item_id, player_level, player_rebirth)
+
+
+static func equipment_slot_active_state(profile: Dictionary, slot_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var slots := equipment_slots(normalized)
+	var item_id := str(slots.get(slot_id, ""))
+	if item_id == "":
+		return {
+			"itemId": "",
+			"active": false,
+			"broken": false,
+			"requirementOk": true,
+			"message": "",
+		}
+	var durability := equipment_durability(normalized)
+	var broken := _equipment_slot_is_broken(slot_id, item_id, durability)
+	var requirement := equipment_item_requirement_state(normalized, item_id)
+	var requirement_ok := bool(requirement.get("ok", false))
+	var message := ""
+	if broken:
+		message = "装备已损坏，暂不生效。"
+	elif not requirement_ok:
+		message = "需求未满足，装备暂不生效。"
+	return {
+		"itemId": item_id,
+		"active": not broken and requirement_ok,
+		"broken": broken,
+		"requirementOk": requirement_ok,
+		"requirement": requirement,
+		"message": message,
+	}
 
 
 static func equipment_slot_durability_text(profile: Dictionary, slot_id: String) -> String:
@@ -684,8 +747,11 @@ static func equipment_change_preview(profile: Dictionary, item_id: String) -> Di
 	var current_item_id := str(before_slots.get(slot_id, ""))
 	var after_slots := before_slots.duplicate(true)
 	after_slots[slot_id] = item_id
-	var before_bonus := _equipment_stat_bonus_from_slots(before_slots)
-	var after_bonus := _equipment_stat_bonus_from_slots(after_slots)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	var player_rebirth := rebirth_count(normalized)
+	var before_bonus := _equipment_stat_bonus_from_slots(before_slots, equipment_durability(normalized), player_level, player_rebirth)
+	var after_bonus := _equipment_stat_bonus_from_slots(after_slots, equipment_durability(normalized), player_level, player_rebirth)
 	var stat_changes: Array[Dictionary] = []
 	for key in EquipmentModel.STAT_KEYS:
 		var before_value := int(before_bonus.get(key, 0))
@@ -700,8 +766,8 @@ static func equipment_change_preview(profile: Dictionary, item_id: String) -> Di
 			"after": after_value,
 			"delta": delta,
 		})
-	var before_spirits := _equipment_spirit_ids_from_slots(before_slots)
-	var after_spirits := _equipment_spirit_ids_from_slots(after_slots)
+	var before_spirits := _equipment_spirit_ids_from_slots(before_slots, equipment_durability(normalized), player_level, player_rebirth)
+	var after_spirits := _equipment_spirit_ids_from_slots(after_slots, equipment_durability(normalized), player_level, player_rebirth)
 	var gained_spirits: Array[String] = []
 	for spirit_id in after_spirits:
 		if not before_spirits.has(spirit_id):
@@ -1727,7 +1793,7 @@ static func _normalize_equipment_durability(slots: Dictionary, value) -> Diction
 	return result
 
 
-static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dictionary = {}) -> Dictionary:
+static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Dictionary:
 	var result := {}
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
@@ -1735,13 +1801,15 @@ static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dict
 			continue
 		if _equipment_slot_is_broken(slot_id, item_id, durability):
 			continue
+		if not _equipment_slot_meets_requirements(item_id, player_level, player_rebirth):
+			continue
 		var stats := EquipmentModel.stats_for(item_id)
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
 	return result
 
 
-static func _equipment_spirit_ids_from_slots(slots: Dictionary, durability: Dictionary = {}) -> Array[String]:
+static func _equipment_spirit_ids_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Array[String]:
 	var result: Array[String] = []
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
@@ -1749,19 +1817,23 @@ static func _equipment_spirit_ids_from_slots(slots: Dictionary, durability: Dict
 			continue
 		if _equipment_slot_is_broken(slot_id, item_id, durability):
 			continue
+		if not _equipment_slot_meets_requirements(item_id, player_level, player_rebirth):
+			continue
 		for spirit_id in EquipmentModel.spirit_ids_for(item_id):
 			if not result.has(spirit_id):
 				result.append(spirit_id)
 	return _sorted_player_spirit_ids(result)
 
 
-static func _equipment_spirit_source_entries_from_slots(slots: Dictionary, durability: Dictionary = {}) -> Array[Dictionary]:
+static func _equipment_spirit_source_entries_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Array[Dictionary]:
 	var source_lookup := {}
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
 		if item_id == "":
 			continue
 		if _equipment_slot_is_broken(slot_id, item_id, durability):
+			continue
+		if not _equipment_slot_meets_requirements(item_id, player_level, player_rebirth):
 			continue
 		for spirit_id in EquipmentModel.spirit_ids_for(item_id):
 			if spirit_id == "":
@@ -1793,6 +1865,39 @@ static func _equipment_slot_is_broken(slot_id: String, item_id: String, durabili
 	if max_durability <= 0:
 		return false
 	return clampi(int(durability.get(slot_id, max_durability)), 0, max_durability) <= 0
+
+
+static func _equipment_slot_meets_requirements(item_id: String, player_level: int, player_rebirth: int) -> bool:
+	return bool(_equipment_requirement_state_for_values(item_id, player_level, player_rebirth).get("ok", false))
+
+
+static func _equipment_requirement_state_for_values(item_id: String, player_level: int, player_rebirth: int) -> Dictionary:
+	if not EquipmentModel.is_equipment(item_id):
+		return {
+			"ok": false,
+			"requiredLevel": 1,
+			"playerLevel": maxi(1, player_level),
+			"requiredRebirth": 0,
+			"playerRebirth": maxi(0, player_rebirth),
+			"message": "不是装备。",
+		}
+	var required_level := EquipmentModel.required_level_for(item_id)
+	var required_rebirth := EquipmentModel.required_rebirth_for(item_id)
+	var normalized_level := maxi(1, player_level)
+	var normalized_rebirth := maxi(0, player_rebirth)
+	var missing: Array[String] = []
+	if normalized_level < required_level:
+		missing.append("Lv%d" % required_level)
+	if normalized_rebirth < required_rebirth:
+		missing.append(EquipmentModel.rebirth_label_for(required_rebirth))
+	return {
+		"ok": missing.is_empty(),
+		"requiredLevel": required_level,
+		"playerLevel": normalized_level,
+		"requiredRebirth": required_rebirth,
+		"playerRebirth": normalized_rebirth,
+		"message": "" if missing.is_empty() else "需要%s。" % " / ".join(missing),
+	}
 
 
 static func _sorted_player_spirit_ids(spirit_ids: Array[String]) -> Array[String]:
@@ -2783,7 +2888,9 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
 	player_dict = normalized.get("player", {}) as Dictionary
 	var player_base_stats := _player_base_stats_from_player(player_dict)
-	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value, equipment_durability_value)
+	var player_level_for_equipment := maxi(1, int(player_dict.get("level", 1)))
+	var player_rebirth_for_equipment := maxi(0, int(normalized.get(REBIRTH_COUNT_KEY, 0)))
+	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value, equipment_durability_value, player_level_for_equipment, player_rebirth_for_equipment)
 	var player_max_hp := maxi(1, int(player_base_stats.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + int(player_bonus.get("maxHp", 0)))
 	player_dict["maxHp"] = player_max_hp
 	player_dict["hp"] = clampi(int(player_dict.get("hp", player_max_hp)), 1, player_max_hp)
@@ -2817,7 +2924,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_form_ids
 	normalized[AUTO_BATTLE_SETTINGS_KEY] = AutoBattleSettingsModel.normalize_settings_for_available_spirits(
 		normalized.get(AUTO_BATTLE_SETTINGS_KEY, {}),
-		_equipment_spirit_ids_from_slots(equipment_slots_value, equipment_durability_value)
+		_equipment_spirit_ids_from_slots(equipment_slots_value, equipment_durability_value, player_level_for_equipment, player_rebirth_for_equipment)
 	)
 	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(normalized.get(AUTO_CAPTURE_SETTINGS_KEY, {}))
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
