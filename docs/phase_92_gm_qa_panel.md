@@ -105,6 +105,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-map-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-marker-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-dialog-options-check
 ```
 
 ## 预览

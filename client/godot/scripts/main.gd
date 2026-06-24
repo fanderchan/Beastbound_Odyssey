@@ -104,6 +104,14 @@ const ACTIVE_TARGET_FPS := 60
 const IDLE_TARGET_FPS := 30
 const WORLD_HUD_REFRESH_INTERVAL_SECONDS := 0.20
 const CLICK_MOVE_REPATH_INTERVAL_SECONDS := 0.05
+const DIALOG_ACTION_ACK := "ack"
+const DIALOG_ACTION_CLAIM_QUEST := "claim_quest"
+const DIALOG_ACTION_TALK_QUEST := "talk_quest"
+const DIALOG_ACTION_HEAL := "heal"
+const DIALOG_ACTION_RECORD_POINT := "record_point"
+const DIALOG_ACTION_PET_SKILL_TRAIN := "pet_skill_train"
+const DIALOG_ACTION_SHOP := "shop"
+const DIALOG_ACTION_OPEN_QUEST := "open_quest"
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -126,8 +134,10 @@ var detail_label: Label
 var task_route_button: Button
 var dialog_name_label: Label
 var dialog_body_label: Label
+var dialog_button_row: HBoxContainer
 var dialog_option_button: Button
 var dialog_close_button: Button
+var dialog_secondary_buttons: Array[Button] = []
 var encounter_panel: PanelContainer
 var encounter_title_label: Label
 var encounter_body_label: Label
@@ -327,6 +337,7 @@ var auto_animation_state_check: bool = false
 var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
 var auto_npc_collision_check: bool = false
+var auto_facility_dialog_options_check: bool = false
 var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
@@ -845,6 +856,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_npc_collision_check")
 	elif auto_npc_interaction_check:
 		call_deferred("_run_auto_npc_interaction_check")
+	elif auto_facility_dialog_options_check:
+		call_deferred("_run_auto_facility_dialog_options_check")
 	elif auto_pet_follow_check:
 		call_deferred("_run_auto_pet_follow_check")
 	elif auto_animation_state_check:
@@ -979,6 +992,8 @@ func _apply_preview_window_args() -> void:
 			auto_npc_interaction_check = true
 		elif arg == "--auto-npc-collision-check":
 			auto_npc_collision_check = true
+		elif arg == "--auto-facility-dialog-options-check":
+			auto_facility_dialog_options_check = true
 		elif arg == "--auto-map-transfer-check":
 			auto_map_transfer_check = true
 		elif arg == "--auto-encounter-check":
@@ -1649,6 +1664,88 @@ func _run_auto_npc_interaction_check() -> void:
 		str(player_close),
 		str(trainer_blocks),
 		str(not_on_trainer),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_facility_dialog_options_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _profile_with_active_quest("quest_buy_supply")
+	_load_map("firebud_village_gate", "from_training_yard")
+	var shopkeeper := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
+	var doctor := InteractionModel.find_by_id(map_data, "firebud_doctor")
+	var record_point := InteractionModel.find_by_id(map_data, "firebud_record_pillar")
+	var pet_trainer := InteractionModel.find_by_id(map_data, "firebud_pet_skill_trainer")
+	var facility_found := not shopkeeper.is_empty() and not doctor.is_empty() and not record_point.is_empty() and not pet_trainer.is_empty()
+
+	_open_interaction_dialog(shopkeeper)
+	await get_tree().process_frame
+	var supply_quest_title := QuestModel.title_for(PlayerProgressModel.active_quest(player_profile))
+	var shop_task_button_ok := (
+		_dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "买卖"
+		and _dialog_secondary_button_texts().has("查看任务")
+		and dialog_close_button != null
+		and dialog_close_button.text == "离开"
+		and dialog_body_label != null
+		and dialog_body_label.text.find("任务：%s" % supply_quest_title) >= 0
+	)
+	_perform_dialog_action(DIALOG_ACTION_OPEN_QUEST)
+	await get_tree().process_frame
+	var quest_panel_opened := quest_panel != null and quest_panel.visible and not _dialog_is_open()
+	_close_quest_panel()
+
+	_open_interaction_dialog(shopkeeper)
+	await get_tree().process_frame
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var shop_primary_ok := shop_panel != null and shop_panel.visible and shop_active_id == ShopCatalogModel.DEFAULT_SHOP_ID
+	_close_shop_panel()
+
+	_open_interaction_dialog(doctor)
+	await get_tree().process_frame
+	var doctor_options_ok := (
+		_dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "治疗队伍"
+		and _dialog_secondary_button_texts().is_empty()
+	)
+	_close_dialog()
+
+	_open_interaction_dialog(record_point)
+	await get_tree().process_frame
+	var record_options_ok := (
+		_dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "保存"
+		and dialog_body_label != null
+		and dialog_body_label.text.find("当前记录点") >= 0
+	)
+	_close_dialog()
+
+	_open_interaction_dialog(pet_trainer)
+	await get_tree().process_frame
+	var trainer_options_ok := _dialog_is_open() and dialog_option_button != null and dialog_option_button.text == "训练"
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var trainer_primary_ok := pet_skill_panel != null and pet_skill_panel.visible and not _dialog_is_open()
+	_close_pet_skill_panel()
+
+	var status := "ok" if facility_found and shop_task_button_ok and quest_panel_opened and shop_primary_ok and doctor_options_ok and record_options_ok and trainer_options_ok and trainer_primary_ok else "failed"
+	print("facility dialog options check ready: status=%s found=%s shop_task=%s quest_open=%s shop_primary=%s doctor=%s record=%s trainer=%s trainer_primary=%s secondary=%s" % [
+		status,
+		str(facility_found),
+		str(shop_task_button_ok),
+		str(quest_panel_opened),
+		str(shop_primary_ok),
+		str(doctor_options_ok),
+		str(record_options_ok),
+		str(trainer_options_ok),
+		str(trainer_primary_ok),
+		str(_dialog_secondary_button_texts()),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -13100,20 +13197,21 @@ func _build_hud() -> void:
 	dialog_body_label.custom_minimum_size = Vector2(0, 72)
 	dialog_body_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	dialog_column.add_child(dialog_body_label)
-	var dialog_buttons := HBoxContainer.new()
-	dialog_buttons.alignment = BoxContainer.ALIGNMENT_END
-	dialog_buttons.size_flags_vertical = Control.SIZE_SHRINK_END
-	dialog_buttons.add_theme_constant_override("separation", 10)
-	dialog_column.add_child(dialog_buttons)
+	dialog_button_row = HBoxContainer.new()
+	dialog_button_row.alignment = BoxContainer.ALIGNMENT_END
+	dialog_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialog_button_row.size_flags_vertical = Control.SIZE_SHRINK_END
+	dialog_button_row.add_theme_constant_override("separation", 10)
+	dialog_column.add_child(dialog_button_row)
 	dialog_option_button = Button.new()
 	dialog_option_button.custom_minimum_size = Vector2(128, 48)
 	dialog_option_button.pressed.connect(_confirm_dialog_action)
-	dialog_buttons.add_child(dialog_option_button)
+	dialog_button_row.add_child(dialog_option_button)
 	dialog_close_button = Button.new()
 	dialog_close_button.text = "离开"
 	dialog_close_button.custom_minimum_size = Vector2(96, 48)
 	dialog_close_button.pressed.connect(_close_dialog)
-	dialog_buttons.add_child(dialog_close_button)
+	dialog_button_row.add_child(dialog_close_button)
 	hud_root.add_child(dialog_panel)
 
 	encounter_panel = _panel_container("EncounterPanel")
@@ -16791,7 +16889,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
-	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-qa-panel-check")
+	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
 
@@ -20100,23 +20198,62 @@ func _dialog_is_open() -> bool:
 func _confirm_dialog_action() -> void:
 	if active_dialog_interaction.is_empty():
 		return
-	if _active_dialog_can_claim_quest():
-		if PlayerProgressModel.active_quest_has_reward_choices(player_profile):
+	_perform_dialog_action(_dialog_primary_action_id(active_dialog_interaction))
+
+
+func _perform_dialog_action(action_id: String) -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	match action_id:
+		DIALOG_ACTION_CLAIM_QUEST:
+			_claim_dialog_quest_reward()
+		DIALOG_ACTION_TALK_QUEST:
+			_complete_dialog_talk_quest()
+		DIALOG_ACTION_HEAL:
+			_apply_dialog_healer()
+		DIALOG_ACTION_RECORD_POINT:
+			_save_record_point_from_dialog()
+		DIALOG_ACTION_PET_SKILL_TRAIN:
+			var trainer_id := str(active_dialog_interaction.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID))
+			_close_dialog()
+			_open_pet_skill_panel(true, trainer_id)
+		DIALOG_ACTION_SHOP:
+			var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
+			_close_dialog()
+			_open_shop_panel(next_shop_id)
+		DIALOG_ACTION_OPEN_QUEST:
 			_close_dialog()
 			_open_quest_panel()
-			_set_world_log_message("请选择任务奖励。")
-			return
-		var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
-		player_profile = claim_result.get("profile", player_profile)
-		if bool(claim_result.get("ok", false)) and profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
-		_set_world_log_message(str(claim_result.get("message", "")))
-		if bool(claim_result.get("ok", false)):
+		_:
 			_close_dialog()
-		else:
-			_update_dialog_text()
-		if status_label != null:
-			_update_hud_text()
+
+
+func _claim_dialog_quest_reward() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	if not _active_dialog_can_claim_quest():
+		_update_dialog_text()
+		return
+	if PlayerProgressModel.active_quest_has_reward_choices(player_profile):
+		_close_dialog()
+		_open_quest_panel()
+		_set_world_log_message("请选择任务奖励。")
+		return
+	var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
+	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(claim_result.get("message", "")))
+	if bool(claim_result.get("ok", false)):
+		_close_dialog()
+	else:
+		_update_dialog_text()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _complete_dialog_talk_quest() -> void:
+	if active_dialog_interaction.is_empty():
 		return
 	var quest_messages := _record_quest_event_and_maybe_claim({
 		"type": "talk",
@@ -20130,32 +20267,116 @@ func _confirm_dialog_action() -> void:
 		if status_label != null:
 			_update_hud_text()
 		return
-	if _active_dialog_is_healer():
-		var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
-		player_profile = heal_result.get("profile", player_profile)
-		if bool(heal_result.get("ok", false)) and profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
-		_set_world_log_message(str(heal_result.get("message", "")))
-		_update_dialog_text()
-		if status_label != null:
-			_update_hud_text()
-		if pet_panel != null and pet_panel.visible:
-			_refresh_pet_panel()
+	_update_dialog_text()
+
+
+func _apply_dialog_healer() -> void:
+	var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
+	player_profile = heal_result.get("profile", player_profile)
+	if bool(heal_result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(heal_result.get("message", "")))
+	_update_dialog_text()
+	if status_label != null:
+		_update_hud_text()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+
+
+func _dialog_primary_action_id(item: Dictionary) -> String:
+	if _active_dialog_can_claim_quest():
+		return DIALOG_ACTION_CLAIM_QUEST
+	if _active_dialog_matches_talk_quest(item):
+		return DIALOG_ACTION_TALK_QUEST
+	if _dialog_item_is_healer(item):
+		return DIALOG_ACTION_HEAL
+	if _dialog_item_is_record_point(item):
+		return DIALOG_ACTION_RECORD_POINT
+	if _dialog_item_is_pet_skill_trainer(item):
+		return DIALOG_ACTION_PET_SKILL_TRAIN
+	if str(item.get("shopId", "")) != "":
+		return DIALOG_ACTION_SHOP
+	return DIALOG_ACTION_ACK
+
+
+func _dialog_action_label(item: Dictionary, action_id: String) -> String:
+	match action_id:
+		DIALOG_ACTION_CLAIM_QUEST:
+			return "选择奖励" if PlayerProgressModel.active_quest_has_reward_choices(player_profile) else "领取奖励"
+		DIALOG_ACTION_TALK_QUEST:
+			return "完成"
+		DIALOG_ACTION_HEAL:
+			return str(item.get("option", "治疗队伍"))
+		DIALOG_ACTION_RECORD_POINT:
+			return str(item.get("option", "保存"))
+		DIALOG_ACTION_PET_SKILL_TRAIN:
+			return str(item.get("option", "训练"))
+		DIALOG_ACTION_SHOP:
+			return str(item.get("option", "买卖"))
+		DIALOG_ACTION_OPEN_QUEST:
+			return "查看任务"
+	return str(item.get("option", "知道了"))
+
+
+func _dialog_action_options(item: Dictionary) -> Array[Dictionary]:
+	var primary_action := _dialog_primary_action_id(item)
+	var options: Array[Dictionary] = [{
+		"id": primary_action,
+		"label": _dialog_action_label(item, primary_action),
+	}]
+	if _dialog_should_offer_quest_button(item):
+		options.append({
+			"id": DIALOG_ACTION_OPEN_QUEST,
+			"label": _dialog_action_label(item, DIALOG_ACTION_OPEN_QUEST),
+		})
+	return options
+
+
+func _dialog_should_offer_quest_button(item: Dictionary) -> bool:
+	if PlayerProgressModel.active_quest(player_profile).is_empty():
+		return false
+	if _active_dialog_can_claim_quest() or _active_dialog_matches_talk_quest(item):
+		return false
+	return _dialog_quest_hint_for(item) != ""
+
+
+func _refresh_dialog_action_buttons(item: Dictionary) -> void:
+	if dialog_option_button == null:
 		return
-	if _active_dialog_is_record_point():
-		_save_record_point_from_dialog()
+	for button in dialog_secondary_buttons:
+		if button == null:
+			continue
+		if dialog_button_row != null and button.get_parent() == dialog_button_row:
+			dialog_button_row.remove_child(button)
+		button.queue_free()
+	dialog_secondary_buttons.clear()
+	var options := _dialog_action_options(item)
+	var primary := options[0] if not options.is_empty() else {"id": DIALOG_ACTION_ACK, "label": "知道了"}
+	dialog_option_button.text = str(primary.get("label", "知道了"))
+	dialog_option_button.visible = true
+	dialog_option_button.disabled = false
+	if dialog_button_row == null:
 		return
-	if _active_dialog_is_pet_skill_trainer():
-		var trainer_id := str(active_dialog_interaction.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID))
-		_close_dialog()
-		_open_pet_skill_panel(true, trainer_id)
-		return
-	if str(active_dialog_interaction.get("shopId", "")) != "":
-		var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
-		_close_dialog()
-		_open_shop_panel(next_shop_id)
-	else:
-		_close_dialog()
+	for index in range(1, options.size()):
+		var option := options[index] as Dictionary
+		var action_id := str(option.get("id", DIALOG_ACTION_ACK))
+		var button := Button.new()
+		button.text = str(option.get("label", "操作"))
+		button.custom_minimum_size = Vector2(112, 48)
+		button.add_theme_font_size_override("font_size", 16)
+		button.pressed.connect(_perform_dialog_action.bind(action_id))
+		dialog_button_row.add_child(button)
+		dialog_secondary_buttons.append(button)
+	if dialog_close_button != null and dialog_close_button.get_parent() == dialog_button_row:
+		dialog_button_row.move_child(dialog_close_button, dialog_button_row.get_child_count() - 1)
+
+
+func _dialog_secondary_button_texts() -> Array[String]:
+	var result: Array[String] = []
+	for button in dialog_secondary_buttons:
+		if button != null:
+			result.append(button.text)
+	return result
 
 
 func _update_dialog_text() -> void:
@@ -20163,7 +20384,7 @@ func _update_dialog_text() -> void:
 		return
 	dialog_name_label.text = str(active_dialog_interaction.get("name", "交互"))
 	dialog_body_label.text = _dialog_body_for(active_dialog_interaction)
-	dialog_option_button.text = _dialog_option_text(active_dialog_interaction)
+	_refresh_dialog_action_buttons(active_dialog_interaction)
 
 
 func _dialog_body_for(item: Dictionary) -> String:
@@ -20189,21 +20410,7 @@ func _dialog_body_for(item: Dictionary) -> String:
 
 
 func _dialog_option_text(item: Dictionary) -> String:
-	if _active_dialog_can_claim_quest():
-		if PlayerProgressModel.active_quest_has_reward_choices(player_profile):
-			return "选择奖励"
-		return "领取奖励"
-	if _active_dialog_matches_talk_quest(item):
-		return "完成"
-	if _dialog_item_is_healer(item):
-		return str(item.get("option", "治疗队伍"))
-	if _dialog_item_is_record_point(item):
-		return str(item.get("option", "保存"))
-	if _dialog_item_is_pet_skill_trainer(item):
-		return str(item.get("option", "训练"))
-	if str(item.get("shopId", "")) != "":
-		return str(item.get("option", "买卖"))
-	return str(item.get("option", "知道了"))
+	return _dialog_action_label(item, _dialog_primary_action_id(item))
 
 
 func _active_dialog_is_healer() -> bool:
