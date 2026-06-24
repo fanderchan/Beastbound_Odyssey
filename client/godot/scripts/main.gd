@@ -443,6 +443,7 @@ var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var player_rebirth_preview: bool = false
 var equipment_requirement_preview: bool = false
+var equipment_rebirth_requirement_preview: bool = false
 var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
@@ -777,6 +778,8 @@ func _ready() -> void:
 		call_deferred("_run_player_rebirth_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
+	elif equipment_rebirth_requirement_preview:
+		call_deferred("_run_equipment_rebirth_requirement_preview")
 	elif equipment_shop_preview:
 		call_deferred("_run_equipment_shop_preview")
 	elif equipment_durability_preview:
@@ -1207,6 +1210,8 @@ func _apply_preview_window_args() -> void:
 			player_rebirth_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
+		elif arg == "--equipment-rebirth-requirement-preview":
+			equipment_rebirth_requirement_preview = true
 		elif arg == "--equipment-shop-preview":
 			equipment_shop_preview = true
 		elif arg == "--equipment-durability-preview":
@@ -6959,11 +6964,17 @@ func _run_auto_equipment_requirement_check() -> void:
 	world_log_message = ""
 	var bone_item := BackpackModel.item_for_id("weapon_bone_blade")
 	var bone_contexts: Array = bone_item.get("useContexts", [])
+	var rebirth_item := BackpackModel.item_for_id("weapon_rebirth_bone_axe")
+	var rebirth_contexts: Array = rebirth_item.get("useContexts", [])
 	var catalog_ok: bool = (
 		EquipmentModel.required_level_for("weapon_bone_blade") == 3
 		and EquipmentModel.detail_lines_for_item("weapon_bone_blade").has("需求: Lv3")
 		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade") == 110
 		and bone_contexts.has(BackpackModel.CONTEXT_EQUIPMENT)
+		and EquipmentModel.required_rebirth_for("weapon_rebirth_bone_axe") == 1
+		and EquipmentModel.detail_lines_for_item("weapon_rebirth_bone_axe").has("需求: 1转")
+		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_rebirth_bone_axe") == 180
+		and rebirth_contexts.has(BackpackModel.CONTEXT_EQUIPMENT)
 	)
 	var low_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
 	var buy_result := PlayerProgressModel.buy_shop_item(low_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
@@ -7017,8 +7028,62 @@ func _run_auto_equipment_requirement_check() -> void:
 	await get_tree().process_frame
 	var shop_text := shop_detail_label.text if shop_detail_label != null else ""
 	var shop_detail_ok: bool = shop_text.find("骨刃") >= 0 and shop_text.find("需求: Lv3") >= 0 and shop_text.find("当前 Lv1：未满足") >= 0
-	var status := "ok" if catalog_ok and low_block_ok and high_ok and bag_button_ok and bag_detail_ok and shop_detail_ok else "failed"
-	print("equipment requirement check ready: status=%s catalog=%s low_block=%s high=%s bag_button=%s bag_detail=%s shop_detail=%s attack=%d low_message=%s" % [
+	var rebirth_base_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	var rebirth_buy_result := PlayerProgressModel.buy_shop_item(rebirth_base_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_rebirth_bone_axe")
+	var rebirth_bought_profile := rebirth_buy_result.get("profile", {}) as Dictionary
+	var rebirth_low_check := PlayerProgressModel.can_equip_item(rebirth_bought_profile, "weapon_rebirth_bone_axe")
+	var rebirth_low_result := PlayerProgressModel.equip_item(rebirth_bought_profile, "weapon_rebirth_bone_axe")
+	var rebirth_low_ok: bool = (
+		bool(rebirth_buy_result.get("ok", false))
+		and not bool(rebirth_low_check.get("ok", true))
+		and int(rebirth_low_check.get("requiredRebirth", 0)) == 1
+		and int(rebirth_low_check.get("playerRebirth", -1)) == 0
+		and str(rebirth_low_result.get("message", "")).find("1转") >= 0
+		and not bool(rebirth_low_result.get("ok", true))
+		and PlayerProgressModel.backpack_item_count(rebirth_low_result.get("profile", rebirth_bought_profile), "weapon_rebirth_bone_axe") == 1
+		and PlayerProgressModel.equipped_item_id(rebirth_low_result.get("profile", rebirth_bought_profile), EquipmentModel.SLOT_RIGHT_HAND_WEAPON) != "weapon_rebirth_bone_axe"
+	)
+	var rebirth_ready_profile := PlayerProgressModel.with_rebirth_count(rebirth_bought_profile, 1)
+	var rebirth_high_result := PlayerProgressModel.equip_item(rebirth_ready_profile, "weapon_rebirth_bone_axe")
+	var rebirth_high_profile := rebirth_high_result.get("profile", {}) as Dictionary
+	var rebirth_high_summary := PlayerProgressModel.player_stat_summary(rebirth_high_profile)
+	var rebirth_high_current := rebirth_high_summary.get("current", {}) as Dictionary
+	var rebirth_high_ok: bool = (
+		bool(rebirth_high_result.get("ok", false))
+		and PlayerProgressModel.rebirth_count(rebirth_high_profile) == 1
+		and PlayerProgressModel.equipped_item_id(rebirth_high_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_rebirth_bone_axe"
+		and PlayerProgressModel.backpack_item_count(rebirth_high_profile, "weapon_rebirth_bone_axe") == 0
+		and PlayerProgressModel.backpack_item_count(rebirth_high_profile, "weapon_stone_dagger") == 1
+		and int(rebirth_high_current.get("attack", 0)) == 45
+	)
+	player_profile = rebirth_bought_profile
+	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_rebirth_bone_axe")
+	_open_backpack_panel()
+	await get_tree().process_frame
+	var rebirth_bag_text := backpack_detail_label.text if backpack_detail_label != null else ""
+	var rebirth_bag_ok: bool = (
+		rebirth_bag_text.find("需求: 1转") >= 0
+		and rebirth_bag_text.find("当前 0转：未满足") >= 0
+		and backpack_use_button != null
+		and backpack_use_button.visible
+		and backpack_use_button.disabled
+	)
+	_close_backpack_panel()
+	player_profile = rebirth_ready_profile
+	_refresh_shop_panel()
+	_select_shop_item("weapon_rebirth_bone_axe")
+	await get_tree().process_frame
+	var rebirth_shop_text := shop_detail_label.text if shop_detail_label != null else ""
+	var rebirth_shop_ok: bool = (
+		rebirth_shop_text.find("转纹骨斧") >= 0
+		and rebirth_shop_text.find("需求: 1转") >= 0
+		and rebirth_shop_text.find("当前 1转：已满足") >= 0
+		and shop_equip_after_buy_button != null
+		and shop_equip_after_buy_button.visible
+		and not shop_equip_after_buy_button.disabled
+	)
+	var status := "ok" if catalog_ok and low_block_ok and high_ok and bag_button_ok and bag_detail_ok and shop_detail_ok and rebirth_low_ok and rebirth_high_ok and rebirth_bag_ok and rebirth_shop_ok else "failed"
+	print("equipment requirement check ready: status=%s catalog=%s low_block=%s high=%s bag_button=%s bag_detail=%s shop_detail=%s rebirth_low=%s rebirth_high=%s rebirth_bag=%s rebirth_shop=%s attack=%d rebirth_attack=%d low_message=%s rebirth_message=%s" % [
 		status,
 		str(catalog_ok),
 		str(low_block_ok),
@@ -7026,8 +7091,14 @@ func _run_auto_equipment_requirement_check() -> void:
 		str(bag_button_ok),
 		str(bag_detail_ok),
 		str(shop_detail_ok),
+		str(rebirth_low_ok),
+		str(rebirth_high_ok),
+		str(rebirth_bag_ok),
+		str(rebirth_shop_ok),
 		int(high_current.get("attack", 0)),
+		int(rebirth_high_current.get("attack", 0)),
 		str(low_equip_result.get("message", "")),
+		str(rebirth_low_result.get("message", "")),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -8176,6 +8247,18 @@ func _run_equipment_requirement_preview() -> void:
 	_set_world_log_message("Phase73：骨刃需要 Lv3 才能装备。")
 	backpack_selected_slot_index = _backpack_slot_index_for_item("weapon_bone_blade")
 	_open_backpack_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_equipment_rebirth_requirement_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase95：转纹骨斧需要一转后才能装备。")
+	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
+	_select_shop_item("weapon_rebirth_bone_axe")
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -15981,6 +16064,10 @@ func _player_level_for_ui() -> int:
 	return maxi(1, int(player_dict.get("level", 1)))
 
 
+func _player_rebirth_for_ui() -> int:
+	return maxi(0, int(player_profile.get(PlayerProgressModel.REBIRTH_COUNT_KEY, 0)))
+
+
 func _equipment_slots_for_ui() -> Dictionary:
 	var result := {}
 	var slots_value = player_profile.get(PlayerProgressModel.EQUIPMENT_SLOTS_KEY, {})
@@ -16115,18 +16202,33 @@ func _can_equip_item_for_ui(item_id: String) -> Dictionary:
 		}
 	var player_level := _player_level_for_ui()
 	var required_level := EquipmentModel.required_level_for(item_id)
+	var player_rebirth := _player_rebirth_for_ui()
+	var required_rebirth := EquipmentModel.required_rebirth_for(item_id)
 	if player_level < required_level:
 		return {
 			"ok": false,
 			"message": "%s 需要 Lv%d 才能装备。" % [item_label, required_level],
 			"requiredLevel": required_level,
 			"playerLevel": player_level,
+			"requiredRebirth": required_rebirth,
+			"playerRebirth": player_rebirth,
+		}
+	if player_rebirth < required_rebirth:
+		return {
+			"ok": false,
+			"message": "%s 需要 %s 才能装备。" % [item_label, EquipmentModel.rebirth_label_for(required_rebirth)],
+			"requiredLevel": required_level,
+			"playerLevel": player_level,
+			"requiredRebirth": required_rebirth,
+			"playerRebirth": player_rebirth,
 		}
 	return {
 		"ok": true,
 		"message": "%s 可以装备。" % item_label,
 		"requiredLevel": required_level,
 		"playerLevel": player_level,
+		"requiredRebirth": required_rebirth,
+		"playerRebirth": player_rebirth,
 	}
 
 
@@ -16185,13 +16287,15 @@ func _equipment_detail_lines_with_requirement_status(item_id: String, use_bbcode
 	var insert_index := -1
 	for index in range(lines.size()):
 		if str(lines[index]) == requirement_text:
-			insert_index = index + 1
+			insert_index = index
 			break
 	if insert_index < 0:
 		lines.append_array(status_lines)
 	else:
-		for offset in range(status_lines.size()):
-			lines.insert(insert_index + offset, status_lines[offset])
+		var status_text_parts: Array[String] = []
+		for status_line in status_lines:
+			status_text_parts.append(str(status_line).replace("需求状态: ", ""))
+		lines[insert_index] = "%s（%s）" % [requirement_text, "；".join(status_text_parts)]
 	return lines
 
 
@@ -16199,15 +16303,30 @@ func _equipment_requirement_status_lines(item_id: String, use_bbcode: bool = fal
 	if not EquipmentModel.is_equipment(item_id):
 		return []
 	var required_level := EquipmentModel.required_level_for(item_id)
-	if required_level <= 1:
+	var required_rebirth := EquipmentModel.required_rebirth_for(item_id)
+	if required_level <= 1 and required_rebirth <= 0:
 		return []
+	var parts: Array[String] = []
 	var player_level := _player_level_for_ui()
-	var met := player_level >= required_level
-	var text := "当前 Lv%d：%s" % [player_level, "已满足" if met else "未满足"]
-	if use_bbcode:
-		var color := EQUIPMENT_COMPARE_GAIN_COLOR if met else EQUIPMENT_COMPARE_LOSS_COLOR
-		text = "[color=%s]%s[/color]" % [color, _bbcode_escape(text)]
-	return ["需求状态: %s" % text]
+	if required_level > 1:
+		var level_met := player_level >= required_level
+		var level_text := "当前 Lv%d：%s" % [player_level, "已满足" if level_met else "未满足"]
+		if use_bbcode:
+			var level_color := EQUIPMENT_COMPARE_GAIN_COLOR if level_met else EQUIPMENT_COMPARE_LOSS_COLOR
+			level_text = "[color=%s]%s[/color]" % [level_color, _bbcode_escape(level_text)]
+		parts.append(level_text)
+	var player_rebirth := _player_rebirth_for_ui()
+	if required_rebirth > 0:
+		var rebirth_met := player_rebirth >= required_rebirth
+		var rebirth_text := "当前 %s：%s" % [
+			EquipmentModel.rebirth_label_for(player_rebirth),
+			"已满足" if rebirth_met else "未满足",
+		]
+		if use_bbcode:
+			var rebirth_color := EQUIPMENT_COMPARE_GAIN_COLOR if rebirth_met else EQUIPMENT_COMPARE_LOSS_COLOR
+			rebirth_text = "[color=%s]%s[/color]" % [rebirth_color, _bbcode_escape(rebirth_text)]
+		parts.append(rebirth_text)
+	return ["需求状态: %s" % "；".join(parts)]
 
 
 func _colored_equipment_delta(text: String, delta: int) -> String:
@@ -17479,7 +17598,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("[color=#d7c36a]常用自测命令[/color]")
 	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
 	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
-	lines.append("装备: --auto-equipment-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
+	lines.append("装备: --auto-equipment-check / --auto-equipment-requirement-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")

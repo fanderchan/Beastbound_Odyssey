@@ -123,9 +123,23 @@ static func required_level_for(item_id: String) -> int:
 	return maxi(1, int(item_for_id(item_id).get("requiredLevel", 1)))
 
 
+static func required_rebirth_for(item_id: String) -> int:
+	return maxi(0, int(item_for_id(item_id).get("requiredRebirth", 0)))
+
+
+static func rebirth_label_for(count: int) -> String:
+	return "%d转" % maxi(0, count)
+
+
 static func requirement_text_for(item_id: String) -> String:
 	var required_level := required_level_for(item_id)
-	return "需求: Lv%d" % required_level if required_level > 1 else ""
+	var required_rebirth := required_rebirth_for(item_id)
+	var parts: Array[String] = []
+	if required_level > 1:
+		parts.append("Lv%d" % required_level)
+	if required_rebirth > 0:
+		parts.append(rebirth_label_for(required_rebirth))
+	return "需求: %s" % " / ".join(parts) if not parts.is_empty() else ""
 
 
 static func max_durability_for(item_id: String) -> int:
@@ -199,6 +213,8 @@ static func validation_errors() -> Array[String]:
 			errors.append("%s.slot 指向不存在装备槽: %s" % [item_id, slot_id])
 		if int(item.get("requiredLevel", 1)) < 1:
 			errors.append("%s.requiredLevel 必须大于等于 1" % item_id)
+		if int(item.get("requiredRebirth", 0)) < 0:
+			errors.append("%s.requiredRebirth 必须大于等于 0" % item_id)
 		if int(item.get("durabilityMax", DEFAULT_DURABILITY_MAX)) < 1:
 			errors.append("%s.durabilityMax 必须大于等于 1" % item_id)
 		var raw_spirits = item.get("spiritIds", [])

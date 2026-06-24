@@ -809,18 +809,33 @@ static func can_equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
 	var required_level := EquipmentModel.required_level_for(item_id)
+	var player_rebirth := rebirth_count(normalized)
+	var required_rebirth := EquipmentModel.required_rebirth_for(item_id)
 	if player_level < required_level:
 		return {
 			"ok": false,
 			"message": "%s 需要 Lv%d 才能装备。" % [item_label, required_level],
 			"requiredLevel": required_level,
 			"playerLevel": player_level,
+			"requiredRebirth": required_rebirth,
+			"playerRebirth": player_rebirth,
+		}
+	if player_rebirth < required_rebirth:
+		return {
+			"ok": false,
+			"message": "%s 需要 %s 才能装备。" % [item_label, EquipmentModel.rebirth_label_for(required_rebirth)],
+			"requiredLevel": required_level,
+			"playerLevel": player_level,
+			"requiredRebirth": required_rebirth,
+			"playerRebirth": player_rebirth,
 		}
 	return {
 		"ok": true,
 		"message": "%s 可以装备。" % item_label,
 		"requiredLevel": required_level,
 		"playerLevel": player_level,
+		"requiredRebirth": required_rebirth,
+		"playerRebirth": player_rebirth,
 	}
 
 

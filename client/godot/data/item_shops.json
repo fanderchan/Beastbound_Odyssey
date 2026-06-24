@@ -120,6 +120,10 @@
           "buyPrice": 110
         },
         {
+          "itemId": "weapon_rebirth_bone_axe",
+          "buyPrice": 180
+        },
+        {
           "itemId": "armor_hide_vest",
           "buyPrice": 60
         }

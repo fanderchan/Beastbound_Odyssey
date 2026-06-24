@@ -270,6 +270,14 @@
       "useContexts": ["equipment"]
     },
     {
+      "id": "weapon_rebirth_bone_axe",
+      "label": "转纹骨斧",
+      "menuLabel": "转纹骨斧",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
       "id": "weapon_hardwood_club",
       "label": "硬木棒",
       "menuLabel": "硬木棒",

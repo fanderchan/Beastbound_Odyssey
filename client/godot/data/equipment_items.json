@@ -197,6 +197,19 @@
       "description": "打磨过的兽骨短刃，需要更熟练的猎人才拿得稳。"
     },
     {
+      "id": "weapon_rebirth_bone_axe",
+      "label": "转纹骨斧",
+      "menuLabel": "转纹骨斧",
+      "slot": "right_hand_weapon",
+      "requiredRebirth": 1,
+      "stats": {
+        "attack": 18,
+        "quick": -1
+      },
+      "durabilityMax": 36,
+      "description": "刻有转生纹路的骨斧，需要完成一转后才能装备。"
+    },
+    {
       "id": "weapon_hardwood_club",
       "label": "硬木棒",
       "menuLabel": "硬木棒",

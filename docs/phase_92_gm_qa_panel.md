@@ -76,6 +76,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-equipment-requirement-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-slot-detail-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-synthesis-check
 ```
@@ -123,4 +124,5 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ```sh
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase92_qa_panel.png --quit-after 90 -- --qa-panel-preview
+godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase95_rebirth_equipment_requirement.png --quit-after 90 -- --equipment-rebirth-requirement-preview
 ```
