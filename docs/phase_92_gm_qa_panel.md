@@ -111,6 +111,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-player-rebirth-preview-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-rebirth-execute-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-player-rebirth-chain-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-remote-stable-unlock-check
 ```
 
 地图设施：
@@ -129,4 +130,5 @@ godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.ru
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase95_rebirth_equipment_requirement.png --quit-after 90 -- --equipment-rebirth-requirement-preview
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase96_inactive_equipment_after_rebirth.png --quit-after 120 -- --equipment-inactive-after-rebirth-preview
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase98_rebirth_chain.png --quit-after 120 -- --player-rebirth-chain-preview
+godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase99_remote_stable_unlock.png --quit-after 120 -- --remote-stable-unlock-preview
 ```

@@ -430,6 +430,7 @@ var auto_player_stat_points_check: bool = false
 var auto_player_rebirth_preview_check: bool = false
 var auto_player_rebirth_execute_check: bool = false
 var auto_player_rebirth_chain_check: bool = false
+var auto_remote_stable_unlock_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_inactive_after_rebirth_check: bool = false
 var auto_equipment_status_closure_check: bool = false
@@ -446,6 +447,7 @@ var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var player_rebirth_preview: bool = false
 var player_rebirth_chain_preview: bool = false
+var remote_stable_unlock_preview: bool = false
 var equipment_requirement_preview: bool = false
 var equipment_rebirth_requirement_preview: bool = false
 var equipment_inactive_after_rebirth_preview: bool = false
@@ -758,6 +760,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_rebirth_execute_check")
 	elif auto_player_rebirth_chain_check:
 		call_deferred("_run_auto_player_rebirth_chain_check")
+	elif auto_remote_stable_unlock_check:
+		call_deferred("_run_auto_remote_stable_unlock_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_equipment_inactive_after_rebirth_check:
@@ -790,6 +794,8 @@ func _ready() -> void:
 		call_deferred("_run_player_rebirth_preview")
 	elif player_rebirth_chain_preview:
 		call_deferred("_run_player_rebirth_chain_preview")
+	elif remote_stable_unlock_preview:
+		call_deferred("_run_remote_stable_unlock_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
 	elif equipment_rebirth_requirement_preview:
@@ -1202,6 +1208,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_rebirth_execute_check = true
 		elif arg == "--auto-player-rebirth-chain-check":
 			auto_player_rebirth_chain_check = true
+		elif arg == "--auto-remote-stable-unlock-check":
+			auto_remote_stable_unlock_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
 		elif arg == "--auto-equipment-inactive-after-rebirth-check":
@@ -1234,6 +1242,8 @@ func _apply_preview_window_args() -> void:
 			player_rebirth_preview = true
 		elif arg == "--player-rebirth-chain-preview":
 			player_rebirth_chain_preview = true
+		elif arg == "--remote-stable-unlock-preview":
+			remote_stable_unlock_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
 		elif arg == "--equipment-rebirth-requirement-preview":
@@ -7055,7 +7065,7 @@ func _run_auto_player_rebirth_chain_check() -> void:
 		var requirement_ready := PlayerProgressModel.rebirth_requirement_state(ready_profile)
 		var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
 		var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
-		var next_expected := "quest_rebirth_%d_guidance" % (target + 1) if target < 6 else ""
+		var next_expected := "quest_rebirth_%d_guidance" % (target + 1) if target < 6 else "quest_remote_stable_unlock"
 		var execute_ok := (
 			bool(claim.get("ok", false))
 			and bool(execute_result.get("ok", false))
@@ -7080,7 +7090,7 @@ func _run_auto_player_rebirth_chain_check() -> void:
 	var maxed_preview := PlayerProgressModel.rebirth_preview(profile)
 	var maxed_ok := (
 		PlayerProgressModel.rebirth_count(profile) == 6
-		and PlayerProgressModel.active_quest_id(profile) == ""
+		and PlayerProgressModel.active_quest_id(profile) == "quest_remote_stable_unlock"
 		and not bool(maxed_preview.get("ok", true))
 		and "\n".join(PlayerProgressModel.rebirth_preview_lines(profile)).find("已达到6转上限") >= 0
 	)
@@ -7126,6 +7136,144 @@ func _run_auto_player_rebirth_chain_check() -> void:
 		PlayerProgressModel.active_quest_id(profile),
 		" ".join(chain_messages),
 		preview_text.replace("\n", " / "),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _profile_after_six_rebirths_for_test() -> Dictionary:
+	var profile := _profile_with_active_quest("quest_rebirth_1_guidance")
+	for target in range(1, 7):
+		var expected_quest_id := "quest_rebirth_%d_guidance" % target
+		if PlayerProgressModel.active_quest_id(profile) != expected_quest_id:
+			break
+		var completion := _complete_active_rebirth_quest_for_test(profile)
+		profile = completion.get("profile", profile) as Dictionary
+		profile = _profile_with_rebirth_test_level(profile, 80)
+		var execute_result := PlayerProgressModel.execute_rebirth(profile)
+		if not bool(execute_result.get("ok", false)):
+			break
+		profile = execute_result.get("profile", profile) as Dictionary
+	return PlayerProgressModel.normalize_profile(profile)
+
+
+func _run_auto_remote_stable_unlock_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var quest := QuestModel.quest_for_id("quest_remote_stable_unlock")
+	var reward_abilities := QuestModel.reward_abilities(quest)
+	var catalog_ok := (
+		not quest.is_empty()
+		and QuestModel.giver_id_for(quest) == "firebud_stable_keeper"
+		and QuestModel.turn_in_id_for(quest) == "firebud_stable_keeper"
+		and int(quest.get("requiredRebirthCount", 0)) == 6
+		and str(quest.get("requiredMissingAbility", "")) == PlayerProgressModel.ABILITY_REMOTE_STABLE
+		and reward_abilities.size() == 1
+		and str((reward_abilities[0] as Dictionary).get("abilityId", "")) == PlayerProgressModel.ABILITY_REMOTE_STABLE
+		and QuestModel.reward_text(quest).find("远程兽栏能力") >= 0
+	)
+
+	var after_five := _profile_with_active_quest("quest_rebirth_1_guidance")
+	for target in range(1, 6):
+		var completion := _complete_active_rebirth_quest_for_test(after_five)
+		after_five = completion.get("profile", after_five) as Dictionary
+		after_five = _profile_with_rebirth_test_level(after_five, 80)
+		var execute_result := PlayerProgressModel.execute_rebirth(after_five)
+		after_five = execute_result.get("profile", after_five) as Dictionary
+	var hidden_before_six := (
+		PlayerProgressModel.rebirth_count(after_five) == 5
+		and PlayerProgressModel.active_quest_id(after_five) == "quest_rebirth_6_guidance"
+		and not PlayerProgressModel.has_remote_stable(after_five)
+	)
+
+	player_profile = _profile_after_six_rebirths_for_test()
+	var six_ready := (
+		PlayerProgressModel.rebirth_count(player_profile) == 6
+		and PlayerProgressModel.active_quest_id(player_profile) == "quest_remote_stable_unlock"
+		and not PlayerProgressModel.has_remote_stable(player_profile)
+	)
+
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	pet_selected_instance_id = "pet_bui_tough"
+	_open_pet_panel(false)
+	await get_tree().process_frame
+	var locked_button_ok := (
+		pet_panel != null
+		and pet_panel.visible
+		and not pet_panel_stable_access_override
+		and pet_stable_button != null
+		and pet_stable_button.visible
+		and pet_stable_button.disabled
+		and pet_stable_button.tooltip_text.find("远程兽栏") >= 0
+	)
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var locked_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var locked_action_blocked := (
+		str(locked_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and world_log_message.find("远程兽栏") >= 0
+	)
+	_close_pet_panel()
+
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	_open_interaction_dialog(stable_keeper)
+	await get_tree().process_frame
+	var dialog_text := dialog_body_label.text if dialog_body_label != null else ""
+	var dialog_ok := (
+		loaded
+		and not stable_keeper.is_empty()
+		and _dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "完成"
+		and dialog_text.find("远程兽栏") >= 0
+		and dialog_text.find("奖励：远程兽栏能力") >= 0
+	)
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var unlocked_ok := (
+		PlayerProgressModel.has_remote_stable(player_profile)
+		and PlayerProgressModel.active_quest_id(player_profile) == ""
+		and world_log_message.find("完成任务「远程兽栏」") >= 0
+		and world_log_message.find("远程兽栏能力") >= 0
+	)
+
+	pet_selected_instance_id = "pet_bui_tough"
+	_open_pet_panel(false)
+	await get_tree().process_frame
+	var remote_button_ok := (
+		pet_panel != null
+		and pet_panel.visible
+		and not pet_panel_stable_access_override
+		and pet_stable_button != null
+		and pet_stable_button.visible
+		and not pet_stable_button.disabled
+		and pet_stable_button.text == "存入"
+	)
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var remote_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var remote_store_ok := str(remote_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+	_close_pet_panel()
+
+	var already_unlocked := PlayerProgressModel.with_unlocked_ability(_profile_after_six_rebirths_for_test(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
+	var already_hidden_ok := PlayerProgressModel.active_quest_id(already_unlocked) == ""
+
+	var status := "ok" if catalog_ok and hidden_before_six and six_ready and locked_button_ok and locked_action_blocked and dialog_ok and unlocked_ok and remote_button_ok and remote_store_ok and already_hidden_ok else "failed"
+	print("remote stable unlock check ready: status=%s catalog=%s hidden_before_six=%s six_ready=%s locked_button=%s locked_action=%s dialog=%s unlocked=%s remote_button=%s remote_store=%s already_hidden=%s active=%s log=%s" % [
+		status,
+		str(catalog_ok),
+		str(hidden_before_six),
+		str(six_ready),
+		str(locked_button_ok),
+		str(locked_action_blocked),
+		str(dialog_ok),
+		str(unlocked_ok),
+		str(remote_button_ok),
+		str(remote_store_ok),
+		str(already_hidden_ok),
+		PlayerProgressModel.active_quest_id(player_profile),
 		world_log_message.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -8605,6 +8753,18 @@ func _run_player_rebirth_chain_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase98：二转到六转使用同一套转生预览和执行流程。")
 	_open_player_rebirth_preview_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_remote_stable_unlock_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _profile_after_six_rebirths_for_test()
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase99：六转后可向兽栏管理员学习远程兽栏。")
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	_open_interaction_dialog(stable_keeper)
 	await get_tree().create_timer(1.0).timeout
 
 
@@ -18114,7 +18274,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
-	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check")
+	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)

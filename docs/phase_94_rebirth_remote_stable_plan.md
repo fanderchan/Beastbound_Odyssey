@@ -186,6 +186,63 @@
 - 远程兽栏是否随时可用，还是战斗中 / 特殊地图禁用。
 - 远程兽栏是否有冷却、费用或道具消耗。
 
+## 里程碑 E 实现记录
+
+Phase99 已落地：
+
+1. 新增 `远程兽栏` 任务。
+2. 任务要求人物已完成六转，并且尚未学会 `remoteStable`。
+3. 六转执行后，普通转生资格任务结束，自动接入 `远程兽栏` 后置任务。
+4. 任务由 `兽栏管理员阿牧` 完成，对话主按钮为 `完成`，不会被普通 `兽栏` 设施按钮挡住。
+5. 任务奖励新增通用能力奖励类型，领取后写入 `unlockedAbilities: ["remoteStable"]`。
+6. 学会后，普通宠物面板里的 `存入` / `取出` 会恢复可用；未学会前仍只能去村内兽栏或使用 GM/QA 入口。
+7. 第一版远程兽栏暂不做费用、冷却和地图限制；后续可在 `_pet_panel_has_stable_access` 外围加正式禁用条件。
+
+本阶段自测：
+
+```sh
+godot --headless --path client/godot --quit
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-remote-stable-unlock-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-player-rebirth-chain-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-quest-chain-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-quest-ui-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-stable-facility-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-pet-stable-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-player-rebirth-execute-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --movement-spam-click-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --shop-select-perf-check
+```
+
+结果：
+
+- `--auto-remote-stable-unlock-check`: ok。
+- `--auto-player-rebirth-chain-check`: ok，六转后 active 为 `quest_remote_stable_unlock`。
+- `--auto-quest-chain-check`: ok。
+- `--auto-quest-ui-check`: ok。
+- `--auto-stable-facility-check`: ok。
+- `--auto-pet-stable-check`: ok。
+- `--auto-qa-panel-check`: ok。
+- `--auto-player-rebirth-execute-check`: ok。
+- `--movement-spam-click-check`: ok，`clicks=120`，`applied=2`。
+- `--shop-select-perf-check`: ok，`item_us=633363`，`equipment_us=900568`。
+
+性能对比：
+
+- Phase98 基线：`movement applied=2`，商店 `item_us=574987`，`equipment_us=890959`。
+- Phase99 当前：`movement applied=2`，商店 `item_us=633363`，`equipment_us=900568`。
+- 结论：移动连点保持合并；商店切换为小幅波动，没有回到秒级卡顿。
+
+预览：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase99_remote_stable_unlock.png --quit-after 120 -- --remote-stable-unlock-preview
+```
+
+截图证据：
+
+- `/Users/fander/projects/Beastbound_Odyssey/.run/godot/phase99_remote_stable_unlock00000119.png`
+
 ## 里程碑 A 实现记录
 
 本阶段已落地：

@@ -12,7 +12,7 @@
   - 0转时只开放一转资格。
   - 执行一转后，才开放二转资格。
   - 以此类推，执行五转后开放六转资格。
-  - 执行六转后不再开放新转生资格任务。
+  - 执行六转后不再开放新转生资格任务；Phase99 起会接入远程兽栏任务。
 - 每转执行仍要求：
   - 当前转生资格任务已记录。
   - 人物 Lv80。
@@ -44,6 +44,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ## 结果
 
 - `--auto-player-rebirth-chain-check`: ok，1-6 转完整链路通过。
+  - 当前版本执行六转后会进入 `远程兽栏` 后置任务，而不是空任务。
 - `--auto-player-rebirth-execute-check`: ok。
 - `--auto-player-rebirth-preview-check`: ok。
 - `--auto-quest-chain-check`: ok。
@@ -63,4 +64,3 @@ godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.ru
 截图证据：
 
 - `/Users/fander/projects/Beastbound_Odyssey/.run/godot/phase98_rebirth_chain00000072.png`
-

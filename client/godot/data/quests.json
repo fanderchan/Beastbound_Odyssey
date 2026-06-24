@@ -381,6 +381,33 @@
       },
       "rebirthQuestTarget": 6,
       "nextQuestId": ""
+    },
+    {
+      "id": "quest_remote_stable_unlock",
+      "title": "远程兽栏",
+      "giverId": "firebud_stable_keeper",
+      "turnInId": "firebud_stable_keeper",
+      "autoClaimOnReady": true,
+      "summary": "六转后向兽栏管理员阿牧学习远程兽栏。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_stable_keeper",
+        "count": 1,
+        "text": "和兽栏管理员阿牧对话"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [],
+        "abilities": [
+          {
+            "abilityId": "remoteStable",
+            "label": "远程兽栏能力"
+          }
+        ]
+      },
+      "requiredRebirthCount": 6,
+      "requiredMissingAbility": "remoteStable",
+      "nextQuestId": ""
     }
   ]
 }

@@ -109,6 +109,12 @@ static func reward_items(quest: Dictionary) -> Array[Dictionary]:
 	return _normalized_reward_items(reward_dict.get("items", []))
 
 
+static func reward_abilities(quest: Dictionary) -> Array[Dictionary]:
+	var rewards = quest.get("rewards", {})
+	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
+	return _normalized_reward_abilities(reward_dict.get("abilities", reward_dict.get("unlockAbilities", [])))
+
+
 static func reward_choices(quest: Dictionary) -> Array[Dictionary]:
 	var rewards = quest.get("rewards", {})
 	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}
@@ -122,14 +128,16 @@ static func reward_choices(quest: Dictionary) -> Array[Dictionary]:
 			var choice := value as Dictionary
 			var choice_id := str(choice.get("id", "choice_%d" % index))
 			var choice_items := _normalized_reward_items(choice.get("items", []))
+			var choice_abilities := _normalized_reward_abilities(choice.get("abilities", choice.get("unlockAbilities", [])))
 			var choice_coins := maxi(0, int(choice.get("stoneCoins", 0)))
-			if choice_id == "" or (choice_items.is_empty() and choice_coins <= 0):
+			if choice_id == "" or (choice_items.is_empty() and choice_abilities.is_empty() and choice_coins <= 0):
 				continue
 			var normalized := {
 				"id": choice_id,
 				"label": str(choice.get("label", "")),
 				"stoneCoins": choice_coins,
 				"items": choice_items,
+				"abilities": choice_abilities,
 			}
 			if str(normalized.get("label", "")) == "":
 				normalized["label"] = reward_bundle_text(normalized)
@@ -160,6 +168,10 @@ static func reward_bundle_text(reward_bundle: Dictionary) -> String:
 				BackpackModel.label_for(str(item.get("itemId", ""))),
 				maxi(0, int(item.get("count", 0))),
 			])
+	var raw_abilities = reward_bundle.get("abilities", reward_bundle.get("unlockAbilities", []))
+	if raw_abilities is Array:
+		for ability in _normalized_reward_abilities(raw_abilities):
+			parts.append(str(ability.get("label", ability_label_for(str(ability.get("abilityId", ""))))))
 	return "、".join(parts)
 
 
@@ -167,6 +179,7 @@ static func reward_claim_text(quest: Dictionary, selected_choice: Dictionary = {
 	var fixed := {
 		"stoneCoins": reward_stone_coins(quest),
 		"items": reward_items(quest),
+		"abilities": reward_abilities(quest),
 	}
 	var parts: Array[String] = []
 	var fixed_text := reward_bundle_text(fixed)
@@ -196,6 +209,36 @@ static func _normalized_reward_items(raw_items) -> Array[Dictionary]:
 	return result
 
 
+static func _normalized_reward_abilities(raw_abilities) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if raw_abilities is Array:
+		for value in raw_abilities:
+			var ability_id := ""
+			var label := ""
+			if value is Dictionary:
+				var ability := value as Dictionary
+				ability_id = str(ability.get("abilityId", ability.get("id", ""))).strip_edges()
+				label = str(ability.get("label", "")).strip_edges()
+			else:
+				ability_id = str(value).strip_edges()
+			if ability_id == "":
+				continue
+			if label == "":
+				label = ability_label_for(ability_id)
+			result.append({
+				"abilityId": ability_id,
+				"label": label,
+			})
+	return result
+
+
+static func ability_label_for(ability_id: String) -> String:
+	match ability_id:
+		"remoteStable":
+			return "远程兽栏能力"
+	return ability_id
+
+
 static func reward_text(quest: Dictionary) -> String:
 	var parts: Array[String] = []
 	var coins := reward_stone_coins(quest)
@@ -206,6 +249,8 @@ static func reward_text(quest: Dictionary) -> String:
 			BackpackModel.label_for(str(item.get("itemId", ""))),
 			maxi(0, int(item.get("count", 0))),
 		])
+	for ability in reward_abilities(quest):
+		parts.append(str(ability.get("label", ability_label_for(str(ability.get("abilityId", ""))))))
 	var choices := reward_choices(quest)
 	if not choices.is_empty():
 		var choice_labels: Array[String] = []
@@ -381,6 +426,7 @@ static func validation_errors() -> Array[String]:
 		if str(objective.get("type", "")) == "":
 			errors.append("%s.objective.type 不能为空" % quest_id)
 		errors.append_array(_reward_item_validation_errors(reward_items(quest), "%s.rewards.items" % quest_id))
+		errors.append_array(_reward_ability_validation_errors(reward_abilities(quest), "%s.rewards.abilities" % quest_id))
 		var choice_ids := {}
 		for choice in reward_choices(quest):
 			var choice_id := str(choice.get("id", ""))
@@ -393,6 +439,7 @@ static func validation_errors() -> Array[String]:
 			if reward_bundle_text(choice) == "":
 				errors.append("%s.rewards.choices.%s 奖励不能为空" % [quest_id, choice_id])
 			errors.append_array(_reward_item_validation_errors(choice.get("items", []), "%s.rewards.choices.%s.items" % [quest_id, choice_id]))
+			errors.append_array(_reward_ability_validation_errors(choice.get("abilities", []), "%s.rewards.choices.%s.abilities" % [quest_id, choice_id]))
 	for quest in quests():
 		var next_id := str(quest.get("nextQuestId", ""))
 		if next_id != "" and not ids.has(next_id):
@@ -406,6 +453,15 @@ static func _reward_item_validation_errors(raw_items, path: String) -> Array[Str
 		var item_id := str(item.get("itemId", ""))
 		if BackpackModel.item_for_id(item_id).is_empty():
 			errors.append("%s 包含不存在的物品: %s" % [path, item_id])
+	return errors
+
+
+static func _reward_ability_validation_errors(raw_abilities, path: String) -> Array[String]:
+	var errors: Array[String] = []
+	for ability in _normalized_reward_abilities(raw_abilities):
+		var ability_id := str(ability.get("abilityId", ""))
+		if ability_id == "":
+			errors.append("%s 包含空能力 ID" % path)
 	return errors
 
 
