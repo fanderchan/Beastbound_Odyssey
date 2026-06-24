@@ -11,7 +11,8 @@
   - 四维基础值、装备加成、最终值。
   - 当前装备提供的精灵，并显示精灵来自哪件装备。
   - 当前记录点。
-- 面板底部提供 `装备` 按钮，可直接跳到装备栏查看和调整装备。
+  - 当前人物转生次数。
+- 面板底部提供 `转生预览` 和 `装备` 按钮；满足资格时，`转生预览` 可通过二次确认执行转生。
 
 ## 暂不处理
 
@@ -23,10 +24,12 @@
 
 ```bash
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-status-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-player-rebirth-preview-check
 ```
 
 预览截图入口：
 
 ```bash
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase71_player_status.png --quit-after 160 -- --player-status-preview
+godot --path client/godot --scene res://scenes/Main.tscn -- --player-rebirth-preview
 ```

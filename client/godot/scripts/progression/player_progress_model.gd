@@ -15,6 +15,7 @@ const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const TrainingPartnerModel := preload("res://scripts/progression/training_partner_model.gd")
 
@@ -70,6 +71,11 @@ const AUTO_CAPTURE_SETTINGS_KEY := AutoCaptureSettingsModel.SETTINGS_KEY
 const HANG_SETTINGS_KEY := HangSettingsModel.SETTINGS_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
 const RECORD_POINT_KEY := "recordPoint"
+const UNLOCKED_ABILITIES_KEY := "unlockedAbilities"
+const ABILITY_REMOTE_STABLE := "remoteStable"
+const REBIRTH_COUNT_KEY := RebirthModel.REBIRTH_COUNT_KEY
+const REBIRTH_HISTORY_KEY := RebirthModel.REBIRTH_HISTORY_KEY
+const REBIRTH_QUEST_COMPLETIONS_KEY := RebirthModel.REBIRTH_QUEST_COMPLETIONS_KEY
 const DEFAULT_RECORD_POINT_MAP_ID := "firebud_village_gate"
 const DEFAULT_RECORD_POINT_SPAWN_NAME := "default"
 const DEFAULT_RECORD_POINT_LABEL := "火芽村出生点"
@@ -115,6 +121,10 @@ static func default_profile() -> Dictionary:
 		"hangSettings": HangSettingsModel.default_settings(),
 		"trainingPartners": [],
 		"recordPoint": default_record_point(),
+		"unlockedAbilities": [],
+		"rebirthCount": 0,
+		"rebirthHistory": [],
+		"rebirthQuestCompletions": [],
 	}
 
 
@@ -158,6 +168,68 @@ static func with_record_point(profile: Dictionary, map_id: String, spawn_name: S
 		"label": label,
 	})
 	return normalize_profile(normalized)
+
+
+static func unlocked_abilities(profile: Dictionary) -> Array[String]:
+	return _valid_unique_ability_ids(normalize_profile(profile).get(UNLOCKED_ABILITIES_KEY, []))
+
+
+static func has_unlocked_ability(profile: Dictionary, ability_id: String) -> bool:
+	var normalized_id := str(ability_id).strip_edges()
+	return normalized_id != "" and unlocked_abilities(profile).has(normalized_id)
+
+
+static func has_remote_stable(profile: Dictionary) -> bool:
+	return has_unlocked_ability(profile, ABILITY_REMOTE_STABLE)
+
+
+static func with_unlocked_ability(profile: Dictionary, ability_id: String) -> Dictionary:
+	var normalized_id := str(ability_id).strip_edges()
+	var normalized := normalize_profile(profile)
+	if normalized_id == "":
+		return normalized
+	var abilities := _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
+	if not abilities.has(normalized_id):
+		abilities.append(normalized_id)
+	normalized[UNLOCKED_ABILITIES_KEY] = abilities
+	return normalize_profile(normalized)
+
+
+static func rebirth_count(profile: Dictionary) -> int:
+	return RebirthModel.rebirth_count(normalize_profile(profile))
+
+
+static func rebirth_requirement_state(profile: Dictionary) -> Dictionary:
+	return RebirthModel.requirement_state(normalize_profile(profile))
+
+
+static func rebirth_preview(profile: Dictionary) -> Dictionary:
+	return RebirthModel.preview(normalize_profile(profile))
+
+
+static func rebirth_preview_lines(profile: Dictionary) -> Array[String]:
+	return RebirthModel.preview_lines(normalize_profile(profile))
+
+
+static func with_rebirth_count(profile: Dictionary, count: int) -> Dictionary:
+	return normalize_profile(RebirthModel.with_rebirth_count(profile, count))
+
+
+static func with_rebirth_quest_completed(profile: Dictionary, target_count: int, completed: bool = true) -> Dictionary:
+	return normalize_profile(RebirthModel.with_rebirth_quest_completed(profile, target_count, completed))
+
+
+static func execute_rebirth(profile: Dictionary) -> Dictionary:
+	var result := RebirthModel.execute_rebirth(normalize_profile(profile), exp_to_next_level(1))
+	var next_profile := result.get("profile", profile) as Dictionary
+	next_profile = normalize_profile(next_profile)
+	if bool(result.get("ok", false)):
+		var player := next_profile.get("player", {}) as Dictionary
+		player["hp"] = maxi(1, int(player.get("maxHp", player.get("hp", 1))))
+		next_profile["player"] = player
+		next_profile = normalize_profile(next_profile)
+	result["profile"] = next_profile
+	return result
 
 
 static func battle_actor_knocked_away(state: Dictionary, actor_id: String) -> bool:
@@ -1477,11 +1549,17 @@ static func claim_active_quest(profile: Dictionary, reward_choice_id: String = "
 	else:
 		normalized[ACTIVE_QUEST_ID_KEY] = ""
 	normalized[QUEST_STATES_KEY] = states
+	var rebirth_target := QuestModel.rebirth_completion_target(quest)
+	if rebirth_target > 0:
+		normalized = RebirthModel.with_rebirth_quest_completed(normalized, rebirth_target, true)
 	normalized = normalize_profile(normalized)
 	var reward_text := QuestModel.reward_claim_text(quest, choice)
 	var message := "完成任务「%s」。" % QuestModel.title_for(quest)
 	if reward_text != "":
 		message = "完成任务「%s」，获得%s。" % [QuestModel.title_for(quest), reward_text]
+	if rebirth_target > 0:
+		var stage_text := RebirthModel.target_stage_label(rebirth_target)
+		message = "完成任务「%s」，%s资格已记录。" % [QuestModel.title_for(quest), stage_text]
 	return {
 		"ok": true,
 		"profile": normalized,
@@ -2730,6 +2808,8 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 	normalized[RECORD_POINT_KEY] = _normalize_record_point(normalized.get(RECORD_POINT_KEY, {}))
+	normalized[UNLOCKED_ABILITIES_KEY] = _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
+	normalized = RebirthModel.normalize_profile(normalized)
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
@@ -3676,6 +3756,16 @@ static func _string_array(value) -> Array[String]:
 			var text := str(item)
 			if text != "":
 				result.append(text)
+	return result
+
+
+static func _valid_unique_ability_ids(value) -> Array[String]:
+	var result: Array[String] = []
+	for ability_id in _string_array(value):
+		var normalized_id := ability_id.strip_edges()
+		if normalized_id == "" or result.has(normalized_id):
+			continue
+		result.append(normalized_id)
 	return result
 
 

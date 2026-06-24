@@ -260,6 +260,26 @@
           }
         ]
       },
+      "nextQuestId": "quest_rebirth_1_guidance"
+    },
+    {
+      "id": "quest_rebirth_1_guidance",
+      "title": "一转资格",
+      "giverId": "firebud_rebirth_mentor",
+      "turnInId": "firebud_rebirth_mentor",
+      "autoClaimOnReady": true,
+      "summary": "向转生导师确认一转资格。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_rebirth_mentor",
+        "count": 1,
+        "text": "和转生导师阿岚对话"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
+      "rebirthQuestTarget": 1,
       "nextQuestId": ""
     }
   ]

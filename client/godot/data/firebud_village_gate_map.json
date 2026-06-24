@@ -108,6 +108,19 @@
       "option": "知道了"
     },
     {
+      "id": "firebud_rebirth_mentor",
+      "name": "转生导师阿岚",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [11, 14],
+      "facilityType": "rebirth",
+      "facilityLabel": "转生",
+      "action": "转生",
+      "actionType": "rebirth",
+      "dialog": ["转生导师阿岚：转生会让等级回到 Lv1，但基础能力会按你这一轮的练度重新计算。先确认资格，再决定是否转生。"],
+      "option": "转生"
+    },
+    {
       "id": "firebud_doctor",
       "name": "村医阿萝",
       "kind": "npc",
@@ -151,6 +164,19 @@
       "shopId": "firebud_item_shop",
       "dialog": ["杂货商阿芸：路上要多备点肉、药和捕捉工具。要买还是要卖，都可以在这里办。"],
       "option": "买卖"
+    },
+    {
+      "id": "firebud_stable_keeper",
+      "name": "兽栏管理员阿牧",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [5, 16],
+      "facilityType": "stable",
+      "facilityLabel": "兽栏",
+      "action": "兽栏",
+      "actionType": "stable",
+      "dialog": ["兽栏管理员阿牧：队伍满了就把伙伴暂时寄放在这里。远程兽栏是后面才能学会的本事。"],
+      "option": "兽栏"
     },
     {
       "id": "firebud_pet_skill_trainer",

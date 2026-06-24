@@ -37,7 +37,9 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --gm-10v10-map
 - `内挂战斗`：打开自动战斗设置。
 - `内挂捕捉`：打开自动捕捉设置。
 - `陪练伙伴`：加伙伴测试 5 人 5 宠。
-- `宠物`：队伍、兽栏、图鉴化详情。
+- `宠物`：普通宠物面板，远程兽栏未解锁时不能随身存取。
+- `兽栏`：GM 测试存取入口，等同站在村内兽栏旁。
+- `转生预览`：打开人物转生资格和能力预览，满足条件时可二次确认执行。
 - `图鉴`：宠物图鉴列表。
 
 ## 自动自测命令
@@ -100,12 +102,21 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-pet-capture-feedback-check
 ```
 
+人物：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-status-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-player-rebirth-preview-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-rebirth-execute-check
+```
+
 地图设施：
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-map-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-marker-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-dialog-options-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-stable-facility-check
 ```
 
 ## 预览

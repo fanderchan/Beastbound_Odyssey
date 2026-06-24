@@ -99,6 +99,10 @@ static func reward_stone_coins(quest: Dictionary) -> int:
 	return maxi(0, int(reward_dict.get("stoneCoins", 0)))
 
 
+static func rebirth_completion_target(quest: Dictionary) -> int:
+	return maxi(0, int(quest.get("rebirthQuestTarget", 0)))
+
+
 static func reward_items(quest: Dictionary) -> Array[Dictionary]:
 	var rewards = quest.get("rewards", {})
 	var reward_dict := rewards as Dictionary if rewards is Dictionary else {}

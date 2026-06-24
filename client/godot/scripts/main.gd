@@ -110,8 +110,10 @@ const DIALOG_ACTION_TALK_QUEST := "talk_quest"
 const DIALOG_ACTION_HEAL := "heal"
 const DIALOG_ACTION_RECORD_POINT := "record_point"
 const DIALOG_ACTION_PET_SKILL_TRAIN := "pet_skill_train"
+const DIALOG_ACTION_STABLE := "stable"
 const DIALOG_ACTION_SHOP := "shop"
 const DIALOG_ACTION_OPEN_QUEST := "open_quest"
+const DIALOG_ACTION_REBIRTH := "rebirth"
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -187,8 +189,14 @@ var player_status_panel: PanelContainer
 var player_status_detail_label: RichTextLabel
 var player_status_points_label: Label
 var player_status_stat_point_buttons: Dictionary = {}
+var player_status_rebirth_button: Button
 var player_status_equipment_button: Button
 var player_status_close_button: Button
+var player_rebirth_preview_panel: PanelContainer
+var player_rebirth_preview_label: RichTextLabel
+var player_rebirth_execute_button: Button
+var player_rebirth_preview_close_button: Button
+var player_rebirth_confirm_pending: bool = false
 var equipment_panel: PanelContainer
 var equipment_grid: Control
 var equipment_stats_label: Label
@@ -270,6 +278,7 @@ var pet_filter_mode: String = PET_FILTER_ALL
 var pet_sort_mode: String = PET_SORT_DEFAULT
 var pet_sort_descending: bool = true
 var pet_clear_confirm_instance_id: String = ""
+var pet_panel_stable_access_override: bool = false
 var pet_list_buttons: Dictionary = {}
 var codex_panel: PanelContainer
 var codex_list_container: VBoxContainer
@@ -338,6 +347,7 @@ var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
+var auto_stable_facility_check: bool = false
 var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
@@ -417,6 +427,8 @@ var auto_equipment_check: bool = false
 var auto_equipment_shop_preview_check: bool = false
 var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
+var auto_player_rebirth_preview_check: bool = false
+var auto_player_rebirth_execute_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_durability_check: bool = false
 var auto_equipment_durability_visual_check: bool = false
@@ -429,6 +441,7 @@ var backpack_filter_preview: bool = false
 var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
+var player_rebirth_preview: bool = false
 var equipment_requirement_preview: bool = false
 var equipment_shop_preview: bool = false
 var equipment_durability_preview: bool = false
@@ -732,6 +745,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_status_check")
 	elif auto_player_stat_points_check:
 		call_deferred("_run_auto_player_stat_points_check")
+	elif auto_player_rebirth_preview_check:
+		call_deferred("_run_auto_player_rebirth_preview_check")
+	elif auto_player_rebirth_execute_check:
+		call_deferred("_run_auto_player_rebirth_execute_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_equipment_durability_check:
@@ -756,6 +773,8 @@ func _ready() -> void:
 		call_deferred("_run_player_status_preview")
 	elif player_stat_points_preview:
 		call_deferred("_run_player_stat_points_preview")
+	elif player_rebirth_preview:
+		call_deferred("_run_player_rebirth_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
 	elif equipment_shop_preview:
@@ -858,6 +877,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_npc_interaction_check")
 	elif auto_facility_dialog_options_check:
 		call_deferred("_run_auto_facility_dialog_options_check")
+	elif auto_stable_facility_check:
+		call_deferred("_run_auto_stable_facility_check")
 	elif auto_pet_follow_check:
 		call_deferred("_run_auto_pet_follow_check")
 	elif auto_animation_state_check:
@@ -994,6 +1015,8 @@ func _apply_preview_window_args() -> void:
 			auto_npc_collision_check = true
 		elif arg == "--auto-facility-dialog-options-check":
 			auto_facility_dialog_options_check = true
+		elif arg == "--auto-stable-facility-check":
+			auto_stable_facility_check = true
 		elif arg == "--auto-map-transfer-check":
 			auto_map_transfer_check = true
 		elif arg == "--auto-encounter-check":
@@ -1152,6 +1175,10 @@ func _apply_preview_window_args() -> void:
 			auto_player_status_check = true
 		elif arg == "--auto-player-stat-points-check":
 			auto_player_stat_points_check = true
+		elif arg == "--auto-player-rebirth-preview-check":
+			auto_player_rebirth_preview_check = true
+		elif arg == "--auto-player-rebirth-execute-check":
+			auto_player_rebirth_execute_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
 		elif arg == "--auto-equipment-durability-check":
@@ -1176,6 +1203,8 @@ func _apply_preview_window_args() -> void:
 			player_status_preview = true
 		elif arg == "--player-stat-points-preview":
 			player_stat_points_preview = true
+		elif arg == "--player-rebirth-preview":
+			player_rebirth_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
 		elif arg == "--equipment-shop-preview":
@@ -1678,7 +1707,9 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var doctor := InteractionModel.find_by_id(map_data, "firebud_doctor")
 	var record_point := InteractionModel.find_by_id(map_data, "firebud_record_pillar")
 	var pet_trainer := InteractionModel.find_by_id(map_data, "firebud_pet_skill_trainer")
-	var facility_found := not shopkeeper.is_empty() and not doctor.is_empty() and not record_point.is_empty() and not pet_trainer.is_empty()
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	var rebirth_mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	var facility_found := not shopkeeper.is_empty() and not doctor.is_empty() and not record_point.is_empty() and not pet_trainer.is_empty() and not stable_keeper.is_empty() and not rebirth_mentor.is_empty()
 
 	_open_interaction_dialog(shopkeeper)
 	await get_tree().process_frame
@@ -1734,8 +1765,24 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var trainer_primary_ok := pet_skill_panel != null and pet_skill_panel.visible and not _dialog_is_open()
 	_close_pet_skill_panel()
 
-	var status := "ok" if facility_found and shop_task_button_ok and quest_panel_opened and shop_primary_ok and doctor_options_ok and record_options_ok and trainer_options_ok and trainer_primary_ok else "failed"
-	print("facility dialog options check ready: status=%s found=%s shop_task=%s quest_open=%s shop_primary=%s doctor=%s record=%s trainer=%s trainer_primary=%s secondary=%s" % [
+	_open_interaction_dialog(stable_keeper)
+	await get_tree().process_frame
+	var stable_options_ok := _dialog_is_open() and dialog_option_button != null and dialog_option_button.text == "兽栏"
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var stable_primary_ok := pet_panel != null and pet_panel.visible and not _dialog_is_open() and pet_panel_stable_access_override
+	_close_pet_panel()
+
+	_open_interaction_dialog(rebirth_mentor)
+	await get_tree().process_frame
+	var rebirth_options_ok := _dialog_is_open() and dialog_option_button != null and dialog_option_button.text == "转生"
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var rebirth_primary_ok := player_rebirth_preview_panel != null and player_rebirth_preview_panel.visible and not _dialog_is_open()
+	_close_player_rebirth_preview_panel()
+
+	var status := "ok" if facility_found and shop_task_button_ok and quest_panel_opened and shop_primary_ok and doctor_options_ok and record_options_ok and trainer_options_ok and trainer_primary_ok and stable_options_ok and stable_primary_ok and rebirth_options_ok and rebirth_primary_ok else "failed"
+	print("facility dialog options check ready: status=%s found=%s shop_task=%s quest_open=%s shop_primary=%s doctor=%s record=%s trainer=%s trainer_primary=%s stable=%s stable_primary=%s rebirth=%s rebirth_primary=%s secondary=%s" % [
 		status,
 		str(facility_found),
 		str(shop_task_button_ok),
@@ -1745,7 +1792,103 @@ func _run_auto_facility_dialog_options_check() -> void:
 		str(record_options_ok),
 		str(trainer_options_ok),
 		str(trainer_primary_ok),
+		str(stable_options_ok),
+		str(stable_primary_ok),
+		str(rebirth_options_ok),
+		str(rebirth_primary_ok),
 		str(_dialog_secondary_button_texts()),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_stable_facility_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+
+	pet_selected_instance_id = "pet_bui_tough"
+	_open_pet_panel(false)
+	await get_tree().process_frame
+	var normal_locked := (
+		pet_panel != null
+		and pet_panel.visible
+		and not pet_panel_stable_access_override
+		and pet_stable_button != null
+		and pet_stable_button.visible
+		and pet_stable_button.disabled
+		and pet_stable_button.text == "存入"
+		and pet_stable_button.tooltip_text.find("远程兽栏") >= 0
+	)
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var locked_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var locked_blocked := (
+		str(locked_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and world_log_message.find("远程兽栏") >= 0
+	)
+	_close_pet_panel()
+
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	_open_interaction_dialog(stable_keeper)
+	await get_tree().process_frame
+	var dialog_ok := (
+		not stable_keeper.is_empty()
+		and _dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "兽栏"
+		and InteractionModel.facility_label_for(stable_keeper) == "兽栏"
+	)
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var village_open := pet_panel != null and pet_panel.visible and not _dialog_is_open() and pet_panel_stable_access_override
+	_select_pet_instance("pet_bui_tough")
+	await get_tree().process_frame
+	var village_enabled := pet_stable_button != null and pet_stable_button.visible and not pet_stable_button.disabled
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var stored_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var village_stored := str(stored_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var withdrawn_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var village_withdrawn := str(withdrawn_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+	_close_pet_panel()
+
+	player_profile = PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.default_profile(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
+	pet_selected_instance_id = "pet_bui_tough"
+	_open_pet_panel(false)
+	await get_tree().process_frame
+	var remote_enabled := (
+		pet_panel != null
+		and pet_panel.visible
+		and not pet_panel_stable_access_override
+		and PlayerProgressModel.has_remote_stable(player_profile)
+		and pet_stable_button != null
+		and pet_stable_button.visible
+		and not pet_stable_button.disabled
+	)
+	_on_pet_stable_pressed()
+	await get_tree().process_frame
+	var remote_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_tough")
+	var remote_stored := str(remote_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
+	_close_pet_panel()
+
+	var status := "ok" if loaded and normal_locked and locked_blocked and dialog_ok and village_open and village_enabled and village_stored and village_withdrawn and remote_enabled and remote_stored else "failed"
+	print("stable facility check ready: status=%s loaded=%s normal_locked=%s locked_blocked=%s dialog=%s village_open=%s village_enabled=%s village_stored=%s village_withdrawn=%s remote_enabled=%s remote_stored=%s log=%s" % [
+		status,
+		str(loaded),
+		str(normal_locked),
+		str(locked_blocked),
+		str(dialog_ok),
+		str(village_open),
+		str(village_enabled),
+		str(village_stored),
+		str(village_withdrawn),
+		str(remote_enabled),
+		str(remote_stored),
+		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -4842,9 +4985,9 @@ func _village_healer_check_profile(coins: int) -> Dictionary:
 
 func _run_auto_pet_stable_check() -> void:
 	profile_save_enabled = false
-	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.default_profile(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
 	pet_selected_instance_id = ""
-	_open_pet_panel()
+	_open_pet_panel(false)
 	await get_tree().process_frame
 	_select_pet_instance("pet_bui_tough")
 	await get_tree().process_frame
@@ -4890,7 +5033,7 @@ func _run_auto_pet_stable_check() -> void:
 		and pet_stable_button.text == "存入"
 	)
 
-	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.default_profile(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
 	var instances: Array = player_profile.get("petInstances", [])
 	instances.append(PlayerProgressModel.create_pet_instance_from_form(
 		"pet_bui_extra",
@@ -4909,7 +5052,7 @@ func _run_auto_pet_stable_check() -> void:
 	player_profile["petInstances"] = instances
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	pet_selected_instance_id = "pet_bui_full_storage"
-	_open_pet_panel()
+	_open_pet_panel(false)
 	_select_pet_instance("pet_bui_full_storage")
 	await get_tree().process_frame
 	var full_before_party := PlayerProgressModel.party_pet_instances(player_profile).size()
@@ -5432,7 +5575,7 @@ func _run_auto_pet_storage_capture_check() -> void:
 		if str(instance.get("instanceId", "")).begins_with("pet_captured_") and str(instance.get("formId", "")).begins_with("wuli_"):
 			captured_storage_ok = true
 			break
-	var result_ok := str(result.get("result", "")) == "victory" and world_log_message.find("捕捉") >= 0
+	var result_ok := str(result.get("result", "")) == "victory" and (world_log_message.find("捕获") >= 0 or world_log_message.find("捕捉") >= 0)
 	var exited_ok := not battle_active and player != null and player.visible
 	var status := "ok" if started and storage_count_ok and captured_storage_ok and result_ok and exited_ok else "failed"
 	print("pet storage capture check ready: status=%s started=%s storage_count=%s captured_storage=%s result=%s exited=%s before_party=%d after_party=%d before_storage=%d after_storage=%d log=%s" % [
@@ -6475,6 +6618,7 @@ func _run_auto_player_status_check() -> void:
 		and text.find("风纹戒指") >= 0
 	)
 	var record_ok := text.find("火芽村出生点") >= 0
+	var rebirth_ok := text.find("转生: 0转") >= 0 and player_status_rebirth_button != null and player_status_rebirth_button.text == "转生预览"
 	_on_player_status_equipment_pressed()
 	await get_tree().process_frame
 	var equipment_route_ok := (
@@ -6485,8 +6629,8 @@ func _run_auto_player_status_check() -> void:
 		and equipment_stats_label != null
 		and equipment_stats_label.text.find("攻击 18+14=32") >= 0
 	)
-	var status := "ok" if menu_ok and panel_ok and stats_ok and bonus_ok and spirits_ok and record_ok and equipment_route_ok else "failed"
-	print("player status check ready: status=%s menu=%s panel=%s stats=%s bonus=%s spirits=%s record=%s equipment_route=%s" % [
+	var status := "ok" if menu_ok and panel_ok and stats_ok and bonus_ok and spirits_ok and record_ok and rebirth_ok and equipment_route_ok else "failed"
+	print("player status check ready: status=%s menu=%s panel=%s stats=%s bonus=%s spirits=%s record=%s rebirth=%s equipment_route=%s" % [
 		status,
 		str(menu_ok),
 		str(panel_ok),
@@ -6494,6 +6638,7 @@ func _run_auto_player_status_check() -> void:
 		str(bonus_ok),
 		str(spirits_ok),
 		str(record_ok),
+		str(rebirth_ok),
 		str(equipment_route_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -6588,6 +6733,222 @@ func _run_auto_player_stat_points_check() -> void:
 		int(allocated_current.get("attack", 0)),
 		int(allocated_current.get("maxHp", 0)),
 		int(allocated_current.get("defense", 0)),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_player_rebirth_preview_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var default_profile := PlayerProgressModel.default_profile()
+	var default_preview := PlayerProgressModel.rebirth_preview(default_profile)
+	var default_lines := "\n".join(PlayerProgressModel.rebirth_preview_lines(default_profile))
+	var default_ok := (
+		PlayerProgressModel.rebirth_count(default_profile) == 0
+		and not bool(default_preview.get("ok", true))
+		and default_lines.find("未满足") >= 0
+		and default_lines.find("人物需要 Lv80") >= 0
+		and default_lines.find("一转任务链未完成") >= 0
+		and default_lines.find("潜能") < 0
+	)
+
+	var ready_profile := default_profile.duplicate(true)
+	var ready_player := ready_profile.get("player", {}) as Dictionary
+	ready_player["level"] = 80
+	ready_player["exp"] = 0
+	ready_player["nextExp"] = PlayerProgressModel.exp_to_next_level(80)
+	ready_player["baseStats"] = {
+		"maxHp": 220,
+		"attack": 45,
+		"defense": 30,
+		"quick": 90,
+	}
+	ready_player["hp"] = 220
+	ready_profile["player"] = ready_player
+	ready_profile = PlayerProgressModel.normalize_profile(ready_profile)
+	ready_profile = PlayerProgressModel.with_rebirth_quest_completed(ready_profile, 1, true)
+	var ready_preview := PlayerProgressModel.rebirth_preview(ready_profile)
+	var ready_after := ready_preview.get("afterStats", {}) as Dictionary
+	var ready_lines := "\n".join(PlayerProgressModel.rebirth_preview_lines(ready_profile))
+	var ready_count_before := PlayerProgressModel.rebirth_count(ready_profile)
+	var ready_ok := (
+		bool(ready_preview.get("ok", false))
+		and int(ready_preview.get("fromCount", -1)) == 0
+		and int(ready_preview.get("targetCount", -1)) == 1
+		and int(ready_after.get("maxHp", 0)) > int(PlayerProgressModel.DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))
+		and int(ready_after.get("attack", 0)) > int(PlayerProgressModel.DEFAULT_PLAYER_BATTLE_STATS.get("attack", 18))
+		and ready_lines.find("可转生") >= 0
+		and ready_lines.find("0转 -> 1转") >= 0
+		and ready_lines.find("执行转生前会再次确认") >= 0
+		and ready_lines.find("潜能") < 0
+		and PlayerProgressModel.rebirth_count(ready_profile) == ready_count_before
+	)
+
+	var maxed_profile := PlayerProgressModel.with_rebirth_count(ready_profile, 6)
+	var maxed_lines := "\n".join(PlayerProgressModel.rebirth_preview_lines(maxed_profile))
+	var maxed_ok := (
+		not bool(PlayerProgressModel.rebirth_preview(maxed_profile).get("ok", true))
+		and maxed_lines.find("已达到6转上限") >= 0
+	)
+
+	player_profile = ready_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_player_status_panel()
+	await get_tree().process_frame
+	var status_text := player_status_detail_label.text if player_status_detail_label != null else ""
+	var status_button_ok := (
+		status_text.find("转生: 0转") >= 0
+		and player_status_rebirth_button != null
+		and player_status_rebirth_button.text == "转生预览"
+	)
+	_open_player_rebirth_preview_panel()
+	await get_tree().process_frame
+	var preview_text := player_rebirth_preview_label.text if player_rebirth_preview_label != null else ""
+	var ui_ok := (
+		player_rebirth_preview_panel != null
+		and player_rebirth_preview_panel.visible
+		and (player_status_panel == null or not player_status_panel.visible)
+		and preview_text.find("转生预览") >= 0
+		and preview_text.find("可转生") >= 0
+		and preview_text.find("转生后预览") >= 0
+		and player_rebirth_execute_button != null
+		and player_rebirth_execute_button.text == "执行转生"
+		and not player_rebirth_execute_button.disabled
+		and preview_text.find("潜能") < 0
+		and PlayerProgressModel.rebirth_count(player_profile) == 0
+	)
+
+	var status := "ok" if default_ok and ready_ok and maxed_ok and status_button_ok and ui_ok else "failed"
+	print("player rebirth preview check ready: status=%s default=%s ready=%s maxed=%s status_button=%s ui=%s after_hp=%d after_attack=%d text=%s" % [
+		status,
+		str(default_ok),
+		str(ready_ok),
+		str(maxed_ok),
+		str(status_button_ok),
+		str(ui_ok),
+		int(ready_after.get("maxHp", 0)),
+		int(ready_after.get("attack", 0)),
+		preview_text.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_player_rebirth_execute_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var quest := QuestModel.quest_for_id("quest_rebirth_1_guidance")
+	var data_ok := (
+		not quest.is_empty()
+		and QuestModel.rebirth_completion_target(quest) == 1
+		and QuestModel.next_quest_id(QuestModel.quest_for_id("quest_capture_wuli")) == "quest_rebirth_1_guidance"
+	)
+	var quest_profile := _profile_with_active_quest("quest_rebirth_1_guidance")
+	player_profile = quest_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	var mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	_open_interaction_dialog(mentor)
+	await get_tree().process_frame
+	var mentor_dialog_ok := (
+		not mentor.is_empty()
+		and _dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "完成"
+		and dialog_body_label != null
+		and dialog_body_label.text.find("一转资格") >= 0
+	)
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var requirement_after_quest := PlayerProgressModel.rebirth_requirement_state(player_profile)
+	var quest_record_ok := (
+		PlayerProgressModel.active_quest_id(player_profile) == ""
+		and bool(requirement_after_quest.get("questOk", false))
+		and not bool(requirement_after_quest.get("ok", true))
+		and str(world_log_message).find("一转资格已记录") >= 0
+	)
+
+	var ready_profile := player_profile.duplicate(true)
+	var ready_player := ready_profile.get("player", {}) as Dictionary
+	ready_player["level"] = 80
+	ready_player["exp"] = 0
+	ready_player["nextExp"] = PlayerProgressModel.exp_to_next_level(80)
+	ready_player["baseStats"] = {
+		"maxHp": 220,
+		"attack": 45,
+		"defense": 30,
+		"quick": 90,
+	}
+	ready_player["hp"] = 220
+	ready_profile["player"] = ready_player
+	ready_profile = PlayerProgressModel.normalize_profile(ready_profile)
+	var before_backpack_count := PlayerProgressModel.backpack_slots(ready_profile).size()
+	var before_pet_count := (ready_profile.get("petInstances", []) as Array).size()
+	var before_right_hand := PlayerProgressModel.equipped_item_id(ready_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
+	var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
+	var executed_player := executed_profile.get("player", {}) as Dictionary
+	var executed_history: Array = executed_profile.get(PlayerProgressModel.REBIRTH_HISTORY_KEY, [])
+	var execute_ok := (
+		bool(execute_result.get("ok", false))
+		and PlayerProgressModel.rebirth_count(executed_profile) == 1
+		and int(executed_player.get("level", 0)) == 1
+		and int(executed_player.get("exp", -1)) == 0
+		and int(executed_player.get("nextExp", 0)) == PlayerProgressModel.exp_to_next_level(1)
+		and PlayerProgressModel.player_stat_points(executed_profile) == 0
+		and int(executed_player.get("hp", 0)) == int(executed_player.get("maxHp", 0))
+		and executed_history.size() == 1
+		and int((executed_history[0] as Dictionary).get("toRebirth", 0)) == 1
+		and PlayerProgressModel.backpack_slots(executed_profile).size() == before_backpack_count
+		and (executed_profile.get("petInstances", []) as Array).size() == before_pet_count
+		and PlayerProgressModel.equipped_item_id(executed_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == before_right_hand
+	)
+
+	player_profile = ready_profile
+	_open_player_rebirth_preview_panel()
+	await get_tree().process_frame
+	var first_button_ok := (
+		player_rebirth_execute_button != null
+		and player_rebirth_execute_button.text == "执行转生"
+		and not player_rebirth_execute_button.disabled
+	)
+	_on_player_rebirth_execute_pressed()
+	await get_tree().process_frame
+	var confirm_pending_ok := (
+		player_rebirth_confirm_pending
+		and PlayerProgressModel.rebirth_count(player_profile) == 0
+		and player_rebirth_execute_button != null
+		and player_rebirth_execute_button.text == "确认转生"
+	)
+	_on_player_rebirth_execute_pressed()
+	await get_tree().process_frame
+	var ui_preview_text := player_rebirth_preview_label.text if player_rebirth_preview_label != null else ""
+	var ui_execute_ok: bool = (
+		not player_rebirth_confirm_pending
+		and PlayerProgressModel.rebirth_count(player_profile) == 1
+		and (player_profile.get("player", {}) as Dictionary).get("level", 0) == 1
+		and player_rebirth_execute_button != null
+		and player_rebirth_execute_button.disabled
+		and ui_preview_text.find("1转 -> 2转") >= 0
+		and world_log_message.find("完成一转") >= 0
+	)
+
+	var status := "ok" if data_ok and mentor_dialog_ok and quest_record_ok and execute_ok and first_button_ok and confirm_pending_ok and ui_execute_ok else "failed"
+	print("player rebirth execute check ready: status=%s data=%s mentor=%s quest_record=%s execute=%s first_button=%s confirm=%s ui=%s count=%d level=%d history=%d log=%s" % [
+		status,
+		str(data_ok),
+		str(mentor_dialog_ok),
+		str(quest_record_ok),
+		str(execute_ok),
+		str(first_button_ok),
+		str(confirm_pending_ok),
+		str(ui_execute_ok),
+		PlayerProgressModel.rebirth_count(player_profile),
+		int((player_profile.get("player", {}) as Dictionary).get("level", 0)),
+		(player_profile.get(PlayerProgressModel.REBIRTH_HISTORY_KEY, []) as Array).size(),
+		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -7779,6 +8140,31 @@ func _run_player_stat_points_preview() -> void:
 	await get_tree().create_timer(1.0).timeout
 
 
+func _run_player_rebirth_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var player_dict := player_profile.get("player", {}) as Dictionary
+	player_dict["level"] = 80
+	player_dict["exp"] = 0
+	player_dict["nextExp"] = PlayerProgressModel.exp_to_next_level(80)
+	player_dict["baseStats"] = {
+		"maxHp": 220,
+		"attack": 45,
+		"defense": 30,
+		"quick": 90,
+	}
+	player_dict["hp"] = 220
+	player_profile["player"] = player_dict
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	player_profile = PlayerProgressModel.with_rebirth_quest_completed(player_profile, 1, true)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase94C：转生预览与二次确认。")
+	_open_player_rebirth_preview_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
 func _run_equipment_requirement_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -8090,9 +8476,25 @@ func _run_auto_quest_chain_check() -> void:
 	var capture_ok := (
 		bool(capture_event.get("ready", false))
 		and bool(capture_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == ""
+		and PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
 		and PlayerProgressModel.stone_coins(profile) == before_capture_coins + 60
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET) == before_net + 2
+	)
+
+	var rebirth_event := PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "firebud_rebirth_mentor",
+	})
+	profile = rebirth_event.get("profile", profile)
+	var rebirth_claim := PlayerProgressModel.claim_active_quest(profile)
+	profile = rebirth_claim.get("profile", profile)
+	var rebirth_requirement := PlayerProgressModel.rebirth_requirement_state(profile)
+	var rebirth_quest_ok := (
+		bool(rebirth_event.get("ready", false))
+		and bool(rebirth_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == ""
+		and bool(rebirth_requirement.get("questOk", false))
+		and str(rebirth_claim.get("message", "")).find("一转资格已记录") >= 0
 	)
 
 	player_profile = PlayerProgressModel.default_profile()
@@ -8117,9 +8519,9 @@ func _run_auto_quest_chain_check() -> void:
 			and world_log_message.find("完成任务「认识训练师」") >= 0
 			and _current_task_text().find("补给准备") >= 0
 		)
-	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -8135,6 +8537,7 @@ func _run_auto_quest_chain_check() -> void:
 		str(spirit_hook_ok),
 		str(victory_ok),
 		str(capture_ok),
+		str(rebirth_quest_ok),
 		str(ui_open_ok),
 		str(ui_advance_ok),
 		PlayerProgressModel.quest_progress_text(profile),
@@ -8393,7 +8796,7 @@ func _quest_reward_choice_ready_profile() -> Dictionary:
 	var states := {}
 	for quest in QuestModel.quests():
 		var quest_id := str(quest.get("id", ""))
-		if quest_id == "" or quest_id == "quest_capture_wuli":
+		if quest_id == "" or quest_id == "quest_capture_wuli" or quest_id == "quest_rebirth_1_guidance":
 			continue
 		states[quest_id] = {
 			"status": QuestModel.STATUS_CLAIMED,
@@ -8434,7 +8837,7 @@ func _run_auto_quest_reward_choice_check() -> void:
 		and not bool(no_choice.get("ok", false))
 		and bool(no_choice.get("requiresChoice", false))
 		and bool(rope_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(rope_profile) == ""
+		and PlayerProgressModel.active_quest_id(rope_profile) == "quest_rebirth_1_guidance"
 		and PlayerProgressModel.backpack_item_count(rope_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == model_before_rope + 4
 		and PlayerProgressModel.stone_coins(rope_profile) == model_before_coins + 60
 		and str(rope_claim.get("message", "")).find("初级捕捉绳") >= 0
@@ -8470,7 +8873,7 @@ func _run_auto_quest_reward_choice_check() -> void:
 	var ui_profile := player_profile
 	var ui_log_after_claim := world_log_message
 	var ui_claim_ok: bool = (
-		PlayerProgressModel.active_quest_id(ui_profile) == ""
+		PlayerProgressModel.active_quest_id(ui_profile) == "quest_rebirth_1_guidance"
 		and PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == ui_before_rope + 4
 		and PlayerProgressModel.stone_coins(ui_profile) == ui_before_coins + 60
 		and ui_log_after_claim.find("初级捕捉绳") >= 0
@@ -8650,6 +9053,7 @@ func _run_auto_map_panel_check() -> void:
 		and map_panel.visible
 		and map_marker_buttons.has("interaction:firebud_doctor")
 		and map_marker_buttons.has("interaction:firebud_equipment_keeper")
+		and map_marker_buttons.has("interaction:firebud_rebirth_mentor")
 		and map_marker_buttons.has("zone:village_grass")
 	)
 	var doctor_target := {
@@ -8709,17 +9113,21 @@ func _run_auto_facility_marker_check() -> void:
 	var loaded := _load_map("firebud_village_gate", "from_training_yard")
 	var doctor := InteractionModel.find_by_id(map_data, "firebud_doctor")
 	var item_shop := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
 	var equipment_shop := InteractionModel.find_by_id(map_data, "firebud_equipment_keeper")
 	var record_point := InteractionModel.find_by_id(map_data, "firebud_record_pillar")
 	var pet_trainer := InteractionModel.find_by_id(map_data, "firebud_pet_skill_trainer")
+	var rebirth_mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
 	var training_map := _map_data_for_id("firebud_training_yard")
 	var intro_trainer := InteractionModel.find_by_id(training_map, "trainer")
 	var facility_data_ok := (
 		InteractionModel.facility_label_for(doctor) == "村医"
 		and InteractionModel.facility_label_for(item_shop) == "杂货"
+		and InteractionModel.facility_label_for(stable_keeper) == "兽栏"
 		and InteractionModel.facility_label_for(equipment_shop) == "装备"
 		and InteractionModel.facility_label_for(record_point) == "记录"
 		and InteractionModel.facility_label_for(pet_trainer) == "训练"
+		and InteractionModel.facility_label_for(rebirth_mentor) == "转生"
 		and InteractionModel.facility_label_for(intro_trainer) == "训练"
 	)
 	_open_map_panel()
@@ -8727,25 +9135,35 @@ func _run_auto_facility_marker_check() -> void:
 	var map_button_ok := (
 		map_marker_buttons.has("interaction:firebud_doctor")
 		and map_marker_buttons.has("interaction:firebud_shopkeeper")
+		and map_marker_buttons.has("interaction:firebud_stable_keeper")
 		and map_marker_buttons.has("interaction:firebud_equipment_keeper")
 		and map_marker_buttons.has("interaction:firebud_record_pillar")
 		and map_marker_buttons.has("interaction:firebud_pet_skill_trainer")
+		and map_marker_buttons.has("interaction:firebud_rebirth_mentor")
 		and str((map_marker_buttons["interaction:firebud_doctor"] as Button).text).find("【村医】") >= 0
 		and str((map_marker_buttons["interaction:firebud_shopkeeper"] as Button).text).find("【杂货】") >= 0
+		and str((map_marker_buttons["interaction:firebud_stable_keeper"] as Button).text).find("【兽栏】") >= 0
 		and str((map_marker_buttons["interaction:firebud_equipment_keeper"] as Button).text).find("【装备】") >= 0
 		and str((map_marker_buttons["interaction:firebud_record_pillar"] as Button).text).find("【记录】") >= 0
 		and str((map_marker_buttons["interaction:firebud_pet_skill_trainer"] as Button).text).find("【训练】") >= 0
+		and str((map_marker_buttons["interaction:firebud_rebirth_mentor"] as Button).text).find("【转生】") >= 0
 	)
 	var item_shop_target := _navigation_target_for_shop("firebud_item_shop")
 	var equipment_shop_target := _navigation_target_for_shop("firebud_equipment_shop")
+	var stable_target := _navigation_target_for_interaction_id("firebud_stable_keeper")
 	var record_target := _navigation_target_for_interaction_id("firebud_record_pillar")
+	var rebirth_target := _navigation_target_for_interaction_id("firebud_rebirth_mentor")
 	var trainer_target := _navigation_target_for_interaction_id("trainer")
 	var target_pick_ok := (
 		str(item_shop_target.get("facilityLabel", "")) == "杂货"
 		and str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_shopkeeper"
 		and str(equipment_shop_target.get("facilityLabel", "")) == "装备"
 		and str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_equipment_keeper"
+		and str(stable_target.get("facilityLabel", "")) == "兽栏"
+		and str((stable_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_stable_keeper"
 		and str(record_target.get("facilityLabel", "")) == "记录"
+		and str(rebirth_target.get("facilityLabel", "")) == "转生"
+		and str((rebirth_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_rebirth_mentor"
 		and str(trainer_target.get("facilityLabel", "")) == "训练"
 		and str(trainer_target.get("mapId", "")) == "firebud_training_yard"
 	)
@@ -8753,11 +9171,15 @@ func _run_auto_facility_marker_check() -> void:
 	var buy_supply_target := _active_quest_navigation_target()
 	player_profile = _profile_with_active_quest("quest_buy_weapon")
 	var buy_weapon_target := _active_quest_navigation_target()
+	player_profile = _profile_with_active_quest("quest_rebirth_1_guidance")
+	var rebirth_quest_target := _active_quest_navigation_target()
 	var quest_target_ok := (
 		str(buy_supply_target.get("facilityLabel", "")) == "杂货"
 		and str((buy_supply_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_shopkeeper"
 		and str(buy_weapon_target.get("facilityLabel", "")) == "装备"
 		and str((buy_weapon_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_equipment_keeper"
+		and str(rebirth_quest_target.get("facilityLabel", "")) == "转生"
+		and str((rebirth_quest_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_rebirth_mentor"
 	)
 	_route_to_quest_target(buy_weapon_target)
 	await get_tree().process_frame
@@ -8768,7 +9190,7 @@ func _run_auto_facility_marker_check() -> void:
 		and world_log_message.find("装备商阿石") >= 0
 	)
 	var status := "ok" if loaded and facility_data_ok and map_button_ok and target_pick_ok and quest_target_ok and route_ok else "failed"
-	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s trainer_map=%s log=%s" % [
+	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s stable=%s trainer_map=%s log=%s" % [
 		status,
 		str(loaded),
 		str(facility_data_ok),
@@ -8778,6 +9200,7 @@ func _run_auto_facility_marker_check() -> void:
 		str(route_ok),
 		str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
+		str((stable_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str(trainer_target.get("mapId", "")),
 		world_log_message,
 	])
@@ -8805,6 +9228,8 @@ func _run_auto_qa_panel_check() -> void:
 		and qa_entry_buttons.has("open_quest")
 		and qa_entry_buttons.has("open_auto_battle")
 		and qa_entry_buttons.has("open_auto_capture")
+		and qa_entry_buttons.has("open_stable")
+		and qa_entry_buttons.has("open_rebirth_preview")
 	)
 	var command_ok := (
 		command_text.find("--auto-backpack-check") >= 0
@@ -8813,6 +9238,9 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("--auto-quest-ui-check") >= 0
 		and command_text.find("--auto-battle-auto-10v10-check") >= 0
 		and command_text.find("--auto-capture-settings-check") >= 0
+		and command_text.find("--auto-player-rebirth-preview-check") >= 0
+		and command_text.find("--auto-player-rebirth-execute-check") >= 0
+		and command_text.find("--auto-stable-facility-check") >= 0
 	)
 	_on_qa_entry_pressed("open_backpack")
 	await get_tree().process_frame
@@ -8844,6 +9272,29 @@ func _run_auto_qa_panel_check() -> void:
 	var auto_capture_ok := auto_settings_panel != null and auto_settings_panel.visible and auto_settings_active_tab == "capture"
 	_close_auto_settings_panel()
 	_open_qa_panel()
+	_on_qa_entry_pressed("open_stable")
+	await get_tree().process_frame
+	var stable_ok := (
+		pet_panel != null
+		and pet_panel.visible
+		and pet_panel_stable_access_override
+		and pet_stable_button != null
+		and pet_stable_button.visible
+		and not pet_stable_button.disabled
+	)
+	_close_pet_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_rebirth_preview")
+	await get_tree().process_frame
+	var rebirth_preview_text := player_rebirth_preview_label.text if player_rebirth_preview_label != null else ""
+	var rebirth_preview_ok := (
+		player_rebirth_preview_panel != null
+		and player_rebirth_preview_panel.visible
+		and rebirth_preview_text.find("转生预览") >= 0
+		and rebirth_preview_text.find("转生后预览") >= 0
+	)
+	_close_player_rebirth_preview_panel()
+	_open_qa_panel()
 	_on_qa_entry_pressed("gm_10v10_grass")
 	await get_tree().process_frame
 	var zone_10v10 := _encounter_zone_by_id("gm_10v10_grass")
@@ -8865,8 +9316,8 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and auto_capture_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s auto_capture=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
@@ -8877,6 +9328,8 @@ func _run_auto_qa_panel_check() -> void:
 		str(equipment_ok),
 		str(quest_ok),
 		str(auto_capture_ok),
+		str(stable_ok),
+		str(rebirth_preview_ok),
 		str(gm_10v10_ok),
 		str(gm_capture_ok),
 		qa_entry_buttons.size(),
@@ -12123,7 +12576,9 @@ func _build_hud() -> void:
 	pet_menu_button = Button.new()
 	pet_menu_button.text = "宠物"
 	pet_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
-	pet_menu_button.pressed.connect(_open_pet_panel)
+	pet_menu_button.pressed.connect(func() -> void:
+		_open_pet_panel(false)
+	)
 	action_row.add_child(pet_menu_button)
 	codex_menu_button = Button.new()
 	codex_menu_button.text = "图鉴"
@@ -12223,6 +12678,13 @@ func _build_hud() -> void:
 		player_status_point_grid.add_child(stat_button)
 		player_status_stat_point_buttons[stat_key] = stat_button
 
+	player_status_rebirth_button = Button.new()
+	player_status_rebirth_button.text = "转生预览"
+	player_status_rebirth_button.custom_minimum_size = Vector2(0, 44)
+	player_status_rebirth_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_status_rebirth_button.pressed.connect(_open_player_rebirth_preview_panel)
+	player_status_column.add_child(player_status_rebirth_button)
+
 	player_status_equipment_button = Button.new()
 	player_status_equipment_button.text = "装备"
 	player_status_equipment_button.custom_minimum_size = Vector2(0, 44)
@@ -12230,6 +12692,47 @@ func _build_hud() -> void:
 	player_status_equipment_button.pressed.connect(_on_player_status_equipment_pressed)
 	player_status_column.add_child(player_status_equipment_button)
 	hud_root.add_child(player_status_panel)
+
+	player_rebirth_preview_panel = _panel_container("PlayerRebirthPreviewPanel")
+	player_rebirth_preview_panel.visible = false
+	player_rebirth_preview_panel.z_index = 25
+	var rebirth_preview_column := VBoxContainer.new()
+	rebirth_preview_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rebirth_preview_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rebirth_preview_column.add_theme_constant_override("separation", 8)
+	player_rebirth_preview_panel.add_child(rebirth_preview_column)
+	var rebirth_preview_header := HBoxContainer.new()
+	rebirth_preview_header.add_theme_constant_override("separation", 10)
+	rebirth_preview_column.add_child(rebirth_preview_header)
+	var rebirth_preview_title := Label.new()
+	rebirth_preview_title.text = "转生预览"
+	rebirth_preview_title.add_theme_font_size_override("font_size", 21)
+	rebirth_preview_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rebirth_preview_header.add_child(rebirth_preview_title)
+	player_rebirth_preview_close_button = Button.new()
+	player_rebirth_preview_close_button.text = "关闭"
+	player_rebirth_preview_close_button.custom_minimum_size = Vector2(92, 44)
+	player_rebirth_preview_close_button.pressed.connect(_close_player_rebirth_preview_panel)
+	rebirth_preview_header.add_child(player_rebirth_preview_close_button)
+	var rebirth_preview_scroll := ScrollContainer.new()
+	rebirth_preview_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rebirth_preview_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rebirth_preview_column.add_child(rebirth_preview_scroll)
+	player_rebirth_preview_label = RichTextLabel.new()
+	player_rebirth_preview_label.bbcode_enabled = true
+	player_rebirth_preview_label.fit_content = true
+	player_rebirth_preview_label.scroll_active = false
+	player_rebirth_preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_rebirth_preview_label.add_theme_font_size_override("font_size", 17)
+	player_rebirth_preview_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rebirth_preview_scroll.add_child(player_rebirth_preview_label)
+	player_rebirth_execute_button = Button.new()
+	player_rebirth_execute_button.text = "执行转生"
+	player_rebirth_execute_button.custom_minimum_size = Vector2(0, 48)
+	player_rebirth_execute_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_rebirth_execute_button.pressed.connect(_on_player_rebirth_execute_pressed)
+	rebirth_preview_column.add_child(player_rebirth_execute_button)
+	hud_root.add_child(player_rebirth_preview_panel)
 
 	backpack_panel = _panel_container("BackpackPanel")
 	backpack_panel.visible = false
@@ -14447,6 +14950,7 @@ func _open_player_status_panel() -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_player_rebirth_preview_panel(false)
 	player_status_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_player_status_panel()
@@ -14455,6 +14959,38 @@ func _open_player_status_panel() -> void:
 
 func _close_player_status_panel() -> void:
 	_hide_control(player_status_panel)
+
+
+func _open_player_rebirth_preview_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if player_rebirth_preview_panel != null:
+		player_rebirth_preview_panel.visible = true
+	player_rebirth_confirm_pending = false
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_player_rebirth_preview_panel()
+	_layout_hud()
+
+
+func _close_player_rebirth_preview_panel(update_layout: bool = true) -> void:
+	player_rebirth_confirm_pending = false
+	_hide_control(player_rebirth_preview_panel, update_layout)
 
 
 func _on_player_status_equipment_pressed() -> void:
@@ -14490,6 +15026,7 @@ func _refresh_player_status_panel() -> void:
 	var lines: Array[String] = [
 		"[color=#d7c36a]%s  Lv%d[/color]" % [_bbcode_escape(str(player_dict.get("name", "见习猎人"))), level],
 		"生命: %d/%d    经验: %d/%d" % [current_hp, current_max_hp, exp, next_exp],
+		"转生: %d转" % PlayerProgressModel.rebirth_count(player_profile),
 		"",
 		"[color=#d7c36a]四维[/color]",
 		_player_status_stat_line("maxHp", base, bonus, current),
@@ -14527,6 +15064,55 @@ func _refresh_player_status_panel() -> void:
 			PlayerProgressModel.player_stat_point_gain_for(str(stat_key)),
 		]
 		button.disabled = stat_points <= 0
+	if player_status_rebirth_button != null:
+		player_status_rebirth_button.text = "转生预览"
+		player_status_rebirth_button.disabled = false
+
+
+func _refresh_player_rebirth_preview_panel() -> void:
+	if player_rebirth_preview_panel == null or player_rebirth_preview_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var raw_lines := PlayerProgressModel.rebirth_preview_lines(player_profile)
+	var lines: Array[String] = []
+	for raw_line in raw_lines:
+		var line := str(raw_line)
+		var escaped := _bbcode_escape(line)
+		if line == "转生预览":
+			lines.append("[color=#d7c36a]%s[/color]" % escaped)
+		elif line == "资格: 可转生":
+			lines.append("[color=#84d46b]%s[/color]" % escaped)
+		elif line == "资格: 未满足":
+			lines.append("[color=#d96b6b]%s[/color]" % escaped)
+		else:
+			lines.append(escaped)
+	player_rebirth_preview_label.text = "\n".join(lines)
+	if player_rebirth_execute_button != null:
+		var preview := PlayerProgressModel.rebirth_preview(player_profile)
+		var can_execute := bool(preview.get("ok", false))
+		player_rebirth_execute_button.disabled = not can_execute
+		player_rebirth_execute_button.text = "确认转生" if player_rebirth_confirm_pending and can_execute else "执行转生"
+
+
+func _on_player_rebirth_execute_pressed() -> void:
+	var preview := PlayerProgressModel.rebirth_preview(player_profile)
+	if not bool(preview.get("ok", false)):
+		player_rebirth_confirm_pending = false
+		_refresh_player_rebirth_preview_panel()
+		return
+	if not player_rebirth_confirm_pending:
+		player_rebirth_confirm_pending = true
+		_refresh_player_rebirth_preview_panel()
+		_set_world_log_message("再次点击确认转生。")
+		return
+	var result := PlayerProgressModel.execute_rebirth(player_profile)
+	player_profile = result.get("profile", player_profile)
+	player_rebirth_confirm_pending = false
+	_set_world_log_message(str(result.get("message", "")))
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_refresh_player_rebirth_preview_panel()
+	_update_hud_text()
 
 
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
@@ -16239,7 +16825,7 @@ func _create_pet_skill_panel() -> void:
 	hud_root.add_child(pet_skill_panel)
 
 
-func _open_pet_panel() -> void:
+func _open_pet_panel(stable_access_override: bool = false) -> void:
 	if battle_active:
 		return
 	_set_hang_mode(false)
@@ -16254,6 +16840,7 @@ func _open_pet_panel() -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	pet_panel_stable_access_override = stable_access_override
 	pet_panel.visible = true
 	var active := PlayerProgressModel.active_pet(player_profile)
 	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
@@ -16264,9 +16851,14 @@ func _open_pet_panel() -> void:
 
 func _close_pet_panel() -> void:
 	var changed := _hide_control(pet_panel, false)
+	pet_panel_stable_access_override = false
 	_close_pet_rename_panel()
 	if changed and hud_root != null:
 		_layout_hud()
+
+
+func _pet_panel_has_stable_access() -> bool:
+	return pet_panel_stable_access_override or PlayerProgressModel.has_remote_stable(player_profile)
 
 
 func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> void:
@@ -16876,6 +17468,8 @@ func _qa_entry_definitions() -> Array[Dictionary]:
 	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
 	entries.append({"id": "open_partner", "label": "陪练伙伴", "description": "补满5人5宠测试合击"})
 	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴化详情"})
+	entries.append({"id": "open_stable", "label": "兽栏", "description": "GM测试存取，等同站在村内兽栏旁"})
+	entries.append({"id": "open_rebirth_preview", "label": "转生预览", "description": "查看人物转生资格和能力预览"})
 	entries.append({"id": "open_codex", "label": "图鉴", "description": "已见、可捕、捕获记录"})
 	return entries
 
@@ -16889,7 +17483,8 @@ func _qa_command_summary_text() -> String:
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
-	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-qa-panel-check")
+	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check")
+	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
 
@@ -16930,7 +17525,14 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_open_training_partner_panel()
 		"open_pet":
 			_close_qa_panel(false)
-			_open_pet_panel()
+			_open_pet_panel(false)
+		"open_stable":
+			_close_qa_panel(false)
+			_open_pet_panel(true)
+			_set_world_log_message("GM测试：已打开兽栏。")
+		"open_rebirth_preview":
+			_close_qa_panel(false)
+			_open_player_rebirth_preview_panel()
 		"open_codex":
 			_close_qa_panel(false)
 			_open_codex_panel()
@@ -18167,11 +18769,14 @@ func _refresh_pet_panel() -> void:
 		if selected.is_empty():
 			pet_stable_button.visible = false
 			pet_stable_button.disabled = true
+			pet_stable_button.tooltip_text = ""
 		else:
 			pet_stable_button.visible = true
-			pet_stable_button.disabled = false
+			var has_stable_access := _pet_panel_has_stable_access()
+			pet_stable_button.disabled = not has_stable_access
 			var stable_state := str(selected.get("state", ""))
 			pet_stable_button.text = "取出" if stable_state == PlayerProgressModel.PET_STATE_STORAGE else "存入"
+			pet_stable_button.tooltip_text = "" if has_stable_access else "需要学会远程兽栏，或前往村内兽栏。"
 	if pet_party_up_button != null and pet_party_down_button != null:
 		var can_show_order := not selected.is_empty()
 		var can_edit_order := (
@@ -18448,6 +19053,10 @@ func _on_pet_state_cycle_pressed() -> void:
 
 
 func _on_pet_stable_pressed() -> void:
+	if not _pet_panel_has_stable_access():
+		_set_world_log_message("需要学会远程兽栏，或前往村内兽栏。")
+		_refresh_pet_panel()
+		return
 	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	if selected.is_empty():
 		return
@@ -20217,6 +20826,9 @@ func _perform_dialog_action(action_id: String) -> void:
 			var trainer_id := str(active_dialog_interaction.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID))
 			_close_dialog()
 			_open_pet_skill_panel(true, trainer_id)
+		DIALOG_ACTION_STABLE:
+			_close_dialog()
+			_open_pet_panel(true)
 		DIALOG_ACTION_SHOP:
 			var next_shop_id := str(active_dialog_interaction.get("shopId", ""))
 			_close_dialog()
@@ -20224,6 +20836,9 @@ func _perform_dialog_action(action_id: String) -> void:
 		DIALOG_ACTION_OPEN_QUEST:
 			_close_dialog()
 			_open_quest_panel()
+		DIALOG_ACTION_REBIRTH:
+			_close_dialog()
+			_open_player_rebirth_preview_panel()
 		_:
 			_close_dialog()
 
@@ -20294,6 +20909,10 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_RECORD_POINT
 	if _dialog_item_is_pet_skill_trainer(item):
 		return DIALOG_ACTION_PET_SKILL_TRAIN
+	if _dialog_item_is_stable(item):
+		return DIALOG_ACTION_STABLE
+	if _dialog_item_is_rebirth(item):
+		return DIALOG_ACTION_REBIRTH
 	if str(item.get("shopId", "")) != "":
 		return DIALOG_ACTION_SHOP
 	return DIALOG_ACTION_ACK
@@ -20311,10 +20930,14 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return str(item.get("option", "保存"))
 		DIALOG_ACTION_PET_SKILL_TRAIN:
 			return str(item.get("option", "训练"))
+		DIALOG_ACTION_STABLE:
+			return str(item.get("option", "兽栏"))
 		DIALOG_ACTION_SHOP:
 			return str(item.get("option", "买卖"))
 		DIALOG_ACTION_OPEN_QUEST:
 			return "查看任务"
+		DIALOG_ACTION_REBIRTH:
+			return str(item.get("option", "转生"))
 	return str(item.get("option", "知道了"))
 
 
@@ -20435,6 +21058,18 @@ func _active_dialog_is_pet_skill_trainer() -> bool:
 
 func _dialog_item_is_pet_skill_trainer(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == "pet_skill_trainer"
+
+
+func _active_dialog_is_stable() -> bool:
+	return _dialog_item_is_stable(active_dialog_interaction)
+
+
+func _dialog_item_is_stable(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == InteractionModel.FACILITY_STABLE or str(item.get("kind", "")) == InteractionModel.FACILITY_STABLE
+
+
+func _dialog_item_is_rebirth(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == InteractionModel.FACILITY_REBIRTH or str(item.get("kind", "")) == InteractionModel.FACILITY_REBIRTH
 
 
 func _dialog_record_point_hint_for(item: Dictionary) -> String:
@@ -20748,7 +21383,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -20757,7 +21392,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
+	for control in [player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -20824,6 +21459,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		player_status_panel.visible = false
 	if player_status_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	player_rebirth_preview_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	player_rebirth_preview_panel.size = Vector2(pet_width, pet_height)
+	if battle_active:
+		player_rebirth_preview_panel.visible = false
+	if player_rebirth_preview_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
@@ -21041,6 +21683,8 @@ func _update_hud_text(force: bool = false) -> void:
 	var panel_start := _perf_now()
 	if player_status_panel != null and player_status_panel.visible:
 		_refresh_player_status_panel()
+	if player_rebirth_preview_panel != null and player_rebirth_preview_panel.visible:
+		_refresh_player_rebirth_preview_panel()
 	_perf_add("hud_status_panel", panel_start)
 
 
@@ -21898,10 +22542,14 @@ func _facility_marker_color(facility_type: String, selected: bool = false) -> Co
 			color = Color(0.58, 0.38, 0.12, 0.88)
 		InteractionModel.FACILITY_EQUIPMENT_SHOP:
 			color = Color(0.56, 0.28, 0.13, 0.88)
+		InteractionModel.FACILITY_STABLE:
+			color = Color(0.18, 0.45, 0.50, 0.88)
 		InteractionModel.FACILITY_RECORD_POINT:
 			color = Color(0.24, 0.42, 0.64, 0.88)
 		InteractionModel.FACILITY_TRAINER:
 			color = Color(0.40, 0.30, 0.62, 0.88)
+		InteractionModel.FACILITY_REBIRTH:
+			color = Color(0.52, 0.38, 0.68, 0.88)
 	if selected:
 		color = color.lightened(0.22)
 	return color
