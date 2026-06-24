@@ -1757,6 +1757,24 @@ static func _quest_states(profile: Dictionary) -> Dictionary:
 	return QuestModel.normalize_states(profile.get(QUEST_STATES_KEY, {}))
 
 
+static func _quest_available_for_rebirth_state(quest: Dictionary, current_rebirth_count: int) -> bool:
+	var target := QuestModel.rebirth_completion_target(quest)
+	return target <= 0 or target == current_rebirth_count + 1
+
+
+static func _first_available_unfinished_quest_id(states: Dictionary, current_rebirth_count: int) -> String:
+	for quest in QuestModel.quests():
+		if not _quest_available_for_rebirth_state(quest, current_rebirth_count):
+			continue
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+		if not states.has(quest_id) or str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_CLAIMED:
+			return quest_id
+	return ""
+
+
 static func _normalize_equipment_slots(value) -> Dictionary:
 	var result := {}
 	var raw := value as Dictionary if value is Dictionary else {}
@@ -2900,14 +2918,16 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
 	var quest_states := QuestModel.normalize_states(normalized.get(QUEST_STATES_KEY, {}))
 	var active_quest_id_value := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	var current_rebirth_count := RebirthModel.rebirth_count(normalized)
 	if active_quest_id_value != "":
+		var active_quest := QuestModel.quest_for_id(active_quest_id_value)
 		var active_state := QuestModel.normalize_state(quest_states.get(active_quest_id_value, {}), active_quest_id_value)
-		if QuestModel.quest_for_id(active_quest_id_value).is_empty() or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+		if active_quest.is_empty() or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED or not _quest_available_for_rebirth_state(active_quest, current_rebirth_count):
 			active_quest_id_value = ""
 		else:
 			quest_states[active_quest_id_value] = active_state
 	if active_quest_id_value == "":
-		active_quest_id_value = QuestModel.first_unfinished_quest_id(quest_states)
+		active_quest_id_value = _first_available_unfinished_quest_id(quest_states, current_rebirth_count)
 		if active_quest_id_value == "" and not had_quest_data:
 			active_quest_id_value = QuestModel.first_quest_id()
 	if active_quest_id_value != "" and not quest_states.has(active_quest_id_value):

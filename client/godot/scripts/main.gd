@@ -429,6 +429,7 @@ var auto_player_status_check: bool = false
 var auto_player_stat_points_check: bool = false
 var auto_player_rebirth_preview_check: bool = false
 var auto_player_rebirth_execute_check: bool = false
+var auto_player_rebirth_chain_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_inactive_after_rebirth_check: bool = false
 var auto_equipment_status_closure_check: bool = false
@@ -444,6 +445,7 @@ var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var player_rebirth_preview: bool = false
+var player_rebirth_chain_preview: bool = false
 var equipment_requirement_preview: bool = false
 var equipment_rebirth_requirement_preview: bool = false
 var equipment_inactive_after_rebirth_preview: bool = false
@@ -754,6 +756,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_rebirth_preview_check")
 	elif auto_player_rebirth_execute_check:
 		call_deferred("_run_auto_player_rebirth_execute_check")
+	elif auto_player_rebirth_chain_check:
+		call_deferred("_run_auto_player_rebirth_chain_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_equipment_inactive_after_rebirth_check:
@@ -784,6 +788,8 @@ func _ready() -> void:
 		call_deferred("_run_player_stat_points_preview")
 	elif player_rebirth_preview:
 		call_deferred("_run_player_rebirth_preview")
+	elif player_rebirth_chain_preview:
+		call_deferred("_run_player_rebirth_chain_preview")
 	elif equipment_requirement_preview:
 		call_deferred("_run_equipment_requirement_preview")
 	elif equipment_rebirth_requirement_preview:
@@ -1194,6 +1200,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_rebirth_preview_check = true
 		elif arg == "--auto-player-rebirth-execute-check":
 			auto_player_rebirth_execute_check = true
+		elif arg == "--auto-player-rebirth-chain-check":
+			auto_player_rebirth_chain_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
 		elif arg == "--auto-equipment-inactive-after-rebirth-check":
@@ -1224,6 +1232,8 @@ func _apply_preview_window_args() -> void:
 			player_stat_points_preview = true
 		elif arg == "--player-rebirth-preview":
 			player_rebirth_preview = true
+		elif arg == "--player-rebirth-chain-preview":
+			player_rebirth_chain_preview = true
 		elif arg == "--equipment-requirement-preview":
 			equipment_requirement_preview = true
 		elif arg == "--equipment-rebirth-requirement-preview":
@@ -6978,6 +6988,149 @@ func _run_auto_player_rebirth_execute_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _profile_with_rebirth_test_level(profile: Dictionary, level: int = 80) -> Dictionary:
+	var next_profile := PlayerProgressModel.normalize_profile(profile)
+	var player := next_profile.get("player", {}) as Dictionary
+	var target := PlayerProgressModel.rebirth_count(next_profile) + 1
+	player["level"] = maxi(1, level)
+	player["exp"] = 0
+	player["nextExp"] = PlayerProgressModel.exp_to_next_level(maxi(1, level))
+	player["baseStats"] = {
+		"maxHp": 220 + target * 8,
+		"attack": 45 + target * 2,
+		"defense": 30 + target,
+		"quick": 90 + target * 2,
+	}
+	player["hp"] = int((player["baseStats"] as Dictionary).get("maxHp", 220))
+	next_profile["player"] = player
+	return PlayerProgressModel.normalize_profile(next_profile)
+
+
+func _complete_active_rebirth_quest_for_test(profile: Dictionary) -> Dictionary:
+	var event_result := PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "firebud_rebirth_mentor",
+	})
+	var event_profile := event_result.get("profile", profile) as Dictionary
+	var claim_result := PlayerProgressModel.claim_active_quest(event_profile)
+	return {
+		"event": event_result,
+		"claim": claim_result,
+		"profile": claim_result.get("profile", event_profile),
+	}
+
+
+func _run_auto_player_rebirth_chain_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var catalog_ok := true
+	for target in range(1, 7):
+		var quest_id := "quest_rebirth_%d_guidance" % target
+		var quest := QuestModel.quest_for_id(quest_id)
+		catalog_ok = catalog_ok and (
+			not quest.is_empty()
+			and QuestModel.rebirth_completion_target(quest) == target
+			and QuestModel.giver_id_for(quest) == "firebud_rebirth_mentor"
+			and QuestModel.turn_in_id_for(quest) == "firebud_rebirth_mentor"
+			and QuestModel.next_quest_id(quest) == ""
+		)
+
+	var profile := _profile_with_active_quest("quest_rebirth_1_guidance")
+	var after_five_profile: Dictionary = {}
+	var sequence_ok := catalog_ok
+	var chain_messages: Array[String] = []
+	for target in range(1, 7):
+		var expected_quest_id := "quest_rebirth_%d_guidance" % target
+		var active_before := PlayerProgressModel.active_quest_id(profile)
+		var active_ok := active_before == expected_quest_id
+		var completion := _complete_active_rebirth_quest_for_test(profile)
+		var claim := completion.get("claim", {}) as Dictionary
+		var claimed_profile := completion.get("profile", profile) as Dictionary
+		var completed_active_ok := PlayerProgressModel.active_quest_id(claimed_profile) == ""
+		var requirement_before_level := PlayerProgressModel.rebirth_requirement_state(claimed_profile)
+		var quest_record_ok := bool(requirement_before_level.get("questOk", false))
+		var ready_profile := _profile_with_rebirth_test_level(claimed_profile, 80)
+		var requirement_ready := PlayerProgressModel.rebirth_requirement_state(ready_profile)
+		var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
+		var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
+		var next_expected := "quest_rebirth_%d_guidance" % (target + 1) if target < 6 else ""
+		var execute_ok := (
+			bool(claim.get("ok", false))
+			and bool(execute_result.get("ok", false))
+			and PlayerProgressModel.rebirth_count(executed_profile) == target
+			and int((executed_profile.get("player", {}) as Dictionary).get("level", 0)) == 1
+			and (executed_profile.get(PlayerProgressModel.REBIRTH_HISTORY_KEY, []) as Array).size() == target
+			and PlayerProgressModel.active_quest_id(executed_profile) == next_expected
+			and bool(requirement_ready.get("ok", false))
+		)
+		sequence_ok = sequence_ok and active_ok and completed_active_ok and quest_record_ok and execute_ok
+		chain_messages.append("%d:%s/%s/%s/%s" % [
+			target,
+			str(active_ok),
+			str(completed_active_ok),
+			str(quest_record_ok),
+			str(execute_ok),
+		])
+		if target == 5:
+			after_five_profile = executed_profile.duplicate(true)
+		profile = executed_profile
+
+	var maxed_preview := PlayerProgressModel.rebirth_preview(profile)
+	var maxed_ok := (
+		PlayerProgressModel.rebirth_count(profile) == 6
+		and PlayerProgressModel.active_quest_id(profile) == ""
+		and not bool(maxed_preview.get("ok", true))
+		and "\n".join(PlayerProgressModel.rebirth_preview_lines(profile)).find("已达到6转上限") >= 0
+	)
+
+	player_profile = after_five_profile
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	_open_interaction_dialog(mentor)
+	await get_tree().process_frame
+	var dialog_text := dialog_body_label.text if dialog_body_label != null else ""
+	var dialog_ok := (
+		loaded
+		and not mentor.is_empty()
+		and _dialog_is_open()
+		and dialog_option_button != null
+		and dialog_option_button.text == "完成"
+		and dialog_text.find("六转资格") >= 0
+	)
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	player_profile = _profile_with_rebirth_test_level(player_profile, 80)
+	_open_player_rebirth_preview_panel()
+	await get_tree().process_frame
+	var preview_text := player_rebirth_preview_label.text if player_rebirth_preview_label != null else ""
+	var ui_ok := (
+		player_rebirth_preview_panel != null
+		and player_rebirth_preview_panel.visible
+		and preview_text.find("5转 -> 6转") >= 0
+		and preview_text.find("资格: 可转生") >= 0
+		and player_rebirth_execute_button != null
+		and not player_rebirth_execute_button.disabled
+	)
+
+	var status := "ok" if catalog_ok and sequence_ok and maxed_ok and dialog_ok and ui_ok else "failed"
+	print("player rebirth chain check ready: status=%s catalog=%s sequence=%s maxed=%s dialog=%s ui=%s final_count=%d active=%s chain=%s preview=%s log=%s" % [
+		status,
+		str(catalog_ok),
+		str(sequence_ok),
+		str(maxed_ok),
+		str(dialog_ok),
+		str(ui_ok),
+		PlayerProgressModel.rebirth_count(profile),
+		PlayerProgressModel.active_quest_id(profile),
+		" ".join(chain_messages),
+		preview_text.replace("\n", " / "),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_equipment_requirement_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -8438,6 +8591,19 @@ func _run_player_rebirth_preview() -> void:
 	player_profile = PlayerProgressModel.with_rebirth_quest_completed(player_profile, 1, true)
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase94C：转生预览与二次确认。")
+	_open_player_rebirth_preview_panel()
+	await get_tree().create_timer(1.0).timeout
+
+
+func _run_player_rebirth_chain_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 5)
+	player_profile = PlayerProgressModel.with_rebirth_quest_completed(player_profile, 6, true)
+	player_profile = _profile_with_rebirth_test_level(player_profile, 80)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("Phase98：二转到六转使用同一套转生预览和执行流程。")
 	_open_player_rebirth_preview_panel()
 	await get_tree().create_timer(1.0).timeout
 
@@ -17948,7 +18114,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
-	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check")
+	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
