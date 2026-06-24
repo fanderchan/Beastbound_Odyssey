@@ -7,6 +7,8 @@ const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
 const CONTEXT_WORLD_ENCOUNTER_STONE := "world_encounter_stone"
 const CONTEXT_EQUIPMENT := "equipment"
+static var data_cache_loaded: bool = false
+static var data_cache: Dictionary = {}
 
 
 static func items() -> Array[Dictionary]:
@@ -376,7 +378,12 @@ static func _add_single_item(slots: Array[Dictionary], item_id: String, count: i
 
 
 static func _data() -> Dictionary:
+	if data_cache_loaded:
+		return data_cache
+	data_cache_loaded = true
 	if not FileAccess.file_exists(DATA_PATH):
-		return {}
+		data_cache = {}
+		return data_cache
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
-	return parsed as Dictionary if parsed is Dictionary else {}
+	data_cache = parsed as Dictionary if parsed is Dictionary else {}
+	return data_cache

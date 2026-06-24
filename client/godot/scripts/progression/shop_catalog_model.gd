@@ -4,6 +4,8 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 
 const DATA_PATH := "res://data/item_shops.json"
 const DEFAULT_SHOP_ID := "firebud_item_shop"
+static var data_cache_loaded: bool = false
+static var data_cache: Dictionary = {}
 
 
 static func shops() -> Array[Dictionary]:
@@ -94,7 +96,12 @@ static func price_line_for(shop_id: String, item_id: String) -> String:
 
 
 static func _data() -> Dictionary:
+	if data_cache_loaded:
+		return data_cache
+	data_cache_loaded = true
 	if not FileAccess.file_exists(DATA_PATH):
-		return {}
+		data_cache = {}
+		return data_cache
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
-	return parsed as Dictionary if parsed is Dictionary else {}
+	data_cache = parsed as Dictionary if parsed is Dictionary else {}
+	return data_cache

@@ -12,6 +12,8 @@ const SLOT_HANDS := "hands"
 const SLOT_FEET := "feet"
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_DURABILITY_MAX := 30
+static var data_cache_loaded: bool = false
+static var data_cache: Dictionary = {}
 
 
 static func slots() -> Array[Dictionary]:
@@ -223,7 +225,12 @@ static func _stat_label_for(key: String) -> String:
 
 
 static func _data() -> Dictionary:
+	if data_cache_loaded:
+		return data_cache
+	data_cache_loaded = true
 	if not FileAccess.file_exists(DATA_PATH):
-		return {}
+		data_cache = {}
+		return data_cache
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
-	return parsed as Dictionary if parsed is Dictionary else {}
+	data_cache = parsed as Dictionary if parsed is Dictionary else {}
+	return data_cache

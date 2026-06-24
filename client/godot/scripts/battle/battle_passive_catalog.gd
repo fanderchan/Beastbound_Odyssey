@@ -2,16 +2,24 @@ extends RefCounted
 
 const PASSIVES_PATH := "res://data/battle_passive_skills.json"
 const ELEMENT_IDS := ["fire", "water", "earth", "wind"]
+static var catalog_cache_loaded: bool = false
+static var catalog_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
+	if catalog_cache_loaded:
+		return catalog_cache
+	catalog_cache_loaded = true
 	if not FileAccess.file_exists(PASSIVES_PATH):
-		return {}
+		catalog_cache = {}
+		return catalog_cache
 	var text := FileAccess.get_file_as_string(PASSIVES_PATH)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+		catalog_cache = {}
+		return catalog_cache
+	catalog_cache = parsed as Dictionary
+	return catalog_cache
 
 
 static func passives() -> Array[Dictionary]:

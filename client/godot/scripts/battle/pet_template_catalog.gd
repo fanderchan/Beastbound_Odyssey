@@ -6,16 +6,24 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const TEMPLATES_PATH := "res://data/pet_templates.json"
 const ELEMENT_IDS := ["fire", "water", "earth", "wind"]
 const MAX_PET_SKILL_SLOTS := BattleActionCatalog.MAX_PET_SKILL_SLOTS_FALLBACK
+static var catalog_cache_loaded: bool = false
+static var catalog_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
+	if catalog_cache_loaded:
+		return catalog_cache
+	catalog_cache_loaded = true
 	if not FileAccess.file_exists(TEMPLATES_PATH):
-		return {}
+		catalog_cache = {}
+		return catalog_cache
 	var text := FileAccess.get_file_as_string(TEMPLATES_PATH)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+		catalog_cache = {}
+		return catalog_cache
+	catalog_cache = parsed as Dictionary
+	return catalog_cache
 
 
 static func lines() -> Array[Dictionary]:

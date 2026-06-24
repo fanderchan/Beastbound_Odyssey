@@ -8,16 +8,24 @@ const OWNER_PET_SKILL := "pet_skill"
 const OWNER_ITEM := "item"
 const SIDE_ALLY := "ally"
 const SIDE_ENEMY := "enemy"
+static var catalog_cache_loaded: bool = false
+static var catalog_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
+	if catalog_cache_loaded:
+		return catalog_cache
+	catalog_cache_loaded = true
 	if not FileAccess.file_exists(ACTIONS_PATH):
-		return {}
+		catalog_cache = {}
+		return catalog_cache
 	var text := FileAccess.get_file_as_string(ACTIONS_PATH)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+		catalog_cache = {}
+		return catalog_cache
+	catalog_cache = parsed as Dictionary
+	return catalog_cache
 
 
 static func actions() -> Array[Dictionary]:

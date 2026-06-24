@@ -5,16 +5,24 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const TRAINING_PATH := "res://data/pet_skill_training.json"
 const DEFAULT_TRAINER_ID := "firebud_pet_skill_trainer"
 const DEFAULT_COST := 30
+static var catalog_cache_loaded: bool = false
+static var catalog_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
+	if catalog_cache_loaded:
+		return catalog_cache
+	catalog_cache_loaded = true
 	if not FileAccess.file_exists(TRAINING_PATH):
-		return {}
+		catalog_cache = {}
+		return catalog_cache
 	var text := FileAccess.get_file_as_string(TRAINING_PATH)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+		catalog_cache = {}
+		return catalog_cache
+	catalog_cache = parsed as Dictionary
+	return catalog_cache
 
 
 static func trainers() -> Array[Dictionary]:

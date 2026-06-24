@@ -8,6 +8,12 @@ size = Vector2(36, 36)
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_player")
 
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+position = Vector2(0, 22)
+color = Color(0, 0, 0, 0.24)
+polygon = PackedVector2Array(-22, 0, -16, -8, 0, -11, 16, -8, 22, 0, 16, 8, 0, 11, -16, 8)
+
 [node name="Body" type="Polygon2D" parent="."]
 color = Color(0.184314, 0.521569, 0.862745, 1)
 polygon = PackedVector2Array(-18, -18, 18, -18, 18, 18, -18, 18)

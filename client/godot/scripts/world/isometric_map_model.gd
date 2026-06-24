@@ -11,14 +11,22 @@ const NEIGHBORS_8: Array[Vector2i] = [
 	Vector2i(0, -1),
 ]
 const MOVEMENT_COLLISION_BLOCK := "block"
+const RUNTIME_BLOCKED_LOOKUP_KEY := "__blockedLookup"
+const RUNTIME_INTERACTION_BLOCKED_LOOKUP_KEY := "__interactionBlockedLookup"
 
 
 static func load_map(path: String) -> Dictionary:
 	var text := FileAccess.get_file_as_string(path)
 	var parsed: Variant = JSON.parse_string(text)
 	if parsed is Dictionary:
-		return parsed as Dictionary
+		return with_runtime_cache(parsed as Dictionary)
 	return {}
+
+
+static func with_runtime_cache(map_data: Dictionary) -> Dictionary:
+	map_data[RUNTIME_BLOCKED_LOOKUP_KEY] = _build_blocked_lookup(map_data)
+	map_data[RUNTIME_INTERACTION_BLOCKED_LOOKUP_KEY] = _build_interaction_blocked_lookup(map_data)
+	return map_data
 
 
 static func grid_size(map_data: Dictionary) -> Vector2i:
@@ -43,6 +51,12 @@ static func spawn_cell(map_data: Dictionary, spawn_name: String = "default") -> 
 
 
 static func blocked_lookup(map_data: Dictionary) -> Dictionary:
+	if map_data.has(RUNTIME_BLOCKED_LOOKUP_KEY):
+		return map_data.get(RUNTIME_BLOCKED_LOOKUP_KEY, {}) as Dictionary
+	return _build_blocked_lookup(map_data)
+
+
+static func _build_blocked_lookup(map_data: Dictionary) -> Dictionary:
 	var lookup: Dictionary = {}
 	var cells: Array = map_data.get("blockedCells", [])
 	for cell_value in cells:
@@ -53,6 +67,12 @@ static func blocked_lookup(map_data: Dictionary) -> Dictionary:
 
 
 static func interaction_blocked_lookup(map_data: Dictionary) -> Dictionary:
+	if map_data.has(RUNTIME_INTERACTION_BLOCKED_LOOKUP_KEY):
+		return map_data.get(RUNTIME_INTERACTION_BLOCKED_LOOKUP_KEY, {}) as Dictionary
+	return _build_interaction_blocked_lookup(map_data)
+
+
+static func _build_interaction_blocked_lookup(map_data: Dictionary) -> Dictionary:
 	var lookup: Dictionary = {}
 	var points: Array = map_data.get("interactionPoints", [])
 	for point_value in points:

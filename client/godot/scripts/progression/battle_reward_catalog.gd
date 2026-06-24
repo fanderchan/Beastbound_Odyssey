@@ -3,6 +3,8 @@ extends RefCounted
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 
 const DATA_PATH := "res://data/battle_rewards.json"
+static var data_cache_loaded: bool = false
+static var data_cache: Dictionary = {}
 
 
 static func rewards_for_state(state: Dictionary) -> Array[Dictionary]:
@@ -146,10 +148,15 @@ static func _tables() -> Array[Dictionary]:
 
 
 static func _data() -> Dictionary:
+	if data_cache_loaded:
+		return data_cache
+	data_cache_loaded = true
 	if not FileAccess.file_exists(DATA_PATH):
-		return {}
+		data_cache = {}
+		return data_cache
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
-	return parsed as Dictionary if parsed is Dictionary else {}
+	data_cache = parsed as Dictionary if parsed is Dictionary else {}
+	return data_cache
 
 
 static func _stable_roll(seed_text: String) -> float:

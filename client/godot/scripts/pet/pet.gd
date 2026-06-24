@@ -18,11 +18,19 @@ const FACING_KEYS := [
 @onready var left_foot: Polygon2D = $LeftFoot
 @onready var right_foot: Polygon2D = $RightFoot
 
+const IDLE_ANIMATION_STEP_SECONDS := 0.125
+
 var follow_target: Vector2 = Vector2.ZERO
 var has_follow_target: bool = false
 var facing_key: String = "south"
 var animation_state: String = "idle"
 var animation_time: float = 0.0
+var animation_visual_elapsed: float = IDLE_ANIMATION_STEP_SECONDS
+var last_body_color: Color = Color.TRANSPARENT
+var last_body_position := Vector2(INF, INF)
+var last_body_scale := Vector2(INF, INF)
+var last_left_foot_visible: bool = false
+var last_right_foot_visible: bool = false
 
 
 func _ready() -> void:
@@ -33,6 +41,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	animation_time += delta
+	var was_moving := animation_state == "walk"
 	var direction := Vector2.ZERO
 	if has_follow_target:
 		var to_target := follow_target - global_position
@@ -45,6 +54,10 @@ func _process(delta: float) -> void:
 			_set_animation_state("idle")
 	else:
 		_set_animation_state("idle")
+	animation_visual_elapsed += delta
+	if animation_state == "idle" and not was_moving and animation_visual_elapsed < IDLE_ANIMATION_STEP_SECONDS:
+		return
+	animation_visual_elapsed = 0.0
 	_update_placeholder_animation()
 
 
@@ -75,6 +88,10 @@ func get_animation_state() -> String:
 	return animation_state
 
 
+func is_moving() -> bool:
+	return animation_state == "walk"
+
+
 func get_animation_clip_key() -> String:
 	return "%s_%s" % [animation_state, facing_key]
 
@@ -92,6 +109,7 @@ func _set_animation_state(next_state: String) -> void:
 		return
 	animation_state = next_state
 	animation_time = 0.0
+	animation_visual_elapsed = IDLE_ANIMATION_STEP_SECONDS
 
 
 func _update_placeholder_animation() -> void:
@@ -99,20 +117,41 @@ func _update_placeholder_animation() -> void:
 		return
 	if animation_state == "walk":
 		var bob := sin(animation_time * 11.0)
-		body.position.y = -1.5 + bob * 1.5
-		body.scale = Vector2.ONE
-		body.color = Color(0.42, 0.78, 0.43, 1.0)
+		_set_body_transform(Vector2(0.0, -1.5 + bob * 1.5), Vector2.ONE)
+		_set_body_color(Color(0.42, 0.78, 0.43, 1.0))
 		_set_foot_visible(true, bob >= 0.0)
 	else:
 		var breathe := 1.0 + sin(animation_time * 3.2) * 0.035
-		body.position.y = 0.0
-		body.scale = Vector2(1.0, breathe)
-		body.color = Color(0.30, 0.68, 0.36, 1.0)
+		_set_body_transform(Vector2.ZERO, Vector2(1.0, breathe))
+		_set_body_color(Color(0.30, 0.68, 0.36, 1.0))
 		_set_foot_visible(false, false)
 
 
+func _set_body_transform(next_position: Vector2, next_scale: Vector2) -> void:
+	if body == null:
+		return
+	if last_body_position.distance_to(next_position) > 0.001:
+		body.position = next_position
+		last_body_position = next_position
+	if last_body_scale.distance_to(next_scale) > 0.001:
+		body.scale = next_scale
+		last_body_scale = next_scale
+
+
+func _set_body_color(next_color: Color) -> void:
+	if body != null and last_body_color != next_color:
+		body.color = next_color
+		last_body_color = next_color
+
+
 func _set_foot_visible(show_feet: bool, left_step: bool) -> void:
+	var next_left := show_feet and left_step
+	var next_right := show_feet and not left_step
 	if left_foot != null:
-		left_foot.visible = show_feet and left_step
+		if last_left_foot_visible != next_left:
+			left_foot.visible = next_left
+			last_left_foot_visible = next_left
 	if right_foot != null:
-		right_foot.visible = show_feet and not left_step
+		if last_right_foot_visible != next_right:
+			right_foot.visible = next_right
+			last_right_foot_visible = next_right

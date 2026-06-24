@@ -7,16 +7,24 @@ const DATA_PATH := "res://data/quests.json"
 const STATUS_ACTIVE := "active"
 const STATUS_READY := "ready"
 const STATUS_CLAIMED := "claimed"
+static var catalog_cache_loaded: bool = false
+static var catalog_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
+	if catalog_cache_loaded:
+		return catalog_cache
+	catalog_cache_loaded = true
 	if not FileAccess.file_exists(DATA_PATH):
-		return {}
+		catalog_cache = {}
+		return catalog_cache
 	var text := FileAccess.get_file_as_string(DATA_PATH)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+		catalog_cache = {}
+		return catalog_cache
+	catalog_cache = parsed as Dictionary
+	return catalog_cache
 
 
 static func quests() -> Array[Dictionary]:

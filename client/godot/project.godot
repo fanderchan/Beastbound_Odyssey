@@ -5,6 +5,7 @@ config_version=5
 config/name="Beastbound Odyssey / 万兽纪元"
 config/description="Godot 4.7 2D client prototype for a StoneAge-inspired pet adventure."
 run/main_scene="res://scenes/Main.tscn"
+run/max_fps=60
 config/features=PackedStringArray("4.7", "Mobile")
 
 [display]
