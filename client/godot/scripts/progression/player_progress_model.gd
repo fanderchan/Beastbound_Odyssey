@@ -1517,6 +1517,15 @@ static func quest_reward_text(profile: Dictionary) -> String:
 	return QuestModel.reward_text(quest)
 
 
+static func quest_available_for_profile(profile: Dictionary, quest: Dictionary) -> bool:
+	return _quest_available_for_profile(quest, normalize_profile(profile))
+
+
+static func quest_state_for_id(profile: Dictionary, quest_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	return QuestModel.normalize_state(_quest_states(normalized).get(quest_id, {}), quest_id)
+
+
 static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))

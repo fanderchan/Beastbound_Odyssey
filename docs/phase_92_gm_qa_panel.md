@@ -120,6 +120,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-map-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-marker-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-facility-dialog-options-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-npc-quest-marker-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-stable-facility-check
 ```
 
@@ -131,4 +132,5 @@ godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.ru
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase96_inactive_equipment_after_rebirth.png --quit-after 120 -- --equipment-inactive-after-rebirth-preview
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase98_rebirth_chain.png --quit-after 120 -- --player-rebirth-chain-preview
 godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase99_remote_stable_unlock.png --quit-after 120 -- --remote-stable-unlock-preview
+godot --path client/godot --scene res://scenes/Main.tscn --write-movie ../../.run/godot/phase100_npc_quest_marker.png --quit-after 120 -- --npc-quest-marker-preview
 ```

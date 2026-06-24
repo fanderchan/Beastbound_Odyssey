@@ -114,6 +114,11 @@ const DIALOG_ACTION_STABLE := "stable"
 const DIALOG_ACTION_SHOP := "shop"
 const DIALOG_ACTION_OPEN_QUEST := "open_quest"
 const DIALOG_ACTION_REBIRTH := "rebirth"
+const QUEST_MARKER_NONE := ""
+const QUEST_MARKER_AVAILABLE := "available"
+const QUEST_MARKER_BLOCKED := "blocked"
+const QUEST_MARKER_IN_PROGRESS := "in_progress"
+const QUEST_MARKER_READY := "ready"
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -347,6 +352,7 @@ var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
+var auto_npc_quest_marker_check: bool = false
 var auto_stable_facility_check: bool = false
 var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
@@ -467,6 +473,7 @@ var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
 var facility_marker_preview: bool = false
+var npc_quest_marker_preview: bool = false
 var qa_panel_preview: bool = false
 var chat_panel_preview: bool = false
 var world_log_panel_preview: bool = false
@@ -834,6 +841,8 @@ func _ready() -> void:
 		call_deferred("_run_map_panel_preview")
 	elif facility_marker_preview:
 		call_deferred("_run_facility_marker_preview")
+	elif npc_quest_marker_preview:
+		call_deferred("_run_npc_quest_marker_preview")
 	elif qa_panel_preview:
 		call_deferred("_run_qa_panel_preview")
 	elif chat_panel_preview:
@@ -904,6 +913,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_npc_interaction_check")
 	elif auto_facility_dialog_options_check:
 		call_deferred("_run_auto_facility_dialog_options_check")
+	elif auto_npc_quest_marker_check:
+		call_deferred("_run_auto_npc_quest_marker_check")
 	elif auto_stable_facility_check:
 		call_deferred("_run_auto_stable_facility_check")
 	elif auto_pet_follow_check:
@@ -1188,6 +1199,8 @@ func _apply_preview_window_args() -> void:
 			auto_map_panel_check = true
 		elif arg == "--auto-facility-marker-check":
 			auto_facility_marker_check = true
+		elif arg == "--auto-npc-quest-marker-check":
+			auto_npc_quest_marker_check = true
 		elif arg == "--auto-qa-panel-check":
 			auto_qa_panel_check = true
 		elif arg == "--auto-chat-panel-check":
@@ -1282,6 +1295,8 @@ func _apply_preview_window_args() -> void:
 			map_panel_preview = true
 		elif arg == "--facility-marker-preview":
 			facility_marker_preview = true
+		elif arg == "--npc-quest-marker-preview":
+			npc_quest_marker_preview = true
 		elif arg == "--qa-panel-preview":
 			qa_panel_preview = true
 		elif arg == "--chat-panel-preview":
@@ -8244,6 +8259,24 @@ func _run_facility_marker_preview() -> void:
 		_update_hud_text()
 
 
+func _run_npc_quest_marker_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	_load_map("firebud_training_yard")
+	var trainer := InteractionModel.find_by_id(map_data, "trainer")
+	if player != null and not trainer.is_empty():
+		var focus_cell := IsoMapModel.nearest_walkable_cell(map_data, InteractionModel.cell_for(trainer) + Vector2i(3, 2))
+		player.global_position = IsoMapModel.grid_to_world(map_data, focus_cell)
+		player.clear_move_target()
+		last_checked_player_cell = focus_cell
+		_update_camera_position(true)
+	_set_world_log_message("Phase100：NPC头顶会显示任务可接、进行中、可交和条件不足状态。")
+	if status_label != null:
+		_update_hud_text()
+
+
 func _run_qa_panel_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -9866,6 +9899,62 @@ func _run_auto_facility_marker_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_npc_quest_marker_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded_training := _load_map("firebud_training_yard")
+	var trainer := InteractionModel.find_by_id(map_data, "trainer")
+	var available_ok := loaded_training and _quest_marker_state_for_item(trainer) == QUEST_MARKER_AVAILABLE
+
+	player_profile = _profile_with_active_quest("quest_buy_supply")
+	var loaded_village := _load_map("firebud_village_gate", "from_training_yard")
+	var shopkeeper := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
+	var in_progress_ok := loaded_village and _quest_marker_state_for_item(shopkeeper) == QUEST_MARKER_IN_PROGRESS
+
+	var ready_profile := _profile_with_active_quest("quest_buy_supply")
+	var buy_event := PlayerProgressModel.record_quest_event(ready_profile, {
+		"type": "buy_item",
+		"shopId": "firebud_item_shop",
+		"itemId": "item_meat_small",
+		"amount": 1,
+	})
+	player_profile = buy_event.get("profile", ready_profile) as Dictionary
+	var ready_ok := _quest_marker_state_for_item(shopkeeper) == QUEST_MARKER_READY
+
+	var rebirth_profile := _profile_with_active_quest("quest_rebirth_1_guidance")
+	var completion := _complete_active_rebirth_quest_for_test(rebirth_profile)
+	player_profile = completion.get("profile", rebirth_profile) as Dictionary
+	var mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	var blocked_ok := (
+		PlayerProgressModel.active_quest_id(player_profile) == ""
+		and _quest_marker_state_for_item(mentor) == QUEST_MARKER_BLOCKED
+	)
+
+	player_profile = PlayerProgressModel.with_unlocked_ability(_profile_after_six_rebirths_for_test(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	var completed_hidden_ok := (
+		PlayerProgressModel.active_quest_id(player_profile) == ""
+		and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_NONE
+	)
+	var signature_ok := _quest_marker_signature().find("abilities:remoteStable") >= 0
+
+	var status := "ok" if available_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and signature_ok else "failed"
+	print("npc quest marker check ready: status=%s available=%s in_progress=%s ready=%s blocked=%s hidden=%s signature=%s active=%s" % [
+		status,
+		str(available_ok),
+		str(in_progress_ok),
+		str(ready_ok),
+		str(blocked_ok),
+		str(completed_hidden_ok),
+		_quest_marker_signature(),
+		PlayerProgressModel.active_quest_id(player_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_qa_panel_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -9899,6 +9988,7 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("--auto-capture-settings-check") >= 0
 		and command_text.find("--auto-player-rebirth-preview-check") >= 0
 		and command_text.find("--auto-player-rebirth-execute-check") >= 0
+		and command_text.find("--auto-npc-quest-marker-check") >= 0
 		and command_text.find("--auto-stable-facility-check") >= 0
 	)
 	_on_qa_entry_pressed("open_backpack")
@@ -13020,7 +13110,7 @@ func _queue_world_redraw_if_needed() -> void:
 func _world_draw_signature() -> String:
 	var ground_drops = player_profile.get("groundPetDrops", [])
 	var ground_drop_count := (ground_drops as Array).size() if ground_drops is Array else 0
-	return "%s|%s|%s|%s|%d|%s|%d" % [
+	return "%s|%s|%s|%s|%d|%s|%d|%s" % [
 		current_map_id,
 		str(has_target_marker),
 		str(target_marker),
@@ -13028,6 +13118,7 @@ func _world_draw_signature() -> String:
 		current_path_cells.size(),
 		str(has_pending_interaction),
 		ground_drop_count,
+		_quest_marker_signature(),
 	]
 
 
@@ -13089,6 +13180,21 @@ func _active_quest_signature() -> String:
 		active_quest_id,
 		str(quest_state.get("status", "")),
 		progress_signature,
+	]
+
+
+func _quest_marker_signature() -> String:
+	var abilities = player_profile.get(PlayerProgressModel.UNLOCKED_ABILITIES_KEY, [])
+	var ability_parts: Array[String] = []
+	if abilities is Array:
+		for ability in abilities:
+			ability_parts.append(str(ability))
+	ability_parts.sort()
+	return "%s|rebirth:%d|abilities:%s|blocked:%s" % [
+		_active_quest_signature(),
+		PlayerProgressModel.rebirth_count(player_profile),
+		",".join(ability_parts),
+		str(_first_blocked_unfinished_quest_for_marker().get("id", "")),
 	]
 
 
@@ -18275,7 +18381,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check")
-	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-stable-facility-check / --auto-qa-panel-check")
+	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
 
@@ -23307,7 +23413,111 @@ func _draw_interaction_points() -> void:
 			draw_circle(marker + Vector2(0, -9), 8.0, Color(0.99, 0.76, 0.46, 0.98))
 			draw_rect(Rect2(marker + Vector2(-8, -1), Vector2(16, 20)), body_color, true)
 			draw_line(marker + Vector2(-13, 8), marker + Vector2(13, 8), trim_color, 3.0)
+		_draw_npc_quest_marker(item, marker)
 		_draw_facility_marker_label(item, marker, selected)
+
+
+func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
+	var state := _quest_marker_state_for_item(item)
+	if state == QUEST_MARKER_NONE:
+		return
+	var fill := Color(1.0, 0.82, 0.18, 0.98)
+	var border := Color(1.0, 0.95, 0.54, 0.98)
+	var text_color := Color(0.16, 0.12, 0.04, 0.98)
+	var glyph := "!"
+	match state:
+		QUEST_MARKER_BLOCKED:
+			fill = Color(0.88, 0.18, 0.13, 0.98)
+			border = Color(1.0, 0.48, 0.40, 0.98)
+			text_color = Color(1.0, 0.94, 0.86, 0.98)
+		QUEST_MARKER_IN_PROGRESS:
+			fill = Color(0.84, 0.84, 0.78, 0.94)
+			border = Color(1.0, 1.0, 0.94, 0.92)
+			text_color = Color(0.18, 0.19, 0.17, 0.96)
+			glyph = "?"
+		QUEST_MARKER_READY:
+			glyph = "?"
+	var center := marker + Vector2(0, -86)
+	draw_circle(center + Vector2(1, 2), 12.5, Color(0.03, 0.04, 0.03, 0.58))
+	draw_circle(center, 12.0, fill)
+	draw_arc(center, 13.0, 0.0, TAU, 28, border, 2.2, true)
+	var font := ThemeDB.fallback_font
+	draw_string(font, center + Vector2(-9, 7), glyph, HORIZONTAL_ALIGNMENT_CENTER, 18.0, 22, text_color)
+
+
+func _quest_marker_state_for_item(item: Dictionary) -> String:
+	var item_id := str(item.get("id", ""))
+	if item_id == "":
+		return QUEST_MARKER_NONE
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	if not quest.is_empty():
+		var state := PlayerProgressModel.active_quest_state(player_profile)
+		var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
+		if status == QuestModel.STATUS_READY and QuestModel.turn_in_id_for(quest) == item_id:
+			return QUEST_MARKER_READY
+		if status == QuestModel.STATUS_ACTIVE:
+			var objective := QuestModel.objective_for(quest)
+			if str(objective.get("type", "")) == "talk" and str(objective.get("targetId", QuestModel.turn_in_id_for(quest))) == item_id:
+				return QUEST_MARKER_AVAILABLE
+			if QuestModel.turn_in_id_for(quest) == item_id:
+				return QUEST_MARKER_IN_PROGRESS
+		return QUEST_MARKER_NONE
+	var available_quest := _first_available_unfinished_quest_for_marker()
+	if not available_quest.is_empty() and QuestModel.giver_id_for(available_quest) == item_id:
+		return QUEST_MARKER_AVAILABLE
+	var blocked_quest := _first_blocked_unfinished_quest_for_marker()
+	if not blocked_quest.is_empty() and QuestModel.giver_id_for(blocked_quest) == item_id:
+		return QUEST_MARKER_BLOCKED
+	return QUEST_MARKER_NONE
+
+
+func _first_available_unfinished_quest_for_marker() -> Dictionary:
+	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+	var state_map := states as Dictionary if states is Dictionary else {}
+	for quest in QuestModel.quests():
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(state_map.get(quest_id, {}), quest_id)
+		if state_map.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if PlayerProgressModel.quest_available_for_profile(player_profile, quest):
+			return quest
+	return {}
+
+
+func _first_blocked_unfinished_quest_for_marker() -> Dictionary:
+	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+	var state_map := states as Dictionary if states is Dictionary else {}
+	for quest in QuestModel.quests():
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(state_map.get(quest_id, {}), quest_id)
+		if state_map.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if not PlayerProgressModel.quest_available_for_profile(player_profile, quest):
+			if _quest_should_show_blocked_marker(quest):
+				return quest
+			continue
+		return {}
+	return {}
+
+
+func _quest_should_show_blocked_marker(quest: Dictionary) -> bool:
+	var required_missing_ability := str(quest.get("requiredMissingAbility", quest.get("requiresMissingAbility", ""))).strip_edges()
+	if required_missing_ability != "":
+		var abilities := PlayerProgressModel.unlocked_abilities(player_profile)
+		if abilities.has(required_missing_ability):
+			return false
+	var current_rebirth := PlayerProgressModel.rebirth_count(player_profile)
+	var rebirth_target := QuestModel.rebirth_completion_target(quest)
+	if rebirth_target > 0:
+		return rebirth_target > current_rebirth + 1
+	var required_rebirth := maxi(0, int(quest.get("requiredRebirthCount", quest.get("requiresRebirthCount", 0))))
+	if required_rebirth > 0:
+		return current_rebirth < required_rebirth
+	return true
 
 
 func _draw_facility_marker_label(item: Dictionary, marker: Vector2, selected: bool) -> void:
