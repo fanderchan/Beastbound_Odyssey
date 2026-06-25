@@ -30,6 +30,10 @@ const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
 const PARTY_LIMIT := 5
 const STORAGE_LIMIT := 20
 const PET_NAME_MAX_LENGTH := 8
+const MAX_PLAYER_LEVEL := 140
+const MAX_PET_LEVEL := 140
+const ITEM_PLAYER_EXP_PILL_LV131 := "item_player_exp_pill_lv131"
+const ITEM_PET_EXP_PILL_LV131 := "item_pet_exp_pill_lv131"
 const PET_REST_RECOVERY_RATIO := 0.05
 const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
@@ -57,11 +61,17 @@ const QUICK_SLOTS_KEY := "quickSlots"
 const QUICK_SLOT_COUNT := 3
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
 const EQUIPMENT_SLOTS_VERSION_KEY := "equipmentSlotsVersion"
-const EQUIPMENT_SLOTS_VERSION := 3
+const EQUIPMENT_SLOTS_VERSION := 4
 const EQUIPMENT_STARTER_SET_VERSION_KEY := "equipmentStarterSetVersion"
 const EQUIPMENT_STARTER_SET_VERSION := 1
 const EQUIPMENT_DURABILITY_KEY := "equipmentDurability"
+const EQUIPMENT_EXP_PILL_CHARGE_KEY := "equipmentExpPillCharge"
 const EQUIPMENT_REPAIR_DURABILITY_PER_COIN := 5
+const EXP_PILL_STARTER_VERSION_KEY := "expPillStarterVersion"
+const EXP_PILL_STARTER_VERSION := 1
+const MAILBOX_MESSAGES_KEY := "mailboxMessages"
+const MAILBOX_EXPIRY_SECONDS := 30 * 24 * 60 * 60
+const MAIL_EXP_PILL_STARTER_ID := "system_exp_pill_starter_v1"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
@@ -128,8 +138,11 @@ static func default_profile() -> Dictionary:
 		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
 		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
+		"equipmentExpPillCharge": {},
 		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
 		"equipmentStarterSetVersion": EQUIPMENT_STARTER_SET_VERSION,
+		"expPillStarterVersion": EXP_PILL_STARTER_VERSION,
+		"mailboxMessages": [],
 		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"activeQuestId": QuestModel.first_quest_id(),
 		"questStates": {},
@@ -699,6 +712,99 @@ static func backpack_item_count(profile: Dictionary, item_id: String) -> int:
 	return BackpackModel.item_count(backpack_slots(profile), item_id)
 
 
+static func mailbox_messages(profile: Dictionary, now_sec: int = -1) -> Array[Dictionary]:
+	var normalized := normalize_profile(profile)
+	return _normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, []), now_sec)
+
+
+static func mailbox_unclaimed_count(profile: Dictionary, now_sec: int = -1) -> int:
+	return mailbox_messages(profile, now_sec).size()
+
+
+static func mailbox_message_by_id(profile: Dictionary, mail_id: String, now_sec: int = -1) -> Dictionary:
+	var normalized_id := str(mail_id).strip_edges()
+	for message in mailbox_messages(profile, now_sec):
+		if str(message.get("mailId", "")) == normalized_id:
+			return message
+	return {}
+
+
+static func mailbox_claim_message(profile: Dictionary, mail_id: String, now_sec: int = -1) -> Dictionary:
+	var now := _safe_now_sec(now_sec)
+	var normalized := normalize_profile(profile)
+	var normalized_id := str(mail_id).strip_edges()
+	var messages := _normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, []), now)
+	var target_index := -1
+	for index in range(messages.size()):
+		if str(messages[index].get("mailId", "")) == normalized_id:
+			target_index = index
+			break
+	if target_index < 0:
+		normalized[MAILBOX_MESSAGES_KEY] = messages
+		return {"ok": false, "profile": normalized, "message": "邮件不存在或已过期。"}
+	var message := messages[target_index] as Dictionary
+	var attachments: Array[Dictionary] = _normalize_mailbox_items(message.get("items", []))
+	if attachments.is_empty():
+		messages.remove_at(target_index)
+		normalized[MAILBOX_MESSAGES_KEY] = messages
+		return {"ok": false, "profile": normalized, "message": "邮件没有可领取附件。"}
+	var add_result := BackpackModel.add_items(backpack_slots(normalized), attachments)
+	var added: Array = add_result.get("added", [])
+	var lost: Array = add_result.get("lost", [])
+	if added.is_empty():
+		normalized[MAILBOX_MESSAGES_KEY] = messages
+		return {"ok": false, "profile": normalized, "message": "背包已满，无法领取邮件附件。"}
+	var remaining := _subtract_item_amounts(attachments, added)
+	if remaining.is_empty():
+		messages.remove_at(target_index)
+	else:
+		message["items"] = remaining
+		messages[target_index] = message
+	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
+	normalized[MAILBOX_MESSAGES_KEY] = messages
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
+	normalized = normalize_profile(normalized)
+	var added_text := BackpackModel.item_amounts_text(added)
+	var message_text := "领取邮件附件：%s。" % added_text
+	if not lost.is_empty():
+		message_text += " 背包空间不足，剩余附件留在邮箱。"
+	return {
+		"ok": remaining.is_empty(),
+		"profile": normalized,
+		"message": message_text,
+		"added": added,
+		"remaining": remaining,
+	}
+
+
+static func exp_pill_starter_notice(profile: Dictionary) -> String:
+	var normalized := normalize_profile(profile)
+	if not mailbox_message_by_id(normalized, MAIL_EXP_PILL_STARTER_ID).is_empty():
+		return "经验丹已通过系统邮件发放，请打开邮箱领取。"
+	if int(normalized.get(EXP_PILL_STARTER_VERSION_KEY, 0)) < EXP_PILL_STARTER_VERSION:
+		return "经验丹待补发。重新打开背包或重进游戏后会进入背包或邮箱。"
+	return ""
+
+
+static func mailbox_expiry_text(message: Dictionary, now_sec: int = -1) -> String:
+	var now := _safe_now_sec(now_sec)
+	var expires_at := int(message.get("expiresAtSec", 0))
+	if expires_at <= 0:
+		return "不会过期"
+	var remaining := expires_at - now
+	if remaining <= 0:
+		return "已过期"
+	var days := int(ceil(float(remaining) / 86400.0))
+	return "%d天后过期" % maxi(1, days)
+
+
+static func mailbox_message_button_text(message: Dictionary, now_sec: int = -1) -> String:
+	var title := str(message.get("title", "邮件"))
+	var items := _normalize_mailbox_items(message.get("items", []))
+	var item_text := "无附件" if items.is_empty() else "附件%d种" % items.size()
+	return "%s\n%s  %s" % [title, item_text, mailbox_expiry_text(message, now_sec)]
+
+
 static func backpack_counts_for_context(profile: Dictionary, context: String) -> Dictionary:
 	var normalized_slots := backpack_slots(profile)
 	if context == BackpackModel.CONTEXT_CAPTURE:
@@ -750,6 +856,12 @@ static func equipment_durability(profile: Dictionary) -> Dictionary:
 	return (durability as Dictionary).duplicate(true) if durability is Dictionary else {}
 
 
+static func equipped_exp_pill_charge(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var charge = normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {})
+	return (charge as Dictionary).duplicate(true) if charge is Dictionary else {}
+
+
 static func equipped_item_id(profile: Dictionary, slot_id: String) -> String:
 	return str(equipment_slots(profile).get(slot_id, ""))
 
@@ -771,6 +883,7 @@ static func starter_equipment_slots() -> Dictionary:
 		EquipmentModel.SLOT_RIGHT_HAND_WEAPON: "weapon_stone_dagger",
 		EquipmentModel.SLOT_HANDS: "gloves_hide",
 		EquipmentModel.SLOT_FEET: "boots_grass",
+		EquipmentModel.SLOT_EXP_PILL: "",
 	}
 
 
@@ -1175,6 +1288,43 @@ static func allocate_player_stat_point(profile: Dictionary, stat_key: String) ->
 	}
 
 
+static func allocate_player_stat_point_fast(profile: Dictionary, stat_key: String) -> Dictionary:
+	var next := profile.duplicate(false)
+	var key := stat_key.strip_edges()
+	if not PLAYER_STAT_KEYS.has(key):
+		return {
+			"ok": false,
+			"profile": next,
+			"message": "不能分配这个属性。",
+		}
+	var player_value = next.get("player", {})
+	var player := (player_value as Dictionary).duplicate(true) if player_value is Dictionary else {}
+	var points := maxi(0, int(player.get("statPoints", 0)))
+	if points <= 0:
+		return {
+			"ok": false,
+			"profile": next,
+			"message": "没有可分配属性点。",
+		}
+	var base_stats := _player_base_stats_from_player(player)
+	var gain := player_stat_point_gain_for(key)
+	base_stats[key] = maxi(1, int(base_stats.get(key, DEFAULT_PLAYER_BATTLE_STATS.get(key, 1))) + gain)
+	player["baseStats"] = base_stats
+	player["statPoints"] = points - 1
+	if key == "maxHp":
+		player["hp"] = maxi(1, int(player.get("hp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + gain)
+		player["maxHp"] = maxi(1, int(player.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + gain)
+	next["player"] = player
+	var label := EquipmentModel.stat_label_for(key)
+	return {
+		"ok": true,
+		"profile": next,
+		"message": "%s 提升到 %d。" % [label, int(base_stats.get(key, 0))],
+		"statKey": key,
+		"gain": gain,
+	}
+
+
 static func player_stat_summary(profile: Dictionary, base_stats: Dictionary = {}) -> Dictionary:
 	var normalized_base := _normalize_player_stat_values(base_stats if not base_stats.is_empty() else player_base_stats(profile))
 	var raw_bonus := equipment_stat_bonus(profile)
@@ -1270,6 +1420,12 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 			"profile": normalized,
 			"message": "%s 已经装备。" % item_label,
 		}
+	if slot_id == EquipmentModel.SLOT_EXP_PILL and previous_item_id != "" and _exp_pill_charge_has_progress(slots, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {})):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "经验丹已储存经验，暂不能替换。",
+		}
 	var backpack_after_take := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, 1)
 	if previous_item_id != "":
 		var return_result := BackpackModel.add_items(backpack_after_take, [{
@@ -1286,7 +1442,13 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 		backpack_after_take = return_result.get("slots", backpack_after_take)
 	slots[slot_id] = item_id
 	var durability := equipment_durability(normalized)
-	durability[slot_id] = EquipmentModel.max_durability_for(item_id)
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	if max_durability > 0:
+		durability[slot_id] = max_durability
+	else:
+		durability.erase(slot_id)
+	if slot_id == EquipmentModel.SLOT_EXP_PILL:
+		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _fresh_exp_pill_charge_for_item(item_id)
 	normalized[BACKPACK_SLOTS_KEY] = backpack_after_take
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_after_take)
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
@@ -1316,6 +1478,12 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 			"profile": normalized,
 			"message": "%s 没有装备。" % EquipmentModel.slot_label_for(slot_id),
 		}
+	if slot_id == EquipmentModel.SLOT_EXP_PILL and _exp_pill_charge_has_progress(slots, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {})):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "经验丹已储存经验，暂不能卸下。",
+		}
 	var add_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), [{
 		"itemId": item_id,
 		"count": 1,
@@ -1330,6 +1498,8 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 	slots.erase(slot_id)
 	var durability := equipment_durability(normalized)
 	durability.erase(slot_id)
+	if slot_id == EquipmentModel.SLOT_EXP_PILL:
+		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = {}
 	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
@@ -2271,6 +2441,118 @@ static func _quest_interaction_matches(quest: Dictionary, interaction_id: String
 	return str(objective.get("targetId", "")) == item_id
 
 
+static func _normalize_mailbox_messages(value, now_sec: int = -1) -> Array[Dictionary]:
+	var now := _safe_now_sec(now_sec)
+	var result: Array[Dictionary] = []
+	if not (value is Array):
+		return result
+	for raw_message in value:
+		if not (raw_message is Dictionary):
+			continue
+		var message := raw_message as Dictionary
+		var mail_id := str(message.get("mailId", "")).strip_edges()
+		if mail_id == "":
+			continue
+		var created_at := int(message.get("createdAtSec", now))
+		if created_at <= 0:
+			created_at = now
+		var expires_at := int(message.get("expiresAtSec", created_at + MAILBOX_EXPIRY_SECONDS))
+		if expires_at <= 0:
+			expires_at = created_at + MAILBOX_EXPIRY_SECONDS
+		if now >= expires_at:
+			continue
+		var items := _normalize_mailbox_items(message.get("items", []))
+		if items.is_empty():
+			continue
+		result.append({
+			"mailId": mail_id,
+			"sender": str(message.get("sender", "系统")).strip_edges(),
+			"title": str(message.get("title", "系统邮件")).strip_edges(),
+			"body": str(message.get("body", "")).strip_edges(),
+			"createdAtSec": created_at,
+			"expiresAtSec": expires_at,
+			"items": items,
+		})
+	return result
+
+
+static func _normalize_mailbox_items(value) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	if value is Array:
+		for raw_entry in value:
+			if not (raw_entry is Dictionary):
+				continue
+			var entry := raw_entry as Dictionary
+			var item_id := str(entry.get("itemId", ""))
+			var count := maxi(0, int(entry.get("count", 0)))
+			if item_id == "" or count <= 0 or BackpackModel.item_for_id(item_id).is_empty():
+				continue
+			entries.append({"itemId": item_id, "count": count})
+	return BackpackModel.merge_item_amounts(entries)
+
+
+static func _upsert_mailbox_message(messages: Array[Dictionary], mail_id: String, title: String, body: String, items: Array, now_sec: int = -1) -> Array[Dictionary]:
+	var now := _safe_now_sec(now_sec)
+	var normalized_items := _normalize_mailbox_items(items)
+	if normalized_items.is_empty():
+		return messages
+	var normalized_id := str(mail_id).strip_edges()
+	var result := _normalize_mailbox_messages(messages, now)
+	for index in range(result.size()):
+		var message := result[index] as Dictionary
+		if str(message.get("mailId", "")) != normalized_id:
+			continue
+		var merged_items: Array[Dictionary] = []
+		var existing_items: Array[Dictionary] = _normalize_mailbox_items(message.get("items", []))
+		merged_items.append_array(existing_items)
+		merged_items.append_array(normalized_items)
+		message["items"] = BackpackModel.merge_item_amounts(merged_items)
+		message["title"] = title
+		message["body"] = body
+		message["expiresAtSec"] = maxi(int(message.get("expiresAtSec", now + MAILBOX_EXPIRY_SECONDS)), now + MAILBOX_EXPIRY_SECONDS)
+		result[index] = message
+		return result
+	result.append({
+		"mailId": normalized_id,
+		"sender": "系统",
+		"title": title,
+		"body": body,
+		"createdAtSec": now,
+		"expiresAtSec": now + MAILBOX_EXPIRY_SECONDS,
+		"items": normalized_items,
+	})
+	return result
+
+
+static func _mailbox_item_count(messages: Array[Dictionary], item_id: String, mail_id: String = "") -> int:
+	var total := 0
+	for message in messages:
+		if mail_id != "" and str(message.get("mailId", "")) != mail_id:
+			continue
+		for entry in _normalize_mailbox_items(message.get("items", [])):
+			if str(entry.get("itemId", "")) == item_id:
+				total += maxi(0, int(entry.get("count", 0)))
+	return total
+
+
+static func _subtract_item_amounts(items: Array, subtract_entries: Array) -> Array[Dictionary]:
+	var counts := {}
+	for entry in _normalize_mailbox_items(items):
+		var item_id := str(entry.get("itemId", ""))
+		counts[item_id] = int(counts.get(item_id, 0)) + maxi(0, int(entry.get("count", 0)))
+	for entry in BackpackModel.merge_item_amounts(subtract_entries):
+		var item_id := str(entry.get("itemId", ""))
+		if item_id == "":
+			continue
+		counts[item_id] = maxi(0, int(counts.get(item_id, 0)) - maxi(0, int(entry.get("count", 0))))
+	var remaining: Array[Dictionary] = []
+	for item_id in counts.keys():
+		var count := maxi(0, int(counts.get(item_id, 0)))
+		if count > 0:
+			remaining.append({"itemId": str(item_id), "count": count})
+	return BackpackModel.merge_item_amounts(remaining)
+
+
 static func _normalize_equipment_slots(value) -> Dictionary:
 	var result := {}
 	var raw := value as Dictionary if value is Dictionary else {}
@@ -2288,8 +2570,9 @@ static func _full_equipment_durability_for_slots(slots: Dictionary) -> Dictionar
 	var result := {}
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
-		if item_id != "":
-			result[slot_id] = EquipmentModel.max_durability_for(item_id)
+		var max_durability := EquipmentModel.max_durability_for(item_id)
+		if item_id != "" and max_durability > 0:
+			result[slot_id] = max_durability
 	return result
 
 
@@ -2305,6 +2588,52 @@ static func _normalize_equipment_durability(slots: Dictionary, value) -> Diction
 			continue
 		result[slot_id] = clampi(int(raw.get(slot_id, max_durability)), 0, max_durability)
 	return result
+
+
+static func _fresh_exp_pill_charge_for_item(item_id: String) -> Dictionary:
+	if not BackpackModel.item_can_world_player_exp(item_id):
+		return {}
+	var level := BackpackModel.world_exp_level_for(item_id)
+	return {
+		"itemId": item_id,
+		"level": clampi(level, 1, MAX_PLAYER_LEVEL),
+		"exp": 0,
+		"nextExp": exp_to_next_level(clampi(level, 1, MAX_PLAYER_LEVEL)),
+	}
+
+
+static func _normalize_equipped_exp_pill_charge(slots: Dictionary, value) -> Dictionary:
+	var item_id := str(slots.get(EquipmentModel.SLOT_EXP_PILL, ""))
+	if item_id == "" or not BackpackModel.item_can_world_player_exp(item_id):
+		return {}
+	var raw := value as Dictionary if value is Dictionary else {}
+	var base_level := BackpackModel.world_exp_level_for(item_id)
+	var level := clampi(int(raw.get("level", base_level)), base_level, MAX_PLAYER_LEVEL)
+	var exp := maxi(0, int(raw.get("exp", 0)))
+	var next_exp := exp_to_next_level(level)
+	if level >= MAX_PLAYER_LEVEL:
+		exp = 0
+	while level < MAX_PLAYER_LEVEL and exp >= next_exp:
+		exp -= next_exp
+		level += 1
+		next_exp = exp_to_next_level(level)
+	return {
+		"itemId": item_id,
+		"level": level,
+		"exp": exp,
+		"nextExp": next_exp,
+	}
+
+
+static func _exp_pill_charge_has_progress(slots: Dictionary, value) -> bool:
+	var item_id := str(slots.get(EquipmentModel.SLOT_EXP_PILL, ""))
+	if item_id == "":
+		return false
+	var charge := _normalize_equipped_exp_pill_charge(slots, value)
+	if charge.is_empty():
+		return false
+	var base_level := BackpackModel.world_exp_level_for(item_id)
+	return int(charge.get("level", base_level)) > base_level or int(charge.get("exp", 0)) > 0
 
 
 static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Dictionary:
@@ -3340,9 +3669,9 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var player = normalized.get("player", {})
 	var player_dict := player as Dictionary if player is Dictionary else {}
 	player_dict["name"] = str(player_dict.get("name", "见习猎人"))
-	player_dict["level"] = maxi(1, int(player_dict.get("level", 1)))
+	player_dict["level"] = clampi(int(player_dict.get("level", 1)), 1, MAX_PLAYER_LEVEL)
 	player_dict["exp"] = maxi(0, int(player_dict.get("exp", 0)))
-	player_dict["nextExp"] = maxi(1, int(player_dict.get("nextExp", exp_to_next_level(int(player_dict.get("level", 1))))))
+	player_dict["nextExp"] = exp_to_next_level(int(player_dict.get("level", 1)))
 	player_dict["baseStats"] = _player_base_stats_from_player(player_dict)
 	player_dict["statPoints"] = maxi(0, int(player_dict.get("statPoints", 0)))
 	normalized["player"] = player_dict
@@ -3380,7 +3709,30 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 				BackpackModel.CONTEXT_CAPTURE,
 				CaptureToolCatalog.normalize_inventory(legacy_capture_tools as Dictionary)
 			)
+	var mailbox_messages_value := _normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, []))
+	var exp_pill_starter_version := int(normalized.get(EXP_PILL_STARTER_VERSION_KEY, 0))
+	if exp_pill_starter_version < EXP_PILL_STARTER_VERSION:
+		var missing_player_pills := maxi(0, 5 - BackpackModel.item_count(backpack_slots_value, ITEM_PLAYER_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_PLAYER_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
+		var missing_pet_pills := maxi(0, 5 - BackpackModel.item_count(backpack_slots_value, ITEM_PET_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_PET_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
+		var exp_pill_rewards: Array[Dictionary] = []
+		if missing_player_pills > 0:
+			exp_pill_rewards.append({"itemId": ITEM_PLAYER_EXP_PILL_LV131, "count": missing_player_pills})
+		if missing_pet_pills > 0:
+			exp_pill_rewards.append({"itemId": ITEM_PET_EXP_PILL_LV131, "count": missing_pet_pills})
+		if not exp_pill_rewards.is_empty():
+			var exp_pill_result := BackpackModel.add_items(backpack_slots_value, exp_pill_rewards)
+			backpack_slots_value = exp_pill_result.get("slots", backpack_slots_value)
+			var lost_exp_pills: Array = exp_pill_result.get("lost", [])
+			if not lost_exp_pills.is_empty():
+				mailbox_messages_value = _upsert_mailbox_message(mailbox_messages_value, MAIL_EXP_PILL_STARTER_ID, "系统补发：经验丹", "背包已满，经验丹已转入邮箱。请在30天内领取附件。", lost_exp_pills)
+		if (
+			BackpackModel.item_count(backpack_slots_value, ITEM_PLAYER_EXP_PILL_LV131) + _mailbox_item_count(mailbox_messages_value, ITEM_PLAYER_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 5
+			and BackpackModel.item_count(backpack_slots_value, ITEM_PET_EXP_PILL_LV131) + _mailbox_item_count(mailbox_messages_value, ITEM_PET_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 5
+		):
+			exp_pill_starter_version = EXP_PILL_STARTER_VERSION
+	normalized[EXP_PILL_STARTER_VERSION_KEY] = exp_pill_starter_version
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
+	normalized[MAILBOX_MESSAGES_KEY] = mailbox_messages_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	normalized[QUICK_SLOTS_KEY] = _normalize_quick_slots(normalized.get(QUICK_SLOTS_KEY, []))
 	var equipment_slots_version := int(normalized.get(EQUIPMENT_SLOTS_VERSION_KEY, 1))
@@ -3389,7 +3741,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	if equipment_starter_set_version < EQUIPMENT_STARTER_SET_VERSION and equipment_slots_value.is_empty():
 		equipment_slots_value = starter_equipment_slots()
 		equipment_starter_set_version = EQUIPMENT_STARTER_SET_VERSION
-	if equipment_slots_version < EQUIPMENT_SLOTS_VERSION:
+	if equipment_slots_version < 3:
 		for slot_id in EquipmentModel.slot_ids():
 			var equipped_item_id_value := str(equipment_slots_value.get(slot_id, ""))
 			if equipped_item_id_value != "" and BackpackModel.item_count(backpack_slots_value, equipped_item_id_value) > 0:
@@ -3399,6 +3751,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
 	var equipment_durability_value := _normalize_equipment_durability(equipment_slots_value, normalized.get(EQUIPMENT_DURABILITY_KEY, {}))
 	normalized[EQUIPMENT_DURABILITY_KEY] = equipment_durability_value
+	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _normalize_equipped_exp_pill_charge(equipment_slots_value, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {}))
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
@@ -3705,18 +4058,18 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	var lost_item_rewards: Array[Dictionary] = []
 	if exp_reward > 0:
 		var player = next_profile.get("player", {}) as Dictionary
-		var player_award := _award_exp(player, exp_reward)
-		var awarded_player := player_award.get("entry", player) as Dictionary
+		var player_award := _grant_player_exp(next_profile, exp_reward)
+		next_profile = player_award.get("profile", next_profile)
+		var awarded_player := next_profile.get("player", player) as Dictionary
 		var player_levels_gained := maxi(0, int(player_award.get("levelsGained", 0)))
-		if player_levels_gained > 0:
-			awarded_player["statPoints"] = maxi(0, int(awarded_player.get("statPoints", 0))) + player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL
-		next_profile["player"] = awarded_player
 		if bool(player_award.get("leveled", false)):
 			level_up_lines.append("%s 升到 Lv%d，获得%d属性点。" % [
 				str(player.get("name", "见习猎人")),
 				int(awarded_player.get("level", 1)),
 				player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL,
 			])
+		if int(player_award.get("chargedExp", 0)) > 0:
+			level_up_lines.append("满级溢出%d经验存入经验丹。" % int(player_award.get("chargedExp", 0)))
 		var active_id := str(next_profile.get("activePetInstanceId", ""))
 		var instances: Array = next_profile.get("petInstances", [])
 		for index in range(instances.size()):
@@ -3725,7 +4078,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 			var instance := instances[index] as Dictionary
 			if str(instance.get("instanceId", "")) != active_id:
 				continue
-			var pet_award := _award_exp(instance, exp_reward)
+			var pet_award := _award_exp(instance, exp_reward, MAX_PET_LEVEL)
 			instances[index] = pet_award.get("entry", instance)
 			if bool(pet_award.get("leveled", false)):
 				level_up_lines.append("%s 升到 Lv%d。" % [str(instance.get("name", "宠物")), int((pet_award.get("entry", {}) as Dictionary).get("level", 1))])
@@ -3920,21 +4273,172 @@ static func battle_exp_reward(state: Dictionary) -> int:
 
 
 static func exp_to_next_level(level: int) -> int:
-	return 80 + maxi(1, level) * 40
+	var safe_level := maxi(1, level)
+	var base := float(80 + safe_level * 40) * pow(1.052, float(safe_level - 1))
+	var high_level_shape := pow(float(safe_level), 2.15) * 2.0
+	return maxi(1, int(roundf(base + high_level_shape)))
 
 
-static func _award_exp(entry: Dictionary, amount: int) -> Dictionary:
+static func exp_grant_for_level(target_level: int) -> int:
+	var safe_target := clampi(target_level, 1, MAX_PLAYER_LEVEL)
+	var total := 0
+	for level in range(1, safe_target):
+		total += exp_to_next_level(level)
+	return total
+
+
+static func use_world_player_exp_item(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "人物经验丹")
+	if not BackpackModel.item_can_world_player_exp(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能给人物使用。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var item_level := BackpackModel.world_exp_level_for(item_id)
+	var grant_exp := exp_grant_for_level(item_level)
+	var grant := _grant_player_exp(normalized, grant_exp)
+	normalized = grant.get("profile", normalized)
+	normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+	normalized = normalize_profile(normalized)
+	var after_player := normalized.get("player", {}) as Dictionary
+	var message := "%s 使用%s，获得%d经验，当前 Lv%d。" % [
+		str(after_player.get("name", "见习猎人")),
+		item_label,
+		grant_exp,
+		int(after_player.get("level", 1)),
+	]
+	if int(grant.get("levelsGained", 0)) > 0:
+		message = "%s 使用%s，获得%d经验，升到 Lv%d。" % [
+			str(after_player.get("name", "见习猎人")),
+			item_label,
+			grant_exp,
+			int(after_player.get("level", 1)),
+		]
+	if int(grant.get("chargedExp", 0)) > 0:
+		message += " 溢出%d经验存入经验丹。" % int(grant.get("chargedExp", 0))
+	elif int(grant.get("overflowExp", 0)) > 0:
+		message += " 人物已满级，多余经验未保存。"
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": message,
+		"itemId": item_id,
+		"exp": grant_exp,
+		"levelsGained": int(grant.get("levelsGained", 0)),
+		"chargedExp": int(grant.get("chargedExp", 0)),
+	}
+
+
+static func use_world_pet_exp_item(profile: Dictionary, item_id: String, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "宠物经验丹")
+	if not BackpackModel.item_can_world_pet_exp(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能给宠物使用。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var instances: Array = normalized.get("petInstances", [])
+	var item_level := BackpackModel.world_exp_level_for(item_id)
+	var grant_exp := exp_grant_for_level(item_level)
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		if int(instance.get("level", 1)) >= MAX_PET_LEVEL:
+			return {"ok": false, "profile": normalized, "message": "%s 已满级。" % str(instance.get("name", "宠物"))}
+		var award := _award_exp(instance, grant_exp, MAX_PET_LEVEL)
+		var next_instance := award.get("entry", instance) as Dictionary
+		instances[index] = next_instance
+		normalized["petInstances"] = instances
+		normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+		normalized = normalize_profile(normalized)
+		var message := "%s 使用%s，获得%d经验，当前 Lv%d。" % [
+			str(next_instance.get("name", "宠物")),
+			item_label,
+			grant_exp,
+			int(next_instance.get("level", 1)),
+		]
+		if int(award.get("levelsGained", 0)) > 0:
+			message = "%s 使用%s，获得%d经验，升到 Lv%d。" % [
+				str(next_instance.get("name", "宠物")),
+				item_label,
+				grant_exp,
+				int(next_instance.get("level", 1)),
+			]
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": message,
+			"itemId": item_id,
+			"instanceId": instance_id,
+			"exp": grant_exp,
+			"levelsGained": int(award.get("levelsGained", 0)),
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
+static func _grant_player_exp(profile: Dictionary, amount: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_award := _award_exp(player, amount, MAX_PLAYER_LEVEL)
+	var awarded_player := player_award.get("entry", player) as Dictionary
+	var player_levels_gained := maxi(0, int(player_award.get("levelsGained", 0)))
+	if player_levels_gained > 0:
+		awarded_player["statPoints"] = maxi(0, int(awarded_player.get("statPoints", 0))) + player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL
+	normalized["player"] = awarded_player
+	var charge := _charge_equipped_player_exp_pill(normalized, int(player_award.get("overflowExp", 0)))
+	normalized = charge.get("profile", normalized)
+	return {
+		"profile": normalize_profile(normalized),
+		"leveled": bool(player_award.get("leveled", false)),
+		"levelsGained": player_levels_gained,
+		"overflowExp": int(player_award.get("overflowExp", 0)),
+		"chargedExp": int(charge.get("chargedExp", 0)),
+		"pillLevelsGained": int(charge.get("pillLevelsGained", 0)),
+	}
+
+
+static func _charge_equipped_player_exp_pill(profile: Dictionary, amount: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var overflow := maxi(0, amount)
+	if overflow <= 0:
+		return {"profile": normalized, "chargedExp": 0, "pillLevelsGained": 0}
+	var slots := equipment_slots(normalized)
+	var item_id := str(slots.get(EquipmentModel.SLOT_EXP_PILL, ""))
+	if item_id == "" or not BackpackModel.item_can_world_player_exp(item_id):
+		return {"profile": normalized, "chargedExp": 0, "pillLevelsGained": 0}
+	var charge := _normalize_equipped_exp_pill_charge(slots, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {}))
+	var before_level := maxi(1, int(charge.get("level", BackpackModel.world_exp_level_for(item_id))))
+	var charge_award := _award_exp(charge, overflow, MAX_PLAYER_LEVEL)
+	var next_charge := charge_award.get("entry", charge) as Dictionary
+	next_charge["itemId"] = item_id
+	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = next_charge
+	return {
+		"profile": normalize_profile(normalized),
+		"chargedExp": overflow,
+		"pillLevelsGained": maxi(0, int(next_charge.get("level", before_level)) - before_level),
+	}
+
+
+static func _award_exp(entry: Dictionary, amount: int, max_level: int = MAX_PLAYER_LEVEL) -> Dictionary:
 	var next_entry := entry.duplicate(true)
-	var level := maxi(1, int(next_entry.get("level", 1)))
+	var safe_max_level := maxi(1, max_level)
+	var level := clampi(int(next_entry.get("level", 1)), 1, safe_max_level)
 	var start_level := level
 	var exp := maxi(0, int(next_entry.get("exp", 0))) + maxi(0, amount)
-	var next_exp := maxi(1, int(next_entry.get("nextExp", exp_to_next_level(level))))
+	var next_exp := exp_to_next_level(level)
 	var leveled := false
-	while exp >= next_exp:
+	while level < safe_max_level and exp >= next_exp:
 		exp -= next_exp
 		level += 1
 		next_exp = exp_to_next_level(level)
 		leveled = true
+	var overflow_exp := 0
+	if level >= safe_max_level and exp > 0:
+		overflow_exp = exp
+		exp = 0
 	next_entry["level"] = level
 	next_entry["exp"] = exp
 	next_entry["nextExp"] = next_exp
@@ -3942,6 +4446,7 @@ static func _award_exp(entry: Dictionary, amount: int) -> Dictionary:
 		"entry": next_entry,
 		"leveled": leveled,
 		"levelsGained": maxi(0, level - start_level),
+		"overflowExp": overflow_exp,
 	}
 
 
@@ -4162,9 +4667,9 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		"formId": form_id,
 		"name": pet_name if pet_name != "" else str(template.get("formName", "宠物")),
 		"state": state,
-		"level": maxi(1, level),
+		"level": clampi(level, 1, MAX_PET_LEVEL),
 		"exp": 0,
-		"nextExp": exp_to_next_level(maxi(1, level)),
+		"nextExp": exp_to_next_level(clampi(level, 1, MAX_PET_LEVEL)),
 		"hp": clampi(hp, 0, max_hp),
 		"maxHp": max_hp,
 		"quick": int(stat_overrides.get("quick", stats_dict.get("agility", 50))),
@@ -4190,9 +4695,9 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["templateId"] = form_id
 	instance["name"] = str(instance.get("name", template.get("formName", "宠物")))
 	instance["state"] = str(instance.get("state", PET_STATE_STANDBY))
-	instance["level"] = maxi(1, int(instance.get("level", 1)))
+	instance["level"] = clampi(int(instance.get("level", 1)), 1, MAX_PET_LEVEL)
 	instance["exp"] = maxi(0, int(instance.get("exp", 0)))
-	instance["nextExp"] = maxi(1, int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1))))))
+	instance["nextExp"] = exp_to_next_level(int(instance.get("level", 1)))
 	var stats = template.get("baseStats", {})
 	var stats_dict := stats as Dictionary if stats is Dictionary else {}
 	instance["maxHp"] = maxi(1, int(instance.get("maxHp", stats_dict.get("maxHp", 1))))

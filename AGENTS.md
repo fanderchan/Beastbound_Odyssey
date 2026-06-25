@@ -18,6 +18,19 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 - Player-facing screens must stay clean: do not show agent-only validation strings, raw smoke summaries, implementation flags, or debug-only IDs in normal UI.
 - Keep reusable gameplay rules in focused scripts or data files instead of growing one giant scene script.
 
+## Validation And Performance Rules
+
+- Before and after each gameplay/client feature stage, compare against the previous performance baseline instead of only checking that the new feature works.
+- Use the full client launch path `godot --path client/godot --scene res://scenes/Main.tscn` when a feature may affect normal runtime behavior, UI refresh, movement, shops, battle, or world interaction.
+- Run relevant narrow probes when available, such as movement spam/perf, shop select perf, player stat spam perf, and feature-specific headless checks.
+- Report CPU/runtime evidence in the final summary, especially when the user has recently reported high CPU, movement stutter, UI stalls, or macOS beachball behavior.
+- If a feature changes HUD refresh, map scanning, pathfinding, panels, inventory, battle loops, or save/profile writes, explicitly check that it did not reintroduce a CPU spike or frame-time regression.
+- Treat `_process`, `_world_hud_signature`, `_world_draw_signature`, `_current_task_text`, task-route button refresh, and map/quest marker signatures as hot paths. Do not call `PlayerProgressModel.normalize_profile`, `PlayerProgressModel.backpack_slots`, full quest scans, pet-list normalization, map scans, or navigation-target builders from these paths.
+- For hot-path UI state, use raw-field lightweight signatures and cached display text. Recompute full task details, map routes, quest panels, or navigation targets only when opening a panel, clicking a button, changing profile data, or forcing a refresh.
+- When fixing or adding HUD/task/route behavior, test both idle and moving cases with `--perf-probe`; movement can expose regressions that idle checks miss because coordinates refresh the HUD.
+- For movement/input performance, simulate real `_input` events across frames. A same-frame batch of direct helper calls is not enough to prove mouse-spam, touch-spam, or manual click-drag behavior is smooth.
+- A good post-fix idle baseline is low single-digit `%CPU` in `ps` for `godot --path client/godot --scene res://scenes/Main.tscn`, and sub-millisecond `process_total` after startup in the in-game perf probe. If `ps` and the script probe disagree, keep investigating instead of trusting only one source.
+
 ## Asset And Reuse Rules
 
 - StoneAge9 may be evaluated for structure, data contracts, validation style, and replaceable asset pipeline ideas.

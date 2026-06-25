@@ -132,6 +132,32 @@
       }
     },
     {
+      "id": "item_player_exp_pill_lv131",
+      "label": "人物经验丹(LV131)",
+      "menuLabel": "人物丹131",
+      "stackLimit": 20,
+      "startingCount": 5,
+      "useContexts": ["world_player_exp", "equipment"],
+      "worldUse": {
+        "type": "player_exp",
+        "level": 131
+      },
+      "description": "使用后获得到达 Lv131 所需的经验；也可装备到经验丹槽储存满级溢出经验。"
+    },
+    {
+      "id": "item_pet_exp_pill_lv131",
+      "label": "宠物经验丹(LV131)",
+      "menuLabel": "宠物丹131",
+      "stackLimit": 20,
+      "startingCount": 5,
+      "useContexts": ["world_pet_exp"],
+      "worldUse": {
+        "type": "pet_exp",
+        "level": 131
+      },
+      "description": "使用后让目标队伍宠物获得到达 Lv131 所需的经验。"
+    },
+    {
       "id": "equip_frag_wood_basic",
       "label": "初级木质碎片",
       "menuLabel": "木质碎片",

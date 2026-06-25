@@ -6,6 +6,8 @@ const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
 const CONTEXT_WORLD_ENCOUNTER_STONE := "world_encounter_stone"
+const CONTEXT_WORLD_PLAYER_EXP := "world_player_exp"
+const CONTEXT_WORLD_PET_EXP := "world_pet_exp"
 const CONTEXT_EQUIPMENT := "equipment"
 static var data_cache_loaded: bool = false
 static var data_cache: Dictionary = {}
@@ -128,6 +130,22 @@ static func item_can_world_encounter_stone(item_id: String) -> bool:
 		and world_encounter_interval_for(item_id) > 0.0
 		and world_encounter_duration_for(item_id) > 0.0
 	)
+
+
+static func world_exp_level_for(item_id: String) -> int:
+	var world_use := world_use_for(item_id)
+	var use_type := str(world_use.get("type", ""))
+	if use_type != "player_exp" and use_type != "pet_exp":
+		return 0
+	return maxi(1, int(world_use.get("level", 1)))
+
+
+static func item_can_world_player_exp(item_id: String) -> bool:
+	return item_has_context(item_id, CONTEXT_WORLD_PLAYER_EXP) and str(world_use_for(item_id).get("type", "")) == "player_exp" and world_exp_level_for(item_id) > 0
+
+
+static func item_can_world_pet_exp(item_id: String) -> bool:
+	return item_has_context(item_id, CONTEXT_WORLD_PET_EXP) and str(world_use_for(item_id).get("type", "")) == "pet_exp" and world_exp_level_for(item_id) > 0
 
 
 static func starting_slots() -> Array[Dictionary]:
@@ -321,7 +339,7 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 	var context_labels: Array[String] = []
 	if contexts.has(CONTEXT_BATTLE_ITEM):
 		context_labels.append("战斗可用")
-	if contexts.has(CONTEXT_WORLD_PET_HEAL) or contexts.has(CONTEXT_WORLD_ENCOUNTER_STONE):
+	if contexts.has(CONTEXT_WORLD_PET_HEAL) or contexts.has(CONTEXT_WORLD_ENCOUNTER_STONE) or contexts.has(CONTEXT_WORLD_PLAYER_EXP) or contexts.has(CONTEXT_WORLD_PET_EXP):
 		context_labels.append("世界可用")
 	if contexts.has(CONTEXT_CAPTURE):
 		context_labels.append("捕捉")
@@ -339,6 +357,8 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 			int(roundf(world_encounter_interval_for(item_id))),
 			int(roundf(world_encounter_duration_for(item_id) / 60.0)),
 		])
+	if item_can_world_player_exp(item_id) or item_can_world_pet_exp(item_id):
+		lines.append("效果: 获得到达 Lv%d 所需的经验。" % world_exp_level_for(item_id))
 	var description := str(item_for_id(item_id).get("description", "")).strip_edges()
 	if description != "":
 		lines.append("说明: %s" % description)

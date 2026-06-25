@@ -10,6 +10,7 @@ const SLOT_BODY := "body"
 const SLOT_RIGHT_HAND_WEAPON := "right_hand_weapon"
 const SLOT_HANDS := "hands"
 const SLOT_FEET := "feet"
+const SLOT_EXP_PILL := "exp_pill"
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_DURABILITY_MAX := 30
 static var data_cache_loaded: bool = false
@@ -119,6 +120,16 @@ static func spirit_text_for(item_id: String) -> String:
 	return "、".join(parts)
 
 
+static func is_exp_pill(item_id: String) -> bool:
+	return bool(item_for_id(item_id).get("expPill", false))
+
+
+static func exp_pill_level_for(item_id: String) -> int:
+	if not is_exp_pill(item_id):
+		return 0
+	return maxi(1, int(item_for_id(item_id).get("expPillLevel", 1)))
+
+
 static func required_level_for(item_id: String) -> int:
 	return maxi(1, int(item_for_id(item_id).get("requiredLevel", 1)))
 
@@ -145,6 +156,8 @@ static func requirement_text_for(item_id: String) -> String:
 static func max_durability_for(item_id: String) -> int:
 	if not is_equipment(item_id):
 		return 0
+	if not bool(item_for_id(item_id).get("usesDurability", true)):
+		return 0
 	return maxi(1, int(item_for_id(item_id).get("durabilityMax", DEFAULT_DURABILITY_MAX)))
 
 
@@ -170,6 +183,8 @@ static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var lines: Array[String] = [
 		"装备槽: %s" % slot_label_for(slot_for(item_id)),
 	]
+	if is_exp_pill(item_id):
+		lines.append("经验丹等级: Lv%d" % exp_pill_level_for(item_id))
 	var requirement_text := requirement_text_for(item_id)
 	if requirement_text != "":
 		lines.append(requirement_text)
@@ -215,8 +230,10 @@ static func validation_errors() -> Array[String]:
 			errors.append("%s.requiredLevel 必须大于等于 1" % item_id)
 		if int(item.get("requiredRebirth", 0)) < 0:
 			errors.append("%s.requiredRebirth 必须大于等于 0" % item_id)
-		if int(item.get("durabilityMax", DEFAULT_DURABILITY_MAX)) < 1:
+		if bool(item.get("usesDurability", true)) and int(item.get("durabilityMax", DEFAULT_DURABILITY_MAX)) < 1:
 			errors.append("%s.durabilityMax 必须大于等于 1" % item_id)
+		if bool(item.get("expPill", false)) and int(item.get("expPillLevel", 0)) < 1:
+			errors.append("%s.expPillLevel 必须大于等于 1" % item_id)
 		var raw_spirits = item.get("spiritIds", [])
 		if raw_spirits is Array:
 			for value in raw_spirits:
