@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "remoteStableUnlock": {
+    "requiredRebirthCount": 4,
+    "requiredLevel": 1,
+    "optional": true
+  },
+  "specialTaskPlans": [
+    {
+      "id": "rebirth_1_grace_cloth_tune",
+      "title": "恩惠衣调律",
+      "requiredRebirthCount": 1,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "补做后开放恩惠衣后续强化路线，适合一转后练级。"
+    },
+    {
+      "id": "rebirth_2_moist_charm_tune",
+      "title": "滋润护符调律",
+      "requiredRebirthCount": 2,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "补做后开放滋润护符后续强化路线，适合低等级续航。"
+    },
+    {
+      "id": "rebirth_3_flame_spear_trial",
+      "title": "火纹长枪试炼",
+      "requiredRebirthCount": 3,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "补做后开放火纹武器后续强化路线，偏单体练级输出。"
+    },
+    {
+      "id": "rebirth_4_remote_stable_lesson",
+      "title": "远程兽栏课题",
+      "requiredRebirthCount": 4,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "实际任务已落地为远程兽栏能力，可在四转后任意时间补做。"
+    },
+    {
+      "id": "rebirth_5_four_spirit_focus",
+      "title": "四灵护符调律",
+      "requiredRebirthCount": 5,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "补做后开放四灵护符后续强化路线，偏综合属性成长。"
+    },
+    {
+      "id": "rebirth_6_shadow_bow_mastery",
+      "title": "玄影群攻弓熟练",
+      "requiredRebirthCount": 6,
+      "requiredLevel": 1,
+      "optional": true,
+      "missable": false,
+      "benefitPlan": "补做后开放群攻弓后续强化路线，方便高转练级。"
+    }
+  ],
+  "finalCave": {
+    "id": "shadow_oath_cavern",
+    "name": "玄影洞窟",
+    "floors": 5,
+    "floorMapIds": ["shadow_oath_cavern", "shadow_oath_cavern_f2", "shadow_oath_cavern_f3", "shadow_oath_cavern_f4", "shadow_oath_cavern_f5"],
+    "captureFloorMapIds": ["shadow_oath_cavern", "shadow_oath_cavern_f2", "shadow_oath_cavern_f3"],
+    "bossFloorMapId": "shadow_oath_cavern_f5",
+    "captureFloors": [1, 2, 3],
+    "bossFloor": 5,
+    "rebirthBossGroup": {
+      "id": "shadow_oath_rebirth_guardian",
+      "enemyCount": 10,
+      "averageLevel": 110,
+      "centerLevel": 122,
+      "centerName": "玄影转生兽",
+      "strongSkillIds": ["pet_bui_charge", "pet_sleep_powder", "pet_confuse_cry", "pet_stone_gaze"]
+    }
+  },
+  "elementCaves": [
+    {
+      "element": "earth",
+      "label": "地",
+      "caveId": "earth_vein_cave",
+      "caveName": "岩脉洞穴",
+      "floors": 4,
+      "floorMapIds": ["earth_vein_cave", "earth_vein_cave_f2", "earth_vein_cave_f3", "earth_vein_cave_f4"],
+      "guardianFloorMapId": "earth_vein_cave_f4",
+      "ringItemId": "ring_earth_trial",
+      "ringName": "地之戒",
+      "minAttemptLevel": 80,
+      "recommendedLevel": 100,
+      "guardianGroup": {
+        "id": "earth_vein_guardian_group",
+        "enemyCount": 10,
+        "averageLevel": 100,
+        "centerLevel": 112,
+        "centerName": "岩脉守护兽",
+        "strongSkillIds": ["pet_bui_charge", "pet_stone_gaze"]
+      }
+    },
+    {
+      "element": "water",
+      "label": "水",
+      "caveId": "tide_echo_cave",
+      "caveName": "潮回洞穴",
+      "floors": 4,
+      "floorMapIds": ["tide_echo_cave", "tide_echo_cave_f2", "tide_echo_cave_f3", "tide_echo_cave_f4"],
+      "guardianFloorMapId": "tide_echo_cave_f4",
+      "ringItemId": "ring_water_trial",
+      "ringName": "水之戒",
+      "minAttemptLevel": 80,
+      "recommendedLevel": 100,
+      "guardianGroup": {
+        "id": "tide_echo_guardian_group",
+        "enemyCount": 10,
+        "averageLevel": 100,
+        "centerLevel": 112,
+        "centerName": "潮回守护兽",
+        "strongSkillIds": ["pet_sleep_powder", "pet_confuse_cry"]
+      }
+    },
+    {
+      "element": "fire",
+      "label": "火",
+      "caveId": "ember_core_cave",
+      "caveName": "焰心洞穴",
+      "floors": 4,
+      "floorMapIds": ["ember_core_cave", "ember_core_cave_f2", "ember_core_cave_f3", "ember_core_cave_f4"],
+      "guardianFloorMapId": "ember_core_cave_f4",
+      "ringItemId": "ring_fire_trial",
+      "ringName": "火之戒",
+      "minAttemptLevel": 80,
+      "recommendedLevel": 100,
+      "guardianGroup": {
+        "id": "ember_core_guardian_group",
+        "enemyCount": 10,
+        "averageLevel": 100,
+        "centerLevel": 112,
+        "centerName": "焰心守护兽",
+        "strongSkillIds": ["pet_bui_charge", "pet_confuse_cry"]
+      }
+    },
+    {
+      "element": "wind",
+      "label": "风",
+      "caveId": "gale_breath_cave",
+      "caveName": "岚息洞穴",
+      "floors": 4,
+      "floorMapIds": ["gale_breath_cave", "gale_breath_cave_f2", "gale_breath_cave_f3", "gale_breath_cave_f4"],
+      "guardianFloorMapId": "gale_breath_cave_f4",
+      "ringItemId": "ring_wind_trial",
+      "ringName": "风之戒",
+      "minAttemptLevel": 80,
+      "recommendedLevel": 100,
+      "guardianGroup": {
+        "id": "gale_breath_guardian_group",
+        "enemyCount": 10,
+        "averageLevel": 100,
+        "centerLevel": 112,
+        "centerName": "岚息守护兽",
+        "strongSkillIds": ["pet_bui_charge", "pet_sleep_powder"]
+      }
+    }
+  ],
+  "rebirthBeasts": [
+    {
+      "element": "earth",
+      "formId": "rebirth_beast_earth_lv50",
+      "name": "地灵转生兽",
+      "captureLevel": 50
+    },
+    {
+      "element": "water",
+      "formId": "rebirth_beast_water_lv50",
+      "name": "水灵转生兽",
+      "captureLevel": 50
+    },
+    {
+      "element": "fire",
+      "formId": "rebirth_beast_fire_lv50",
+      "name": "火灵转生兽",
+      "captureLevel": 50
+    },
+    {
+      "element": "wind",
+      "formId": "rebirth_beast_wind_lv50",
+      "name": "风灵转生兽",
+      "captureLevel": 50
+    }
+  ],
+  "stages": [
+    {
+      "targetRebirth": 1,
+      "title": "一转",
+      "requiredCapturedBeastElements": ["earth"],
+      "starterPetPlan": "地纹幼兽",
+      "rewardPlan": "恩惠3衣服"
+    },
+    {
+      "targetRebirth": 2,
+      "title": "二转",
+      "requiredCapturedBeastElements": ["water"],
+      "starterPetPlan": "潮纹幼兽",
+      "rewardPlan": "滋润3饰品"
+    },
+    {
+      "targetRebirth": 3,
+      "title": "三转",
+      "requiredCapturedBeastElements": ["fire"],
+      "starterPetPlan": "焰纹幼兽",
+      "rewardPlan": "火纹长枪"
+    },
+    {
+      "targetRebirth": 4,
+      "title": "四转",
+      "requiredCapturedBeastElements": ["wind"],
+      "starterPetPlan": "岚纹幼兽",
+      "rewardPlan": "风纹轻靴"
+    },
+    {
+      "targetRebirth": 5,
+      "title": "五转",
+      "requiredCapturedBeastElements": ["earth", "water", "fire", "wind"],
+      "starterPetPlan": "四灵幼兽",
+      "rewardPlan": "四灵护符"
+    },
+    {
+      "targetRebirth": 6,
+      "title": "六转",
+      "requiredCapturedBeastElements": ["earth", "water", "fire", "wind"],
+      "starterPetPlan": "玄影幼兽",
+      "rewardPlan": "群攻弓"
+    }
+  ]
+}

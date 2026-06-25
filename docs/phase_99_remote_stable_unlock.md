@@ -2,12 +2,13 @@
 
 ## 目标
 
-把 Phase94 设计里的 `远程兽栏` 从预留能力变成正式任务奖励：玩家完成六转后，去找兽栏管理员阿牧学习，学会后才可以在普通宠物面板随身存取兽栏。
+把 Phase94 设计里的 `远程兽栏` 从预留能力变成正式任务奖励。Phase101 已把门槛调整为 `4转 Lv1` 后可选学习，学会后才可以在普通宠物面板随身存取兽栏。
 
 ## 规则
 
-- 六转前不会出现远程兽栏任务。
-- 执行六转后，自动接入 `远程兽栏` 任务。
+- 4转前不会出现远程兽栏任务。
+- 执行四转后，可在兽栏管理员阿牧处可选学习 `远程兽栏`。
+- 该任务不占用主线 active，不会阻断五转、六转。
 - `远程兽栏` 任务由 `兽栏管理员阿牧` 完成。
 - 任务奖励是永久能力 `remoteStable`。
 - 未学会前：
@@ -25,13 +26,14 @@
 - 任务可见性支持：
   - `requiredRebirthCount`
   - `requiredMissingAbility`
-- `--auto-player-rebirth-chain-check` 更新为六转后接入远程兽栏任务。
+- `--auto-player-rebirth-chain-check` 更新为六转后主线结束，远程兽栏改走可选任务。
 - 新增 `--auto-remote-stable-unlock-check`。
 
 ## 自测
 
 ```sh
 godot --headless --path client/godot --quit
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-rebirth-trial-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-remote-stable-unlock-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-player-rebirth-chain-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-quest-chain-check
@@ -47,7 +49,8 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ## 结果
 
 - `--auto-remote-stable-unlock-check`: ok。
-- `--auto-player-rebirth-chain-check`: ok，六转后 active 为 `quest_remote_stable_unlock`。
+- `--auto-rebirth-trial-contract-check`: ok。
+- `--auto-player-rebirth-chain-check`: ok，六转后主线 active 为空。
 - `--auto-quest-chain-check`: ok。
 - `--auto-quest-ui-check`: ok。
 - `--auto-stable-facility-check`: ok。

@@ -16,6 +16,7 @@ const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_trai
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
+const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const TrainingPartnerModel := preload("res://scripts/progression/training_partner_model.gd")
 
@@ -76,6 +77,24 @@ const ABILITY_REMOTE_STABLE := "remoteStable"
 const REBIRTH_COUNT_KEY := RebirthModel.REBIRTH_COUNT_KEY
 const REBIRTH_HISTORY_KEY := RebirthModel.REBIRTH_HISTORY_KEY
 const REBIRTH_QUEST_COMPLETIONS_KEY := RebirthModel.REBIRTH_QUEST_COMPLETIONS_KEY
+const REBIRTH_TRIAL_PROOFS_KEY := "rebirthTrialProofs"
+const REBIRTH_FINAL_BOSS_PROOF_ID := "shadow_oath_rebirth_guardian"
+const REBIRTH_REWARD_ITEMS_BY_TARGET := {
+	1: "armor_grace_cloth_3",
+	2: "accessory_moist_charm_3",
+	3: "weapon_flame_trial_spear",
+	4: "boots_gale_trial",
+	5: "accessory_four_spirit_charm",
+	6: "weapon_shadow_group_bow",
+}
+const REBIRTH_STARTER_PET_BY_TARGET := {
+	1: {"formId": "rebirth_starter_earth_cub", "name": "地纹幼兽"},
+	2: {"formId": "rebirth_starter_water_cub", "name": "潮纹幼兽"},
+	3: {"formId": "rebirth_starter_fire_cub", "name": "焰纹幼兽"},
+	4: {"formId": "rebirth_starter_wind_cub", "name": "岚纹幼兽"},
+	5: {"formId": "rebirth_starter_four_spirit_cub", "name": "四灵幼兽"},
+	6: {"formId": "rebirth_starter_shadow_cub", "name": "玄影幼兽"},
+}
 const DEFAULT_RECORD_POINT_MAP_ID := "firebud_village_gate"
 const DEFAULT_RECORD_POINT_SPAWN_NAME := "default"
 const DEFAULT_RECORD_POINT_LABEL := "火芽村出生点"
@@ -121,11 +140,12 @@ static func default_profile() -> Dictionary:
 		"hangSettings": HangSettingsModel.default_settings(),
 		"trainingPartners": [],
 		"recordPoint": default_record_point(),
-		"unlockedAbilities": [],
-		"rebirthCount": 0,
-		"rebirthHistory": [],
-		"rebirthQuestCompletions": [],
-	}
+			"unlockedAbilities": [],
+			"rebirthCount": 0,
+			"rebirthHistory": [],
+			"rebirthQuestCompletions": [],
+			"rebirthTrialProofs": {},
+		}
 
 
 static func load_profile() -> Dictionary:
@@ -200,15 +220,15 @@ static func rebirth_count(profile: Dictionary) -> int:
 
 
 static func rebirth_requirement_state(profile: Dictionary) -> Dictionary:
-	return RebirthModel.requirement_state(normalize_profile(profile))
+	return _rebirth_requirement_state_with_trials(normalize_profile(profile))
 
 
 static func rebirth_preview(profile: Dictionary) -> Dictionary:
-	return RebirthModel.preview(normalize_profile(profile))
+	return _rebirth_preview_with_trials(normalize_profile(profile))
 
 
 static func rebirth_preview_lines(profile: Dictionary) -> Array[String]:
-	return RebirthModel.preview_lines(normalize_profile(profile))
+	return _rebirth_preview_lines_with_trials(normalize_profile(profile))
 
 
 static func with_rebirth_count(profile: Dictionary, count: int) -> Dictionary:
@@ -219,17 +239,325 @@ static func with_rebirth_quest_completed(profile: Dictionary, target_count: int,
 	return normalize_profile(RebirthModel.with_rebirth_quest_completed(profile, target_count, completed))
 
 
+static func rebirth_trial_proof_count(profile: Dictionary, proof_id: String = REBIRTH_FINAL_BOSS_PROOF_ID) -> int:
+	var normalized_id := str(proof_id).strip_edges()
+	if normalized_id == "":
+		return 0
+	return maxi(0, int(_normalize_rebirth_trial_proofs(normalize_profile(profile).get(REBIRTH_TRIAL_PROOFS_KEY, {})).get(normalized_id, 0)))
+
+
+static func with_rebirth_trial_proof_count(profile: Dictionary, proof_id: String, count: int) -> Dictionary:
+	var normalized_id := str(proof_id).strip_edges()
+	var normalized := normalize_profile(profile)
+	if normalized_id == "":
+		return normalized
+	var proofs := _normalize_rebirth_trial_proofs(normalized.get(REBIRTH_TRIAL_PROOFS_KEY, {}))
+	var next_count := maxi(0, count)
+	if next_count > 0:
+		proofs[normalized_id] = next_count
+	else:
+		proofs.erase(normalized_id)
+	normalized[REBIRTH_TRIAL_PROOFS_KEY] = proofs
+	return normalize_profile(normalized)
+
+
 static func execute_rebirth(profile: Dictionary) -> Dictionary:
-	var result := RebirthModel.execute_rebirth(normalize_profile(profile), exp_to_next_level(1))
+	var normalized := normalize_profile(profile)
+	var preview := rebirth_preview(normalized)
+	if not bool(preview.get("ok", false)):
+		var reasons: Array = preview.get("reasons", [])
+		var reason_texts: Array[String] = []
+		for reason in reasons:
+			reason_texts.append(str(reason))
+		var message := "暂时不能转生。"
+		if not reason_texts.is_empty():
+			message = "暂时不能转生：%s" % " ".join(reason_texts)
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": message,
+			"reasons": reason_texts,
+		}
+	var target_count := clampi(int(preview.get("targetCount", RebirthModel.rebirth_count(normalized) + 1)), 1, RebirthModel.MAX_REBIRTH_COUNT)
+	var consume_result := _consume_rebirth_trial_requirements(normalized, target_count)
+	if not bool(consume_result.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(consume_result.get("message", "转生试炼材料不足。")),
+		}
+	var prepared_profile := consume_result.get("profile", normalized) as Dictionary
+	var result := RebirthModel.execute_rebirth(prepared_profile, exp_to_next_level(1))
 	var next_profile := result.get("profile", profile) as Dictionary
 	next_profile = normalize_profile(next_profile)
 	if bool(result.get("ok", false)):
 		var player := next_profile.get("player", {}) as Dictionary
 		player["hp"] = maxi(1, int(player.get("maxHp", player.get("hp", 1))))
 		next_profile["player"] = player
+		var reward_result := _grant_rebirth_trial_rewards(next_profile, target_count)
+		next_profile = reward_result.get("profile", next_profile) as Dictionary
+		result["consumedRingIds"] = consume_result.get("consumedRingIds", [])
+		result["consumedPets"] = consume_result.get("consumedPets", [])
+		result["rewardItems"] = reward_result.get("rewardItems", [])
+		result["lostRewardItems"] = reward_result.get("lostRewardItems", [])
+		result["starterPet"] = reward_result.get("starterPet", {})
+		var reward_text := _rebirth_reward_text(reward_result)
+		if reward_text != "":
+			result["message"] = "%s 获得%s。" % [str(result.get("message", "")), reward_text]
 		next_profile = normalize_profile(next_profile)
 	result["profile"] = next_profile
 	return result
+
+
+static func _rebirth_requirement_state_with_trials(profile: Dictionary) -> Dictionary:
+	var base := RebirthModel.requirement_state(profile)
+	var trial := _rebirth_trial_requirement_state(profile, base)
+	var reasons := _string_array(base.get("reasons", []))
+	for reason in _string_array(trial.get("reasons", [])):
+		if not reasons.has(reason):
+			reasons.append(reason)
+	var result := base.duplicate(true)
+	result["ok"] = bool(base.get("ok", false)) and bool(trial.get("ok", false))
+	result["trialOk"] = bool(trial.get("ok", false))
+	result["trial"] = trial
+	result["reasons"] = reasons
+	return result
+
+
+static func _rebirth_preview_with_trials(profile: Dictionary) -> Dictionary:
+	var base_preview := RebirthModel.preview(profile)
+	var requirement := _rebirth_requirement_state_with_trials(profile)
+	var target_count := clampi(int(base_preview.get("targetCount", requirement.get("targetCount", 1))), 1, RebirthModel.MAX_REBIRTH_COUNT)
+	var result := base_preview.duplicate(true)
+	result["ok"] = bool(requirement.get("ok", false))
+	result["reasons"] = requirement.get("reasons", [])
+	result["trial"] = requirement.get("trial", {})
+	result["rewardItems"] = _rebirth_reward_items_for_target(target_count)
+	result["starterPetPlan"] = _rebirth_starter_pet_plan_for_target(target_count)
+	return result
+
+
+static func _rebirth_preview_lines_with_trials(profile: Dictionary) -> Array[String]:
+	var data := _rebirth_preview_with_trials(profile)
+	var lines: Array[String] = []
+	for raw_line in RebirthModel.preview_lines(profile):
+		var line := str(raw_line)
+		if line.begins_with("资格:"):
+			lines.append("资格: %s" % ("可转生" if bool(data.get("ok", false)) else "未满足"))
+		elif line.begins_with("未满足:"):
+			continue
+		else:
+			lines.append(line)
+	lines.append("试炼: %s" % _rebirth_trial_requirement_text(int(data.get("targetCount", 1))))
+	lines.append("奖励: %s" % _rebirth_reward_plan_text(int(data.get("targetCount", 1))))
+	var reasons := _string_array(data.get("reasons", []))
+	if not reasons.is_empty():
+		lines.append("未满足: %s" % " ".join(reasons))
+	return lines
+
+
+static func _rebirth_trial_requirement_state(profile: Dictionary, base_requirement: Dictionary = {}) -> Dictionary:
+	var requirement := base_requirement if not base_requirement.is_empty() else RebirthModel.requirement_state(profile)
+	var target_count := clampi(int(requirement.get("targetCount", RebirthModel.rebirth_count(profile) + 1)), 1, RebirthModel.MAX_REBIRTH_COUNT)
+	var reasons: Array[String] = []
+	var ring_ids := RebirthTrialModel.stage_required_ring_ids(target_count)
+	var missing_ring_labels: Array[String] = []
+	for ring_id in ring_ids:
+		if BackpackModel.item_count(backpack_slots(profile), ring_id) <= 0:
+			missing_ring_labels.append(BackpackModel.label_for(ring_id, ring_id))
+	var required_beast_form_ids := RebirthTrialModel.stage_required_beast_form_ids(target_count)
+	var owned_form_counts := _owned_pet_form_counts(profile)
+	var missing_beast_labels: Array[String] = []
+	for form_id in required_beast_form_ids:
+		if int(owned_form_counts.get(form_id, 0)) <= 0:
+			missing_beast_labels.append(_pet_form_name_for(form_id))
+	var boss_proof_count := rebirth_trial_proof_count(profile, REBIRTH_FINAL_BOSS_PROOF_ID)
+	if not bool(requirement.get("limitOk", true)):
+		return {
+			"ok": false,
+			"targetCount": target_count,
+			"ringOk": false,
+			"beastOk": false,
+			"bossOk": false,
+			"requiredRingIds": ring_ids,
+			"requiredBeastFormIds": required_beast_form_ids,
+			"bossProofCount": boss_proof_count,
+			"reasons": [],
+		}
+	if not missing_ring_labels.is_empty():
+		reasons.append("缺少元素戒指：%s。" % "、".join(missing_ring_labels))
+	if not missing_beast_labels.is_empty():
+		reasons.append("缺少转生兽：%s。" % "、".join(missing_beast_labels))
+	if boss_proof_count <= 0:
+		reasons.append("未击败玄影洞窟顶层守护。")
+	return {
+		"ok": reasons.is_empty(),
+		"targetCount": target_count,
+		"ringOk": missing_ring_labels.is_empty(),
+		"beastOk": missing_beast_labels.is_empty(),
+		"bossOk": boss_proof_count > 0,
+		"requiredRingIds": ring_ids,
+		"requiredBeastFormIds": required_beast_form_ids,
+		"missingRingLabels": missing_ring_labels,
+		"missingBeastLabels": missing_beast_labels,
+		"bossProofCount": boss_proof_count,
+		"reasons": reasons,
+	}
+
+
+static func _rebirth_trial_requirement_text(target_count: int) -> String:
+	var beast_labels: Array[String] = []
+	for form_id in RebirthTrialModel.stage_required_beast_form_ids(target_count):
+		beast_labels.append(_pet_form_name_for(form_id))
+	return "四枚元素戒指；玄影顶层胜利；交付%s" % ("、".join(beast_labels) if not beast_labels.is_empty() else "转生兽")
+
+
+static func _rebirth_reward_plan_text(target_count: int) -> String:
+	var reward_text := BackpackModel.item_amounts_text(_rebirth_reward_items_for_target(target_count))
+	var starter := _rebirth_starter_pet_plan_for_target(target_count)
+	var starter_name := str(starter.get("name", "幼兽"))
+	if reward_text == "":
+		return "%s Lv1" % starter_name
+	return "%s Lv1；%s" % [starter_name, reward_text]
+
+
+static func _rebirth_reward_items_for_target(target_count: int) -> Array[Dictionary]:
+	var item_id := str(REBIRTH_REWARD_ITEMS_BY_TARGET.get(clampi(target_count, 1, RebirthModel.MAX_REBIRTH_COUNT), ""))
+	if item_id == "":
+		return []
+	return [{
+		"itemId": item_id,
+		"count": 1,
+	}]
+
+
+static func _rebirth_starter_pet_plan_for_target(target_count: int) -> Dictionary:
+	var plan = REBIRTH_STARTER_PET_BY_TARGET.get(clampi(target_count, 1, RebirthModel.MAX_REBIRTH_COUNT), {})
+	return plan as Dictionary if plan is Dictionary else {}
+
+
+static func _consume_rebirth_trial_requirements(profile: Dictionary, target_count: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var requirement := _rebirth_trial_requirement_state(normalized, RebirthModel.requirement_state(normalized))
+	if not bool(requirement.get("ok", false)):
+		var reasons := _string_array(requirement.get("reasons", []))
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "转生试炼未完成：%s" % " ".join(reasons),
+		}
+	var consumed_ring_ids: Array[String] = []
+	var slots := BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, []))
+	for ring_id in RebirthTrialModel.stage_required_ring_ids(target_count):
+		slots = BackpackModel.consume(slots, ring_id, 1)
+		consumed_ring_ids.append(ring_id)
+	normalized[BACKPACK_SLOTS_KEY] = slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
+	var consume_pet_result := _consume_rebirth_beasts(normalized, target_count)
+	normalized = consume_pet_result.get("profile", normalized) as Dictionary
+	var proofs := _normalize_rebirth_trial_proofs(normalized.get(REBIRTH_TRIAL_PROOFS_KEY, {}))
+	proofs[REBIRTH_FINAL_BOSS_PROOF_ID] = maxi(0, int(proofs.get(REBIRTH_FINAL_BOSS_PROOF_ID, 0)) - 1)
+	if int(proofs.get(REBIRTH_FINAL_BOSS_PROOF_ID, 0)) <= 0:
+		proofs.erase(REBIRTH_FINAL_BOSS_PROOF_ID)
+	normalized[REBIRTH_TRIAL_PROOFS_KEY] = proofs
+	return {
+		"ok": true,
+		"profile": normalize_profile(normalized),
+		"consumedRingIds": consumed_ring_ids,
+		"consumedPets": consume_pet_result.get("consumedPets", []),
+	}
+
+
+static func _consume_rebirth_beasts(profile: Dictionary, target_count: int) -> Dictionary:
+	var normalized := profile.duplicate(true)
+	var required_counts := {}
+	for form_id in RebirthTrialModel.stage_required_beast_form_ids(target_count):
+		required_counts[form_id] = int(required_counts.get(form_id, 0)) + 1
+	var next_instances: Array[Dictionary] = []
+	var consumed_pets: Array[Dictionary] = []
+	for instance in _pet_instances(normalized):
+		var form_id := str(instance.get("formId", instance.get("templateId", "")))
+		var remaining_required := int(required_counts.get(form_id, 0))
+		if remaining_required > 0:
+			required_counts[form_id] = remaining_required - 1
+			consumed_pets.append({
+				"instanceId": str(instance.get("instanceId", "")),
+				"name": str(instance.get("name", _pet_form_name_for(form_id))),
+				"formId": form_id,
+			})
+			continue
+		next_instances.append(instance)
+	normalized["petInstances"] = next_instances
+	return {
+		"profile": normalize_profile(normalized),
+		"consumedPets": consumed_pets,
+	}
+
+
+static func _grant_rebirth_trial_rewards(profile: Dictionary, target_count: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var reward_result := BackpackModel.add_items(backpack_slots(normalized), _rebirth_reward_items_for_target(target_count))
+	normalized = with_backpack_slots(normalized, reward_result.get("slots", []))
+	var starter_result := _append_rebirth_starter_pet(normalized, target_count)
+	normalized = starter_result.get("profile", normalized) as Dictionary
+	return {
+		"profile": normalize_profile(normalized),
+		"rewardItems": _item_amount_array(reward_result.get("added", [])),
+		"lostRewardItems": _item_amount_array(reward_result.get("lost", [])),
+		"starterPet": starter_result.get("starterPet", {}),
+	}
+
+
+static func _append_rebirth_starter_pet(profile: Dictionary, target_count: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var plan := _rebirth_starter_pet_plan_for_target(target_count)
+	var form_id := str(plan.get("formId", ""))
+	if form_id == "":
+		return {"profile": normalized, "starterPet": {}}
+	var serial := maxi(int(normalized.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(normalized)))
+	var instance_id := "pet_rebirth_%d_%d" % [target_count, serial]
+	var state_name := PET_STATE_STORAGE
+	var instances: Array = normalized.get("petInstances", [])
+	if _party_visible_instance_count(normalized) < PARTY_LIMIT:
+		state_name = PET_STATE_BATTLE
+		for index in range(instances.size()):
+			if not (instances[index] is Dictionary):
+				continue
+			var instance := instances[index] as Dictionary
+			if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_BATTLE:
+				instance["state"] = PET_STATE_STANDBY
+				instances[index] = instance
+	var starter := _pet_instance_from_form(instance_id, str(plan.get("name", "")), form_id, state_name, 1)
+	if starter.is_empty():
+		return {"profile": normalized, "starterPet": {}}
+	instances.append(starter)
+	normalized["petInstances"] = instances
+	normalized["nextPetInstanceSerial"] = serial + 1
+	if state_name == PET_STATE_BATTLE:
+		normalized["activePetInstanceId"] = instance_id
+	return {
+		"profile": normalize_profile(normalized),
+		"starterPet": starter,
+	}
+
+
+static func _rebirth_reward_text(reward_result: Dictionary) -> String:
+	var parts: Array[String] = []
+	var starter := reward_result.get("starterPet", {}) as Dictionary
+	if not starter.is_empty():
+		parts.append("%s Lv%d" % [str(starter.get("name", "幼兽")), int(starter.get("level", 1))])
+	var item_text := BackpackModel.item_amounts_text(_item_amount_array(reward_result.get("rewardItems", [])))
+	if item_text != "":
+		parts.append(item_text)
+	var lost_text := BackpackModel.item_amounts_text(_item_amount_array(reward_result.get("lostRewardItems", [])))
+	if lost_text != "":
+		parts.append("背包已满，未获得%s" % lost_text)
+	return "、".join(parts)
+
+
+static func _pet_form_name_for(form_id: String) -> String:
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	return str(template.get("formName", form_id)) if not template.is_empty() else form_id
 
 
 static func battle_actor_knocked_away(state: Dictionary, actor_id: String) -> bool:
@@ -461,7 +789,7 @@ static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
 		equipment_slots(normalized),
 		equipment_durability(normalized),
 		player_level,
-		rebirth_count(normalized)
+		RebirthModel.rebirth_count(normalized)
 	)
 
 
@@ -473,7 +801,7 @@ static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
 		equipment_slots(normalized),
 		equipment_durability(normalized),
 		player_level,
-		rebirth_count(normalized)
+		RebirthModel.rebirth_count(normalized)
 	)
 
 
@@ -485,7 +813,7 @@ static func equipment_spirit_source_entries(profile: Dictionary) -> Array[Dictio
 		equipment_slots(normalized),
 		equipment_durability(normalized),
 		player_level,
-		rebirth_count(normalized)
+		RebirthModel.rebirth_count(normalized)
 	)
 
 
@@ -493,7 +821,7 @@ static func equipment_item_requirement_state(profile: Dictionary, item_id: Strin
 	var normalized := normalize_profile(profile)
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
-	var player_rebirth := rebirth_count(normalized)
+	var player_rebirth := RebirthModel.rebirth_count(normalized)
 	return _equipment_requirement_state_for_values(item_id, player_level, player_rebirth)
 
 
@@ -749,7 +1077,7 @@ static func equipment_change_preview(profile: Dictionary, item_id: String) -> Di
 	after_slots[slot_id] = item_id
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
-	var player_rebirth := rebirth_count(normalized)
+	var player_rebirth := RebirthModel.rebirth_count(normalized)
 	var before_bonus := _equipment_stat_bonus_from_slots(before_slots, equipment_durability(normalized), player_level, player_rebirth)
 	var after_bonus := _equipment_stat_bonus_from_slots(after_slots, equipment_durability(normalized), player_level, player_rebirth)
 	var stat_changes: Array[Dictionary] = []
@@ -875,7 +1203,7 @@ static func can_equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
 	var required_level := EquipmentModel.required_level_for(item_id)
-	var player_rebirth := rebirth_count(normalized)
+	var player_rebirth := RebirthModel.rebirth_count(normalized)
 	var required_rebirth := EquipmentModel.required_rebirth_for(item_id)
 	if player_level < required_level:
 		return {
@@ -1521,6 +1849,124 @@ static func quest_available_for_profile(profile: Dictionary, quest: Dictionary) 
 	return _quest_available_for_profile(quest, normalize_profile(profile))
 
 
+static func optional_quest_for_interaction(profile: Dictionary, interaction_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_id := str(interaction_id).strip_edges()
+	if item_id == "":
+		return {}
+	var states := _quest_states(normalized)
+	for quest in QuestModel.quests():
+		if not QuestModel.is_optional(quest):
+			continue
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+		if states.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if not _quest_interaction_matches(quest, item_id):
+			continue
+		if _quest_available_for_profile(quest, normalized):
+			return quest
+	return {}
+
+
+static func blocked_optional_quest_for_interaction(profile: Dictionary, interaction_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_id := str(interaction_id).strip_edges()
+	if item_id == "":
+		return {}
+	var states := _quest_states(normalized)
+	for quest in QuestModel.quests():
+		if not QuestModel.is_optional(quest):
+			continue
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+		if states.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if not _quest_interaction_matches(quest, item_id):
+			continue
+		var required_missing_ability := str(quest.get("requiredMissingAbility", quest.get("requiresMissingAbility", ""))).strip_edges()
+		if required_missing_ability != "" and _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, [])).has(required_missing_ability):
+			continue
+		if not _quest_available_for_profile(quest, normalized):
+			return quest
+	return {}
+
+
+static func can_claim_optional_quest(profile: Dictionary, quest_id: String) -> bool:
+	var normalized := normalize_profile(profile)
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty() or not QuestModel.is_optional(quest):
+		return false
+	var states := _quest_states(normalized)
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	return str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_READY
+
+
+static func record_optional_quest_event(profile: Dictionary, quest_id: String, event: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty() or not QuestModel.is_optional(quest) or not _quest_available_for_profile(quest, normalized):
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": false,
+			"questId": "",
+			"message": "",
+		}
+	var states := _quest_states(normalized)
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": str(state.get("status", "")) == QuestModel.STATUS_READY,
+			"questId": quest_id,
+			"message": "",
+		}
+	var progress_amount := QuestModel.progress_amount_for_event(quest, event)
+	if progress_amount <= 0:
+		return {
+			"profile": normalized,
+			"changed": false,
+			"ready": false,
+			"questId": quest_id,
+			"message": "",
+		}
+	var required := QuestModel.objective_required_count(quest)
+	var next_progress := clampi(int(state.get("progress", 0)) + progress_amount, 0, required)
+	state["progress"] = next_progress
+	var ready := next_progress >= required
+	if ready:
+		state["status"] = QuestModel.STATUS_READY
+	states[quest_id] = state
+	normalized[QUEST_STATES_KEY] = states
+	normalized = normalize_profile(normalized)
+	var message := "任务完成：%s。" % QuestModel.title_for(quest) if ready else "任务更新：%s。" % QuestModel.progress_text_for_state(quest, state)
+	return {
+		"profile": normalized,
+		"changed": true,
+		"ready": ready,
+		"questId": quest_id,
+		"title": QuestModel.title_for(quest),
+		"message": message,
+	}
+
+
+static func claim_optional_quest(profile: Dictionary, quest_id: String, reward_choice_id: String = "") -> Dictionary:
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty() or not QuestModel.is_optional(quest):
+		return {
+			"ok": false,
+			"profile": normalize_profile(profile),
+			"message": "当前没有可领取的任务奖励。",
+		}
+	return _claim_quest_by_id(profile, quest_id, reward_choice_id, false)
+
+
 static func quest_state_for_id(profile: Dictionary, quest_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	return QuestModel.normalize_state(_quest_states(normalized).get(quest_id, {}), quest_id)
@@ -1580,6 +2026,11 @@ static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictio
 static func claim_active_quest(profile: Dictionary, reward_choice_id: String = "") -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
+	return _claim_quest_by_id(normalized, quest_id, reward_choice_id, true)
+
+
+static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_choice_id: String = "", advance_active: bool = true) -> Dictionary:
+	var normalized := normalize_profile(profile)
 	var quest := QuestModel.quest_for_id(quest_id)
 	if quest.is_empty():
 		return {
@@ -1634,20 +2085,23 @@ static func claim_active_quest(profile: Dictionary, reward_choice_id: String = "
 	var coins := QuestModel.reward_stone_coins(quest) + maxi(0, int(choice.get("stoneCoins", 0)))
 	if coins > 0:
 		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
+	var abilities := _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
 	for ability in reward_abilities:
 		var ability_id := str(ability.get("abilityId", ""))
-		if ability_id != "":
-			normalized = with_unlocked_ability(normalized, ability_id)
+		if ability_id != "" and not abilities.has(ability_id):
+			abilities.append(ability_id)
+	normalized[UNLOCKED_ABILITIES_KEY] = abilities
 	state["status"] = QuestModel.STATUS_CLAIMED
 	state["progress"] = QuestModel.objective_required_count(quest)
 	states[quest_id] = state
 	var next_id := QuestModel.next_quest_id(quest)
-	if next_id != "":
-		if not states.has(next_id):
-			states[next_id] = QuestModel.normalize_state({}, next_id)
-		normalized[ACTIVE_QUEST_ID_KEY] = next_id
-	else:
-		normalized[ACTIVE_QUEST_ID_KEY] = ""
+	if advance_active and str(normalized.get(ACTIVE_QUEST_ID_KEY, "")) == quest_id:
+		if next_id != "":
+			if not states.has(next_id):
+				states[next_id] = QuestModel.normalize_state({}, next_id)
+			normalized[ACTIVE_QUEST_ID_KEY] = next_id
+		else:
+			normalized[ACTIVE_QUEST_ID_KEY] = ""
 	normalized[QUEST_STATES_KEY] = states
 	var rebirth_target := QuestModel.rebirth_completion_target(quest)
 	if rebirth_target > 0:
@@ -1794,6 +2248,8 @@ static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary)
 
 static func _first_available_unfinished_quest_id(states: Dictionary, profile: Dictionary) -> String:
 	for quest in QuestModel.quests():
+		if QuestModel.is_optional(quest):
+			continue
 		if not _quest_available_for_profile(quest, profile):
 			continue
 		var quest_id := str(quest.get("id", ""))
@@ -1803,6 +2259,16 @@ static func _first_available_unfinished_quest_id(states: Dictionary, profile: Di
 		if not states.has(quest_id) or str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_CLAIMED:
 			return quest_id
 	return ""
+
+
+static func _quest_interaction_matches(quest: Dictionary, interaction_id: String) -> bool:
+	var item_id := str(interaction_id).strip_edges()
+	if item_id == "":
+		return false
+	if item_id == QuestModel.giver_id_for(quest) or item_id == QuestModel.turn_in_id_for(quest):
+		return true
+	var objective := QuestModel.objective_for(quest)
+	return str(objective.get("targetId", "")) == item_id
 
 
 static func _normalize_equipment_slots(value) -> Dictionary:
@@ -1952,6 +2418,8 @@ static func _sorted_player_spirit_ids(spirit_ids: Array[String]) -> Array[String
 	var preferred_order: Array[String] = [
 		"spirit_grace_1",
 		"spirit_moist_1",
+		"spirit_grace_3",
+		"spirit_moist_3",
 		"spirit_poison_1",
 		"spirit_poison_mist_1",
 		"spirit_grace_5",
@@ -2348,7 +2816,7 @@ static func use_world_pet_heal_item(profile: Dictionary, item_id: String, instan
 			}
 		var max_hp := maxi(1, int(instance.get("maxHp", 1)))
 		var hp := clampi(int(instance.get("hp", max_hp)), 0, max_hp)
-		var allow_full_hp_use := bool(BackpackModel.world_use_for(item_id).get("allowFullHpUse", false))
+		var allow_full_hp_use := BackpackModel.world_pet_heal_allows_full_hp_use(item_id)
 		if hp >= max_hp and not allow_full_hp_use:
 			return {
 				"ok": false,
@@ -2365,7 +2833,7 @@ static func use_world_pet_heal_item(profile: Dictionary, item_id: String, instan
 			"profile": normalized,
 			"message": "没有找到这只宠物。",
 		}
-	var allow_full_hp_use_after := bool(BackpackModel.world_use_for(item_id).get("allowFullHpUse", false))
+	var allow_full_hp_use_after := BackpackModel.world_pet_heal_allows_full_hp_use(item_id)
 	if healed_amount <= 0 and not allow_full_hp_use_after:
 		return {
 			"ok": false,
@@ -2951,7 +3419,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	if active_quest_id_value != "":
 		var active_quest := QuestModel.quest_for_id(active_quest_id_value)
 		var active_state := QuestModel.normalize_state(quest_states.get(active_quest_id_value, {}), active_quest_id_value)
-		if active_quest.is_empty() or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED or not _quest_available_for_profile(active_quest, normalized):
+		if active_quest.is_empty() or QuestModel.is_optional(active_quest) or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED or not _quest_available_for_profile(active_quest, normalized):
 			active_quest_id_value = ""
 		else:
 			quest_states[active_quest_id_value] = active_state
@@ -2980,6 +3448,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 	normalized[RECORD_POINT_KEY] = _normalize_record_point(normalized.get(RECORD_POINT_KEY, {}))
 	normalized[UNLOCKED_ABILITIES_KEY] = _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
+	normalized[REBIRTH_TRIAL_PROOFS_KEY] = _normalize_rebirth_trial_proofs(normalized.get(REBIRTH_TRIAL_PROOFS_KEY, {}))
 	normalized = RebirthModel.normalize_profile(normalized)
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
@@ -3011,6 +3480,17 @@ static func _normalize_record_point(value) -> Dictionary:
 		"spawnName": spawn_name,
 		"label": label,
 	}
+
+
+static func _normalize_rebirth_trial_proofs(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for raw_key in source.keys():
+		var key := str(raw_key).strip_edges()
+		var count := maxi(0, int(source.get(raw_key, 0)))
+		if key != "" and count > 0:
+			result[key] = count
+	return result
 
 
 static func _normalize_quick_slots(value) -> Array[String]:
@@ -3265,6 +3745,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		next_profile = with_backpack_slots(next_profile, reward_result.get("slots", []))
 		item_rewards = _item_amount_array(reward_result.get("added", []))
 		lost_item_rewards = _item_amount_array(reward_result.get("lost", []))
+		next_profile = _record_rebirth_trial_battle_victory(next_profile, state)
 	if result == "victory" or result == "defeat":
 		var wear_result := apply_equipment_wear(next_profile, 1)
 		next_profile = wear_result.get("profile", next_profile)
@@ -3582,6 +4063,13 @@ static func _with_codex_form_recorded(profile: Dictionary, form_id: String, capt
 			captured_ids.append(normalized_form_id)
 		next_profile[PET_CODEX_CAPTURED_FORM_IDS_KEY] = captured_ids
 	return next_profile
+
+
+static func _record_rebirth_trial_battle_victory(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var group_id := str(state.get("sourceEncounterGroupId", state.get("encounterGroupId", "")))
+	if group_id != REBIRTH_FINAL_BOSS_PROOF_ID:
+		return profile
+	return with_rebirth_trial_proof_count(profile, REBIRTH_FINAL_BOSS_PROOF_ID, rebirth_trial_proof_count(profile, REBIRTH_FINAL_BOSS_PROOF_ID) + 1)
 
 
 static func _owned_pet_form_counts(profile: Dictionary) -> Dictionary:

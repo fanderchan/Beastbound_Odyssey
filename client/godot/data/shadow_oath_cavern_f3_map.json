@@ -1,0 +1,102 @@
+{
+  "id": "shadow_oath_cavern_f3",
+  "name": "玄影洞窟三层",
+  "gridSize": [30, 26],
+  "tileSize": [80, 40],
+  "origin": [600, 110],
+  "spawnCell": [5, 22],
+  "spawnPoints": {
+    "default": [5, 22],
+    "from_floor_2": [5, 22],
+    "from_floor_4": [22, 8]
+  },
+  "blockedCells": [
+    [8, 18],
+    [9, 18],
+    [13, 14],
+    [14, 14],
+    [17, 10],
+    [18, 10],
+    [22, 13],
+    [23, 13]
+  ],
+  "decorCells": [
+    {"cell": [6, 21], "kind": "flower"},
+    {"cell": [10, 18], "kind": "grass"},
+    {"cell": [14, 13], "kind": "flower"},
+    {"cell": [19, 9], "kind": "grass"},
+    {"cell": [22, 8], "kind": "flower"}
+  ],
+  "encounterZones": [
+    {
+      "id": "shadow_oath_fire_beast_floor",
+      "name": "玄影洞窟三层火纹区",
+      "rects": [[17, 8, 3, 4]],
+      "encounterRate": 0.24,
+      "encounterGroupId": "shadow_oath_rebirth_fire",
+      "wildPetPool": [
+        {
+          "formId": "rebirth_beast_fire_lv50",
+          "name": "火灵转生兽",
+          "weight": 1,
+          "levelMin": 50,
+          "levelMax": 50,
+          "battleStats": {
+            "maxHp": 480,
+            "attack": 96,
+            "defense": 68,
+            "agility": 70
+          }
+        }
+      ],
+      "previewText": "玄影洞窟三层火纹区能遇到火灵转生兽。"
+    },
+    {
+      "id": "shadow_oath_wind_beast_floor",
+      "name": "玄影洞窟三层风纹区",
+      "rects": [[21, 8, 3, 4]],
+      "encounterRate": 0.24,
+      "encounterGroupId": "shadow_oath_rebirth_wind",
+      "wildPetPool": [
+        {
+          "formId": "rebirth_beast_wind_lv50",
+          "name": "风灵转生兽",
+          "weight": 1,
+          "levelMin": 50,
+          "levelMax": 50,
+          "battleStats": {
+            "maxHp": 470,
+            "attack": 78,
+            "defense": 64,
+            "agility": 112
+          }
+        }
+      ],
+      "previewText": "玄影洞窟三层风纹区能遇到风灵转生兽。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "shadow_oath_stair_3_to_2",
+      "name": "玄影洞窟二层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 22],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern_f2",
+      "toSpawn": "from_floor_3"
+    },
+    {
+      "id": "shadow_oath_stair_3_to_4",
+      "name": "玄影洞窟四层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 8],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern_f4",
+      "toSpawn": "from_floor_3"
+    }
+  ]
+}

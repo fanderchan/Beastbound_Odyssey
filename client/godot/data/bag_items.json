@@ -150,6 +150,42 @@
       "description": "初级装备合成材料，后续可用于制作或强化皮革装备。"
     },
     {
+      "id": "ring_earth_trial",
+      "label": "地之戒",
+      "menuLabel": "地之戒",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "岩脉洞穴守护兽认可的证明。转生试炼需要集齐四枚元素戒指。"
+    },
+    {
+      "id": "ring_water_trial",
+      "label": "水之戒",
+      "menuLabel": "水之戒",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "潮回洞穴守护兽认可的证明。转生试炼需要集齐四枚元素戒指。"
+    },
+    {
+      "id": "ring_fire_trial",
+      "label": "火之戒",
+      "menuLabel": "火之戒",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "焰心洞穴守护兽认可的证明。转生试炼需要集齐四枚元素戒指。"
+    },
+    {
+      "id": "ring_wind_trial",
+      "label": "风之戒",
+      "menuLabel": "风之戒",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "岚息洞穴守护兽认可的证明。转生试炼需要集齐四枚元素戒指。"
+    },
+    {
       "id": "accessory_firebud_charm",
       "label": "火芽护符",
       "menuLabel": "火芽护符",
@@ -297,6 +333,54 @@
       "id": "armor_stitched_hide_vest",
       "label": "缝皮背心",
       "menuLabel": "缝皮背心",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "armor_grace_cloth_3",
+      "label": "恩惠衣3",
+      "menuLabel": "恩惠衣3",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "accessory_moist_charm_3",
+      "label": "滋润护符3",
+      "menuLabel": "滋润护符3",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "weapon_flame_trial_spear",
+      "label": "火纹长枪",
+      "menuLabel": "火纹长枪",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "boots_gale_trial",
+      "label": "风纹轻靴",
+      "menuLabel": "风纹轻靴",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "accessory_four_spirit_charm",
+      "label": "四灵护符",
+      "menuLabel": "四灵护符",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "weapon_shadow_group_bow",
+      "label": "玄影群攻弓",
+      "menuLabel": "群攻弓",
       "stackLimit": 1,
       "startingCount": 0,
       "useContexts": ["equipment"]

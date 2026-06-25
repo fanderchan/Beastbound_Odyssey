@@ -1,0 +1,77 @@
+{
+  "id": "tide_echo_cave_f4",
+  "name": "潮回洞穴顶层",
+  "gridSize": [30, 26],
+  "tileSize": [80, 40],
+  "origin": [600, 110],
+  "spawnCell": [5, 22],
+  "spawnPoints": {
+    "default": [5, 22],
+    "from_floor_3": [5, 22],
+    "guardian_floor": [21, 8]
+  },
+  "blockedCells": [
+    [8, 5],
+    [9, 6],
+    [10, 6],
+    [14, 13],
+    [15, 13],
+    [18, 14],
+    [24, 18],
+    [25, 19]
+  ],
+  "decorCells": [
+    {"cell": [6, 21], "kind": "flower"},
+    {"cell": [10, 18], "kind": "grass"},
+    {"cell": [14, 15], "kind": "flower"},
+    {"cell": [18, 10], "kind": "grass"},
+    {"cell": [20, 6], "kind": "grass"},
+    {"cell": [21, 6], "kind": "flower"},
+    {"cell": [22, 6], "kind": "grass"},
+    {"cell": [23, 6], "kind": "grass"},
+    {"cell": [20, 7], "kind": "grass"},
+    {"cell": [21, 7], "kind": "grass"},
+    {"cell": [23, 7], "kind": "flower"},
+    {"cell": [20, 8], "kind": "flower"},
+    {"cell": [21, 8], "kind": "grass"},
+    {"cell": [22, 8], "kind": "grass"},
+    {"cell": [23, 8], "kind": "grass"}
+  ],
+  "encounterZones": [
+    {
+      "id": "tide_echo_guardian_floor",
+      "name": "潮回洞穴顶层",
+      "rects": [[20, 6, 4, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "tide_echo_guardian_group",
+      "fixedWildPets": [
+        {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 98, "battleStats": {"maxHp": 990, "attack": 138, "defense": 84, "agility": 88}},
+        {"formId": "wuli_normal_fast_wind10", "name": "潮回乌力", "level": 99, "battleStats": {"maxHp": 960, "attack": 136, "defense": 78, "agility": 122}},
+        {"formId": "bui_normal_red_fire10", "name": "潮回守护兽", "level": 112, "battleStats": {"maxHp": 1600, "attack": 184, "defense": 112, "agility": 110}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry"], "petSkillSlots": ["pet_attack", "pet_defend", "", "pet_sleep_powder", "pet_confuse_cry", "", ""]},
+        {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 99, "battleStats": {"maxHp": 1000, "attack": 140, "defense": 82, "agility": 90}},
+        {"formId": "wuli_normal_tough_earth10", "name": "潮回乌力", "level": 98, "battleStats": {"maxHp": 1040, "attack": 134, "defense": 104, "agility": 72}},
+        {"formId": "wuli_normal_fast_wind10", "name": "潮回乌力", "level": 100, "battleStats": {"maxHp": 970, "attack": 140, "defense": 78, "agility": 126}},
+        {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 101, "battleStats": {"maxHp": 1010, "attack": 146, "defense": 84, "agility": 92}},
+        {"formId": "wuli_normal_fast_wind10", "name": "潮回乌力", "level": 100, "battleStats": {"maxHp": 970, "attack": 140, "defense": 78, "agility": 124}},
+        {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 97, "battleStats": {"maxHp": 960, "attack": 134, "defense": 80, "agility": 86}},
+        {"formId": "wuli_normal_tough_earth10", "name": "潮回乌力", "level": 96, "battleStats": {"maxHp": 1000, "attack": 130, "defense": 98, "agility": 70}}
+      ],
+      "previewText": "潮回洞穴顶层有十只守护兽镇守水之戒。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "tide_echo_stair_4_to_3",
+      "name": "潮回洞穴三层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 22],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "tide_echo_cave_f3",
+      "toSpawn": "from_floor_4"
+    }
+  ]
+}

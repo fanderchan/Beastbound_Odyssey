@@ -77,6 +77,10 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		enemy_form_id
 	)
 	enemy_actor["level"] = enemy_level
+	if wild_pet.has("catchable"):
+		enemy_actor["catchable"] = bool(wild_pet.get("catchable", true))
+	if wild_pet.has("captureDifficulty"):
+		enemy_actor["captureDifficulty"] = maxi(1, int(wild_pet.get("captureDifficulty", enemy_actor.get("captureDifficulty", 42))))
 	var state := {
 		"id": "local_wild_battle",
 		"round": 1,
@@ -253,6 +257,13 @@ static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, ene
 			form_id
 		)
 		actor["level"] = enemy_level
+		if wild_pet.has("catchable"):
+			actor["catchable"] = bool(wild_pet.get("catchable", true))
+		if wild_pet.has("captureDifficulty"):
+			actor["captureDifficulty"] = maxi(1, int(wild_pet.get("captureDifficulty", actor.get("captureDifficulty", 42))))
+		for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+			if wild_pet.has(key):
+				actor[key] = _string_array(wild_pet.get(key))
 		actors.append(actor)
 	return actors
 
@@ -387,6 +398,12 @@ static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
 	var stats = value.get("battleStats", {})
 	if stats is Dictionary:
 		entry["battleStats"] = (stats as Dictionary).duplicate(true)
+	for key in ["catchable", "captureDifficulty"]:
+		if value.has(key):
+			entry[key] = value.get(key)
+	for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+		if value.has(key):
+			entry[key] = _string_array(value.get(key))
 	return entry
 
 

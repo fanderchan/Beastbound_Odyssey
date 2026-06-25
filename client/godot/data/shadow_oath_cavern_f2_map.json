@@ -1,0 +1,79 @@
+{
+  "id": "shadow_oath_cavern_f2",
+  "name": "玄影洞窟二层",
+  "gridSize": [30, 26],
+  "tileSize": [80, 40],
+  "origin": [600, 110],
+  "spawnCell": [5, 22],
+  "spawnPoints": {
+    "default": [5, 22],
+    "from_floor_1": [5, 22],
+    "from_floor_3": [22, 8]
+  },
+  "blockedCells": [
+    [8, 17],
+    [9, 17],
+    [12, 13],
+    [13, 13],
+    [16, 10],
+    [17, 10],
+    [21, 14],
+    [22, 14]
+  ],
+  "decorCells": [
+    {"cell": [6, 21], "kind": "grass"},
+    {"cell": [11, 17], "kind": "flower"},
+    {"cell": [15, 13], "kind": "grass"},
+    {"cell": [19, 9], "kind": "flower"},
+    {"cell": [22, 8], "kind": "grass"}
+  ],
+  "encounterZones": [
+    {
+      "id": "shadow_oath_water_beast_floor",
+      "name": "玄影洞窟二层",
+      "rects": [[18, 8, 5, 4]],
+      "encounterRate": 0.24,
+      "encounterGroupId": "shadow_oath_rebirth_water",
+      "wildPetPool": [
+        {
+          "formId": "rebirth_beast_water_lv50",
+          "name": "水灵转生兽",
+          "weight": 1,
+          "levelMin": 50,
+          "levelMax": 50,
+          "battleStats": {
+            "maxHp": 500,
+            "attack": 72,
+            "defense": 78,
+            "agility": 66
+          }
+        }
+      ],
+      "previewText": "玄影洞窟二层能遇到水灵转生兽。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "shadow_oath_stair_2_to_1",
+      "name": "玄影洞窟一层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 22],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern",
+      "toSpawn": "from_floor_2"
+    },
+    {
+      "id": "shadow_oath_stair_2_to_3",
+      "name": "玄影洞窟三层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 8],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern_f3",
+      "toSpawn": "from_floor_2"
+    }
+  ]
+}

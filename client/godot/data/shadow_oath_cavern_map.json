@@ -1,0 +1,81 @@
+{
+  "id": "shadow_oath_cavern",
+  "name": "玄影洞窟一层",
+  "gridSize": [30, 26],
+  "tileSize": [80, 40],
+  "origin": [600, 110],
+  "spawnCell": [5, 22],
+  "spawnPoints": {
+    "default": [5, 22],
+    "from_firebud_village": [5, 22],
+    "from_floor_2": [22, 8]
+  },
+  "blockedCells": [
+    [9, 6],
+    [10, 6],
+    [13, 11],
+    [14, 11],
+    [17, 15],
+    [18, 15],
+    [23, 19],
+    [24, 19]
+  ],
+  "decorCells": [
+    {"cell": [6, 21], "kind": "flower"},
+    {"cell": [10, 18], "kind": "grass"},
+    {"cell": [14, 14], "kind": "flower"},
+    {"cell": [18, 10], "kind": "grass"},
+    {"cell": [21, 8], "kind": "grass"},
+    {"cell": [22, 8], "kind": "flower"},
+    {"cell": [23, 8], "kind": "grass"}
+  ],
+  "encounterZones": [
+    {
+      "id": "shadow_oath_earth_beast_floor",
+      "name": "玄影洞窟一层",
+      "rects": [[18, 8, 5, 4]],
+      "encounterRate": 0.24,
+      "encounterGroupId": "shadow_oath_rebirth_earth",
+      "wildPetPool": [
+        {
+          "formId": "rebirth_beast_earth_lv50",
+          "name": "地灵转生兽",
+          "weight": 1,
+          "levelMin": 50,
+          "levelMax": 50,
+          "battleStats": {
+            "maxHp": 520,
+            "attack": 76,
+            "defense": 92,
+            "agility": 48
+          }
+        }
+      ],
+      "previewText": "玄影洞窟一层能遇到地灵转生兽。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "shadow_oath_cavern_exit",
+      "name": "返回火芽村",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 22],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_shadow_oath_cavern"
+    },
+    {
+      "id": "shadow_oath_stair_1_to_2",
+      "name": "玄影洞窟二层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 8],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern_f2",
+      "toSpawn": "from_floor_1"
+    }
+  ]
+}

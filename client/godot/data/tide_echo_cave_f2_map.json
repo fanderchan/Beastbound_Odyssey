@@ -1,0 +1,55 @@
+{
+  "id": "tide_echo_cave_f2",
+  "name": "潮回洞穴二层",
+  "gridSize": [28, 24],
+  "tileSize": [80, 40],
+  "origin": [560, 110],
+  "spawnCell": [5, 20],
+  "spawnPoints": {
+    "default": [5, 20],
+    "from_floor_1": [5, 20],
+    "from_floor_3": [21, 7]
+  },
+  "blockedCells": [
+    [7, 16],
+    [8, 16],
+    [11, 13],
+    [12, 13],
+    [15, 10],
+    [16, 10],
+    [19, 13],
+    [20, 13]
+  ],
+  "decorCells": [
+    {"cell": [5, 19], "kind": "grass"},
+    {"cell": [10, 15], "kind": "flower"},
+    {"cell": [14, 11], "kind": "grass"},
+    {"cell": [18, 9], "kind": "flower"},
+    {"cell": [21, 7], "kind": "grass"}
+  ],
+  "encounterZones": [],
+  "interactionPoints": [
+    {
+      "id": "tide_echo_stair_2_to_1",
+      "name": "潮回洞穴一层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 20],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "tide_echo_cave",
+      "toSpawn": "from_floor_2"
+    },
+    {
+      "id": "tide_echo_stair_2_to_3",
+      "name": "潮回洞穴三层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [22, 7],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "tide_echo_cave_f3",
+      "toSpawn": "from_floor_2"
+    }
+  ]
+}

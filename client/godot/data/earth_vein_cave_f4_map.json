@@ -1,0 +1,77 @@
+{
+  "id": "earth_vein_cave_f4",
+  "name": "岩脉洞穴顶层",
+  "gridSize": [30, 26],
+  "tileSize": [80, 40],
+  "origin": [600, 110],
+  "spawnCell": [5, 22],
+  "spawnPoints": {
+    "default": [5, 22],
+    "from_floor_3": [5, 22],
+    "guardian_floor": [21, 8]
+  },
+  "blockedCells": [
+    [8, 5],
+    [9, 5],
+    [10, 6],
+    [15, 12],
+    [16, 12],
+    [17, 13],
+    [24, 18],
+    [25, 19]
+  ],
+  "decorCells": [
+    {"cell": [6, 21], "kind": "flower"},
+    {"cell": [9, 18], "kind": "grass"},
+    {"cell": [13, 14], "kind": "grass"},
+    {"cell": [18, 10], "kind": "flower"},
+    {"cell": [20, 6], "kind": "grass"},
+    {"cell": [21, 6], "kind": "grass"},
+    {"cell": [22, 6], "kind": "grass"},
+    {"cell": [23, 6], "kind": "grass"},
+    {"cell": [20, 7], "kind": "grass"},
+    {"cell": [22, 7], "kind": "flower"},
+    {"cell": [23, 7], "kind": "grass"},
+    {"cell": [20, 8], "kind": "grass"},
+    {"cell": [21, 8], "kind": "grass"},
+    {"cell": [22, 8], "kind": "grass"},
+    {"cell": [23, 8], "kind": "flower"}
+  ],
+  "encounterZones": [
+    {
+      "id": "earth_vein_guardian_floor",
+      "name": "岩脉洞穴顶层",
+      "rects": [[20, 6, 4, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "earth_vein_guardian_group",
+      "fixedWildPets": [
+        {"formId": "wuli_normal_tough_earth10", "name": "岩脉乌力", "level": 98, "battleStats": {"maxHp": 1020, "attack": 136, "defense": 96, "agility": 72}},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩脉乌力", "level": 99, "battleStats": {"maxHp": 1050, "attack": 138, "defense": 100, "agility": 74}},
+        {"formId": "bui_normal_thick_earth10", "name": "岩脉守护兽", "level": 112, "battleStats": {"maxHp": 1680, "attack": 192, "defense": 138, "agility": 92}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_stone_gaze"], "petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "pet_stone_gaze", ""]},
+        {"formId": "wuli_normal_orange_fire10", "name": "岩脉乌力", "level": 99, "battleStats": {"maxHp": 980, "attack": 144, "defense": 82, "agility": 82}},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩脉乌力", "level": 98, "battleStats": {"maxHp": 1030, "attack": 134, "defense": 104, "agility": 70}},
+        {"formId": "wuli_normal_orange_fire10", "name": "岩脉乌力", "level": 100, "battleStats": {"maxHp": 990, "attack": 148, "defense": 84, "agility": 86}},
+        {"formId": "wuli_normal_fast_wind10", "name": "岩脉乌力", "level": 101, "battleStats": {"maxHp": 940, "attack": 142, "defense": 78, "agility": 122}},
+        {"formId": "wuli_normal_orange_fire10", "name": "岩脉乌力", "level": 100, "battleStats": {"maxHp": 1000, "attack": 146, "defense": 84, "agility": 84}},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩脉乌力", "level": 97, "battleStats": {"maxHp": 1000, "attack": 132, "defense": 102, "agility": 68}},
+        {"formId": "wuli_normal_orange_fire10", "name": "岩脉乌力", "level": 96, "battleStats": {"maxHp": 930, "attack": 134, "defense": 78, "agility": 78}}
+      ],
+      "previewText": "岩脉洞穴顶层有十只守护兽镇守地之戒。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "earth_vein_stair_4_to_3",
+      "name": "岩脉洞穴三层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 22],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "earth_vein_cave_f3",
+      "toSpawn": "from_floor_4"
+    }
+  ]
+}

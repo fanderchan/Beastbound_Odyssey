@@ -126,6 +126,13 @@ static func selected_wild_pet(zone: Dictionary, rng: RandomNumberGenerator) -> D
 
 static func zone_with_selected_wild_pet(zone: Dictionary, rng: RandomNumberGenerator, fallback_enemy_count: int = 1) -> Dictionary:
 	var next_zone := zone.duplicate(true)
+	var fixed_pets := _fixed_wild_pets(zone)
+	if not fixed_pets.is_empty():
+		var count := clampi(fixed_pets.size(), 1, 10)
+		next_zone["selectedEnemyCount"] = count
+		next_zone["selectedWildPet"] = fixed_pets[0]
+		next_zone["selectedWildPets"] = fixed_pets
+		return next_zone
 	var count := _selected_enemy_count(zone, rng, fallback_enemy_count)
 	next_zone["selectedEnemyCount"] = count
 	var selected_pets: Array[Dictionary] = []
@@ -145,6 +152,22 @@ static func _selected_enemy_count(zone: Dictionary, rng: RandomNumberGenerator, 
 		var max_count := clampi(int(zone.get("enemyCountMax", min_count)), min_count, 10)
 		return rng.randi_range(min_count, max_count)
 	return enemy_count(zone, fallback_enemy_count)
+
+
+static func _fixed_wild_pets(zone: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_pets = zone.get("fixedWildPets", [])
+	if not (raw_pets is Array):
+		return result
+	for value in raw_pets:
+		if not (value is Dictionary):
+			continue
+		var entry := _normalized_wild_pet_entry(value as Dictionary)
+		if not entry.is_empty():
+			result.append(entry)
+		if result.size() >= 10:
+			break
+	return result
 
 
 static func _with_selected_level(entry: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
@@ -173,4 +196,20 @@ static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
 	var stats = value.get("battleStats", {})
 	if stats is Dictionary:
 		entry["battleStats"] = (stats as Dictionary).duplicate(true)
+	for key in ["catchable", "captureDifficulty"]:
+		if value.has(key):
+			entry[key] = value.get(key)
+	for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+		if value.has(key):
+			entry[key] = _string_array(value.get(key))
 	return entry
+
+
+static func _string_array(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			var text := str(item).strip_edges()
+			if text != "" and not result.has(text):
+				result.append(text)
+	return result

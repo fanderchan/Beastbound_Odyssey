@@ -241,6 +241,86 @@
       },
       "durabilityMax": 34,
       "description": "用皮革碎片补强的背心，适合早期练级。"
+    },
+    {
+      "id": "armor_grace_cloth_3",
+      "label": "恩惠衣3",
+      "menuLabel": "恩惠衣3",
+      "slot": "body",
+      "requiredRebirth": 1,
+      "stats": {
+        "defense": 8
+      },
+      "spiritIds": ["spirit_grace_3"],
+      "durabilityMax": 40,
+      "description": "一转试炼奖励，附带恩惠精灵3。"
+    },
+    {
+      "id": "accessory_moist_charm_3",
+      "label": "滋润护符3",
+      "menuLabel": "滋润护符3",
+      "slot": "accessory_right",
+      "requiredRebirth": 2,
+      "stats": {
+        "maxHp": 18
+      },
+      "spiritIds": ["spirit_moist_3"],
+      "durabilityMax": 40,
+      "description": "二转试炼奖励，附带滋润精灵3。"
+    },
+    {
+      "id": "weapon_flame_trial_spear",
+      "label": "火纹长枪",
+      "menuLabel": "火纹长枪",
+      "slot": "left_hand_weapon",
+      "requiredRebirth": 3,
+      "stats": {
+        "attack": 22,
+        "quick": 2
+      },
+      "durabilityMax": 44,
+      "description": "三转试炼奖励，轻长枪。"
+    },
+    {
+      "id": "boots_gale_trial",
+      "label": "风纹轻靴",
+      "menuLabel": "风纹轻靴",
+      "slot": "feet",
+      "requiredRebirth": 4,
+      "stats": {
+        "quick": 12,
+        "defense": 3
+      },
+      "durabilityMax": 44,
+      "description": "四转试炼奖励，适合长时间练级。"
+    },
+    {
+      "id": "accessory_four_spirit_charm",
+      "label": "四灵护符",
+      "menuLabel": "四灵护符",
+      "slot": "accessory_left",
+      "requiredRebirth": 5,
+      "stats": {
+        "maxHp": 28,
+        "attack": 4,
+        "defense": 4,
+        "quick": 4
+      },
+      "durabilityMax": 48,
+      "description": "五转试炼奖励，四灵气息汇成的护符。"
+    },
+    {
+      "id": "weapon_shadow_group_bow",
+      "label": "玄影群攻弓",
+      "menuLabel": "群攻弓",
+      "slot": "right_hand_weapon",
+      "requiredRebirth": 6,
+      "stats": {
+        "attack": 32,
+        "quick": 5
+      },
+      "durabilityMax": 50,
+      "description": "六转试炼奖励，后续会接入群体攻击技能表现。"
     }
   ]
 }

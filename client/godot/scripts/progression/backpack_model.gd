@@ -104,6 +104,10 @@ static func item_can_world_pet_heal(item_id: String) -> bool:
 	return item_has_context(item_id, CONTEXT_WORLD_PET_HEAL) and world_heal_amount_for(item_id) > 0
 
 
+static func world_pet_heal_allows_full_hp_use(item_id: String) -> bool:
+	return item_can_world_pet_heal(item_id) and bool(world_use_for(item_id).get("allowFullHpUse", false))
+
+
 static func world_encounter_interval_for(item_id: String) -> float:
 	var world_use := world_use_for(item_id)
 	if str(world_use.get("type", "")) != "encounter_stone":

@@ -23,6 +23,7 @@ const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_trai
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
@@ -32,6 +33,27 @@ const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
 const MAP_DATA_PATHS := {
 	"firebud_training_yard": "res://data/firebud_training_map.json",
 	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
+	"earth_vein_cave": "res://data/earth_vein_cave_map.json",
+	"earth_vein_cave_f2": "res://data/earth_vein_cave_f2_map.json",
+	"earth_vein_cave_f3": "res://data/earth_vein_cave_f3_map.json",
+	"earth_vein_cave_f4": "res://data/earth_vein_cave_f4_map.json",
+	"tide_echo_cave": "res://data/tide_echo_cave_map.json",
+	"tide_echo_cave_f2": "res://data/tide_echo_cave_f2_map.json",
+	"tide_echo_cave_f3": "res://data/tide_echo_cave_f3_map.json",
+	"tide_echo_cave_f4": "res://data/tide_echo_cave_f4_map.json",
+	"ember_core_cave": "res://data/ember_core_cave_map.json",
+	"ember_core_cave_f2": "res://data/ember_core_cave_f2_map.json",
+	"ember_core_cave_f3": "res://data/ember_core_cave_f3_map.json",
+	"ember_core_cave_f4": "res://data/ember_core_cave_f4_map.json",
+	"gale_breath_cave": "res://data/gale_breath_cave_map.json",
+	"gale_breath_cave_f2": "res://data/gale_breath_cave_f2_map.json",
+	"gale_breath_cave_f3": "res://data/gale_breath_cave_f3_map.json",
+	"gale_breath_cave_f4": "res://data/gale_breath_cave_f4_map.json",
+	"shadow_oath_cavern": "res://data/shadow_oath_cavern_map.json",
+	"shadow_oath_cavern_f2": "res://data/shadow_oath_cavern_f2_map.json",
+	"shadow_oath_cavern_f3": "res://data/shadow_oath_cavern_f3_map.json",
+	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
+	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
 	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
@@ -104,9 +126,12 @@ const ACTIVE_TARGET_FPS := 60
 const IDLE_TARGET_FPS := 30
 const WORLD_HUD_REFRESH_INTERVAL_SECONDS := 0.20
 const CLICK_MOVE_REPATH_INTERVAL_SECONDS := 0.05
+const BACKPACK_HEAL_POPUP_DURATION_SECONDS := 2.0
 const DIALOG_ACTION_ACK := "ack"
 const DIALOG_ACTION_CLAIM_QUEST := "claim_quest"
 const DIALOG_ACTION_TALK_QUEST := "talk_quest"
+const DIALOG_ACTION_CLAIM_OPTIONAL_QUEST := "claim_optional_quest"
+const DIALOG_ACTION_TALK_OPTIONAL_QUEST := "talk_optional_quest"
 const DIALOG_ACTION_HEAL := "heal"
 const DIALOG_ACTION_RECORD_POINT := "record_point"
 const DIALOG_ACTION_PET_SKILL_TRAIN := "pet_skill_train"
@@ -437,6 +462,10 @@ var auto_player_rebirth_preview_check: bool = false
 var auto_player_rebirth_execute_check: bool = false
 var auto_player_rebirth_chain_check: bool = false
 var auto_remote_stable_unlock_check: bool = false
+var auto_rebirth_trial_contract_check: bool = false
+var auto_rebirth_cave_guardian_check: bool = false
+var auto_shadow_oath_cavern_check: bool = false
+var auto_rebirth_trial_execute_check: bool = false
 var auto_equipment_requirement_check: bool = false
 var auto_equipment_inactive_after_rebirth_check: bool = false
 var auto_equipment_status_closure_check: bool = false
@@ -609,6 +638,9 @@ var hud_task_route_signature_cache: String = ""
 var quick_bar_signature_cache: String = ""
 var world_draw_signature_cache: String = ""
 var world_hud_signature_cache: String = ""
+var quest_marker_source_signature_cache: String = ""
+var quest_marker_signature_cache: String = ""
+var quest_marker_state_cache: Dictionary = {}
 var world_hud_refresh_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
 var map_world_bounds_cache := Rect2()
 var map_world_bounds_cache_valid: bool = false
@@ -769,6 +801,14 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_rebirth_chain_check")
 	elif auto_remote_stable_unlock_check:
 		call_deferred("_run_auto_remote_stable_unlock_check")
+	elif auto_rebirth_trial_contract_check:
+		call_deferred("_run_auto_rebirth_trial_contract_check")
+	elif auto_rebirth_cave_guardian_check:
+		call_deferred("_run_auto_rebirth_cave_guardian_check")
+	elif auto_shadow_oath_cavern_check:
+		call_deferred("_run_auto_shadow_oath_cavern_check")
+	elif auto_rebirth_trial_execute_check:
+		call_deferred("_run_auto_rebirth_trial_execute_check")
 	elif auto_equipment_requirement_check:
 		call_deferred("_run_auto_equipment_requirement_check")
 	elif auto_equipment_inactive_after_rebirth_check:
@@ -1223,6 +1263,14 @@ func _apply_preview_window_args() -> void:
 			auto_player_rebirth_chain_check = true
 		elif arg == "--auto-remote-stable-unlock-check":
 			auto_remote_stable_unlock_check = true
+		elif arg == "--auto-rebirth-trial-contract-check":
+			auto_rebirth_trial_contract_check = true
+		elif arg == "--auto-rebirth-cave-guardian-check":
+			auto_rebirth_cave_guardian_check = true
+		elif arg == "--auto-shadow-oath-cavern-check":
+			auto_shadow_oath_cavern_check = true
+		elif arg == "--auto-rebirth-trial-execute-check":
+			auto_rebirth_trial_execute_check = true
 		elif arg == "--auto-equipment-requirement-check":
 			auto_equipment_requirement_check = true
 		elif arg == "--auto-equipment-inactive-after-rebirth-check":
@@ -1386,6 +1434,9 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	map_world_bounds_cache_valid = false
 	world_draw_signature_cache = ""
 	world_hud_signature_cache = ""
+	quest_marker_source_signature_cache = ""
+	quest_marker_signature_cache = ""
+	quest_marker_state_cache.clear()
 	_set_hang_mode(false)
 	_clear_navigation_state()
 	_close_dialog()
@@ -1425,6 +1476,32 @@ func _encounter_zone_by_id(zone_id: String) -> Dictionary:
 		if str(zone.get("id", "")) == zone_id:
 			return zone
 	return {}
+
+
+func _encounter_zone_for_group(loaded_map: Dictionary, group_id: String) -> Dictionary:
+	if group_id == "":
+		return {}
+	for value in EncounterModel.encounter_zones(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var zone := value as Dictionary
+		if str(zone.get("encounterGroupId", "")) == group_id:
+			return zone
+	return {}
+
+
+func _map_has_encounter_group(loaded_map: Dictionary, group_id: String) -> bool:
+	return not _encounter_zone_for_group(loaded_map, group_id).is_empty()
+
+
+func _map_has_warp_to_map(loaded_map: Dictionary, map_id: String) -> bool:
+	for value in InteractionModel.interaction_points(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		if InteractionModel.is_warp(item) and str(item.get("toMap", "")) == map_id:
+			return true
+	return false
 
 
 func _run_auto_movement_check() -> void:
@@ -3842,11 +3919,11 @@ func _run_auto_battle_retarget_visual_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 20,
 			"speed": 90,
-				"sequence": 0,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 0,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 		{
 			"type": "attack",
@@ -3855,11 +3932,11 @@ func _run_auto_battle_retarget_visual_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 10,
 			"speed": 80,
-				"sequence": 1,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 1,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 		{
 			"type": "attack",
@@ -3868,11 +3945,11 @@ func _run_auto_battle_retarget_visual_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 10,
 			"speed": 70,
-				"sequence": 2,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 2,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 	]
 	battle_last_round_applied_events = 0
@@ -4039,10 +4116,10 @@ func _run_auto_battle_label_check() -> void:
 			"levelMin": 1,
 			"levelMax": 3,
 			"battleStats": {
-				"maxHp": 92,
-				"attack": 11,
-				"defense": 6,
-				"agility": 88,
+			"maxHp": 92,
+			"attack": 11,
+			"defense": 6,
+			"agility": 88,
 			},
 		}
 		_start_battle(BattleModel.create_wild_battle(zone))
@@ -4117,11 +4194,11 @@ func _run_auto_battle_event_ledger_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 20,
 			"speed": 100,
-				"sequence": 0,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 0,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 		{
 			"type": "attack",
@@ -4130,11 +4207,11 @@ func _run_auto_battle_event_ledger_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 99,
 			"speed": 90,
-				"sequence": 1,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 1,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 		{
 			"type": "attack",
@@ -4143,11 +4220,11 @@ func _run_auto_battle_event_ledger_check() -> void:
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"damage": 99,
 			"speed": 80,
-				"sequence": 2,
-				"movementStyle": "melee",
-				"canLaunch": false,
-				"forceDodge": false,
-				"forceCritical": false,
+			"sequence": 2,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"forceDodge": false,
+			"forceCritical": false,
 			},
 	]
 	battle_last_round_applied_events = 0
@@ -4973,34 +5050,34 @@ func _record_point_test_battle_state(knocked: bool) -> Dictionary:
 		"message": "记录点测试战斗。",
 		"actors": [
 			{
-				"id": BattleModel.PLAYER_ACTOR_ID,
-				"name": "见习猎人",
-				"side": BattleModel.SIDE_ALLY,
-				"kind": "player",
-				"slotId": "ally.back.3",
-				"hp": 0,
-				"maxHp": 120,
-				"quick": 70,
-				"attack": 18,
-				"defense": 6,
-				"actionState": "launched" if knocked else "down",
-				"launched": knocked,
-				"revivable": not knocked,
-				"statuses": BattleStatusModel.empty_statuses(),
+			"id": BattleModel.PLAYER_ACTOR_ID,
+			"name": "见习猎人",
+			"side": BattleModel.SIDE_ALLY,
+			"kind": "player",
+			"slotId": "ally.back.3",
+			"hp": 0,
+			"maxHp": 120,
+			"quick": 70,
+			"attack": 18,
+			"defense": 6,
+			"actionState": "launched" if knocked else "down",
+			"launched": knocked,
+			"revivable": not knocked,
+			"statuses": BattleStatusModel.empty_statuses(),
 			},
 			{
-				"id": "enemy_front_1",
-				"name": "高级乌力",
-				"side": BattleModel.SIDE_ENEMY,
-				"kind": "wild_pet",
-				"slotId": "enemy.front.1",
-				"hp": 999,
-				"maxHp": 999,
-				"quick": 120,
-				"attack": 400,
-				"defense": 50,
-				"actionState": "idle",
-				"statuses": BattleStatusModel.empty_statuses(),
+			"id": "enemy_front_1",
+			"name": "高级乌力",
+			"side": BattleModel.SIDE_ENEMY,
+			"kind": "wild_pet",
+			"slotId": "enemy.front.1",
+			"hp": 999,
+			"maxHp": 999,
+			"quick": 120,
+			"attack": 400,
+			"defense": 50,
+			"actionState": "idle",
+			"statuses": BattleStatusModel.empty_statuses(),
 			},
 		],
 	}
@@ -5720,10 +5797,14 @@ func _run_backpack_preview() -> void:
 
 func _run_backpack_world_use_preview() -> void:
 	profile_save_enabled = false
-	player_profile = _profile_with_pet_hp(PlayerProgressModel.default_profile(), "pet_bui_main", 68)
+	var base_profile := PlayerProgressModel.default_profile()
+	var base_pet := PlayerProgressModel.pet_instance_by_id(base_profile, "pet_bui_main")
+	player_profile = _profile_with_pet_hp(base_profile, "pet_bui_main", maxi(1, int(base_pet.get("maxHp", 1))))
 	backpack_selected_slot_index = 0
 	_open_backpack_panel()
 	_on_backpack_use_pressed()
+	await get_tree().process_frame
+	_use_backpack_item_on_pet(BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
 
 
 func _run_backpack_filter_preview() -> void:
@@ -5907,6 +5988,8 @@ func _run_auto_backpack_world_use_check() -> void:
 	await get_tree().process_frame
 	var after_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
 	var expected_hp := mini(max_hp, start_hp + BackpackModel.world_heal_amount_for(BattleModel.ITEM_MEAT_SMALL))
+	var expected_heal := maxi(0, expected_hp - start_hp)
+	var world_popup_ok := _backpack_heal_popup_text_for_pet("pet_bui_main") == "+%d" % expected_heal
 	var world_use_ok := (
 		PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == before_meat - 1
 		and int(after_pet.get("hp", 0)) == expected_hp
@@ -5915,6 +5998,25 @@ func _run_auto_backpack_world_use_check() -> void:
 	)
 
 	player_profile = _profile_with_pet_hp(player_profile, "pet_bui_main", max_hp)
+	_refresh_backpack_target_buttons(BattleModel.ITEM_MEAT_SMALL)
+	await get_tree().process_frame
+	var full_meat_target_enabled_ok := false
+	if backpack_target_container != null:
+		for child in backpack_target_container.get_children():
+			if child is Button:
+				full_meat_target_enabled_ok = not (child as Button).disabled
+				break
+	var before_full_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+	_use_backpack_item_on_pet(BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
+	await get_tree().process_frame
+	var full_meat_pet := PlayerProgressModel.pet_instance_by_id(player_profile, "pet_bui_main")
+	var full_meat_popup_ok := _backpack_heal_popup_text_for_pet("pet_bui_main") == "+0"
+	var full_meat_ok := (
+		PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == before_full_meat - 1
+		and int(full_meat_pet.get("hp", 0)) == max_hp
+		and world_log_message.find("生命已满") >= 0
+	)
+
 	var before_medicine := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_HEAL_SINGLE)
 	var full_result := PlayerProgressModel.use_world_pet_heal_item(player_profile, BattleModel.ITEM_HEAL_SINGLE, "pet_bui_main")
 	player_profile = full_result.get("profile", player_profile)
@@ -5928,14 +6030,18 @@ func _run_auto_backpack_world_use_check() -> void:
 	await get_tree().process_frame
 	var capture_hidden_ok := backpack_use_button != null and not backpack_use_button.visible and backpack_detail_label.text.find("捕捉") >= 0
 	_close_backpack_panel()
-	var status := "ok" if context_ok and detail_ok and use_button_ok and target_ok and world_use_ok and full_block_ok and capture_hidden_ok else "failed"
-	print("backpack world use check ready: status=%s context=%s detail=%s use_button=%s targets=%s world_use=%s full_block=%s capture_hidden=%s hp=%d/%d meat=%d" % [
+	var status := "ok" if context_ok and detail_ok and use_button_ok and target_ok and world_use_ok and world_popup_ok and full_meat_target_enabled_ok and full_meat_ok and full_meat_popup_ok and full_block_ok and capture_hidden_ok else "failed"
+	print("backpack world use check ready: status=%s context=%s detail=%s use_button=%s targets=%s world_use=%s world_popup=%s full_meat_target=%s full_meat=%s full_meat_popup=%s full_block=%s capture_hidden=%s hp=%d/%d meat=%d" % [
 		status,
 		str(context_ok),
 		str(detail_ok),
 		str(use_button_ok),
 		str(target_ok),
 		str(world_use_ok),
+		str(world_popup_ok),
+		str(full_meat_target_enabled_ok),
+		str(full_meat_ok),
+		str(full_meat_popup_ok),
 		str(full_block_ok),
 		str(capture_hidden_ok),
 		int(after_pet.get("hp", 0)),
@@ -6829,6 +6935,7 @@ func _run_auto_player_rebirth_preview_check() -> void:
 	ready_profile["player"] = ready_player
 	ready_profile = PlayerProgressModel.normalize_profile(ready_profile)
 	ready_profile = PlayerProgressModel.with_rebirth_quest_completed(ready_profile, 1, true)
+	ready_profile = _profile_with_rebirth_trial_resources_for_test(ready_profile, 1)
 	var ready_preview := PlayerProgressModel.rebirth_preview(ready_profile)
 	var ready_after := ready_preview.get("afterStats", {}) as Dictionary
 	var ready_lines := "\n".join(PlayerProgressModel.rebirth_preview_lines(ready_profile))
@@ -6944,6 +7051,7 @@ func _run_auto_player_rebirth_execute_check() -> void:
 	ready_player["hp"] = 220
 	ready_profile["player"] = ready_player
 	ready_profile = PlayerProgressModel.normalize_profile(ready_profile)
+	ready_profile = _profile_with_rebirth_trial_resources_for_test(ready_profile, 1)
 	var before_backpack_count := PlayerProgressModel.backpack_slots(ready_profile).size()
 	var before_pet_count := (ready_profile.get("petInstances", []) as Array).size()
 	var before_right_hand := PlayerProgressModel.equipped_item_id(ready_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
@@ -6964,9 +7072,20 @@ func _run_auto_player_rebirth_execute_check() -> void:
 		and PlayerProgressModel.backpack_slots(executed_profile).size() == before_backpack_count
 		and (executed_profile.get("petInstances", []) as Array).size() == before_pet_count
 		and PlayerProgressModel.equipped_item_id(executed_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == before_right_hand
+		and PlayerProgressModel.backpack_item_count(executed_profile, "ring_earth_trial") == 0
+		and PlayerProgressModel.backpack_item_count(executed_profile, "armor_grace_cloth_3") == 1
+		and PlayerProgressModel.rebirth_trial_proof_count(executed_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 0
+		and _profile_has_pet_form(executed_profile, "rebirth_starter_earth_cub")
+		and not _profile_has_pet_form(executed_profile, "rebirth_beast_earth_lv50")
 	)
 
-	player_profile = ready_profile
+	player_profile = PlayerProgressModel.with_record_point(
+		ready_profile,
+		"firebud_village_gate",
+		"doctor_record",
+		"村医旁记录点"
+	)
+	_load_map("firebud_training_yard")
 	_open_player_rebirth_preview_panel()
 	await get_tree().process_frame
 	var first_button_ok := (
@@ -6989,10 +7108,13 @@ func _run_auto_player_rebirth_execute_check() -> void:
 		not player_rebirth_confirm_pending
 		and PlayerProgressModel.rebirth_count(player_profile) == 1
 		and (player_profile.get("player", {}) as Dictionary).get("level", 0) == 1
+		and current_map_id == "firebud_village_gate"
+		and last_checked_player_cell == IsoMapModel.spawn_cell(map_data, "doctor_record")
 		and player_rebirth_execute_button != null
 		and player_rebirth_execute_button.disabled
 		and ui_preview_text.find("1转 -> 2转") >= 0
 		and world_log_message.find("完成一转") >= 0
+		and world_log_message.find("回到记录点「村医旁记录点」") >= 0
 	)
 
 	var status := "ok" if data_ok and mentor_dialog_ok and quest_record_ok and execute_ok and first_button_ok and confirm_pending_ok and ui_execute_ok else "failed"
@@ -7029,6 +7151,57 @@ func _profile_with_rebirth_test_level(profile: Dictionary, level: int = 80) -> D
 	player["hp"] = int((player["baseStats"] as Dictionary).get("maxHp", 220))
 	next_profile["player"] = player
 	return PlayerProgressModel.normalize_profile(next_profile)
+
+
+func _profile_with_rebirth_trial_resources_for_test(profile: Dictionary, target_count: int = 0) -> Dictionary:
+	var next_profile := PlayerProgressModel.normalize_profile(profile)
+	var target := target_count if target_count > 0 else PlayerProgressModel.rebirth_count(next_profile) + 1
+	target = clampi(target, 1, 6)
+	var reward_entries: Array[Dictionary] = []
+	for ring_id in RebirthTrialModel.stage_required_ring_ids(target):
+		reward_entries.append({
+			"itemId": ring_id,
+			"count": 1,
+		})
+	var add_result := BackpackModel.add_items(BackpackModel.slots_from_counts({}), reward_entries)
+	next_profile = PlayerProgressModel.with_backpack_slots(next_profile, add_result.get("slots", []))
+	var instances: Array = next_profile.get("petInstances", [])
+	var serial := maxi(int(next_profile.get("nextPetInstanceSerial", 1)), _next_pet_instance_serial_for_test(instances))
+	for form_id in RebirthTrialModel.stage_required_beast_form_ids(target):
+		var instance := PlayerProgressModel.create_pet_instance_from_form(
+			"pet_rebirth_trial_%d_%d" % [target, serial],
+			"",
+			form_id,
+			PlayerProgressModel.PET_STATE_STORAGE,
+			50
+		)
+		serial += 1
+		if not instance.is_empty():
+			instances.append(instance)
+	next_profile["petInstances"] = instances
+	next_profile["nextPetInstanceSerial"] = serial
+	next_profile = PlayerProgressModel.with_rebirth_trial_proof_count(next_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID, PlayerProgressModel.rebirth_trial_proof_count(next_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) + 1)
+	return PlayerProgressModel.normalize_profile(next_profile)
+
+
+func _next_pet_instance_serial_for_test(instances: Array) -> int:
+	var max_serial := 0
+	for value in instances:
+		if not (value is Dictionary):
+			continue
+		var instance_id := str((value as Dictionary).get("instanceId", ""))
+		var parts := instance_id.split("_")
+		if parts.is_empty():
+			continue
+		max_serial = maxi(max_serial, int(parts[parts.size() - 1]))
+	return max_serial + 1
+
+
+func _profile_has_pet_form(profile: Dictionary, form_id: String) -> bool:
+	for instance in PlayerProgressModel.all_pet_instances(profile):
+		if str(instance.get("formId", instance.get("templateId", ""))) == form_id:
+			return true
+	return false
 
 
 func _complete_active_rebirth_quest_for_test(profile: Dictionary) -> Dictionary:
@@ -7077,10 +7250,11 @@ func _run_auto_player_rebirth_chain_check() -> void:
 		var requirement_before_level := PlayerProgressModel.rebirth_requirement_state(claimed_profile)
 		var quest_record_ok := bool(requirement_before_level.get("questOk", false))
 		var ready_profile := _profile_with_rebirth_test_level(claimed_profile, 80)
+		ready_profile = _profile_with_rebirth_trial_resources_for_test(ready_profile, target)
 		var requirement_ready := PlayerProgressModel.rebirth_requirement_state(ready_profile)
 		var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
 		var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
-		var next_expected := "quest_rebirth_%d_guidance" % (target + 1) if target < 6 else "quest_remote_stable_unlock"
+		var next_expected := "quest_rebirth_%d_guidance" % (target + 1) if target < 6 else ""
 		var execute_ok := (
 			bool(claim.get("ok", false))
 			and bool(execute_result.get("ok", false))
@@ -7105,7 +7279,7 @@ func _run_auto_player_rebirth_chain_check() -> void:
 	var maxed_preview := PlayerProgressModel.rebirth_preview(profile)
 	var maxed_ok := (
 		PlayerProgressModel.rebirth_count(profile) == 6
-		and PlayerProgressModel.active_quest_id(profile) == "quest_remote_stable_unlock"
+		and PlayerProgressModel.active_quest_id(profile) == ""
 		and not bool(maxed_preview.get("ok", true))
 		and "\n".join(PlayerProgressModel.rebirth_preview_lines(profile)).find("已达到6转上限") >= 0
 	)
@@ -7127,6 +7301,7 @@ func _run_auto_player_rebirth_chain_check() -> void:
 	_confirm_dialog_action()
 	await get_tree().process_frame
 	player_profile = _profile_with_rebirth_test_level(player_profile, 80)
+	player_profile = _profile_with_rebirth_trial_resources_for_test(player_profile, 6)
 	_open_player_rebirth_preview_panel()
 	await get_tree().process_frame
 	var preview_text := player_rebirth_preview_label.text if player_rebirth_preview_label != null else ""
@@ -7156,20 +7331,25 @@ func _run_auto_player_rebirth_chain_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
-func _profile_after_six_rebirths_for_test() -> Dictionary:
+func _profile_after_rebirths_for_test(count: int) -> Dictionary:
 	var profile := _profile_with_active_quest("quest_rebirth_1_guidance")
-	for target in range(1, 7):
+	for target in range(1, clampi(count, 0, 6) + 1):
 		var expected_quest_id := "quest_rebirth_%d_guidance" % target
 		if PlayerProgressModel.active_quest_id(profile) != expected_quest_id:
 			break
 		var completion := _complete_active_rebirth_quest_for_test(profile)
 		profile = completion.get("profile", profile) as Dictionary
 		profile = _profile_with_rebirth_test_level(profile, 80)
+		profile = _profile_with_rebirth_trial_resources_for_test(profile, target)
 		var execute_result := PlayerProgressModel.execute_rebirth(profile)
 		if not bool(execute_result.get("ok", false)):
 			break
 		profile = execute_result.get("profile", profile) as Dictionary
 	return PlayerProgressModel.normalize_profile(profile)
+
+
+func _profile_after_six_rebirths_for_test() -> Dictionary:
+	return _profile_after_rebirths_for_test(6)
 
 
 func _run_auto_remote_stable_unlock_check() -> void:
@@ -7183,34 +7363,35 @@ func _run_auto_remote_stable_unlock_check() -> void:
 		not quest.is_empty()
 		and QuestModel.giver_id_for(quest) == "firebud_stable_keeper"
 		and QuestModel.turn_in_id_for(quest) == "firebud_stable_keeper"
-		and int(quest.get("requiredRebirthCount", 0)) == 6
+		and QuestModel.is_optional(quest)
+		and int(quest.get("requiredRebirthCount", 0)) == 4
 		and str(quest.get("requiredMissingAbility", "")) == PlayerProgressModel.ABILITY_REMOTE_STABLE
 		and reward_abilities.size() == 1
 		and str((reward_abilities[0] as Dictionary).get("abilityId", "")) == PlayerProgressModel.ABILITY_REMOTE_STABLE
 		and QuestModel.reward_text(quest).find("远程兽栏能力") >= 0
 	)
 
-	var after_five := _profile_with_active_quest("quest_rebirth_1_guidance")
-	for target in range(1, 6):
-		var completion := _complete_active_rebirth_quest_for_test(after_five)
-		after_five = completion.get("profile", after_five) as Dictionary
-		after_five = _profile_with_rebirth_test_level(after_five, 80)
-		var execute_result := PlayerProgressModel.execute_rebirth(after_five)
-		after_five = execute_result.get("profile", after_five) as Dictionary
-	var hidden_before_six := (
-		PlayerProgressModel.rebirth_count(after_five) == 5
-		and PlayerProgressModel.active_quest_id(after_five) == "quest_rebirth_6_guidance"
-		and not PlayerProgressModel.has_remote_stable(after_five)
+	var after_three := _profile_after_rebirths_for_test(3)
+	var hidden_before_four := (
+		PlayerProgressModel.rebirth_count(after_three) == 3
+		and PlayerProgressModel.active_quest_id(after_three) == "quest_rebirth_4_guidance"
+		and PlayerProgressModel.optional_quest_for_interaction(after_three, "firebud_stable_keeper").is_empty()
+		and not PlayerProgressModel.has_remote_stable(after_three)
 	)
 
-	player_profile = _profile_after_six_rebirths_for_test()
-	var six_ready := (
-		PlayerProgressModel.rebirth_count(player_profile) == 6
-		and PlayerProgressModel.active_quest_id(player_profile) == "quest_remote_stable_unlock"
+	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	var remote_unlock_active_id := PlayerProgressModel.active_quest_id(player_profile)
+	var optional_quest := PlayerProgressModel.optional_quest_for_interaction(player_profile, "firebud_stable_keeper")
+	var four_ready := (
+		PlayerProgressModel.rebirth_count(player_profile) == 4
+		and str(optional_quest.get("id", "")) == "quest_remote_stable_unlock"
 		and not PlayerProgressModel.has_remote_stable(player_profile)
 	)
 
 	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	var marker_ready_ok := _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_AVAILABLE
+
 	pet_selected_instance_id = "pet_bui_tough"
 	_open_pet_panel(false)
 	await get_tree().process_frame
@@ -7232,7 +7413,6 @@ func _run_auto_remote_stable_unlock_check() -> void:
 	)
 	_close_pet_panel()
 
-	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
 	_open_interaction_dialog(stable_keeper)
 	await get_tree().process_frame
 	var dialog_text := dialog_body_label.text if dialog_body_label != null else ""
@@ -7249,7 +7429,7 @@ func _run_auto_remote_stable_unlock_check() -> void:
 	await get_tree().process_frame
 	var unlocked_ok := (
 		PlayerProgressModel.has_remote_stable(player_profile)
-		and PlayerProgressModel.active_quest_id(player_profile) == ""
+		and PlayerProgressModel.active_quest_id(player_profile) == remote_unlock_active_id
 		and world_log_message.find("完成任务「远程兽栏」") >= 0
 		and world_log_message.find("远程兽栏能力") >= 0
 	)
@@ -7272,15 +7452,21 @@ func _run_auto_remote_stable_unlock_check() -> void:
 	var remote_store_ok := str(remote_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
 	_close_pet_panel()
 
-	var already_unlocked := PlayerProgressModel.with_unlocked_ability(_profile_after_six_rebirths_for_test(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
-	var already_hidden_ok := PlayerProgressModel.active_quest_id(already_unlocked) == ""
+	var already_unlocked := PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4), PlayerProgressModel.ABILITY_REMOTE_STABLE)
+	player_profile = already_unlocked
+	var already_hidden_ok := (
+		PlayerProgressModel.active_quest_id(already_unlocked) == remote_unlock_active_id
+		and PlayerProgressModel.optional_quest_for_interaction(already_unlocked, "firebud_stable_keeper").is_empty()
+		and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_NONE
+	)
 
-	var status := "ok" if catalog_ok and hidden_before_six and six_ready and locked_button_ok and locked_action_blocked and dialog_ok and unlocked_ok and remote_button_ok and remote_store_ok and already_hidden_ok else "failed"
-	print("remote stable unlock check ready: status=%s catalog=%s hidden_before_six=%s six_ready=%s locked_button=%s locked_action=%s dialog=%s unlocked=%s remote_button=%s remote_store=%s already_hidden=%s active=%s log=%s" % [
+	var status := "ok" if catalog_ok and hidden_before_four and four_ready and marker_ready_ok and locked_button_ok and locked_action_blocked and dialog_ok and unlocked_ok and remote_button_ok and remote_store_ok and already_hidden_ok else "failed"
+	print("remote stable unlock check ready: status=%s catalog=%s hidden_before_four=%s four_ready=%s marker=%s locked_button=%s locked_action=%s dialog=%s unlocked=%s remote_button=%s remote_store=%s already_hidden=%s active=%s log=%s" % [
 		status,
 		str(catalog_ok),
-		str(hidden_before_six),
-		str(six_ready),
+		str(hidden_before_four),
+		str(four_ready),
+		str(marker_ready_ok),
 		str(locked_button_ok),
 		str(locked_action_blocked),
 		str(dialog_ok),
@@ -7290,6 +7476,429 @@ func _run_auto_remote_stable_unlock_check() -> void:
 		str(already_hidden_ok),
 		PlayerProgressModel.active_quest_id(player_profile),
 		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_rebirth_trial_contract_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var errors := RebirthTrialModel.validation_errors()
+	var remote_unlock := RebirthTrialModel.remote_stable_unlock()
+	var final_cave := RebirthTrialModel.final_cave()
+	var stage_one_beasts := RebirthTrialModel.stage_required_beast_form_ids(1)
+	var stage_five_beasts := RebirthTrialModel.stage_required_beast_form_ids(5)
+	var stage_six := RebirthTrialModel.stage_for_target(6)
+	var contract_ok := (
+		errors.is_empty()
+		and RebirthTrialModel.element_caves().size() == 4
+			and RebirthTrialModel.ring_item_ids().size() == 4
+			and RebirthTrialModel.rebirth_beasts().size() == 4
+			and RebirthTrialModel.stages().size() == 6
+			and RebirthTrialModel.special_task_plans().size() >= 6
+			and int(remote_unlock.get("requiredRebirthCount", 0)) == 4
+			and bool(remote_unlock.get("optional", false))
+		and str(final_cave.get("name", "")) == "玄影洞窟"
+		and str(final_cave.get("name", "")) != "漆黑洞穴"
+		and stage_one_beasts.size() == 1
+		and stage_five_beasts.size() == 4
+		and str(stage_six.get("rewardPlan", "")).find("群攻弓") >= 0
+	)
+	var status := "ok" if contract_ok else "failed"
+	print("rebirth trial contract check ready: status=%s caves=%d rings=%d beasts=%d stages=%d special_tasks=%d remote_rebirth=%d final=%s stage1_beasts=%d stage5_beasts=%d errors=%s" % [
+		status,
+		RebirthTrialModel.element_caves().size(),
+		RebirthTrialModel.ring_item_ids().size(),
+		RebirthTrialModel.rebirth_beasts().size(),
+		RebirthTrialModel.stages().size(),
+		RebirthTrialModel.special_task_plans().size(),
+		int(remote_unlock.get("requiredRebirthCount", 0)),
+		str(final_cave.get("name", "")),
+		stage_one_beasts.size(),
+		stage_five_beasts.size(),
+		" | ".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_rebirth_cave_guardian_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var errors := RebirthTrialModel.validation_errors()
+	var village_map := _map_data_for_id("firebud_village_gate")
+	var village_ok := not village_map.is_empty()
+	var entrance_count := 0
+	var return_count := 0
+	var ring_count := 0
+	var maps_ok := true
+	var floor_chain_ok := true
+	var guardian_top_only_ok := true
+	var zones_ok := true
+	var fixed_pets_ok := true
+	var battle_ok := true
+	var center_ok := true
+	var reward_ok := true
+	var navigation_ok := true
+	var summaries: Array[String] = []
+	var seeded_rng := RandomNumberGenerator.new()
+	seeded_rng.seed = 10102
+
+	for cave in RebirthTrialModel.element_caves():
+		var cave_id := str(cave.get("caveId", ""))
+		var ring_id := str(cave.get("ringItemId", ""))
+		var group_value = cave.get("guardianGroup", {})
+		var group := group_value as Dictionary if group_value is Dictionary else {}
+		var group_id := str(group.get("id", ""))
+		var center_name := str(group.get("centerName", ""))
+		var center_level := int(group.get("centerLevel", 0))
+		var expected_count := int(group.get("enemyCount", 10))
+		var floor_ids := RebirthTrialModel.floor_map_ids_for_cave(cave)
+		var top_floor_map_id := RebirthTrialModel.guardian_floor_map_id_for_cave(cave)
+		var first_floor_map_id := floor_ids[0] if not floor_ids.is_empty() else cave_id
+
+		var entrance := _warp_to_map("firebud_village_gate", first_floor_map_id)
+		if not entrance.is_empty():
+			entrance_count += 1
+
+		var first_floor_map := _map_data_for_id(first_floor_map_id)
+		if first_floor_map.is_empty() or str(first_floor_map.get("id", "")) != first_floor_map_id:
+			maps_ok = false
+			summaries.append("%s:map=missing" % cave_id)
+			continue
+
+		var has_return := false
+		for interaction_value in InteractionModel.interaction_points(first_floor_map):
+			if not (interaction_value is Dictionary):
+				continue
+			var interaction := interaction_value as Dictionary
+			if InteractionModel.is_warp(interaction) and str(interaction.get("toMap", "")) == "firebud_village_gate":
+				has_return = true
+				break
+		if has_return:
+			return_count += 1
+
+		var this_floor_chain_ok := floor_ids.size() == int(cave.get("floors", 0))
+		var this_top_only_ok := true
+		for floor_index in range(floor_ids.size()):
+			var floor_map_id := floor_ids[floor_index]
+			var floor_map := _map_data_for_id(floor_map_id)
+			if floor_map.is_empty() or str(floor_map.get("id", "")) != floor_map_id:
+				maps_ok = false
+				this_floor_chain_ok = false
+				continue
+			var has_guardian_here := _map_has_encounter_group(floor_map, group_id)
+			if floor_map_id == top_floor_map_id:
+				this_top_only_ok = this_top_only_ok and has_guardian_here
+			else:
+				this_top_only_ok = this_top_only_ok and not has_guardian_here
+			if floor_index < floor_ids.size() - 1:
+				this_floor_chain_ok = this_floor_chain_ok and _map_has_warp_to_map(floor_map, floor_ids[floor_index + 1])
+			if floor_index > 0:
+				this_floor_chain_ok = this_floor_chain_ok and _map_has_warp_to_map(floor_map, floor_ids[floor_index - 1])
+		floor_chain_ok = floor_chain_ok and this_floor_chain_ok
+		guardian_top_only_ok = guardian_top_only_ok and this_top_only_ok
+
+		var loaded_map := _map_data_for_id(top_floor_map_id)
+		var zone := _encounter_zone_for_group(loaded_map, group_id)
+		if zone.is_empty():
+			zones_ok = false
+			summaries.append("%s:zone=missing" % cave_id)
+			continue
+
+		var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, seeded_rng, expected_count)
+		var selected_pets = selected_zone.get("selectedWildPets", [])
+		var selected_pet_count: int = selected_pets.size() if selected_pets is Array else 0
+		var count_ok: bool = selected_pet_count == expected_count and int(selected_zone.get("selectedEnemyCount", 0)) == expected_count
+		fixed_pets_ok = fixed_pets_ok and count_ok
+
+		var battle_state := BattleModel.create_training_partner_battle(selected_zone, expected_count)
+		var enemy_count_ok := BattleModel.side_actor_count(battle_state, BattleModel.SIDE_ENEMY) == expected_count
+		var slots_ok := BattleModel.occupied_slots_are_unique(battle_state)
+		battle_ok = battle_ok and enemy_count_ok and slots_ok and str(battle_state.get("sourceEncounterGroupId", "")) == group_id
+
+		var center_actor := BattleModel.actor_by_id(battle_state, "enemy_front_3")
+		var center_skills: Array = center_actor.get("activeSkillIds", [])
+		var strong_skills_ok := true
+		for skill_value in group.get("strongSkillIds", []):
+			if not center_skills.has(str(skill_value)):
+				strong_skills_ok = false
+				break
+		var this_center_ok := (
+			not center_actor.is_empty()
+			and str(center_actor.get("name", "")).find(center_name) >= 0
+			and int(center_actor.get("level", 0)) == center_level
+			and strong_skills_ok
+		)
+		center_ok = center_ok and this_center_ok
+
+		var rewards := BattleRewardCatalog.rewards_for_state({
+			"sourceEncounterGroupId": group_id,
+			"targetSeed": "rebirth_cave_guardian_check:%s" % group_id,
+		})
+		var has_ring := _item_amount_count(rewards, ring_id) == 1
+		if has_ring:
+			ring_count += 1
+		reward_ok = reward_ok and has_ring
+
+		var nav := _navigation_target_for_encounter_group(group_id)
+		navigation_ok = navigation_ok and str(nav.get("mapId", "")) == top_floor_map_id and str(nav.get("kind", "")) == "encounter_zone"
+		summaries.append("%s:floors=%d entrance=%s return=%s chain=%s top_only=%s pets=%d enemies=%s center=%s ring=%s" % [
+			cave_id,
+			floor_ids.size(),
+			str(not entrance.is_empty()),
+			str(has_return),
+			str(this_floor_chain_ok),
+			str(this_top_only_ok),
+			selected_pet_count,
+			str(enemy_count_ok),
+			str(this_center_ok),
+			str(has_ring),
+		])
+
+	var status := "ok" if errors.is_empty() and village_ok and entrance_count == 4 and return_count == 4 and maps_ok and floor_chain_ok and guardian_top_only_ok and zones_ok and fixed_pets_ok and battle_ok and center_ok and reward_ok and navigation_ok and ring_count == 4 else "failed"
+	print("rebirth cave guardian check ready: status=%s errors=%s village=%s entrances=%d returns=%d rings=%d maps=%s chain=%s top_only=%s zones=%s fixed=%s battle=%s center=%s reward=%s navigation=%s details=%s" % [
+		status,
+		" | ".join(errors),
+		str(village_ok),
+		entrance_count,
+		return_count,
+		ring_count,
+		str(maps_ok),
+		str(floor_chain_ok),
+		str(guardian_top_only_ok),
+		str(zones_ok),
+		str(fixed_pets_ok),
+		str(battle_ok),
+		str(center_ok),
+		str(reward_ok),
+		str(navigation_ok),
+		" ; ".join(summaries),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_shadow_oath_cavern_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var errors := RebirthTrialModel.validation_errors()
+	var final_cave := RebirthTrialModel.final_cave()
+	var floor_ids := RebirthTrialModel.floor_map_ids_for_final_cave()
+	var capture_floor_ids := RebirthTrialModel.capture_floor_map_ids_for_final_cave()
+	var boss_floor_map_id := RebirthTrialModel.boss_floor_map_id_for_final_cave()
+	var boss_value = final_cave.get("rebirthBossGroup", {})
+	var boss_group := boss_value as Dictionary if boss_value is Dictionary else {}
+	var boss_group_id := str(boss_group.get("id", ""))
+	var boss_center_name := str(boss_group.get("centerName", ""))
+	var boss_center_level := int(boss_group.get("centerLevel", 0))
+	var expected_count := int(boss_group.get("enemyCount", 10))
+	var expected_average := int(boss_group.get("averageLevel", 110))
+	var first_floor_id := floor_ids[0] if not floor_ids.is_empty() else str(final_cave.get("id", ""))
+
+	var entrance_ok := not _warp_to_map("firebud_village_gate", first_floor_id).is_empty()
+	var floor_maps_ok := floor_ids.size() == int(final_cave.get("floors", 0))
+	var floor_chain_ok := true
+	var boss_top_only_ok := true
+	for floor_index in range(floor_ids.size()):
+		var floor_map_id := floor_ids[floor_index]
+		var floor_map := _map_data_for_id(floor_map_id)
+		if floor_map.is_empty() or str(floor_map.get("id", "")) != floor_map_id:
+			floor_maps_ok = false
+			floor_chain_ok = false
+			continue
+		var has_boss_here := _map_has_encounter_group(floor_map, boss_group_id)
+		if floor_map_id == boss_floor_map_id:
+			boss_top_only_ok = boss_top_only_ok and has_boss_here
+		else:
+			boss_top_only_ok = boss_top_only_ok and not has_boss_here
+		if floor_index < floor_ids.size() - 1:
+			floor_chain_ok = floor_chain_ok and _map_has_warp_to_map(floor_map, floor_ids[floor_index + 1])
+		if floor_index > 0:
+			floor_chain_ok = floor_chain_ok and _map_has_warp_to_map(floor_map, floor_ids[floor_index - 1])
+
+	var required_beast_forms: Array[String] = []
+	for beast in RebirthTrialModel.rebirth_beasts():
+		var form_id := str(beast.get("formId", ""))
+		if form_id != "":
+			required_beast_forms.append(form_id)
+	var found_forms := {}
+	var capture_levels_ok := true
+	var capture_actors_ok := true
+	var seeded_rng := RandomNumberGenerator.new()
+	seeded_rng.seed = 10401
+	for capture_map_id in capture_floor_ids:
+		var capture_map := _map_data_for_id(capture_map_id)
+		for zone_value in EncounterModel.encounter_zones(capture_map):
+			if not (zone_value is Dictionary):
+				continue
+			var zone := zone_value as Dictionary
+			for pool_value in zone.get("wildPetPool", []):
+				if not (pool_value is Dictionary):
+					continue
+				var pool_entry := pool_value as Dictionary
+				var form_id := str(pool_entry.get("formId", ""))
+				if not required_beast_forms.has(form_id):
+					continue
+				found_forms[form_id] = true
+				capture_levels_ok = capture_levels_ok and int(pool_entry.get("levelMin", 0)) == 50 and int(pool_entry.get("levelMax", 0)) == 50
+				var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, seeded_rng)
+				var battle_state := BattleModel.create_wild_battle(selected_zone)
+				var enemy_actor := BattleModel.actor_by_id(battle_state, "enemy_0")
+				capture_actors_ok = capture_actors_ok and int(enemy_actor.get("level", 0)) == 50 and bool(enemy_actor.get("catchable", false))
+	var capture_forms_ok := true
+	for form_id in required_beast_forms:
+		capture_forms_ok = capture_forms_ok and found_forms.has(form_id)
+
+	var boss_map := _map_data_for_id(boss_floor_map_id)
+	var boss_zone := _encounter_zone_for_group(boss_map, boss_group_id)
+	var boss_selected_zone := EncounterModel.zone_with_selected_wild_pet(boss_zone, seeded_rng, expected_count) if not boss_zone.is_empty() else {}
+	var boss_battle := BattleModel.create_training_partner_battle(boss_selected_zone, expected_count) if not boss_selected_zone.is_empty() else {}
+	var boss_enemy_count := BattleModel.side_actor_count(boss_battle, BattleModel.SIDE_ENEMY) if not boss_battle.is_empty() else 0
+	var level_total := 0
+	for actor_value in boss_battle.get("actors", []):
+		if not (actor_value is Dictionary):
+			continue
+		var actor := actor_value as Dictionary
+		if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+			level_total += int(actor.get("level", 0))
+	var boss_average_ok := boss_enemy_count == expected_count and int(round(float(level_total) / float(maxi(1, boss_enemy_count)))) == expected_average
+	var boss_center := BattleModel.actor_by_id(boss_battle, "enemy_front_3")
+	var center_skills: Array = boss_center.get("activeSkillIds", [])
+	var boss_strong_skills_ok := true
+	for skill_value in boss_group.get("strongSkillIds", []):
+		if not center_skills.has(str(skill_value)):
+			boss_strong_skills_ok = false
+			break
+	var boss_center_ok := (
+		not boss_center.is_empty()
+		and str(boss_center.get("name", "")).find(boss_center_name) >= 0
+		and int(boss_center.get("level", 0)) == boss_center_level
+		and boss_strong_skills_ok
+		and not bool(boss_center.get("catchable", true))
+	)
+	var boss_reward_table := BattleRewardCatalog.table_for_id(boss_group_id)
+	var boss_reward_ok := (
+		not boss_reward_table.is_empty()
+		and BattleRewardCatalog.stone_coins_for_state({
+			"sourceEncounterGroupId": boss_group_id,
+			"targetSeed": "shadow_oath_cavern_check",
+		}) >= 320
+		and BattleRewardCatalog.rewards_for_state({
+			"sourceEncounterGroupId": boss_group_id,
+			"targetSeed": "shadow_oath_cavern_check",
+		}).is_empty()
+	)
+	var navigation := _navigation_target_for_encounter_group(boss_group_id)
+	var navigation_ok := str(navigation.get("mapId", "")) == boss_floor_map_id
+
+	var status := "ok" if errors.is_empty() and entrance_ok and floor_maps_ok and floor_chain_ok and boss_top_only_ok and capture_forms_ok and capture_levels_ok and capture_actors_ok and boss_enemy_count == expected_count and boss_average_ok and boss_center_ok and boss_reward_ok and navigation_ok else "failed"
+	print("shadow oath cavern check ready: status=%s errors=%s entrance=%s floors=%d maps=%s chain=%s boss_top_only=%s capture_forms=%d/%d capture_levels=%s capture_actors=%s boss_count=%d boss_avg=%s center=%s reward=%s navigation=%s" % [
+		status,
+		" | ".join(errors),
+		str(entrance_ok),
+		floor_ids.size(),
+		str(floor_maps_ok),
+		str(floor_chain_ok),
+		str(boss_top_only_ok),
+		found_forms.size(),
+		required_beast_forms.size(),
+		str(capture_levels_ok),
+		str(capture_actors_ok),
+		boss_enemy_count,
+		str(boss_average_ok),
+		str(boss_center_ok),
+		str(boss_reward_ok),
+		str(navigation_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_rebirth_trial_execute_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+
+	var quest_profile := _profile_with_active_quest("quest_rebirth_1_guidance")
+	var completion := _complete_active_rebirth_quest_for_test(quest_profile)
+	var ready_without_trial := _profile_with_rebirth_test_level(completion.get("profile", quest_profile) as Dictionary, 80)
+	var missing_preview := PlayerProgressModel.rebirth_preview(ready_without_trial)
+	var missing_lines := "\n".join(PlayerProgressModel.rebirth_preview_lines(ready_without_trial))
+	var missing_block_ok := (
+		not bool(missing_preview.get("ok", true))
+		and missing_lines.find("缺少元素戒指") >= 0
+		and missing_lines.find("缺少转生兽") >= 0
+		and missing_lines.find("玄影洞窟顶层") >= 0
+	)
+
+	var proof_result := PlayerProgressModel.apply_battle_result(ready_without_trial, {
+		"sourceEncounterGroupId": PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID,
+		"actors": [],
+	}, "victory")
+	var proof_profile := proof_result.get("profile", ready_without_trial) as Dictionary
+	var proof_record_ok := PlayerProgressModel.rebirth_trial_proof_count(proof_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 1
+
+	var ready_profile := _profile_with_rebirth_trial_resources_for_test(ready_without_trial, 1)
+	var ready_preview := PlayerProgressModel.rebirth_preview(ready_profile)
+	var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
+	var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
+	var stage_one_ok := (
+		bool(ready_preview.get("ok", false))
+		and bool(execute_result.get("ok", false))
+		and PlayerProgressModel.rebirth_count(executed_profile) == 1
+		and int((executed_profile.get("player", {}) as Dictionary).get("level", 0)) == 1
+		and PlayerProgressModel.backpack_item_count(executed_profile, "armor_grace_cloth_3") == 1
+		and PlayerProgressModel.backpack_item_count(executed_profile, "ring_earth_trial") == 0
+		and PlayerProgressModel.backpack_item_count(executed_profile, "ring_water_trial") == 0
+		and PlayerProgressModel.backpack_item_count(executed_profile, "ring_fire_trial") == 0
+		and PlayerProgressModel.backpack_item_count(executed_profile, "ring_wind_trial") == 0
+		and PlayerProgressModel.rebirth_trial_proof_count(executed_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 0
+		and _profile_has_pet_form(executed_profile, "rebirth_starter_earth_cub")
+		and not _profile_has_pet_form(executed_profile, "rebirth_beast_earth_lv50")
+	)
+
+	var stage_five_profile := PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	stage_five_profile = PlayerProgressModel.with_rebirth_quest_completed(stage_five_profile, 5, true)
+	stage_five_profile = _profile_with_rebirth_test_level(stage_five_profile, 80)
+	stage_five_profile = _profile_with_rebirth_trial_resources_for_test(stage_five_profile, 5)
+	var stage_five_execute := PlayerProgressModel.execute_rebirth(stage_five_profile)
+	var stage_five_after := stage_five_execute.get("profile", stage_five_profile) as Dictionary
+	var stage_five_beasts_consumed := true
+	for form_id in RebirthTrialModel.stage_required_beast_form_ids(5):
+		stage_five_beasts_consumed = stage_five_beasts_consumed and not _profile_has_pet_form(stage_five_after, form_id)
+	var stage_five_ok := (
+		bool(stage_five_execute.get("ok", false))
+		and PlayerProgressModel.rebirth_count(stage_five_after) == 5
+		and PlayerProgressModel.backpack_item_count(stage_five_after, "accessory_four_spirit_charm") == 1
+		and _profile_has_pet_form(stage_five_after, "rebirth_starter_four_spirit_cub")
+		and stage_five_beasts_consumed
+		and PlayerProgressModel.rebirth_trial_proof_count(stage_five_after, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 0
+	)
+
+	var shadow_bow_contexts: Array = BackpackModel.item_for_id("weapon_shadow_group_bow").get("useContexts", [])
+	var reward_equipment_ok := (
+		EquipmentModel.spirit_ids_for("armor_grace_cloth_3").has("spirit_grace_3")
+		and EquipmentModel.spirit_ids_for("accessory_moist_charm_3").has("spirit_moist_3")
+		and shadow_bow_contexts.has(BackpackModel.CONTEXT_EQUIPMENT)
+		and not PetTemplateCatalog.runtime_template_for_form("rebirth_starter_shadow_cub").is_empty()
+	)
+
+	var status := "ok" if missing_block_ok and proof_record_ok and stage_one_ok and stage_five_ok and reward_equipment_ok else "failed"
+	print("rebirth trial execute check ready: status=%s missing=%s proof=%s stage1=%s stage5=%s reward=%s count1=%d count5=%d message=%s stage5_message=%s" % [
+		status,
+		str(missing_block_ok),
+		str(proof_record_ok),
+		str(stage_one_ok),
+		str(stage_five_ok),
+		str(reward_equipment_ok),
+		PlayerProgressModel.rebirth_count(executed_profile),
+		PlayerProgressModel.rebirth_count(stage_five_after),
+		str(execute_result.get("message", "")),
+		str(stage_five_execute.get("message", "")),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -7457,6 +8066,7 @@ func _run_auto_equipment_inactive_after_rebirth_check() -> void:
 	player_dict["hp"] = 220
 	profile["player"] = player_dict
 	profile = PlayerProgressModel.with_rebirth_quest_completed(profile, 1, true)
+	profile = _profile_with_rebirth_trial_resources_for_test(profile, 1)
 	var buy_result := PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
 	var bought_profile := buy_result.get("profile", profile) as Dictionary
 	var equip_result := PlayerProgressModel.equip_item(bought_profile, "weapon_bone_blade")
@@ -7540,6 +8150,7 @@ func _profile_ready_to_rebirth_with_bone_blade_for_ui() -> Dictionary:
 	profile["player"] = player_dict
 	profile = PlayerProgressModel.normalize_profile(profile)
 	profile = PlayerProgressModel.with_rebirth_quest_completed(profile, 1, true)
+	profile = _profile_with_rebirth_trial_resources_for_test(profile, 1)
 	profile = PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade").get("profile", profile) as Dictionary
 	profile = PlayerProgressModel.equip_item(profile, "weapon_bone_blade").get("profile", profile) as Dictionary
 	return PlayerProgressModel.normalize_profile(profile)
@@ -8093,10 +8704,10 @@ func _equipment_drop_case_for_profile(profile: Dictionary, seed_prefix: String) 
 		var fragment_id := _first_equipment_fragment_id(rewards)
 		if fragment_id != "":
 			return {
-				"seed": seed,
-				"state": state,
-				"result": result,
-				"fragmentId": fragment_id,
+			"seed": seed,
+			"state": state,
+			"result": result,
+			"fragmentId": fragment_id,
 			}
 	return {}
 
@@ -8185,8 +8796,8 @@ func _profile_with_active_quest(quest_id: String) -> Dictionary:
 			continue
 		if current_quest_id == quest_id:
 			states[current_quest_id] = {
-				"status": QuestModel.STATUS_ACTIVE,
-				"progress": 0,
+			"status": QuestModel.STATUS_ACTIVE,
+			"progress": 0,
 			}
 			break
 		states[current_quest_id] = {
@@ -8263,16 +8874,16 @@ func _run_npc_quest_marker_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
 	world_log_message = ""
-	player_profile = PlayerProgressModel.default_profile()
-	_load_map("firebud_training_yard")
-	var trainer := InteractionModel.find_by_id(map_data, "trainer")
-	if player != null and not trainer.is_empty():
-		var focus_cell := IsoMapModel.nearest_walkable_cell(map_data, InteractionModel.cell_for(trainer) + Vector2i(3, 2))
+	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	_load_map("firebud_village_gate", "from_training_yard")
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	if player != null and not stable_keeper.is_empty():
+		var focus_cell := IsoMapModel.nearest_walkable_cell(map_data, InteractionModel.cell_for(stable_keeper) + Vector2i(3, 2))
 		player.global_position = IsoMapModel.grid_to_world(map_data, focus_cell)
 		player.clear_move_target()
 		last_checked_player_cell = focus_cell
 		_update_camera_position(true)
-	_set_world_log_message("Phase100：NPC头顶会显示任务可接、进行中、可交和条件不足状态。")
+	_set_world_log_message("Phase100：黄色叹号表示有可接任务；灰白问号为已接未完成，黄色问号为可提交。")
 	if status_label != null:
 		_update_hud_text()
 
@@ -8770,6 +9381,7 @@ func _run_player_rebirth_preview() -> void:
 	player_profile["player"] = player_dict
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	player_profile = PlayerProgressModel.with_rebirth_quest_completed(player_profile, 1, true)
+	player_profile = _profile_with_rebirth_trial_resources_for_test(player_profile, 1)
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase94C：转生预览与二次确认。")
 	_open_player_rebirth_preview_panel()
@@ -8783,6 +9395,7 @@ func _run_player_rebirth_chain_preview() -> void:
 	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 5)
 	player_profile = PlayerProgressModel.with_rebirth_quest_completed(player_profile, 6, true)
 	player_profile = _profile_with_rebirth_test_level(player_profile, 80)
+	player_profile = _profile_with_rebirth_trial_resources_for_test(player_profile, 6)
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase98：二转到六转使用同一套转生预览和执行流程。")
 	_open_player_rebirth_preview_panel()
@@ -8845,6 +9458,7 @@ func _run_equipment_inactive_after_rebirth_preview() -> void:
 	player_dict["hp"] = 220
 	profile["player"] = player_dict
 	profile = PlayerProgressModel.with_rebirth_quest_completed(profile, 1, true)
+	profile = _profile_with_rebirth_trial_resources_for_test(profile, 1)
 	profile = PlayerProgressModel.buy_shop_item(profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade").get("profile", profile) as Dictionary
 	profile = PlayerProgressModel.equip_item(profile, "weapon_bone_blade").get("profile", profile) as Dictionary
 	player_profile = PlayerProgressModel.execute_rebirth(profile).get("profile", profile) as Dictionary
@@ -9112,27 +9726,27 @@ func _run_auto_quest_chain_check() -> void:
 		var target_id := str(enemy_ids[0]) if not enemy_ids.is_empty() else ""
 		if target_id != "":
 			var poison_event := {
-				"type": "spirit_poison",
-				"attackerId": BattleModel.PLAYER_ACTOR_ID,
-				"targetId": target_id,
-				"targetSide": BattleModel.SIDE_ENEMY,
-				"damage": 6,
-				"speed": 70,
-				"sequence": 1,
-				"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
-				"spiritId": BattleModel.SPIRIT_POISON_1,
-				"statusId": BattleModel.STATUS_POISON,
-				"statusTurns": 3,
-				"statusPotency": 3,
-				"statusHitRate": 1.0,
+			"type": "spirit_poison",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": target_id,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"damage": 6,
+			"speed": 70,
+			"sequence": 1,
+			"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
+			"spiritId": BattleModel.SPIRIT_POISON_1,
+			"statusId": BattleModel.STATUS_POISON,
+			"statusTurns": 3,
+			"statusPotency": 3,
+			"statusHitRate": 1.0,
 			}
 			var snapshots := _battle_actor_snapshots_by_id()
 			battle_state = BattleModel.apply_battle_event(battle_state, poison_event)
 			var ledger := BattleEventLedger.build_from_applied_state(battle_state, poison_event, snapshots, _battle_event_timeline_for_applied_event(poison_event))
 			_record_battle_event(poison_event, ledger)
 			spirit_hook_ok = (
-				PlayerProgressModel.active_quest_id(player_profile) == "quest_first_victory"
-				and world_log_message.find("完成任务「释放毒精灵」") >= 0
+			PlayerProgressModel.active_quest_id(player_profile) == "quest_first_victory"
+			and world_log_message.find("完成任务「释放毒精灵」") >= 0
 			)
 	battle_active = false
 	battle_state = {}
@@ -9904,13 +10518,18 @@ func _run_auto_npc_quest_marker_check() -> void:
 	world_log_history.clear()
 	world_log_message = ""
 
-	player_profile = PlayerProgressModel.default_profile()
+	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	var loaded_village := _load_map("firebud_village_gate", "from_training_yard")
+	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
+	var available_ok := loaded_village and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_AVAILABLE
+
+	player_profile = _profile_with_active_quest("quest_intro_talk")
 	var loaded_training := _load_map("firebud_training_yard")
 	var trainer := InteractionModel.find_by_id(map_data, "trainer")
-	var available_ok := loaded_training and _quest_marker_state_for_item(trainer) == QUEST_MARKER_AVAILABLE
+	var accepted_talk_ok := loaded_training and _quest_marker_state_for_item(trainer) == QUEST_MARKER_IN_PROGRESS
 
 	player_profile = _profile_with_active_quest("quest_buy_supply")
-	var loaded_village := _load_map("firebud_village_gate", "from_training_yard")
+	loaded_village = _load_map("firebud_village_gate", "from_training_yard")
 	var shopkeeper := InteractionModel.find_by_id(map_data, "firebud_shopkeeper")
 	var in_progress_ok := loaded_village and _quest_marker_state_for_item(shopkeeper) == QUEST_MARKER_IN_PROGRESS
 
@@ -9924,31 +10543,39 @@ func _run_auto_npc_quest_marker_check() -> void:
 	player_profile = buy_event.get("profile", ready_profile) as Dictionary
 	var ready_ok := _quest_marker_state_for_item(shopkeeper) == QUEST_MARKER_READY
 
-	var rebirth_profile := _profile_with_active_quest("quest_rebirth_1_guidance")
-	var completion := _complete_active_rebirth_quest_for_test(rebirth_profile)
-	player_profile = completion.get("profile", rebirth_profile) as Dictionary
-	var mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 3)
 	var blocked_ok := (
-		PlayerProgressModel.active_quest_id(player_profile) == ""
-		and _quest_marker_state_for_item(mentor) == QUEST_MARKER_BLOCKED
+		loaded_village
+		and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_BLOCKED
 	)
 
 	player_profile = PlayerProgressModel.with_unlocked_ability(_profile_after_six_rebirths_for_test(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
-	var stable_keeper := InteractionModel.find_by_id(map_data, "firebud_stable_keeper")
 	var completed_hidden_ok := (
 		PlayerProgressModel.active_quest_id(player_profile) == ""
 		and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_NONE
 	)
 	var signature_ok := _quest_marker_signature().find("abilities:remoteStable") >= 0
+	var visual_ok := (
+		str(_quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("glyph", "")) == "!"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("tone", "")) == "yellow"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_BLOCKED).get("glyph", "")) == "!"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_BLOCKED).get("tone", "")) == "red"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS).get("glyph", "")) == "?"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS).get("tone", "")) == "gray"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_READY).get("glyph", "")) == "?"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_READY).get("tone", "")) == "yellow"
+	)
 
-	var status := "ok" if available_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and signature_ok else "failed"
-	print("npc quest marker check ready: status=%s available=%s in_progress=%s ready=%s blocked=%s hidden=%s signature=%s active=%s" % [
+	var status := "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and signature_ok and visual_ok else "failed"
+	print("npc quest marker check ready: status=%s available=%s accepted_talk=%s in_progress=%s ready=%s blocked=%s hidden=%s visual=%s signature=%s active=%s" % [
 		status,
 		str(available_ok),
+		str(accepted_talk_ok),
 		str(in_progress_ok),
 		str(ready_ok),
 		str(blocked_ok),
 		str(completed_hidden_ok),
+		str(visual_ok),
 		_quest_marker_signature(),
 		PlayerProgressModel.active_quest_id(player_profile),
 	])
@@ -10349,10 +10976,10 @@ func _battle_reward_test_state(zone_id: String, profile: Dictionary = {}) -> Dic
 			"name": "野生乌力",
 			"level": 1,
 			"battleStats": {
-				"maxHp": 80,
-				"attack": 10,
-				"defense": 6,
-				"agility": 48,
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 6,
+			"agility": 48,
 			},
 		},
 	})
@@ -10489,10 +11116,10 @@ func _pet_capture_feedback_state(zone_id: String) -> Dictionary:
 			"name": "野生乌力",
 			"level": 1,
 			"battleStats": {
-				"maxHp": 80,
-				"attack": 10,
-				"defense": 6,
-				"agility": 48,
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 6,
+			"agility": 48,
 			},
 		},
 	})
@@ -13184,17 +13811,63 @@ func _active_quest_signature() -> String:
 
 
 func _quest_marker_signature() -> String:
+	_refresh_quest_marker_cache_if_needed()
+	return quest_marker_signature_cache
+
+
+func _refresh_quest_marker_cache_if_needed() -> void:
+	var source_signature := _quest_marker_source_signature()
+	if source_signature == quest_marker_source_signature_cache:
+		return
+	quest_marker_source_signature_cache = source_signature
+	quest_marker_state_cache.clear()
+	var available_quest := _first_available_unfinished_quest_for_marker()
+	var blocked_quest := _first_blocked_unfinished_quest_for_marker()
+	quest_marker_signature_cache = "%s|blocked:%s" % [
+		source_signature,
+		str(blocked_quest.get("id", "")),
+	]
+	var points: Array = map_data.get("interactionPoints", [])
+	for point_value in points:
+		if not (point_value is Dictionary):
+			continue
+		var item := point_value as Dictionary
+		var item_id := str(item.get("id", ""))
+		if item_id == "":
+			continue
+		quest_marker_state_cache[item_id] = _compute_quest_marker_state_for_item(item, available_quest, blocked_quest)
+
+
+func _quest_marker_source_signature() -> String:
 	var abilities = player_profile.get(PlayerProgressModel.UNLOCKED_ABILITIES_KEY, [])
 	var ability_parts: Array[String] = []
 	if abilities is Array:
 		for ability in abilities:
 			ability_parts.append(str(ability))
 	ability_parts.sort()
-	return "%s|rebirth:%d|abilities:%s|blocked:%s" % [
+	var quest_state_parts: Array[String] = []
+	var quest_states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+	if quest_states is Dictionary:
+		var quest_ids := (quest_states as Dictionary).keys()
+		quest_ids.sort()
+		for quest_id_value in quest_ids:
+			var quest_id := str(quest_id_value)
+			var raw_state = (quest_states as Dictionary).get(quest_id_value, {})
+			if raw_state is Dictionary:
+				var state := raw_state as Dictionary
+				quest_state_parts.append("%s:%s:%s" % [
+					quest_id,
+					str(state.get("status", "")),
+					str(state.get("progress", {})),
+				])
+			else:
+				quest_state_parts.append("%s:%s" % [quest_id, str(raw_state)])
+	return "%s|rebirth:%d|abilities:%s|states:%s|map:%s" % [
 		_active_quest_signature(),
-		PlayerProgressModel.rebirth_count(player_profile),
+		maxi(0, int(player_profile.get(PlayerProgressModel.REBIRTH_COUNT_KEY, 0))),
 		",".join(ability_parts),
-		str(_first_blocked_unfinished_quest_for_marker().get("id", "")),
+		",".join(quest_state_parts),
+		current_map_id,
 	]
 
 
@@ -15450,6 +16123,11 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 
 
 func _return_player_to_record_point_after_knockaway(log_lines: Array[String]) -> void:
+	var returned := _return_player_to_record_point()
+	log_lines.append("见习猎人被击飞，回到记录点「%s」。" % str(returned.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL)))
+
+
+func _return_player_to_record_point() -> Dictionary:
 	var point := PlayerProgressModel.record_point(player_profile)
 	var map_id := str(point.get("mapId", PlayerProgressModel.DEFAULT_RECORD_POINT_MAP_ID))
 	var spawn_name := str(point.get("spawnName", PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME))
@@ -15459,7 +16137,11 @@ func _return_player_to_record_point_after_knockaway(log_lines: Array[String]) ->
 		spawn_name = PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME
 		label = PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL
 		_load_map(map_id, spawn_name)
-	log_lines.append("见习猎人被击飞，回到记录点「%s」。" % label)
+	return {
+		"mapId": map_id,
+		"spawnName": spawn_name,
+		"label": label,
+	}
 
 
 func _battle_player_actor_from_state(state: Dictionary) -> Dictionary:
@@ -15538,10 +16220,10 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 				continue
 			var captured := value as Dictionary
 			messages.append_array(_record_quest_event_and_maybe_claim({
-				"type": "capture_pet",
-				"formId": str(captured.get("formId", "")),
-				"lineId": str(captured.get("lineId", "")),
-				"amount": 1,
+			"type": "capture_pet",
+			"formId": str(captured.get("formId", "")),
+			"lineId": str(captured.get("lineId", "")),
+			"amount": 1,
 			}))
 	return messages
 
@@ -15811,8 +16493,8 @@ func _refresh_player_status_panel() -> void:
 	else:
 		for entry in spirit_entries:
 			lines.append("%s：%s" % [
-				_bbcode_escape(str(entry.get("spiritLabel", "精灵"))),
-				_bbcode_escape(_equipment_spirit_sources_text(entry)),
+			_bbcode_escape(str(entry.get("spiritLabel", "精灵"))),
+			_bbcode_escape(_equipment_spirit_sources_text(entry)),
 			])
 	var point := PlayerProgressModel.record_point(player_profile)
 	lines.append("")
@@ -15878,7 +16560,13 @@ func _on_player_rebirth_execute_pressed() -> void:
 	var result := PlayerProgressModel.execute_rebirth(player_profile)
 	player_profile = result.get("profile", player_profile)
 	player_rebirth_confirm_pending = false
-	_set_world_log_message(str(result.get("message", "")))
+	var log_text := str(result.get("message", ""))
+	if bool(result.get("ok", false)):
+		var returned := _return_player_to_record_point()
+		if log_text != "":
+			log_text += "\n"
+		log_text += "转生后已回到记录点「%s」。" % str(returned.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
+	_set_world_log_message(log_text)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
 	_refresh_player_rebirth_preview_panel()
@@ -16359,8 +17047,8 @@ func _refresh_equipment_synthesis_panel() -> void:
 			button.toggle_mode = true
 			button.button_pressed = recipe_id == equipment_synthesis_selected_recipe_id
 			button.text = "%s\n%s" % [
-				EquipmentSynthesisModel.output_label_for_recipe(recipe),
-				EquipmentSynthesisModel.material_text(recipe),
+			EquipmentSynthesisModel.output_label_for_recipe(recipe),
+			EquipmentSynthesisModel.material_text(recipe),
 			]
 			button.custom_minimum_size = Vector2(0, 62)
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -16792,6 +17480,7 @@ func _on_quick_slot_pressed(slot_index: int) -> void:
 func _quick_pet_heal_target_id(item_id: String) -> String:
 	if not BackpackModel.item_can_world_pet_heal(item_id):
 		return ""
+	var allow_full_hp_use := BackpackModel.world_pet_heal_allows_full_hp_use(item_id)
 	var party := PlayerProgressModel.party_pet_instances(player_profile)
 	var active_id := str(player_profile.get("activePetInstanceId", ""))
 	for pet in party:
@@ -16799,12 +17488,12 @@ func _quick_pet_heal_target_id(item_id: String) -> String:
 			continue
 		var active_max_hp := maxi(1, int(pet.get("maxHp", 1)))
 		var active_hp := clampi(int(pet.get("hp", active_max_hp)), 0, active_max_hp)
-		if active_hp < active_max_hp:
+		if active_hp < active_max_hp or allow_full_hp_use:
 			return active_id
 	for pet in party:
 		var max_hp := maxi(1, int(pet.get("maxHp", 1)))
 		var hp := clampi(int(pet.get("hp", max_hp)), 0, max_hp)
-		if hp < max_hp:
+		if hp < max_hp or allow_full_hp_use:
 			return str(pet.get("instanceId", ""))
 	return ""
 
@@ -17038,9 +17727,9 @@ func _equipment_compare_detail_lines(item_id: String) -> Array[String]:
 			if delta == 0:
 				continue
 			stat_parts.append(_colored_equipment_delta("%s %s%d" % [
-				str(change.get("label", "")),
-				"+" if delta > 0 else "",
-				delta,
+			str(change.get("label", "")),
+			"+" if delta > 0 else "",
+			delta,
 			], delta))
 		if stat_parts.is_empty():
 			impact_parts.append("属性: 无变化")
@@ -17143,10 +17832,10 @@ func _on_backpack_use_pressed() -> void:
 		var log_lines: Array[String] = [str(result.get("message", ""))]
 		if bool(result.get("ok", false)):
 			log_lines.append_array(_record_quest_event_and_maybe_claim({
-				"type": "equip_item",
-				"itemId": str(result.get("itemId", item_id)),
-				"slot": str(result.get("slot", "")),
-				"amount": 1,
+			"type": "equip_item",
+			"itemId": str(result.get("itemId", item_id)),
+			"slot": str(result.get("slot", "")),
+			"amount": 1,
 			}))
 		if bool(result.get("ok", false)) and profile_save_enabled:
 			PlayerProgressModel.save_profile(player_profile)
@@ -17266,8 +17955,10 @@ func _refresh_backpack_target_buttons(item_id: String) -> void:
 		button.text = "%s\n生命 %d/%d" % [str(pet.get("name", "宠物")), hp, max_hp]
 		button.custom_minimum_size = Vector2(0, 52)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.disabled = hp >= max_hp or not BackpackModel.item_can_world_pet_heal(item_id)
+		var allow_full_hp_use := BackpackModel.world_pet_heal_allows_full_hp_use(item_id)
+		button.disabled = (hp >= max_hp and not allow_full_hp_use) or not BackpackModel.item_can_world_pet_heal(item_id)
 		var instance_id := str(pet.get("instanceId", ""))
+		button.set_meta("pet_instance_id", instance_id)
 		button.pressed.connect(func() -> void:
 			_use_backpack_item_on_pet(item_id, instance_id)
 		)
@@ -17275,14 +17966,18 @@ func _refresh_backpack_target_buttons(item_id: String) -> void:
 
 
 func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
-	_use_world_pet_heal_item_and_log(item_id, instance_id)
+	var result := _use_world_pet_heal_item_and_log(item_id, instance_id)
+	var used := bool(result.get("ok", false))
+	var healed := maxi(0, int(result.get("heal", 0)))
 	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
 	_refresh_backpack_panel()
+	if used:
+		_show_backpack_pet_heal_popup(instance_id, healed)
 	if pet_panel != null and pet_panel.visible:
 		_refresh_pet_panel()
 
 
-func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> bool:
+func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> Dictionary:
 	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -17297,7 +17992,71 @@ func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> b
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message("\n".join(log_lines))
 	_refresh_quick_bar()
-	return bool(result.get("ok", false))
+	return result
+
+
+func _show_backpack_pet_heal_popup(instance_id: String, healed_amount: int) -> void:
+	var target_button = _backpack_target_button_for_pet(instance_id)
+	if target_button == null:
+		return
+	_spawn_backpack_heal_popup(target_button, healed_amount)
+
+
+func _backpack_target_button_for_pet(instance_id: String):
+	if backpack_target_container == null:
+		return null
+	for child in backpack_target_container.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if child is Button and str(child.get_meta("pet_instance_id", "")) == instance_id:
+			return child
+	return null
+
+
+func _backpack_heal_popup_text_for_pet(instance_id: String) -> String:
+	var target_button = _backpack_target_button_for_pet(instance_id)
+	if target_button == null:
+		return ""
+	for child in target_button.get_children():
+		if child is Label and child.has_meta("backpack_heal_popup"):
+			return (child as Label).text
+	return ""
+
+
+func _spawn_backpack_heal_popup(target: Control, healed_amount: int) -> void:
+	for child in target.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if child.has_meta("backpack_heal_popup"):
+			child.queue_free()
+	var label := Label.new()
+	label.set_meta("backpack_heal_popup", true)
+	label.text = "+%d" % maxi(0, healed_amount)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_color_override("font_color", Color(0.48, 1.0, 0.58, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0.02, 0.10, 0.04, 0.90))
+	label.add_theme_constant_override("outline_size", 4)
+	label.z_index = 20
+	label.anchor_left = 1.0
+	label.anchor_right = 1.0
+	label.anchor_top = 0.5
+	label.anchor_bottom = 0.5
+	label.offset_left = -92.0
+	label.offset_right = -12.0
+	label.offset_top = -23.0
+	label.offset_bottom = 13.0
+	label.pivot_offset = Vector2(40.0, 18.0)
+	target.add_child(label)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "modulate:a", 0.0, BACKPACK_HEAL_POPUP_DURATION_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_property(label, "scale", Vector2(0.72, 0.72), BACKPACK_HEAL_POPUP_DURATION_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "offset_top", -43.0, BACKPACK_HEAL_POPUP_DURATION_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "offset_bottom", -7.0, BACKPACK_HEAL_POPUP_DURATION_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_callback(Callable(label, "queue_free"))
 
 
 func _open_shop_panel(next_shop_id: String = "") -> void:
@@ -18874,8 +19633,8 @@ func _auto_settings_heal_source_options() -> Array[Dictionary]:
 			if not equipped_spirits.has(option_id):
 				continue
 			options.append({
-				"id": option_id,
-				"label": _equipment_spirit_label_with_source(option_id),
+			"id": option_id,
+			"label": _equipment_spirit_label_with_source(option_id),
 			})
 		else:
 			options.append(option)
@@ -19041,7 +19800,7 @@ func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 			if not valid_selected:
 				selected_id = str(choices[0].get("id", ""))
 				selected_index = 0
-			quest_selected_reward_choice_id = selected_id
+				quest_selected_reward_choice_id = selected_id
 			quest_reward_choice_option.select(selected_index)
 		else:
 			quest_selected_reward_choice_id = ""
@@ -19828,25 +20587,25 @@ func _pet_panel_sort_before(a: Dictionary, b: Dictionary) -> bool:
 			var b_level := int(b.get("level", 1))
 			if a_level != b_level:
 				result = a_level > b_level
-				return result if pet_sort_descending else not result
+			return result if pet_sort_descending else not result
 		PET_SORT_POWER:
 			var a_power := PetPowerModel.combat_power_for_pet(a)
 			var b_power := PetPowerModel.combat_power_for_pet(b)
 			if a_power != b_power:
 				result = a_power > b_power
-				return result if pet_sort_descending else not result
+			return result if pet_sort_descending else not result
 		PET_SORT_SPECIES:
 			var a_species := "%s:%s:%s" % [str(a.get("lineName", "")), str(a.get("subtypeName", "")), str(a.get("formName", ""))]
 			var b_species := "%s:%s:%s" % [str(b.get("lineName", "")), str(b.get("subtypeName", "")), str(b.get("formName", ""))]
 			if a_species != b_species:
 				result = a_species > b_species
-				return result if pet_sort_descending else not result
+			return result if pet_sort_descending else not result
 		PET_SORT_CAPTURED:
 			var a_serial := int(a.get("capturedSerial", 0))
 			var b_serial := int(b.get("capturedSerial", 0))
 			if a_serial != b_serial:
 				result = a_serial > b_serial
-				return result if pet_sort_descending else not result
+			return result if pet_sort_descending else not result
 	var a_state_order := _pet_panel_state_order(str(a.get("state", "")))
 	var b_state_order := _pet_panel_state_order(str(b.get("state", "")))
 	if a_state_order != b_state_order:
@@ -20724,15 +21483,15 @@ func _battle_start_pending_round() -> void:
 	if player_command_id != "switch_pet" and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
 		if bool(battle_pending_player_command.get("captureHold", false)):
 			battle_pending_pet_command = {
-				"command": "defend",
-				"targetId": "",
-				"skillId": BattleModel.PET_SKILL_DEFEND,
-				"captureHold": true,
+			"command": "defend",
+			"targetId": "",
+			"skillId": BattleModel.PET_SKILL_DEFEND,
+			"captureHold": true,
 			}
 		else:
 			battle_pending_pet_command = {
-				"command": "attack",
-				"targetId": battle_selected_target_id,
+			"command": "attack",
+			"targetId": battle_selected_target_id,
 			}
 	_refresh_battle_target_seed()
 	battle_event_queue = BattleModel.build_player_pet_round_events(
@@ -21267,9 +22026,9 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		if command_id == "capture":
 			var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), player_target_id, battle_pending_capture_tool_id)
 			_set_battle_message("%s：%s，机会：%s。" % [
-				CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
-				str(player_target.get("name", "敌人")),
-				CaptureToolCatalog.chance_tier(chance),
+			CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
+			str(player_target.get("name", "敌人")),
+			CaptureToolCatalog.chance_tier(chance),
 			])
 		else:
 			_set_battle_message("攻击：%s" % str(player_target.get("name", "敌人")))
@@ -21715,6 +22474,10 @@ func _perform_dialog_action(action_id: String) -> void:
 			_claim_dialog_quest_reward()
 		DIALOG_ACTION_TALK_QUEST:
 			_complete_dialog_talk_quest()
+		DIALOG_ACTION_CLAIM_OPTIONAL_QUEST:
+			_claim_dialog_optional_quest_reward()
+		DIALOG_ACTION_TALK_OPTIONAL_QUEST:
+			_complete_dialog_optional_talk_quest()
 		DIALOG_ACTION_HEAL:
 			_apply_dialog_healer()
 		DIALOG_ACTION_RECORD_POINT:
@@ -21764,6 +22527,27 @@ func _claim_dialog_quest_reward() -> void:
 		_update_hud_text()
 
 
+func _claim_dialog_optional_quest_reward() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	var quest := _optional_dialog_quest(active_dialog_interaction)
+	var quest_id := str(quest.get("id", ""))
+	if quest_id == "" or not PlayerProgressModel.can_claim_optional_quest(player_profile, quest_id):
+		_update_dialog_text()
+		return
+	var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
+	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(claim_result.get("message", "")))
+	if bool(claim_result.get("ok", false)):
+		_close_dialog()
+	else:
+		_update_dialog_text()
+	if status_label != null:
+		_update_hud_text()
+
+
 func _complete_dialog_talk_quest() -> void:
 	if active_dialog_interaction.is_empty():
 		return
@@ -21775,6 +22559,43 @@ func _complete_dialog_talk_quest() -> void:
 		if profile_save_enabled:
 			PlayerProgressModel.save_profile(player_profile)
 		_set_world_log_message("\n".join(quest_messages))
+		_close_dialog()
+		if status_label != null:
+			_update_hud_text()
+		return
+	_update_dialog_text()
+
+
+func _complete_dialog_optional_talk_quest() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	var quest := _optional_dialog_quest(active_dialog_interaction)
+	var quest_id := str(quest.get("id", ""))
+	if quest_id == "":
+		_update_dialog_text()
+		return
+	var messages: Array[String] = []
+	var progress_result := PlayerProgressModel.record_optional_quest_event(player_profile, quest_id, {
+		"type": "talk",
+		"targetId": str(active_dialog_interaction.get("id", "")),
+	})
+	player_profile = progress_result.get("profile", player_profile)
+	if bool(progress_result.get("changed", false)):
+		if bool(progress_result.get("ready", false)) and QuestModel.auto_claim_on_ready(quest) and not QuestModel.has_reward_choices(quest):
+			var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
+			player_profile = claim_result.get("profile", player_profile)
+			messages.append(str(claim_result.get("message", "")))
+		else:
+			messages.append(str(progress_result.get("message", "")))
+	var filtered: Array[String] = []
+	for message in messages:
+		var text := message.strip_edges()
+		if text != "":
+			filtered.append(text)
+	if not filtered.is_empty():
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_set_world_log_message("\n".join(filtered))
 		_close_dialog()
 		if status_label != null:
 			_update_hud_text()
@@ -21800,6 +22621,10 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_CLAIM_QUEST
 	if _active_dialog_matches_talk_quest(item):
 		return DIALOG_ACTION_TALK_QUEST
+	if _optional_dialog_can_claim_quest(item):
+		return DIALOG_ACTION_CLAIM_OPTIONAL_QUEST
+	if _optional_dialog_matches_talk_quest(item):
+		return DIALOG_ACTION_TALK_OPTIONAL_QUEST
 	if _dialog_item_is_healer(item):
 		return DIALOG_ACTION_HEAL
 	if _dialog_item_is_record_point(item):
@@ -21820,6 +22645,10 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 		DIALOG_ACTION_CLAIM_QUEST:
 			return "选择奖励" if PlayerProgressModel.active_quest_has_reward_choices(player_profile) else "领取奖励"
 		DIALOG_ACTION_TALK_QUEST:
+			return "完成"
+		DIALOG_ACTION_CLAIM_OPTIONAL_QUEST:
+			return "领取奖励"
+		DIALOG_ACTION_TALK_OPTIONAL_QUEST:
 			return "完成"
 		DIALOG_ACTION_HEAL:
 			return str(item.get("option", "治疗队伍"))
@@ -21923,6 +22752,8 @@ func _dialog_body_for(item: Dictionary) -> String:
 		text_parts.append("")
 		text_parts.append(record_hint)
 	var quest_hint := _dialog_quest_hint_for(item)
+	if quest_hint == "":
+		quest_hint = _dialog_optional_quest_hint_for(item)
 	if quest_hint != "":
 		text_parts.append("")
 		text_parts.append(quest_hint)
@@ -22046,6 +22877,30 @@ func _active_dialog_matches_talk_quest(item: Dictionary) -> bool:
 	}) > 0
 
 
+func _optional_dialog_quest(item: Dictionary) -> Dictionary:
+	return PlayerProgressModel.optional_quest_for_interaction(player_profile, str(item.get("id", "")))
+
+
+func _optional_dialog_can_claim_quest(item: Dictionary) -> bool:
+	var quest := _optional_dialog_quest(item)
+	if quest.is_empty():
+		return false
+	return PlayerProgressModel.can_claim_optional_quest(player_profile, str(quest.get("id", ""))) and QuestModel.turn_in_id_for(quest) == str(item.get("id", ""))
+
+
+func _optional_dialog_matches_talk_quest(item: Dictionary) -> bool:
+	var quest := _optional_dialog_quest(item)
+	if quest.is_empty():
+		return false
+	var state := PlayerProgressModel.quest_state_for_id(player_profile, str(quest.get("id", "")))
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return false
+	return QuestModel.progress_amount_for_event(quest, {
+		"type": "talk",
+		"targetId": str(item.get("id", "")),
+	}) > 0
+
+
 func _dialog_quest_hint_for(item: Dictionary) -> String:
 	var quest := PlayerProgressModel.active_quest(player_profile)
 	if quest.is_empty():
@@ -22070,6 +22925,29 @@ func _dialog_quest_hint_for(item: Dictionary) -> String:
 		lines.append("任务：%s" % QuestModel.title_for(quest))
 		lines.append(QuestModel.objective_text_for(quest))
 	var reward_text := PlayerProgressModel.quest_reward_text(player_profile)
+	if reward_text != "":
+		lines.append("奖励：%s" % reward_text)
+	var reward_equipment_lines := QuestModel.reward_equipment_detail_lines(quest)
+	if not reward_equipment_lines.is_empty():
+		lines.append("奖励装备：")
+		for reward_equipment_line in reward_equipment_lines:
+			lines.append("- %s" % reward_equipment_line)
+	return "\n".join(lines)
+
+
+func _dialog_optional_quest_hint_for(item: Dictionary) -> String:
+	var quest := _optional_dialog_quest(item)
+	if quest.is_empty():
+		return ""
+	var item_id := str(item.get("id", ""))
+	var state := PlayerProgressModel.quest_state_for_id(player_profile, str(quest.get("id", "")))
+	var lines: Array[String] = []
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_READY and item_id == QuestModel.turn_in_id_for(quest):
+		lines.append("任务完成：%s" % QuestModel.title_for(quest))
+	else:
+		lines.append("任务：%s" % QuestModel.title_for(quest))
+		lines.append(QuestModel.objective_text_for(quest))
+	var reward_text := QuestModel.reward_text(quest)
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
 	var reward_equipment_lines := QuestModel.reward_equipment_detail_lines(quest)
@@ -22548,11 +23426,11 @@ func _update_hud_text(force: bool = false) -> void:
 		if has_pending_interaction:
 			target_text = str(pending_interaction.get("name", "交互点"))
 		detail_text = "坐标  %d,%d\n目标  %s\n伙伴  %d/4\n任务  -  %s" % [
-				player_cell.x,
-				player_cell.y,
-				target_text,
-				_training_partner_count(),
-				_current_task_text(),
+			player_cell.x,
+			player_cell.y,
+			target_text,
+			_training_partner_count(),
+			_current_task_text(),
 			]
 	_perf_add("hud_text_build", build_start)
 	var label_start := _perf_now()
@@ -23421,22 +24299,13 @@ func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
 	var state := _quest_marker_state_for_item(item)
 	if state == QUEST_MARKER_NONE:
 		return
-	var fill := Color(1.0, 0.82, 0.18, 0.98)
-	var border := Color(1.0, 0.95, 0.54, 0.98)
-	var text_color := Color(0.16, 0.12, 0.04, 0.98)
-	var glyph := "!"
-	match state:
-		QUEST_MARKER_BLOCKED:
-			fill = Color(0.88, 0.18, 0.13, 0.98)
-			border = Color(1.0, 0.48, 0.40, 0.98)
-			text_color = Color(1.0, 0.94, 0.86, 0.98)
-		QUEST_MARKER_IN_PROGRESS:
-			fill = Color(0.84, 0.84, 0.78, 0.94)
-			border = Color(1.0, 1.0, 0.94, 0.92)
-			text_color = Color(0.18, 0.19, 0.17, 0.96)
-			glyph = "?"
-		QUEST_MARKER_READY:
-			glyph = "?"
+	var visual := _quest_marker_visual_for_state(state)
+	if visual.is_empty():
+		return
+	var fill: Color = visual.get("fill", Color(1.0, 0.82, 0.18, 0.98))
+	var border: Color = visual.get("border", Color(1.0, 0.95, 0.54, 0.98))
+	var text_color: Color = visual.get("textColor", Color(0.16, 0.12, 0.04, 0.98))
+	var glyph := str(visual.get("glyph", "!"))
 	var center := marker + Vector2(0, -86)
 	draw_circle(center + Vector2(1, 2), 12.5, Color(0.03, 0.04, 0.03, 0.58))
 	draw_circle(center, 12.0, fill)
@@ -23445,7 +24314,52 @@ func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
 	draw_string(font, center + Vector2(-9, 7), glyph, HORIZONTAL_ALIGNMENT_CENTER, 18.0, 22, text_color)
 
 
+func _quest_marker_visual_for_state(state: String) -> Dictionary:
+	match state:
+		QUEST_MARKER_AVAILABLE:
+			return {
+				"glyph": "!",
+				"tone": "yellow",
+				"fill": Color(1.0, 0.82, 0.18, 0.98),
+				"border": Color(1.0, 0.95, 0.54, 0.98),
+				"textColor": Color(0.16, 0.12, 0.04, 0.98),
+			}
+		QUEST_MARKER_BLOCKED:
+			return {
+				"glyph": "!",
+				"tone": "red",
+				"fill": Color(0.88, 0.18, 0.13, 0.98),
+				"border": Color(1.0, 0.48, 0.40, 0.98),
+				"textColor": Color(1.0, 0.94, 0.86, 0.98),
+			}
+		QUEST_MARKER_IN_PROGRESS:
+			return {
+				"glyph": "?",
+				"tone": "gray",
+				"fill": Color(0.84, 0.84, 0.78, 0.94),
+				"border": Color(1.0, 1.0, 0.94, 0.92),
+				"textColor": Color(0.18, 0.19, 0.17, 0.96),
+			}
+		QUEST_MARKER_READY:
+			return {
+				"glyph": "?",
+				"tone": "yellow",
+				"fill": Color(1.0, 0.82, 0.18, 0.98),
+				"border": Color(1.0, 0.95, 0.54, 0.98),
+				"textColor": Color(0.16, 0.12, 0.04, 0.98),
+			}
+	return {}
+
+
 func _quest_marker_state_for_item(item: Dictionary) -> String:
+	_refresh_quest_marker_cache_if_needed()
+	var item_id := str(item.get("id", ""))
+	if item_id == "":
+		return QUEST_MARKER_NONE
+	return str(quest_marker_state_cache.get(item_id, QUEST_MARKER_NONE))
+
+
+func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dictionary = {}, blocked_quest: Dictionary = {}) -> String:
 	var item_id := str(item.get("id", ""))
 	if item_id == "":
 		return QUEST_MARKER_NONE
@@ -23458,15 +24372,44 @@ func _quest_marker_state_for_item(item: Dictionary) -> String:
 		if status == QuestModel.STATUS_ACTIVE:
 			var objective := QuestModel.objective_for(quest)
 			if str(objective.get("type", "")) == "talk" and str(objective.get("targetId", QuestModel.turn_in_id_for(quest))) == item_id:
-				return QUEST_MARKER_AVAILABLE
+				return QUEST_MARKER_IN_PROGRESS
 			if QuestModel.turn_in_id_for(quest) == item_id:
 				return QUEST_MARKER_IN_PROGRESS
+	var optional_state := _optional_quest_marker_state_for_item(item)
+	if optional_state != QUEST_MARKER_NONE:
+		return optional_state
+	if not quest.is_empty():
 		return QUEST_MARKER_NONE
-	var available_quest := _first_available_unfinished_quest_for_marker()
 	if not available_quest.is_empty() and QuestModel.giver_id_for(available_quest) == item_id:
 		return QUEST_MARKER_AVAILABLE
-	var blocked_quest := _first_blocked_unfinished_quest_for_marker()
 	if not blocked_quest.is_empty() and QuestModel.giver_id_for(blocked_quest) == item_id:
+		return QUEST_MARKER_BLOCKED
+	return QUEST_MARKER_NONE
+
+
+func _optional_quest_marker_state_for_item(item: Dictionary) -> String:
+	var item_id := str(item.get("id", ""))
+	if item_id == "":
+		return QUEST_MARKER_NONE
+	var optional_quest := PlayerProgressModel.optional_quest_for_interaction(player_profile, item_id)
+	if not optional_quest.is_empty():
+		var quest_id := str(optional_quest.get("id", ""))
+		var raw_states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+		var has_quest_state := raw_states is Dictionary and (raw_states as Dictionary).has(quest_id)
+		if not has_quest_state:
+			return QUEST_MARKER_AVAILABLE
+		var state := PlayerProgressModel.quest_state_for_id(player_profile, quest_id)
+		var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
+		if status == QuestModel.STATUS_READY and QuestModel.turn_in_id_for(optional_quest) == item_id:
+			return QUEST_MARKER_READY
+		if status == QuestModel.STATUS_ACTIVE:
+			var objective := QuestModel.objective_for(optional_quest)
+			if str(objective.get("type", "")) == "talk" and str(objective.get("targetId", QuestModel.turn_in_id_for(optional_quest))) == item_id:
+				return QUEST_MARKER_IN_PROGRESS
+			if QuestModel.turn_in_id_for(optional_quest) == item_id:
+				return QUEST_MARKER_IN_PROGRESS
+	var blocked_quest := PlayerProgressModel.blocked_optional_quest_for_interaction(player_profile, item_id)
+	if not blocked_quest.is_empty():
 		return QUEST_MARKER_BLOCKED
 	return QUEST_MARKER_NONE
 
@@ -23475,6 +24418,8 @@ func _first_available_unfinished_quest_for_marker() -> Dictionary:
 	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
 	var state_map := states as Dictionary if states is Dictionary else {}
 	for quest in QuestModel.quests():
+		if QuestModel.is_optional(quest):
+			continue
 		var quest_id := str(quest.get("id", ""))
 		if quest_id == "":
 			continue
@@ -23490,6 +24435,8 @@ func _first_blocked_unfinished_quest_for_marker() -> Dictionary:
 	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
 	var state_map := states as Dictionary if states is Dictionary else {}
 	for quest in QuestModel.quests():
+		if QuestModel.is_optional(quest):
+			continue
 		var quest_id := str(quest.get("id", ""))
 		if quest_id == "":
 			continue

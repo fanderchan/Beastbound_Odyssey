@@ -78,6 +78,10 @@ static func auto_claim_on_ready(quest: Dictionary) -> bool:
 	return bool(quest.get("autoClaimOnReady", false))
 
 
+static func is_optional(quest: Dictionary) -> bool:
+	return bool(quest.get("optional", quest.get("isOptional", false)))
+
+
 static func objective_for(quest: Dictionary) -> Dictionary:
 	var objective = quest.get("objective", {})
 	return objective as Dictionary if objective is Dictionary else {}

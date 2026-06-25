@@ -1,0 +1,55 @@
+{
+  "id": "ember_core_cave_f3",
+  "name": "焰心洞穴三层",
+  "gridSize": [28, 24],
+  "tileSize": [80, 40],
+  "origin": [560, 110],
+  "spawnCell": [5, 20],
+  "spawnPoints": {
+    "default": [5, 20],
+    "from_floor_2": [5, 20],
+    "from_floor_4": [21, 7]
+  },
+  "blockedCells": [
+    [7, 17],
+    [8, 17],
+    [11, 14],
+    [12, 14],
+    [16, 10],
+    [17, 10],
+    [20, 12],
+    [21, 12]
+  ],
+  "decorCells": [
+    {"cell": [6, 19], "kind": "flower"},
+    {"cell": [10, 15], "kind": "grass"},
+    {"cell": [15, 12], "kind": "flower"},
+    {"cell": [19, 9], "kind": "grass"},
+    {"cell": [21, 7], "kind": "grass"}
+  ],
+  "encounterZones": [],
+  "interactionPoints": [
+    {
+      "id": "ember_core_stair_3_to_2",
+      "name": "焰心洞穴二层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 20],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "ember_core_cave_f2",
+      "toSpawn": "from_floor_3"
+    },
+    {
+      "id": "ember_core_stair_3_to_4",
+      "name": "焰心洞穴顶层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [22, 7],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "ember_core_cave_f4",
+      "toSpawn": "from_floor_3"
+    }
+  ]
+}

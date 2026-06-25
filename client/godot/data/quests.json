@@ -387,8 +387,9 @@
       "title": "远程兽栏",
       "giverId": "firebud_stable_keeper",
       "turnInId": "firebud_stable_keeper",
+      "optional": true,
       "autoClaimOnReady": true,
-      "summary": "六转后向兽栏管理员阿牧学习远程兽栏。",
+      "summary": "四转后向兽栏管理员阿牧学习远程兽栏。",
       "objective": {
         "type": "talk",
         "targetId": "firebud_stable_keeper",
@@ -405,7 +406,7 @@
           }
         ]
       },
-      "requiredRebirthCount": 6,
+      "requiredRebirthCount": 4,
       "requiredMissingAbility": "remoteStable",
       "nextQuestId": ""
     }

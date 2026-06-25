@@ -91,6 +91,42 @@
       "stoneAgeReference": "MAGIC_OtherRecovery"
     },
     {
+      "id": "spirit_grace_3",
+      "owner": "spirit",
+      "label": "恩惠精灵3",
+      "command": "spirit",
+      "target": {
+        "isAll": true,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 24
+      },
+      "stoneAgeReference": "MAGIC_Recovery"
+    },
+    {
+      "id": "spirit_moist_3",
+      "owner": "spirit",
+      "label": "滋润精灵3",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": true,
+        "canTargetEnemy": false,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "heal",
+        "amount": 34
+      },
+      "stoneAgeReference": "MAGIC_OtherRecovery"
+    },
+    {
       "id": "spirit_poison_1",
       "owner": "spirit",
       "label": "毒精灵1",

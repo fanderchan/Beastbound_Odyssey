@@ -8,7 +8,12 @@
   "spawnPoints": {
     "default": [3, 15],
     "from_training_yard": [3, 15],
-    "doctor_record": [10, 17]
+    "doctor_record": [10, 17],
+    "from_earth_vein_cave": [21, 6],
+    "from_tide_echo_cave": [21, 7],
+    "from_ember_core_cave": [21, 8],
+    "from_gale_breath_cave": [21, 9],
+    "from_shadow_oath_cavern": [22, 10]
   },
   "blockedCells": [
     [8, 4],
@@ -32,6 +37,11 @@
     {"cell": [13, 13], "kind": "flower"},
     {"cell": [17, 16], "kind": "grass"},
     {"cell": [21, 10], "kind": "flower"},
+    {"cell": [23, 6], "kind": "grass"},
+    {"cell": [24, 7], "kind": "flower"},
+    {"cell": [23, 8], "kind": "grass"},
+    {"cell": [24, 9], "kind": "flower"},
+    {"cell": [25, 10], "kind": "grass"},
     {"cell": [24, 17], "kind": "grass"}
   ],
   "encounterZones": [
@@ -96,6 +106,61 @@
       "trigger": "arrive",
       "toMap": "firebud_training_yard",
       "toSpawn": "from_village_gate"
+    },
+    {
+      "id": "warp_to_earth_vein_cave",
+      "name": "岩脉洞穴入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 6],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "earth_vein_cave",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_tide_echo_cave",
+      "name": "潮回洞穴入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [24, 7],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "tide_echo_cave",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_ember_core_cave",
+      "name": "焰心洞穴入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 8],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "ember_core_cave",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_gale_breath_cave",
+      "name": "岚息洞穴入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [24, 9],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "gale_breath_cave",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_shadow_oath_cavern",
+      "name": "玄影洞窟入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [25, 10],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_cavern",
+      "toSpawn": "from_firebud_village"
     },
     {
       "id": "village_guard",

@@ -12,6 +12,12 @@
       "lineName": "乌力系",
       "description": "常见野生兽类，适合测试敌方、捕捉、状态抗性。",
       "passiveSkillId": "wuli_hard_shell"
+    },
+    {
+      "lineId": "rebirth_beast",
+      "lineName": "转生兽系",
+      "description": "玄影洞窟中出现的试炼兽，完成对应转生仪式时需要捕捉。",
+      "passiveSkillId": "bui_resistant_skin"
     }
   ],
   "subtypes": [
@@ -35,6 +41,31 @@
       "lineId": "wuli",
       "battleRole": "wild_pet",
       "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
+      "subtypeId": "rebirth_beast_trial",
+      "subtypeName": "试炼转生兽",
+      "lineId": "rebirth_beast",
+      "battleRole": "trial_capture_pet",
+      "activeSkillIds": [
+        "pet_attack",
+        "pet_defend",
+        "pet_bui_charge",
+        "pet_sleep_powder",
+        "pet_confuse_cry",
+        "pet_stone_gaze"
+      ]
+    },
+    {
+      "subtypeId": "rebirth_starter_cub",
+      "subtypeName": "转生幼兽",
+      "lineId": "rebirth_beast",
+      "battleRole": "starter_pet",
+      "activeSkillIds": [
+        "pet_attack",
+        "pet_defend",
+        "pet_bui_charge"
+      ]
     }
   ],
   "forms": [
@@ -192,6 +223,266 @@
       },
       "visual": {
         "placeholderPalette": "wuli_tough"
+      }
+    },
+    {
+      "formId": "rebirth_beast_earth_lv50",
+      "formName": "地灵转生兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_beast_trial",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 10,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "baseStats": {
+        "maxHp": 520,
+        "attack": 76,
+        "defense": 92,
+        "agility": 48
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 82
+      },
+      "visual": {
+        "placeholderPalette": "bui_earth"
+      }
+    },
+    {
+      "formId": "rebirth_beast_water_lv50",
+      "formName": "水灵转生兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_beast_trial",
+      "elements": {
+        "fire": 0,
+        "water": 10,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "balanced",
+      "baseStats": {
+        "maxHp": 500,
+        "attack": 72,
+        "defense": 78,
+        "agility": 66
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 82
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
+      "formId": "rebirth_beast_fire_lv50",
+      "formName": "火灵转生兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_beast_trial",
+      "elements": {
+        "fire": 10,
+        "water": 0,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "baseStats": {
+        "maxHp": 480,
+        "attack": 96,
+        "defense": 68,
+        "agility": 70
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 82
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
+      "formId": "rebirth_beast_wind_lv50",
+      "formName": "风灵转生兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_beast_trial",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 0,
+        "wind": 10
+      },
+      "growthProfileId": "agility_high",
+      "baseStats": {
+        "maxHp": 470,
+        "attack": 78,
+        "defense": 64,
+        "agility": 112
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 82
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "rebirth_starter_earth_cub",
+      "formName": "地纹幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 10,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "baseStats": {
+        "maxHp": 96,
+        "attack": 14,
+        "defense": 16,
+        "agility": 46
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_earth"
+      }
+    },
+    {
+      "formId": "rebirth_starter_water_cub",
+      "formName": "潮纹幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 0,
+        "water": 10,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "balanced",
+      "baseStats": {
+        "maxHp": 90,
+        "attack": 15,
+        "defense": 13,
+        "agility": 58
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
+      "formId": "rebirth_starter_fire_cub",
+      "formName": "焰纹幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 10,
+        "water": 0,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "baseStats": {
+        "maxHp": 86,
+        "attack": 20,
+        "defense": 10,
+        "agility": 60
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
+      "formId": "rebirth_starter_wind_cub",
+      "formName": "岚纹幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 0,
+        "wind": 10
+      },
+      "growthProfileId": "agility_high",
+      "baseStats": {
+        "maxHp": 84,
+        "attack": 15,
+        "defense": 10,
+        "agility": 82
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "rebirth_starter_four_spirit_cub",
+      "formName": "四灵幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 3,
+        "water": 3,
+        "earth": 2,
+        "wind": 2
+      },
+      "growthProfileId": "balanced",
+      "baseStats": {
+        "maxHp": 104,
+        "attack": 18,
+        "defense": 15,
+        "agility": 68
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "rebirth_starter_shadow_cub",
+      "formName": "玄影幼兽",
+      "lineId": "rebirth_beast",
+      "subtypeId": "rebirth_starter_cub",
+      "elements": {
+        "fire": 2,
+        "water": 2,
+        "earth": 3,
+        "wind": 3
+      },
+      "growthProfileId": "balanced",
+      "baseStats": {
+        "maxHp": 112,
+        "attack": 21,
+        "defense": 17,
+        "agility": 72
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_earth"
       }
     }
   ]

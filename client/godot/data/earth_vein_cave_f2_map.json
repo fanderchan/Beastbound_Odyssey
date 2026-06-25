@@ -1,0 +1,55 @@
+{
+  "id": "earth_vein_cave_f2",
+  "name": "岩脉洞穴二层",
+  "gridSize": [28, 24],
+  "tileSize": [80, 40],
+  "origin": [560, 110],
+  "spawnCell": [5, 20],
+  "spawnPoints": {
+    "default": [5, 20],
+    "from_floor_1": [5, 20],
+    "from_floor_3": [21, 7]
+  },
+  "blockedCells": [
+    [7, 16],
+    [8, 16],
+    [10, 12],
+    [11, 12],
+    [14, 9],
+    [15, 9],
+    [18, 13],
+    [19, 13]
+  ],
+  "decorCells": [
+    {"cell": [5, 19], "kind": "grass"},
+    {"cell": [9, 15], "kind": "flower"},
+    {"cell": [13, 11], "kind": "grass"},
+    {"cell": [17, 9], "kind": "flower"},
+    {"cell": [21, 7], "kind": "grass"}
+  ],
+  "encounterZones": [],
+  "interactionPoints": [
+    {
+      "id": "earth_vein_stair_2_to_1",
+      "name": "岩脉洞穴一层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [4, 20],
+      "action": "下层",
+      "trigger": "arrive",
+      "toMap": "earth_vein_cave",
+      "toSpawn": "from_floor_2"
+    },
+    {
+      "id": "earth_vein_stair_2_to_3",
+      "name": "岩脉洞穴三层",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [22, 7],
+      "action": "上层",
+      "trigger": "arrive",
+      "toMap": "earth_vein_cave_f3",
+      "toSpawn": "from_floor_2"
+    }
+  ]
+}
