@@ -106,6 +106,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3000 -- --auto-battle-auto-10v10-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3000 -- --auto-battle-command-timer-check
 ```
 
 捉宠：
@@ -115,14 +116,36 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-pet-capture-feedback-check
 ```
 
+挂机：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-loop-closure-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-settings-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-encounter-loop-check
+```
+
 人物：
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-status-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-player-growth-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-player-rebirth-preview-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-player-rebirth-execute-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-player-rebirth-chain-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-remote-stable-unlock-check
+```
+
+宠物管理：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-pet-management-safety-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-pet-management-check
+```
+
+存档迁移契约：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-server-profile-contract-check
 ```
 
 地图设施：

@@ -16,9 +16,11 @@ const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individ
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const PlayerGrowthModel := preload("res://scripts/progression/player_growth_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
+const ServerProfileContractModel := preload("res://scripts/progression/server_profile_contract_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const TrainingPartnerModel := preload("res://scripts/progression/training_partner_model.gd")
 
@@ -115,7 +117,10 @@ const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
 const AUTO_CAPTURE_SETTINGS_KEY := AutoCaptureSettingsModel.SETTINGS_KEY
 const HANG_SETTINGS_KEY := HangSettingsModel.SETTINGS_KEY
+const HANG_SESSION_KEY := HangSettingsModel.SESSION_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
+const PLAYER_GROWTH_KEY := PlayerGrowthModel.PROFILE_KEY
+const SERVER_SYNC_KEY := ServerProfileContractModel.PROFILE_KEY
 const RECORD_POINT_KEY := "recordPoint"
 const UNLOCKED_ABILITIES_KEY := "unlockedAbilities"
 const ABILITY_REMOTE_STABLE := "remoteStable"
@@ -190,7 +195,10 @@ static func default_profile() -> Dictionary:
 		"autoBattleSettings": AutoBattleSettingsModel.default_settings(),
 		"autoCaptureSettings": AutoCaptureSettingsModel.default_settings(),
 		"hangSettings": HangSettingsModel.default_settings(),
+		"hangSession": HangSettingsModel.default_session(),
 		"trainingPartners": [],
+		"playerGrowth": PlayerGrowthModel.default_growth(),
+		"serverSync": ServerProfileContractModel.default_sync_state(),
 		"recordPoint": default_record_point(),
 			"unlockedAbilities": [],
 			"rebirthCount": 0,
@@ -691,6 +699,83 @@ static func mark_pet_seen(profile: Dictionary, instance_id: String) -> Dictionar
 		break
 	normalized["petInstances"] = instances
 	return normalize_profile(normalized)
+
+
+static func pet_locked(profile: Dictionary, instance_id: String) -> bool:
+	return bool(pet_instance_by_id(profile, instance_id).get("locked", false))
+
+
+static func set_pet_locked(profile: Dictionary, instance_id: String, locked: bool) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		instance["locked"] = locked
+		instances[index] = instance
+		break
+	normalized["petInstances"] = instances
+	return normalize_profile(normalized)
+
+
+static func toggle_pet_locked(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+	var next_locked := not bool(instance.get("locked", false))
+	normalized = set_pet_locked(normalized, instance_id, next_locked)
+	var changed := pet_instance_by_id(normalized, instance_id)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"locked": next_locked,
+		"message": "%s 已%s。" % [str(changed.get("name", "宠物")), "锁定" if next_locked else "解锁"],
+	}
+
+
+static func batch_store_standby_pets(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var storage_count := storage_pet_instances(normalized).size()
+	var available := maxi(0, STORAGE_LIMIT - storage_count)
+	if available <= 0:
+		return {"ok": false, "profile": normalized, "message": "兽栏已满。", "storedCount": 0, "skippedCount": 0}
+	var instances: Array = normalized.get("petInstances", [])
+	var stored_count := 0
+	var skipped_count := 0
+	for index in range(instances.size()):
+		if stored_count >= available:
+			break
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		var state := str(instance.get("state", PET_STATE_STANDBY))
+		var instance_id := str(instance.get("instanceId", ""))
+		if state == PET_STATE_STORAGE or state == PET_STATE_BATTLE:
+			continue
+		if bool(instance.get("locked", false)) or _pet_required_by_active_quest(normalized, instance):
+			skipped_count += 1
+			continue
+		instance["state"] = PET_STATE_STORAGE
+		instances[index] = instance
+		stored_count += 1
+	normalized["petInstances"] = instances
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": stored_count > 0,
+		"profile": normalized,
+		"storedCount": stored_count,
+		"skippedCount": skipped_count,
+		"message": "已批量存入%d只，跳过%d只。" % [stored_count, skipped_count] if stored_count > 0 else "没有可批量存入的宠物。",
+	}
 
 
 static func can_move_party_pet(profile: Dictionary, instance_id: String, direction: int) -> Dictionary:
@@ -2146,6 +2231,59 @@ static func with_hang_settings(profile: Dictionary, settings: Dictionary) -> Dic
 	return normalize_profile(normalized)
 
 
+static func hang_session(profile: Dictionary) -> Dictionary:
+	return HangSettingsModel.normalize_session(normalize_profile(profile).get(HANG_SESSION_KEY, {}))
+
+
+static func with_hang_session(profile: Dictionary, session: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[HANG_SESSION_KEY] = HangSettingsModel.normalize_session(session)
+	return normalize_profile(normalized)
+
+
+static func start_hang_session(profile: Dictionary, mode: String, map_id: String = "", cell: Vector2i = Vector2i.ZERO) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[HANG_SESSION_KEY] = HangSettingsModel.session_with_started(normalized.get(HANG_SESSION_KEY, {}), mode, map_id, cell)
+	return normalize_profile(normalized)
+
+
+static func stop_hang_session(profile: Dictionary, reason: String = "") -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[HANG_SESSION_KEY] = HangSettingsModel.session_with_stopped(normalized.get(HANG_SESSION_KEY, {}), reason)
+	return normalize_profile(normalized)
+
+
+static func record_hang_battle_finished(profile: Dictionary, captured_count: int = 0) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[HANG_SESSION_KEY] = HangSettingsModel.session_with_battle_finished(normalized.get(HANG_SESSION_KEY, {}), captured_count)
+	return normalize_profile(normalized)
+
+
+static func hang_capture_target_reached(profile: Dictionary) -> bool:
+	var normalized := normalize_profile(profile)
+	return HangSettingsModel.capture_target_reached(normalized.get(HANG_SETTINGS_KEY, {}), normalized.get(HANG_SESSION_KEY, {}))
+
+
+static func player_growth(profile: Dictionary) -> Dictionary:
+	return normalize_profile(profile).get(PLAYER_GROWTH_KEY, PlayerGrowthModel.default_growth())
+
+
+static func player_growth_summary_lines(profile: Dictionary) -> Array[String]:
+	return PlayerGrowthModel.summary_lines(player_growth(profile))
+
+
+static func server_sync_state(profile: Dictionary) -> Dictionary:
+	return ServerProfileContractModel.normalize_sync_state(normalize_profile(profile).get(SERVER_SYNC_KEY, {}))
+
+
+static func server_contract_errors() -> Array[String]:
+	return ServerProfileContractModel.validation_errors()
+
+
+static func server_migration_preview(profile: Dictionary) -> Dictionary:
+	return ServerProfileContractModel.migration_preview(normalize_profile(profile))
+
+
 static func player_hp(profile: Dictionary) -> int:
 	var normalized := normalize_profile(profile)
 	var player = normalized.get("player", {})
@@ -2662,6 +2800,12 @@ static func deliver_pet_for_quest(profile: Dictionary, quest_id: String, instanc
 			"profile": normalized,
 			"message": "没有找到这只宠物。",
 		}
+	if bool(instance.get("locked", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 已锁定，不能交付。" % str(instance.get("name", "宠物")),
+		}
 	var event := {
 		"type": "deliver_pet",
 		"instanceId": instance_id,
@@ -2898,6 +3042,28 @@ static func _battle_item_inventory_from_slots(slots: Array[Dictionary]) -> Dicti
 
 static func _quest_states(profile: Dictionary) -> Dictionary:
 	return QuestModel.normalize_states(profile.get(QUEST_STATES_KEY, {}))
+
+
+static func _pet_required_by_active_quest(profile: Dictionary, instance: Dictionary) -> bool:
+	var quest_id := str(profile.get(ACTIVE_QUEST_ID_KEY, ""))
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty():
+		return false
+	var state := QuestModel.normalize_state(_quest_states(profile).get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return false
+	var event := {
+		"type": "deliver_pet",
+		"instanceId": str(instance.get("instanceId", "")),
+		"formId": str(instance.get("formId", instance.get("templateId", ""))),
+		"lineId": str(instance.get("lineId", "")),
+		"level": maxi(1, int(instance.get("level", 1))),
+		"amount": 1,
+	}
+	if QuestModel.progress_amount_for_event(quest, event) > 0:
+		return true
+	event["type"] = "capture_pet"
+	return QuestModel.progress_amount_for_event(quest, event) > 0
 
 
 static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary) -> bool:
@@ -3918,6 +4084,10 @@ static func can_drop_pet(profile: Dictionary, instance_id: String) -> Dictionary
 		return {"ok": false, "message": "没有找到这只宠物。"}
 	if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 		return {"ok": false, "message": "兽栏里的宠物不能直接丢弃。"}
+	if bool(instance.get("locked", false)):
+		return {"ok": false, "message": "%s 已锁定，不能丢弃。" % str(instance.get("name", "宠物"))}
+	if _pet_required_by_active_quest(normalized, instance):
+		return {"ok": false, "message": "%s 是当前任务需要的宠物，不能丢弃。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 可以丢弃。" % str(instance.get("name", "宠物"))}
 
 
@@ -3996,6 +4166,10 @@ static func can_clear_storage_pet(profile: Dictionary, instance_id: String) -> D
 		return {"ok": false, "message": "没有找到这只宠物。"}
 	if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
 		return {"ok": false, "message": "只有兽栏里的宠物可以清理。"}
+	if bool(instance.get("locked", false)):
+		return {"ok": false, "message": "%s 已锁定，不能清理。" % str(instance.get("name", "宠物"))}
+	if _pet_required_by_active_quest(normalized, instance):
+		return {"ok": false, "message": "%s 是当前任务需要的宠物，不能清理。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 可以清理。" % str(instance.get("name", "宠物"))}
 
 
@@ -4211,6 +4385,8 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		str(instance.get("growthTierLabel", growth_profile_label(str(instance.get("growthProfileId", ""))))),
 		str(instance.get("individualQualityLabel", "普通")),
 	])
+	if bool(instance.get("locked", false)):
+		lines.append("保护：已锁定")
 	lines.append_array(PetCultivationModel.detail_lines_for_pet(instance))
 	var initial_stats = instance.get("initialStats", {})
 	if initial_stats is Dictionary:
@@ -4547,11 +4723,20 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	)
 	normalized[AUTO_CAPTURE_SETTINGS_KEY] = AutoCaptureSettingsModel.normalize_settings(normalized.get(AUTO_CAPTURE_SETTINGS_KEY, {}))
 	normalized[HANG_SETTINGS_KEY] = HangSettingsModel.normalize_settings(normalized.get(HANG_SETTINGS_KEY, {}))
+	normalized[HANG_SESSION_KEY] = HangSettingsModel.normalize_session(normalized.get(HANG_SESSION_KEY, {}))
 	normalized[TRAINING_PARTNERS_KEY] = TrainingPartnerModel.normalize_partners(normalized.get(TRAINING_PARTNERS_KEY, []))
 	normalized[RECORD_POINT_KEY] = _normalize_record_point(normalized.get(RECORD_POINT_KEY, {}))
 	normalized[UNLOCKED_ABILITIES_KEY] = _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
 	normalized[REBIRTH_TRIAL_PROOFS_KEY] = _normalize_rebirth_trial_proofs(normalized.get(REBIRTH_TRIAL_PROOFS_KEY, {}))
 	normalized = RebirthModel.normalize_profile(normalized)
+	normalized[PLAYER_GROWTH_KEY] = PlayerGrowthModel.normalize_growth(
+		normalized.get(PLAYER_GROWTH_KEY, {}),
+		player_dict,
+		RebirthModel.rebirth_count(normalized),
+		equipment_slots_value,
+		equipment_durability_value
+	)
+	normalized[SERVER_SYNC_KEY] = ServerProfileContractModel.normalize_sync_state(normalized.get(SERVER_SYNC_KEY, {}))
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
 	if active_id != "":
@@ -5604,6 +5789,7 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 		instance["lastCultivationResult"] = (last_cultivation_result as Dictionary).duplicate(true)
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
+	instance["locked"] = bool(instance.get("locked", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)

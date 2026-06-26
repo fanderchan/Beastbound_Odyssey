@@ -91,6 +91,7 @@ const PET_LOW_POWER_FILTER_THRESHOLD := 31
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
+const BATTLE_COMMAND_COUNTDOWN_SECONDS := 99.0
 const BATTLE_AUTO_ATTACK_STEP_DELAY := 0.16
 const BATTLE_PASSIVE_LABEL_FONT_SIZE := 15
 const BATTLE_PASSIVE_MAX_LINES := 2
@@ -185,6 +186,10 @@ var encounter_enter_button: Button
 var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
 var battle_command_title_label: Label
+var battle_round_panel: PanelContainer
+var battle_round_label: Label
+var battle_timer_panel: PanelContainer
+var battle_timer_label: Label
 var battle_auto_button: Button
 var battle_auto_stop_button: Button
 var battle_command_button_grid: GridContainer
@@ -289,6 +294,8 @@ var pet_state_cycle_button: Button
 var pet_stable_button: Button
 var pet_party_up_button: Button
 var pet_party_down_button: Button
+var pet_lock_button: Button
+var pet_batch_store_button: Button
 var pet_rename_button: Button
 var pet_cultivation_button: Button
 var pet_drop_button: Button
@@ -418,6 +425,7 @@ var auto_gm_10v10_map_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
+var auto_battle_command_timer_check: bool = false
 var auto_battle_speed_check: bool = false
 var auto_battle_feedback_check: bool = false
 var auto_battle_combo_check: bool = false
@@ -513,6 +521,10 @@ var auto_quest_objective_templates_check: bool = false
 var auto_map_region_contract_check: bool = false
 var auto_reward_grant_check: bool = false
 var auto_encounter_loop_check: bool = false
+var auto_hang_loop_closure_check: bool = false
+var auto_pet_management_safety_check: bool = false
+var auto_player_growth_contract_check: bool = false
+var auto_server_profile_contract_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var backpack_filter_preview: bool = false
@@ -661,6 +673,10 @@ var battle_last_event_launch_mode: String = ""
 var battle_last_event_ledger: Dictionary = {}
 var battle_recorded_event_sequence: int = 0
 var battle_float_texts: Array[Dictionary] = []
+var battle_command_countdown_remaining: float = 99.0
+var battle_command_countdown_last_second: int = -1
+var battle_round_display_last_text: String = ""
+var battle_timer_display_last_text: String = ""
 var battle_debug_window: Window
 var battle_debug_text: TextEdit
 var battle_debug_last_text: String = ""
@@ -761,6 +777,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_visual_timing_check")
 	elif auto_battle_label_check:
 		call_deferred("_run_auto_battle_label_check")
+	elif auto_battle_command_timer_check:
+		call_deferred("_run_auto_battle_command_timer_check")
 	elif auto_battle_event_ledger_check:
 		call_deferred("_run_auto_battle_event_ledger_check")
 	elif auto_battle_status_check:
@@ -905,6 +923,14 @@ func _ready() -> void:
 		call_deferred("_run_auto_reward_grant_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
+	elif auto_hang_loop_closure_check:
+		call_deferred("_run_auto_hang_loop_closure_check")
+	elif auto_pet_management_safety_check:
+		call_deferred("_run_auto_pet_management_safety_check")
+	elif auto_player_growth_contract_check:
+		call_deferred("_run_auto_player_growth_contract_check")
+	elif auto_server_profile_contract_check:
+		call_deferred("_run_auto_server_profile_contract_check")
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
@@ -1206,6 +1232,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_target_check = true
 		elif arg == "--auto-battle-round-check":
 			auto_battle_round_check = true
+		elif arg == "--auto-battle-command-timer-check":
+			auto_battle_command_timer_check = true
 		elif arg == "--auto-battle-speed-check":
 			auto_battle_speed_check = true
 		elif arg == "--auto-battle-feedback-check":
@@ -1398,6 +1426,14 @@ func _apply_preview_window_args() -> void:
 			auto_reward_grant_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
+		elif arg == "--auto-hang-loop-closure-check":
+			auto_hang_loop_closure_check = true
+		elif arg == "--auto-pet-management-safety-check":
+			auto_pet_management_safety_check = true
+		elif arg == "--auto-player-growth-contract-check":
+			auto_player_growth_contract_check = true
+		elif arg == "--auto-server-profile-contract-check":
+			auto_server_profile_contract_check = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
@@ -3469,6 +3505,52 @@ func _run_auto_battle_round_check() -> void:
 		ally_hp_after,
 		str(enemy_target_spread),
 		battle_last_round_applied_events,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_command_timer_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	if zone_found:
+		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	var initial_round_ok := battle_round_label != null and battle_round_label.text == "第 1 回合"
+	var initial_timer_ok := battle_timer_label != null and battle_timer_label.text == "99秒"
+	var timer_visible_ok := battle_round_panel != null and battle_round_panel.visible and battle_timer_panel != null and battle_timer_panel.visible
+	battle_command_countdown_remaining = 0.04
+	battle_command_countdown_last_second = -1
+	var guard := 0
+	while guard < 120 and battle_active and not _battle_commands_locked():
+		guard += 1
+		await get_tree().process_frame
+	var auto_started_round := battle_active and _battle_commands_locked() and str(battle_state.get("phase", "")) == "round_events"
+	var default_round_events := battle_action_timer > 0.0 or not battle_event_queue.is_empty() or not battle_current_event.is_empty()
+	guard = 0
+	while guard < 2400 and battle_active and _battle_commands_locked():
+		guard += 1
+		await get_tree().process_frame
+	var returned_to_command := battle_active and not _battle_commands_locked()
+	var second_round_ok := int(battle_state.get("round", 0)) >= 2 and battle_round_label != null and battle_round_label.text == "第 2 回合"
+	var timer_reset_ok := battle_timer_label != null and battle_timer_label.text == "99秒"
+	var status := "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
+	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s" % [
+		status,
+		str(loaded),
+		str(zone_found),
+		str(timer_visible_ok),
+		str(initial_round_ok),
+		str(initial_timer_ok),
+		str(auto_started_round),
+		str(default_round_events),
+		str(returned_to_command),
+		str(second_round_ok),
+		str(timer_reset_ok),
+		battle_round_label.text if battle_round_label != null else "",
+		battle_timer_label.text if battle_timer_label != null else "",
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -10029,6 +10111,181 @@ func _run_auto_encounter_loop_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_hang_loop_closure_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = PlayerProgressModel.default_profile()
+	var settings := PlayerProgressModel.hang_settings(player_profile)
+	settings[HangSettingsModel.CAPTURE_TARGET_COUNT_KEY] = 2
+	settings[HangSettingsModel.LOW_HP_STOP_PERCENT_KEY] = 30
+	settings[HangSettingsModel.LOW_HP_ACTION_KEY] = HangSettingsModel.LOW_HP_ACTION_TOWN_HEAL
+	settings[HangSettingsModel.RESUME_AFTER_HEAL_KEY] = true
+	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
+	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", "firebud_village_gate", Vector2i(10, 10))
+	player_profile = PlayerProgressModel.record_hang_battle_finished(player_profile, 1)
+	var one_capture_session := PlayerProgressModel.hang_session(player_profile)
+	var one_capture_ok := (
+		int(one_capture_session.get(HangSettingsModel.SESSION_BATTLE_COUNT_KEY, 0)) == 1
+		and int(one_capture_session.get(HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY, 0)) == 1
+		and not PlayerProgressModel.hang_capture_target_reached(player_profile)
+	)
+	player_profile = PlayerProgressModel.record_hang_battle_finished(player_profile, 1)
+	var target_reached_ok := PlayerProgressModel.hang_capture_target_reached(player_profile)
+	var session := PlayerProgressModel.hang_session(player_profile)
+	session = HangSettingsModel.session_with_pending_resume(session, true)
+	player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+	var pending_resume_ok := bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_PENDING_RESUME_KEY, false))
+	_load_map("firebud_village_gate", "from_training_yard")
+	auto_settings_active_tab = "hang"
+	_open_auto_settings_panel()
+	await get_tree().process_frame
+	var ui_ok := (
+		auto_settings_panel != null
+		and auto_settings_panel.visible
+		and auto_settings_controls.has(HangSettingsModel.LOW_HP_ACTION_KEY)
+		and auto_settings_controls.has(HangSettingsModel.RESUME_AFTER_HEAL_KEY)
+		and auto_settings_controls.has(HangSettingsModel.CAPTURE_TARGET_COUNT_KEY)
+	)
+	_close_auto_settings_panel()
+	var status := "ok" if one_capture_ok and target_reached_ok and pending_resume_ok and ui_ok else "failed"
+	print("hang loop closure check ready: status=%s one_capture=%s target=%s pending_resume=%s ui=%s" % [
+		status,
+		str(one_capture_ok),
+		str(target_reached_ok),
+		str(pending_resume_ok),
+		str(ui_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_management_safety_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var profile := PlayerProgressModel.default_profile()
+	var instances: Array = profile.get("petInstances", [])
+	var task_pet := PlayerProgressModel.create_pet_instance_from_form("pet_task_guard", "任务乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STORAGE, 50)
+	var batch_pet := PlayerProgressModel.create_pet_instance_from_form("pet_batch_store", "批存布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 2)
+	var locked_pet := PlayerProgressModel.create_pet_instance_from_form("pet_locked_guard", "锁定布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 3)
+	locked_pet["locked"] = true
+	instances.append(task_pet)
+	instances.append(batch_pet)
+	instances.append(locked_pet)
+	profile["petInstances"] = instances
+	profile["activeQuestId"] = "quest_capture_wuli"
+	profile["questStates"] = {
+		"quest_capture_wuli": {"id": "quest_capture_wuli", "status": QuestModel.STATUS_ACTIVE, "progress": 0},
+	}
+	player_profile = PlayerProgressModel.normalize_profile(profile)
+	var locked_drop := PlayerProgressModel.can_drop_pet(player_profile, "pet_locked_guard")
+	var locked_deliver := PlayerProgressModel.deliver_pet_for_quest(player_profile, "quest_capture_wuli", "pet_locked_guard")
+	var task_clear := PlayerProgressModel.can_clear_storage_pet(player_profile, "pet_task_guard")
+	var lock_result := PlayerProgressModel.toggle_pet_locked(player_profile, "pet_batch_store")
+	player_profile = lock_result.get("profile", player_profile)
+	var unlock_result := PlayerProgressModel.toggle_pet_locked(player_profile, "pet_batch_store")
+	player_profile = unlock_result.get("profile", player_profile)
+	var batch_result := PlayerProgressModel.batch_store_standby_pets(player_profile)
+	var batch_profile := batch_result.get("profile", {}) as Dictionary
+	var batch_pet_state := str(PlayerProgressModel.pet_instance_by_id(batch_profile, "pet_batch_store").get("state", ""))
+	var locked_pet_state := str(PlayerProgressModel.pet_instance_by_id(batch_profile, "pet_locked_guard").get("state", ""))
+	player_profile = batch_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	pet_selected_instance_id = "pet_locked_guard"
+	_open_pet_panel()
+	await get_tree().process_frame
+	var ui_ok := (
+		pet_lock_button != null
+		and pet_lock_button.visible
+		and pet_lock_button.text == "解锁"
+		and pet_batch_store_button != null
+		and pet_batch_store_button.visible
+		and (pet_detail_label.text if pet_detail_label != null else "").find("保护：已锁定") >= 0
+	)
+	_close_pet_panel()
+	var safety_ok := (
+		not bool(locked_drop.get("ok", false))
+		and str(locked_drop.get("message", "")).find("锁定") >= 0
+		and not bool(locked_deliver.get("ok", false))
+		and not bool(task_clear.get("ok", false))
+		and bool(lock_result.get("locked", false))
+		and not bool(unlock_result.get("locked", true))
+		and batch_pet_state == PlayerProgressModel.PET_STATE_STORAGE
+		and locked_pet_state == PlayerProgressModel.PET_STATE_STANDBY
+	)
+	var status := "ok" if safety_ok and ui_ok else "failed"
+	print("pet management safety check ready: status=%s safety=%s ui=%s batch=%s locked_state=%s" % [
+		status,
+		str(safety_ok),
+		str(ui_ok),
+		batch_pet_state,
+		locked_pet_state,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_player_growth_contract_check() -> void:
+	profile_save_enabled = false
+	var profile := PlayerProgressModel.default_profile()
+	var player_dict := profile.get("player", {}) as Dictionary
+	player_dict["level"] = 10
+	profile["player"] = player_dict
+	profile = PlayerProgressModel.normalize_profile(profile)
+	var growth := PlayerProgressModel.player_growth(profile)
+	var lines := PlayerProgressModel.player_growth_summary_lines(profile)
+	var sources := growth.get("statPointSources", {}) as Dictionary
+	var skill_sources: Array = growth.get("skillSources", [])
+	var level_source_ok := int(sources.get("level_up", 0)) == 27
+	var equipment_skill_ok := false
+	for source in skill_sources:
+		if source is Dictionary and str((source as Dictionary).get("sourceType", "")) == "equipment":
+			equipment_skill_ok = true
+			break
+	var summary_ok := "\n".join(lines).find("成长来源") >= 0 and "\n".join(lines).find("人物技能") >= 0
+	player_profile = profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	_open_player_status_panel()
+	await get_tree().process_frame
+	var ui_text := player_status_detail_label.text if player_status_detail_label != null else ""
+	var ui_ok := ui_text.find("成长来源") >= 0 and ui_text.find("属性点") >= 0 and ui_text.find("人物技能") >= 0
+	_close_player_status_panel()
+	var status := "ok" if level_source_ok and equipment_skill_ok and summary_ok and ui_ok else "failed"
+	print("player growth contract check ready: status=%s level_source=%s equipment_skill=%s summary=%s ui=%s" % [
+		status,
+		str(level_source_ok),
+		str(equipment_skill_ok),
+		str(summary_ok),
+		str(ui_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_profile_contract_check() -> void:
+	profile_save_enabled = false
+	var profile := PlayerProgressModel.normalize_profile(PlayerProgressModel.default_profile())
+	var sync := PlayerProgressModel.server_sync_state(profile)
+	var errors := PlayerProgressModel.server_contract_errors()
+	var preview := PlayerProgressModel.server_migration_preview(profile)
+	var counts := preview.get("counts", {}) as Dictionary
+	var sync_ok := int(sync.get("schemaVersion", 0)) == 1 and sync.has("dirtyModules")
+	var contract_ok := errors.is_empty() and int(preview.get("moduleCount", 0)) >= 8
+	var counts_ok := (
+		int(counts.get("pets", 0)) >= 4
+		and int(counts.get("backpackSlots", 0)) >= BackpackModel.BASE_SLOT_LIMIT
+		and int(counts.get("equipmentSlots", 0)) >= 8
+	)
+	var status := "ok" if sync_ok and contract_ok and counts_ok else "failed"
+	print("server profile contract check ready: status=%s sync=%s contract=%s counts=%s modules=%d errors=%s" % [
+		status,
+		str(sync_ok),
+		str(contract_ok),
+		str(counts_ok),
+		int(preview.get("moduleCount", 0)),
+		" | ".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_reward_check() -> void:
 	profile_save_enabled = false
 	var base_profile := PlayerProgressModel.default_profile()
@@ -15375,6 +15632,7 @@ func _process(delta: float) -> void:
 	if battle_active:
 		var battle_start := _perf_now()
 		_update_path_line_overlay()
+		_update_battle_command_countdown(delta)
 		_update_battle_animation(delta)
 		_update_battle_auto_attack(delta)
 		_update_hud_text()
@@ -15806,6 +16064,36 @@ func _build_hud() -> void:
 	status_label.add_theme_font_size_override("font_size", 18)
 	top_panel.add_child(status_label)
 	hud_root.add_child(top_panel)
+
+	battle_round_panel = _panel_container("BattleRoundPanel")
+	battle_round_panel.visible = false
+	battle_round_panel.z_index = 28
+	battle_round_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_round_panel.add_theme_stylebox_override("panel", _battle_indicator_panel_style())
+	battle_round_label = Label.new()
+	battle_round_label.name = "BattleRoundLabel"
+	battle_round_label.text = "第 1 回合"
+	battle_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_round_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	battle_round_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_round_label.add_theme_font_size_override("font_size", 17)
+	battle_round_panel.add_child(battle_round_label)
+	hud_root.add_child(battle_round_panel)
+
+	battle_timer_panel = _panel_container("BattleTimerPanel")
+	battle_timer_panel.visible = false
+	battle_timer_panel.z_index = 28
+	battle_timer_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_timer_panel.add_theme_stylebox_override("panel", _battle_indicator_panel_style())
+	battle_timer_label = Label.new()
+	battle_timer_label.name = "BattleTimerLabel"
+	battle_timer_label.text = "99秒"
+	battle_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	battle_timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_timer_label.add_theme_font_size_override("font_size", 19)
+	battle_timer_panel.add_child(battle_timer_label)
+	hud_root.add_child(battle_timer_panel)
 
 	side_panel = _panel_container("SidePanel")
 	var side_column := VBoxContainer.new()
@@ -16542,6 +16830,22 @@ func _build_hud() -> void:
 		_on_pet_party_move_pressed(1)
 	)
 	pet_order_row.add_child(pet_party_down_button)
+	var pet_safety_row := HBoxContainer.new()
+	pet_safety_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_safety_row.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_child(pet_safety_row)
+	pet_lock_button = Button.new()
+	pet_lock_button.text = "锁定"
+	pet_lock_button.custom_minimum_size = Vector2(0, 42)
+	pet_lock_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_lock_button.pressed.connect(_on_pet_lock_pressed)
+	pet_safety_row.add_child(pet_lock_button)
+	pet_batch_store_button = Button.new()
+	pet_batch_store_button.text = "批存"
+	pet_batch_store_button.custom_minimum_size = Vector2(0, 42)
+	pet_batch_store_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_batch_store_button.pressed.connect(_on_pet_batch_store_pressed)
+	pet_safety_row.add_child(pet_batch_store_button)
 	var pet_button_row := HBoxContainer.new()
 	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_button_row.add_theme_constant_override("separation", 8)
@@ -17606,6 +17910,19 @@ func _battle_passive_panel_style() -> StyleBoxFlat:
 	return style
 
 
+func _battle_indicator_panel_style() -> StyleBoxFlat:
+	var style := _panel_style()
+	style.bg_color = Color(0.08, 0.11, 0.11, 0.72)
+	style.border_color = Color(0.72, 0.56, 0.32, 0.66)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	return style
+
+
 func _battle_command_button_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
@@ -18020,6 +18337,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_last_event_ledger.clear()
 	battle_recorded_event_sequence = 0
 	battle_float_texts.clear()
+	_reset_battle_command_countdown()
 	_set_battle_command_owner("player")
 	if player != null:
 		player.visible = false
@@ -18087,6 +18405,9 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_last_event_ledger.clear()
 	battle_recorded_event_sequence = 0
 	battle_float_texts.clear()
+	battle_command_countdown_remaining = BATTLE_COMMAND_COUNTDOWN_SECONDS
+	battle_command_countdown_last_second = -1
+	_sync_battle_round_timer_labels(true)
 	_set_battle_command_owner("player")
 	if battle_command_panel != null:
 		battle_command_panel.visible = false
@@ -18135,11 +18456,27 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	var log_lines: Array[String] = []
 	for line in result.get("logLines", []):
 		log_lines.append(str(line))
+	var captured_count := _captured_pet_count_from_battle_result(result)
+	var route_to_healer_after_battle := false
+	if _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false)):
+		player_profile = PlayerProgressModel.record_hang_battle_finished(player_profile, captured_count)
+		if PlayerProgressModel.hang_capture_target_reached(player_profile):
+			_stop_hang_activity("", true)
+			player_profile = PlayerProgressModel.stop_hang_session(player_profile, "capture_target")
+			log_lines.append("捕宠目标已完成，挂机停止。")
 	var quest_lines := _quest_messages_for_battle_result(ended_state, result)
 	for line in quest_lines:
 		log_lines.append(line)
 	if hang_stop_message != "":
+		var hang_settings := PlayerProgressModel.hang_settings(player_profile)
+		var low_hp_action := str(hang_settings.get(HangSettingsModel.LOW_HP_ACTION_KEY, HangSettingsModel.LOW_HP_ACTION_STOP))
+		var resume_after_heal := bool(hang_settings.get(HangSettingsModel.RESUME_AFTER_HEAL_KEY, true))
 		_stop_hang_activity("", true)
+		if low_hp_action == HangSettingsModel.LOW_HP_ACTION_TOWN_HEAL:
+			var session := PlayerProgressModel.hang_session(player_profile)
+			session = HangSettingsModel.session_with_pending_resume(session, resume_after_heal)
+			player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+			route_to_healer_after_battle = true
 		log_lines.append(hang_stop_message)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
@@ -18148,7 +18485,24 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	else:
 		_end_battle(true)
 	_set_world_log_message("\n".join(log_lines))
+	if route_to_healer_after_battle:
+		call_deferred("_route_to_hang_healer")
 	return result
+
+
+func _captured_pet_count_from_battle_result(result: Dictionary) -> int:
+	var captured_values = result.get("capturedPets", [])
+	return (captured_values as Array).size() if captured_values is Array else 0
+
+
+func _route_to_hang_healer() -> void:
+	if battle_active:
+		return
+	var target := _navigation_target_for_interaction_id("firebud_doctor")
+	if target.is_empty():
+		_set_world_log_message("暂时找不到村医，挂机已停止。")
+		return
+	_route_to_quest_target(target)
 
 
 func _return_player_to_record_point_after_knockaway(log_lines: Array[String]) -> void:
@@ -18208,9 +18562,17 @@ func _hang_stop_message_for_battle_result(ended_state: Dictionary) -> String:
 	var player_hp := _battle_player_hp_from_state(ended_state)
 	var player_max_hp := _battle_player_max_hp_from_state(ended_state)
 	if threshold == HangSettingsModel.STOP_ON_DEATH:
-		return "人物倒下过，挂机已停止。" if battle_player_zero_hp_seen or player_hp <= 0 else ""
+		if battle_player_zero_hp_seen or player_hp <= 0:
+			var death_settings := PlayerProgressModel.hang_settings(player_profile)
+			if str(death_settings.get(HangSettingsModel.LOW_HP_ACTION_KEY, HangSettingsModel.LOW_HP_ACTION_STOP)) == HangSettingsModel.LOW_HP_ACTION_TOWN_HEAL:
+				return "人物倒下过，正在回村治疗。"
+			return "人物倒下过，挂机已停止。"
+		return ""
 	var hp_percent := float(maxi(0, player_hp)) / float(player_max_hp) * 100.0
 	if hp_percent < float(threshold):
+		var low_hp_settings := PlayerProgressModel.hang_settings(player_profile)
+		if str(low_hp_settings.get(HangSettingsModel.LOW_HP_ACTION_KEY, HangSettingsModel.LOW_HP_ACTION_STOP)) == HangSettingsModel.LOW_HP_ACTION_TOWN_HEAL:
+			return "人物生命低于%d%%，正在回村治疗。" % threshold
 		return "人物生命低于%d%%，挂机已停止。" % threshold
 	return ""
 
@@ -18588,6 +18950,9 @@ func _refresh_player_status_panel() -> void:
 			_bbcode_escape(str(entry.get("spiritLabel", "精灵"))),
 			_bbcode_escape(_equipment_spirit_sources_text(entry)),
 			])
+	lines.append("")
+	for growth_line in PlayerProgressModel.player_growth_summary_lines(player_profile):
+		lines.append(str(growth_line))
 	var point_value = player_profile.get(PlayerProgressModel.RECORD_POINT_KEY, {})
 	var point := point_value as Dictionary if point_value is Dictionary else {}
 	lines.append("")
@@ -20276,6 +20641,8 @@ func _activate_encounter_stone(item_id: String) -> void:
 	encounter_stone_interval = BackpackModel.world_encounter_interval_for(item_id)
 	encounter_stone_remaining = BackpackModel.world_encounter_duration_for(item_id)
 	encounter_stone_elapsed = 0.0
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
+	player_profile = PlayerProgressModel.start_hang_session(player_profile, "encounter_stone", current_map_id, player_cell)
 	_set_hang_mode(false)
 	_sync_hang_button_text()
 	_set_world_log_message("%s 已生效，站在遇敌区域每%d秒遇敌。" % [
@@ -20290,6 +20657,8 @@ func _encounter_stone_active() -> bool:
 
 func _clear_encounter_stone_effect(show_message: bool = false) -> void:
 	var item_label := BackpackModel.label_for(encounter_stone_item_id, "遇敌石")
+	if _encounter_stone_active():
+		player_profile = PlayerProgressModel.stop_hang_session(player_profile, "encounter_stone_end")
 	encounter_stone_item_id = ""
 	encounter_stone_interval = 0.0
 	encounter_stone_remaining = 0.0
@@ -21986,6 +22355,25 @@ func _refresh_hang_settings_tab() -> void:
 		HangSettingsModel.low_hp_stop_options(),
 		str(settings.get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, HangSettingsModel.STOP_ON_DEATH))
 	)
+	_add_auto_settings_option(
+		"低血动作",
+		HangSettingsModel.LOW_HP_ACTION_KEY,
+		HangSettingsModel.low_hp_action_options(),
+		str(settings.get(HangSettingsModel.LOW_HP_ACTION_KEY, HangSettingsModel.LOW_HP_ACTION_STOP))
+	)
+	_add_auto_settings_checkbox(
+		"治疗后继续",
+		HangSettingsModel.RESUME_AFTER_HEAL_KEY,
+		bool(settings.get(HangSettingsModel.RESUME_AFTER_HEAL_KEY, true))
+	)
+	_add_auto_settings_int_spinbox(
+		"捕宠目标",
+		HangSettingsModel.CAPTURE_TARGET_COUNT_KEY,
+		int(settings.get(HangSettingsModel.CAPTURE_TARGET_COUNT_KEY, 0)),
+		0,
+		HangSettingsModel.MAX_CAPTURE_TARGET_COUNT,
+		"只"
+	)
 	var button_row := HBoxContainer.new()
 	button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button_row.add_theme_constant_override("separation", 8)
@@ -22342,7 +22730,7 @@ func _auto_capture_form_options() -> Array[Dictionary]:
 
 
 func _set_auto_settings_value(key: String, value) -> void:
-	if key == HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
+	if _hang_settings_keys().has(key):
 		_set_hang_settings_value(key, value)
 		return
 	if _auto_capture_settings_keys().has(key):
@@ -22372,6 +22760,15 @@ func _auto_capture_settings_keys() -> Array[String]:
 	]
 
 
+func _hang_settings_keys() -> Array[String]:
+	return [
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY,
+		HangSettingsModel.LOW_HP_ACTION_KEY,
+		HangSettingsModel.RESUME_AFTER_HEAL_KEY,
+		HangSettingsModel.CAPTURE_TARGET_COUNT_KEY,
+	]
+
+
 func _set_auto_capture_settings_value(key: String, value) -> void:
 	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
 	match key:
@@ -22388,8 +22785,15 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 
 func _set_hang_settings_value(key: String, value) -> void:
 	var settings := PlayerProgressModel.hang_settings(player_profile)
-	if key == HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
-		settings[key] = HangSettingsModel.normalized_low_hp_stop_percent(value)
+	match key:
+		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY:
+			settings[key] = HangSettingsModel.normalized_low_hp_stop_percent(value)
+		HangSettingsModel.LOW_HP_ACTION_KEY:
+			settings[key] = HangSettingsModel.normalized_low_hp_action(value)
+		HangSettingsModel.RESUME_AFTER_HEAL_KEY:
+			settings[key] = bool(value)
+		HangSettingsModel.CAPTURE_TARGET_COUNT_KEY:
+			settings[key] = clampi(int(value), 0, HangSettingsModel.MAX_CAPTURE_TARGET_COUNT)
 	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
@@ -23534,6 +23938,13 @@ func _refresh_pet_panel() -> void:
 		pet_party_down_button.disabled = not can_edit_order or not bool(down_check.get("ok", false))
 		pet_party_up_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
 		pet_party_down_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
+	if pet_lock_button != null:
+		pet_lock_button.visible = not selected.is_empty()
+		pet_lock_button.disabled = selected.is_empty()
+		pet_lock_button.text = "解锁" if bool(selected.get("locked", false)) else "锁定"
+	if pet_batch_store_button != null:
+		pet_batch_store_button.visible = true
+		pet_batch_store_button.disabled = PlayerProgressModel.storage_pet_instances(player_profile).size() >= PlayerProgressModel.STORAGE_LIMIT
 	if pet_rename_button != null:
 		pet_rename_button.visible = not selected.is_empty()
 		pet_rename_button.disabled = selected.is_empty()
@@ -23756,10 +24167,12 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 	var marker := "▶ " if instance_id == pet_selected_instance_id else ""
 	var active_marker := "主 " if str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE else ""
 	var new_marker := "新 " if bool(instance.get("isNew", false)) else ""
-	button.text = "%s%s%s%s\nLv%d  %s  战力%d" % [
+	var lock_marker := "锁 " if bool(instance.get("locked", false)) else ""
+	button.text = "%s%s%s%s%s\nLv%d  %s  战力%d" % [
 		marker,
 		active_marker,
 		new_marker,
+		lock_marker,
 		str(instance.get("name", "宠物")),
 		int(instance.get("level", 1)),
 		PlayerProgressModel.state_label(str(instance.get("state", ""))),
@@ -23820,6 +24233,24 @@ func _on_pet_stable_pressed() -> void:
 
 func _on_pet_party_move_pressed(direction: int) -> void:
 	var result := PlayerProgressModel.move_party_pet(player_profile, pet_selected_instance_id, direction)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_lock_pressed() -> void:
+	var result := PlayerProgressModel.toggle_pet_locked(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_batch_store_pressed() -> void:
+	var result := PlayerProgressModel.batch_store_standby_pets(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
@@ -24803,6 +25234,7 @@ func _finish_battle_round_and_open_commands() -> void:
 	battle_selected_ally_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
+	_reset_battle_command_countdown()
 	_sync_battle_target_selection()
 	if battle_auto_attack_enabled:
 		battle_auto_attack_delay = maxf(battle_auto_attack_delay, BATTLE_AUTO_ROUND_SETTLE_DELAY)
@@ -25576,6 +26008,74 @@ func _battle_commands_locked() -> bool:
 	return battle_action_timer > 0.0 or not battle_event_queue.is_empty() or battle_enemy_response_pending or battle_end_pending or str(battle_state.get("phase", "command")) != "command"
 
 
+func _reset_battle_command_countdown() -> void:
+	battle_command_countdown_remaining = BATTLE_COMMAND_COUNTDOWN_SECONDS
+	battle_command_countdown_last_second = -1
+	_sync_battle_round_timer_labels(true)
+
+
+func _update_battle_command_countdown(delta: float) -> void:
+	if not battle_active:
+		return
+	if str(battle_state.get("phase", "command")) != "command" or _battle_commands_locked():
+		_sync_battle_round_timer_labels(false)
+		return
+	battle_command_countdown_remaining = maxf(0.0, battle_command_countdown_remaining - delta)
+	_sync_battle_round_timer_labels(false)
+	if battle_command_countdown_remaining <= 0.001:
+		_submit_battle_timeout_default_commands()
+
+
+func _sync_battle_round_timer_labels(force: bool = false) -> void:
+	if battle_round_panel != null:
+		battle_round_panel.visible = battle_active
+	if battle_timer_panel != null:
+		battle_timer_panel.visible = battle_active
+	if not battle_active:
+		battle_round_display_last_text = ""
+		battle_timer_display_last_text = ""
+		return
+	var round_text := "第 %d 回合" % maxi(1, int(battle_state.get("round", 1)))
+	if force or round_text != battle_round_display_last_text:
+		battle_round_display_last_text = round_text
+		if battle_round_label != null:
+			battle_round_label.text = round_text
+	var second := clampi(int(ceilf(battle_command_countdown_remaining)), 0, int(BATTLE_COMMAND_COUNTDOWN_SECONDS))
+	if not force and second == battle_command_countdown_last_second:
+		return
+	battle_command_countdown_last_second = second
+	var timer_text := "%d秒" % second
+	battle_timer_display_last_text = timer_text
+	if battle_timer_label != null:
+		battle_timer_label.text = timer_text
+
+
+func _submit_battle_timeout_default_commands() -> void:
+	if not battle_active or _battle_commands_locked():
+		return
+	var added_default := false
+	if battle_pending_player_command.is_empty():
+		battle_pending_player_command = {
+			"command": "defend",
+			"targetId": "",
+			"allyTargetId": "",
+			"timeoutDefault": true,
+		}
+		added_default = true
+	var player_command_id := str(battle_pending_player_command.get("command", ""))
+	if player_command_id != "switch_pet" and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
+		battle_pending_pet_command = {
+			"command": "defend",
+			"targetId": "",
+			"skillId": BattleModel.PET_SKILL_DEFEND,
+			"timeoutDefault": true,
+		}
+		added_default = true
+	if added_default:
+		_set_battle_message("本回合倒计时结束，未下达的指令自动防御。")
+	_battle_start_pending_round()
+
+
 func _update_battle_animation(delta: float) -> void:
 	var scaled_delta := _scaled_battle_delta(delta)
 	_update_battle_float_texts(scaled_delta)
@@ -26296,6 +26796,7 @@ func _start_hang_walk() -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_clear_encounter_stone_effect(false)
+	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
 	_set_hang_mode(true)
 	_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
 
@@ -26364,6 +26865,7 @@ func _stop_auto_move() -> void:
 
 func _stop_hang_activity(message: String = "", clear_stone: bool = true) -> void:
 	_set_hang_mode(false)
+	player_profile = PlayerProgressModel.stop_hang_session(player_profile, message)
 	if player != null:
 		player.clear_move_target()
 	_clear_navigation_state()
@@ -26416,6 +26918,29 @@ func _layout_hud() -> void:
 	var world_menu_open := _world_menu_is_open()
 	top_panel.position = Vector2(margin, margin)
 	top_panel.size = Vector2(top_width, 56)
+	if battle_round_panel != null:
+		var round_size := Vector2(128.0, 40.0)
+		var round_y := top_panel.position.y + top_panel.size.y + 8.0
+		var timer_size := Vector2(112.0, 44.0)
+		var timer_y := margin
+		if viewport_size.x < 720.0:
+			timer_y = round_y
+			round_y = timer_y + timer_size.y + 8.0
+		battle_round_panel.position = Vector2(margin, round_y)
+		battle_round_panel.size = round_size
+		battle_round_panel.visible = battle_active
+		if battle_round_label != null:
+			battle_round_label.size = round_size - Vector2(20.0, 12.0)
+	if battle_timer_panel != null:
+		var timer_size := Vector2(112.0, 44.0)
+		var timer_y := margin
+		if viewport_size.x < 720.0:
+			timer_y = top_panel.position.y + top_panel.size.y + 8.0
+		battle_timer_panel.position = Vector2((viewport_size.x - timer_size.x) * 0.5, timer_y)
+		battle_timer_panel.size = timer_size
+		battle_timer_panel.visible = battle_active
+		if battle_timer_label != null:
+			battle_timer_label.size = timer_size - Vector2(20.0, 12.0)
 
 	if battle_active:
 		side_panel.visible = false
