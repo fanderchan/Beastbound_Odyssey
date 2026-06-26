@@ -1,6 +1,7 @@
 extends Node2D
 
 @export var follow_speed: float = 170.0
+@export var speed_multiplier: float = 1.0
 
 const FACING_KEYS := [
 	"east",
@@ -40,25 +41,38 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	animation_time += delta
+	var animation_delta := delta * _effective_speed_multiplier() if animation_state == "walk" else delta
+	animation_time += animation_delta
 	var was_moving := animation_state == "walk"
 	var direction := Vector2.ZERO
 	if has_follow_target:
 		var to_target := follow_target - global_position
 		if to_target.length() > 5.0:
 			direction = to_target.normalized()
-			global_position += direction * minf(follow_speed * delta, to_target.length())
+			global_position += direction * minf(follow_speed * delta * _effective_speed_multiplier(), to_target.length())
 			face_direction(direction)
 			_set_animation_state("walk")
 		else:
 			_set_animation_state("idle")
 	else:
 		_set_animation_state("idle")
-	animation_visual_elapsed += delta
+	animation_visual_elapsed += animation_delta
 	if animation_state == "idle" and not was_moving and animation_visual_elapsed < IDLE_ANIMATION_STEP_SECONDS:
 		return
 	animation_visual_elapsed = 0.0
 	_update_placeholder_animation()
+
+
+func set_speed_multiplier(value: float) -> void:
+	speed_multiplier = clampf(value, 1.0, 10.0)
+
+
+func get_speed_multiplier() -> float:
+	return _effective_speed_multiplier()
+
+
+func _effective_speed_multiplier() -> float:
+	return clampf(speed_multiplier, 1.0, 10.0)
 
 
 func set_follow_target(target: Vector2) -> void:

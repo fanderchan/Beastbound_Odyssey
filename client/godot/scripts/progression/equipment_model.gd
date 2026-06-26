@@ -13,6 +13,10 @@ const SLOT_FEET := "feet"
 const SLOT_EXP_PILL := "exp_pill"
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_DURABILITY_MAX := 30
+const DEFAULT_ENHANCE_MAX := 5
+const ENHANCE_WOOD_MATERIAL_ID := "equip_frag_wood_basic"
+const ENHANCE_HIDE_MATERIAL_ID := "equip_frag_hide_basic"
+const ENHANCE_BASE_STONE_COST := 20
 static var data_cache_loaded: bool = false
 static var data_cache: Dictionary = {}
 
@@ -199,6 +203,57 @@ static func max_durability_for(item_id: String) -> int:
 	return maxi(1, int(item_for_id(item_id).get("durabilityMax", DEFAULT_DURABILITY_MAX)))
 
 
+static func enhance_max_for(item_id: String) -> int:
+	if not is_equipment(item_id) or is_exp_pill(item_id):
+		return 0
+	return maxi(0, int(item_for_id(item_id).get("enhanceMax", DEFAULT_ENHANCE_MAX)))
+
+
+static func enhance_material_id_for(item_id: String) -> String:
+	if not is_equipment(item_id) or enhance_max_for(item_id) <= 0:
+		return ""
+	var explicit_id := str(item_for_id(item_id).get("enhanceMaterialId", "")).strip_edges()
+	if explicit_id != "":
+		return explicit_id
+	var slot_id := slot_for(item_id)
+	if [SLOT_BODY, SLOT_HEAD, SLOT_HANDS, SLOT_FEET].has(slot_id):
+		return ENHANCE_HIDE_MATERIAL_ID
+	return ENHANCE_WOOD_MATERIAL_ID
+
+
+static func enhance_material_count_for_level(next_level: int) -> int:
+	return maxi(1, next_level)
+
+
+static func enhance_stone_cost_for_level(next_level: int) -> int:
+	return maxi(1, next_level) * ENHANCE_BASE_STONE_COST
+
+
+static func enhance_stat_bonus_for(item_id: String, level: int) -> Dictionary:
+	var normalized_level := clampi(level, 0, enhance_max_for(item_id))
+	if normalized_level <= 0:
+		return {}
+	match slot_for(item_id):
+		SLOT_RIGHT_HAND_WEAPON, SLOT_LEFT_HAND_WEAPON:
+			return {"attack": normalized_level}
+		SLOT_BODY, SLOT_HEAD, SLOT_HANDS, SLOT_FEET:
+			return {"defense": normalized_level}
+		SLOT_ACCESSORY_LEFT, SLOT_ACCESSORY_RIGHT:
+			return {"maxHp": normalized_level * 2}
+	return {}
+
+
+static func enhance_bonus_text_for(item_id: String, level: int) -> String:
+	var bonus := enhance_stat_bonus_for(item_id, level)
+	var parts: Array[String] = []
+	for key in STAT_KEYS:
+		var amount := int(bonus.get(key, 0))
+		if amount == 0:
+			continue
+		parts.append("%s +%d" % [_stat_label_for(key), amount])
+	return "、".join(parts)
+
+
 static func stat_bonus_text_for(item_id: String) -> String:
 	var stats := stats_for(item_id)
 	var parts: Array[String] = []
@@ -229,6 +284,9 @@ static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var durability_max := max_durability_for(item_id)
 	if durability_max > 0:
 		lines.append("耐久上限: %d" % durability_max)
+	var enhance_max := enhance_max_for(item_id)
+	if enhance_max > 0:
+		lines.append("强化上限: +%d" % enhance_max)
 	var stat_text := stat_bonus_text_for(item_id)
 	if stat_text != "":
 		lines.append("效果: %s" % stat_text)
@@ -273,6 +331,8 @@ static func validation_errors() -> Array[String]:
 			errors.append("%s.requiredRebirth 必须大于等于 0" % item_id)
 		if bool(item.get("usesDurability", true)) and int(item.get("durabilityMax", DEFAULT_DURABILITY_MAX)) < 1:
 			errors.append("%s.durabilityMax 必须大于等于 1" % item_id)
+		if int(item.get("enhanceMax", DEFAULT_ENHANCE_MAX)) < 0:
+			errors.append("%s.enhanceMax 必须大于等于 0" % item_id)
 		if bool(item.get("expPill", false)) and int(item.get("expPillLevel", 0)) < 1:
 			errors.append("%s.expPillLevel 必须大于等于 1" % item_id)
 		var raw_spirits = item.get("spiritIds", [])

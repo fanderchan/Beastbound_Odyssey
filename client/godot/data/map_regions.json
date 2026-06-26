@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "regions": [
+    {
+      "id": "firebud_village",
+      "label": "火芽村",
+      "type": "village",
+      "mapIds": ["firebud_village_gate"],
+      "facilities": ["healer", "item_shop", "equipment_shop", "stable", "record_point", "rebirth"],
+      "recordPoint": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "label": "火芽村医旁记录点"
+      }
+    },
+    {
+      "id": "firebud_training_field",
+      "label": "火芽村外训练区",
+      "type": "field",
+      "mapIds": ["firebud_village_gate", "firebud_training_yard"],
+      "encounterGroups": ["firebud_grass_01"],
+      "levelRange": {"min": 1, "max": 10}
+    },
+    {
+      "id": "element_trial_caves",
+      "label": "四大洞穴",
+      "type": "dungeon",
+      "mapIds": [
+        "earth_vein_cave",
+        "earth_vein_cave_f2",
+        "earth_vein_cave_f3",
+        "earth_vein_cave_f4",
+        "tide_echo_cave",
+        "tide_echo_cave_f2",
+        "tide_echo_cave_f3",
+        "tide_echo_cave_f4",
+        "ember_core_cave",
+        "ember_core_cave_f2",
+        "ember_core_cave_f3",
+        "ember_core_cave_f4",
+        "gale_breath_cave",
+        "gale_breath_cave_f2",
+        "gale_breath_cave_f3",
+        "gale_breath_cave_f4"
+      ],
+      "encounterGroups": [
+        "earth_vein_guardian_group",
+        "tide_echo_guardian_group",
+        "ember_core_guardian_group",
+        "gale_breath_guardian_group"
+      ],
+      "bossMode": "interaction_guardian"
+    },
+    {
+      "id": "shadow_oath_cavern",
+      "label": "玄影洞窟",
+      "type": "dungeon",
+      "mapIds": [
+        "shadow_oath_cavern",
+        "shadow_oath_cavern_f2",
+        "shadow_oath_cavern_f3",
+        "shadow_oath_cavern_f4",
+        "shadow_oath_cavern_f5"
+      ],
+      "encounterGroups": [
+        "shadow_oath_rebirth_earth",
+        "shadow_oath_rebirth_water",
+        "shadow_oath_rebirth_fire",
+        "shadow_oath_rebirth_wind",
+        "shadow_oath_rebirth_guardian"
+      ],
+      "captureMapIds": ["shadow_oath_cavern", "shadow_oath_cavern_f2", "shadow_oath_cavern_f3"],
+      "bossMode": "interaction_guardian"
+    },
+    {
+      "id": "gm_training_ground",
+      "label": "GM练级测试场",
+      "type": "gm",
+      "mapIds": ["gm_10v10_training_ground"],
+      "encounterGroups": ["gm_10v10_grass", "gm_codex_capture_grass", "gm_high_knockaway_grass"]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const PetCultivationModel := preload("res://scripts/progression/pet_cultivation_model.gd")
 const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
@@ -41,6 +42,10 @@ const PET_INDIVIDUAL_FIELD_KEYS: Array[String] = [
 	"growthRecord",
 	"combatPower",
 	"combatPowerBreakdown",
+]
+const PET_CULTIVATION_FIELD_KEYS: Array[String] = [
+	"petCultivation",
+	"lastCultivationResult",
 ]
 const PARTY_LIMIT := 5
 const STORAGE_LIMIT := 20
@@ -90,13 +95,18 @@ const EQUIPMENT_SLOTS_VERSION := 4
 const EQUIPMENT_STARTER_SET_VERSION_KEY := "equipmentStarterSetVersion"
 const EQUIPMENT_STARTER_SET_VERSION := 1
 const EQUIPMENT_DURABILITY_KEY := "equipmentDurability"
+const EQUIPMENT_ENHANCEMENT_KEY := "equipmentEnhancement"
+const EQUIPMENT_WEAR_COUNTERS_KEY := "equipmentWearCounters"
 const EQUIPMENT_EXP_PILL_CHARGE_KEY := "equipmentExpPillCharge"
 const EQUIPMENT_REPAIR_DURABILITY_PER_COIN := 5
+const EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY := 100
+const EQUIPMENT_ARMOR_HITS_PER_DURABILITY := 10
 const EXP_PILL_STARTER_VERSION_KEY := "expPillStarterVersion"
 const EXP_PILL_STARTER_VERSION := 1
 const MAILBOX_MESSAGES_KEY := "mailboxMessages"
 const MAILBOX_EXPIRY_SECONDS := 30 * 24 * 60 * 60
 const MAIL_EXP_PILL_STARTER_ID := "system_exp_pill_starter_v1"
+const MAIL_REWARD_FALLBACK_PREFIX := "system_reward_fallback"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
@@ -165,6 +175,8 @@ static func default_profile() -> Dictionary:
 		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
 		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
+		"equipmentEnhancement": _fresh_equipment_enhancement_for_slots(starter_equipment_slots()),
+		"equipmentWearCounters": _fresh_equipment_wear_counters_for_slots(starter_equipment_slots()),
 		"equipmentExpPillCharge": {},
 		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
 		"equipmentStarterSetVersion": EQUIPMENT_STARTER_SET_VERSION,
@@ -931,6 +943,42 @@ static func equipment_durability(profile: Dictionary) -> Dictionary:
 	return (durability as Dictionary).duplicate(true) if durability is Dictionary else {}
 
 
+static func equipment_enhancement(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var enhancement = normalized.get(EQUIPMENT_ENHANCEMENT_KEY, {})
+	return (enhancement as Dictionary).duplicate(true) if enhancement is Dictionary else {}
+
+
+static func equipment_wear_counters(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var counters = normalized.get(EQUIPMENT_WEAR_COUNTERS_KEY, {})
+	return (counters as Dictionary).duplicate(true) if counters is Dictionary else {}
+
+
+static func equipment_enhance_level(profile: Dictionary, slot_id: String) -> int:
+	var slots := equipment_slots(profile)
+	var item_id := str(slots.get(slot_id, ""))
+	if item_id == "":
+		return 0
+	return _equipment_enhance_level_for_slot(equipment_enhancement(profile), slot_id, item_id)
+
+
+static func equipment_enhance_text(profile: Dictionary, slot_id: String) -> String:
+	var slots := equipment_slots(profile)
+	var item_id := str(slots.get(slot_id, ""))
+	if item_id == "":
+		return ""
+	var level := equipment_enhance_level(profile, slot_id)
+	if level <= 0:
+		return "强化: +0/%d" % EquipmentModel.enhance_max_for(item_id) if EquipmentModel.enhance_max_for(item_id) > 0 else ""
+	var bonus_text := EquipmentModel.enhance_bonus_text_for(item_id, level)
+	return "强化: +%d/%d%s" % [
+		level,
+		EquipmentModel.enhance_max_for(item_id),
+		"（%s）" % bonus_text if bonus_text != "" else "",
+	]
+
+
 static func equipped_exp_pill_charge(profile: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var charge = normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {})
@@ -977,7 +1025,8 @@ static func equipment_stat_bonus(profile: Dictionary) -> Dictionary:
 		equipment_slots(normalized),
 		equipment_durability(normalized),
 		player_level,
-		RebirthModel.rebirth_count(normalized)
+		RebirthModel.rebirth_count(normalized),
+		equipment_enhancement(normalized)
 	)
 
 
@@ -1112,6 +1161,108 @@ static func apply_equipment_wear(profile: Dictionary, amount: int = 1) -> Dictio
 	}
 
 
+static func apply_equipment_wear_from_battle_usage(profile: Dictionary, usage: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var weapon_attacks := maxi(0, int(usage.get("weaponAttacks", 0)))
+	var armor_hits := maxi(0, int(usage.get("armorHits", 0)))
+	if weapon_attacks <= 0 and armor_hits <= 0:
+		return {
+			"profile": normalized,
+			"changed": false,
+			"brokenLabels": [],
+			"durabilityDrops": [],
+		}
+	var slots := equipment_slots(normalized)
+	var durability := equipment_durability(normalized)
+	var counters := equipment_wear_counters(normalized)
+	var broken_labels: Array[String] = []
+	var durability_drops: Array[Dictionary] = []
+	if weapon_attacks > 0:
+		_apply_equipment_counter_wear(
+			slots,
+			durability,
+			counters,
+			_active_weapon_slot_for_wear(slots, durability),
+			"attackCount",
+			weapon_attacks,
+			EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY,
+			broken_labels,
+			durability_drops
+		)
+	if armor_hits > 0:
+		_apply_equipment_counter_wear(
+			slots,
+			durability,
+			counters,
+			_active_armor_slot_for_wear(slots, durability),
+			"hitCount",
+			armor_hits,
+			EQUIPMENT_ARMOR_HITS_PER_DURABILITY,
+			broken_labels,
+			durability_drops
+		)
+	normalized[EQUIPMENT_DURABILITY_KEY] = durability
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = counters
+	normalized = normalize_profile(normalized)
+	return {
+		"profile": normalized,
+		"changed": not durability_drops.is_empty(),
+		"brokenLabels": broken_labels,
+		"durabilityDrops": durability_drops,
+	}
+
+
+static func _active_weapon_slot_for_wear(slots: Dictionary, durability: Dictionary) -> String:
+	for slot_id in [EquipmentModel.SLOT_RIGHT_HAND_WEAPON, EquipmentModel.SLOT_LEFT_HAND_WEAPON]:
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id != "" and EquipmentModel.max_durability_for(item_id) > 0 and not _equipment_slot_is_broken(slot_id, item_id, durability):
+			return slot_id
+	return ""
+
+
+static func _active_armor_slot_for_wear(slots: Dictionary, durability: Dictionary) -> String:
+	for slot_id in [EquipmentModel.SLOT_BODY, EquipmentModel.SLOT_HEAD, EquipmentModel.SLOT_HANDS, EquipmentModel.SLOT_FEET, EquipmentModel.SLOT_ACCESSORY_LEFT, EquipmentModel.SLOT_ACCESSORY_RIGHT]:
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id != "" and EquipmentModel.max_durability_for(item_id) > 0 and not _equipment_slot_is_broken(slot_id, item_id, durability):
+			return slot_id
+	return ""
+
+
+static func _apply_equipment_counter_wear(slots: Dictionary, durability: Dictionary, counters: Dictionary, slot_id: String, counter_key: String, amount: int, per_durability: int, broken_labels: Array[String], durability_drops: Array[Dictionary]) -> void:
+	if slot_id == "" or amount <= 0 or per_durability <= 0:
+		return
+	var item_id := str(slots.get(slot_id, ""))
+	if item_id == "":
+		return
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	if max_durability <= 0:
+		return
+	var current := clampi(int(durability.get(slot_id, max_durability)), 0, max_durability)
+	if current <= 0:
+		return
+	var counter = counters.get(slot_id, _fresh_equipment_wear_counter_record(item_id))
+	var record := counter as Dictionary if counter is Dictionary else _fresh_equipment_wear_counter_record(item_id)
+	if str(record.get("itemId", "")) != item_id:
+		record = _fresh_equipment_wear_counter_record(item_id)
+	var total := maxi(0, int(record.get(counter_key, 0))) + amount
+	var drop := int(total / per_durability)
+	record[counter_key] = total % per_durability
+	if drop > 0:
+		var next_durability := maxi(0, current - drop)
+		durability[slot_id] = next_durability
+		durability_drops.append({
+			"slotId": slot_id,
+			"itemId": item_id,
+			"label": EquipmentModel.label_for(item_id, item_id),
+			"amount": current - next_durability,
+			"current": next_durability,
+			"max": max_durability,
+		})
+		if next_durability <= 0:
+			broken_labels.append(EquipmentModel.label_for(item_id, item_id))
+	counters[slot_id] = record
+
+
 static func equipment_repair_missing(profile: Dictionary) -> int:
 	var normalized := normalize_profile(profile)
 	var slots := equipment_slots(normalized)
@@ -1163,6 +1314,7 @@ static func repair_all_equipment(profile: Dictionary) -> Dictionary:
 		if max_durability > 0:
 			durability[slot_id] = max_durability
 	normalized[EQUIPMENT_DURABILITY_KEY] = durability
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = _fresh_equipment_wear_counters_for_slots(slots)
 	normalized[STONE_COINS_KEY] = stone_coins(normalized) - cost
 	normalized = normalize_profile(normalized)
 	return {
@@ -1170,6 +1322,105 @@ static func repair_all_equipment(profile: Dictionary) -> Dictionary:
 		"profile": normalized,
 		"message": "装备修理完成，花费%d石币。" % cost,
 		"cost": cost,
+	}
+
+
+static func equipment_enhance_quote(profile: Dictionary, slot_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var slots := equipment_slots(normalized)
+	var item_id := str(slots.get(slot_id, ""))
+	if item_id == "":
+		return {
+			"ok": false,
+			"slotId": slot_id,
+			"message": "这个装备槽没有装备。",
+		}
+	var max_level := EquipmentModel.enhance_max_for(item_id)
+	if max_level <= 0:
+		return {
+			"ok": false,
+			"slotId": slot_id,
+			"itemId": item_id,
+			"message": "%s 暂不能强化。" % EquipmentModel.label_for(item_id, item_id),
+		}
+	var current_level := equipment_enhance_level(normalized, slot_id)
+	if current_level >= max_level:
+		return {
+			"ok": false,
+			"slotId": slot_id,
+			"itemId": item_id,
+			"level": current_level,
+			"maxLevel": max_level,
+			"message": "%s 已达到强化上限。" % EquipmentModel.label_for(item_id, item_id),
+		}
+	var next_level := current_level + 1
+	var material_id := EquipmentModel.enhance_material_id_for(item_id)
+	var material_count := EquipmentModel.enhance_material_count_for_level(next_level)
+	var held_material := BackpackModel.item_count(backpack_slots(normalized), material_id)
+	var stone_cost := EquipmentModel.enhance_stone_cost_for_level(next_level)
+	var ok := held_material >= material_count and stone_coins(normalized) >= stone_cost
+	var missing_parts: Array[String] = []
+	if held_material < material_count:
+		missing_parts.append("%s %d/%d" % [BackpackModel.label_for(material_id, material_id), held_material, material_count])
+	if stone_coins(normalized) < stone_cost:
+		missing_parts.append("石币 %d/%d" % [stone_coins(normalized), stone_cost])
+	return {
+		"ok": ok,
+		"slotId": slot_id,
+		"itemId": item_id,
+		"level": current_level,
+		"nextLevel": next_level,
+		"maxLevel": max_level,
+		"materialId": material_id,
+		"materialCount": material_count,
+		"heldMaterialCount": held_material,
+		"stoneCost": stone_cost,
+		"stoneCoins": stone_coins(normalized),
+		"message": "可强化到 +%d。" % next_level if ok else "强化材料不足：%s。" % "、".join(missing_parts),
+	}
+
+
+static func enhance_equipment_slot(profile: Dictionary, slot_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quote := equipment_enhance_quote(normalized, slot_id)
+	if not bool(quote.get("ok", false)):
+		quote["profile"] = normalized
+		return quote
+	var item_id := str(quote.get("itemId", ""))
+	var material_id := str(quote.get("materialId", ""))
+	var material_count := maxi(1, int(quote.get("materialCount", 1)))
+	var stone_cost := maxi(0, int(quote.get("stoneCost", 0)))
+	var slots := BackpackModel.consume(backpack_slots(normalized), material_id, material_count)
+	normalized[BACKPACK_SLOTS_KEY] = slots
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(slots)
+	normalized[STONE_COINS_KEY] = stone_coins(normalized) - stone_cost
+	var enhancement := equipment_enhancement(normalized)
+	var record := _equipment_enhancement_record_for_item(enhancement, slot_id, item_id)
+	var next_level := maxi(1, int(quote.get("nextLevel", 1)))
+	record["level"] = next_level
+	var history: Array = record.get("history", [])
+	history.append({
+		"level": next_level,
+		"materialId": material_id,
+		"materialCount": material_count,
+		"stoneCost": stone_cost,
+	})
+	record["history"] = history
+	enhancement[slot_id] = record
+	normalized[EQUIPMENT_ENHANCEMENT_KEY] = enhancement
+	normalized = normalize_profile(normalized)
+	var bonus_text := EquipmentModel.enhance_bonus_text_for(item_id, next_level)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"slotId": slot_id,
+		"itemId": item_id,
+		"level": next_level,
+		"message": "%s 强化到 +%d%s。" % [
+			EquipmentModel.label_for(item_id, item_id),
+			next_level,
+			"（%s）" % bonus_text if bonus_text != "" else "",
+		],
 	}
 
 
@@ -1290,8 +1541,9 @@ static func equipment_change_preview(profile: Dictionary, item_id: String) -> Di
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
 	var player_rebirth := RebirthModel.rebirth_count(normalized)
-	var before_bonus := _equipment_stat_bonus_from_slots(before_slots, equipment_durability(normalized), player_level, player_rebirth)
-	var after_bonus := _equipment_stat_bonus_from_slots(after_slots, equipment_durability(normalized), player_level, player_rebirth)
+	var enhancement := equipment_enhancement(normalized)
+	var before_bonus := _equipment_stat_bonus_from_slots(before_slots, equipment_durability(normalized), player_level, player_rebirth, enhancement)
+	var after_bonus := _equipment_stat_bonus_from_slots(after_slots, equipment_durability(normalized), player_level, player_rebirth, enhancement)
 	var stat_changes: Array[Dictionary] = []
 	for key in EquipmentModel.STAT_KEYS:
 		var before_value := int(before_bonus.get(key, 0))
@@ -1546,12 +1798,24 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 		durability[slot_id] = max_durability
 	else:
 		durability.erase(slot_id)
+	var enhancement := equipment_enhancement(normalized)
+	if EquipmentModel.enhance_max_for(item_id) > 0:
+		enhancement[slot_id] = _fresh_equipment_enhancement_record(item_id)
+	else:
+		enhancement.erase(slot_id)
+	var wear_counters := equipment_wear_counters(normalized)
+	if max_durability > 0:
+		wear_counters[slot_id] = _fresh_equipment_wear_counter_record(item_id)
+	else:
+		wear_counters.erase(slot_id)
 	if slot_id == EquipmentModel.SLOT_EXP_PILL:
 		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _fresh_exp_pill_charge_for_item(item_id)
 	normalized[BACKPACK_SLOTS_KEY] = backpack_after_take
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_after_take)
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
 	normalized[EQUIPMENT_DURABILITY_KEY] = durability
+	normalized[EQUIPMENT_ENHANCEMENT_KEY] = enhancement
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = wear_counters
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized = normalize_profile(normalized)
 	var message := "装备%s。" % item_label
@@ -1597,12 +1861,18 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 	slots.erase(slot_id)
 	var durability := equipment_durability(normalized)
 	durability.erase(slot_id)
+	var enhancement := equipment_enhancement(normalized)
+	enhancement.erase(slot_id)
+	var wear_counters := equipment_wear_counters(normalized)
+	wear_counters.erase(slot_id)
 	if slot_id == EquipmentModel.SLOT_EXP_PILL:
 		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = {}
 	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
 	normalized[EQUIPMENT_DURABILITY_KEY] = durability
+	normalized[EQUIPMENT_ENHANCEMENT_KEY] = enhancement
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = wear_counters
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized = normalize_profile(normalized)
 	return {
@@ -1982,6 +2252,48 @@ static func with_diamonds(profile: Dictionary, amount: int) -> Dictionary:
 	return normalized
 
 
+static func grant_reward_bundle(profile: Dictionary, reward_bundle: Dictionary, source_id: String = "", mail_title: String = "系统奖励") -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var items := _item_amount_array(reward_bundle.get("items", []))
+	var coins := maxi(0, int(reward_bundle.get("stoneCoins", 0)))
+	var diamond_reward := maxi(0, int(reward_bundle.get("diamonds", 0)))
+	if coins > 0:
+		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
+	if diamond_reward > 0:
+		normalized[DIAMONDS_KEY] = diamonds(normalized) + diamond_reward
+	var reward_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), items)
+	var added_items := _item_amount_array(reward_result.get("added", []))
+	var mailed_items := _item_amount_array(reward_result.get("lost", []))
+	normalized[BACKPACK_SLOTS_KEY] = reward_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
+	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
+	if not mailed_items.is_empty():
+		var mail_id := "%s:%s" % [MAIL_REWARD_FALLBACK_PREFIX, _safe_mail_id_source(source_id)]
+		var title := mail_title if mail_title.strip_edges() != "" else "系统奖励"
+		var body := "背包空间不足，未放入背包的奖励已转入邮箱。请在30天内领取附件。"
+		normalized[MAILBOX_MESSAGES_KEY] = _upsert_mailbox_message(_normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, [])), mail_id, title, body, mailed_items)
+	var raw_abilities = reward_bundle.get("abilities", reward_bundle.get("unlockAbilities", []))
+	if raw_abilities is Array:
+		var abilities := _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
+		for ability in raw_abilities:
+			var ability_id := ""
+			if ability is Dictionary:
+				ability_id = str((ability as Dictionary).get("abilityId", (ability as Dictionary).get("id", ""))).strip_edges()
+			else:
+				ability_id = str(ability).strip_edges()
+			if ability_id != "" and not abilities.has(ability_id):
+				abilities.append(ability_id)
+		normalized[UNLOCKED_ABILITIES_KEY] = abilities
+	normalized = normalize_profile(normalized)
+	return {
+		"profile": normalized,
+		"stoneCoins": coins,
+		"diamonds": diamond_reward,
+		"addedItems": added_items,
+		"mailedItems": mailed_items,
+		"mailSent": not mailed_items.is_empty(),
+	}
+
+
 static func unlock_backpack_slot(profile: Dictionary, requested_extra_slot_index: int = -1) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var extra_slots := clampi(int(normalized.get(BACKPACK_EXTRA_SLOTS_KEY, 0)), 0, BackpackModel.EXTRA_SLOT_LIMIT)
@@ -2334,6 +2646,64 @@ static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictio
 	}
 
 
+static func deliver_pet_for_quest(profile: Dictionary, quest_id: String, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest := QuestModel.quest_for_id(quest_id)
+	if quest.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "任务不存在。",
+		}
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+	var event := {
+		"type": "deliver_pet",
+		"instanceId": instance_id,
+		"formId": str(instance.get("formId", instance.get("templateId", ""))),
+		"lineId": str(instance.get("lineId", "")),
+		"level": maxi(1, int(instance.get("level", 1))),
+		"amount": 1,
+	}
+	if QuestModel.progress_amount_for_event(quest, event) <= 0:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 不符合任务要求。" % str(instance.get("name", "宠物")),
+		}
+	var instances: Array = normalized.get("petInstances", [])
+	var next_instances: Array = []
+	for value in instances:
+		if value is Dictionary and str((value as Dictionary).get("instanceId", "")) == instance_id:
+			continue
+		next_instances.append(value)
+	normalized["petInstances"] = next_instances
+	if str(normalized.get("activePetInstanceId", "")) == instance_id:
+		normalized["activePetInstanceId"] = _first_battle_pet_id(normalized)
+	var states := _quest_states(normalized)
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_ACTIVE:
+		var required := QuestModel.objective_required_count(quest)
+		state["progress"] = clampi(int(state.get("progress", 0)) + 1, 0, required)
+		if int(state.get("progress", 0)) >= required:
+			state["status"] = QuestModel.STATUS_READY
+		states[quest_id] = state
+		normalized[QUEST_STATES_KEY] = states
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"ready": str(state.get("status", "")) == QuestModel.STATUS_READY,
+		"questId": quest_id,
+		"message": "交付%s。" % str(instance.get("name", "宠物")),
+	}
+
+
 static func claim_active_quest(profile: Dictionary, reward_choice_id: String = "") -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
@@ -2380,28 +2750,13 @@ static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_cho
 			for ability in choice_abilities:
 				if ability is Dictionary:
 					reward_abilities.append((ability as Dictionary).duplicate(true))
-	var reward_result := BackpackModel.add_items(
-		BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])),
-		reward_items
-	)
-	var lost: Array = reward_result.get("lost", [])
-	if lost is Array and not (lost as Array).is_empty():
-		return {
-			"ok": false,
-			"profile": normalized,
-			"message": "背包空间不足，无法领取任务奖励。",
-		}
-	normalized[BACKPACK_SLOTS_KEY] = reward_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
-	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
 	var coins := QuestModel.reward_stone_coins(quest) + maxi(0, int(choice.get("stoneCoins", 0)))
-	if coins > 0:
-		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
-	var abilities := _valid_unique_ability_ids(normalized.get(UNLOCKED_ABILITIES_KEY, []))
-	for ability in reward_abilities:
-		var ability_id := str(ability.get("abilityId", ""))
-		if ability_id != "" and not abilities.has(ability_id):
-			abilities.append(ability_id)
-	normalized[UNLOCKED_ABILITIES_KEY] = abilities
+	var grant_result := grant_reward_bundle(normalized, {
+		"stoneCoins": coins,
+		"items": reward_items,
+		"abilities": reward_abilities,
+	}, "quest_%s" % quest_id, "任务奖励：%s" % QuestModel.title_for(quest))
+	normalized = grant_result.get("profile", normalized)
 	state["status"] = QuestModel.STATUS_CLAIMED
 	state["progress"] = QuestModel.objective_required_count(quest)
 	states[quest_id] = state
@@ -2422,6 +2777,9 @@ static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_cho
 	var message := "完成任务「%s」。" % QuestModel.title_for(quest)
 	if reward_text != "":
 		message = "完成任务「%s」，获得%s。" % [QuestModel.title_for(quest), reward_text]
+	var mailed_items := _item_amount_array(grant_result.get("mailedItems", []))
+	if not mailed_items.is_empty():
+		message += " 背包已满，%s 已发送邮箱。" % BackpackModel.item_amounts_text(mailed_items)
 	if rebirth_target > 0:
 		var stage_text := RebirthModel.target_stage_label(rebirth_target)
 		message = "完成任务「%s」，%s资格已记录。" % [QuestModel.title_for(quest), stage_text]
@@ -2432,6 +2790,7 @@ static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_cho
 		"questId": quest_id,
 		"nextQuestId": next_id,
 		"rewardChoiceId": str(choice.get("id", "")),
+		"mailedItems": mailed_items,
 	}
 
 
@@ -2578,8 +2937,10 @@ static func _quest_interaction_matches(quest: Dictionary, interaction_id: String
 		return false
 	if item_id == QuestModel.giver_id_for(quest) or item_id == QuestModel.turn_in_id_for(quest):
 		return true
-	var objective := QuestModel.objective_for(quest)
-	return str(objective.get("targetId", "")) == item_id
+	for objective in QuestModel.objectives_for(quest):
+		if str(objective.get("targetId", "")) == item_id or str(objective.get("interactionId", "")) == item_id:
+			return true
+	return false
 
 
 static func _normalize_mailbox_messages(value, now_sec: int = -1) -> Array[Dictionary]:
@@ -2717,6 +3078,40 @@ static func _full_equipment_durability_for_slots(slots: Dictionary) -> Dictionar
 	return result
 
 
+static func _fresh_equipment_enhancement_for_slots(slots: Dictionary) -> Dictionary:
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id != "" and EquipmentModel.enhance_max_for(item_id) > 0:
+			result[slot_id] = _fresh_equipment_enhancement_record(item_id)
+	return result
+
+
+static func _fresh_equipment_enhancement_record(item_id: String) -> Dictionary:
+	return {
+		"itemId": item_id,
+		"level": 0,
+		"history": [],
+	}
+
+
+static func _fresh_equipment_wear_counters_for_slots(slots: Dictionary) -> Dictionary:
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id != "" and EquipmentModel.max_durability_for(item_id) > 0:
+			result[slot_id] = _fresh_equipment_wear_counter_record(item_id)
+	return result
+
+
+static func _fresh_equipment_wear_counter_record(item_id: String) -> Dictionary:
+	return {
+		"itemId": item_id,
+		"attackCount": 0,
+		"hitCount": 0,
+	}
+
+
 static func _normalize_equipment_durability(slots: Dictionary, value) -> Dictionary:
 	var raw := value as Dictionary if value is Dictionary else {}
 	var result := {}
@@ -2729,6 +3124,69 @@ static func _normalize_equipment_durability(slots: Dictionary, value) -> Diction
 			continue
 		result[slot_id] = clampi(int(raw.get(slot_id, max_durability)), 0, max_durability)
 	return result
+
+
+static func _normalize_equipment_enhancement(slots: Dictionary, value) -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "" or EquipmentModel.enhance_max_for(item_id) <= 0:
+			continue
+		var raw_record = raw.get(slot_id, {})
+		var record := raw_record as Dictionary if raw_record is Dictionary else {}
+		var record_item_id := str(record.get("itemId", item_id))
+		var level := 0
+		var history: Array = []
+		if record_item_id == item_id:
+			level = clampi(int(record.get("level", 0)), 0, EquipmentModel.enhance_max_for(item_id))
+			var raw_history = record.get("history", [])
+			if raw_history is Array:
+				for value_entry in raw_history:
+					if value_entry is Dictionary:
+						history.append((value_entry as Dictionary).duplicate(true))
+		result[slot_id] = {
+			"itemId": item_id,
+			"level": level,
+			"history": history,
+		}
+	return result
+
+
+static func _normalize_equipment_wear_counters(slots: Dictionary, value) -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "" or EquipmentModel.max_durability_for(item_id) <= 0:
+			continue
+		var raw_record = raw.get(slot_id, {})
+		var record := raw_record as Dictionary if raw_record is Dictionary else {}
+		if str(record.get("itemId", item_id)) != item_id:
+			result[slot_id] = _fresh_equipment_wear_counter_record(item_id)
+		else:
+			result[slot_id] = {
+				"itemId": item_id,
+				"attackCount": maxi(0, int(record.get("attackCount", 0))),
+				"hitCount": maxi(0, int(record.get("hitCount", 0))),
+			}
+	return result
+
+
+static func _equipment_enhancement_record_for_item(enhancement: Dictionary, slot_id: String, item_id: String) -> Dictionary:
+	var raw_record = enhancement.get(slot_id, {})
+	if raw_record is Dictionary:
+		var record := (raw_record as Dictionary).duplicate(true)
+		if str(record.get("itemId", "")) == item_id:
+			return record
+	return _fresh_equipment_enhancement_record(item_id)
+
+
+static func _equipment_enhance_level_for_slot(enhancement: Dictionary, slot_id: String, item_id: String) -> int:
+	if item_id == "":
+		return 0
+	var record := _equipment_enhancement_record_for_item(enhancement, slot_id, item_id)
+	return clampi(int(record.get("level", 0)), 0, EquipmentModel.enhance_max_for(item_id))
 
 
 static func _fresh_exp_pill_charge_for_item(item_id: String) -> Dictionary:
@@ -2777,7 +3235,7 @@ static func _exp_pill_charge_has_progress(slots: Dictionary, value) -> bool:
 	return int(charge.get("level", base_level)) > base_level or int(charge.get("exp", 0)) > 0
 
 
-static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Dictionary:
+static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99, enhancement: Dictionary = {}) -> Dictionary:
 	var result := {}
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
@@ -2790,6 +3248,10 @@ static func _equipment_stat_bonus_from_slots(slots: Dictionary, durability: Dict
 		var stats := EquipmentModel.stats_for(item_id)
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
+		var enhance_level := _equipment_enhance_level_for_slot(enhancement, slot_id, item_id)
+		var enhance_stats := EquipmentModel.enhance_stat_bonus_for(item_id, enhance_level)
+		for key in EquipmentModel.STAT_KEYS:
+			result[key] = int(result.get(key, 0)) + int(enhance_stats.get(key, 0))
 	return result
 
 
@@ -3749,6 +4211,7 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		str(instance.get("growthTierLabel", growth_profile_label(str(instance.get("growthProfileId", ""))))),
 		str(instance.get("individualQualityLabel", "普通")),
 	])
+	lines.append_array(PetCultivationModel.detail_lines_for_pet(instance))
 	var initial_stats = instance.get("initialStats", {})
 	if initial_stats is Dictionary:
 		var initial := initial_stats as Dictionary
@@ -3777,6 +4240,76 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 	elif int(instance.get("hp", 0)) <= 0:
 		lines.append("%s 生命为 0，不能出战。" % str(instance.get("name", "宠物")))
 	return lines
+
+
+static func pet_cultivation_preview(profile: Dictionary, instance_id: String, mode: String = "") -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return PetCultivationModel.preview_for_pet({}, mode)
+	return PetCultivationModel.preview_for_pet(instance, mode)
+
+
+static func apply_pet_cultivation(profile: Dictionary, instance_id: String, mode: String = "", now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance := pet_instance_by_id(normalized, instance_id)
+	if instance.is_empty():
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+	var result := PetCultivationModel.apply_to_pet(instance, mode, now_sec)
+	if not bool(result.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"preview": result.get("preview", {}),
+			"message": str(result.get("message", "不能培养这只宠物。")),
+		}
+	var next_profile := normalized.duplicate(true)
+	var instances: Array = next_profile.get("petInstances", [])
+	var found := false
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var current := instances[index] as Dictionary
+		if str(current.get("instanceId", "")) != instance_id:
+			continue
+		instances[index] = result.get("pet", current)
+		found = true
+		break
+	if not found:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "没有找到这只宠物。",
+		}
+	next_profile["petInstances"] = instances
+	next_profile = normalize_profile(next_profile)
+	var updated := pet_instance_by_id(next_profile, instance_id)
+	var preview_value = result.get("preview", {})
+	var preview_mode := ""
+	if preview_value is Dictionary:
+		preview_mode = str((preview_value as Dictionary).get("mode", ""))
+	if preview_mode == PetCultivationModel.MODE_REBIRTH and not updated.is_empty():
+		updated["hp"] = int(updated.get("maxHp", updated.get("hp", 1)))
+		var normalized_instances: Array = next_profile.get("petInstances", [])
+		for index in range(normalized_instances.size()):
+			if not (normalized_instances[index] is Dictionary):
+				continue
+			if str((normalized_instances[index] as Dictionary).get("instanceId", "")) == instance_id:
+				normalized_instances[index] = updated
+				break
+		next_profile["petInstances"] = normalized_instances
+	return {
+		"ok": true,
+		"profile": next_profile,
+		"pet": pet_instance_by_id(next_profile, instance_id),
+		"preview": result.get("preview", {}),
+		"result": result.get("result", {}),
+		"message": str(result.get("message", "宠物培养完成。")),
+	}
 
 
 static func pet_codex_detail_lines(instance: Dictionary) -> Array[String]:
@@ -3963,6 +4496,9 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
 	var equipment_durability_value := _normalize_equipment_durability(equipment_slots_value, normalized.get(EQUIPMENT_DURABILITY_KEY, {}))
 	normalized[EQUIPMENT_DURABILITY_KEY] = equipment_durability_value
+	var equipment_enhancement_value := _normalize_equipment_enhancement(equipment_slots_value, normalized.get(EQUIPMENT_ENHANCEMENT_KEY, {}))
+	normalized[EQUIPMENT_ENHANCEMENT_KEY] = equipment_enhancement_value
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = _normalize_equipment_wear_counters(equipment_slots_value, normalized.get(EQUIPMENT_WEAR_COUNTERS_KEY, {}))
 	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _normalize_equipped_exp_pill_charge(equipment_slots_value, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {}))
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
@@ -3972,7 +4508,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var player_base_stats := _player_base_stats_from_player(player_dict)
 	var player_level_for_equipment := maxi(1, int(player_dict.get("level", 1)))
 	var player_rebirth_for_equipment := maxi(0, int(normalized.get(REBIRTH_COUNT_KEY, 0)))
-	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value, equipment_durability_value, player_level_for_equipment, player_rebirth_for_equipment)
+	var player_bonus := _equipment_stat_bonus_from_slots(equipment_slots_value, equipment_durability_value, player_level_for_equipment, player_rebirth_for_equipment, equipment_enhancement_value)
 	var player_max_hp := maxi(1, int(player_base_stats.get("maxHp", DEFAULT_PLAYER_BATTLE_STATS.get("maxHp", 120))) + int(player_bonus.get("maxHp", 0)))
 	player_dict["maxHp"] = player_max_hp
 	player_dict["hp"] = clampi(int(player_dict.get("hp", player_max_hp)), 1, player_max_hp)
@@ -4178,6 +4714,9 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 	for key in PET_INDIVIDUAL_FIELD_KEYS:
 		if instance.has(key):
 			actor[key] = instance.get(key)
+	for key in PET_CULTIVATION_FIELD_KEYS:
+		if instance.has(key):
+			actor[key] = instance.get(key)
 	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
 
 
@@ -4281,6 +4820,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	var level_up_lines: Array[String] = []
 	var item_rewards: Array[Dictionary] = []
 	var lost_item_rewards: Array[Dictionary] = []
+	var mailed_item_rewards: Array[Dictionary] = []
 	if exp_reward > 0:
 		var player = next_profile.get("player", {}) as Dictionary
 		var player_award := _grant_player_exp(next_profile, exp_reward)
@@ -4314,19 +4854,25 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		for line in partner_award.get("levelUpLines", []):
 			level_up_lines.append(str(line))
 	if result == "victory":
-		if stone_coins_reward > 0:
-			next_profile[STONE_COINS_KEY] = stone_coins(next_profile) + stone_coins_reward
-		var reward_result := BackpackModel.add_items(
-			BackpackModel.normalize_slots(next_profile.get(BACKPACK_SLOTS_KEY, [])),
-			BattleRewardCatalog.rewards_for_state(state)
-		)
-		next_profile = with_backpack_slots(next_profile, reward_result.get("slots", []))
-		item_rewards = _item_amount_array(reward_result.get("added", []))
-		lost_item_rewards = _item_amount_array(reward_result.get("lost", []))
+		var grant_result := grant_reward_bundle(next_profile, {
+			"stoneCoins": stone_coins_reward,
+			"items": BattleRewardCatalog.rewards_for_state(state),
+		}, "battle_%s" % str(state.get("targetSeed", state.get("id", "wild"))), "战斗掉落")
+		next_profile = grant_result.get("profile", next_profile)
+		item_rewards = _item_amount_array(grant_result.get("addedItems", []))
+		mailed_item_rewards = _item_amount_array(grant_result.get("mailedItems", []))
 		next_profile = _record_rebirth_trial_battle_victory(next_profile, state)
 	if result == "victory" or result == "defeat":
-		var wear_result := apply_equipment_wear(next_profile, 1)
+		var wear_result := apply_equipment_wear_from_battle_usage(next_profile, state.get("equipmentWearUsage", {}))
 		next_profile = wear_result.get("profile", next_profile)
+		for drop in wear_result.get("durabilityDrops", []):
+			if not (drop is Dictionary):
+				continue
+			var drop_dict := drop as Dictionary
+			level_up_lines.append("%s 耐久 -%d。" % [
+				str(drop_dict.get("label", "装备")),
+				maxi(1, int(drop_dict.get("amount", 1))),
+			])
 		for label in wear_result.get("brokenLabels", []):
 			level_up_lines.append("%s 耐久耗尽，已失去效果。" % str(label))
 
@@ -4342,7 +4888,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		next_profile["petInstances"] = instances
 		next_profile["nextPetInstanceSerial"] = _next_serial_from_instances(_pet_instances(next_profile))
 	next_profile = normalize_profile(next_profile)
-	var log_lines := battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward, lost_captured_instances, auto_discarded_instances)
+	var log_lines := battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward, lost_captured_instances, auto_discarded_instances, mailed_item_rewards)
 	for line in _battle_knockaway_log_lines(state, active_pet_knocked_away):
 		if not log_lines.has(line):
 			log_lines.append(line)
@@ -4360,6 +4906,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"stoneCoinsReward": stone_coins_reward,
 		"itemRewards": item_rewards,
 		"lostItemRewards": lost_item_rewards,
+		"mailedItemRewards": mailed_item_rewards,
 		"capturedPets": captured_instances,
 		"lostCapturedPets": lost_captured_instances,
 		"autoDiscardedPets": auto_discarded_instances,
@@ -4367,7 +4914,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 	}
 
 
-static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0, lost_captured_instances: Array[Dictionary] = [], auto_discarded_instances: Array[Dictionary] = []) -> Array[String]:
+static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0, lost_captured_instances: Array[Dictionary] = [], auto_discarded_instances: Array[Dictionary] = [], mailed_item_rewards: Array[Dictionary] = []) -> Array[String]:
 	var lines: Array[String] = []
 	match result:
 		"victory":
@@ -4402,6 +4949,9 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 			var lost_item_reward_text := BackpackModel.item_amounts_text(lost_item_rewards)
 			if lost_item_reward_text != "":
 				lines.append("背包已满，未获得 %s。" % lost_item_reward_text)
+			var mailed_item_reward_text := BackpackModel.item_amounts_text(mailed_item_rewards)
+			if mailed_item_reward_text != "":
+				lines.append("背包已满，%s 已发送邮箱。" % mailed_item_reward_text)
 		"defeat":
 			lines.append("战斗失败。")
 			_append_capture_result_lines(lines, captured_instances, lost_captured_instances, auto_discarded_instances)
@@ -4755,6 +5305,7 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 				continue
 			var copy_keys: Array[String] = ["name", "state", "hp", "maxHp", "quick", "attack", "defense", "formId", "templateId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "forgottenSkillIds", "passiveSkillIds"]
 			copy_keys.append_array(PET_INDIVIDUAL_FIELD_KEYS)
+			copy_keys.append_array(PET_CULTIVATION_FIELD_KEYS)
 			for key in copy_keys:
 				if entry.has(key):
 					instance[key] = entry.get(key)
@@ -5046,6 +5597,11 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
 	instance["initialStats"] = growth_snapshot.get("initialStats", {})
 	instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
+	var cultivation := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
+	instance["petCultivation"] = cultivation
+	var last_cultivation_result = instance.get("lastCultivationResult", cultivation.get("lastResult", {}))
+	if last_cultivation_result is Dictionary:
+		instance["lastCultivationResult"] = (last_cultivation_result as Dictionary).duplicate(true)
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
@@ -5253,6 +5809,20 @@ static func _safe_now_sec(now_sec: int) -> int:
 	if now_sec >= 0:
 		return now_sec
 	return int(Time.get_unix_time_from_system())
+
+
+static func _safe_mail_id_source(source_id: String) -> String:
+	var source := source_id.strip_edges()
+	if source == "":
+		source = "reward"
+	var result := ""
+	for index in range(source.length()):
+		var character := source.substr(index, 1)
+		if character.is_valid_identifier() or character.is_valid_int() or character == "-" or character == "_":
+			result += character
+		else:
+			result += "_"
+	return result if result != "" else "reward"
 
 
 static func _string_array(value) -> Array[String]:

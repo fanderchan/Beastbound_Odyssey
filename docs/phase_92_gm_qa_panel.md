@@ -30,6 +30,7 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --gm-10v10-map
 - `捉宠草丛`：随机图鉴可捕宠物，1-5 只，Lv1-10。
 - `击飞草丛`：120-140 级怪，适合测试击飞回记录点。
 - `背包`：打开随身包。
+- `变速齿轮`：按 `x1 -> x2 -> ... -> x10` 循环，加速战斗和世界走路测试。
 - `杂货铺`：打开火芽杂货铺。
 - `装备铺`：打开火芽装备铺。
 - `装备栏`：打开装备栏，并可进入合成。
@@ -76,8 +77,10 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-equipment-growth-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2200 -- --auto-equipment-requirement-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-inactive-after-rebirth-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-equipment-durability-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-slot-detail-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-equipment-synthesis-check
 ```
@@ -88,6 +91,14 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-quest-chain-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-quest-ui-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-task-tracker-route-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-quest-objective-templates-check
+```
+
+地图 / 奖励：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-map-region-contract-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-reward-grant-check
 ```
 
 自动战斗：

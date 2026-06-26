@@ -82,19 +82,46 @@ static func is_optional(quest: Dictionary) -> bool:
 	return bool(quest.get("optional", quest.get("isOptional", false)))
 
 
+static func quest_type_for(quest: Dictionary) -> String:
+	return str(quest.get("questType", "main" if not is_optional(quest) else "side"))
+
+
 static func objective_for(quest: Dictionary) -> Dictionary:
+	var objectives := objectives_for(quest)
+	return objectives[0] if not objectives.is_empty() else {}
+
+
+static func objectives_for(quest: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_objectives = quest.get("objectives", [])
+	if raw_objectives is Array:
+		for value in raw_objectives:
+			if value is Dictionary and str((value as Dictionary).get("type", "")) != "":
+				result.append((value as Dictionary).duplicate(true))
+	if not result.is_empty():
+		return result
 	var objective = quest.get("objective", {})
-	return objective as Dictionary if objective is Dictionary else {}
+	if objective is Dictionary and str((objective as Dictionary).get("type", "")) != "":
+		result.append((objective as Dictionary).duplicate(true))
+	return result
 
 
 static func objective_required_count(quest: Dictionary) -> int:
-	return maxi(1, int(objective_for(quest).get("count", 1)))
+	var total := 0
+	for objective in objectives_for(quest):
+		total += maxi(1, int(objective.get("count", 1)))
+	return maxi(1, total)
 
 
 static func objective_text_for(quest: Dictionary) -> String:
-	var objective := objective_for(quest)
-	var text := str(objective.get("text", ""))
-	return text if text != "" else title_for(quest)
+	var parts: Array[String] = []
+	for objective in objectives_for(quest):
+		var text := str(objective.get("text", "")).strip_edges()
+		if text != "":
+			parts.append(text)
+	if not parts.is_empty():
+		return "；".join(parts)
+	return title_for(quest)
 
 
 static func reward_stone_coins(quest: Dictionary) -> int:
@@ -356,51 +383,103 @@ static func progress_text_for_state(quest: Dictionary, state: Dictionary) -> Str
 static func progress_amount_for_event(quest: Dictionary, event: Dictionary) -> int:
 	if quest.is_empty():
 		return 0
-	var objective := objective_for(quest)
+	var total := 0
+	for objective in objectives_for(quest):
+		total += _progress_amount_for_objective(objective, event)
+	return total
+
+
+static func _progress_amount_for_objective(objective: Dictionary, event: Dictionary) -> int:
 	var objective_type := str(objective.get("type", ""))
 	var event_type := str(event.get("type", ""))
-	if objective_type == "" or objective_type != event_type:
+	if objective_type == "":
 		return 0
 	match objective_type:
 		"talk":
+			if event_type != "talk":
+				return 0
 			if not _matches_string_filter(objective, event, "targetId"):
 				return 0
 			return 1
 		"buy_item":
+			if event_type != "buy_item":
+				return 0
 			if not _matches_string_filter(objective, event, "shopId"):
 				return 0
 			if not _matches_item_filter(objective, event):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"use_world_item":
+			if event_type != "use_world_item":
+				return 0
+			if not _matches_item_filter(objective, event):
+				return 0
+			if not _matches_string_filter(objective, event, "targetType"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"use_item":
+			if not ["use_item", "use_world_item", "battle_item"].has(event_type):
+				return 0
 			if not _matches_item_filter(objective, event):
 				return 0
 			if not _matches_string_filter(objective, event, "targetType"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"equip_item":
+			if event_type != "equip_item":
+				return 0
 			if not _matches_item_filter(objective, event):
 				return 0
 			if not _matches_string_filter(objective, event, "slot"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"use_spirit":
+			if event_type != "use_spirit":
+				return 0
 			if not _matches_string_filter(objective, event, "spiritId"):
 				return 0
 			if not _matches_string_filter(objective, event, "eventType"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"battle_victory":
+			if event_type != "battle_victory":
+				return 0
 			if not _matches_string_filter(objective, event, "encounterGroupId"):
 				return 0
 			return 1
+		"defeat_npc":
+			if event_type != "defeat_npc" and event_type != "battle_victory":
+				return 0
+			if not _matches_string_filter(objective, event, "encounterGroupId"):
+				return 0
+			if not _matches_string_filter(objective, event, "targetId"):
+				return 0
+			if not _matches_string_filter(objective, event, "interactionId"):
+				return 0
+			return 1
 		"capture_pet":
+			if event_type != "capture_pet":
+				return 0
 			if not _matches_string_filter(objective, event, "lineId"):
 				return 0
 			if not _matches_string_filter(objective, event, "formId"):
 				return 0
 			var prefix := str(objective.get("formIdPrefix", ""))
 			if prefix != "" and not str(event.get("formId", "")).begins_with(prefix):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"deliver_pet":
+			if event_type != "deliver_pet":
+				return 0
+			if not _matches_string_filter(objective, event, "lineId"):
+				return 0
+			if not _matches_string_filter(objective, event, "formId"):
+				return 0
+			var prefix := str(objective.get("formIdPrefix", ""))
+			if prefix != "" and not str(event.get("formId", "")).begins_with(prefix):
+				return 0
+			var min_level := maxi(0, int(objective.get("minLevel", 0)))
+			if min_level > 0 and int(event.get("level", 1)) < min_level:
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 	return 0
@@ -426,9 +505,15 @@ static func validation_errors() -> Array[String]:
 			ids[quest_id] = true
 		if title_for(quest) == "":
 			errors.append("%s.title 不能为空" % quest_id)
-		var objective := objective_for(quest)
-		if str(objective.get("type", "")) == "":
+		var objectives := objectives_for(quest)
+		if objectives.is_empty():
 			errors.append("%s.objective.type 不能为空" % quest_id)
+		for objective_index in range(objectives.size()):
+			var objective := objectives[objective_index]
+			if str(objective.get("type", "")) == "":
+				errors.append("%s.objectives[%d].type 不能为空" % [quest_id, objective_index])
+			if int(objective.get("count", 1)) < 1:
+				errors.append("%s.objectives[%d].count 必须大于等于 1" % [quest_id, objective_index])
 		errors.append_array(_reward_item_validation_errors(reward_items(quest), "%s.rewards.items" % quest_id))
 		errors.append_array(_reward_ability_validation_errors(reward_abilities(quest), "%s.rewards.abilities" % quest_id))
 		var choice_ids := {}

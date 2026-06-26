@@ -4,6 +4,7 @@ extends CharacterBody2D
 @export var sprint_speed: float = 260.0
 @export var click_move_speed: float = 190.0
 @export var world_margin: float = 32.0
+@export var speed_multiplier: float = 1.0
 
 const FACING_KEYS := [
 	"east",
@@ -22,6 +23,7 @@ const FACING_KEYS := [
 @onready var right_foot: Polygon2D = $RightFoot
 
 const IDLE_ANIMATION_STEP_SECONDS := 0.125
+const AUTO_MOVE_ARRIVE_DISTANCE := 4.0
 
 var move_target: Vector2 = Vector2.ZERO
 var has_move_target: bool = false
@@ -45,8 +47,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	animation_time += delta
-	animation_visual_elapsed += delta
+	var animation_delta := delta * _effective_speed_multiplier() if animation_state == "walk" else delta
+	animation_time += animation_delta
+	animation_visual_elapsed += animation_delta
 	if animation_state == "idle" and animation_visual_elapsed < IDLE_ANIMATION_STEP_SECONDS:
 		return
 	animation_visual_elapsed = 0.0
@@ -95,45 +98,83 @@ func set_controls_enabled(enabled: bool) -> void:
 		_set_animation_state("idle")
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not controls_enabled:
 		velocity = Vector2.ZERO
 		_set_animation_state("idle")
 		return
 	var keyboard_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var direction := keyboard_direction
-	var current_speed := walk_speed
-
 	# Keyboard movement is a developer fallback; the player-facing control is click/tap auto-move.
 	if keyboard_direction.length() > 0.0:
 		has_move_target = false
-		current_speed = sprint_speed if Input.is_action_pressed("sprint") else walk_speed
-	elif has_move_target:
-		var to_target := move_target - global_position
-		if to_target.length() <= 4.0:
-			if not path_points.is_empty():
-				path_points.pop_front()
-			if path_points.is_empty():
-				has_move_target = false
-				direction = Vector2.ZERO
-			else:
-				move_target = path_points[0]
-				direction = (move_target - global_position).normalized()
-				current_speed = click_move_speed
-		else:
-			direction = to_target.normalized()
-			current_speed = click_move_speed
-
-	direction = direction.normalized()
-	if direction.length() > 0.0:
+		var keyboard_speed := sprint_speed if Input.is_action_pressed("sprint") else walk_speed
+		var direction := keyboard_direction.normalized()
 		face_direction(direction)
 		_set_animation_state("walk")
-	else:
-		_set_animation_state("idle")
+		velocity = direction * keyboard_speed * _effective_speed_multiplier()
+		move_and_slide()
+		_clamp_to_bounds()
+		return
 
-	velocity = direction * current_speed
-	move_and_slide()
+	if has_move_target:
+		var movement_delta := _advance_auto_path(click_move_speed * _effective_speed_multiplier() * delta)
+		if movement_delta.length() > 0.001:
+			face_direction(movement_delta.normalized())
+			_set_animation_state("walk")
+			velocity = movement_delta / maxf(delta, 0.0001)
+		else:
+			velocity = Vector2.ZERO
+			_set_animation_state("idle")
+		_clamp_to_bounds()
+		return
+
+	velocity = Vector2.ZERO
+	_set_animation_state("idle")
 	_clamp_to_bounds()
+
+
+func _advance_auto_path(distance_budget: float) -> Vector2:
+	var start_position := global_position
+	var budget := maxf(0.0, distance_budget)
+	while has_move_target and budget > 0.0:
+		if path_points.is_empty():
+			has_move_target = false
+			break
+		move_target = path_points[0]
+		var to_target := move_target - global_position
+		var distance := to_target.length()
+		if distance <= AUTO_MOVE_ARRIVE_DISTANCE:
+			global_position = move_target
+			path_points.pop_front()
+			if path_points.is_empty():
+				has_move_target = false
+				break
+			continue
+		if budget >= distance:
+			global_position = move_target
+			budget -= distance
+			path_points.pop_front()
+			if path_points.is_empty():
+				has_move_target = false
+				break
+			continue
+		global_position += to_target / distance * budget
+		budget = 0.0
+	if has_move_target and not path_points.is_empty():
+		move_target = path_points[0]
+	return global_position - start_position
+
+
+func set_speed_multiplier(value: float) -> void:
+	speed_multiplier = clampf(value, 1.0, 10.0)
+
+
+func get_speed_multiplier() -> float:
+	return _effective_speed_multiplier()
+
+
+func _effective_speed_multiplier() -> float:
+	return clampf(speed_multiplier, 1.0, 10.0)
 
 
 func _clamp_to_bounds() -> void:

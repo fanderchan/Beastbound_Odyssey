@@ -80,6 +80,8 @@ const PET_METADATA_KEYS: Array[String] = [
 	"growthRecord",
 	"combatPower",
 	"combatPowerBreakdown",
+	"petCultivation",
+	"lastCultivationResult",
 ]
 
 
@@ -2158,6 +2160,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, hp_before)
 		state["lastCounterTriggered"] = not (state["lastCounterEvent"] as Dictionary).is_empty()
 		state["lastReactionKind"] = "dodge"
+		if _event_counts_as_player_weapon_attack(event_type, participant_ids):
+			state = _add_equipment_wear_usage(state, "weaponAttacks", 1)
 		var dodged_attacker_name := str(first_attacker.get("name", "我方"))
 		var dodged_target_name := str(target.get("name", "目标"))
 		if event_type == "counter_attack":
@@ -2212,6 +2216,10 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, next_hp)
 	state["lastCounterTriggered"] = not (state["lastCounterEvent"] as Dictionary).is_empty()
 	state["lastReactionKind"] = "critical" if critical else ""
+	if _event_counts_as_player_weapon_attack(event_type, participant_ids):
+		state = _add_equipment_wear_usage(state, "weaponAttacks", 1)
+	if target_id == PLAYER_ACTOR_ID and damage > 0:
+		state = _add_equipment_wear_usage(state, "armorHits", 1)
 	if confusion_triggered:
 		state["lastStatusId"] = STATUS_CONFUSION
 		state["lastStatusResult"] = "confused_retarget"
@@ -2338,6 +2346,10 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	state["lastCounterEvent"] = {}
 	state["lastCounterTriggered"] = false
 	state["lastReactionKind"] = "multi_attack"
+	if attacker_id == PLAYER_ACTOR_ID:
+		state = _add_equipment_wear_usage(state, "weaponAttacks", 1)
+	if int(effect_per_target.get(PLAYER_ACTOR_ID, 0)) > 0:
+		state = _add_equipment_wear_usage(state, "armorHits", 1)
 	if not status_changes.is_empty():
 		state["lastStatusChanges"] = status_changes
 	var attacker_name := str(attacker.get("name", "我方"))
@@ -2350,6 +2362,25 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	]
 	if dodged_count > 0:
 		state["message"] += " %d个目标回避。" % dodged_count
+	return state
+
+
+static func _event_counts_as_player_weapon_attack(event_type: String, participant_ids: Array) -> bool:
+	if not ["attack", "combo_attack", "counter_attack"].has(event_type):
+		return false
+	for participant_id in participant_ids:
+		if str(participant_id) == PLAYER_ACTOR_ID:
+			return true
+	return false
+
+
+static func _add_equipment_wear_usage(state: Dictionary, key: String, amount: int) -> Dictionary:
+	if amount <= 0:
+		return state
+	var raw_usage = state.get("equipmentWearUsage", {})
+	var usage := raw_usage as Dictionary if raw_usage is Dictionary else {}
+	usage[key] = maxi(0, int(usage.get(key, 0))) + amount
+	state["equipmentWearUsage"] = usage
 	return state
 
 

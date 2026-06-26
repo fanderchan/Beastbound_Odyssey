@@ -18,6 +18,7 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
@@ -241,6 +242,7 @@ var equipment_grid: Control
 var equipment_stats_label: Label
 var equipment_detail_label: Label
 var equipment_unequip_button: Button
+var equipment_enhance_button: Button
 var equipment_synthesis_open_button: Button
 var equipment_close_button: Button
 var equipment_slot_buttons: Dictionary = {}
@@ -288,12 +290,18 @@ var pet_stable_button: Button
 var pet_party_up_button: Button
 var pet_party_down_button: Button
 var pet_rename_button: Button
+var pet_cultivation_button: Button
 var pet_drop_button: Button
 var pet_rename_panel: PanelContainer
 var pet_rename_title_label: Label
 var pet_rename_input: LineEdit
 var pet_rename_confirm_button: Button
 var pet_rename_cancel_button: Button
+var pet_cultivation_panel: PanelContainer
+var pet_cultivation_title_label: Label
+var pet_cultivation_preview_label: Label
+var pet_cultivation_confirm_button: Button
+var pet_cultivation_close_button: Button
 var pet_close_button: Button
 var pet_skill_button: Button
 var pet_skill_panel: PanelContainer
@@ -372,7 +380,9 @@ var auto_settings_close_button: Button
 var auto_settings_controls: Dictionary = {}
 var auto_settings_active_tab: String = "battle"
 var qa_panel: PanelContainer
+var qa_entry_scroll: ScrollContainer
 var qa_entry_container: VBoxContainer
+var qa_detail_scroll: ScrollContainer
 var qa_detail_label: RichTextLabel
 var qa_close_button: Button
 var qa_entry_buttons: Dictionary = {}
@@ -443,6 +453,7 @@ var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
 var auto_pet_growth_check: bool = false
 var auto_pet_individual_growth_check: bool = false
+var auto_pet_cultivation_check: bool = false
 var auto_pet_rename_check: bool = false
 var auto_pet_order_check: bool = false
 var auto_pet_recovery_check: bool = false
@@ -497,6 +508,10 @@ var auto_equipment_durability_check: bool = false
 var auto_equipment_durability_visual_check: bool = false
 var auto_equipment_slot_detail_check: bool = false
 var auto_equipment_synthesis_check: bool = false
+var auto_equipment_growth_check: bool = false
+var auto_quest_objective_templates_check: bool = false
+var auto_map_region_contract_check: bool = false
+var auto_reward_grant_check: bool = false
 var auto_encounter_loop_check: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
@@ -770,6 +785,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_growth_check")
 	elif auto_pet_individual_growth_check:
 		call_deferred("_run_auto_pet_individual_growth_check")
+	elif auto_pet_cultivation_check:
+		call_deferred("_run_auto_pet_cultivation_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
 	elif auto_pet_order_check:
@@ -878,6 +895,14 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_slot_detail_check")
 	elif auto_equipment_synthesis_check:
 		call_deferred("_run_auto_equipment_synthesis_check")
+	elif auto_equipment_growth_check:
+		call_deferred("_run_auto_equipment_growth_check")
+	elif auto_quest_objective_templates_check:
+		call_deferred("_run_auto_quest_objective_templates_check")
+	elif auto_map_region_contract_check:
+		call_deferred("_run_auto_map_region_contract_check")
+	elif auto_reward_grant_check:
+		call_deferred("_run_auto_reward_grant_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif backpack_preview:
@@ -1251,6 +1276,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_growth_check = true
 		elif arg == "--auto-pet-individual-growth-check":
 			auto_pet_individual_growth_check = true
+		elif arg == "--auto-pet-cultivation-check":
+			auto_pet_cultivation_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
 		elif arg == "--auto-pet-order-check":
@@ -1361,6 +1388,14 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_slot_detail_check = true
 		elif arg == "--auto-equipment-synthesis-check":
 			auto_equipment_synthesis_check = true
+		elif arg == "--auto-equipment-growth-check":
+			auto_equipment_growth_check = true
+		elif arg == "--auto-quest-objective-templates-check":
+			auto_quest_objective_templates_check = true
+		elif arg == "--auto-map-region-contract-check":
+			auto_map_region_contract_check = true
+		elif arg == "--auto-reward-grant-check":
+			auto_reward_grant_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--backpack-preview":
@@ -2203,6 +2238,8 @@ func _run_auto_npc_collision_check() -> void:
 
 
 func _run_auto_map_transfer_check() -> void:
+	var previous_multiplier := gm_battle_speed_multiplier
+	_set_gm_speed_multiplier(10)
 	var start_ok := current_map_id == "firebud_training_yard"
 	var outbound_warp := InteractionModel.find_by_id(map_data, "warp_to_village_gate")
 	var outbound_found := not outbound_warp.is_empty()
@@ -2231,9 +2268,12 @@ func _run_auto_map_transfer_check() -> void:
 	var return_spawn_ok := false
 	if returned_training:
 		return_spawn_ok = IsoMapModel.world_to_grid(map_data, player.global_position) == IsoMapModel.spawn_cell(map_data, "from_village_gate")
+	_set_gm_speed_multiplier(previous_multiplier)
+	var speed_restored := _gm_battle_speed_multiplier() == clampi(previous_multiplier, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
 	var status := "ok" if start_ok and outbound_found and outbound_overlap and arrived_village and village_spawn_ok and return_found and return_overlap and returned_training and return_spawn_ok else "failed"
-	print("map transfer check ready: status=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s final_map=%s final_cell=%s" % [
+	print("map transfer check ready: status=%s speed_x10=true speed_restored=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s final_map=%s final_cell=%s" % [
 		status,
+		str(speed_restored),
 		str(start_ok),
 		str(outbound_found),
 		str(outbound_overlap),
@@ -3435,13 +3475,39 @@ func _run_auto_battle_round_check() -> void:
 
 func _run_auto_battle_speed_check() -> void:
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var previous_multiplier := gm_battle_speed_multiplier
+	var movement_speed_ok := false
+	var normal_walk_distance := 0.0
+	var fast_walk_distance := 0.0
+	if loaded and player != null:
+		var start_position := player.global_position
+		var target_position := start_position + Vector2(480.0, 0.0)
+		var previous_grace := encounter_grace_remaining
+		encounter_grace_remaining = 999.0
+		_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN)
+		player.global_position = start_position
+		player.clear_move_target()
+		player.set_move_target(target_position)
+		for _step in range(8):
+			await get_tree().physics_frame
+		normal_walk_distance = player.global_position.distance_to(start_position)
+		player.global_position = start_position
+		player.clear_move_target()
+		_set_gm_speed_multiplier(5)
+		player.set_move_target(target_position)
+		for _step in range(8):
+			await get_tree().physics_frame
+		fast_walk_distance = player.global_position.distance_to(start_position)
+		player.clear_move_target()
+		_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN)
+		encounter_grace_remaining = previous_grace
+		movement_speed_ok = fast_walk_distance > normal_walk_distance * 1.8
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
 	if zone_found:
 		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
 	await get_tree().process_frame
-	var previous_multiplier := gm_battle_speed_multiplier
-	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN
+	_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN)
 	var events := BattleModel.build_command_round_events(battle_state, "attack", "enemy_front_5")
 	var sorted := not events.is_empty()
 	var saw_ally := false
@@ -3475,7 +3541,7 @@ func _run_auto_battle_speed_check() -> void:
 	battle_action_timer = 1.0
 	_update_battle_animation(0.1)
 	var normal_animation_ok := absf(battle_action_timer - 0.9) <= 0.001
-	gm_battle_speed_multiplier = 5
+	_set_gm_speed_multiplier(5)
 	battle_current_event = {"type": "defend"}
 	battle_current_event_duration = 1.0
 	battle_event_advance_pending = false
@@ -3494,13 +3560,16 @@ func _run_auto_battle_speed_check() -> void:
 	_update_battle_auto_attack(0.1)
 	var fast_auto_delay_ok := absf(battle_auto_attack_delay - 0.5) <= 0.001
 	battle_auto_attack_enabled = false
-	gm_battle_speed_multiplier = previous_multiplier
+	_set_gm_speed_multiplier(previous_multiplier)
 	var speed_gear_ok := normal_animation_ok and fast_animation_ok and fast_auto_delay_ok
-	var status := "ok" if loaded and zone_found and sorted and saw_ally and saw_enemy and mixed_opening and enemy_targets_spread and speed_gear_ok else "failed"
-	print("battle speed check ready: status=%s loaded=%s zone_found=%s sorted=%s saw_ally=%s saw_enemy=%s mixed=%s enemy_targets_spread=%s gear=%s normal_anim=%s fast_anim=%s fast_auto_delay=%s order=%s" % [
+	var status := "ok" if loaded and zone_found and movement_speed_ok and sorted and saw_ally and saw_enemy and mixed_opening and enemy_targets_spread and speed_gear_ok else "failed"
+	print("battle speed check ready: status=%s loaded=%s zone_found=%s world_speed=%s normal_walk=%.2f fast_walk=%.2f sorted=%s saw_ally=%s saw_enemy=%s mixed=%s enemy_targets_spread=%s gear=%s normal_anim=%s fast_anim=%s fast_auto_delay=%s order=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
+		str(movement_speed_ok),
+		normal_walk_distance,
+		fast_walk_distance,
 		str(sorted),
 		str(saw_ally),
 		str(saw_enemy),
@@ -4437,6 +4506,15 @@ func _run_auto_battle_label_check() -> void:
 	var large_count_ok := large_actors.size() == 20
 	var large_labels_ok := large_count_ok
 	var large_visible_ok := large_count_ok
+	var large_long_label_plan := _battle_actor_label_draw_plan({
+		"name": "陪练高速乌力1",
+		"level": 131,
+	}, _battle_actor_visual_scale(), true)
+	var large_long_label_ok := (
+		str(large_long_label_plan.get("label", "")).find("Lv131") >= 0
+		and bool(large_long_label_plan.get("fits", false))
+		and bool(large_long_label_plan.get("fullLabel", false))
+	)
 	for value in large_actors:
 		if not (value is Dictionary):
 			large_labels_ok = false
@@ -4446,8 +4524,8 @@ func _run_auto_battle_label_check() -> void:
 		var label := _battle_actor_label(large_actor)
 		large_labels_ok = large_labels_ok and label != "" and label.find(" Lv") >= 0
 		large_visible_ok = large_visible_ok and _battle_should_show_actor_label(large_actor)
-	var status := "ok" if loaded and zone_found and battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok else "failed"
-	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s player_label=%s pet_label=%s enemy_label=%s" % [
+	var status := "ok" if loaded and zone_found and battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok and large_long_label_ok else "failed"
+	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s long_label=%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
 		status,
 		str(player_ok),
 		str(pet_ok),
@@ -4455,6 +4533,8 @@ func _run_auto_battle_label_check() -> void:
 		str(large_count_ok),
 		str(large_labels_ok),
 		str(large_visible_ok),
+		str(large_long_label_ok),
+		str(large_long_label_plan),
 		_battle_actor_label(player_actor),
 		_battle_actor_label(pet_actor),
 		_battle_actor_label(enemy_actor),
@@ -5411,6 +5491,95 @@ func _run_auto_pet_individual_growth_check() -> void:
 		int(second_pet.get("quick", 0)),
 		str(captured_a.get("individualSeed", "")),
 		str(captured_b.get("individualSeed", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_cultivation_check() -> void:
+	profile_save_enabled = false
+	var form_id := "wuli_normal_orange_fire10"
+	var junior_pet := PlayerProgressModel.create_pet_instance_from_form("phase114_junior", "强化乌力", form_id, PlayerProgressModel.PET_STATE_STANDBY, 10, {
+		"individualSeed": "phase114:junior",
+	})
+	var elder_pet := PlayerProgressModel.create_pet_instance_from_form("phase114_elder", "转生乌力", form_id, PlayerProgressModel.PET_STATE_BATTLE, PlayerProgressModel.MAX_PET_LEVEL, {
+		"individualSeed": "phase114:elder",
+	})
+	var profile := PlayerProgressModel.default_profile()
+	profile["activePetInstanceId"] = "phase114_elder"
+	profile["petInstances"] = [junior_pet, elder_pet]
+	profile = PlayerProgressModel.normalize_profile(profile)
+
+	var enhance_preview := PlayerProgressModel.pet_cultivation_preview(profile, "phase114_junior", "enhance")
+	var enhance_result := PlayerProgressModel.apply_pet_cultivation(profile, "phase114_junior", "enhance", 11400)
+	var enhanced_profile: Dictionary = enhance_result.get("profile", profile)
+	var enhanced_pet := PlayerProgressModel.pet_instance_by_id(enhanced_profile, "phase114_junior")
+	var enhance_record := enhanced_pet.get("petCultivation", {}) as Dictionary
+	var enhance_history: Array = enhance_record.get("history", [])
+	var enhance_ok := (
+		bool(enhance_preview.get("ok", false))
+		and bool(enhance_result.get("ok", false))
+		and int(enhance_record.get("enhanceLevel", 0)) == 1
+		and enhance_history.size() == 1
+		and int(enhanced_pet.get("level", 0)) == 10
+	)
+	var actor := PlayerProgressModel.actor_from_pet_instance(enhanced_pet, "ally_pet", "ally", "ally.back.8")
+	var actor_ok := actor.get("petCultivation", {}) is Dictionary and int((actor.get("petCultivation", {}) as Dictionary).get("enhanceLevel", 0)) == 1
+
+	var rebirth_preview := PlayerProgressModel.pet_cultivation_preview(profile, "phase114_elder", "rebirth")
+	var rebirth_result := PlayerProgressModel.apply_pet_cultivation(profile, "phase114_elder", "rebirth", 11401)
+	var reborn_profile: Dictionary = rebirth_result.get("profile", profile)
+	var reborn_pet := PlayerProgressModel.pet_instance_by_id(reborn_profile, "phase114_elder")
+	var rebirth_record := reborn_pet.get("petCultivation", {}) as Dictionary
+	var rebirth_history: Array = rebirth_record.get("history", [])
+	var rebirth_ok := (
+		bool(rebirth_preview.get("ok", false))
+		and bool(rebirth_result.get("ok", false))
+		and int(rebirth_record.get("rebirthCount", 0)) == 1
+		and rebirth_history.size() == 1
+		and int(reborn_pet.get("level", 0)) == 1
+		and int(reborn_pet.get("exp", -1)) == 0
+		and int(reborn_pet.get("hp", 0)) == int(reborn_pet.get("maxHp", 1))
+		and str(reborn_pet.get("individualSeed", "")) == "phase114:elder"
+	)
+
+	player_profile = profile
+	pet_selected_instance_id = "phase114_elder"
+	_open_pet_panel()
+	await get_tree().process_frame
+	var button_ready := pet_cultivation_button != null and pet_cultivation_button.visible and not pet_cultivation_button.disabled and pet_cultivation_button.text == "转强"
+	_on_pet_cultivation_pressed()
+	await get_tree().process_frame
+	var panel_ready := (
+		pet_cultivation_panel != null
+		and pet_cultivation_panel.visible
+		and pet_cultivation_title_label != null
+		and pet_cultivation_title_label.text == "宠物转生"
+		and pet_cultivation_confirm_button != null
+		and pet_cultivation_confirm_button.text == "确认转生"
+		and not pet_cultivation_confirm_button.disabled
+		and pet_cultivation_preview_label != null
+		and pet_cultivation_preview_label.text.find("Lv140 -> Lv1") >= 0
+	)
+	_on_pet_cultivation_confirm_pressed()
+	await get_tree().process_frame
+	var ui_reborn := PlayerProgressModel.pet_instance_by_id(player_profile, "phase114_elder")
+	var detail_text := pet_detail_label.text if pet_detail_label != null else ""
+	var ui_ok := (
+		int(ui_reborn.get("level", 0)) == 1
+		and int((ui_reborn.get("petCultivation", {}) as Dictionary).get("rebirthCount", 0)) == 1
+		and detail_text.find("培养：转生 1 次") >= 0
+		and world_log_message.find("Lv140 -> Lv1") >= 0
+	)
+	var status := "ok" if enhance_ok and actor_ok and rebirth_ok and button_ready and panel_ready and ui_ok else "failed"
+	print("pet cultivation check ready: status=%s enhance=%s actor=%s rebirth=%s button=%s panel=%s ui=%s log=%s" % [
+		status,
+		str(enhance_ok),
+		str(actor_ok),
+		str(rebirth_ok),
+		str(button_ready),
+		str(panel_ready),
+		str(ui_ok),
+		world_log_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -9235,13 +9404,48 @@ func _run_auto_equipment_durability_check() -> void:
 	world_log_message = ""
 	var base_profile := PlayerProgressModel.default_profile()
 	var base_durability := PlayerProgressModel.equipment_durability(base_profile)
-	var default_durability_ok := int(base_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
-	var wear_result := PlayerProgressModel.apply_equipment_wear(base_profile, 1)
-	var worn_profile := wear_result.get("profile", {}) as Dictionary
-	var worn_durability := PlayerProgressModel.equipment_durability(worn_profile)
-	var wear_ok := (
-		bool(wear_result.get("changed", false))
-		and int(worn_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX - 1
+	var default_weapon_durability := int(base_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0))
+	var default_body_durability := int(base_durability.get(EquipmentModel.SLOT_BODY, 0))
+	var default_durability_ok := (
+		default_weapon_durability == EquipmentModel.DEFAULT_DURABILITY_MAX
+		and default_body_durability == EquipmentModel.DEFAULT_DURABILITY_MAX
+	)
+	var weapon_99_result := PlayerProgressModel.apply_equipment_wear_from_battle_usage(base_profile, {"weaponAttacks": 99})
+	var weapon_99_profile := weapon_99_result.get("profile", {}) as Dictionary
+	var weapon_99_durability := PlayerProgressModel.equipment_durability(weapon_99_profile)
+	var weapon_99_counters := PlayerProgressModel.equipment_wear_counters(weapon_99_profile)
+	var weapon_99_record := weapon_99_counters.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, {}) as Dictionary
+	var weapon_99_ok := (
+		not bool(weapon_99_result.get("changed", false))
+		and int(weapon_99_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == default_weapon_durability
+		and int(weapon_99_record.get("attackCount", 0)) == 99
+	)
+	var weapon_100_result := PlayerProgressModel.apply_equipment_wear_from_battle_usage(weapon_99_profile, {"weaponAttacks": 1})
+	var weapon_100_profile := weapon_100_result.get("profile", {}) as Dictionary
+	var weapon_100_durability := PlayerProgressModel.equipment_durability(weapon_100_profile)
+	var weapon_100_record := PlayerProgressModel.equipment_wear_counters(weapon_100_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, {}) as Dictionary
+	var weapon_100_ok := (
+		bool(weapon_100_result.get("changed", false))
+		and int(weapon_100_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == default_weapon_durability - 1
+		and int(weapon_100_record.get("attackCount", 0)) == 0
+	)
+	var armor_9_result := PlayerProgressModel.apply_equipment_wear_from_battle_usage(base_profile, {"armorHits": 9})
+	var armor_9_profile := armor_9_result.get("profile", {}) as Dictionary
+	var armor_9_durability := PlayerProgressModel.equipment_durability(armor_9_profile)
+	var armor_9_record := PlayerProgressModel.equipment_wear_counters(armor_9_profile).get(EquipmentModel.SLOT_BODY, {}) as Dictionary
+	var armor_9_ok := (
+		not bool(armor_9_result.get("changed", false))
+		and int(armor_9_durability.get(EquipmentModel.SLOT_BODY, 0)) == default_body_durability
+		and int(armor_9_record.get("hitCount", 0)) == 9
+	)
+	var armor_10_result := PlayerProgressModel.apply_equipment_wear_from_battle_usage(armor_9_profile, {"armorHits": 1})
+	var armor_10_profile := armor_10_result.get("profile", {}) as Dictionary
+	var armor_10_durability := PlayerProgressModel.equipment_durability(armor_10_profile)
+	var armor_10_record := PlayerProgressModel.equipment_wear_counters(armor_10_profile).get(EquipmentModel.SLOT_BODY, {}) as Dictionary
+	var armor_10_ok := (
+		bool(armor_10_result.get("changed", false))
+		and int(armor_10_durability.get(EquipmentModel.SLOT_BODY, 0)) == default_body_durability - 1
+		and int(armor_10_record.get("hitCount", 0)) == 0
 	)
 	var broken_profile := base_profile.duplicate(true)
 	var broken_durability := PlayerProgressModel.equipment_durability(broken_profile)
@@ -9268,9 +9472,17 @@ func _run_auto_equipment_durability_check() -> void:
 		and int(repaired_current.get("attack", 0)) == 32
 	)
 	var battle_state := _battle_reward_test_state("equipment_durability_battle", base_profile)
+	battle_state["equipmentWearUsage"] = {
+		"weaponAttacks": PlayerProgressModel.EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY,
+		"armorHits": PlayerProgressModel.EQUIPMENT_ARMOR_HITS_PER_DURABILITY,
+	}
 	var battle_result := PlayerProgressModel.apply_battle_result(base_profile, battle_state, "victory")
 	var battle_profile := battle_result.get("profile", {}) as Dictionary
-	var battle_durability_ok := int(PlayerProgressModel.equipment_durability(battle_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX - 1
+	var battle_durability := PlayerProgressModel.equipment_durability(battle_profile)
+	var battle_durability_ok := (
+		int(battle_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == default_weapon_durability - 1
+		and int(battle_durability.get(EquipmentModel.SLOT_BODY, 0)) == default_body_durability - 1
+	)
 
 	player_profile = broken_profile
 	_load_map("firebud_village_gate", "from_training_yard")
@@ -9303,11 +9515,14 @@ func _run_auto_equipment_durability_check() -> void:
 		and shop_repair_button.disabled
 		and int(PlayerProgressModel.equipment_durability(player_profile).get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0)) == EquipmentModel.DEFAULT_DURABILITY_MAX
 	)
-	var status := "ok" if default_durability_ok and wear_ok and broken_ok and repair_ok and battle_durability_ok and equipment_ui_ok and repair_button_ready and repair_button_done else "failed"
-	print("equipment durability check ready: status=%s default=%s wear=%s broken=%s repair=%s battle=%s equipment_ui=%s repair_ready=%s repair_done=%s attack_broken=%d coins=%d" % [
+	var status := "ok" if default_durability_ok and weapon_99_ok and weapon_100_ok and armor_9_ok and armor_10_ok and broken_ok and repair_ok and battle_durability_ok and equipment_ui_ok and repair_button_ready and repair_button_done else "failed"
+	print("equipment durability check ready: status=%s default=%s weapon99=%s weapon100=%s armor9=%s armor10=%s broken=%s repair=%s battle=%s equipment_ui=%s repair_ready=%s repair_done=%s attack_broken=%d coins=%d" % [
 		status,
 		str(default_durability_ok),
-		str(wear_ok),
+		str(weapon_99_ok),
+		str(weapon_100_ok),
+		str(armor_9_ok),
+		str(armor_10_ok),
 		str(broken_ok),
 		str(repair_ok),
 		str(battle_durability_ok),
@@ -9316,6 +9531,285 @@ func _run_auto_equipment_durability_check() -> void:
 		str(repair_button_done),
 		int(broken_current.get("attack", 0)),
 		PlayerProgressModel.stone_coins(player_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_equipment_growth_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var base_profile := PlayerProgressModel.default_profile()
+	var material_slots := BackpackModel.slots_from_counts({
+		EQUIP_FRAG_WOOD_BASIC_ID: 3,
+		EQUIP_FRAG_HIDE_BASIC_ID: 3,
+	}, BackpackModel.BASE_SLOT_LIMIT)
+	var material_profile := PlayerProgressModel.with_backpack_slots(base_profile, material_slots)
+	material_profile = PlayerProgressModel.with_stone_coins(material_profile, 120)
+	var before_bonus := PlayerProgressModel.equipment_stat_bonus(material_profile)
+	var quote := PlayerProgressModel.equipment_enhance_quote(material_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var quote_ok := (
+		bool(quote.get("ok", false))
+		and int(quote.get("nextLevel", 0)) == 1
+		and str(quote.get("materialId", "")) == EQUIP_FRAG_WOOD_BASIC_ID
+		and int(quote.get("stoneCost", 0)) == EquipmentModel.ENHANCE_BASE_STONE_COST
+	)
+	var enhance_result := PlayerProgressModel.enhance_equipment_slot(material_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var enhanced_profile := enhance_result.get("profile", {}) as Dictionary
+	var after_bonus := PlayerProgressModel.equipment_stat_bonus(enhanced_profile)
+	var enhance_ok := (
+		bool(enhance_result.get("ok", false))
+		and PlayerProgressModel.equipment_enhance_level(enhanced_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == 1
+		and int(after_bonus.get("attack", 0)) == int(before_bonus.get("attack", 0)) + 1
+		and PlayerProgressModel.backpack_item_count(enhanced_profile, EQUIP_FRAG_WOOD_BASIC_ID) == 2
+		and PlayerProgressModel.stone_coins(enhanced_profile) == 100
+		and PlayerProgressModel.equipment_enhance_text(enhanced_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON).find("+1") >= 0
+	)
+	player_profile = material_profile
+	_load_map("firebud_village_gate", "from_training_yard")
+	equipment_selected_slot_id = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+	_open_equipment_panel()
+	await get_tree().process_frame
+	var before_ui_detail := equipment_detail_label.text if equipment_detail_label != null else ""
+	var button_ready_ok := (
+		equipment_enhance_button != null
+		and equipment_enhance_button.visible
+		and not equipment_enhance_button.disabled
+		and equipment_enhance_button.text == "强化 +1"
+		and before_ui_detail.find("强化: +0") >= 0
+	)
+	_on_equipment_enhance_pressed()
+	await get_tree().process_frame
+	var after_ui_detail := equipment_detail_label.text if equipment_detail_label != null else ""
+	var ui_ok := (
+		PlayerProgressModel.equipment_enhance_level(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == 1
+		and after_ui_detail.find("强化: +1") >= 0
+		and after_ui_detail.find("攻击 +1") >= 0
+		and world_log_message.find("强化到 +1") >= 0
+	)
+	_close_equipment_panel()
+	var status := "ok" if quote_ok and enhance_ok and button_ready_ok and ui_ok else "failed"
+	print("equipment growth check ready: status=%s quote=%s enhance=%s button=%s ui=%s level=%d coins=%d wood=%d" % [
+		status,
+		str(quote_ok),
+		str(enhance_ok),
+		str(button_ready_ok),
+		str(ui_ok),
+		PlayerProgressModel.equipment_enhance_level(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON),
+		PlayerProgressModel.stone_coins(player_profile),
+		PlayerProgressModel.backpack_item_count(player_profile, EQUIP_FRAG_WOOD_BASIC_ID),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_reward_grant_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var fill_counts := {}
+	var filled := 0
+	for item in BackpackModel.items():
+		if filled >= BackpackModel.BASE_SLOT_LIMIT:
+			break
+		var item_id := str(item.get("id", ""))
+		if item_id == "":
+			continue
+		fill_counts[item_id] = BackpackModel.stack_limit_for(item_id)
+		filled += 1
+	var full_slots := BackpackModel.slots_from_counts(fill_counts, BackpackModel.BASE_SLOT_LIMIT)
+	var full_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
+	full_profile = PlayerProgressModel.with_stone_coins(full_profile, 100)
+	full_profile = PlayerProgressModel.with_diamonds(full_profile, 200)
+	var grant_result := PlayerProgressModel.grant_reward_bundle(full_profile, {
+		"stoneCoins": 7,
+		"diamonds": 11,
+		"items": [
+			{"itemId": "item_meat_small", "count": 1},
+			{"itemId": "capture_net", "count": 3},
+		],
+	}, "phase118_reward_grant_check", "测试奖励")
+	var reward_profile := grant_result.get("profile", {}) as Dictionary
+	var mail := PlayerProgressModel.mailbox_message_by_id(reward_profile, "%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "phase118_reward_grant_check"])
+	var mailed_items: Array[Dictionary] = []
+	var mailed_items_value = grant_result.get("mailedItems", [])
+	if mailed_items_value is Array:
+		for item_value in mailed_items_value:
+			if item_value is Dictionary:
+				mailed_items.append(item_value as Dictionary)
+	var reward_ok := (
+		bool(grant_result.get("mailSent", false))
+		and PlayerProgressModel.stone_coins(reward_profile) == 107
+		and PlayerProgressModel.diamonds(reward_profile) == 211
+		and PlayerProgressModel.backpack_item_count(reward_profile, "item_meat_small") == BackpackModel.stack_limit_for("item_meat_small")
+		and _item_amount_count(mailed_items, "item_meat_small") == 1
+		and _item_amount_count(mailed_items, "capture_net") == 3
+		and not mail.is_empty()
+		and PlayerProgressModel.mailbox_expiry_text(mail).find("天后过期") >= 0
+	)
+	var claim_result := PlayerProgressModel.mailbox_claim_message(reward_profile, str(mail.get("mailId", "")))
+	var claim_full_ok := (
+		not bool(claim_result.get("ok", false))
+		and str(claim_result.get("message", "")).find("背包已满") >= 0
+	)
+	var status := "ok" if reward_ok and claim_full_ok else "failed"
+	print("reward grant check ready: status=%s reward=%s claim_full=%s mailed=%s coins=%d diamonds=%d" % [
+		status,
+		str(reward_ok),
+		str(claim_full_ok),
+		BackpackModel.item_amounts_text(mailed_items),
+		PlayerProgressModel.stone_coins(reward_profile),
+		PlayerProgressModel.diamonds(reward_profile),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_quest_objective_templates_check() -> void:
+	profile_save_enabled = false
+	var defeat_quest := {
+		"id": "test_defeat_guardian",
+		"title": "击败指定守护兽",
+		"objective": {
+			"type": "defeat_npc",
+			"interactionId": "earth_vein_guardian_npc",
+			"encounterGroupId": "earth_vein_guardian_group",
+			"count": 1,
+		},
+	}
+	var deliver_quest := {
+		"id": "test_deliver_pet",
+		"title": "交付指定宠物",
+		"objective": {
+			"type": "deliver_pet",
+			"lineId": "wuli",
+			"minLevel": 50,
+			"count": 1,
+		},
+	}
+	var use_quest := {
+		"id": "test_use_item",
+		"title": "使用指定道具",
+		"objective": {
+			"type": "use_item",
+			"itemId": "item_meat_small",
+			"targetType": "pet",
+			"count": 1,
+		},
+	}
+	var equip_quest := {
+		"id": "test_equip_item",
+		"title": "装备指定装备",
+		"objectives": [
+			{
+				"type": "equip_item",
+				"itemId": "weapon_wooden_club",
+				"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
+				"count": 1,
+				"text": "装备木棒",
+			},
+			{
+				"type": "use_item",
+				"itemId": "item_meat_small",
+				"targetType": "pet",
+				"count": 1,
+				"text": "给宠物喂肉",
+			}
+		],
+	}
+	var defeat_ok := (
+		QuestModel.progress_amount_for_event(defeat_quest, {
+			"type": "defeat_npc",
+			"interactionId": "earth_vein_guardian_npc",
+			"encounterGroupId": "earth_vein_guardian_group",
+		}) == 1
+		and QuestModel.progress_amount_for_event(defeat_quest, {
+			"type": "defeat_npc",
+			"interactionId": "tide_echo_guardian_npc",
+			"encounterGroupId": "tide_echo_guardian_group",
+		}) == 0
+	)
+	var deliver_ok := (
+		QuestModel.progress_amount_for_event(deliver_quest, {
+			"type": "deliver_pet",
+			"lineId": "wuli",
+			"formId": "wuli_normal_fast_wind10",
+			"level": 50,
+		}) == 1
+		and QuestModel.progress_amount_for_event(deliver_quest, {
+			"type": "deliver_pet",
+			"lineId": "wuli",
+			"formId": "wuli_normal_fast_wind10",
+			"level": 49,
+		}) == 0
+	)
+	var use_ok := (
+		QuestModel.progress_amount_for_event(use_quest, {
+			"type": "use_world_item",
+			"itemId": "item_meat_small",
+			"targetType": "pet",
+		}) == 1
+		and QuestModel.progress_amount_for_event(use_quest, {
+			"type": "battle_item",
+			"itemId": "item_meat_small",
+			"targetType": "enemy",
+		}) == 0
+	)
+	var multi_ok := (
+		QuestModel.objectives_for(equip_quest).size() == 2
+		and QuestModel.objective_required_count(equip_quest) == 2
+		and QuestModel.objective_text_for(equip_quest).find("装备木棒；给宠物喂肉") >= 0
+		and QuestModel.progress_amount_for_event(equip_quest, {
+			"type": "equip_item",
+			"itemId": "weapon_wooden_club",
+			"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
+		}) == 1
+	)
+	var catalog_ok := QuestModel.validation_errors().is_empty()
+	var status := "ok" if defeat_ok and deliver_ok and use_ok and multi_ok and catalog_ok else "failed"
+	print("quest objective templates check ready: status=%s defeat=%s deliver=%s use=%s multi=%s catalog=%s" % [
+		status,
+		str(defeat_ok),
+		str(deliver_ok),
+		str(use_ok),
+		str(multi_ok),
+		str(catalog_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_map_region_contract_check() -> void:
+	profile_save_enabled = false
+	var known_map_ids: Array[String] = []
+	for map_id in MAP_DATA_PATHS.keys():
+		known_map_ids.append(str(map_id))
+	var region_errors := MapRegionCatalog.validation_errors(known_map_ids)
+	var rebirth_errors := RebirthTrialModel.validation_errors()
+	var village := MapRegionCatalog.region_for_id("firebud_village")
+	var element_region := MapRegionCatalog.region_for_id("element_trial_caves")
+	var shadow_region := MapRegionCatalog.region_for_id("shadow_oath_cavern")
+	var village_ok := (
+		not village.is_empty()
+		and MapRegionCatalog.map_ids_for_region("firebud_village").has("firebud_village_gate")
+		and str((village.get("recordPoint", {}) as Dictionary).get("spawnName", "")) == "doctor_record"
+	)
+	var element_ok := not element_region.is_empty()
+	for cave in RebirthTrialModel.element_caves():
+		element_ok = element_ok and MapRegionCatalog.map_ids_for_region("element_trial_caves").has(RebirthTrialModel.guardian_floor_map_id_for_cave(cave))
+	var shadow_ok := (
+		not shadow_region.is_empty()
+		and MapRegionCatalog.map_ids_for_region("shadow_oath_cavern").has(RebirthTrialModel.boss_floor_map_id_for_final_cave())
+		and (shadow_region.get("captureMapIds", []) as Array).size() == RebirthTrialModel.capture_floor_map_ids_for_final_cave().size()
+	)
+	var reverse_lookup_ok := str(MapRegionCatalog.region_for_map_id("gm_10v10_training_ground").get("id", "")) == "gm_training_ground"
+	var status := "ok" if region_errors.is_empty() and rebirth_errors.is_empty() and village_ok and element_ok and shadow_ok and reverse_lookup_ok else "failed"
+	print("map region contract check ready: status=%s regions=%s rebirth=%s village=%s element=%s shadow=%s reverse=%s errors=%s" % [
+		status,
+		str(region_errors.is_empty()),
+		str(rebirth_errors.is_empty()),
+		str(village_ok),
+		str(element_ok),
+		str(shadow_ok),
+		str(reverse_lookup_ok),
+		";".join(region_errors + rebirth_errors),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -9574,13 +10068,20 @@ func _run_auto_battle_reward_check() -> void:
 	var full_reward_state := _battle_reward_test_state("battle_reward_check", full_profile)
 	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_reward_state, "victory")
 	var full_lost: Array = full_result.get("lostItemRewards", [])
+	var full_mailed: Array = full_result.get("mailedItemRewards", [])
 	var full_log := _battle_result_log_text(full_result)
+	var full_mail := PlayerProgressModel.mailbox_message_by_id(
+		full_result.get("profile", full_profile) as Dictionary,
+		"%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "battle_battle_reward_check"]
+	)
 	var full_block_ok := (
 		full_lost is Array
-		and not (full_lost as Array).is_empty()
-		and _item_amount_count(full_lost, BattleModel.ITEM_MEAT_SMALL) >= 1
-		and _item_amount_count(full_lost, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 1
-		and full_log.find("背包已满，未获得") >= 0
+		and (full_lost as Array).is_empty()
+		and _item_amount_count(full_mailed, BattleModel.ITEM_MEAT_SMALL) >= 1
+		and _item_amount_count(full_mailed, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 1
+		and full_log.find("背包已满") >= 0
+		and full_log.find("已发送邮箱") >= 0
+		and not full_mail.is_empty()
 	)
 
 	var escape_result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "escape")
@@ -9662,16 +10163,25 @@ func _run_auto_equipment_drop_check() -> void:
 	var full_state := _battle_reward_test_state(str(drop_case.get("seed", "equipment_drop_check_full")), full_profile)
 	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_state, "victory")
 	var full_lost: Array = full_result.get("lostItemRewards", [])
+	var full_mailed: Array = full_result.get("mailedItemRewards", [])
 	var full_log := _battle_result_log_text(full_result)
+	var full_mail := PlayerProgressModel.mailbox_message_by_id(
+		full_result.get("profile", full_profile) as Dictionary,
+		"%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "battle_%s" % str(drop_case.get("seed", "equipment_drop_check_full"))]
+	)
 	var full_block_ok := (
-		_equipment_fragment_count(full_lost) > 0
+		full_lost is Array
+		and (full_lost as Array).is_empty()
+		and _equipment_fragment_count(full_mailed) > 0
 		and PlayerProgressModel.backpack_item_count(full_result.get("profile", full_profile) as Dictionary, fragment_id) == 0
-		and full_log.find("背包已满，未获得") >= 0
+		and full_log.find("背包已满") >= 0
+		and full_log.find("已发送邮箱") >= 0
 		and full_log.find("碎片") >= 0
+		and not full_mail.is_empty()
 	)
 
 	var status := "ok" if table_drop_ok and item_data_ok and drop_ok and full_block_ok else "failed"
-	print("equipment drop check ready: status=%s table=%s item=%s drop=%s full=%s seed=%s fragment=%s rewards=%s lost=%s log=%s full_log=%s detail=%s" % [
+	print("equipment drop check ready: status=%s table=%s item=%s drop=%s full=%s seed=%s fragment=%s rewards=%s mailed=%s log=%s full_log=%s detail=%s" % [
 		status,
 		str(table_drop_ok),
 		str(item_data_ok),
@@ -9680,7 +10190,7 @@ func _run_auto_equipment_drop_check() -> void:
 		str(drop_case.get("seed", "")),
 		fragment_id,
 		BackpackModel.item_amounts_text(rewards),
-		BackpackModel.item_amounts_text(full_lost),
+		BackpackModel.item_amounts_text(full_mailed),
 		drop_log.replace("\n", " / "),
 		full_log.replace("\n", " / "),
 		item_detail_text.replace("\n", " / "),
@@ -11805,6 +12315,7 @@ func _run_auto_qa_panel_check() -> void:
 	_open_qa_panel()
 	await get_tree().process_frame
 	var command_text := qa_detail_label.text if qa_detail_label != null else ""
+	var first_layout_ok := _qa_panel_layout_is_usable()
 	var button_ok := (
 		qa_panel != null
 		and qa_panel.visible
@@ -11832,6 +12343,14 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("--auto-player-rebirth-execute-check") >= 0
 		and command_text.find("--auto-npc-quest-marker-check") >= 0
 		and command_text.find("--auto-stable-facility-check") >= 0
+	)
+	_close_qa_panel(false)
+	_open_qa_panel()
+	await get_tree().process_frame
+	var second_layout_ok := (
+		_qa_panel_layout_is_usable()
+		and qa_entry_scroll != null
+		and int(qa_entry_scroll.scroll_vertical) == 0
 	)
 	_on_qa_entry_pressed("open_backpack")
 	await get_tree().process_frame
@@ -11870,9 +12389,9 @@ func _run_auto_qa_panel_check() -> void:
 		and gm_battle_speed_multiplier == 2
 		and speed_text_before.find("x1") >= 0
 		and speed_text_after.find("x2") >= 0
-		and world_log_message.find("战斗速度") >= 0
+		and world_log_message.find("测试速度") >= 0
 	)
-	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN
+	_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN)
 	_refresh_qa_panel()
 	_open_qa_panel()
 	_on_qa_entry_pressed("open_auto_capture")
@@ -11924,12 +12443,16 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
 		str(command_ok),
+		str(first_layout_ok),
+		str(second_layout_ok),
+		qa_entry_scroll.size.y if qa_entry_scroll != null else 0.0,
+		qa_detail_scroll.size.y if qa_detail_scroll != null else 0.0,
 		str(backpack_ok),
 		str(item_shop_ok),
 		str(equipment_shop_ok),
@@ -15231,6 +15754,7 @@ func _spawn_player() -> void:
 	else:
 		player.global_position = IsoMapModel.grid_to_world(map_data, IsoMapModel.spawn_cell(map_data))
 	player.set_movement_bounds(_player_movement_bounds())
+	_sync_gm_speed_multiplier()
 
 
 func _spawn_pet() -> void:
@@ -15238,6 +15762,7 @@ func _spawn_pet() -> void:
 	add_child(pet)
 	pet.visible = false
 	pet.global_position = player.global_position + Vector2(-56, 36)
+	_sync_gm_speed_multiplier()
 
 
 func _build_path_line_overlay() -> void:
@@ -15668,6 +16193,13 @@ func _build_hud() -> void:
 	equipment_unequip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_unequip_button.pressed.connect(_on_equipment_unequip_pressed)
 	equipment_action_row.add_child(equipment_unequip_button)
+	equipment_enhance_button = Button.new()
+	equipment_enhance_button.text = "强化"
+	equipment_enhance_button.visible = false
+	equipment_enhance_button.custom_minimum_size = Vector2(0, 44)
+	equipment_enhance_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_enhance_button.pressed.connect(_on_equipment_enhance_pressed)
+	equipment_action_row.add_child(equipment_enhance_button)
 	equipment_synthesis_open_button = Button.new()
 	equipment_synthesis_open_button.text = "合成"
 	equipment_synthesis_open_button.custom_minimum_size = Vector2(0, 44)
@@ -16040,6 +16572,12 @@ func _build_hud() -> void:
 		_open_pet_skill_panel(false)
 	)
 	pet_button_row.add_child(pet_skill_button)
+	pet_cultivation_button = Button.new()
+	pet_cultivation_button.text = "转强"
+	pet_cultivation_button.custom_minimum_size = Vector2(0, 48)
+	pet_cultivation_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_cultivation_button.pressed.connect(_on_pet_cultivation_pressed)
+	pet_button_row.add_child(pet_cultivation_button)
 	pet_drop_button = Button.new()
 	pet_drop_button.text = "丢弃"
 	pet_drop_button.custom_minimum_size = Vector2(0, 48)
@@ -16048,6 +16586,7 @@ func _build_hud() -> void:
 	pet_button_row.add_child(pet_drop_button)
 	hud_root.add_child(pet_panel)
 	_create_pet_skill_panel()
+	_create_pet_cultivation_panel()
 
 	codex_panel = _panel_container("CodexPanel")
 	codex_panel.visible = false
@@ -16475,23 +17014,29 @@ func _build_hud() -> void:
 	qa_close_button.pressed.connect(_close_qa_panel)
 	qa_header.add_child(qa_close_button)
 
-	var qa_scroll := ScrollContainer.new()
-	qa_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	qa_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	qa_column.add_child(qa_scroll)
+	qa_entry_scroll = ScrollContainer.new()
+	qa_entry_scroll.custom_minimum_size = Vector2(0, 320)
+	qa_entry_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_entry_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	qa_column.add_child(qa_entry_scroll)
 	qa_entry_container = VBoxContainer.new()
 	qa_entry_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	qa_entry_container.add_theme_constant_override("separation", 7)
-	qa_scroll.add_child(qa_entry_container)
+	qa_entry_scroll.add_child(qa_entry_container)
+	qa_detail_scroll = ScrollContainer.new()
+	qa_detail_scroll.custom_minimum_size = Vector2(0, 142)
+	qa_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_detail_scroll.size_flags_vertical = Control.SIZE_SHRINK_END
+	qa_column.add_child(qa_detail_scroll)
 	qa_detail_label = RichTextLabel.new()
 	qa_detail_label.bbcode_enabled = true
 	qa_detail_label.fit_content = true
 	qa_detail_label.scroll_active = false
 	qa_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	qa_detail_label.add_theme_font_size_override("font_size", 14)
-	qa_detail_label.custom_minimum_size = Vector2(0, 112)
+	qa_detail_label.custom_minimum_size = Vector2(0, 0)
 	qa_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	qa_column.add_child(qa_detail_label)
+	qa_detail_scroll.add_child(qa_detail_label)
 	hud_root.add_child(qa_panel)
 
 	pet_rename_panel = _panel_container("PetRenamePanel")
@@ -17306,7 +17851,10 @@ func _start_guardian_battle_from_dialog() -> void:
 	encounter_active = false
 	var enemy_count := EncounterModel.enemy_count(zone, _encounter_enemy_count_fallback())
 	var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, enemy_count)
-	_start_battle(_battle_state_for_encounter_zone(selected_zone))
+	var guardian_state := _battle_state_for_encounter_zone(selected_zone)
+	guardian_state["sourceInteractionId"] = str(interaction.get("id", ""))
+	guardian_state["sourceInteractionName"] = str(interaction.get("name", ""))
+	_start_battle(guardian_state)
 
 
 func _guardian_zone_for_interaction(item: Dictionary) -> Dictionary:
@@ -17690,10 +18238,19 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 	var messages: Array[String] = []
 	if str(result.get("result", "")) == "victory":
 		var group_id := str(ended_state.get("sourceEncounterGroupId", ended_state.get("encounterGroupId", "")))
+		var interaction_id := str(ended_state.get("sourceInteractionId", ""))
 		messages.append_array(_record_quest_event_and_maybe_claim({
 			"type": "battle_victory",
 			"encounterGroupId": group_id,
+			"interactionId": interaction_id,
 		}))
+		if interaction_id != "":
+			messages.append_array(_record_quest_event_and_maybe_claim({
+				"type": "defeat_npc",
+				"encounterGroupId": group_id,
+				"interactionId": interaction_id,
+				"targetId": interaction_id,
+			}))
 	var captured_values = result.get("capturedPets", [])
 	if captured_values is Array:
 		for value in captured_values:
@@ -17701,10 +18258,10 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 				continue
 			var captured := value as Dictionary
 			messages.append_array(_record_quest_event_and_maybe_claim({
-			"type": "capture_pet",
-			"formId": str(captured.get("formId", "")),
-			"lineId": str(captured.get("lineId", "")),
-			"amount": 1,
+				"type": "capture_pet",
+				"formId": str(captured.get("formId", "")),
+				"lineId": str(captured.get("lineId", "")),
+				"amount": 1,
 			}))
 	return messages
 
@@ -18214,6 +18771,9 @@ func _equipment_slot_button_item_text(slot_id: String, item_id: String) -> Strin
 		var level := int(charge.get("level", EquipmentModel.exp_pill_level_for(item_id)))
 		return "%s Lv%d" % [EquipmentModel.menu_label_for(item_id, "-"), level]
 	var item_label := EquipmentModel.menu_label_for(item_id, "-")
+	var enhance_level := PlayerProgressModel.equipment_enhance_level(player_profile, slot_id)
+	if enhance_level > 0:
+		item_label += " +%d" % enhance_level
 	var max_durability := EquipmentModel.max_durability_for(item_id)
 	if max_durability <= 0:
 		return item_label
@@ -18315,6 +18875,9 @@ func _refresh_equipment_detail() -> void:
 		lines.append_array(_equipment_slot_recommendation_lines(equipment_selected_slot_id))
 	else:
 		lines.append(EquipmentModel.label_for(item_id))
+		var enhance_text := PlayerProgressModel.equipment_enhance_text(player_profile, equipment_selected_slot_id)
+		if enhance_text != "":
+			lines.append(enhance_text)
 		var durability_text := PlayerProgressModel.equipment_slot_durability_text(player_profile, equipment_selected_slot_id)
 		if durability_text != "":
 			lines.append(durability_text)
@@ -18329,6 +18892,21 @@ func _refresh_equipment_detail() -> void:
 	if equipment_unequip_button != null:
 		equipment_unequip_button.visible = item_id != ""
 		equipment_unequip_button.disabled = item_id == "" or _equipment_slot_unequip_locked(equipment_selected_slot_id)
+	if equipment_enhance_button != null:
+		var quote := PlayerProgressModel.equipment_enhance_quote(player_profile, equipment_selected_slot_id)
+		var can_show_enhance := item_id != "" and EquipmentModel.enhance_max_for(item_id) > 0
+		equipment_enhance_button.visible = can_show_enhance
+		equipment_enhance_button.disabled = not can_show_enhance or not bool(quote.get("ok", false))
+		if bool(quote.get("ok", false)):
+			equipment_enhance_button.text = "强化 +%d" % maxi(1, int(quote.get("nextLevel", 1)))
+			equipment_enhance_button.tooltip_text = "%s x%d，%d石币" % [
+				BackpackModel.label_for(str(quote.get("materialId", ""))),
+				maxi(1, int(quote.get("materialCount", 1))),
+				maxi(0, int(quote.get("stoneCost", 0))),
+			]
+		else:
+			equipment_enhance_button.text = "强化"
+			equipment_enhance_button.tooltip_text = str(quote.get("message", ""))
 
 
 func _equipment_slot_recommendation_lines(slot_id: String) -> Array[String]:
@@ -18597,6 +19175,18 @@ func _on_equipment_unequip_pressed() -> void:
 		PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _on_equipment_enhance_pressed() -> void:
+	var result := PlayerProgressModel.enhance_equipment_slot(player_profile, equipment_selected_slot_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_equipment_panel()
+	_refresh_backpack_panel()
 	if status_label != null:
 		_update_hud_text()
 
@@ -19097,29 +19687,29 @@ func _backpack_slots_for_ui() -> Array[Dictionary]:
 func _backpack_item_count_for_ui(item_id: String) -> int:
 	if item_id == "":
 		return 0
-	var total := 0
-	for slot in _backpack_slots_for_ui():
-		if str(slot.get("itemId", "")) == item_id:
-			total += maxi(0, int(slot.get("count", 0)))
-	return total
+	return int(_backpack_counts_from_slots_for_ui(_backpack_slots_for_ui()).get(item_id, 0))
 
 
-func _backpack_counts_for_ui() -> Dictionary:
+func _backpack_counts_from_slots_for_ui(slots: Array[Dictionary]) -> Dictionary:
 	var counts := {}
-	for slot in _backpack_slots_for_ui():
-		var item_id := str(slot.get("itemId", ""))
-		if item_id == "":
-			continue
-		counts[item_id] = int(counts.get(item_id, 0)) + maxi(0, int(slot.get("count", 0)))
+	for slot in slots:
+		var slot_item_id := str(slot.get("itemId", ""))
+		if slot_item_id != "":
+			counts[slot_item_id] = int(counts.get(slot_item_id, 0)) + maxi(0, int(slot.get("count", 0)))
 	return counts
 
 
-func _backpack_available_capacity_for_ui(item_id: String) -> int:
+func _backpack_counts_for_ui() -> Dictionary:
+	return _backpack_counts_from_slots_for_ui(_backpack_slots_for_ui())
+
+
+func _backpack_available_capacity_for_ui(item_id: String, slots: Array[Dictionary] = []) -> int:
 	if item_id == "" or BackpackModel.item_for_id(item_id).is_empty():
 		return 0
 	var total := 0
 	var stack_limit := BackpackModel.stack_limit_for(item_id)
-	for slot in _backpack_slots_for_ui():
+	var effective_slots := slots if not slots.is_empty() else _backpack_slots_for_ui()
+	for slot in effective_slots:
 		if bool(slot.get("locked", false)):
 			continue
 		var slot_item_id := str(slot.get("itemId", ""))
@@ -19248,6 +19838,42 @@ func _equipment_durability_for_ui() -> Dictionary:
 	return result
 
 
+func _equipment_enhancement_for_ui() -> Dictionary:
+	var result := {}
+	var slots := _equipment_slots_for_ui()
+	var enhancement_value = player_profile.get(PlayerProgressModel.EQUIPMENT_ENHANCEMENT_KEY, {})
+	if not (enhancement_value is Dictionary):
+		return result
+	var enhancement := enhancement_value as Dictionary
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		var record_value = enhancement.get(slot_id, {})
+		if not (record_value is Dictionary):
+			continue
+		var record := record_value as Dictionary
+		if str(record.get("itemId", "")) != item_id:
+			continue
+		var level := clampi(int(record.get("level", 0)), 0, EquipmentModel.enhance_max_for(item_id))
+		if level > 0:
+			result[slot_id] = {
+				"itemId": item_id,
+				"level": level,
+			}
+	return result
+
+
+func _equipment_enhance_level_for_ui(slot_id: String, item_id: String, enhancement: Dictionary) -> int:
+	var record_value = enhancement.get(slot_id, {})
+	if not (record_value is Dictionary):
+		return 0
+	var record := record_value as Dictionary
+	if str(record.get("itemId", "")) != item_id:
+		return 0
+	return clampi(int(record.get("level", 0)), 0, EquipmentModel.enhance_max_for(item_id))
+
+
 func _equipment_slot_is_broken_for_ui(slot_id: String, item_id: String, durability: Dictionary) -> bool:
 	var max_durability := EquipmentModel.max_durability_for(item_id)
 	if max_durability <= 0:
@@ -19255,8 +19881,9 @@ func _equipment_slot_is_broken_for_ui(slot_id: String, item_id: String, durabili
 	return clampi(int(durability.get(slot_id, max_durability)), 0, max_durability) <= 0
 
 
-func _equipment_stat_bonus_for_ui(slots: Dictionary, durability: Dictionary) -> Dictionary:
+func _equipment_stat_bonus_for_ui(slots: Dictionary, durability: Dictionary, enhancement: Dictionary = {}) -> Dictionary:
 	var result := {}
+	var effective_enhancement := enhancement if not enhancement.is_empty() else _equipment_enhancement_for_ui()
 	for slot_id in EquipmentModel.slot_ids():
 		var item_id := str(slots.get(slot_id, ""))
 		if item_id == "" or _equipment_slot_is_broken_for_ui(slot_id, item_id, durability):
@@ -19266,6 +19893,10 @@ func _equipment_stat_bonus_for_ui(slots: Dictionary, durability: Dictionary) -> 
 		var stats := EquipmentModel.stats_for(item_id)
 		for key in EquipmentModel.STAT_KEYS:
 			result[key] = int(result.get(key, 0)) + int(stats.get(key, 0))
+		var enhance_level := _equipment_enhance_level_for_ui(slot_id, item_id, effective_enhancement)
+		var enhance_stats := EquipmentModel.enhance_stat_bonus_for(item_id, enhance_level)
+		for key in EquipmentModel.STAT_KEYS:
+			result[key] = int(result.get(key, 0)) + int(enhance_stats.get(key, 0))
 	return result
 
 
@@ -19326,12 +19957,13 @@ func _equipment_change_preview_for_ui(item_id: String) -> Dictionary:
 	if slot_id == "":
 		return {}
 	var before_slots := _equipment_slots_for_ui()
-	var durability := _equipment_durability_for_ui()
 	var current_item_id := str(before_slots.get(slot_id, ""))
 	var after_slots := before_slots.duplicate(true)
 	after_slots[slot_id] = item_id
-	var before_bonus := _equipment_stat_bonus_for_ui(before_slots, durability)
-	var after_bonus := _equipment_stat_bonus_for_ui(after_slots, durability)
+	var durability := _equipment_durability_for_ui()
+	var enhancement := _equipment_enhancement_for_ui()
+	var before_bonus := _equipment_stat_bonus_for_ui(before_slots, durability, enhancement)
+	var after_bonus := _equipment_stat_bonus_for_ui(after_slots, durability, enhancement)
 	var stat_changes: Array[Dictionary] = []
 	for key in EquipmentModel.STAT_KEYS:
 		var before_value := int(before_bonus.get(key, 0))
@@ -19914,7 +20546,9 @@ func _refresh_shop_panel(rebuild_list: bool = true) -> void:
 		shop_buy_button.button_pressed = shop_mode == "buy"
 	if shop_sell_button != null:
 		shop_sell_button.button_pressed = shop_mode == "sell"
-	var valid_ids := _shop_item_ids_for_mode(shop_mode)
+	var backpack_slots_cache := _backpack_slots_for_ui()
+	var backpack_counts_cache := _backpack_counts_from_slots_for_ui(backpack_slots_cache)
+	var valid_ids := _shop_item_ids_for_mode(shop_mode, backpack_counts_cache)
 	if shop_selected_item_id == "" or not valid_ids.has(shop_selected_item_id):
 		shop_selected_item_id = valid_ids[0] if not valid_ids.is_empty() else ""
 		rebuild_list = true
@@ -19934,7 +20568,7 @@ func _refresh_shop_panel(rebuild_list: bool = true) -> void:
 				var button := Button.new()
 				button.toggle_mode = true
 				button.button_pressed = item_id == shop_selected_item_id
-				button.text = _shop_item_button_text(item_id)
+				button.text = _shop_item_button_text(item_id, int(backpack_counts_cache.get(item_id, 0)))
 				button.custom_minimum_size = Vector2(0, 58)
 				button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				button.pressed.connect(func() -> void:
@@ -19947,13 +20581,15 @@ func _refresh_shop_panel(rebuild_list: bool = true) -> void:
 			var button = shop_item_buttons.get(item_id)
 			if button is Button:
 				(button as Button).set_pressed_no_signal(item_id == shop_selected_item_id)
-	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
-	shop_detail_label.text = _shop_detail_text(shop_selected_item_id)
-	_refresh_shop_quantity_controls()
-	_refresh_shop_equip_after_buy_button()
+	var quantity_max := _shop_quantity_max(shop_selected_item_id, backpack_slots_cache, backpack_counts_cache)
+	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id, quantity_max)
+	shop_detail_label.bbcode_enabled = EquipmentModel.is_equipment(shop_selected_item_id)
+	shop_detail_label.text = _shop_detail_text(shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
+	_refresh_shop_quantity_controls(quantity_max)
+	_refresh_shop_equip_after_buy_button(quantity_max)
 	if shop_action_button != null:
 		shop_action_button.text = _shop_action_text()
-		shop_action_button.disabled = shop_selected_item_id == "" or _shop_quantity_max(shop_selected_item_id) <= 0
+		shop_action_button.disabled = shop_selected_item_id == "" or quantity_max <= 0
 	if shop_repair_button != null:
 		shop_repair_button.visible = shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
 		if shop_repair_button.visible:
@@ -19967,13 +20603,13 @@ func _refresh_shop_panel(rebuild_list: bool = true) -> void:
 			shop_repair_button.disabled = true
 
 
-func _shop_item_ids_for_mode(mode: String) -> Array[String]:
+func _shop_item_ids_for_mode(mode: String, counts: Dictionary = {}) -> Array[String]:
 	var result: Array[String] = []
 	if mode == "sell":
-		var counts := _backpack_counts_for_ui()
+		var effective_counts := counts if not counts.is_empty() else _backpack_counts_for_ui()
 		for entry in ShopCatalogModel.entries_for(shop_active_id):
 			var item_id := str(entry.get("itemId", ""))
-			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(counts.get(item_id, 0)) > 0:
+			if item_id != "" and ShopCatalogModel.is_sellable(shop_active_id, item_id) and int(effective_counts.get(item_id, 0)) > 0:
 				result.append(item_id)
 	else:
 		for entry in ShopCatalogModel.buyable_entries_for(shop_active_id):
@@ -19988,27 +20624,27 @@ func _first_shop_item_id_for_mode(mode: String) -> String:
 	return ids[0] if not ids.is_empty() else ""
 
 
-func _shop_item_button_text(item_id: String) -> String:
-	var count := _backpack_item_count_for_ui(item_id)
+func _shop_item_button_text(item_id: String, count: int = -1) -> String:
+	var effective_count := count if count >= 0 else _backpack_item_count_for_ui(item_id)
 	if shop_mode == "sell":
 		return "%s\n可卖 %d石币    持有 %d" % [
 			BackpackModel.menu_label_for(item_id),
 			ShopCatalogModel.sell_price_for(shop_active_id, item_id),
-			count,
+			effective_count,
 		]
 	return "%s\n%d石币    持有 %d" % [
 		BackpackModel.menu_label_for(item_id),
 		ShopCatalogModel.buy_price_for(shop_active_id, item_id),
-		count,
+		effective_count,
 	]
 
 
-func _shop_detail_text(item_id: String) -> String:
+func _shop_detail_text(item_id: String, count: int = -1) -> String:
 	if item_id == "":
 		return "请选择道具。"
-	var count := _backpack_item_count_for_ui(item_id)
+	var effective_count := count if count >= 0 else _backpack_item_count_for_ui(item_id)
 	var lines: Array[String] = []
-	lines.append("%s x%d" % [BackpackModel.label_for(item_id), count])
+	lines.append("%s x%d" % [BackpackModel.label_for(item_id), effective_count])
 	lines.append("购买单价: %d石币    出售单价: %d石币" % [
 		ShopCatalogModel.buy_price_for(shop_active_id, item_id),
 		ShopCatalogModel.sell_price_for(shop_active_id, item_id),
@@ -20019,24 +20655,24 @@ func _shop_detail_text(item_id: String) -> String:
 	return "\n".join(lines)
 
 
-func _shop_quantity_max(item_id: String) -> int:
+func _shop_quantity_max(item_id: String, slots: Array[Dictionary] = [], counts: Dictionary = {}) -> int:
 	if item_id == "":
 		return 0
 	if shop_mode == "sell":
-		return _backpack_item_count_for_ui(item_id)
+		return int(counts.get(item_id, _backpack_item_count_for_ui(item_id)))
 	var buy_price := ShopCatalogModel.buy_price_for(shop_active_id, item_id)
 	if buy_price <= 0:
 		return 0
 	var affordable := int(floor(float(_profile_stone_coins_for_ui()) / float(buy_price)))
-	var capacity := _backpack_available_capacity_for_ui(item_id)
+	var capacity := _backpack_available_capacity_for_ui(item_id, slots)
 	return mini(999, mini(affordable, capacity))
 
 
-func _clamped_shop_quantity(value: int, item_id: String) -> int:
-	var max_quantity := _shop_quantity_max(item_id)
-	if max_quantity <= 0:
+func _clamped_shop_quantity(value: int, item_id: String, max_quantity: int = -1) -> int:
+	var effective_max := max_quantity if max_quantity >= 0 else _shop_quantity_max(item_id)
+	if effective_max <= 0:
 		return 1
-	return clampi(value, 1, max_quantity)
+	return clampi(value, 1, effective_max)
 
 
 func _set_shop_quantity(value: int) -> void:
@@ -20044,25 +20680,25 @@ func _set_shop_quantity(value: int) -> void:
 	_refresh_shop_panel(false)
 
 
-func _refresh_shop_quantity_controls() -> void:
-	var max_quantity := _shop_quantity_max(shop_selected_item_id)
-	var controls_enabled := shop_selected_item_id != "" and max_quantity > 0
+func _refresh_shop_quantity_controls(max_quantity: int = -1) -> void:
+	var effective_max := max_quantity if max_quantity >= 0 else _shop_quantity_max(shop_selected_item_id)
+	var controls_enabled := shop_selected_item_id != "" and effective_max > 0
 	if shop_quantity_spinbox != null:
 		shop_quantity_spinbox.set_block_signals(true)
 		shop_quantity_spinbox.min_value = 1
-		shop_quantity_spinbox.max_value = maxf(1.0, float(max_quantity))
+		shop_quantity_spinbox.max_value = maxf(1.0, float(effective_max))
 		shop_quantity_spinbox.value = float(shop_quantity)
 		shop_quantity_spinbox.editable = controls_enabled
 		shop_quantity_spinbox.set_block_signals(false)
 	if shop_quantity_minus_button != null:
 		shop_quantity_minus_button.disabled = not controls_enabled or shop_quantity <= 1
 	if shop_quantity_plus_button != null:
-		shop_quantity_plus_button.disabled = not controls_enabled or shop_quantity >= max_quantity
+		shop_quantity_plus_button.disabled = not controls_enabled or shop_quantity >= effective_max
 	if shop_quantity_max_button != null:
-		shop_quantity_max_button.disabled = not controls_enabled or shop_quantity >= max_quantity
+		shop_quantity_max_button.disabled = not controls_enabled or shop_quantity >= effective_max
 
 
-func _refresh_shop_equip_after_buy_button() -> void:
+func _refresh_shop_equip_after_buy_button(quantity_max: int = -1) -> void:
 	if shop_equip_after_buy_button == null:
 		return
 	var is_buy_equipment := shop_mode == "buy" and EquipmentModel.is_equipment(shop_selected_item_id)
@@ -20073,7 +20709,7 @@ func _refresh_shop_equip_after_buy_button() -> void:
 		shop_equip_after_buy_button.disabled = true
 		return
 	var equip_check := _can_equip_item_for_ui(shop_selected_item_id)
-	var can_buy := _shop_quantity_max(shop_selected_item_id) > 0
+	var can_buy := (quantity_max if quantity_max >= 0 else _shop_quantity_max(shop_selected_item_id)) > 0
 	var can_equip := bool(equip_check.get("ok", false))
 	if not can_buy or not can_equip:
 		shop_equip_after_buy = false
@@ -20274,6 +20910,50 @@ func _create_pet_skill_panel() -> void:
 	hud_root.add_child(pet_skill_panel)
 
 
+func _create_pet_cultivation_panel() -> void:
+	pet_cultivation_panel = _panel_container("PetCultivationPanel")
+	pet_cultivation_panel.visible = false
+	pet_cultivation_panel.z_index = 37
+	pet_cultivation_panel.add_theme_stylebox_override("panel", _pet_rename_panel_style())
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 10)
+	pet_cultivation_panel.add_child(column)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	column.add_child(header)
+	pet_cultivation_title_label = Label.new()
+	pet_cultivation_title_label.text = "宠物培养"
+	pet_cultivation_title_label.add_theme_font_size_override("font_size", 20)
+	pet_cultivation_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(pet_cultivation_title_label)
+	pet_cultivation_close_button = Button.new()
+	pet_cultivation_close_button.text = "关闭"
+	pet_cultivation_close_button.custom_minimum_size = Vector2(92, 44)
+	pet_cultivation_close_button.pressed.connect(_close_pet_cultivation_panel)
+	header.add_child(pet_cultivation_close_button)
+
+	var preview_scroll := ScrollContainer.new()
+	preview_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(preview_scroll)
+	pet_cultivation_preview_label = Label.new()
+	pet_cultivation_preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pet_cultivation_preview_label.add_theme_font_size_override("font_size", 16)
+	pet_cultivation_preview_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview_scroll.add_child(pet_cultivation_preview_label)
+
+	pet_cultivation_confirm_button = Button.new()
+	pet_cultivation_confirm_button.text = "确认"
+	pet_cultivation_confirm_button.custom_minimum_size = Vector2(0, 46)
+	pet_cultivation_confirm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_cultivation_confirm_button.pressed.connect(_on_pet_cultivation_confirm_pressed)
+	column.add_child(pet_cultivation_confirm_button)
+	hud_root.add_child(pet_cultivation_panel)
+
+
 func _open_pet_panel(stable_access_override: bool = false) -> void:
 	if battle_active:
 		return
@@ -20305,6 +20985,7 @@ func _close_pet_panel() -> void:
 	var changed := _hide_control(pet_panel, false)
 	pet_panel_stable_access_override = false
 	_close_pet_rename_panel()
+	_close_pet_cultivation_panel()
 	if changed and hud_root != null:
 		_layout_hud()
 
@@ -21012,6 +21693,7 @@ func _open_qa_panel() -> void:
 	if qa_panel != null:
 		qa_panel.visible = true
 	_refresh_qa_panel()
+	_reset_qa_panel_scrolls()
 	_layout_hud()
 
 
@@ -21049,6 +21731,24 @@ func _refresh_qa_panel() -> void:
 	qa_detail_label.text = _qa_command_summary_text()
 
 
+func _reset_qa_panel_scrolls() -> void:
+	if qa_entry_scroll != null:
+		qa_entry_scroll.scroll_vertical = 0
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
+
+
+func _qa_panel_layout_is_usable() -> bool:
+	if qa_panel == null or qa_entry_scroll == null or qa_detail_scroll == null:
+		return false
+	return (
+		qa_panel.visible
+		and qa_entry_scroll.size.y >= 260.0
+		and qa_detail_scroll.size.y >= 110.0
+		and qa_entry_scroll.size.y > qa_detail_scroll.size.y
+	)
+
+
 func _qa_entry_definitions() -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
 	entries.append({"section": "GM地图"})
@@ -21058,12 +21758,12 @@ func _qa_entry_definitions() -> Array[Dictionary]:
 	entries.append({"id": "gm_knockaway_grass", "label": "击飞草丛", "description": "120-140级怪，测记录点回城"})
 	entries.append({"id": "firebud_village", "label": "回火芽村", "description": "回到村口，测商店、村医、记录点"})
 	entries.append({"section": "GM工具"})
-	entries.append({"id": "gm_battle_speed_gear", "label": "变速齿轮 x%d" % _gm_battle_speed_multiplier(), "description": "点击切换 x2-x10，x1为关闭加速"})
+	entries.append({"id": "gm_battle_speed_gear", "label": "变速齿轮 x%d" % _gm_battle_speed_multiplier(), "description": "战斗和走路 x2-x10，x1关闭"})
 	entries.append({"section": "功能面板"})
 	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、快捷栏、世界使用"})
 	entries.append({"id": "open_item_shop", "label": "杂货铺", "description": "购买、出售、数量输入"})
 	entries.append({"id": "open_equipment_shop", "label": "装备铺", "description": "装备购买预览、购买后装备"})
-	entries.append({"id": "open_equipment", "label": "装备栏", "description": "槽位详情、卸下、合成入口"})
+	entries.append({"id": "open_equipment", "label": "装备栏", "description": "槽位详情、卸下、强化、合成"})
 	entries.append({"id": "open_quest", "label": "任务", "description": "任务详情、奖励、自动寻路"})
 	entries.append({"id": "open_auto_battle", "label": "内挂战斗", "description": "人物/宠物首回合与一般回合策略"})
 	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
@@ -21080,11 +21780,12 @@ func _qa_command_summary_text() -> String:
 	lines.append("[color=#d7c36a]常用自测命令[/color]")
 	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
 	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
-	lines.append("装备: --auto-equipment-check / --auto-equipment-requirement-check / --auto-equipment-inactive-after-rebirth-check / --auto-equipment-status-closure-check / --auto-equipment-slot-detail-check / --auto-equipment-synthesis-check")
-	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check")
+	lines.append("装备: --auto-equipment-check / --auto-equipment-growth-check / --auto-equipment-durability-check / --auto-equipment-synthesis-check")
+	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check / --auto-quest-objective-templates-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check")
+	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
@@ -21151,15 +21852,28 @@ func _gm_battle_speed_multiplier() -> int:
 	return clampi(gm_battle_speed_multiplier, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
 
 
+func _set_gm_speed_multiplier(value: int) -> void:
+	gm_battle_speed_multiplier = clampi(value, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
+	_sync_gm_speed_multiplier()
+
+
+func _sync_gm_speed_multiplier() -> void:
+	var multiplier := float(_gm_battle_speed_multiplier())
+	if player != null and player.has_method("set_speed_multiplier"):
+		player.set_speed_multiplier(multiplier)
+	if pet != null and pet.has_method("set_speed_multiplier"):
+		pet.set_speed_multiplier(multiplier)
+
+
 func _scaled_battle_delta(delta: float) -> float:
 	return delta * float(_gm_battle_speed_multiplier())
 
 
 func _cycle_gm_battle_speed_gear() -> void:
 	var current := _gm_battle_speed_multiplier()
-	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN if current >= GM_BATTLE_SPEED_MAX else maxi(2, current + 1)
+	_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN if current >= GM_BATTLE_SPEED_MAX else maxi(2, current + 1))
 	_refresh_qa_panel()
-	_set_world_log_message("GM变速齿轮：战斗速度 x%d。" % _gm_battle_speed_multiplier())
+	_set_world_log_message("GM变速齿轮：测试速度 x%d。" % _gm_battle_speed_multiplier())
 	_layout_hud()
 
 
@@ -22826,6 +23540,9 @@ func _refresh_pet_panel() -> void:
 	if pet_skill_button != null:
 		pet_skill_button.visible = not selected.is_empty()
 		pet_skill_button.disabled = selected.is_empty()
+	if pet_cultivation_button != null:
+		pet_cultivation_button.visible = not selected.is_empty()
+		pet_cultivation_button.disabled = selected.is_empty()
 	if pet_drop_button != null:
 		pet_drop_button.visible = not selected.is_empty()
 		var selected_state := str(selected.get("state", ""))
@@ -23068,6 +23785,8 @@ func _select_pet_instance(instance_id: String) -> void:
 		if profile_save_enabled:
 			PlayerProgressModel.save_profile(player_profile)
 	_refresh_pet_panel()
+	if pet_cultivation_panel != null and pet_cultivation_panel.visible:
+		_refresh_pet_cultivation_panel()
 
 
 func _on_pet_state_cycle_pressed() -> void:
@@ -23136,6 +23855,57 @@ func _on_pet_rename_confirmed() -> void:
 		pet_rename_input.text = str(result.get("name", pet_rename_input.text))
 		pet_rename_input.grab_focus()
 	_set_world_log_message(str(result.get("message", "")))
+
+
+func _on_pet_cultivation_pressed() -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty() or pet_cultivation_panel == null:
+		return
+	pet_cultivation_panel.visible = true
+	_refresh_pet_cultivation_panel()
+	_layout_hud()
+
+
+func _refresh_pet_cultivation_panel() -> void:
+	if pet_cultivation_panel == null or pet_cultivation_preview_label == null:
+		return
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var preview := PlayerProgressModel.pet_cultivation_preview(player_profile, pet_selected_instance_id)
+	var lines: Array[String] = []
+	if not selected.is_empty():
+		lines.append("%s  Lv%d  %s" % [
+			str(selected.get("name", "宠物")),
+			int(selected.get("level", 1)),
+			PlayerProgressModel.state_label(str(selected.get("state", PlayerProgressModel.PET_STATE_STANDBY))),
+		])
+	var raw_preview_lines = preview.get("lines", [])
+	if raw_preview_lines is Array:
+		for line_value in raw_preview_lines:
+			lines.append(str(line_value))
+	if lines.is_empty():
+		lines.append(str(preview.get("message", "请选择宠物。")))
+	if pet_cultivation_title_label != null:
+		pet_cultivation_title_label.text = str(preview.get("title", "宠物培养"))
+	pet_cultivation_preview_label.text = "\n".join(lines)
+	if pet_cultivation_confirm_button != null:
+		var mode := str(preview.get("mode", ""))
+		pet_cultivation_confirm_button.text = "确认转生" if mode == "rebirth" else "确认强化"
+		pet_cultivation_confirm_button.disabled = not bool(preview.get("ok", false))
+		pet_cultivation_confirm_button.tooltip_text = str(preview.get("message", ""))
+
+
+func _on_pet_cultivation_confirm_pressed() -> void:
+	var result := PlayerProgressModel.apply_pet_cultivation(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+	_refresh_pet_cultivation_panel()
+
+
+func _close_pet_cultivation_panel() -> void:
+	_hide_control(pet_cultivation_panel, false)
 
 
 func _on_pet_drop_pressed() -> void:
@@ -23212,25 +23982,39 @@ func _available_pet_drop_cell_result() -> Dictionary:
 
 func _ground_pet_occupied_cell_lookup(map_id: String) -> Dictionary:
 	var lookup: Dictionary = {}
-	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, map_id):
+	for drop in _ground_pet_drops_on_map_fast(map_id):
 		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
 		lookup[IsoMapModel.cell_key(cell)] = true
 	return lookup
 
 
 func _ground_pet_drop_for_instance_id(instance_id: String) -> Dictionary:
-	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+	for drop in _ground_pet_drops_on_map_fast(current_map_id):
 		var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
 		if str(pet_instance.get("instanceId", "")) == instance_id:
 			return drop
 	return {}
 
 
+func _ground_pet_drops_on_map_fast(map_id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_drops = player_profile.get("groundPetDrops", [])
+	if not (raw_drops is Array):
+		return result
+	for value in raw_drops:
+		if not (value is Dictionary):
+			continue
+		var drop := value as Dictionary
+		if str(drop.get("mapId", "")) == map_id:
+			result.append(drop)
+	return result
+
+
 func _find_ground_pet_drop_at_world_point(world_point: Vector2, hit_radius: float = 34.0) -> Dictionary:
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	var best_drop: Dictionary = {}
 	var best_distance := INF
-	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+	for drop in _ground_pet_drops_on_map_fast(current_map_id):
 		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
 		var marker_point := _ground_pet_marker_world_position(drop)
 		var distance := world_point.distance_to(marker_point)
@@ -25558,7 +26342,7 @@ func _update_hang_walk(delta: float) -> void:
 	_set_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
 	has_target_marker = false
 	has_target_cell = false
-	hang_walk_cooldown = HANG_WALK_COOLDOWN_SECONDS
+	hang_walk_cooldown = HANG_WALK_COOLDOWN_SECONDS / float(_gm_battle_speed_multiplier())
 
 
 func _next_hang_walk_cell(player_cell: Vector2i, zone: Dictionary) -> Vector2i:
@@ -25600,7 +26384,7 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
+	for control in [top_panel, side_panel, action_bar, player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, pet_cultivation_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
 		if control != null and control.visible:
 			var rect := Rect2(control.global_position, control.size)
 			if rect.has_point(point):
@@ -25609,7 +26393,7 @@ func _is_ui_point(point: Vector2) -> bool:
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
+	for control in [player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, pet_cultivation_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
 		if control != null and control.visible:
 			return true
 	return false
@@ -25731,6 +26515,15 @@ func _layout_hud() -> void:
 	if battle_active:
 		pet_skill_panel.visible = false
 	if pet_skill_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	var pet_cultivation_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
+	var pet_cultivation_height: float = minf(viewport_size.y - margin * 2.0 - 80.0, 320.0)
+	pet_cultivation_panel.position = Vector2((viewport_size.x - pet_cultivation_width) * 0.5, maxf(margin + 92.0, (viewport_size.y - pet_cultivation_height) * 0.5))
+	pet_cultivation_panel.size = Vector2(pet_cultivation_width, pet_cultivation_height)
+	if battle_active:
+		pet_cultivation_panel.visible = false
+	if pet_cultivation_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var codex_width := pet_width
@@ -26215,15 +27008,64 @@ func _draw_battle_actor_home_shadow(actor: Dictionary, home_pos: Vector2, visual
 
 
 func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: float, alpha: float, compact: bool) -> void:
-	var label := _battle_actor_label(actor)
+	var plan := _battle_actor_label_draw_plan(actor, visual_scale, compact)
+	var label := str(plan.get("label", ""))
 	if label == "":
 		return
 	var font := ThemeDB.fallback_font
-	var label_width := (112.0 if compact else 132.0) * visual_scale
-	var font_size := maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))
+	var label_width := float(plan.get("width", (112.0 if compact else 132.0) * visual_scale))
+	var font_size := int(plan.get("fontSize", maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))))
 	var origin := center + Vector2(-label_width * 0.5, 0)
 	draw_string(font, origin + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.05, 0.06, 0.05, 0.72 * alpha))
 	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_CENTER, label_width, font_size, Color(0.96, 0.93, 0.80, alpha))
+
+
+func _battle_actor_label_draw_plan(actor: Dictionary, visual_scale: float, compact: bool) -> Dictionary:
+	var full_label := _battle_actor_label(actor)
+	if full_label == "":
+		return {"label": "", "width": 0.0, "fontSize": 0, "fits": true, "fullLabel": true}
+	var font := ThemeDB.fallback_font
+	var font_size := maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))
+	var min_font_size := 8
+	var base_width := (112.0 if compact else 132.0) * visual_scale
+	var max_width := maxf((176.0 if compact else 240.0) * visual_scale, 128.0 if compact else 168.0)
+	var label := full_label
+	var text_width := _font_text_width(font, label, font_size)
+	while font_size > min_font_size and text_width + 8.0 > max_width:
+		font_size -= 1
+		text_width = _font_text_width(font, label, font_size)
+	if text_width + 8.0 > max_width:
+		label = _battle_actor_label_trimmed_to_width(actor, font, font_size, max_width - 8.0)
+		text_width = _font_text_width(font, label, font_size)
+	var label_width := clampf(maxf(base_width, text_width + 8.0), base_width, max_width)
+	return {
+		"label": label,
+		"width": label_width,
+		"fontSize": font_size,
+		"fits": text_width <= label_width + 0.5,
+		"fullLabel": label == full_label,
+	}
+
+
+func _battle_actor_label_trimmed_to_width(actor: Dictionary, font: Font, font_size: int, max_text_width: float) -> String:
+	var actor_name := str(actor.get("name", "")).strip_edges()
+	var level := maxi(1, int(actor.get("level", 1)))
+	var suffix := " Lv%d" % level
+	var label := "%s%s" % [actor_name, suffix]
+	if _font_text_width(font, label, font_size) <= max_text_width:
+		return label
+	var suffix_width := _font_text_width(font, suffix, font_size)
+	var marker := "..."
+	var marker_width := _font_text_width(font, marker, font_size)
+	var available_name_width := maxf(0.0, max_text_width - suffix_width - marker_width)
+	var trimmed_name := actor_name
+	while trimmed_name.length() > 1 and _font_text_width(font, trimmed_name, font_size) > available_name_width:
+		trimmed_name = trimmed_name.left(trimmed_name.length() - 1)
+	return "%s%s%s" % [trimmed_name, marker, suffix]
+
+
+func _font_text_width(font: Font, text: String, font_size: int) -> float:
+	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 
 
 func _battle_actor_label(actor: Dictionary) -> String:
@@ -27011,7 +27853,7 @@ func _facility_marker_color(facility_type: String, selected: bool = false) -> Co
 
 func _draw_ground_pet_drops() -> void:
 	var font := ThemeDB.fallback_font
-	for drop in PlayerProgressModel.ground_pet_drops_on_map(player_profile, current_map_id):
+	for drop in _ground_pet_drops_on_map_fast(current_map_id):
 		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
 		var center := IsoMapModel.grid_to_world(map_data, cell)
 		var marker := _ground_pet_marker_world_position(drop)
