@@ -61,6 +61,10 @@ static func boss_floor_map_id_for_final_cave() -> String:
 	return floor_ids[floor_ids.size() - 1] if not floor_ids.is_empty() else str(final_cave().get("id", ""))
 
 
+static func boss_interaction_id_for_final_cave() -> String:
+	return str(final_cave().get("bossInteractionId", "")).strip_edges()
+
+
 static func remote_stable_unlock() -> Dictionary:
 	var value = catalog().get("remoteStableUnlock", {})
 	return value as Dictionary if value is Dictionary else {}
@@ -97,6 +101,10 @@ static func guardian_floor_map_id_for_cave(cave: Dictionary) -> String:
 		return explicit_id
 	var floor_ids := floor_map_ids_for_cave(cave)
 	return floor_ids[floor_ids.size() - 1] if not floor_ids.is_empty() else str(cave.get("caveId", ""))
+
+
+static func guardian_interaction_id_for_cave(cave: Dictionary) -> String:
+	return str(cave.get("guardianInteractionId", "")).strip_edges()
 
 
 static func beast_for_element(element: String) -> Dictionary:
@@ -183,6 +191,8 @@ static func _validate_element_caves(errors: Array[String]) -> void:
 			errors.append("%s 第一层地图必须等于 caveId" % str(cave.get("caveName", element)))
 		if floor_ids.size() >= 2 and guardian_floor_map_id_for_cave(cave) != floor_ids[floor_ids.size() - 1]:
 			errors.append("%s 守护兽必须在最后一层地图" % str(cave.get("caveName", element)))
+		if guardian_interaction_id_for_cave(cave) == "":
+			errors.append("%s 缺少守护兽 NPC 交互 id" % str(cave.get("caveName", element)))
 		if int(cave.get("minAttemptLevel", 0)) > 80:
 			errors.append("%s Lv80 应该可以尝试" % str(cave.get("caveName", element)))
 		if int(cave.get("recommendedLevel", 0)) < 100:
@@ -210,6 +220,8 @@ static func _validate_final_cave(errors: Array[String]) -> void:
 		errors.append("最终洞窟第一层地图必须等于 id")
 	if floor_ids.size() >= 2 and boss_floor_map_id_for_final_cave() != floor_ids[floor_ids.size() - 1]:
 		errors.append("最终洞窟 boss 必须在最后一层地图")
+	if boss_interaction_id_for_final_cave() == "":
+		errors.append("最终洞窟缺少守护兽 NPC 交互 id")
 	if capture_floor_ids.size() < 3:
 		errors.append("最终洞窟至少前三层应可捕捉转生兽")
 	for map_id in capture_floor_ids:

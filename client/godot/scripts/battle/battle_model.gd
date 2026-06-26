@@ -35,6 +35,8 @@ const ITEM_MEAT_SMALL := "item_meat_small"
 const ITEM_POISON_SINGLE := "item_poison_single_5"
 const ITEM_POISON_ALL := "item_poison_all_5"
 const ITEM_CLEANSE_SINGLE := "item_cleanse_single_5"
+const WEAPON_SHADOW_GROUP_SHOT := "weapon_shadow_group_shot"
+const SPIRIT_WIND_FIELD_1 := "spirit_wind_field_1"
 const CAPTURE_TOOL_EMPTY_HAND := "empty_hand"
 const CAPTURE_TOOL_ROPE_BASIC := "capture_rope_basic"
 const CAPTURE_TOOL_NET := "capture_net"
@@ -92,6 +94,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		"message": "%s 出现了%s。" % [zone_name, enemy_name],
 		"itemBag": default_item_bag(),
 		"captureToolBag": CaptureToolCatalog.starting_inventory(),
+		"fieldEffects": [],
 		"guardingActorIds": [],
 		"actors": [
 			_make_actor("ally_player", "见习猎人", SIDE_ALLY, "player", "ally.back.3", 120, 120, 70, 18),
@@ -147,6 +150,7 @@ static func create_stat_formula_test_battle(encounter_zone: Dictionary) -> Dicti
 		"message": "%s 数值验证战斗。旁路日志会记录速度和伤害公式。" % zone_name,
 		"itemBag": default_item_bag(),
 		"captureToolBag": CaptureToolCatalog.starting_inventory(),
+		"fieldEffects": [],
 		"guardingActorIds": [],
 		"actors": _stat_formula_test_actors(),
 	}
@@ -859,6 +863,23 @@ static func living_actor_ids(state: Dictionary, side: String) -> Array[String]:
 	return ids
 
 
+static func living_actor_ids_by_battle_order(state: Dictionary, side: String) -> Array[String]:
+	var ordered: Array[String] = []
+	for number in range(1, SLOTS_PER_ROW * 2 + 1):
+		var expected_slot := slot_id_for_number(side, number)
+		for value in state.get("actors", []):
+			var actor := value as Dictionary
+			var actor_id := str(actor.get("id", ""))
+			if actor_id == "" or ordered.has(actor_id):
+				continue
+			if str(actor.get("side", "")) == side and int(actor.get("hp", 0)) > 0 and str(actor.get("slotId", "")) == expected_slot:
+				ordered.append(actor_id)
+	for actor_id in living_actor_ids(state, side):
+		if not ordered.has(actor_id):
+			ordered.append(actor_id)
+	return ordered
+
+
 static func living_actor_count(state: Dictionary, side: String) -> int:
 	return living_actor_ids(state, side).size()
 
@@ -1008,6 +1029,8 @@ static func _make_spirit_event(state: Dictionary, player_id: String, command: Di
 	if not actor_has_spirit(state, player_id, spirit_id):
 		return {}
 	var effect_type := BattleActionCatalog.effect_type_for(spirit_id)
+	if effect_type == "field_effect":
+		return _make_field_effect_event(state, player_id, sequence, spirit_id)
 	if effect_type == "poison":
 		if BattleActionCatalog.action_is_all(spirit_id) and BattleActionCatalog.action_can_target_side(spirit_id, SIDE_ENEMY):
 			return _make_spirit_poison_all_event(state, player_id, sequence, spirit_id)
@@ -1069,6 +1092,13 @@ static func _make_pet_command_event(state: Dictionary, pet_id: String, command_i
 
 
 static func _make_attack_event(state: Dictionary, attacker_id: String, target_id: String, target_side: String, sequence: int) -> Dictionary:
+	var attack_action_id := _attack_action_id_for_actor(state, attacker_id)
+	if (
+		attack_action_id != ""
+		and target_side == SIDE_ENEMY
+		and BattleActionCatalog.target_mode_for(attack_action_id) == BattleActionCatalog.TARGET_MODE_ENEMY_RANDOM_RANGE
+	):
+		return _make_multi_attack_event(state, attacker_id, target_side, sequence, attack_action_id)
 	return {
 		"type": "attack",
 		"attackerId": attacker_id,
@@ -1080,6 +1110,79 @@ static func _make_attack_event(state: Dictionary, attacker_id: String, target_id
 		"movementStyle": "melee",
 		"canLaunch": true,
 	}
+
+
+static func _make_multi_attack_event(state: Dictionary, attacker_id: String, target_side: String, sequence: int, action_id: String) -> Dictionary:
+	var target_ids := _random_range_target_ids_for_action(state, attacker_id, target_side, sequence, action_id)
+	if target_ids.is_empty():
+		return {}
+	return {
+		"type": "multi_attack",
+		"attackerId": attacker_id,
+		"targetId": target_ids[0],
+		"targetIds": target_ids,
+		"targetSide": target_side,
+		"damage": 0,
+		"speed": _effective_action_speed(state, attacker_id, "attack"),
+		"sequence": sequence,
+		"actionId": action_id,
+		"skillName": BattleActionCatalog.label_for(action_id, "群体攻击"),
+		"movementStyle": "ranged_multi",
+		"canDodge": BattleActionCatalog.effect_allows_dodge(action_id, true),
+		"canCritical": BattleActionCatalog.effect_allows_critical(action_id, false),
+		"canCounter": BattleActionCatalog.effect_allows_counter(action_id, false),
+		"canLaunch": false,
+	}
+
+
+static func _attack_action_id_for_actor(state: Dictionary, actor_id: String) -> String:
+	var actor := actor_by_id(state, actor_id)
+	var action_id := str(actor.get("attackActionId", "")) if not actor.is_empty() else ""
+	if action_id == "":
+		return ""
+	var action := BattleActionCatalog.action_by_id(action_id)
+	if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_EQUIPMENT_ACTION:
+		return ""
+	return action_id
+
+
+static func _random_range_target_ids_for_action(state: Dictionary, attacker_id: String, target_side: String, sequence: int, action_id: String) -> Array[String]:
+	var candidates := living_actor_ids_by_battle_order(state, target_side)
+	if candidates.is_empty():
+		return []
+	var min_targets := BattleActionCatalog.target_min_count_for(action_id, 1)
+	var max_targets := BattleActionCatalog.target_max_count_for(action_id, min_targets)
+	var capped_min := mini(min_targets, candidates.size())
+	var capped_max := mini(max_targets, candidates.size())
+	var count := capped_max
+	if capped_max > capped_min:
+		var count_seed := "%s:%s:%s:%d:count" % [
+			str(state.get("targetSeed", state.get("id", "battle"))),
+			action_id,
+			attacker_id,
+			sequence,
+		]
+		count = capped_min + _stable_target_index(count_seed, capped_max - capped_min + 1)
+	if count >= candidates.size():
+		return candidates
+	var remaining := candidates.duplicate()
+	var picked: Array[String] = []
+	for pick_index in range(count):
+		var seed_text := "%s:%s:%s:%d:pick:%d" % [
+			str(state.get("targetSeed", state.get("id", "battle"))),
+			action_id,
+			attacker_id,
+			sequence,
+			pick_index,
+		]
+		var selected_index := _stable_target_index(seed_text, remaining.size())
+		picked.append(str(remaining[selected_index]))
+		remaining.remove_at(selected_index)
+	var ordered: Array[String] = []
+	for candidate_id in candidates:
+		if picked.has(candidate_id):
+			ordered.append(candidate_id)
+	return ordered
 
 
 static func _make_skill_event(state: Dictionary, attacker_id: String, target_id: String, sequence: int, skill_id: String = PET_SKILL_BUI_CHARGE) -> Dictionary:
@@ -1117,6 +1220,24 @@ static func _make_status_skill_event(state: Dictionary, attacker_id: String, tar
 		"statusPotency": BattleActionCatalog.effect_status_potency_for(skill_id, 0, 0),
 		"statusHitRate": BattleActionCatalog.effect_status_hit_rate_for(skill_id, 1.0),
 		"movementStyle": "ranged_status",
+		"canLaunch": false,
+	}
+
+
+static func _make_field_effect_event(state: Dictionary, attacker_id: String, sequence: int, action_id: String) -> Dictionary:
+	return {
+		"type": "field_effect",
+		"attackerId": attacker_id,
+		"targetSide": "",
+		"targetIds": [],
+		"speed": _effective_action_speed(state, attacker_id, "spirit"),
+		"sequence": sequence,
+		"actionId": action_id,
+		"skillName": BattleActionCatalog.label_for(action_id, "场地精灵"),
+		"fieldEffectId": BattleActionCatalog.effect_field_effect_id_for(action_id, action_id),
+		"element": BattleActionCatalog.effect_element_for(action_id, ""),
+		"modifier": BattleActionCatalog.effect_modifier_for(action_id, 0),
+		"turns": BattleActionCatalog.effect_turns_for(action_id, 1),
 		"canLaunch": false,
 	}
 
@@ -1588,6 +1709,9 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastStatusRollPerTarget"] = {}
 	state["lastStatusChancePerTarget"] = {}
 	state["lastStatusResistancePerTarget"] = {}
+	state["lastDodgePerTarget"] = {}
+	state["lastCriticalPerTarget"] = {}
+	state["lastFieldEffectId"] = ""
 	state["lastParticipants"] = event.get("participantIds", [])
 	state["lastDodged"] = false
 	state["lastCritical"] = false
@@ -1604,8 +1728,12 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_status_skip_event(state, event, blocking_status_id)
 	if event_type == "skill_status":
 		return _apply_status_apply_event(state, event)
+	if event_type == "multi_attack":
+		return _apply_multi_damage_event(state, event)
 	if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
 		return _apply_damage_event(state, event)
+	if event_type == "field_effect":
+		return _apply_field_effect_event(state, event)
 	if event_type == "spirit_heal":
 		return _apply_spirit_heal_event(state, event)
 	if event_type == "spirit_heal_all":
@@ -2091,6 +2219,114 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	return state
 
 
+static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var attacker_id := str(event.get("attackerId", ""))
+	var attacker := actor_by_id(state, attacker_id)
+	if attacker.is_empty() or int(attacker.get("hp", 0)) <= 0:
+		return state
+	var target_side := str(event.get("targetSide", SIDE_ENEMY))
+	var raw_target_ids := _string_array(event.get("targetIds", []))
+	if raw_target_ids.is_empty():
+		raw_target_ids = _random_range_target_ids_for_action(
+			state,
+			attacker_id,
+			target_side,
+			int(event.get("sequence", 0)),
+			str(event.get("actionId", _attack_action_id_for_actor(state, attacker_id)))
+		)
+	if raw_target_ids.is_empty():
+		return state
+
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	if attacker_index < 0:
+		return state
+	attacker = actors[attacker_index] as Dictionary
+	attacker["actionState"] = "attack"
+	actors[attacker_index] = attacker
+
+	var target_ids: Array[String] = []
+	var effect_per_target := {}
+	var dodge_per_target := {}
+	var critical_per_target := {}
+	var status_changes: Array[Dictionary] = []
+	var total_damage := 0
+	var dodged_count := 0
+	var critical_count := 0
+	var action_id := str(event.get("actionId", _attack_action_id_for_actor(state, attacker_id)))
+	for target_id_value in raw_target_ids:
+		var target_id := str(target_id_value)
+		if not _is_living_side_actor(state, target_id, target_side):
+			continue
+		var target_index := actor_index(state, target_id)
+		if target_index < 0:
+			continue
+		var target := actors[target_index] as Dictionary
+		var hp_before := int(target.get("hp", 0))
+		var target_dodged := _damage_event_is_dodged(state, event, attacker_id, target_id)
+		target_ids.append(target_id)
+		if target_dodged:
+			target["actionState"] = "dodge"
+			actors[target_index] = target
+			effect_per_target[target_id] = 0
+			dodge_per_target[target_id] = true
+			critical_per_target[target_id] = false
+			dodged_count += 1
+			continue
+		var damage := _multi_attack_damage_for(state, attacker_id, target_id, action_id)
+		var target_critical := _damage_event_is_critical(state, event, attacker_id, target_id)
+		if target_critical:
+			damage = _critical_damage_for_action(state, attacker_id, target_id, damage, action_id)
+			critical_count += 1
+		var next_hp := maxi(0, hp_before - damage)
+		target["hp"] = next_hp
+		if BattleStatusModel.has_status(target, STATUS_SLEEP):
+			target = BattleStatusModel.remove_status(target, STATUS_SLEEP)
+			status_changes.append({
+				"actorId": target_id,
+				"statusId": STATUS_SLEEP,
+				"change": "remove_on_damage",
+			})
+		target["actionState"] = "down" if next_hp <= 0 else "hit"
+		actors[target_index] = target
+		effect_per_target[target_id] = damage
+		dodge_per_target[target_id] = false
+		critical_per_target[target_id] = target_critical
+		total_damage += damage
+	if target_ids.is_empty():
+		return state
+	state["actors"] = actors
+	state = _sync_player_pet_party_from_actor(state, actor_by_id(state, PLAYER_PET_ID))
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_ids[0]
+	state["lastTargetIds"] = target_ids
+	state["lastDamage"] = total_damage
+	state["lastEffectPerTarget"] = effect_per_target
+	state["lastParticipants"] = [attacker_id]
+	state["lastDodged"] = dodged_count > 0 and dodged_count == target_ids.size()
+	state["lastCritical"] = critical_count > 0
+	state["lastDodgePerTarget"] = dodge_per_target
+	state["lastCriticalPerTarget"] = critical_per_target
+	state["lastCounterEvent"] = {}
+	state["lastCounterTriggered"] = false
+	state["lastReactionKind"] = "multi_attack"
+	if not status_changes.is_empty():
+		state["lastStatusChanges"] = status_changes
+	var attacker_name := str(attacker.get("name", "我方"))
+	var skill_name := str(event.get("skillName", BattleActionCatalog.label_for(action_id, "群体攻击")))
+	state["message"] = "%s 使用%s，攻击%d个目标，造成%d点伤害。" % [
+		attacker_name,
+		skill_name,
+		target_ids.size(),
+		total_damage,
+	]
+	if dodged_count > 0:
+		state["message"] += " %d个目标回避。" % dodged_count
+	return state
+
+
 static func _resolved_damage_for_event(state: Dictionary, event: Dictionary, target_id: String, declared_target_id: String, participant_ids: Array) -> int:
 	if target_id == declared_target_id:
 		return maxi(1, int(event.get("damage", 1)))
@@ -2130,7 +2366,7 @@ static func _damage_event_is_dodged(state: Dictionary, event: Dictionary, attack
 static func _damage_event_allows_dodge(event: Dictionary) -> bool:
 	if not bool(event.get("canDodge", true)):
 		return false
-	return ["attack", "skill_attack", "counter_attack"].has(str(event.get("type", "")))
+	return ["attack", "skill_attack", "counter_attack", "multi_attack"].has(str(event.get("type", "")))
 
 
 static func _damage_event_is_critical(state: Dictionary, event: Dictionary, attacker_id: String, target_id: String) -> bool:
@@ -2146,7 +2382,7 @@ static func _damage_event_is_critical(state: Dictionary, event: Dictionary, atta
 static func _damage_event_allows_critical(event: Dictionary) -> bool:
 	if not bool(event.get("canCritical", true)):
 		return false
-	return ["attack", "skill_attack", "counter_attack"].has(str(event.get("type", "")))
+	return ["attack", "skill_attack", "counter_attack", "multi_attack"].has(str(event.get("type", "")))
 
 
 static func _counter_event_after_damage(state: Dictionary, event: Dictionary, attacker_id: String, target_id: String, target_side: String, hp_before: int, hp_after: int) -> Dictionary:
@@ -2236,6 +2472,13 @@ static func _critical_damage_for(state: Dictionary, attacker_id: String, target_
 	var target_level := maxf(1.0, float(target.get("level", 1)))
 	var defense_bonus := float(target.get("defense", 0)) * attacker_level / target_level * 0.5
 	return maxi(base_damage + 1, base_damage + int(round(defense_bonus)))
+
+
+static func _critical_damage_for_action(state: Dictionary, attacker_id: String, target_id: String, base_damage: int, action_id: String) -> int:
+	var multiplier := BattleActionCatalog.effect_critical_damage_multiplier_for(action_id, -1.0)
+	if multiplier >= 0.0:
+		return maxi(1, int(round(float(base_damage) * multiplier)))
+	return _critical_damage_for(state, attacker_id, target_id, base_damage)
 
 
 static func _counter_damage_for(state: Dictionary, counter_actor_id: String, target_id: String) -> int:
@@ -2399,6 +2642,53 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 	state["lastPetId"] = pet_id
 	state["lastParticipants"] = [attacker_id]
 	state["message"] = "%s 换上了 %s。" % [str(attacker.get("name", "我方")), str(next_pet.get("name", "宠物"))]
+	return state
+
+
+static func _apply_field_effect_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var attacker_id := str(event.get("attackerId", ""))
+	var attacker := actor_by_id(state, attacker_id)
+	if attacker.is_empty() or int(attacker.get("hp", 0)) <= 0:
+		return state
+	var action_id := str(event.get("actionId", ""))
+	var field_effect_id := str(event.get("fieldEffectId", BattleActionCatalog.effect_field_effect_id_for(action_id, action_id)))
+	if field_effect_id == "":
+		return state
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	if attacker_index >= 0:
+		attacker = actors[attacker_index] as Dictionary
+		attacker["actionState"] = "spirit"
+		actors[attacker_index] = attacker
+	state["actors"] = actors
+	var next_effects: Array[Dictionary] = []
+	for value in field_effects(state):
+		if str(value.get("id", "")) != field_effect_id:
+			next_effects.append(value)
+	var effect := {
+		"id": field_effect_id,
+		"actionId": action_id,
+		"label": str(event.get("skillName", BattleActionCatalog.label_for(action_id, "场地效果"))),
+		"element": str(event.get("element", BattleActionCatalog.effect_element_for(action_id, ""))),
+		"modifier": int(event.get("modifier", BattleActionCatalog.effect_modifier_for(action_id, 0))),
+		"turns": maxi(1, int(event.get("turns", BattleActionCatalog.effect_turns_for(action_id, 1)))),
+		"sourceActorId": attacker_id,
+	}
+	next_effects.append(effect)
+	state["fieldEffects"] = next_effects
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = ""
+	state["lastTargetIds"] = []
+	state["lastParticipants"] = [attacker_id]
+	state["lastFieldEffectId"] = field_effect_id
+	state["message"] = "%s 使用%s，战场%s属性加强%d回合。" % [
+		str(attacker.get("name", "我方")),
+		str(event.get("skillName", BattleActionCatalog.label_for(action_id, "场地精灵"))),
+		_element_label(str(effect.get("element", ""))),
+		int(effect.get("turns", 1)),
+	]
 	return state
 
 
@@ -2870,6 +3160,12 @@ static func _attack_damage_for(state: Dictionary, actor_id: String, target_id: S
 	return _damage_after_defense(state, raw_attack, target_id, 0.35)
 
 
+static func _multi_attack_damage_for(state: Dictionary, actor_id: String, target_id: String, action_id: String) -> int:
+	var base_damage := _attack_damage_for(state, actor_id, target_id)
+	var multiplier := BattleActionCatalog.effect_power_multiplier_for(action_id, 1.0)
+	return maxi(1, int(round(float(base_damage) * multiplier)))
+
+
 static func _skill_damage_for(state: Dictionary, actor_id: String, target_id: String = "", action_id: String = PET_SKILL_BUI_CHARGE) -> int:
 	var actor := actor_by_id(state, actor_id)
 	if actor.is_empty():
@@ -2940,6 +3236,47 @@ static func _confusion_target_id(state: Dictionary, attacker_id: String, sequenc
 
 static func _poison_tick_damage_for(base_damage: int) -> int:
 	return maxi(1, int(ceil(float(maxi(1, base_damage)) * 0.5)))
+
+
+static func field_effects(state: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_effects = state.get("fieldEffects", [])
+	if raw_effects is Array:
+		for value in raw_effects:
+			if value is Dictionary and str((value as Dictionary).get("id", "")) != "":
+				result.append((value as Dictionary).duplicate(true))
+	return result
+
+
+static func has_field_effect(state: Dictionary, field_effect_id: String) -> bool:
+	for effect in field_effects(state):
+		if str(effect.get("id", "")) == field_effect_id and int(effect.get("turns", 0)) > 0:
+			return true
+	return false
+
+
+static func decrement_field_effects(state: Dictionary) -> Dictionary:
+	var next_effects: Array[Dictionary] = []
+	for effect in field_effects(state):
+		var next_effect := effect.duplicate(true)
+		next_effect["turns"] = int(next_effect.get("turns", 1)) - 1
+		if int(next_effect.get("turns", 0)) > 0:
+			next_effects.append(next_effect)
+	state["fieldEffects"] = next_effects
+	return state
+
+
+static func _element_label(element: String) -> String:
+	match element:
+		"fire":
+			return "火"
+		"water":
+			return "水"
+		"earth":
+			return "地"
+		"wind":
+			return "风"
+	return "全场"
 
 
 static func _fallback_target_id(state: Dictionary, target_side: String, attacker_id: String = "", sequence: int = 0) -> String:

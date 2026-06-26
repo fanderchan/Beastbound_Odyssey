@@ -11,9 +11,15 @@ static func encounter_zones(map_data: Dictionary) -> Array:
 static func zone_for_cell(map_data: Dictionary, cell: Vector2i) -> Dictionary:
 	for value in encounter_zones(map_data):
 		var zone := value as Dictionary
+		if is_manual_only(zone):
+			continue
 		if zone_contains_cell(zone, cell):
 			return zone
 	return {}
+
+
+static func is_manual_only(zone: Dictionary) -> bool:
+	return bool(zone.get("manualOnly", false))
 
 
 static func zone_contains_cell(zone: Dictionary, cell: Vector2i) -> bool:

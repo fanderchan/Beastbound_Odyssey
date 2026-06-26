@@ -43,6 +43,7 @@
       "name": "岩脉洞穴顶层",
       "rects": [[20, 6, 4, 3]],
       "encounterRate": 1.0,
+      "manualOnly": true,
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "earth_vein_guardian_group",
@@ -62,6 +63,23 @@
     }
   ],
   "interactionPoints": [
+    {
+      "id": "earth_vein_guardian_npc",
+      "name": "岩脉守护兽",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [21, 7],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "earth_vein_guardian_floor",
+      "encounterGroupId": "earth_vein_guardian_group",
+      "option": "挑战",
+      "dialog": [
+        "岩脉守护兽镇守着地之戒。",
+        "击败它才能取得任务物品。"
+      ]
+    },
     {
       "id": "earth_vein_stair_4_to_3",
       "name": "岩脉洞穴三层",

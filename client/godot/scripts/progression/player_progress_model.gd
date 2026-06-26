@@ -26,6 +26,8 @@ const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
+const BATTLE_PLAYER_ACTOR_ID := "ally_player"
+const BATTLE_PET_ACTOR_ID := "ally_pet"
 const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
 const PARTY_LIMIT := 5
 const STORAGE_LIMIT := 20
@@ -38,8 +40,16 @@ const PET_REST_RECOVERY_RATIO := 0.05
 const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
 const PET_DROP_PICKUP_PUBLIC := "public"
+const PET_GROWTH_PROFILES := {
+	"balanced": {"maxHp": 8.0, "attack": 1.6, "defense": 1.3, "quick": 1.4},
+	"attack_high": {"maxHp": 8.0, "attack": 2.2, "defense": 1.1, "quick": 1.2},
+	"agility_high": {"maxHp": 7.5, "attack": 1.45, "defense": 1.0, "quick": 2.2},
+	"defense_high": {"maxHp": 10.0, "attack": 1.25, "defense": 2.0, "quick": 0.9},
+	"hp_high": {"maxHp": 12.0, "attack": 1.35, "defense": 1.45, "quick": 1.0},
+}
 const LOCAL_PLAYER_ID := "local_player"
 const DEFAULT_STONE_COINS := 120
+const DEFAULT_DIAMONDS := 10000
 const VILLAGE_HEAL_HP_PER_COIN := 20
 const PLAYER_STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_PLAYER_BATTLE_STATS := {
@@ -56,7 +66,9 @@ const PLAYER_STAT_POINT_GAINS := {
 	"quick": 1,
 }
 const STONE_COINS_KEY := "stoneCoins"
+const DIAMONDS_KEY := "diamonds"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
+const BACKPACK_EXTRA_SLOTS_KEY := "backpackExtraSlots"
 const QUICK_SLOTS_KEY := "quickSlots"
 const QUICK_SLOT_COUNT := 3
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
@@ -127,6 +139,7 @@ static func default_profile() -> Dictionary:
 		"nextPetInstanceSerial": 5,
 		"nextPetDropSerial": 1,
 		"stoneCoins": DEFAULT_STONE_COINS,
+		"diamonds": DEFAULT_DIAMONDS,
 		"petInstances": [
 			_pet_instance_from_form("pet_bui_main", "我的布伊", "bui_normal_red_fire10", PET_STATE_BATTLE, 1),
 			_pet_instance_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, 1),
@@ -135,6 +148,7 @@ static func default_profile() -> Dictionary:
 		],
 		"groundPetDrops": [],
 		"backpackSlots": BackpackModel.starting_slots(),
+		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
 		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
@@ -314,6 +328,9 @@ static func execute_rebirth(profile: Dictionary) -> Dictionary:
 		result["rewardItems"] = reward_result.get("rewardItems", [])
 		result["lostRewardItems"] = reward_result.get("lostRewardItems", [])
 		result["starterPet"] = reward_result.get("starterPet", {})
+		var consumed_pet_text := _rebirth_consumed_pet_text(result.get("consumedPets", []))
+		if consumed_pet_text != "":
+			result["message"] = "%s 交出%s。" % [str(result.get("message", "")), consumed_pet_text]
 		var reward_text := _rebirth_reward_text(reward_result)
 		if reward_text != "":
 			result["message"] = "%s 获得%s。" % [str(result.get("message", "")), reward_text]
@@ -497,6 +514,7 @@ static func _consume_rebirth_beasts(profile: Dictionary, target_count: int) -> D
 				"instanceId": str(instance.get("instanceId", "")),
 				"name": str(instance.get("name", _pet_form_name_for(form_id))),
 				"formId": form_id,
+				"level": maxi(1, int(instance.get("level", 1))),
 			})
 			continue
 		next_instances.append(instance)
@@ -505,6 +523,22 @@ static func _consume_rebirth_beasts(profile: Dictionary, target_count: int) -> D
 		"profile": normalize_profile(normalized),
 		"consumedPets": consumed_pets,
 	}
+
+
+static func _rebirth_consumed_pet_text(consumed_pets) -> String:
+	if not (consumed_pets is Array):
+		return ""
+	var parts: Array[String] = []
+	for value in consumed_pets:
+		if not (value is Dictionary):
+			continue
+		var pet := value as Dictionary
+		var label := str(pet.get("name", _pet_form_name_for(str(pet.get("formId", ""))))).strip_edges()
+		if label == "":
+			label = "转生兽"
+		var level := maxi(1, int(pet.get("level", 1)))
+		parts.append("%s Lv%d" % [label, level])
+	return "、".join(parts)
 
 
 static func _grant_rebirth_trial_rewards(profile: Dictionary, target_count: int) -> Dictionary:
@@ -577,8 +611,17 @@ static func battle_actor_knocked_away(state: Dictionary, actor_id: String) -> bo
 	for actor in _actors(state):
 		if str(actor.get("id", "")) != actor_id:
 			continue
-		return bool(actor.get("launched", false)) or str(actor.get("actionState", "")) == "launched" or not bool(actor.get("revivable", true))
+		return _actor_knocked_away(actor)
 	return false
+
+
+static func battle_knocked_away_actor_ids(state: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for actor in _actors(state):
+		var actor_id := str(actor.get("id", ""))
+		if actor_id != "" and _actor_knocked_away(actor):
+			result.append(actor_id)
+	return result
 
 
 static func active_pet(profile: Dictionary) -> Dictionary:
@@ -705,7 +748,11 @@ static func with_capture_tool_inventory(profile: Dictionary, inventory: Dictiona
 
 
 static func backpack_slots(profile: Dictionary) -> Array[Dictionary]:
-	return BackpackModel.normalize_slots(normalize_profile(profile).get(BACKPACK_SLOTS_KEY, []))
+	var normalized := normalize_profile(profile)
+	return BackpackModel.normalize_slots(
+		normalized.get(BACKPACK_SLOTS_KEY, []),
+		BackpackModel.unlocked_slot_count(int(normalized.get(BACKPACK_EXTRA_SLOTS_KEY, 0)))
+	)
 
 
 static func backpack_item_count(profile: Dictionary, item_id: String) -> int:
@@ -814,9 +861,24 @@ static func backpack_counts_for_context(profile: Dictionary, context: String) ->
 	return BackpackModel.counts_for_context(normalized_slots, context)
 
 
+static func backpack_extra_slots(profile: Dictionary) -> int:
+	return clampi(int(normalize_profile(profile).get(BACKPACK_EXTRA_SLOTS_KEY, 0)), 0, BackpackModel.EXTRA_SLOT_LIMIT)
+
+
+static func backpack_unlocked_slot_count(profile: Dictionary) -> int:
+	return BackpackModel.unlocked_slot_count(backpack_extra_slots(profile))
+
+
+static func backpack_max_slot_count() -> int:
+	return BackpackModel.SLOT_LIMIT
+
+
 static func with_backpack_slots(profile: Dictionary, slots: Array[Dictionary]) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	var normalized_slots := BackpackModel.normalize_slots(slots)
+	var normalized_slots := BackpackModel.normalize_slots(
+		slots,
+		BackpackModel.unlocked_slot_count(int(normalized.get(BACKPACK_EXTRA_SLOTS_KEY, 0)))
+	)
 	normalized[BACKPACK_SLOTS_KEY] = normalized_slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(normalized_slots)
 	return normalize_profile(normalized)
@@ -911,6 +973,30 @@ static func equipment_spirit_ids(profile: Dictionary) -> Array[String]:
 	var player := normalized.get("player", {}) as Dictionary
 	var player_level := maxi(1, int(player.get("level", 1)))
 	return _equipment_spirit_ids_from_slots(
+		equipment_slots(normalized),
+		equipment_durability(normalized),
+		player_level,
+		RebirthModel.rebirth_count(normalized)
+	)
+
+
+static func equipment_battle_action_ids(profile: Dictionary) -> Array[String]:
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	return _equipment_battle_action_ids_from_slots(
+		equipment_slots(normalized),
+		equipment_durability(normalized),
+		player_level,
+		RebirthModel.rebirth_count(normalized)
+	)
+
+
+static func equipment_attack_action_id(profile: Dictionary) -> String:
+	var normalized := normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	return _equipment_attack_action_id_from_slots(
 		equipment_slots(normalized),
 		equipment_durability(normalized),
 		player_level,
@@ -1873,6 +1959,48 @@ static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 	return normalized
 
 
+static func diamonds(profile: Dictionary) -> int:
+	return maxi(0, int(normalize_profile(profile).get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
+
+
+static func with_diamonds(profile: Dictionary, amount: int) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	normalized[DIAMONDS_KEY] = maxi(0, amount)
+	return normalized
+
+
+static func unlock_backpack_slot(profile: Dictionary, requested_extra_slot_index: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var extra_slots := clampi(int(normalized.get(BACKPACK_EXTRA_SLOTS_KEY, 0)), 0, BackpackModel.EXTRA_SLOT_LIMIT)
+	if extra_slots >= BackpackModel.EXTRA_SLOT_LIMIT:
+		return {"ok": false, "profile": normalized, "message": "扩展背包位已全部解锁。"}
+	if requested_extra_slot_index >= 0 and requested_extra_slot_index != extra_slots:
+		return {"ok": false, "profile": normalized, "message": "请先解锁前一个扩展背包位。"}
+	var cost := BackpackModel.unlock_cost_for_extra_slot(extra_slots)
+	var current_diamonds := diamonds(normalized)
+	if current_diamonds < cost:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "钻石不足，还需要 %d 钻石。" % maxi(0, cost - current_diamonds),
+			"cost": cost,
+		}
+	var next_extra_slots := extra_slots + 1
+	normalized[DIAMONDS_KEY] = current_diamonds - cost
+	normalized[BACKPACK_EXTRA_SLOTS_KEY] = next_extra_slots
+	normalized[BACKPACK_SLOTS_KEY] = BackpackModel.normalize_slots(
+		normalized.get(BACKPACK_SLOTS_KEY, []),
+		BackpackModel.unlocked_slot_count(next_extra_slots)
+	)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "已消耗 %d 钻石，解锁第 %d 个扩展背包位。" % [cost, next_extra_slots],
+		"cost": cost,
+	}
+
+
 static func village_healer_missing_hp(profile: Dictionary) -> int:
 	var normalized := normalize_profile(profile)
 	var missing := maxi(0, player_max_hp(normalized) - player_hp(normalized))
@@ -2666,6 +2794,38 @@ static func _equipment_spirit_ids_from_slots(slots: Dictionary, durability: Dict
 			if not result.has(spirit_id):
 				result.append(spirit_id)
 	return _sorted_player_spirit_ids(result)
+
+
+static func _equipment_battle_action_ids_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Array[String]:
+	var result: Array[String] = []
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		if _equipment_slot_is_broken(slot_id, item_id, durability):
+			continue
+		if not _equipment_slot_meets_requirements(item_id, player_level, player_rebirth):
+			continue
+		for action_id in EquipmentModel.battle_action_ids_for(item_id):
+			if action_id != "" and not result.has(action_id):
+				result.append(action_id)
+	result.sort()
+	return result
+
+
+static func _equipment_attack_action_id_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> String:
+	for slot_id in [EquipmentModel.SLOT_RIGHT_HAND_WEAPON, EquipmentModel.SLOT_LEFT_HAND_WEAPON]:
+		var item_id := str(slots.get(slot_id, ""))
+		if item_id == "":
+			continue
+		if _equipment_slot_is_broken(slot_id, item_id, durability):
+			continue
+		if not _equipment_slot_meets_requirements(item_id, player_level, player_rebirth):
+			continue
+		var action_id := EquipmentModel.attack_action_id_for(item_id)
+		if action_id != "":
+			return action_id
+	return ""
 
 
 static func _equipment_spirit_source_entries_from_slots(slots: Dictionary, durability: Dictionary = {}, player_level: int = 999999, player_rebirth: int = 99) -> Array[Dictionary]:
@@ -3659,6 +3819,52 @@ static func growth_profile_label(profile_id: String) -> String:
 	return " / ".join(labels)
 
 
+static func pet_stats_for_form_level(form_id: String, level: int) -> Dictionary:
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return {
+			"maxHp": 1,
+			"attack": 1,
+			"defense": 1,
+			"quick": 1,
+		}
+	return _pet_stats_for_template_level(template, level)
+
+
+static func _pet_stats_for_template_level(template: Dictionary, level: int) -> Dictionary:
+	var stats = template.get("baseStats", {})
+	var stats_dict := stats as Dictionary if stats is Dictionary else {}
+	var base := {
+		"maxHp": maxi(1, int(stats_dict.get("maxHp", 1))),
+		"attack": maxi(1, int(stats_dict.get("attack", 12))),
+		"defense": maxi(1, int(stats_dict.get("defense", 6))),
+		"quick": maxi(1, int(stats_dict.get("agility", stats_dict.get("quick", 50)))),
+	}
+	var rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
+	var level_bonus := maxi(0, clampi(level, 1, MAX_PET_LEVEL) - 1)
+	return {
+		"maxHp": maxi(1, int(round(float(base.get("maxHp", 1)) + float(rates.get("maxHp", 0.0)) * float(level_bonus)))),
+		"attack": maxi(1, int(round(float(base.get("attack", 1)) + float(rates.get("attack", 0.0)) * float(level_bonus)))),
+		"defense": maxi(1, int(round(float(base.get("defense", 1)) + float(rates.get("defense", 0.0)) * float(level_bonus)))),
+		"quick": maxi(1, int(round(float(base.get("quick", 1)) + float(rates.get("quick", 0.0)) * float(level_bonus)))),
+	}
+
+
+static func _pet_growth_rates(profile_id: String) -> Dictionary:
+	var normalized := profile_id.to_lower().strip_edges()
+	if PET_GROWTH_PROFILES.has(normalized):
+		return (PET_GROWTH_PROFILES.get(normalized, {}) as Dictionary).duplicate(true)
+	if normalized.find("attack") >= 0:
+		return (PET_GROWTH_PROFILES.get("attack_high", {}) as Dictionary).duplicate(true)
+	if normalized.find("agility") >= 0 or normalized.find("quick") >= 0 or normalized.find("speed") >= 0:
+		return (PET_GROWTH_PROFILES.get("agility_high", {}) as Dictionary).duplicate(true)
+	if normalized.find("defense") >= 0:
+		return (PET_GROWTH_PROFILES.get("defense_high", {}) as Dictionary).duplicate(true)
+	if normalized.find("hp") >= 0 or normalized.find("health") >= 0 or normalized.find("stamina") >= 0 or normalized.find("survival") >= 0:
+		return (PET_GROWTH_PROFILES.get("hp_high", {}) as Dictionary).duplicate(true)
+	return (PET_GROWTH_PROFILES.get("balanced", {}) as Dictionary).duplicate(true)
+
+
 static func create_pet_instance_from_form(instance_id: String, pet_name: String, form_id: String, state: String, level: int, stat_overrides: Dictionary = {}) -> Dictionary:
 	return _pet_instance_from_form(instance_id, pet_name, form_id, state, level, stat_overrides)
 
@@ -3699,9 +3905,17 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 					drops.append(drop)
 	normalized["groundPetDrops"] = drops
 	var has_backpack_slots := normalized.has(BACKPACK_SLOTS_KEY) and normalized.get(BACKPACK_SLOTS_KEY) is Array
-	var backpack_slots_value := BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, []))
+	var backpack_extra_slots_value := clampi(int(normalized.get(BACKPACK_EXTRA_SLOTS_KEY, 0)), 0, BackpackModel.EXTRA_SLOT_LIMIT)
+	normalized[BACKPACK_EXTRA_SLOTS_KEY] = backpack_extra_slots_value
+	var backpack_slots_value := BackpackModel.normalize_slots(
+		normalized.get(BACKPACK_SLOTS_KEY, []),
+		BackpackModel.unlocked_slot_count(backpack_extra_slots_value)
+	)
 	if not has_backpack_slots:
-		backpack_slots_value = BackpackModel.starting_slots()
+		backpack_slots_value = BackpackModel.normalize_slots(
+			BackpackModel.starting_slots(),
+			BackpackModel.unlocked_slot_count(backpack_extra_slots_value)
+		)
 		var legacy_capture_tools = normalized.get(CAPTURE_TOOLS_KEY, null)
 		if legacy_capture_tools is Dictionary:
 			backpack_slots_value = BackpackModel.set_counts_for_context(
@@ -3755,6 +3969,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+	normalized[DIAMONDS_KEY] = maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
 	player_dict = normalized.get("player", {}) as Dictionary
 	var player_base_stats := _player_base_stats_from_player(player_dict)
 	var player_level_for_equipment := maxi(1, int(player_dict.get("level", 1)))
@@ -3906,6 +4121,8 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		actor["equipmentStatBonus"] = summary.get("bonus", {})
 		actor["equipmentStatSummary"] = summary
 		actor["spiritIds"] = equipment_spirit_ids(profile)
+		actor["battleActionIds"] = equipment_battle_action_ids(profile)
+		actor["attackActionId"] = equipment_attack_action_id(profile)
 		actors[index] = actor
 		break
 	next_state["actors"] = actors
@@ -4022,6 +4239,8 @@ static func _training_partner_pet_actor(partner: Dictionary, index: int, slot_nu
 
 
 static func battle_result_for_state(state: Dictionary) -> String:
+	if battle_actor_knocked_away(state, BATTLE_PLAYER_ACTOR_ID):
+		return "defeat"
 	var living_enemies := 0
 	var living_allies := 0
 	for actor in _actors(state):
@@ -4041,6 +4260,11 @@ static func battle_result_for_state(state: Dictionary) -> String:
 
 static func apply_battle_result(profile: Dictionary, state: Dictionary, result_override: String = "") -> Dictionary:
 	var next_profile := normalize_profile(profile)
+	var knocked_away_actor_ids := battle_knocked_away_actor_ids(state)
+	var player_knocked_away := knocked_away_actor_ids.has(BATTLE_PLAYER_ACTOR_ID)
+	var active_pet_knocked_away := knocked_away_actor_ids.has(BATTLE_PET_ACTOR_ID)
+	var ally_knocked_away_actor_ids := _battle_knocked_away_actor_ids_for_side(state, "ally")
+	var enemy_knocked_away_actor_ids := _battle_knocked_away_actor_ids_for_side(state, "enemy")
 	var state_item_bag = state.get("itemBag", _battle_item_inventory_from_slots(backpack_slots(next_profile)))
 	if state_item_bag is Dictionary:
 		next_profile = with_battle_item_inventory(next_profile, state_item_bag as Dictionary)
@@ -4117,10 +4341,20 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		next_profile["petInstances"] = instances
 		next_profile["nextPetInstanceSerial"] = _next_serial_from_instances(_pet_instances(next_profile))
 	next_profile = normalize_profile(next_profile)
+	var log_lines := battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward, lost_captured_instances, auto_discarded_instances)
+	for line in _battle_knockaway_log_lines(state, active_pet_knocked_away):
+		if not log_lines.has(line):
+			log_lines.append(line)
 
 	return {
 		"profile": next_profile,
 		"result": result,
+		"playerKnockedAway": player_knocked_away,
+		"activePetKnockedAway": active_pet_knocked_away,
+		"knockedAwayActorIds": knocked_away_actor_ids,
+		"allyKnockedAwayActorIds": ally_knocked_away_actor_ids,
+		"enemyKnockedAwayActorIds": enemy_knocked_away_actor_ids,
+		"returnToRecordPoint": player_knocked_away,
 		"expReward": exp_reward,
 		"stoneCoinsReward": stone_coins_reward,
 		"itemRewards": item_rewards,
@@ -4128,7 +4362,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"capturedPets": captured_instances,
 		"lostCapturedPets": lost_captured_instances,
 		"autoDiscardedPets": auto_discarded_instances,
-		"logLines": battle_result_log_lines(result, exp_reward, captured_instances, level_up_lines, next_profile, item_rewards, lost_item_rewards, stone_coins_reward, lost_captured_instances, auto_discarded_instances),
+		"logLines": log_lines,
 	}
 
 
@@ -4471,7 +4705,7 @@ static func _award_training_partner_exp(profile: Dictionary, amount: int) -> Dic
 			pet_dict = pet_award.get("entry", pet_dict)
 			var pet_after_level := maxi(1, int(pet_dict.get("level", pet_before_level)))
 			if pet_after_level > pet_before_level:
-				pet_dict = _grow_training_partner_pet_stats(pet_dict, pet_after_level - pet_before_level)
+				pet_dict = _normalize_pet_instance(pet_dict)
 				lines.append("%s 升到 Lv%d。" % [str(pet_dict.get("name", "陪练宠物")), pet_after_level])
 			partner["pet"] = pet_dict
 		partners[index] = TrainingPartnerModel.normalize_partner(partner, index)
@@ -4524,6 +4758,8 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 			instances[index] = instance
 			break
 	next_profile["petInstances"] = instances
+	if battle_actor_knocked_away(state, BATTLE_PET_ACTOR_ID):
+		next_profile = _with_active_battle_pet_rest(next_profile, state)
 	return next_profile
 
 
@@ -4541,6 +4777,32 @@ static func _merge_battle_player(profile: Dictionary, state: Dictionary) -> Dict
 	return next_profile
 
 
+static func _with_active_battle_pet_rest(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var next_profile := profile.duplicate(true)
+	var active_id := str(next_profile.get("activePetInstanceId", ""))
+	var pet_actor := _battle_actor_by_id(state, BATTLE_PET_ACTOR_ID)
+	if active_id == "" and not pet_actor.is_empty():
+		active_id = str(pet_actor.get("instanceId", pet_actor.get("petId", "")))
+	if active_id == "":
+		return next_profile
+	var instances: Array = next_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != active_id:
+			instances[index] = instance
+			continue
+		instance["state"] = PET_STATE_REST
+		instance["hp"] = 0
+		instances[index] = instance
+		break
+	next_profile["petInstances"] = instances
+	if str(next_profile.get("activePetInstanceId", "")) == active_id:
+		next_profile["activePetInstanceId"] = ""
+	return next_profile
+
+
 static func _with_codex_forms_seen_from_battle(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var next_profile := profile.duplicate(true)
 	for actor in _actors(state):
@@ -4551,6 +4813,39 @@ static func _with_codex_forms_seen_from_battle(profile: Dictionary, state: Dicti
 			continue
 		next_profile = _with_codex_form_recorded(next_profile, form_id, bool(actor.get("captured", false)))
 	return next_profile
+
+
+static func _battle_knocked_away_actor_ids_for_side(state: Dictionary, side: String) -> Array[String]:
+	var result: Array[String] = []
+	for actor in _actors(state):
+		var actor_id := str(actor.get("id", ""))
+		if actor_id != "" and str(actor.get("side", "")) == side and _actor_knocked_away(actor):
+			result.append(actor_id)
+	return result
+
+
+static func _battle_knockaway_log_lines(state: Dictionary, active_pet_knocked_away: bool) -> Array[String]:
+	var lines: Array[String] = []
+	if active_pet_knocked_away:
+		var pet_name := _battle_actor_name(state, BATTLE_PET_ACTOR_ID, "宠物")
+		lines.append("%s被击飞，进入休息状态。" % pet_name)
+	return lines
+
+
+static func _battle_actor_name(state: Dictionary, actor_id: String, fallback: String) -> String:
+	var actor := _battle_actor_by_id(state, actor_id)
+	return str(actor.get("name", fallback)) if not actor.is_empty() else fallback
+
+
+static func _battle_actor_by_id(state: Dictionary, actor_id: String) -> Dictionary:
+	for actor in _actors(state):
+		if str(actor.get("id", "")) == actor_id:
+			return actor
+	return {}
+
+
+static func _actor_knocked_away(actor: Dictionary) -> bool:
+	return bool(actor.get("launched", false)) or str(actor.get("actionState", "")) == "launched" or not bool(actor.get("revivable", true))
 
 
 static func _with_codex_form_recorded(profile: Dictionary, form_id: String, captured: bool) -> Dictionary:
@@ -4656,10 +4951,12 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
 	if template.is_empty():
 		return {}
-	var stats = template.get("baseStats", {})
-	var stats_dict := stats as Dictionary if stats is Dictionary else {}
-	var max_hp := int(stat_overrides.get("maxHp", stats_dict.get("maxHp", 1)))
+	var level_value := clampi(level, 1, MAX_PET_LEVEL)
+	var grown_stats := _pet_stats_for_template_level(template, level_value)
+	var max_hp := maxi(1, int(grown_stats.get("maxHp", 1)))
 	var hp := int(stat_overrides.get("hp", max_hp))
+	if stat_overrides.has("maxHp") and hp >= maxi(1, int(stat_overrides.get("maxHp", max_hp))):
+		hp = max_hp
 	var instance := {
 		"instanceId": instance_id,
 		"petId": instance_id,
@@ -4667,14 +4964,14 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		"formId": form_id,
 		"name": pet_name if pet_name != "" else str(template.get("formName", "宠物")),
 		"state": state,
-		"level": clampi(level, 1, MAX_PET_LEVEL),
+		"level": level_value,
 		"exp": 0,
-		"nextExp": exp_to_next_level(clampi(level, 1, MAX_PET_LEVEL)),
+		"nextExp": exp_to_next_level(level_value),
 		"hp": clampi(hp, 0, max_hp),
 		"maxHp": max_hp,
-		"quick": int(stat_overrides.get("quick", stats_dict.get("agility", 50))),
-		"attack": int(stat_overrides.get("attack", stats_dict.get("attack", 12))),
-		"defense": int(stat_overrides.get("defense", stats_dict.get("defense", 6))),
+		"quick": int(grown_stats.get("quick", 1)),
+		"attack": int(grown_stats.get("attack", 1)),
+		"defense": int(grown_stats.get("defense", 1)),
 	}
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if template.has(key):
@@ -4698,13 +4995,16 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["level"] = clampi(int(instance.get("level", 1)), 1, MAX_PET_LEVEL)
 	instance["exp"] = maxi(0, int(instance.get("exp", 0)))
 	instance["nextExp"] = exp_to_next_level(int(instance.get("level", 1)))
-	var stats = template.get("baseStats", {})
-	var stats_dict := stats as Dictionary if stats is Dictionary else {}
-	instance["maxHp"] = maxi(1, int(instance.get("maxHp", stats_dict.get("maxHp", 1))))
-	instance["hp"] = clampi(int(instance.get("hp", instance.get("maxHp", 1))), 0, int(instance.get("maxHp", 1)))
-	instance["quick"] = int(instance.get("quick", stats_dict.get("agility", 50)))
-	instance["attack"] = int(instance.get("attack", stats_dict.get("attack", 12)))
-	instance["defense"] = int(instance.get("defense", stats_dict.get("defense", 6)))
+	var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
+	var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
+	var missing_hp := maxi(0, old_max_hp - old_hp)
+	var grown_stats := _pet_stats_for_template_level(template, int(instance.get("level", 1)))
+	var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
+	instance["maxHp"] = grown_max_hp
+	instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
+	instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
+	instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
+	instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:

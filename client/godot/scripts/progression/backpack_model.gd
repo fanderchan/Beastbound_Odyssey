@@ -1,7 +1,10 @@
 extends RefCounted
 
 const DATA_PATH := "res://data/bag_items.json"
-const SLOT_LIMIT := 15
+const BASE_SLOT_LIMIT := 15
+const EXTRA_SLOT_LIMIT := 5
+const SLOT_LIMIT := 20
+const UNLOCK_COSTS: Array[int] = [50, 100, 200, 400, 1000]
 const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
@@ -155,10 +158,20 @@ static func starting_slots() -> Array[Dictionary]:
 		var count := maxi(0, int(item.get("startingCount", 0)))
 		if item_id != "" and count > 0:
 			counts[item_id] = count
-	return slots_from_counts(counts)
+	return slots_from_counts(counts, BASE_SLOT_LIMIT)
 
 
-static func normalize_slots(value) -> Array[Dictionary]:
+static func unlocked_slot_count(extra_slots: int) -> int:
+	return BASE_SLOT_LIMIT + clampi(extra_slots, 0, EXTRA_SLOT_LIMIT)
+
+
+static func unlock_cost_for_extra_slot(extra_slots_unlocked: int) -> int:
+	if extra_slots_unlocked < 0 or extra_slots_unlocked >= UNLOCK_COSTS.size():
+		return 0
+	return maxi(0, int(UNLOCK_COSTS[extra_slots_unlocked]))
+
+
+static func normalize_slots(value, slot_limit: int = -1) -> Array[Dictionary]:
 	var counts := {}
 	if value is Array:
 		for raw_slot in value:
@@ -172,10 +185,11 @@ static func normalize_slots(value) -> Array[Dictionary]:
 			if count <= 0:
 				continue
 			counts[item_id] = int(counts.get(item_id, 0)) + count
-	return slots_from_counts(counts)
+	return slots_from_counts(counts, _slot_limit_from_value(value, slot_limit))
 
 
-static func slots_from_counts(counts: Dictionary) -> Array[Dictionary]:
+static func slots_from_counts(counts: Dictionary, slot_limit: int = BASE_SLOT_LIMIT) -> Array[Dictionary]:
+	var resolved_slot_limit := _resolved_slot_limit(slot_limit)
 	var result: Array[Dictionary] = []
 	for item in items():
 		var item_id := str(item.get("id", ""))
@@ -183,14 +197,14 @@ static func slots_from_counts(counts: Dictionary) -> Array[Dictionary]:
 			continue
 		var remaining := maxi(0, int(counts.get(item_id, 0)))
 		var stack_limit := stack_limit_for(item_id)
-		while remaining > 0 and result.size() < SLOT_LIMIT:
+		while remaining > 0 and result.size() < resolved_slot_limit:
 			var stack_count := mini(remaining, stack_limit)
 			result.append({
 				"itemId": item_id,
 				"count": stack_count,
 			})
 			remaining -= stack_count
-	while result.size() < SLOT_LIMIT:
+	while result.size() < resolved_slot_limit:
 		result.append({})
 	return result
 
@@ -236,7 +250,7 @@ static func set_item_count(slots: Array[Dictionary], item_id: String, count: int
 		counts[item_id] = next_count
 	else:
 		counts.erase(item_id)
-	return slots_from_counts(counts)
+	return slots_from_counts(counts, _slot_limit_from_slots(slots))
 
 
 static func set_counts_for_context(slots: Array[Dictionary], context: String, counts: Dictionary) -> Array[Dictionary]:
@@ -247,7 +261,7 @@ static func set_counts_for_context(slots: Array[Dictionary], context: String, co
 			next_counts[item_id] = next_count
 		else:
 			next_counts.erase(item_id)
-	return slots_from_counts(next_counts)
+	return slots_from_counts(next_counts, _slot_limit_from_slots(slots))
 
 
 static func consume(slots: Array[Dictionary], item_id: String, amount: int = 1) -> Array[Dictionary]:
@@ -399,6 +413,24 @@ static func _add_single_item(slots: Array[Dictionary], item_id: String, count: i
 		"slots": next_slots,
 		"addedCount": count - remaining,
 	}
+
+
+static func _resolved_slot_limit(slot_limit: int) -> int:
+	return clampi(slot_limit, BASE_SLOT_LIMIT, SLOT_LIMIT)
+
+
+static func _slot_limit_from_slots(slots: Array[Dictionary]) -> int:
+	return _resolved_slot_limit(slots.size())
+
+
+static func _slot_limit_from_value(value, explicit_slot_limit: int = -1) -> int:
+	if explicit_slot_limit > 0:
+		return _resolved_slot_limit(explicit_slot_limit)
+	if value is Array:
+		var value_size := (value as Array).size()
+		if value_size > 0:
+			return _resolved_slot_limit(value_size)
+	return BASE_SLOT_LIMIT
 
 
 static func _data() -> Dictionary:

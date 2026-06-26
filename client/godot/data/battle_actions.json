@@ -38,6 +38,32 @@
       "stoneAgeReference": "BATTLE_COM_GUARD"
     },
     {
+      "id": "weapon_shadow_group_shot",
+      "owner": "equipment_action",
+      "label": "玄影连射",
+      "command": "attack",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": false,
+        "selfOnly": false,
+        "targetMode": "enemy_random_range",
+        "minTargets": 6,
+        "maxTargets": 10
+      },
+      "effect": {
+        "type": "damage",
+        "amountSource": "actorAttack",
+        "powerMultiplier": 0.65,
+        "canDodge": true,
+        "canCritical": true,
+        "criticalDamageMultiplier": 1.0,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BOW_multi_target_attack"
+    },
+    {
       "id": "player_capture",
       "owner": "player",
       "label": "捕捉",
@@ -125,6 +151,28 @@
         "amount": 34
       },
       "stoneAgeReference": "MAGIC_OtherRecovery"
+    },
+    {
+      "id": "spirit_wind_field_1",
+      "owner": "spirit",
+      "label": "风场精灵1",
+      "command": "spirit",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": false,
+        "requiresSelection": false,
+        "selfOnly": false,
+        "targetMode": "battlefield"
+      },
+      "effect": {
+        "type": "field_effect",
+        "fieldEffectId": "wind_power_1",
+        "element": "wind",
+        "modifier": 1,
+        "turns": 3
+      },
+      "stoneAgeReference": "MAGIC_field_attribute"
     },
     {
       "id": "spirit_poison_1",

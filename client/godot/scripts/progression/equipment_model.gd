@@ -113,6 +113,44 @@ static func spirit_ids_for(item_id: String) -> Array[String]:
 	return result
 
 
+static func battle_action_ids_for(item_id: String) -> Array[String]:
+	var item := item_for_id(item_id)
+	var raw_actions = item.get("battleActionIds", [])
+	var result: Array[String] = []
+	if raw_actions is Array:
+		for value in raw_actions:
+			var action_id := str(value)
+			if action_id == "" or result.has(action_id):
+				continue
+			var action := BattleActionCatalog.action_by_id(action_id)
+			if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_EQUIPMENT_ACTION:
+				continue
+			result.append(action_id)
+	return result
+
+
+static func attack_action_id_for(item_id: String) -> String:
+	var item := item_for_id(item_id)
+	var action_id := str(item.get("attackActionId", ""))
+	if action_id == "":
+		return ""
+	var action := BattleActionCatalog.action_by_id(action_id)
+	if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_EQUIPMENT_ACTION:
+		return ""
+	return action_id
+
+
+static func battle_action_text_for(item_id: String) -> String:
+	var parts: Array[String] = []
+	for action_id in battle_action_ids_for(item_id):
+		var label := BattleActionCatalog.label_for(action_id, action_id)
+		var min_targets := BattleActionCatalog.target_min_count_for(action_id, 1)
+		var max_targets := BattleActionCatalog.target_max_count_for(action_id, min_targets)
+		var target_text := "目标%d-%d个" % [min_targets, max_targets] if max_targets > min_targets else "目标%d个" % max_targets
+		parts.append("%s（%s）" % [label, target_text])
+	return "、".join(parts)
+
+
 static func spirit_text_for(item_id: String) -> String:
 	var parts: Array[String] = []
 	for spirit_id in spirit_ids_for(item_id):
@@ -197,6 +235,9 @@ static func detail_lines_for_item(item_id: String) -> Array[String]:
 	var spirit_text := spirit_text_for(item_id)
 	if spirit_text != "":
 		lines.append("精灵: %s" % spirit_text)
+	var action_text := battle_action_text_for(item_id)
+	if action_text != "":
+		lines.append("战斗动作: %s" % action_text)
 	var description := str(item.get("description", "")).strip_edges()
 	if description != "":
 		lines.append(description)
@@ -241,6 +282,18 @@ static func validation_errors() -> Array[String]:
 				var action := BattleActionCatalog.action_by_id(spirit_id)
 				if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_SPIRIT:
 					errors.append("%s.spiritIds 包含无效精灵: %s" % [item_id, spirit_id])
+		var attack_action_id := str(item.get("attackActionId", ""))
+		if attack_action_id != "":
+			var attack_action := BattleActionCatalog.action_by_id(attack_action_id)
+			if attack_action.is_empty() or str(attack_action.get("owner", "")) != BattleActionCatalog.OWNER_EQUIPMENT_ACTION:
+				errors.append("%s.attackActionId 包含无效装备动作: %s" % [item_id, attack_action_id])
+		var raw_actions = item.get("battleActionIds", [])
+		if raw_actions is Array:
+			for value in raw_actions:
+				var action_id := str(value)
+				var action := BattleActionCatalog.action_by_id(action_id)
+				if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_EQUIPMENT_ACTION:
+					errors.append("%s.battleActionIds 包含无效装备动作: %s" % [item_id, action_id])
 	return errors
 
 

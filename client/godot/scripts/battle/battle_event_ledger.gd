@@ -58,10 +58,15 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 		"statusRollPerTarget": _duplicate_dict(state.get("lastStatusRollPerTarget", {})),
 		"statusChancePerTarget": _duplicate_dict(state.get("lastStatusChancePerTarget", {})),
 		"statusResistancePerTarget": _duplicate_dict(state.get("lastStatusResistancePerTarget", {})),
+		"dodgePerTarget": _duplicate_dict(state.get("lastDodgePerTarget", {})),
+		"criticalPerTarget": _duplicate_dict(state.get("lastCriticalPerTarget", {})),
+		"fieldEffectId": str(state.get("lastFieldEffectId", source_event.get("fieldEffectId", ""))),
 		"timeline": timeline.duplicate(true),
 		"targets": _target_results(state, before_snapshots, target_ids, effect_per_target),
 		"message": str(state.get("message", "")),
 	}
+	if source_event.has("actionId"):
+		ledger["actionId"] = str(source_event.get("actionId", ""))
 	if source_event.has("skillName"):
 		ledger["skillName"] = str(source_event.get("skillName", ""))
 	if source_event.has("skillId"):
@@ -105,6 +110,11 @@ static func playback_event(source_event: Dictionary, ledger: Dictionary) -> Dict
 	event["statusRollPerTarget"] = _duplicate_dict(ledger.get("statusRollPerTarget", event.get("statusRollPerTarget", {})))
 	event["statusChancePerTarget"] = _duplicate_dict(ledger.get("statusChancePerTarget", event.get("statusChancePerTarget", {})))
 	event["statusResistancePerTarget"] = _duplicate_dict(ledger.get("statusResistancePerTarget", event.get("statusResistancePerTarget", {})))
+	event["dodgePerTarget"] = _duplicate_dict(ledger.get("dodgePerTarget", event.get("dodgePerTarget", {})))
+	event["criticalPerTarget"] = _duplicate_dict(ledger.get("criticalPerTarget", event.get("criticalPerTarget", {})))
+	event["fieldEffectId"] = str(ledger.get("fieldEffectId", event.get("fieldEffectId", "")))
+	if ledger.has("actionId"):
+		event["actionId"] = str(ledger.get("actionId", ""))
 	return event
 
 

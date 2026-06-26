@@ -23,6 +23,7 @@ const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_trai
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
@@ -114,6 +115,8 @@ const BATTLE_LAUNCH_STRAIGHT_SECONDS := 1.45
 const BATTLE_LAUNCH_BOUNCE_SECONDS := 1.95
 const BATTLE_LAUNCH_FINISH_HOLD_RATIO := 0.86
 const BATTLE_AUTO_ROUND_SETTLE_DELAY := 0.24
+const GM_BATTLE_SPEED_MIN := 1
+const GM_BATTLE_SPEED_MAX := 10
 const ENCOUNTER_POST_BATTLE_GRACE_SECONDS := 1.0
 const ENCOUNTER_SAFE_STEPS := 2
 const ENCOUNTER_STONE_LOW_ID := "encounter_stone_low"
@@ -139,11 +142,15 @@ const DIALOG_ACTION_STABLE := "stable"
 const DIALOG_ACTION_SHOP := "shop"
 const DIALOG_ACTION_OPEN_QUEST := "open_quest"
 const DIALOG_ACTION_REBIRTH := "rebirth"
+const DIALOG_ACTION_BACKPACK_UNLOCK := "backpack_unlock"
+const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const QUEST_MARKER_NONE := ""
 const QUEST_MARKER_AVAILABLE := "available"
 const QUEST_MARKER_BLOCKED := "blocked"
 const QUEST_MARKER_IN_PROGRESS := "in_progress"
 const QUEST_MARKER_READY := "ready"
+const QUEST_MARKER_REBIRTH_AVAILABLE := "rebirth_available"
+const QUEST_MARKER_REBIRTH_READY := "rebirth_ready"
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -412,6 +419,7 @@ var auto_battle_pet_command_check: bool = false
 var auto_battle_pet_target_check: bool = false
 var auto_battle_spirit_four_check: bool = false
 var auto_battle_action_catalog_check: bool = false
+var auto_battle_action_system_check: bool = false
 var auto_battle_item_check: bool = false
 var auto_battle_item_count_check: bool = false
 var auto_battle_stat_formula_check: bool = false
@@ -431,7 +439,9 @@ var auto_battle_status_rule_check: bool = false
 var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
 var auto_battle_result_check: bool = false
+var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
+var auto_pet_growth_check: bool = false
 var auto_pet_rename_check: bool = false
 var auto_pet_order_check: bool = false
 var auto_pet_recovery_check: bool = false
@@ -639,6 +649,7 @@ var battle_debug_window: Window
 var battle_debug_text: TextEdit
 var battle_debug_last_text: String = ""
 var battle_trace_path: String = ""
+var gm_battle_speed_multiplier: int = GM_BATTLE_SPEED_MIN
 var last_checked_player_cell: Vector2i = Vector2i.ZERO
 var encounter_zone_step_count: int = 0
 var encounter_grace_remaining: float = 0.0
@@ -696,6 +707,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_encounter_check")
 	elif auto_battle_action_catalog_check:
 		call_deferred("_run_auto_battle_action_catalog_check")
+	elif auto_battle_action_system_check:
+		call_deferred("_run_auto_battle_action_system_check")
 	elif auto_battle_auto_attack_check:
 		call_deferred("_run_auto_battle_auto_attack_check")
 	elif auto_battle_auto_10v10_check:
@@ -748,8 +761,12 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_reaction_check")
 	elif auto_battle_result_check:
 		call_deferred("_run_auto_battle_result_check")
+	elif auto_battle_knockaway_result_check:
+		call_deferred("_run_auto_battle_knockaway_result_check")
 	elif auto_pet_management_check:
 		call_deferred("_run_auto_pet_management_check")
+	elif auto_pet_growth_check:
+		call_deferred("_run_auto_pet_growth_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
 	elif auto_pet_order_check:
@@ -1183,6 +1200,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_spirit_four_check = true
 		elif arg == "--auto-battle-action-catalog-check":
 			auto_battle_action_catalog_check = true
+		elif arg == "--auto-battle-action-system-check":
+			auto_battle_action_system_check = true
 		elif arg == "--auto-battle-item-check":
 			auto_battle_item_check = true
 		elif arg == "--auto-battle-item-count-check":
@@ -1221,8 +1240,12 @@ func _apply_preview_window_args() -> void:
 			auto_battle_reaction_check = true
 		elif arg == "--auto-battle-result-check":
 			auto_battle_result_check = true
+		elif arg == "--auto-battle-knockaway-result-check":
+			auto_battle_knockaway_result_check = true
 		elif arg == "--auto-pet-management-check":
 			auto_pet_management_check = true
+		elif arg == "--auto-pet-growth-check":
+			auto_pet_growth_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
 		elif arg == "--auto-pet-order-check":
@@ -1538,8 +1561,24 @@ func _encounter_zone_for_group(loaded_map: Dictionary, group_id: String) -> Dict
 	return {}
 
 
+func _interaction_for_encounter_group(loaded_map: Dictionary, group_id: String) -> Dictionary:
+	if group_id == "":
+		return {}
+	for value in InteractionModel.interaction_points(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		if str(item.get("encounterGroupId", "")) == group_id:
+			return item
+	return {}
+
+
 func _map_has_encounter_group(loaded_map: Dictionary, group_id: String) -> bool:
 	return not _encounter_zone_for_group(loaded_map, group_id).is_empty()
+
+
+func _map_has_encounter_group_interaction(loaded_map: Dictionary, group_id: String) -> bool:
+	return not _interaction_for_encounter_group(loaded_map, group_id).is_empty()
 
 
 func _map_has_warp_to_map(loaded_map: Dictionary, map_id: String) -> bool:
@@ -3386,6 +3425,8 @@ func _run_auto_battle_speed_check() -> void:
 	if zone_found:
 		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
 	await get_tree().process_frame
+	var previous_multiplier := gm_battle_speed_multiplier
+	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN
 	var events := BattleModel.build_command_round_events(battle_state, "attack", "enemy_front_5")
 	var sorted := not events.is_empty()
 	var saw_ally := false
@@ -3413,8 +3454,35 @@ func _run_auto_battle_speed_check() -> void:
 			if saw_ally:
 				mixed_opening = true
 	var enemy_targets_spread := _unique_string_count(enemy_target_ids) > 1
-	var status := "ok" if loaded and zone_found and sorted and saw_ally and saw_enemy and mixed_opening and enemy_targets_spread else "failed"
-	print("battle speed check ready: status=%s loaded=%s zone_found=%s sorted=%s saw_ally=%s saw_enemy=%s mixed=%s enemy_targets_spread=%s order=%s" % [
+	battle_current_event = {"type": "defend"}
+	battle_current_event_duration = 1.0
+	battle_event_advance_pending = false
+	battle_action_timer = 1.0
+	_update_battle_animation(0.1)
+	var normal_animation_ok := absf(battle_action_timer - 0.9) <= 0.001
+	gm_battle_speed_multiplier = 5
+	battle_current_event = {"type": "defend"}
+	battle_current_event_duration = 1.0
+	battle_event_advance_pending = false
+	battle_action_timer = 1.0
+	_update_battle_animation(0.1)
+	var fast_animation_ok := absf(battle_action_timer - 0.5) <= 0.001
+	battle_state["phase"] = "command"
+	battle_current_event.clear()
+	battle_current_event_duration = 0.0
+	battle_event_queue.clear()
+	battle_enemy_response_pending = false
+	battle_end_pending = false
+	battle_action_timer = 0.0
+	battle_auto_attack_enabled = true
+	battle_auto_attack_delay = 1.0
+	_update_battle_auto_attack(0.1)
+	var fast_auto_delay_ok := absf(battle_auto_attack_delay - 0.5) <= 0.001
+	battle_auto_attack_enabled = false
+	gm_battle_speed_multiplier = previous_multiplier
+	var speed_gear_ok := normal_animation_ok and fast_animation_ok and fast_auto_delay_ok
+	var status := "ok" if loaded and zone_found and sorted and saw_ally and saw_enemy and mixed_opening and enemy_targets_spread and speed_gear_ok else "failed"
+	print("battle speed check ready: status=%s loaded=%s zone_found=%s sorted=%s saw_ally=%s saw_enemy=%s mixed=%s enemy_targets_spread=%s gear=%s normal_anim=%s fast_anim=%s fast_auto_delay=%s order=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -3423,6 +3491,10 @@ func _run_auto_battle_speed_check() -> void:
 		str(saw_enemy),
 		str(mixed_opening),
 		str(enemy_targets_spread),
+		str(speed_gear_ok),
+		str(normal_animation_ok),
+		str(fast_animation_ok),
+		str(fast_auto_delay_ok),
 		",".join(order),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -3444,7 +3516,7 @@ func _run_auto_battle_feedback_check() -> void:
 	var damage_recorded := battle_last_event_damage > 0
 	var feedback_type_ok := battle_last_event_type == "attack" or battle_last_event_type == "combo_attack"
 	var target_state := str(BattleModel.actor_by_id(battle_state, battle_last_event_target_id).get("actionState", ""))
-	var target_reacted := target_state == "hit" or target_state == "down"
+	var target_reacted := target_state == "hit" or target_state == "down" or target_state == "launched"
 	var status := "ok" if loaded and zone_found and popup_created and damage_recorded and feedback_type_ok and target_reacted else "failed"
 	print("battle feedback check ready: status=%s popup=%s damage=%d event=%s target=%s target_state=%s" % [
 		status,
@@ -3811,6 +3883,8 @@ func _run_auto_battle_action_catalog_check() -> void:
 	var item_heal_rule := BattleActionCatalog.target_rule_for(BattleModel.ITEM_HEAL_SINGLE)
 	var item_poison_rule := BattleActionCatalog.target_rule_for(BattleModel.ITEM_POISON_SINGLE)
 	var item_poison_all_rule := BattleActionCatalog.target_rule_for(BattleModel.ITEM_POISON_ALL)
+	var weapon_rule := BattleActionCatalog.target_rule_for(BattleModel.WEAPON_SHADOW_GROUP_SHOT)
+	var wind_field_rule := BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_WIND_FIELD_1)
 	var spirit_rules_ok := bool(grace_rule.get("isAll", false)) and bool(grace_rule.get("canTargetAlly", false)) and not bool(grace_rule.get("canTargetEnemy", true))
 	spirit_rules_ok = spirit_rules_ok and bool(moist_rule.get("requiresSelection", false)) and bool(moist_rule.get("canTargetAlly", false)) and not bool(moist_rule.get("canTargetEnemy", true))
 	spirit_rules_ok = spirit_rules_ok and bool(poison_rule.get("requiresSelection", false)) and bool(poison_rule.get("canTargetEnemy", false)) and not bool(poison_rule.get("canTargetAlly", true))
@@ -3824,17 +3898,138 @@ func _run_auto_battle_action_catalog_check() -> void:
 		str(BattleActionCatalog.pet_skill_action_for_slot(3).get("id", "")) == BattleModel.PET_SKILL_BUI_CHARGE
 		and str(BattleActionCatalog.pet_skill_action_for_slot(7).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
 	)
-	var status := "ok" if errors.is_empty() and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok else "failed"
-	print("battle action catalog check ready: status=%s errors=%d spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s" % [
+	var weapon_rule_ok := (
+		str(weapon_rule.get("targetMode", "")) == BattleActionCatalog.TARGET_MODE_ENEMY_RANDOM_RANGE
+		and int(weapon_rule.get("minTargets", 0)) == 6
+		and int(weapon_rule.get("maxTargets", 0)) == 10
+		and BattleActionCatalog.effect_power_multiplier_for(BattleModel.WEAPON_SHADOW_GROUP_SHOT, 0.0) > 0.0
+		and BattleActionCatalog.effect_allows_critical(BattleModel.WEAPON_SHADOW_GROUP_SHOT, false)
+		and absf(BattleActionCatalog.effect_critical_damage_multiplier_for(BattleModel.WEAPON_SHADOW_GROUP_SHOT, 0.0) - 1.0) <= 0.001
+	)
+	var field_rule_ok := (
+		str(wind_field_rule.get("targetMode", "")) == BattleActionCatalog.TARGET_MODE_BATTLEFIELD
+		and BattleActionCatalog.effect_type_for(BattleModel.SPIRIT_WIND_FIELD_1) == "field_effect"
+		and BattleActionCatalog.effect_element_for(BattleModel.SPIRIT_WIND_FIELD_1, "") == "wind"
+	)
+	var status := "ok" if errors.is_empty() and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok and weapon_rule_ok and field_rule_ok else "failed"
+	print("battle action catalog check ready: status=%s errors=%d spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s weapon=%s field=%s" % [
 		status,
 		errors.size(),
 		str(spirit_rules_ok),
 		str(pet_rules_ok),
 		str(item_rules_ok),
 		str(pet_slot_ok),
+		str(weapon_rule_ok),
+		str(field_rule_ok),
 	])
 	if not errors.is_empty():
 		print("battle action catalog errors: %s" % "; ".join(errors))
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_action_system_check() -> void:
+	profile_save_enabled = false
+	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found: bool = loaded and not zones.is_empty()
+	if zone_found:
+		var profile := PlayerProgressModel.default_profile()
+		var player := profile.get("player", {}) as Dictionary
+		player["level"] = 131
+		player["hp"] = 999
+		profile["player"] = player
+		profile[PlayerProgressModel.REBIRTH_COUNT_KEY] = 6
+		var slots := PlayerProgressModel.equipment_slots(profile)
+		slots[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = "weapon_shadow_group_bow"
+		profile[PlayerProgressModel.EQUIPMENT_SLOTS_KEY] = slots
+		var durability := PlayerProgressModel.equipment_durability(profile)
+		durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = EquipmentModel.max_durability_for("weapon_shadow_group_bow")
+		profile[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+		player_profile = PlayerProgressModel.normalize_profile(profile)
+		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	var player_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var equipment_action_ok := (
+		str(player_actor.get("attackActionId", "")) == BattleModel.WEAPON_SHADOW_GROUP_SHOT
+		and (player_actor.get("battleActionIds", []) as Array).has(BattleModel.WEAPON_SHADOW_GROUP_SHOT)
+	)
+	var events := BattleModel.build_player_pet_round_events(
+		battle_state,
+		{"command": "attack", "targetId": BattleModel.living_enemy_id(battle_state)},
+		{"command": "defend", "skillId": BattleModel.PET_SKILL_DEFEND}
+	)
+	var multi_event := {}
+	for value in events:
+		var event := value as Dictionary
+		if str(event.get("type", "")) == "multi_attack":
+			multi_event = event
+			break
+	var multi_event_ok := not multi_event.is_empty()
+	var multi_target_ids: Array[String] = []
+	if multi_event_ok:
+		for target_id_value in multi_event.get("targetIds", []):
+			var target_id := str(target_id_value)
+			if target_id != "":
+				multi_target_ids.append(target_id)
+	var target_count_ok := multi_target_ids.size() >= 6 and multi_target_ids.size() <= 10
+	if multi_event_ok:
+		multi_event["canDodge"] = false
+		multi_event["canCritical"] = false
+	var snapshots := _battle_actor_snapshots_by_id()
+	var battle_state_before_multi := battle_state.duplicate(true)
+	if multi_event_ok:
+		battle_state = BattleModel.apply_battle_event(battle_state, multi_event)
+	var ledger := BattleEventLedger.build_from_applied_state(battle_state, multi_event, snapshots, _battle_event_timeline_for_applied_event(multi_event)) if multi_event_ok else {}
+	var ledger_ok := (
+		str(ledger.get("type", "")) == "multi_attack"
+		and (ledger.get("targetIds", []) as Array).size() == multi_target_ids.size()
+		and (ledger.get("effectPerTarget", {}) as Dictionary).size() == multi_target_ids.size()
+		and int(ledger.get("damage", 0)) > 0
+	)
+	var critical_event := multi_event.duplicate(true)
+	var critical_damage_ok := false
+	if multi_event_ok and not multi_target_ids.is_empty():
+		var critical_target_id := multi_target_ids[0]
+		var base_damage := int((ledger.get("effectPerTarget", {}) as Dictionary).get(critical_target_id, 0))
+		critical_event["targetIds"] = [critical_target_id]
+		critical_event["canDodge"] = false
+		critical_event["canCritical"] = true
+		critical_event["forceCritical"] = true
+		var critical_state := BattleModel.apply_battle_event(battle_state_before_multi.duplicate(true), critical_event)
+		var critical_damage := int((critical_state.get("lastEffectPerTarget", {}) as Dictionary).get(critical_target_id, 0))
+		critical_damage_ok = critical_damage == base_damage and bool((critical_state.get("lastCriticalPerTarget", {}) as Dictionary).get(critical_target_id, false))
+	var field_event := {
+		"type": "field_effect",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"actionId": BattleModel.SPIRIT_WIND_FIELD_1,
+		"fieldEffectId": BattleActionCatalog.effect_field_effect_id_for(BattleModel.SPIRIT_WIND_FIELD_1, ""),
+		"element": "wind",
+		"modifier": 1,
+		"turns": 3,
+		"speed": 100,
+		"sequence": 888,
+		"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_WIND_FIELD_1, "风场精灵1"),
+	}
+	battle_state = BattleModel.apply_battle_event(battle_state, field_event)
+	var field_added := BattleModel.has_field_effect(battle_state, "wind_power_1")
+	battle_state = BattleModel.decrement_field_effects(battle_state)
+	battle_state = BattleModel.decrement_field_effects(battle_state)
+	var field_still_active := BattleModel.has_field_effect(battle_state, "wind_power_1")
+	battle_state = BattleModel.decrement_field_effects(battle_state)
+	var field_expired := not BattleModel.has_field_effect(battle_state, "wind_power_1")
+	var status := "ok" if zone_found and equipment_action_ok and multi_event_ok and target_count_ok and ledger_ok and critical_damage_ok and field_added and field_still_active and field_expired else "failed"
+	print("battle action system check ready: status=%s zone=%s equipment=%s multi=%s target_count=%d ledger=%s critical_no_bonus=%s field=%s/%s/%s" % [
+		status,
+		str(zone_found),
+		str(equipment_action_ok),
+		str(multi_event_ok),
+		multi_target_ids.size(),
+		str(ledger_ok),
+		str(critical_damage_ok),
+		str(field_added),
+		str(field_still_active),
+		str(field_expired),
+	])
 	get_tree().quit(0 if status == "ok" else 1)
 
 
@@ -4566,6 +4761,175 @@ func _run_auto_battle_result_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_battle_knockaway_result_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var map_loaded := _load_map(GM_10V10_MAP_ID)
+
+	player_profile = PlayerProgressModel.with_record_point(
+		PlayerProgressModel.default_profile(),
+		"firebud_village_gate",
+		"doctor_record",
+		"火芽村医旁记录点"
+	)
+	_load_map(GM_10V10_MAP_ID)
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "phase112_player_knockaway",
+		"name": "Phase112人物击飞",
+	}))
+	await get_tree().process_frame
+	var player_started := battle_active and not BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID).is_empty()
+	if player_started:
+		battle_state = BattleModel.apply_battle_event(battle_state, {
+			"type": "attack",
+			"attackerId": "enemy_0",
+			"targetId": BattleModel.PLAYER_ACTOR_ID,
+			"targetSide": BattleModel.SIDE_ALLY,
+			"damage": 10000,
+			"speed": 90,
+			"sequence": 1,
+			"movementStyle": "melee",
+			"canLaunch": true,
+			"launchMode": "straight",
+			"forceDodge": false,
+			"forceCritical": false,
+		})
+	var player_launch_applied := PlayerProgressModel.battle_actor_knocked_away(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var player_end_ok := _battle_state_should_end(battle_state)
+	var player_result := _finish_battle_and_return_to_world()
+	await get_tree().process_frame
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
+	var player_return_ok := (
+		map_loaded
+		and player_started
+		and player_launch_applied
+		and player_end_ok
+		and str(player_result.get("result", "")) == "defeat"
+		and bool(player_result.get("playerKnockedAway", false))
+		and bool(player_result.get("returnToRecordPoint", false))
+		and current_map_id == "firebud_village_gate"
+		and player_cell == Vector2i(10, 17)
+		and world_log_message.find("回到记录点") >= 0
+	)
+
+	player_profile = PlayerProgressModel.default_profile()
+	var active_pet_id := str(player_profile.get("activePetInstanceId", ""))
+	_load_map(GM_10V10_MAP_ID)
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "phase112_pet_knockaway",
+		"name": "Phase112宠物击飞",
+	}))
+	await get_tree().process_frame
+	var pet_started := battle_active and active_pet_id != "" and not BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID).is_empty()
+	if pet_started:
+		battle_state = BattleModel.apply_battle_event(battle_state, {
+			"type": "attack",
+			"attackerId": "enemy_0",
+			"targetId": BattleModel.PLAYER_PET_ID,
+			"targetSide": BattleModel.SIDE_ALLY,
+			"damage": 10000,
+			"speed": 90,
+			"sequence": 2,
+			"movementStyle": "melee",
+			"canLaunch": true,
+			"launchMode": "bounce",
+			"forceDodge": false,
+			"forceCritical": false,
+		})
+	var pet_launch_applied := PlayerProgressModel.battle_actor_knocked_away(battle_state, BattleModel.PLAYER_PET_ID)
+	var pet_result := _finish_battle_and_return_to_world("escape")
+	await get_tree().process_frame
+	var pet_after := PlayerProgressModel.pet_instance_by_id(player_profile, active_pet_id)
+	var pet_rest_ok := (
+		pet_started
+		and pet_launch_applied
+		and str(pet_result.get("result", "")) == "escape"
+		and bool(pet_result.get("activePetKnockedAway", false))
+		and str(pet_after.get("state", "")) == PlayerProgressModel.PET_STATE_REST
+		and int(pet_after.get("hp", 1)) == 0
+		and str(player_profile.get("activePetInstanceId", "")) != active_pet_id
+		and world_log_message.find("进入休息状态") >= 0
+	)
+
+	var enemy_state := BattleModel.create_wild_battle({
+		"id": "phase112_enemy_knockaway",
+		"name": "Phase112敌方击飞",
+	})
+	enemy_state = BattleModel.apply_battle_event(enemy_state, {
+		"type": "attack",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"targetId": "enemy_0",
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 10000,
+		"speed": 90,
+		"sequence": 3,
+		"movementStyle": "melee",
+		"canLaunch": true,
+		"launchMode": "straight",
+		"forceDodge": false,
+		"forceCritical": false,
+	})
+	var enemy_result := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), enemy_state)
+	var enemy_knocked_ids: Array = enemy_result.get("enemyKnockedAwayActorIds", [])
+	var enemy_launch_ok := (
+		str(enemy_result.get("result", "")) == "victory"
+		and enemy_knocked_ids.has("enemy_0")
+		and not bool(enemy_result.get("returnToRecordPoint", true))
+	)
+
+	var capture_state := BattleModel.create_wild_battle({
+		"id": "phase112_capture_settlement",
+		"name": "Phase112捕获结算",
+	})
+	capture_state = BattleModel.apply_battle_event(capture_state, {
+		"type": "capture",
+		"attackerId": BattleModel.PLAYER_ACTOR_ID,
+		"targetId": "enemy_0",
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"success": true,
+		"speed": 100,
+		"sequence": 4,
+	})
+	var capture_result := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state)
+	var captured_pets: Array = capture_result.get("capturedPets", [])
+	var capture_ok := (
+		str(capture_result.get("result", "")) == "victory"
+		and captured_pets.size() == 1
+		and capture_result.has("knockedAwayActorIds")
+		and not bool(capture_result.get("returnToRecordPoint", true))
+	)
+
+	var escape_result := PlayerProgressModel.apply_battle_result(
+		PlayerProgressModel.default_profile(),
+		BattleModel.create_wild_battle({
+			"id": "phase112_escape_settlement",
+			"name": "Phase112逃跑结算",
+		}),
+		"escape"
+	)
+	var escape_ok := (
+		str(escape_result.get("result", "")) == "escape"
+		and escape_result.has("knockedAwayActorIds")
+		and not bool(escape_result.get("returnToRecordPoint", true))
+	)
+
+	var status := "ok" if player_return_ok and pet_rest_ok and enemy_launch_ok and capture_ok and escape_ok else "failed"
+	print("battle knockaway result check ready: status=%s player=%s pet=%s enemy=%s capture=%s escape=%s cell=%s player_result=%s pet_state=%s log=%s" % [
+		status,
+		str(player_return_ok),
+		str(pet_rest_ok),
+		str(enemy_launch_ok),
+		str(capture_ok),
+		str(escape_ok),
+		str(player_cell),
+		str(player_result.get("result", "")),
+		str(pet_after.get("state", "")),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_management_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -4790,6 +5154,90 @@ func _run_auto_pet_order_check() -> void:
 		str(after_up),
 		str(after_down),
 		world_log_message,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_check() -> void:
+	profile_save_enabled = false
+	var old_full_pet := {
+		"instanceId": "pet_growth_fast",
+		"petId": "pet_growth_fast",
+		"formId": "wuli_normal_fast_wind10",
+		"templateId": "wuli_normal_fast_wind10",
+		"name": "高速乌力",
+		"state": PlayerProgressModel.PET_STATE_BATTLE,
+		"level": 131,
+		"exp": 122,
+		"nextExp": PlayerProgressModel.exp_to_next_level(131),
+		"hp": 92,
+		"maxHp": 92,
+		"attack": 11,
+		"defense": 6,
+		"quick": 88,
+	}
+	var old_wounded_pet := old_full_pet.duplicate(true)
+	old_wounded_pet["instanceId"] = "pet_growth_wounded"
+	old_wounded_pet["petId"] = "pet_growth_wounded"
+	old_wounded_pet["state"] = PlayerProgressModel.PET_STATE_STANDBY
+	old_wounded_pet["hp"] = 40
+	old_wounded_pet["maxHp"] = 92
+
+	var profile := PlayerProgressModel.default_profile()
+	profile["activePetInstanceId"] = "pet_growth_fast"
+	profile["petInstances"] = [old_full_pet, old_wounded_pet]
+	profile = PlayerProgressModel.normalize_profile(profile)
+	var grown := PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_fast")
+	var wounded := PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_wounded")
+	var expected_stats := PlayerProgressModel.pet_stats_for_form_level("wuli_normal_fast_wind10", 131)
+	var stat_ok := (
+		int(grown.get("maxHp", 0)) == int(expected_stats.get("maxHp", 0))
+		and int(grown.get("attack", 0)) == int(expected_stats.get("attack", 0))
+		and int(grown.get("defense", 0)) == int(expected_stats.get("defense", 0))
+		and int(grown.get("quick", 0)) == int(expected_stats.get("quick", 0))
+		and int(grown.get("maxHp", 0)) >= 1000
+		and int(grown.get("attack", 0)) >= 190
+		and int(grown.get("defense", 0)) >= 130
+		and int(grown.get("quick", 0)) >= 380
+	)
+	var full_hp_ok := int(grown.get("hp", 0)) == int(grown.get("maxHp", 0))
+	var wounded_missing_ok := (
+		int(wounded.get("maxHp", 0)) == int(grown.get("maxHp", 0))
+		and int(wounded.get("hp", 0)) == int(wounded.get("maxHp", 0)) - 52
+	)
+	var power_ok := PetPowerModel.combat_power_for_pet(grown) >= 1000 and int(grown.get("combatPower", 0)) == PetPowerModel.combat_power_for_pet(grown)
+	var actor := PlayerProgressModel.actor_from_pet_instance(grown, "ally_pet", "ally", "ally.front.3")
+	var battle_actor_ok := (
+		int(actor.get("maxHp", 0)) == int(grown.get("maxHp", 0))
+		and int(actor.get("attack", 0)) == int(grown.get("attack", 0))
+		and int(actor.get("defense", 0)) == int(grown.get("defense", 0))
+		and int(actor.get("quick", 0)) == int(grown.get("quick", 0))
+	)
+	player_profile = profile
+	pet_selected_instance_id = "pet_growth_fast"
+	_open_pet_panel()
+	await get_tree().process_frame
+	var detail_ok := (
+		pet_detail_label != null
+		and pet_detail_label.text.find("生命：%d/%d" % [int(grown.get("hp", 0)), int(grown.get("maxHp", 0))]) >= 0
+		and pet_detail_label.text.find("战力 %d" % PetPowerModel.combat_power_for_pet(grown)) >= 0
+	)
+	var status := "ok" if stat_ok and full_hp_ok and wounded_missing_ok and power_ok and battle_actor_ok and detail_ok else "failed"
+	print("pet growth check ready: status=%s stats=%s full_hp=%s wounded=%s power=%s actor=%s detail=%s lv=%d hp=%d/%d atk=%d def=%d quick=%d power_value=%d" % [
+		status,
+		str(stat_ok),
+		str(full_hp_ok),
+		str(wounded_missing_ok),
+		str(power_ok),
+		str(battle_actor_ok),
+		str(detail_ok),
+		int(grown.get("level", 0)),
+		int(grown.get("hp", 0)),
+		int(grown.get("maxHp", 0)),
+		int(grown.get("attack", 0)),
+		int(grown.get("defense", 0)),
+		int(grown.get("quick", 0)),
+		PetPowerModel.combat_power_for_pet(grown),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -5943,7 +6391,7 @@ func _run_auto_backpack_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
 	var slots := PlayerProgressModel.backpack_slots(player_profile)
-	var slot_limit_ok := slots.size() == BackpackModel.SLOT_LIMIT
+	var slot_limit_ok := slots.size() == BackpackModel.BASE_SLOT_LIMIT and PlayerProgressModel.backpack_max_slot_count() == BackpackModel.SLOT_LIMIT
 	var meat_default_ok := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == 6
 	var stacked_slots := BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 25)
 	var meat_stack_slots := 0
@@ -5966,9 +6414,30 @@ func _run_auto_backpack_check() -> void:
 	var panel_ok := (
 		backpack_panel != null
 		and backpack_panel.visible
+			and backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
+			and not backpack_slot_buttons.is_empty()
+			and backpack_slot_buttons[0].text.find("肉") >= 0
+			and backpack_slot_buttons[BackpackModel.BASE_SLOT_LIMIT].text.find("50钻石") >= 0
+		)
+	var before_unlock_diamonds := PlayerProgressModel.diamonds(player_profile)
+	_select_backpack_slot(BackpackModel.BASE_SLOT_LIMIT)
+	await get_tree().process_frame
+	var unlock_dialog_ok := (
+		_dialog_is_open()
+		and str(active_dialog_interaction.get("actionType", "")) == DIALOG_ACTION_BACKPACK_UNLOCK
+		and dialog_body_label != null
+		and dialog_body_label.text.find("50 钻石") >= 0
+		and dialog_panel.z_index > backpack_panel.z_index
+		and dialog_panel.get_index() > backpack_panel.get_index()
+	)
+	_confirm_dialog_action()
+	await get_tree().process_frame
+	var unlock_ok := (
+		unlock_dialog_ok
+		and PlayerProgressModel.backpack_slots(player_profile).size() == BackpackModel.BASE_SLOT_LIMIT + 1
+		and PlayerProgressModel.diamonds(player_profile) == before_unlock_diamonds - 50
 		and backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
-		and not backpack_slot_buttons.is_empty()
-		and backpack_slot_buttons[0].text.find("肉") >= 0
+		and backpack_slot_buttons[BackpackModel.BASE_SLOT_LIMIT + 1].text.find("100钻石") >= 0
 	)
 	_close_backpack_panel()
 
@@ -6013,14 +6482,15 @@ func _run_auto_backpack_check() -> void:
 		var after_meat := BattleModel.item_count(battle_state, BattleModel.ITEM_MEAT_SMALL)
 		var profile_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
 		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
-	var status := "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
-	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+	var status := "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
+	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
 		status,
 		str(slot_limit_ok),
 		str(meat_default_ok),
 		str(stack_ok),
 		str(context_ok),
 		str(panel_ok),
+		str(unlock_ok),
 		str(item_menu_ok),
 		str(capture_menu_ok),
 		str(meat_consumed_ok),
@@ -6245,7 +6715,7 @@ func _run_auto_mailbox_check() -> void:
 		"ring_earth_trial",
 	]
 	var full_slots: Array[Dictionary] = []
-	for index in range(BackpackModel.SLOT_LIMIT):
+	for index in range(BackpackModel.BASE_SLOT_LIMIT):
 		full_slots.append({"itemId": str(filler_ids[index]), "count": 1})
 
 	var full_profile := PlayerProgressModel.default_profile()
@@ -6441,7 +6911,7 @@ func _run_auto_shop_check() -> void:
 	var full_slots := BackpackModel.set_item_count(
 		PlayerProgressModel.backpack_slots(full_profile),
 		BattleModel.ITEM_MEAT_SMALL,
-		BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
+		BackpackModel.BASE_SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
 	)
 	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
 	var full_result := PlayerProgressModel.buy_shop_item(full_profile, shop_id, BattleModel.CAPTURE_TOOL_NET)
@@ -7365,6 +7835,7 @@ func _run_auto_player_rebirth_execute_check() -> void:
 	var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
 	var executed_player := executed_profile.get("player", {}) as Dictionary
 	var executed_history: Array = executed_profile.get(PlayerProgressModel.REBIRTH_HISTORY_KEY, [])
+	var execute_message := str(execute_result.get("message", ""))
 	var execute_ok := (
 		bool(execute_result.get("ok", false))
 		and PlayerProgressModel.rebirth_count(executed_profile) == 1
@@ -7383,6 +7854,8 @@ func _run_auto_player_rebirth_execute_check() -> void:
 		and PlayerProgressModel.rebirth_trial_proof_count(executed_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 0
 		and _profile_has_pet_form(executed_profile, "rebirth_starter_earth_cub")
 		and not _profile_has_pet_form(executed_profile, "rebirth_beast_earth_lv50")
+		and execute_message.find("交出") >= 0
+		and execute_message.find("Lv50") >= 0
 	)
 
 	player_profile = PlayerProgressModel.with_record_point(
@@ -7418,10 +7891,12 @@ func _run_auto_player_rebirth_execute_check() -> void:
 		and last_checked_player_cell == IsoMapModel.spawn_cell(map_data, "doctor_record")
 		and player_rebirth_execute_button != null
 		and player_rebirth_execute_button.disabled
-		and ui_preview_text.find("1转 -> 2转") >= 0
-		and world_log_message.find("完成一转") >= 0
-		and world_log_message.find("回到记录点「村医旁记录点」") >= 0
-	)
+			and ui_preview_text.find("1转 -> 2转") >= 0
+			and world_log_message.find("完成一转") >= 0
+			and world_log_message.find("交出") >= 0
+			and world_log_message.find("Lv50") >= 0
+			and world_log_message.find("回到记录点「村医旁记录点」") >= 0
+		)
 
 	var status := "ok" if data_ok and mentor_dialog_ok and quest_record_ok and execute_ok and first_button_ok and confirm_pending_ok and ui_execute_ok else "failed"
 	print("player rebirth execute check ready: status=%s data=%s mentor=%s quest_record=%s execute=%s first_button=%s confirm=%s ui=%s count=%d level=%d history=%d log=%s" % [
@@ -7844,6 +8319,8 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 	var floor_chain_ok := true
 	var guardian_top_only_ok := true
 	var zones_ok := true
+	var manual_only_ok := true
+	var guardian_interaction_ok := true
 	var fixed_pets_ok := true
 	var battle_ok := true
 	var center_ok := true
@@ -7864,6 +8341,7 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 		var expected_count := int(group.get("enemyCount", 10))
 		var floor_ids := RebirthTrialModel.floor_map_ids_for_cave(cave)
 		var top_floor_map_id := RebirthTrialModel.guardian_floor_map_id_for_cave(cave)
+		var guardian_interaction_id := RebirthTrialModel.guardian_interaction_id_for_cave(cave)
 		var first_floor_map_id := floor_ids[0] if not floor_ids.is_empty() else cave_id
 
 		var entrance := _warp_to_map("firebud_village_gate", first_floor_map_id)
@@ -7896,7 +8374,7 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 				maps_ok = false
 				this_floor_chain_ok = false
 				continue
-			var has_guardian_here := _map_has_encounter_group(floor_map, group_id)
+			var has_guardian_here := _map_has_encounter_group_interaction(floor_map, group_id)
 			if floor_map_id == top_floor_map_id:
 				this_top_only_ok = this_top_only_ok and has_guardian_here
 			else:
@@ -7914,6 +8392,17 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 			zones_ok = false
 			summaries.append("%s:zone=missing" % cave_id)
 			continue
+		manual_only_ok = manual_only_ok and EncounterModel.is_manual_only(zone)
+		var guardian_interaction := InteractionModel.find_by_id(loaded_map, guardian_interaction_id)
+		var this_guardian_interaction_ok := (
+			not guardian_interaction.is_empty()
+			and str(guardian_interaction.get("encounterGroupId", "")) == group_id
+			and str(guardian_interaction.get("encounterZoneId", "")) == str(zone.get("id", ""))
+			and str(guardian_interaction.get("kind", "")) == InteractionModel.FACILITY_GUARDIAN
+			and InteractionModel.blocks_movement(guardian_interaction)
+			and EncounterModel.zone_for_cell(loaded_map, InteractionModel.cell_for(guardian_interaction)).is_empty()
+		)
+		guardian_interaction_ok = guardian_interaction_ok and this_guardian_interaction_ok
 
 		var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, seeded_rng, expected_count)
 		var selected_pets = selected_zone.get("selectedWildPets", [])
@@ -7951,22 +8440,25 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 		reward_ok = reward_ok and has_ring
 
 		var nav := _navigation_target_for_encounter_group(group_id)
-		navigation_ok = navigation_ok and str(nav.get("mapId", "")) == top_floor_map_id and str(nav.get("kind", "")) == "encounter_zone"
-		summaries.append("%s:floors=%d entrance=%s return=%s chain=%s top_only=%s pets=%d enemies=%s center=%s ring=%s" % [
+		var nav_interaction := nav.get("interaction", {}) as Dictionary if nav.get("interaction", {}) is Dictionary else {}
+		navigation_ok = navigation_ok and str(nav.get("mapId", "")) == top_floor_map_id and str(nav.get("kind", "")) == "interaction" and str(nav_interaction.get("id", "")) == guardian_interaction_id
+		summaries.append("%s:floors=%d entrance=%s return=%s chain=%s top_only=%s npc=%s manual=%s pets=%d enemies=%s center=%s ring=%s" % [
 			cave_id,
 			floor_ids.size(),
 			str(not entrance.is_empty()),
 			str(has_return),
 			str(this_floor_chain_ok),
 			str(this_top_only_ok),
+			str(this_guardian_interaction_ok),
+			str(EncounterModel.is_manual_only(zone)),
 			selected_pet_count,
 			str(enemy_count_ok),
 			str(this_center_ok),
 			str(has_ring),
 		])
 
-	var status := "ok" if errors.is_empty() and village_ok and entrance_count == 4 and return_count == 4 and maps_ok and floor_chain_ok and guardian_top_only_ok and zones_ok and fixed_pets_ok and battle_ok and center_ok and reward_ok and navigation_ok and ring_count == 4 else "failed"
-	print("rebirth cave guardian check ready: status=%s errors=%s village=%s entrances=%d returns=%d rings=%d maps=%s chain=%s top_only=%s zones=%s fixed=%s battle=%s center=%s reward=%s navigation=%s details=%s" % [
+	var status := "ok" if errors.is_empty() and village_ok and entrance_count == 4 and return_count == 4 and maps_ok and floor_chain_ok and guardian_top_only_ok and zones_ok and manual_only_ok and guardian_interaction_ok and fixed_pets_ok and battle_ok and center_ok and reward_ok and navigation_ok and ring_count == 4 else "failed"
+	print("rebirth cave guardian check ready: status=%s errors=%s village=%s entrances=%d returns=%d rings=%d maps=%s chain=%s top_only=%s zones=%s manual=%s npc=%s fixed=%s battle=%s center=%s reward=%s navigation=%s details=%s" % [
 		status,
 		" | ".join(errors),
 		str(village_ok),
@@ -7977,6 +8469,8 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 		str(floor_chain_ok),
 		str(guardian_top_only_ok),
 		str(zones_ok),
+		str(manual_only_ok),
+		str(guardian_interaction_ok),
 		str(fixed_pets_ok),
 		str(battle_ok),
 		str(center_ok),
@@ -8000,6 +8494,7 @@ func _run_auto_shadow_oath_cavern_check() -> void:
 	var boss_value = final_cave.get("rebirthBossGroup", {})
 	var boss_group := boss_value as Dictionary if boss_value is Dictionary else {}
 	var boss_group_id := str(boss_group.get("id", ""))
+	var boss_interaction_id := RebirthTrialModel.boss_interaction_id_for_final_cave()
 	var boss_center_name := str(boss_group.get("centerName", ""))
 	var boss_center_level := int(boss_group.get("centerLevel", 0))
 	var expected_count := int(boss_group.get("enemyCount", 10))
@@ -8017,7 +8512,7 @@ func _run_auto_shadow_oath_cavern_check() -> void:
 			floor_maps_ok = false
 			floor_chain_ok = false
 			continue
-		var has_boss_here := _map_has_encounter_group(floor_map, boss_group_id)
+		var has_boss_here := _map_has_encounter_group_interaction(floor_map, boss_group_id)
 		if floor_map_id == boss_floor_map_id:
 			boss_top_only_ok = boss_top_only_ok and has_boss_here
 		else:
@@ -8062,6 +8557,15 @@ func _run_auto_shadow_oath_cavern_check() -> void:
 
 	var boss_map := _map_data_for_id(boss_floor_map_id)
 	var boss_zone := _encounter_zone_for_group(boss_map, boss_group_id)
+	var boss_manual_only_ok := not boss_zone.is_empty() and EncounterModel.is_manual_only(boss_zone)
+	var boss_interaction := InteractionModel.find_by_id(boss_map, boss_interaction_id)
+	var boss_interaction_ok := (
+		not boss_interaction.is_empty()
+		and str(boss_interaction.get("kind", "")) == InteractionModel.FACILITY_GUARDIAN
+		and str(boss_interaction.get("encounterGroupId", "")) == boss_group_id
+		and str(boss_interaction.get("encounterZoneId", "")) == str(boss_zone.get("id", ""))
+		and EncounterModel.zone_for_cell(boss_map, InteractionModel.cell_for(boss_interaction)).is_empty()
+	)
 	var boss_selected_zone := EncounterModel.zone_with_selected_wild_pet(boss_zone, seeded_rng, expected_count) if not boss_zone.is_empty() else {}
 	var boss_battle := BattleModel.create_training_partner_battle(boss_selected_zone, expected_count) if not boss_selected_zone.is_empty() else {}
 	var boss_enemy_count := BattleModel.side_actor_count(boss_battle, BattleModel.SIDE_ENEMY) if not boss_battle.is_empty() else 0
@@ -8100,10 +8604,15 @@ func _run_auto_shadow_oath_cavern_check() -> void:
 		}).is_empty()
 	)
 	var navigation := _navigation_target_for_encounter_group(boss_group_id)
-	var navigation_ok := str(navigation.get("mapId", "")) == boss_floor_map_id
+	var navigation_interaction := navigation.get("interaction", {}) as Dictionary if navigation.get("interaction", {}) is Dictionary else {}
+	var navigation_ok := (
+		str(navigation.get("mapId", "")) == boss_floor_map_id
+		and str(navigation.get("kind", "")) == "interaction"
+		and str(navigation_interaction.get("id", "")) == boss_interaction_id
+	)
 
-	var status := "ok" if errors.is_empty() and entrance_ok and floor_maps_ok and floor_chain_ok and boss_top_only_ok and capture_forms_ok and capture_levels_ok and capture_actors_ok and boss_enemy_count == expected_count and boss_average_ok and boss_center_ok and boss_reward_ok and navigation_ok else "failed"
-	print("shadow oath cavern check ready: status=%s errors=%s entrance=%s floors=%d maps=%s chain=%s boss_top_only=%s capture_forms=%d/%d capture_levels=%s capture_actors=%s boss_count=%d boss_avg=%s center=%s reward=%s navigation=%s" % [
+	var status := "ok" if errors.is_empty() and entrance_ok and floor_maps_ok and floor_chain_ok and boss_top_only_ok and boss_manual_only_ok and boss_interaction_ok and capture_forms_ok and capture_levels_ok and capture_actors_ok and boss_enemy_count == expected_count and boss_average_ok and boss_center_ok and boss_reward_ok and navigation_ok else "failed"
+	print("shadow oath cavern check ready: status=%s errors=%s entrance=%s floors=%d maps=%s chain=%s boss_top_only=%s boss_manual=%s boss_npc=%s capture_forms=%d/%d capture_levels=%s capture_actors=%s boss_count=%d boss_avg=%s center=%s reward=%s navigation=%s" % [
 		status,
 		" | ".join(errors),
 		str(entrance_ok),
@@ -8111,6 +8620,8 @@ func _run_auto_shadow_oath_cavern_check() -> void:
 		str(floor_maps_ok),
 		str(floor_chain_ok),
 		str(boss_top_only_ok),
+		str(boss_manual_only_ok),
+		str(boss_interaction_ok),
 		found_forms.size(),
 		required_beast_forms.size(),
 		str(capture_levels_ok),
@@ -8152,6 +8663,7 @@ func _run_auto_rebirth_trial_execute_check() -> void:
 	var ready_preview := PlayerProgressModel.rebirth_preview(ready_profile)
 	var execute_result := PlayerProgressModel.execute_rebirth(ready_profile)
 	var executed_profile := execute_result.get("profile", ready_profile) as Dictionary
+	var stage_one_message := str(execute_result.get("message", ""))
 	var stage_one_ok := (
 		bool(ready_preview.get("ok", false))
 		and bool(execute_result.get("ok", false))
@@ -8165,6 +8677,8 @@ func _run_auto_rebirth_trial_execute_check() -> void:
 		and PlayerProgressModel.rebirth_trial_proof_count(executed_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == 0
 		and _profile_has_pet_form(executed_profile, "rebirth_starter_earth_cub")
 		and not _profile_has_pet_form(executed_profile, "rebirth_beast_earth_lv50")
+		and stage_one_message.find("交出") >= 0
+		and stage_one_message.find("Lv50") >= 0
 	)
 
 	var stage_five_profile := PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
@@ -8882,7 +9396,7 @@ func _run_auto_battle_reward_check() -> void:
 	)
 
 	var full_profile := PlayerProgressModel.default_profile()
-	var full_slots := BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(full_profile), BattleModel.ITEM_MEAT_SMALL, BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL))
+	var full_slots := BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(full_profile), BattleModel.ITEM_MEAT_SMALL, BackpackModel.BASE_SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL))
 	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
 	var full_reward_state := _battle_reward_test_state("battle_reward_check", full_profile)
 	var full_result := PlayerProgressModel.apply_battle_result(full_profile, full_reward_state, "victory")
@@ -8969,7 +9483,7 @@ func _run_auto_equipment_drop_check() -> void:
 	var full_slots := BackpackModel.set_item_count(
 		PlayerProgressModel.backpack_slots(full_profile),
 		BattleModel.ITEM_MEAT_SMALL,
-		BackpackModel.SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
+		BackpackModel.BASE_SLOT_LIMIT * BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
 	)
 	full_profile = PlayerProgressModel.with_backpack_slots(full_profile, full_slots)
 	var full_state := _battle_reward_test_state(str(drop_case.get("seed", "equipment_drop_check_full")), full_profile)
@@ -10687,17 +11201,81 @@ func _run_auto_rebirth_task_tracker_check() -> void:
 	var ring_route_ok := has_pending_interaction and str(pending_interaction.get("id", "")) == "warp_to_earth_vein_cave"
 	_clear_pending_interaction()
 
+	var loaded_first_floor := _load_map("earth_vein_cave", "from_firebud_village")
+	await get_tree().process_frame
+	var ring_inside_target := _current_task_navigation_target()
+	var ring_inside_interaction := ring_inside_target.get("interaction", {}) as Dictionary if ring_inside_target.get("interaction", {}) is Dictionary else {}
+	var ring_inside_target_ok := (
+		loaded_first_floor
+		and _current_task_text().find("取得地之戒") >= 0
+		and str(ring_inside_target.get("kind", "")) == "interaction"
+		and str(ring_inside_target.get("mapId", "")) == "earth_vein_cave"
+		and str(ring_inside_interaction.get("id", "")) == "earth_vein_stair_1_to_2"
+	)
+	_on_task_tracker_route_pressed()
+	await get_tree().process_frame
+	var ring_inside_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "earth_vein_stair_1_to_2"
+		and world_log_message.find("岩脉洞穴二层") >= 0
+		and world_log_message.find("返回火芽村") < 0
+	)
+	_clear_pending_interaction()
+
+	var loaded_top_floor := _load_map("earth_vein_cave_f4", "from_floor_3")
+	await get_tree().process_frame
+	var ring_top_target := _current_task_navigation_target()
+	var ring_top_interaction := ring_top_target.get("interaction", {}) as Dictionary if ring_top_target.get("interaction", {}) is Dictionary else {}
+	var ring_top_target_ok := (
+		loaded_top_floor
+		and str(ring_top_target.get("kind", "")) == "interaction"
+		and str(ring_top_target.get("mapId", "")) == "earth_vein_cave_f4"
+		and str(ring_top_interaction.get("id", "")) == "earth_vein_guardian_npc"
+	)
+	_on_task_tracker_route_pressed()
+	await get_tree().process_frame
+	var ring_top_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == "earth_vein_guardian_npc"
+		and world_log_message.find("岩脉守护兽") >= 0
+		and world_log_message.find("返回火芽村") < 0
+	)
+	_clear_pending_interaction()
+
 	var slots := PlayerProgressModel.backpack_slots(player_profile)
 	for ring_id in RebirthTrialModel.stage_required_ring_ids(1):
 		slots = BackpackModel.set_item_count(slots, ring_id, 1)
 	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, slots)
+	var loaded_village_again := _load_map("firebud_village_gate", "from_training_yard")
 	_update_hud_text(true)
 	var beast_target := _current_task_navigation_target()
 	var beast_interaction := beast_target.get("interaction", {}) as Dictionary if beast_target.get("interaction", {}) is Dictionary else {}
 	var beast_tracker_ok := (
-		_current_task_text().find("捕捉地灵转生兽") >= 0
+		loaded_village_again
+		and _current_task_text().find("捕捉地灵转生兽") >= 0
 		and str(beast_interaction.get("id", "")) == "warp_to_shadow_oath_cavern"
 	)
+
+	var loaded_shadow_second_floor := _load_map("shadow_oath_cavern_f2", "from_floor_1")
+	await get_tree().process_frame
+	var beast_inside_target := _current_task_navigation_target()
+	var beast_inside_interaction := beast_inside_target.get("interaction", {}) as Dictionary if beast_inside_target.get("interaction", {}) is Dictionary else {}
+	var beast_inside_target_ok := (
+		loaded_shadow_second_floor
+		and _current_task_text().find("捕捉地灵转生兽") >= 0
+		and str(beast_inside_target.get("kind", "")) == "interaction"
+		and str(beast_inside_target.get("mapId", "")) == "shadow_oath_cavern_f2"
+		and str(beast_inside_interaction.get("toMap", "")) == "shadow_oath_cavern"
+	)
+	_on_task_tracker_route_pressed()
+	await get_tree().process_frame
+	var beast_inside_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("toMap", "")) == "shadow_oath_cavern"
+		and world_log_message.find("玄影洞窟一层") >= 0
+		and world_log_message.find("返回火芽村") < 0
+	)
+	_clear_pending_interaction()
 
 	var instances: Array = player_profile.get("petInstances", [])
 	instances.append(PlayerProgressModel.create_pet_instance_from_form(
@@ -10709,13 +11287,33 @@ func _run_auto_rebirth_task_tracker_check() -> void:
 	))
 	player_profile["petInstances"] = instances
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var loaded_village_for_boss := _load_map("firebud_village_gate", "from_training_yard")
 	_update_hud_text(true)
 	var boss_target := _current_task_navigation_target()
 	var boss_interaction := boss_target.get("interaction", {}) as Dictionary if boss_target.get("interaction", {}) is Dictionary else {}
 	var boss_tracker_ok := (
-		_current_task_text().find("挑战玄影洞窟顶层") >= 0
+		loaded_village_for_boss
+		and _current_task_text().find("挑战玄影洞窟顶层") >= 0
 		and str(boss_interaction.get("id", "")) == "warp_to_shadow_oath_cavern"
 	)
+
+	var loaded_shadow_boss_floor := _load_map("shadow_oath_cavern_f5", "from_floor_4")
+	_update_hud_text(true)
+	var boss_top_target := _current_task_navigation_target()
+	var boss_top_interaction := boss_top_target.get("interaction", {}) as Dictionary if boss_top_target.get("interaction", {}) is Dictionary else {}
+	var boss_top_target_ok := (
+		loaded_shadow_boss_floor
+		and _current_task_text().find("挑战玄影洞窟顶层") >= 0
+		and str(boss_top_target.get("kind", "")) == "interaction"
+		and str(boss_top_interaction.get("id", "")) == RebirthTrialModel.boss_interaction_id_for_final_cave()
+	)
+	_on_task_tracker_route_pressed()
+	await get_tree().process_frame
+	var boss_top_route_ok := (
+		has_pending_interaction
+		and str(pending_interaction.get("id", "")) == RebirthTrialModel.boss_interaction_id_for_final_cave()
+	)
+	_clear_pending_interaction()
 
 	player_profile = PlayerProgressModel.with_rebirth_trial_proof_count(player_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID, 1)
 	_update_hud_text(true)
@@ -10726,15 +11324,23 @@ func _run_auto_rebirth_task_tracker_check() -> void:
 		and str(ready_interaction.get("id", "")) == "firebud_rebirth_mentor"
 	)
 
-	var status := "ok" if loaded and ring_tracker_ok and ring_panel_ok and ring_route_ok and beast_tracker_ok and boss_tracker_ok and ready_tracker_ok else "failed"
-	print("rebirth task tracker check ready: status=%s loaded=%s ring=%s panel=%s route=%s beast=%s boss=%s ready=%s task=%s ring_detail=%s" % [
+	var status := "ok" if loaded and ring_tracker_ok and ring_panel_ok and ring_route_ok and ring_inside_target_ok and ring_inside_route_ok and ring_top_target_ok and ring_top_route_ok and beast_tracker_ok and beast_inside_target_ok and beast_inside_route_ok and boss_tracker_ok and boss_top_target_ok and boss_top_route_ok and ready_tracker_ok else "failed"
+	print("rebirth task tracker check ready: status=%s loaded=%s ring=%s panel=%s route=%s inside_target=%s inside_route=%s top_target=%s top_route=%s beast=%s beast_inside_target=%s beast_inside_route=%s boss=%s boss_top_target=%s boss_top_route=%s ready=%s task=%s ring_detail=%s" % [
 		status,
 		str(loaded),
 		str(ring_tracker_ok),
 		str(ring_panel_ok),
 		str(ring_route_ok),
+		str(ring_inside_target_ok),
+		str(ring_inside_route_ok),
+		str(ring_top_target_ok),
+		str(ring_top_route_ok),
 		str(beast_tracker_ok),
+		str(beast_inside_target_ok),
+		str(beast_inside_route_ok),
 		str(boss_tracker_ok),
+		str(boss_top_target_ok),
+		str(boss_top_route_ok),
 		str(ready_tracker_ok),
 		_current_task_text(),
 		ring_panel_text.replace("\n", " / "),
@@ -10952,7 +11558,34 @@ func _run_auto_npc_quest_marker_check() -> void:
 		PlayerProgressModel.active_quest_id(player_profile) == ""
 		and _quest_marker_state_for_item(stable_keeper) == QUEST_MARKER_NONE
 	)
-	var signature_ok := _quest_marker_signature().find("abilities:remoteStable") >= 0
+	var completed_signature := _quest_marker_signature()
+
+	var mentor := InteractionModel.find_by_id(map_data, "firebud_rebirth_mentor")
+	var rebirth_blocked_profile := PlayerProgressModel.default_profile()
+	rebirth_blocked_profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = ""
+	player_profile = rebirth_blocked_profile
+	var rebirth_blocked_marker_ok := _quest_marker_state_for_item(mentor) == QUEST_MARKER_BLOCKED
+	var rebirth_available_profile := _profile_with_rebirth_test_level(rebirth_blocked_profile, RebirthModel.MIN_REBIRTH_LEVEL)
+	rebirth_available_profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = ""
+	player_profile = rebirth_available_profile
+	var rebirth_available_marker_ok := _quest_marker_state_for_item(mentor) == QUEST_MARKER_REBIRTH_AVAILABLE
+	var rebirth_progress_profile := PlayerProgressModel.with_rebirth_quest_completed(rebirth_available_profile, 1, true)
+	player_profile = rebirth_progress_profile
+	var rebirth_progress_marker_ok := _quest_marker_state_for_item(mentor) == QUEST_MARKER_IN_PROGRESS
+	var rebirth_ready_profile := _profile_with_rebirth_trial_resources_for_test(rebirth_progress_profile, 1)
+	player_profile = rebirth_ready_profile
+	var rebirth_ready_marker_ok := _quest_marker_state_for_item(mentor) == QUEST_MARKER_REBIRTH_READY
+	var rebirth_execute_result := PlayerProgressModel.execute_rebirth(rebirth_ready_profile)
+	player_profile = rebirth_execute_result.get("profile", rebirth_ready_profile) as Dictionary
+	var rebirth_after_marker_ok := _quest_marker_state_for_item(mentor) == QUEST_MARKER_BLOCKED
+	var rebirth_marker_ok := (
+		rebirth_blocked_marker_ok
+		and rebirth_available_marker_ok
+		and rebirth_progress_marker_ok
+		and rebirth_ready_marker_ok
+		and rebirth_after_marker_ok
+	)
+	var signature_ok := completed_signature.find("abilities:remoteStable") >= 0
 	var visual_ok := (
 		str(_quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("glyph", "")) == "!"
 		and str(_quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("tone", "")) == "yellow"
@@ -10962,10 +11595,14 @@ func _run_auto_npc_quest_marker_check() -> void:
 		and str(_quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS).get("tone", "")) == "gray"
 		and str(_quest_marker_visual_for_state(QUEST_MARKER_READY).get("glyph", "")) == "?"
 		and str(_quest_marker_visual_for_state(QUEST_MARKER_READY).get("tone", "")) == "yellow"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_AVAILABLE).get("glyph", "")) == "!"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_AVAILABLE).get("tone", "")) == "gray"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_READY).get("glyph", "")) == "!"
+		and str(_quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_READY).get("tone", "")) == "yellow"
 	)
 
-	var status := "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and signature_ok and visual_ok else "failed"
-	print("npc quest marker check ready: status=%s available=%s accepted_talk=%s in_progress=%s ready=%s blocked=%s hidden=%s visual=%s signature=%s active=%s" % [
+	var status := "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and rebirth_marker_ok and signature_ok and visual_ok else "failed"
+	print("npc quest marker check ready: status=%s available=%s accepted_talk=%s in_progress=%s ready=%s blocked=%s hidden=%s rebirth=%s rebirth_steps=%s/%s/%s/%s/%s visual=%s signature=%s active=%s" % [
 		status,
 		str(available_ok),
 		str(accepted_talk_ok),
@@ -10973,8 +11610,14 @@ func _run_auto_npc_quest_marker_check() -> void:
 		str(ready_ok),
 		str(blocked_ok),
 		str(completed_hidden_ok),
+		str(rebirth_marker_ok),
+		str(rebirth_blocked_marker_ok),
+		str(rebirth_available_marker_ok),
+		str(rebirth_progress_marker_ok),
+		str(rebirth_ready_marker_ok),
+		str(rebirth_after_marker_ok),
 		str(visual_ok),
-		_quest_marker_signature(),
+		completed_signature,
 		PlayerProgressModel.active_quest_id(player_profile),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -10997,13 +11640,14 @@ func _run_auto_qa_panel_check() -> void:
 		and qa_entry_buttons.has("open_backpack")
 		and qa_entry_buttons.has("open_item_shop")
 		and qa_entry_buttons.has("open_equipment_shop")
-		and qa_entry_buttons.has("open_equipment")
-		and qa_entry_buttons.has("open_quest")
-		and qa_entry_buttons.has("open_auto_battle")
-		and qa_entry_buttons.has("open_auto_capture")
-		and qa_entry_buttons.has("open_stable")
-		and qa_entry_buttons.has("open_rebirth_preview")
-	)
+			and qa_entry_buttons.has("open_equipment")
+			and qa_entry_buttons.has("open_quest")
+			and qa_entry_buttons.has("open_auto_battle")
+			and qa_entry_buttons.has("open_auto_capture")
+			and qa_entry_buttons.has("open_stable")
+			and qa_entry_buttons.has("open_rebirth_preview")
+			and qa_entry_buttons.has("gm_battle_speed_gear")
+		)
 	var command_ok := (
 		command_text.find("--auto-backpack-check") >= 0
 		and command_text.find("--auto-shop-check") >= 0
@@ -11040,6 +11684,23 @@ func _run_auto_qa_panel_check() -> void:
 	await get_tree().process_frame
 	var quest_ok := quest_panel != null and quest_panel.visible
 	_close_quest_panel()
+	_open_qa_panel()
+	var speed_button_before := qa_entry_buttons.get("gm_battle_speed_gear", null) as Button
+	var speed_text_before := speed_button_before.text if speed_button_before != null else ""
+	_on_qa_entry_pressed("gm_battle_speed_gear")
+	await get_tree().process_frame
+	var speed_button_after := qa_entry_buttons.get("gm_battle_speed_gear", null) as Button
+	var speed_text_after := speed_button_after.text if speed_button_after != null else ""
+	var speed_gear_ok := (
+		qa_panel != null
+		and qa_panel.visible
+		and gm_battle_speed_multiplier == 2
+		and speed_text_before.find("x1") >= 0
+		and speed_text_after.find("x2") >= 0
+		and world_log_message.find("战斗速度") >= 0
+	)
+	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN
+	_refresh_qa_panel()
 	_open_qa_panel()
 	_on_qa_entry_pressed("open_auto_capture")
 	await get_tree().process_frame
@@ -11090,8 +11751,8 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and command_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
@@ -11101,6 +11762,7 @@ func _run_auto_qa_panel_check() -> void:
 		str(equipment_shop_ok),
 		str(equipment_ok),
 		str(quest_ok),
+		str(speed_gear_ok),
 		str(auto_capture_ok),
 		str(stable_ok),
 		str(rebirth_preview_ok),
@@ -11445,11 +12107,12 @@ func _run_auto_pet_capture_feedback_check() -> void:
 	var standby_after_profile := standby_result.get("profile", {}) as Dictionary
 	var standby_captured := _first_captured_pet_from_result(standby_result)
 	var standby_log := _battle_result_log_text(standby_result)
+	var standby_power_text := "战力%d" % PetPowerModel.combat_power_for_pet(standby_captured)
 	var standby_join_ok := (
 		not standby_captured.is_empty()
 		and str(standby_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 		and PlayerProgressModel.party_pet_instances(standby_after_profile).size() == standby_before_party + 1
-		and standby_log.find("捕获野生乌力 Lv1，战力84，已加入队伍。") >= 0
+		and standby_log.find("捕获野生乌力 Lv1，%s，已加入队伍。" % standby_power_text) >= 0
 	)
 
 	var storage_profile := PlayerProgressModel.default_profile()
@@ -11469,12 +12132,13 @@ func _run_auto_pet_capture_feedback_check() -> void:
 	var storage_after_profile := storage_result.get("profile", {}) as Dictionary
 	var storage_captured := _first_captured_pet_from_result(storage_result)
 	var storage_log := _battle_result_log_text(storage_result)
+	var storage_power_text := "战力%d" % PetPowerModel.combat_power_for_pet(storage_captured)
 	var storage_destination_ok := (
 		not storage_captured.is_empty()
 		and str(storage_captured.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE
 		and PlayerProgressModel.party_pet_instances(storage_after_profile).size() == PlayerProgressModel.PARTY_LIMIT
 		and PlayerProgressModel.storage_pet_instances(storage_after_profile).size() == storage_before_storage + 1
-		and storage_log.find("捕获野生乌力 Lv1，战力84，队伍已满，已送入兽栏。") >= 0
+		and storage_log.find("捕获野生乌力 Lv1，%s，队伍已满，已送入兽栏。" % storage_power_text) >= 0
 	)
 	var status := "ok" if standby_join_ok and storage_destination_ok else "failed"
 	print("pet capture feedback check ready: status=%s standby=%s storage=%s standby_before_party=%d storage_before_party=%d storage_before_storage=%d standby_log=%s storage_log=%s" % [
@@ -13265,7 +13929,7 @@ func _update_battle_auto_attack(delta: float) -> void:
 	if _battle_commands_locked():
 		return
 	if battle_auto_attack_delay > 0.0:
-		battle_auto_attack_delay = maxf(0.0, battle_auto_attack_delay - delta)
+		battle_auto_attack_delay = maxf(0.0, battle_auto_attack_delay - _scaled_battle_delta(delta))
 		return
 	if battle_command_owner == "player":
 		_submit_battle_auto_player_action()
@@ -15698,6 +16362,7 @@ func _build_hud() -> void:
 
 	dialog_panel = _panel_container("DialogPanel")
 	dialog_panel.visible = false
+	dialog_panel.z_index = 48
 	var dialog_column := VBoxContainer.new()
 	dialog_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dialog_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -16451,6 +17116,42 @@ func _transfer_from_warp(item: Dictionary) -> void:
 	_load_map(to_map, to_spawn)
 
 
+func _start_guardian_battle_from_dialog() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	var interaction := active_dialog_interaction.duplicate(true)
+	var zone := _guardian_zone_for_interaction(interaction)
+	if zone.is_empty():
+		_set_world_log_message("暂时无法挑战%s。" % str(interaction.get("name", "守护兽")))
+		_update_dialog_text()
+		return
+	_close_dialog()
+	if player != null:
+		player.clear_move_target()
+	_clear_navigation_state()
+	active_encounter_zone.clear()
+	encounter_active = false
+	var enemy_count := EncounterModel.enemy_count(zone, _encounter_enemy_count_fallback())
+	var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, enemy_count)
+	_start_battle(_battle_state_for_encounter_zone(selected_zone))
+
+
+func _guardian_zone_for_interaction(item: Dictionary) -> Dictionary:
+	var zone_id := str(item.get("encounterZoneId", "")).strip_edges()
+	if zone_id != "":
+		var zone := _encounter_zone_by_id(zone_id)
+		if not zone.is_empty():
+			return zone
+	var group_id := str(item.get("encounterGroupId", "")).strip_edges()
+	if group_id != "":
+		var group_zone := _encounter_zone_for_group(map_data, group_id)
+		if not group_zone.is_empty():
+			return group_zone
+	if item.has("fixedWildPets") or item.has("wildPetPool") or item.has("wildPetPoolSource"):
+		return item.duplicate(true)
+	return {}
+
+
 func _update_encounter_zone_check() -> void:
 	if player == null or map_data.is_empty() or encounter_active or battle_active or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
 		return
@@ -16721,7 +17422,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		log_lines.append(hang_stop_message)
 	if profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
-	if player_knocked_away:
+	if bool(result.get("returnToRecordPoint", player_knocked_away)):
 		_return_player_to_record_point_after_knockaway(log_lines)
 	else:
 		_end_battle(true)
@@ -17835,7 +18536,7 @@ func _refresh_backpack_panel() -> void:
 	if backpack_panel == null or backpack_grid == null or backpack_detail_label == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	var slots := _backpack_slots_for_ui()
 	var visible_indices := _backpack_visible_slot_indices(slots)
 	if visible_indices.is_empty():
 		backpack_selected_slot_index = 0
@@ -17860,11 +18561,14 @@ func _refresh_backpack_panel() -> void:
 		for index in visible_indices:
 			var slot := slots[index] if index < slots.size() else {}
 			var button := Button.new()
-			button.text = BackpackModel.slot_label(slot)
-			button.toggle_mode = true
-			button.button_pressed = index == backpack_selected_slot_index
+			var locked := bool(slot.get("locked", false))
+			button.text = _backpack_locked_slot_label(index) if locked else BackpackModel.slot_label(slot)
+			button.toggle_mode = not locked
+			button.button_pressed = (not locked) and index == backpack_selected_slot_index
 			button.custom_minimum_size = Vector2(0, 62)
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if locked:
+				button.add_theme_font_size_override("font_size", 14)
 			var slot_index := index
 			button.pressed.connect(func() -> void:
 				_select_backpack_slot(slot_index)
@@ -17877,6 +18581,19 @@ func _refresh_backpack_panel() -> void:
 	var selected_item_id := str(selected_slot.get("itemId", ""))
 	if visible_indices.is_empty():
 		backpack_detail_label.text = "当前筛选：%s\n没有符合条件的道具。" % _backpack_filter_label_for(backpack_filter)
+		if backpack_use_button != null:
+			backpack_use_button.visible = false
+		if backpack_equip_button != null:
+			backpack_equip_button.visible = false
+		if backpack_quick_bind_row != null:
+			backpack_quick_bind_row.visible = false
+		backpack_pending_use_item_id = ""
+		_clear_backpack_target_buttons()
+		if backpack_target_scroll != null:
+			backpack_target_scroll.visible = false
+		return
+	if bool(selected_slot.get("locked", false)):
+		backpack_detail_label.text = "\n".join(_backpack_locked_slot_detail_lines(backpack_selected_slot_index))
 		if backpack_use_button != null:
 			backpack_use_button.visible = false
 		if backpack_equip_button != null:
@@ -18002,6 +18719,38 @@ func _backpack_button_texts() -> String:
 	return "\n".join(parts)
 
 
+func _backpack_unlocked_slot_count_for_ui() -> int:
+	return BackpackModel.unlocked_slot_count(
+		clampi(int(player_profile.get(PlayerProgressModel.BACKPACK_EXTRA_SLOTS_KEY, 0)), 0, BackpackModel.EXTRA_SLOT_LIMIT)
+	)
+
+
+func _backpack_locked_slot_cost(slot_index: int) -> int:
+	var extra_index := slot_index - BackpackModel.BASE_SLOT_LIMIT
+	return BackpackModel.unlock_cost_for_extra_slot(extra_index)
+
+
+func _backpack_locked_slot_label(slot_index: int) -> String:
+	var cost := _backpack_locked_slot_cost(slot_index)
+	return "锁\n%d钻石" % cost if cost > 0 else "锁"
+
+
+func _backpack_locked_slot_detail_lines(slot_index: int) -> Array[String]:
+	var cost := _backpack_locked_slot_cost(slot_index)
+	var lines: Array[String] = [
+		"扩展背包位",
+		"费用：%d 钻石" % cost,
+		"当前钻石：%d" % _profile_diamonds_for_ui(),
+	]
+	if slot_index > _backpack_unlocked_slot_count_for_ui():
+		lines.append("请先解锁前一个背包位。")
+	return lines
+
+
+func _backpack_slot_is_locked_index(slot_index: int) -> bool:
+	return slot_index >= _backpack_unlocked_slot_count_for_ui() and slot_index < BackpackModel.SLOT_LIMIT
+
+
 func _backpack_visible_slot_indices(slots: Array[Dictionary]) -> Array[int]:
 	var result: Array[int] = []
 	for index in range(BackpackModel.SLOT_LIMIT):
@@ -18041,7 +18790,57 @@ func _backpack_grid_columns() -> int:
 func _select_backpack_slot(slot_index: int) -> void:
 	backpack_selected_slot_index = clampi(slot_index, 0, BackpackModel.SLOT_LIMIT - 1)
 	backpack_pending_use_item_id = ""
+	if _backpack_slot_is_locked_index(backpack_selected_slot_index):
+		_open_backpack_unlock_dialog(backpack_selected_slot_index)
+		return
 	_refresh_backpack_panel()
+
+
+func _open_backpack_unlock_dialog(slot_index: int) -> void:
+	var unlocked_count := _backpack_unlocked_slot_count_for_ui()
+	if slot_index > unlocked_count:
+		_set_world_log_message("请先解锁前一个扩展背包位。")
+		_refresh_backpack_panel()
+		return
+	var extra_index := slot_index - BackpackModel.BASE_SLOT_LIMIT
+	var cost := _backpack_locked_slot_cost(slot_index)
+	active_dialog_interaction = {
+		"id": "backpack_unlock_%d" % slot_index,
+		"name": "扩展背包",
+		"actionType": DIALOG_ACTION_BACKPACK_UNLOCK,
+		"slotIndex": slot_index,
+		"extraSlotIndex": extra_index,
+		"option": "同意",
+		"dialog": [
+			"是否消耗 %d 钻石解锁这个背包位？" % cost,
+			"当前钻石：%d" % _profile_diamonds_for_ui(),
+		],
+	}
+	_update_dialog_text()
+	dialog_panel.move_to_front()
+	dialog_panel.visible = true
+	_layout_hud()
+
+
+func _unlock_backpack_slot_from_dialog() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	var extra_index := int(active_dialog_interaction.get("extraSlotIndex", -1))
+	var result := PlayerProgressModel.unlock_backpack_slot(player_profile, extra_index)
+	player_profile = result.get("profile", player_profile)
+	var message := str(result.get("message", ""))
+	_set_world_log_message(message)
+	if bool(result.get("ok", false)):
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		_close_dialog()
+		_refresh_backpack_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		return
+	active_dialog_interaction["dialog"] = [message, "当前钻石：%d" % _profile_diamonds_for_ui()]
+	_update_dialog_text()
 
 
 func _refresh_quick_bar(force: bool = false) -> void:
@@ -18103,16 +18902,22 @@ func _profile_stone_coins_for_ui() -> int:
 	return maxi(0, int(player_profile.get(PlayerProgressModel.STONE_COINS_KEY, PlayerProgressModel.DEFAULT_STONE_COINS)))
 
 
+func _profile_diamonds_for_ui() -> int:
+	return maxi(0, int(player_profile.get(PlayerProgressModel.DIAMONDS_KEY, PlayerProgressModel.DEFAULT_DIAMONDS)))
+
+
 func _backpack_slots_for_ui() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
+	var unlocked_count := _backpack_unlocked_slot_count_for_ui()
+	var result := BackpackModel.normalize_slots(player_profile.get("backpackSlots", []), unlocked_count)
 	var slots = player_profile.get("backpackSlots", [])
-	if not (slots is Array):
-		return result
-	var slot_values := slots as Array
-	for slot_value in slot_values:
-		result.append((slot_value as Dictionary) if slot_value is Dictionary else {})
+	if slots is Array:
+		result = BackpackModel.normalize_slots(slots, unlocked_count)
 	while result.size() < BackpackModel.SLOT_LIMIT:
-		result.append({})
+		var extra_index := result.size() - BackpackModel.BASE_SLOT_LIMIT
+		result.append({
+			"locked": true,
+			"unlockCost": BackpackModel.unlock_cost_for_extra_slot(extra_index),
+		})
 	return result
 
 
@@ -18142,6 +18947,8 @@ func _backpack_available_capacity_for_ui(item_id: String) -> int:
 	var total := 0
 	var stack_limit := BackpackModel.stack_limit_for(item_id)
 	for slot in _backpack_slots_for_ui():
+		if bool(slot.get("locked", false)):
+			continue
 		var slot_item_id := str(slot.get("itemId", ""))
 		if slot_item_id == item_id:
 			total += maxi(0, stack_limit - maxi(0, int(slot.get("count", 0))))
@@ -20077,6 +20884,8 @@ func _qa_entry_definitions() -> Array[Dictionary]:
 	entries.append({"id": "gm_capture_grass", "label": "捉宠草丛", "description": "随机图鉴宠，1-5只，Lv1-10"})
 	entries.append({"id": "gm_knockaway_grass", "label": "击飞草丛", "description": "120-140级怪，测记录点回城"})
 	entries.append({"id": "firebud_village", "label": "回火芽村", "description": "回到村口，测商店、村医、记录点"})
+	entries.append({"section": "GM工具"})
+	entries.append({"id": "gm_battle_speed_gear", "label": "变速齿轮 x%d" % _gm_battle_speed_multiplier(), "description": "点击切换 x2-x10，x1为关闭加速"})
 	entries.append({"section": "功能面板"})
 	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、快捷栏、世界使用"})
 	entries.append({"id": "open_item_shop", "label": "杂货铺", "description": "购买、出售、数量输入"})
@@ -20120,6 +20929,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_qa_route_to_gm_zone("gm_high_knockaway_grass")
 		"firebud_village":
 			_qa_load_map("firebud_village_gate", "from_training_yard", "已回到火芽村入口。")
+		"gm_battle_speed_gear":
+			_cycle_gm_battle_speed_gear()
 		"open_backpack":
 			_close_qa_panel(false)
 			_open_backpack_panel()
@@ -20161,6 +20972,22 @@ func _qa_open_auto_settings(tab_id: String) -> void:
 	auto_settings_active_tab = tab_id
 	_close_qa_panel(false)
 	_open_auto_settings_panel()
+
+
+func _gm_battle_speed_multiplier() -> int:
+	return clampi(gm_battle_speed_multiplier, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
+
+
+func _scaled_battle_delta(delta: float) -> float:
+	return delta * float(_gm_battle_speed_multiplier())
+
+
+func _cycle_gm_battle_speed_gear() -> void:
+	var current := _gm_battle_speed_multiplier()
+	gm_battle_speed_multiplier = GM_BATTLE_SPEED_MIN if current >= GM_BATTLE_SPEED_MAX else maxi(2, current + 1)
+	_refresh_qa_panel()
+	_set_world_log_message("GM变速齿轮：战斗速度 x%d。" % _gm_battle_speed_multiplier())
+	_layout_hud()
 
 
 func _qa_load_map(map_id: String, spawn_name: String, message: String) -> void:
@@ -20947,6 +21774,8 @@ func _rebirth_trial_task_info(include_target: bool = false) -> Dictionary:
 		var ring_name := str(missing_ring.get("ringName", BackpackModel.label_for(str(missing_ring.get("ringItemId", "")), "元素戒指")))
 		var cave_name := str(missing_ring.get("caveName", "元素洞穴"))
 		var owned_rings := _owned_rebirth_ring_count(normalized, target_count)
+		var guardian_group_value = missing_ring.get("guardianGroup", {})
+		var guardian_group := guardian_group_value as Dictionary if guardian_group_value is Dictionary else {}
 		var ring_info := {
 			"title": "%s试炼：%s" % [stage_label, ring_name],
 			"taskText": "%s试炼 - 取得%s" % [stage_label, ring_name],
@@ -20958,7 +21787,13 @@ func _rebirth_trial_task_info(include_target: bool = false) -> Dictionary:
 			],
 		}
 		if include_target:
-			ring_info["target"] = _navigation_target_for_map_entrance(str(missing_ring.get("caveId", "")), "%s入口" % cave_name)
+			ring_info["target"] = _navigation_target_for_cave_progress(
+				RebirthTrialModel.floor_map_ids_for_cave(missing_ring),
+				RebirthTrialModel.guardian_floor_map_id_for_cave(missing_ring),
+				str(guardian_group.get("id", "")),
+				"%s入口" % cave_name,
+				str(guardian_group.get("centerName", "%s守护兽" % cave_name))
+			)
 		return ring_info
 	var missing_beast := _first_missing_rebirth_beast(normalized, target_count)
 	if not missing_beast.is_empty():
@@ -20975,11 +21810,21 @@ func _rebirth_trial_task_info(include_target: bool = false) -> Dictionary:
 			],
 		}
 		if include_target:
-			beast_info["target"] = _navigation_target_for_map_entrance(str(final_cave.get("id", "")), "%s入口" % final_cave_name)
+			var capture_objective := {
+				"formId": str(missing_beast.get("formId", "")),
+			}
+			beast_info["target"] = _navigation_target_for_capture_objective_in_cave(
+				RebirthTrialModel.floor_map_ids_for_final_cave(),
+				RebirthTrialModel.capture_floor_map_ids_for_final_cave(),
+				capture_objective,
+				"%s入口" % final_cave_name
+			)
 		return beast_info
 	if PlayerProgressModel.rebirth_trial_proof_count(normalized, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) <= 0:
 		var final_cave := RebirthTrialModel.final_cave()
 		var final_cave_name := str(final_cave.get("name", "玄影洞窟"))
+		var boss_group_value = final_cave.get("rebirthBossGroup", {})
+		var boss_group := boss_group_value as Dictionary if boss_group_value is Dictionary else {}
 		var boss_info := {
 			"title": "%s试炼：玄影守护" % stage_label,
 			"taskText": "%s试炼 - 挑战%s顶层" % [stage_label, final_cave_name],
@@ -20990,7 +21835,13 @@ func _rebirth_trial_task_info(include_target: bool = false) -> Dictionary:
 			],
 		}
 		if include_target:
-			boss_info["target"] = _navigation_target_for_map_entrance(str(final_cave.get("id", "")), "%s入口" % final_cave_name)
+			boss_info["target"] = _navigation_target_for_cave_progress(
+				RebirthTrialModel.floor_map_ids_for_final_cave(),
+				RebirthTrialModel.boss_floor_map_id_for_final_cave(),
+				str(boss_group.get("id", "")),
+				"%s入口" % final_cave_name,
+				"%s顶层" % final_cave_name
+			)
 		return boss_info
 	var ready_info := {
 		"title": "%s试炼：找导师转生" % stage_label,
@@ -21119,6 +21970,8 @@ func _map_targets_for_current_map() -> Array[Dictionary]:
 		if not (value is Dictionary):
 			continue
 		var zone := value as Dictionary
+		if EncounterModel.is_manual_only(zone):
+			continue
 		var zone_id := str(zone.get("id", ""))
 		if zone_id == "":
 			continue
@@ -21225,6 +22078,8 @@ func _map_target_minimap_color(target: Dictionary) -> Color:
 			return Color(0.58, 0.80, 1.0, 1.0)
 		InteractionModel.FACILITY_TRAINER:
 			return Color(0.76, 0.66, 1.0, 1.0)
+		InteractionModel.FACILITY_GUARDIAN:
+			return Color(1.0, 0.46, 0.34, 1.0)
 	match str(target.get("kind", "")):
 		"encounter_zone":
 			return Color(0.48, 0.72, 0.32, 1.0)
@@ -21258,6 +22113,8 @@ func _map_encounter_zone_lookup() -> Dictionary:
 	var lookup := {}
 	for value in EncounterModel.encounter_zones(map_data):
 		if not (value is Dictionary):
+			continue
+		if EncounterModel.is_manual_only(value as Dictionary):
 			continue
 		for cell in EncounterModel.cells_for_zone(value as Dictionary):
 			lookup[IsoMapModel.cell_key(cell)] = true
@@ -21399,6 +22256,108 @@ func _navigation_target_for_map_entrance(destination_map_id: String, label: Stri
 	return {}
 
 
+func _navigation_target_for_direct_warp(from_map_id: String, destination_map_id: String, label: String = "") -> Dictionary:
+	var loaded_map := _map_data_for_id(from_map_id)
+	for value in InteractionModel.interaction_points(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		if not InteractionModel.is_warp(item) or str(item.get("toMap", "")) != destination_map_id:
+			continue
+		var target := _navigation_target_from_interaction(from_map_id, item)
+		if label != "":
+			target["label"] = label
+		return target
+	return {}
+
+
+func _navigation_target_for_encounter_group_on_map(map_id: String, group_id: String, label: String = "") -> Dictionary:
+	var loaded_map := _map_data_for_id(map_id)
+	var interaction := _interaction_for_encounter_group(loaded_map, group_id)
+	if not interaction.is_empty():
+		var interaction_target := _navigation_target_from_interaction(map_id, interaction)
+		if label != "":
+			interaction_target["label"] = label
+		return interaction_target
+	var zone := _encounter_zone_for_group(loaded_map, group_id)
+	if zone.is_empty():
+		return {}
+	var cell := EncounterModel.first_walkable_cell(loaded_map, zone)
+	return {
+		"kind": "encounter_zone",
+		"mapId": map_id,
+		"label": label if label != "" else str(zone.get("name", "野外")),
+		"zone": zone,
+		"cell": cell,
+	}
+
+
+func _navigation_target_for_cave_progress(floor_ids: Array[String], goal_map_id: String, encounter_group_id: String, entrance_label: String, goal_label: String) -> Dictionary:
+	if floor_ids.is_empty():
+		return {}
+	var first_floor_id := floor_ids[0]
+	var current_index := floor_ids.find(current_map_id)
+	if current_index < 0:
+		return _navigation_target_for_map_entrance(first_floor_id, entrance_label)
+
+	if current_map_id == goal_map_id:
+		return _navigation_target_for_encounter_group_on_map(current_map_id, encounter_group_id, goal_label)
+
+	var goal_index := floor_ids.find(goal_map_id)
+	if goal_index < 0:
+		goal_index = floor_ids.size() - 1
+	var step := 1 if current_index < goal_index else -1
+	var next_index := clampi(current_index + step, 0, floor_ids.size() - 1)
+	if next_index == current_index:
+		return {}
+	var next_map_id := floor_ids[next_index]
+	return _navigation_target_for_direct_warp(
+		current_map_id,
+		next_map_id,
+		"前往%s" % _map_name_for_id(next_map_id)
+	)
+
+
+func _navigation_target_for_capture_objective_in_cave(floor_ids: Array[String], capture_floor_ids: Array[String], objective: Dictionary, entrance_label: String) -> Dictionary:
+	var current_target := _navigation_target_for_capture_objective_on_current_map(objective)
+	if not current_target.is_empty():
+		return current_target
+	if floor_ids.is_empty():
+		return {}
+	var first_floor_id := floor_ids[0]
+	var current_index := floor_ids.find(current_map_id)
+	if current_index < 0:
+		return _navigation_target_for_map_entrance(first_floor_id, entrance_label)
+
+	var goal_index := -1
+	var best_distance := 1000000
+	for capture_map_id in capture_floor_ids:
+		var floor_index := floor_ids.find(capture_map_id)
+		if floor_index < 0:
+			continue
+		if not _map_has_capture_objective(_map_data_for_id(capture_map_id), objective):
+			continue
+		var distance: int = abs(floor_index - current_index)
+		if distance < best_distance:
+			best_distance = distance
+			goal_index = floor_index
+	if goal_index < 0:
+		return _navigation_target_for_map_entrance(first_floor_id, entrance_label)
+	if goal_index == current_index:
+		return {}
+
+	var step := 1 if current_index < goal_index else -1
+	var next_index := clampi(current_index + step, 0, floor_ids.size() - 1)
+	if next_index == current_index:
+		return {}
+	var next_map_id := floor_ids[next_index]
+	return _navigation_target_for_direct_warp(
+		current_map_id,
+		next_map_id,
+		"前往%s" % _map_name_for_id(next_map_id)
+	)
+
+
 func _navigation_target_for_backpack(label: String) -> Dictionary:
 	return {
 		"kind": "backpack",
@@ -21412,10 +22371,15 @@ func _navigation_target_for_encounter_group(group_id: String) -> Dictionary:
 		return {}
 	for map_id in MAP_DATA_PATHS.keys():
 		var loaded_map := _map_data_for_id(str(map_id))
+		var interaction := _interaction_for_encounter_group(loaded_map, group_id)
+		if not interaction.is_empty():
+			return _navigation_target_from_interaction(str(map_id), interaction)
 		for value in EncounterModel.encounter_zones(loaded_map):
 			if not (value is Dictionary):
 				continue
 			var zone := value as Dictionary
+			if EncounterModel.is_manual_only(zone):
+				continue
 			if str(zone.get("encounterGroupId", "")) != group_id:
 				continue
 			var cell := EncounterModel.first_walkable_cell(loaded_map, zone)
@@ -21447,6 +22411,34 @@ func _navigation_target_for_capture_objective(objective: Dictionary) -> Dictiona
 				"cell": cell,
 			}
 	return {}
+
+
+func _navigation_target_for_capture_objective_on_current_map(objective: Dictionary) -> Dictionary:
+	var loaded_map := _map_data_for_id(current_map_id)
+	for value in EncounterModel.encounter_zones(loaded_map):
+		if not (value is Dictionary):
+			continue
+		var zone := value as Dictionary
+		if not _zone_matches_capture_objective(zone, objective):
+			continue
+		var cell := EncounterModel.first_walkable_cell(loaded_map, zone)
+		return {
+			"kind": "encounter_zone",
+			"mapId": current_map_id,
+			"label": str(zone.get("name", "野外")),
+			"zone": zone,
+			"cell": cell,
+		}
+	return {}
+
+
+func _map_has_capture_objective(loaded_map: Dictionary, objective: Dictionary) -> bool:
+	for value in EncounterModel.encounter_zones(loaded_map):
+		if not (value is Dictionary):
+			continue
+		if _zone_matches_capture_objective(value as Dictionary, objective):
+			return true
+	return false
 
 
 func _zone_matches_capture_objective(zone: Dictionary, objective: Dictionary) -> bool:
@@ -22762,7 +23754,7 @@ func _battle_start_round(command_id: String) -> void:
 func _start_round_end_status_events_if_needed() -> bool:
 	if battle_round_end_status_processed:
 		return false
-	if battle_state.is_empty() or BattleModel.living_enemy_id(battle_state) == "" or BattleModel.living_ally_id(battle_state) == "":
+	if battle_state.is_empty() or _battle_state_should_end(battle_state):
 		return false
 	battle_round_end_status_processed = true
 	var status_events := BattleModel.build_round_end_status_events(battle_state)
@@ -22804,7 +23796,7 @@ func _play_next_battle_event() -> void:
 		_add_battle_event_feedback(battle_current_event, ledger)
 		_set_battle_message(str(battle_state.get("message", "")))
 		_sync_battle_target_selection()
-		if BattleModel.living_enemy_id(battle_state) == "" or BattleModel.living_ally_id(battle_state) == "":
+		if _battle_state_should_end(battle_state):
 			battle_event_queue.clear()
 			battle_end_pending = true
 		battle_current_event_actor_snapshots = actor_snapshots
@@ -22814,7 +23806,7 @@ func _play_next_battle_event() -> void:
 		queue_redraw()
 		return
 
-	if BattleModel.living_enemy_id(battle_state) == "" or BattleModel.living_ally_id(battle_state) == "":
+	if _battle_state_should_end(battle_state):
 		battle_end_pending = true
 		battle_action_timer = 0.2
 		_sync_battle_buttons()
@@ -22825,8 +23817,17 @@ func _play_next_battle_event() -> void:
 	_finish_battle_round_and_open_commands()
 
 
+func _battle_state_should_end(state: Dictionary) -> bool:
+	return (
+		PlayerProgressModel.battle_actor_knocked_away(state, BattleModel.PLAYER_ACTOR_ID)
+		or BattleModel.living_enemy_id(state) == ""
+		or BattleModel.living_ally_id(state) == ""
+	)
+
+
 func _finish_battle_round_and_open_commands() -> void:
 	battle_state["phase"] = "command"
+	battle_state = BattleModel.decrement_field_effects(battle_state)
 	battle_state["round"] = int(battle_state.get("round", 1)) + 1
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
@@ -23033,6 +24034,24 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 				var item_poison_all_text := "毒粉 -%d" % item_poison_value if item_poison_result == "applied" else (("免疫 -%d" % item_poison_value) if item_poison_result == "immune" else "抵抗 -%d" % item_poison_value)
 				_add_battle_float_text(str(item_poison_target_id), item_poison_all_text, Color(0.80, 0.92, 0.34, 0.98))
 		return
+	if event_type == "multi_attack":
+		var multi_effects := ledger.get("effectPerTarget", {}) as Dictionary
+		var dodge_map := ledger.get("dodgePerTarget", {}) as Dictionary
+		var critical_map := ledger.get("criticalPerTarget", {}) as Dictionary
+		var multi_delay := _battle_event_duration(event) * _battle_event_result_reveal_progress(event) if _battle_event_delays_result(event) else 0.0
+		for multi_target_id in ledger.get("targetIds", []):
+			var resolved_multi_target_id := str(multi_target_id)
+			if bool(dodge_map.get(resolved_multi_target_id, false)):
+				_add_battle_float_text(resolved_multi_target_id, "回避", Color(0.62, 0.88, 1.0, 0.98), multi_delay)
+				continue
+			var multi_damage := int(multi_effects.get(resolved_multi_target_id, 0))
+			if multi_damage <= 0:
+				continue
+			var multi_text := "-%d" % multi_damage
+			if bool(critical_map.get(resolved_multi_target_id, false)):
+				multi_text = "暴击 %s" % multi_text
+			_add_battle_float_text(resolved_multi_target_id, multi_text, Color(1.0, 0.82, 0.30, 0.98), multi_delay)
+		return
 	if event_type == "defend":
 		return
 	if bool(ledger.get("dodged", false)):
@@ -23120,6 +24139,8 @@ func _battle_event_duration(event: Dictionary) -> float:
 				var launch_tail_seconds := _battle_launch_duration_for_mode(launch_mode) * (1.0 - BATTLE_LAUNCH_TARGET_START_RATIO)
 				duration = maxf(duration, _battle_combo_last_hit_seconds(participant_count) + launch_tail_seconds)
 			return duration
+		"multi_attack":
+			return 0.72
 		"skill_attack":
 			return 0.74
 		"counter_attack":
@@ -23166,7 +24187,7 @@ func _battle_event_delays_result(event: Dictionary) -> bool:
 	var timeline = event.get("timeline", {})
 	if timeline is Dictionary and (timeline as Dictionary).has("delaysResult"):
 		return bool((timeline as Dictionary).get("delaysResult", false))
-	return ["attack", "skill_attack", "combo_attack", "counter_attack"].has(str(event.get("type", "")))
+	return ["attack", "skill_attack", "combo_attack", "counter_attack", "multi_attack"].has(str(event.get("type", "")))
 
 
 func _battle_event_result_reveal_progress(event: Dictionary) -> float:
@@ -23179,6 +24200,8 @@ func _battle_event_result_reveal_progress(event: Dictionary) -> float:
 		var participant_count := maxi(1, participant_ids.size())
 		var duration := _battle_event_duration(event)
 		return clampf(_battle_combo_last_hit_seconds(participant_count) / maxf(0.01, duration), 0.18, 0.88)
+	if event_type == "multi_attack":
+		return 0.42
 	if bool(event.get("canLaunch", false)):
 		return BATTLE_LAUNCH_TARGET_START_RATIO
 	if event_type == "attack" or event_type == "skill_attack" or event_type == "counter_attack":
@@ -23203,7 +24226,7 @@ func _battle_enemy_response() -> void:
 	battle_state["phase"] = "enemy_action"
 	battle_action_timer = 0.52
 	_set_battle_message(str(battle_state.get("message", "")))
-	if BattleModel.living_ally_id(battle_state) == "":
+	if _battle_state_should_end(battle_state):
 		battle_end_pending = true
 		battle_action_timer = 0.72
 	_sync_battle_buttons()
@@ -23597,7 +24620,8 @@ func _battle_commands_locked() -> bool:
 
 
 func _update_battle_animation(delta: float) -> void:
-	_update_battle_float_texts(delta)
+	var scaled_delta := _scaled_battle_delta(delta)
+	_update_battle_float_texts(scaled_delta)
 	if battle_event_advance_pending:
 		battle_event_advance_pending = false
 		_advance_battle_after_current_event()
@@ -23606,7 +24630,7 @@ func _update_battle_animation(delta: float) -> void:
 		if str(battle_state.get("phase", "command")) == "round_events":
 			_advance_battle_after_current_event()
 		return
-	battle_action_timer = maxf(0.0, battle_action_timer - delta)
+	battle_action_timer = maxf(0.0, battle_action_timer - scaled_delta)
 	if battle_action_timer <= 0.001:
 		battle_action_timer = 0.0
 		if battle_current_event.is_empty():
@@ -23652,6 +24676,7 @@ func _open_interaction_dialog(item: Dictionary) -> void:
 	if player != null:
 		player.face_direction(InteractionModel.marker_world_position(map_data, item) - player.global_position)
 	_update_dialog_text()
+	dialog_panel.move_to_front()
 	dialog_panel.visible = true
 	_layout_hud()
 
@@ -23705,6 +24730,10 @@ func _perform_dialog_action(action_id: String) -> void:
 		DIALOG_ACTION_REBIRTH:
 			_close_dialog()
 			_open_player_rebirth_preview_panel()
+		DIALOG_ACTION_BACKPACK_UNLOCK:
+			_unlock_backpack_slot_from_dialog()
+		DIALOG_ACTION_GUARDIAN_BATTLE:
+			_start_guardian_battle_from_dialog()
 		_:
 			_close_dialog()
 
@@ -23841,6 +24870,10 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_STABLE
 	if _dialog_item_is_rebirth(item):
 		return DIALOG_ACTION_REBIRTH
+	if _dialog_item_is_backpack_unlock(item):
+		return DIALOG_ACTION_BACKPACK_UNLOCK
+	if _dialog_item_is_guardian_battle(item):
+		return DIALOG_ACTION_GUARDIAN_BATTLE
 	if str(item.get("shopId", "")) != "":
 		return DIALOG_ACTION_SHOP
 	return DIALOG_ACTION_ACK
@@ -23870,6 +24903,10 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return "查看任务"
 		DIALOG_ACTION_REBIRTH:
 			return str(item.get("option", "转生"))
+		DIALOG_ACTION_BACKPACK_UNLOCK:
+			return str(item.get("option", "同意"))
+		DIALOG_ACTION_GUARDIAN_BATTLE:
+			return str(item.get("option", "挑战"))
 	return str(item.get("option", "知道了"))
 
 
@@ -24004,6 +25041,18 @@ func _dialog_item_is_stable(item: Dictionary) -> bool:
 
 func _dialog_item_is_rebirth(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == InteractionModel.FACILITY_REBIRTH or str(item.get("kind", "")) == InteractionModel.FACILITY_REBIRTH
+
+
+func _dialog_item_is_backpack_unlock(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == DIALOG_ACTION_BACKPACK_UNLOCK
+
+
+func _dialog_item_is_guardian_battle(item: Dictionary) -> bool:
+	return (
+		str(item.get("actionType", "")) == DIALOG_ACTION_GUARDIAN_BATTLE
+		or str(item.get("kind", "")) == InteractionModel.FACILITY_GUARDIAN
+		or str(item.get("encounterGroupId", "")) != "" and str(item.get("encounterZoneId", "")) != ""
+	)
 
 
 func _dialog_record_point_hint_for(item: Dictionary) -> String:
@@ -25473,6 +26522,8 @@ func _draw_decor_cells() -> void:
 func _draw_encounter_zones() -> void:
 	for zone_value in EncounterModel.encounter_zones(map_data):
 		var zone := zone_value as Dictionary
+		if EncounterModel.is_manual_only(zone):
+			continue
 		for cell in EncounterModel.cells_for_zone(zone):
 			if IsoMapModel.is_inside(map_data, cell) and IsoMapModel.is_walkable(map_data, cell):
 				_draw_iso_tile(IsoMapModel.grid_to_world(map_data, cell), Color(0.34, 0.58, 0.34, 0.22), Color(0.55, 0.82, 0.42, 0.34))
@@ -25569,6 +26620,22 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 				"border": Color(1.0, 0.95, 0.54, 0.98),
 				"textColor": Color(0.16, 0.12, 0.04, 0.98),
 			}
+		QUEST_MARKER_REBIRTH_AVAILABLE:
+			return {
+				"glyph": "!",
+				"tone": "gray",
+				"fill": Color(0.84, 0.84, 0.78, 0.94),
+				"border": Color(1.0, 1.0, 0.94, 0.92),
+				"textColor": Color(0.18, 0.19, 0.17, 0.96),
+			}
+		QUEST_MARKER_REBIRTH_READY:
+			return {
+				"glyph": "!",
+				"tone": "yellow",
+				"fill": Color(1.0, 0.82, 0.18, 0.98),
+				"border": Color(1.0, 0.95, 0.54, 0.98),
+				"textColor": Color(0.16, 0.12, 0.04, 0.98),
+			}
 	return {}
 
 
@@ -25584,6 +26651,9 @@ func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dic
 	var item_id := str(item.get("id", ""))
 	if item_id == "":
 		return QUEST_MARKER_NONE
+	var rebirth_marker_state := _rebirth_mentor_marker_state(item_id)
+	if rebirth_marker_state != QUEST_MARKER_NONE:
+		return rebirth_marker_state
 	var quest := PlayerProgressModel.active_quest(player_profile)
 	if not quest.is_empty():
 		var state := PlayerProgressModel.active_quest_state(player_profile)
@@ -25606,6 +26676,46 @@ func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dic
 	if not blocked_quest.is_empty() and QuestModel.giver_id_for(blocked_quest) == item_id:
 		return QUEST_MARKER_BLOCKED
 	return QUEST_MARKER_NONE
+
+
+func _rebirth_mentor_marker_state(item_id: String) -> String:
+	if item_id != "firebud_rebirth_mentor":
+		return QUEST_MARKER_NONE
+	var current_rebirth := maxi(0, int(player_profile.get(PlayerProgressModel.REBIRTH_COUNT_KEY, 0)))
+	if current_rebirth >= RebirthModel.MAX_REBIRTH_COUNT:
+		return QUEST_MARKER_NONE
+	var target_count := current_rebirth + 1
+	if target_count > RebirthTrialModel.stages().size():
+		return QUEST_MARKER_NONE
+	var active_quest_id := str(player_profile.get(PlayerProgressModel.ACTIVE_QUEST_ID_KEY, ""))
+	var expected_quest_id := "quest_rebirth_%d_guidance" % target_count
+	if active_quest_id == expected_quest_id:
+		return QUEST_MARKER_IN_PROGRESS
+	var player := player_profile.get("player", {}) as Dictionary
+	var player_level := maxi(1, int(player.get("level", 1)))
+	var quest_completed := _rebirth_quest_completed_for_target(player_profile, target_count)
+	if not quest_completed:
+		return QUEST_MARKER_REBIRTH_AVAILABLE if player_level >= RebirthModel.MIN_REBIRTH_LEVEL else QUEST_MARKER_BLOCKED
+	if _rebirth_trial_ready_for_target_raw(target_count):
+		return QUEST_MARKER_REBIRTH_READY
+	return QUEST_MARKER_IN_PROGRESS
+
+
+func _rebirth_trial_ready_for_target_raw(target_count: int) -> bool:
+	var player := player_profile.get("player", {}) as Dictionary
+	if maxi(1, int(player.get("level", 1))) < RebirthModel.MIN_REBIRTH_LEVEL:
+		return false
+	if not _rebirth_quest_completed_for_target(player_profile, target_count):
+		return false
+	for ring_id in RebirthTrialModel.stage_required_ring_ids(target_count):
+		if _raw_backpack_item_count(ring_id) <= 0:
+			return false
+	for form_id in RebirthTrialModel.stage_required_beast_form_ids(target_count):
+		if not _profile_has_pet_form_raw(player_profile, form_id):
+			return false
+	var proofs = player_profile.get(PlayerProgressModel.REBIRTH_TRIAL_PROOFS_KEY, {})
+	var proof_count := int((proofs as Dictionary).get(PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID, 0)) if proofs is Dictionary else 0
+	return proof_count > 0
 
 
 func _optional_quest_marker_state_for_item(item: Dictionary) -> String:
@@ -25719,6 +26829,8 @@ func _facility_marker_color(facility_type: String, selected: bool = false) -> Co
 			color = Color(0.40, 0.30, 0.62, 0.88)
 		InteractionModel.FACILITY_REBIRTH:
 			color = Color(0.52, 0.38, 0.68, 0.88)
+		InteractionModel.FACILITY_GUARDIAN:
+			color = Color(0.58, 0.26, 0.18, 0.88)
 	if selected:
 		color = color.lightened(0.22)
 	return color

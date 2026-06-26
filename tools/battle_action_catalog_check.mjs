@@ -11,8 +11,8 @@ const catalogPath = path.join(repoRoot, "client/godot/data/battle_actions.json")
 const passiveCatalogPath = path.join(repoRoot, "client/godot/data/battle_passive_skills.json");
 const petTemplateCatalogPath = path.join(repoRoot, "client/godot/data/pet_templates.json");
 const maxPetSkillSlots = 7;
-const validOwners = new Set(["player", "spirit", "pet_skill", "item"]);
-const validEffectTypes = new Set(["damage", "heal", "poison", "status", "cleanse", "defend", "capture"]);
+const validOwners = new Set(["player", "spirit", "pet_skill", "item", "equipment_action"]);
+const validEffectTypes = new Set(["damage", "heal", "poison", "status", "cleanse", "defend", "capture", "field_effect"]);
 const validStatusIds = new Set(["poison", "sleep", "confusion", "stone"]);
 const validElementIds = new Set(["fire", "water", "earth", "wind"]);
 const requiredRuntimeActions = [
@@ -36,6 +36,7 @@ const requiredRuntimeActions = [
   "item_poison_single_5",
   "item_poison_all_5",
   "item_cleanse_single_5",
+  "weapon_shadow_group_shot",
 ];
 
 function readJson(filePath) {
@@ -131,6 +132,20 @@ function validateTarget(name, target, errors) {
   if (target.selfOnly && (target.isAll || target.canTargetEnemy || target.requiresSelection)) {
     errors.push(`${name} selfOnly 只能是我方非全体且不点选`);
   }
+  if ("targetMode" in target && typeof target.targetMode !== "string") {
+    errors.push(`${name}.target.targetMode 必须是字符串`);
+  }
+  if (target.targetMode === "enemy_random_range") {
+    if (target.canTargetEnemy !== true || target.requiresSelection !== false) {
+      errors.push(`${name}.target enemy_random_range 必须是不点选敌方目标`);
+    }
+    if (!Number.isInteger(target.minTargets) || !Number.isInteger(target.maxTargets) || target.minTargets < 1 || target.maxTargets < target.minTargets) {
+      errors.push(`${name}.target 需要有效 minTargets/maxTargets`);
+    }
+  }
+  if (target.targetMode === "battlefield" && (target.canTargetAlly || target.canTargetEnemy || target.requiresSelection || target.selfOnly)) {
+    errors.push(`${name}.target battlefield 不能要求单位目标`);
+  }
 }
 
 function validateEffect(name, effect, errors) {
@@ -149,11 +164,28 @@ function validateEffect(name, effect, errors) {
   if ("amountBonus" in effect && typeof effect.amountBonus !== "number") {
     errors.push(`${name}.effect.amountBonus 必须是数字`);
   }
+  if ("powerMultiplier" in effect && typeof effect.powerMultiplier !== "number") {
+    errors.push(`${name}.effect.powerMultiplier 必须是数字`);
+  }
+  if ("criticalDamageMultiplier" in effect && typeof effect.criticalDamageMultiplier !== "number") {
+    errors.push(`${name}.effect.criticalDamageMultiplier 必须是数字`);
+  }
   if (["poison", "status"].includes(effect.type)) {
     validateStatusEffect(name, effect, errors);
   }
   if (effect.type === "cleanse") {
     validateCleanseEffect(name, effect, errors);
+  }
+  if (effect.type === "field_effect") {
+    if (!effect.fieldEffectId || typeof effect.fieldEffectId !== "string") {
+      errors.push(`${name}.effect.fieldEffectId 不能为空`);
+    }
+    if (!validElementIds.has(effect.element)) {
+      errors.push(`${name}.effect.element 无效: ${effect.element}`);
+    }
+    if (typeof effect.turns !== "number" || effect.turns <= 0) {
+      errors.push(`${name}.effect.turns 必须是正数`);
+    }
   }
 }
 

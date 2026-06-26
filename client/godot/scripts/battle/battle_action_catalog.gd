@@ -6,8 +6,12 @@ const OWNER_PLAYER := "player"
 const OWNER_SPIRIT := "spirit"
 const OWNER_PET_SKILL := "pet_skill"
 const OWNER_ITEM := "item"
+const OWNER_EQUIPMENT_ACTION := "equipment_action"
 const SIDE_ALLY := "ally"
 const SIDE_ENEMY := "enemy"
+const TARGET_MODE_SINGLE := "single"
+const TARGET_MODE_ENEMY_RANDOM_RANGE := "enemy_random_range"
+const TARGET_MODE_BATTLEFIELD := "battlefield"
 static var catalog_cache_loaded: bool = false
 static var catalog_cache: Dictionary = {}
 
@@ -75,6 +79,20 @@ static func effect_amount_bonus_for(action_id: String, fallback: int = 0) -> int
 	return fallback
 
 
+static func effect_power_multiplier_for(action_id: String, fallback: float = 1.0) -> float:
+	var effect := effect_for(action_id)
+	if effect.has("powerMultiplier"):
+		return maxf(0.0, float(effect.get("powerMultiplier", fallback)))
+	return fallback
+
+
+static func effect_critical_damage_multiplier_for(action_id: String, fallback: float = -1.0) -> float:
+	var effect := effect_for(action_id)
+	if effect.has("criticalDamageMultiplier"):
+		return maxf(0.0, float(effect.get("criticalDamageMultiplier", fallback)))
+	return fallback
+
+
 static func effect_type_for(action_id: String) -> String:
 	return str(effect_for(action_id).get("type", ""))
 
@@ -118,6 +136,32 @@ static func effect_status_ids_for(action_id: String) -> Array[String]:
 	return result
 
 
+static func effect_field_effect_id_for(action_id: String, fallback: String = "") -> String:
+	var effect := effect_for(action_id)
+	var field_effect_id := str(effect.get("fieldEffectId", ""))
+	return field_effect_id if field_effect_id != "" else fallback
+
+
+static func effect_element_for(action_id: String, fallback: String = "") -> String:
+	var effect := effect_for(action_id)
+	var element := str(effect.get("element", ""))
+	return element if element != "" else fallback
+
+
+static func effect_modifier_for(action_id: String, fallback: int = 0) -> int:
+	var effect := effect_for(action_id)
+	if effect.has("modifier"):
+		return int(effect.get("modifier", fallback))
+	return fallback
+
+
+static func effect_turns_for(action_id: String, fallback: int = 1) -> int:
+	var effect := effect_for(action_id)
+	if effect.has("turns"):
+		return maxi(1, int(effect.get("turns", fallback)))
+	return fallback
+
+
 static func effect_for(action_id: String) -> Dictionary:
 	var action := action_by_id(action_id)
 	if action.is_empty():
@@ -153,6 +197,46 @@ static func action_can_target_side(action_id: String, side: String) -> bool:
 
 static func action_self_only(action_id: String) -> bool:
 	return bool(target_rule_for(action_id).get("selfOnly", false))
+
+
+static func target_mode_for(action_id: String) -> String:
+	var mode := str(target_rule_for(action_id).get("targetMode", ""))
+	return mode if mode != "" else TARGET_MODE_SINGLE
+
+
+static func target_min_count_for(action_id: String, fallback: int = 1) -> int:
+	var target := target_rule_for(action_id)
+	if target.has("minTargets"):
+		return maxi(1, int(target.get("minTargets", fallback)))
+	return fallback
+
+
+static func target_max_count_for(action_id: String, fallback: int = 1) -> int:
+	var target := target_rule_for(action_id)
+	if target.has("maxTargets"):
+		return maxi(target_min_count_for(action_id, fallback), int(target.get("maxTargets", fallback)))
+	return fallback
+
+
+static func effect_allows_dodge(action_id: String, fallback: bool = true) -> bool:
+	var effect := effect_for(action_id)
+	if effect.has("canDodge"):
+		return bool(effect.get("canDodge", fallback))
+	return fallback
+
+
+static func effect_allows_critical(action_id: String, fallback: bool = true) -> bool:
+	var effect := effect_for(action_id)
+	if effect.has("canCritical"):
+		return bool(effect.get("canCritical", fallback))
+	return fallback
+
+
+static func effect_allows_counter(action_id: String, fallback: bool = true) -> bool:
+	var effect := effect_for(action_id)
+	if effect.has("canCounter"):
+		return bool(effect.get("canCounter", fallback))
+	return fallback
 
 
 static func pet_skill_action_for_slot(slot: int) -> Dictionary:
@@ -210,7 +294,7 @@ static func _validate_action(action: Dictionary, index: int, max_pet_slots: int,
 		errors.append("%s.label 不能为空" % _action_name(action, index))
 
 	var owner := str(action.get("owner", ""))
-	if not [OWNER_PLAYER, OWNER_SPIRIT, OWNER_PET_SKILL, OWNER_ITEM].has(owner):
+	if not [OWNER_PLAYER, OWNER_SPIRIT, OWNER_PET_SKILL, OWNER_ITEM, OWNER_EQUIPMENT_ACTION].has(owner):
 		errors.append("%s.owner 无效: %s" % [_action_name(action, index), owner])
 
 	var target = action.get("target", null)
@@ -250,13 +334,28 @@ static func _validate_target_rule(action: Dictionary, target: Dictionary, errors
 		errors.append("%s 需要点选时必须至少允许一侧目标" % action_name)
 	if self_only and (is_all or can_enemy or requires_selection):
 		errors.append("%s selfOnly 只能是我方非全体且不点选" % action_name)
+	var target_mode := str(target.get("targetMode", ""))
+	if target.has("targetMode") and typeof(target.get("targetMode")) != TYPE_STRING:
+		errors.append("%s.target.targetMode 必须是字符串" % action_name)
+	if target_mode == TARGET_MODE_ENEMY_RANDOM_RANGE:
+		if not can_enemy or requires_selection:
+			errors.append("%s.target enemy_random_range 必须是不点选敌方目标" % action_name)
+		if not target.has("minTargets") or not target.has("maxTargets"):
+			errors.append("%s.target 需要 minTargets/maxTargets" % action_name)
+		else:
+			var min_targets := int(target.get("minTargets", 0))
+			var max_targets := int(target.get("maxTargets", 0))
+			if min_targets < 1 or max_targets < min_targets:
+				errors.append("%s.target 需要有效 minTargets/maxTargets" % action_name)
+	if target_mode == TARGET_MODE_BATTLEFIELD and (can_ally or can_enemy or requires_selection or self_only):
+		errors.append("%s.target battlefield 不能要求单位目标" % action_name)
 
 
 static func _validate_effect(action: Dictionary, effect: Dictionary, errors: Array[String]) -> void:
 	var effect_type := str(effect.get("type", ""))
 	if effect_type == "":
 		errors.append("%s.effect.type 不能为空" % _action_name(action, -1))
-	if not ["damage", "heal", "poison", "status", "cleanse", "defend", "capture"].has(effect_type):
+	if not ["damage", "heal", "poison", "status", "cleanse", "defend", "capture", "field_effect"].has(effect_type):
 		errors.append("%s.effect.type 无效: %s" % [_action_name(action, -1), effect_type])
 	if ["heal", "poison"].has(effect_type) and not effect.has("amount"):
 		errors.append("%s.%s 必须配置 amount" % [_action_name(action, -1), effect_type])
@@ -264,10 +363,26 @@ static func _validate_effect(action: Dictionary, effect: Dictionary, errors: Arr
 		errors.append("%s.effect.amount 必须是数字" % _action_name(action, -1))
 	if effect.has("amountBonus") and typeof(effect.get("amountBonus")) != TYPE_FLOAT and typeof(effect.get("amountBonus")) != TYPE_INT:
 		errors.append("%s.effect.amountBonus 必须是数字" % _action_name(action, -1))
+	if effect.has("powerMultiplier") and typeof(effect.get("powerMultiplier")) != TYPE_FLOAT and typeof(effect.get("powerMultiplier")) != TYPE_INT:
+		errors.append("%s.effect.powerMultiplier 必须是数字" % _action_name(action, -1))
+	if effect.has("criticalDamageMultiplier") and typeof(effect.get("criticalDamageMultiplier")) != TYPE_FLOAT and typeof(effect.get("criticalDamageMultiplier")) != TYPE_INT:
+		errors.append("%s.effect.criticalDamageMultiplier 必须是数字" % _action_name(action, -1))
 	if ["poison", "status"].has(effect_type):
 		_validate_status_effect(action, effect, errors)
 	if effect_type == "cleanse":
 		_validate_cleanse_effect(action, effect, errors)
+	if effect_type == "field_effect":
+		_validate_field_effect(action, effect, errors)
+
+
+static func _validate_field_effect(action: Dictionary, effect: Dictionary, errors: Array[String]) -> void:
+	var action_name := _action_name(action, -1)
+	if str(effect.get("fieldEffectId", "")) == "":
+		errors.append("%s.effect.fieldEffectId 不能为空" % action_name)
+	if not ["fire", "water", "earth", "wind"].has(str(effect.get("element", ""))):
+		errors.append("%s.effect.element 无效: %s" % [action_name, str(effect.get("element", ""))])
+	if not effect.has("turns") or typeof(effect.get("turns")) != TYPE_FLOAT and typeof(effect.get("turns")) != TYPE_INT or int(effect.get("turns", 0)) <= 0:
+		errors.append("%s.effect.turns 必须是正数" % action_name)
 
 
 static func _validate_status_effect(action: Dictionary, effect: Dictionary, errors: Array[String]) -> void:
@@ -338,6 +453,7 @@ static func _validate_required_actions(seen_ids: Dictionary, errors: Array[Strin
 		"item_poison_single_5",
 		"item_poison_all_5",
 		"item_cleanse_single_5",
+		"weapon_shadow_group_shot",
 	]:
 		if not seen_ids.has(required_id):
 			errors.append("缺少当前战斗需要的动作: %s" % required_id)

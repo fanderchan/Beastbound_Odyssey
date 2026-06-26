@@ -43,6 +43,7 @@
       "name": "潮回洞穴顶层",
       "rects": [[20, 6, 4, 3]],
       "encounterRate": 1.0,
+      "manualOnly": true,
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "tide_echo_guardian_group",
@@ -62,6 +63,23 @@
     }
   ],
   "interactionPoints": [
+    {
+      "id": "tide_echo_guardian_npc",
+      "name": "潮回守护兽",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [21, 7],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "tide_echo_guardian_floor",
+      "encounterGroupId": "tide_echo_guardian_group",
+      "option": "挑战",
+      "dialog": [
+        "潮回守护兽镇守着水之戒。",
+        "击败它才能取得任务物品。"
+      ]
+    },
     {
       "id": "tide_echo_stair_4_to_3",
       "name": "潮回洞穴三层",

@@ -44,6 +44,7 @@
       "name": "岚息洞穴顶层",
       "rects": [[20, 6, 4, 3]],
       "encounterRate": 1.0,
+      "manualOnly": true,
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "gale_breath_guardian_group",
@@ -63,6 +64,23 @@
     }
   ],
   "interactionPoints": [
+    {
+      "id": "gale_breath_guardian_npc",
+      "name": "岚息守护兽",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [21, 7],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "gale_breath_guardian_floor",
+      "encounterGroupId": "gale_breath_guardian_group",
+      "option": "挑战",
+      "dialog": [
+        "岚息守护兽镇守着风之戒。",
+        "击败它才能取得任务物品。"
+      ]
+    },
     {
       "id": "gale_breath_stair_4_to_3",
       "name": "岚息洞穴三层",

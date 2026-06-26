@@ -44,6 +44,7 @@
       "name": "焰心洞穴顶层",
       "rects": [[20, 6, 4, 3]],
       "encounterRate": 1.0,
+      "manualOnly": true,
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "ember_core_guardian_group",
@@ -63,6 +64,23 @@
     }
   ],
   "interactionPoints": [
+    {
+      "id": "ember_core_guardian_npc",
+      "name": "焰心守护兽",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [21, 7],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "ember_core_guardian_floor",
+      "encounterGroupId": "ember_core_guardian_group",
+      "option": "挑战",
+      "dialog": [
+        "焰心守护兽镇守着火之戒。",
+        "击败它才能取得任务物品。"
+      ]
+    },
     {
       "id": "ember_core_stair_4_to_3",
       "name": "焰心洞穴三层",

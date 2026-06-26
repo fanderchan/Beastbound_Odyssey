@@ -323,8 +323,10 @@
         "attack": 32,
         "quick": 5
       },
+      "attackActionId": "weapon_shadow_group_shot",
+      "battleActionIds": ["weapon_shadow_group_shot"],
       "durabilityMax": 50,
-      "description": "六转试炼奖励，后续会接入群体攻击技能表现。"
+      "description": "六转试炼奖励，攻击时可随机攻击6-10个目标。"
     },
     {
       "id": "item_player_exp_pill_lv131",
