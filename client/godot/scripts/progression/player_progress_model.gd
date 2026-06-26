@@ -11,6 +11,7 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
@@ -29,6 +30,18 @@ const PET_STATE_STORAGE := "storage"
 const BATTLE_PLAYER_ACTOR_ID := "ally_player"
 const BATTLE_PET_ACTOR_ID := "ally_pet"
 const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
+const PET_INDIVIDUAL_FIELD_KEYS: Array[String] = [
+	"growthTierId",
+	"growthTierLabel",
+	"individualSeed",
+	"individualVariance",
+	"individualQualityScore",
+	"individualQualityLabel",
+	"initialStats",
+	"growthRecord",
+	"combatPower",
+	"combatPowerBreakdown",
+]
 const PARTY_LIMIT := 5
 const STORAGE_LIMIT := 20
 const PET_NAME_MAX_LENGTH := 8
@@ -3732,6 +3745,20 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		int(instance.get("quick", 0)),
 	])
 	lines.append(PetPowerModel.combat_power_label_for_pet(instance))
+	lines.append("成长档：%s    个体：%s" % [
+		str(instance.get("growthTierLabel", growth_profile_label(str(instance.get("growthProfileId", ""))))),
+		str(instance.get("individualQualityLabel", "普通")),
+	])
+	var initial_stats = instance.get("initialStats", {})
+	if initial_stats is Dictionary:
+		var initial := initial_stats as Dictionary
+		lines.append("初始四维：生命 %d    攻击 %d    防御 %d    敏捷 %d" % [
+			int(initial.get("maxHp", 0)),
+			int(initial.get("attack", 0)),
+			int(initial.get("defense", 0)),
+			int(initial.get("quick", 0)),
+		])
+	lines.append(PetPowerModel.combat_power_source_label_for_pet(instance))
 	lines.append("经验：%d/%d" % [
 		int(instance.get("exp", 0)),
 		int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1))))),
@@ -3800,23 +3827,7 @@ static func pet_codex_detail_lines(instance: Dictionary) -> Array[String]:
 
 
 static func growth_profile_label(profile_id: String) -> String:
-	var normalized := profile_id.to_lower()
-	if normalized == "":
-		return "未记录"
-	if normalized == "balanced":
-		return "均衡"
-	var labels: Array[String] = []
-	if normalized.find("attack") >= 0:
-		labels.append("攻击")
-	if normalized.find("agility") >= 0 or normalized.find("quick") >= 0 or normalized.find("speed") >= 0:
-		labels.append("敏捷")
-	if normalized.find("defense") >= 0:
-		labels.append("防御")
-	if normalized.find("hp") >= 0 or normalized.find("health") >= 0 or normalized.find("stamina") >= 0 or normalized.find("survival") >= 0:
-		labels.append("生命")
-	if labels.is_empty():
-		return "未记录"
-	return " / ".join(labels)
+	return PetIndividualGrowthModel.growth_tier_label(profile_id)
 
 
 static func pet_stats_for_form_level(form_id: String, level: int) -> Dictionary:
@@ -3832,22 +3843,9 @@ static func pet_stats_for_form_level(form_id: String, level: int) -> Dictionary:
 
 
 static func _pet_stats_for_template_level(template: Dictionary, level: int) -> Dictionary:
-	var stats = template.get("baseStats", {})
-	var stats_dict := stats as Dictionary if stats is Dictionary else {}
-	var base := {
-		"maxHp": maxi(1, int(stats_dict.get("maxHp", 1))),
-		"attack": maxi(1, int(stats_dict.get("attack", 12))),
-		"defense": maxi(1, int(stats_dict.get("defense", 6))),
-		"quick": maxi(1, int(stats_dict.get("agility", stats_dict.get("quick", 50)))),
-	}
 	var rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
-	var level_bonus := maxi(0, clampi(level, 1, MAX_PET_LEVEL) - 1)
-	return {
-		"maxHp": maxi(1, int(round(float(base.get("maxHp", 1)) + float(rates.get("maxHp", 0.0)) * float(level_bonus)))),
-		"attack": maxi(1, int(round(float(base.get("attack", 1)) + float(rates.get("attack", 0.0)) * float(level_bonus)))),
-		"defense": maxi(1, int(round(float(base.get("defense", 1)) + float(rates.get("defense", 0.0)) * float(level_bonus)))),
-		"quick": maxi(1, int(round(float(base.get("quick", 1)) + float(rates.get("quick", 0.0)) * float(level_bonus)))),
-	}
+	var snapshot := PetIndividualGrowthModel.growth_snapshot(template, {}, level, rates, str(template.get("formId", template.get("id", ""))))
+	return snapshot.get("finalStats", {})
 
 
 static func _pet_growth_rates(profile_id: String) -> Dictionary:
@@ -4177,6 +4175,9 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 	actor["activeSkillIds"] = _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
 	actor["petSkillSlots"] = pet_skill_slots_for_instance(instance)
 	actor["petBattleState"] = PET_STATE_BATTLE
+	for key in PET_INDIVIDUAL_FIELD_KEYS:
+		if instance.has(key):
+			actor[key] = instance.get(key)
 	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
 
 
@@ -4752,7 +4753,9 @@ static func _merge_battle_pet_party(profile: Dictionary, state: Dictionary) -> D
 			var instance := instances[index] as Dictionary
 			if str(instance.get("instanceId", "")) != instance_id:
 				continue
-			for key in ["name", "state", "hp", "maxHp", "quick", "attack", "defense", "formId", "templateId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "forgottenSkillIds", "passiveSkillIds"]:
+			var copy_keys: Array[String] = ["name", "state", "hp", "maxHp", "quick", "attack", "defense", "formId", "templateId", "lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "forgottenSkillIds", "passiveSkillIds"]
+			copy_keys.append_array(PET_INDIVIDUAL_FIELD_KEYS)
+			for key in copy_keys:
 				if entry.has(key):
 					instance[key] = entry.get(key)
 			instances[index] = instance
@@ -4915,12 +4918,14 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 			state_name = PET_STATE_STORAGE
 		else:
 			can_keep = false
+		var capture_serial := serial - 1
 		var captured := _pet_instance_from_form(instance_id, str(actor.get("name", actor.get("formName", "宠物"))), form_id, state_name, maxi(1, int(actor.get("level", 1))), {
 			"hp": maxi(1, int(actor.get("maxHp", actor.get("hp", 1)))),
 			"maxHp": int(actor.get("maxHp", 1)),
 			"quick": int(actor.get("quick", 50)),
 			"attack": int(actor.get("attack", 12)),
 			"defense": int(actor.get("defense", 6)),
+			"individualSeed": _capture_individual_seed(state, actor, capture_serial),
 		})
 		if captured.is_empty():
 			continue
@@ -4947,12 +4952,30 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 	}
 
 
+static func _capture_individual_seed(state: Dictionary, actor: Dictionary, capture_serial: int) -> String:
+	return "capture:%s:%s:%s:%d:%d" % [
+		str(state.get("id", "battle")),
+		str(state.get("sourceZoneId", state.get("sourceEncounterGroupId", ""))),
+		str(actor.get("formId", actor.get("templateId", ""))),
+		maxi(1, int(actor.get("level", 1))),
+		maxi(1, capture_serial),
+	]
+
+
 static func _pet_instance_from_form(instance_id: String, pet_name: String, form_id: String, state: String, level: int, stat_overrides: Dictionary = {}) -> Dictionary:
 	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
 	if template.is_empty():
 		return {}
 	var level_value := clampi(level, 1, MAX_PET_LEVEL)
-	var grown_stats := _pet_stats_for_template_level(template, level_value)
+	var seed := str(stat_overrides.get("individualSeed", instance_id)).strip_edges()
+	var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
+	var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, {
+		"instanceId": instance_id,
+		"formId": form_id,
+		"individualSeed": seed,
+		"individualVariance": stat_overrides.get("individualVariance", {}),
+	}, level_value, growth_rates, seed)
+	var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
 	var max_hp := maxi(1, int(grown_stats.get("maxHp", 1)))
 	var hp := int(stat_overrides.get("hp", max_hp))
 	if stat_overrides.has("maxHp") and hp >= maxi(1, int(stat_overrides.get("maxHp", max_hp))):
@@ -4972,6 +4995,14 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		"quick": int(grown_stats.get("quick", 1)),
 		"attack": int(grown_stats.get("attack", 1)),
 		"defense": int(grown_stats.get("defense", 1)),
+		"growthTierId": str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced"))),
+		"growthTierLabel": str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", ""))))),
+		"individualSeed": seed,
+		"individualVariance": growth_snapshot.get("individualVariance", {}),
+		"individualQualityScore": int(growth_snapshot.get("individualQualityScore", 5000)),
+		"individualQualityLabel": str(growth_snapshot.get("individualQualityLabel", "普通")),
+		"initialStats": growth_snapshot.get("initialStats", {}),
+		"growthRecord": growth_snapshot.get("growthRecord", {}),
 	}
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if template.has(key):
@@ -4998,13 +5029,23 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
 	var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
 	var missing_hp := maxi(0, old_max_hp - old_hp)
-	var grown_stats := _pet_stats_for_template_level(template, int(instance.get("level", 1)))
+	var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
+	var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, instance, int(instance.get("level", 1)), growth_rates, instance_id)
+	var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
 	var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
 	instance["maxHp"] = grown_max_hp
 	instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
 	instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
 	instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
 	instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
+	instance["growthTierId"] = str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced")))
+	instance["growthTierLabel"] = str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", "")))))
+	instance["individualSeed"] = str(growth_snapshot.get("individualSeed", instance_id))
+	instance["individualVariance"] = growth_snapshot.get("individualVariance", {})
+	instance["individualQualityScore"] = int(growth_snapshot.get("individualQualityScore", 5000))
+	instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
+	instance["initialStats"] = growth_snapshot.get("initialStats", {})
+	instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
@@ -5026,6 +5067,7 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["forgottenSkillIds"] = forgotten
 	instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, instance.get("petSkillSlots", template.get("petSkillSlots", [])))
 	instance["combatPower"] = PetPowerModel.combat_power_for_pet(instance)
+	instance["combatPowerBreakdown"] = PetPowerModel.combat_power_breakdown_for_pet(instance)
 	return instance
 
 

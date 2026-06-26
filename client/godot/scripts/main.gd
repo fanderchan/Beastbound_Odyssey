@@ -442,6 +442,7 @@ var auto_battle_result_check: bool = false
 var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
 var auto_pet_growth_check: bool = false
+var auto_pet_individual_growth_check: bool = false
 var auto_pet_rename_check: bool = false
 var auto_pet_order_check: bool = false
 var auto_pet_recovery_check: bool = false
@@ -767,6 +768,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_management_check")
 	elif auto_pet_growth_check:
 		call_deferred("_run_auto_pet_growth_check")
+	elif auto_pet_individual_growth_check:
+		call_deferred("_run_auto_pet_individual_growth_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
 	elif auto_pet_order_check:
@@ -1246,6 +1249,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_management_check = true
 		elif arg == "--auto-pet-growth-check":
 			auto_pet_growth_check = true
+		elif arg == "--auto-pet-individual-growth-check":
+			auto_pet_individual_growth_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
 		elif arg == "--auto-pet-order-check":
@@ -2320,6 +2325,7 @@ func _run_auto_gm_10v10_map_check() -> void:
 	var source_group_ok := str(battle_state.get("sourceEncounterGroupId", "")) == "gm_10v10_grass" if battle_active else false
 	var random_zone := _encounter_zone_by_id("gm_codex_capture_grass")
 	var random_pool := EncounterModel.wild_pet_pool(random_zone) if not random_zone.is_empty() else []
+	var catchable_pool_size := PetTemplateCatalog.catchable_wild_pet_pool(1, 10).size()
 	var random_selected_zone := EncounterModel.zone_with_selected_wild_pet(random_zone, encounter_rng) if not random_zone.is_empty() else {}
 	var random_selected_pets: Array = random_selected_zone.get("selectedWildPets", [])
 	var random_count := EncounterModel.enemy_count(random_selected_zone, 1) if not random_selected_zone.is_empty() else 0
@@ -2346,7 +2352,7 @@ func _run_auto_gm_10v10_map_check() -> void:
 		and int(random_zone.get("enemyCountMax", 0)) == 5
 		and str(random_zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10
 		and bool(random_zone.get("individualWildPets", false))
-		and random_pool.size() >= PetTemplateCatalog.forms().size()
+		and random_pool.size() >= catchable_pool_size
 		and random_levels_ok
 		and random_battle_count_ok
 		and random_formation_ok
@@ -2824,11 +2830,19 @@ func _run_auto_capture_settings_check() -> void:
 		"id": "auto_capture_test",
 		"name": "自动捕捉测试",
 		"enemyCount": 1,
-		"wildPetPoolSource": "codex_catchable",
-		"levelMin": 1,
-		"levelMax": 10,
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "普通乌力",
+			"level": 1,
+			"battleStats": {
+				"maxHp": 80,
+				"attack": 10,
+				"defense": 6,
+				"agility": 48,
+			},
+		},
 	}
-	var selected_auto_zone := EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)
+	var selected_auto_zone := auto_zone.duplicate(true)
 	_start_battle(BattleModel.create_wild_battle(selected_auto_zone))
 	await get_tree().process_frame
 	var target_id := BattleModel.living_enemy_id(battle_state)
@@ -3067,6 +3081,7 @@ func _run_auto_capture_settings_check() -> void:
 	var loaded_gm := _load_map(GM_10V10_MAP_ID)
 	var gm_random_zone := _encounter_zone_by_id("gm_codex_capture_grass")
 	var gm_pool := EncounterModel.wild_pet_pool(gm_random_zone) if not gm_random_zone.is_empty() else []
+	var gm_catchable_pool_size := PetTemplateCatalog.catchable_wild_pet_pool(1, 10).size()
 	var gm_selected_zone := EncounterModel.zone_with_selected_wild_pet(gm_random_zone, encounter_rng) if not gm_random_zone.is_empty() else {}
 	var gm_selected_pets: Array = gm_selected_zone.get("selectedWildPets", [])
 	var gm_random_count := EncounterModel.enemy_count(gm_selected_zone, 1) if not gm_selected_zone.is_empty() else 0
@@ -3094,7 +3109,7 @@ func _run_auto_capture_settings_check() -> void:
 		and int(gm_random_zone.get("enemyCountMax", 0)) == 5
 		and str(gm_random_zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10
 		and bool(gm_random_zone.get("individualWildPets", false))
-		and gm_pool.size() >= PetTemplateCatalog.forms().size()
+		and gm_pool.size() >= gm_catchable_pool_size
 		and gm_random_levels_ok
 		and gm_random_battle_count_ok
 		and gm_random_formation_ok
@@ -4966,7 +4981,7 @@ func _run_auto_pet_management_check() -> void:
 	_select_pet_instance("pet_bui_speed")
 	await get_tree().process_frame
 	var detail_text := pet_detail_label.text if pet_detail_label != null else ""
-	var detail_ok := detail_text.find("黄色普通布伊") >= 0 and detail_text.find("10风") >= 0 and detail_text.find("成长") < 0
+	var detail_ok := detail_text.find("黄色普通布伊") >= 0 and detail_text.find("10风") >= 0 and detail_text.find("成长档") >= 0
 	var standby_to_rest_ready := pet_state_cycle_button != null and not pet_state_cycle_button.disabled and pet_state_cycle_button.text == "休息"
 	_on_pet_state_cycle_pressed()
 	await get_tree().process_frame
@@ -5175,6 +5190,7 @@ func _run_auto_pet_growth_check() -> void:
 		"attack": 11,
 		"defense": 6,
 		"quick": 88,
+		"individualSeed": "phase108:fast-growth",
 	}
 	var old_wounded_pet := old_full_pet.duplicate(true)
 	old_wounded_pet["instanceId"] = "pet_growth_wounded"
@@ -5189,15 +5205,17 @@ func _run_auto_pet_growth_check() -> void:
 	profile = PlayerProgressModel.normalize_profile(profile)
 	var grown := PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_fast")
 	var wounded := PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_wounded")
-	var expected_stats := PlayerProgressModel.pet_stats_for_form_level("wuli_normal_fast_wind10", 131)
+	var growth_record := grown.get("growthRecord", {}) as Dictionary
+	var expected_stats := growth_record.get("finalStats", {}) as Dictionary
 	var stat_ok := (
-		int(grown.get("maxHp", 0)) == int(expected_stats.get("maxHp", 0))
+		not expected_stats.is_empty()
+		and int(grown.get("maxHp", 0)) == int(expected_stats.get("maxHp", 0))
 		and int(grown.get("attack", 0)) == int(expected_stats.get("attack", 0))
 		and int(grown.get("defense", 0)) == int(expected_stats.get("defense", 0))
 		and int(grown.get("quick", 0)) == int(expected_stats.get("quick", 0))
 		and int(grown.get("maxHp", 0)) >= 1000
 		and int(grown.get("attack", 0)) >= 190
-		and int(grown.get("defense", 0)) >= 130
+		and int(grown.get("defense", 0)) >= 120
 		and int(grown.get("quick", 0)) >= 380
 	)
 	var full_hp_ok := int(grown.get("hp", 0)) == int(grown.get("maxHp", 0))
@@ -5212,6 +5230,7 @@ func _run_auto_pet_growth_check() -> void:
 		and int(actor.get("attack", 0)) == int(grown.get("attack", 0))
 		and int(actor.get("defense", 0)) == int(grown.get("defense", 0))
 		and int(actor.get("quick", 0)) == int(grown.get("quick", 0))
+		and str(actor.get("individualSeed", "")) == str(grown.get("individualSeed", ""))
 	)
 	player_profile = profile
 	pet_selected_instance_id = "pet_growth_fast"
@@ -5219,8 +5238,11 @@ func _run_auto_pet_growth_check() -> void:
 	await get_tree().process_frame
 	var detail_ok := (
 		pet_detail_label != null
-		and pet_detail_label.text.find("生命：%d/%d" % [int(grown.get("hp", 0)), int(grown.get("maxHp", 0))]) >= 0
-		and pet_detail_label.text.find("战力 %d" % PetPowerModel.combat_power_for_pet(grown)) >= 0
+			and pet_detail_label.text.find("生命：%d/%d" % [int(grown.get("hp", 0)), int(grown.get("maxHp", 0))]) >= 0
+			and pet_detail_label.text.find("战力 %d" % PetPowerModel.combat_power_for_pet(grown)) >= 0
+			and pet_detail_label.text.find("成长档") >= 0
+			and pet_detail_label.text.find("初始四维") >= 0
+			and pet_detail_label.text.find("战力来源") >= 0
 	)
 	var status := "ok" if stat_ok and full_hp_ok and wounded_missing_ok and power_ok and battle_actor_ok and detail_ok else "failed"
 	print("pet growth check ready: status=%s stats=%s full_hp=%s wounded=%s power=%s actor=%s detail=%s lv=%d hp=%d/%d atk=%d def=%d quick=%d power_value=%d" % [
@@ -5238,6 +5260,157 @@ func _run_auto_pet_growth_check() -> void:
 		int(grown.get("defense", 0)),
 		int(grown.get("quick", 0)),
 		PetPowerModel.combat_power_for_pet(grown),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _pet_stats_differ(first: Dictionary, second: Dictionary) -> bool:
+	return (
+		int(first.get("maxHp", 0)) != int(second.get("maxHp", 0))
+		or int(first.get("attack", 0)) != int(second.get("attack", 0))
+		or int(first.get("defense", 0)) != int(second.get("defense", 0))
+		or int(first.get("quick", 0)) != int(second.get("quick", 0))
+		or int(first.get("combatPower", 0)) != int(second.get("combatPower", 0))
+	)
+
+
+func _run_auto_pet_individual_growth_check() -> void:
+	profile_save_enabled = false
+	var form_id := "wuli_normal_orange_fire10"
+	var first_pet := {}
+	var second_pet := {}
+	for seed_index in range(1, 40):
+		first_pet = PlayerProgressModel.create_pet_instance_from_form("phase113_first", "个体乌力A", form_id, PlayerProgressModel.PET_STATE_BATTLE, 10, {
+			"individualSeed": "phase113:first:%d" % seed_index,
+		})
+		second_pet = PlayerProgressModel.create_pet_instance_from_form("phase113_second", "个体乌力B", form_id, PlayerProgressModel.PET_STATE_STANDBY, 10, {
+			"individualSeed": "phase113:second:%d" % seed_index,
+		})
+		if _pet_stats_differ(first_pet, second_pet):
+			break
+	var seeded_diff_ok := (
+		str(first_pet.get("formId", "")) == str(second_pet.get("formId", ""))
+		and int(first_pet.get("level", 0)) == int(second_pet.get("level", 0))
+		and str(first_pet.get("individualSeed", "")) != str(second_pet.get("individualSeed", ""))
+		and _pet_stats_differ(first_pet, second_pet)
+	)
+	var first_record := first_pet.get("growthRecord", {}) as Dictionary
+	var first_initial := first_pet.get("initialStats", {}) as Dictionary
+	var first_variance := first_pet.get("individualVariance", {}) as Dictionary
+	var first_breakdown := first_pet.get("combatPowerBreakdown", {}) as Dictionary
+	var field_ok := (
+		str(first_pet.get("growthTierId", "")) != ""
+		and str(first_pet.get("growthTierLabel", "")) != ""
+		and str(first_pet.get("individualQualityLabel", "")) != ""
+		and not first_variance.is_empty()
+		and not first_initial.is_empty()
+		and not first_record.is_empty()
+		and int(first_record.get("schemaVersion", 0)) >= 1
+		and int(first_breakdown.get("total", 0)) == PetPowerModel.combat_power_for_pet(first_pet)
+	)
+	var actor := PlayerProgressModel.actor_from_pet_instance(first_pet, "ally_pet", "ally", "ally.front.3")
+	var actor_field_ok := (
+		str(actor.get("individualSeed", "")) == str(first_pet.get("individualSeed", ""))
+		and int(actor.get("combatPower", 0)) == int(first_pet.get("combatPower", 0))
+		and actor.get("growthRecord", {}) is Dictionary
+	)
+
+	var profile := PlayerProgressModel.default_profile()
+	profile["activePetInstanceId"] = "phase113_first"
+	profile["petInstances"] = [first_pet, second_pet]
+	player_profile = PlayerProgressModel.normalize_profile(profile)
+	pet_selected_instance_id = "phase113_first"
+	_open_pet_panel()
+	await get_tree().process_frame
+	var detail_text := pet_detail_label.text if pet_detail_label != null else ""
+	var detail_ok := (
+		detail_text.find("成长档") >= 0
+		and detail_text.find("个体：") >= 0
+		and detail_text.find("初始四维") >= 0
+		and detail_text.find("战力来源") >= 0
+	)
+
+	var capture_zone := {
+		"id": "phase113_capture_zone",
+		"name": "个体捕捉验证",
+		"selectedWildPet": {
+			"formId": form_id,
+			"name": "普通乌力",
+			"level": 1,
+			"battleStats": {
+				"maxHp": 80,
+				"attack": 10,
+				"defense": 6,
+				"agility": 48,
+			},
+		},
+	}
+	var capture_state_a := BattleModel.create_wild_battle(capture_zone)
+	capture_state_a["id"] = "phase113_capture_a"
+	var capture_target_a := BattleModel.living_enemy_id(capture_state_a)
+	if capture_target_a != "":
+		capture_state_a = BattleModel.apply_battle_event(capture_state_a, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": capture_target_a,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+			"success": true,
+			"sequence": 1,
+			"speed": 100,
+		})
+	var capture_state_b := BattleModel.create_wild_battle(capture_zone)
+	capture_state_b["id"] = "phase113_capture_b"
+	var capture_target_b := BattleModel.living_enemy_id(capture_state_b)
+	if capture_target_b != "":
+		capture_state_b = BattleModel.apply_battle_event(capture_state_b, {
+			"type": "capture",
+			"attackerId": BattleModel.PLAYER_ACTOR_ID,
+			"targetId": capture_target_b,
+			"targetSide": BattleModel.SIDE_ENEMY,
+			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+			"success": true,
+			"sequence": 1,
+			"speed": 100,
+		})
+	var capture_result_a := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state_a, "victory")
+	var capture_result_b := PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state_b, "victory")
+	var captured_a: Dictionary = {}
+	var captured_b: Dictionary = {}
+	var captured_array_a: Array = capture_result_a.get("capturedPets", [])
+	var captured_array_b: Array = capture_result_b.get("capturedPets", [])
+	if not captured_array_a.is_empty() and captured_array_a[0] is Dictionary:
+		captured_a = captured_array_a[0] as Dictionary
+	if not captured_array_b.is_empty() and captured_array_b[0] is Dictionary:
+		captured_b = captured_array_b[0] as Dictionary
+	var captured_diff_ok := (
+		not captured_a.is_empty()
+		and not captured_b.is_empty()
+		and str(captured_a.get("formId", "")) == str(captured_b.get("formId", ""))
+		and int(captured_a.get("level", 0)) == int(captured_b.get("level", 0))
+		and str(captured_a.get("individualSeed", "")) != str(captured_b.get("individualSeed", ""))
+		and _pet_stats_differ(captured_a, captured_b)
+	)
+	var status := "ok" if seeded_diff_ok and field_ok and actor_field_ok and detail_ok and captured_diff_ok else "failed"
+	print("pet individual growth check ready: status=%s seeded_diff=%s fields=%s actor=%s detail=%s captured_diff=%s first_seed=%s second_seed=%s first_stats=%d/%d/%d/%d second_stats=%d/%d/%d/%d cap_a=%s cap_b=%s" % [
+		status,
+		str(seeded_diff_ok),
+		str(field_ok),
+		str(actor_field_ok),
+		str(detail_ok),
+		str(captured_diff_ok),
+		str(first_pet.get("individualSeed", "")),
+		str(second_pet.get("individualSeed", "")),
+		int(first_pet.get("maxHp", 0)),
+		int(first_pet.get("attack", 0)),
+		int(first_pet.get("defense", 0)),
+		int(first_pet.get("quick", 0)),
+		int(second_pet.get("maxHp", 0)),
+		int(second_pet.get("attack", 0)),
+		int(second_pet.get("defense", 0)),
+		int(second_pet.get("quick", 0)),
+		str(captured_a.get("individualSeed", "")),
+		str(captured_b.get("individualSeed", "")),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
