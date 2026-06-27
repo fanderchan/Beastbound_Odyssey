@@ -1,10 +1,30 @@
 {
   "schemaVersion": 1,
+  "_comment": "战斗公式配置。JSON 不能写 // 注释；给人看的说明统一放在 _comment / _fieldNotes 字段里，代码会忽略这些说明字段。概率字段 0.05 表示 5%。",
+  "_fieldNotes": {
+    "activeFormulaId": "当前启用的战斗公式 id。想做大改时建议新增 combat_v2，再切这个字段，不要直接覆盖 combat_v1。",
+    "formulas": "战斗公式列表。每个公式由物理伤害、回避、暴击、合击、群攻、状态命中几块组成。",
+    "elementMatchup": "地水火风属性克制关系和倍率，影响属性伤害修正。"
+  },
   "activeFormulaId": "combat_v1",
   "formulas": [
     {
       "id": "combat_v1",
+      "_comment": "combat_v1 是 Phase123-134 的基线公式，目标是稳定和可回归测试。大幅改战斗手感时建议复制一份为 combat_v2。",
       "physicalDamage": {
+        "_comment": "普通攻击和单体物理技能的基础伤害。核心思路是：攻击力/技能威力先算 raw，再减去目标防御的一部分，最后套防御、等级、守护等修正。",
+        "_fieldNotes": {
+          "flatPower": "固定威力加成。提高后所有普通攻击会更痛；当前为 0。",
+          "powerMultiplier": "攻击方攻击力倍率。1.0 表示按 100% 攻击力计算，1.2 就是整体提高 20%。",
+          "defaultDefenseFactor": "普通攻击计算时，目标防御有多少比例用于减伤。0.35 表示扣除目标防御的 35%。",
+          "petSkillDefenseFactor": "宠物物理技能计算时，目标防御有多少比例用于减伤。越低技能越容易打穿防御。",
+          "roundDefenseBeforeSubtract": "是否先把防御减伤值四舍五入再相减。为 true 时更接近旧行为。",
+          "levelDifferenceMultiplierPerLevel": "等级差每级带来的伤害倍率变化。当前 0 表示等级差不直接放大伤害。",
+          "levelMultiplierMin": "等级差伤害倍率下限。",
+          "levelMultiplierMax": "等级差伤害倍率上限。",
+          "guardMultiplier": "防御/守护时受到的伤害倍率。0.45 表示防御后约吃 45% 伤害。",
+          "guardRounding": "防御减伤后的取整方式；floor 表示向下取整。"
+        },
         "flatPower": 0,
         "powerMultiplier": 1.0,
         "defaultDefenseFactor": 0.35,
@@ -17,6 +37,15 @@
         "guardRounding": "floor"
       },
       "dodge": {
+        "_comment": "回避率。当前模式用双方敏捷做平方根竞争，敏捷优势越大越容易回避，但受 minRate/maxRate 限制。",
+        "_fieldNotes": {
+          "mode": "quick_contest_sqrt 表示使用敏捷竞争公式。",
+          "baseRate": "基础回避率。0.03 表示至少从 3% 起算，再叠加敏捷差。",
+          "quickDifferenceWeight": "敏捷差对回避率的线性影响权重，越高敏捷差越重要。",
+          "dexDivisor": "敏捷竞争公式的缩放参数；越小通常会让敏捷差更敏感。",
+          "minRate": "回避率下限，避免完全 0%。",
+          "maxRate": "回避率上限，避免高敏目标无限闪避。"
+        },
         "mode": "quick_contest_sqrt",
         "baseRate": 0.03,
         "quickDifferenceWeight": 0.002,
@@ -25,6 +54,17 @@
         "maxRate": 0.75
       },
       "critical": {
+        "_comment": "暴击率和暴击伤害。当前同样用敏捷竞争计算暴击概率；群攻暴击伤害可以单独压低。",
+        "_fieldNotes": {
+          "mode": "quick_contest_sqrt 表示使用敏捷竞争公式。",
+          "baseRate": "基础暴击率。0.05 表示 5%。",
+          "quickDifferenceWeight": "攻击方敏捷高于目标时提高暴击率的权重。",
+          "dexDivisor": "敏捷竞争公式的缩放参数。",
+          "minRate": "暴击率下限。",
+          "maxRate": "暴击率上限。",
+          "damageMultiplier": "普通单体暴击伤害倍率。1.35 表示 135%。",
+          "multiTargetDamageMultiplier": "群攻暴击伤害倍率。1.0 表示群攻即使出现会心表现，也不额外放大伤害。"
+        },
         "mode": "quick_contest_sqrt",
         "baseRate": 0.05,
         "quickDifferenceWeight": 0.0015,
@@ -35,6 +75,14 @@
         "multiTargetDamageMultiplier": 1.0
       },
       "combo": {
+        "_comment": "合击触发率和合击伤害加成。合击本身会把多个参与者的攻击伤害相加，再额外加固定奖励。",
+        "_fieldNotes": {
+          "allyBaseRate": "我方/玩家/宠物发起攻击时的基础合击率。0.50 表示 50%。",
+          "monsterBaseRate": "野怪/敌方发起攻击时的基础合击率。",
+          "bonusPerExtraParticipant": "每多一个合击参与者带来的百分比伤害加成。当前 0 表示不做百分比放大。",
+          "flatBonusPerExtraParticipant": "每多一个合击参与者增加的固定伤害。",
+          "maxParticipants": "一次合击最多参与人数。"
+        },
         "allyBaseRate": 0.50,
         "monsterBaseRate": 0.20,
         "bonusPerExtraParticipant": 0.0,
@@ -42,11 +90,27 @@
         "maxParticipants": 5
       },
       "multiTarget": {
+        "_comment": "群体攻击修正。主要给弓/群攻技能使用，避免目标越多时伤害过高或过低。",
+        "_fieldNotes": {
+          "applyPowerMultiplierAfterDefense": "是否先算防御减伤，再套群攻威力倍率。",
+          "targetCountFalloffPerExtra": "每多一个目标时的递减比例。0 表示不按目标数量递减。",
+          "minMultiplier": "群攻伤害倍率下限，避免递减后伤害太低。"
+        },
         "applyPowerMultiplierAfterDefense": true,
         "targetCountFalloffPerExtra": 0.0,
         "minMultiplier": 0.45
       },
       "statusHit": {
+        "_comment": "毒、睡眠、混乱等状态命中率修正。第一版仍以技能基础命中 - 抗性为主，敏捷差和等级差暂时不参与。",
+        "_fieldNotes": {
+          "mode": "legacy_base_minus_resistance 表示旧式基础命中减抗性。",
+          "quickDifferenceWeight": "敏捷差影响状态命中的权重。当前 0 表示不影响。",
+          "quickDifferenceBonusMin": "敏捷差命中修正下限，当前预留。",
+          "quickDifferenceBonusMax": "敏捷差命中修正上限，当前预留。",
+          "levelDifferenceWeight": "等级差影响状态命中的权重。当前 0 表示不影响。",
+          "controlMaxRate": "控制类状态最高命中率。",
+          "poisonMaxRate": "中毒类状态最高命中率。"
+        },
         "mode": "legacy_base_minus_resistance",
         "quickDifferenceWeight": 0.0,
         "quickDifferenceBonusMin": -0.05,
@@ -58,6 +122,13 @@
     }
   ],
   "elementMatchup": {
+    "_comment": "属性克制表。含义是 strong 克 weak；例如 earth 克 water。伤害方属性克制目标时用 strongMultiplier，被克时用 weakMultiplier。",
+    "_fieldNotes": {
+      "cycle": "克制环。当前：地克水、水克火、火克风、风克地。",
+      "strongMultiplier": "属性克制时伤害倍率。",
+      "weakMultiplier": "属性被克时伤害倍率。",
+      "neutralMultiplier": "没有克制关系时的倍率。"
+    },
     "cycle": [
       {"strong": "earth", "weak": "water"},
       {"strong": "water", "weak": "fire"},

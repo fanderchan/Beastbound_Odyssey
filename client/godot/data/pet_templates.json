@@ -14,6 +14,12 @@
       "passiveSkillId": "wuli_hard_shell"
     },
     {
+      "lineId": "man_dragon",
+      "lineName": "人龙系",
+      "description": "高攻高速的长期培养宠物，当前用于成长观察测试。",
+      "passiveSkillId": "wuli_hard_shell"
+    },
+    {
       "lineId": "rebirth_beast",
       "lineName": "转生兽系",
       "description": "玄影洞窟中出现的试炼兽，完成对应转生仪式时需要捕捉。",
@@ -40,6 +46,13 @@
       "subtypeName": "普通乌力",
       "lineId": "wuli",
       "battleRole": "wild_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
+      "subtypeId": "man_dragon_blue",
+      "subtypeName": "蓝人龙",
+      "lineId": "man_dragon",
+      "battleRole": "growth_test_pet",
       "activeSkillIds": ["pet_attack", "pet_defend"]
     },
     {
@@ -133,6 +146,7 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "rebirth_starter_earth_cub_v1",
       "baseStats": {
         "maxHp": 150,
         "attack": 14,
@@ -226,6 +240,33 @@
       }
     },
     {
+      "formId": "blue_man_dragon_water10",
+      "formName": "蓝人龙",
+      "lineId": "man_dragon",
+      "subtypeId": "man_dragon_blue",
+      "elements": {
+        "fire": 0,
+        "water": 10,
+        "earth": 0,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "blue_man_dragon_v1",
+      "baseStats": {
+        "maxHp": 60,
+        "attack": 14,
+        "defense": 8,
+        "agility": 6
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 55
+      },
+      "visual": {
+        "placeholderPalette": "wuli_fast"
+      }
+    },
+    {
       "formId": "rebirth_beast_earth_lv50",
       "formName": "地灵转生兽",
       "lineId": "rebirth_beast",
@@ -263,6 +304,7 @@
         "wind": 0
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "rebirth_starter_water_cub_v1",
       "baseStats": {
         "maxHp": 500,
         "attack": 72,
@@ -289,6 +331,7 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "rebirth_starter_fire_cub_v1",
       "baseStats": {
         "maxHp": 480,
         "attack": 96,
@@ -315,6 +358,7 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "rebirth_starter_wind_cub_v1",
       "baseStats": {
         "maxHp": 470,
         "attack": 78,

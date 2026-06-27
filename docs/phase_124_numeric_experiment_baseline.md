@@ -25,7 +25,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 | 指标 | 当前值 | 解释 |
 |---|---:|---|
 | Active Balance Set | phase123_core_v1 | Phase133 后作为 Phase123-133 核心数值骨架版本 |
-| 数值源指纹 | cc7388f7d3a1 | Phase134 当前 11 个核心源文件 SHA-256 digest 前 12 位 |
+| 数值源指纹 | 3f31226909bf | Phase134 当前 12 个核心源文件 SHA-256 digest 前 12 位 |
 | 战斗公式版本 | combat_v1 | 严格旧行为 parity；新平衡应另开 combat_v2 |
 | 奖励经济版本 | battle_exp_v1 | 战斗经验、石币、经济账本当前口径 |
 | Lv80 累计经验 / Lv140 累计经验 | 2.91% | 人物转生循环点和宠物长期满级点已明显分层 |

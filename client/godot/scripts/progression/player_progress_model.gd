@@ -14,6 +14,7 @@ const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetCultivationModel := preload("res://scripts/progression/pet_cultivation_model.gd")
+const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
@@ -44,6 +45,12 @@ const PET_INDIVIDUAL_FIELD_KEYS: Array[String] = [
 	"individualQualityLabel",
 	"initialStats",
 	"growthRecord",
+	"growthSpeciesProfileId",
+	"growthSpeciesSeed",
+	"growthSpeciesSampleNo",
+	"growthSpeciesRoll",
+	"growthSpeciesLevel1Stats",
+	"growthObservation",
 	"combatPower",
 	"combatPowerBreakdown",
 ]
@@ -4575,6 +4582,115 @@ static func create_pet_instance_from_form(instance_id: String, pet_name: String,
 	return _pet_instance_from_form(instance_id, pet_name, form_id, state, level, stat_overrides)
 
 
+static func gm_grant_blue_man_dragon(profile: Dictionary) -> Dictionary:
+	return gm_grant_growth_pet(profile, PetGrowthObservationModel.DEFAULT_PROFILE_ID)
+
+
+static func gm_grant_growth_pet(profile: Dictionary, growth_profile_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var profile_id := growth_profile_id.strip_edges()
+	var growth_profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
+	if growth_profile.is_empty():
+		return {"ok": false, "profile": normalized, "message": "成长档不存在：%s。" % profile_id}
+	var form_id := str(growth_profile.get("formId", PetGrowthObservationModel.DEFAULT_FORM_ID)).strip_edges()
+	if form_id == "":
+		return {"ok": false, "profile": normalized, "message": "%s 没有配置测试形态。" % str(growth_profile.get("displayName", profile_id))}
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 对应宠物形态不存在。" % str(growth_profile.get("displayName", profile_id))}
+	var pet_name := str(template.get("formName", growth_profile.get("displayName", "宠物")))
+	var party_count := party_pet_instances(normalized).size()
+	var storage_count := storage_pet_instances(normalized).size()
+	var state := PET_STATE_STANDBY
+	if party_count >= PARTY_LIMIT:
+		if storage_count >= STORAGE_LIMIT:
+			return {"ok": false, "profile": normalized, "message": "队伍和兽栏都满了，无法领取%s。" % pet_name}
+		state = PET_STATE_STORAGE
+	var serial := maxi(int(normalized.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(normalized)))
+	var instance_id := "pet_gm_%s_%d" % [_safe_id_part(profile_id), serial]
+	var seed := "gm_growth_pet:%s:%d" % [profile_id, serial]
+	var instance := PetGrowthObservationModel.create_pet_instance(
+		profile_id,
+		instance_id,
+		form_id,
+		pet_name,
+		state,
+		1,
+		seed,
+		serial
+	)
+	if instance.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 成长档未就绪。" % pet_name}
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+		if template.has(key):
+			instance[key] = template.get(key)
+	instance["capturedSerial"] = serial
+	instance["isNew"] = true
+	var instances: Array = normalized.get("petInstances", [])
+	instances.append(instance)
+	normalized["petInstances"] = instances
+	normalized["nextPetInstanceSerial"] = serial + 1
+	normalized = _with_codex_form_recorded(normalized, form_id, true)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"instanceId": instance_id,
+		"pet": pet_instance_by_id(normalized, instance_id),
+		"message": "获得 Lv1 %s，已加入%s。" % [pet_name, "兽栏" if state == PET_STATE_STORAGE else "队伍"],
+	}
+
+
+static func gm_level_up_growth_pet_once(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		if str(instance.get("growthSpeciesProfileId", "")) == "":
+			return {"ok": false, "profile": normalized, "message": "%s 不是成长观察宠物。" % str(instance.get("name", "宠物"))}
+		if int(instance.get("level", 1)) >= MAX_PET_LEVEL:
+			return {"ok": false, "profile": normalized, "message": "%s 已满级。" % str(instance.get("name", "宠物"))}
+		var next_instance := PetGrowthObservationModel.level_up_once(instance, MAX_PET_LEVEL)
+		next_instance["exp"] = 0
+		next_instance["nextExp"] = exp_to_next_level(int(next_instance.get("level", 1)))
+		instances[index] = next_instance
+		normalized["petInstances"] = instances
+		normalized = normalize_profile(normalized)
+		var updated := pet_instance_by_id(normalized, instance_id)
+		var observation = updated.get("growthObservation", {})
+		var overall := str((observation as Dictionary).get("overallGrade", "未观察")) if observation is Dictionary else "未观察"
+		return {
+			"ok": true,
+			"profile": normalized,
+			"pet": updated,
+			"message": "%s 升到 Lv%d，成长评价 %s。" % [
+				str(updated.get("name", "宠物")),
+				int(updated.get("level", 1)),
+				overall,
+			],
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
+static func _safe_id_part(value: String) -> String:
+	var result := ""
+	var text := value.to_lower().strip_edges()
+	for index in range(text.length()):
+		var code := text.unicode_at(index)
+		var allowed := (
+			(code >= 48 and code <= 57)
+			or (code >= 97 and code <= 122)
+			or code == 95
+		)
+		result += text.substr(index, 1) if allowed else "_"
+	return result if result != "" else "growth_pet"
+
+
 static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var normalized := profile.duplicate(true)
 	normalized["schemaVersion"] = PROFILE_SCHEMA_VERSION
@@ -5708,6 +5824,26 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		return {}
 	var level_value := clampi(level, 1, MAX_PET_LEVEL)
 	var seed := str(stat_overrides.get("individualSeed", instance_id)).strip_edges()
+	var species_profile_id := str(template.get("growthSpeciesProfileId", "")).strip_edges()
+	if species_profile_id != "":
+		var species_instance := PetGrowthObservationModel.create_pet_instance(
+			species_profile_id,
+			instance_id,
+			form_id,
+			pet_name if pet_name != "" else str(template.get("formName", "宠物")),
+			state,
+			level_value,
+			seed,
+			int(stat_overrides.get("capturedSerial", 0))
+		)
+		if species_instance.is_empty():
+			return {}
+		for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+			if template.has(key):
+				species_instance[key] = template.get(key)
+		if stat_overrides.has("hp"):
+			species_instance["hp"] = clampi(int(stat_overrides.get("hp", species_instance.get("hp", 1))), 0, maxi(1, int(species_instance.get("maxHp", 1))))
+		return _normalize_pet_instance(species_instance)
 	var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
 	var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, {
 		"instanceId": instance_id,
@@ -5766,26 +5902,31 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["level"] = clampi(int(instance.get("level", 1)), 1, MAX_PET_LEVEL)
 	instance["exp"] = maxi(0, int(instance.get("exp", 0)))
 	instance["nextExp"] = exp_to_next_level(int(instance.get("level", 1)))
-	var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
-	var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
-	var missing_hp := maxi(0, old_max_hp - old_hp)
-	var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
-	var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, instance, int(instance.get("level", 1)), growth_rates, instance_id)
-	var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
-	var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
-	instance["maxHp"] = grown_max_hp
-	instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
-	instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
-	instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
-	instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
-	instance["growthTierId"] = str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced")))
-	instance["growthTierLabel"] = str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", "")))))
-	instance["individualSeed"] = str(growth_snapshot.get("individualSeed", instance_id))
-	instance["individualVariance"] = growth_snapshot.get("individualVariance", {})
-	instance["individualQualityScore"] = int(growth_snapshot.get("individualQualityScore", 5000))
-	instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
-	instance["initialStats"] = growth_snapshot.get("initialStats", {})
-	instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
+	var species_profile_id := str(instance.get("growthSpeciesProfileId", template.get("growthSpeciesProfileId", ""))).strip_edges()
+	if species_profile_id != "":
+		instance["growthSpeciesProfileId"] = species_profile_id
+		instance = PetGrowthObservationModel.normalize_pet_instance(instance, template)
+	else:
+		var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
+		var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
+		var missing_hp := maxi(0, old_max_hp - old_hp)
+		var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
+		var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, instance, int(instance.get("level", 1)), growth_rates, instance_id)
+		var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
+		var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
+		instance["maxHp"] = grown_max_hp
+		instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
+		instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
+		instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
+		instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
+		instance["growthTierId"] = str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced")))
+		instance["growthTierLabel"] = str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", "")))))
+		instance["individualSeed"] = str(growth_snapshot.get("individualSeed", instance_id))
+		instance["individualVariance"] = growth_snapshot.get("individualVariance", {})
+		instance["individualQualityScore"] = int(growth_snapshot.get("individualQualityScore", 5000))
+		instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
+		instance["initialStats"] = growth_snapshot.get("initialStats", {})
+		instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
 	var cultivation := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
 	instance["petCultivation"] = cultivation
 	var last_cultivation_result = instance.get("lastCultivationResult", cultivation.get("lastResult", {}))
@@ -5794,7 +5935,7 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	instance["locked"] = bool(instance.get("locked", false))
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
 	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))

@@ -764,13 +764,13 @@ BalanceCatalogModel.balance_snapshot_summary()
 当前参与 digest 的核心源文件数量：
 
 ```text
-sourceCount=11
+sourceCount=12
 ```
 
 当前窄测结果：
 
 ```text
---auto-balance-version-receipt-check: status=ok version=true receipt=true projection=true receipts=1 formula=combat_v1 digest=cc7388f7d3a1 sources=11 driver=table errors=
+--auto-balance-version-receipt-check: status=ok version=true receipt=true projection=true receipts=1 formula=combat_v1 digest=3f31226909bf sources=12 driver=table errors=
 ```
 
 接入口径：

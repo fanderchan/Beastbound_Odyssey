@@ -5,6 +5,7 @@ const BALANCE_SETS_PATH := BALANCE_DIR + "/balance_sets.json"
 const LEVEL_CURVES_PATH := BALANCE_DIR + "/level_curves.json"
 const PLAYER_GROWTH_PATH := BALANCE_DIR + "/player_growth.json"
 const PET_GROWTH_PROFILES_PATH := BALANCE_DIR + "/pet_growth_profiles.json"
+const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_profiles.json"
 const COMBAT_FORMULAS_PATH := BALANCE_DIR + "/combat_formulas.json"
 const CAPTURE_FORMULA_PATH := BALANCE_DIR + "/capture_formula.json"
 const REWARD_ECONOMY_PATH := BALANCE_DIR + "/reward_economy.json"
@@ -18,6 +19,7 @@ const CORE_NUMERIC_DIGEST_PATHS: Array[String] = [
 	LEVEL_CURVES_PATH,
 	PLAYER_GROWTH_PATH,
 	PET_GROWTH_PROFILES_PATH,
+	PET_GROWTH_SPECIES_PROFILES_PATH,
 	COMBAT_FORMULAS_PATH,
 	CAPTURE_FORMULA_PATH,
 	REWARD_ECONOMY_PATH,
@@ -48,6 +50,10 @@ static func player_growth() -> Dictionary:
 
 static func pet_growth_profiles() -> Dictionary:
 	return _data(PET_GROWTH_PROFILES_PATH)
+
+
+static func pet_growth_species_profiles() -> Dictionary:
+	return _data(PET_GROWTH_SPECIES_PROFILES_PATH)
 
 
 static func combat_formulas() -> Dictionary:
@@ -330,6 +336,24 @@ static func pet_growth_profile_list() -> Array[Dictionary]:
 	return result
 
 
+static func pet_growth_species_profile(profile_id: String) -> Dictionary:
+	var normalized := profile_id.strip_edges()
+	for profile in pet_growth_species_profile_list():
+		if str(profile.get("profileId", "")) == normalized:
+			return profile.duplicate(true)
+	return {}
+
+
+static func pet_growth_species_profile_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_profiles = pet_growth_species_profiles().get("profiles", [])
+	if raw_profiles is Array:
+		for value in raw_profiles:
+			if value is Dictionary:
+				result.append((value as Dictionary).duplicate(true))
+	return result
+
+
 static func pet_power_formula() -> Dictionary:
 	var catalog := pet_growth_profiles()
 	var active_id := str(catalog.get("activePowerFormula", ""))
@@ -403,6 +427,7 @@ static func validation_errors() -> Array[String]:
 	_validate_level_curves(errors)
 	_validate_player_growth(errors)
 	_validate_pet_growth_profiles(errors)
+	_validate_pet_growth_species_profiles(errors)
 	_validate_combat_formulas(errors)
 	_validate_capture_formula(errors)
 	_validate_reward_economy(errors)
@@ -528,6 +553,60 @@ static func _validate_pet_growth_profiles(errors: Array[String]) -> void:
 		var growth_range := pet_growth_bonus_range(key, 0.0, 0.0)
 		if float(growth_range.get("min", 0.0)) > float(growth_range.get("max", 0.0)):
 			errors.append("pet_growth_profiles.individualVariance.growthBonus.%s 无效" % key)
+
+
+static func _validate_pet_growth_species_profiles(errors: Array[String]) -> void:
+	var data := pet_growth_species_profiles()
+	if data.is_empty():
+		errors.append("pet_growth_species_profiles.json 缺失或不是 JSON 对象")
+		return
+	var seen := {}
+	for profile in pet_growth_species_profile_list():
+		var profile_id := str(profile.get("profileId", "")).strip_edges()
+		if profile_id == "":
+			errors.append("pet_growth_species profileId 不能为空")
+			continue
+		if seen.has(profile_id):
+			errors.append("pet_growth_species profileId 重复: %s" % profile_id)
+		seen[profile_id] = true
+		var base := profile.get("outputBase", {}) as Dictionary
+		var growth := profile.get("outputGrowth", {}) as Dictionary
+		var rules := profile.get("individualRules", {}) as Dictionary
+		var initial := rules.get("initialOutputSpread", {}) as Dictionary
+		var growth_spread := rules.get("growthOutputSpread", {}) as Dictionary
+		var observation := profile.get("growthObservation", {}) as Dictionary
+		for key in STAT_KEYS:
+			if float(base.get(key, 0.0)) <= 0.0:
+				errors.append("%s.outputBase.%s 必须大于0" % [profile_id, key])
+			if float(growth.get(key, -1.0)) < 0.0:
+				errors.append("%s.outputGrowth.%s 无效" % [profile_id, key])
+			if not _range_value_valid(initial.get(key, [])):
+				errors.append("%s.initialOutputSpread.%s 无效" % [profile_id, key])
+			if not _range_value_valid(growth_spread.get(key, [])):
+				errors.append("%s.growthOutputSpread.%s 无效" % [profile_id, key])
+		if not observation.is_empty():
+			var by_level := observation.get("powerGrowthPercentilesByLevel", {}) as Dictionary
+			var level_min := clampi(int(observation.get("levelMin", 2)), 2, 140)
+			var level_max := clampi(int(observation.get("levelMax", 140)), level_min, 140)
+			if by_level.is_empty():
+				errors.append("%s.growthObservation 缺少 powerGrowthPercentilesByLevel" % profile_id)
+			for level in range(level_min, level_max + 1):
+				var thresholds := by_level.get(str(level), {}) as Dictionary
+				if thresholds.is_empty():
+					errors.append("%s.growthObservation 缺少 Lv%d 阈值" % [profile_id, level])
+					break
+				var last := -INF
+				for threshold_key in ["min", "p25", "p55", "p85", "p95", "max"]:
+					if not thresholds.has(threshold_key):
+						errors.append("%s.growthObservation.Lv%d 缺少 %s" % [profile_id, level, threshold_key])
+						break
+					var value := float(thresholds.get(threshold_key, 0.0))
+					if value < last:
+						errors.append("%s.growthObservation.Lv%d 阈值顺序错误" % [profile_id, level])
+						break
+					last = value
+	if seen.is_empty():
+		errors.append("pet_growth_species_profiles 至少需要一个 profile")
 
 
 static func _validate_combat_formulas(errors: Array[String]) -> void:
@@ -783,6 +862,15 @@ static func _number_range_for_key(ranges: Dictionary, stat_key: String, fallback
 	if as_int:
 		return {"min": int(round(min_value)), "max": int(round(max_value))}
 	return {"min": min_value, "max": max_value}
+
+
+static func _range_value_valid(value) -> bool:
+	if not (value is Array):
+		return false
+	var values := value as Array
+	if values.size() < 2:
+		return false
+	return float(values[0]) <= float(values[1])
 
 
 static func _int_pair(value, fallback_min: int, fallback_max: int) -> Array[int]:

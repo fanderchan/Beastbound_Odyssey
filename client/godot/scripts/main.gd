@@ -27,6 +27,9 @@ const NumericBalanceGateModel := preload("res://scripts/progression/numeric_bala
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
+const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
+const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
@@ -71,6 +74,7 @@ const ACTION_BAR_SIZE := Vector2(566, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
+const PET_MANAGEMENT_PANEL_MAX_SIZE := Vector2(980.0, 560.0)
 const WORLD_LOG_MAX_LINES := 80
 const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
@@ -79,6 +83,7 @@ const CHAT_CHANNEL_TEAM := "team"
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
+const PET_DETAIL_MODE_GROWTH := "growth"
 const PET_FILTER_ALL := "all"
 const PET_FILTER_PARTY := "party"
 const PET_FILTER_STORAGE := "storage"
@@ -298,6 +303,9 @@ var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
 var pet_detail_instance_button: Button
 var pet_detail_codex_button: Button
+var pet_detail_growth_button: Button
+var pet_growth_table_grid: GridContainer
+var pet_growth_radar: Control
 var pet_state_cycle_button: Button
 var pet_stable_button: Button
 var pet_party_up_button: Button
@@ -401,6 +409,12 @@ var qa_detail_scroll: ScrollContainer
 var qa_detail_label: RichTextLabel
 var qa_close_button: Button
 var qa_entry_buttons: Dictionary = {}
+var qa_pet_species_option: OptionButton
+var qa_pet_target_option: OptionButton
+var qa_pet_grant_button: Button
+var qa_pet_level_up_button: Button
+var qa_pet_growth_profile_id: String = ""
+var qa_pet_level_instance_id: String = ""
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
@@ -536,6 +550,10 @@ var auto_server_profile_contract_check: bool = false
 var auto_balance_version_receipt_check: bool = false
 var auto_balance_snapshot_digest_check: bool = false
 var auto_balance_catalog_check: bool = false
+var auto_pet_growth_threshold_check: bool = false
+var auto_pet_growth_observation_check: bool = false
+var auto_pet_growth_species_simulation_check: bool = false
+var auto_pet_growth_starter_profiles_check: bool = false
 var auto_numeric_experiment_report_check: bool = false
 var auto_combat_formula_parity_check: bool = false
 var auto_combat_formula_driver_ab_check: bool = false
@@ -955,6 +973,14 @@ func _ready() -> void:
 		call_deferred("_run_auto_balance_snapshot_digest_check")
 	elif auto_balance_catalog_check:
 		call_deferred("_run_auto_balance_catalog_check")
+	elif auto_pet_growth_threshold_check:
+		call_deferred("_run_auto_pet_growth_threshold_check")
+	elif auto_pet_growth_observation_check:
+		call_deferred("_run_auto_pet_growth_observation_check")
+	elif auto_pet_growth_species_simulation_check:
+		call_deferred("_run_auto_pet_growth_species_simulation_check")
+	elif auto_pet_growth_starter_profiles_check:
+		call_deferred("_run_auto_pet_growth_starter_profiles_check")
 	elif auto_numeric_experiment_report_check:
 		call_deferred("_run_numeric_experiment_report", true)
 	elif auto_combat_formula_parity_check:
@@ -1478,6 +1504,14 @@ func _apply_preview_window_args() -> void:
 			auto_balance_snapshot_digest_check = true
 		elif arg == "--auto-balance-catalog-check":
 			auto_balance_catalog_check = true
+		elif arg == "--auto-pet-growth-threshold-check":
+			auto_pet_growth_threshold_check = true
+		elif arg == "--auto-pet-growth-observation-check":
+			auto_pet_growth_observation_check = true
+		elif arg == "--auto-pet-growth-species-simulation-check":
+			auto_pet_growth_species_simulation_check = true
+		elif arg == "--auto-pet-growth-starter-profiles-check":
+			auto_pet_growth_starter_profiles_check = true
 		elif arg == "--auto-numeric-experiment-report-check":
 			auto_numeric_experiment_report_check = true
 		elif arg == "--auto-combat-formula-parity-check":
@@ -4097,6 +4131,15 @@ func _option_button_has_item_text(option: OptionButton, needle: String) -> bool:
 	return false
 
 
+func _option_button_has_metadata(option: OptionButton, metadata_text: String) -> bool:
+	if option == null:
+		return false
+	for index in range(option.get_item_count()):
+		if str(option.get_item_metadata(index)) == metadata_text:
+			return true
+	return false
+
+
 func _run_auto_balance_catalog_check() -> void:
 	BalanceCatalogModel.reload()
 	var errors := BalanceCatalogModel.validation_errors()
@@ -4204,6 +4247,204 @@ func _run_numeric_experiment_report(check_only: bool = false) -> void:
 		economy_ledger_samples.size(),
 		int(economy_ledger_summary.get("repeatableNetPositive", 0)),
 		capture_rows.size(),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_observation_check() -> void:
+	player_profile = PlayerProgressModel.default_profile()
+	var grant := PlayerProgressModel.gm_grant_blue_man_dragon(player_profile)
+	player_profile = grant.get("profile", player_profile)
+	var instance_id := str(grant.get("instanceId", ""))
+	var level_up_ok := true
+	for _i in range(10):
+		var level_result := PlayerProgressModel.gm_level_up_growth_pet_once(player_profile, instance_id)
+		player_profile = level_result.get("profile", player_profile)
+		if not bool(level_result.get("ok", false)):
+			level_up_ok = false
+			break
+	pet_selected_instance_id = instance_id
+	pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	_open_pet_panel(false)
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+	var observation = selected.get("growthObservation", {})
+	var observation_dict := observation as Dictionary if observation is Dictionary else {}
+	var csv := PetGrowthObservationModel.write_observation_csv(PetGrowthObservationModel.DEFAULT_PROFILE_ID, 100)
+	var table_text := ""
+	if pet_growth_table_grid != null:
+		for child in pet_growth_table_grid.get_children():
+			if child is Label:
+				table_text += " " + (child as Label).text
+	var table_ok := (
+		pet_growth_table_grid != null
+		and pet_growth_table_grid.visible
+		and pet_growth_table_grid.get_child_count() >= 36
+		and table_text.find("初始") >= 0
+		and table_text.find("当前") >= 0
+		and table_text.find("预测140") >= 0
+		and table_text.find("成长/级") >= 0
+		and table_text.find("生命") >= 0
+		and table_text.find("战力") >= 0
+	)
+	var ui_ok := (
+		pet_panel != null
+		and pet_panel.visible
+		and pet_detail_growth_button != null
+		and pet_detail_growth_button.button_pressed
+		and pet_growth_radar != null
+		and pet_growth_radar.visible
+		and pet_detail_label != null
+		and pet_detail_label.text.contains("成长评价")
+		and table_ok
+	)
+	var status := "ok" if bool(grant.get("ok", false)) and level_up_ok and not selected.is_empty() and int(selected.get("level", 1)) == 11 and bool(csv.get("ok", false)) and ui_ok else "failed"
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s table=%s level=%d overall=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s" % [
+		status,
+		str(bool(grant.get("ok", false))),
+		str(level_up_ok),
+		str(ui_ok),
+		str(table_ok),
+		int(selected.get("level", 0)),
+		str(observation_dict.get("overallGrade", "")),
+		str((observation_dict.get("statGrades", {}) as Dictionary).get("maxHp", "")) if observation_dict.has("statGrades") else "",
+		str((observation_dict.get("statGrades", {}) as Dictionary).get("attack", "")) if observation_dict.has("statGrades") else "",
+		str((observation_dict.get("statGrades", {}) as Dictionary).get("defense", "")) if observation_dict.has("statGrades") else "",
+		str((observation_dict.get("statGrades", {}) as Dictionary).get("quick", "")) if observation_dict.has("statGrades") else "",
+		str(csv.get("path", "")),
+		int(csv.get("rows", 0)),
+		str(csv.get("error", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_threshold_check() -> void:
+	var result := PetGrowthObservationModel.write_power_growth_percentile_table(PetGrowthObservationModel.DEFAULT_PROFILE_ID, PetGrowthObservationModel.DEFAULT_THRESHOLD_SAMPLE_COUNT)
+	var table := result.get("table", {}) as Dictionary
+	var by_level := table.get("powerGrowthPercentilesByLevel", {}) as Dictionary
+	var lv140 := by_level.get("140", {}) as Dictionary
+	var status := "ok" if bool(result.get("ok", false)) and not lv140.is_empty() else "failed"
+	print("pet growth threshold ready: status=%s profile=%s samples=%d levels=%d path=%s lv140_min=%.3f p25=%.3f p55=%.3f p85=%.3f p95=%.3f max=%.3f error=%s" % [
+		status,
+		str(table.get("profileId", "")),
+		int(table.get("sampleCount", 0)),
+		by_level.keys().size(),
+		str(result.get("path", "")),
+		float(lv140.get("min", 0.0)),
+		float(lv140.get("p25", 0.0)),
+		float(lv140.get("p55", 0.0)),
+		float(lv140.get("p85", 0.0)),
+		float(lv140.get("p95", 0.0)),
+		float(lv140.get("max", 0.0)),
+		str(result.get("error", "")),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_species_simulation_check() -> void:
+	var result := PetGrowthSpeciesSimulationModel.run_default()
+	var report := result.get("report", {}) as Dictionary
+	var errors: Array = result.get("errors", [])
+	var outputs := report.get("outputs", {}) as Dictionary
+	var quality_counts := report.get("qualityCounts", {}) as Dictionary
+	var lv1_summary := {}
+	var lv140_summary := {}
+	var summaries: Array = report.get("levelSummaries", [])
+	for value in summaries:
+		if not (value is Dictionary):
+			continue
+		var summary := value as Dictionary
+		if int(summary.get("level", 0)) == 1:
+			lv1_summary = summary
+		elif int(summary.get("level", 0)) == 140:
+			lv140_summary = summary
+	var lv1_hp := (lv1_summary.get("maxHp", {}) as Dictionary) if lv1_summary.has("maxHp") else {}
+	var lv140_power := (lv140_summary.get("combatPower", {}) as Dictionary) if lv140_summary.has("combatPower") else {}
+	var growth_summaries := report.get("growthSummaries", {}) as Dictionary
+	var hp_growth := (growth_summaries.get("hpGrowthPerLevel", {}) as Dictionary) if growth_summaries.has("hpGrowthPerLevel") else {}
+	var three_growth := (growth_summaries.get("threeStatGrowthPerLevel", {}) as Dictionary) if growth_summaries.has("threeStatGrowthPerLevel") else {}
+	var status := "ok" if errors.is_empty() else "failed"
+	print("pet growth species simulation ready: status=%s profile=%s rows=%d samples=%d levels=%d json=%s csv=%s lv1_hp=%d-%d avg=%.2f hp_growth=%.3f-%.3f avg=%.3f three_growth=%.3f-%.3f avg=%.3f lv140_power=%d-%d avg=%.2f quality=S%d/A%d/B%d/C%d/D%d errors=%s" % [
+		status,
+		str(report.get("profileId", "")),
+		int(report.get("rowCount", 0)),
+		int(report.get("sampleCount", 0)),
+		int(report.get("levelCount", 0)),
+		str(outputs.get("json", "")),
+		str(outputs.get("csv", "")),
+		int(lv1_hp.get("min", 0)),
+		int(lv1_hp.get("max", 0)),
+		float(lv1_hp.get("avg", 0.0)),
+		float(hp_growth.get("min", 0.0)),
+		float(hp_growth.get("max", 0.0)),
+		float(hp_growth.get("avg", 0.0)),
+		float(three_growth.get("min", 0.0)),
+		float(three_growth.get("max", 0.0)),
+		float(three_growth.get("avg", 0.0)),
+		int(lv140_power.get("min", 0)),
+		int(lv140_power.get("max", 0)),
+		float(lv140_power.get("avg", 0.0)),
+		int(quality_counts.get("S", 0)),
+		int(quality_counts.get("A", 0)),
+		int(quality_counts.get("B", 0)),
+		int(quality_counts.get("C", 0)),
+		int(quality_counts.get("D", 0)),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_starter_profiles_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var profile_ids := [
+		"rebirth_starter_earth_cub_v1",
+		"rebirth_starter_water_cub_v1",
+		"rebirth_starter_fire_cub_v1",
+		"rebirth_starter_wind_cub_v1",
+	]
+	var errors: Array[String] = []
+	var csv_paths: Array[String] = []
+	var granted_names: Array[String] = []
+	for profile_id in profile_ids:
+		var profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
+		if profile.is_empty():
+			errors.append("缺少成长档 %s" % profile_id)
+			continue
+		if str(profile.get("formId", "")).strip_edges() == "":
+			errors.append("%s 缺少 formId" % profile_id)
+		var grant := PlayerProgressModel.gm_grant_growth_pet(player_profile, profile_id)
+		player_profile = grant.get("profile", player_profile)
+		if not bool(grant.get("ok", false)):
+			errors.append(str(grant.get("message", "发放失败")))
+			continue
+		var instance_id := str(grant.get("instanceId", ""))
+		var level_up := PlayerProgressModel.gm_level_up_growth_pet_once(player_profile, instance_id)
+		player_profile = level_up.get("profile", player_profile)
+		var instance := PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+		if not bool(level_up.get("ok", false)) or int(instance.get("level", 1)) != 2:
+			errors.append("%s 升级检查失败" % profile_id)
+		if str(instance.get("growthSpeciesProfileId", "")) != profile_id:
+			errors.append("%s 实例成长档错误" % profile_id)
+		if str((instance.get("growthObservation", {}) as Dictionary).get("overallGrade", "")) == "":
+			errors.append("%s 缺少成长观察" % profile_id)
+		granted_names.append("%sLv%d" % [str(instance.get("name", "")), int(instance.get("level", 0))])
+		var csv := PetGrowthObservationModel.write_observation_csv(
+			profile_id,
+			100,
+			"res://../../.run/godot/pet_growth_%s_100.csv" % profile_id
+		)
+		if not bool(csv.get("ok", false)) or int(csv.get("rows", 0)) != 14000:
+			errors.append("%s CSV 导出失败: %s" % [profile_id, str(csv.get("error", ""))])
+		else:
+			csv_paths.append(str(csv.get("path", "")))
+	var status := "ok" if errors.is_empty() else "failed"
+	print("pet growth starter profiles ready: status=%s profiles=%d granted=%s csv_count=%d csv=%s errors=%s" % [
+		status,
+		profile_ids.size(),
+		"/".join(granted_names),
+		csv_paths.size(),
+		" | ".join(csv_paths),
 		";".join(errors),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -6623,19 +6864,23 @@ func _run_auto_pet_codex_detail_check() -> void:
 	var tabs_ready := (
 		pet_detail_instance_button != null
 		and pet_detail_codex_button != null
+		and pet_detail_growth_button != null
 		and pet_detail_instance_button.visible
 		and pet_detail_codex_button.visible
+		and pet_detail_growth_button.visible
 		and pet_detail_instance_button.text == "个体"
 		and pet_detail_codex_button.text == "图鉴"
+		and pet_detail_growth_button.text == "成长"
 		and pet_detail_instance_button.button_pressed
 		and not pet_detail_codex_button.button_pressed
+		and not pet_detail_growth_button.button_pressed
 	)
 	var instance_ok := (
 		instance_text.find("黄色普通布伊") >= 0
 		and instance_text.find("Lv1") >= 0
-		and instance_text.find("生命：130/130") >= 0
-		and instance_text.find("经验：0/120") >= 0
-		and instance_text.find("成长") < 0
+		and instance_text.find("生命：") >= 0
+		and instance_text.find("经验：") >= 0
+		and instance_text.find("图鉴：") < 0
 	)
 
 	_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
@@ -6645,8 +6890,10 @@ func _run_auto_pet_codex_detail_check() -> void:
 	var codex_buttons_ok := (
 		pet_detail_instance_button != null
 		and pet_detail_codex_button != null
+		and pet_detail_growth_button != null
 		and not pet_detail_instance_button.button_pressed
 		and pet_detail_codex_button.button_pressed
+		and not pet_detail_growth_button.button_pressed
 	)
 	var codex_ok := (
 		codex_text.find("图鉴：黄色普通布伊") >= 0
@@ -6661,7 +6908,24 @@ func _run_auto_pet_codex_detail_check() -> void:
 		and codex_text.find("被动技能: [抗性皮肤]") >= 0
 	)
 	var raw_hidden := codex_text.find("bui_normal_yellow_wind10") < 0 and codex_text.find("agility_high") < 0
-	var action_y_stable := absf(instance_button_y - codex_button_y) < 1.0
+	_set_pet_detail_mode(PET_DETAIL_MODE_GROWTH)
+	await get_tree().process_frame
+	var growth_text := pet_detail_label.text if pet_detail_label != null else ""
+	var growth_button_y := pet_state_cycle_button.global_position.y if pet_state_cycle_button != null else -3.0
+	var growth_buttons_ok := (
+		pet_detail_instance_button != null
+		and pet_detail_codex_button != null
+		and pet_detail_growth_button != null
+		and not pet_detail_instance_button.button_pressed
+		and not pet_detail_codex_button.button_pressed
+		and pet_detail_growth_button.button_pressed
+	)
+	var growth_ok := (
+		growth_text.find("暂无成长观察档") >= 0
+		and pet_growth_radar != null
+		and pet_growth_radar.visible
+	)
+	var action_y_stable := absf(instance_button_y - codex_button_y) < 1.0 and absf(instance_button_y - growth_button_y) < 1.0
 
 	_set_pet_detail_mode(PET_DETAIL_MODE_INSTANCE)
 	await get_tree().process_frame
@@ -6669,19 +6933,23 @@ func _run_auto_pet_codex_detail_check() -> void:
 	var returned_ok := (
 		pet_detail_instance_button != null
 		and pet_detail_codex_button != null
+		and pet_detail_growth_button != null
 		and pet_detail_instance_button.button_pressed
 		and not pet_detail_codex_button.button_pressed
+		and not pet_detail_growth_button.button_pressed
 		and returned_text == instance_text
 	)
 	var growth_mix_label_ok := PlayerProgressModel.growth_profile_label("attack_agility") == "攻击 / 敏捷"
-	var status := "ok" if tabs_ready and instance_ok and codex_buttons_ok and codex_ok and raw_hidden and action_y_stable and returned_ok and growth_mix_label_ok else "failed"
-	print("pet codex detail check ready: status=%s tabs=%s instance=%s codex_buttons=%s codex=%s raw_hidden=%s action_y=%s returned=%s mixed_growth=%s" % [
+	var status := "ok" if tabs_ready and instance_ok and codex_buttons_ok and codex_ok and raw_hidden and growth_buttons_ok and growth_ok and action_y_stable and returned_ok and growth_mix_label_ok else "failed"
+	print("pet codex detail check ready: status=%s tabs=%s instance=%s codex_buttons=%s codex=%s raw_hidden=%s growth_buttons=%s growth=%s action_y=%s returned=%s mixed_growth=%s" % [
 		status,
 		str(tabs_ready),
 		str(instance_ok),
 		str(codex_buttons_ok),
 		str(codex_ok),
 		str(raw_hidden),
+		str(growth_buttons_ok),
+		str(growth_ok),
 		str(action_y_stable),
 		str(returned_ok),
 		str(growth_mix_label_ok),
@@ -10647,9 +10915,10 @@ func _run_auto_balance_snapshot_digest_check() -> void:
 	var digest_ok := digest.length() == 64 and digest == str(second.get("sourceDigest", ""))
 	var sources_ok := (
 		int(first.get("sourceCount", 0)) == source_paths.size()
-		and source_paths.size() >= 11
+		and source_paths.size() >= 12
 		and source_paths.has("res://data/battle_rewards.json")
 		and source_paths.has("res://data/balance/combat_formulas.json")
+		and source_paths.has("res://data/balance/pet_growth_species_profiles.json")
 		and source_paths.has("res://data/balance/reward_economy.json")
 	)
 	var report_ok := str(report_balance.get("sourceDigest", "")) == digest
@@ -12968,11 +13237,21 @@ func _run_auto_qa_panel_check() -> void:
 			and qa_entry_buttons.has("open_equipment")
 			and qa_entry_buttons.has("open_quest")
 			and qa_entry_buttons.has("open_auto_battle")
-			and qa_entry_buttons.has("open_auto_capture")
-			and qa_entry_buttons.has("open_stable")
-			and qa_entry_buttons.has("open_rebirth_preview")
-			and qa_entry_buttons.has("gm_battle_speed_gear")
+		and qa_entry_buttons.has("open_auto_capture")
+		and qa_entry_buttons.has("open_stable")
+		and qa_entry_buttons.has("open_rebirth_preview")
+		and qa_entry_buttons.has("gm_battle_speed_gear")
 		)
+	var pet_tool_options_ok := (
+		qa_pet_species_option != null
+		and qa_pet_species_option.get_item_count() >= 5
+		and _option_button_has_metadata(qa_pet_species_option, "blue_man_dragon_v1")
+		and _option_button_has_metadata(qa_pet_species_option, "rebirth_starter_earth_cub_v1")
+		and qa_pet_grant_button != null
+		and not qa_pet_grant_button.disabled
+		and qa_pet_target_option != null
+		and qa_pet_level_up_button != null
+	)
 	var command_ok := (
 		command_text.find("--auto-backpack-check") >= 0
 		and command_text.find("--auto-shop-check") >= 0
@@ -13063,6 +13342,26 @@ func _run_auto_qa_panel_check() -> void:
 	)
 	_close_player_rebirth_preview_panel()
 	_open_qa_panel()
+	qa_pet_growth_profile_id = "rebirth_starter_fire_cub_v1"
+	_refresh_qa_pet_tool_controls()
+	_on_qa_pet_grant_pressed()
+	await get_tree().process_frame
+	var gm_grant_pet := PlayerProgressModel.pet_instance_by_id(player_profile, qa_pet_level_instance_id)
+	var gm_grant_ok := (
+		not gm_grant_pet.is_empty()
+		and str(gm_grant_pet.get("formId", "")) == "rebirth_starter_fire_cub"
+		and int(gm_grant_pet.get("level", 1)) == 1
+		and str(gm_grant_pet.get("growthSpeciesProfileId", "")) == "rebirth_starter_fire_cub_v1"
+	)
+	_on_qa_pet_level_up_pressed()
+	await get_tree().process_frame
+	var gm_level_pet := PlayerProgressModel.pet_instance_by_id(player_profile, qa_pet_level_instance_id)
+	var gm_level_ok := (
+		not gm_level_pet.is_empty()
+		and int(gm_level_pet.get("level", 1)) == 2
+		and str((gm_level_pet.get("growthObservation", {}) as Dictionary).get("overallGrade", "")) != ""
+	)
+	_open_qa_panel()
 	_on_qa_entry_pressed("gm_10v10_grass")
 	await get_tree().process_frame
 	var zone_10v10 := _encounter_zone_by_id("gm_10v10_grass")
@@ -13084,11 +13383,12 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
+		str(pet_tool_options_ok),
 		str(command_ok),
 		str(first_layout_ok),
 		str(second_layout_ok),
@@ -13103,6 +13403,8 @@ func _run_auto_qa_panel_check() -> void:
 		str(auto_capture_ok),
 		str(stable_ok),
 		str(rebirth_preview_ok),
+		str(gm_grant_ok),
+		str(gm_level_ok),
 		str(gm_10v10_ok),
 		str(gm_capture_ok),
 		qa_entry_buttons.size(),
@@ -17109,20 +17411,20 @@ func _build_hud() -> void:
 	var pet_body := HBoxContainer.new()
 	pet_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_body.add_theme_constant_override("separation", 10)
+	pet_body.add_theme_constant_override("separation", 8)
 	pet_column.add_child(pet_body)
 
 	var pet_left_column := VBoxContainer.new()
-	pet_left_column.custom_minimum_size = Vector2(232, 0)
+	pet_left_column.custom_minimum_size = Vector2(220, 0)
 	pet_left_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_left_column.add_theme_constant_override("separation", 7)
+	pet_left_column.add_theme_constant_override("separation", 6)
 	pet_body.add_child(pet_left_column)
 	var pet_manage_row := HBoxContainer.new()
 	pet_manage_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_manage_row.add_theme_constant_override("separation", 6)
 	pet_left_column.add_child(pet_manage_row)
 	pet_filter_option = _pet_management_option(_pet_filter_options(), pet_filter_mode)
-	pet_filter_option.custom_minimum_size = Vector2(0, 40)
+	pet_filter_option.custom_minimum_size = Vector2(0, 36)
 	pet_filter_option.item_selected.connect(func(index: int) -> void:
 		pet_filter_mode = str(pet_filter_option.get_item_metadata(index))
 		pet_clear_confirm_instance_id = ""
@@ -17130,7 +17432,7 @@ func _build_hud() -> void:
 	)
 	pet_manage_row.add_child(pet_filter_option)
 	pet_sort_option = _pet_management_option(_pet_sort_options(), pet_sort_mode)
-	pet_sort_option.custom_minimum_size = Vector2(0, 40)
+	pet_sort_option.custom_minimum_size = Vector2(0, 36)
 	pet_sort_option.item_selected.connect(func(index: int) -> void:
 		var next_sort_mode := str(pet_sort_option.get_item_metadata(index))
 		if next_sort_mode != pet_sort_mode:
@@ -17143,7 +17445,7 @@ func _build_hud() -> void:
 	)
 	pet_manage_row.add_child(pet_sort_option)
 	pet_sort_direction_button = Button.new()
-	pet_sort_direction_button.custom_minimum_size = Vector2(42, 40)
+	pet_sort_direction_button.custom_minimum_size = Vector2(40, 36)
 	pet_sort_direction_button.add_theme_font_size_override("font_size", 15)
 	pet_sort_direction_button.pressed.connect(_on_pet_sort_direction_pressed)
 	pet_manage_row.add_child(pet_sort_direction_button)
@@ -17159,7 +17461,7 @@ func _build_hud() -> void:
 	var pet_detail_column := VBoxContainer.new()
 	pet_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_detail_column.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_theme_constant_override("separation", 6)
 	pet_body.add_child(pet_detail_column)
 	var pet_detail_mode_row := HBoxContainer.new()
 	pet_detail_mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -17169,7 +17471,7 @@ func _build_hud() -> void:
 	pet_detail_instance_button.text = "个体"
 	pet_detail_instance_button.toggle_mode = true
 	pet_detail_instance_button.button_pressed = true
-	pet_detail_instance_button.custom_minimum_size = Vector2(0, 40)
+	pet_detail_instance_button.custom_minimum_size = Vector2(0, 36)
 	pet_detail_instance_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_instance_button.pressed.connect(func() -> void:
 		_set_pet_detail_mode(PET_DETAIL_MODE_INSTANCE)
@@ -17178,83 +17480,104 @@ func _build_hud() -> void:
 	pet_detail_codex_button = Button.new()
 	pet_detail_codex_button.text = "图鉴"
 	pet_detail_codex_button.toggle_mode = true
-	pet_detail_codex_button.custom_minimum_size = Vector2(0, 40)
+	pet_detail_codex_button.custom_minimum_size = Vector2(0, 36)
 	pet_detail_codex_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_codex_button.pressed.connect(func() -> void:
 		_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
 	)
 	pet_detail_mode_row.add_child(pet_detail_codex_button)
+	pet_detail_growth_button = Button.new()
+	pet_detail_growth_button.text = "成长"
+	pet_detail_growth_button.toggle_mode = true
+	pet_detail_growth_button.custom_minimum_size = Vector2(0, 36)
+	pet_detail_growth_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_growth_button.pressed.connect(func() -> void:
+		_set_pet_detail_mode(PET_DETAIL_MODE_GROWTH)
+	)
+	pet_detail_mode_row.add_child(pet_detail_growth_button)
 	pet_detail_scroll = ScrollContainer.new()
 	pet_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pet_detail_column.add_child(pet_detail_scroll)
+	var pet_detail_content := VBoxContainer.new()
+	pet_detail_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_content.add_theme_constant_override("separation", 6)
+	pet_detail_scroll.add_child(pet_detail_content)
+	pet_growth_table_grid = GridContainer.new()
+	pet_growth_table_grid.columns = 6
+	pet_growth_table_grid.visible = false
+	pet_growth_table_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_growth_table_grid.add_theme_constant_override("h_separation", 5)
+	pet_growth_table_grid.add_theme_constant_override("v_separation", 5)
+	pet_detail_content.add_child(pet_growth_table_grid)
+	pet_growth_radar = PetGrowthRadarControl.new()
+	pet_growth_radar.visible = false
+	pet_growth_radar.custom_minimum_size = Vector2(0, 150)
+	pet_growth_radar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_content.add_child(pet_growth_radar)
 	pet_detail_label = Label.new()
 	pet_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pet_detail_label.add_theme_font_size_override("font_size", 16)
+	pet_detail_label.add_theme_font_size_override("font_size", 14)
 	pet_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	pet_detail_scroll.add_child(pet_detail_label)
-	var pet_order_row := HBoxContainer.new()
-	pet_order_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_order_row.add_theme_constant_override("separation", 8)
-	pet_detail_column.add_child(pet_order_row)
+	pet_detail_content.add_child(pet_detail_label)
+	var pet_manage_action_row := HBoxContainer.new()
+	pet_manage_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_manage_action_row.add_theme_constant_override("separation", 8)
+	pet_detail_column.add_child(pet_manage_action_row)
 	pet_party_up_button = Button.new()
 	pet_party_up_button.text = "上移"
-	pet_party_up_button.custom_minimum_size = Vector2(0, 42)
+	pet_party_up_button.custom_minimum_size = Vector2(0, 38)
 	pet_party_up_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_party_up_button.pressed.connect(func() -> void:
 		_on_pet_party_move_pressed(-1)
 	)
-	pet_order_row.add_child(pet_party_up_button)
+	pet_manage_action_row.add_child(pet_party_up_button)
 	pet_party_down_button = Button.new()
 	pet_party_down_button.text = "下移"
-	pet_party_down_button.custom_minimum_size = Vector2(0, 42)
+	pet_party_down_button.custom_minimum_size = Vector2(0, 38)
 	pet_party_down_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_party_down_button.pressed.connect(func() -> void:
 		_on_pet_party_move_pressed(1)
 	)
-	pet_order_row.add_child(pet_party_down_button)
-	var pet_safety_row := HBoxContainer.new()
-	pet_safety_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_safety_row.add_theme_constant_override("separation", 8)
-	pet_detail_column.add_child(pet_safety_row)
+	pet_manage_action_row.add_child(pet_party_down_button)
 	pet_lock_button = Button.new()
 	pet_lock_button.text = "锁定"
-	pet_lock_button.custom_minimum_size = Vector2(0, 42)
+	pet_lock_button.custom_minimum_size = Vector2(0, 38)
 	pet_lock_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_lock_button.pressed.connect(_on_pet_lock_pressed)
-	pet_safety_row.add_child(pet_lock_button)
+	pet_manage_action_row.add_child(pet_lock_button)
 	pet_batch_store_button = Button.new()
 	pet_batch_store_button.text = "批存"
-	pet_batch_store_button.custom_minimum_size = Vector2(0, 42)
+	pet_batch_store_button.custom_minimum_size = Vector2(0, 38)
 	pet_batch_store_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_batch_store_button.pressed.connect(_on_pet_batch_store_pressed)
-	pet_safety_row.add_child(pet_batch_store_button)
+	pet_manage_action_row.add_child(pet_batch_store_button)
 	var pet_button_row := HBoxContainer.new()
 	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_button_row.add_theme_constant_override("separation", 8)
 	pet_detail_column.add_child(pet_button_row)
 	pet_state_cycle_button = Button.new()
 	pet_state_cycle_button.text = "休息"
-	pet_state_cycle_button.custom_minimum_size = Vector2(0, 48)
+	pet_state_cycle_button.custom_minimum_size = Vector2(0, 42)
 	pet_state_cycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_state_cycle_button.pressed.connect(_on_pet_state_cycle_pressed)
 	pet_button_row.add_child(pet_state_cycle_button)
 	pet_stable_button = Button.new()
 	pet_stable_button.text = "存入"
-	pet_stable_button.custom_minimum_size = Vector2(0, 48)
+	pet_stable_button.custom_minimum_size = Vector2(0, 42)
 	pet_stable_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_stable_button.pressed.connect(_on_pet_stable_pressed)
 	pet_button_row.add_child(pet_stable_button)
 	pet_rename_button = Button.new()
 	pet_rename_button.text = "改名"
-	pet_rename_button.custom_minimum_size = Vector2(0, 48)
+	pet_rename_button.custom_minimum_size = Vector2(0, 42)
 	pet_rename_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_rename_button.pressed.connect(_on_pet_rename_pressed)
 	pet_button_row.add_child(pet_rename_button)
 	pet_skill_button = Button.new()
 	pet_skill_button.text = "宠技"
-	pet_skill_button.custom_minimum_size = Vector2(0, 48)
+	pet_skill_button.custom_minimum_size = Vector2(0, 42)
 	pet_skill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_skill_button.pressed.connect(func() -> void:
 		_open_pet_skill_panel(false)
@@ -17262,13 +17585,13 @@ func _build_hud() -> void:
 	pet_button_row.add_child(pet_skill_button)
 	pet_cultivation_button = Button.new()
 	pet_cultivation_button.text = "转强"
-	pet_cultivation_button.custom_minimum_size = Vector2(0, 48)
+	pet_cultivation_button.custom_minimum_size = Vector2(0, 42)
 	pet_cultivation_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_cultivation_button.pressed.connect(_on_pet_cultivation_pressed)
 	pet_button_row.add_child(pet_cultivation_button)
 	pet_drop_button = Button.new()
 	pet_drop_button.text = "丢弃"
-	pet_drop_button.custom_minimum_size = Vector2(0, 48)
+	pet_drop_button.custom_minimum_size = Vector2(0, 42)
 	pet_drop_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
 	pet_button_row.add_child(pet_drop_button)
@@ -17702,8 +18025,50 @@ func _build_hud() -> void:
 	qa_close_button.pressed.connect(_close_qa_panel)
 	qa_header.add_child(qa_close_button)
 
+	var qa_pet_tool_column := VBoxContainer.new()
+	qa_pet_tool_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_tool_column.add_theme_constant_override("separation", 6)
+	qa_column.add_child(qa_pet_tool_column)
+	var qa_pet_tool_label := Label.new()
+	qa_pet_tool_label.text = "GM宠物测试"
+	qa_pet_tool_label.add_theme_font_size_override("font_size", 15)
+	qa_pet_tool_label.add_theme_color_override("font_color", Color(0.91, 0.80, 0.43, 0.98))
+	qa_pet_tool_column.add_child(qa_pet_tool_label)
+	var qa_pet_grant_row := HBoxContainer.new()
+	qa_pet_grant_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_grant_row.add_theme_constant_override("separation", 8)
+	qa_pet_tool_column.add_child(qa_pet_grant_row)
+	qa_pet_species_option = OptionButton.new()
+	qa_pet_species_option.custom_minimum_size = Vector2(0, 38)
+	qa_pet_species_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_species_option.item_selected.connect(func(index: int) -> void:
+		qa_pet_growth_profile_id = str(qa_pet_species_option.get_item_metadata(index))
+	)
+	qa_pet_grant_row.add_child(qa_pet_species_option)
+	qa_pet_grant_button = Button.new()
+	qa_pet_grant_button.text = "获取Lv1"
+	qa_pet_grant_button.custom_minimum_size = Vector2(104, 38)
+	qa_pet_grant_button.pressed.connect(_on_qa_pet_grant_pressed)
+	qa_pet_grant_row.add_child(qa_pet_grant_button)
+	var qa_pet_level_row := HBoxContainer.new()
+	qa_pet_level_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_level_row.add_theme_constant_override("separation", 8)
+	qa_pet_tool_column.add_child(qa_pet_level_row)
+	qa_pet_target_option = OptionButton.new()
+	qa_pet_target_option.custom_minimum_size = Vector2(0, 38)
+	qa_pet_target_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_target_option.item_selected.connect(func(index: int) -> void:
+		qa_pet_level_instance_id = str(qa_pet_target_option.get_item_metadata(index))
+	)
+	qa_pet_level_row.add_child(qa_pet_target_option)
+	qa_pet_level_up_button = Button.new()
+	qa_pet_level_up_button.text = "升1级"
+	qa_pet_level_up_button.custom_minimum_size = Vector2(104, 38)
+	qa_pet_level_up_button.pressed.connect(_on_qa_pet_level_up_pressed)
+	qa_pet_level_row.add_child(qa_pet_level_up_button)
+
 	qa_entry_scroll = ScrollContainer.new()
-	qa_entry_scroll.custom_minimum_size = Vector2(0, 320)
+	qa_entry_scroll.custom_minimum_size = Vector2(0, 260)
 	qa_entry_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	qa_entry_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	qa_column.add_child(qa_entry_scroll)
@@ -17712,7 +18077,7 @@ func _build_hud() -> void:
 	qa_entry_container.add_theme_constant_override("separation", 7)
 	qa_entry_scroll.add_child(qa_entry_container)
 	qa_detail_scroll = ScrollContainer.new()
-	qa_detail_scroll.custom_minimum_size = Vector2(0, 142)
+	qa_detail_scroll.custom_minimum_size = Vector2(0, 110)
 	qa_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	qa_detail_scroll.size_flags_vertical = Control.SIZE_SHRINK_END
 	qa_column.add_child(qa_detail_scroll)
@@ -22481,7 +22846,60 @@ func _refresh_qa_panel() -> void:
 		)
 		qa_entry_container.add_child(button)
 		qa_entry_buttons[entry_id] = button
+	_refresh_qa_pet_tool_controls()
 	qa_detail_label.text = _qa_command_summary_text()
+
+
+func _refresh_qa_pet_tool_controls() -> void:
+	if qa_pet_species_option == null or qa_pet_target_option == null:
+		return
+	var previous_profile_id := qa_pet_growth_profile_id
+	qa_pet_species_option.clear()
+	var selected_profile_index := -1
+	for profile in BalanceCatalogModel.pet_growth_species_profile_list():
+		var profile_id := str(profile.get("profileId", "")).strip_edges()
+		var form_id := str(profile.get("formId", "")).strip_edges()
+		if profile_id == "" or form_id == "":
+			continue
+		var label := str(profile.get("formName", profile.get("displayName", profile_id)))
+		qa_pet_species_option.add_item(label)
+		var item_index := qa_pet_species_option.get_item_count() - 1
+		qa_pet_species_option.set_item_metadata(item_index, profile_id)
+		if profile_id == previous_profile_id or selected_profile_index < 0:
+			selected_profile_index = item_index
+	if selected_profile_index >= 0:
+		qa_pet_species_option.select(selected_profile_index)
+		qa_pet_growth_profile_id = str(qa_pet_species_option.get_item_metadata(selected_profile_index))
+	if qa_pet_grant_button != null:
+		qa_pet_grant_button.disabled = qa_pet_species_option.get_item_count() <= 0
+
+	var previous_instance_id := qa_pet_level_instance_id
+	qa_pet_target_option.clear()
+	var selected_pet_index := -1
+	for instance in PlayerProgressModel.all_pet_instances(player_profile):
+		if str(instance.get("growthSpeciesProfileId", "")).strip_edges() == "":
+			continue
+		var label := "%s Lv%d %s" % [
+			str(instance.get("name", "宠物")),
+			int(instance.get("level", 1)),
+			PlayerProgressModel.state_label(str(instance.get("state", ""))),
+		]
+		qa_pet_target_option.add_item(label)
+		var item_index := qa_pet_target_option.get_item_count() - 1
+		var instance_id := str(instance.get("instanceId", ""))
+		qa_pet_target_option.set_item_metadata(item_index, instance_id)
+		if instance_id == previous_instance_id or selected_pet_index < 0:
+			selected_pet_index = item_index
+	if selected_pet_index >= 0:
+		qa_pet_target_option.select(selected_pet_index)
+		qa_pet_level_instance_id = str(qa_pet_target_option.get_item_metadata(selected_pet_index))
+	else:
+		qa_pet_level_instance_id = ""
+		qa_pet_target_option.add_item("暂无成长宠")
+		qa_pet_target_option.set_item_metadata(0, "")
+		qa_pet_target_option.select(0)
+	if qa_pet_level_up_button != null:
+		qa_pet_level_up_button.disabled = qa_pet_level_instance_id == ""
 
 
 func _reset_qa_panel_scrolls() -> void:
@@ -22521,7 +22939,7 @@ func _qa_entry_definitions() -> Array[Dictionary]:
 	entries.append({"id": "open_auto_battle", "label": "内挂战斗", "description": "人物/宠物首回合与一般回合策略"})
 	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
 	entries.append({"id": "open_partner", "label": "陪练伙伴", "description": "补满5人5宠测试合击"})
-	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴化详情"})
+	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴、成长"})
 	entries.append({"id": "open_stable", "label": "兽栏", "description": "GM测试存取，等同站在村内兽栏旁"})
 	entries.append({"id": "open_rebirth_preview", "label": "转生预览", "description": "查看人物转生资格和能力预览"})
 	entries.append({"id": "open_codex", "label": "图鉴", "description": "已见、可捕、捕获记录"})
@@ -22539,7 +22957,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check")
 	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check")
-	lines.append("数值: --auto-balance-catalog-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
+	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
@@ -22594,6 +23012,39 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 		"open_codex":
 			_close_qa_panel(false)
 			_open_codex_panel()
+
+
+func _on_qa_pet_grant_pressed() -> void:
+	var profile_id := qa_pet_growth_profile_id
+	if profile_id == "" and qa_pet_species_option != null and qa_pet_species_option.get_item_count() > 0:
+		profile_id = str(qa_pet_species_option.get_item_metadata(qa_pet_species_option.selected))
+	var result := PlayerProgressModel.gm_grant_growth_pet(player_profile, profile_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		qa_pet_level_instance_id = str(result.get("instanceId", qa_pet_level_instance_id))
+		pet_selected_instance_id = qa_pet_level_instance_id
+		pet_detail_mode = PET_DETAIL_MODE_GROWTH
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_qa_pet_tool_controls()
+	_refresh_qa_panel()
+
+
+func _on_qa_pet_level_up_pressed() -> void:
+	if qa_pet_level_instance_id == "":
+		_set_world_log_message("请选择要升级的成长宠。")
+		return
+	var result := PlayerProgressModel.gm_level_up_growth_pet_once(player_profile, qa_pet_level_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_selected_instance_id = qa_pet_level_instance_id
+		pet_detail_mode = PET_DETAIL_MODE_GROWTH
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_qa_pet_tool_controls()
+	_refresh_qa_panel()
 
 
 func _qa_open_auto_settings(tab_id: String) -> void:
@@ -24232,6 +24683,70 @@ func _select_codex_form(form_id: String) -> void:
 	_refresh_codex_panel()
 
 
+func _refresh_pet_growth_table(instance: Dictionary) -> void:
+	if pet_growth_table_grid == null:
+		return
+	for child in pet_growth_table_grid.get_children():
+		child.queue_free()
+	if instance.is_empty() or str(instance.get("growthSpeciesProfileId", "")) == "":
+		pet_growth_table_grid.visible = false
+		return
+	pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH
+	for header in ["属性", "初始", "当前", "预测140", "成长/级", "评级"]:
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(header, true, ""))
+	for row in PetGrowthObservationModel.attribute_table_rows(instance, 140):
+		var grade := str(row.get("grade", ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(str(row.get("label", "")), false, ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(str(row.get("initial", "")), false, ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(str(row.get("current", "")), false, ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(str(row.get("target", "")), false, ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(str(row.get("growth", "")), false, ""))
+		pet_growth_table_grid.add_child(_pet_growth_table_cell(_pet_growth_grade_text(row), false, grade))
+
+
+func _pet_growth_grade_text(row: Dictionary) -> String:
+	var grade := str(row.get("grade", ""))
+	var percentile = row.get("percentile", "")
+	if grade == "" or grade == "未观察":
+		return "未观察"
+	if percentile is int or percentile is float:
+		return "%s %.0f%%" % [grade, float(percentile)]
+	return grade
+
+
+func _pet_growth_table_cell(text: String, is_header: bool, grade: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.custom_minimum_size = Vector2(62, 26)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", _pet_growth_table_color(grade, is_header))
+	if is_header:
+		label.add_theme_color_override("font_outline_color", Color(0.02, 0.03, 0.03, 0.72))
+		label.add_theme_constant_override("outline_size", 1)
+	return label
+
+
+func _pet_growth_table_color(grade: String, is_header: bool) -> Color:
+	if is_header:
+		return Color(0.96, 0.86, 0.48, 1.0)
+	match grade:
+		"S":
+			return Color(1.0, 0.88, 0.24, 1.0)
+		"A":
+			return Color(0.48, 1.0, 0.58, 1.0)
+		"B":
+			return Color(0.72, 0.94, 1.0, 1.0)
+		"C":
+			return Color(0.93, 0.90, 0.78, 1.0)
+		"D":
+			return Color(1.0, 0.58, 0.48, 1.0)
+	return Color(0.94, 0.94, 0.90, 1.0)
+
+
 func _refresh_pet_panel() -> void:
 	if pet_panel == null or pet_list_container == null or pet_detail_label == null:
 		return
@@ -24269,13 +24784,38 @@ func _refresh_pet_panel() -> void:
 			for instance in storage:
 				if _pet_panel_instance_passes_filter(instance):
 					_add_pet_list_button(instance)
-	else:
-		for instance in visible_instances:
-			_add_pet_list_button(instance)
-	if pet_detail_mode == PET_DETAIL_MODE_CODEX:
-		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines(selected))
-	else:
-		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+		else:
+			for instance in visible_instances:
+				_add_pet_list_button(instance)
+		if pet_growth_radar != null:
+			pet_growth_radar.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty()
+		if pet_growth_table_grid != null:
+			pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
+		if pet_detail_mode == PET_DETAIL_MODE_CODEX:
+			pet_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines(selected))
+		elif pet_detail_mode == PET_DETAIL_MODE_GROWTH:
+			if selected.is_empty():
+				pet_detail_label.text = "请选择宠物。"
+				_refresh_pet_growth_table({})
+			elif str(selected.get("growthSpeciesProfileId", "")) == "":
+				pet_detail_label.text = "这只宠物暂无成长观察档。"
+				_refresh_pet_growth_table({})
+				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
+					pet_growth_radar.call("set_growth_data", {}, {})
+			else:
+				_refresh_pet_growth_table(selected)
+				pet_detail_label.text = "\n".join(PetGrowthObservationModel.detail_lines(selected))
+				var observation = selected.get("growthObservation", {})
+				var grades := {}
+				if observation is Dictionary:
+					var raw_grades = (observation as Dictionary).get("statGrades", {})
+					if raw_grades is Dictionary:
+						grades = raw_grades as Dictionary
+				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
+					pet_growth_radar.call("set_growth_data", PetGrowthObservationModel.radar_values(selected), grades)
+		else:
+			_refresh_pet_growth_table({})
+			pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
 	if pet_detail_instance_button != null:
 		pet_detail_instance_button.visible = not selected.is_empty()
 		pet_detail_instance_button.disabled = selected.is_empty()
@@ -24284,6 +24824,10 @@ func _refresh_pet_panel() -> void:
 		pet_detail_codex_button.visible = not selected.is_empty()
 		pet_detail_codex_button.disabled = selected.is_empty()
 		pet_detail_codex_button.button_pressed = pet_detail_mode == PET_DETAIL_MODE_CODEX
+	if pet_detail_growth_button != null:
+		pet_detail_growth_button.visible = not selected.is_empty()
+		pet_detail_growth_button.disabled = selected.is_empty()
+		pet_detail_growth_button.button_pressed = pet_detail_mode == PET_DETAIL_MODE_GROWTH
 	if pet_state_cycle_button != null:
 		var selected_state := str(selected.get("state", ""))
 		var target_state := PlayerProgressModel.cycled_pet_state(selected_state)
@@ -24531,7 +25075,7 @@ func _pet_state_button_label(state: String) -> String:
 
 
 func _set_pet_detail_mode(mode: String) -> void:
-	if mode != PET_DETAIL_MODE_INSTANCE and mode != PET_DETAIL_MODE_CODEX:
+	if mode != PET_DETAIL_MODE_INSTANCE and mode != PET_DETAIL_MODE_CODEX and mode != PET_DETAIL_MODE_GROWTH:
 		return
 	pet_detail_mode = mode
 	_refresh_pet_panel()
@@ -24639,6 +25183,32 @@ func _on_pet_batch_store_pressed() -> void:
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_gm_grant_blue_pressed() -> void:
+	var result := PlayerProgressModel.gm_grant_blue_man_dragon(player_profile)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
+		pet_detail_mode = PET_DETAIL_MODE_GROWTH
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_gm_level_up_pressed() -> void:
+	if pet_selected_instance_id == "":
+		_set_world_log_message("请选择要升级的宠物。")
+		return
+	var result := PlayerProgressModel.gm_level_up_growth_pet_once(player_profile, pet_selected_instance_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)):
+		pet_detail_mode = PET_DETAIL_MODE_GROWTH
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -27413,8 +27983,12 @@ func _layout_hud() -> void:
 	if shop_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	pet_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
-	pet_panel.size = Vector2(pet_width, pet_height)
+	var pet_management_width: float = minf(viewport_size.x - margin * 2.0, PET_MANAGEMENT_PANEL_MAX_SIZE.x)
+	var pet_management_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_MANAGEMENT_PANEL_MAX_SIZE.y)
+	pet_management_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_management_width)
+	pet_management_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_management_height)
+	pet_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_management_height) * 0.5))
+	pet_panel.size = Vector2(pet_management_width, pet_management_height)
 	if battle_active:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
@@ -27487,8 +28061,8 @@ func _layout_hud() -> void:
 	if auto_settings_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	qa_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-	qa_panel.size = Vector2(codex_width, codex_height)
+	qa_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_management_height) * 0.5))
+	qa_panel.size = Vector2(pet_management_width, pet_management_height)
 	if battle_active:
 		qa_panel.visible = false
 	if qa_panel.visible and action_bar != null:
