@@ -129,7 +129,11 @@ const QUICK_SLOTS_KEY := "quickSlots"
 const QUICK_SLOT_COUNT := 3
 const EQUIPMENT_SLOTS_KEY := "equipmentSlots"
 const EQUIPMENT_SLOTS_VERSION_KEY := "equipmentSlotsVersion"
-const EQUIPMENT_SLOTS_VERSION := 4
+const EQUIPMENT_SLOTS_VERSION := 5
+const EQUIPMENT_INSTANCES_KEY := "equipmentInstances"
+const EQUIPMENT_SLOT_INSTANCE_IDS_KEY := "equipmentSlotInstanceIds"
+const NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY := "nextEquipmentInstanceSerial"
+const EQUIPMENT_INSTANCE_SCHEMA_VERSION := 1
 const EQUIPMENT_STARTER_SET_VERSION_KEY := "equipmentStarterSetVersion"
 const EQUIPMENT_STARTER_SET_VERSION := 1
 const EQUIPMENT_DURABILITY_KEY := "equipmentDurability"
@@ -222,6 +226,9 @@ static func default_profile() -> Dictionary:
 		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
+		"equipmentInstances": {},
+		"equipmentSlotInstanceIds": {},
+		"nextEquipmentInstanceSerial": 1,
 		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
 		"equipmentEnhancement": _fresh_equipment_enhancement_for_slots(starter_equipment_slots()),
 		"equipmentWearCounters": _fresh_equipment_wear_counters_for_slots(starter_equipment_slots()),
@@ -1262,6 +1269,36 @@ static func equipment_wear_counters(profile: Dictionary) -> Dictionary:
 	return (counters as Dictionary).duplicate(true) if counters is Dictionary else {}
 
 
+static func equipment_instances(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instances = normalized.get(EQUIPMENT_INSTANCES_KEY, {})
+	return (instances as Dictionary).duplicate(true) if instances is Dictionary else {}
+
+
+static func equipment_slot_instance_ids(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var slot_instance_ids = normalized.get(EQUIPMENT_SLOT_INSTANCE_IDS_KEY, {})
+	return (slot_instance_ids as Dictionary).duplicate(true) if slot_instance_ids is Dictionary else {}
+
+
+static func equipped_instance_id(profile: Dictionary, slot_id: String) -> String:
+	return str(equipment_slot_instance_ids(profile).get(slot_id, ""))
+
+
+static func equipment_instance_by_id(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized_id := instance_id.strip_edges()
+	if normalized_id == "":
+		return {}
+	var instances := equipment_instances(profile)
+	var record = instances.get(normalized_id, {})
+	return (record as Dictionary).duplicate(true) if record is Dictionary else {}
+
+
+static func backpack_equipment_instance_ids(profile: Dictionary, item_id: String = "") -> Array[String]:
+	var instances := equipment_instances(profile)
+	return _equipment_instance_ids_for_location(instances, "backpack", item_id)
+
+
 static func equipment_enhance_level(profile: Dictionary, slot_id: String) -> int:
 	var slots := equipment_slots(profile)
 	var item_id := str(slots.get(slot_id, ""))
@@ -1320,6 +1357,13 @@ static func starter_equipment_slots() -> Dictionary:
 static func without_equipment(profile: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	normalized[EQUIPMENT_SLOTS_KEY] = {}
+	normalized[EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = {}
+	var instances := equipment_instances(normalized)
+	for instance_id in _sorted_string_keys(instances):
+		var record := instances.get(instance_id, {}) as Dictionary
+		if str(record.get("location", "")) == "equipped":
+			instances.erase(instance_id)
+	normalized[EQUIPMENT_INSTANCES_KEY] = instances
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = EQUIPMENT_STARTER_SET_VERSION
 	return normalize_profile(normalized)
 
@@ -2076,7 +2120,24 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 			"message": "%s 没有可用装备槽。" % item_label,
 		}
 	var slots := equipment_slots(normalized)
+	var instances := equipment_instances(normalized)
+	var slot_instance_ids := equipment_slot_instance_ids(normalized)
+	var backpack_instance_ids := _equipment_instance_ids_for_location(instances, "backpack", item_id)
+	var backpack_instance_id := backpack_instance_ids[0] if not backpack_instance_ids.is_empty() else ""
+	if backpack_instance_id == "":
+		var created := _create_equipment_instance_record(
+			instances,
+			int(normalized.get(NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY, 1)),
+			item_id,
+			"backpack",
+			"",
+			"equip_fallback"
+		)
+		instances = created.get("instances", instances)
+		backpack_instance_id = str(created.get("instanceId", ""))
+		normalized[NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY] = int(created.get("nextSerial", int(normalized.get(NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY, 1))))
 	var previous_item_id := str(slots.get(slot_id, ""))
+	var previous_instance_id := str(slot_instance_ids.get(slot_id, ""))
 	if previous_item_id == item_id:
 		return {
 			"ok": false,
@@ -2101,29 +2162,46 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 				"ok": false,
 				"profile": normalized,
 				"message": "背包已满，无法换下%s。" % EquipmentModel.label_for(previous_item_id, BackpackModel.label_for(previous_item_id)),
-			}
+		}
 		backpack_after_take = return_result.get("slots", backpack_after_take)
 	slots[slot_id] = item_id
+	if previous_instance_id != "" and instances.has(previous_instance_id):
+		var previous_record := (instances.get(previous_instance_id, {}) as Dictionary).duplicate(true)
+		previous_record["location"] = "backpack"
+		previous_record["slotId"] = ""
+		instances[previous_instance_id] = previous_record
+	if backpack_instance_id != "" and instances.has(backpack_instance_id):
+		var equipped_record := (instances.get(backpack_instance_id, {}) as Dictionary).duplicate(true)
+		equipped_record["location"] = "equipped"
+		equipped_record["slotId"] = slot_id
+		instances[backpack_instance_id] = equipped_record
+		slot_instance_ids[slot_id] = backpack_instance_id
 	var durability := equipment_durability(normalized)
 	var max_durability := EquipmentModel.max_durability_for(item_id)
 	if max_durability > 0:
-		durability[slot_id] = max_durability
+		var equipped_record := instances.get(backpack_instance_id, {}) as Dictionary
+		durability[slot_id] = clampi(int(equipped_record.get("durability", max_durability)), 0, max_durability)
 	else:
 		durability.erase(slot_id)
 	var enhancement := equipment_enhancement(normalized)
 	if EquipmentModel.enhance_max_for(item_id) > 0:
-		enhancement[slot_id] = _fresh_equipment_enhancement_record(item_id)
+		var equipped_record := instances.get(backpack_instance_id, {}) as Dictionary
+		enhancement[slot_id] = _normalize_equipment_instance_enhancement(item_id, equipped_record.get("enhancement", {}))
 	else:
 		enhancement.erase(slot_id)
 	var wear_counters := equipment_wear_counters(normalized)
 	if max_durability > 0:
-		wear_counters[slot_id] = _fresh_equipment_wear_counter_record(item_id)
+		var equipped_record := instances.get(backpack_instance_id, {}) as Dictionary
+		wear_counters[slot_id] = _normalize_equipment_instance_wear_counters(item_id, equipped_record.get("wearCounters", {}))
 	else:
 		wear_counters.erase(slot_id)
 	if slot_id == EquipmentModel.SLOT_EXP_PILL:
-		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _fresh_exp_pill_charge_for_item(item_id)
+		var equipped_record := instances.get(backpack_instance_id, {}) as Dictionary
+		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _normalize_equipment_instance_exp_pill_charge(item_id, equipped_record.get("expPillCharge", _fresh_exp_pill_charge_for_item(item_id)))
 	normalized[BACKPACK_SLOTS_KEY] = backpack_after_take
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_after_take)
+	normalized[EQUIPMENT_INSTANCES_KEY] = instances
+	normalized[EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = slot_instance_ids
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
 	normalized[EQUIPMENT_DURABILITY_KEY] = durability
 	normalized[EQUIPMENT_ENHANCEMENT_KEY] = enhancement
@@ -2138,8 +2216,10 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 		"profile": normalized,
 		"message": message,
 		"itemId": item_id,
+		"instanceId": backpack_instance_id,
 		"slot": slot_id,
 		"previousItemId": previous_item_id,
+		"previousInstanceId": previous_instance_id,
 	}
 
 
@@ -2159,6 +2239,9 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 			"profile": normalized,
 			"message": "经验丹已储存经验，暂不能卸下。",
 		}
+	var instances := equipment_instances(normalized)
+	var slot_instance_ids := equipment_slot_instance_ids(normalized)
+	var instance_id := str(slot_instance_ids.get(slot_id, ""))
 	var add_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), [{
 		"itemId": item_id,
 		"count": 1,
@@ -2179,8 +2262,16 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 	wear_counters.erase(slot_id)
 	if slot_id == EquipmentModel.SLOT_EXP_PILL:
 		normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = {}
+	if instance_id != "" and instances.has(instance_id):
+		var record := (instances.get(instance_id, {}) as Dictionary).duplicate(true)
+		record["location"] = "backpack"
+		record["slotId"] = ""
+		instances[instance_id] = record
+	slot_instance_ids.erase(slot_id)
 	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", normalized.get(BACKPACK_SLOTS_KEY, []))
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])))
+	normalized[EQUIPMENT_INSTANCES_KEY] = instances
+	normalized[EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = slot_instance_ids
 	normalized[EQUIPMENT_SLOTS_KEY] = slots
 	normalized[EQUIPMENT_DURABILITY_KEY] = durability
 	normalized[EQUIPMENT_ENHANCEMENT_KEY] = enhancement
@@ -2192,6 +2283,7 @@ static func unequip_slot(profile: Dictionary, slot_id: String) -> Dictionary:
 		"profile": normalized,
 		"message": "卸下%s。" % EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id)),
 		"itemId": item_id,
+		"instanceId": instance_id,
 		"slot": slot_id,
 	}
 
@@ -3452,6 +3544,331 @@ static func _mailbox_item_count(messages: Array[Dictionary], item_id: String, ma
 			if str(entry.get("itemId", "")) == item_id:
 				total += maxi(0, int(entry.get("count", 0)))
 	return total
+
+
+static func _sync_equipment_instances(raw_instances, raw_slot_instance_ids, backpack_slots: Array[Dictionary], legacy_slots: Dictionary, legacy_durability: Dictionary, legacy_enhancement: Dictionary, legacy_wear_counters: Dictionary, legacy_exp_charge: Dictionary, next_serial_value: int) -> Dictionary:
+	var instances := _normalize_equipment_instances(raw_instances)
+	var next_serial := maxi(1, next_serial_value)
+	for instance_id in instances.keys():
+		next_serial = maxi(next_serial, _equipment_instance_serial_from_id(str(instance_id)) + 1)
+
+	var slot_instance_ids := _normalize_equipment_slot_instance_ids(raw_slot_instance_ids, instances)
+	for slot_id in EquipmentModel.slot_ids():
+		if str(slot_instance_ids.get(slot_id, "")) != "":
+			continue
+		var legacy_item_id := str(legacy_slots.get(slot_id, ""))
+		if legacy_item_id == "" or EquipmentModel.slot_for(legacy_item_id) != slot_id:
+			continue
+		var candidate_id := _first_equipment_instance_id_for_slot(instances, legacy_item_id, slot_id)
+		if candidate_id == "":
+			var created := _create_equipment_instance_record(
+				instances,
+				next_serial,
+				legacy_item_id,
+				"equipped",
+				slot_id,
+				"legacy_slot",
+				int(legacy_durability.get(slot_id, EquipmentModel.max_durability_for(legacy_item_id))),
+				legacy_enhancement.get(slot_id, {}),
+				legacy_wear_counters.get(slot_id, {}),
+				legacy_exp_charge if slot_id == EquipmentModel.SLOT_EXP_PILL else {}
+			)
+			instances = created.get("instances", instances)
+			candidate_id = str(created.get("instanceId", ""))
+			next_serial = int(created.get("nextSerial", next_serial))
+		if candidate_id != "":
+			var record := (instances.get(candidate_id, {}) as Dictionary).duplicate(true)
+			record["location"] = "equipped"
+			record["slotId"] = slot_id
+			instances[candidate_id] = record
+			slot_instance_ids[slot_id] = candidate_id
+
+	for slot_id in EquipmentModel.slot_ids():
+		var instance_id := str(slot_instance_ids.get(slot_id, ""))
+		if instance_id == "" or not instances.has(instance_id):
+			continue
+		var record := (instances.get(instance_id, {}) as Dictionary).duplicate(true)
+		var item_id := str(record.get("itemId", ""))
+		if item_id == "":
+			continue
+		if legacy_durability.has(slot_id) and EquipmentModel.max_durability_for(item_id) > 0:
+			record["durability"] = clampi(int(legacy_durability.get(slot_id, EquipmentModel.max_durability_for(item_id))), 0, EquipmentModel.max_durability_for(item_id))
+		if legacy_enhancement.has(slot_id) and EquipmentModel.enhance_max_for(item_id) > 0:
+			record["enhancement"] = _normalize_equipment_instance_enhancement(item_id, legacy_enhancement.get(slot_id, {}))
+		if legacy_wear_counters.has(slot_id) and EquipmentModel.max_durability_for(item_id) > 0:
+			record["wearCounters"] = _normalize_equipment_instance_wear_counters(item_id, legacy_wear_counters.get(slot_id, {}))
+		if slot_id == EquipmentModel.SLOT_EXP_PILL and not legacy_exp_charge.is_empty():
+			record["expPillCharge"] = _normalize_equipment_instance_exp_pill_charge(item_id, legacy_exp_charge)
+		instances[instance_id] = record
+
+	var equipped_ids := {}
+	for slot_id in slot_instance_ids.keys():
+		equipped_ids[str(slot_instance_ids.get(slot_id, ""))] = true
+	for instance_id in instances.keys():
+		var record := (instances.get(instance_id, {}) as Dictionary).duplicate(true)
+		if str(record.get("location", "")) == "equipped" and not equipped_ids.has(str(instance_id)):
+			record["location"] = "backpack"
+			record["slotId"] = ""
+			instances[instance_id] = record
+
+	var needed_backpack_counts := _backpack_equipment_counts(backpack_slots)
+	var remaining_counts := needed_backpack_counts.duplicate(true)
+	for instance_id in _sorted_string_keys(instances):
+		var record := instances.get(instance_id, {}) as Dictionary
+		if str(record.get("location", "")) != "backpack":
+			continue
+		var item_id := str(record.get("itemId", ""))
+		var remaining := int(remaining_counts.get(item_id, 0))
+		if remaining > 0:
+			remaining_counts[item_id] = remaining - 1
+		else:
+			instances.erase(instance_id)
+	for item_id in remaining_counts.keys():
+		var remaining := maxi(0, int(remaining_counts.get(item_id, 0)))
+		for _index in range(remaining):
+			var created := _create_equipment_instance_record(
+				instances,
+				next_serial,
+				str(item_id),
+				"backpack",
+				"",
+				"legacy_backpack"
+			)
+			instances = created.get("instances", instances)
+			next_serial = int(created.get("nextSerial", next_serial))
+
+	var compatibility := _equipment_compatibility_from_instances(instances, slot_instance_ids)
+	return {
+		"instances": instances,
+		"slotInstanceIds": slot_instance_ids,
+		"nextSerial": next_serial,
+		"slots": compatibility.get("slots", {}),
+		"durability": compatibility.get("durability", {}),
+		"enhancement": compatibility.get("enhancement", {}),
+		"wearCounters": compatibility.get("wearCounters", {}),
+		"expPillCharge": compatibility.get("expPillCharge", {}),
+	}
+
+
+static func _normalize_equipment_instances(value) -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for key in raw.keys():
+		var raw_record = raw.get(key, {})
+		if not (raw_record is Dictionary):
+			continue
+		var record := _normalize_equipment_instance_record(raw_record as Dictionary, str(key))
+		if not record.is_empty():
+			result[str(record.get("instanceId", ""))] = record
+	return result
+
+
+static func _normalize_equipment_instance_record(raw: Dictionary, fallback_instance_id: String = "") -> Dictionary:
+	var item_id := str(raw.get("itemId", "")).strip_edges()
+	if item_id == "" or not EquipmentModel.is_equipment(item_id):
+		return {}
+	var instance_id := str(raw.get("instanceId", fallback_instance_id)).strip_edges()
+	if instance_id == "":
+		return {}
+	var location := str(raw.get("location", "backpack")).strip_edges()
+	if location != "equipped" and location != "backpack":
+		location = "backpack"
+	var slot_id := str(raw.get("slotId", "")).strip_edges()
+	if location != "equipped" or EquipmentModel.slot_for(item_id) != slot_id:
+		slot_id = ""
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	var durability := 0
+	if max_durability > 0:
+		durability = clampi(int(raw.get("durability", max_durability)), 0, max_durability)
+	var record := {
+		"schemaVersion": EQUIPMENT_INSTANCE_SCHEMA_VERSION,
+		"instanceId": instance_id,
+		"itemId": item_id,
+		"location": location,
+		"slotId": slot_id,
+		"durability": durability,
+		"enhancement": _normalize_equipment_instance_enhancement(item_id, raw.get("enhancement", {})),
+		"wearCounters": _normalize_equipment_instance_wear_counters(item_id, raw.get("wearCounters", {})),
+		"expPillCharge": _normalize_equipment_instance_exp_pill_charge(item_id, raw.get("expPillCharge", {})),
+		"source": str(raw.get("source", "")),
+	}
+	return record
+
+
+static func _normalize_equipment_instance_enhancement(item_id: String, value) -> Dictionary:
+	if item_id == "" or EquipmentModel.enhance_max_for(item_id) <= 0:
+		return {}
+	var raw := value as Dictionary if value is Dictionary else {}
+	var level := 0
+	var history: Array = []
+	if str(raw.get("itemId", item_id)) == item_id:
+		level = clampi(int(raw.get("level", 0)), 0, EquipmentModel.enhance_max_for(item_id))
+		var raw_history = raw.get("history", [])
+		if raw_history is Array:
+			for value_entry in raw_history:
+				if value_entry is Dictionary:
+					history.append((value_entry as Dictionary).duplicate(true))
+	return {
+		"itemId": item_id,
+		"level": level,
+		"history": history,
+	}
+
+
+static func _normalize_equipment_instance_wear_counters(item_id: String, value) -> Dictionary:
+	if item_id == "" or EquipmentModel.max_durability_for(item_id) <= 0:
+		return {}
+	var raw := value as Dictionary if value is Dictionary else {}
+	if str(raw.get("itemId", item_id)) != item_id:
+		return _fresh_equipment_wear_counter_record(item_id)
+	return {
+		"itemId": item_id,
+		"attackCount": maxi(0, int(raw.get("attackCount", 0))),
+		"hitCount": maxi(0, int(raw.get("hitCount", 0))),
+	}
+
+
+static func _normalize_equipment_instance_exp_pill_charge(item_id: String, value) -> Dictionary:
+	if item_id == "" or not BackpackModel.item_can_world_player_exp(item_id):
+		return {}
+	return _normalize_equipped_exp_pill_charge({EquipmentModel.SLOT_EXP_PILL: item_id}, value)
+
+
+static func _normalize_equipment_slot_instance_ids(value, instances: Dictionary) -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var instance_id := str(raw.get(slot_id, "")).strip_edges()
+		if instance_id == "" or not instances.has(instance_id):
+			continue
+		var record := instances.get(instance_id, {}) as Dictionary
+		if EquipmentModel.slot_for(str(record.get("itemId", ""))) != slot_id:
+			continue
+		record = record.duplicate(true)
+		record["location"] = "equipped"
+		record["slotId"] = slot_id
+		instances[instance_id] = record
+		result[slot_id] = instance_id
+	return result
+
+
+static func _create_equipment_instance_record(instances: Dictionary, next_serial: int, item_id: String, location: String = "backpack", slot_id: String = "", source: String = "", durability_value: int = -1, enhancement_value = {}, wear_counter_value = {}, exp_charge_value = {}) -> Dictionary:
+	if item_id == "" or not EquipmentModel.is_equipment(item_id):
+		return {"instances": instances, "instanceId": "", "nextSerial": next_serial}
+	var serial := maxi(1, next_serial)
+	var instance_id := _equipment_instance_id_for_serial(serial)
+	while instances.has(instance_id):
+		serial += 1
+		instance_id = _equipment_instance_id_for_serial(serial)
+	var max_durability := EquipmentModel.max_durability_for(item_id)
+	var durability := 0
+	if max_durability > 0:
+		durability = clampi(durability_value if durability_value >= 0 else max_durability, 0, max_durability)
+	var safe_location := location if location == "equipped" else "backpack"
+	var safe_slot_id := slot_id if safe_location == "equipped" and EquipmentModel.slot_for(item_id) == slot_id else ""
+	var record := {
+		"schemaVersion": EQUIPMENT_INSTANCE_SCHEMA_VERSION,
+		"instanceId": instance_id,
+		"itemId": item_id,
+		"location": safe_location,
+		"slotId": safe_slot_id,
+		"durability": durability,
+		"enhancement": _normalize_equipment_instance_enhancement(item_id, enhancement_value),
+		"wearCounters": _normalize_equipment_instance_wear_counters(item_id, wear_counter_value),
+		"expPillCharge": _normalize_equipment_instance_exp_pill_charge(item_id, exp_charge_value),
+		"source": source,
+	}
+	instances[instance_id] = record
+	return {
+		"instances": instances,
+		"instanceId": instance_id,
+		"nextSerial": serial + 1,
+	}
+
+
+static func _equipment_instance_id_for_serial(serial: int) -> String:
+	return "equip_%06d" % maxi(1, serial)
+
+
+static func _equipment_instance_serial_from_id(instance_id: String) -> int:
+	var normalized_id := instance_id.strip_edges()
+	if not normalized_id.begins_with("equip_"):
+		return 0
+	return maxi(0, int(normalized_id.substr(6)))
+
+
+static func _first_equipment_instance_id_for_slot(instances: Dictionary, item_id: String, slot_id: String) -> String:
+	for instance_id in _sorted_string_keys(instances):
+		var record := instances.get(instance_id, {}) as Dictionary
+		if str(record.get("itemId", "")) == item_id and str(record.get("location", "")) == "equipped" and str(record.get("slotId", "")) == slot_id:
+			return instance_id
+	for instance_id in _sorted_string_keys(instances):
+		var record := instances.get(instance_id, {}) as Dictionary
+		if str(record.get("itemId", "")) == item_id and str(record.get("location", "")) == "backpack":
+			return instance_id
+	return ""
+
+
+static func _equipment_instance_ids_for_location(instances: Dictionary, location: String, item_id: String = "") -> Array[String]:
+	var result: Array[String] = []
+	for instance_id in _sorted_string_keys(instances):
+		var record := instances.get(instance_id, {}) as Dictionary
+		if str(record.get("location", "")) != location:
+			continue
+		if item_id != "" and str(record.get("itemId", "")) != item_id:
+			continue
+		result.append(instance_id)
+	return result
+
+
+static func _backpack_equipment_counts(slots: Array[Dictionary]) -> Dictionary:
+	var result := {}
+	for slot in BackpackModel.normalize_slots(slots):
+		var item_id := str(slot.get("itemId", ""))
+		if item_id == "" or not EquipmentModel.is_equipment(item_id):
+			continue
+		result[item_id] = int(result.get(item_id, 0)) + maxi(0, int(slot.get("count", 0)))
+	return result
+
+
+static func _equipment_compatibility_from_instances(instances: Dictionary, slot_instance_ids: Dictionary) -> Dictionary:
+	var slots := {}
+	var durability := {}
+	var enhancement := {}
+	var wear_counters := {}
+	var exp_pill_charge := {}
+	for slot_id in EquipmentModel.slot_ids():
+		var instance_id := str(slot_instance_ids.get(slot_id, ""))
+		if instance_id == "" or not instances.has(instance_id):
+			continue
+		var record := instances.get(instance_id, {}) as Dictionary
+		var item_id := str(record.get("itemId", ""))
+		if item_id == "" or EquipmentModel.slot_for(item_id) != slot_id:
+			continue
+		slots[slot_id] = item_id
+		var max_durability := EquipmentModel.max_durability_for(item_id)
+		if max_durability > 0:
+			durability[slot_id] = clampi(int(record.get("durability", max_durability)), 0, max_durability)
+			wear_counters[slot_id] = _normalize_equipment_instance_wear_counters(item_id, record.get("wearCounters", {}))
+		if EquipmentModel.enhance_max_for(item_id) > 0:
+			enhancement[slot_id] = _normalize_equipment_instance_enhancement(item_id, record.get("enhancement", {}))
+		if slot_id == EquipmentModel.SLOT_EXP_PILL:
+			exp_pill_charge = _normalize_equipment_instance_exp_pill_charge(item_id, record.get("expPillCharge", {}))
+	return {
+		"slots": slots,
+		"durability": durability,
+		"enhancement": enhancement,
+		"wearCounters": wear_counters,
+		"expPillCharge": exp_pill_charge,
+	}
+
+
+static func _sorted_string_keys(dict: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for key in dict.keys():
+		result.append(str(key))
+	result.sort()
+	return result
 
 
 static func _subtract_item_amounts(items: Array, subtract_entries: Array) -> Array[Dictionary]:
@@ -5653,11 +6070,33 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)
 	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
 	var equipment_durability_value := _normalize_equipment_durability(equipment_slots_value, normalized.get(EQUIPMENT_DURABILITY_KEY, {}))
-	normalized[EQUIPMENT_DURABILITY_KEY] = equipment_durability_value
 	var equipment_enhancement_value := _normalize_equipment_enhancement(equipment_slots_value, normalized.get(EQUIPMENT_ENHANCEMENT_KEY, {}))
+	var equipment_wear_counters_value := _normalize_equipment_wear_counters(equipment_slots_value, normalized.get(EQUIPMENT_WEAR_COUNTERS_KEY, {}))
+	var equipment_exp_pill_charge_value := _normalize_equipped_exp_pill_charge(equipment_slots_value, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {}))
+	var equipment_instance_sync := _sync_equipment_instances(
+		normalized.get(EQUIPMENT_INSTANCES_KEY, {}),
+		normalized.get(EQUIPMENT_SLOT_INSTANCE_IDS_KEY, {}),
+		backpack_slots_value,
+		equipment_slots_value,
+		equipment_durability_value,
+		equipment_enhancement_value,
+		equipment_wear_counters_value,
+		equipment_exp_pill_charge_value,
+		int(normalized.get(NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY, 1))
+	)
+	equipment_slots_value = equipment_instance_sync.get("slots", {}) as Dictionary
+	equipment_durability_value = equipment_instance_sync.get("durability", {}) as Dictionary
+	equipment_enhancement_value = equipment_instance_sync.get("enhancement", {}) as Dictionary
+	equipment_wear_counters_value = equipment_instance_sync.get("wearCounters", {}) as Dictionary
+	equipment_exp_pill_charge_value = equipment_instance_sync.get("expPillCharge", {}) as Dictionary
+	normalized[EQUIPMENT_INSTANCES_KEY] = equipment_instance_sync.get("instances", {})
+	normalized[EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = equipment_instance_sync.get("slotInstanceIds", {})
+	normalized[NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY] = maxi(1, int(equipment_instance_sync.get("nextSerial", 1)))
+	normalized[EQUIPMENT_SLOTS_KEY] = equipment_slots_value
+	normalized[EQUIPMENT_DURABILITY_KEY] = equipment_durability_value
 	normalized[EQUIPMENT_ENHANCEMENT_KEY] = equipment_enhancement_value
-	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = _normalize_equipment_wear_counters(equipment_slots_value, normalized.get(EQUIPMENT_WEAR_COUNTERS_KEY, {}))
-	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = _normalize_equipped_exp_pill_charge(equipment_slots_value, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {}))
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = equipment_wear_counters_value
+	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = equipment_exp_pill_charge_value
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))

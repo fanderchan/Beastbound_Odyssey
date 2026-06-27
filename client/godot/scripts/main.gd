@@ -548,6 +548,7 @@ var auto_equipment_durability_visual_check: bool = false
 var auto_equipment_slot_detail_check: bool = false
 var auto_equipment_synthesis_check: bool = false
 var auto_equipment_growth_check: bool = false
+var auto_equipment_instance_check: bool = false
 var auto_quest_objective_templates_check: bool = false
 var auto_map_region_contract_check: bool = false
 var auto_reward_grant_check: bool = false
@@ -964,6 +965,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_synthesis_check")
 	elif auto_equipment_growth_check:
 		call_deferred("_run_auto_equipment_growth_check")
+	elif auto_equipment_instance_check:
+		call_deferred("_run_auto_equipment_instance_check")
 	elif auto_quest_objective_templates_check:
 		call_deferred("_run_auto_quest_objective_templates_check")
 	elif auto_map_region_contract_check:
@@ -1509,6 +1512,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_synthesis_check = true
 		elif arg == "--auto-equipment-growth-check":
 			auto_equipment_growth_check = true
+		elif arg == "--auto-equipment-instance-check":
+			auto_equipment_instance_check = true
 		elif arg == "--auto-quest-objective-templates-check":
 			auto_quest_objective_templates_check = true
 		elif arg == "--auto-map-region-contract-check":
@@ -10738,6 +10743,107 @@ func _run_auto_equipment_growth_check() -> void:
 		PlayerProgressModel.equipment_enhance_level(player_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON),
 		PlayerProgressModel.stone_coins(player_profile),
 		PlayerProgressModel.backpack_item_count(player_profile, EQUIP_FRAG_WOOD_BASIC_ID),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_equipment_instance_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var starter_profile := PlayerProgressModel.default_profile()
+	var starter_instances := PlayerProgressModel.equipment_instances(starter_profile)
+	var starter_slot_instance_ids := PlayerProgressModel.equipment_slot_instance_ids(starter_profile)
+	var starter_instance_ok := true
+	for slot_id in EquipmentModel.slot_ids():
+		var item_id := PlayerProgressModel.equipped_item_id(starter_profile, slot_id)
+		var instance_id := str(starter_slot_instance_ids.get(slot_id, ""))
+		if item_id == "":
+			starter_instance_ok = starter_instance_ok and instance_id == ""
+			continue
+		var record := starter_instances.get(instance_id, {}) as Dictionary
+		starter_instance_ok = (
+			starter_instance_ok
+			and instance_id != ""
+			and str(record.get("itemId", "")) == item_id
+			and str(record.get("location", "")) == "equipped"
+			and str(record.get("slotId", "")) == slot_id
+		)
+
+	var base_profile := PlayerProgressModel.without_equipment(starter_profile)
+	base_profile = PlayerProgressModel.with_stone_coins(base_profile, 400)
+	var buy_result := PlayerProgressModel.buy_shop_item(base_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_wooden_club", 2)
+	var buy_profile := buy_result.get("profile", {}) as Dictionary
+	var bought_instance_ids := PlayerProgressModel.backpack_equipment_instance_ids(buy_profile, "weapon_wooden_club")
+	var buy_instance_ok := (
+		bool(buy_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(buy_profile, "weapon_wooden_club") == 2
+		and bought_instance_ids.size() == 2
+		and bought_instance_ids[0] != bought_instance_ids[1]
+	)
+
+	var equip_result := PlayerProgressModel.equip_item(buy_profile, "weapon_wooden_club")
+	var equip_profile := equip_result.get("profile", {}) as Dictionary
+	var equipped_instance_id := PlayerProgressModel.equipped_instance_id(equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var equipped_record := PlayerProgressModel.equipment_instance_by_id(equip_profile, equipped_instance_id)
+	var equip_instance_ok := (
+		bool(equip_result.get("ok", false))
+		and equipped_instance_id != ""
+		and str(equipped_record.get("itemId", "")) == "weapon_wooden_club"
+		and str(equipped_record.get("location", "")) == "equipped"
+		and str(equipped_record.get("slotId", "")) == EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+		and PlayerProgressModel.backpack_equipment_instance_ids(equip_profile, "weapon_wooden_club").size() == 1
+	)
+
+	var material_profile := PlayerProgressModel.grant_reward_bundle(equip_profile, {
+		"items": [{"itemId": EQUIP_FRAG_WOOD_BASIC_ID, "count": 3}],
+	}, "equipment_instance_check").get("profile", equip_profile) as Dictionary
+	material_profile = PlayerProgressModel.with_stone_coins(material_profile, 120)
+	var enhance_result := PlayerProgressModel.enhance_equipment_slot(material_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var enhanced_profile := enhance_result.get("profile", {}) as Dictionary
+	var enhanced_record := PlayerProgressModel.equipment_instance_by_id(enhanced_profile, equipped_instance_id)
+	var enhanced_record_data := enhanced_record.get("enhancement", {}) as Dictionary
+	var enhance_instance_ok := (
+		bool(enhance_result.get("ok", false))
+		and PlayerProgressModel.equipment_enhance_level(enhanced_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == 1
+		and int(enhanced_record_data.get("level", 0)) == 1
+		and str(enhanced_record.get("location", "")) == "equipped"
+	)
+
+	var unequip_result := PlayerProgressModel.unequip_slot(enhanced_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var unequipped_profile := unequip_result.get("profile", {}) as Dictionary
+	var unequipped_record := PlayerProgressModel.equipment_instance_by_id(unequipped_profile, equipped_instance_id)
+	var unequipped_enhancement := unequipped_record.get("enhancement", {}) as Dictionary
+	var unequip_instance_ok := (
+		bool(unequip_result.get("ok", false))
+		and PlayerProgressModel.equipped_instance_id(unequipped_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == ""
+		and PlayerProgressModel.backpack_item_count(unequipped_profile, "weapon_wooden_club") == 2
+		and PlayerProgressModel.backpack_equipment_instance_ids(unequipped_profile, "weapon_wooden_club").size() == 2
+		and str(unequipped_record.get("location", "")) == "backpack"
+		and int(unequipped_enhancement.get("level", 0)) == 1
+	)
+
+	var re_equip_result := PlayerProgressModel.equip_item(unequipped_profile, "weapon_wooden_club")
+	var re_equip_profile := re_equip_result.get("profile", {}) as Dictionary
+	var re_equipped_instance_id := PlayerProgressModel.equipped_instance_id(re_equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
+	var re_equip_instance_ok := (
+		bool(re_equip_result.get("ok", false))
+		and re_equipped_instance_id == equipped_instance_id
+		and PlayerProgressModel.equipment_enhance_level(re_equip_profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == 1
+		and PlayerProgressModel.backpack_item_count(re_equip_profile, "weapon_wooden_club") == 1
+		and PlayerProgressModel.backpack_equipment_instance_ids(re_equip_profile, "weapon_wooden_club").size() == 1
+	)
+	var status := "ok" if starter_instance_ok and buy_instance_ok and equip_instance_ok and enhance_instance_ok and unequip_instance_ok and re_equip_instance_ok else "failed"
+	print("equipment instance check ready: status=%s starter=%s buy=%s equip=%s enhance=%s unequip=%s reequip=%s equipped_instance=%s backpack_instances=%d" % [
+		status,
+		str(starter_instance_ok),
+		str(buy_instance_ok),
+		str(equip_instance_ok),
+		str(enhance_instance_ok),
+		str(unequip_instance_ok),
+		str(re_equip_instance_ok),
+		equipped_instance_id,
+		PlayerProgressModel.backpack_equipment_instance_ids(re_equip_profile, "weapon_wooden_club").size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -23617,7 +23723,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("[color=#d7c36a]常用自测命令[/color]")
 	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
 	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
-	lines.append("装备: --auto-equipment-check / --auto-equipment-growth-check / --auto-equipment-durability-check / --auto-equipment-synthesis-check")
+	lines.append("装备: --auto-equipment-check / --auto-equipment-instance-check / --auto-equipment-growth-check / --auto-equipment-durability-check / --auto-equipment-synthesis-check")
 	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check / --auto-quest-objective-templates-check")
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
