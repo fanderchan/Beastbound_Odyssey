@@ -12,8 +12,8 @@ const MAX_REBIRTH_STAGE := 2
 const HP_INTERNAL_SCALE := 4.0
 const TARGET_WEIGHT_SCALE := 1.0
 const STONE_WEIGHT_SCALE := 8.0
-const HELPER_QUALITY_MULTIPLIER_MIN := 0.92
-const HELPER_QUALITY_MULTIPLIER_MAX := 1.08
+const HELPER_GROWTH_WEIGHT_SCALE := 0.6
+const STONE_EFFECTIVE_EXPONENT := 1.35
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const STAT_LABELS := {
 	"maxHp": "生命",
@@ -29,20 +29,20 @@ const HELPER_NAME_BY_STAGE := {
 	STAGE_ONE: "1转小MM",
 	STAGE_TWO: "2转小MM",
 }
-const FULL_STONE_INTERNAL_POOLS_BY_STAGE := {
+const STONE_EFFECTIVE_POOL_RANGES_BY_STAGE := {
 	STAGE_ONE: {
-		0: 0.0,
-		1: 1.05,
-		2: 1.20,
-		3: 1.35,
-		4: 1.60,
+		0: {"min": 0.00, "max": 0.10},
+		1: {"min": 0.55, "max": 0.95},
+		2: {"min": 0.80, "max": 1.25},
+		3: {"min": 1.00, "max": 1.45},
+		4: {"min": 1.15, "max": 1.65},
 	},
 	STAGE_TWO: {
-		0: 0.0,
-		1: 1.15,
-		2: 1.35,
-		3: 1.55,
-		4: 1.85,
+		0: {"min": 0.00, "max": 0.12},
+		1: {"min": 0.65, "max": 1.05},
+		2: {"min": 0.95, "max": 1.40},
+		3: {"min": 1.15, "max": 1.65},
+		4: {"min": 1.35, "max": 1.85},
 	},
 }
 
@@ -144,7 +144,7 @@ static func helper_record_lines(record: Dictionary) -> Array[String]:
 	return lines
 
 
-static func rebirth_bonus_preview(target_pet: Dictionary, helper_pet: Dictionary) -> Dictionary:
+static func rebirth_bonus_preview(target_pet: Dictionary, helper_pet: Dictionary, roll_seed: String = "") -> Dictionary:
 	var helper_stage := helper_stage_for_pet(helper_pet)
 	var target_rebirth := _pet_rebirth_count(target_pet)
 	var expected_stage := target_rebirth + 1
@@ -168,15 +168,27 @@ static func rebirth_bonus_preview(target_pet: Dictionary, helper_pet: Dictionary
 			HELPER_REQUIRED_LEVEL,
 		], {}, {})
 	var helper_record := normalized_helper_record(helper_pet.get("petRebirthHelper", {}), helper_stage)
-	var bonus := _bonus_from_target_and_helper(target_pet, helper_pet, helper_record, helper_stage)
+	var bonus_package := _bonus_from_target_and_helper(target_pet, helper_pet, helper_record, helper_stage, roll_seed)
+	var bonus := bonus_package.get("visibleGrowthBonus", {}) as Dictionary
 	return _preview(true, "%s 可以使用 %s 转生。" % [
 		str(target_pet.get("name", "宠物")),
 		str(helper_pet.get("name", helper_name_for_stage(helper_stage))),
-	], bonus, helper_record, _helper_growth_multiplier(helper_pet))
+	], bonus, helper_record, bonus_package)
 
 
-static func apply_rebirth_to_pet(target_pet: Dictionary, helper_pet: Dictionary, now_sec: int) -> Dictionary:
-	var preview := rebirth_bonus_preview(target_pet, helper_pet)
+static func apply_rebirth_to_pet(target_pet: Dictionary, helper_pet: Dictionary, now_sec: int, roll_seed: String = "") -> Dictionary:
+	var validation_preview := rebirth_bonus_preview(target_pet, helper_pet)
+	if not bool(validation_preview.get("ok", false)):
+		return {
+			"ok": false,
+			"pet": target_pet.duplicate(true),
+			"preview": validation_preview,
+			"message": str(validation_preview.get("message", "不能转生。")),
+		}
+	var actual_roll_seed := roll_seed.strip_edges()
+	if actual_roll_seed == "":
+		actual_roll_seed = _new_rebirth_roll_seed(target_pet, helper_pet, now_sec)
+	var preview := rebirth_bonus_preview(target_pet, helper_pet, actual_roll_seed)
 	if not bool(preview.get("ok", false)):
 		return {
 			"ok": false,
@@ -204,7 +216,11 @@ static func apply_rebirth_to_pet(target_pet: Dictionary, helper_pet: Dictionary,
 		"helperStage": current_rebirth + 1,
 		"helperLevel": int(helper_pet.get("level", 1)),
 		"helperStonePoints": (preview.get("helperRecord", {}) as Dictionary).get("stonePoints", {}),
-		"helperGrowthMultiplier": float(preview.get("helperGrowthMultiplier", 1.0)),
+		"rebirthBonusInternalPower": float(preview.get("rebirthBonusInternalPower", 0.0)),
+		"rebirthBonusPercentile": float(preview.get("rebirthBonusPercentile", 0.0)),
+		"rebirthBonusGrade": str(preview.get("rebirthBonusGrade", "D")),
+		"rebirthRollSeed": str(preview.get("rebirthRollSeed", actual_roll_seed)),
+		"helperGrowthWeights": (preview.get("helperGrowthWeights", {}) as Dictionary).duplicate(true) if preview.get("helperGrowthWeights", {}) is Dictionary else {},
 		"visibleGrowthBonus": bonus,
 		"beforeLevel": int(target_pet.get("level", 1)),
 		"afterLevel": 1,
@@ -243,48 +259,75 @@ static func apply_rebirth_to_pet(target_pet: Dictionary, helper_pet: Dictionary,
 	}
 
 
-static func _bonus_from_target_and_helper(target_pet: Dictionary, helper_pet: Dictionary, helper_record: Dictionary, stage: int) -> Dictionary:
+static func _bonus_from_target_and_helper(target_pet: Dictionary, helper_pet: Dictionary, helper_record: Dictionary, stage: int, roll_seed: String = "") -> Dictionary:
 	var target_growth := observed_visible_growth(target_pet)
 	var target_internal := {}
 	for key in STAT_KEYS:
 		var value := float(target_growth.get(key, 0.0))
 		target_internal[key] = value / HP_INTERNAL_SCALE if key == "maxHp" else value
 	var stone_points := normalized_stone_points(helper_record.get("stonePoints", {}))
+	var helper_growth_weights := helper_growth_weight_distribution(helper_pet)
 	var weights := {}
 	var weight_total := 0.0
 	for key in STAT_KEYS:
 		var weight := maxf(0.05, float(target_internal.get(key, 0.0)) * TARGET_WEIGHT_SCALE)
 		weight += float(stone_points.get(key, 0)) / float(STONE_CAPACITY) * STONE_WEIGHT_SCALE
+		weight += float(helper_growth_weights.get(key, 1.0)) * HELPER_GROWTH_WEIGHT_SCALE
 		weights[key] = weight
 		weight_total += weight
 	if weight_total <= 0.0001:
-		return _growth_bonus_dict({})
-	var pool := _pool_for_helper_record(helper_record, stage)
-	pool = snappedf(pool * _helper_growth_multiplier(helper_pet), 0.001)
+		return _bonus_package(_growth_bonus_dict({}), {}, 0.0, 0.0, "D", helper_growth_weights)
+	var pool_info := _pool_info_for_target_and_helper(target_pet, helper_pet, helper_record, stage, roll_seed)
+	var pool := float(pool_info.get("pool", 0.0))
 	var visible_bonus := {}
 	var internal_bonus := {}
 	for key in STAT_KEYS:
 		var internal := pool * float(weights.get(key, 0.0)) / weight_total
 		internal_bonus[key] = snappedf(internal, 0.001)
 		visible_bonus[key] = snappedf(internal * HP_INTERNAL_SCALE, 0.001) if key == "maxHp" else snappedf(internal, 0.001)
-	return _growth_bonus_dict(visible_bonus)
+	return _bonus_package(
+		_growth_bonus_dict(visible_bonus),
+		internal_bonus,
+		pool,
+		float(pool_info.get("percentile", 0.0)),
+		str(pool_info.get("grade", "D")),
+		helper_growth_weights,
+		roll_seed
+	)
 
 
 static func helper_growth_multiplier(helper_pet: Dictionary) -> float:
-	return _helper_growth_multiplier(helper_pet)
+	return 1.0
 
 
-static func _helper_growth_multiplier(helper_pet: Dictionary) -> float:
+static func helper_growth_weight_distribution(helper_pet: Dictionary) -> Dictionary:
+	return _helper_growth_weight_distribution(helper_pet)
+
+
+static func _helper_growth_weight_distribution(helper_pet: Dictionary) -> Dictionary:
+	var equal := {}
+	for key in STAT_KEYS:
+		equal[key] = 1.0
 	if helper_pet.is_empty():
-		return 1.0
+		return equal
 	if str(helper_pet.get("growthSpeciesProfileId", "")).strip_edges() == "":
-		return 1.0
-	var observation := PetGrowthObservationModel.evaluate_pet_for_stage(helper_pet, 0)
-	var observed_levels := int(observation.get("observedLevels", 0))
-	if observed_levels <= 0:
-		return 1.0
-	var percentile := clampf(float(observation.get("powerPercentile", 50.0)), 0.0, 100.0)
-	return snappedf(HELPER_QUALITY_MULTIPLIER_MIN + (HELPER_QUALITY_MULTIPLIER_MAX - HELPER_QUALITY_MULTIPLIER_MIN) * percentile / 100.0, 0.001)
+		return equal
+	var growth := observed_visible_growth(helper_pet)
+	var internal := {}
+	var total := 0.0
+	for key in STAT_KEYS:
+		var value := float(growth.get(key, 0.0))
+		if key == "maxHp":
+			value /= HP_INTERNAL_SCALE
+		value = maxf(0.001, value)
+		internal[key] = value
+		total += value
+	if total <= 0.0001:
+		return equal
+	var result := {}
+	for key in STAT_KEYS:
+		result[key] = snappedf(float(internal.get(key, 0.001)) / total * float(STAT_KEYS.size()), 0.001)
+	return result
 
 
 static func observed_visible_growth(pet: Dictionary) -> Dictionary:
@@ -309,33 +352,113 @@ static func observed_visible_growth(pet: Dictionary) -> Dictionary:
 
 
 static func _pool_for_helper_record(helper_record: Dictionary, stage: int) -> float:
-	var completion := stone_completion(helper_record)
-	var total_points := int(completion.get("totalPoints", 0))
-	var full_count := clampi(int(completion.get("fullCount", 0)), 0, 4)
-	if total_points <= 0:
-		return 0.0
-	var stage_table := FULL_STONE_INTERNAL_POOLS_BY_STAGE.get(clampi(stage, STAGE_ONE, STAGE_TWO), FULL_STONE_INTERNAL_POOLS_BY_STAGE[STAGE_ONE]) as Dictionary
-	if full_count <= 0:
-		var four_full_pool := float(stage_table.get(4, 1.60))
-		return snappedf(four_full_pool * pow(float(total_points) / float(STONE_CAPACITY * 4), 1.35), 0.001)
-	var current_full_pool := float(stage_table.get(full_count, 0.0))
-	var previous_full_pool := float(stage_table.get(full_count - 1, 0.0))
-	var points_in_band := total_points - full_count * STONE_CAPACITY
-	var band_size := STONE_CAPACITY if full_count < 4 else 1
-	var band_unit := clampf(float(points_in_band) / float(band_size), 0.0, 1.0)
-	if full_count >= 4:
-		return snappedf(current_full_pool, 0.001)
-	var next_pool := float(stage_table.get(full_count + 1, current_full_pool))
-	return snappedf(current_full_pool + (next_pool - current_full_pool) * pow(band_unit, 1.15), 0.001) if points_in_band > 0 else snappedf(current_full_pool if current_full_pool > 0.0 else previous_full_pool, 0.001)
+	var pool_range := _pool_range_for_effective_stone_count(_effective_stone_count(helper_record), stage)
+	return snappedf((float(pool_range.get("min", 0.0)) + float(pool_range.get("max", 0.0))) * 0.5, 0.001)
 
 
-static func _preview(ok: bool, message: String, visible_bonus: Dictionary, helper_record: Dictionary, helper_multiplier: float = 1.0) -> Dictionary:
+static func _pool_info_for_target_and_helper(target_pet: Dictionary, helper_pet: Dictionary, helper_record: Dictionary, stage: int, roll_seed: String = "") -> Dictionary:
+	var safe_stage := clampi(stage, STAGE_ONE, STAGE_TWO)
+	var effective_count := _effective_stone_count(helper_record)
+	var pool_range := _pool_range_for_effective_stone_count(effective_count, safe_stage)
+	var min_pool := float(pool_range.get("min", 0.0))
+	var max_pool := float(pool_range.get("max", 0.0))
+	var percentile := _rebirth_bonus_percentile(target_pet, helper_pet, helper_record, safe_stage, roll_seed)
+	var pool := snappedf(min_pool + (max_pool - min_pool) * percentile / 100.0, 0.001)
+	return {
+		"pool": pool,
+		"effectiveStoneCount": snappedf(effective_count, 0.001),
+		"poolMin": snappedf(min_pool, 0.001),
+		"poolMax": snappedf(max_pool, 0.001),
+		"percentile": snappedf(percentile, 0.1),
+		"grade": _grade_for_percentile(percentile),
+	}
+
+
+static func _effective_stone_count(helper_record: Dictionary) -> float:
+	var points := normalized_stone_points(helper_record.get("stonePoints", {}))
+	var total := 0.0
+	for key in STAT_KEYS:
+		var ratio := clampf(float(points.get(key, 0)) / float(STONE_CAPACITY), 0.0, 1.0)
+		total += pow(ratio, STONE_EFFECTIVE_EXPONENT)
+	return snappedf(total, 0.001)
+
+
+static func _pool_range_for_effective_stone_count(effective_count: float, stage: int) -> Dictionary:
+	var safe_stage := clampi(stage, STAGE_ONE, STAGE_TWO)
+	var table := STONE_EFFECTIVE_POOL_RANGES_BY_STAGE.get(safe_stage, STONE_EFFECTIVE_POOL_RANGES_BY_STAGE[STAGE_ONE]) as Dictionary
+	var safe_count := clampf(effective_count, 0.0, 4.0)
+	var lower := clampi(int(floor(safe_count)), 0, 4)
+	var upper := clampi(lower + 1, 0, 4)
+	var t := 0.0 if lower >= 4 else clampf(safe_count - float(lower), 0.0, 1.0)
+	var lower_range := table.get(lower, table.get(0, {"min": 0.0, "max": 0.0})) as Dictionary
+	var upper_range := table.get(upper, lower_range) as Dictionary
+	var lower_min := float(lower_range.get("min", 0.0))
+	var lower_max := float(lower_range.get("max", 0.0))
+	var upper_min := float(upper_range.get("min", lower_min))
+	var upper_max := float(upper_range.get("max", lower_max))
+	return {
+		"min": snappedf(lower_min + (upper_min - lower_min) * t, 0.001),
+		"max": snappedf(lower_max + (upper_max - lower_max) * t, 0.001),
+	}
+
+
+static func _rebirth_bonus_percentile(target_pet: Dictionary, helper_pet: Dictionary, _helper_record: Dictionary, stage: int, roll_seed: String = "") -> float:
+	var actual_seed := roll_seed.strip_edges()
+	if actual_seed == "":
+		return 50.0
+	var key := "%s|%s|%s|%s|%d|%s" % [
+		str(target_pet.get("growthSpeciesSeed", target_pet.get("instanceId", target_pet.get("petId", "")))),
+		str(helper_pet.get("growthSpeciesSeed", helper_pet.get("instanceId", helper_pet.get("petId", "")))),
+		str(target_pet.get("formId", target_pet.get("templateId", ""))),
+		str(helper_pet.get("formId", helper_pet.get("templateId", ""))),
+		stage,
+		actual_seed,
+	]
+	return float(_stable_hash("pet_rebirth_bonus:%s" % key) % 10001) / 100.0
+
+
+static func _grade_for_percentile(percentile: float) -> String:
+	var value := clampf(percentile, 0.0, 100.0)
+	if value >= 95.0:
+		return "S"
+	if value >= 85.0:
+		return "A"
+	if value >= 55.0:
+		return "B"
+	if value >= 25.0:
+		return "C"
+	return "D"
+
+
+static func _bonus_package(visible_bonus: Dictionary, internal_bonus: Dictionary, internal_power: float, percentile: float, grade: String, helper_growth_weights: Dictionary, roll_seed: String = "") -> Dictionary:
+	return {
+		"visibleGrowthBonus": _growth_bonus_dict(visible_bonus),
+		"internalGrowthBonus": internal_bonus.duplicate(true),
+		"rebirthBonusInternalPower": snappedf(internal_power, 0.001),
+		"rebirthBonusPercentile": snappedf(percentile, 0.1),
+		"rebirthBonusGrade": grade,
+		"rebirthRollSeed": roll_seed.strip_edges(),
+		"rebirthRollMode": "random" if roll_seed.strip_edges() != "" else "preview_median",
+		"helperGrowthWeights": helper_growth_weights.duplicate(true),
+	}
+
+
+static func _preview(ok: bool, message: String, visible_bonus: Dictionary, helper_record: Dictionary, bonus_package: Dictionary = {}) -> Dictionary:
 	var lines: Array[String] = []
 	if ok:
 		lines.append("等级变化：当前等级 -> Lv1，经验清零。")
 		lines.append("成长加成：%s" % _bonus_text(visible_bonus))
 		lines.append("MM石头：%s" % _stone_points_text(helper_record.get("stonePoints", {})))
-		lines.append("MM个体效率：%.1f%%" % (helper_multiplier * 100.0))
+		var roll_mode := str(bonus_package.get("rebirthRollMode", "preview_median"))
+		lines.append("转生加成%s：%s %.1f%%，四维等效 %.3f/级" % [
+			"预估" if roll_mode == "preview_median" else "",
+			str(bonus_package.get("rebirthBonusGrade", "D")),
+			float(bonus_package.get("rebirthBonusPercentile", 0.0)),
+			float(bonus_package.get("rebirthBonusInternalPower", 0.0)),
+		])
+		if roll_mode == "preview_median":
+			lines.append("说明：预览按中位数估算，确认转生时随机一次并记录。")
+		lines.append("说明：MM单项成长只轻微影响四维分配，不放大总成长。")
 		lines.append("说明：加成写入宠物成长记录，后续升级按新成长计算。")
 	return {
 		"ok": ok,
@@ -344,7 +467,12 @@ static func _preview(ok: bool, message: String, visible_bonus: Dictionary, helpe
 		"message": message,
 		"lines": lines,
 		"visibleGrowthBonus": _growth_bonus_dict(visible_bonus),
-		"helperGrowthMultiplier": snappedf(helper_multiplier, 0.001),
+		"rebirthBonusInternalPower": snappedf(float(bonus_package.get("rebirthBonusInternalPower", 0.0)), 0.001),
+		"rebirthBonusPercentile": snappedf(float(bonus_package.get("rebirthBonusPercentile", 0.0)), 0.1),
+		"rebirthBonusGrade": str(bonus_package.get("rebirthBonusGrade", "D")),
+		"rebirthRollSeed": str(bonus_package.get("rebirthRollSeed", "")),
+		"rebirthRollMode": str(bonus_package.get("rebirthRollMode", "preview_median")),
+		"helperGrowthWeights": (bonus_package.get("helperGrowthWeights", {}) as Dictionary).duplicate(true) if bonus_package.get("helperGrowthWeights", {}) is Dictionary else {},
 		"helperRecord": normalized_helper_record(helper_record, int(helper_record.get("stage", STAGE_ONE))) if not helper_record.is_empty() else {},
 		"schemaVersion": SCHEMA_VERSION,
 	}
@@ -374,6 +502,25 @@ static func _growth_bonus_dict(value) -> Dictionary:
 	for key in STAT_KEYS:
 		result[key] = snappedf(float(source.get(key, 0.0)), 0.001)
 	return result
+
+
+static func _stable_hash(text: String) -> int:
+	var hash_value := 2166136261
+	for index in range(text.length()):
+		hash_value = int((hash_value ^ text.unicode_at(index)) * 16777619) % 2147483647
+	return abs(hash_value)
+
+
+static func _new_rebirth_roll_seed(target_pet: Dictionary, helper_pet: Dictionary, now_sec: int) -> String:
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	return "%d|%d|%d|%s|%s" % [
+		now_sec,
+		Time.get_ticks_usec(),
+		rng.randi(),
+		str(target_pet.get("instanceId", target_pet.get("petId", ""))),
+		str(helper_pet.get("instanceId", helper_pet.get("petId", ""))),
+	]
 
 
 static func _normalized_cultivation(value) -> Dictionary:
