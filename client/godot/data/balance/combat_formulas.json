@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "activeFormulaId": "combat_v1",
+  "formulas": [
+    {
+      "id": "combat_v1",
+      "physicalDamage": {
+        "flatPower": 0,
+        "powerMultiplier": 1.0,
+        "defaultDefenseFactor": 0.35,
+        "petSkillDefenseFactor": 0.25,
+        "roundDefenseBeforeSubtract": true,
+        "levelDifferenceMultiplierPerLevel": 0.0,
+        "levelMultiplierMin": 1.0,
+        "levelMultiplierMax": 1.0,
+        "guardMultiplier": 0.45,
+        "guardRounding": "floor"
+      },
+      "dodge": {
+        "mode": "quick_contest_sqrt",
+        "baseRate": 0.03,
+        "quickDifferenceWeight": 0.002,
+        "dexDivisor": 0.02,
+        "minRate": 0.0001,
+        "maxRate": 0.75
+      },
+      "critical": {
+        "mode": "quick_contest_sqrt",
+        "baseRate": 0.05,
+        "quickDifferenceWeight": 0.0015,
+        "dexDivisor": 0.09,
+        "minRate": 0.0,
+        "maxRate": 1.0,
+        "damageMultiplier": 1.35,
+        "multiTargetDamageMultiplier": 1.0
+      },
+      "combo": {
+        "allyBaseRate": 0.50,
+        "monsterBaseRate": 0.20,
+        "bonusPerExtraParticipant": 0.0,
+        "flatBonusPerExtraParticipant": 8,
+        "maxParticipants": 5
+      },
+      "multiTarget": {
+        "applyPowerMultiplierAfterDefense": true,
+        "targetCountFalloffPerExtra": 0.0,
+        "minMultiplier": 0.45
+      },
+      "statusHit": {
+        "mode": "legacy_base_minus_resistance",
+        "quickDifferenceWeight": 0.0,
+        "quickDifferenceBonusMin": -0.05,
+        "quickDifferenceBonusMax": 0.05,
+        "levelDifferenceWeight": 0.0,
+        "controlMaxRate": 1.0,
+        "poisonMaxRate": 1.0
+      }
+    }
+  ],
+  "elementMatchup": {
+    "cycle": [
+      {"strong": "earth", "weak": "water"},
+      {"strong": "water", "weak": "fire"},
+      {"strong": "fire", "weak": "wind"},
+      {"strong": "wind", "weak": "earth"}
+    ],
+    "strongMultiplier": 1.35,
+    "weakMultiplier": 0.75,
+    "neutralMultiplier": 1.0
+  }
+}

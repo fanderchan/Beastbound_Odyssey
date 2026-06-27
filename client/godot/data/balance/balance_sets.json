@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "activeBalanceSetId": "phase123_core_v1",
+  "sets": [
+    {
+      "id": "phase123_core_v1",
+      "label": "Phase123-133 核心数值骨架 v1",
+      "status": "prototype_locked",
+      "balanceVersion": "phase123_core_v1",
+      "formulaVersion": "combat_v1",
+      "captureFormulaVersion": "capture_v1",
+      "rewardEconomyVersion": "battle_exp_v1",
+      "progressionVersion": "progression_v1",
+      "battleSimulationSuiteId": "phase127_core",
+      "economyLedgerId": "phase128_core",
+      "levelCurveId": "default_1_140",
+      "playerGrowthVersion": "player_growth_v1",
+      "petGrowthVersion": "pet_growth_v1",
+      "petPowerFormulaId": "stoneage_like_v1",
+      "createdPhase": 123,
+      "lockedThroughPhase": 133,
+      "serverAuthorityPolicy": {
+        "recordOnBattleReceipt": true,
+        "clientMayPreview": true,
+        "serverOwnsRewards": true,
+        "serverOwnsCaptureResult": true
+      },
+      "notes": [
+        "本数值包以旧行为 parity 和固定样本稳定为目标，不代表最终商业化平衡。",
+        "combat_v1 不直接做新平衡；新手感应新增 combat_v2。",
+        "经济高阶区仍处于 watch，需要后续金币回收系统解释。"
+      ]
+    }
+  ]
+}

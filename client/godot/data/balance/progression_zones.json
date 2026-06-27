@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "activeProgressionId": "progression_v1",
+  "progressions": [
+    {
+      "id": "progression_v1",
+      "label": "1-140 练级与资格战数值骨架",
+      "zones": [
+        {
+          "id": "firebud_newbie",
+          "label": "火芽村入口草丛",
+          "stageId": "newbie",
+          "contentType": "wild_training",
+          "levelRange": [1, 20],
+          "mapIds": ["firebud_village_gate"],
+          "encounterGroupId": "firebud_grass_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [40, 120],
+          "targetBattlesPerLevel": [10, 20],
+          "targetStoneCoinsPerBattle": [10, 35],
+          "typicalBattle": {
+            "enemyCount": 2,
+            "enemy": {"level": 2, "maxHp": 92, "attack": 15, "defense": 7, "quick": 72}
+          },
+          "designNotes": "教学、新手补给和第一批捕宠道具来源；不服务中后期练级。"
+        },
+        {
+          "id": "riverbank_growth",
+          "label": "河岸成长区",
+          "stageId": "growth",
+          "contentType": "wild_training",
+          "levelRange": [20, 60],
+          "mapIds": [],
+          "encounterGroupId": "growth_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [300, 1200],
+          "targetBattlesPerLevel": [10, 28],
+          "targetStoneCoinsPerBattle": [35, 120],
+          "typicalBattle": {
+            "enemyCount": 3,
+            "enemy": {"level": 35, "maxHp": 260, "attack": 38, "defense": 24, "quick": 80}
+          },
+          "designNotes": "承接新手任务后的第一段稳定练级区，后续需要正式地图和遇敌池。"
+        },
+        {
+          "id": "forest_rebirth_prep",
+          "label": "一转准备练级区",
+          "stageId": "rebirth_prep",
+          "contentType": "wild_training",
+          "levelRange": [60, 80],
+          "mapIds": [],
+          "encounterGroupId": "rebirth_prep_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [3000, 7000],
+          "targetBattlesPerLevel": [18, 45],
+          "targetStoneCoinsPerBattle": [120, 280],
+          "typicalBattle": {
+            "enemyCount": 4,
+            "enemy": {"level": 70, "maxHp": 520, "attack": 55, "defense": 35, "quick": 96}
+          },
+          "designNotes": "主要服务 Lv60-80 和一转前补强；收益应明显高于火芽草丛。"
+        },
+        {
+          "id": "post_rebirth_plateau",
+          "label": "一转后高原练级区",
+          "stageId": "post_rebirth",
+          "contentType": "wild_training",
+          "levelRange": [80, 100],
+          "mapIds": [],
+          "encounterGroupId": "post_rebirth_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [7000, 16000],
+          "targetBattlesPerLevel": [25, 60],
+          "targetStoneCoinsPerBattle": [220, 520],
+          "typicalBattle": {
+            "enemyCount": 5,
+            "enemy": {"level": 90, "maxHp": 760, "attack": 78, "defense": 52, "quick": 118}
+          },
+          "designNotes": "一转后主循环区，应该开始考验自动战斗、补给和装备耐久。"
+        },
+        {
+          "id": "four_cave_high",
+          "label": "四洞深层练级区",
+          "stageId": "high_cave",
+          "contentType": "wild_training",
+          "levelRange": [100, 120],
+          "mapIds": [
+            "earth_vein_cave_f4",
+            "tide_echo_cave_f4",
+            "ember_core_cave_f4",
+            "gale_breath_cave_f4"
+          ],
+          "encounterGroupId": "high_cave_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [18000, 42000],
+          "targetBattlesPerLevel": [30, 75],
+          "targetStoneCoinsPerBattle": [450, 1000],
+          "typicalBattle": {
+            "enemyCount": 6,
+            "enemy": {"level": 110, "maxHp": 1050, "attack": 112, "defense": 78, "quick": 138}
+          },
+          "designNotes": "四洞正式刷级池应和守护兽资格战区分，避免玩家反复刷一次性守护。"
+        },
+        {
+          "id": "shadow_chase",
+          "label": "玄影追赶练级区",
+          "stageId": "shadow_chase",
+          "contentType": "wild_training",
+          "levelRange": [120, 131],
+          "mapIds": ["shadow_oath_cave_f5"],
+          "encounterGroupId": "shadow_chase_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [55000, 110000],
+          "targetBattlesPerLevel": [28, 55],
+          "targetStoneCoinsPerBattle": [900, 1800],
+          "typicalBattle": {
+            "enemyCount": 8,
+            "enemy": {"level": 130, "maxHp": 1400, "attack": 145, "defense": 98, "quick": 165}
+          },
+          "designNotes": "经验丹测试和追赶段，经验较高但不代表最终满级耐玩段。"
+        },
+        {
+          "id": "shadow_capstone",
+          "label": "玄影满级冲刺区",
+          "stageId": "capstone",
+          "contentType": "wild_training",
+          "levelRange": [132, 140],
+          "mapIds": ["shadow_oath_cave_f5"],
+          "encounterGroupId": "shadow_capstone_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [100000, 180000],
+          "targetBattlesPerLevel": [30, 65],
+          "targetStoneCoinsPerBattle": [1200, 2600],
+          "typicalBattle": {
+            "enemyCount": 10,
+            "enemy": {"level": 138, "maxHp": 1650, "attack": 170, "defense": 120, "quick": 180}
+          },
+          "designNotes": "最终长期满级冲刺段，经验高但应通过药耗、修理、捕捉成本和击飞风险回收。"
+        },
+        {
+          "id": "four_cave_guardian_qualification",
+          "label": "四洞守护资格战",
+          "stageId": "high_cave",
+          "contentType": "qualification_battle",
+          "levelRange": [80, 120],
+          "mapIds": [
+            "earth_vein_cave_f4",
+            "tide_echo_cave_f4",
+            "ember_core_cave_f4",
+            "gale_breath_cave_f4"
+          ],
+          "encounterGroupId": "earth_vein_guardian_group",
+          "repeatable": false,
+          "targetAvgExpPerBattle": [4500, 9000],
+          "targetBattlesPerLevel": [999, 999],
+          "targetStoneCoinsPerBattle": [180, 320],
+          "typicalBattle": {
+            "enemyCount": 2,
+            "enemy": {"level": 80, "maxHp": 950, "attack": 95, "defense": 70, "quick": 70}
+          },
+          "designNotes": "任务资格战，用于阶段仪式感和补贴；不作为刷级路线。"
+        },
+        {
+          "id": "shadow_rebirth_qualification",
+          "label": "玄影顶层转生战",
+          "stageId": "capstone",
+          "contentType": "qualification_battle",
+          "levelRange": [100, 140],
+          "mapIds": ["shadow_oath_cave_f5"],
+          "encounterGroupId": "shadow_oath_rebirth_guardian",
+          "repeatable": false,
+          "targetAvgExpPerBattle": [6500, 14000],
+          "targetBattlesPerLevel": [999, 999],
+          "targetStoneCoinsPerBattle": [300, 520],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 106, "maxHp": 1500, "attack": 135, "defense": 95, "quick": 90}
+          },
+          "designNotes": "转生任务收束战，胜利奖励应有存在感，但主要价值来自任务推进。"
+        }
+      ]
+    }
+  ]
+}

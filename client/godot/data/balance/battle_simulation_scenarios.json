@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "activeSuiteId": "phase127_core",
+  "suites": [
+    {
+      "id": "phase127_core",
+      "label": "Phase127 固定战斗仿真基线",
+      "roundLimit": 30,
+      "scenarios": [
+        {
+          "id": "firebud_newbie_solo",
+          "label": "火芽新手单人草丛",
+          "progressionZoneId": "firebud_newbie",
+          "partySize": 1,
+          "playerLevel": 5,
+          "petLevel": 5,
+          "petFormId": "bui_normal_red_fire10",
+          "enemyLevel": 2,
+          "enemyCount": 2,
+          "enemyStats": {"maxHp": 92, "attack": 15, "defense": 7, "quick": 72},
+          "expect": {"result": "victory", "minRounds": 3, "maxRounds": 8, "minPlayerHpRatio": 0.35}
+        },
+        {
+          "id": "riverbank_growth_solo",
+          "label": "河岸成长单人练级",
+          "progressionZoneId": "riverbank_growth",
+          "partySize": 1,
+          "playerLevel": 35,
+          "petLevel": 35,
+          "petFormId": "bui_normal_red_fire10",
+          "enemyLevel": 35,
+          "enemyCount": 3,
+          "enemyStats": {"maxHp": 260, "attack": 38, "defense": 24, "quick": 80},
+          "expect": {"result": "victory", "minRounds": 3, "maxRounds": 14, "minPlayerHpRatio": 0.20}
+        },
+        {
+          "id": "rebirth_prep_small_team",
+          "label": "一转准备三人练级",
+          "progressionZoneId": "forest_rebirth_prep",
+          "partySize": 3,
+          "playerLevel": 70,
+          "petLevel": 70,
+          "petFormId": "bui_normal_red_fire10",
+          "enemyLevel": 70,
+          "enemyCount": 4,
+          "enemyStats": {"maxHp": 520, "attack": 55, "defense": 35, "quick": 96},
+          "expect": {"result": "victory", "minRounds": 3, "maxRounds": 16, "minPlayerHpRatio": 0.20}
+        },
+        {
+          "id": "post_rebirth_full_team",
+          "label": "一转后五人练级",
+          "progressionZoneId": "post_rebirth_plateau",
+          "partySize": 5,
+          "playerLevel": 90,
+          "petLevel": 90,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 90,
+          "enemyCount": 5,
+          "enemyStats": {"maxHp": 760, "attack": 78, "defense": 52, "quick": 118},
+          "expect": {"result": "victory", "minRounds": 3, "maxRounds": 18, "minPlayerHpRatio": 0.15}
+        },
+        {
+          "id": "four_cave_high_full_team",
+          "label": "四洞深层五人练级",
+          "progressionZoneId": "four_cave_high",
+          "partySize": 5,
+          "playerLevel": 110,
+          "petLevel": 110,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 110,
+          "enemyCount": 6,
+          "enemyStats": {"maxHp": 1050, "attack": 112, "defense": 78, "quick": 138},
+          "expect": {"result": "victory", "minRounds": 3, "maxRounds": 20, "minPlayerHpRatio": 0.10}
+        },
+        {
+          "id": "shadow_chase_full_team",
+          "label": "玄影追赶五人练级",
+          "progressionZoneId": "shadow_chase",
+          "partySize": 5,
+          "playerLevel": 130,
+          "petLevel": 130,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 130,
+          "enemyCount": 8,
+          "enemyStats": {"maxHp": 1400, "attack": 145, "defense": 98, "quick": 165},
+          "expect": {"result": "victory", "minRounds": 5, "maxRounds": 24, "minPlayerHpRatio": 0.08}
+        },
+        {
+          "id": "shadow_capstone_full_team",
+          "label": "玄影满级冲刺五人练级",
+          "progressionZoneId": "shadow_capstone",
+          "partySize": 5,
+          "playerLevel": 138,
+          "petLevel": 138,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 138,
+          "enemyCount": 10,
+          "enemyStats": {"maxHp": 1650, "attack": 170, "defense": 120, "quick": 180},
+          "expect": {"result": "victory", "minRounds": 6, "maxRounds": 28, "minPlayerHpRatio": 0.05}
+        },
+        {
+          "id": "four_cave_guardian_qualification",
+          "label": "四洞守护资格战",
+          "progressionZoneId": "four_cave_guardian_qualification",
+          "partySize": 5,
+          "playerLevel": 90,
+          "petLevel": 90,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 80,
+          "enemyCount": 2,
+          "enemyStats": {"maxHp": 950, "attack": 95, "defense": 70, "quick": 70},
+          "expect": {"result": "victory", "minRounds": 2, "maxRounds": 18, "minPlayerHpRatio": 0.12}
+        },
+        {
+          "id": "shadow_rebirth_qualification",
+          "label": "玄影顶层转生战",
+          "progressionZoneId": "shadow_rebirth_qualification",
+          "partySize": 5,
+          "playerLevel": 131,
+          "petLevel": 131,
+          "petFormId": "wuli_normal_orange_fire10",
+          "enemyLevel": 106,
+          "enemyCount": 1,
+          "enemyStats": {"maxHp": 2600, "attack": 160, "defense": 110, "quick": 100},
+          "expect": {"result": "victory", "minRounds": 2, "maxRounds": 16, "minPlayerHpRatio": 0.12}
+        }
+      ]
+    }
+  ]
+}

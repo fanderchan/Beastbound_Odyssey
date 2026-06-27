@@ -3,7 +3,9 @@ extends RefCounted
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const CombatFormulaModel := preload("res://scripts/progression/combat_formula_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const SIDE_ALLY := "ally"
 const SIDE_ENEMY := "enemy"
@@ -55,6 +57,8 @@ const COUNTER_DEX_DIVISOR := 0.08
 const COUNTER_DAMAGE_FACTOR := 0.75
 const COMBATANT_COMBO_BASE_RATE := 0.50
 const MONSTER_COMBO_BASE_RATE := 0.20
+const COMBAT_FORMULA_DRIVER_LEGACY := "legacy"
+const COMBAT_FORMULA_DRIVER_TABLE := "table"
 const PET_METADATA_KEYS: Array[String] = [
 	"instanceId",
 	"petId",
@@ -83,6 +87,30 @@ const PET_METADATA_KEYS: Array[String] = [
 	"petCultivation",
 	"lastCultivationResult",
 ]
+
+
+static func with_combat_formula_driver(state: Dictionary, driver: String, formula: Dictionary = {}) -> Dictionary:
+	var next_state := state.duplicate(true)
+	next_state["combatFormulaDriver"] = driver
+	if not formula.is_empty():
+		next_state["combatFormula"] = formula.duplicate(true)
+	return next_state
+
+
+static func combat_formula_driver_for_state(state: Dictionary) -> String:
+	var driver := str(state.get("combatFormulaDriver", COMBAT_FORMULA_DRIVER_LEGACY))
+	return COMBAT_FORMULA_DRIVER_TABLE if driver == COMBAT_FORMULA_DRIVER_TABLE else COMBAT_FORMULA_DRIVER_LEGACY
+
+
+static func _uses_table_combat_formula(state: Dictionary) -> bool:
+	return combat_formula_driver_for_state(state) == COMBAT_FORMULA_DRIVER_TABLE
+
+
+static func _active_combat_formula_for_state(state: Dictionary) -> Dictionary:
+	var raw_formula = state.get("combatFormula", {})
+	if raw_formula is Dictionary and not (raw_formula as Dictionary).is_empty():
+		return raw_formula as Dictionary
+	return BalanceCatalogModel.active_combat_formula()
 
 
 static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
@@ -1552,6 +1580,8 @@ static func combo_chance_for_event(state: Dictionary, event: Dictionary) -> floa
 		return clampf(_rate_value(event.get("comboRateOverride"), 0.0), 0.0, 1.0)
 	if attacker.has("comboRateOverride"):
 		return clampf(_rate_value(attacker.get("comboRateOverride"), 0.0), 0.0, 1.0)
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.combo_rate_for_event(_active_combat_formula_for_state(state), state, event)
 	var chance := combo_base_rate_for_actor(attacker)
 	chance += _rate_value(state.get("comboBonusRate", 0.0), 0.0)
 	var side_bonus_map = state.get("comboBonusRateBySide", {})
@@ -1677,10 +1707,13 @@ static func capture_chance(state: Dictionary, attacker_id: String, target_id: St
 	var max_hp := maxf(1.0, float(target.get("maxHp", 1)))
 	var hp_ratio := clampf(float(target.get("hp", 0)) / max_hp, 0.0, 1.0)
 	var difficulty := clampf(float(target.get("captureDifficulty", 42)) / 100.0, 0.0, 0.9)
-	var chance := 0.42 - hp_ratio * 0.22 - difficulty * 0.12
+	var formula := BalanceCatalogModel.active_capture_formula()
+	var chance := float(formula.get("baseChance", 0.42))
+	chance -= hp_ratio * float(formula.get("hpRatioPenalty", 0.22))
+	chance -= difficulty * float(formula.get("difficultyRatioPenalty", 0.12))
 	chance += CaptureToolCatalog.chance_bonus_for(capture_tool_id)
 	chance += _capture_status_bonus_for_actor(target)
-	return clampf(chance, 0.05, 0.95)
+	return clampf(chance, float(formula.get("minChance", 0.05)), float(formula.get("maxChance", 0.95)))
 
 
 static func capture_roll(state: Dictionary, attacker_id: String, target_id: String, capture_tool_id: String = CAPTURE_TOOL_EMPTY_HAND, sequence: int = 0) -> float:
@@ -1702,14 +1735,17 @@ static func capture_would_succeed(state: Dictionary, attacker_id: String, target
 
 static func _capture_status_bonus_for_actor(actor: Dictionary) -> float:
 	var bonus := 0.0
+	var formula := BalanceCatalogModel.active_capture_formula()
+	var status_bonus = formula.get("statusBonus", {})
+	var status_bonus_dict := status_bonus as Dictionary if status_bonus is Dictionary else {}
 	if BattleStatusModel.has_status(actor, STATUS_SLEEP):
-		bonus += 0.18
+		bonus += float(status_bonus_dict.get("sleep", 0.18))
 	if BattleStatusModel.has_status(actor, STATUS_STONE):
-		bonus += 0.16
+		bonus += float(status_bonus_dict.get("stone", 0.16))
 	if BattleStatusModel.has_status(actor, STATUS_CONFUSION):
-		bonus += 0.10
+		bonus += float(status_bonus_dict.get("confusion", 0.10))
 	if BattleStatusModel.has_status(actor, STATUS_POISON):
-		bonus += 0.05
+		bonus += float(status_bonus_dict.get("poison", 0.05))
 	return bonus
 
 
@@ -1937,6 +1973,16 @@ static func _status_hit_check_for_event(state: Dictionary, event: Dictionary, ta
 		base_rate = float(event.get("statusHitRate", base_rate))
 	var resistance := _status_resistance_for_actor(target, status_id)
 	var chance := clampf(base_rate - resistance, 0.0, 1.0)
+	if _uses_table_combat_formula(state):
+		chance = CombatFormulaModel.status_hit_rate_for(
+			_active_combat_formula_for_state(state),
+			state,
+			str(event.get("attackerId", "")),
+			str(target.get("id", "")),
+			action_id,
+			status_id,
+			base_rate
+		)
 	var seed_text := "%s:status:%s:%s:%s:%s:%d:%d" % [
 		str(state.get("targetSeed", state.get("id", "battle"))),
 		action_id,
@@ -2403,6 +2449,8 @@ static func _resolved_damage_for_event(state: Dictionary, event: Dictionary, tar
 			total += _attack_damage_for(state, participant_id, target_id)
 		if living_participants.is_empty():
 			return maxi(1, int(event.get("damage", 1)))
+		if _uses_table_combat_formula(state):
+			return CombatFormulaModel.combo_damage_for(_active_combat_formula_for_state(state), state, living_participants, target_id)
 		return maxi(1, total + 8 * maxi(1, living_participants.size() - 1))
 	return _attack_damage_for(state, str(event.get("attackerId", "")), target_id)
 
@@ -2482,6 +2530,8 @@ static func _dodge_rate_for(state: Dictionary, attacker_id: String, target_id: S
 		return clampf(float(target.get("dodgeRateOverride", 0.0)), 0.0, 1.0)
 	if target.has("evasionRateOverride"):
 		return clampf(float(target.get("evasionRateOverride", 0.0)), 0.0, 1.0)
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.dodge_rate_for(_active_combat_formula_for_state(state), state, attacker_id, target_id)
 	var chance_percent := _quick_contest_percent(state, target_id, attacker_id, DODGE_DEX_DIVISOR)
 	chance_percent += float(target.get("luck", 0))
 	chance_percent += float(target.get("dodgeBonus", target.get("evasionBonus", 0.0)))
@@ -2492,6 +2542,8 @@ static func _critical_rate_for(state: Dictionary, attacker_id: String, target_id
 	var attacker := actor_by_id(state, attacker_id)
 	if attacker.has("criticalRateOverride"):
 		return clampf(float(attacker.get("criticalRateOverride", 0.0)), 0.0, 1.0)
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.critical_rate_for(_active_combat_formula_for_state(state), state, attacker_id, target_id)
 	var chance_percent := _quick_contest_percent(state, attacker_id, target_id, CRITICAL_DEX_DIVISOR)
 	chance_percent += float(attacker.get("luck", 0))
 	chance_percent += float(attacker.get("criticalBonus", 0.0))
@@ -3204,6 +3256,8 @@ static func _ally_action_order(state: Dictionary) -> Array[String]:
 
 
 static func _attack_damage_for(state: Dictionary, actor_id: String, target_id: String = "") -> int:
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.attack_damage_for(_active_combat_formula_for_state(state), state, actor_id, target_id)
 	var actor := actor_by_id(state, actor_id)
 	if actor.is_empty():
 		return 1
@@ -3218,12 +3272,16 @@ static func _attack_damage_for(state: Dictionary, actor_id: String, target_id: S
 
 
 static func _multi_attack_damage_for(state: Dictionary, actor_id: String, target_id: String, action_id: String) -> int:
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.multi_attack_damage_for(_active_combat_formula_for_state(state), state, actor_id, target_id, action_id, 1)
 	var base_damage := _attack_damage_for(state, actor_id, target_id)
 	var multiplier := BattleActionCatalog.effect_power_multiplier_for(action_id, 1.0)
 	return maxi(1, int(round(float(base_damage) * multiplier)))
 
 
 static func _skill_damage_for(state: Dictionary, actor_id: String, target_id: String = "", action_id: String = PET_SKILL_BUI_CHARGE) -> int:
+	if _uses_table_combat_formula(state):
+		return CombatFormulaModel.skill_damage_for(_active_combat_formula_for_state(state), state, actor_id, target_id, action_id)
 	var actor := actor_by_id(state, actor_id)
 	if actor.is_empty():
 		return 1

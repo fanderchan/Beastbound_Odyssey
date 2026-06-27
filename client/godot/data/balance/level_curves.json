@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "maxPlayerLevel": 140,
+  "maxPetLevel": 140,
+  "activeCurveId": "default_1_140",
+  "curves": [
+    {
+      "id": "default_1_140",
+      "label": "默认1-140级曲线",
+      "formula": "v1_exponential_power",
+      "baseConstant": 80,
+      "linearPerLevel": 40,
+      "expGrowthRate": 1.052,
+      "powerExponent": 2.15,
+      "powerMultiplier": 2.0,
+      "anchors": [
+        {"level": 20, "role": "新手教学快段"},
+        {"level": 60, "role": "探索成长段"},
+        {"level": 80, "role": "人物转生循环点"},
+        {"level": 100, "role": "守护战稳定挑战点"},
+        {"level": 131, "role": "经验丹测试与追赶锚点"},
+        {"level": 140, "role": "宠物长期培养上限"}
+      ]
+    }
+  ]
+}

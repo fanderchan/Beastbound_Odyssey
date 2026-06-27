@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "baseStats": {
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 6,
+    "quick": 70
+  },
+  "statPointsPerLevel": 3,
+  "pointGains": {
+    "maxHp": 4,
+    "attack": 1,
+    "defense": 1,
+    "quick": 1
+  },
+  "villageHealHpPerCoin": 20,
+  "rebirth": {
+    "maxRebirth": 6,
+    "requiredLevelByTarget": [80, 80, 80, 80, 80, 80],
+    "previewFormula": "rebirth_v1"
+  },
+  "equipmentWear": {
+    "weaponAttacksPerDurability": 100,
+    "armorHitsPerDurability": 10,
+    "repairDurabilityPerCoin": 5
+  }
+}

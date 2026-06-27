@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "activeFormulaId": "capture_v1",
+  "formulas": [
+    {
+      "id": "capture_v1",
+      "baseChance": 0.42,
+      "hpRatioPenalty": 0.22,
+      "difficultyRatioPenalty": 0.12,
+      "toolPowerWeight": 0.02,
+      "minChance": 0.05,
+      "maxChance": 0.95,
+      "statusBonus": {
+        "sleep": 0.18,
+        "stone": 0.16,
+        "confusion": 0.10,
+        "poison": 0.05
+      }
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+
 const SCHEMA_VERSION := 1
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 
@@ -115,11 +117,11 @@ static func quality_score_for_variance(variance: Dictionary) -> int:
 
 
 static func quality_label(score: int) -> String:
-	if score >= 7600:
-		return "偏高"
-	if score <= 2400:
-		return "偏低"
-	return "普通"
+	if score >= BalanceCatalogModel.pet_quality_high_threshold(7600):
+		return BalanceCatalogModel.pet_quality_label("high", "偏高")
+	if score <= BalanceCatalogModel.pet_quality_low_threshold(2400):
+		return BalanceCatalogModel.pet_quality_label("low", "偏低")
+	return BalanceCatalogModel.pet_quality_label("normal", "普通")
 
 
 static func growth_tier_label(tier_id: String) -> String:
@@ -143,16 +145,28 @@ static func power_breakdown(value: Dictionary) -> Dictionary:
 	var attack := maxi(0, int(value.get("attack", 0)))
 	var defense := maxi(0, int(value.get("defense", 0)))
 	var quick := maxi(0, int(value.get("agility", value.get("quick", 0))))
-	var hp_part := float(max_hp) / 4.0
-	var total := int(round(hp_part + float(attack + defense + quick)))
+	var weights := BalanceCatalogModel.pet_power_weights()
+	var hp_weight := float(weights.get("maxHp", 0.25))
+	var attack_weight := float(weights.get("attack", 1.0))
+	var defense_weight := float(weights.get("defense", 1.0))
+	var quick_weight := float(weights.get("quick", 1.0))
+	var hp_part := float(max_hp) * hp_weight
+	var attack_part := float(attack) * attack_weight
+	var defense_part := float(defense) * defense_weight
+	var quick_part := float(quick) * quick_weight
+	var total := int(round(hp_part + attack_part + defense_part + quick_part))
+	var formula := str(BalanceCatalogModel.pet_power_formula().get("formula", "round(maxHp / 4 + attack + defense + agility)"))
 	return {
-		"formula": "round(maxHp / 4 + attack + defense + agility)",
+		"formula": formula,
 		"maxHp": max_hp,
 		"maxHpContribution": hp_part,
 		"attack": attack,
+		"attackContribution": attack_part,
 		"defense": defense,
+		"defenseContribution": defense_part,
 		"quick": quick,
 		"agility": quick,
+		"quickContribution": quick_part,
 		"total": total,
 	}
 
@@ -169,20 +183,28 @@ static func power_source_label(value: Dictionary) -> String:
 
 
 static func _generated_initial_bonus(seed: String) -> Dictionary:
+	var hp_range = BalanceCatalogModel.pet_initial_bonus_range("maxHp", -3, 3)
+	var attack_range = BalanceCatalogModel.pet_initial_bonus_range("attack", -1, 1)
+	var defense_range = BalanceCatalogModel.pet_initial_bonus_range("defense", -1, 1)
+	var quick_range = BalanceCatalogModel.pet_initial_bonus_range("quick", -2, 2)
 	return {
-		"maxHp": _roll_int(seed, "initial_maxHp", -3, 3),
-		"attack": _roll_int(seed, "initial_attack", -1, 1),
-		"defense": _roll_int(seed, "initial_defense", -1, 1),
-		"quick": _roll_int(seed, "initial_quick", -2, 2),
+		"maxHp": _roll_int(seed, "initial_maxHp", int(hp_range.get("min", -3)), int(hp_range.get("max", 3))),
+		"attack": _roll_int(seed, "initial_attack", int(attack_range.get("min", -1)), int(attack_range.get("max", 1))),
+		"defense": _roll_int(seed, "initial_defense", int(defense_range.get("min", -1)), int(defense_range.get("max", 1))),
+		"quick": _roll_int(seed, "initial_quick", int(quick_range.get("min", -2)), int(quick_range.get("max", 2))),
 	}
 
 
 static func _generated_growth_bonus(seed: String) -> Dictionary:
+	var hp_range = BalanceCatalogModel.pet_growth_bonus_range("maxHp", -0.45, 0.45)
+	var attack_range = BalanceCatalogModel.pet_growth_bonus_range("attack", -0.12, 0.12)
+	var defense_range = BalanceCatalogModel.pet_growth_bonus_range("defense", -0.10, 0.10)
+	var quick_range = BalanceCatalogModel.pet_growth_bonus_range("quick", -0.12, 0.12)
 	return {
-		"maxHp": _roll_float(seed, "growth_maxHp", -0.45, 0.45),
-		"attack": _roll_float(seed, "growth_attack", -0.12, 0.12),
-		"defense": _roll_float(seed, "growth_defense", -0.10, 0.10),
-		"quick": _roll_float(seed, "growth_quick", -0.12, 0.12),
+		"maxHp": _roll_float(seed, "growth_maxHp", float(hp_range.get("min", -0.45)), float(hp_range.get("max", 0.45))),
+		"attack": _roll_float(seed, "growth_attack", float(attack_range.get("min", -0.12)), float(attack_range.get("max", 0.12))),
+		"defense": _roll_float(seed, "growth_defense", float(defense_range.get("min", -0.10)), float(defense_range.get("max", 0.10))),
+		"quick": _roll_float(seed, "growth_quick", float(quick_range.get("min", -0.12)), float(quick_range.get("max", 0.12))),
 	}
 
 
@@ -217,4 +239,3 @@ static func _stable_hash(text: String) -> int:
 	for index in range(text.length()):
 		hash_value = int((hash_value ^ text.unicode_at(index)) * 16777619) % 2147483647
 	return abs(hash_value)
-

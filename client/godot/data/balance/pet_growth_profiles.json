@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "activePowerFormula": "stoneage_like_v1",
+  "powerFormulas": [
+    {
+      "id": "stoneage_like_v1",
+      "label": "生命/4 + 攻击 + 防御 + 敏捷",
+      "formula": "round(maxHp / 4 + attack + defense + quick)",
+      "weights": {
+        "maxHp": 0.25,
+        "attack": 1.0,
+        "defense": 1.0,
+        "quick": 1.0
+      }
+    }
+  ],
+  "quality": {
+    "lowThreshold": 2400,
+    "highThreshold": 7600,
+    "labels": {
+      "low": "偏低",
+      "normal": "普通",
+      "high": "偏高"
+    }
+  },
+  "individualVariance": {
+    "initialBonus": {
+      "maxHp": [-3, 3],
+      "attack": [-1, 1],
+      "defense": [-1, 1],
+      "quick": [-2, 2]
+    },
+    "growthBonus": {
+      "maxHp": [-0.45, 0.45],
+      "attack": [-0.12, 0.12],
+      "defense": [-0.10, 0.10],
+      "quick": [-0.12, 0.12]
+    }
+  },
+  "profiles": [
+    {
+      "id": "balanced",
+      "displayName": "均衡",
+      "perLevel": {"maxHp": 8.0, "attack": 1.6, "defense": 1.3, "quick": 1.4}
+    },
+    {
+      "id": "attack_high",
+      "displayName": "攻击成长高",
+      "perLevel": {"maxHp": 8.0, "attack": 2.2, "defense": 1.1, "quick": 1.2}
+    },
+    {
+      "id": "agility_high",
+      "displayName": "敏捷成长高",
+      "perLevel": {"maxHp": 7.5, "attack": 1.45, "defense": 1.0, "quick": 2.2}
+    },
+    {
+      "id": "defense_high",
+      "displayName": "防御成长高",
+      "perLevel": {"maxHp": 10.0, "attack": 1.25, "defense": 2.0, "quick": 0.9}
+    },
+    {
+      "id": "hp_high",
+      "displayName": "生命成长高",
+      "perLevel": {"maxHp": 12.0, "attack": 1.35, "defense": 1.45, "quick": 1.0}
+    }
+  ]
+}

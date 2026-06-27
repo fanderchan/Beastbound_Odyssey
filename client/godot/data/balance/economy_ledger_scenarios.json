@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "activeLedgerId": "phase128_core",
+  "ledgers": [
+    {
+      "id": "phase128_core",
+      "label": "Phase128 经济净收入账本",
+      "sourceBattleSuiteId": "phase127_core",
+      "assumptions": {
+        "normalEncounterSeconds": 6.0,
+        "qualificationEncounterSeconds": 0.0,
+        "secondsPerRound": 2.4,
+        "settlementSeconds": 1.2,
+        "fieldSupplyHpRatioThreshold": 0.70,
+        "fieldSupplyReserveShare": 0.35,
+        "minRepeatableNetStonePerBattle": 0.0,
+        "warningNetMargin": 0.15,
+        "itemSalePolicy": "只计算当前商店可出售物品的期望回收价；任务戒指、材料如果暂不可卖则按0石币计。",
+        "costPolicy": "人物生命差额按村医费计；低血风险额外按可购买战斗治疗道具计安全储备；装备只计算人物武器攻击与人物防具受击。"
+      }
+    }
+  ]
+}

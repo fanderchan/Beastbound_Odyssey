@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 
 const PROFILE_KEY := "playerGrowth"
@@ -101,7 +102,7 @@ static func _normalize_stat_point_sources(value, player: Dictionary) -> Dictiona
 			result[key] = maxi(0, int((value as Dictionary).get(key, result.get(key, 0))))
 	var level := maxi(1, int(player.get("level", 1)))
 	if int(result.get(SOURCE_LEVEL_UP, 0)) == 0 and level > 1:
-		result[SOURCE_LEVEL_UP] = (level - 1) * 3
+		result[SOURCE_LEVEL_UP] = (level - 1) * BalanceCatalogModel.stat_points_per_level(3)
 	return result
 
 

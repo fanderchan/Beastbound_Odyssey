@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+
 const REBIRTH_COUNT_KEY := "rebirthCount"
 const REBIRTH_HISTORY_KEY := "rebirthHistory"
 const REBIRTH_QUEST_COMPLETIONS_KEY := "rebirthQuestCompletions"
@@ -77,13 +79,14 @@ static func requirement_state(profile: Dictionary) -> Dictionary:
 	var completions := quest_completions(normalized)
 	var quest_id := quest_id_for_target(target_count)
 	var limit_ok := count < MAX_REBIRTH_COUNT
-	var level_ok := level >= MIN_REBIRTH_LEVEL
+	var required_level := BalanceCatalogModel.rebirth_required_level_for_target(target_count, MIN_REBIRTH_LEVEL)
+	var level_ok := level >= required_level
 	var quest_ok := completions.has(quest_id)
 	var reasons: Array[String] = []
 	if not limit_ok:
 		reasons.append("已达到%d转上限。" % MAX_REBIRTH_COUNT)
 	if not level_ok:
-		reasons.append("人物需要 Lv%d。" % MIN_REBIRTH_LEVEL)
+		reasons.append("人物需要 Lv%d。" % required_level)
 	if limit_ok and not quest_ok:
 		reasons.append("%s未完成。" % required_quest_label_for_target(target_count))
 	return {
@@ -91,6 +94,7 @@ static func requirement_state(profile: Dictionary) -> Dictionary:
 		"fromCount": count,
 		"targetCount": target_count,
 		"level": level,
+		"requiredLevel": required_level,
 		"levelOk": level_ok,
 		"questOk": quest_ok,
 		"limitOk": limit_ok,

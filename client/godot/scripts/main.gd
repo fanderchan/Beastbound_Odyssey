@@ -11,14 +11,22 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
+const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_formula_driver_ab_model.gd")
+const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
+const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
+const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
+const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
+const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
@@ -525,6 +533,16 @@ var auto_hang_loop_closure_check: bool = false
 var auto_pet_management_safety_check: bool = false
 var auto_player_growth_contract_check: bool = false
 var auto_server_profile_contract_check: bool = false
+var auto_balance_version_receipt_check: bool = false
+var auto_balance_snapshot_digest_check: bool = false
+var auto_balance_catalog_check: bool = false
+var auto_numeric_experiment_report_check: bool = false
+var auto_combat_formula_parity_check: bool = false
+var auto_combat_formula_driver_ab_check: bool = false
+var auto_numeric_battle_simulation_check: bool = false
+var auto_economy_ledger_check: bool = false
+var auto_numeric_balance_gate_check: bool = false
+var numeric_experiment_report: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var backpack_filter_preview: bool = false
@@ -931,6 +949,26 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_growth_contract_check")
 	elif auto_server_profile_contract_check:
 		call_deferred("_run_auto_server_profile_contract_check")
+	elif auto_balance_version_receipt_check:
+		call_deferred("_run_auto_balance_version_receipt_check")
+	elif auto_balance_snapshot_digest_check:
+		call_deferred("_run_auto_balance_snapshot_digest_check")
+	elif auto_balance_catalog_check:
+		call_deferred("_run_auto_balance_catalog_check")
+	elif auto_numeric_experiment_report_check:
+		call_deferred("_run_numeric_experiment_report", true)
+	elif auto_combat_formula_parity_check:
+		call_deferred("_run_auto_combat_formula_parity_check")
+	elif auto_combat_formula_driver_ab_check:
+		call_deferred("_run_auto_combat_formula_driver_ab_check")
+	elif auto_numeric_battle_simulation_check:
+		call_deferred("_run_auto_numeric_battle_simulation_check")
+	elif auto_economy_ledger_check:
+		call_deferred("_run_auto_economy_ledger_check")
+	elif auto_numeric_balance_gate_check:
+		call_deferred("_run_auto_numeric_balance_gate_check")
+	elif numeric_experiment_report:
+		call_deferred("_run_numeric_experiment_report", false)
 	elif backpack_preview:
 		call_deferred("_run_backpack_preview")
 	elif backpack_world_use_preview:
@@ -1434,6 +1472,26 @@ func _apply_preview_window_args() -> void:
 			auto_player_growth_contract_check = true
 		elif arg == "--auto-server-profile-contract-check":
 			auto_server_profile_contract_check = true
+		elif arg == "--auto-balance-version-receipt-check":
+			auto_balance_version_receipt_check = true
+		elif arg == "--auto-balance-snapshot-digest-check":
+			auto_balance_snapshot_digest_check = true
+		elif arg == "--auto-balance-catalog-check":
+			auto_balance_catalog_check = true
+		elif arg == "--auto-numeric-experiment-report-check":
+			auto_numeric_experiment_report_check = true
+		elif arg == "--auto-combat-formula-parity-check":
+			auto_combat_formula_parity_check = true
+		elif arg == "--auto-combat-formula-driver-ab-check":
+			auto_combat_formula_driver_ab_check = true
+		elif arg == "--auto-numeric-battle-simulation-check":
+			auto_numeric_battle_simulation_check = true
+		elif arg == "--auto-economy-ledger-check":
+			auto_economy_ledger_check = true
+		elif arg == "--auto-numeric-balance-gate-check":
+			auto_numeric_balance_gate_check = true
+		elif arg == "--numeric-experiment-report":
+			numeric_experiment_report = true
 		elif arg == "--backpack-preview":
 			backpack_preview = true
 		elif arg == "--backpack-world-use-preview":
@@ -2937,6 +2995,7 @@ func _run_auto_capture_settings_check() -> void:
 	var submit_capture_seen := false
 	var submit_capture_tool_ok := false
 	var submit_pet_defend_seen := submit_pet_actor_id == ""
+	var submit_pet_attack_seen := false
 	for _frame in range(900):
 		if battle_recorded_event_sequence != submit_last_sequence:
 			submit_last_sequence = battle_recorded_event_sequence
@@ -2947,14 +3006,17 @@ func _run_auto_capture_settings_check() -> void:
 				submit_capture_tool_ok = str(battle_state.get("lastCaptureToolId", "")) == chosen_tool
 			if event_type == "defend" and attacker_id == submit_pet_actor_id:
 				submit_pet_defend_seen = true
-			if submit_capture_seen and submit_pet_defend_seen:
+			if ["attack", "skill_attack", "combo_attack"].has(event_type) and attacker_id == submit_pet_actor_id:
+				submit_pet_attack_seen = true
+			if submit_capture_seen and (submit_pet_defend_seen or bool(battle_state.get("lastCaptureSuccess", false))):
 				break
 		await get_tree().process_frame
 	var pending_capture_ok := (
 		submit_ok
 		and submit_capture_seen
 		and submit_capture_tool_ok
-		and submit_pet_defend_seen
+		and (submit_pet_defend_seen or bool(battle_state.get("lastCaptureSuccess", false)))
+		and not submit_pet_attack_seen
 	)
 	_end_battle(true)
 	await get_tree().process_frame
@@ -4033,6 +4095,237 @@ func _option_button_has_item_text(option: OptionButton, needle: String) -> bool:
 		if option.get_item_text(index).find(needle) >= 0:
 			return true
 	return false
+
+
+func _run_auto_balance_catalog_check() -> void:
+	BalanceCatalogModel.reload()
+	var errors := BalanceCatalogModel.validation_errors()
+	var catalog_ok := errors.is_empty()
+	var level_ok := (
+		BalanceCatalogModel.max_player_level(0) == PlayerProgressModel.MAX_PLAYER_LEVEL
+		and BalanceCatalogModel.max_pet_level(0) == PlayerProgressModel.MAX_PET_LEVEL
+		and PlayerProgressModel.exp_to_next_level(1) == 122
+		and PlayerProgressModel.exp_to_next_level(80) > PlayerProgressModel.exp_to_next_level(20)
+		and PlayerProgressModel.exp_grant_for_level(131) > PlayerProgressModel.exp_grant_for_level(80)
+	)
+	var player_stats := BalanceCatalogModel.default_player_battle_stats({})
+	var player_growth_ok := (
+		int(player_stats.get("maxHp", 0)) == 120
+		and int(player_stats.get("attack", 0)) == 18
+		and BalanceCatalogModel.stat_points_per_level(0) == PlayerProgressModel.PLAYER_STAT_POINTS_PER_LEVEL
+		and BalanceCatalogModel.player_stat_point_gain("maxHp", 0) == 4
+		and BalanceCatalogModel.equipment_weapon_attacks_per_durability(0) == PlayerProgressModel.EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY
+		and BalanceCatalogModel.equipment_armor_hits_per_durability(0) == PlayerProgressModel.EQUIPMENT_ARMOR_HITS_PER_DURABILITY
+		and BalanceCatalogModel.equipment_repair_durability_per_coin(0) == PlayerProgressModel.EQUIPMENT_REPAIR_DURABILITY_PER_COIN
+		and PlayerProgressModel.village_healer_cost_for_missing_hp(21) == 2
+	)
+	var attack_rates := BalanceCatalogModel.pet_growth_rates("attack_high", {})
+	var fuzzy_rates := BalanceCatalogModel.pet_growth_rates("attack_super_test", {})
+	var hp_initial_range := BalanceCatalogModel.pet_initial_bonus_range("maxHp", 0, 0)
+	var attack_growth_range := BalanceCatalogModel.pet_growth_bonus_range("attack", 0.0, 0.0)
+	var pet_growth_ok := (
+		absf(float(attack_rates.get("attack", 0.0)) - 2.2) <= 0.001
+		and absf(float(fuzzy_rates.get("attack", 0.0)) - 2.2) <= 0.001
+		and str(BalanceCatalogModel.pet_growth_profile("balanced").get("displayName", "")) == "均衡"
+		and BalanceCatalogModel.pet_quality_low_threshold(0) == 2400
+		and BalanceCatalogModel.pet_quality_high_threshold(0) == 7600
+		and str(BalanceCatalogModel.pet_quality_label("high", "")) == "偏高"
+		and int(hp_initial_range.get("min", 0)) == -3
+		and int(hp_initial_range.get("max", 0)) == 3
+		and absf(float(attack_growth_range.get("min", 0.0)) + 0.12) <= 0.001
+		and absf(float(attack_growth_range.get("max", 0.0)) - 0.12) <= 0.001
+	)
+	var power_formula := BalanceCatalogModel.pet_power_formula()
+	var power_ok := (
+		str(power_formula.get("formula", "")) == "round(maxHp / 4 + attack + defense + quick)"
+		and PetPowerModel.combat_power_for_stats({"maxHp": 80, "attack": 10, "defense": 5, "quick": 20}) == 55
+	)
+	var combat_formula := BalanceCatalogModel.active_combat_formula()
+	var capture_formula := BalanceCatalogModel.active_capture_formula()
+	var formula_ok := (
+		not combat_formula.is_empty()
+		and not capture_formula.is_empty()
+		and str((combat_formula.get("dodge", {}) as Dictionary).get("mode", "")) == "quick_contest_sqrt"
+		and absf(float((combat_formula.get("dodge", {}) as Dictionary).get("maxRate", 0.0)) - 0.75) <= 0.001
+		and str((combat_formula.get("critical", {}) as Dictionary).get("mode", "")) == "quick_contest_sqrt"
+		and absf(float(capture_formula.get("maxChance", 0.0)) - 0.95) <= 0.001
+	)
+	var economy_ok := absf(BalanceCatalogModel.default_shop_sell_rate(0.0) - 0.5) <= 0.001
+	var status := "ok" if catalog_ok and level_ok and player_growth_ok and pet_growth_ok and power_ok and formula_ok and economy_ok else "failed"
+	print("balance catalog check ready: status=%s catalog=%s level=%s player=%s pet=%s power=%s formula=%s economy=%s errors=%s" % [
+		status,
+		str(catalog_ok),
+		str(level_ok),
+		str(player_growth_ok),
+		str(pet_growth_ok),
+		str(power_ok),
+		str(formula_ok),
+		str(economy_ok),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_numeric_experiment_report(check_only: bool = false) -> void:
+	var report := NumericExperimentModel.build_report()
+	var write_result := NumericExperimentModel.write_report(report)
+	var errors := NumericExperimentModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var anchors: Array = report.get("levelCurve", {}).get("anchors", [])
+	var pet_growth_samples: Array = report.get("petGrowth", {}).get("growthSamples", [])
+	var reward_samples: Array = report.get("battleRewards", {}).get("samples", [])
+	var progression_samples: Array = report.get("progressionZones", {}).get("samples", [])
+	var progression_summary := report.get("progressionZones", {}).get("summary", {}) as Dictionary
+	var combat_shadow_samples: Array = report.get("combatFormulaShadow", {}).get("samples", [])
+	var combat_driver_ab_samples: Array = report.get("combatFormulaDriverAB", {}).get("samples", [])
+	var combat_driver_ab_summary := report.get("combatFormulaDriverAB", {}).get("summary", {}) as Dictionary
+	var battle_simulation_samples: Array = report.get("battleSimulation", {}).get("samples", [])
+	var battle_simulation_summary := report.get("battleSimulation", {}).get("summary", {}) as Dictionary
+	var economy_ledger_samples: Array = report.get("economyLedger", {}).get("samples", [])
+	var economy_ledger_summary := report.get("economyLedger", {}).get("summary", {}) as Dictionary
+	var capture_rows: Array = report.get("captureMatrix", {}).get("rows", [])
+	var status := "ok" if errors.is_empty() else "failed"
+	print("numeric experiment report ready: status=%s check=%s output=%s anchors=%d pet_growth_samples=%d reward_samples=%d progression_samples=%d progression_exp_ok=%d progression_battle_ok=%d combat_shadow_samples=%d driver_ab_samples=%d driver_ab_identical=%d battle_simulation_samples=%d battle_simulation_ok=%d economy_samples=%d economy_net_ok=%d capture_rows=%d errors=%s" % [
+		status,
+		str(check_only),
+		str(write_result.get("path", "")),
+		anchors.size(),
+		pet_growth_samples.size(),
+		reward_samples.size(),
+		progression_samples.size(),
+		int(progression_summary.get("expOk", 0)),
+		int(progression_summary.get("battleCountOk", 0)),
+		combat_shadow_samples.size(),
+		combat_driver_ab_samples.size(),
+		int(combat_driver_ab_summary.get("identicalCount", 0)),
+		battle_simulation_samples.size(),
+		int(battle_simulation_summary.get("expectationOk", 0)),
+		economy_ledger_samples.size(),
+		int(economy_ledger_summary.get("repeatableNetPositive", 0)),
+		capture_rows.size(),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_combat_formula_parity_check() -> void:
+	var report := CombatFormulaShadowModel.build_report()
+	var errors := CombatFormulaShadowModel.validation_errors(report)
+	var samples: Array = report.get("samples", [])
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("combat formula parity check ready: status=%s samples=%d damage=%d rate=%d combo=%d avg_damage_delta=%.2f avg_rate_delta=%.4f max_damage_delta=%d max_rate_delta=%.4f strict=%s errors=%s" % [
+		status,
+		samples.size(),
+		int(summary.get("damageSamples", 0)),
+		int(summary.get("rateSamples", 0)),
+		int(summary.get("comboSamples", 0)),
+		float(summary.get("avgAbsDamageDelta", 0.0)),
+		float(summary.get("avgAbsRateDelta", 0.0)),
+		int(summary.get("maxAbsDamageDelta", 0)),
+		float(summary.get("maxAbsRateDelta", 0.0)),
+		str(bool(summary.get("strictParityReady", false))),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_combat_formula_driver_ab_check() -> void:
+	var report := CombatFormulaDriverABModel.build_report()
+	var write_result := CombatFormulaDriverABModel.write_report(report)
+	var errors := CombatFormulaDriverABModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var samples: Array = report.get("samples", [])
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("combat formula driver ab check ready: status=%s output=%s samples=%d identical=%d mismatches=%d max_round_delta=%d max_hp_delta=%d ready=%s first_mismatch=%s errors=%s" % [
+		status,
+		str(write_result.get("path", "")),
+		samples.size(),
+		int(summary.get("identicalCount", 0)),
+		int(summary.get("mismatchCount", 0)),
+		int(summary.get("maxAbsRoundDelta", 0)),
+		int(summary.get("maxAbsPlayerHpDelta", 0)),
+		str(bool(summary.get("driverSwitchReady", false))),
+		str(summary.get("firstMismatchId", "")),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_numeric_battle_simulation_check() -> void:
+	var report := NumericBattleSimulatorModel.build_report()
+	var write_result := NumericBattleSimulatorModel.write_report(report)
+	var errors := NumericBattleSimulatorModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var samples: Array = report.get("samples", [])
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("numeric battle simulation check ready: status=%s output=%s samples=%d victory=%d expectation_ok=%d avg_rounds=%.2f avg_player_hp=%.2f%% hardest=%s errors=%s" % [
+		status,
+		str(write_result.get("path", "")),
+		samples.size(),
+		int(summary.get("victoryCount", 0)),
+		int(summary.get("expectationOk", 0)),
+		float(summary.get("avgRounds", 0.0)),
+		float(summary.get("avgPlayerHpRatio", 0.0)) * 100.0,
+		str(summary.get("hardestScenarioId", "")),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_economy_ledger_check() -> void:
+	var battle_report := NumericBattleSimulatorModel.build_report()
+	var report := NumericEconomyLedgerModel.build_report(battle_report)
+	var write_result := NumericEconomyLedgerModel.write_report(report)
+	var errors := NumericEconomyLedgerModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var samples: Array = report.get("samples", [])
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("economy ledger check ready: status=%s output=%s samples=%d repeatable=%d net_ok=%d avg_net=%.2f lowest=%s:%.2f highest_hour=%s:%.2f errors=%s" % [
+		status,
+		str(write_result.get("path", "")),
+		samples.size(),
+		int(summary.get("repeatableCount", 0)),
+		int(summary.get("repeatableNetPositive", 0)),
+		float(summary.get("avgRepeatableNetStonePerBattle", 0.0)),
+		str(summary.get("lowestRepeatableNetScenarioId", "")),
+		float(summary.get("lowestRepeatableNetStonePerBattle", 0.0)),
+		str(summary.get("highestRepeatableNetPerHourScenarioId", "")),
+		float(summary.get("highestRepeatableNetStonePerHour", 0.0)),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_numeric_balance_gate_check() -> void:
+	var numeric_report := NumericExperimentModel.build_report()
+	var report := NumericBalanceGateModel.build_report(numeric_report)
+	var write_result := NumericBalanceGateModel.write_report(report)
+	var errors := NumericBalanceGateModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("numeric balance gate check ready: status=%s output=%s gates=%d pass=%d watch=%d blocked=%d fail=%d core_ok=%s formula_ready=%s errors=%s" % [
+		status,
+		str(write_result.get("path", "")),
+		int(summary.get("gateCount", 0)),
+		int(summary.get("passCount", 0)),
+		int(summary.get("watchCount", 0)),
+		int(summary.get("blockedCount", 0)),
+		int(summary.get("failCount", 0)),
+		str(bool(summary.get("coreValidationOk", false))),
+		str(bool(summary.get("formulaSwitchReady", false))),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
 
 
 func _run_auto_battle_action_catalog_check() -> void:
@@ -7313,7 +7606,7 @@ func _run_auto_shop_check() -> void:
 		and str(buy_result.get("message", "")).find("x3") >= 0
 	)
 
-	var bulk_buy_profile := PlayerProgressModel.with_stone_coins(base_profile, 999)
+	var bulk_buy_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.with_stone_coins(base_profile, 999), [])
 	var bulk_buy_result := PlayerProgressModel.buy_shop_item(bulk_buy_profile, shop_id, BattleModel.ITEM_MEAT_SMALL, 99)
 	var bulk_buy_after := bulk_buy_result.get("profile", {}) as Dictionary
 	var bulk_buy_ok := (
@@ -10268,7 +10561,7 @@ func _run_auto_server_profile_contract_check() -> void:
 	var preview := PlayerProgressModel.server_migration_preview(profile)
 	var counts := preview.get("counts", {}) as Dictionary
 	var sync_ok := int(sync.get("schemaVersion", 0)) == 1 and sync.has("dirtyModules")
-	var contract_ok := errors.is_empty() and int(preview.get("moduleCount", 0)) >= 8
+	var contract_ok := errors.is_empty() and int(preview.get("moduleCount", 0)) >= 9
 	var counts_ok := (
 		int(counts.get("pets", 0)) >= 4
 		and int(counts.get("backpackSlots", 0)) >= BackpackModel.BASE_SLOT_LIMIT
@@ -10282,6 +10575,97 @@ func _run_auto_server_profile_contract_check() -> void:
 		str(counts_ok),
 		int(preview.get("moduleCount", 0)),
 		" | ".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_balance_version_receipt_check() -> void:
+	profile_save_enabled = false
+	BalanceCatalogModel.reload()
+	var version := BalanceCatalogModel.balance_snapshot_summary()
+	var catalog_errors := BalanceCatalogModel.validation_errors()
+	var base_profile := PlayerProgressModel.default_profile()
+	var reward_state := _battle_reward_test_state("balance_version_receipt_check", base_profile)
+	reward_state["combatFormulaDriver"] = BattleModel.COMBAT_FORMULA_DRIVER_TABLE
+	reward_state["combatFormula"] = BalanceCatalogModel.active_combat_formula()
+	var result := PlayerProgressModel.apply_battle_result(base_profile, reward_state, "victory")
+	var result_profile := result.get("profile", {}) as Dictionary
+	var receipt := result.get("receipt", {}) as Dictionary
+	var receipt_errors := BattleResultReceiptModel.validation_errors(receipt)
+	var projection := BattleResultReceiptModel.server_projection(receipt)
+	var receipts: Array = result_profile.get("battleResultReceipts", [])
+	var receipt_balance := receipt.get("balance", {}) as Dictionary if receipt.get("balance", {}) is Dictionary else {}
+	var version_ok := (
+		str(version.get("balanceSetId", "")) == "phase123_core_v1"
+			and str(version.get("formulaVersion", "")) == "combat_v1"
+			and str(version.get("captureFormulaVersion", "")) == "capture_v1"
+			and str(version.get("rewardEconomyVersion", "")) == "battle_exp_v1"
+			and str(version.get("sourceDigest", "")) != ""
+			and int(version.get("sourceCount", 0)) >= 10
+	)
+	var receipt_ok := (
+		receipt_errors.is_empty()
+		and receipts.size() == 1
+		and str(receipt.get("combatFormulaDriver", "")) == BattleModel.COMBAT_FORMULA_DRIVER_TABLE
+			and str(receipt.get("targetSeed", "")) == "balance_version_receipt_check"
+			and str(receipt_balance.get("balanceVersion", "")) == str(version.get("balanceVersion", ""))
+			and str(receipt_balance.get("sourceDigest", "")) == str(version.get("sourceDigest", ""))
+			and int((receipt.get("rewards", {}) as Dictionary).get("exp", 0)) > 0
+		and int((receipt.get("rewards", {}) as Dictionary).get("stoneCoins", 0)) > 0
+	)
+	var projection_ok := (
+			str(projection.get("receiptId", "")) == str(receipt.get("receiptId", ""))
+			and str(projection.get("formulaVersion", "")) == "combat_v1"
+			and str(projection.get("balanceSourceDigest", "")) == str(version.get("sourceDigest", ""))
+			and int(projection.get("expReward", 0)) > 0
+		)
+	var status := "ok" if catalog_errors.is_empty() and version_ok and receipt_ok and projection_ok else "failed"
+	print("balance version receipt check ready: status=%s version=%s receipt=%s projection=%s receipts=%d formula=%s digest=%s sources=%d driver=%s errors=%s" % [
+		status,
+		str(version_ok),
+		str(receipt_ok),
+		str(projection_ok),
+		receipts.size(),
+		str(receipt_balance.get("formulaVersion", "")),
+		str(receipt_balance.get("sourceDigestShort", "")),
+		int(receipt_balance.get("sourceCount", 0)),
+		str(receipt.get("combatFormulaDriver", "")),
+		" | ".join(catalog_errors + receipt_errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_balance_snapshot_digest_check() -> void:
+	profile_save_enabled = false
+	BalanceCatalogModel.reload()
+	var first := BalanceCatalogModel.balance_snapshot_summary()
+	var second := BalanceCatalogModel.balance_snapshot_summary()
+	var digest := str(first.get("sourceDigest", ""))
+	var source_paths: Array = first.get("sourcePaths", [])
+	var report := NumericExperimentModel.build_report()
+	var report_balance := report.get("balance", {}) as Dictionary
+	var digest_ok := digest.length() == 64 and digest == str(second.get("sourceDigest", ""))
+	var sources_ok := (
+		int(first.get("sourceCount", 0)) == source_paths.size()
+		and source_paths.size() >= 11
+		and source_paths.has("res://data/battle_rewards.json")
+		and source_paths.has("res://data/balance/combat_formulas.json")
+		and source_paths.has("res://data/balance/reward_economy.json")
+	)
+	var report_ok := str(report_balance.get("sourceDigest", "")) == digest
+	var version_ok := (
+		str(first.get("balanceSetId", "")) == "phase123_core_v1"
+		and str(first.get("formulaVersion", "")) == "combat_v1"
+	)
+	var status := "ok" if digest_ok and sources_ok and report_ok and version_ok else "failed"
+	print("balance snapshot digest check ready: status=%s digest=%s sources=%d repeatable=%s report=%s paths=%s errors=%s" % [
+		status,
+		str(first.get("sourceDigestShort", "")),
+		source_paths.size(),
+		str(digest_ok),
+		str(report_ok),
+		str(sources_ok),
+		"" if status == "ok" else "digest/source/report/version check failed",
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -22155,6 +22539,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check")
 	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check")
+	lines.append("数值: --auto-balance-catalog-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)

@@ -1,5 +1,6 @@
 extends RefCounted
 
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 
 const DATA_PATH := "res://data/item_shops.json"
@@ -88,7 +89,8 @@ static func sell_price_for(shop_id: String, item_id: String) -> int:
 	if entry.has("sellPrice"):
 		return maxi(0, int(entry.get("sellPrice", 0)))
 	var buy_price := buy_price_for(shop_id, item_id)
-	return maxi(1, int(floor(float(buy_price) * 0.5))) if buy_price > 0 else 0
+	var sell_rate := BalanceCatalogModel.default_shop_sell_rate(0.5)
+	return maxi(1, int(floor(float(buy_price) * sell_rate))) if buy_price > 0 else 0
 
 
 static func price_line_for(shop_id: String, item_id: String) -> String:

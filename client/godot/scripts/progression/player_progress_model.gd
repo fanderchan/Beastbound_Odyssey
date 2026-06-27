@@ -5,8 +5,10 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
+const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
@@ -121,6 +123,7 @@ const HANG_SESSION_KEY := HangSettingsModel.SESSION_KEY
 const TRAINING_PARTNERS_KEY := TrainingPartnerModel.PROFILE_KEY
 const PLAYER_GROWTH_KEY := PlayerGrowthModel.PROFILE_KEY
 const SERVER_SYNC_KEY := ServerProfileContractModel.PROFILE_KEY
+const BATTLE_RESULT_RECEIPTS_KEY := "battleResultReceipts"
 const RECORD_POINT_KEY := "recordPoint"
 const UNLOCKED_ABILITIES_KEY := "unlockedAbilities"
 const ABILITY_REMOTE_STABLE := "remoteStable"
@@ -198,6 +201,7 @@ static func default_profile() -> Dictionary:
 		"hangSession": HangSettingsModel.default_session(),
 		"trainingPartners": [],
 		"playerGrowth": PlayerGrowthModel.default_growth(),
+		"battleResultReceipts": [],
 		"serverSync": ServerProfileContractModel.default_sync_state(),
 		"recordPoint": default_record_point(),
 			"unlockedAbilities": [],
@@ -1270,7 +1274,7 @@ static func apply_equipment_wear_from_battle_usage(profile: Dictionary, usage: D
 			_active_weapon_slot_for_wear(slots, durability),
 			"attackCount",
 			weapon_attacks,
-			EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY,
+			BalanceCatalogModel.equipment_weapon_attacks_per_durability(EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY),
 			broken_labels,
 			durability_drops
 		)
@@ -1282,7 +1286,7 @@ static func apply_equipment_wear_from_battle_usage(profile: Dictionary, usage: D
 			_active_armor_slot_for_wear(slots, durability),
 			"hitCount",
 			armor_hits,
-			EQUIPMENT_ARMOR_HITS_PER_DURABILITY,
+			BalanceCatalogModel.equipment_armor_hits_per_durability(EQUIPMENT_ARMOR_HITS_PER_DURABILITY),
 			broken_labels,
 			durability_drops
 		)
@@ -1366,7 +1370,8 @@ static func equipment_repair_missing(profile: Dictionary) -> int:
 
 
 static func equipment_repair_cost_for_missing(missing: int) -> int:
-	return int(ceil(float(maxi(0, missing)) / float(EQUIPMENT_REPAIR_DURABILITY_PER_COIN)))
+	var repair_per_coin := BalanceCatalogModel.equipment_repair_durability_per_coin(EQUIPMENT_REPAIR_DURABILITY_PER_COIN)
+	return int(ceil(float(maxi(0, missing)) / float(repair_per_coin)))
 
 
 static func equipment_repair_quote(profile: Dictionary) -> Dictionary:
@@ -1681,8 +1686,12 @@ static func player_stat_points(profile: Dictionary) -> int:
 	return maxi(0, int(player_dict.get("statPoints", 0)))
 
 
+static func player_stat_points_per_level() -> int:
+	return BalanceCatalogModel.stat_points_per_level(PLAYER_STAT_POINTS_PER_LEVEL)
+
+
 static func player_stat_point_gain_for(stat_key: String) -> int:
-	return maxi(1, int(PLAYER_STAT_POINT_GAINS.get(stat_key, 1)))
+	return maxi(1, BalanceCatalogModel.player_stat_point_gain(stat_key, int(PLAYER_STAT_POINT_GAINS.get(stat_key, 1))))
 
 
 static func allocate_player_stat_point(profile: Dictionary, stat_key: String) -> Dictionary:
@@ -2476,7 +2485,7 @@ static func village_healer_cost_for_missing_hp(missing_hp: int) -> int:
 	var missing := maxi(0, missing_hp)
 	if missing <= 0:
 		return 0
-	return maxi(1, int(ceil(float(missing) / float(VILLAGE_HEAL_HP_PER_COIN))))
+	return maxi(1, int(ceil(float(missing) / float(BalanceCatalogModel.village_heal_hp_per_coin(VILLAGE_HEAL_HP_PER_COIN)))))
 
 
 static func village_healer_quote(profile: Dictionary) -> Dictionary:
@@ -4558,18 +4567,8 @@ static func _pet_stats_for_template_level(template: Dictionary, level: int) -> D
 
 
 static func _pet_growth_rates(profile_id: String) -> Dictionary:
-	var normalized := profile_id.to_lower().strip_edges()
-	if PET_GROWTH_PROFILES.has(normalized):
-		return (PET_GROWTH_PROFILES.get(normalized, {}) as Dictionary).duplicate(true)
-	if normalized.find("attack") >= 0:
-		return (PET_GROWTH_PROFILES.get("attack_high", {}) as Dictionary).duplicate(true)
-	if normalized.find("agility") >= 0 or normalized.find("quick") >= 0 or normalized.find("speed") >= 0:
-		return (PET_GROWTH_PROFILES.get("agility_high", {}) as Dictionary).duplicate(true)
-	if normalized.find("defense") >= 0:
-		return (PET_GROWTH_PROFILES.get("defense_high", {}) as Dictionary).duplicate(true)
-	if normalized.find("hp") >= 0 or normalized.find("health") >= 0 or normalized.find("stamina") >= 0 or normalized.find("survival") >= 0:
-		return (PET_GROWTH_PROFILES.get("hp_high", {}) as Dictionary).duplicate(true)
-	return (PET_GROWTH_PROFILES.get("balanced", {}) as Dictionary).duplicate(true)
+	var fallback := (PET_GROWTH_PROFILES.get("balanced", {}) as Dictionary).duplicate(true)
+	return BalanceCatalogModel.pet_growth_rates(profile_id, fallback)
 
 
 static func create_pet_instance_from_form(instance_id: String, pet_name: String, form_id: String, state: String, level: int, stat_overrides: Dictionary = {}) -> Dictionary:
@@ -4736,6 +4735,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 		equipment_slots_value,
 		equipment_durability_value
 	)
+	normalized[BATTLE_RESULT_RECEIPTS_KEY] = BattleResultReceiptModel.normalize_receipts(normalized.get(BATTLE_RESULT_RECEIPTS_KEY, []))
 	normalized[SERVER_SYNC_KEY] = ServerProfileContractModel.normalize_sync_state(normalized.get(SERVER_SYNC_KEY, {}))
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
@@ -5016,7 +5016,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 			level_up_lines.append("%s 升到 Lv%d，获得%d属性点。" % [
 				str(player.get("name", "见习猎人")),
 				int(awarded_player.get("level", 1)),
-				player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL,
+				player_levels_gained * player_stat_points_per_level(),
 			])
 		if int(player_award.get("chargedExp", 0)) > 0:
 			level_up_lines.append("满级溢出%d经验存入经验丹。" % int(player_award.get("chargedExp", 0)))
@@ -5078,7 +5078,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		if not log_lines.has(line):
 			log_lines.append(line)
 
-	return {
+	var result_payload := {
 		"profile": next_profile,
 		"result": result,
 		"playerKnockedAway": player_knocked_away,
@@ -5097,6 +5097,11 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		"autoDiscardedPets": auto_discarded_instances,
 		"logLines": log_lines,
 	}
+	var receipt := BattleResultReceiptModel.build_receipt(state, result_payload)
+	next_profile = BattleResultReceiptModel.with_appended_receipt(next_profile, receipt, BATTLE_RESULT_RECEIPTS_KEY)
+	result_payload["profile"] = next_profile
+	result_payload["receipt"] = receipt
+	return result_payload
 
 
 static func battle_result_log_lines(result: String, exp_reward: int, captured_instances: Array[Dictionary], level_up_lines: Array[String], profile: Dictionary, item_rewards: Array[Dictionary] = [], lost_item_rewards: Array[Dictionary] = [], stone_coins_reward: int = 0, lost_captured_instances: Array[Dictionary] = [], auto_discarded_instances: Array[Dictionary] = [], mailed_item_rewards: Array[Dictionary] = []) -> Array[String]:
@@ -5229,6 +5234,7 @@ static func _captured_pet_power(captured: Dictionary) -> int:
 
 static func battle_exp_reward(state: Dictionary) -> int:
 	var total := 0
+	var reward_group_id := str(state.get("sourceEncounterGroupId", state.get("sourceZoneId", "default_wild")))
 	for actor in _actors(state):
 		if str(actor.get("side", "")) != "enemy":
 			continue
@@ -5238,7 +5244,8 @@ static func battle_exp_reward(state: Dictionary) -> int:
 		var attack := int(actor.get("attack", 8))
 		var defense := int(actor.get("defense", 6))
 		var quick := int(actor.get("quick", 40))
-		total += maxi(8, int(round(float(max_hp) / 10.0)) + attack + defense + int(round(float(quick) / 8.0)))
+		var fallback := maxi(8, int(round(float(max_hp) / 10.0)) + attack + defense + int(round(float(quick) / 8.0)))
+		total += BalanceCatalogModel.battle_exp_reward_for_actor(actor, reward_group_id, fallback)
 	return maxi(0, total)
 
 
@@ -5246,15 +5253,12 @@ static func exp_to_next_level(level: int) -> int:
 	var safe_level := maxi(1, level)
 	var base := float(80 + safe_level * 40) * pow(1.052, float(safe_level - 1))
 	var high_level_shape := pow(float(safe_level), 2.15) * 2.0
-	return maxi(1, int(roundf(base + high_level_shape)))
+	var fallback := maxi(1, int(roundf(base + high_level_shape)))
+	return BalanceCatalogModel.exp_to_next_level(safe_level, fallback)
 
 
 static func exp_grant_for_level(target_level: int) -> int:
-	var safe_target := clampi(target_level, 1, MAX_PLAYER_LEVEL)
-	var total := 0
-	for level in range(1, safe_target):
-		total += exp_to_next_level(level)
-	return total
+	return BalanceCatalogModel.exp_grant_for_level(target_level, MAX_PLAYER_LEVEL)
 
 
 static func use_world_player_exp_item(profile: Dictionary, item_id: String) -> Dictionary:
@@ -5356,7 +5360,7 @@ static func _grant_player_exp(profile: Dictionary, amount: int) -> Dictionary:
 	var awarded_player := player_award.get("entry", player) as Dictionary
 	var player_levels_gained := maxi(0, int(player_award.get("levelsGained", 0)))
 	if player_levels_gained > 0:
-		awarded_player["statPoints"] = maxi(0, int(awarded_player.get("statPoints", 0))) + player_levels_gained * PLAYER_STAT_POINTS_PER_LEVEL
+		awarded_player["statPoints"] = maxi(0, int(awarded_player.get("statPoints", 0))) + player_levels_gained * player_stat_points_per_level()
 	normalized["player"] = awarded_player
 	var charge := _charge_equipped_player_exp_pill(normalized, int(player_award.get("overflowExp", 0)))
 	normalized = charge.get("profile", normalized)
