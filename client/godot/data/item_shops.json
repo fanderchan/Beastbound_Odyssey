@@ -128,6 +128,33 @@
           "buyPrice": 60
         }
       ]
+    },
+    {
+      "id": "firebud_diamond_shop",
+      "label": "火芽钻石铺",
+      "currency": "diamonds",
+      "items": [
+        {"itemId": "mm_stone_hp_basic", "buyPrice": 20, "sellable": false},
+        {"itemId": "mm_stone_hp_mid", "buyPrice": 55, "sellable": false},
+        {"itemId": "mm_stone_hp_high", "buyPrice": 85, "sellable": false},
+        {"itemId": "mm_stone_attack_basic", "buyPrice": 20, "sellable": false},
+        {"itemId": "mm_stone_attack_mid", "buyPrice": 55, "sellable": false},
+        {"itemId": "mm_stone_attack_high", "buyPrice": 85, "sellable": false},
+        {"itemId": "mm_stone_defense_basic", "buyPrice": 20, "sellable": false},
+        {"itemId": "mm_stone_defense_mid", "buyPrice": 55, "sellable": false},
+        {"itemId": "mm_stone_defense_high", "buyPrice": 85, "sellable": false},
+        {"itemId": "mm_stone_quick_basic", "buyPrice": 20, "sellable": false},
+        {"itemId": "mm_stone_quick_mid", "buyPrice": 55, "sellable": false},
+        {"itemId": "mm_stone_quick_high", "buyPrice": 85, "sellable": false},
+        {"itemId": "armor_grace_cloth_5", "buyPrice": 1200, "sellable": false},
+        {"itemId": "accessory_moist_charm_5", "buyPrice": 1500, "sellable": false},
+        {"itemId": "item_exp_pill_lv1", "buyPrice": 120, "sellable": false},
+        {"itemId": "item_exp_pill_lv131", "buyPrice": 600, "sellable": false},
+        {"itemId": "item_exp_pill_lv140", "buyPrice": 900, "sellable": false},
+        {"itemId": "thunder_dragon_egg", "buyPrice": 3600, "sellable": false},
+        {"itemId": "pet_rebirth_mm1_egg", "buyPrice": 1800, "sellable": false},
+        {"itemId": "pet_rebirth_mm2_egg", "buyPrice": 2800, "sellable": false}
+      ]
     }
   ]
 }

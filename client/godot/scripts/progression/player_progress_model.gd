@@ -17,6 +17,7 @@ const PetCultivationModel := preload("res://scripts/progression/pet_cultivation_
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
+const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerGrowthModel := preload("res://scripts/progression/player_growth_model.gd")
@@ -28,11 +29,13 @@ const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.
 const TrainingPartnerModel := preload("res://scripts/progression/training_partner_model.gd")
 
 const SAVE_PATH := "user://player_profile.json"
+const SAVE_BACKUP_PATH := "user://player_profile.last_good.json"
 const PROFILE_SCHEMA_VERSION := 1
 const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
 const PET_STATE_STORAGE := "storage"
+const PET_STATE_RIDING := "riding"
 const BATTLE_PLAYER_ACTOR_ID := "ally_player"
 const BATTLE_PET_ACTOR_ID := "ally_pet"
 const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
@@ -63,8 +66,27 @@ const STORAGE_LIMIT := 20
 const PET_NAME_MAX_LENGTH := 8
 const MAX_PLAYER_LEVEL := 140
 const MAX_PET_LEVEL := 140
+const ITEM_EXP_PILL_LV1 := "item_exp_pill_lv1"
+const ITEM_EXP_PILL_LV131 := "item_exp_pill_lv131"
+const ITEM_EXP_PILL_LV140 := "item_exp_pill_lv140"
 const ITEM_PLAYER_EXP_PILL_LV131 := "item_player_exp_pill_lv131"
 const ITEM_PET_EXP_PILL_LV131 := "item_pet_exp_pill_lv131"
+const ITEM_PET_REBIRTH_MM1_EGG := "pet_rebirth_mm1_egg"
+const ITEM_PET_REBIRTH_MM2_EGG := "pet_rebirth_mm2_egg"
+const ITEM_REBIRTH_STARTER_FOUR_SPIRIT_CUB_EGG := "rebirth_starter_four_spirit_cub_egg"
+const ITEM_NOVICE_TIGER_EGG := "novice_tiger_egg"
+const PET_REBIRTH_MM_TRIAL_GROUP_ID := "pet_rebirth_mm_trial_1"
+const PET_REBIRTH_MM_GUIDE_KEY := "petRebirthMmGuide"
+const PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE := "available"
+const PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE := "active"
+const PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED := "completed"
+const PET_REBIRTH_MM_GUIDE_STEP_START := "start"
+const PET_REBIRTH_MM_GUIDE_STEP_CLAIM_MM := "claim_mm"
+const PET_REBIRTH_MM_GUIDE_STEP_WITHDRAW_MM := "withdraw_mm"
+const PET_REBIRTH_MM_GUIDE_STEP_FEED_MM := "feed_mm"
+const PET_REBIRTH_MM_GUIDE_STEP_LEVEL_MM := "level_mm"
+const PET_REBIRTH_MM_GUIDE_STEP_PREPARE_TARGET := "prepare_target"
+const PET_REBIRTH_MM_GUIDE_STEP_REBIRTH := "rebirth"
 const PET_REST_RECOVERY_RATIO := 0.05
 const PET_DROP_TTL_SECONDS := 600
 const PET_PICKUP_LEVEL_MARGIN := 5
@@ -75,10 +97,14 @@ const PET_GROWTH_PROFILES := {
 	"agility_high": {"maxHp": 7.5, "attack": 1.45, "defense": 1.0, "quick": 2.2},
 	"defense_high": {"maxHp": 10.0, "attack": 1.25, "defense": 2.0, "quick": 0.9},
 	"hp_high": {"maxHp": 12.0, "attack": 1.35, "defense": 1.45, "quick": 1.0},
+	"starter_mount_low": {"maxHp": 7.3, "attack": 1.35, "defense": 0.95, "quick": 1.95},
+	"thunder_dragon_mount": {"maxHp": 11.5, "attack": 1.35, "defense": 1.90, "quick": 0.72},
 }
 const LOCAL_PLAYER_ID := "local_player"
 const DEFAULT_STONE_COINS := 120
-const DEFAULT_DIAMONDS := 10000
+const DEFAULT_DIAMONDS := 999999
+const DEV_DIAMONDS_MIN := 999999
+const DEV_DIAMONDS_GRANT_VERSION := 1
 const VILLAGE_HEAL_HP_PER_COIN := 20
 const PLAYER_STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const DEFAULT_PLAYER_BATTLE_STATS := {
@@ -96,6 +122,7 @@ const PLAYER_STAT_POINT_GAINS := {
 }
 const STONE_COINS_KEY := "stoneCoins"
 const DIAMONDS_KEY := "diamonds"
+const DEV_DIAMONDS_GRANT_VERSION_KEY := "devDiamondsGrantVersion"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const BACKPACK_EXTRA_SLOTS_KEY := "backpackExtraSlots"
 const QUICK_SLOTS_KEY := "quickSlots"
@@ -113,10 +140,10 @@ const EQUIPMENT_REPAIR_DURABILITY_PER_COIN := 5
 const EQUIPMENT_WEAPON_ATTACKS_PER_DURABILITY := 100
 const EQUIPMENT_ARMOR_HITS_PER_DURABILITY := 10
 const EXP_PILL_STARTER_VERSION_KEY := "expPillStarterVersion"
-const EXP_PILL_STARTER_VERSION := 1
+const EXP_PILL_STARTER_VERSION := 2
 const MAILBOX_MESSAGES_KEY := "mailboxMessages"
 const MAILBOX_EXPIRY_SECONDS := 30 * 24 * 60 * 60
-const MAIL_EXP_PILL_STARTER_ID := "system_exp_pill_starter_v1"
+const MAIL_EXP_PILL_STARTER_ID := "system_exp_pill_starter_v2"
 const MAIL_REWARD_FALLBACK_PREFIX := "system_reward_fallback"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
@@ -133,7 +160,11 @@ const SERVER_SYNC_KEY := ServerProfileContractModel.PROFILE_KEY
 const BATTLE_RESULT_RECEIPTS_KEY := "battleResultReceipts"
 const RECORD_POINT_KEY := "recordPoint"
 const UNLOCKED_ABILITIES_KEY := "unlockedAbilities"
+const RIDE_PET_INSTANCE_ID_KEY := "ridePetInstanceId"
+const PET_REBIRTH_MM_STAGE2_CLAIMED_KEY := "petRebirthMmStage2Claimed"
 const ABILITY_REMOTE_STABLE := "remoteStable"
+const ABILITY_RIDING := "riding"
+const RIDE_SKILL_LEVEL_CAP := 200
 const REBIRTH_COUNT_KEY := RebirthModel.REBIRTH_COUNT_KEY
 const REBIRTH_HISTORY_KEY := RebirthModel.REBIRTH_HISTORY_KEY
 const REBIRTH_QUEST_COMPLETIONS_KEY := RebirthModel.REBIRTH_QUEST_COMPLETIONS_KEY
@@ -178,14 +209,16 @@ static func default_profile() -> Dictionary:
 		"nextPetDropSerial": 1,
 		"stoneCoins": DEFAULT_STONE_COINS,
 		"diamonds": DEFAULT_DIAMONDS,
+		"devDiamondsGrantVersion": DEV_DIAMONDS_GRANT_VERSION,
 		"petInstances": [
 			_pet_instance_from_form("pet_bui_main", "我的布伊", "bui_normal_red_fire10", PET_STATE_BATTLE, 1),
 			_pet_instance_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PET_STATE_STANDBY, 1),
 			_pet_instance_from_form("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", PET_STATE_STANDBY, 1),
 			_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PET_STATE_REST, 1),
-		],
-		"groundPetDrops": [],
-		"backpackSlots": BackpackModel.starting_slots(),
+			],
+			"groundPetDrops": [],
+			"ridePetInstanceId": "",
+			"backpackSlots": BackpackModel.starting_slots(),
 		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
 		"equipmentSlots": starter_equipment_slots(),
@@ -197,6 +230,8 @@ static func default_profile() -> Dictionary:
 		"equipmentStarterSetVersion": EQUIPMENT_STARTER_SET_VERSION,
 		"expPillStarterVersion": EXP_PILL_STARTER_VERSION,
 		"mailboxMessages": [],
+		"petRebirthMmStage2Claimed": false,
+		"petRebirthMmGuide": _normalize_pet_rebirth_mm_guide({}),
 		"captureTools": CaptureToolCatalog.starting_inventory(),
 		"activeQuestId": QuestModel.first_quest_id(),
 		"questStates": {},
@@ -231,12 +266,46 @@ static func load_profile() -> Dictionary:
 
 static func save_profile(profile: Dictionary) -> bool:
 	var normalized := normalize_profile(profile)
+	var old_pet_count := _existing_save_pet_count()
+	var next_pet_count := (normalized.get("petInstances", []) as Array).size() if normalized.get("petInstances", []) is Array else 0
+	if old_pet_count > 0 and next_pet_count <= 0:
+		push_error("Refusing to overwrite a non-empty pet save with an empty pet list.")
+		return false
+	_write_last_good_backup()
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify(normalized, "\t"))
 	file.close()
 	return true
+
+
+static func _existing_save_pet_count() -> int:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return 0
+	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var parsed = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return 0
+	var raw_instances = (parsed as Dictionary).get("petInstances", [])
+	return (raw_instances as Array).size() if raw_instances is Array else 0
+
+
+static func _write_last_good_backup() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var parsed = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var raw_instances = (parsed as Dictionary).get("petInstances", [])
+	if not (raw_instances is Array) or (raw_instances as Array).is_empty():
+		return
+	var backup := FileAccess.open(SAVE_BACKUP_PATH, FileAccess.WRITE)
+	if backup == null:
+		return
+	backup.store_string(text)
+	backup.close()
 
 
 static func default_record_point() -> Dictionary:
@@ -274,6 +343,22 @@ static func has_remote_stable(profile: Dictionary) -> bool:
 	return has_unlocked_ability(profile, ABILITY_REMOTE_STABLE)
 
 
+static func has_riding(profile: Dictionary) -> bool:
+	return has_unlocked_ability(profile, ABILITY_RIDING)
+
+
+static func riding_pet_instance_id(profile: Dictionary) -> String:
+	return str(normalize_profile(profile).get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+
+
+static func riding_pet_instance(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance_id := str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	if instance_id == "":
+		return {}
+	return pet_instance_by_id(normalized, instance_id)
+
+
 static func with_unlocked_ability(profile: Dictionary, ability_id: String) -> Dictionary:
 	var normalized_id := str(ability_id).strip_edges()
 	var normalized := normalize_profile(profile)
@@ -284,6 +369,129 @@ static func with_unlocked_ability(profile: Dictionary, ability_id: String) -> Di
 		abilities.append(normalized_id)
 	normalized[UNLOCKED_ABILITIES_KEY] = abilities
 	return normalize_profile(normalized)
+
+
+static func can_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var selected_id := instance_id.strip_edges()
+	if selected_id == "":
+		return {"ok": false, "message": "请选择要骑乘的宠物。"}
+	if not has_unlocked_ability(normalized, ABILITY_RIDING):
+		return {"ok": false, "message": "尚未学会骑宠术。"}
+	var instance := pet_instance_by_id(normalized, selected_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。"}
+	var ride_config := _ride_config_for_instance(instance)
+	if ride_config.is_empty():
+		return {"ok": false, "message": "%s 不能骑乘。" % str(instance.get("name", "宠物"))}
+	var state := str(instance.get("state", PET_STATE_STANDBY))
+	if state == PET_STATE_STORAGE:
+		return {"ok": false, "message": "%s 在兽栏里，不能骑乘。" % str(instance.get("name", "宠物"))}
+	if state == PET_STATE_REST:
+		return {"ok": false, "message": "%s 正在休息，不能骑乘。" % str(instance.get("name", "宠物"))}
+	if int(instance.get("hp", 0)) <= 0:
+		return {"ok": false, "message": "%s 生命为 0，不能骑乘。" % str(instance.get("name", "宠物"))}
+	var level_cap := riding_level_cap(normalized)
+	var pet_level := maxi(1, int(instance.get("level", 1)))
+	if pet_level > level_cap:
+		return {"ok": false, "message": "当前骑宠术只能骑乘 Lv%d 及以下宠物。" % level_cap}
+	return {"ok": true, "message": "%s 可以骑乘。" % str(instance.get("name", "宠物"))}
+
+
+static func set_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var check := can_ride_pet(normalized, instance_id)
+	if not bool(check.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(check.get("message", "不能骑乘这只宠物。")),
+		}
+	var selected_id := instance_id.strip_edges()
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		var current_id := str(instance.get("instanceId", ""))
+		if current_id == selected_id:
+			instance["state"] = PET_STATE_RIDING
+		elif str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_RIDING:
+			instance["state"] = PET_STATE_STANDBY
+		instances[index] = instance
+	normalized["petInstances"] = instances
+	if str(normalized.get("activePetInstanceId", "")) == selected_id:
+		normalized["activePetInstanceId"] = ""
+	normalized[RIDE_PET_INSTANCE_ID_KEY] = selected_id
+	normalized = normalize_profile(normalized)
+	var mounted := pet_instance_by_id(normalized, selected_id)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 已设为骑宠。" % str(mounted.get("name", "宠物")),
+	}
+
+
+static func clear_ride_pet(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var instance_id := str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	if instance_id == "":
+		return {"ok": false, "profile": normalized, "message": "当前没有骑乘宠物。"}
+	var instance := pet_instance_by_id(normalized, instance_id)
+	normalized[RIDE_PET_INSTANCE_ID_KEY] = ""
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var current := (instances[index] as Dictionary).duplicate(true)
+		if str(current.get("instanceId", "")) == instance_id and str(current.get("state", PET_STATE_STANDBY)) == PET_STATE_RIDING:
+			current["state"] = PET_STATE_STANDBY
+		instances[index] = current
+	normalized["petInstances"] = instances
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "%s 已下骑。" % str(instance.get("name", "骑宠")),
+	}
+
+
+static func riding_level_cap(_profile: Dictionary) -> int:
+	return RIDE_SKILL_LEVEL_CAP
+
+
+static func riding_stat_summary(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var base_summary := player_stat_summary(normalized)
+	var base_current := (base_summary.get("current", {}) as Dictionary).duplicate(true)
+	var ride_pet := riding_pet_instance(normalized)
+	if ride_pet.is_empty():
+		return {
+			"active": false,
+			"current": base_current,
+			"baseCurrent": base_current,
+			"mount": {},
+			"formula": "none",
+		}
+	var mount_stats := {
+		"maxHp": maxi(1, int(ride_pet.get("maxHp", 1))),
+		"attack": maxi(1, int(ride_pet.get("attack", 1))),
+		"defense": maxi(1, int(ride_pet.get("defense", 1))),
+		"quick": maxi(1, int(ride_pet.get("quick", 1))),
+	}
+	var style := _ride_attack_style_for_profile(normalized)
+	var adjusted := _ride_adjusted_player_stats(base_current, mount_stats, style)
+	return {
+		"active": true,
+		"current": adjusted,
+		"baseCurrent": base_current,
+		"mount": mount_stats,
+		"mountName": str(ride_pet.get("name", "骑宠")),
+		"mountLevel": maxi(1, int(ride_pet.get("level", 1))),
+		"mountInstanceId": str(ride_pet.get("instanceId", "")),
+		"formula": "stoneage_like_ride_v1",
+		"attackStyle": style,
+	}
 
 
 static func rebirth_count(profile: Dictionary) -> int:
@@ -771,6 +979,9 @@ static func batch_store_standby_pets(profile: Dictionary) -> Dictionary:
 		var state := str(instance.get("state", PET_STATE_STANDBY))
 		var instance_id := str(instance.get("instanceId", ""))
 		if state == PET_STATE_STORAGE or state == PET_STATE_BATTLE:
+			continue
+		if instance_id == str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")):
+			skipped_count += 1
 			continue
 		if bool(instance.get("locked", false)) or _pet_required_by_active_quest(normalized, instance):
 			skipped_count += 1
@@ -2406,6 +2617,24 @@ static func with_diamonds(profile: Dictionary, amount: int) -> Dictionary:
 	return normalized
 
 
+static func currency_amount(profile: Dictionary, currency: String) -> int:
+	var normalized := normalize_profile(profile)
+	match currency:
+		ShopCatalogModel.CURRENCY_DIAMONDS:
+			return maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
+	return maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+
+
+static func _set_currency_amount(profile: Dictionary, currency: String, amount: int) -> Dictionary:
+	var next := profile.duplicate(true)
+	match currency:
+		ShopCatalogModel.CURRENCY_DIAMONDS:
+			next[DIAMONDS_KEY] = maxi(0, amount)
+		_:
+			next[STONE_COINS_KEY] = maxi(0, amount)
+	return next
+
+
 static func grant_reward_bundle(profile: Dictionary, reward_bundle: Dictionary, source_id: String = "", mail_title: String = "系统奖励") -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var items := _item_amount_array(reward_bundle.get("items", []))
@@ -2966,11 +3195,13 @@ static func buy_shop_item(profile: Dictionary, shop_id: String, item_id: String,
 		}
 	var price := ShopCatalogModel.buy_price_for(shop_id, item_id)
 	var total_price := price * buy_amount
-	if stone_coins(normalized) < total_price:
+	var currency := ShopCatalogModel.currency_for(shop_id)
+	var currency_label := ShopCatalogModel.currency_label(currency)
+	if currency_amount(normalized, currency) < total_price:
 		return {
 			"ok": false,
 			"profile": normalized,
-			"message": "石币不够。",
+			"message": "%s不够。" % currency_label,
 		}
 	var add_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), [{
 		"itemId": item_id,
@@ -2985,15 +3216,16 @@ static func buy_shop_item(profile: Dictionary, shop_id: String, item_id: String,
 	var next_slots: Array[Dictionary] = add_result.get("slots", [])
 	normalized[BACKPACK_SLOTS_KEY] = next_slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
-	normalized[STONE_COINS_KEY] = stone_coins(normalized) - total_price
+	normalized = _set_currency_amount(normalized, currency, currency_amount(normalized, currency) - total_price)
 	normalized = normalize_profile(normalized)
 	return {
 		"ok": true,
 		"profile": normalized,
-		"message": "购买%s x%d，花费%d石币。" % [item_label, buy_amount, total_price],
+		"message": "购买%s x%d，花费%d%s。" % [item_label, buy_amount, total_price, currency_label],
 		"itemId": item_id,
 		"amount": buy_amount,
 		"price": total_price,
+		"currency": currency,
 	}
 
 
@@ -3016,18 +3248,21 @@ static func sell_shop_item(profile: Dictionary, shop_id: String, item_id: String
 		}
 	var price := ShopCatalogModel.sell_price_for(shop_id, item_id)
 	var total_price := price * sell_amount
+	var currency := ShopCatalogModel.currency_for(shop_id)
+	var currency_label := ShopCatalogModel.currency_label(currency)
 	var next_slots := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, sell_amount)
 	normalized[BACKPACK_SLOTS_KEY] = next_slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
-	normalized[STONE_COINS_KEY] = stone_coins(normalized) + total_price
+	normalized = _set_currency_amount(normalized, currency, currency_amount(normalized, currency) + total_price)
 	normalized = normalize_profile(normalized)
 	return {
 		"ok": true,
 		"profile": normalized,
-		"message": "出售%s x%d，获得%d石币。" % [item_label, sell_amount, total_price],
+		"message": "出售%s x%d，获得%d%s。" % [item_label, sell_amount, total_price, currency_label],
 		"itemId": item_id,
 		"amount": sell_amount,
 		"price": total_price,
+		"currency": currency,
 	}
 
 
@@ -3717,6 +3952,8 @@ static func can_set_active_pet(profile: Dictionary, instance_id: String) -> Dict
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")) == instance_id:
+		return {"ok": false, "message": "%s 正在骑乘中，不能出战。" % str(instance.get("name", "宠物"))}
 	if str(normalized.get("activePetInstanceId", "")) == instance_id:
 		return {"ok": false, "message": "%s 已经是主宠。" % str(instance.get("name", "宠物"))}
 	var state := str(instance.get("state", PET_STATE_STANDBY))
@@ -3763,10 +4000,50 @@ static func set_active_pet(profile: Dictionary, instance_id: String) -> Dictiona
 static func cycled_pet_state(state: String) -> String:
 	match state:
 		PET_STATE_REST:
-			return PET_STATE_BATTLE
-		PET_STATE_BATTLE:
 			return PET_STATE_STANDBY
 		PET_STATE_STANDBY:
+			return PET_STATE_BATTLE
+		PET_STATE_BATTLE:
+			return PET_STATE_REST
+		PET_STATE_RIDING:
+			return PET_STATE_BATTLE
+		_:
+			return ""
+
+
+static func pet_effective_state(profile: Dictionary, instance_id: String) -> String:
+	var normalized := normalize_profile(profile)
+	var selected_id := instance_id.strip_edges()
+	if selected_id == "":
+		return ""
+	var instance := pet_instance_by_id(normalized, selected_id)
+	if instance.is_empty():
+		return ""
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges() == selected_id:
+		return PET_STATE_RIDING
+	return str(instance.get("state", PET_STATE_STANDBY))
+
+
+static func cycled_pet_state_for_profile(profile: Dictionary, instance_id: String) -> String:
+	var normalized := normalize_profile(profile)
+	var selected_id := instance_id.strip_edges()
+	if selected_id == "":
+		return ""
+	var instance := pet_instance_by_id(normalized, selected_id)
+	if instance.is_empty():
+		return ""
+	var state := pet_effective_state(normalized, selected_id)
+	match state:
+		PET_STATE_REST:
+			return PET_STATE_STANDBY
+		PET_STATE_STANDBY:
+			var ride_check := can_ride_pet(normalized, selected_id)
+			if bool(ride_check.get("ok", false)):
+				return PET_STATE_RIDING
+			return PET_STATE_BATTLE
+		PET_STATE_RIDING:
+			return PET_STATE_BATTLE
+		PET_STATE_BATTLE:
 			return PET_STATE_REST
 		_:
 			return ""
@@ -3777,12 +4054,16 @@ static func can_cycle_pet_state(profile: Dictionary, instance_id: String) -> Dic
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
-	var state := str(instance.get("state", PET_STATE_STANDBY))
-	var target_state := cycled_pet_state(state)
+	var state := pet_effective_state(normalized, instance_id)
+	var target_state := cycled_pet_state_for_profile(normalized, instance_id)
 	if target_state == "":
 		return {"ok": false, "message": "%s 当前状态不能切换。" % str(instance.get("name", "宠物"))}
 	if state == PET_STATE_STORAGE:
 		return {"ok": false, "message": "%s 在兽栏里，暂时不能切换状态。" % str(instance.get("name", "宠物"))}
+	if target_state == PET_STATE_RIDING:
+		var ride_check := can_ride_pet(normalized, instance_id)
+		if not bool(ride_check.get("ok", false)):
+			return ride_check
 	if target_state == PET_STATE_BATTLE and int(instance.get("hp", 0)) <= 0:
 		return {"ok": false, "message": "%s 生命为 0，不能出战。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 将切换为%s。" % [str(instance.get("name", "宠物")), state_label(target_state)]}
@@ -3797,9 +4078,10 @@ static func cycle_pet_state(profile: Dictionary, instance_id: String) -> Diction
 			"profile": normalized,
 			"message": str(check.get("message", "不能切换宠物状态。")),
 		}
-	var selected := pet_instance_by_id(normalized, instance_id)
-	var current_state := str(selected.get("state", PET_STATE_STANDBY))
-	var target_state := cycled_pet_state(current_state)
+	var current_state := pet_effective_state(normalized, instance_id)
+	var target_state := cycled_pet_state_for_profile(normalized, instance_id)
+	if target_state == PET_STATE_RIDING:
+		return set_ride_pet(normalized, instance_id)
 	var instances: Array = normalized.get("petInstances", [])
 	for index in range(instances.size()):
 		if not (instances[index] is Dictionary):
@@ -3812,6 +4094,8 @@ static func cycle_pet_state(profile: Dictionary, instance_id: String) -> Diction
 			instance["state"] = PET_STATE_STANDBY
 		instances[index] = instance
 	normalized["petInstances"] = instances
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")) == instance_id:
+		normalized[RIDE_PET_INSTANCE_ID_KEY] = ""
 	if target_state == PET_STATE_BATTLE:
 		normalized["activePetInstanceId"] = instance_id
 	elif current_state == PET_STATE_BATTLE:
@@ -3830,6 +4114,8 @@ static func can_store_pet(profile: Dictionary, instance_id: String) -> Dictionar
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")) == instance_id:
+		return {"ok": false, "message": "%s 正在骑乘中，不能存入兽栏。" % str(instance.get("name", "宠物"))}
 	if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 		return {"ok": false, "message": "%s 已在兽栏。" % str(instance.get("name", "宠物"))}
 	if _storage_instance_count(normalized) >= STORAGE_LIMIT:
@@ -4098,6 +4384,8 @@ static func can_drop_pet(profile: Dictionary, instance_id: String) -> Dictionary
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")) == instance_id:
+		return {"ok": false, "message": "%s 正在骑乘中，不能丢弃。" % str(instance.get("name", "宠物"))}
 	if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
 		return {"ok": false, "message": "兽栏里的宠物不能直接丢弃。"}
 	if bool(instance.get("locked", false)):
@@ -4180,6 +4468,8 @@ static func can_clear_storage_pet(profile: Dictionary, instance_id: String) -> D
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
+	if str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")) == instance_id:
+		return {"ok": false, "message": "%s 正在骑乘中，不能清理。" % str(instance.get("name", "宠物"))}
 	if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
 		return {"ok": false, "message": "只有兽栏里的宠物可以清理。"}
 	if bool(instance.get("locked", false)):
@@ -4330,6 +4620,8 @@ static func state_label(state: String) -> String:
 			return "休息"
 		PET_STATE_STORAGE:
 			return "兽栏"
+		PET_STATE_RIDING:
+			return "骑乘"
 		_:
 			return "未知"
 
@@ -4439,6 +4731,8 @@ static func pet_cultivation_preview(profile: Dictionary, instance_id: String, mo
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
 		return PetCultivationModel.preview_for_pet({}, mode)
+	if _should_use_pet_rebirth_mm(instance, mode):
+		return _pet_rebirth_mm_preview(normalized, instance)
 	return PetCultivationModel.preview_for_pet(instance, mode)
 
 
@@ -4450,6 +4744,67 @@ static func apply_pet_cultivation(profile: Dictionary, instance_id: String, mode
 			"ok": false,
 			"profile": normalized,
 			"message": "没有找到这只宠物。",
+		}
+	if _should_use_pet_rebirth_mm(instance, mode):
+		var helper := _pet_rebirth_mm_helper_for_target(normalized, instance)
+		var now := now_sec if now_sec >= 0 else int(Time.get_unix_time_from_system())
+		var mm_result := PetRebirthMmModel.apply_rebirth_to_pet(instance, helper, now)
+		if not bool(mm_result.get("ok", false)):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"preview": mm_result.get("preview", {}),
+				"message": str(mm_result.get("message", "不能进行宠物转生。")),
+			}
+		var helper_id := str(helper.get("instanceId", ""))
+		var next_profile := normalized.duplicate(true)
+		var next_instances: Array = []
+		var target_found := false
+		for value in normalized.get("petInstances", []):
+			if not (value is Dictionary):
+				continue
+			var current := value as Dictionary
+			var current_id := str(current.get("instanceId", ""))
+			if current_id == helper_id:
+				continue
+			if current_id == instance_id:
+				next_instances.append(mm_result.get("pet", current))
+				target_found = true
+			else:
+				next_instances.append(current)
+		if not target_found:
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "没有找到这只宠物。",
+			}
+		next_profile["petInstances"] = next_instances
+		if str(next_profile.get("activePetInstanceId", "")) == helper_id:
+			next_profile["activePetInstanceId"] = instance_id
+		next_profile = normalize_profile(next_profile)
+		var updated_pet := pet_instance_by_id(next_profile, instance_id)
+		if not updated_pet.is_empty():
+			updated_pet["hp"] = int(updated_pet.get("maxHp", updated_pet.get("hp", 1)))
+			var normalized_instances: Array = next_profile.get("petInstances", [])
+			for index in range(normalized_instances.size()):
+				if not (normalized_instances[index] is Dictionary):
+					continue
+				if str((normalized_instances[index] as Dictionary).get("instanceId", "")) == instance_id:
+					normalized_instances[index] = updated_pet
+					break
+			next_profile["petInstances"] = normalized_instances
+		var guide_completion := complete_pet_rebirth_mm_guide_if_ready(next_profile, now)
+		next_profile = guide_completion.get("profile", next_profile)
+		var result_message := str(mm_result.get("message", "宠物转生完成。"))
+		if bool(guide_completion.get("completed", false)):
+			result_message += "\n宠物转生教学完成，之后可找MM1反复领取1转小MM。"
+		return {
+			"ok": true,
+			"profile": next_profile,
+			"pet": pet_instance_by_id(next_profile, instance_id),
+			"preview": mm_result.get("preview", {}),
+			"result": mm_result.get("result", {}),
+			"message": result_message,
 		}
 	var result := PetCultivationModel.apply_to_pet(instance, mode, now_sec)
 	if not bool(result.get("ok", false)):
@@ -4502,6 +4857,44 @@ static func apply_pet_cultivation(profile: Dictionary, instance_id: String, mode
 		"result": result.get("result", {}),
 		"message": str(result.get("message", "宠物培养完成。")),
 	}
+
+
+static func _should_use_pet_rebirth_mm(instance: Dictionary, mode: String) -> bool:
+	var normalized_mode := mode.strip_edges().to_lower()
+	if normalized_mode == PetCultivationModel.MODE_REBIRTH:
+		return true
+	if PetRebirthMmModel.is_helper_pet(instance):
+		return false
+	var record := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
+	return int(instance.get("level", 1)) >= PetRebirthMmModel.TARGET_REQUIRED_LEVEL or int(record.get("rebirthCount", 0)) > 0
+
+
+static func _pet_rebirth_mm_preview(profile: Dictionary, target_pet: Dictionary) -> Dictionary:
+	if PetRebirthMmModel.is_helper_pet(target_pet):
+		return {
+			"ok": false,
+			"mode": PetCultivationModel.MODE_REBIRTH,
+			"title": "宠物转生",
+			"message": "转生MM不能作为转生目标。",
+			"lines": [],
+			"schemaVersion": PetRebirthMmModel.SCHEMA_VERSION,
+		}
+	var helper := _pet_rebirth_mm_helper_for_target(profile, target_pet)
+	return PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper)
+
+
+static func _pet_rebirth_mm_helper_for_target(profile: Dictionary, target_pet: Dictionary) -> Dictionary:
+	var target_id := str(target_pet.get("instanceId", ""))
+	var target_record := PetCultivationModel.normalized_record(target_pet.get("petCultivation", {}))
+	var expected_stage := clampi(int(target_record.get("rebirthCount", 0)) + 1, PetRebirthMmModel.STAGE_ONE, PetRebirthMmModel.MAX_REBIRTH_STAGE)
+	for instance in party_pet_instances(profile):
+		if str(instance.get("instanceId", "")) == target_id:
+			continue
+		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+			continue
+		if PetRebirthMmModel.helper_stage_for_pet(instance) == expected_stage:
+			return instance
+	return {}
 
 
 static func pet_codex_detail_lines(instance: Dictionary) -> Array[String]:
@@ -4621,7 +5014,7 @@ static func gm_grant_growth_pet(profile: Dictionary, growth_profile_id: String) 
 	)
 	if instance.is_empty():
 		return {"ok": false, "profile": normalized, "message": "%s 成长档未就绪。" % pet_name}
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
 	instance["capturedSerial"] = serial
@@ -4641,7 +5034,7 @@ static func gm_grant_growth_pet(profile: Dictionary, growth_profile_id: String) 
 	}
 
 
-static func gm_level_up_growth_pet_once(profile: Dictionary, instance_id: String) -> Dictionary:
+static func gm_level_up_pet_once(profile: Dictionary, instance_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var instances: Array = normalized.get("petInstances", [])
 	for index in range(instances.size()):
@@ -4651,11 +5044,14 @@ static func gm_level_up_growth_pet_once(profile: Dictionary, instance_id: String
 		if str(instance.get("instanceId", "")) != instance_id:
 			instances[index] = instance
 			continue
-		if str(instance.get("growthSpeciesProfileId", "")) == "":
-			return {"ok": false, "profile": normalized, "message": "%s 不是成长观察宠物。" % str(instance.get("name", "宠物"))}
 		if int(instance.get("level", 1)) >= MAX_PET_LEVEL:
 			return {"ok": false, "profile": normalized, "message": "%s 已满级。" % str(instance.get("name", "宠物"))}
-		var next_instance := PetGrowthObservationModel.level_up_once(instance, MAX_PET_LEVEL)
+		var next_instance := instance.duplicate(true)
+		var has_growth_observation := str(instance.get("growthSpeciesProfileId", "")).strip_edges() != ""
+		if has_growth_observation:
+			next_instance = PetGrowthObservationModel.level_up_once(instance, MAX_PET_LEVEL)
+		else:
+			next_instance["level"] = clampi(int(instance.get("level", 1)) + 1, 1, MAX_PET_LEVEL)
 		next_instance["exp"] = 0
 		next_instance["nextExp"] = exp_to_next_level(int(next_instance.get("level", 1)))
 		instances[index] = next_instance
@@ -4663,18 +5059,492 @@ static func gm_level_up_growth_pet_once(profile: Dictionary, instance_id: String
 		normalized = normalize_profile(normalized)
 		var updated := pet_instance_by_id(normalized, instance_id)
 		var observation = updated.get("growthObservation", {})
-		var overall := str((observation as Dictionary).get("overallGrade", "未观察")) if observation is Dictionary else "未观察"
+		var overall := str((observation as Dictionary).get("overallGrade", "未观察")) if observation is Dictionary else ""
+		var suffix := "，成长评价 %s" % overall if overall != "" else ""
 		return {
 			"ok": true,
 			"profile": normalized,
 			"pet": updated,
-			"message": "%s 升到 Lv%d，成长评价 %s。" % [
+			"message": "%s 升到 Lv%d%s。" % [
 				str(updated.get("name", "宠物")),
 				int(updated.get("level", 1)),
-				overall,
+				suffix,
 			],
 		}
 	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
+static func gm_level_up_growth_pet_once(profile: Dictionary, instance_id: String) -> Dictionary:
+	return gm_level_up_pet_once(profile, instance_id)
+
+
+static func grant_pet_rebirth_mm(profile: Dictionary, stage: int, source_id: String = "") -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var helper_stage := clampi(stage, PetRebirthMmModel.STAGE_ONE, PetRebirthMmModel.STAGE_TWO)
+	var form_id := PetRebirthMmModel.helper_form_id_for_stage(helper_stage)
+	var pet_name := PetRebirthMmModel.helper_name_for_stage(helper_stage)
+	if form_id == "":
+		return {"ok": false, "profile": normalized, "message": "转生MM配置不存在。"}
+	var state := PET_STATE_STANDBY
+	var party_count := party_pet_instances(normalized).size()
+	var storage_count := storage_pet_instances(normalized).size()
+	if party_count >= PARTY_LIMIT:
+		if storage_count >= STORAGE_LIMIT:
+			return {"ok": false, "profile": normalized, "message": "队伍和兽栏都满了，无法领取%s。" % pet_name}
+		state = PET_STATE_STORAGE
+	var serial := maxi(int(normalized.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(normalized)))
+	var source_part := _safe_id_part(source_id) if source_id.strip_edges() != "" else "grant"
+	var instance_id := "pet_mm%d_%s_%d" % [helper_stage, source_part, serial]
+	var instance := _pet_instance_from_form(instance_id, pet_name, form_id, state, 1, {
+		"individualSeed": "pet_rebirth_mm:%d:%s:%d" % [helper_stage, source_part, serial],
+	})
+	if instance.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 模板不存在。" % pet_name}
+	instance["petRebirthHelper"] = PetRebirthMmModel.normalized_helper_record({}, helper_stage)
+	instance["isNew"] = true
+	var instances: Array = normalized.get("petInstances", [])
+	instances.append(instance)
+	normalized["petInstances"] = instances
+	normalized["nextPetInstanceSerial"] = serial + 1
+	normalized = _with_codex_form_recorded(normalized, form_id, true)
+	normalized = normalize_profile(normalized)
+	var updated := pet_instance_by_id(normalized, instance_id)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"instanceId": instance_id,
+		"pet": updated,
+		"message": "获得 Lv1 %s，已加入%s。" % [pet_name, "兽栏" if state == PET_STATE_STORAGE else "队伍"],
+	}
+
+
+static func pet_rebirth_mm_stage2_claimed(profile: Dictionary) -> bool:
+	return bool(normalize_profile(profile).get(PET_REBIRTH_MM_STAGE2_CLAIMED_KEY, false))
+
+
+static func claim_pet_rebirth_mm_stage2(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if bool(normalized.get(PET_REBIRTH_MM_STAGE2_CLAIMED_KEY, false)):
+		return {"ok": false, "profile": normalized, "message": "2转小MM任务奖励每个角色只能领取一次。"}
+	var grant := grant_pet_rebirth_mm(normalized, PetRebirthMmModel.STAGE_TWO, "stage2_once")
+	normalized = grant.get("profile", normalized)
+	if not bool(grant.get("ok", false)):
+		return grant
+	normalized[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = true
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"instanceId": str(grant.get("instanceId", "")),
+		"pet": grant.get("pet", {}),
+		"message": "完成2转小MM任务，%s" % str(grant.get("message", "")),
+	}
+
+
+static func pet_rebirth_mm_guide_completed(profile: Dictionary) -> bool:
+	var normalized := normalize_profile(profile)
+	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	return str(guide.get("status", "")) == PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED or _has_pet_rebirth_count_at_least(normalized, 1)
+
+
+static func pet_rebirth_mm_guide_started(profile: Dictionary) -> bool:
+	var guide := _normalize_pet_rebirth_mm_guide(normalize_profile(profile).get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	return [PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE, PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED].has(str(guide.get("status", "")))
+
+
+static func start_pet_rebirth_mm_guide(profile: Dictionary, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if pet_rebirth_mm_guide_completed(normalized):
+		normalized = _with_pet_rebirth_mm_guide_status(normalized, PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED, now_sec)
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "宠物转生教学已完成。之后可反复挑战1转MM试炼领取1转小MM。",
+		}
+	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	if str(guide.get("status", "")) != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
+		guide["status"] = PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE
+		guide["startedAtSec"] = _safe_now_sec(now_sec)
+		normalized[PET_REBIRTH_MM_GUIDE_KEY] = guide
+		normalized = normalize_profile(normalized)
+	var info := pet_rebirth_mm_guide_info(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "开始任务「宠物转生教学」。%s" % str(info.get("taskText", "")),
+		"info": info,
+	}
+
+
+static func complete_pet_rebirth_mm_guide_if_ready(profile: Dictionary, now_sec: int = -1) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var already_completed := pet_rebirth_mm_guide_completed(normalized)
+	if not _has_pet_rebirth_count_at_least(normalized, 1):
+		return {
+			"profile": normalized,
+			"completed": false,
+			"alreadyCompleted": already_completed,
+		}
+	normalized = _with_pet_rebirth_mm_guide_status(normalized, PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED, now_sec)
+	return {
+		"profile": normalized,
+		"completed": not already_completed,
+		"alreadyCompleted": already_completed,
+	}
+
+
+static func pet_rebirth_mm_guide_info(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if pet_rebirth_mm_guide_completed(normalized):
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED,
+			"completed",
+			"宠物转生教学",
+			"宠物转生教学已完成",
+			["之后可找 1转MM试炼师阿澄反复挑战，领取新的1转小MM。"]
+		)
+	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	if str(guide.get("status", "")) != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE,
+			PET_REBIRTH_MM_GUIDE_STEP_START,
+			"宠物转生教学",
+			"可接任务 - 宠物转生教学",
+			[
+				"目标：找 1转MM试炼师阿澄开始教学。",
+				"教学会引导领取1转小MM、喂满四种MM石、练到Lv79，再给一只Lv80以上宠物转生。",
+			]
+		)
+	var party_helper := _pet_rebirth_mm_best_helper(normalized, PetRebirthMmModel.STAGE_ONE, false)
+	var any_helper := _pet_rebirth_mm_best_helper(normalized, PetRebirthMmModel.STAGE_ONE, true)
+	if any_helper.is_empty():
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+			PET_REBIRTH_MM_GUIDE_STEP_CLAIM_MM,
+			"宠物转生教学：领取1转小MM",
+			"宠物转生教学 - 挑战MM1领取1转小MM",
+			[
+				"目标：打赢1转MM试炼师阿澄的试炼。",
+				"胜利后会获得 Lv1 1转小MM。",
+			]
+		)
+	if party_helper.is_empty():
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+			PET_REBIRTH_MM_GUIDE_STEP_WITHDRAW_MM,
+			"宠物转生教学：取出1转小MM",
+			"宠物转生教学 - 从兽栏取出1转小MM",
+			[
+				"%s 在兽栏中，先从兽栏取出到队伍。" % str(any_helper.get("name", "1转小MM")),
+				"转生时需要队伍中有对应阶段的转生MM。",
+			]
+		)
+	var helper_record := PetRebirthMmModel.normalized_helper_record(party_helper.get("petRebirthHelper", {}), PetRebirthMmModel.STAGE_ONE)
+	var completion := PetRebirthMmModel.stone_completion(helper_record)
+	if float(completion.get("completion", 0.0)) < 1.0:
+		var stone_lines := PetRebirthMmModel.helper_record_lines(helper_record)
+		var lines := [
+			"目标：给%s喂满生命、攻击、防御、敏捷四种MM石。" % str(party_helper.get("name", "1转小MM")),
+			"可在钻石铺购买低/中/高级MM石，喂石必须在MM Lv74前完成。",
+		]
+		lines.append_array(stone_lines)
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+			PET_REBIRTH_MM_GUIDE_STEP_FEED_MM,
+			"宠物转生教学：喂满MM石",
+			"宠物转生教学 - 喂满1转小MM四种MM石",
+			lines
+		)
+	if int(party_helper.get("level", 1)) < PetRebirthMmModel.HELPER_REQUIRED_LEVEL:
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+			PET_REBIRTH_MM_GUIDE_STEP_LEVEL_MM,
+			"宠物转生教学：练MM",
+			"宠物转生教学 - 把1转小MM练到Lv79",
+			[
+				"目标：把%s从 Lv%d 练到 Lv%d。" % [
+					str(party_helper.get("name", "1转小MM")),
+					int(party_helper.get("level", 1)),
+					PetRebirthMmModel.HELPER_REQUIRED_LEVEL,
+				],
+				"提示：测试阶段可以用经验丹，也可以实战练级。",
+			]
+		)
+	var target := _pet_rebirth_mm_guide_target_candidate(normalized)
+	if target.is_empty():
+		return _pet_rebirth_mm_guide_info_for_step(
+			PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+			PET_REBIRTH_MM_GUIDE_STEP_PREPARE_TARGET,
+			"宠物转生教学：准备目标宠",
+			"宠物转生教学 - 准备一只Lv80以上0转宠物",
+			[
+				"目标：准备一只非MM宠物，等级至少 Lv%d。" % PetRebirthMmModel.TARGET_REQUIRED_LEVEL,
+				"之后在宠物界面选中它，使用转强/转生。",
+			]
+		)
+	return _pet_rebirth_mm_guide_info_for_step(
+		PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
+		PET_REBIRTH_MM_GUIDE_STEP_REBIRTH,
+		"宠物转生教学：执行转生",
+		"宠物转生教学 - 选中目标宠并确认转生",
+		[
+			"目标宠：%s Lv%d。" % [str(target.get("name", "宠物")), int(target.get("level", 1))],
+			"转生MM：%s Lv%d，四种MM石已满。" % [str(party_helper.get("name", "1转小MM")), int(party_helper.get("level", 1))],
+			"打开宠物界面，选中目标宠，点击「转强」后确认转生。",
+		]
+	)
+
+
+static func pet_rebirth_mm_guide_signature(profile: Dictionary) -> String:
+	var guide := _normalize_pet_rebirth_mm_guide(profile.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	var helper := _pet_rebirth_mm_best_helper(profile, PetRebirthMmModel.STAGE_ONE, true)
+	var target := _pet_rebirth_mm_guide_target_candidate(profile)
+	var helper_record := PetRebirthMmModel.normalized_helper_record(helper.get("petRebirthHelper", {}), PetRebirthMmModel.STAGE_ONE) if not helper.is_empty() else PetRebirthMmModel.normalized_helper_record({}, PetRebirthMmModel.STAGE_ONE)
+	var points := PetRebirthMmModel.normalized_stone_points(helper_record.get("stonePoints", {}))
+	var target_record := {}
+	if not target.is_empty():
+		target_record = PetCultivationModel.normalized_record(target.get("petCultivation", {}))
+	var point_parts: Array[String] = []
+	for key in PetRebirthMmModel.STAT_KEYS:
+		point_parts.append("%s:%d" % [key, int(points.get(key, 0))])
+	return "%s|done:%s|helper:%s:%s:%d:%s|target:%s:%d:%d" % [
+		str(guide.get("status", "")),
+		str(_has_pet_rebirth_count_at_least(profile, 1)),
+		str(helper.get("instanceId", "")),
+		str(helper.get("state", "")),
+		int(helper.get("level", 0)),
+		",".join(point_parts),
+		str(target.get("instanceId", "")),
+		int(target.get("level", 0)),
+		int(target_record.get("rebirthCount", 0)),
+	]
+
+
+static func _normalize_pet_rebirth_mm_guide(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	var status := str(source.get("status", PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE))
+	if bool(source.get("completed", false)):
+		status = PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED
+	if not [PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE, PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE, PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED].has(status):
+		status = PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE
+	return {
+		"schemaVersion": 1,
+		"status": status,
+		"startedAtSec": maxi(0, int(source.get("startedAtSec", 0))),
+		"completedAtSec": maxi(0, int(source.get("completedAtSec", 0))),
+	}
+
+
+static func _with_pet_rebirth_mm_guide_status(profile: Dictionary, status: String, now_sec: int = -1) -> Dictionary:
+	var next := profile.duplicate(true)
+	var guide := _normalize_pet_rebirth_mm_guide(next.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	guide["status"] = status
+	var now := _safe_now_sec(now_sec)
+	if status == PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE and int(guide.get("startedAtSec", 0)) <= 0:
+		guide["startedAtSec"] = now
+	if status == PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED:
+		if int(guide.get("startedAtSec", 0)) <= 0:
+			guide["startedAtSec"] = now
+		guide["completedAtSec"] = now
+	next[PET_REBIRTH_MM_GUIDE_KEY] = guide
+	return normalize_profile(next)
+
+
+static func _pet_rebirth_mm_guide_info_for_step(status: String, step: String, title: String, task_text: String, detail_lines: Array) -> Dictionary:
+	var normalized_lines: Array[String] = []
+	for line in detail_lines:
+		normalized_lines.append(str(line))
+	return {
+		"status": status,
+		"step": step,
+		"title": title,
+		"taskText": task_text,
+		"detailLines": normalized_lines,
+	}
+
+
+static func _pet_rebirth_mm_best_helper(profile: Dictionary, stage: int, include_storage: bool) -> Dictionary:
+	var best := {}
+	var best_score := -1
+	for instance in _pet_instances(profile):
+		if PetRebirthMmModel.helper_stage_for_pet(instance) != stage:
+			continue
+		var state := str(instance.get("state", PET_STATE_STANDBY))
+		if not include_storage and state == PET_STATE_STORAGE:
+			continue
+		var record := PetRebirthMmModel.normalized_helper_record(instance.get("petRebirthHelper", {}), stage)
+		var completion := PetRebirthMmModel.stone_completion(record)
+		var score := int(instance.get("level", 1)) * 1000 + int(completion.get("totalPoints", 0))
+		if state != PET_STATE_STORAGE:
+			score += 100000
+		if score > best_score:
+			best_score = score
+			best = instance
+	return best
+
+
+static func _pet_rebirth_mm_guide_target_candidate(profile: Dictionary) -> Dictionary:
+	var best := {}
+	var best_score := -1
+	for instance in _pet_instances(profile):
+		if PetRebirthMmModel.is_helper_pet(instance):
+			continue
+		var record := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
+		if int(record.get("rebirthCount", 0)) != 0:
+			continue
+		var level := int(instance.get("level", 1))
+		if level < PetRebirthMmModel.TARGET_REQUIRED_LEVEL:
+			continue
+		var score := level
+		if str(instance.get("state", PET_STATE_STANDBY)) != PET_STATE_STORAGE:
+			score += 1000
+		if score > best_score:
+			best_score = score
+			best = instance
+	return best
+
+
+static func _has_pet_rebirth_count_at_least(profile: Dictionary, required_count: int) -> bool:
+	var required := maxi(1, required_count)
+	for instance in _pet_instances(profile):
+		var record := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
+		if int(record.get("rebirthCount", 0)) >= required:
+			return true
+	return false
+
+
+static func use_world_mm_stone_item(profile: Dictionary, item_id: String, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "MM石")
+	if not BackpackModel.item_can_world_mm_stone(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能喂给MM。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var stat_key := PetRebirthMmModel.normalized_stat_key(BackpackModel.world_mm_stone_stat_for(item_id))
+	var points := BackpackModel.world_mm_stone_points_for(item_id)
+	if stat_key == "" or points <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 没有有效石头点数。" % item_label}
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			continue
+		if not PetRebirthMmModel.is_helper_pet(instance):
+			return {"ok": false, "profile": normalized, "message": "%s 不是转生MM。" % str(instance.get("name", "宠物"))}
+		if str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+			return {"ok": false, "profile": normalized, "message": "%s 在兽栏中，不能喂石。" % str(instance.get("name", "宠物"))}
+		if int(instance.get("level", 1)) >= 74:
+			return {"ok": false, "profile": normalized, "message": "%s 已到 Lv74，不能继续喂石。" % str(instance.get("name", "宠物"))}
+		var stage := PetRebirthMmModel.helper_stage_for_pet(instance)
+		var before_record := PetRebirthMmModel.normalized_helper_record(instance.get("petRebirthHelper", {}), stage)
+		var before_points := PetRebirthMmModel.normalized_stone_points(before_record.get("stonePoints", {}))
+		var before_value := int(before_points.get(stat_key, 0))
+		if before_value >= PetRebirthMmModel.STONE_CAPACITY:
+			return {"ok": false, "profile": normalized, "message": "%s 的%s石已满。" % [str(instance.get("name", "宠物")), PetRebirthMmModel.stat_label(stat_key)]}
+		var after_record := PetRebirthMmModel.add_stone_points(before_record, stat_key, points)
+		var after_points := PetRebirthMmModel.normalized_stone_points(after_record.get("stonePoints", {}))
+		var after_value := int(after_points.get(stat_key, 0))
+		instance["petRebirthHelper"] = after_record
+		instances[index] = instance
+		normalized["petInstances"] = instances
+		normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+		normalized = normalize_profile(normalized)
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": "%s 使用%s，%s石 %d/%d。" % [
+				str(instance.get("name", "转生MM")),
+				item_label,
+				PetRebirthMmModel.stat_label(stat_key),
+				after_value,
+				PetRebirthMmModel.STONE_CAPACITY,
+			],
+			"itemId": item_id,
+			"instanceId": instance_id,
+			"stat": stat_key,
+			"pointsAdded": after_value - before_value,
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只转生MM。"}
+
+
+static func use_world_pet_egg_item(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "宠物蛋")
+	if not BackpackModel.item_can_world_pet_egg(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能使用。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var grant := {}
+	var use_type := str(BackpackModel.world_use_for(item_id).get("type", ""))
+	if use_type == "pet_rebirth_mm_egg":
+		var stage := BackpackModel.world_pet_egg_stage_for(item_id)
+		grant = grant_pet_rebirth_mm(normalized, stage, "egg")
+	elif use_type == "pet_form_egg":
+		grant = _grant_pet_from_form_egg(normalized, item_id)
+	else:
+		return {"ok": false, "profile": normalized, "message": "%s 不能使用。" % item_label}
+	normalized = grant.get("profile", normalized)
+	if not bool(grant.get("ok", false)):
+		return grant
+	normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "使用%s，%s" % [item_label, str(grant.get("message", ""))],
+		"itemId": item_id,
+		"instanceId": str(grant.get("instanceId", "")),
+		"pet": grant.get("pet", {}),
+	}
+
+
+static func use_world_pet_rebirth_mm_egg(profile: Dictionary, item_id: String) -> Dictionary:
+	return use_world_pet_egg_item(profile, item_id)
+
+
+static func _grant_pet_from_form_egg(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var form_id := BackpackModel.world_pet_egg_form_id_for(item_id)
+	var item_label := BackpackModel.label_for(item_id, "宠物蛋")
+	if form_id == "":
+		return {"ok": false, "profile": normalized, "message": "%s 没有配置宠物。" % item_label}
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 对应宠物不存在。" % item_label}
+	var pet_name := BackpackModel.world_pet_egg_pet_name_for(item_id)
+	if pet_name == "":
+		pet_name = str(template.get("formName", "宠物"))
+	var state := PET_STATE_STANDBY
+	var party_count := party_pet_instances(normalized).size()
+	var storage_count := storage_pet_instances(normalized).size()
+	if party_count >= PARTY_LIMIT:
+		if storage_count >= STORAGE_LIMIT:
+			return {"ok": false, "profile": normalized, "message": "队伍和兽栏都满了，无法孵化%s。" % pet_name}
+		state = PET_STATE_STORAGE
+	var serial := maxi(int(normalized.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(normalized)))
+	var instance_id := "pet_egg_%s_%d" % [_safe_id_part(form_id), serial]
+	var instance := _pet_instance_from_form(instance_id, pet_name, form_id, state, 1, {
+		"individualSeed": "pet_egg:%s:%d" % [form_id, serial],
+		"capturedSerial": serial,
+	})
+	if instance.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 模板不存在。" % pet_name}
+	instance["isNew"] = true
+	var instances: Array = normalized.get("petInstances", [])
+	instances.append(instance)
+	normalized["petInstances"] = instances
+	normalized["nextPetInstanceSerial"] = serial + 1
+	normalized = _with_codex_form_recorded(normalized, form_id, true)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"instanceId": instance_id,
+		"pet": pet_instance_by_id(normalized, instance_id),
+		"message": "获得 Lv1 %s，已加入%s。" % [pet_name, "兽栏" if state == PET_STATE_STORAGE else "队伍"],
+	}
 
 
 static func _safe_id_part(value: String) -> String:
@@ -4748,13 +5618,10 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var mailbox_messages_value := _normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, []))
 	var exp_pill_starter_version := int(normalized.get(EXP_PILL_STARTER_VERSION_KEY, 0))
 	if exp_pill_starter_version < EXP_PILL_STARTER_VERSION:
-		var missing_player_pills := maxi(0, 5 - BackpackModel.item_count(backpack_slots_value, ITEM_PLAYER_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_PLAYER_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
-		var missing_pet_pills := maxi(0, 5 - BackpackModel.item_count(backpack_slots_value, ITEM_PET_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_PET_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
+		var missing_exp_pills := maxi(0, 10 - BackpackModel.item_count(backpack_slots_value, ITEM_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
 		var exp_pill_rewards: Array[Dictionary] = []
-		if missing_player_pills > 0:
-			exp_pill_rewards.append({"itemId": ITEM_PLAYER_EXP_PILL_LV131, "count": missing_player_pills})
-		if missing_pet_pills > 0:
-			exp_pill_rewards.append({"itemId": ITEM_PET_EXP_PILL_LV131, "count": missing_pet_pills})
+		if missing_exp_pills > 0:
+			exp_pill_rewards.append({"itemId": ITEM_EXP_PILL_LV131, "count": missing_exp_pills})
 		if not exp_pill_rewards.is_empty():
 			var exp_pill_result := BackpackModel.add_items(backpack_slots_value, exp_pill_rewards)
 			backpack_slots_value = exp_pill_result.get("slots", backpack_slots_value)
@@ -4762,8 +5629,8 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 			if not lost_exp_pills.is_empty():
 				mailbox_messages_value = _upsert_mailbox_message(mailbox_messages_value, MAIL_EXP_PILL_STARTER_ID, "系统补发：经验丹", "背包已满，经验丹已转入邮箱。请在30天内领取附件。", lost_exp_pills)
 		if (
-			BackpackModel.item_count(backpack_slots_value, ITEM_PLAYER_EXP_PILL_LV131) + _mailbox_item_count(mailbox_messages_value, ITEM_PLAYER_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 5
-			and BackpackModel.item_count(backpack_slots_value, ITEM_PET_EXP_PILL_LV131) + _mailbox_item_count(mailbox_messages_value, ITEM_PET_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 5
+			BackpackModel.item_count(backpack_slots_value, ITEM_EXP_PILL_LV131)
+			+ _mailbox_item_count(mailbox_messages_value, ITEM_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 10
 		):
 			exp_pill_starter_version = EXP_PILL_STARTER_VERSION
 	normalized[EXP_PILL_STARTER_VERSION_KEY] = exp_pill_starter_version
@@ -4794,7 +5661,15 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
-	normalized[DIAMONDS_KEY] = maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
+	var dev_diamonds_grant_version := int(normalized.get(DEV_DIAMONDS_GRANT_VERSION_KEY, 0))
+	var diamonds_value := maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
+	if dev_diamonds_grant_version < DEV_DIAMONDS_GRANT_VERSION:
+		diamonds_value = maxi(DEV_DIAMONDS_MIN, diamonds_value)
+		dev_diamonds_grant_version = DEV_DIAMONDS_GRANT_VERSION
+	normalized[DIAMONDS_KEY] = diamonds_value
+	normalized[DEV_DIAMONDS_GRANT_VERSION_KEY] = dev_diamonds_grant_version
+	normalized[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = bool(normalized.get(PET_REBIRTH_MM_STAGE2_CLAIMED_KEY, false))
+	normalized[PET_REBIRTH_MM_GUIDE_KEY] = _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
 	player_dict = normalized.get("player", {}) as Dictionary
 	var player_base_stats := _player_base_stats_from_player(player_dict)
 	var player_level_for_equipment := maxi(1, int(player_dict.get("level", 1)))
@@ -4853,14 +5728,19 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	)
 	normalized[BATTLE_RESULT_RECEIPTS_KEY] = BattleResultReceiptModel.normalize_receipts(normalized.get(BATTLE_RESULT_RECEIPTS_KEY, []))
 	normalized[SERVER_SYNC_KEY] = ServerProfileContractModel.normalize_sync_state(normalized.get(SERVER_SYNC_KEY, {}))
+	var ride_pet_instance_id := _normalized_ride_pet_instance_id(normalized, instances)
+	normalized[RIDE_PET_INSTANCE_ID_KEY] = ride_pet_instance_id
+	normalized["petInstances"] = instances
 
 	var active_id := str(normalized.get("activePetInstanceId", ""))
+	if active_id == ride_pet_instance_id:
+		active_id = ""
 	if active_id != "":
 		var active_index := _pet_instance_index(instances, active_id)
 		if active_index < 0 or str(instances[active_index].get("state", PET_STATE_STANDBY)) != PET_STATE_BATTLE:
 			active_id = ""
 	if active_id == "":
-		active_id = _first_battle_pet_id({"petInstances": instances})
+		active_id = _first_battle_pet_id({"petInstances": instances, RIDE_PET_INSTANCE_ID_KEY: ride_pet_instance_id})
 	normalized["activePetInstanceId"] = active_id
 	normalized["nextPetInstanceSerial"] = maxi(int(normalized.get("nextPetInstanceSerial", instances.size() + 1)), _next_serial_from_instances(instances))
 	normalized["nextPetDropSerial"] = maxi(int(normalized.get("nextPetDropSerial", 1)), _next_drop_serial_from_drops(drops))
@@ -4947,14 +5827,30 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 		var previous_hp := clampi(int(actor.get("hp", previous_max_hp)), 0, previous_max_hp)
 		var summary := player_stat_summary(profile)
 		var current := summary.get("current", {}) as Dictionary
+		var ride_summary := riding_stat_summary(profile)
+		var battle_current := ride_summary.get("current", current) as Dictionary
 		var current_max_hp := maxi(1, int(current.get("maxHp", previous_max_hp)))
 		actor["maxHp"] = current_max_hp
 		actor["hp"] = clampi(int(player_dict.get("hp", previous_hp + current_max_hp - previous_max_hp)), 1, current_max_hp)
+		actor["rideBaseStats"] = {
+			"attack": maxi(1, int(current.get("attack", actor.get("attack", 1)))),
+			"defense": maxi(1, int(current.get("defense", actor.get("defense", 1)))),
+			"quick": maxi(1, int(current.get("quick", actor.get("quick", 1)))),
+		}
 		for key in ["attack", "defense", "quick"]:
-			actor[key] = maxi(1, int(current.get(key, actor.get(key, 1))))
+			actor[key] = maxi(1, int(battle_current.get(key, actor.get(key, 1))))
 		actor["equipmentSlots"] = equipment_slots(profile)
 		actor["equipmentStatBonus"] = summary.get("bonus", {})
 		actor["equipmentStatSummary"] = summary
+		actor["rideStatSummary"] = ride_summary
+		var ride_pet := riding_pet_instance(profile)
+		actor["ridePetInstanceId"] = str(ride_summary.get("mountInstanceId", ""))
+		actor["ridePetName"] = str(ride_summary.get("mountName", ""))
+		actor["ridePetFormId"] = str(ride_pet.get("formId", ride_pet.get("templateId", "")))
+		actor["ridePetLevel"] = maxi(0, int(ride_pet.get("level", 0)))
+		actor["ridePetHp"] = clampi(int(ride_pet.get("hp", 0)), 0, maxi(0, int(ride_pet.get("maxHp", 0))))
+		actor["ridePetMaxHp"] = maxi(0, int(ride_pet.get("maxHp", 0)))
+		actor["ridePetBattleState"] = str(ride_pet.get("state", "")) if not ride_pet.is_empty() else ""
 		actor["spiritIds"] = equipment_spirit_ids(profile)
 		actor["battleActionIds"] = equipment_battle_action_ids(profile)
 		actor["attackActionId"] = equipment_attack_action_id(profile)
@@ -4967,6 +5863,7 @@ static func _apply_profile_player_to_battle_state(profile: Dictionary, state: Di
 static func pet_party_for_battle(profile: Dictionary) -> Array[Dictionary]:
 	var normalized := normalize_profile(profile)
 	var active_id := str(normalized.get("activePetInstanceId", ""))
+	var ride_id := str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
 	var party: Array[Dictionary] = []
 	if active_id != "":
 		for instance in _pet_instances(normalized):
@@ -4981,6 +5878,8 @@ static func pet_party_for_battle(profile: Dictionary) -> Array[Dictionary]:
 			break
 		var instance_id := str(instance.get("instanceId", ""))
 		if instance_id == "" or instance_id == active_id:
+			continue
+		if instance_id == ride_id:
 			continue
 		var state := str(instance.get("state", PET_STATE_STANDBY))
 		if state == PET_STATE_STORAGE:
@@ -5163,6 +6062,10 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		item_rewards = _item_amount_array(grant_result.get("addedItems", []))
 		mailed_item_rewards = _item_amount_array(grant_result.get("mailedItems", []))
 		next_profile = _record_rebirth_trial_battle_victory(next_profile, state)
+		var mm_trial_result := _grant_pet_rebirth_mm_for_trial_victory(next_profile, state)
+		next_profile = mm_trial_result.get("profile", next_profile)
+		if bool(mm_trial_result.get("ok", false)):
+			level_up_lines.append(str(mm_trial_result.get("message", "")))
 	if result == "victory" or result == "defeat":
 		var wear_result := apply_equipment_wear_from_battle_usage(next_profile, state.get("equipmentWearUsage", {}))
 		next_profile = wear_result.get("profile", next_profile)
@@ -5632,7 +6535,35 @@ static func _merge_battle_player(profile: Dictionary, state: Dictionary) -> Dict
 		player["maxHp"] = max_hp
 		player["hp"] = clampi(maxi(1, int(actor.get("hp", player.get("hp", max_hp)))), 1, max_hp)
 		next_profile["player"] = player
-		return next_profile
+		return _merge_battle_ride_pet(next_profile, actor)
+	return next_profile
+
+
+static func _merge_battle_ride_pet(profile: Dictionary, player_actor: Dictionary) -> Dictionary:
+	var ride_id := str(player_actor.get("ridePetInstanceId", "")).strip_edges()
+	if ride_id == "":
+		return profile
+	var next_profile := profile.duplicate(true)
+	var ride_max_hp := maxi(0, int(player_actor.get("ridePetMaxHp", 0)))
+	var ride_hp := clampi(int(player_actor.get("ridePetHp", ride_max_hp)), 0, ride_max_hp)
+	var instances: Array = next_profile.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != ride_id:
+			continue
+		var instance_max_hp := maxi(1, int(instance.get("maxHp", ride_max_hp)))
+		instance["hp"] = clampi(ride_hp, 0, instance_max_hp)
+		if ride_hp <= 0:
+			instance["state"] = PET_STATE_REST
+			if str(next_profile.get(RIDE_PET_INSTANCE_ID_KEY, "")) == ride_id:
+				next_profile[RIDE_PET_INSTANCE_ID_KEY] = ""
+		elif str(next_profile.get(RIDE_PET_INSTANCE_ID_KEY, "")) == ride_id:
+			instance["state"] = PET_STATE_RIDING
+		instances[index] = instance
+		break
+	next_profile["petInstances"] = instances
 	return next_profile
 
 
@@ -5729,6 +6660,13 @@ static func _record_rebirth_trial_battle_victory(profile: Dictionary, state: Dic
 	if group_id != REBIRTH_FINAL_BOSS_PROOF_ID:
 		return profile
 	return with_rebirth_trial_proof_count(profile, REBIRTH_FINAL_BOSS_PROOF_ID, rebirth_trial_proof_count(profile, REBIRTH_FINAL_BOSS_PROOF_ID) + 1)
+
+
+static func _grant_pet_rebirth_mm_for_trial_victory(profile: Dictionary, state: Dictionary) -> Dictionary:
+	var group_id := str(state.get("sourceEncounterGroupId", state.get("encounterGroupId", "")))
+	if group_id != PET_REBIRTH_MM_TRIAL_GROUP_ID:
+		return {"ok": false, "profile": profile}
+	return grant_pet_rebirth_mm(profile, PetRebirthMmModel.STAGE_ONE, group_id)
 
 
 static func _owned_pet_form_counts(profile: Dictionary) -> Dictionary:
@@ -5838,7 +6776,7 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		)
 		if species_instance.is_empty():
 			return {}
-		for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
+		for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 			if template.has(key):
 				species_instance[key] = template.get(key)
 		if stat_overrides.has("hp"):
@@ -5929,13 +6867,16 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 		instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
 	var cultivation := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
 	instance["petCultivation"] = cultivation
+	var helper_stage := PetRebirthMmModel.helper_stage_for_pet(instance)
+	if helper_stage > 0:
+		instance["petRebirthHelper"] = PetRebirthMmModel.normalized_helper_record(instance.get("petRebirthHelper", {}), helper_stage)
 	var last_cultivation_result = instance.get("lastCultivationResult", cultivation.get("lastResult", {}))
 	if last_cultivation_result is Dictionary:
 		instance["lastCultivationResult"] = (last_cultivation_result as Dictionary).duplicate(true)
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	instance["locked"] = bool(instance.get("locked", false))
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "growthSpeciesProfileId", "elements", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)
 	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
@@ -6105,11 +7046,88 @@ static func _storage_instance_count(profile: Dictionary) -> int:
 
 
 static func _first_battle_pet_id(profile: Dictionary) -> String:
+	var ride_id := str(profile.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
 	for instance in _pet_instances(profile):
 		var instance_id := str(instance.get("instanceId", ""))
+		if instance_id == ride_id:
+			continue
 		if instance_id != "" and str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_BATTLE:
 			return instance_id
 	return ""
+
+
+static func _ride_config_for_instance(instance: Dictionary) -> Dictionary:
+	var form_id := str(instance.get("formId", instance.get("templateId", ""))).strip_edges()
+	if form_id == "":
+		return {}
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	var raw_config = template.get("riding", {})
+	if not (raw_config is Dictionary):
+		return {}
+	var config := (raw_config as Dictionary).duplicate(true)
+	if not bool(config.get("rideable", false)):
+		return {}
+	return config
+
+
+static func _normalized_ride_pet_instance_id(profile: Dictionary, instances: Array[Dictionary]) -> String:
+	var ride_id := str(profile.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	for index in range(instances.size()):
+		var stale_instance := instances[index]
+		if str(stale_instance.get("state", PET_STATE_STANDBY)) == PET_STATE_RIDING:
+			var restored := stale_instance.duplicate(true)
+			restored["state"] = PET_STATE_STANDBY
+			instances[index] = restored
+	if ride_id == "":
+		return ""
+	var abilities := _valid_unique_ability_ids(profile.get(UNLOCKED_ABILITIES_KEY, []))
+	if not abilities.has(ABILITY_RIDING):
+		return ""
+	for index in range(instances.size()):
+		var instance := instances[index]
+		if str(instance.get("instanceId", "")) != ride_id:
+			continue
+		if _ride_config_for_instance(instance).is_empty():
+			return ""
+		var state := str(instance.get("state", PET_STATE_STANDBY))
+		if state == PET_STATE_STORAGE or state == PET_STATE_REST:
+			return ""
+		if int(instance.get("hp", 0)) <= 0:
+			return ""
+		if maxi(1, int(instance.get("level", 1))) > riding_level_cap(profile):
+			return ""
+		if state != PET_STATE_RIDING:
+			var mounted := instance.duplicate(true)
+			mounted["state"] = PET_STATE_RIDING
+			instances[index] = mounted
+		return ride_id
+	return ""
+
+
+static func _ride_attack_style_for_profile(profile: Dictionary) -> String:
+	var action_id := equipment_attack_action_id(profile)
+	var lower := action_id.to_lower()
+	if lower.find("bow") >= 0 or lower.find("shot") >= 0 or lower.find("throw") >= 0:
+		return "ranged"
+	return "melee"
+
+
+static func _ride_adjusted_player_stats(base_current: Dictionary, mount_stats: Dictionary, attack_style: String) -> Dictionary:
+	var adjusted := base_current.duplicate(true)
+	var player_attack := maxi(1, int(base_current.get("attack", 1)))
+	var player_defense := maxi(1, int(base_current.get("defense", 1)))
+	var player_quick := maxi(1, int(base_current.get("quick", 1)))
+	var mount_attack := maxi(1, int(mount_stats.get("attack", 1)))
+	var mount_defense := maxi(1, int(mount_stats.get("defense", 1)))
+	var mount_quick := maxi(1, int(mount_stats.get("quick", 1)))
+	if attack_style == "ranged":
+		adjusted["attack"] = maxi(1, int(round(float(player_attack) + float(mount_attack) * 0.4)))
+		adjusted["quick"] = maxi(1, int(round(float(player_quick) * 0.8 + float(mount_quick) * 0.2)))
+	else:
+		adjusted["attack"] = maxi(1, int(round(float(player_attack) * 0.8 + float(mount_attack) * 0.8)))
+		adjusted["quick"] = maxi(1, int(round(float(player_quick) * 0.2 + float(mount_quick) * 0.8)))
+	adjusted["defense"] = maxi(1, int(round(float(player_defense) * 0.7 + float(mount_defense) * 0.7)))
+	return adjusted
 
 
 static func _next_serial_from_instances(instances: Array[Dictionary]) -> int:

@@ -9,8 +9,11 @@ const CONTEXT_BATTLE_ITEM := "battle_item"
 const CONTEXT_CAPTURE := "capture"
 const CONTEXT_WORLD_PET_HEAL := "world_pet_heal"
 const CONTEXT_WORLD_ENCOUNTER_STONE := "world_encounter_stone"
+const CONTEXT_WORLD_EXP := "world_exp"
 const CONTEXT_WORLD_PLAYER_EXP := "world_player_exp"
 const CONTEXT_WORLD_PET_EXP := "world_pet_exp"
+const CONTEXT_WORLD_MM_STONE := "world_mm_stone"
+const CONTEXT_WORLD_PET_EGG := "world_pet_egg"
 const CONTEXT_EQUIPMENT := "equipment"
 static var data_cache_loaded: bool = false
 static var data_cache: Dictionary = {}
@@ -138,17 +141,82 @@ static func item_can_world_encounter_stone(item_id: String) -> bool:
 static func world_exp_level_for(item_id: String) -> int:
 	var world_use := world_use_for(item_id)
 	var use_type := str(world_use.get("type", ""))
-	if use_type != "player_exp" and use_type != "pet_exp":
+	if use_type != "exp" and use_type != "player_exp" and use_type != "pet_exp":
 		return 0
 	return maxi(1, int(world_use.get("level", 1)))
 
 
 static func item_can_world_player_exp(item_id: String) -> bool:
-	return item_has_context(item_id, CONTEXT_WORLD_PLAYER_EXP) and str(world_use_for(item_id).get("type", "")) == "player_exp" and world_exp_level_for(item_id) > 0
+	var use_type := str(world_use_for(item_id).get("type", ""))
+	return (
+		(
+			item_has_context(item_id, CONTEXT_WORLD_EXP)
+			and use_type == "exp"
+		)
+		or (
+			item_has_context(item_id, CONTEXT_WORLD_PLAYER_EXP)
+			and use_type == "player_exp"
+		)
+	) and world_exp_level_for(item_id) > 0
 
 
 static func item_can_world_pet_exp(item_id: String) -> bool:
-	return item_has_context(item_id, CONTEXT_WORLD_PET_EXP) and str(world_use_for(item_id).get("type", "")) == "pet_exp" and world_exp_level_for(item_id) > 0
+	var use_type := str(world_use_for(item_id).get("type", ""))
+	return (
+		(
+			item_has_context(item_id, CONTEXT_WORLD_EXP)
+			and use_type == "exp"
+		)
+		or (
+			item_has_context(item_id, CONTEXT_WORLD_PET_EXP)
+			and use_type == "pet_exp"
+		)
+	) and world_exp_level_for(item_id) > 0
+
+
+static func item_can_world_mm_stone(item_id: String) -> bool:
+	return item_has_context(item_id, CONTEXT_WORLD_MM_STONE) and str(world_use_for(item_id).get("type", "")) == "mm_stone" and world_mm_stone_points_for(item_id) > 0
+
+
+static func world_mm_stone_stat_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "mm_stone":
+		return ""
+	return str(world_use_for(item_id).get("stat", ""))
+
+
+static func world_mm_stone_points_for(item_id: String) -> int:
+	if str(world_use_for(item_id).get("type", "")) != "mm_stone":
+		return 0
+	return maxi(0, int(world_use_for(item_id).get("points", 0)))
+
+
+static func item_can_world_pet_egg(item_id: String) -> bool:
+	if not item_has_context(item_id, CONTEXT_WORLD_PET_EGG):
+		return false
+	var use_type := str(world_use_for(item_id).get("type", ""))
+	if use_type == "pet_rebirth_mm_egg":
+		return world_pet_egg_stage_for(item_id) > 0
+	if use_type == "pet_form_egg":
+		return world_pet_egg_form_id_for(item_id) != ""
+	return false
+
+
+static func world_pet_egg_stage_for(item_id: String) -> int:
+	if str(world_use_for(item_id).get("type", "")) != "pet_rebirth_mm_egg":
+		return 0
+	return maxi(0, int(world_use_for(item_id).get("stage", 0)))
+
+
+static func world_pet_egg_form_id_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_form_egg":
+		return ""
+	return str(world_use_for(item_id).get("formId", "")).strip_edges()
+
+
+static func world_pet_egg_pet_name_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_form_egg":
+		return ""
+	return str(world_use_for(item_id).get("petName", "")).strip_edges()
 
 
 static func starting_slots() -> Array[Dictionary]:
@@ -353,7 +421,7 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 	var context_labels: Array[String] = []
 	if contexts.has(CONTEXT_BATTLE_ITEM):
 		context_labels.append("战斗可用")
-	if contexts.has(CONTEXT_WORLD_PET_HEAL) or contexts.has(CONTEXT_WORLD_ENCOUNTER_STONE) or contexts.has(CONTEXT_WORLD_PLAYER_EXP) or contexts.has(CONTEXT_WORLD_PET_EXP):
+	if contexts.has(CONTEXT_WORLD_PET_HEAL) or contexts.has(CONTEXT_WORLD_ENCOUNTER_STONE) or contexts.has(CONTEXT_WORLD_EXP) or contexts.has(CONTEXT_WORLD_PLAYER_EXP) or contexts.has(CONTEXT_WORLD_PET_EXP) or contexts.has(CONTEXT_WORLD_MM_STONE) or contexts.has(CONTEXT_WORLD_PET_EGG):
 		context_labels.append("世界可用")
 	if contexts.has(CONTEXT_CAPTURE):
 		context_labels.append("捕捉")
@@ -373,10 +441,34 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 		])
 	if item_can_world_player_exp(item_id) or item_can_world_pet_exp(item_id):
 		lines.append("效果: 获得到达 Lv%d 所需的经验。" % world_exp_level_for(item_id))
+	if item_can_world_mm_stone(item_id):
+		lines.append("效果: 给转生MM增加 %s石 %d 点。" % [
+			_mm_stone_stat_label(world_mm_stone_stat_for(item_id)),
+			world_mm_stone_points_for(item_id),
+		])
+		if item_can_world_pet_egg(item_id):
+			var egg_pet_name := world_pet_egg_pet_name_for(item_id)
+			if egg_pet_name != "":
+				lines.append("效果: 使用后获得 Lv1 %s。" % egg_pet_name)
+			else:
+				lines.append("效果: 使用后获得 Lv1 %d转小MM。" % world_pet_egg_stage_for(item_id))
 	var description := str(item_for_id(item_id).get("description", "")).strip_edges()
 	if description != "":
 		lines.append("说明: %s" % description)
 	return lines
+
+
+static func _mm_stone_stat_label(stat_key: String) -> String:
+	match stat_key:
+		"maxHp", "hp", "life":
+			return "生命"
+		"attack":
+			return "攻击"
+		"defense":
+			return "防御"
+		"quick", "agility", "speed":
+			return "敏捷"
+	return stat_key
 
 
 static func _add_single_item(slots: Array[Dictionary], item_id: String, count: int) -> Dictionary:

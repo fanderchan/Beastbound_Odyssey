@@ -1,5 +1,7 @@
 extends RefCounted
 
+const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
+
 const SCHEMA_VERSION := 1
 const MODE_ENHANCE := "enhance"
 const MODE_REBIRTH := "rebirth"
@@ -25,6 +27,7 @@ static func normalized_record(value) -> Dictionary:
 		"schemaVersion": SCHEMA_VERSION,
 		"rebirthCount": maxi(0, int(source.get("rebirthCount", 0))),
 		"enhanceLevel": clampi(int(source.get("enhanceLevel", 0)), 0, MAX_ENHANCE_LEVEL),
+		"rebirthGrowthBonus": _growth_bonus_dict(source.get("rebirthGrowthBonus", {})),
 		"history": history,
 		"lastPreview": last_preview.duplicate(true) if last_preview is Dictionary else {},
 		"lastResult": last_result.duplicate(true) if last_result is Dictionary else {},
@@ -84,6 +87,17 @@ static func detail_lines_for_pet(pet: Dictionary) -> Array[String]:
 		int(record.get("rebirthCount", 0)),
 		int(record.get("enhanceLevel", 0)),
 	])
+	if PetRebirthMmModel.is_helper_pet(pet):
+		lines.append("MM养成：")
+		lines.append_array(PetRebirthMmModel.helper_record_lines(pet.get("petRebirthHelper", {})))
+	var bonus := _growth_bonus_dict(record.get("rebirthGrowthBonus", {}))
+	if _has_growth_bonus(bonus):
+		lines.append("转生成长加成：血 %.3f/级  攻 %.3f/级  防 %.3f/级  敏 %.3f/级" % [
+			float(bonus.get("maxHp", 0.0)),
+			float(bonus.get("attack", 0.0)),
+			float(bonus.get("defense", 0.0)),
+			float(bonus.get("quick", 0.0)),
+		])
 	var last_result = record.get("lastResult", {})
 	if last_result is Dictionary and not (last_result as Dictionary).is_empty():
 		var result := last_result as Dictionary
@@ -177,3 +191,20 @@ static func _result_event(before_pet: Dictionary, next_pet: Dictionary, preview:
 		"summary": summary,
 		"message": "%s：%s。" % [str(before_pet.get("name", "宠物")), summary],
 	}
+
+
+static func _growth_bonus_dict(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	return {
+		"maxHp": snappedf(float(source.get("maxHp", 0.0)), 0.001),
+		"attack": snappedf(float(source.get("attack", 0.0)), 0.001),
+		"defense": snappedf(float(source.get("defense", 0.0)), 0.001),
+		"quick": snappedf(float(source.get("quick", 0.0)), 0.001),
+	}
+
+
+static func _has_growth_bonus(bonus: Dictionary) -> bool:
+	for key in ["maxHp", "attack", "defense", "quick"]:
+		if absf(float(bonus.get(key, 0.0))) >= 0.0005:
+			return true
+	return false

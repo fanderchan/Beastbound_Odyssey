@@ -16,6 +16,20 @@ const STAT_LABELS := {
 	"defense": "防御",
 	"quick": "敏捷",
 }
+const REBIRTH_STAGE_LABELS := {
+	0: "0转成长",
+	1: "1转成长",
+	2: "2转成长",
+}
+const REBIRTH_HP_INTERNAL_SCALE := 4.0
+const REBIRTH_POWER_THRESHOLDS := {
+	1: {"min": 0.0, "p25": 0.55, "p55": 1.05, "p85": 1.35, "p95": 1.52, "max": 1.60},
+	2: {"min": 0.0, "p25": 0.65, "p55": 1.18, "p85": 1.55, "p95": 1.76, "max": 1.85},
+}
+const REBIRTH_STAT_INTERNAL_THRESHOLDS := {
+	1: {"min": 0.0, "p25": 0.12, "p55": 0.28, "p85": 0.55, "p95": 0.85, "max": 1.30},
+	2: {"min": 0.0, "p25": 0.14, "p55": 0.32, "p85": 0.62, "p95": 0.98, "max": 1.50},
+}
 
 
 static func create_pet_instance(profile_id: String, instance_id: String, form_id: String, pet_name: String, state: String, level: int = 1, seed: String = "", sample_no: int = 0) -> Dictionary:
@@ -77,7 +91,8 @@ static func normalize_pet_instance(instance: Dictionary, template: Dictionary = 
 	var old_max_hp := maxi(1, int(next.get("maxHp", 1)))
 	var old_hp := clampi(int(next.get("hp", old_max_hp)), 0, old_max_hp)
 	var missing_hp := maxi(0, old_max_hp - old_hp)
-	var stats := _stats_for_profile_roll_level(profile, roll_dict, safe_level)
+	var cultivation_bonus := _cultivation_growth_bonus(next.get("petCultivation", {}))
+	var stats := _stats_for_profile_roll_level(profile, roll_dict, safe_level, cultivation_bonus)
 	var max_hp := maxi(1, int(stats.get("maxHp", old_max_hp)))
 	next["maxHp"] = max_hp
 	next["hp"] = clampi(max_hp - missing_hp, 0, max_hp)
@@ -87,10 +102,10 @@ static func normalize_pet_instance(instance: Dictionary, template: Dictionary = 
 	var level1 = next.get("growthSpeciesLevel1Stats", {})
 	var level1_dict := level1 as Dictionary if level1 is Dictionary else {}
 	if level1_dict.is_empty():
-		level1_dict = _stats_for_profile_roll_level(profile, roll_dict, 1)
+		level1_dict = _stats_for_profile_roll_level(profile, roll_dict, 1, cultivation_bonus)
 	next["growthSpeciesLevel1Stats"] = level1_dict
 	next["initialStats"] = level1_dict
-	next["growthRecord"] = _growth_record_from_roll(roll_dict)
+	next["growthRecord"] = _growth_record_from_roll(roll_dict, cultivation_bonus)
 	next["growthTierId"] = profile_id
 	next["growthTierLabel"] = str(profile.get("displayName", profile_id))
 	next["growthObservation"] = evaluate_pet(next)
@@ -110,6 +125,17 @@ static func level_up_once(instance: Dictionary, max_level: int = 140) -> Diction
 
 
 static func evaluate_pet(instance: Dictionary) -> Dictionary:
+	return evaluate_pet_for_stage(instance, 0)
+
+
+static func evaluate_pet_for_stage(instance: Dictionary, stage: int = 0) -> Dictionary:
+	var safe_stage := clampi(stage, 0, 2)
+	if safe_stage > 0:
+		return _evaluate_rebirth_growth(instance, safe_stage)
+	return _evaluate_base_growth(instance)
+
+
+static func _evaluate_base_growth(instance: Dictionary) -> Dictionary:
 	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
 	var profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
 	var level := clampi(int(instance.get("level", 1)), 1, 140)
@@ -119,17 +145,21 @@ static func evaluate_pet(instance: Dictionary) -> Dictionary:
 			"profileId": profile_id,
 			"level": level,
 			"observedLevels": maxi(0, level - 1),
+			"stage": 0,
+			"stageLabel": str(REBIRTH_STAGE_LABELS.get(0, "0转成长")),
+			"enabled": true,
 			"overallGrade": "未知",
 		}
 	var observed_levels := maxi(0, level - 1)
-	var level1 = instance.get("growthSpeciesLevel1Stats", instance.get("initialStats", {}))
-	var level1_stats := level1 as Dictionary if level1 is Dictionary else {}
+	var roll_dict := _roll_for_instance(instance, profile, profile_id)
+	var level1_stats := _level1_stats_for_instance(instance, profile, roll_dict)
+	var current_stats := _stats_for_profile_roll_level(profile, roll_dict, level)
 	var stat_averages := {}
 	var stat_percentiles := {}
 	var stat_grades := {}
 	if observed_levels > 0:
 		for key in STAT_KEYS:
-			var average := (float(instance.get(key, 0.0)) - float(level1_stats.get(key, instance.get(key, 0.0)))) / float(observed_levels)
+			var average := (float(current_stats.get(key, 0.0)) - float(level1_stats.get(key, current_stats.get(key, 0.0)))) / float(observed_levels)
 			var percentile := _growth_percentile_for_stat(profile, key, average)
 			stat_averages[key] = snappedf(average, 0.001)
 			stat_percentiles[key] = snappedf(percentile, 0.1)
@@ -137,7 +167,7 @@ static func evaluate_pet(instance: Dictionary) -> Dictionary:
 	var power_growth := 0.0
 	var power_percentile := 0.0
 	if observed_levels > 0:
-		var current_power := PetPowerModel.combat_power_for_pet(instance)
+		var current_power := PetPowerModel.combat_power_for_stats(current_stats)
 		var level1_power := PetPowerModel.combat_power_for_stats(level1_stats)
 		power_growth = (float(current_power) - float(level1_power)) / float(observed_levels)
 		power_percentile = _power_growth_percentile(profile, power_growth, level)
@@ -147,6 +177,9 @@ static func evaluate_pet(instance: Dictionary) -> Dictionary:
 		"profileId": profile_id,
 		"level": level,
 		"observedLevels": observed_levels,
+		"stage": 0,
+		"stageLabel": str(REBIRTH_STAGE_LABELS.get(0, "0转成长")),
+		"enabled": true,
 		"statAverages": stat_averages,
 		"statPercentiles": stat_percentiles,
 		"statGrades": stat_grades,
@@ -156,27 +189,91 @@ static func evaluate_pet(instance: Dictionary) -> Dictionary:
 	}
 
 
+static func _evaluate_rebirth_growth(instance: Dictionary, stage: int) -> Dictionary:
+	var safe_stage := clampi(stage, 1, 2)
+	var level := clampi(int(instance.get("level", 1)), 1, 140)
+	var rebirth_count := _rebirth_count(instance)
+	var label := str(REBIRTH_STAGE_LABELS.get(safe_stage, "%d转成长" % safe_stage))
+	if rebirth_count < safe_stage:
+		return {
+			"schemaVersion": 1,
+			"profileId": str(instance.get("growthSpeciesProfileId", "")).strip_edges(),
+			"level": level,
+			"observedLevels": maxi(0, level - 1),
+			"stage": safe_stage,
+			"stageLabel": label,
+			"enabled": false,
+			"overallGrade": "未开启",
+		}
+	var bonus := _rebirth_stage_bonus(instance, safe_stage)
+	var has_record := not _bonus_is_zero(bonus)
+	var stat_averages := {}
+	var stat_percentiles := {}
+	var stat_grades := {}
+	for key in STAT_KEYS:
+		var visible_growth := float(bonus.get(key, 0.0))
+		var internal_growth := _rebirth_internal_value(key, visible_growth)
+		var percentile := _rebirth_stat_percentile(safe_stage, internal_growth)
+		stat_averages[key] = snappedf(visible_growth, 0.001)
+		stat_percentiles[key] = snappedf(percentile, 0.1)
+		stat_grades[key] = _grade_for_percentile(percentile) if has_record else "未记录"
+	var power_growth := _rebirth_power_growth(bonus)
+	var power_percentile := _rebirth_power_percentile(safe_stage, power_growth)
+	return {
+		"schemaVersion": 1,
+		"profileId": str(instance.get("growthSpeciesProfileId", "")).strip_edges(),
+		"level": level,
+		"observedLevels": maxi(0, level - 1),
+		"stage": safe_stage,
+		"stageLabel": label,
+		"enabled": true,
+		"hasRecord": has_record,
+		"statAverages": stat_averages,
+		"statPercentiles": stat_percentiles,
+		"statGrades": stat_grades,
+		"powerGrowthPerLevel": snappedf(power_growth, 0.001),
+		"powerPercentile": snappedf(power_percentile, 0.1),
+		"overallGrade": _grade_for_percentile(power_percentile) if has_record else "未记录",
+	}
+
+
 static func detail_lines(instance: Dictionary) -> Array[String]:
-	var observation = instance.get("growthObservation", {})
-	var data := observation as Dictionary if observation is Dictionary else evaluate_pet(instance)
+	return detail_lines_for_stage(instance, 0)
+
+
+static func detail_lines_for_stage(instance: Dictionary, stage: int = 0) -> Array[String]:
+	var data := evaluate_pet_for_stage(instance, stage)
 	var lines: Array[String] = []
 	var observed_levels := int(data.get("observedLevels", 0))
-	lines.append("成长评价：%s" % str(data.get("overallGrade", "未观察")))
-	lines.append("观察等级：Lv1 -> Lv%d（%d次升级）" % [
-		int(instance.get("level", 1)),
-		observed_levels,
+	var safe_stage := clampi(int(data.get("stage", stage)), 0, 2)
+	lines.append("%s评价：%s" % [
+		str(data.get("stageLabel", REBIRTH_STAGE_LABELS.get(safe_stage, "成长"))),
+		str(data.get("overallGrade", "未观察")),
 	])
-	if observed_levels <= 0:
-		lines.append("升到 Lv2 后开始按实际成长记录评级。")
+	if not bool(data.get("enabled", true)):
+		lines.append("完成%d转后开放此成长观察。" % safe_stage)
 		return lines
+	if safe_stage <= 0:
+		lines.append("观察等级：Lv1 -> Lv%d（%d次升级）" % [
+			int(instance.get("level", 1)),
+			observed_levels,
+		])
+		if observed_levels <= 0:
+			lines.append("升到 Lv2 后开始按实际成长记录评级。")
+			return lines
+	else:
+		lines.append("评价对象：%d转带来的每级转生增量。" % safe_stage)
+		if not bool(data.get("hasRecord", true)):
+			lines.append("旧记录没有保存该次转生增量，暂时无法拆分评级。")
+			return lines
 	var averages := data.get("statAverages", {}) as Dictionary
 	var percentiles := data.get("statPercentiles", {}) as Dictionary
 	var grades := data.get("statGrades", {}) as Dictionary
 	for key in STAT_KEYS:
-		lines.append("%s成长：%s    %.3f/级    分位 %.1f%%" % [
+		lines.append("%s成长：%s    %s/级    分位 %.1f%%" % [
 			str(STAT_LABELS.get(key, key)),
 			str(grades.get(key, "D")),
-			float(averages.get(key, 0.0)),
+			_growth_cell_text(averages.get(key, 0.0)),
 			float(percentiles.get(key, 0.0)),
 		])
 	lines.append("战力成长：%s    %.3f/级    分位 %.1f%%" % [
@@ -188,8 +285,11 @@ static func detail_lines(instance: Dictionary) -> Array[String]:
 
 
 static func radar_values(instance: Dictionary) -> Dictionary:
-	var observation = instance.get("growthObservation", {})
-	var data := observation as Dictionary if observation is Dictionary else evaluate_pet(instance)
+	return radar_values_for_stage(instance, 0)
+
+
+static func radar_values_for_stage(instance: Dictionary, stage: int = 0) -> Dictionary:
+	var data := evaluate_pet_for_stage(instance, stage)
 	var percentiles = data.get("statPercentiles", {})
 	var percentile_dict := percentiles as Dictionary if percentiles is Dictionary else {}
 	var result := {}
@@ -199,26 +299,24 @@ static func radar_values(instance: Dictionary) -> Dictionary:
 
 
 static func attribute_table_rows(instance: Dictionary, target_level: int = 140) -> Array[Dictionary]:
+	return attribute_table_rows_for_stage(instance, 0, target_level)
+
+
+static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0, target_level: int = 140) -> Array[Dictionary]:
+	var safe_stage := clampi(stage, 0, 2)
+	if safe_stage > 0:
+		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
 	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
 	var profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
 	if profile.is_empty():
 		return []
-	var roll = instance.get("growthSpeciesRoll", {})
-	var roll_dict := roll as Dictionary if roll is Dictionary else {}
-	if roll_dict.is_empty() or not roll_dict.has("growthBonus"):
-		var seed := str(instance.get("growthSpeciesSeed", instance.get("instanceId", profile_id))).strip_edges()
-		if seed == "":
-			seed = profile_id
-		roll_dict = PetGrowthSpeciesSimulationModel.roll_individual_for_seed(profile, seed)
+	var roll_dict := _roll_for_instance(instance, profile, profile_id)
 	var safe_level := clampi(int(instance.get("level", 1)), 1, 140)
 	var safe_target := clampi(target_level, safe_level, 140)
-	var level1 = instance.get("growthSpeciesLevel1Stats", instance.get("initialStats", {}))
-	var level1_stats := level1 as Dictionary if level1 is Dictionary else {}
-	if level1_stats.is_empty():
-		level1_stats = _stats_for_profile_roll_level(profile, roll_dict, 1)
+	var level1_stats := _level1_stats_for_instance(instance, profile, roll_dict)
+	var current_stats := _stats_for_profile_roll_level(profile, roll_dict, safe_level)
 	var target_stats := _stats_for_profile_roll_level(profile, roll_dict, safe_target)
-	var observation = instance.get("growthObservation", {})
-	var data := observation as Dictionary if observation is Dictionary else evaluate_pet(instance)
+	var data := evaluate_pet_for_stage(instance, 0)
 	var averages := data.get("statAverages", {}) as Dictionary
 	var percentiles := data.get("statPercentiles", {}) as Dictionary
 	var grades := data.get("statGrades", {}) as Dictionary
@@ -236,14 +334,14 @@ static func attribute_table_rows(instance: Dictionary, target_level: int = 140) 
 		rows.append({
 			"label": str(STAT_LABELS.get(key, key)),
 			"initial": int(level1_stats.get(key, instance.get(key, 0))),
-			"current": int(instance.get(key, 0)),
+			"current": int(current_stats.get(key, 0)),
 			"target": int(target_stats.get(key, 0)),
 			"growth": _growth_cell_text(averages.get(key, "")),
 			"grade": str(grades.get(key, "未观察")),
 			"percentile": percentiles.get(key, ""),
 		})
 	var level1_power := PetPowerModel.combat_power_for_stats(level1_stats)
-	var current_power := PetPowerModel.combat_power_for_pet(instance)
+	var current_power := PetPowerModel.combat_power_for_stats(current_stats)
 	var target_power := PetPowerModel.combat_power_for_stats(target_stats)
 	rows.append({
 		"label": "战力",
@@ -255,6 +353,63 @@ static func attribute_table_rows(instance: Dictionary, target_level: int = 140) 
 		"percentile": data.get("powerPercentile", ""),
 	})
 	return rows
+
+
+static func _rebirth_attribute_table_rows(instance: Dictionary, stage: int, target_level: int = 140) -> Array[Dictionary]:
+	var data := evaluate_pet_for_stage(instance, stage)
+	var rows: Array[Dictionary] = []
+	var safe_level := clampi(int(instance.get("level", 1)), 1, 140)
+	var safe_target := clampi(target_level, safe_level, 140)
+	rows.append({
+		"label": "阶段",
+		"initial": "%d转" % (stage - 1),
+		"current": "%d转" % stage,
+		"target": "Lv%d" % safe_target,
+		"growth": "-",
+		"grade": str(data.get("overallGrade", "未观察")),
+		"percentile": data.get("powerPercentile", ""),
+	})
+	if not bool(data.get("enabled", false)):
+		return rows
+	var averages := data.get("statAverages", {}) as Dictionary
+	var percentiles := data.get("statPercentiles", {}) as Dictionary
+	var grades := data.get("statGrades", {}) as Dictionary
+	var observed_levels := maxi(0, safe_level - 1)
+	var target_levels := maxi(0, safe_target - 1)
+	for key in STAT_KEYS:
+		var growth := float(averages.get(key, 0.0))
+		rows.append({
+			"label": str(STAT_LABELS.get(key, key)),
+			"initial": "+0",
+			"current": _rebirth_total_cell(growth * float(observed_levels)),
+			"target": _rebirth_total_cell(growth * float(target_levels)),
+			"growth": _growth_cell_text(growth),
+			"grade": str(grades.get(key, "未记录")),
+			"percentile": percentiles.get(key, ""),
+		})
+	var power_growth := float(data.get("powerGrowthPerLevel", 0.0))
+	rows.append({
+		"label": "战力",
+		"initial": "+0",
+		"current": _rebirth_total_cell(power_growth * float(observed_levels)),
+		"target": _rebirth_total_cell(power_growth * float(target_levels)),
+		"growth": _growth_cell_text(power_growth),
+		"grade": str(data.get("overallGrade", "未观察")),
+		"percentile": data.get("powerPercentile", ""),
+	})
+	return rows
+
+
+static func growth_stage_options(instance: Dictionary) -> Array[Dictionary]:
+	var rebirth_count := _rebirth_count(instance)
+	var options: Array[Dictionary] = []
+	for stage in [0, 1, 2]:
+		options.append({
+			"stage": int(stage),
+			"label": str(REBIRTH_STAGE_LABELS.get(stage, "%d转成长" % int(stage))),
+			"enabled": int(stage) == 0 or rebirth_count >= int(stage),
+		})
+	return options
 
 
 static func write_observation_csv(profile_id: String = DEFAULT_PROFILE_ID, sample_count: int = 100, output_path: String = DEFAULT_CSV_PATH) -> Dictionary:
@@ -399,23 +554,131 @@ static func write_power_growth_percentile_table(profile_id: String = DEFAULT_PRO
 	}
 
 
-static func _stats_for_profile_roll_level(profile: Dictionary, roll: Dictionary, level: int) -> Dictionary:
+static func _stats_for_profile_roll_level(profile: Dictionary, roll: Dictionary, level: int, cultivation_bonus: Dictionary = {}) -> Dictionary:
 	var row := PetGrowthSpeciesSimulationModel.row_for_roll_level(profile, roll, 0, level)
+	var observed_levels := maxi(0, level - 1)
+	var bonus := _growth_bonus_dict(cultivation_bonus)
 	return {
-		"maxHp": int(row.get("maxHp", 1)),
-		"attack": int(row.get("attack", 1)),
-		"defense": int(row.get("defense", 1)),
-		"quick": int(row.get("quick", 1)),
+		"maxHp": int(round(float(row.get("maxHp", 1)) + float(bonus.get("maxHp", 0.0)) * float(observed_levels))),
+		"attack": int(round(float(row.get("attack", 1)) + float(bonus.get("attack", 0.0)) * float(observed_levels))),
+		"defense": int(round(float(row.get("defense", 1)) + float(bonus.get("defense", 0.0)) * float(observed_levels))),
+		"quick": int(round(float(row.get("quick", 1)) + float(bonus.get("quick", 0.0)) * float(observed_levels))),
 	}
 
 
-static func _growth_record_from_roll(roll: Dictionary) -> Dictionary:
+static func _growth_record_from_roll(roll: Dictionary, cultivation_bonus: Dictionary = {}) -> Dictionary:
 	var growth = roll.get("growthBonus", {})
 	var growth_dict := growth as Dictionary if growth is Dictionary else {}
 	return {
 		"base": "species_profile",
 		"bonus": growth_dict.duplicate(true),
+		"rebirthBonus": _growth_bonus_dict(cultivation_bonus),
 	}
+
+
+static func _cultivation_growth_bonus(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	return _growth_bonus_dict(source.get("rebirthGrowthBonus", {}))
+
+
+static func _growth_bonus_dict(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for key in STAT_KEYS:
+		result[key] = snappedf(float(source.get(key, 0.0)), 0.001)
+	return result
+
+
+static func _roll_for_instance(instance: Dictionary, profile: Dictionary, profile_id: String) -> Dictionary:
+	var roll = instance.get("growthSpeciesRoll", {})
+	var roll_dict := roll as Dictionary if roll is Dictionary else {}
+	if not roll_dict.is_empty() and roll_dict.has("growthBonus"):
+		return roll_dict
+	var seed := str(instance.get("growthSpeciesSeed", instance.get("instanceId", profile_id))).strip_edges()
+	if seed == "":
+		seed = profile_id
+	return PetGrowthSpeciesSimulationModel.roll_individual_for_seed(profile, seed)
+
+
+static func _level1_stats_for_instance(instance: Dictionary, profile: Dictionary, roll: Dictionary) -> Dictionary:
+	var level1 = instance.get("growthSpeciesLevel1Stats", instance.get("initialStats", {}))
+	var level1_stats := level1 as Dictionary if level1 is Dictionary else {}
+	if not level1_stats.is_empty():
+		return _stats_dict(level1_stats)
+	return _stats_for_profile_roll_level(profile, roll, 1)
+
+
+static func _stats_dict(value) -> Dictionary:
+	var source := value as Dictionary if value is Dictionary else {}
+	var result := {}
+	for key in STAT_KEYS:
+		result[key] = int(source.get(key, 0))
+	return result
+
+
+static func _rebirth_count(instance: Dictionary) -> int:
+	var record = instance.get("petCultivation", {})
+	var record_dict := record as Dictionary if record is Dictionary else {}
+	return maxi(0, int(record_dict.get("rebirthCount", 0)))
+
+
+static func _rebirth_stage_bonus(instance: Dictionary, stage: int) -> Dictionary:
+	var safe_stage := clampi(stage, 1, 2)
+	var record = instance.get("petCultivation", {})
+	var record_dict := record as Dictionary if record is Dictionary else {}
+	var history: Array = record_dict.get("history", []) if record_dict.get("history", []) is Array else []
+	for index in range(history.size() - 1, -1, -1):
+		var entry = history[index]
+		if not (entry is Dictionary):
+			continue
+		var entry_dict := entry as Dictionary
+		var after_stage := int(entry_dict.get("afterRebirthCount", entry_dict.get("helperStage", 0)))
+		if str(entry_dict.get("mode", "")) == "rebirth" and after_stage == safe_stage:
+			return _growth_bonus_dict(entry_dict.get("visibleGrowthBonus", {}))
+	var last_result = record_dict.get("lastResult", {})
+	if last_result is Dictionary:
+		var result_dict := last_result as Dictionary
+		var result_stage := int(result_dict.get("afterRebirthCount", result_dict.get("helperStage", 0)))
+		if str(result_dict.get("mode", "")) == "rebirth" and result_stage == safe_stage:
+			return _growth_bonus_dict(result_dict.get("visibleGrowthBonus", {}))
+	if safe_stage == 1 and int(record_dict.get("rebirthCount", 0)) == 1:
+		return _growth_bonus_dict(record_dict.get("rebirthGrowthBonus", {}))
+	return _growth_bonus_dict({})
+
+
+static func _bonus_is_zero(bonus: Dictionary) -> bool:
+	for key in STAT_KEYS:
+		if absf(float(bonus.get(key, 0.0))) > 0.0001:
+			return false
+	return true
+
+
+static func _rebirth_internal_value(stat_key: String, visible_growth: float) -> float:
+	return visible_growth / REBIRTH_HP_INTERNAL_SCALE if stat_key == "maxHp" else visible_growth
+
+
+static func _rebirth_power_growth(bonus: Dictionary) -> float:
+	var total := 0.0
+	for key in STAT_KEYS:
+		total += _rebirth_internal_value(key, float(bonus.get(key, 0.0)))
+	return snappedf(total, 0.001)
+
+
+static func _rebirth_power_percentile(stage: int, power_growth: float) -> float:
+	var thresholds := REBIRTH_POWER_THRESHOLDS.get(clampi(stage, 1, 2), REBIRTH_POWER_THRESHOLDS[1]) as Dictionary
+	return _percentile_from_thresholds(power_growth, thresholds)
+
+
+static func _rebirth_stat_percentile(stage: int, internal_growth: float) -> float:
+	var thresholds := REBIRTH_STAT_INTERNAL_THRESHOLDS.get(clampi(stage, 1, 2), REBIRTH_STAT_INTERNAL_THRESHOLDS[1]) as Dictionary
+	return _percentile_from_thresholds(internal_growth, thresholds)
+
+
+static func _rebirth_total_cell(value: float) -> String:
+	var snapped := snappedf(value, 0.1)
+	if absf(snapped - round(snapped)) <= 0.001:
+		return "+%d" % int(round(snapped))
+	return "+%.1f" % snapped
 
 
 static func _growth_percentile_for_stat(profile: Dictionary, stat_key: String, observed_growth: float) -> float:

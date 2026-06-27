@@ -130,7 +130,7 @@
       },
       "effect": {
         "type": "heal",
-        "amount": 24
+        "amount": 150
       },
       "stoneAgeReference": "MAGIC_Recovery"
     },
@@ -148,7 +148,7 @@
       },
       "effect": {
         "type": "heal",
-        "amount": 34
+        "amount": 220
       },
       "stoneAgeReference": "MAGIC_OtherRecovery"
     },
@@ -232,7 +232,7 @@
       },
       "effect": {
         "type": "heal",
-        "amount": 34
+        "amount": 320
       },
       "stoneAgeReference": "MAGIC_Recovery"
     },
@@ -250,7 +250,7 @@
       },
       "effect": {
         "type": "heal",
-        "amount": 48
+        "amount": 550
       },
       "stoneAgeReference": "MAGIC_OtherRecovery"
     },

@@ -62,6 +62,18 @@
       ]
     },
     {
+      "id": "pet_rebirth_mm_trial_1",
+      "rewardRole": "pet_rebirth_mm_trial",
+      "repeatable": true,
+      "economyTier": "rebirth_mm",
+      "stoneCoins": {
+        "min": 260,
+        "max": 420,
+        "chance": 1.0
+      },
+      "rewards": []
+    },
+    {
       "id": "growth_training_01",
       "rewardRole": "training_loop",
       "repeatable": true,

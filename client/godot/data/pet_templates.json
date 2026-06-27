@@ -20,9 +20,27 @@
       "passiveSkillId": "wuli_hard_shell"
     },
     {
+      "lineId": "tiger",
+      "lineName": "虎系",
+      "description": "适合骑乘的高速兽类。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
+      "lineId": "thunder_dragon",
+      "lineName": "雷龙系",
+      "description": "适合骑乘的厚重龙类。",
+      "passiveSkillId": "wuli_hard_shell"
+    },
+    {
       "lineId": "rebirth_beast",
       "lineName": "转生兽系",
       "description": "玄影洞窟中出现的试炼兽，完成对应转生仪式时需要捕捉。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
+      "lineId": "rebirth_mm",
+      "lineName": "转生MM系",
+      "description": "用于宠物转生仪式的特殊陪练伙伴，通过喂石和练级影响目标宠物转生成长。",
       "passiveSkillId": "bui_resistant_skin"
     }
   ],
@@ -56,6 +74,20 @@
       "activeSkillIds": ["pet_attack", "pet_defend"]
     },
     {
+      "subtypeId": "tiger_novice",
+      "subtypeName": "新手老虎",
+      "lineId": "tiger",
+      "battleRole": "starter_mount",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
+      "subtypeId": "thunder_dragon_normal",
+      "subtypeName": "雷龙",
+      "lineId": "thunder_dragon",
+      "battleRole": "mount_tank",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"]
+    },
+    {
       "subtypeId": "rebirth_beast_trial",
       "subtypeName": "试炼转生兽",
       "lineId": "rebirth_beast",
@@ -78,6 +110,16 @@
         "pet_attack",
         "pet_defend",
         "pet_bui_charge"
+      ]
+    },
+    {
+      "subtypeId": "rebirth_mm_helper",
+      "subtypeName": "转生MM",
+      "lineId": "rebirth_mm",
+      "battleRole": "support_pet",
+      "activeSkillIds": [
+        "pet_attack",
+        "pet_defend"
       ]
     }
   ],
@@ -146,7 +188,6 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
-      "growthSpeciesProfileId": "rebirth_starter_earth_cub_v1",
       "baseStats": {
         "maxHp": 150,
         "attack": 14,
@@ -267,6 +308,60 @@
       }
     },
     {
+      "formId": "pet_rebirth_mm_stage1",
+      "formName": "1转小MM",
+      "lineId": "rebirth_mm",
+      "subtypeId": "rebirth_mm_helper",
+      "elements": {
+        "fire": 2,
+        "water": 2,
+        "earth": 3,
+        "wind": 3
+      },
+      "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "pet_rebirth_mm_stage1_v1",
+      "baseStats": {
+        "maxHp": 88,
+        "attack": 10,
+        "defense": 8,
+        "agility": 58
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "pet_rebirth_mm_stage2",
+      "formName": "2转小MM",
+      "lineId": "rebirth_mm",
+      "subtypeId": "rebirth_mm_helper",
+      "elements": {
+        "fire": 3,
+        "water": 3,
+        "earth": 2,
+        "wind": 2
+      },
+      "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "pet_rebirth_mm_stage2_v1",
+      "baseStats": {
+        "maxHp": 94,
+        "attack": 12,
+        "defense": 9,
+        "agility": 64
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_red"
+      }
+    },
+    {
       "formId": "rebirth_beast_earth_lv50",
       "formName": "地灵转生兽",
       "lineId": "rebirth_beast",
@@ -304,7 +399,6 @@
         "wind": 0
       },
       "growthProfileId": "balanced",
-      "growthSpeciesProfileId": "rebirth_starter_water_cub_v1",
       "baseStats": {
         "maxHp": 500,
         "attack": 72,
@@ -331,7 +425,6 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
-      "growthSpeciesProfileId": "rebirth_starter_fire_cub_v1",
       "baseStats": {
         "maxHp": 480,
         "attack": 96,
@@ -358,7 +451,6 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
-      "growthSpeciesProfileId": "rebirth_starter_wind_cub_v1",
       "baseStats": {
         "maxHp": 470,
         "attack": 78,
@@ -385,6 +477,7 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "rebirth_starter_earth_cub_v1",
       "baseStats": {
         "maxHp": 96,
         "attack": 14,
@@ -411,6 +504,7 @@
         "wind": 0
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "rebirth_starter_water_cub_v1",
       "baseStats": {
         "maxHp": 90,
         "attack": 15,
@@ -437,6 +531,7 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "rebirth_starter_fire_cub_v1",
       "baseStats": {
         "maxHp": 86,
         "attack": 20,
@@ -463,6 +558,7 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "rebirth_starter_wind_cub_v1",
       "baseStats": {
         "maxHp": 84,
         "attack": 15,
@@ -524,6 +620,72 @@
       "capture": {
         "catchable": false,
         "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_earth"
+      }
+    },
+    {
+      "formId": "novice_tiger_mount",
+      "formName": "新手老虎",
+      "lineId": "tiger",
+      "subtypeId": "tiger_novice",
+      "elements": {
+        "fire": 2,
+        "water": 0,
+        "earth": 0,
+        "wind": 8
+      },
+      "growthProfileId": "starter_mount_low",
+      "baseStats": {
+        "maxHp": 48,
+        "attack": 8,
+        "defense": 5,
+        "agility": 28
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "riding": {
+        "rideable": true,
+        "mountRole": "starter_speed",
+        "levelCapRequired": 40,
+        "attackStyle": "melee",
+        "formulaId": "stoneage_like_ride_v1"
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow"
+      }
+    },
+    {
+      "formId": "thunder_dragon_mount",
+      "formName": "雷龙",
+      "lineId": "thunder_dragon",
+      "subtypeId": "thunder_dragon_normal",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 8,
+        "wind": 2
+      },
+      "growthProfileId": "thunder_dragon_mount",
+      "baseStats": {
+        "maxHp": 92,
+        "attack": 12,
+        "defense": 18,
+        "agility": 12
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "riding": {
+        "rideable": true,
+        "mountRole": "heavy_guard",
+        "levelCapRequired": 120,
+        "attackStyle": "melee",
+        "formulaId": "stoneage_like_ride_v1"
       },
       "visual": {
         "placeholderPalette": "bui_earth"

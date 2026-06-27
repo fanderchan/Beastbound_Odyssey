@@ -186,6 +186,47 @@
       "option": "转生"
     },
     {
+      "id": "firebud_pet_mm_trial_mentor",
+      "name": "1转MM试炼师阿澄",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [12, 14],
+      "facilityType": "pet_mm_trial",
+      "facilityLabel": "MM1",
+      "action": "挑战",
+      "actionType": "guardian_battle",
+      "encounterGroupId": "pet_rebirth_mm_trial_1",
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "fixedWildPets": [
+        {"formId": "wuli_normal_tough_earth10", "name": "MM试炼兽1", "level": 126, "battleStats": {"maxHp": 1320, "attack": 235, "defense": 118, "agility": 112}},
+        {"formId": "wuli_normal_orange_fire10", "name": "MM试炼兽2", "level": 127, "battleStats": {"maxHp": 1280, "attack": 252, "defense": 106, "agility": 124}},
+        {"formId": "wuli_normal_fast_wind10", "name": "MM试炼兽3", "level": 128, "battleStats": {"maxHp": 1220, "attack": 238, "defense": 102, "agility": 158}},
+        {"formId": "wuli_normal_tough_earth10", "name": "MM试炼兽4", "level": 129, "battleStats": {"maxHp": 1380, "attack": 244, "defense": 126, "agility": 116}},
+        {"formId": "wuli_normal_orange_fire10", "name": "MM试炼兽5", "level": 130, "battleStats": {"maxHp": 1340, "attack": 268, "defense": 112, "agility": 132}},
+        {"formId": "wuli_normal_fast_wind10", "name": "MM试炼兽6", "level": 130, "battleStats": {"maxHp": 1260, "attack": 256, "defense": 108, "agility": 164}},
+        {"formId": "wuli_normal_tough_earth10", "name": "MM试炼兽7", "level": 131, "battleStats": {"maxHp": 1440, "attack": 262, "defense": 132, "agility": 120}},
+        {"formId": "wuli_normal_orange_fire10", "name": "MM试炼兽8", "level": 132, "battleStats": {"maxHp": 1400, "attack": 280, "defense": 116, "agility": 136}},
+        {"formId": "wuli_normal_fast_wind10", "name": "MM试炼兽9", "level": 133, "battleStats": {"maxHp": 1320, "attack": 272, "defense": 110, "agility": 172}},
+        {"formId": "wuli_normal_tough_earth10", "name": "MM试炼兽10", "level": 134, "battleStats": {"maxHp": 1520, "attack": 286, "defense": 140, "agility": 126}}
+      ],
+      "dialog": ["1转MM试炼师阿澄：想反复培养1转小MM，就打赢这场试炼。敌人平均 Lv130，没有一队高等级伙伴会很吃力。"],
+      "option": "挑战"
+    },
+    {
+      "id": "firebud_pet_mm_stage2_keeper",
+      "name": "2转MM守护员阿岚",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [12, 16],
+      "facilityType": "pet_mm_stage2",
+      "facilityLabel": "MM2",
+      "action": "领取",
+      "actionType": "claim_mm_stage2",
+      "dialog": ["2转MM守护员阿岚：2转小MM每个角色只能通过任务领取一次。之后还想要，就去钻石铺购买2转MM蛋。"],
+      "option": "领取"
+    },
+    {
       "id": "firebud_doctor",
       "name": "村医阿萝",
       "kind": "npc",
@@ -231,6 +272,19 @@
       "option": "买卖"
     },
     {
+      "id": "firebud_diamond_keeper",
+      "name": "钻石商阿璨",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [6, 16],
+      "facilityType": "diamond_shop",
+      "facilityLabel": "钻石",
+      "action": "买卖",
+      "shopId": "firebud_diamond_shop",
+      "dialog": ["钻石商阿璨：MM石和2转MM蛋都在这里。现在是测试阶段，账户里有足够钻石。"],
+      "option": "买卖"
+    },
+    {
       "id": "firebud_stable_keeper",
       "name": "兽栏管理员阿牧",
       "kind": "npc",
@@ -242,6 +296,18 @@
       "actionType": "stable",
       "dialog": ["兽栏管理员阿牧：队伍满了就把伙伴暂时寄放在这里。远程兽栏是后面才能学会的本事。"],
       "option": "兽栏"
+    },
+    {
+      "id": "firebud_riding_trainer",
+      "name": "骑宠导师阿越",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [4, 16],
+      "facilityType": "riding_trainer",
+      "facilityLabel": "骑宠",
+      "action": "骑宠",
+      "dialog": ["骑宠导师阿越：骑宠不是坐上去就完事，先学会和伙伴同步出手。"],
+      "option": "学习"
     },
     {
       "id": "firebud_pet_skill_trainer",

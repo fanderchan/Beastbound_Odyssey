@@ -57,6 +57,7 @@ const COUNTER_DEX_DIVISOR := 0.08
 const COUNTER_DAMAGE_FACTOR := 0.75
 const COMBATANT_COMBO_BASE_RATE := 0.50
 const MONSTER_COMBO_BASE_RATE := 0.20
+const RIDE_DAMAGE_TO_MOUNT_RATIO := 0.50
 const COMBAT_FORMULA_DRIVER_LEGACY := "legacy"
 const COMBAT_FORMULA_DRIVER_TABLE := "table"
 const PET_METADATA_KEYS: Array[String] = [
@@ -2222,9 +2223,13 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	critical = _damage_event_is_critical(state, event, attacker_id, target_id)
 	if critical:
 		damage = _critical_damage_for(state, attacker_id, target_id, damage)
-	var next_hp := maxi(0, hp_before - damage)
+	var ride_damage_result := _apply_ride_damage_share(target, damage)
+	target = ride_damage_result.get("actor", target) as Dictionary
+	var player_damage := int(ride_damage_result.get("actorDamage", damage))
+	var mount_damage := int(ride_damage_result.get("mountDamage", 0))
+	var next_hp := maxi(0, hp_before - player_damage)
 	var max_hp := maxi(1, int(target.get("maxHp", hp_before)))
-	var overkill := damage - hp_before
+	var overkill := player_damage - hp_before
 	var launch_threshold := maxi(12, int(round(float(max_hp) * 0.18)))
 	var launched := bool(event.get("canLaunch", false)) and hp_before > 0 and next_hp <= 0 and overkill >= launch_threshold
 	target["hp"] = next_hp
@@ -2254,6 +2259,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetIds"] = [target_id]
 	state["lastDamage"] = damage
 	state["lastEffectPerTarget"] = {target_id: damage}
+	state["lastActorDamagePerTarget"] = {target_id: player_damage}
+	state["lastRideDamagePerTarget"] = {target_id: mount_damage}
 	state["lastParticipants"] = participant_ids
 	state["lastLaunch"] = launched
 	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
@@ -2273,20 +2280,21 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		state["lastStatusChanges"] = status_changes
 
 	var target_name := str(target.get("name", "目标"))
+	var ride_message_suffix := _ride_damage_message_suffix(target, mount_damage, player_damage)
 	if event_type == "combo_attack":
 		var names: Array[String] = []
 		for participant_id in participant_ids:
 			var participant_actor := actor_by_id(state, str(participant_id))
 			if not participant_actor.is_empty():
 				names.append(str(participant_actor.get("name", "我方")))
-		state["message"] = "%s 合击了 %s，造成 %d 点伤害。" % ["、".join(names), target_name, damage]
+		state["message"] = "%s 合击了 %s，造成 %d 点伤害%s。" % ["、".join(names), target_name, damage, ride_message_suffix]
 	elif event_type == "skill_attack":
 		var skill_name := str(event.get("skillName", "技能"))
-		state["message"] = "%s 使用%s，造成 %d 点伤害。" % [str(first_attacker.get("name", "伙伴")), skill_name, damage]
+		state["message"] = "%s 使用%s，造成 %d 点伤害%s。" % [str(first_attacker.get("name", "伙伴")), skill_name, damage, ride_message_suffix]
 	elif event_type == "counter_attack":
-		state["message"] = "%s 反击了 %s，造成 %d 点伤害。" % [str(first_attacker.get("name", "我方")), target_name, damage]
+		state["message"] = "%s 反击了 %s，造成 %d 点伤害%s。" % [str(first_attacker.get("name", "我方")), target_name, damage, ride_message_suffix]
 	else:
-		state["message"] = "%s 攻击了 %s，造成 %d 点伤害。" % [str(first_attacker.get("name", "我方")), target_name, damage]
+		state["message"] = "%s 攻击了 %s，造成 %d 点伤害%s。" % [str(first_attacker.get("name", "我方")), target_name, damage, ride_message_suffix]
 	if critical:
 		state["message"] += " 触发幸运一击。"
 	if launched:
@@ -2327,6 +2335,8 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 
 	var target_ids: Array[String] = []
 	var effect_per_target := {}
+	var actor_damage_per_target := {}
+	var ride_damage_per_target := {}
 	var dodge_per_target := {}
 	var critical_per_target := {}
 	var status_changes: Array[Dictionary] = []
@@ -2358,7 +2368,11 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 		if target_critical:
 			damage = _critical_damage_for_action(state, attacker_id, target_id, damage, action_id)
 			critical_count += 1
-		var next_hp := maxi(0, hp_before - damage)
+		var ride_damage_result := _apply_ride_damage_share(target, damage)
+		target = ride_damage_result.get("actor", target) as Dictionary
+		var player_damage := int(ride_damage_result.get("actorDamage", damage))
+		var mount_damage := int(ride_damage_result.get("mountDamage", 0))
+		var next_hp := maxi(0, hp_before - player_damage)
 		target["hp"] = next_hp
 		if BattleStatusModel.has_status(target, STATUS_SLEEP):
 			target = BattleStatusModel.remove_status(target, STATUS_SLEEP)
@@ -2370,6 +2384,8 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 		target["actionState"] = "down" if next_hp <= 0 else "hit"
 		actors[target_index] = target
 		effect_per_target[target_id] = damage
+		actor_damage_per_target[target_id] = player_damage
+		ride_damage_per_target[target_id] = mount_damage
 		dodge_per_target[target_id] = false
 		critical_per_target[target_id] = target_critical
 		total_damage += damage
@@ -2384,6 +2400,8 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	state["lastTargetIds"] = target_ids
 	state["lastDamage"] = total_damage
 	state["lastEffectPerTarget"] = effect_per_target
+	state["lastActorDamagePerTarget"] = actor_damage_per_target
+	state["lastRideDamagePerTarget"] = ride_damage_per_target
 	state["lastParticipants"] = [attacker_id]
 	state["lastDodged"] = dodged_count > 0 and dodged_count == target_ids.size()
 	state["lastCritical"] = critical_count > 0
@@ -2409,6 +2427,60 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	if dodged_count > 0:
 		state["message"] += " %d个目标回避。" % dodged_count
 	return state
+
+
+static func _apply_ride_damage_share(actor: Dictionary, damage: int) -> Dictionary:
+	var target := actor.duplicate(true)
+	var total_damage := maxi(0, damage)
+	var ride_id := str(target.get("ridePetInstanceId", "")).strip_edges()
+	var ride_max_hp := maxi(0, int(target.get("ridePetMaxHp", 0)))
+	var ride_hp_before := clampi(int(target.get("ridePetHp", ride_max_hp)), 0, ride_max_hp)
+	if ride_id == "" or ride_max_hp <= 0 or ride_hp_before <= 0 or total_damage <= 0:
+		return {
+			"actor": target,
+			"actorDamage": total_damage,
+			"mountDamage": 0,
+			"mountBefore": ride_hp_before,
+			"mountAfter": ride_hp_before,
+		}
+	var mount_share := clampi(int(round(float(total_damage) * RIDE_DAMAGE_TO_MOUNT_RATIO)), 1, total_damage)
+	var mount_damage := mini(ride_hp_before, mount_share)
+	var actor_damage := total_damage - mount_damage
+	var overflow := mount_share - mount_damage
+	if overflow > 0:
+		actor_damage += overflow
+	var ride_hp_after := maxi(0, ride_hp_before - mount_damage)
+	target["ridePetHp"] = ride_hp_after
+	target["ridePetDamage"] = mount_damage
+	target["ridePetHpBefore"] = ride_hp_before
+	target["ridePetKnocked"] = ride_hp_after <= 0
+	if ride_hp_after <= 0:
+		var base_stats = target.get("rideBaseStats", {})
+		if base_stats is Dictionary:
+			var base_dict := base_stats as Dictionary
+			for key in ["attack", "defense", "quick"]:
+				if base_dict.has(key):
+					target[key] = maxi(1, int(base_dict.get(key, target.get(key, 1))))
+		target["ridePetBattleState"] = PET_STATE_REST
+	return {
+		"actor": target,
+		"actorDamage": actor_damage,
+		"mountDamage": mount_damage,
+		"mountBefore": ride_hp_before,
+		"mountAfter": ride_hp_after,
+	}
+
+
+static func _ride_damage_message_suffix(actor: Dictionary, mount_damage: int, actor_damage: int) -> String:
+	if mount_damage <= 0:
+		return ""
+	var mount_name := str(actor.get("ridePetName", "骑宠")).strip_edges()
+	if mount_name == "":
+		mount_name = "骑宠"
+	var suffix := "，其中%s承受%d，人物承受%d" % [mount_name, mount_damage, maxi(0, actor_damage)]
+	if bool(actor.get("ridePetKnocked", false)):
+		suffix += "，%s倒下并解除骑乘" % mount_name
+	return suffix
 
 
 static func _event_counts_as_player_weapon_attack(event_type: String, participant_ids: Array) -> bool:

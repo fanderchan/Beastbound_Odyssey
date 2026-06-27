@@ -41,6 +41,8 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 		"damage": int(state.get("lastDamage", 0)),
 		"heal": int(state.get("lastHeal", 0)),
 		"effectPerTarget": effect_per_target,
+		"actorDamagePerTarget": _duplicate_dict(state.get("lastActorDamagePerTarget", {})),
+		"rideDamagePerTarget": _duplicate_dict(state.get("lastRideDamagePerTarget", {})),
 		"dodged": bool(state.get("lastDodged", false)),
 		"critical": bool(state.get("lastCritical", false)),
 		"counterTriggered": bool(state.get("lastCounterTriggered", false)),
@@ -94,6 +96,8 @@ static func playback_event(source_event: Dictionary, ledger: Dictionary) -> Dict
 	event["damage"] = int(ledger.get("damage", event.get("damage", 0)))
 	event["heal"] = int(ledger.get("heal", event.get("heal", 0)))
 	event["effectPerTarget"] = ledger.get("effectPerTarget", {}).duplicate(true)
+	event["actorDamagePerTarget"] = ledger.get("actorDamagePerTarget", {}).duplicate(true)
+	event["rideDamagePerTarget"] = ledger.get("rideDamagePerTarget", {}).duplicate(true)
 	event["dodged"] = bool(ledger.get("dodged", false))
 	event["critical"] = bool(ledger.get("critical", false))
 	event["counterTriggered"] = bool(ledger.get("counterTriggered", false))

@@ -273,6 +273,30 @@
       "description": "二转试炼奖励，附带滋润精灵3。"
     },
     {
+      "id": "armor_grace_cloth_5",
+      "label": "恩惠衣5",
+      "menuLabel": "恩惠衣5",
+      "slot": "body",
+      "stats": {
+        "defense": 10
+      },
+      "spiritIds": ["spirit_grace_5"],
+      "durabilityMax": 42,
+      "description": "钻石铺试炼装备，附带恩惠精灵5。"
+    },
+    {
+      "id": "accessory_moist_charm_5",
+      "label": "滋润护符5",
+      "menuLabel": "滋润护符5",
+      "slot": "accessory_right",
+      "stats": {
+        "maxHp": 24
+      },
+      "spiritIds": ["spirit_moist_5"],
+      "durabilityMax": 42,
+      "description": "钻石铺试炼装备，附带滋润精灵5。"
+    },
+    {
       "id": "weapon_flame_trial_spear",
       "label": "火纹长枪",
       "menuLabel": "火纹长枪",
@@ -337,6 +361,36 @@
       "expPill": true,
       "expPillLevel": 131,
       "description": "可装备到经验丹槽。人物满级后的溢出经验会存入已装备的人物经验丹。"
+    },
+    {
+      "id": "item_exp_pill_lv1",
+      "label": "经验丹(LV1)",
+      "menuLabel": "空丹1",
+      "slot": "exp_pill",
+      "usesDurability": false,
+      "expPill": true,
+      "expPillLevel": 1,
+      "description": "可装备到经验丹槽。人物满级后的溢出经验会存入已装备的经验丹。"
+    },
+    {
+      "id": "item_exp_pill_lv131",
+      "label": "经验丹(LV131)",
+      "menuLabel": "经验丹131",
+      "slot": "exp_pill",
+      "usesDurability": false,
+      "expPill": true,
+      "expPillLevel": 131,
+      "description": "可装备到经验丹槽。人物满级后的溢出经验会存入已装备的经验丹。"
+    },
+    {
+      "id": "item_exp_pill_lv140",
+      "label": "经验丹(LV140)",
+      "menuLabel": "经验丹140",
+      "slot": "exp_pill",
+      "usesDurability": false,
+      "expPill": true,
+      "expPillLevel": 140,
+      "description": "可装备到经验丹槽。人物满级后的溢出经验会存入已装备的经验丹。"
     }
   ]
 }

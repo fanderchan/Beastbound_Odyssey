@@ -5,6 +5,8 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 
 const DATA_PATH := "res://data/item_shops.json"
 const DEFAULT_SHOP_ID := "firebud_item_shop"
+const CURRENCY_STONE_COINS := "stoneCoins"
+const CURRENCY_DIAMONDS := "diamonds"
 static var data_cache_loaded: bool = false
 static var data_cache: Dictionary = {}
 
@@ -30,6 +32,25 @@ static func shop_for_id(shop_id: String) -> Dictionary:
 static func label_for(shop_id: String) -> String:
 	var shop := shop_for_id(shop_id)
 	return str(shop.get("label", "道具店")) if not shop.is_empty() else "道具店"
+
+
+static func currency_for(shop_id: String) -> String:
+	var shop := shop_for_id(shop_id)
+	var raw_currency := str(shop.get("currency", CURRENCY_STONE_COINS))
+	if raw_currency == CURRENCY_DIAMONDS or raw_currency == "diamond":
+		return CURRENCY_DIAMONDS
+	return CURRENCY_STONE_COINS
+
+
+static func currency_label_for(shop_id: String) -> String:
+	return currency_label(currency_for(shop_id))
+
+
+static func currency_label(currency: String) -> String:
+	match currency:
+		CURRENCY_DIAMONDS:
+			return "钻石"
+	return "石币"
 
 
 static func entries_for(shop_id: String) -> Array[Dictionary]:
@@ -94,7 +115,13 @@ static func sell_price_for(shop_id: String, item_id: String) -> int:
 
 
 static func price_line_for(shop_id: String, item_id: String) -> String:
-	return "购买单价: %d石币    出售单价: %d石币" % [buy_price_for(shop_id, item_id), sell_price_for(shop_id, item_id)]
+	var label := currency_label_for(shop_id)
+	return "购买单价: %d%s    出售单价: %d%s" % [
+		buy_price_for(shop_id, item_id),
+		label,
+		sell_price_for(shop_id, item_id),
+		label,
+	]
 
 
 static func _data() -> Dictionary:

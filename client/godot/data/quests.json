@@ -409,6 +409,38 @@
       "requiredRebirthCount": 4,
       "requiredMissingAbility": "remoteStable",
       "nextQuestId": ""
+    },
+    {
+      "id": "quest_riding_unlock",
+      "title": "奇怪的骑宠课",
+      "giverId": "firebud_riding_trainer",
+      "turnInId": "firebud_riding_trainer",
+      "optional": true,
+      "autoClaimOnReady": true,
+      "summary": "向骑宠导师阿越学习骑宠术，并领取一枚新手老虎蛋。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_riding_trainer",
+        "count": 1,
+        "text": "和骑宠导师阿越对话"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "novice_tiger_egg",
+            "count": 1
+          }
+        ],
+        "abilities": [
+          {
+            "abilityId": "riding",
+            "label": "骑宠术"
+          }
+        ]
+      },
+      "requiredMissingAbility": "riding",
+      "nextQuestId": ""
     }
   ]
 }

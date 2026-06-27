@@ -136,7 +136,7 @@
       "label": "人物经验丹(LV131)",
       "menuLabel": "人物丹131",
       "stackLimit": 20,
-      "startingCount": 5,
+      "startingCount": 0,
       "useContexts": ["world_player_exp", "equipment"],
       "worldUse": {
         "type": "player_exp",
@@ -149,13 +149,222 @@
       "label": "宠物经验丹(LV131)",
       "menuLabel": "宠物丹131",
       "stackLimit": 20,
-      "startingCount": 5,
+      "startingCount": 0,
       "useContexts": ["world_pet_exp"],
       "worldUse": {
         "type": "pet_exp",
         "level": 131
       },
       "description": "使用后让目标队伍宠物获得到达 Lv131 所需的经验。"
+    },
+    {
+      "id": "item_exp_pill_lv1",
+      "label": "经验丹(LV1)",
+      "menuLabel": "空丹1",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_exp", "equipment"],
+      "worldUse": {
+        "type": "exp",
+        "level": 1
+      },
+      "description": "空经验丹。可给人物或宠物使用；也可装备到经验丹槽储存满级溢出经验。"
+    },
+    {
+      "id": "item_exp_pill_lv131",
+      "label": "经验丹(LV131)",
+      "menuLabel": "经验丹131",
+      "stackLimit": 20,
+      "startingCount": 10,
+      "useContexts": ["world_exp", "equipment"],
+      "worldUse": {
+        "type": "exp",
+        "level": 131
+      },
+      "description": "可给人物或宠物使用，获得到达 Lv131 所需的经验；也可装备到经验丹槽储存满级溢出经验。"
+    },
+    {
+      "id": "item_exp_pill_lv140",
+      "label": "经验丹(LV140)",
+      "menuLabel": "经验丹140",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_exp", "equipment"],
+      "worldUse": {
+        "type": "exp",
+        "level": 140
+      },
+      "description": "可给人物或宠物使用，获得到达 Lv140 所需的经验；也可装备到经验丹槽储存满级溢出经验。"
+    },
+    {
+      "id": "mm_stone_hp_basic",
+      "label": "初级生命石",
+      "menuLabel": "初级生命石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "maxHp", "points": 1},
+      "description": "给转生MM增加生命石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_hp_mid",
+      "label": "中级生命石",
+      "menuLabel": "中级生命石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "maxHp", "points": 3},
+      "description": "给转生MM增加生命石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_hp_high",
+      "label": "高级生命石",
+      "menuLabel": "高级生命石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "maxHp", "points": 5},
+      "description": "给转生MM增加生命石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_attack_basic",
+      "label": "初级攻击石",
+      "menuLabel": "初级攻击石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "attack", "points": 1},
+      "description": "给转生MM增加攻击石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_attack_mid",
+      "label": "中级攻击石",
+      "menuLabel": "中级攻击石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "attack", "points": 3},
+      "description": "给转生MM增加攻击石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_attack_high",
+      "label": "高级攻击石",
+      "menuLabel": "高级攻击石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "attack", "points": 5},
+      "description": "给转生MM增加攻击石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_defense_basic",
+      "label": "初级防御石",
+      "menuLabel": "初级防御石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "defense", "points": 1},
+      "description": "给转生MM增加防御石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_defense_mid",
+      "label": "中级防御石",
+      "menuLabel": "中级防御石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "defense", "points": 3},
+      "description": "给转生MM增加防御石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_defense_high",
+      "label": "高级防御石",
+      "menuLabel": "高级防御石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "defense", "points": 5},
+      "description": "给转生MM增加防御石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_quick_basic",
+      "label": "初级敏捷石",
+      "menuLabel": "初级敏捷石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "quick", "points": 1},
+      "description": "给转生MM增加敏捷石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_quick_mid",
+      "label": "中级敏捷石",
+      "menuLabel": "中级敏捷石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "quick", "points": 3},
+      "description": "给转生MM增加敏捷石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "mm_stone_quick_high",
+      "label": "高级敏捷石",
+      "menuLabel": "高级敏捷石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_mm_stone"],
+      "worldUse": {"type": "mm_stone", "stat": "quick", "points": 5},
+      "description": "给转生MM增加敏捷石点数。Lv74以后不能继续喂石。"
+    },
+    {
+      "id": "pet_rebirth_mm1_egg",
+      "label": "1转MM蛋",
+      "menuLabel": "1转MM蛋",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_egg"],
+      "worldUse": {"type": "pet_rebirth_mm_egg", "stage": 1},
+      "description": "使用后获得一只 Lv1 1转小MM。"
+    },
+    {
+      "id": "pet_rebirth_mm2_egg",
+      "label": "2转MM蛋",
+      "menuLabel": "2转MM蛋",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_egg"],
+      "worldUse": {"type": "pet_rebirth_mm_egg", "stage": 2},
+      "description": "使用后获得一只 Lv1 2转小MM。"
+    },
+    {
+      "id": "rebirth_starter_four_spirit_cub_egg",
+      "label": "四灵幼兽蛋",
+      "menuLabel": "四灵幼兽蛋",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_egg"],
+      "worldUse": {"type": "pet_form_egg", "formId": "rebirth_starter_four_spirit_cub", "petName": "四灵幼兽"},
+      "description": "使用后获得一只 Lv1 四灵幼兽。"
+    },
+    {
+      "id": "novice_tiger_egg",
+      "label": "新手老虎蛋",
+      "menuLabel": "新手虎蛋",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_egg"],
+      "worldUse": {"type": "pet_form_egg", "formId": "novice_tiger_mount", "petName": "新手老虎"},
+      "description": "使用后获得一只 Lv1 新手老虎。新手老虎适合骑乘，成长低于长期主力宠。"
+    },
+    {
+      "id": "thunder_dragon_egg",
+      "label": "雷龙蛋",
+      "menuLabel": "雷龙蛋",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_egg"],
+      "worldUse": {"type": "pet_form_egg", "formId": "thunder_dragon_mount", "petName": "雷龙"},
+      "description": "使用后获得一只 Lv1 雷龙。雷龙可骑乘，偏防御和生命。"
     },
     {
       "id": "equip_frag_wood_basic",
@@ -375,6 +584,22 @@
       "id": "accessory_moist_charm_3",
       "label": "滋润护符3",
       "menuLabel": "滋润护符3",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "armor_grace_cloth_5",
+      "label": "恩惠衣5",
+      "menuLabel": "恩惠衣5",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["equipment"]
+    },
+    {
+      "id": "accessory_moist_charm_5",
+      "label": "滋润护符5",
+      "menuLabel": "滋润护符5",
       "stackLimit": 1,
       "startingCount": 0,
       "useContexts": ["equipment"]
