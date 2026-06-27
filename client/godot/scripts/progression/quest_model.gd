@@ -7,6 +7,80 @@ const DATA_PATH := "res://data/quests.json"
 const STATUS_ACTIVE := "active"
 const STATUS_READY := "ready"
 const STATUS_CLAIMED := "claimed"
+const OBJECTIVE_TEMPLATES := {
+	"talk": {
+		"label": "对话",
+		"eventTypes": ["talk"],
+		"requiredFields": ["targetId"],
+		"summary": "和指定 NPC / 设施对话。",
+	},
+	"buy_item": {
+		"label": "购买道具",
+		"eventTypes": ["buy_item"],
+		"requiredFields": ["shopId", "itemId"],
+		"summary": "在指定商店购买指定物品。",
+	},
+	"use_world_item": {
+		"label": "世界使用道具",
+		"eventTypes": ["use_world_item"],
+		"requiredFields": ["itemId", "targetType"],
+		"summary": "在世界界面对目标使用指定道具。",
+	},
+	"use_item": {
+		"label": "使用道具",
+		"eventTypes": ["use_item", "use_world_item", "battle_item"],
+		"requiredFields": ["itemId"],
+		"summary": "在世界或战斗中使用指定道具，可用 targetType 限定目标。",
+	},
+	"equip_item": {
+		"label": "装备指定装备",
+		"eventTypes": ["equip_item"],
+		"requiredFields": ["itemId", "slot"],
+		"summary": "把指定装备穿到指定装备槽。",
+	},
+	"use_spirit": {
+		"label": "释放精灵",
+		"eventTypes": ["use_spirit"],
+		"requiredFields": ["spiritId"],
+		"summary": "在战斗中释放指定精灵，可用 eventType 限定效果。",
+	},
+	"battle_victory": {
+		"label": "战斗胜利",
+		"eventTypes": ["battle_victory"],
+		"requiredFields": ["encounterGroupId"],
+		"summary": "赢下指定遇敌组或试炼战斗。",
+	},
+	"defeat_npc": {
+		"label": "击败指定 NPC 怪",
+		"eventTypes": ["defeat_npc", "battle_victory"],
+		"requiredAnyFields": ["encounterGroupId", "targetId", "interactionId"],
+		"summary": "击败地图上对话触发的指定守护兽或 NPC 战斗。",
+	},
+	"capture_pet": {
+		"label": "捕捉宠物",
+		"eventTypes": ["capture_pet"],
+		"requiredAnyFields": ["lineId", "formId", "formIdPrefix"],
+		"summary": "捕捉指定系别、形态或形态前缀的宠物。",
+	},
+	"deliver_pet": {
+		"label": "交付宠物",
+		"eventTypes": ["deliver_pet"],
+		"requiredAnyFields": ["lineId", "formId", "formIdPrefix"],
+		"summary": "交付指定系别、形态或形态前缀的宠物，可用 minLevel 限定等级。",
+	},
+	"reach_map": {
+		"label": "到达地图",
+		"eventTypes": ["reach_map", "enter_map"],
+		"requiredFields": ["mapId"],
+		"summary": "到达指定地图，适合副本入口或跨地图教学。",
+	},
+	"reach_npc": {
+		"label": "到达 NPC",
+		"eventTypes": ["reach_npc", "reach_interaction"],
+		"requiredAnyFields": ["targetId", "interactionId"],
+		"summary": "自动寻路到指定 NPC / 设施附近。",
+	},
+}
 static var catalog_cache_loaded: bool = false
 static var catalog_cache: Dictionary = {}
 
@@ -84,6 +158,56 @@ static func is_optional(quest: Dictionary) -> bool:
 
 static func quest_type_for(quest: Dictionary) -> String:
 	return str(quest.get("questType", "main" if not is_optional(quest) else "side"))
+
+
+static func objective_templates() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var keys := OBJECTIVE_TEMPLATES.keys()
+	keys.sort()
+	for key in keys:
+		var template := (OBJECTIVE_TEMPLATES.get(key, {}) as Dictionary).duplicate(true)
+		template["type"] = str(key)
+		result.append(template)
+	return result
+
+
+static func objective_template_for_type(objective_type: String) -> Dictionary:
+	return (OBJECTIVE_TEMPLATES.get(objective_type, {}) as Dictionary).duplicate(true)
+
+
+static func supported_objective_types() -> Array[String]:
+	var result: Array[String] = []
+	var keys := OBJECTIVE_TEMPLATES.keys()
+	keys.sort()
+	for key in keys:
+		result.append(str(key))
+	return result
+
+
+static func objective_type_label_for(objective_type: String) -> String:
+	var template := objective_template_for_type(objective_type)
+	return str(template.get("label", objective_type))
+
+
+static func objective_contract_lines() -> Array[String]:
+	var lines: Array[String] = []
+	for template in objective_templates():
+		var required := _string_array(template.get("requiredFields", []))
+		var required_any := _string_array(template.get("requiredAnyFields", []))
+		var requirement_text := ""
+		if not required.is_empty():
+			requirement_text = "必填 %s" % "、".join(required)
+		elif not required_any.is_empty():
+			requirement_text = "至少填 %s 之一" % "、".join(required_any)
+		else:
+			requirement_text = "无额外必填"
+		lines.append("%s：%s；事件 %s；%s" % [
+			str(template.get("type", "")),
+			str(template.get("label", "")),
+			"、".join(_string_array(template.get("eventTypes", []))),
+			requirement_text,
+		])
+	return lines
 
 
 static func objective_for(quest: Dictionary) -> Dictionary:
@@ -482,6 +606,24 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 			if min_level > 0 and int(event.get("level", 1)) < min_level:
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
+		"reach_map":
+			if not ["reach_map", "enter_map"].has(event_type):
+				return 0
+			if not _matches_string_filter(objective, event, "mapId"):
+				return 0
+			if not _matches_string_filter(objective, event, "regionId"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"reach_npc":
+			if not ["reach_npc", "reach_interaction"].has(event_type):
+				return 0
+			if not _matches_string_filter(objective, event, "targetId"):
+				return 0
+			if not _matches_string_filter(objective, event, "interactionId"):
+				return 0
+			if not _matches_string_filter(objective, event, "mapId"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
 	return 0
 
 
@@ -514,6 +656,7 @@ static func validation_errors() -> Array[String]:
 				errors.append("%s.objectives[%d].type 不能为空" % [quest_id, objective_index])
 			if int(objective.get("count", 1)) < 1:
 				errors.append("%s.objectives[%d].count 必须大于等于 1" % [quest_id, objective_index])
+			errors.append_array(_objective_template_validation_errors(quest_id, objective_index, objective))
 		errors.append_array(_reward_item_validation_errors(reward_items(quest), "%s.rewards.items" % quest_id))
 		errors.append_array(_reward_ability_validation_errors(reward_abilities(quest), "%s.rewards.abilities" % quest_id))
 		var choice_ids := {}
@@ -533,6 +676,31 @@ static func validation_errors() -> Array[String]:
 		var next_id := str(quest.get("nextQuestId", ""))
 		if next_id != "" and not ids.has(next_id):
 			errors.append("%s.nextQuestId 指向不存在任务: %s" % [str(quest.get("id", "")), next_id])
+	return errors
+
+
+static func _objective_template_validation_errors(quest_id: String, objective_index: int, objective: Dictionary) -> Array[String]:
+	var errors: Array[String] = []
+	var objective_type := str(objective.get("type", ""))
+	if objective_type == "":
+		return errors
+	var template := objective_template_for_type(objective_type)
+	var path := "%s.objectives[%d]" % [quest_id, objective_index]
+	if template.is_empty():
+		errors.append("%s 使用未知任务目标模板: %s" % [path, objective_type])
+		return errors
+	for field in _string_array(template.get("requiredFields", [])):
+		if str(objective.get(field, "")).strip_edges() == "":
+			errors.append("%s.%s 为 %s 模板必填字段" % [path, field, objective_type])
+	var required_any := _string_array(template.get("requiredAnyFields", []))
+	if not required_any.is_empty():
+		var has_any := false
+		for field in required_any:
+			if str(objective.get(field, "")).strip_edges() != "":
+				has_any = true
+				break
+		if not has_any:
+			errors.append("%s 需要填写 %s 之一" % [path, "、".join(required_any)])
 	return errors
 
 

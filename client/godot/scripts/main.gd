@@ -10961,6 +10961,32 @@ func _run_auto_quest_objective_templates_check() -> void:
 			}
 		],
 	}
+	var reach_quest := {
+		"id": "test_reach_map",
+		"title": "到达指定地图和NPC",
+		"objectives": [
+			{
+				"type": "reach_map",
+				"mapId": "firebud_village_gate",
+				"count": 1,
+				"text": "回到火芽村入口",
+			},
+			{
+				"type": "reach_npc",
+				"targetId": "firebud_rebirth_mentor",
+				"mapId": "firebud_village_gate",
+				"count": 1,
+				"text": "找到转生导师",
+			},
+		],
+	}
+	var templates_ok := (
+		QuestModel.supported_objective_types().has("defeat_npc")
+		and QuestModel.supported_objective_types().has("deliver_pet")
+		and QuestModel.supported_objective_types().has("reach_map")
+		and str(QuestModel.objective_template_for_type("equip_item").get("label", "")) == "装备指定装备"
+		and "\n".join(QuestModel.objective_contract_lines()).find("capture_pet：捕捉宠物") >= 0
+	)
 	var defeat_ok := (
 		QuestModel.progress_amount_for_event(defeat_quest, {
 			"type": "defeat_npc",
@@ -11009,14 +11035,33 @@ func _run_auto_quest_objective_templates_check() -> void:
 			"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
 		}) == 1
 	)
+	var reach_ok := (
+		QuestModel.objectives_for(reach_quest).size() == 2
+		and QuestModel.progress_amount_for_event(reach_quest, {
+			"type": "reach_map",
+			"mapId": "firebud_village_gate",
+		}) == 1
+		and QuestModel.progress_amount_for_event(reach_quest, {
+			"type": "reach_npc",
+			"targetId": "firebud_rebirth_mentor",
+			"mapId": "firebud_village_gate",
+		}) == 1
+		and QuestModel.progress_amount_for_event(reach_quest, {
+			"type": "reach_npc",
+			"targetId": "firebud_rebirth_mentor",
+			"mapId": "shadow_oath_cavern_top",
+		}) == 0
+	)
 	var catalog_ok := QuestModel.validation_errors().is_empty()
-	var status := "ok" if defeat_ok and deliver_ok and use_ok and multi_ok and catalog_ok else "failed"
-	print("quest objective templates check ready: status=%s defeat=%s deliver=%s use=%s multi=%s catalog=%s" % [
+	var status := "ok" if templates_ok and defeat_ok and deliver_ok and use_ok and multi_ok and reach_ok and catalog_ok else "failed"
+	print("quest objective templates check ready: status=%s templates=%s defeat=%s deliver=%s use=%s multi=%s reach=%s catalog=%s" % [
 		status,
+		str(templates_ok),
 		str(defeat_ok),
 		str(deliver_ok),
 		str(use_ok),
 		str(multi_ok),
+		str(reach_ok),
 		str(catalog_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
