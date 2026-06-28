@@ -49,6 +49,7 @@ const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_mode
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const ServerAuthContractModel := preload("res://scripts/progression/server_auth_contract_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
+const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
@@ -586,6 +587,7 @@ var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
+var auto_auth_server_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -888,6 +890,8 @@ func _ready() -> void:
 	set_process(true)
 	if auto_auth_check:
 		call_deferred("_run_auto_auth_check")
+	elif auto_auth_server_live_check:
+		call_deferred("_run_auto_auth_server_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1380,7 +1384,7 @@ func _apply_preview_window_args() -> void:
 			or arg == "--numeric-experiment-report"
 		):
 			profile_save_enabled = false
-			if arg != "--auto-auth-check":
+			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check":
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
 			pass
@@ -1600,6 +1604,8 @@ func _apply_preview_window_args() -> void:
 			auth_auto_bypass = false
 		elif arg == "--auto-auth-server-client-check":
 			auto_auth_server_client_check = true
+		elif arg == "--auto-auth-server-live-check":
+			auto_auth_server_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -14730,15 +14736,34 @@ func _run_auto_auth_check() -> void:
 	var original_audit_exists := FileAccess.file_exists(GmToolRuntimeModel.AUDIT_PATH)
 	var original_audit_text := FileAccess.get_file_as_string(GmToolRuntimeModel.AUDIT_PATH) if original_audit_exists else ""
 	var username := "auth%d" % int(Time.get_ticks_msec() % 1000000)
-	auth_username_input.text = username
-	auth_password_input.text = "test1234"
-	auth_display_name_input.text = "测试玩家"
 	if auth_remember_check != null:
 		auth_remember_check.button_pressed = true
-	_set_auth_mode(true)
-	_on_auth_submit_pressed()
+	var server_session := {
+		"username": username,
+		"displayName": "测试玩家",
+		"role": AccountAuthModel.ROLE_PLAYER,
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+		"gmPluginInstalled": false,
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username(username),
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		"serverSessionToken": "",
+		"serverProfileSummary": {
+			"playerId": "player_%s" % username,
+			"profileRevision": 1,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+			"hasProfile": true,
+		},
+	}
+	_remember_auth_session(server_session)
+	_apply_authenticated_session(server_session, false)
 	await get_tree().process_frame
-	var player_registered := account_authenticated and str(current_account_session.get("username", "")) == username
+	var player_session_ok := (
+		account_authenticated
+		and str(current_account_session.get("username", "")) == username
+		and str(current_account_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
+	)
 	var remember_ok := AccountAuthModel.last_username() == username
 	var player_is_not_gm := not _can_use_gm_tools()
 	var player_hides_gm := qa_menu_button != null and not qa_menu_button.visible
@@ -14766,22 +14791,30 @@ func _run_auto_auth_check() -> void:
 		and not qa_menu_button.visible
 	)
 	var plugin_install_ok := AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
-	current_account_session = AccountAuthModel.session_for_account({
+	current_account_session = {
 		"username": "codex_auth_gm",
 		"displayName": "测试GM",
 		"role": AccountAuthModel.ROLE_GM,
-	})
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_GM,
+		"gmPluginInstalled": true,
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username("codex_auth_gm"),
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+	}
 	account_authenticated = true
 	_refresh_gm_visibility()
 	_open_qa_panel()
 	await get_tree().process_frame
 	var gm_plugin_unlocks := plugin_install_ok and _can_use_gm_tools() and qa_menu_button != null and qa_menu_button.visible and qa_panel != null and qa_panel.visible
 	var restricted_install_ok := AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"], ["gm_map"])
-	current_account_session = AccountAuthModel.session_for_account({
+	current_account_session = {
 		"username": "codex_auth_gm",
 		"displayName": "测试GM",
 		"role": AccountAuthModel.ROLE_GM,
-	})
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_GM,
+		"gmPluginInstalled": true,
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username("codex_auth_gm"),
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+	}
 	_close_backpack_panel()
 	_close_qa_panel(false)
 	_open_qa_panel()
@@ -14800,10 +14833,10 @@ func _run_auto_auth_check() -> void:
 	_restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
 	_restore_auth_check_account_store(original_store_exists, original_store_text)
 	_restore_auth_check_audit_log(original_audit_exists, original_audit_text)
-	var status := "ok" if player_registered and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
-	print("auth check ready: status=%s registered=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
+	var status := "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
+	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
 		status,
-		str(player_registered),
+		str(player_session_ok),
 		str(remember_ok),
 		str(player_is_not_gm),
 		str(player_hides_gm),
@@ -14850,8 +14883,8 @@ func _run_auto_auth_server_client_check() -> void:
 		"profileSummary": {
 			"playerId": "player_test",
 			"profileRevision": 3,
-			"storageMode": "local_shadow",
-			"serverAuthority": "account_binding",
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
 		},
 	}).to_utf8_buffer()
 	var profile_spec := ServerAuthClientModel.profile_request("http://127.0.0.1:8787/", "token_test")
@@ -14939,21 +14972,25 @@ func _run_auto_auth_server_client_check() -> void:
 	var ui_server_ok := (
 		auth_server_mode
 		and auth_source_option != null
-		and auth_source_option.selected == 1
+		and auth_source_option.get_item_count() == 1
+		and auth_source_option.selected == 0
+		and not auth_source_option.visible
 		and auth_server_url_input != null
 		and auth_server_url_input.visible
 	)
 	_set_auth_server_mode(false, false)
-	var ui_local_ok := (
-		not auth_server_mode
+	var ui_server_only_ok := (
+		auth_server_mode
 		and auth_source_option != null
+		and auth_source_option.get_item_count() == 1
 		and auth_source_option.selected == 0
+		and not auth_source_option.visible
 		and auth_server_url_input != null
-		and not auth_server_url_input.visible
+		and auth_server_url_input.visible
 	)
-	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_local_ok else "failed"
+	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s error=%s ui_server=%s ui_local=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -14964,7 +15001,60 @@ func _run_auto_auth_server_client_check() -> void:
 		str(conflict_ok),
 		str(error_ok),
 		str(ui_server_ok),
-		str(ui_local_ok),
+		str(ui_server_only_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_auth_server_live_check() -> void:
+	profile_save_enabled = false
+	var username := "live%d" % int(Time.get_ticks_usec() % 100000000000)
+	if auth_server_url_input != null:
+		auth_server_url_input.text = ServerAuthClientModel.DEFAULT_BASE_URL
+	if auth_username_input != null:
+		auth_username_input.text = username
+	if auth_password_input != null:
+		auth_password_input.text = "test1234"
+	if auth_display_name_input != null:
+		auth_display_name_input.text = "联网验证%s" % username.substr(maxi(0, username.length() - 4))
+	if auth_remember_check != null:
+		auth_remember_check.button_pressed = false
+	_set_auth_server_mode(true, false)
+	_set_auth_mode(true)
+	_on_auth_submit_pressed()
+	var frames := 0
+	while frames < 360 and (auth_request_pending or not account_authenticated):
+		frames += 1
+		await get_tree().process_frame
+	var auth_ok := (
+		account_authenticated
+		and str(current_account_session.get("username", "")) == username
+		and str(current_account_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
+		and str(current_account_session.get("serverSessionToken", "")).strip_edges() != ""
+	)
+	frames = 0
+	while frames < 420 and (server_profile_sync_state == "loading" or server_profile_sync_state == "uploading"):
+		frames += 1
+		await get_tree().process_frame
+	var sync_ok := server_profile_sync_state == "ready" and server_profile_sync_expected_revision >= 1
+	_open_account_panel()
+	await get_tree().process_frame
+	var account_panel_ok := (
+		account_info_label != null
+		and account_info_label.text.find(username) >= 0
+		and account_info_label.text.find("通道：服务器") >= 0
+		and account_info_label.text.find("本地") < 0
+	)
+	var status := "ok" if auth_ok and sync_ok and account_panel_ok else "failed"
+	print("auth server live check ready: status=%s username=%s auth=%s sync=%s account_panel=%s state=%s revision=%d message=%s" % [
+		status,
+		username,
+		str(auth_ok),
+		str(sync_ok),
+		str(account_panel_ok),
+		server_profile_sync_state,
+		server_profile_sync_expected_revision,
+		server_profile_sync_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -14987,8 +15077,8 @@ func _run_auto_server_profile_sync_check() -> void:
 		"serverProfileSummary": {
 			"playerId": "player_sync",
 			"profileRevision": 0,
-			"storageMode": "local_shadow",
-			"serverAuthority": "account_binding",
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
 		},
 	}
 	current_account_session = session
@@ -20573,8 +20663,8 @@ func _build_auth_panel() -> void:
 	auth_source_option = OptionButton.new()
 	auth_source_option.custom_minimum_size = Vector2(0, 40)
 	auth_source_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auth_source_option.add_item("本地", 0)
-	auth_source_option.add_item("服务器", 1)
+	auth_source_option.add_item("服务器", 0)
+	auth_source_option.visible = false
 	auth_source_option.item_selected.connect(_on_auth_source_selected)
 	outer.add_child(auth_source_option)
 
@@ -20660,7 +20750,7 @@ func _build_auth_panel() -> void:
 	auth_panel.add_child(profile_sync_http_request)
 
 	hud_root.add_child(auth_panel)
-	_set_auth_server_mode(false, false)
+	_set_auth_server_mode(true, false)
 	_set_auth_mode(false)
 	_prefill_auth_last_username()
 
@@ -20717,26 +20807,27 @@ func _set_auth_mode(register_mode: bool) -> void:
 	if auth_display_name_input != null:
 		auth_display_name_input.visible = auth_mode_register
 	if auth_submit_button != null:
-		auth_submit_button.text = "注册并进入" if auth_mode_register else "进入游戏"
+		auth_submit_button.text = "注册并连接" if auth_mode_register else "登录服务器"
 		auth_submit_button.disabled = auth_request_pending
 	if auth_message_label != null:
 		auth_message_label.text = ""
 
 
 func _set_auth_server_mode(server_mode: bool, update_layout: bool = true) -> void:
-	auth_server_mode = server_mode
+	auth_server_mode = true if AUTH_SERVER_ONLY else server_mode
 	if auth_source_option != null:
-		auth_source_option.select(1 if auth_server_mode else 0)
+		auth_source_option.select(0)
+		auth_source_option.visible = not AUTH_SERVER_ONLY
 	if auth_server_url_input != null:
-		auth_server_url_input.visible = auth_server_mode
+		auth_server_url_input.visible = true if AUTH_SERVER_ONLY else auth_server_mode
 	if auth_message_label != null:
 		auth_message_label.text = ""
 	if update_layout:
 		_layout_hud()
 
 
-func _on_auth_source_selected(index: int) -> void:
-	_set_auth_server_mode(index == 1)
+func _on_auth_source_selected(_index: int) -> void:
+	_set_auth_server_mode(true)
 
 
 func _prefill_auth_last_username() -> void:
@@ -20780,7 +20871,7 @@ func _on_auth_submit_pressed() -> void:
 		return
 	var username := auth_username_input.text
 	var password := auth_password_input.text
-	if auth_server_mode:
+	if AUTH_SERVER_ONLY or auth_server_mode:
 		_submit_server_auth_request(username, password)
 		return
 	var result := {}
@@ -20961,7 +21052,7 @@ func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
 	PlayerProgressModel.save_profile(player_profile)
 	server_profile_sync_state = "ready"
 	server_profile_sync_dirty = false
-	server_profile_sync_message = "服务器暂无档案，准备上传本地档案。"
+	server_profile_sync_message = "服务器暂无角色档案，正在创建服务器档案。"
 	_queue_server_profile_upload()
 
 
@@ -21109,18 +21200,18 @@ func _refresh_account_panel() -> void:
 		return
 	var display_name := str(current_account_session.get("displayName", "玩家")).strip_edges()
 	var username := str(current_account_session.get("username", "")).strip_edges()
-	var source := str(current_account_session.get("authSource", "local"))
-	var source_label := "服务器" if source == ServerAuthClientModel.SOURCE_SERVER else "本地"
+	var source := str(current_account_session.get("authSource", ServerAuthClientModel.SOURCE_SERVER))
+	var source_label := "服务器" if AUTH_SERVER_ONLY or source == ServerAuthClientModel.SOURCE_SERVER else "本地"
 	if display_name == "":
 		display_name = username if username != "" else "玩家"
-	var profile_line := "档案：本地"
-	if source == ServerAuthClientModel.SOURCE_SERVER:
+	var profile_line := "档案：等待服务器绑定"
+	if AUTH_SERVER_ONLY or source == ServerAuthClientModel.SOURCE_SERVER:
 		var summary := current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
 		var player_id := str(summary.get("playerId", "")).strip_edges()
 		var revision := int(summary.get("profileRevision", 0))
 		var sync_label := "同步中" if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading" else ("冲突" if server_profile_sync_state == "conflict" else "已连接")
 		profile_line = "档案：%s r%d %s" % [player_id if player_id != "" else "服务器绑定", revision, sync_label]
-	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存当前进度。" % [
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存并同步当前进度。" % [
 		display_name,
 		username if username != "" else "-",
 		source_label,

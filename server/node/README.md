@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing; MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. The Godot player entry now depends on this service for normal play; MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -9,7 +9,7 @@ cd server/node
 npm test
 ```
 
-## Start Local Prototype
+## Start Local Server
 
 ```sh
 cd server/node
@@ -66,4 +66,4 @@ This prototype keeps the same rule as the Godot contract: the client may hide GM
 }
 ```
 
-The server increments `profileRevision` on success and returns `409 revision_conflict` if the expected revision is stale. This is enough for prototype server-login testing, but it is still a JSON-store implementation rather than the final MySQL-backed MMO profile authority.
+The server increments `profileRevision` on success and returns `409 revision_conflict` if the expected revision is stale. This is enough for server-login and two-account local validation, but it is still a JSON-store implementation rather than the final MySQL-backed MMO profile authority.

@@ -5,3 +5,4 @@ client/godot/.godot/
 dist/
 node_modules/
 *.log
+server/node/.local/

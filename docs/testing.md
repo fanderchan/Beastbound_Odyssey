@@ -44,6 +44,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-panel-registry-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -175,8 +176,15 @@ Phase161 账号/档案同步自测：
 - 服务端：`cd server/node && npm test`
 - 客户端：
   - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check`
+  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check`
   - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-sync-check`
 - 性能：继续跑 `--movement-spam-click-check` 和 `--perf-probe`，确认保存同步没有进入移动/HUD热路径。
+
+Phase162 服务器-only / 多开前置自测：
+
+- 先启动服务端：`cd server/node && npm start`
+- 单客户端真实联网登录：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check`
+- 双客户端并发时，在两个终端同时运行上一条命令；两个进程应各自输出 `status=ok`，并创建不同服务器账号和档案 revision。
 
 ## 验收口径
 

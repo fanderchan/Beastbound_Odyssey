@@ -4,7 +4,7 @@ Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2
 
 ## 当前状态快照
 
-当前仓库已经进入工程治理和数值策划前置阶段：Godot 4.7 客户端具备完整地图、任务、背包、装备、商店、宠物、图鉴、自动战斗、自动捉宠、骑宠、人物转生、宠物转生、GM/QA 测试入口和数值表骨架。README 只保留快速入口和功能快照；架构边界见 [docs/architecture.md](docs/architecture.md)，测试与性能基线见 [docs/testing.md](docs/testing.md)。
+当前仓库已经进入工程治理和数值策划前置阶段：Godot 4.7 客户端具备完整地图、任务、背包、装备、商店、宠物、图鉴、自动战斗、自动捉宠、骑宠、人物转生、宠物转生、GM/QA 测试入口和数值表骨架。正常游玩入口已经切到本机 Node 账号/档案服务，玩家界面不再提供本地单机账号入口。README 只保留快速入口和功能快照；架构边界见 [docs/architecture.md](docs/architecture.md)，测试与性能基线见 [docs/testing.md](docs/testing.md)。
 
 功能快照：
 
@@ -121,9 +121,16 @@ Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2
 - 走到可互动目标附近后会打开对话。
 - 第一个本地任务旗标是 `和训练师阿土对话`。
 - HUD 会适配桌面和手机布局。
-- 暂时没有后端依赖。
+- 正常启动需要本机 Node 服务，默认地址为 `http://127.0.0.1:8787`。
 
 ## 运行
+
+先启动本机账号/档案服务：
+
+```sh
+cd server/node
+npm start
+```
 
 完整版功能测试入口：
 
@@ -131,7 +138,7 @@ Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2
 godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-preview
 ```
 
-`--full-client-preview` 不会打开局部测试场景，也不会隐藏已有系统；它等价于进入当前完整客户端，只是让测试链接语义更明确。以后做整体验收优先用这个入口。
+`--full-client-preview` 不会打开局部测试场景，也不会隐藏已有系统；它等价于进入当前完整客户端，只是让测试链接语义更明确。以后做整体验收优先用这个入口，并保持 Node 服务运行。
 
 GM 10v10 完整客户端测试地图：
 
@@ -141,7 +148,7 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-previe
 
 这个入口仍然是完整客户端，只是出生在 `GM练级测试场`。该地图草丛遇敌率为 100%，每场固定 10 只野生宠物；我方人数用动作栏 `伙伴` 自己加满。
 
-不带测试参数的正常启动也可以：
+不带测试参数的正常启动也可以，同样会要求服务器账号登录：
 
 ```sh
 godot --path client/godot --scene res://scenes/Main.tscn
