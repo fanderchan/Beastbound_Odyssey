@@ -27,6 +27,10 @@ const STONE_PLAN_HP_ONLY := "hp_only"
 const STONE_PLAN_EMPTY := "empty"
 
 
+static func output_dir_path() -> String:
+	return ProjectSettings.globalize_path(OUTPUT_DIR).simplify_path()
+
+
 static func pet_growth_profile_options() -> Array[Dictionary]:
 	BalanceCatalogModel.reload()
 	var result: Array[Dictionary] = []
@@ -159,18 +163,7 @@ static func build_mm_rebirth_report(profile_id: String, sample_count: int = DEFA
 		var write_result := _write_csv(
 			rows,
 			"%s/numeric_workbench_mm_rebirth_%s_stage%d_%s_%d.csv" % [OUTPUT_DIR, profile_id, safe_stage, str(stone_plan.get("id", "")), safe_samples],
-			[
-				"profileId", "sampleNo", "stage", "stonePlanId", "stonePlanLabel", "effectiveStoneCount",
-				"rebirthGrade", "rebirthPercentile", "rebirthInternalPowerBonus",
-				"targetLv1MaxHp", "targetLv1Attack", "targetLv1Defense", "targetLv1Quick", "targetLv1Power",
-				"targetLv140MaxHp", "targetLv140Attack", "targetLv140Defense", "targetLv140Quick", "targetLv140Power",
-				"helperLv79MaxHp", "helperLv79Attack", "helperLv79Defense", "helperLv79Quick",
-				"helperHpWeight", "helperAttackWeight", "helperDefenseWeight", "helperQuickWeight",
-				"hpGrowthBonus", "attackGrowthBonus", "defenseGrowthBonus", "quickGrowthBonus",
-				"afterLv1MaxHp", "afterLv1Attack", "afterLv1Defense", "afterLv1Quick", "afterLv1Power",
-				"afterLv140MaxHp", "afterLv140Attack", "afterLv140Defense", "afterLv140Quick", "afterTargetPower",
-				"afterHpGrowthPerLevel", "afterAttackGrowthPerLevel", "afterDefenseGrowthPerLevel", "afterQuickGrowthPerLevel", "afterPowerGrowthPerLevel",
-			]
+			_mm_rebirth_csv_headers()
 		)
 		csv_path = str(write_result.get("path", ""))
 		csv_error = str(write_result.get("error", ""))
@@ -198,6 +191,80 @@ static func build_mm_rebirth_report(profile_id: String, sample_count: int = DEFA
 		"title": "MM转宠模拟",
 		"lines": lines,
 		"summary": summary,
+		"rows": rows,
+		"csvPath": csv_path,
+		"error": csv_error,
+	}
+
+
+static func build_mm_stone_comparison_report(profile_id: String, sample_count: int = DEFAULT_SAMPLE_COUNT, stage: int = PetRebirthMmModel.STAGE_ONE, write_csv_file: bool = true) -> Dictionary:
+	BalanceCatalogModel.reload()
+	var target_profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
+	if target_profile.is_empty():
+		return _error_report("MM转宠方案对比", "找不到目标成长档：%s" % profile_id)
+	var safe_stage := clampi(stage, PetRebirthMmModel.STAGE_ONE, PetRebirthMmModel.STAGE_TWO)
+	var helper_profile_id := "pet_rebirth_mm_stage%d_v1" % safe_stage
+	var helper_profile := BalanceCatalogModel.pet_growth_species_profile(helper_profile_id)
+	if helper_profile.is_empty():
+		return _error_report("MM转宠方案对比", "找不到MM成长档：%s" % helper_profile_id)
+	var safe_samples := clampi(sample_count, 1, 1000)
+	var rows: Array[Dictionary] = []
+	var plan_summaries: Array[Dictionary] = []
+	var plan_index := 0
+	for stone_plan in stone_plan_options():
+		plan_index += 1
+		var plan_rows: Array[Dictionary] = []
+		for index in range(safe_samples):
+			var sample_no := index + 1
+			var row := _mm_rebirth_sample_row(target_profile, helper_profile, safe_stage, stone_plan, sample_no)
+			row["comparisonPlanOrder"] = plan_index
+			plan_rows.append(row)
+			rows.append(row)
+		plan_summaries.append(_mm_stone_plan_summary(stone_plan, plan_rows))
+	var csv_path := ""
+	var csv_error := ""
+	if write_csv_file:
+		var headers: Array[String] = ["comparisonPlanOrder"]
+		headers.append_array(_mm_rebirth_csv_headers())
+		var write_result := _write_csv(
+			rows,
+			"%s/numeric_workbench_mm_stone_compare_%s_stage%d_%d.csv" % [OUTPUT_DIR, profile_id, safe_stage, safe_samples],
+			headers
+		)
+		csv_path = str(write_result.get("path", ""))
+		csv_error = str(write_result.get("error", ""))
+	var lines: Array[String] = []
+	lines.append("MM转宠方案对比：%s，%s，每方案%d组" % [
+		str(target_profile.get("displayName", profile_id)),
+		PetRebirthMmModel.helper_name_for_stage(safe_stage),
+		safe_samples,
+	])
+	lines.append("CSV：%s" % (csv_path if csv_path != "" else "未导出"))
+	lines.append("方案 | 四维等效/级 | Lv140战力 | 成长均值(血/攻/防/敏)")
+	for summary in plan_summaries:
+		lines.append("%s：%s；战力 %s；均 %.3f / %.3f / %.3f / %.3f" % [
+			str(summary.get("label", "")),
+			_range_text(summary.get("internalPowerBonus", {}), 3),
+			_range_text(summary.get("afterTargetPower", {}), 1),
+			float((summary.get("afterHpGrowthPerLevel", {}) as Dictionary).get("avg", 0.0)),
+			float((summary.get("afterAttackGrowthPerLevel", {}) as Dictionary).get("avg", 0.0)),
+			float((summary.get("afterDefenseGrowthPerLevel", {}) as Dictionary).get("avg", 0.0)),
+			float((summary.get("afterQuickGrowthPerLevel", {}) as Dictionary).get("avg", 0.0)),
+		])
+	if csv_error != "":
+		lines.append("CSV错误：%s" % csv_error)
+	return {
+		"ok": csv_error == "",
+		"mode": "mm_stone_comparison",
+		"title": "MM转宠方案对比",
+		"lines": lines,
+		"summary": {
+			"profileId": profile_id,
+			"displayName": str(target_profile.get("displayName", profile_id)),
+			"sampleCount": safe_samples,
+			"stage": safe_stage,
+			"planSummaries": plan_summaries,
+		},
 		"rows": rows,
 		"csvPath": csv_path,
 		"error": csv_error,
@@ -523,6 +590,38 @@ static func _range_text(summary_value, decimals: int = 2) -> String:
 		float(summary.get("max", 0.0)),
 		float(summary.get("avg", 0.0)),
 	]
+
+
+static func _mm_rebirth_csv_headers() -> Array[String]:
+	return [
+		"profileId", "sampleNo", "stage", "stonePlanId", "stonePlanLabel", "effectiveStoneCount",
+		"rebirthGrade", "rebirthPercentile", "rebirthInternalPowerBonus",
+		"targetLv1MaxHp", "targetLv1Attack", "targetLv1Defense", "targetLv1Quick", "targetLv1Power",
+		"targetLv140MaxHp", "targetLv140Attack", "targetLv140Defense", "targetLv140Quick", "targetLv140Power",
+		"helperLv79MaxHp", "helperLv79Attack", "helperLv79Defense", "helperLv79Quick",
+		"helperHpWeight", "helperAttackWeight", "helperDefenseWeight", "helperQuickWeight",
+		"hpGrowthBonus", "attackGrowthBonus", "defenseGrowthBonus", "quickGrowthBonus",
+		"afterLv1MaxHp", "afterLv1Attack", "afterLv1Defense", "afterLv1Quick", "afterLv1Power",
+		"afterLv140MaxHp", "afterLv140Attack", "afterLv140Defense", "afterLv140Quick", "afterTargetPower",
+		"afterHpGrowthPerLevel", "afterAttackGrowthPerLevel", "afterDefenseGrowthPerLevel", "afterQuickGrowthPerLevel", "afterPowerGrowthPerLevel",
+	]
+
+
+static func _mm_stone_plan_summary(stone_plan: Dictionary, rows: Array[Dictionary]) -> Dictionary:
+	return {
+		"id": str(stone_plan.get("id", "")),
+		"label": str(stone_plan.get("label", "")),
+		"sampleCount": rows.size(),
+		"effectiveStoneCount": _number_summary(rows, "effectiveStoneCount"),
+		"rebirthGradeCounts": _counts_for_key(rows, "rebirthGrade"),
+		"internalPowerBonus": _number_summary(rows, "rebirthInternalPowerBonus"),
+		"afterTargetPower": _number_summary(rows, "afterTargetPower"),
+		"afterHpGrowthPerLevel": _number_summary(rows, "afterHpGrowthPerLevel"),
+		"afterAttackGrowthPerLevel": _number_summary(rows, "afterAttackGrowthPerLevel"),
+		"afterDefenseGrowthPerLevel": _number_summary(rows, "afterDefenseGrowthPerLevel"),
+		"afterQuickGrowthPerLevel": _number_summary(rows, "afterQuickGrowthPerLevel"),
+		"afterPowerGrowthPerLevel": _number_summary(rows, "afterPowerGrowthPerLevel"),
+	}
 
 
 static func _write_csv(rows: Array[Dictionary], output_path: String, headers: Array[String]) -> Dictionary:

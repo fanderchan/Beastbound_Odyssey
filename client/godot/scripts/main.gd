@@ -447,7 +447,9 @@ var numeric_workbench_stage_option: OptionButton
 var numeric_workbench_stone_option: OptionButton
 var numeric_workbench_growth_button: Button
 var numeric_workbench_mm_button: Button
+var numeric_workbench_compare_button: Button
 var numeric_workbench_battle_button: Button
+var numeric_workbench_output_button: Button
 var numeric_workbench_close_button: Button
 var numeric_workbench_result_label: RichTextLabel
 var numeric_workbench_profile_id: String = ""
@@ -4790,17 +4792,22 @@ func _run_auto_numeric_workbench_check() -> void:
 	await get_tree().process_frame
 	var mm_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
 	var mm_ok := mm_text.find("MM转宠模拟") >= 0 and mm_text.find("四维等效加成/级") >= 0 and mm_text.find("转后Lv140战力") >= 0
+	_on_numeric_workbench_compare_pressed()
+	await get_tree().process_frame
+	var compare_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
+	var compare_ok := compare_text.find("MM转宠方案对比") >= 0 and compare_text.find("方案 | 四维等效/级") >= 0 and compare_text.find("最近输出") >= 0
 	_on_numeric_workbench_battle_pressed()
 	await get_tree().process_frame
 	var battle_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
 	var battle_ok := battle_text.find("固定战斗模拟") >= 0 and battle_text.find("平均回合") >= 0
-	var status := "ok" if loaded and panel_ok and growth_ok and mm_ok and battle_ok else "failed"
-	print("numeric workbench check ready: status=%s loaded=%s panel=%s growth=%s mm=%s battle=%s profile_count=%d stone_count=%d result=%s" % [
+	var status := "ok" if loaded and panel_ok and growth_ok and mm_ok and compare_ok and battle_ok else "failed"
+	print("numeric workbench check ready: status=%s loaded=%s panel=%s growth=%s mm=%s compare=%s battle=%s profile_count=%d stone_count=%d result=%s" % [
 		status,
 		str(loaded),
 		str(panel_ok),
 		str(growth_ok),
 		str(mm_ok),
+		str(compare_ok),
 		str(battle_ok),
 		numeric_workbench_profile_option.get_item_count() if numeric_workbench_profile_option != null else 0,
 		numeric_workbench_stone_option.get_item_count() if numeric_workbench_stone_option != null else 0,
@@ -14668,6 +14675,13 @@ func _run_auto_qa_panel_check() -> void:
 		and numeric_workbench_result_label.text.find("MM转宠模拟") >= 0
 		and numeric_workbench_result_label.text.find("四维等效") >= 0
 	)
+	_on_numeric_workbench_compare_pressed()
+	await get_tree().process_frame
+	var numeric_compare_ok := (
+		numeric_workbench_result_label != null
+		and numeric_workbench_result_label.text.find("MM转宠方案对比") >= 0
+		and numeric_workbench_result_label.text.find("最近输出") >= 0
+	)
 	_on_numeric_workbench_battle_pressed()
 	await get_tree().process_frame
 	var numeric_battle_ok := (
@@ -14785,8 +14799,8 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
@@ -14805,6 +14819,7 @@ func _run_auto_qa_panel_check() -> void:
 		str(numeric_open_ok),
 		str(numeric_growth_ok),
 		str(numeric_mm_ok),
+		str(numeric_compare_ok),
 		str(numeric_battle_ok),
 		str(auto_capture_ok),
 		str(stable_ok),
@@ -19650,12 +19665,24 @@ func _build_hud() -> void:
 	numeric_workbench_mm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	numeric_workbench_mm_button.pressed.connect(_on_numeric_workbench_mm_pressed)
 	numeric_button_row.add_child(numeric_workbench_mm_button)
+	numeric_workbench_compare_button = Button.new()
+	numeric_workbench_compare_button.text = "方案对比"
+	numeric_workbench_compare_button.custom_minimum_size = Vector2(0, 44)
+	numeric_workbench_compare_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_compare_button.pressed.connect(_on_numeric_workbench_compare_pressed)
+	numeric_button_row.add_child(numeric_workbench_compare_button)
 	numeric_workbench_battle_button = Button.new()
 	numeric_workbench_battle_button.text = "战斗模拟"
 	numeric_workbench_battle_button.custom_minimum_size = Vector2(0, 44)
 	numeric_workbench_battle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	numeric_workbench_battle_button.pressed.connect(_on_numeric_workbench_battle_pressed)
 	numeric_button_row.add_child(numeric_workbench_battle_button)
+	numeric_workbench_output_button = Button.new()
+	numeric_workbench_output_button.text = "输出目录"
+	numeric_workbench_output_button.custom_minimum_size = Vector2(0, 44)
+	numeric_workbench_output_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_output_button.pressed.connect(_on_numeric_workbench_output_pressed)
+	numeric_button_row.add_child(numeric_workbench_output_button)
 
 	var numeric_result_scroll := ScrollContainer.new()
 	numeric_result_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -24595,9 +24622,30 @@ func _on_numeric_workbench_mm_pressed() -> void:
 	_set_numeric_workbench_result(result)
 
 
+func _on_numeric_workbench_compare_pressed() -> void:
+	var result := NumericWorkbenchModel.build_mm_stone_comparison_report(
+		_numeric_workbench_profile_id(),
+		_numeric_workbench_sample_count(),
+		_numeric_workbench_stage(),
+		true
+	)
+	_set_numeric_workbench_result(result)
+
+
 func _on_numeric_workbench_battle_pressed() -> void:
 	var result := NumericWorkbenchModel.build_battle_report(true)
 	_set_numeric_workbench_result(result)
+
+
+func _on_numeric_workbench_output_pressed() -> void:
+	var output_dir := NumericWorkbenchModel.output_dir_path()
+	if not DirAccess.dir_exists_absolute(output_dir):
+		DirAccess.make_dir_recursive_absolute(output_dir)
+	var open_error := OS.shell_open(output_dir)
+	if open_error == OK:
+		_set_world_log_message("已打开数值实验输出目录。")
+	else:
+		_set_world_log_message("无法打开输出目录：%s。" % output_dir)
 
 
 func _set_numeric_workbench_result(result: Dictionary) -> void:
@@ -24606,6 +24654,10 @@ func _set_numeric_workbench_result(result: Dictionary) -> void:
 	text_lines.append("[color=#d7c36a]%s[/color]" % str(result.get("title", "数值实验")))
 	for line in lines:
 		text_lines.append(str(line))
+	var output_path := str(result.get("csvPath", result.get("jsonPath", "")))
+	if output_path != "":
+		text_lines.append("")
+		text_lines.append("[color=#9fd7a0]最近输出[/color] %s" % output_path)
 	if numeric_workbench_result_label != null:
 		numeric_workbench_result_label.text = "\n".join(text_lines)
 	var ok := bool(result.get("ok", false))
