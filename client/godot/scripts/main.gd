@@ -23,6 +23,7 @@ const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_fo
 const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
+const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -48,6 +49,7 @@ const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_mode
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
@@ -14626,6 +14628,8 @@ func _run_auto_auth_check() -> void:
 	var original_store_text := FileAccess.get_file_as_string(AccountAuthModel.ACCOUNT_STORE_PATH) if original_store_exists else ""
 	var original_plugin_exists := FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH)
 	var original_plugin_text := FileAccess.get_file_as_string(AccountAuthModel.GM_PLUGIN_PATH) if original_plugin_exists else ""
+	var original_audit_exists := FileAccess.file_exists(GmToolRuntimeModel.AUDIT_PATH)
+	var original_audit_text := FileAccess.get_file_as_string(GmToolRuntimeModel.AUDIT_PATH) if original_audit_exists else ""
 	var username := "auth%d" % int(Time.get_ticks_msec() % 1000000)
 	auth_username_input.text = username
 	auth_password_input.text = "test1234"
@@ -14673,10 +14677,32 @@ func _run_auto_auth_check() -> void:
 	_open_qa_panel()
 	await get_tree().process_frame
 	var gm_plugin_unlocks := plugin_install_ok and _can_use_gm_tools() and qa_menu_button != null and qa_menu_button.visible and qa_panel != null and qa_panel.visible
+	var restricted_install_ok := AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"], ["gm_map"])
+	current_account_session = AccountAuthModel.session_for_account({
+		"username": "codex_auth_gm",
+		"displayName": "测试GM",
+		"role": AccountAuthModel.ROLE_GM,
+	})
+	_close_backpack_panel()
+	_close_qa_panel(false)
+	_open_qa_panel()
+	world_log_message = ""
+	_on_qa_entry_pressed("open_backpack")
+	await get_tree().process_frame
+	var restricted_denies_command := (
+		restricted_install_ok
+		and backpack_panel != null
+		and not backpack_panel.visible
+		and world_log_message.find("未授权该命令") >= 0
+	)
+	_on_qa_entry_pressed("gm_map")
+	await get_tree().process_frame
+	var restricted_allows_command := current_map_id == GM_10V10_MAP_ID
 	_restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
 	_restore_auth_check_account_store(original_store_exists, original_store_text)
-	var status := "ok" if player_registered and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks else "fail"
-	print("auth check ready: status=%s registered=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s" % [
+	_restore_auth_check_audit_log(original_audit_exists, original_audit_text)
+	var status := "ok" if player_registered and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
+	print("auth check ready: status=%s registered=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
 		status,
 		str(player_registered),
 		str(remember_ok),
@@ -14687,6 +14713,8 @@ func _run_auto_auth_check() -> void:
 		str(account_panel_opens),
 		str(switch_to_login_ok),
 		str(gm_plugin_unlocks),
+		str(restricted_denies_command),
+		str(restricted_allows_command),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -14715,6 +14743,21 @@ func _restore_auth_check_plugin(existed: bool, text: String) -> void:
 			file.close()
 	else:
 		if FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH):
+			DirAccess.remove_absolute(absolute_path)
+
+
+func _restore_auth_check_audit_log(existed: bool, text: String) -> void:
+	var absolute_path := ProjectSettings.globalize_path(GmToolRuntimeModel.AUDIT_PATH)
+	if existed:
+		var dir_path := GmToolRuntimeModel.AUDIT_PATH.get_base_dir()
+		if dir_path != "":
+			DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+		var file := FileAccess.open(GmToolRuntimeModel.AUDIT_PATH, FileAccess.WRITE)
+		if file != null:
+			file.store_string(text)
+			file.close()
+	else:
+		if FileAccess.file_exists(GmToolRuntimeModel.AUDIT_PATH):
 			DirAccess.remove_absolute(absolute_path)
 
 
@@ -20374,7 +20417,7 @@ func _apply_auth_profile_metadata(display_name: String) -> void:
 
 
 func _can_use_gm_tools() -> bool:
-	return auth_auto_bypass or AccountAuthModel.session_can_use_gm(current_account_session)
+	return auth_auto_bypass or GmToolRuntimeModel.session_can_open_tools(current_account_session)
 
 
 func _refresh_gm_visibility() -> void:
@@ -25223,9 +25266,27 @@ func _qa_command_summary_text() -> String:
 	return QaPanelCatalog.command_summary_text()
 
 
+func _gm_allowed_command_ids() -> Array[String]:
+	var command_ids := GmToolRuntimeModel.command_ids_from_entries(_qa_entry_definitions())
+	for command_id in GM_TOOL_EXTRA_COMMAND_IDS:
+		if not command_ids.has(command_id):
+			command_ids.append(command_id)
+	return command_ids
+
+
+func _authorize_gm_command(command_id: String) -> bool:
+	if auth_auto_bypass:
+		return true
+	var result := GmToolRuntimeModel.authorize_command(current_account_session, command_id, _gm_allowed_command_ids())
+	var ok := bool(result.get("ok", false))
+	if not ok:
+		_set_world_log_message(str(result.get("message", "当前账号没有GM权限。")))
+	GmToolRuntimeModel.audit_command(current_account_session, command_id, ok, str(result.get("message", "")))
+	return ok
+
+
 func _on_qa_entry_pressed(entry_id: String) -> void:
-	if not _can_use_gm_tools():
-		_set_world_log_message("当前账号没有GM权限。")
+	if not _authorize_gm_command(entry_id):
 		return
 	match entry_id:
 		"gm_map":
@@ -25280,6 +25341,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 
 
 func _on_qa_pet_grant_pressed() -> void:
+	if not _authorize_gm_command("gm_grant_pet"):
+		return
 	var profile_id := qa_pet_growth_profile_id
 	if profile_id == "" and qa_pet_species_option != null and qa_pet_species_option.get_item_count() > 0:
 		profile_id = str(qa_pet_species_option.get_item_metadata(qa_pet_species_option.selected))
@@ -25297,6 +25360,8 @@ func _on_qa_pet_grant_pressed() -> void:
 
 
 func _on_qa_pet_level_up_pressed() -> void:
+	if not _authorize_gm_command("gm_level_pet"):
+		return
 	if qa_pet_level_instance_id == "":
 		_set_world_log_message("请选择要升级的宠物。")
 		return

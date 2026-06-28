@@ -180,8 +180,8 @@ static func ensure_local_gm_account(username: String, password: String, display_
 	return session_for_account(account)
 
 
-static func install_local_gm_plugin(usernames: Array[String]) -> bool:
-	return GmToolPluginModel.install_local_plugin(usernames)
+static func install_local_gm_plugin(usernames: Array[String], command_ids: Array[String] = []) -> bool:
+	return GmToolPluginModel.install_local_plugin(usernames, command_ids)
 
 
 static func _empty_store() -> Dictionary:
