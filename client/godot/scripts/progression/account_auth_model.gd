@@ -46,6 +46,7 @@ static func load_store() -> Dictionary:
 	if not (store.get("accounts", {}) is Dictionary):
 		store["accounts"] = {}
 	store["schemaVersion"] = int(store.get("schemaVersion", 1))
+	store["lastUsername"] = normalized_username(str(store.get("lastUsername", "")))
 	return store
 
 
@@ -101,6 +102,17 @@ static func login(username: String, password: String) -> Dictionary:
 		"message": "登录成功。",
 		"session": session_for_account(account),
 	}
+
+
+static func last_username() -> String:
+	return normalized_username(str(load_store().get("lastUsername", "")))
+
+
+static func set_last_username(username: String) -> bool:
+	var store := load_store()
+	var normalized := normalized_username(username)
+	store["lastUsername"] = normalized if is_valid_username(normalized) else ""
+	return save_store(store)
 
 
 static func session_for_account(account: Dictionary) -> Dictionary:
@@ -176,6 +188,7 @@ static func _empty_store() -> Dictionary:
 	return {
 		"schemaVersion": 1,
 		"accounts": {},
+		"lastUsername": "",
 	}
 
 

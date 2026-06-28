@@ -239,6 +239,7 @@ var chat_menu_button: Button
 var mailbox_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
+var account_menu_button: Button
 var qa_menu_button: Button
 var auth_panel: PanelContainer
 var auth_title_label: Label
@@ -246,9 +247,14 @@ var auth_message_label: Label
 var auth_username_input: LineEdit
 var auth_password_input: LineEdit
 var auth_display_name_input: LineEdit
+var auth_remember_check: CheckBox
 var auth_login_tab_button: Button
 var auth_register_tab_button: Button
 var auth_submit_button: Button
+var account_panel: PanelContainer
+var account_info_label: Label
+var account_switch_button: Button
+var account_close_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: RichTextLabel
@@ -569,6 +575,7 @@ var auto_map_panel_check: bool = false
 var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
+var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
@@ -860,6 +867,8 @@ func _ready() -> void:
 	set_process(true)
 	if auto_auth_check:
 		call_deferred("_run_auto_auth_check")
+	elif auth_ux_preview:
+		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
 		call_deferred("_run_auto_encounter_check")
 	elif auto_battle_action_catalog_check:
@@ -1561,6 +1570,9 @@ func _apply_preview_window_args() -> void:
 			auto_qa_panel_check = true
 		elif arg == "--auto-auth-check":
 			auto_auth_check = true
+			auth_auto_bypass = false
+		elif arg == "--auth-ux-preview":
+			auth_ux_preview = true
 			auth_auto_bypass = false
 		elif arg == "--auto-panel-registry-check":
 			auto_panel_registry_check = true
@@ -14590,23 +14602,66 @@ func _run_auto_panel_registry_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auth_ux_preview() -> void:
+	profile_save_enabled = false
+	account_authenticated = true
+	current_account_session = {
+		"username": "preview_player",
+		"displayName": "预览猎人",
+		"role": AccountAuthModel.ROLE_PLAYER,
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+		"gmPluginInstalled": false,
+		"profileSavePath": "",
+	}
+	player_profile = PlayerProgressModel.default_profile()
+	_apply_auth_profile_metadata("预览猎人")
+	_close_auth_panel(false)
+	_refresh_gm_visibility()
+	_open_account_panel()
+
+
 func _run_auto_auth_check() -> void:
 	profile_save_enabled = false
+	var original_store_exists := FileAccess.file_exists(AccountAuthModel.ACCOUNT_STORE_PATH)
+	var original_store_text := FileAccess.get_file_as_string(AccountAuthModel.ACCOUNT_STORE_PATH) if original_store_exists else ""
 	var original_plugin_exists := FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH)
 	var original_plugin_text := FileAccess.get_file_as_string(AccountAuthModel.GM_PLUGIN_PATH) if original_plugin_exists else ""
 	var username := "auth%d" % int(Time.get_ticks_msec() % 1000000)
 	auth_username_input.text = username
 	auth_password_input.text = "test1234"
 	auth_display_name_input.text = "测试玩家"
+	if auth_remember_check != null:
+		auth_remember_check.button_pressed = true
 	_set_auth_mode(true)
 	_on_auth_submit_pressed()
 	await get_tree().process_frame
 	var player_registered := account_authenticated and str(current_account_session.get("username", "")) == username
+	var remember_ok := AccountAuthModel.last_username() == username
 	var player_is_not_gm := not _can_use_gm_tools()
 	var player_hides_gm := qa_menu_button != null and not qa_menu_button.visible
+	var account_button_visible := account_menu_button != null and account_menu_button.visible
 	_open_qa_panel()
 	await get_tree().process_frame
 	var player_blocks_qa := qa_panel == null or not qa_panel.visible
+	_open_account_panel()
+	await get_tree().process_frame
+	var account_panel_opens := (
+		account_panel != null
+		and account_panel.visible
+		and account_info_label != null
+		and account_info_label.text.find(username) >= 0
+	)
+	_switch_account_to_login()
+	await get_tree().process_frame
+	var switch_to_login_ok := (
+		not account_authenticated
+		and auth_panel != null
+		and auth_panel.visible
+		and account_menu_button != null
+		and not account_menu_button.visible
+		and qa_menu_button != null
+		and not qa_menu_button.visible
+	)
 	var plugin_install_ok := AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
 	current_account_session = AccountAuthModel.session_for_account({
 		"username": "codex_auth_gm",
@@ -14619,16 +14674,36 @@ func _run_auto_auth_check() -> void:
 	await get_tree().process_frame
 	var gm_plugin_unlocks := plugin_install_ok and _can_use_gm_tools() and qa_menu_button != null and qa_menu_button.visible and qa_panel != null and qa_panel.visible
 	_restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
-	var status := "ok" if player_registered and player_is_not_gm and player_hides_gm and player_blocks_qa and gm_plugin_unlocks else "fail"
-	print("auth check ready: status=%s registered=%s player_no_gm=%s hidden=%s qa_blocked=%s gm_unlocked=%s" % [
+	_restore_auth_check_account_store(original_store_exists, original_store_text)
+	var status := "ok" if player_registered and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks else "fail"
+	print("auth check ready: status=%s registered=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s" % [
 		status,
 		str(player_registered),
+		str(remember_ok),
 		str(player_is_not_gm),
 		str(player_hides_gm),
+		str(account_button_visible),
 		str(player_blocks_qa),
+		str(account_panel_opens),
+		str(switch_to_login_ok),
 		str(gm_plugin_unlocks),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _restore_auth_check_account_store(existed: bool, text: String) -> void:
+	var absolute_path := ProjectSettings.globalize_path(AccountAuthModel.ACCOUNT_STORE_PATH)
+	if existed:
+		var dir_path := AccountAuthModel.ACCOUNT_STORE_PATH.get_base_dir()
+		if dir_path != "":
+			DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+		var file := FileAccess.open(AccountAuthModel.ACCOUNT_STORE_PATH, FileAccess.WRITE)
+		if file != null:
+			file.store_string(text)
+			file.close()
+	else:
+		if FileAccess.file_exists(AccountAuthModel.ACCOUNT_STORE_PATH):
+			DirAccess.remove_absolute(absolute_path)
 
 
 func _restore_auth_check_plugin(existed: bool, text: String) -> void:
@@ -18439,6 +18514,11 @@ func _build_hud() -> void:
 	auto_settings_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	auto_settings_menu_button.pressed.connect(_open_auto_settings_panel)
 	action_row.add_child(auto_settings_menu_button)
+	account_menu_button = Button.new()
+	account_menu_button.text = "账号"
+	account_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	account_menu_button.pressed.connect(_open_account_panel)
+	action_row.add_child(account_menu_button)
 	qa_menu_button = Button.new()
 	qa_menu_button.text = "GM"
 	qa_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -18446,6 +18526,7 @@ func _build_hud() -> void:
 	action_row.add_child(qa_menu_button)
 	hud_root.add_child(action_bar)
 	_build_auth_panel()
+	_build_account_panel()
 
 	player_status_panel = _panel_container("PlayerStatusPanel")
 	player_status_panel.visible = false
@@ -20111,6 +20192,12 @@ func _build_auth_panel() -> void:
 	auth_display_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_child(auth_display_name_input)
 
+	auth_remember_check = CheckBox.new()
+	auth_remember_check.text = "记住账号"
+	auth_remember_check.button_pressed = true
+	auth_remember_check.custom_minimum_size = Vector2(0, 32)
+	outer.add_child(auth_remember_check)
+
 	auth_message_label = Label.new()
 	auth_message_label.text = ""
 	auth_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -20128,6 +20215,50 @@ func _build_auth_panel() -> void:
 
 	hud_root.add_child(auth_panel)
 	_set_auth_mode(false)
+	_prefill_auth_last_username()
+
+
+func _build_account_panel() -> void:
+	account_panel = _panel_container("AccountPanel")
+	account_panel.visible = false
+	account_panel.z_index = 82
+	account_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var outer := VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_theme_constant_override("separation", 12)
+	account_panel.add_child(outer)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(header)
+	var title := Label.new()
+	title.text = "账号"
+	title.add_theme_font_size_override("font_size", 24)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	account_close_button = Button.new()
+	account_close_button.text = "关闭"
+	account_close_button.custom_minimum_size = Vector2(96, 44)
+	account_close_button.pressed.connect(_close_account_panel)
+	header.add_child(account_close_button)
+
+	account_info_label = Label.new()
+	account_info_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	account_info_label.clip_text = true
+	account_info_label.add_theme_font_size_override("font_size", 17)
+	account_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	account_info_label.custom_minimum_size = Vector2(0, 70)
+	outer.add_child(account_info_label)
+
+	account_switch_button = Button.new()
+	account_switch_button.text = "切换账号"
+	account_switch_button.custom_minimum_size = Vector2(0, 48)
+	account_switch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	account_switch_button.pressed.connect(_switch_account_to_login)
+	outer.add_child(account_switch_button)
+	hud_root.add_child(account_panel)
 
 
 func _set_auth_mode(register_mode: bool) -> void:
@@ -20144,10 +20275,22 @@ func _set_auth_mode(register_mode: bool) -> void:
 		auth_message_label.text = ""
 
 
+func _prefill_auth_last_username() -> void:
+	if auth_username_input == null:
+		return
+	var last_username := AccountAuthModel.last_username()
+	if auth_username_input.text.strip_edges() == "":
+		auth_username_input.text = last_username
+	if auth_remember_check != null:
+		auth_remember_check.button_pressed = last_username != ""
+
+
 func _open_auth_panel(update_layout: bool = true) -> void:
 	if auth_panel == null:
 		return
+	_close_account_panel(false)
 	auth_panel.visible = true
+	_prefill_auth_last_username()
 	if auth_username_input != null:
 		auth_username_input.grab_focus()
 	if update_layout:
@@ -20156,6 +20299,14 @@ func _open_auth_panel(update_layout: bool = true) -> void:
 
 func _close_auth_panel(update_layout: bool = true) -> void:
 	_hide_control(auth_panel, update_layout)
+
+
+func _remember_auth_session(session: Dictionary) -> void:
+	var remember := auth_remember_check == null or auth_remember_check.button_pressed
+	if remember:
+		AccountAuthModel.set_last_username(str(session.get("username", "")))
+	else:
+		AccountAuthModel.set_last_username("")
 
 
 func _on_auth_submit_pressed() -> void:
@@ -20174,7 +20325,9 @@ func _on_auth_submit_pressed() -> void:
 			auth_message_label.text = str(result.get("message", "登录失败。"))
 		return
 	var migrate_legacy := auth_mode_register and bool(result.get("firstAccount", false))
-	_apply_authenticated_session(result.get("session", {}), migrate_legacy)
+	var session := result.get("session", {}) as Dictionary
+	_remember_auth_session(session)
+	_apply_authenticated_session(session, migrate_legacy)
 	if auth_message_label != null:
 		auth_message_label.text = str(result.get("message", "已进入游戏。"))
 
@@ -20185,14 +20338,20 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	current_account_session = session
 	account_authenticated = true
 	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
+	var migrated := false
 	if migrate_legacy:
-		PlayerProgressModel.copy_legacy_save_to_active_if_missing()
+		migrated = PlayerProgressModel.copy_legacy_save_to_active_if_missing()
 	player_profile = PlayerProgressModel.load_profile()
 	_apply_auth_profile_metadata(str(session.get("displayName", "")))
 	_close_auth_panel(false)
+	_close_account_panel(false)
 	_refresh_gm_visibility()
 	_save_profile_after_exp_pill_starter_update()
 	_show_exp_pill_starter_notice_if_needed()
+	if migrated:
+		_set_world_log_message("已导入旧本地存档。")
+	elif world_log_message == "":
+		_set_world_log_message("已进入游戏。")
 	_refresh_mailbox_menu_button()
 	_mark_progress_ui_caches_dirty()
 	_update_hud_text(true)
@@ -20219,11 +20378,81 @@ func _can_use_gm_tools() -> bool:
 
 
 func _refresh_gm_visibility() -> void:
+	if account_menu_button != null:
+		account_menu_button.visible = account_authenticated
 	if qa_menu_button != null:
 		qa_menu_button.visible = _can_use_gm_tools()
 	if not _can_use_gm_tools():
 		_close_qa_panel(false)
 		_close_numeric_workbench_panel(false)
+
+
+func _open_account_panel() -> void:
+	if not account_authenticated:
+		_open_auth_panel()
+		return
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_mailbox_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	_close_numeric_workbench_panel(false)
+	if account_panel != null:
+		account_panel.visible = true
+	_refresh_account_panel()
+	_layout_hud()
+
+
+func _close_account_panel(update_layout: bool = true) -> void:
+	_hide_control(account_panel, update_layout)
+
+
+func _refresh_account_panel() -> void:
+	if account_info_label == null:
+		return
+	var display_name := str(current_account_session.get("displayName", "玩家")).strip_edges()
+	var username := str(current_account_session.get("username", "")).strip_edges()
+	if display_name == "":
+		display_name = username if username != "" else "玩家"
+	account_info_label.text = "当前角色：%s\n账号：%s\n切换账号前会保存当前进度。" % [
+		display_name,
+		username if username != "" else "-",
+	]
+
+
+func _switch_account_to_login() -> void:
+	if profile_save_enabled:
+		_flush_profile_save_now()
+		_save_player_profile_now()
+	account_authenticated = false
+	current_account_session = {}
+	PlayerProgressModel.reset_active_save_path()
+	player_profile = PlayerProgressModel.default_profile()
+	if auth_password_input != null:
+		auth_password_input.text = ""
+	if auth_display_name_input != null:
+		auth_display_name_input.text = ""
+	_set_auth_mode(false)
+	_close_account_panel(false)
+	_refresh_gm_visibility()
+	_mark_progress_ui_caches_dirty()
+	_update_hud_text(true)
+	_open_auth_panel(false)
+	_layout_hud()
 
 
 func _add_battle_buttons(specs: Array) -> void:
@@ -20355,6 +20584,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
+		account_panel,
 		qa_panel,
 		numeric_workbench_panel,
 		pet_rename_panel,
@@ -20383,6 +20613,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
+		account_panel,
 		qa_panel,
 		numeric_workbench_panel,
 		pet_rename_panel,
@@ -30276,6 +30507,7 @@ func _layout_hud() -> void:
 	var world_menu_open := _world_menu_is_open()
 	top_panel.position = Vector2(margin, margin)
 	top_panel.size = Vector2(top_width, 56)
+	top_panel.visible = true
 	if battle_round_panel != null:
 		var round_size := Vector2(128.0, 40.0)
 		var round_y := top_panel.position.y + top_panel.size.y + 8.0
@@ -30531,9 +30763,22 @@ func _layout_hud() -> void:
 	battle_message_panel.size = Vector2(message_width, message_height)
 	battle_message_panel.visible = (battle_active or world_log_message != "" or not world_log_history.is_empty()) and (battle_active or not world_menu_open)
 
+	if account_panel != null:
+		var account_width: float = minf(viewport_size.x - margin * 2.0, 440.0)
+		var account_height: float = minf(viewport_size.y - margin * 2.0, 216.0)
+		account_panel.position = Vector2((viewport_size.x - account_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - account_height) * 0.5))
+		account_panel.size = Vector2(account_width, account_height)
+		if battle_active:
+			account_panel.visible = false
+		if account_panel.visible:
+			top_panel.visible = false
+			side_panel.visible = false
+			action_bar.visible = false
+			battle_message_panel.visible = false
+
 	if auth_panel != null:
 		var auth_width: float = minf(viewport_size.x - margin * 2.0, 460.0)
-		var auth_height: float = minf(viewport_size.y - margin * 2.0, 438.0)
+		var auth_height: float = minf(viewport_size.y - margin * 2.0, 470.0)
 		auth_panel.position = Vector2((viewport_size.x - auth_width) * 0.5, maxf(margin, (viewport_size.y - auth_height) * 0.5))
 		auth_panel.size = Vector2(auth_width, auth_height)
 		if auth_panel.visible:
