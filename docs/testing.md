@@ -118,7 +118,7 @@ Phase150-C 完成后的参考结果：
 
 - `--auto-pet-rebirth-mm-formula-check`：`status=ok ranges=true interpolation=true preview=true seeded=true full_mid=1.400`
 - `--auto-pet-rebirth-mm-check`：`status=ok catalog=true buy_stone=true feed=true rebirth=true stage2_claim=true`
-- `--shop-select-perf-check`：输出三轮样本的 `item_us/equipment_us` 中位数以及 `min/max`。当前严格布局后基线约 `item_us≈3.5s equipment_us≈5.9s`，说明真实点击后的商店详情排版仍是后续性能目标。
+- `--shop-select-perf-check`：输出三轮样本的 `item_us/equipment_us` 中位数、`min/max`，以及合并详情刷新的 `item_flush_us/equipment_flush_us`。详情生成与 RichText 排版已按下一帧合并，商品列表与数量上限复用缓存，当前基线约 `item_us≈40ms equipment_us≈50ms flush<1ms`。
 
 Phase150-A 完成后的参考结果：
 

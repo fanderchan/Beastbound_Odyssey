@@ -307,6 +307,11 @@ var shop_cached_backpack_slots: Array[Dictionary] = []
 var shop_cached_backpack_counts: Dictionary = {}
 var shop_detail_text_cache: Dictionary = {}
 var shop_equip_check_cache: Dictionary = {}
+var shop_quantity_max_cache: Dictionary = {}
+var shop_detail_update_queued: bool = false
+var shop_pending_detail_bbcode_enabled: bool = false
+var shop_pending_detail_item_id: String = ""
+var shop_pending_detail_count: int = 0
 var pet_panel: PanelContainer
 var pet_filter_option: OptionButton
 var pet_sort_option: OptionButton
@@ -1939,6 +1944,8 @@ func _run_shop_select_perf_check() -> void:
 	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 999)
 	var item_elapsed_samples: Array[int] = []
 	var equipment_elapsed_samples: Array[int] = []
+	var item_flush_samples: Array[int] = []
+	var equipment_flush_samples: Array[int] = []
 	var item_count := 0
 	var equipment_count := 0
 	var item_shop_ok := true
@@ -1946,19 +1953,23 @@ func _run_shop_select_perf_check() -> void:
 	for sample_index in range(3):
 		var item_sample: Dictionary = await _shop_select_perf_sample(ShopCatalogModel.DEFAULT_SHOP_ID, 180)
 		item_elapsed_samples.append(int(item_sample.get("elapsedUsec", 0)))
+		item_flush_samples.append(int(item_sample.get("flushUsec", 0)))
 		item_count = int(item_sample.get("itemCount", item_count))
 		item_shop_ok = item_shop_ok and bool(item_sample.get("ok", false))
 		var equipment_sample: Dictionary = await _shop_select_perf_sample(FIREBUD_EQUIPMENT_SHOP_ID, 120)
 		equipment_elapsed_samples.append(int(equipment_sample.get("elapsedUsec", 0)))
+		equipment_flush_samples.append(int(equipment_sample.get("flushUsec", 0)))
 		equipment_count = int(equipment_sample.get("itemCount", equipment_count))
 		equipment_shop_ok = equipment_shop_ok and bool(equipment_sample.get("ok", false))
 	var item_shop_elapsed_usec := _median_int(item_elapsed_samples)
 	var equipment_shop_elapsed_usec := _median_int(equipment_elapsed_samples)
 	var status := "ok" if item_shop_ok and equipment_shop_ok else "failed"
-	print("shop select perf check ready: status=%s item_us=%d equipment_us=%d item_min_us=%d item_max_us=%d equipment_min_us=%d equipment_max_us=%d item_count=%d equipment_count=%d selected=%s samples=%d" % [
+	print("shop select perf check ready: status=%s item_us=%d equipment_us=%d item_flush_us=%d equipment_flush_us=%d item_min_us=%d item_max_us=%d equipment_min_us=%d equipment_max_us=%d item_count=%d equipment_count=%d selected=%s samples=%d" % [
 		status,
 		item_shop_elapsed_usec,
 		equipment_shop_elapsed_usec,
+		_median_int(item_flush_samples),
+		_median_int(equipment_flush_samples),
 		_min_int(item_elapsed_samples),
 		_max_int(item_elapsed_samples),
 		_min_int(equipment_elapsed_samples),
@@ -1979,12 +1990,17 @@ func _shop_select_perf_sample(shop_id: String, select_count: int) -> Dictionary:
 		return {"ok": false, "elapsedUsec": 0, "itemCount": 0}
 	var started_usec := Time.get_ticks_usec()
 	for index in range(select_count):
-		_select_shop_item(str(item_ids[index % item_ids.size()]))
+		_select_shop_item(str(item_ids[index % item_ids.size()]), true)
 	var elapsed_usec := Time.get_ticks_usec() - started_usec
 	var expected_selected := str(item_ids[(select_count - 1) % item_ids.size()])
+	var flush_started_usec := Time.get_ticks_usec()
+	await get_tree().process_frame
+	var flush_usec := Time.get_ticks_usec() - flush_started_usec
+	var expected_detail := _shop_detail_text_cached(expected_selected, _backpack_item_count_for_ui(expected_selected))
 	return {
-		"ok": shop_selected_item_id == expected_selected,
+		"ok": shop_selected_item_id == expected_selected and shop_detail_label != null and shop_detail_label.text == expected_detail,
 		"elapsedUsec": elapsed_usec,
+		"flushUsec": flush_usec,
 		"itemCount": item_ids.size(),
 	}
 
@@ -22914,6 +22930,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 func _close_shop_panel() -> void:
 	if _hide_control(shop_panel):
 		shop_selected_item_id = ""
+		shop_detail_update_queued = false
 	_clear_shop_refresh_cache()
 
 
@@ -22922,6 +22939,7 @@ func _clear_shop_refresh_cache() -> void:
 	shop_cached_backpack_counts.clear()
 	shop_detail_text_cache.clear()
 	shop_equip_check_cache.clear()
+	shop_quantity_max_cache.clear()
 
 
 func _shop_cached_backpack_slots_for_ui() -> Array[Dictionary]:
@@ -22949,6 +22967,12 @@ func _shop_can_equip_item_cached(item_id: String) -> Dictionary:
 	return (shop_equip_check_cache.get(item_id, {}) as Dictionary).duplicate(true)
 
 
+func _shop_quantity_max_cached(item_id: String, slots: Array[Dictionary], counts: Dictionary) -> int:
+	if not shop_quantity_max_cache.has(item_id):
+		shop_quantity_max_cache[item_id] = _shop_quantity_max(item_id, slots, counts)
+	return int(shop_quantity_max_cache.get(item_id, 0))
+
+
 func _set_shop_mode(next_mode: String) -> void:
 	shop_mode = "sell" if next_mode == "sell" else "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
@@ -22957,17 +22981,43 @@ func _set_shop_mode(next_mode: String) -> void:
 	_refresh_shop_panel()
 
 
-func _select_shop_item(item_id: String) -> void:
+func _apply_shop_detail_text(bbcode_enabled: bool, detail_text: String) -> void:
+	if shop_detail_label == null:
+		return
+	if shop_detail_label.bbcode_enabled != bbcode_enabled:
+		shop_detail_label.bbcode_enabled = bbcode_enabled
+	if shop_detail_label.text != detail_text:
+		shop_detail_label.text = detail_text
+
+
+func _queue_shop_detail_item(bbcode_enabled: bool, item_id: String, count: int) -> void:
+	shop_pending_detail_bbcode_enabled = bbcode_enabled
+	shop_pending_detail_item_id = item_id
+	shop_pending_detail_count = count
+	if not shop_detail_update_queued:
+		shop_detail_update_queued = true
+		call_deferred("_apply_queued_shop_detail_item")
+
+
+func _apply_queued_shop_detail_item() -> void:
+	shop_detail_update_queued = false
+	if shop_panel == null or not shop_panel.visible:
+		return
+	var detail_text := _shop_detail_text_cached(shop_pending_detail_item_id, shop_pending_detail_count)
+	_apply_shop_detail_text(shop_pending_detail_bbcode_enabled, detail_text)
+
+
+func _select_shop_item(item_id: String, defer_detail_update: bool = false) -> void:
 	if shop_selected_item_id == item_id:
 		return
 	var previous_selected_item_id := shop_selected_item_id
 	shop_selected_item_id = item_id
 	shop_quantity = 1
 	shop_equip_after_buy = false
-	_refresh_shop_panel(false, previous_selected_item_id)
+	_refresh_shop_panel(false, previous_selected_item_id, defer_detail_update)
 
 
-func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: String = "") -> void:
+func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: String = "", defer_detail_update: bool = false) -> void:
 	if shop_panel == null or shop_list_container == null or shop_detail_label == null:
 		return
 	if rebuild_list:
@@ -22984,10 +23034,12 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			shop_sell_button.button_pressed = shop_mode == "sell"
 	var backpack_slots_cache := _shop_cached_backpack_slots_for_ui()
 	var backpack_counts_cache := _shop_cached_backpack_counts_for_ui(backpack_slots_cache)
-	var valid_ids := _shop_item_ids_for_mode(shop_mode, backpack_counts_cache)
-	if shop_selected_item_id == "" or not valid_ids.has(shop_selected_item_id):
-		shop_selected_item_id = valid_ids[0] if not valid_ids.is_empty() else ""
-		rebuild_list = true
+	var valid_ids: Array[String] = []
+	if rebuild_list or shop_item_buttons.is_empty() or shop_selected_item_id == "" or not shop_item_buttons.has(shop_selected_item_id):
+		valid_ids = _shop_item_ids_for_mode(shop_mode, backpack_counts_cache)
+		if shop_selected_item_id == "" or not valid_ids.has(shop_selected_item_id):
+			shop_selected_item_id = valid_ids[0] if not valid_ids.is_empty() else ""
+			rebuild_list = true
 	if not rebuild_list and shop_item_buttons.is_empty() and not valid_ids.is_empty():
 		rebuild_list = true
 	if rebuild_list:
@@ -23008,7 +23060,7 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 				button.custom_minimum_size = Vector2(0, 58)
 				button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				button.pressed.connect(func() -> void:
-					_select_shop_item(item_id)
+					_select_shop_item(item_id, true)
 				)
 				shop_list_container.add_child(button)
 				shop_item_buttons[item_id] = button
@@ -23021,18 +23073,18 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			if current_button is Button:
 				(current_button as Button).set_pressed_no_signal(true)
 		else:
-			for item_id in valid_ids:
-				var button = shop_item_buttons.get(item_id)
+			for item_id in shop_item_buttons.keys():
+				var button = shop_item_buttons.get(str(item_id))
 				if button is Button:
-					(button as Button).set_pressed_no_signal(item_id == shop_selected_item_id)
-	var quantity_max := _shop_quantity_max(shop_selected_item_id, backpack_slots_cache, backpack_counts_cache)
+					(button as Button).set_pressed_no_signal(str(item_id) == shop_selected_item_id)
+	var quantity_max := _shop_quantity_max_cached(shop_selected_item_id, backpack_slots_cache, backpack_counts_cache)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id, quantity_max)
 	var selected_is_equipment := EquipmentModel.is_equipment(shop_selected_item_id)
-	if shop_detail_label.bbcode_enabled != selected_is_equipment:
-		shop_detail_label.bbcode_enabled = selected_is_equipment
-	var next_detail_text := _shop_detail_text_cached(shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
-	if shop_detail_label.text != next_detail_text:
-		shop_detail_label.text = next_detail_text
+	if defer_detail_update and not rebuild_list:
+		_queue_shop_detail_item(selected_is_equipment, shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
+	else:
+		var next_detail_text := _shop_detail_text_cached(shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
+		_apply_shop_detail_text(selected_is_equipment, next_detail_text)
 	_refresh_shop_quantity_controls(quantity_max)
 	if selected_is_equipment or (shop_equip_after_buy_button != null and shop_equip_after_buy_button.visible):
 		_refresh_shop_equip_after_buy_button(quantity_max)
