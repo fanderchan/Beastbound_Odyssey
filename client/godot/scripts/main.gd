@@ -555,6 +555,7 @@ var auto_map_region_contract_check: bool = false
 var auto_reward_grant_check: bool = false
 var auto_encounter_loop_check: bool = false
 var auto_hang_loop_closure_check: bool = false
+var auto_hang_supply_closure_check: bool = false
 var auto_pet_management_safety_check: bool = false
 var auto_player_growth_contract_check: bool = false
 var auto_server_profile_contract_check: bool = false
@@ -736,6 +737,10 @@ var encounter_grace_remaining: float = 0.0
 var hang_mode_active: bool = false
 var hang_walk_direction_index: int = 0
 var hang_walk_cooldown: float = 0.0
+var hang_heal_resume_active: bool = false
+var hang_heal_resume_mode: String = ""
+var hang_heal_resume_map_id: String = ""
+var hang_heal_resume_cell: Vector2i = Vector2i.ZERO
 var encounter_stone_item_id: String = ""
 var encounter_stone_interval: float = 0.0
 var encounter_stone_remaining: float = 0.0
@@ -979,6 +984,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif auto_hang_loop_closure_check:
 		call_deferred("_run_auto_hang_loop_closure_check")
+	elif auto_hang_supply_closure_check:
+		call_deferred("_run_auto_hang_supply_closure_check")
 	elif auto_pet_management_safety_check:
 		call_deferred("_run_auto_pet_management_safety_check")
 	elif auto_player_growth_contract_check:
@@ -1528,6 +1535,8 @@ func _apply_preview_window_args() -> void:
 			auto_encounter_loop_check = true
 		elif arg == "--auto-hang-loop-closure-check":
 			auto_hang_loop_closure_check = true
+		elif arg == "--auto-hang-supply-closure-check":
+			auto_hang_supply_closure_check = true
 		elif arg == "--auto-pet-management-safety-check":
 			auto_pet_management_safety_check = true
 		elif arg == "--auto-player-growth-contract-check":
@@ -11423,6 +11432,84 @@ func _run_auto_hang_loop_closure_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_hang_supply_closure_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	_clear_hang_heal_resume_route()
+	var loaded := _load_map("firebud_village_gate", "doctor_record")
+	var zones := EncounterModel.encounter_zones(map_data)
+	var zone_found := loaded and not zones.is_empty()
+	var origin_cell := Vector2i(12, 16)
+	if player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, Vector2i(9, 17))
+		last_checked_player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
+
+	player_profile = _village_healer_check_profile(120)
+	var settings := PlayerProgressModel.hang_settings(player_profile)
+	settings[HangSettingsModel.LOW_HP_STOP_PERCENT_KEY] = 30
+	settings[HangSettingsModel.LOW_HP_ACTION_KEY] = HangSettingsModel.LOW_HP_ACTION_TOWN_HEAL
+	settings[HangSettingsModel.RESUME_AFTER_HEAL_KEY] = true
+	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
+	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", "firebud_village_gate", origin_cell)
+	var session := PlayerProgressModel.hang_session(player_profile)
+	session = HangSettingsModel.session_with_pending_resume(session, true)
+	player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+	var before_coins := PlayerProgressModel.stone_coins(player_profile)
+	var doctor := _navigation_target_for_interaction_id("firebud_doctor")
+	if not doctor.is_empty():
+		_open_interaction_dialog(doctor.get("interaction", {}) as Dictionary)
+	await get_tree().process_frame
+	_auto_apply_hang_healer_if_open()
+	await get_tree().process_frame
+	if player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, origin_cell)
+		player.clear_move_target()
+		current_path_cells.clear()
+	_update_hang_heal_resume_route()
+	await get_tree().process_frame
+	var resumed_session := PlayerProgressModel.hang_session(player_profile)
+	var healed_resume_ok := (
+		zone_found
+		and PlayerProgressModel.player_hp(player_profile) == PlayerProgressModel.player_max_hp(player_profile)
+		and PlayerProgressModel.stone_coins(player_profile) < before_coins
+		and not bool(resumed_session.get(HangSettingsModel.SESSION_PENDING_RESUME_KEY, false))
+		and bool(resumed_session.get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+		and str(resumed_session.get(HangSettingsModel.SESSION_MODE_KEY, "")) == "walk"
+		and hang_mode_active
+		and world_log_message.find("继续挂机") >= 0
+	)
+
+	_clear_hang_heal_resume_route()
+	_set_hang_mode(false)
+	player_profile = _village_healer_check_profile(0)
+	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
+	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", "firebud_village_gate", origin_cell)
+	session = PlayerProgressModel.hang_session(player_profile)
+	session = HangSettingsModel.session_with_pending_resume(session, true)
+	player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+	if not doctor.is_empty():
+		_open_interaction_dialog(doctor.get("interaction", {}) as Dictionary)
+	await get_tree().process_frame
+	_auto_apply_hang_healer_if_open()
+	await get_tree().process_frame
+	var poor_session := PlayerProgressModel.hang_session(player_profile)
+	var poor_stop_ok := (
+		not bool(poor_session.get(HangSettingsModel.SESSION_ENABLED_KEY, true))
+		and not bool(poor_session.get(HangSettingsModel.SESSION_PENDING_RESUME_KEY, true))
+		and not hang_heal_resume_active
+		and world_log_message.find("挂机补给失败") >= 0
+	)
+	var status := "ok" if healed_resume_ok and poor_stop_ok else "failed"
+	print("hang supply closure check ready: status=%s healed_resume=%s poor_stop=%s zone=%s" % [
+		status,
+		str(healed_resume_ok),
+		str(poor_stop_ok),
+		str(zone_found),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pet_management_safety_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -17085,6 +17172,7 @@ func _process(delta: float) -> void:
 	_perf_add("click_move", section_start)
 	section_start = _perf_now()
 	_update_pending_interaction()
+	_update_hang_heal_resume_route()
 	_update_encounter_grace(delta)
 	_update_hang_walk(delta)
 	_update_stationary_encounter_stone(delta)
@@ -19664,6 +19752,8 @@ func _transfer_from_warp(item: Dictionary) -> void:
 		_open_interaction_dialog(item)
 		return
 	_load_map(to_map, to_spawn)
+	if hang_heal_resume_active:
+		call_deferred("_update_hang_heal_resume_route")
 
 
 func _start_guardian_battle_from_dialog() -> void:
@@ -28071,6 +28161,8 @@ func _open_interaction_dialog(item: Dictionary) -> void:
 	dialog_panel.move_to_front()
 	dialog_panel.visible = true
 	_layout_hud()
+	if _dialog_item_is_healer(item) and _hang_pending_healer_resume():
+		call_deferred("_auto_apply_hang_healer_if_open")
 
 
 func _close_dialog() -> void:
@@ -28234,17 +28326,137 @@ func _complete_dialog_optional_talk_quest() -> void:
 	_update_dialog_text()
 
 
-func _apply_dialog_healer() -> void:
+func _apply_dialog_healer(from_hang_auto: bool = false) -> void:
+	var was_hang_pending_resume := _hang_pending_healer_resume()
 	var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
 	player_profile = heal_result.get("profile", player_profile)
-	if bool(heal_result.get("ok", false)) and profile_save_enabled:
+	var message := str(heal_result.get("message", ""))
+	if was_hang_pending_resume:
+		var hang_message := _handle_hang_healer_result(heal_result, from_hang_auto)
+		if hang_message != "":
+			message = "%s\n%s" % [message, hang_message]
+	if (bool(heal_result.get("ok", false)) or was_hang_pending_resume) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)
-	_set_world_log_message(str(heal_result.get("message", "")))
+	_set_world_log_message(message)
 	_update_dialog_text()
 	if status_label != null:
 		_update_hud_text()
 	if pet_panel != null and pet_panel.visible:
 		_refresh_pet_panel()
+
+
+func _hang_pending_healer_resume() -> bool:
+	var session := PlayerProgressModel.hang_session(player_profile)
+	return bool(session.get(HangSettingsModel.SESSION_PENDING_RESUME_KEY, false))
+
+
+func _auto_apply_hang_healer_if_open() -> void:
+	if not _hang_pending_healer_resume():
+		return
+	if not _dialog_is_open() or not _active_dialog_is_healer():
+		return
+	_apply_dialog_healer(true)
+
+
+func _handle_hang_healer_result(heal_result: Dictionary, from_hang_auto: bool) -> String:
+	var healed_or_full := bool(heal_result.get("ok", false)) or str(heal_result.get("message", "")) == "队伍生命已满。"
+	if not healed_or_full:
+		_clear_hang_heal_resume_route()
+		player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_failed")
+		return "挂机补给失败，已停止。"
+	var session := PlayerProgressModel.hang_session(player_profile)
+	session = HangSettingsModel.session_with_pending_resume(session, false)
+	player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+	if from_hang_auto:
+		_close_dialog()
+	return _start_hang_heal_resume_route(session)
+
+
+func _start_hang_heal_resume_route(session: Dictionary) -> String:
+	var origin_map_id := str(session.get(HangSettingsModel.SESSION_ORIGIN_MAP_ID_KEY, ""))
+	var origin_cell := _hang_origin_cell_from_session(session)
+	if origin_map_id == "":
+		_clear_hang_heal_resume_route()
+		player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_no_origin")
+		return "没有记录挂机点，挂机已停止。"
+	hang_heal_resume_active = true
+	hang_heal_resume_mode = str(session.get(HangSettingsModel.SESSION_MODE_KEY, "walk"))
+	hang_heal_resume_map_id = origin_map_id
+	hang_heal_resume_cell = origin_cell
+	call_deferred("_update_hang_heal_resume_route")
+	return "治疗完成，正在返回挂机点。"
+
+
+func _hang_origin_cell_from_session(session: Dictionary) -> Vector2i:
+	var cell_value = session.get(HangSettingsModel.SESSION_ORIGIN_CELL_KEY, [0, 0])
+	if cell_value is Array and (cell_value as Array).size() >= 2:
+		return Vector2i(int((cell_value as Array)[0]), int((cell_value as Array)[1]))
+	return Vector2i.ZERO
+
+
+func _update_hang_heal_resume_route() -> void:
+	if not hang_heal_resume_active:
+		return
+	if battle_active or encounter_active or player == null or map_data.is_empty():
+		return
+	if _dialog_is_open() or _world_menu_is_open() or player.is_auto_moving() or has_pending_interaction:
+		return
+	if current_map_id != hang_heal_resume_map_id:
+		var warp := _warp_to_map(current_map_id, hang_heal_resume_map_id)
+		if warp.is_empty():
+			_stop_hang_heal_resume_route("找不到回挂机点通路，挂机已停止。")
+			return
+		_set_interaction_target(warp)
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	if (
+		player_cell == hang_heal_resume_cell
+		or player.global_position.distance_to(IsoMapModel.grid_to_world(map_data, hang_heal_resume_cell)) <= 8.0
+	):
+		_complete_hang_heal_resume()
+		return
+	var target_point := IsoMapModel.grid_to_world(map_data, hang_heal_resume_cell)
+	if not _set_move_target_cell(hang_heal_resume_cell, target_point, hang_heal_resume_cell):
+		_stop_hang_heal_resume_route("找不到回挂机点通路，挂机已停止。")
+
+
+func _complete_hang_heal_resume() -> void:
+	var resume_mode := hang_heal_resume_mode
+	_clear_hang_heal_resume_route()
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
+	if resume_mode == "walk" or resume_mode == "":
+		var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+		if zone.is_empty():
+			player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_no_zone")
+			_set_world_log_message("已回到挂机点附近，但这里不是遇敌区域，挂机已停止。")
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			return
+		player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
+		_set_hang_mode(true)
+		_set_world_log_message("治疗完成，已回到挂机点，继续挂机。")
+		if profile_save_enabled:
+			PlayerProgressModel.save_profile(player_profile)
+		return
+	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_encounter_stone_ended")
+	_set_world_log_message("治疗完成，已回到挂机点；遇敌石效果已结束，请重新使用。")
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
+func _stop_hang_heal_resume_route(message: String) -> void:
+	_clear_hang_heal_resume_route()
+	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_route_failed")
+	_set_world_log_message(message)
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+
+
+func _clear_hang_heal_resume_route() -> void:
+	hang_heal_resume_active = false
+	hang_heal_resume_mode = ""
+	hang_heal_resume_map_id = ""
+	hang_heal_resume_cell = Vector2i.ZERO
 
 
 func _claim_pet_rebirth_mm_stage2_from_dialog() -> void:
