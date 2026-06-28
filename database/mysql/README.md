@@ -1,5 +1,7 @@
-# MySQL 9.7 Placeholder
+# Beastbound Odyssey MySQL 9.7
 
-Database schema work is intentionally deferred in Phase 01.
+Phase158 adds the first backend migration target:
 
-Future schema work should begin from the smallest client-backed persistence need, such as character creation, local preview save sync, inventory, pet instance state, or battle receipts.
+- `001_auth_schema.sql`
+
+It covers account login, sessions, player profile binding, GM user grants, GM command grants, GM command audit, and auth events. The running Node prototype still uses memory or JSON storage first; this SQL is the intended MySQL shape before the real database adapter lands.

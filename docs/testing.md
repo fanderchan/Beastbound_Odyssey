@@ -28,6 +28,13 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-previe
 godot --headless --path client/godot --quit
 ```
 
+## 后端检查
+
+```sh
+cd server/node
+npm test
+```
+
 ## 每阶段推荐回归
 
 ```sh

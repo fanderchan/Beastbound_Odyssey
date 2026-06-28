@@ -1,0 +1,14 @@
+{
+  "name": "beastbound-odyssey-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Beastbound Odyssey prototype Node.js backend.",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/http-server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
