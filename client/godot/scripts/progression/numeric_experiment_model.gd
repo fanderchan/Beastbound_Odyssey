@@ -4,6 +4,7 @@ const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const CombatFormulaCandidateModel := preload("res://scripts/progression/combat_formula_candidate_model.gd")
 const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_formula_driver_ab_model.gd")
 const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
@@ -47,6 +48,7 @@ static func build_report() -> Dictionary:
 	var battle_rewards := _battle_reward_section()
 	var progression_zones := _progression_zone_section()
 	var combat_formula_shadow := CombatFormulaShadowModel.build_report()
+	var combat_v2_shadow := CombatFormulaCandidateModel.build_report()
 	var combat_formula_driver_ab := CombatFormulaDriverABModel.build_report()
 	var battle_simulation := NumericBattleSimulatorModel.build_report()
 	var economy_ledger := NumericEconomyLedgerModel.build_report(battle_simulation)
@@ -60,6 +62,7 @@ static func build_report() -> Dictionary:
 		"battleRewards": battle_rewards,
 		"progressionZones": progression_zones,
 		"combatFormulaShadow": combat_formula_shadow,
+		"combatV2Shadow": combat_v2_shadow,
 		"combatFormulaDriverAB": combat_formula_driver_ab,
 		"battleSimulation": battle_simulation,
 		"economyLedger": economy_ledger,
@@ -86,6 +89,7 @@ static func build_report() -> Dictionary:
 		"battleRewards": battle_rewards,
 		"progressionZones": progression_zones,
 		"combatFormulaShadow": combat_formula_shadow,
+		"combatV2Shadow": combat_v2_shadow,
 		"combatFormulaDriverAB": combat_formula_driver_ab,
 		"battleSimulation": battle_simulation,
 		"economyLedger": economy_ledger,
@@ -131,6 +135,8 @@ static func validation_errors(report: Dictionary) -> Array[String]:
 		errors.append("equipmentEconomy 耐久参数无效")
 	var combat_shadow := report.get("combatFormulaShadow", {}) as Dictionary
 	errors.append_array(CombatFormulaShadowModel.validation_errors(combat_shadow))
+	var combat_v2_shadow := report.get("combatV2Shadow", {}) as Dictionary
+	errors.append_array(CombatFormulaCandidateModel.validation_errors(combat_v2_shadow))
 	var combat_driver_ab := report.get("combatFormulaDriverAB", {}) as Dictionary
 	errors.append_array(CombatFormulaDriverABModel.validation_errors(combat_driver_ab))
 	var battle_simulation := report.get("battleSimulation", {}) as Dictionary
@@ -651,6 +657,19 @@ static func _baseline_findings(sections: Dictionary) -> Array[Dictionary]:
 		"text": "战斗公式 shadow report 平均伤害差 %.2f、平均概率差 %.2f%%；当前只记录差异，尚未切换实战公式。" % [
 			float(combat_summary.get("avgAbsDamageDelta", 0.0)),
 			float(combat_summary.get("avgAbsRateDelta", 0.0)) * 100.0,
+		],
+	})
+	var combat_v2_shadow := sections.get("combatV2Shadow", {}) as Dictionary
+	var combat_v2_summary := combat_v2_shadow.get("summary", {}) as Dictionary
+	findings.append({
+		"id": "combat_v2_candidate_shadow",
+		"severity": "info" if bool(combat_v2_summary.get("candidateReadyForReview", false)) else "warning",
+		"text": "combat_v2_candidate 影子样本 %d 个，评审条件 %d/%d，平均伤害差 %.2f、平均伤害比例差 %.2f%%；当前只观察，不切换真实战斗。" % [
+			int(combat_v2_summary.get("sampleCount", 0)),
+			int(combat_v2_summary.get("criteriaPassed", 0)),
+			int(combat_v2_summary.get("criteriaTotal", 0)),
+			float(combat_v2_summary.get("avgAbsDamageDelta", 0.0)),
+			float(combat_v2_summary.get("avgAbsDamageDeltaRatio", 0.0)) * 100.0,
 		],
 	})
 	var battle_simulation := sections.get("battleSimulation", {}) as Dictionary

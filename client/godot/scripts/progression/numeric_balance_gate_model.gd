@@ -15,6 +15,8 @@ const ACTIVE_FORMULA_MAX_SINGLE_DAMAGE_DELTA := 10.0
 const ACTIVE_FORMULA_MAX_SINGLE_RATE_DELTA := 0.08
 const HIGH_ECONOMY_NET_PER_HOUR_WATCH := 200000.0
 
+const CombatFormulaCandidateModel := preload("res://scripts/progression/combat_formula_candidate_model.gd")
+
 
 static func build_report(numeric_report: Dictionary = {}) -> Dictionary:
 	BalanceCatalogModel.reload()
@@ -25,6 +27,7 @@ static func build_report(numeric_report: Dictionary = {}) -> Dictionary:
 	gates.append(_catalog_gate())
 	gates.append(_progression_gate(report.get("progressionZones", {}) as Dictionary))
 	gates.append(_combat_shadow_gate(report.get("combatFormulaShadow", {}) as Dictionary))
+	gates.append(_combat_v2_shadow_gate(report.get("combatV2Shadow", {}) as Dictionary))
 	gates.append(_active_formula_switch_gate(report.get("combatFormulaShadow", {}) as Dictionary))
 	gates.append(_combat_formula_driver_ab_gate(report.get("combatFormulaDriverAB", {}) as Dictionary))
 	gates.append(_battle_simulation_gate(report.get("battleSimulation", {}) as Dictionary))
@@ -58,7 +61,7 @@ static func validation_errors(report: Dictionary) -> Array[String]:
 	if str(report.get("mode", "")) != "balance_promotion_gate":
 		errors.append("numericBalanceGate.mode 必须是 balance_promotion_gate")
 	var gates: Array = report.get("gates", [])
-	if gates.size() < 8:
+	if gates.size() < 9:
 		errors.append("numericBalanceGate.gates 数量不足")
 	var summary := report.get("summary", {}) as Dictionary
 	if int(summary.get("gateCount", 0)) != gates.size():
@@ -144,6 +147,31 @@ static func _combat_shadow_gate(combat_shadow: Dictionary) -> Dictionary:
 			"maxAbsDamageDelta": int(summary.get("maxAbsDamageDelta", 0)),
 			"maxAbsRateDelta": float(summary.get("maxAbsRateDelta", 0.0)),
 			"strictParityReady": bool(summary.get("strictParityReady", false)),
+		}
+	)
+
+
+static func _combat_v2_shadow_gate(combat_v2_shadow: Dictionary) -> Dictionary:
+	var errors := CombatFormulaCandidateModel.validation_errors(combat_v2_shadow)
+	var summary := combat_v2_shadow.get("summary", {}) as Dictionary
+	var ready := errors.is_empty() and bool(summary.get("candidateReadyForReview", false))
+	return _gate(
+		"combat_v2_shadow_candidate",
+		"combat_v2 候选观察",
+		"pass" if ready else "fail",
+		"combat_v2_candidate 影子报告可用于数值评审；真实公式仍保持 combat_v1。" if ready else "; ".join(errors),
+		{
+			"baselineFormulaId": str(combat_v2_shadow.get("baselineFormulaId", "")),
+			"candidateFormulaId": str(combat_v2_shadow.get("candidateFormulaId", "")),
+			"sampleCount": int(summary.get("sampleCount", 0)),
+			"avgAbsDamageDelta": float(summary.get("avgAbsDamageDelta", 0.0)),
+			"avgAbsDamageDeltaRatio": float(summary.get("avgAbsDamageDeltaRatio", 0.0)),
+			"avgAbsRateDelta": float(summary.get("avgAbsRateDelta", 0.0)),
+			"maxAbsDamageDelta": int(summary.get("maxAbsDamageDelta", 0)),
+			"maxAbsRateDelta": float(summary.get("maxAbsRateDelta", 0.0)),
+			"criteriaPassed": int(summary.get("criteriaPassed", 0)),
+			"criteriaTotal": int(summary.get("criteriaTotal", 0)),
+			"candidateReadyForReview": bool(summary.get("candidateReadyForReview", false)),
 		}
 	)
 
@@ -267,6 +295,8 @@ static func _documentation_gate() -> Dictionary:
 			"res://../../docs/phase_132_combat_formula_driver_switch.md",
 			"res://../../docs/phase_133_balance_version_receipt_contract.md",
 			"res://../../docs/phase_134_numeric_snapshot_digest_contract.md",
+			"res://../../docs/phase_141_riding_battle_closure.md",
+			"res://../../docs/phase_142_combat_v2_shadow_candidate.md",
 		]
 	var missing: Array[String] = []
 	for path in docs:

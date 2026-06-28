@@ -2344,6 +2344,7 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	var dodged_count := 0
 	var critical_count := 0
 	var action_id := str(event.get("actionId", _attack_action_id_for_actor(state, attacker_id)))
+	var action_target_count := raw_target_ids.size()
 	for target_id_value in raw_target_ids:
 		var target_id := str(target_id_value)
 		if not _is_living_side_actor(state, target_id, target_side):
@@ -2363,7 +2364,7 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 			critical_per_target[target_id] = false
 			dodged_count += 1
 			continue
-		var damage := _multi_attack_damage_for(state, attacker_id, target_id, action_id)
+		var damage := _multi_attack_damage_for(state, attacker_id, target_id, action_id, action_target_count)
 		var target_critical := _damage_event_is_critical(state, event, attacker_id, target_id)
 		if target_critical:
 			damage = _critical_damage_for_action(state, attacker_id, target_id, damage, action_id)
@@ -3343,9 +3344,9 @@ static func _attack_damage_for(state: Dictionary, actor_id: String, target_id: S
 	return _damage_after_defense(state, raw_attack, target_id, 0.35)
 
 
-static func _multi_attack_damage_for(state: Dictionary, actor_id: String, target_id: String, action_id: String) -> int:
+static func _multi_attack_damage_for(state: Dictionary, actor_id: String, target_id: String, action_id: String, target_count: int = 1) -> int:
 	if _uses_table_combat_formula(state):
-		return CombatFormulaModel.multi_attack_damage_for(_active_combat_formula_for_state(state), state, actor_id, target_id, action_id, 1)
+		return CombatFormulaModel.multi_attack_damage_for(_active_combat_formula_for_state(state), state, actor_id, target_id, action_id, target_count)
 	var base_damage := _attack_damage_for(state, actor_id, target_id)
 	var multiplier := BattleActionCatalog.effect_power_multiplier_for(action_id, 1.0)
 	return maxi(1, int(round(float(base_damage) * multiplier)))

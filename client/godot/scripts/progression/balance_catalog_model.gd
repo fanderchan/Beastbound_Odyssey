@@ -402,12 +402,30 @@ static func pet_growth_bonus_range(stat_key: String, fallback_min: float, fallba
 static func active_combat_formula() -> Dictionary:
 	var catalog := combat_formulas()
 	var active_id := str(catalog.get("activeFormulaId", ""))
+	return combat_formula_by_id(active_id)
+
+
+static func combat_formula_by_id(formula_id: String) -> Dictionary:
+	var normalized_id := formula_id.strip_edges()
+	if normalized_id == "":
+		return {}
+	var catalog := combat_formulas()
 	var raw_formulas = catalog.get("formulas", [])
 	if raw_formulas is Array:
 		for value in raw_formulas:
-			if value is Dictionary and str((value as Dictionary).get("id", "")) == active_id:
+			if value is Dictionary and str((value as Dictionary).get("id", "")) == normalized_id:
 				return (value as Dictionary).duplicate(true)
 	return {}
+
+
+static func combat_formula_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_formulas = combat_formulas().get("formulas", [])
+	if raw_formulas is Array:
+		for value in raw_formulas:
+			if value is Dictionary:
+				result.append((value as Dictionary).duplicate(true))
+	return result
 
 
 static func active_capture_formula() -> Dictionary:
@@ -614,12 +632,27 @@ static func _validate_combat_formulas(errors: Array[String]) -> void:
 	if formula.is_empty():
 		errors.append("combat_formulas 缺少 activeFormulaId 对应公式")
 		return
-	for key in ["physicalDamage", "dodge", "critical", "combo", "multiTarget", "statusHit"]:
-		if not (formula.get(key, {}) is Dictionary):
-			errors.append("combat_formulas.%s 必须是对象" % key)
-	var dodge := formula.get("dodge", {}) as Dictionary
-	if float(dodge.get("maxRate", 0.0)) <= float(dodge.get("minRate", 0.0)):
-		errors.append("combat_formulas.dodge 上限必须大于下限")
+	var seen := {}
+	for formula_entry in combat_formula_list():
+		var formula_id := str(formula_entry.get("id", "")).strip_edges()
+		if formula_id == "":
+			errors.append("combat_formulas 存在空公式 id")
+			continue
+		if seen.has(formula_id):
+			errors.append("combat_formulas.%s 重复" % formula_id)
+		seen[formula_id] = true
+		for key in ["physicalDamage", "dodge", "critical", "combo", "multiTarget", "statusHit"]:
+			if not (formula_entry.get(key, {}) is Dictionary):
+				errors.append("combat_formulas.%s.%s 必须是对象" % [formula_id, key])
+		var dodge := formula_entry.get("dodge", {}) as Dictionary
+		if float(dodge.get("maxRate", 0.0)) <= float(dodge.get("minRate", 0.0)):
+			errors.append("combat_formulas.%s.dodge 上限必须大于下限" % formula_id)
+		var critical := formula_entry.get("critical", {}) as Dictionary
+		if float(critical.get("maxRate", 0.0)) < float(critical.get("minRate", 0.0)):
+			errors.append("combat_formulas.%s.critical 上限不能小于下限" % formula_id)
+		var multi := formula_entry.get("multiTarget", {}) as Dictionary
+		if float(multi.get("minMultiplier", 0.0)) <= 0.0:
+			errors.append("combat_formulas.%s.multiTarget.minMultiplier 必须大于 0" % formula_id)
 
 
 static func _validate_capture_formula(errors: Array[String]) -> void:

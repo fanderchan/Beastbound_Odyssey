@@ -119,6 +119,99 @@
         "controlMaxRate": 1.0,
         "poisonMaxRate": 1.0
       }
+    },
+    {
+      "id": "combat_v2_candidate",
+      "_comment": "Phase142 候选公式，只用于 shadow 报告和数值评审；activeFormulaId 仍保持 combat_v1，不会改变真实战斗。",
+      "physicalDamage": {
+        "_comment": "v2 候选让等级差、目标防御更有存在感，但幅度保守，避免从工程阶段直接改坏手感。",
+        "_fieldNotes": {
+          "flatPower": "固定威力加成，候选阶段仍为 0。",
+          "powerMultiplier": "整体攻击倍率，保持 1.0 便于观察等级差和防御系数带来的差异。",
+          "defaultDefenseFactor": "普通攻击防御减伤比例，从 v1 的 0.35 提到 0.38。",
+          "petSkillDefenseFactor": "宠物物理技能防御减伤比例，从 v1 的 0.25 提到 0.28。",
+          "levelDifferenceMultiplierPerLevel": "每级等级差修正 0.8%，16 级优势约 +12.8%，低等级攻击高等级会相应降低。",
+          "levelMultiplierMin": "等级差伤害倍率下限。",
+          "levelMultiplierMax": "等级差伤害倍率上限。",
+          "guardMultiplier": "防御/守护时受到的伤害倍率，暂不改。"
+        },
+        "flatPower": 0,
+        "powerMultiplier": 1.0,
+        "defaultDefenseFactor": 0.38,
+        "petSkillDefenseFactor": 0.28,
+        "roundDefenseBeforeSubtract": true,
+        "levelDifferenceMultiplierPerLevel": 0.008,
+        "levelMultiplierMin": 0.82,
+        "levelMultiplierMax": 1.18,
+        "guardMultiplier": 0.45,
+        "guardRounding": "floor"
+      },
+      "dodge": {
+        "_comment": "v2 候选降低极端敏捷导致的回避上限，减少 10V10 长回合拖沓。",
+        "_fieldNotes": {
+          "mode": "继续使用 quick_contest_sqrt，方便和 v1 单变量对照。",
+          "dexDivisor": "从 v1 的 0.02 放宽到 0.028，让敏捷差曲线稍平缓。",
+          "minRate": "保留 1% 下限。",
+          "maxRate": "从 v1 的 75% 降到 58%。"
+        },
+        "mode": "quick_contest_sqrt",
+        "baseRate": 0.03,
+        "quickDifferenceWeight": 0.0018,
+        "dexDivisor": 0.028,
+        "minRate": 0.01,
+        "maxRate": 0.58
+      },
+      "critical": {
+        "_comment": "v2 候选保留敏捷带来的会心可能，但把极端上限收住。群攻仍不放大会心伤害。",
+        "_fieldNotes": {
+          "maxRate": "从 v1 的 100% 降到 38%，避免高敏单位过度稳定暴击。",
+          "damageMultiplier": "单体暴击伤害倍率暂不改。",
+          "multiTargetDamageMultiplier": "群攻会心表现不额外放大伤害。"
+        },
+        "mode": "quick_contest_sqrt",
+        "baseRate": 0.05,
+        "quickDifferenceWeight": 0.0013,
+        "dexDivisor": 0.13,
+        "minRate": 0.0,
+        "maxRate": 0.38,
+        "damageMultiplier": 1.35,
+        "multiTargetDamageMultiplier": 1.0
+      },
+      "combo": {
+        "_comment": "v2 候选基本保留练级合击体验，只轻微降低野怪合击率。",
+        "allyBaseRate": 0.50,
+        "monsterBaseRate": 0.18,
+        "bonusPerExtraParticipant": 0.0,
+        "flatBonusPerExtraParticipant": 8,
+        "maxParticipants": 5
+      },
+      "multiTarget": {
+        "_comment": "v2 候选给弓/群攻加入目标数递减。6 目标仍强，10 目标不再等同于单体铺满。",
+        "_fieldNotes": {
+          "targetCountFalloffPerExtra": "每多一个目标，倍率降低 3.5%。",
+          "minMultiplier": "递减最低保留 35%，避免 6 目标和 10 目标被同一个下限夹成相同伤害。"
+        },
+        "applyPowerMultiplierAfterDefense": true,
+        "targetCountFalloffPerExtra": 0.035,
+        "minMultiplier": 0.35
+      },
+      "statusHit": {
+        "_comment": "v2 候选让敏捷差和等级差轻微影响状态命中，控制类仍有上限。",
+        "_fieldNotes": {
+          "mode": "非 legacy 模式会启用 CombatFormulaModel 的敏捷差/等级差修正。",
+          "quickDifferenceWeight": "攻击方每高 1 敏捷约 +0.12% 命中，受上下限夹取。",
+          "levelDifferenceWeight": "攻击方每高 1 级约 +0.25% 命中。",
+          "controlMaxRate": "睡眠、混乱、石化等控制类最高 85%。",
+          "poisonMaxRate": "中毒最高 95%。"
+        },
+        "mode": "quick_level_adjusted",
+        "quickDifferenceWeight": 0.0012,
+        "quickDifferenceBonusMin": -0.08,
+        "quickDifferenceBonusMax": 0.08,
+        "levelDifferenceWeight": 0.0025,
+        "controlMaxRate": 0.85,
+        "poisonMaxRate": 0.95
+      }
     }
   ],
   "elementMatchup": {

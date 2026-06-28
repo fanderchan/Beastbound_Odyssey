@@ -17,6 +17,7 @@ const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_captur
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const CombatFormulaCandidateModel := preload("res://scripts/progression/combat_formula_candidate_model.gd")
 const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_formula_driver_ab_model.gd")
 const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
@@ -566,6 +567,7 @@ var auto_pet_growth_species_simulation_check: bool = false
 var auto_pet_growth_starter_profiles_check: bool = false
 var auto_numeric_experiment_report_check: bool = false
 var auto_combat_formula_parity_check: bool = false
+var auto_combat_v2_shadow_check: bool = false
 var auto_combat_formula_driver_ab_check: bool = false
 var auto_numeric_battle_simulation_check: bool = false
 var auto_economy_ledger_check: bool = false
@@ -1001,6 +1003,8 @@ func _ready() -> void:
 		call_deferred("_run_numeric_experiment_report", true)
 	elif auto_combat_formula_parity_check:
 		call_deferred("_run_auto_combat_formula_parity_check")
+	elif auto_combat_v2_shadow_check:
+		call_deferred("_run_auto_combat_v2_shadow_check")
 	elif auto_combat_formula_driver_ab_check:
 		call_deferred("_run_auto_combat_formula_driver_ab_check")
 	elif auto_numeric_battle_simulation_check:
@@ -1548,6 +1552,8 @@ func _apply_preview_window_args() -> void:
 			auto_numeric_experiment_report_check = true
 		elif arg == "--auto-combat-formula-parity-check":
 			auto_combat_formula_parity_check = true
+		elif arg == "--auto-combat-v2-shadow-check":
+			auto_combat_v2_shadow_check = true
 		elif arg == "--auto-combat-formula-driver-ab-check":
 			auto_combat_formula_driver_ab_check = true
 		elif arg == "--auto-numeric-battle-simulation-check":
@@ -4253,6 +4259,8 @@ func _run_numeric_experiment_report(check_only: bool = false) -> void:
 	var progression_samples: Array = report.get("progressionZones", {}).get("samples", [])
 	var progression_summary := report.get("progressionZones", {}).get("summary", {}) as Dictionary
 	var combat_shadow_samples: Array = report.get("combatFormulaShadow", {}).get("samples", [])
+	var combat_v2_shadow_samples: Array = report.get("combatV2Shadow", {}).get("samples", [])
+	var combat_v2_shadow_summary := report.get("combatV2Shadow", {}).get("summary", {}) as Dictionary
 	var combat_driver_ab_samples: Array = report.get("combatFormulaDriverAB", {}).get("samples", [])
 	var combat_driver_ab_summary := report.get("combatFormulaDriverAB", {}).get("summary", {}) as Dictionary
 	var battle_simulation_samples: Array = report.get("battleSimulation", {}).get("samples", [])
@@ -4261,7 +4269,7 @@ func _run_numeric_experiment_report(check_only: bool = false) -> void:
 	var economy_ledger_summary := report.get("economyLedger", {}).get("summary", {}) as Dictionary
 	var capture_rows: Array = report.get("captureMatrix", {}).get("rows", [])
 	var status := "ok" if errors.is_empty() else "failed"
-	print("numeric experiment report ready: status=%s check=%s output=%s anchors=%d pet_growth_samples=%d reward_samples=%d progression_samples=%d progression_exp_ok=%d progression_battle_ok=%d combat_shadow_samples=%d driver_ab_samples=%d driver_ab_identical=%d battle_simulation_samples=%d battle_simulation_ok=%d economy_samples=%d economy_net_ok=%d capture_rows=%d errors=%s" % [
+	print("numeric experiment report ready: status=%s check=%s output=%s anchors=%d pet_growth_samples=%d reward_samples=%d progression_samples=%d progression_exp_ok=%d progression_battle_ok=%d combat_shadow_samples=%d combat_v2_samples=%d combat_v2_criteria=%d/%d driver_ab_samples=%d driver_ab_identical=%d battle_simulation_samples=%d battle_simulation_ok=%d economy_samples=%d economy_net_ok=%d capture_rows=%d errors=%s" % [
 		status,
 		str(check_only),
 		str(write_result.get("path", "")),
@@ -4272,6 +4280,9 @@ func _run_numeric_experiment_report(check_only: bool = false) -> void:
 		int(progression_summary.get("expOk", 0)),
 		int(progression_summary.get("battleCountOk", 0)),
 		combat_shadow_samples.size(),
+		combat_v2_shadow_samples.size(),
+		int(combat_v2_shadow_summary.get("criteriaPassed", 0)),
+		int(combat_v2_shadow_summary.get("criteriaTotal", 0)),
 		combat_driver_ab_samples.size(),
 		int(combat_driver_ab_summary.get("identicalCount", 0)),
 		battle_simulation_samples.size(),
@@ -4557,6 +4568,35 @@ func _run_auto_combat_formula_parity_check() -> void:
 		int(summary.get("maxAbsDamageDelta", 0)),
 		float(summary.get("maxAbsRateDelta", 0.0)),
 		str(bool(summary.get("strictParityReady", false))),
+		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_combat_v2_shadow_check() -> void:
+	var report := CombatFormulaCandidateModel.build_report()
+	var write_result := CombatFormulaCandidateModel.write_report(report)
+	var errors := CombatFormulaCandidateModel.validation_errors(report)
+	if not bool(write_result.get("ok", false)):
+		errors.append(str(write_result.get("error", "报告写入失败")))
+	var samples: Array = report.get("samples", [])
+	var summary := report.get("summary", {}) as Dictionary
+	var status := "ok" if errors.is_empty() else "failed"
+	print("combat v2 shadow check ready: status=%s output=%s baseline=%s candidate=%s samples=%d damage=%d rate=%d combo=%d avg_damage_delta=%.2f avg_damage_ratio=%.4f avg_rate_delta=%.4f criteria=%d/%d ready=%s errors=%s" % [
+		status,
+		str(write_result.get("path", "")),
+		str(report.get("baselineFormulaId", "")),
+		str(report.get("candidateFormulaId", "")),
+		samples.size(),
+		int(summary.get("damageSamples", 0)),
+		int(summary.get("rateSamples", 0)),
+		int(summary.get("comboSamples", 0)),
+		float(summary.get("avgAbsDamageDelta", 0.0)),
+		float(summary.get("avgAbsDamageDeltaRatio", 0.0)),
+		float(summary.get("avgAbsRateDelta", 0.0)),
+		int(summary.get("criteriaPassed", 0)),
+		int(summary.get("criteriaTotal", 0)),
+		str(bool(summary.get("candidateReadyForReview", false))),
 		";".join(errors),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -23789,7 +23829,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物/骑宠: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check / --auto-riding-system-check")
 	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check")
-	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
+	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-v2-shadow-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
