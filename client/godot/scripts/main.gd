@@ -10,6 +10,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
@@ -238,6 +239,15 @@ var mailbox_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
 var qa_menu_button: Button
+var auth_panel: PanelContainer
+var auth_title_label: Label
+var auth_message_label: Label
+var auth_username_input: LineEdit
+var auth_password_input: LineEdit
+var auth_display_name_input: LineEdit
+var auth_login_tab_button: Button
+var auth_register_tab_button: Button
+var auth_submit_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
 var backpack_detail_label: RichTextLabel
@@ -557,6 +567,7 @@ var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
+var auto_auth_check: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
@@ -678,6 +689,10 @@ var startup_map_id: String = START_MAP_ID
 var startup_spawn_name: String = "default"
 var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
+var account_authenticated: bool = false
+var auth_auto_bypass: bool = false
+var auth_mode_register: bool = false
+var current_account_session: Dictionary = {}
 var profile_save_enabled: bool = true
 var profile_save_pending: bool = false
 var profile_save_debounce_remaining: float = 0.0
@@ -809,10 +824,22 @@ var perf_probe_frames: int = 0
 var perf_probe_totals: Dictionary = {}
 
 
+func _bootstrap_auth_state() -> void:
+	if auth_auto_bypass:
+		account_authenticated = true
+		current_account_session = AccountAuthModel.dev_gm_session()
+		PlayerProgressModel.reset_active_save_path()
+	else:
+		account_authenticated = false
+		current_account_session = {}
+		PlayerProgressModel.reset_active_save_path()
+
+
 func _ready() -> void:
 	_configure_runtime_performance()
 	_apply_preview_window_args()
-	player_profile = PlayerProgressModel.load_profile()
+	_bootstrap_auth_state()
+	player_profile = PlayerProgressModel.load_profile() if account_authenticated else PlayerProgressModel.default_profile()
 	_load_map(startup_map_id, startup_spawn_name)
 	get_tree().root.size_changed.connect(_layout_hud)
 	encounter_rng.randomize()
@@ -821,12 +848,18 @@ func _ready() -> void:
 	_build_path_line_overlay()
 	_build_camera()
 	_build_hud()
-	_save_profile_after_exp_pill_starter_update()
-	_show_exp_pill_starter_notice_if_needed()
-	_refresh_mailbox_menu_button()
+	if account_authenticated:
+		_save_profile_after_exp_pill_starter_update()
+		_show_exp_pill_starter_notice_if_needed()
+		_refresh_mailbox_menu_button()
+	else:
+		_open_auth_panel(false)
+	_refresh_gm_visibility()
 	_layout_hud()
 	set_process(true)
-	if auto_encounter_check:
+	if auto_auth_check:
+		call_deferred("_run_auto_auth_check")
+	elif auto_encounter_check:
 		call_deferred("_run_auto_encounter_check")
 	elif auto_battle_action_catalog_check:
 		call_deferred("_run_auto_battle_action_catalog_check")
@@ -1310,6 +1343,8 @@ func _apply_preview_window_args() -> void:
 			or arg == "--numeric-experiment-report"
 		):
 			profile_save_enabled = false
+			if arg != "--auto-auth-check":
+				auth_auto_bypass = true
 		if arg == "--preview-mobile":
 			pass
 		elif arg == "--preview-mobile-portrait":
@@ -1523,6 +1558,9 @@ func _apply_preview_window_args() -> void:
 			auto_npc_quest_marker_check = true
 		elif arg == "--auto-qa-panel-check":
 			auto_qa_panel_check = true
+		elif arg == "--auto-auth-check":
+			auto_auth_check = true
+			auth_auto_bypass = false
 		elif arg == "--auto-panel-registry-check":
 			auto_panel_registry_check = true
 		elif arg == "--auto-chat-panel-check":
@@ -14551,6 +14589,59 @@ func _run_auto_panel_registry_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_auth_check() -> void:
+	profile_save_enabled = false
+	var original_plugin_exists := FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH)
+	var original_plugin_text := FileAccess.get_file_as_string(AccountAuthModel.GM_PLUGIN_PATH) if original_plugin_exists else ""
+	var username := "auth%d" % int(Time.get_ticks_msec() % 1000000)
+	auth_username_input.text = username
+	auth_password_input.text = "test1234"
+	auth_display_name_input.text = "测试玩家"
+	_set_auth_mode(true)
+	_on_auth_submit_pressed()
+	await get_tree().process_frame
+	var player_registered := account_authenticated and str(current_account_session.get("username", "")) == username
+	var player_is_not_gm := not _can_use_gm_tools()
+	var player_hides_gm := qa_menu_button != null and not qa_menu_button.visible
+	_open_qa_panel()
+	await get_tree().process_frame
+	var player_blocks_qa := qa_panel == null or not qa_panel.visible
+	var plugin_install_ok := AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
+	current_account_session = AccountAuthModel.session_for_account({
+		"username": "codex_auth_gm",
+		"displayName": "测试GM",
+		"role": AccountAuthModel.ROLE_GM,
+	})
+	account_authenticated = true
+	_refresh_gm_visibility()
+	_open_qa_panel()
+	await get_tree().process_frame
+	var gm_plugin_unlocks := plugin_install_ok and _can_use_gm_tools() and qa_menu_button != null and qa_menu_button.visible and qa_panel != null and qa_panel.visible
+	_restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
+	var status := "ok" if player_registered and player_is_not_gm and player_hides_gm and player_blocks_qa and gm_plugin_unlocks else "fail"
+	print("auth check ready: status=%s registered=%s player_no_gm=%s hidden=%s qa_blocked=%s gm_unlocked=%s" % [
+		status,
+		str(player_registered),
+		str(player_is_not_gm),
+		str(player_hides_gm),
+		str(player_blocks_qa),
+		str(gm_plugin_unlocks),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _restore_auth_check_plugin(existed: bool, text: String) -> void:
+	var absolute_path := ProjectSettings.globalize_path(AccountAuthModel.GM_PLUGIN_PATH)
+	if existed:
+		var file := FileAccess.open(AccountAuthModel.GM_PLUGIN_PATH, FileAccess.WRITE)
+		if file != null:
+			file.store_string(text)
+			file.close()
+	else:
+		if FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH):
+			DirAccess.remove_absolute(absolute_path)
+
+
 func _run_auto_qa_panel_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -17887,6 +17978,8 @@ func _flush_profile_save_now() -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if not account_authenticated and not auth_auto_bypass:
+		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
@@ -18351,6 +18444,7 @@ func _build_hud() -> void:
 	qa_menu_button.pressed.connect(_open_qa_panel)
 	action_row.add_child(qa_menu_button)
 	hud_root.add_child(action_bar)
+	_build_auth_panel()
 
 	player_status_panel = _panel_container("PlayerStatusPanel")
 	player_status_panel.visible = false
@@ -19949,6 +20043,188 @@ func _build_hud() -> void:
 	_register_hud_panels()
 
 
+func _build_auth_panel() -> void:
+	auth_panel = _panel_container("AuthPanel")
+	auth_panel.visible = false
+	auth_panel.z_index = 90
+	auth_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var outer := VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_theme_constant_override("separation", 12)
+	auth_panel.add_child(outer)
+
+	auth_title_label = Label.new()
+	auth_title_label.text = "万兽纪元"
+	auth_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	auth_title_label.add_theme_font_size_override("font_size", 26)
+	outer.add_child(auth_title_label)
+
+	var subtitle := Label.new()
+	subtitle.text = "登录后进入火芽村"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", Color(0.86, 0.82, 0.70, 0.92))
+	outer.add_child(subtitle)
+
+	var tab_row := HBoxContainer.new()
+	tab_row.add_theme_constant_override("separation", 8)
+	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(tab_row)
+	auth_login_tab_button = Button.new()
+	auth_login_tab_button.text = "登录"
+	auth_login_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_login_tab_button.custom_minimum_size = Vector2(0, 44)
+	auth_login_tab_button.pressed.connect(func() -> void:
+		_set_auth_mode(false)
+	)
+	tab_row.add_child(auth_login_tab_button)
+	auth_register_tab_button = Button.new()
+	auth_register_tab_button.text = "注册"
+	auth_register_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_register_tab_button.custom_minimum_size = Vector2(0, 44)
+	auth_register_tab_button.pressed.connect(func() -> void:
+		_set_auth_mode(true)
+	)
+	tab_row.add_child(auth_register_tab_button)
+
+	auth_username_input = LineEdit.new()
+	auth_username_input.placeholder_text = "账号"
+	auth_username_input.custom_minimum_size = Vector2(0, 44)
+	auth_username_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(auth_username_input)
+
+	auth_password_input = LineEdit.new()
+	auth_password_input.placeholder_text = "密码"
+	auth_password_input.secret = true
+	auth_password_input.custom_minimum_size = Vector2(0, 44)
+	auth_password_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_password_input.text_submitted.connect(func(_text: String) -> void:
+		_on_auth_submit_pressed()
+	)
+	outer.add_child(auth_password_input)
+
+	auth_display_name_input = LineEdit.new()
+	auth_display_name_input.placeholder_text = "昵称"
+	auth_display_name_input.custom_minimum_size = Vector2(0, 44)
+	auth_display_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(auth_display_name_input)
+
+	auth_message_label = Label.new()
+	auth_message_label.text = ""
+	auth_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	auth_message_label.add_theme_font_size_override("font_size", 14)
+	auth_message_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	auth_message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_message_label.custom_minimum_size = Vector2(0, 44)
+	outer.add_child(auth_message_label)
+
+	auth_submit_button = Button.new()
+	auth_submit_button.custom_minimum_size = Vector2(0, 52)
+	auth_submit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_submit_button.pressed.connect(_on_auth_submit_pressed)
+	outer.add_child(auth_submit_button)
+
+	hud_root.add_child(auth_panel)
+	_set_auth_mode(false)
+
+
+func _set_auth_mode(register_mode: bool) -> void:
+	auth_mode_register = register_mode
+	if auth_login_tab_button != null:
+		auth_login_tab_button.disabled = not auth_mode_register
+	if auth_register_tab_button != null:
+		auth_register_tab_button.disabled = auth_mode_register
+	if auth_display_name_input != null:
+		auth_display_name_input.visible = auth_mode_register
+	if auth_submit_button != null:
+		auth_submit_button.text = "注册并进入" if auth_mode_register else "进入游戏"
+	if auth_message_label != null:
+		auth_message_label.text = ""
+
+
+func _open_auth_panel(update_layout: bool = true) -> void:
+	if auth_panel == null:
+		return
+	auth_panel.visible = true
+	if auth_username_input != null:
+		auth_username_input.grab_focus()
+	if update_layout:
+		_layout_hud()
+
+
+func _close_auth_panel(update_layout: bool = true) -> void:
+	_hide_control(auth_panel, update_layout)
+
+
+func _on_auth_submit_pressed() -> void:
+	if auth_username_input == null or auth_password_input == null:
+		return
+	var username := auth_username_input.text
+	var password := auth_password_input.text
+	var result := {}
+	if auth_mode_register:
+		var display_name := auth_display_name_input.text if auth_display_name_input != null else ""
+		result = AccountAuthModel.register_player_account(username, password, display_name)
+	else:
+		result = AccountAuthModel.login(username, password)
+	if not bool(result.get("ok", false)):
+		if auth_message_label != null:
+			auth_message_label.text = str(result.get("message", "登录失败。"))
+		return
+	var migrate_legacy := auth_mode_register and bool(result.get("firstAccount", false))
+	_apply_authenticated_session(result.get("session", {}), migrate_legacy)
+	if auth_message_label != null:
+		auth_message_label.text = str(result.get("message", "已进入游戏。"))
+
+
+func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = false) -> void:
+	if session.is_empty():
+		return
+	current_account_session = session
+	account_authenticated = true
+	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
+	if migrate_legacy:
+		PlayerProgressModel.copy_legacy_save_to_active_if_missing()
+	player_profile = PlayerProgressModel.load_profile()
+	_apply_auth_profile_metadata(str(session.get("displayName", "")))
+	_close_auth_panel(false)
+	_refresh_gm_visibility()
+	_save_profile_after_exp_pill_starter_update()
+	_show_exp_pill_starter_notice_if_needed()
+	_refresh_mailbox_menu_button()
+	_mark_progress_ui_caches_dirty()
+	_update_hud_text(true)
+	_layout_hud()
+
+
+func _apply_auth_profile_metadata(display_name: String) -> void:
+	var name := display_name.strip_edges()
+	if name == "":
+		name = str(current_account_session.get("username", "玩家"))
+	var current_name := str(player_profile.get("playerName", "")).strip_edges()
+	if current_name == "" or current_name == "见习猎人":
+		player_profile["playerName"] = name
+	player_profile["accountUsername"] = str(current_account_session.get("username", ""))
+	player_profile["accountRole"] = str(current_account_session.get("role", AccountAuthModel.ROLE_PLAYER))
+	player_profile["effectiveAccountRole"] = str(current_account_session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	if profile_save_enabled:
+		_request_profile_save()
+
+
+func _can_use_gm_tools() -> bool:
+	return auth_auto_bypass or AccountAuthModel.session_can_use_gm(current_account_session)
+
+
+func _refresh_gm_visibility() -> void:
+	if qa_menu_button != null:
+		qa_menu_button.visible = _can_use_gm_tools()
+	if not _can_use_gm_tools():
+		_close_qa_panel(false)
+		_close_numeric_workbench_panel(false)
+
+
 func _add_battle_buttons(specs: Array) -> void:
 	for value in specs:
 		var spec := value as Dictionary
@@ -20077,6 +20353,7 @@ func _register_hud_panels() -> void:
 		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
+		auth_panel,
 		qa_panel,
 		numeric_workbench_panel,
 		pet_rename_panel,
@@ -20104,6 +20381,7 @@ func _register_hud_panels() -> void:
 		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
+		auth_panel,
 		qa_panel,
 		numeric_workbench_panel,
 		pet_rename_panel,
@@ -24436,6 +24714,9 @@ func _close_auto_settings_panel() -> void:
 
 
 func _open_qa_panel() -> void:
+	if not _can_use_gm_tools():
+		_set_world_log_message("当前账号没有GM权限。")
+		return
 	if battle_active:
 		return
 	_set_hang_mode(false)
@@ -24467,6 +24748,9 @@ func _close_qa_panel(update_layout: bool = true) -> void:
 
 
 func _open_numeric_workbench_panel() -> void:
+	if not _can_use_gm_tools():
+		_set_world_log_message("当前账号没有GM权限。")
+		return
 	if battle_active:
 		return
 	_set_hang_mode(false)
@@ -24773,6 +25057,9 @@ func _qa_command_summary_text() -> String:
 
 
 func _on_qa_entry_pressed(entry_id: String) -> void:
+	if not _can_use_gm_tools():
+		_set_world_log_message("当前账号没有GM权限。")
+		return
 	match entry_id:
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
@@ -30307,6 +30594,21 @@ func _layout_hud() -> void:
 	battle_message_panel.position = Vector2(margin, maxf(margin + 68.0, message_y))
 	battle_message_panel.size = Vector2(message_width, message_height)
 	battle_message_panel.visible = (battle_active or world_log_message != "" or not world_log_history.is_empty()) and (battle_active or not world_menu_open)
+
+	if auth_panel != null:
+		var auth_width: float = minf(viewport_size.x - margin * 2.0, 460.0)
+		var auth_height: float = minf(viewport_size.y - margin * 2.0, 438.0)
+		auth_panel.position = Vector2((viewport_size.x - auth_width) * 0.5, maxf(margin, (viewport_size.y - auth_height) * 0.5))
+		auth_panel.size = Vector2(auth_width, auth_height)
+		if auth_panel.visible:
+			top_panel.visible = false
+			side_panel.visible = false
+			action_bar.visible = false
+			battle_message_panel.visible = false
+			if battle_round_panel != null:
+				battle_round_panel.visible = false
+			if battle_timer_panel != null:
+				battle_timer_panel.visible = false
 
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())

@@ -193,6 +193,61 @@ const REBIRTH_STARTER_PET_BY_TARGET := {
 const DEFAULT_RECORD_POINT_MAP_ID := "firebud_village_gate"
 const DEFAULT_RECORD_POINT_SPAWN_NAME := "default"
 const DEFAULT_RECORD_POINT_LABEL := "火芽村出生点"
+static var active_save_path: String = SAVE_PATH
+static var active_backup_path: String = SAVE_BACKUP_PATH
+
+
+static func set_active_save_path(path: String) -> void:
+	var normalized_path := path.strip_edges()
+	if normalized_path == "":
+		normalized_path = SAVE_PATH
+	active_save_path = normalized_path
+	active_backup_path = _backup_path_for_save_path(active_save_path)
+
+
+static func reset_active_save_path() -> void:
+	set_active_save_path(SAVE_PATH)
+
+
+static func current_save_path() -> String:
+	return active_save_path
+
+
+static func legacy_save_exists() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+
+static func active_save_exists() -> bool:
+	return FileAccess.file_exists(active_save_path)
+
+
+static func copy_legacy_save_to_active_if_missing() -> bool:
+	if active_save_path == SAVE_PATH:
+		return false
+	if FileAccess.file_exists(active_save_path) or not FileAccess.file_exists(SAVE_PATH):
+		return false
+	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var parsed = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return false
+	var dir_path := active_save_path.get_base_dir()
+	if dir_path != "":
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+	var file := FileAccess.open(active_save_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(text)
+	file.close()
+	return true
+
+
+static func _backup_path_for_save_path(path: String) -> String:
+	if path == SAVE_PATH:
+		return SAVE_BACKUP_PATH
+	var extension := path.get_extension()
+	if extension == "":
+		return "%s.last_good" % path
+	return "%s.last_good.%s" % [path.substr(0, path.length() - extension.length() - 1), extension]
 
 
 static func default_profile() -> Dictionary:
@@ -262,9 +317,9 @@ static func default_profile() -> Dictionary:
 
 
 static func load_profile() -> Dictionary:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not FileAccess.file_exists(active_save_path):
 		return default_profile()
-	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var text := FileAccess.get_file_as_string(active_save_path)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return default_profile()
@@ -279,7 +334,10 @@ static func save_profile(profile: Dictionary) -> bool:
 		push_error("Refusing to overwrite a non-empty pet save with an empty pet list.")
 		return false
 	_write_last_good_backup()
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var dir_path := active_save_path.get_base_dir()
+	if dir_path != "":
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+	var file := FileAccess.open(active_save_path, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify(normalized, "\t"))
@@ -288,9 +346,9 @@ static func save_profile(profile: Dictionary) -> bool:
 
 
 static func _existing_save_pet_count() -> int:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not FileAccess.file_exists(active_save_path):
 		return 0
-	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var text := FileAccess.get_file_as_string(active_save_path)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return 0
@@ -299,16 +357,19 @@ static func _existing_save_pet_count() -> int:
 
 
 static func _write_last_good_backup() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not FileAccess.file_exists(active_save_path):
 		return
-	var text := FileAccess.get_file_as_string(SAVE_PATH)
+	var text := FileAccess.get_file_as_string(active_save_path)
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
 	var raw_instances = (parsed as Dictionary).get("petInstances", [])
 	if not (raw_instances is Array) or (raw_instances as Array).is_empty():
 		return
-	var backup := FileAccess.open(SAVE_BACKUP_PATH, FileAccess.WRITE)
+	var backup_dir := active_backup_path.get_base_dir()
+	if backup_dir != "":
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(backup_dir))
+	var backup := FileAccess.open(active_backup_path, FileAccess.WRITE)
 	if backup == null:
 		return
 	backup.store_string(text)
