@@ -14820,15 +14820,40 @@ func _run_auto_auth_server_client_check() -> void:
 			"expiresAt": "2099-01-01T00:00:00.000Z",
 		},
 		"profileBinding": {"playerId": "player_test"},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 3,
+			"storageMode": "local_shadow",
+			"serverAuthority": "account_binding",
+		},
 	}).to_utf8_buffer()
+	var profile_spec := ServerAuthClientModel.profile_request("http://127.0.0.1:8787/", "token_test")
+	var profile_request_ok := (
+		str(profile_spec.get("url", "")) == "http://127.0.0.1:8787/profiles/me"
+		and int(profile_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and _packed_string_array(profile_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
 	var parsed := ServerAuthClientModel.parse_auth_response(200, success_body)
 	var parsed_session := parsed.get("session", {}) as Dictionary
+	var summary := parsed_session.get("serverProfileSummary", {}) as Dictionary
 	var parse_ok := (
 		bool(parsed.get("ok", false))
 		and str(parsed_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
 		and str(parsed_session.get("username", "")) == "remoteuser"
 		and str(parsed_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/player_profile.json"
 		and str(parsed_session.get("serverSessionToken", "")) == "token_test"
+		and str(summary.get("playerId", "")) == "player_test"
+		and int(summary.get("profileRevision", -1)) == 3
+	)
+	var profile_body := JSON.stringify({
+		"ok": true,
+		"profileBinding": {"playerId": "player_test"},
+		"profileSummary": summary,
+	}).to_utf8_buffer()
+	var parsed_profile := ServerAuthClientModel.parse_profile_response(200, profile_body)
+	var profile_parse_ok := (
+		bool(parsed_profile.get("ok", false))
+		and str((parsed_profile.get("profileSummary", {}) as Dictionary).get("playerId", "")) == "player_test"
 	)
 	var error_body := JSON.stringify({
 		"ok": false,
@@ -14854,10 +14879,13 @@ func _run_auto_auth_server_client_check() -> void:
 		and not auth_server_url_input.visible
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_local_ok else "failed"
-	print("auth server client check ready: status=%s request=%s parse=%s error=%s ui_server=%s ui_local=%s" % [
+	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok else "failed"
+	print("auth server client check ready: status=%s request=%s profile_request=%s parse=%s profile_parse=%s error=%s ui_server=%s ui_local=%s" % [
 		status,
 		str(request_ok),
+		str(profile_request_ok),
 		str(parse_ok),
+		str(profile_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_local_ok),
@@ -20459,7 +20487,7 @@ func _build_account_panel() -> void:
 	account_info_label.clip_text = true
 	account_info_label.add_theme_font_size_override("font_size", 17)
 	account_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	account_info_label.custom_minimum_size = Vector2(0, 70)
+	account_info_label.custom_minimum_size = Vector2(0, 108)
 	outer.add_child(account_info_label)
 
 	account_switch_button = Button.new()
@@ -20659,6 +20687,8 @@ func _apply_auth_profile_metadata(display_name: String) -> void:
 	player_profile["accountUsername"] = str(current_account_session.get("username", ""))
 	player_profile["accountRole"] = str(current_account_session.get("role", AccountAuthModel.ROLE_PLAYER))
 	player_profile["effectiveAccountRole"] = str(current_account_session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
+	if current_account_session.has("serverProfileSummary"):
+		player_profile["serverProfileSummary"] = current_account_session.get("serverProfileSummary", {})
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	if profile_save_enabled:
 		_request_profile_save()
@@ -20721,10 +20751,17 @@ func _refresh_account_panel() -> void:
 	var source_label := "服务器" if source == ServerAuthClientModel.SOURCE_SERVER else "本地"
 	if display_name == "":
 		display_name = username if username != "" else "玩家"
-	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n切换账号前会保存当前进度。" % [
+	var profile_line := "档案：本地"
+	if source == ServerAuthClientModel.SOURCE_SERVER:
+		var summary := current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
+		var player_id := str(summary.get("playerId", "")).strip_edges()
+		var revision := int(summary.get("profileRevision", 0))
+		profile_line = "档案：%s r%d" % [player_id if player_id != "" else "服务器绑定", revision]
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存当前进度。" % [
 		display_name,
 		username if username != "" else "-",
 		source_label,
+		profile_line,
 	]
 
 
@@ -31081,7 +31118,7 @@ func _layout_hud() -> void:
 
 	if account_panel != null:
 		var account_width: float = minf(viewport_size.x - margin * 2.0, 440.0)
-		var account_height: float = minf(viewport_size.y - margin * 2.0, 244.0)
+		var account_height: float = minf(viewport_size.y - margin * 2.0, 284.0)
 		account_panel.position = Vector2((viewport_size.x - account_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - account_height) * 0.5))
 		account_panel.size = Vector2(account_width, account_height)
 		if battle_active:

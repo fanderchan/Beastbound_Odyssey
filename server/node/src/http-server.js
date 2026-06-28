@@ -51,8 +51,9 @@ function createHttpServer(options = {}) {
         return sendJson(res, 200, {
           "ok": true,
           "profileBinding": result.profileBinding,
+          "profileSummary": result.profileSummary,
           "profile": null,
-          "message": "档案同步尚未接管，本阶段只返回账号绑定。"
+          "message": "服务器已确认角色档案绑定，完整档案同步尚未接管。"
         });
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});

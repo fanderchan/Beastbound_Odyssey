@@ -25,6 +25,9 @@ test("register/login/session keeps players away from GM tools", () => {
   assert.equal(registered.account.passwordHash, undefined);
   assert.equal(registered.session.effectiveRole, "player");
   assert.equal(Boolean(registered.session.token), true);
+  assert.equal(registered.profileSummary.storageMode, "local_shadow");
+  assert.equal(registered.profileSummary.profileRevision, 0);
+  assert.match(registered.profileSummary.playerId, /^player_/);
 
   const duplicate = service.register({"username": "fander", "password": "test1234"});
   assert.equal(duplicate.ok, false);
@@ -99,6 +102,15 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   });
   assert.equal(session.ok, true);
   assert.equal(session.account.username, "httpuser");
+  assert.equal(session.profileSummary.storageMode, "local_shadow");
+
+  const profile = await fetchJson(`${base}/profiles/me`, {
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(profile.ok, true);
+  assert.equal(profile.profile, null);
+  assert.equal(profile.profileSummary.playerId, registered.profileSummary.playerId);
+  assert.equal(profile.profileSummary.serverAuthority, "account_binding");
 
   const tools = await fetchJson(`${base}/gm/tools`, {
     "headers": {"authorization": `Bearer ${registered.session.token}`},

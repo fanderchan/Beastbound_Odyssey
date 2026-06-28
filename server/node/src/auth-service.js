@@ -71,6 +71,7 @@ function createAuthService(options = {}) {
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
       profileBinding: data.profileBindings[accountId],
+      profileSummary: profileSummaryForAccount(account, data),
     });
   }
 
@@ -96,6 +97,7 @@ function createAuthService(options = {}) {
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
       profileBinding: data.profileBindings[account.accountId] || null,
+      profileSummary: profileSummaryForAccount(account, data),
     });
   }
 
@@ -121,6 +123,7 @@ function createAuthService(options = {}) {
       account: publicAccount(resolved.account),
       session: publicSession(resolved.session, resolved.account, data),
       profileBinding: data.profileBindings[resolved.account.accountId] || null,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
     });
   }
 
@@ -331,6 +334,24 @@ function publicSession(session, account, data, token = "") {
     result.token = token;
   }
   return result;
+}
+
+function profileSummaryForAccount(account, data) {
+  const binding = data.profileBindings[account.accountId] || null;
+  if (!binding) {
+    return null;
+  }
+  return {
+    accountId: account.accountId,
+    username: account.username,
+    displayName: account.displayName,
+    playerId: binding.playerId,
+    profileRevision: Number(binding.profileRevision || 0),
+    storageMode: "local_shadow",
+    serverAuthority: "account_binding",
+    updatedAt: binding.updatedAt,
+    schemaVersion: 1,
+  };
 }
 
 function effectiveRoleIsGm(data, account, now) {
