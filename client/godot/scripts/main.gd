@@ -30,6 +30,9 @@ const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_ec
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
+const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
+const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
+const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -92,11 +95,11 @@ const PET_FILTER_STORAGE := "storage"
 const PET_FILTER_LEVEL_ONE := "level_one"
 const PET_FILTER_LOW_POWER := "low_power"
 const PET_FILTER_NEW := "new"
-const BACKPACK_FILTER_ALL := "all"
-const BACKPACK_FILTER_WORLD := "world"
-const BACKPACK_FILTER_BATTLE := "battle"
-const BACKPACK_FILTER_CAPTURE := "capture"
-const BACKPACK_FILTER_EQUIPMENT := "equipment"
+const BACKPACK_FILTER_ALL := BackpackPanelPresenter.FILTER_ALL
+const BACKPACK_FILTER_WORLD := BackpackPanelPresenter.FILTER_WORLD
+const BACKPACK_FILTER_BATTLE := BackpackPanelPresenter.FILTER_BATTLE
+const BACKPACK_FILTER_CAPTURE := BackpackPanelPresenter.FILTER_CAPTURE
+const BACKPACK_FILTER_EQUIPMENT := BackpackPanelPresenter.FILTER_EQUIPMENT
 const PET_SORT_DEFAULT := "default"
 const PET_SORT_LEVEL := "level"
 const PET_SORT_POWER := "power"
@@ -184,6 +187,7 @@ var player: CharacterBody2D
 var pet
 var path_line_node: Line2D
 var hud_root: Control
+var panel_registry
 var top_panel: PanelContainer
 var side_panel: PanelContainer
 var action_bar: PanelContainer
@@ -527,6 +531,7 @@ var auto_task_tracker_route_check: bool = false
 var auto_map_panel_check: bool = false
 var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
+var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
 var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
@@ -729,9 +734,6 @@ var battle_command_countdown_remaining: float = 99.0
 var battle_command_countdown_last_second: int = -1
 var battle_round_display_last_text: String = ""
 var battle_timer_display_last_text: String = ""
-var battle_debug_window: Window
-var battle_debug_text: TextEdit
-var battle_debug_last_text: String = ""
 var battle_trace_path: String = ""
 var gm_battle_speed_multiplier: int = GM_BATTLE_SPEED_MIN
 var last_checked_player_cell: Vector2i = Vector2i.ZERO
@@ -762,8 +764,14 @@ var world_hud_signature_cache: String = ""
 var quest_marker_source_signature_cache: String = ""
 var quest_marker_signature_cache: String = ""
 var quest_marker_state_cache: Dictionary = {}
+var quest_marker_cache_dirty: bool = true
 var current_task_text_signature_cache: String = ""
 var current_task_text_cache: String = ""
+var task_tracker_cache_dirty: bool = true
+var task_tracker_source_signature_cache: String = ""
+var task_tracker_text_cache: String = "当前没有任务"
+var task_tracker_target_cache: Dictionary = {}
+var task_tracker_has_target_cache: bool = false
 var world_hud_refresh_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
 var map_world_bounds_cache := Rect2()
 var map_world_bounds_cache_valid: bool = false
@@ -927,6 +935,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_facility_marker_check")
 	elif auto_qa_panel_check:
 		call_deferred("_run_auto_qa_panel_check")
+	elif auto_panel_registry_check:
+		call_deferred("_run_auto_panel_registry_check")
 	elif auto_chat_panel_check:
 		call_deferred("_run_auto_chat_panel_check")
 	elif auto_world_log_panel_check:
@@ -1480,6 +1490,8 @@ func _apply_preview_window_args() -> void:
 			auto_npc_quest_marker_check = true
 		elif arg == "--auto-qa-panel-check":
 			auto_qa_panel_check = true
+		elif arg == "--auto-panel-registry-check":
+			auto_panel_registry_check = true
 		elif arg == "--auto-chat-panel-check":
 			auto_chat_panel_check = true
 		elif arg == "--auto-world-log-panel-check":
@@ -1725,11 +1737,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
 	map_world_bounds_cache_valid = false
-	world_draw_signature_cache = ""
-	world_hud_signature_cache = ""
-	quest_marker_source_signature_cache = ""
-	quest_marker_signature_cache = ""
-	quest_marker_state_cache.clear()
+	_mark_progress_ui_caches_dirty()
 	_set_hang_mode(false)
 	_clear_navigation_state()
 	_close_dialog()
@@ -14237,6 +14245,44 @@ func _run_auto_npc_quest_marker_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_panel_registry_check() -> void:
+	profile_save_enabled = false
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	await get_tree().process_frame
+	var registry_ok := panel_registry != null
+	var top_point := top_panel.global_position + top_panel.size * 0.5 if top_panel != null else Vector2.ZERO
+	var top_blocks_ok := _is_ui_point(top_point)
+	var no_menu_before_ok := not _world_menu_is_open()
+	if equipment_synthesis_panel != null:
+		equipment_synthesis_panel.visible = true
+	_layout_hud()
+	await get_tree().process_frame
+	var synthesis_point := equipment_synthesis_panel.global_position + equipment_synthesis_panel.size * 0.5 if equipment_synthesis_panel != null else Vector2.ZERO
+	var synthesis_visible_ok := equipment_synthesis_panel != null and equipment_synthesis_panel.visible
+	var synthesis_menu_ok := _world_menu_is_open()
+	var synthesis_blocks_ok := _is_ui_point(synthesis_point)
+	if equipment_synthesis_panel != null:
+		equipment_synthesis_panel.visible = false
+	_layout_hud()
+	await get_tree().process_frame
+	var no_menu_after_ok := not _world_menu_is_open()
+	var synthesis_clear_ok := not _is_ui_point(synthesis_point)
+	var status := "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
+	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s after=%s clear=%s" % [
+		status,
+		str(loaded),
+		str(registry_ok),
+		str(top_blocks_ok),
+		str(no_menu_before_ok),
+		str(synthesis_visible_ok),
+		str(synthesis_menu_ok),
+		str(synthesis_blocks_ok),
+		str(no_menu_after_ok),
+		str(synthesis_clear_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_qa_panel_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -17473,10 +17519,33 @@ func _perf_report(delta: float) -> void:
 
 
 func _request_profile_save(delay_seconds: float = 0.3) -> void:
+	_mark_progress_ui_caches_dirty()
 	if not profile_save_enabled:
 		return
 	profile_save_pending = true
 	profile_save_debounce_remaining = maxf(profile_save_debounce_remaining, delay_seconds)
+
+
+func _save_player_profile_now() -> bool:
+	_mark_progress_ui_caches_dirty()
+	return PlayerProgressModel.save_profile(player_profile)
+
+
+func _mark_progress_ui_caches_dirty() -> void:
+	world_draw_signature_cache = ""
+	world_hud_signature_cache = ""
+	hud_task_route_signature_cache = ""
+	current_task_text_signature_cache = ""
+	current_task_text_cache = ""
+	task_tracker_cache_dirty = true
+	task_tracker_source_signature_cache = ""
+	task_tracker_text_cache = "当前没有任务"
+	task_tracker_target_cache = {}
+	task_tracker_has_target_cache = false
+	quest_marker_cache_dirty = true
+	quest_marker_source_signature_cache = ""
+	quest_marker_signature_cache = ""
+	quest_marker_state_cache.clear()
 
 
 func _flush_profile_save_if_due(delta: float) -> void:
@@ -17497,7 +17566,7 @@ func _flush_profile_save_now() -> bool:
 	if profile_save_dry_run:
 		profile_save_debug_count += 1
 		return true
-	var saved := PlayerProgressModel.save_profile(player_profile)
+	var saved := _save_player_profile_now()
 	if saved:
 		profile_save_debug_count += 1
 	return saved
@@ -17578,7 +17647,7 @@ func _world_hud_signature() -> String:
 		player_cell.x,
 		player_cell.y,
 		partner_count,
-		_active_quest_signature(),
+		_task_tracker_signature_for_hud(),
 		str(_world_menu_is_open()),
 		str(_dialog_is_open()),
 	]
@@ -17681,13 +17750,17 @@ func _profile_has_pet_form_raw(profile: Dictionary, form_id: String) -> bool:
 
 
 func _quest_marker_signature() -> String:
-	_refresh_quest_marker_cache_if_needed()
+	if quest_marker_cache_dirty or quest_marker_signature_cache == "":
+		_refresh_quest_marker_cache_if_needed()
 	return quest_marker_signature_cache
 
 
-func _refresh_quest_marker_cache_if_needed() -> void:
+func _refresh_quest_marker_cache_if_needed(force: bool = false) -> void:
+	if not force and not quest_marker_cache_dirty and quest_marker_signature_cache != "":
+		return
 	var source_signature := _quest_marker_source_signature()
-	if source_signature == quest_marker_source_signature_cache:
+	if not force and source_signature == quest_marker_source_signature_cache and quest_marker_signature_cache != "":
+		quest_marker_cache_dirty = false
 		return
 	quest_marker_source_signature_cache = source_signature
 	quest_marker_state_cache.clear()
@@ -17706,6 +17779,7 @@ func _refresh_quest_marker_cache_if_needed() -> void:
 		if item_id == "":
 			continue
 		quest_marker_state_cache[item_id] = _compute_quest_marker_state_for_item(item, available_quest, blocked_quest)
+	quest_marker_cache_dirty = false
 
 
 func _quest_marker_source_signature() -> String:
@@ -19440,6 +19514,7 @@ func _build_hud() -> void:
 	battle_log_label.custom_minimum_size = Vector2(0, 42)
 	battle_message_box.add_child(battle_log_label)
 	hud_root.add_child(battle_message_panel)
+	_register_hud_panels()
 
 
 func _add_battle_buttons(specs: Array) -> void:
@@ -19462,170 +19537,9 @@ func _add_battle_buttons(specs: Array) -> void:
 	_sync_battle_command_layout()
 
 
-func _open_battle_debug_window() -> void:
-	if battle_debug_window != null:
-		battle_debug_window.visible = true
-		_update_battle_debug_window(true)
-		return
-	battle_debug_window = Window.new()
-	battle_debug_window.title = "战斗工程验证"
-	battle_debug_window.size = Vector2i(760, 620)
-	battle_debug_window.close_requested.connect(_on_battle_debug_window_close_requested)
-	add_child(battle_debug_window)
-
-	battle_debug_text = TextEdit.new()
-	battle_debug_text.editable = false
-	battle_debug_text.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	battle_debug_text.set_anchors_preset(Control.PRESET_FULL_RECT)
-	battle_debug_text.add_theme_font_size_override("font_size", 15)
-	battle_debug_window.add_child(battle_debug_text)
-	battle_debug_window.popup_centered(Vector2i(760, 620))
-	_update_battle_debug_window(true)
-
-
-func _on_battle_debug_window_close_requested() -> void:
-	battle_debug_window_enabled = false
-	if battle_debug_window != null:
-		battle_debug_window.hide()
-
-
 func _update_battle_debug_window(_force: bool = false) -> void:
 	# 兼容旧参数名；当前旁路验证只写 .run/battle_trace/latest.jsonl，不打开游戏窗口。
 	return
-
-
-func _battle_debug_report_text() -> String:
-	var lines: Array[String] = []
-	lines.append("战斗工程验证日志")
-	lines.append("说明：当前旁路验证写入 .run/battle_trace/latest.jsonl。")
-	lines.append("")
-	if battle_state.is_empty():
-		lines.append("当前没有战斗。")
-		return "\n".join(lines)
-	lines.append("战斗：%s  回合：%d  阶段：%s" % [
-		str(battle_state.get("id", "")),
-		int(battle_state.get("round", 1)),
-		str(battle_state.get("phase", "")),
-	])
-	lines.append("消息：%s" % str(battle_state.get("message", "")))
-	lines.append("")
-	lines.append("一、角色属性")
-	lines.append("名字 | 阵营 | 位置 | HP | 攻击 | 防御 | 敏捷")
-	for value in battle_state.get("actors", []):
-		var actor := value as Dictionary
-		lines.append("%s | %s | %s | %d/%d | %d | %d | %d" % [
-			str(actor.get("name", "")),
-			"我方" if str(actor.get("side", "")) == BattleModel.SIDE_ALLY else "敌方",
-			str(actor.get("slotId", "")),
-			int(actor.get("hp", 0)),
-			int(actor.get("maxHp", 0)),
-			int(actor.get("attack", 0)),
-			int(actor.get("defense", 0)),
-			int(actor.get("quick", 0)),
-		])
-	lines.append("")
-	_append_battle_debug_speed_lines(lines)
-	lines.append("")
-	_append_battle_debug_formula_probe_lines(lines)
-	lines.append("")
-	_append_battle_debug_event_preview_lines(lines)
-	lines.append("")
-	lines.append("手工验证要点：高速猎人 > 普通猎人 > 慢速猎人；物品 speed 高于普通攻击；高攻伤害更高；高防受到伤害更低。")
-	return "\n".join(lines)
-
-
-func _append_battle_debug_speed_lines(lines: Array[String]) -> void:
-	lines.append("二、基础攻击速度排序")
-	var rows: Array[Dictionary] = []
-	for value in battle_state.get("actors", []):
-		var actor := value as Dictionary
-		if int(actor.get("hp", 0)) <= 0:
-			continue
-		var actor_id := str(actor.get("id", ""))
-		rows.append({
-			"name": str(actor.get("name", "")),
-			"side": str(actor.get("side", "")),
-			"quick": int(actor.get("quick", 0)),
-			"speed": BattleModel.action_speed_for(battle_state, actor_id, "attack"),
-		})
-	for index in range(rows.size()):
-		for next_index in range(index + 1, rows.size()):
-			if int((rows[next_index] as Dictionary).get("speed", 0)) > int((rows[index] as Dictionary).get("speed", 0)):
-				var next_row := rows[next_index]
-				rows[next_index] = rows[index]
-				rows[index] = next_row
-	for row in rows:
-		var speed_row := row as Dictionary
-		lines.append("%s | %s | 敏捷=%d | attack speed=%d" % [
-			str(speed_row.get("name", "")),
-			"我方" if str(speed_row.get("side", "")) == BattleModel.SIDE_ALLY else "敌方",
-			int(speed_row.get("quick", 0)),
-			int(speed_row.get("speed", 0)),
-		])
-
-
-func _append_battle_debug_formula_probe_lines(lines: Array[String]) -> void:
-	lines.append("三、关键公式探针")
-	_append_damage_probe_line(lines, "高攻 vs 低防", "ally_attack_high", "enemy_front_3", "attack")
-	_append_damage_probe_line(lines, "普通攻 vs 低防", "ally_speed_normal", "enemy_front_3", "attack")
-	_append_damage_probe_line(lines, "普通攻 vs 高防", "ally_speed_normal", "enemy_front_4", "attack")
-	_append_damage_probe_line(lines, "宠物普攻 vs 低防", BattleModel.PLAYER_PET_ID, "enemy_front_3", "attack")
-	_append_damage_probe_line(lines, "宠物布伊冲撞 vs 低防", BattleModel.PLAYER_PET_ID, "enemy_front_3", "pet_skill")
-	var player_id := BattleModel.PLAYER_ACTOR_ID
-	lines.append("我本人速度：普通攻击 speed=%d；物品 speed=%d" % [
-		BattleModel.action_speed_for(battle_state, player_id, "attack"),
-		BattleModel.action_speed_for(battle_state, player_id, "item"),
-	])
-
-
-func _append_damage_probe_line(lines: Array[String], label: String, attacker_id: String, target_id: String, command_id: String) -> void:
-	var attacker := BattleModel.actor_by_id(battle_state, attacker_id)
-	var target := BattleModel.actor_by_id(battle_state, target_id)
-	if attacker.is_empty() or target.is_empty():
-		return
-	var damage := BattleModel.pet_skill_damage_preview_for(battle_state, attacker_id, target_id) if command_id == "pet_skill" else BattleModel.attack_damage_preview_for(battle_state, attacker_id, target_id)
-	lines.append("%s：%s 攻击=%d -> %s 防御=%d，damage=%d，speed=%d" % [
-		label,
-		str(attacker.get("name", "")),
-		int(attacker.get("attack", 0)),
-		str(target.get("name", "")),
-		int(target.get("defense", 0)),
-		damage,
-		BattleModel.action_speed_for(battle_state, attacker_id, command_id),
-	])
-
-
-func _append_battle_debug_event_preview_lines(lines: Array[String]) -> void:
-	lines.append("四、下一轮事件预览")
-	lines.append("假设：人物攻击低防乌力，宠物防御，其他友方 NPC 自动攻击。")
-	var events := BattleModel.build_player_pet_round_events(
-		battle_state,
-		{"command": "attack", "targetId": "enemy_front_3", "allyTargetId": BattleModel.PLAYER_ACTOR_ID},
-		{"command": "defend", "targetId": "enemy_front_3"}
-	)
-	var order := 1
-	for event_value in events:
-		var event := event_value as Dictionary
-		var attacker_id := str(event.get("attackerId", ""))
-		var target_id := str(event.get("targetId", ""))
-		var attacker := BattleModel.actor_by_id(battle_state, attacker_id)
-		var target := BattleModel.actor_by_id(battle_state, target_id)
-		var attacker_name := str(attacker.get("name", attacker_id))
-		if str(event.get("type", "")) == "combo_attack":
-			var names: Array[String] = []
-			for participant_value in event.get("participantIds", []):
-				var participant := BattleModel.actor_by_id(battle_state, str(participant_value))
-				names.append(str(participant.get("name", participant_value)))
-			attacker_name = "、".join(names)
-		lines.append("%02d. %s | %s -> %s | speed=%d | damage=%d" % [
-			order,
-			str(event.get("type", "")),
-			attacker_name,
-			str(target.get("name", target_id)),
-			int(event.get("speed", 0)),
-			int(event.get("damage", 0)),
-		])
-		order += 1
 
 
 func _battle_trace_enabled() -> bool:
@@ -19707,6 +19621,59 @@ func _build_theme() -> Theme:
 	theme.default_font = font
 	theme.default_font_size = 18
 	return theme
+
+
+func _register_hud_panels() -> void:
+	panel_registry = PanelRegistry.new()
+	panel_registry.set_input_blockers([
+		top_panel,
+		side_panel,
+		action_bar,
+		player_status_panel,
+		player_rebirth_preview_panel,
+		backpack_panel,
+		equipment_panel,
+		equipment_synthesis_panel,
+		shop_panel,
+		pet_panel,
+		pet_skill_panel,
+		pet_cultivation_panel,
+		codex_panel,
+		quest_panel,
+		map_panel,
+		chat_panel,
+		mailbox_panel,
+		training_partner_panel,
+		auto_settings_panel,
+		qa_panel,
+		pet_rename_panel,
+		dialog_panel,
+		encounter_panel,
+		battle_command_panel,
+		battle_auto_stop_button,
+		battle_passive_panel,
+		battle_message_panel,
+	])
+	panel_registry.set_world_menu_panels([
+		player_status_panel,
+		player_rebirth_preview_panel,
+		backpack_panel,
+		equipment_panel,
+		equipment_synthesis_panel,
+		shop_panel,
+		pet_panel,
+		pet_skill_panel,
+		pet_cultivation_panel,
+		codex_panel,
+		quest_panel,
+		map_panel,
+		chat_panel,
+		mailbox_panel,
+		training_partner_panel,
+		auto_settings_panel,
+		qa_panel,
+		pet_rename_panel,
+	])
 
 
 func _panel_container(node_name: String) -> PanelContainer:
@@ -20331,7 +20298,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 			route_to_healer_after_battle = true
 		log_lines.append(hang_stop_message)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	if bool(result.get("returnToRecordPoint", player_knocked_away)):
 		_return_player_to_record_point_after_knockaway(log_lines)
 	else:
@@ -20434,7 +20401,7 @@ func _sync_profile_capture_tools_from_battle_state(save_after: bool = true) -> v
 		return
 	player_profile = PlayerProgressModel.with_capture_tool_inventory(player_profile, BattleModel.capture_tool_inventory(battle_state))
 	if save_after and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _sync_profile_battle_items_from_battle_state(save_after: bool = true) -> void:
@@ -20445,7 +20412,7 @@ func _sync_profile_battle_items_from_battle_state(save_after: bool = true) -> vo
 		return
 	player_profile = PlayerProgressModel.with_battle_item_inventory(player_profile, bag as Dictionary)
 	if save_after and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictionary) -> Array[String]:
@@ -20877,7 +20844,7 @@ func _on_player_rebirth_execute_pressed() -> void:
 		log_text += "转生后已回到记录点「%s」。" % str(returned.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
 	_set_world_log_message(log_text)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_refresh_player_rebirth_preview_panel()
 	_update_hud_text()
 
@@ -21388,7 +21355,7 @@ func _on_equipment_unequip_pressed() -> void:
 	var result := PlayerProgressModel.unequip_slot(player_profile, equipment_selected_slot_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_panel()
 	if status_label != null:
@@ -21399,7 +21366,7 @@ func _on_equipment_enhance_pressed() -> void:
 	var result := PlayerProgressModel.enhance_equipment_slot(player_profile, equipment_selected_slot_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_panel()
 	_refresh_backpack_panel()
@@ -21503,7 +21470,7 @@ func _on_equipment_synthesis_pressed() -> void:
 	var result := PlayerProgressModel.synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_synthesis_panel()
 	_refresh_quick_bar()
@@ -21554,127 +21521,78 @@ func _refresh_backpack_panel() -> void:
 			)
 			backpack_grid.add_child(button)
 			backpack_slot_buttons.append(button)
-	var selected_slot := {}
-	if not visible_indices.is_empty() and backpack_selected_slot_index < slots.size():
-		selected_slot = slots[backpack_selected_slot_index]
-	var selected_item_id := str(selected_slot.get("itemId", ""))
-	if visible_indices.is_empty():
-		backpack_detail_label.text = "当前筛选：%s\n没有符合条件的道具。" % _backpack_filter_label_for(backpack_filter)
+		var selected_slot := {}
+		if not visible_indices.is_empty() and backpack_selected_slot_index < slots.size():
+			selected_slot = slots[backpack_selected_slot_index]
+		var selected_item_id := str(selected_slot.get("itemId", ""))
+		if visible_indices.is_empty():
+			backpack_detail_label.text = "当前筛选：%s\n没有符合条件的道具。" % _backpack_filter_label_for(backpack_filter)
+			if backpack_use_button != null:
+				backpack_use_button.visible = false
+			if backpack_equip_button != null:
+				backpack_equip_button.visible = false
+			if backpack_quick_bind_row != null:
+				backpack_quick_bind_row.visible = false
+			backpack_pending_use_item_id = ""
+			_clear_backpack_target_buttons()
+			if backpack_target_scroll != null:
+				backpack_target_scroll.visible = false
+			return
+		if bool(selected_slot.get("locked", false)):
+			backpack_detail_label.text = "\n".join(_backpack_locked_slot_detail_lines(backpack_selected_slot_index))
+			if backpack_use_button != null:
+				backpack_use_button.visible = false
+			if backpack_equip_button != null:
+				backpack_equip_button.visible = false
+			if backpack_quick_bind_row != null:
+				backpack_quick_bind_row.visible = false
+			backpack_pending_use_item_id = ""
+			_clear_backpack_target_buttons()
+			if backpack_target_scroll != null:
+				backpack_target_scroll.visible = false
+			return
+		var is_selected_equipment := EquipmentModel.is_equipment(selected_item_id)
+		var equipment_requirement_lines: Array[String] = []
+		var equipment_compare_lines: Array[String] = []
+		if is_selected_equipment:
+			equipment_requirement_lines = _equipment_detail_lines_with_requirement_status(selected_item_id, true)
+			equipment_compare_lines = _equipment_compare_detail_lines(selected_item_id)
+		var detail_lines := BackpackPanelPresenter.detail_lines_for_slot(selected_slot, equipment_requirement_lines, equipment_compare_lines)
+		backpack_detail_label.text = "\n".join(detail_lines)
+		var equip_check := _can_equip_item_for_ui(selected_item_id) if is_selected_equipment else {}
+		var item_actions := BackpackPanelPresenter.selected_item_actions(selected_slot, slots, equip_check)
 		if backpack_use_button != null:
-			backpack_use_button.visible = false
+			backpack_use_button.visible = bool(item_actions.get("useButtonVisible", false))
+			backpack_use_button.disabled = bool(item_actions.get("useButtonDisabled", true))
+			backpack_use_button.text = str(item_actions.get("useButtonText", "使用"))
 		if backpack_equip_button != null:
-			backpack_equip_button.visible = false
+			backpack_equip_button.visible = bool(item_actions.get("equipButtonVisible", false))
+			backpack_equip_button.disabled = bool(item_actions.get("equipButtonDisabled", true))
 		if backpack_quick_bind_row != null:
-			backpack_quick_bind_row.visible = false
-		backpack_pending_use_item_id = ""
-		_clear_backpack_target_buttons()
-		if backpack_target_scroll != null:
-			backpack_target_scroll.visible = false
-		return
-	if bool(selected_slot.get("locked", false)):
-		backpack_detail_label.text = "\n".join(_backpack_locked_slot_detail_lines(backpack_selected_slot_index))
-		if backpack_use_button != null:
-			backpack_use_button.visible = false
-		if backpack_equip_button != null:
-			backpack_equip_button.visible = false
-		if backpack_quick_bind_row != null:
-			backpack_quick_bind_row.visible = false
-		backpack_pending_use_item_id = ""
-		_clear_backpack_target_buttons()
-		if backpack_target_scroll != null:
-			backpack_target_scroll.visible = false
-		return
-	var detail_lines := BackpackModel.detail_lines_for_slot(selected_slot)
-	if EquipmentModel.is_equipment(selected_item_id):
-		detail_lines.append_array(_equipment_detail_lines_with_requirement_status(selected_item_id, true))
-		detail_lines.append_array(_equipment_compare_detail_lines(selected_item_id))
-	backpack_detail_label.text = "\n".join(detail_lines)
-	var is_selected_equipment := EquipmentModel.is_equipment(selected_item_id)
-	var equip_check := _can_equip_item_for_ui(selected_item_id) if is_selected_equipment else {}
-	var can_world_pet_use := (
-		selected_item_id != ""
-		and (
-			BackpackModel.item_can_world_pet_heal(selected_item_id)
-			or BackpackModel.item_can_world_pet_exp(selected_item_id)
-			or BackpackModel.item_can_world_mm_stone(selected_item_id)
-		)
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-	)
-	var can_world_player_use := (
-		selected_item_id != ""
-		and BackpackModel.item_can_world_player_exp(selected_item_id)
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-	)
-	var can_world_pet_egg := (
-		selected_item_id != ""
-		and BackpackModel.item_can_world_pet_egg(selected_item_id)
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-	)
-	var can_world_use := can_world_pet_use or can_world_player_use or can_world_pet_egg
-	var can_world_encounter_stone := (
-		selected_item_id != ""
-		and BackpackModel.item_can_world_encounter_stone(selected_item_id)
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-	)
-	var can_quick_bind := (
-		selected_item_id != ""
-		and PlayerProgressModel.item_can_quick_use(selected_item_id)
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-	)
-	var can_equip := (
-		selected_item_id != ""
-		and is_selected_equipment
-		and BackpackModel.item_count(slots, selected_item_id) > 0
-		and bool(equip_check.get("ok", false))
-	)
-	var use_as_equipment_only := is_selected_equipment and not can_world_player_use
-	if backpack_use_button != null:
-		backpack_use_button.visible = can_world_use or can_world_encounter_stone or is_selected_equipment
-		backpack_use_button.disabled = not (can_world_use or can_world_encounter_stone or (can_equip and use_as_equipment_only))
-		if use_as_equipment_only:
-			backpack_use_button.text = "装备"
+			backpack_quick_bind_row.visible = bool(item_actions.get("quickBindVisible", false))
+		for index in range(backpack_quick_bind_buttons.size()):
+			var quick_bind_button := backpack_quick_bind_buttons[index]
+			quick_bind_button.disabled = not bool(item_actions.get("canQuickBind", false))
+			quick_bind_button.text = "快捷%d" % [index + 1]
+		if not bool(item_actions.get("targetSelectionAllowed", false)) or backpack_pending_use_item_id != selected_item_id:
+			backpack_pending_use_item_id = ""
+			_clear_backpack_target_buttons()
+			if backpack_target_scroll != null:
+				backpack_target_scroll.visible = false
 		else:
-			backpack_use_button.text = "使用"
-	if backpack_equip_button != null:
-		backpack_equip_button.visible = is_selected_equipment and can_world_player_use
-		backpack_equip_button.disabled = not can_equip
-	if backpack_quick_bind_row != null:
-		backpack_quick_bind_row.visible = can_quick_bind
-	for index in range(backpack_quick_bind_buttons.size()):
-		var quick_bind_button := backpack_quick_bind_buttons[index]
-		quick_bind_button.disabled = not can_quick_bind
-		quick_bind_button.text = "快捷%d" % [index + 1]
-	if not (can_world_pet_use or can_world_player_use) or backpack_pending_use_item_id != selected_item_id:
-		backpack_pending_use_item_id = ""
-		_clear_backpack_target_buttons()
-		if backpack_target_scroll != null:
-			backpack_target_scroll.visible = false
-	else:
-		_refresh_backpack_target_buttons(selected_item_id)
+			_refresh_backpack_target_buttons(selected_item_id)
 
 
 func _backpack_filter_options() -> Array[Dictionary]:
-	return [
-		{"id": BACKPACK_FILTER_ALL, "label": "全部"},
-		{"id": BACKPACK_FILTER_WORLD, "label": "世界"},
-		{"id": BACKPACK_FILTER_BATTLE, "label": "战斗"},
-		{"id": BACKPACK_FILTER_CAPTURE, "label": "捕捉"},
-		{"id": BACKPACK_FILTER_EQUIPMENT, "label": "装备"},
-	]
+	return BackpackPanelPresenter.filter_options()
 
 
 func _backpack_filter_ids() -> Array[String]:
-	var result: Array[String] = []
-	for option in _backpack_filter_options():
-		result.append(str(option.get("id", "")))
-	return result
+	return BackpackPanelPresenter.filter_ids()
 
 
 func _backpack_filter_label_for(filter_id: String) -> String:
-	for option in _backpack_filter_options():
-		if str(option.get("id", "")) == filter_id:
-			return str(option.get("label", filter_id))
-	return filter_id
+	return BackpackPanelPresenter.filter_label(filter_id)
 
 
 func _refresh_backpack_filter_buttons() -> void:
@@ -21749,29 +21667,7 @@ func _backpack_visible_slot_indices(slots: Array[Dictionary]) -> Array[int]:
 
 
 func _backpack_slot_matches_filter(slot: Dictionary) -> bool:
-	if backpack_filter == BACKPACK_FILTER_ALL:
-		return true
-	var item_id := str(slot.get("itemId", ""))
-	if item_id == "":
-		return false
-	match backpack_filter:
-		BACKPACK_FILTER_WORLD:
-			return (
-				BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_HEAL)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_ENCOUNTER_STONE)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_EXP)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PLAYER_EXP)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_EXP)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_MM_STONE)
-				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_EGG)
-			)
-		BACKPACK_FILTER_BATTLE:
-			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_BATTLE_ITEM)
-		BACKPACK_FILTER_CAPTURE:
-			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_CAPTURE)
-		BACKPACK_FILTER_EQUIPMENT:
-			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_EQUIPMENT) or EquipmentModel.is_equipment(item_id)
-	return true
+	return BackpackPanelPresenter.slot_matches_filter(slot, backpack_filter)
 
 
 func _backpack_grid_columns() -> int:
@@ -21823,7 +21719,7 @@ func _unlock_backpack_slot_from_dialog() -> void:
 	_set_world_log_message(message)
 	if bool(result.get("ok", false)):
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_close_dialog()
 		_refresh_backpack_panel()
 		_refresh_quick_bar()
@@ -21964,7 +21860,7 @@ func _on_backpack_quick_bind_pressed(slot_index: int) -> void:
 		return
 	player_profile = PlayerProgressModel.with_quick_slot_item(player_profile, slot_index, item_id)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("%s 已绑定到快捷%d。" % [BackpackModel.label_for(item_id), slot_index + 1])
 	_refresh_backpack_panel()
 	_refresh_quick_bar()
@@ -21982,7 +21878,7 @@ func _on_quick_slot_pressed(slot_index: int) -> void:
 	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
 		player_profile = PlayerProgressModel.clear_quick_slot(player_profile, slot_index)
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_set_world_log_message("快捷%d没有可用道具。" % [slot_index + 1])
 		_refresh_quick_bar()
 		return
@@ -22037,7 +21933,7 @@ func _clear_empty_quick_slot_item(item_id: String) -> void:
 	normalized[PlayerProgressModel.QUICK_SLOTS_KEY] = slots
 	player_profile = PlayerProgressModel.normalize_profile(normalized)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _player_level_for_ui() -> int:
@@ -22473,7 +22369,7 @@ func _equip_selected_backpack_item(item_id: String) -> void:
 			"amount": 1,
 		}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("\n".join(log_lines))
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
@@ -22486,7 +22382,7 @@ func _use_backpack_player_exp_item(item_id: String) -> void:
 	var result := PlayerProgressModel.use_world_player_exp_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
@@ -22510,7 +22406,7 @@ func _use_backpack_encounter_stone(item_id: String) -> void:
 	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, slots)
 	_activate_encounter_stone(item_id)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
 	_refresh_quick_bar()
@@ -22701,7 +22597,7 @@ func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> D
 			"amount": 1,
 		}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("\n".join(log_lines))
 	_refresh_quick_bar()
 	return result
@@ -22711,7 +22607,7 @@ func _use_world_pet_exp_item_and_log(item_id: String, instance_id: String) -> Di
 	var result := PlayerProgressModel.use_world_pet_exp_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_quick_bar()
 	if status_label != null:
@@ -22723,7 +22619,7 @@ func _use_world_mm_stone_item_and_log(item_id: String, instance_id: String) -> D
 	var result := PlayerProgressModel.use_world_mm_stone_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_quick_bar()
 	if status_label != null:
@@ -22735,7 +22631,7 @@ func _use_backpack_pet_egg_item(item_id: String) -> void:
 	var result := PlayerProgressModel.use_world_pet_egg_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
@@ -23093,7 +22989,7 @@ func _on_shop_action_pressed() -> void:
 					"amount": 1,
 				}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("\n".join(log_lines))
 	if shop_mode == "sell" and _backpack_item_count_for_ui(shop_selected_item_id) <= 0:
 		shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
@@ -23109,7 +23005,7 @@ func _on_shop_repair_pressed() -> void:
 	var result := PlayerProgressModel.repair_all_equipment(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_shop_panel()
 	if equipment_panel != null and equipment_panel.visible:
@@ -23519,7 +23415,7 @@ func _on_pet_skill_move_pressed(direction: int) -> void:
 	if bool(result.get("ok", false)):
 		pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_skill_panel()
 	if pet_panel != null and pet_panel.visible:
@@ -23538,7 +23434,7 @@ func _on_pet_skill_learn_pressed() -> void:
 	if bool(result.get("ok", false)):
 		pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_skill_panel()
 	if pet_panel != null and pet_panel.visible:
@@ -23557,7 +23453,7 @@ func _on_pet_skill_forget_pressed() -> void:
 	var result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, skill_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_skill_panel()
 	if pet_panel != null and pet_panel.visible:
@@ -23857,7 +23753,7 @@ func _on_mailbox_claim_pressed() -> void:
 	var result := PlayerProgressModel.mailbox_claim_message(player_profile, mailbox_selected_mail_id)
 	player_profile = result.get("profile", player_profile)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
@@ -23948,7 +23844,7 @@ func _refresh_training_partner_panel() -> void:
 func _set_training_partner_count(count: int) -> void:
 	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, count)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	var next_count := PlayerProgressModel.training_partner_count(player_profile)
 	_set_world_log_message("练级伙伴 %d/4。" % next_count)
 	_refresh_training_partner_panel()
@@ -24130,46 +24026,11 @@ func _qa_panel_layout_is_usable() -> bool:
 
 
 func _qa_entry_definitions() -> Array[Dictionary]:
-	var entries: Array[Dictionary] = []
-	entries.append({"section": "GM地图"})
-	entries.append({"id": "gm_map", "label": "进入GM测试场", "description": "完整客户端 + 三块专用测试草丛"})
-	entries.append({"id": "gm_10v10_grass", "label": "10V10草丛", "description": "固定10只，测练级、合击、自动战斗"})
-	entries.append({"id": "gm_capture_grass", "label": "捉宠草丛", "description": "随机图鉴宠，1-5只，Lv1-10"})
-	entries.append({"id": "gm_knockaway_grass", "label": "击飞草丛", "description": "120-140级怪，测记录点回城"})
-	entries.append({"id": "firebud_village", "label": "回火芽村", "description": "回到村口，测商店、村医、记录点"})
-	entries.append({"section": "GM工具"})
-	entries.append({"id": "gm_battle_speed_gear", "label": "变速齿轮 x%d" % _gm_battle_speed_multiplier(), "description": "战斗和走路 x2-x10，x1关闭"})
-	entries.append({"section": "功能面板"})
-	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、快捷栏、世界使用"})
-	entries.append({"id": "open_item_shop", "label": "杂货铺", "description": "购买、出售、数量输入"})
-	entries.append({"id": "open_equipment_shop", "label": "装备铺", "description": "装备购买预览、购买后装备"})
-	entries.append({"id": "open_equipment", "label": "装备栏", "description": "槽位详情、卸下、强化、合成"})
-	entries.append({"id": "open_quest", "label": "任务", "description": "任务详情、奖励、自动寻路"})
-	entries.append({"id": "open_auto_battle", "label": "内挂战斗", "description": "人物/宠物首回合与一般回合策略"})
-	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
-	entries.append({"id": "open_partner", "label": "陪练伙伴", "description": "补满5人5宠测试合击"})
-	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴、成长"})
-	entries.append({"id": "open_stable", "label": "兽栏", "description": "GM测试存取，等同站在村内兽栏旁"})
-	entries.append({"id": "open_rebirth_preview", "label": "转生预览", "description": "查看人物转生资格和能力预览"})
-	entries.append({"id": "open_codex", "label": "图鉴", "description": "已见、可捕、捕获记录"})
-	return entries
+	return QaPanelCatalog.entry_definitions(_gm_battle_speed_multiplier())
 
 
 func _qa_command_summary_text() -> String:
-	var lines: Array[String] = []
-	lines.append("[color=#d7c36a]常用自测命令[/color]")
-	lines.append("背包: --auto-backpack-check / --auto-backpack-world-use-check / --auto-backpack-filter-check")
-	lines.append("商店: --auto-shop-check / --auto-equipment-shop-preview-check")
-	lines.append("装备: --auto-equipment-check / --auto-equipment-instance-check / --auto-equipment-growth-check / --auto-equipment-durability-check / --auto-equipment-synthesis-check")
-	lines.append("任务: --auto-quest-chain-check / --auto-quest-ui-check / --auto-task-tracker-route-check / --auto-quest-objective-templates-check")
-	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
-	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
-	lines.append("人物/骑宠: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check / --auto-riding-system-check")
-	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check / --auto-reward-mail-fallback-check")
-	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-v2-shadow-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
-	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
-	lines.append("完整清单: docs/bak/legacy_phase_notes/phase_92_gm_qa_panel.md")
-	return "\n".join(lines)
+	return QaPanelCatalog.command_summary_text()
 
 
 func _on_qa_entry_pressed(entry_id: String) -> void:
@@ -24234,7 +24095,7 @@ func _on_qa_pet_grant_pressed() -> void:
 		pet_selected_instance_id = qa_pet_level_instance_id
 		pet_detail_mode = PET_DETAIL_MODE_GROWTH
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_qa_pet_tool_controls()
 	_refresh_qa_panel()
@@ -24251,7 +24112,7 @@ func _on_qa_pet_level_up_pressed() -> void:
 		var updated = result.get("pet", {})
 		pet_detail_mode = PET_DETAIL_MODE_GROWTH if updated is Dictionary and str((updated as Dictionary).get("growthSpeciesProfileId", "")).strip_edges() != "" else PET_DETAIL_MODE_INSTANCE
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_qa_pet_tool_controls()
 	_refresh_qa_panel()
@@ -24430,7 +24291,7 @@ func _refresh_hang_settings_tab() -> void:
 	save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save_button.pressed.connect(func() -> void:
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_set_world_log_message("挂机设置已保存。")
 	)
 	button_row.add_child(save_button)
@@ -24786,7 +24647,7 @@ func _set_auto_settings_value(key: String, value) -> void:
 	settings[key] = int(value) if key == AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY or key == AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY else value
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _auto_capture_settings_keys() -> Array[String]:
@@ -24826,7 +24687,7 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 			settings[key] = str(value)
 	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _set_hang_settings_value(key: String, value) -> void:
@@ -24842,7 +24703,7 @@ func _set_hang_settings_value(key: String, value) -> void:
 			settings[key] = clampi(int(value), 0, HangSettingsModel.MAX_CAPTURE_TARGET_COUNT)
 	player_profile = PlayerProgressModel.with_hang_settings(player_profile, settings)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _set_auto_settings_heal_priority(index: int, source_id: String) -> void:
@@ -24853,7 +24714,7 @@ func _set_auto_settings_heal_priority(index: int, source_id: String) -> void:
 	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = priority
 	player_profile = PlayerProgressModel.with_auto_battle_settings(player_profile, settings)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_refresh_auto_settings_panel()
 
 
@@ -25011,7 +24872,7 @@ func _on_quest_claim_pressed() -> void:
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile, choice_id)
 	player_profile = claim_result.get("profile", player_profile)
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
 	if bool(claim_result.get("ok", false)):
 		quest_selected_reward_choice_id = ""
@@ -25042,13 +24903,28 @@ func _on_task_tracker_route_pressed() -> void:
 func _refresh_task_route_button() -> void:
 	if task_route_button == null:
 		return
-	var has_target := not _current_task_navigation_target().is_empty()
+	var has_target := _task_tracker_has_navigation_target_cached()
 	task_route_button.disabled = battle_active or encounter_active or has_pending_interaction or _dialog_is_open() or _world_menu_is_open() or not has_target
 	task_route_button.visible = not battle_active
 	task_route_button.text = "寻路"
 
 
 func _current_task_navigation_target() -> Dictionary:
+	_refresh_task_tracker_cache_if_needed(true)
+	return task_tracker_target_cache.duplicate(true)
+
+
+func _current_task_navigation_target_cached() -> Dictionary:
+	_refresh_task_tracker_cache_if_needed(false)
+	return task_tracker_target_cache.duplicate(true)
+
+
+func _task_tracker_has_navigation_target_cached() -> bool:
+	_refresh_task_tracker_cache_if_needed(false)
+	return task_tracker_has_target_cache
+
+
+func _current_task_navigation_target_uncached() -> Dictionary:
 	var quest := PlayerProgressModel.active_quest(player_profile)
 	if not quest.is_empty():
 		return _navigation_target_for_quest(quest)
@@ -26442,7 +26318,7 @@ func _select_pet_instance(instance_id: String) -> void:
 	if bool(selected.get("isNew", false)):
 		player_profile = PlayerProgressModel.mark_pet_seen(player_profile, instance_id)
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_refresh_pet_panel()
 	if pet_cultivation_panel != null and pet_cultivation_panel.visible:
 		_refresh_pet_cultivation_panel()
@@ -26452,7 +26328,7 @@ func _on_pet_state_cycle_pressed() -> void:
 	var result := PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26472,7 +26348,7 @@ func _on_pet_stable_pressed() -> void:
 		result = PlayerProgressModel.store_pet(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26481,7 +26357,7 @@ func _on_pet_party_move_pressed(direction: int) -> void:
 	var result := PlayerProgressModel.move_party_pet(player_profile, pet_selected_instance_id, direction)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26490,7 +26366,7 @@ func _on_pet_lock_pressed() -> void:
 	var result := PlayerProgressModel.toggle_pet_locked(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26503,7 +26379,7 @@ func _on_pet_batch_store_pressed() -> void:
 	var result := PlayerProgressModel.batch_store_standby_pets(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26512,7 +26388,7 @@ func _on_pet_batch_state_pressed(target_state: String) -> void:
 	var result := PlayerProgressModel.batch_set_party_pet_state(player_profile, target_state)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26524,7 +26400,7 @@ func _on_pet_gm_grant_blue_pressed() -> void:
 		pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
 		pet_detail_mode = PET_DETAIL_MODE_GROWTH
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26539,7 +26415,7 @@ func _on_pet_gm_level_up_pressed() -> void:
 		var updated = result.get("pet", {})
 		pet_detail_mode = PET_DETAIL_MODE_GROWTH if updated is Dictionary and str((updated as Dictionary).get("growthSpeciesProfileId", "")).strip_edges() != "" else PET_DETAIL_MODE_INSTANCE
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 
@@ -26565,7 +26441,7 @@ func _on_pet_rename_confirmed() -> void:
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_close_pet_rename_panel()
 		_refresh_pet_panel()
 	else:
@@ -26615,7 +26491,7 @@ func _on_pet_cultivation_confirm_pressed() -> void:
 	var result := PlayerProgressModel.apply_pet_cultivation(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 	_refresh_pet_cultivation_panel()
@@ -26648,7 +26524,7 @@ func _on_pet_drop_pressed() -> void:
 	if bool(result.get("ok", false)):
 		pet_selected_instance_id = ""
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	_close_pet_rename_panel()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
@@ -26670,7 +26546,7 @@ func _on_pet_clear_storage_pressed() -> void:
 	if bool(result.get("ok", false)):
 		pet_selected_instance_id = ""
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 	pet_clear_confirm_instance_id = ""
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
@@ -26764,7 +26640,7 @@ func _pickup_ground_pet_drop(drop_id: String) -> void:
 	var result := PlayerProgressModel.pickup_ground_pet(player_profile, drop_id, int(Time.get_unix_time_from_system()))
 	player_profile = result.get("profile", player_profile)
 	if (bool(result.get("ok", false)) or bool(result.get("changed", false))) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	if bool(result.get("ok", false)):
 		pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
 	if pet_panel != null and pet_panel.visible:
@@ -26793,7 +26669,7 @@ func _update_pet_rest_recovery(delta: float) -> void:
 		recovered = recovered or bool(result.get("ok", false))
 	if recovered:
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 
@@ -26803,7 +26679,7 @@ func _apply_pet_rest_recovery_tick(save_after: bool = true, refresh_panel: bool 
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
 		if save_after and profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		if refresh_panel and pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 	return result
@@ -26845,7 +26721,7 @@ func _update_ground_pet_drop_expiration(delta: float) -> void:
 		return
 	player_profile = result.get("profile", player_profile)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	if pet_panel != null and pet_panel.visible:
 		_refresh_pet_panel()
 	_set_world_log_message("地上的宠物离开了。")
@@ -27609,7 +27485,7 @@ func _record_quest_spirit_event_from_battle(event: Dictionary, ledger: Dictionar
 	if quest_messages.is_empty():
 		return
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("\n".join(quest_messages))
 
 
@@ -28509,7 +28385,7 @@ func _claim_dialog_quest_reward() -> void:
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
 	player_profile = claim_result.get("profile", player_profile)
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
 	if bool(claim_result.get("ok", false)):
 		_close_dialog()
@@ -28530,7 +28406,7 @@ func _claim_dialog_optional_quest_reward() -> void:
 	var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
 	player_profile = claim_result.get("profile", player_profile)
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
 	if bool(claim_result.get("ok", false)):
 		_close_dialog()
@@ -28549,7 +28425,7 @@ func _complete_dialog_talk_quest() -> void:
 	})
 	if not quest_messages.is_empty():
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_set_world_log_message("\n".join(quest_messages))
 		_close_dialog()
 		if status_label != null:
@@ -28586,7 +28462,7 @@ func _complete_dialog_optional_talk_quest() -> void:
 			filtered.append(text)
 	if not filtered.is_empty():
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		_set_world_log_message("\n".join(filtered))
 		_close_dialog()
 		if status_label != null:
@@ -28605,7 +28481,7 @@ func _apply_dialog_healer(from_hang_auto: bool = false) -> void:
 		if hang_message != "":
 			message = "%s\n%s" % [message, hang_message]
 	if (bool(heal_result.get("ok", false)) or was_hang_pending_resume) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(message)
 	_update_dialog_text()
 	if status_label != null:
@@ -28699,18 +28575,18 @@ func _complete_hang_heal_resume() -> void:
 			player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_no_zone")
 			_set_world_log_message("已回到挂机点附近，但这里不是遇敌区域，挂机已停止。")
 			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
+				_save_player_profile_now()
 			return
 		player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
 		_set_hang_mode(true)
 		_set_world_log_message("治疗完成，已回到挂机点，继续挂机。")
 		if profile_save_enabled:
-			PlayerProgressModel.save_profile(player_profile)
+			_save_player_profile_now()
 		return
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_encounter_stone_ended")
 	_set_world_log_message("治疗完成，已回到挂机点；遇敌石效果已结束，请重新使用。")
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _stop_hang_heal_resume_route(message: String) -> void:
@@ -28718,7 +28594,7 @@ func _stop_hang_heal_resume_route(message: String) -> void:
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_route_failed")
 	_set_world_log_message(message)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 
 
 func _clear_hang_heal_resume_route() -> void:
@@ -28732,7 +28608,7 @@ func _claim_pet_rebirth_mm_stage2_from_dialog() -> void:
 	var result := PlayerProgressModel.claim_pet_rebirth_mm_stage2(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	if bool(result.get("ok", false)):
 		_close_dialog()
@@ -28748,7 +28624,7 @@ func _start_pet_rebirth_mm_guide_from_dialog() -> void:
 	var result := PlayerProgressModel.start_pet_rebirth_mm_guide(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_update_dialog_text()
 	if status_label != null:
@@ -29047,7 +28923,7 @@ func _save_record_point_from_dialog() -> void:
 		str(point.get("label", "记录点"))
 	)
 	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
+		_save_player_profile_now()
 	_set_world_log_message("记录点已保存：%s。" % str(PlayerProgressModel.record_point(player_profile).get("label", "记录点")))
 	_update_dialog_text()
 	if status_label != null:
@@ -29171,35 +29047,53 @@ func _dialog_optional_quest_hint_for(item: Dictionary) -> String:
 
 
 func _current_task_text() -> String:
+	_refresh_task_tracker_cache_if_needed(false)
+	return task_tracker_text_cache
+
+
+func _refresh_task_tracker_cache_if_needed(force: bool = false) -> void:
+	if not force and not task_tracker_cache_dirty and task_tracker_text_cache != "":
+		return
 	var signature := _active_quest_signature()
-	if signature == current_task_text_signature_cache:
-		return current_task_text_cache
+	if not force and signature == task_tracker_source_signature_cache and task_tracker_text_cache != "":
+		task_tracker_cache_dirty = false
+		return
+	task_tracker_source_signature_cache = signature
 	current_task_text_signature_cache = signature
+	current_task_text_cache = _current_task_text_uncached()
+	task_tracker_text_cache = current_task_text_cache
+	task_tracker_target_cache = _current_task_navigation_target_uncached()
+	task_tracker_has_target_cache = not task_tracker_target_cache.is_empty()
+	task_tracker_cache_dirty = false
+
+
+func _task_tracker_signature_for_hud() -> String:
+	if task_tracker_cache_dirty:
+		return "dirty"
+	return task_tracker_source_signature_cache
+
+
+func _current_task_text_uncached() -> String:
 	var quest_id := str(player_profile.get("activeQuestId", ""))
 	var quest := QuestModel.quest_for_id(quest_id)
 	if quest.is_empty():
 		var available_quest := _first_available_unfinished_quest_for_tracker()
 		if not available_quest.is_empty():
-			current_task_text_cache = "可接任务 - %s" % QuestModel.title_for(available_quest)
-			return current_task_text_cache
+			return "可接任务 - %s" % QuestModel.title_for(available_quest)
 		var mm_guide := _pet_rebirth_mm_guide_task_info(false)
 		if not mm_guide.is_empty():
-			current_task_text_cache = str(mm_guide.get("taskText", mm_guide.get("title", "宠物转生教学")))
-			return current_task_text_cache
+			return str(mm_guide.get("taskText", mm_guide.get("title", "宠物转生教学")))
 		var trial := _rebirth_trial_task_info(false)
 		if not trial.is_empty():
-			current_task_text_cache = str(trial.get("taskText", trial.get("title", "转生试炼")))
-			return current_task_text_cache
-		current_task_text_cache = "当前没有任务"
-		return current_task_text_cache
+			return str(trial.get("taskText", trial.get("title", "转生试炼")))
+		return "当前没有任务"
 	var quest_states = player_profile.get("questStates", {})
 	var quest_state := {}
 	if quest_states is Dictionary:
 		var state_value = (quest_states as Dictionary).get(quest_id, {})
 		if state_value is Dictionary:
 			quest_state = state_value
-	current_task_text_cache = QuestModel.progress_text_for_state(quest, quest_state)
-	return current_task_text_cache
+	return QuestModel.progress_text_for_state(quest, quest_state)
 
 
 func _training_partner_count() -> int:
@@ -29390,19 +29284,15 @@ func _clear_navigation_state() -> void:
 
 
 func _is_ui_point(point: Vector2) -> bool:
-	for control in [top_panel, side_panel, action_bar, player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, shop_panel, pet_panel, pet_skill_panel, pet_cultivation_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel, dialog_panel, encounter_panel, battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel]:
-		if control != null and control.visible:
-			var rect := Rect2(control.global_position, control.size)
-			if rect.has_point(point):
-				return true
-	return false
+	if panel_registry == null:
+		return false
+	return panel_registry.point_hits_visible_panel(point)
 
 
 func _world_menu_is_open() -> bool:
-	for control in [player_status_panel, player_rebirth_preview_panel, backpack_panel, equipment_panel, equipment_synthesis_panel, shop_panel, pet_panel, pet_skill_panel, pet_cultivation_panel, codex_panel, quest_panel, map_panel, chat_panel, mailbox_panel, training_partner_panel, auto_settings_panel, qa_panel, pet_rename_panel]:
-		if control != null and control.visible:
-			return true
-	return false
+	if panel_registry == null:
+		return false
+	return panel_registry.any_world_menu_visible()
 
 
 func _layout_hud() -> void:
@@ -29724,7 +29614,7 @@ func _update_hud_text(force: bool = false) -> void:
 		str(_dialog_is_open()),
 		str(_world_menu_is_open()),
 		current_map_id,
-		_active_quest_signature(),
+		_task_tracker_signature_for_hud(),
 	]
 	if force or route_signature != hud_task_route_signature_cache:
 		hud_task_route_signature_cache = route_signature
@@ -30729,7 +30619,7 @@ func _draw_interaction_points() -> void:
 
 
 func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
-	var state := _quest_marker_state_for_item(item)
+	var state := _quest_marker_state_for_item(item, false)
 	if state == QUEST_MARKER_NONE:
 		return
 	var visual := _quest_marker_visual_for_state(state)
@@ -30808,8 +30698,8 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 	return {}
 
 
-func _quest_marker_state_for_item(item: Dictionary) -> String:
-	_refresh_quest_marker_cache_if_needed()
+func _quest_marker_state_for_item(item: Dictionary, force_refresh: bool = true) -> String:
+	_refresh_quest_marker_cache_if_needed(force_refresh)
 	var item_id := str(item.get("id", ""))
 	if item_id == "":
 		return QUEST_MARKER_NONE

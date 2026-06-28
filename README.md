@@ -2,9 +2,11 @@
 
 Beastbound Odyssey / 万兽纪元是一个原创的、受石器时代启发的 2.5D 回合制宠物 MMORPG 原型。
 
-## 当前阶段
+## 当前状态快照
 
-Phase62 是 Godot 4.7 GM 10v10 完整客户端测试地图阶段：
+当前仓库已经进入工程治理和数值策划前置阶段：Godot 4.7 客户端具备完整地图、任务、背包、装备、商店、宠物、图鉴、自动战斗、自动捉宠、骑宠、人物转生、宠物转生、GM/QA 测试入口和数值表骨架。README 只保留快速入口和功能快照；架构边界见 [docs/architecture.md](docs/architecture.md)，测试与性能基线见 [docs/testing.md](docs/testing.md)。
+
+功能快照：
 
 - 45 度/等距起步地图。
 - 第二张地图：`火芽村入口`。
