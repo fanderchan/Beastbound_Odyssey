@@ -1,7 +1,9 @@
 extends RefCounted
 
+const GmToolPluginModel := preload("res://scripts/progression/gm_tool_plugin_model.gd")
+
 const ACCOUNT_STORE_PATH := "user://accounts.json"
-const GM_PLUGIN_PATH := "user://gm_tools.gmplugin.json"
+const GM_PLUGIN_PATH := GmToolPluginModel.PLUGIN_PATH
 const ROLE_PLAYER := "player"
 const ROLE_GM := "gm"
 const EFFECTIVE_ROLE_PLAYER := "player"
@@ -138,23 +140,11 @@ static func profile_save_path_for_username(username: String) -> String:
 
 
 static func gm_plugin_installed() -> bool:
-	var plugin := _load_gm_plugin()
-	return not plugin.is_empty() and bool(plugin.get("enabled", false))
+	return GmToolPluginModel.installed()
 
 
 static func gm_plugin_allows_username(username: String) -> bool:
-	var plugin := _load_gm_plugin()
-	if plugin.is_empty() or not bool(plugin.get("enabled", false)):
-		return false
-	var allowed = plugin.get("gmUsernames", [])
-	if not (allowed is Array):
-		return false
-	var normalized := normalized_username(username)
-	for value in allowed as Array:
-		var item := normalized_username(str(value))
-		if item == "*" or item == normalized:
-			return true
-	return false
+	return GmToolPluginModel.allows_username(username)
 
 
 static func ensure_local_gm_account(username: String, password: String, display_name: String = "GM") -> Dictionary:
@@ -179,35 +169,7 @@ static func ensure_local_gm_account(username: String, password: String, display_
 
 
 static func install_local_gm_plugin(usernames: Array[String]) -> bool:
-	var normalized_names: Array[String] = []
-	for username in usernames:
-		var normalized := normalized_username(username)
-		if normalized != "" and not normalized_names.has(normalized):
-			normalized_names.append(normalized)
-	var plugin := {
-		"schemaVersion": 1,
-		"enabled": true,
-		"gmUsernames": normalized_names,
-	}
-	var dir_path := GM_PLUGIN_PATH.get_base_dir()
-	if dir_path != "":
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
-	var file := FileAccess.open(GM_PLUGIN_PATH, FileAccess.WRITE)
-	if file == null:
-		return false
-	file.store_string(JSON.stringify(plugin, "\t"))
-	file.close()
-	return true
-
-
-static func _load_gm_plugin() -> Dictionary:
-	if not FileAccess.file_exists(GM_PLUGIN_PATH):
-		return {}
-	var text := FileAccess.get_file_as_string(GM_PLUGIN_PATH)
-	var parsed = JSON.parse_string(text)
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed as Dictionary
+	return GmToolPluginModel.install_local_plugin(usernames)
 
 
 static func _empty_store() -> Dictionary:

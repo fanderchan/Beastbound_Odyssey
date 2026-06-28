@@ -35,6 +35,7 @@ const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_contro
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
+const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -24951,101 +24952,36 @@ func _set_numeric_workbench_result(result: Dictionary) -> void:
 func _refresh_qa_panel() -> void:
 	if qa_panel == null or qa_entry_container == null or qa_detail_label == null:
 		return
-	for child in qa_entry_container.get_children():
-		child.queue_free()
-	qa_entry_buttons.clear()
-	for entry in _qa_entry_definitions():
-		if entry.has("section"):
-			var section_label := Label.new()
-			section_label.text = str(entry.get("section", ""))
-			section_label.add_theme_font_size_override("font_size", 16)
-			section_label.add_theme_color_override("font_color", Color(0.91, 0.80, 0.43, 0.98))
-			qa_entry_container.add_child(section_label)
-			continue
-		var entry_id := str(entry.get("id", ""))
-		if entry_id == "":
-			continue
-		var button := Button.new()
-		button.text = "%s\n%s" % [str(entry.get("label", "入口")), str(entry.get("description", ""))]
-		button.custom_minimum_size = Vector2(0, 58)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.add_theme_font_size_override("font_size", 15)
-		button.pressed.connect(func() -> void:
-			_on_qa_entry_pressed(entry_id)
-		)
-		qa_entry_container.add_child(button)
-		qa_entry_buttons[entry_id] = button
+	QaPanelPresenter.rebuild_entry_buttons(
+		qa_entry_container,
+		qa_entry_buttons,
+		_qa_entry_definitions(),
+		Callable(self, "_on_qa_entry_pressed")
+	)
 	_refresh_qa_pet_tool_controls()
 	qa_detail_label.text = _qa_command_summary_text()
 
 
 func _refresh_qa_pet_tool_controls() -> void:
-	if qa_pet_species_option == null or qa_pet_target_option == null:
-		return
-	var previous_profile_id := qa_pet_growth_profile_id
-	qa_pet_species_option.clear()
-	var selected_profile_index := -1
-	for profile in BalanceCatalogModel.pet_growth_species_profile_list():
-		var profile_id := str(profile.get("profileId", "")).strip_edges()
-		var form_id := str(profile.get("formId", "")).strip_edges()
-		if profile_id == "" or form_id == "":
-			continue
-		var label := str(profile.get("formName", profile.get("displayName", profile_id)))
-		qa_pet_species_option.add_item(label)
-		var item_index := qa_pet_species_option.get_item_count() - 1
-		qa_pet_species_option.set_item_metadata(item_index, profile_id)
-		if profile_id == previous_profile_id or selected_profile_index < 0:
-			selected_profile_index = item_index
-	if selected_profile_index >= 0:
-		qa_pet_species_option.select(selected_profile_index)
-		qa_pet_growth_profile_id = str(qa_pet_species_option.get_item_metadata(selected_profile_index))
-	if qa_pet_grant_button != null:
-		qa_pet_grant_button.disabled = qa_pet_species_option.get_item_count() <= 0
-
-	var previous_instance_id := qa_pet_level_instance_id
-	qa_pet_target_option.clear()
-	var selected_pet_index := -1
-	for instance in PlayerProgressModel.all_pet_instances(player_profile):
-		var label := "%s Lv%d %s 战力%d" % [
-			str(instance.get("name", "宠物")),
-			int(instance.get("level", 1)),
-			PlayerProgressModel.state_label(str(instance.get("state", ""))),
-			PetPowerModel.combat_power_for_pet(instance),
-		]
-		qa_pet_target_option.add_item(label)
-		var item_index := qa_pet_target_option.get_item_count() - 1
-		var instance_id := str(instance.get("instanceId", ""))
-		qa_pet_target_option.set_item_metadata(item_index, instance_id)
-		if instance_id == previous_instance_id or selected_pet_index < 0:
-			selected_pet_index = item_index
-	if selected_pet_index >= 0:
-		qa_pet_target_option.select(selected_pet_index)
-		qa_pet_level_instance_id = str(qa_pet_target_option.get_item_metadata(selected_pet_index))
-	else:
-		qa_pet_level_instance_id = ""
-		qa_pet_target_option.add_item("暂无宠物")
-		qa_pet_target_option.set_item_metadata(0, "")
-		qa_pet_target_option.select(0)
-	if qa_pet_level_up_button != null:
-		qa_pet_level_up_button.disabled = qa_pet_level_instance_id == ""
+	var result := QaPanelPresenter.refresh_pet_tool_controls(
+		qa_pet_species_option,
+		qa_pet_target_option,
+		qa_pet_grant_button,
+		qa_pet_level_up_button,
+		player_profile,
+		qa_pet_growth_profile_id,
+		qa_pet_level_instance_id
+	)
+	qa_pet_growth_profile_id = str(result.get("profileId", qa_pet_growth_profile_id))
+	qa_pet_level_instance_id = str(result.get("instanceId", qa_pet_level_instance_id))
 
 
 func _reset_qa_panel_scrolls() -> void:
-	if qa_entry_scroll != null:
-		qa_entry_scroll.scroll_vertical = 0
-	if qa_detail_scroll != null:
-		qa_detail_scroll.scroll_vertical = 0
+	QaPanelPresenter.reset_scrolls(qa_entry_scroll, qa_detail_scroll)
 
 
 func _qa_panel_layout_is_usable() -> bool:
-	if qa_panel == null or qa_entry_scroll == null or qa_detail_scroll == null:
-		return false
-	return (
-		qa_panel.visible
-		and qa_entry_scroll.size.y >= 260.0
-		and qa_detail_scroll.size.y >= 110.0
-		and qa_entry_scroll.size.y > qa_detail_scroll.size.y
-	)
+	return QaPanelPresenter.layout_is_usable(qa_panel, qa_entry_scroll, qa_detail_scroll)
 
 
 func _qa_entry_definitions() -> Array[Dictionary]:
