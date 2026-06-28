@@ -320,6 +320,8 @@ var pet_party_up_button: Button
 var pet_party_down_button: Button
 var pet_lock_button: Button
 var pet_batch_store_button: Button
+var pet_batch_standby_button: Button
+var pet_batch_rest_button: Button
 var pet_rename_button: Button
 var pet_cultivation_button: Button
 var pet_drop_button: Button
@@ -11641,17 +11643,110 @@ func _run_auto_pet_management_safety_check() -> void:
 	var batch_pet_state := str(PlayerProgressModel.pet_instance_by_id(batch_profile, "pet_batch_store").get("state", ""))
 	var locked_pet_state := str(PlayerProgressModel.pet_instance_by_id(batch_profile, "pet_locked_guard").get("state", ""))
 	player_profile = batch_profile
+
+	var state_profile := PlayerProgressModel.default_profile()
+	var state_instances: Array = []
+	var state_active := PlayerProgressModel.create_pet_instance_from_form("pet_state_active", "出战布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_BATTLE, 9)
+	var state_standby := PlayerProgressModel.create_pet_instance_from_form("pet_state_standby", "待机布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 8)
+	var state_rest := PlayerProgressModel.create_pet_instance_from_form("pet_state_rest", "休息布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_REST, 7)
+	var state_locked := PlayerProgressModel.create_pet_instance_from_form("pet_state_locked", "锁定乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STANDBY, 6)
+	var state_task := PlayerProgressModel.create_pet_instance_from_form("pet_state_task", "任务乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STANDBY, 5)
+	var state_ride := PlayerProgressModel.create_pet_instance_from_form("pet_state_ride", "骑乘老虎", "novice_tiger_mount", PlayerProgressModel.PET_STATE_RIDING, 4)
+	state_locked["locked"] = true
+	state_instances.append_array([state_active, state_standby, state_rest, state_locked, state_task, state_ride])
+	state_profile["petInstances"] = state_instances
+	state_profile["activePetInstanceId"] = "pet_state_active"
+	state_profile[PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY] = "pet_state_ride"
+	state_profile[PlayerProgressModel.UNLOCKED_ABILITIES_KEY] = [PlayerProgressModel.ABILITY_RIDING]
+	state_profile["activeQuestId"] = "quest_capture_wuli"
+	state_profile["questStates"] = {
+		"quest_capture_wuli": {"id": "quest_capture_wuli", "status": QuestModel.STATUS_ACTIVE, "progress": 0},
+	}
+	state_profile = PlayerProgressModel.normalize_profile(state_profile)
+	var batch_rest_result := PlayerProgressModel.batch_set_party_pet_state(state_profile, PlayerProgressModel.PET_STATE_REST)
+	var batch_rest_profile := batch_rest_result.get("profile", {}) as Dictionary
+	var batch_rest_ok := (
+		bool(batch_rest_result.get("ok", false))
+		and int(batch_rest_result.get("changedCount", 0)) == 2
+		and int(batch_rest_result.get("skippedCount", 0)) == 3
+		and str(batch_rest_profile.get("activePetInstanceId", "")) == ""
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_active").get("state", "")) == PlayerProgressModel.PET_STATE_REST
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_standby").get("state", "")) == PlayerProgressModel.PET_STATE_REST
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_locked").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_task").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_ride").get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
+	)
+	var batch_standby_result := PlayerProgressModel.batch_set_party_pet_state(batch_rest_profile, PlayerProgressModel.PET_STATE_STANDBY)
+	var batch_standby_profile := batch_standby_result.get("profile", {}) as Dictionary
+	var batch_standby_ok := (
+		bool(batch_standby_result.get("ok", false))
+		and int(batch_standby_result.get("changedCount", 0)) == 3
+		and int(batch_standby_result.get("skippedCount", 0)) == 1
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_active").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_standby").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_rest").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_locked").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_task").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_ride").get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
+	)
+
+	var helper_pet := PlayerProgressModel.create_pet_instance_from_form("pet_cult_helper", "转生MM", PetRebirthMmModel.helper_form_id_for_stage(PetRebirthMmModel.STAGE_ONE), PlayerProgressModel.PET_STATE_STANDBY, PetRebirthMmModel.HELPER_REQUIRED_LEVEL, {"individualSeed": "phase145:mm"})
+	helper_pet["petRebirthHelper"] = PetRebirthMmModel.normalized_helper_record({}, PetRebirthMmModel.STAGE_ONE)
+	var cult_target := PlayerProgressModel.create_pet_instance_from_form("pet_cult_target", "转生乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STANDBY, PlayerProgressModel.MAX_PET_LEVEL, {"individualSeed": "phase145:target"})
+	var locked_target := cult_target.duplicate(true)
+	locked_target["locked"] = true
+	var locked_target_profile := PlayerProgressModel.default_profile()
+	locked_target_profile["petInstances"] = [locked_target, helper_pet.duplicate(true)]
+	locked_target_profile = PlayerProgressModel.normalize_profile(locked_target_profile)
+	var locked_target_result := PlayerProgressModel.apply_pet_cultivation(locked_target_profile, "pet_cult_target", "rebirth", 14500)
+	var locked_helper := helper_pet.duplicate(true)
+	locked_helper["locked"] = true
+	var locked_helper_profile := PlayerProgressModel.default_profile()
+	locked_helper_profile["petInstances"] = [cult_target.duplicate(true), locked_helper]
+	locked_helper_profile = PlayerProgressModel.normalize_profile(locked_helper_profile)
+	var locked_helper_result := PlayerProgressModel.apply_pet_cultivation(locked_helper_profile, "pet_cult_target", "rebirth", 14501)
+	var task_target_profile := PlayerProgressModel.default_profile()
+	task_target_profile["petInstances"] = [cult_target.duplicate(true), helper_pet.duplicate(true)]
+	task_target_profile["activeQuestId"] = "quest_capture_wuli"
+	task_target_profile["questStates"] = {
+		"quest_capture_wuli": {"id": "quest_capture_wuli", "status": QuestModel.STATUS_ACTIVE, "progress": 0},
+	}
+	task_target_profile = PlayerProgressModel.normalize_profile(task_target_profile)
+	var task_target_result := PlayerProgressModel.apply_pet_cultivation(task_target_profile, "pet_cult_target", "rebirth", 14502)
+	var cultivation_safety_ok := (
+		not bool(locked_target_result.get("ok", false))
+		and str(locked_target_result.get("message", "")).find("锁定") >= 0
+		and not bool(locked_helper_result.get("ok", false))
+		and str(locked_helper_result.get("message", "")).find("材料") >= 0
+		and not bool(task_target_result.get("ok", false))
+		and str(task_target_result.get("message", "")).find("任务需要") >= 0
+	)
+
 	_load_map("firebud_village_gate", "from_training_yard")
 	pet_selected_instance_id = "pet_locked_guard"
 	_open_pet_panel()
 	await get_tree().process_frame
-	var ui_ok := (
+	var ui_no_access_ok := (
 		pet_lock_button != null
 		and pet_lock_button.visible
 		and pet_lock_button.text == "解锁"
 		and pet_batch_store_button != null
 		and pet_batch_store_button.visible
+		and pet_batch_store_button.disabled
+		and pet_batch_store_button.tooltip_text.find("远程兽栏") >= 0
 		and (pet_detail_label.text if pet_detail_label != null else "").find("保护：已锁定") >= 0
+	)
+	_close_pet_panel()
+	_open_pet_panel(true)
+	await get_tree().process_frame
+	var ui_stable_access_ok := (
+		pet_batch_store_button != null
+		and pet_batch_store_button.visible
+		and not pet_batch_store_button.disabled
+		and pet_batch_standby_button != null
+		and pet_batch_standby_button.visible
+		and pet_batch_rest_button != null
+		and pet_batch_rest_button.visible
 	)
 	_close_pet_panel()
 	var safety_ok := (
@@ -11664,11 +11759,15 @@ func _run_auto_pet_management_safety_check() -> void:
 		and batch_pet_state == PlayerProgressModel.PET_STATE_STORAGE
 		and locked_pet_state == PlayerProgressModel.PET_STATE_STANDBY
 	)
-	var status := "ok" if safety_ok and ui_ok else "failed"
-	print("pet management safety check ready: status=%s safety=%s ui=%s batch=%s locked_state=%s" % [
+	var status := "ok" if safety_ok and batch_rest_ok and batch_standby_ok and cultivation_safety_ok and ui_no_access_ok and ui_stable_access_ok else "failed"
+	print("pet management safety check ready: status=%s safety=%s batch_rest=%s batch_standby=%s cultivation=%s ui_no_access=%s ui_stable=%s batch=%s locked_state=%s" % [
 		status,
 		str(safety_ok),
-		str(ui_ok),
+		str(batch_rest_ok),
+		str(batch_standby_ok),
+		str(cultivation_safety_ok),
+		str(ui_no_access_ok),
+		str(ui_stable_access_ok),
 		batch_pet_state,
 		locked_pet_state,
 	])
@@ -18507,6 +18606,22 @@ func _build_hud() -> void:
 	pet_batch_store_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_batch_store_button.pressed.connect(_on_pet_batch_store_pressed)
 	pet_manage_action_row.add_child(pet_batch_store_button)
+	pet_batch_standby_button = Button.new()
+	pet_batch_standby_button.text = "批待"
+	pet_batch_standby_button.custom_minimum_size = Vector2(0, 38)
+	pet_batch_standby_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_batch_standby_button.pressed.connect(func() -> void:
+		_on_pet_batch_state_pressed(PlayerProgressModel.PET_STATE_STANDBY)
+	)
+	pet_manage_action_row.add_child(pet_batch_standby_button)
+	pet_batch_rest_button = Button.new()
+	pet_batch_rest_button.text = "批休"
+	pet_batch_rest_button.custom_minimum_size = Vector2(0, 38)
+	pet_batch_rest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_batch_rest_button.pressed.connect(func() -> void:
+		_on_pet_batch_state_pressed(PlayerProgressModel.PET_STATE_REST)
+	)
+	pet_manage_action_row.add_child(pet_batch_rest_button)
 	var pet_button_row := HBoxContainer.new()
 	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_button_row.add_theme_constant_override("separation", 8)
@@ -26024,13 +26139,22 @@ func _refresh_pet_panel() -> void:
 		pet_party_down_button.disabled = not can_edit_order or not bool(down_check.get("ok", false))
 		pet_party_up_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
 		pet_party_down_button.tooltip_text = "" if can_edit_order else "默认队伍顺序下可调整"
-		if pet_lock_button != null:
-			pet_lock_button.visible = not selected.is_empty()
-			pet_lock_button.disabled = selected.is_empty()
-			pet_lock_button.text = "解锁" if bool(selected.get("locked", false)) else "锁定"
-		if pet_batch_store_button != null:
-			pet_batch_store_button.visible = true
-		pet_batch_store_button.disabled = PlayerProgressModel.storage_pet_instances(player_profile).size() >= PlayerProgressModel.STORAGE_LIMIT
+	if pet_lock_button != null:
+		pet_lock_button.visible = not selected.is_empty()
+		pet_lock_button.disabled = selected.is_empty()
+		pet_lock_button.text = "解锁" if bool(selected.get("locked", false)) else "锁定"
+	var party_count := PlayerProgressModel.party_pet_instances(player_profile).size()
+	var has_batch_stable_access := _pet_panel_has_stable_access()
+	if pet_batch_store_button != null:
+		pet_batch_store_button.visible = true
+		pet_batch_store_button.disabled = not has_batch_stable_access or party_count <= 0 or PlayerProgressModel.storage_pet_instances(player_profile).size() >= PlayerProgressModel.STORAGE_LIMIT
+		pet_batch_store_button.tooltip_text = "" if has_batch_stable_access else "需要学会远程兽栏，或前往村内兽栏。"
+	if pet_batch_standby_button != null:
+		pet_batch_standby_button.visible = true
+		pet_batch_standby_button.disabled = party_count <= 0
+	if pet_batch_rest_button != null:
+		pet_batch_rest_button.visible = true
+		pet_batch_rest_button.disabled = party_count <= 0
 	if pet_rename_button != null:
 		pet_rename_button.visible = not selected.is_empty()
 		pet_rename_button.disabled = selected.is_empty()
@@ -26340,7 +26464,20 @@ func _on_pet_lock_pressed() -> void:
 
 
 func _on_pet_batch_store_pressed() -> void:
+	if not _pet_panel_has_stable_access():
+		_set_world_log_message("需要学会远程兽栏，或前往村内兽栏。")
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.batch_store_standby_pets(player_profile)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_set_world_log_message(str(result.get("message", "")))
+	_refresh_pet_panel()
+
+
+func _on_pet_batch_state_pressed(target_state: String) -> void:
+	var result := PlayerProgressModel.batch_set_party_pet_state(player_profile, target_state)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		PlayerProgressModel.save_profile(player_profile)

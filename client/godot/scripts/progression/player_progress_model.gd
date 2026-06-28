@@ -1014,6 +1014,67 @@ static func batch_store_standby_pets(profile: Dictionary) -> Dictionary:
 	}
 
 
+static func batch_set_party_pet_state(profile: Dictionary, target_state: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var safe_target := target_state.strip_edges()
+	if safe_target != PET_STATE_STANDBY and safe_target != PET_STATE_REST:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"changedCount": 0,
+			"skippedCount": 0,
+			"message": "暂不支持这种批量状态。",
+		}
+	var instances: Array = normalized.get("petInstances", [])
+	var changed_count := 0
+	var skipped_count := 0
+	var changed_ids: Array[String] = []
+	var skipped_ids: Array[String] = []
+	var ride_id := str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	var active_id := str(normalized.get("activePetInstanceId", "")).strip_edges()
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		var instance_id := str(instance.get("instanceId", ""))
+		var state := str(instance.get("state", PET_STATE_STANDBY))
+		if state == PET_STATE_STORAGE or state == safe_target:
+			instances[index] = instance
+			continue
+		if instance_id == ride_id or bool(instance.get("locked", false)) or _pet_required_by_active_quest(normalized, instance):
+			skipped_count += 1
+			skipped_ids.append(instance_id)
+			instances[index] = instance
+			continue
+		if safe_target == PET_STATE_STANDBY and state != PET_STATE_REST and state != PET_STATE_BATTLE:
+			instances[index] = instance
+			continue
+		if safe_target == PET_STATE_REST and state != PET_STATE_STANDBY and state != PET_STATE_BATTLE:
+			instances[index] = instance
+			continue
+		instance["state"] = safe_target
+		instances[index] = instance
+		changed_count += 1
+		changed_ids.append(instance_id)
+		if active_id == instance_id:
+			active_id = ""
+	normalized["petInstances"] = instances
+	normalized["activePetInstanceId"] = active_id
+	if safe_target == PET_STATE_STANDBY and active_id == "":
+		normalized["activePetInstanceId"] = ""
+	normalized = normalize_profile(normalized)
+	var target_label := state_label(safe_target)
+	return {
+		"ok": changed_count > 0,
+		"profile": normalized,
+		"changedCount": changed_count,
+		"skippedCount": skipped_count,
+		"changedIds": changed_ids,
+		"skippedIds": skipped_ids,
+		"message": "已批量切为%s%d只，跳过%d只。" % [target_label, changed_count, skipped_count] if changed_count > 0 else "没有可批量切为%s的宠物。" % target_label,
+	}
+
+
 static func can_move_party_pet(profile: Dictionary, instance_id: String, direction: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var step := -1 if direction < 0 else 1 if direction > 0 else 0
@@ -5170,7 +5231,31 @@ static func apply_pet_cultivation(profile: Dictionary, instance_id: String, mode
 			"message": "没有找到这只宠物。",
 		}
 	if _should_use_pet_rebirth_mm(instance, mode):
+		if bool(instance.get("locked", false)):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 已锁定，不能转强。" % str(instance.get("name", "宠物")),
+			}
+		if _pet_required_by_active_quest(normalized, instance):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 是当前任务需要的宠物，不能转强。" % str(instance.get("name", "宠物")),
+			}
 		var helper := _pet_rebirth_mm_helper_for_target(normalized, instance)
+		if bool(helper.get("locked", false)):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 已锁定，不能作为转强材料。" % str(helper.get("name", "转生MM")),
+			}
+		if _pet_required_by_active_quest(normalized, helper):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "%s 是当前任务需要的宠物，不能作为转强材料。" % str(helper.get("name", "转生MM")),
+			}
 		var now := now_sec if now_sec >= 0 else int(Time.get_unix_time_from_system())
 		var mm_result := PetRebirthMmModel.apply_rebirth_to_pet(instance, helper, now)
 		if not bool(mm_result.get("ok", false)):
