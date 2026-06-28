@@ -4,7 +4,7 @@
 
 - 战斗胜利后可以获得道具。
 - 获得的道具进入 Phase49 的 15 格随身包，相同道具优先堆叠。
-- 背包满或堆叠空间不足时，结算日志提示未获得的道具。
+- 背包满或堆叠空间不足时，未放入背包的道具转入系统邮箱。
 - 本阶段不做金钱、商店、任务奖励、掉落拾取动画和服务器权威结算。
 
 ## 数据契约
@@ -38,7 +38,7 @@
 背包放不下时：
 
 ```text
-背包已满，未获得 肉 x2、初级捕捉绳 x1。
+背包已满，肉 x2、初级捕捉绳 x1 已发送邮箱。
 ```
 
 普通 UI 不显示奖励表 ID、roll、seed 或内部字段。
@@ -47,5 +47,6 @@
 
 ```bash
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-battle-reward-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-reward-mail-fallback-check
 godot --path client/godot --scene res://scenes/Main.tscn -- --battle-reward-preview
 ```

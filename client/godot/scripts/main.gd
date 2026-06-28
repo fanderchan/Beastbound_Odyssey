@@ -553,6 +553,7 @@ var auto_equipment_instance_check: bool = false
 var auto_quest_objective_templates_check: bool = false
 var auto_map_region_contract_check: bool = false
 var auto_reward_grant_check: bool = false
+var auto_reward_mail_fallback_check: bool = false
 var auto_encounter_loop_check: bool = false
 var auto_hang_loop_closure_check: bool = false
 var auto_hang_supply_closure_check: bool = false
@@ -980,6 +981,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_map_region_contract_check")
 	elif auto_reward_grant_check:
 		call_deferred("_run_auto_reward_grant_check")
+	elif auto_reward_mail_fallback_check:
+		call_deferred("_run_auto_reward_mail_fallback_check")
 	elif auto_encounter_loop_check:
 		call_deferred("_run_auto_encounter_loop_check")
 	elif auto_hang_loop_closure_check:
@@ -1531,6 +1534,8 @@ func _apply_preview_window_args() -> void:
 			auto_map_region_contract_check = true
 		elif arg == "--auto-reward-grant-check":
 			auto_reward_grant_check = true
+		elif arg == "--auto-reward-mail-fallback-check":
+			auto_reward_mail_fallback_check = true
 		elif arg == "--auto-encounter-loop-check":
 			auto_encounter_loop_check = true
 		elif arg == "--auto-hang-loop-closure-check":
@@ -10901,17 +10906,7 @@ func _run_auto_reward_grant_check() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
 	world_log_message = ""
-	var fill_counts := {}
-	var filled := 0
-	for item in BackpackModel.items():
-		if filled >= BackpackModel.BASE_SLOT_LIMIT:
-			break
-		var item_id := str(item.get("id", ""))
-		if item_id == "":
-			continue
-		fill_counts[item_id] = BackpackModel.stack_limit_for(item_id)
-		filled += 1
-	var full_slots := BackpackModel.slots_from_counts(fill_counts, BackpackModel.BASE_SLOT_LIMIT)
+	var full_slots := _full_backpack_slots_for_reward_mail_check()
 	var full_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
 	full_profile = PlayerProgressModel.with_stone_coins(full_profile, 100)
 	full_profile = PlayerProgressModel.with_diamonds(full_profile, 200)
@@ -11382,6 +11377,111 @@ func _run_auto_encounter_loop_check() -> void:
 		str(stone_triggered),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_reward_mail_fallback_check() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	var full_slots := _full_backpack_slots_for_reward_mail_check()
+
+	var generic_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
+	generic_profile = PlayerProgressModel.with_stone_coins(generic_profile, 100)
+	generic_profile = PlayerProgressModel.with_diamonds(generic_profile, 200)
+	var generic_result := PlayerProgressModel.grant_reward_bundle(generic_profile, {
+		"stoneCoins": 7,
+		"diamonds": 11,
+		"items": [
+			{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 1},
+			{"itemId": BattleModel.CAPTURE_TOOL_NET, "count": 3},
+		],
+	}, "phase144_generic", "测试奖励")
+	var generic_after := generic_result.get("profile", generic_profile) as Dictionary
+	var generic_mail := PlayerProgressModel.mailbox_message_by_id(generic_after, "%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "phase144_generic"])
+	var generic_ok := (
+		bool(generic_result.get("mailSent", false))
+		and PlayerProgressModel.stone_coins(generic_after) == 107
+		and PlayerProgressModel.diamonds(generic_after) == 211
+		and _item_amount_count(generic_result.get("mailedItems", []), BattleModel.ITEM_MEAT_SMALL) == 1
+		and _item_amount_count(generic_result.get("mailedItems", []), BattleModel.CAPTURE_TOOL_NET) == 3
+		and _item_amount_count(generic_mail.get("items", []), BattleModel.CAPTURE_TOOL_NET) == 3
+	)
+
+	var battle_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
+	var battle_state := _battle_reward_test_state("phase144_battle", battle_profile)
+	var battle_result := PlayerProgressModel.apply_battle_result(battle_profile, battle_state, "victory")
+	var battle_after := battle_result.get("profile", battle_profile) as Dictionary
+	var battle_mail := PlayerProgressModel.mailbox_message_by_id(battle_after, "%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "battle_phase144_battle"])
+	var battle_receipt := battle_result.get("receipt", {}) as Dictionary
+	var battle_receipt_rewards := battle_receipt.get("rewards", {}) as Dictionary if battle_receipt.get("rewards", {}) is Dictionary else {}
+	var battle_ok := (
+		str(battle_result.get("result", "")) == "victory"
+		and (battle_result.get("lostItemRewards", []) as Array).is_empty()
+		and not (battle_result.get("mailedItemRewards", []) as Array).is_empty()
+		and not battle_mail.is_empty()
+		and not (battle_receipt_rewards.get("mailedItems", []) as Array).is_empty()
+		and _battle_result_log_text(battle_result).find("已发送邮箱") >= 0
+	)
+
+	var quest_profile := _quest_equipment_tutorial_profile()
+	quest_profile = PlayerProgressModel.with_backpack_slots(quest_profile, full_slots)
+	var quest_event := PlayerProgressModel.record_quest_event(quest_profile, {
+		"type": "use_spirit",
+		"spiritId": BattleModel.SPIRIT_POISON_1,
+		"eventType": "spirit_poison",
+		"amount": 1,
+	})
+	var quest_ready := quest_event.get("profile", quest_profile) as Dictionary
+	var quest_claim := PlayerProgressModel.claim_active_quest(quest_ready)
+	var quest_after := quest_claim.get("profile", quest_ready) as Dictionary
+	var quest_mail := PlayerProgressModel.mailbox_message_by_id(quest_after, "%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "quest_quest_use_poison_spirit"])
+	var quest_ok := (
+		bool(quest_event.get("ready", false))
+		and bool(quest_claim.get("ok", false))
+		and _item_amount_count(quest_claim.get("mailedItems", []), "weapon_blessed_club") == 1
+		and _item_amount_count(quest_mail.get("items", []), "weapon_blessed_club") == 1
+		and str(quest_claim.get("message", "")).find("已发送邮箱") >= 0
+	)
+
+	var rebirth_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), full_slots)
+	var rebirth_reward := PlayerProgressModel._grant_rebirth_trial_rewards(rebirth_profile, 1)
+	var rebirth_after := rebirth_reward.get("profile", rebirth_profile) as Dictionary
+	var rebirth_mail := PlayerProgressModel.mailbox_message_by_id(rebirth_after, "%s:%s" % [PlayerProgressModel.MAIL_REWARD_FALLBACK_PREFIX, "rebirth_trial_1"])
+	var rebirth_ok := (
+		(rebirth_reward.get("lostRewardItems", []) as Array).is_empty()
+		and _item_amount_count(rebirth_reward.get("mailedRewardItems", []), "armor_grace_cloth_3") == 1
+		and _item_amount_count(rebirth_mail.get("items", []), "armor_grace_cloth_3") == 1
+		and _profile_has_pet_form(rebirth_after, "rebirth_starter_earth_cub")
+		and _battle_result_log_text({"logLines": [PlayerProgressModel._rebirth_reward_text(rebirth_reward)]}).find("已发送邮箱") >= 0
+	)
+
+	var status := "ok" if generic_ok and battle_ok and quest_ok and rebirth_ok else "failed"
+	print("reward mail fallback check ready: status=%s generic=%s battle=%s quest=%s rebirth=%s generic_mail=%s battle_mail=%s quest_mail=%s rebirth_mail=%s" % [
+		status,
+		str(generic_ok),
+		str(battle_ok),
+		str(quest_ok),
+		str(rebirth_ok),
+		BackpackModel.item_amounts_text(generic_result.get("mailedItems", [])),
+		BackpackModel.item_amounts_text(battle_result.get("mailedItemRewards", [])),
+		BackpackModel.item_amounts_text(quest_claim.get("mailedItems", [])),
+		BackpackModel.item_amounts_text(rebirth_reward.get("mailedRewardItems", [])),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _full_backpack_slots_for_reward_mail_check() -> Array[Dictionary]:
+	var fill_counts := {}
+	var filled := 0
+	for item in BackpackModel.items():
+		if filled >= BackpackModel.BASE_SLOT_LIMIT:
+			break
+		var item_id := str(item.get("id", ""))
+		if item_id == "":
+			continue
+		fill_counts[item_id] = BackpackModel.stack_limit_for(item_id)
+		filled += 1
+	return BackpackModel.slots_from_counts(fill_counts, BackpackModel.BASE_SLOT_LIMIT)
 
 
 func _run_auto_hang_loop_closure_check() -> void:
@@ -23918,7 +24018,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("自动战斗: --auto-battle-settings-check / --auto-battle-auto-10v10-check")
 	lines.append("捉宠: --auto-capture-settings-check / --auto-pet-capture-feedback-check")
 	lines.append("人物/骑宠: --auto-player-status-check / --auto-player-rebirth-preview-check / --auto-player-rebirth-execute-check / --auto-player-rebirth-chain-check / --auto-remote-stable-unlock-check / --auto-riding-system-check")
-	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check")
+	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check / --auto-reward-mail-fallback-check")
 	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-v2-shadow-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
 	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")

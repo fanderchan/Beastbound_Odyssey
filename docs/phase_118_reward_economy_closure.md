@@ -16,5 +16,6 @@
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-reward-grant-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-reward-mail-fallback-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-reward-check
 ```

@@ -586,6 +586,7 @@ static func execute_rebirth(profile: Dictionary) -> Dictionary:
 		result["consumedPets"] = consume_result.get("consumedPets", [])
 		result["rewardItems"] = reward_result.get("rewardItems", [])
 		result["lostRewardItems"] = reward_result.get("lostRewardItems", [])
+		result["mailedRewardItems"] = reward_result.get("mailedRewardItems", [])
 		result["starterPet"] = reward_result.get("starterPet", {})
 		var consumed_pet_text := _rebirth_consumed_pet_text(result.get("consumedPets", []))
 		if consumed_pet_text != "":
@@ -802,14 +803,17 @@ static func _rebirth_consumed_pet_text(consumed_pets) -> String:
 
 static func _grant_rebirth_trial_rewards(profile: Dictionary, target_count: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	var reward_result := BackpackModel.add_items(backpack_slots(normalized), _rebirth_reward_items_for_target(target_count))
-	normalized = with_backpack_slots(normalized, reward_result.get("slots", []))
+	var grant_result := grant_reward_bundle(normalized, {
+		"items": _rebirth_reward_items_for_target(target_count),
+	}, "rebirth_trial_%d" % target_count, "转生奖励")
+	normalized = grant_result.get("profile", normalized) as Dictionary
 	var starter_result := _append_rebirth_starter_pet(normalized, target_count)
 	normalized = starter_result.get("profile", normalized) as Dictionary
 	return {
 		"profile": normalize_profile(normalized),
-		"rewardItems": _item_amount_array(reward_result.get("added", [])),
-		"lostRewardItems": _item_amount_array(reward_result.get("lost", [])),
+		"rewardItems": _item_amount_array(grant_result.get("addedItems", [])),
+		"lostRewardItems": [],
+		"mailedRewardItems": _item_amount_array(grant_result.get("mailedItems", [])),
 		"starterPet": starter_result.get("starterPet", {}),
 	}
 
@@ -857,7 +861,10 @@ static func _rebirth_reward_text(reward_result: Dictionary) -> String:
 		parts.append(item_text)
 	var lost_text := BackpackModel.item_amounts_text(_item_amount_array(reward_result.get("lostRewardItems", [])))
 	if lost_text != "":
-		parts.append("背包已满，未获得%s" % lost_text)
+		parts.append("背包已满，%s 未进入背包" % lost_text)
+	var mailed_text := BackpackModel.item_amounts_text(_item_amount_array(reward_result.get("mailedRewardItems", [])))
+	if mailed_text != "":
+		parts.append("背包已满，%s 已发送邮箱" % mailed_text)
 	return "、".join(parts)
 
 
@@ -6594,9 +6601,9 @@ static func battle_result_log_lines(result: String, exp_reward: int, captured_in
 			var item_reward_text := BackpackModel.item_amounts_text(item_rewards)
 			if item_reward_text != "":
 				lines.append("获得 %s。" % item_reward_text)
-			var lost_item_reward_text := BackpackModel.item_amounts_text(lost_item_rewards)
-			if lost_item_reward_text != "":
-				lines.append("背包已满，未获得 %s。" % lost_item_reward_text)
+				var lost_item_reward_text := BackpackModel.item_amounts_text(lost_item_rewards)
+				if lost_item_reward_text != "":
+					lines.append("背包已满，%s 未进入背包。" % lost_item_reward_text)
 			var mailed_item_reward_text := BackpackModel.item_amounts_text(mailed_item_rewards)
 			if mailed_item_reward_text != "":
 				lines.append("背包已满，%s 已发送邮箱。" % mailed_item_reward_text)
