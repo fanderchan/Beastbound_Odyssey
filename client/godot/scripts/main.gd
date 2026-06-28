@@ -28,6 +28,7 @@ const NumericBalanceGateModel := preload("res://scripts/progression/numeric_bala
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
+const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
@@ -438,6 +439,19 @@ var qa_pet_grant_button: Button
 var qa_pet_level_up_button: Button
 var qa_pet_growth_profile_id: String = ""
 var qa_pet_level_instance_id: String = ""
+var numeric_workbench_panel: PanelContainer
+var numeric_workbench_profile_option: OptionButton
+var numeric_workbench_sample_option: OptionButton
+var numeric_workbench_level_option: OptionButton
+var numeric_workbench_stage_option: OptionButton
+var numeric_workbench_stone_option: OptionButton
+var numeric_workbench_growth_button: Button
+var numeric_workbench_mm_button: Button
+var numeric_workbench_battle_button: Button
+var numeric_workbench_close_button: Button
+var numeric_workbench_result_label: RichTextLabel
+var numeric_workbench_profile_id: String = ""
+var numeric_workbench_stone_plan_id: String = ""
 var game_camera: Camera2D
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
@@ -585,6 +599,7 @@ var auto_pet_growth_observation_check: bool = false
 var auto_pet_growth_species_simulation_check: bool = false
 var auto_pet_growth_starter_profiles_check: bool = false
 var auto_numeric_experiment_report_check: bool = false
+var auto_numeric_workbench_check: bool = false
 var auto_combat_formula_parity_check: bool = false
 var auto_combat_v2_shadow_check: bool = false
 var auto_combat_formula_driver_ab_check: bool = false
@@ -1035,6 +1050,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_growth_starter_profiles_check")
 	elif auto_numeric_experiment_report_check:
 		call_deferred("_run_numeric_experiment_report", true)
+	elif auto_numeric_workbench_check:
+		call_deferred("_run_auto_numeric_workbench_check")
 	elif auto_combat_formula_parity_check:
 		call_deferred("_run_auto_combat_formula_parity_check")
 	elif auto_combat_v2_shadow_check:
@@ -1592,6 +1609,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_growth_starter_profiles_check = true
 		elif arg == "--auto-numeric-experiment-report-check":
 			auto_numeric_experiment_report_check = true
+		elif arg == "--auto-numeric-workbench-check":
+			auto_numeric_workbench_check = true
 		elif arg == "--auto-combat-formula-parity-check":
 			auto_combat_formula_parity_check = true
 		elif arg == "--auto-combat-v2-shadow-check":
@@ -4739,6 +4758,53 @@ func _run_auto_numeric_battle_simulation_check() -> void:
 		float(summary.get("avgPlayerHpRatio", 0.0)) * 100.0,
 		str(summary.get("hardestScenarioId", "")),
 		";".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_numeric_workbench_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	_open_numeric_workbench_panel()
+	await get_tree().process_frame
+	var panel_ok := (
+		numeric_workbench_panel != null
+		and numeric_workbench_panel.visible
+		and numeric_workbench_profile_option != null
+		and numeric_workbench_profile_option.get_item_count() >= 5
+		and numeric_workbench_sample_option != null
+		and numeric_workbench_sample_option.get_item_count() >= 3
+		and numeric_workbench_stone_option != null
+		and numeric_workbench_stone_option.get_item_count() >= 7
+	)
+	numeric_workbench_profile_id = "rebirth_starter_earth_cub_v1"
+	_refresh_numeric_workbench_profile_options()
+	_on_numeric_workbench_growth_pressed()
+	await get_tree().process_frame
+	var growth_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
+	var growth_ok := growth_text.find("宠物成长模拟") >= 0 and growth_text.find("成长评价") >= 0 and growth_text.find("CSV") >= 0
+	numeric_workbench_stone_plan_id = NumericWorkbenchModel.STONE_PLAN_FULL4
+	_refresh_numeric_workbench_stone_options()
+	_on_numeric_workbench_mm_pressed()
+	await get_tree().process_frame
+	var mm_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
+	var mm_ok := mm_text.find("MM转宠模拟") >= 0 and mm_text.find("四维等效加成/级") >= 0 and mm_text.find("转后Lv140战力") >= 0
+	_on_numeric_workbench_battle_pressed()
+	await get_tree().process_frame
+	var battle_text := numeric_workbench_result_label.text if numeric_workbench_result_label != null else ""
+	var battle_ok := battle_text.find("固定战斗模拟") >= 0 and battle_text.find("平均回合") >= 0
+	var status := "ok" if loaded and panel_ok and growth_ok and mm_ok and battle_ok else "failed"
+	print("numeric workbench check ready: status=%s loaded=%s panel=%s growth=%s mm=%s battle=%s profile_count=%d stone_count=%d result=%s" % [
+		status,
+		str(loaded),
+		str(panel_ok),
+		str(growth_ok),
+		str(mm_ok),
+		str(battle_ok),
+		numeric_workbench_profile_option.get_item_count() if numeric_workbench_profile_option != null else 0,
+		numeric_workbench_stone_option.get_item_count() if numeric_workbench_stone_option != null else 0,
+		battle_text.replace("\n", " | "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -14503,6 +14569,7 @@ func _run_auto_qa_panel_check() -> void:
 		and qa_entry_buttons.has("open_stable")
 		and qa_entry_buttons.has("open_rebirth_preview")
 		and qa_entry_buttons.has("gm_battle_speed_gear")
+		and qa_entry_buttons.has("open_numeric_workbench")
 		)
 	var pet_tool_options_ok := (
 		qa_pet_species_option != null
@@ -14523,6 +14590,7 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("--auto-capture-settings-check") >= 0
 		and command_text.find("--auto-player-rebirth-preview-check") >= 0
 		and command_text.find("--auto-player-rebirth-execute-check") >= 0
+		and command_text.find("--auto-numeric-workbench-check") >= 0
 		and command_text.find("--auto-npc-quest-marker-check") >= 0
 		and command_text.find("--auto-stable-facility-check") >= 0
 	)
@@ -14575,6 +14643,38 @@ func _run_auto_qa_panel_check() -> void:
 	)
 	_set_gm_speed_multiplier(GM_BATTLE_SPEED_MIN)
 	_refresh_qa_panel()
+	_open_qa_panel()
+	_on_qa_entry_pressed("open_numeric_workbench")
+	await get_tree().process_frame
+	var numeric_open_ok := (
+		numeric_workbench_panel != null
+		and numeric_workbench_panel.visible
+		and qa_panel != null
+		and not qa_panel.visible
+		and numeric_workbench_profile_option != null
+		and numeric_workbench_profile_option.get_item_count() >= 5
+	)
+	_on_numeric_workbench_growth_pressed()
+	await get_tree().process_frame
+	var numeric_growth_ok := (
+		numeric_workbench_result_label != null
+		and numeric_workbench_result_label.text.find("宠物成长模拟") >= 0
+		and numeric_workbench_result_label.text.find("CSV") >= 0
+	)
+	_on_numeric_workbench_mm_pressed()
+	await get_tree().process_frame
+	var numeric_mm_ok := (
+		numeric_workbench_result_label != null
+		and numeric_workbench_result_label.text.find("MM转宠模拟") >= 0
+		and numeric_workbench_result_label.text.find("四维等效") >= 0
+	)
+	_on_numeric_workbench_battle_pressed()
+	await get_tree().process_frame
+	var numeric_battle_ok := (
+		numeric_workbench_result_label != null
+		and numeric_workbench_result_label.text.find("固定战斗模拟") >= 0
+	)
+	_close_numeric_workbench_panel(false)
 	_open_qa_panel()
 	_on_qa_entry_pressed("open_auto_capture")
 	await get_tree().process_frame
@@ -14685,8 +14785,8 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, target_cell)
 		and world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status := "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status := "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
@@ -14702,6 +14802,10 @@ func _run_auto_qa_panel_check() -> void:
 		str(equipment_ok),
 		str(quest_ok),
 		str(speed_gear_ok),
+		str(numeric_open_ok),
+		str(numeric_growth_ok),
+		str(numeric_mm_ok),
+		str(numeric_battle_ok),
 		str(auto_capture_ok),
 		str(stable_ok),
 		str(rebirth_preview_ok),
@@ -19462,6 +19566,112 @@ func _build_hud() -> void:
 	qa_detail_scroll.add_child(qa_detail_label)
 	hud_root.add_child(qa_panel)
 
+	numeric_workbench_panel = _panel_container("NumericWorkbenchPanel")
+	numeric_workbench_panel.visible = false
+	numeric_workbench_panel.z_index = 25
+	var numeric_column := VBoxContainer.new()
+	numeric_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	numeric_column.add_theme_constant_override("separation", 9)
+	numeric_workbench_panel.add_child(numeric_column)
+
+	var numeric_header := HBoxContainer.new()
+	numeric_header.add_theme_constant_override("separation", 10)
+	numeric_column.add_child(numeric_header)
+	var numeric_title := Label.new()
+	numeric_title.text = "数值实验"
+	numeric_title.add_theme_font_size_override("font_size", 21)
+	numeric_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_header.add_child(numeric_title)
+	numeric_workbench_close_button = Button.new()
+	numeric_workbench_close_button.text = "关闭"
+	numeric_workbench_close_button.custom_minimum_size = Vector2(92, 44)
+	numeric_workbench_close_button.pressed.connect(_close_numeric_workbench_panel)
+	numeric_header.add_child(numeric_workbench_close_button)
+
+	var numeric_param_grid := GridContainer.new()
+	numeric_param_grid.columns = 2
+	numeric_param_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_param_grid.add_theme_constant_override("h_separation", 8)
+	numeric_param_grid.add_theme_constant_override("v_separation", 8)
+	numeric_column.add_child(numeric_param_grid)
+
+	numeric_workbench_profile_option = OptionButton.new()
+	numeric_workbench_profile_option.custom_minimum_size = Vector2(0, 42)
+	numeric_workbench_profile_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_profile_option.item_selected.connect(func(index: int) -> void:
+		numeric_workbench_profile_id = str(numeric_workbench_profile_option.get_item_metadata(index))
+	)
+	numeric_param_grid.add_child(numeric_workbench_profile_option)
+
+	numeric_workbench_sample_option = OptionButton.new()
+	numeric_workbench_sample_option.custom_minimum_size = Vector2(0, 42)
+	numeric_workbench_sample_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_param_grid.add_child(numeric_workbench_sample_option)
+
+	numeric_workbench_level_option = OptionButton.new()
+	numeric_workbench_level_option.custom_minimum_size = Vector2(0, 42)
+	numeric_workbench_level_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_param_grid.add_child(numeric_workbench_level_option)
+
+	numeric_workbench_stage_option = OptionButton.new()
+	numeric_workbench_stage_option.custom_minimum_size = Vector2(0, 42)
+	numeric_workbench_stage_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_param_grid.add_child(numeric_workbench_stage_option)
+
+	numeric_workbench_stone_option = OptionButton.new()
+	numeric_workbench_stone_option.custom_minimum_size = Vector2(0, 42)
+	numeric_workbench_stone_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_stone_option.item_selected.connect(func(index: int) -> void:
+		numeric_workbench_stone_plan_id = str(numeric_workbench_stone_option.get_item_metadata(index))
+	)
+	numeric_param_grid.add_child(numeric_workbench_stone_option)
+
+	var numeric_hint := Label.new()
+	numeric_hint.text = "结果会写到 .run/godot"
+	numeric_hint.add_theme_font_size_override("font_size", 14)
+	numeric_hint.add_theme_color_override("font_color", Color(0.78, 0.78, 0.72, 0.92))
+	numeric_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	numeric_param_grid.add_child(numeric_hint)
+
+	var numeric_button_row := HBoxContainer.new()
+	numeric_button_row.add_theme_constant_override("separation", 8)
+	numeric_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_column.add_child(numeric_button_row)
+	numeric_workbench_growth_button = Button.new()
+	numeric_workbench_growth_button.text = "成长模拟"
+	numeric_workbench_growth_button.custom_minimum_size = Vector2(0, 44)
+	numeric_workbench_growth_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_growth_button.pressed.connect(_on_numeric_workbench_growth_pressed)
+	numeric_button_row.add_child(numeric_workbench_growth_button)
+	numeric_workbench_mm_button = Button.new()
+	numeric_workbench_mm_button.text = "MM转宠"
+	numeric_workbench_mm_button.custom_minimum_size = Vector2(0, 44)
+	numeric_workbench_mm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_mm_button.pressed.connect(_on_numeric_workbench_mm_pressed)
+	numeric_button_row.add_child(numeric_workbench_mm_button)
+	numeric_workbench_battle_button = Button.new()
+	numeric_workbench_battle_button.text = "战斗模拟"
+	numeric_workbench_battle_button.custom_minimum_size = Vector2(0, 44)
+	numeric_workbench_battle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_workbench_battle_button.pressed.connect(_on_numeric_workbench_battle_pressed)
+	numeric_button_row.add_child(numeric_workbench_battle_button)
+
+	var numeric_result_scroll := ScrollContainer.new()
+	numeric_result_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_result_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	numeric_result_scroll.custom_minimum_size = Vector2(0, 260)
+	numeric_column.add_child(numeric_result_scroll)
+	numeric_workbench_result_label = RichTextLabel.new()
+	numeric_workbench_result_label.bbcode_enabled = true
+	numeric_workbench_result_label.fit_content = true
+	numeric_workbench_result_label.scroll_active = false
+	numeric_workbench_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	numeric_workbench_result_label.add_theme_font_size_override("font_size", 15)
+	numeric_workbench_result_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	numeric_result_scroll.add_child(numeric_workbench_result_label)
+	hud_root.add_child(numeric_workbench_panel)
+
 	pet_rename_panel = _panel_container("PetRenamePanel")
 	pet_rename_panel.visible = false
 	pet_rename_panel.z_index = 36
@@ -19841,6 +20051,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		qa_panel,
+		numeric_workbench_panel,
 		pet_rename_panel,
 		dialog_panel,
 		encounter_panel,
@@ -19867,6 +20078,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		qa_panel,
+		numeric_workbench_panel,
 		pet_rename_panel,
 	])
 
@@ -24215,6 +24427,7 @@ func _open_qa_panel() -> void:
 	_close_mailbox_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_numeric_workbench_panel(false)
 	if qa_panel != null:
 		qa_panel.visible = true
 	_refresh_qa_panel()
@@ -24224,6 +24437,179 @@ func _open_qa_panel() -> void:
 
 func _close_qa_panel(update_layout: bool = true) -> void:
 	_hide_control(qa_panel, update_layout)
+
+
+func _open_numeric_workbench_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_mailbox_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if numeric_workbench_panel != null:
+		numeric_workbench_panel.visible = true
+	_refresh_numeric_workbench_panel()
+	_layout_hud()
+
+
+func _close_numeric_workbench_panel(update_layout: bool = true) -> void:
+	_hide_control(numeric_workbench_panel, update_layout)
+
+
+func _refresh_numeric_workbench_panel() -> void:
+	if numeric_workbench_panel == null or numeric_workbench_profile_option == null:
+		return
+	_refresh_numeric_workbench_profile_options()
+	_refresh_numeric_workbench_sample_options()
+	_refresh_numeric_workbench_level_options()
+	_refresh_numeric_workbench_stage_options()
+	_refresh_numeric_workbench_stone_options()
+	if numeric_workbench_result_label != null and numeric_workbench_result_label.text.strip_edges() == "":
+		numeric_workbench_result_label.text = "[color=#d7c36a]数值实验工作台[/color]\n选择参数后点击模拟。成长和MM转宠会导出CSV，战斗模拟会导出JSON。"
+
+
+func _refresh_numeric_workbench_profile_options() -> void:
+	if numeric_workbench_profile_option == null:
+		return
+	var previous := numeric_workbench_profile_id
+	numeric_workbench_profile_option.clear()
+	var selected_index := -1
+	for option in NumericWorkbenchModel.pet_growth_profile_options():
+		var profile_id := str(option.get("id", ""))
+		numeric_workbench_profile_option.add_item(str(option.get("label", profile_id)))
+		var index := numeric_workbench_profile_option.get_item_count() - 1
+		numeric_workbench_profile_option.set_item_metadata(index, profile_id)
+		if profile_id == previous or selected_index < 0:
+			selected_index = index
+	if selected_index >= 0:
+		numeric_workbench_profile_option.select(selected_index)
+		numeric_workbench_profile_id = str(numeric_workbench_profile_option.get_item_metadata(selected_index))
+
+
+func _refresh_numeric_workbench_sample_options() -> void:
+	if numeric_workbench_sample_option == null or numeric_workbench_sample_option.get_item_count() > 0:
+		return
+	for sample_count in [20, 100, 200, 500]:
+		numeric_workbench_sample_option.add_item("样本 %d" % sample_count)
+		numeric_workbench_sample_option.set_item_metadata(numeric_workbench_sample_option.get_item_count() - 1, sample_count)
+	numeric_workbench_sample_option.select(1)
+
+
+func _refresh_numeric_workbench_level_options() -> void:
+	if numeric_workbench_level_option == null or numeric_workbench_level_option.get_item_count() > 0:
+		return
+	for target_level in [80, 131, 140]:
+		numeric_workbench_level_option.add_item("目标 Lv%d" % target_level)
+		numeric_workbench_level_option.set_item_metadata(numeric_workbench_level_option.get_item_count() - 1, target_level)
+	numeric_workbench_level_option.select(2)
+
+
+func _refresh_numeric_workbench_stage_options() -> void:
+	if numeric_workbench_stage_option == null or numeric_workbench_stage_option.get_item_count() > 0:
+		return
+	for stage in [PetRebirthMmModel.STAGE_ONE, PetRebirthMmModel.STAGE_TWO]:
+		numeric_workbench_stage_option.add_item("%s" % PetRebirthMmModel.helper_name_for_stage(stage))
+		numeric_workbench_stage_option.set_item_metadata(numeric_workbench_stage_option.get_item_count() - 1, stage)
+	numeric_workbench_stage_option.select(0)
+
+
+func _refresh_numeric_workbench_stone_options() -> void:
+	if numeric_workbench_stone_option == null:
+		return
+	var previous := numeric_workbench_stone_plan_id
+	numeric_workbench_stone_option.clear()
+	var selected_index := -1
+	for option in NumericWorkbenchModel.stone_plan_options():
+		var plan_id := str(option.get("id", ""))
+		numeric_workbench_stone_option.add_item(str(option.get("label", plan_id)))
+		var index := numeric_workbench_stone_option.get_item_count() - 1
+		numeric_workbench_stone_option.set_item_metadata(index, plan_id)
+		if plan_id == previous or selected_index < 0:
+			selected_index = index
+	if selected_index >= 0:
+		numeric_workbench_stone_option.select(selected_index)
+		numeric_workbench_stone_plan_id = str(numeric_workbench_stone_option.get_item_metadata(selected_index))
+
+
+func _numeric_workbench_profile_id() -> String:
+	if numeric_workbench_profile_id == "" and numeric_workbench_profile_option != null and numeric_workbench_profile_option.get_item_count() > 0:
+		return str(numeric_workbench_profile_option.get_item_metadata(numeric_workbench_profile_option.selected))
+	return numeric_workbench_profile_id
+
+
+func _numeric_workbench_sample_count() -> int:
+	if numeric_workbench_sample_option == null or numeric_workbench_sample_option.get_item_count() <= 0:
+		return NumericWorkbenchModel.DEFAULT_SAMPLE_COUNT
+	return int(numeric_workbench_sample_option.get_item_metadata(numeric_workbench_sample_option.selected))
+
+
+func _numeric_workbench_target_level() -> int:
+	if numeric_workbench_level_option == null or numeric_workbench_level_option.get_item_count() <= 0:
+		return NumericWorkbenchModel.DEFAULT_TARGET_LEVEL
+	return int(numeric_workbench_level_option.get_item_metadata(numeric_workbench_level_option.selected))
+
+
+func _numeric_workbench_stage() -> int:
+	if numeric_workbench_stage_option == null or numeric_workbench_stage_option.get_item_count() <= 0:
+		return PetRebirthMmModel.STAGE_ONE
+	return int(numeric_workbench_stage_option.get_item_metadata(numeric_workbench_stage_option.selected))
+
+
+func _numeric_workbench_stone_plan_id() -> String:
+	if numeric_workbench_stone_plan_id == "" and numeric_workbench_stone_option != null and numeric_workbench_stone_option.get_item_count() > 0:
+		return str(numeric_workbench_stone_option.get_item_metadata(numeric_workbench_stone_option.selected))
+	return numeric_workbench_stone_plan_id
+
+
+func _on_numeric_workbench_growth_pressed() -> void:
+	var result := NumericWorkbenchModel.build_pet_growth_report(
+		_numeric_workbench_profile_id(),
+		_numeric_workbench_sample_count(),
+		_numeric_workbench_target_level(),
+		true
+	)
+	_set_numeric_workbench_result(result)
+
+
+func _on_numeric_workbench_mm_pressed() -> void:
+	var result := NumericWorkbenchModel.build_mm_rebirth_report(
+		_numeric_workbench_profile_id(),
+		_numeric_workbench_sample_count(),
+		_numeric_workbench_stage(),
+		_numeric_workbench_stone_plan_id(),
+		true
+	)
+	_set_numeric_workbench_result(result)
+
+
+func _on_numeric_workbench_battle_pressed() -> void:
+	var result := NumericWorkbenchModel.build_battle_report(true)
+	_set_numeric_workbench_result(result)
+
+
+func _set_numeric_workbench_result(result: Dictionary) -> void:
+	var lines: Array = result.get("lines", [])
+	var text_lines: Array[String] = []
+	text_lines.append("[color=#d7c36a]%s[/color]" % str(result.get("title", "数值实验")))
+	for line in lines:
+		text_lines.append(str(line))
+	if numeric_workbench_result_label != null:
+		numeric_workbench_result_label.text = "\n".join(text_lines)
+	var ok := bool(result.get("ok", false))
+	_set_world_log_message("%s：%s。" % [str(result.get("title", "数值实验")), "完成" if ok else "失败"])
 
 
 func _refresh_qa_panel() -> void:
@@ -24348,6 +24734,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_qa_load_map("firebud_village_gate", "from_training_yard", "已回到火芽村入口。")
 		"gm_battle_speed_gear":
 			_cycle_gm_battle_speed_gear()
+		"open_numeric_workbench":
+			_open_numeric_workbench_panel()
 		"open_backpack":
 			_close_qa_panel(false)
 			_open_backpack_panel()
@@ -29806,6 +30194,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		qa_panel.visible = false
 	if qa_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	numeric_workbench_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_management_height) * 0.5))
+	numeric_workbench_panel.size = Vector2(pet_management_width, pet_management_height)
+	if battle_active:
+		numeric_workbench_panel.visible = false
+	if numeric_workbench_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	var rename_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
