@@ -47,6 +47,7 @@ const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
+const ServerAuthContractModel := preload("res://scripts/progression/server_auth_contract_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
@@ -614,6 +615,7 @@ var auto_hang_supply_closure_check: bool = false
 var auto_pet_management_safety_check: bool = false
 var auto_player_growth_contract_check: bool = false
 var auto_server_profile_contract_check: bool = false
+var auto_server_auth_contract_check: bool = false
 var auto_balance_version_receipt_check: bool = false
 var auto_balance_snapshot_digest_check: bool = false
 var auto_balance_catalog_check: bool = false
@@ -1081,6 +1083,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_player_growth_contract_check")
 	elif auto_server_profile_contract_check:
 		call_deferred("_run_auto_server_profile_contract_check")
+	elif auto_server_auth_contract_check:
+		call_deferred("_run_auto_server_auth_contract_check")
 	elif auto_balance_version_receipt_check:
 		call_deferred("_run_auto_balance_version_receipt_check")
 	elif auto_balance_snapshot_digest_check:
@@ -1648,6 +1652,8 @@ func _apply_preview_window_args() -> void:
 			auto_player_growth_contract_check = true
 		elif arg == "--auto-server-profile-contract-check":
 			auto_server_profile_contract_check = true
+		elif arg == "--auto-server-auth-contract-check":
+			auto_server_auth_contract_check = true
 		elif arg == "--auto-balance-version-receipt-check":
 			auto_balance_version_receipt_check = true
 		elif arg == "--auto-balance-snapshot-digest-check":
@@ -12192,6 +12198,61 @@ func _run_auto_server_profile_contract_check() -> void:
 		int(counts.get("equipmentInstances", 0)),
 		int(counts.get("equipmentSlotInstanceIds", 0)),
 		" | ".join(profile_errors),
+		" | ".join(errors),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_auth_contract_check() -> void:
+	profile_save_enabled = false
+	var contract := ServerAuthContractModel.contract()
+	var manifest := ServerAuthContractModel.migration_manifest()
+	var errors := ServerAuthContractModel.validation_errors()
+	var preview := manifest.get("preview", {}) as Dictionary
+	var table_ids = contract.get("tableIds", [])
+	var endpoint_ids = contract.get("endpointIds", [])
+	var security := contract.get("securityRules", {}) as Dictionary
+	var counts := preview.get("counts", {}) as Dictionary
+	var paths := preview.get("paths", {}) as Dictionary
+	var tables_ok := (
+		table_ids is Array
+		and (table_ids as Array).has("accounts")
+		and (table_ids as Array).has("accountSessions")
+		and (table_ids as Array).has("gmCommandGrants")
+		and (table_ids as Array).has("gmCommandAudit")
+		and (table_ids as Array).size() >= 7
+	)
+	var endpoints_ok := (
+		endpoint_ids is Array
+		and (endpoint_ids as Array).has("login")
+		and (endpoint_ids as Array).has("session")
+		and (endpoint_ids as Array).has("gmCommand")
+		and (endpoint_ids as Array).has("profileSync")
+		and (endpoint_ids as Array).size() >= 8
+	)
+	var security_ok := (
+		bool(security.get("serverAuthoritativeGm", false))
+		and bool(security.get("serverComputesEffectiveRole", false))
+		and bool(security.get("gmCommandRequiresRoleGrantAndAudit", false))
+		and bool(security.get("localPluginIgnoredInProduction", false))
+	)
+	var paths_ok := (
+		str(paths.get("accountStorePath", "")) == AccountAuthModel.ACCOUNT_STORE_PATH
+		and str(paths.get("gmPluginPath", "")) == AccountAuthModel.GM_PLUGIN_PATH
+		and str(paths.get("gmAuditPath", "")) == GmToolRuntimeModel.AUDIT_PATH
+	)
+	var manifest_ok := manifest.has("contract") and manifest.has("preview") and errors.is_empty()
+	var status := "ok" if tables_ok and endpoints_ok and security_ok and paths_ok and manifest_ok else "failed"
+	print("server auth contract check ready: status=%s tables=%s endpoints=%s security=%s paths=%s accounts=%d gm_accounts=%d plugin=%s audit_lines=%d errors=%s" % [
+		status,
+		str(tables_ok),
+		str(endpoints_ok),
+		str(security_ok),
+		str(paths_ok),
+		int(counts.get("accounts", 0)),
+		int(counts.get("gmAccounts", 0)),
+		str(bool(preview.get("pluginInstalled", false))),
+		int(counts.get("gmAuditLines", 0)),
 		" | ".join(errors),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
