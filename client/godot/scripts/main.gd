@@ -11085,20 +11085,35 @@ func _run_auto_map_region_contract_check() -> void:
 	var element_ok := not element_region.is_empty()
 	for cave in RebirthTrialModel.element_caves():
 		element_ok = element_ok and MapRegionCatalog.map_ids_for_region("element_trial_caves").has(RebirthTrialModel.guardian_floor_map_id_for_cave(cave))
+	var element_sub_dungeons := MapRegionCatalog.sub_dungeons_for_region("element_trial_caves")
+	var element_structure_ok := (
+		str(element_region.get("entryMapId", "")) == "earth_vein_cave"
+		and str(element_region.get("bossMode", "")) == "interaction_guardian"
+		and element_sub_dungeons.size() == 4
+		and str((element_sub_dungeons[0] as Dictionary).get("bossMapId", "")) == "earth_vein_cave_f4"
+	)
 	var shadow_ok := (
 		not shadow_region.is_empty()
 		and MapRegionCatalog.map_ids_for_region("shadow_oath_cavern").has(RebirthTrialModel.boss_floor_map_id_for_final_cave())
 		and (shadow_region.get("captureMapIds", []) as Array).size() == RebirthTrialModel.capture_floor_map_ids_for_final_cave().size()
 	)
+	var shadow_structure_ok := (
+		MapRegionCatalog.entry_map_id_for_region("shadow_oath_cavern") == "shadow_oath_cavern"
+		and MapRegionCatalog.boss_map_id_for_region("shadow_oath_cavern") == "shadow_oath_cavern_f5"
+		and MapRegionCatalog.floor_order_for_region("shadow_oath_cavern").size() == 5
+		and str(MapRegionCatalog.safe_return_for_region("shadow_oath_cavern").get("spawnName", "")) == "from_shadow_oath_cavern"
+	)
 	var reverse_lookup_ok := str(MapRegionCatalog.region_for_map_id("gm_10v10_training_ground").get("id", "")) == "gm_training_ground"
-	var status := "ok" if region_errors.is_empty() and rebirth_errors.is_empty() and village_ok and element_ok and shadow_ok and reverse_lookup_ok else "failed"
-	print("map region contract check ready: status=%s regions=%s rebirth=%s village=%s element=%s shadow=%s reverse=%s errors=%s" % [
+	var status := "ok" if region_errors.is_empty() and rebirth_errors.is_empty() and village_ok and element_ok and element_structure_ok and shadow_ok and shadow_structure_ok and reverse_lookup_ok else "failed"
+	print("map region contract check ready: status=%s regions=%s rebirth=%s village=%s element=%s element_structure=%s shadow=%s shadow_structure=%s reverse=%s errors=%s" % [
 		status,
 		str(region_errors.is_empty()),
 		str(rebirth_errors.is_empty()),
 		str(village_ok),
 		str(element_ok),
+		str(element_structure_ok),
 		str(shadow_ok),
+		str(shadow_structure_ok),
 		str(reverse_lookup_ok),
 		";".join(region_errors + rebirth_errors),
 	])
