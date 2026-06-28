@@ -24168,7 +24168,7 @@ func _qa_command_summary_text() -> String:
 	lines.append("地图经济: --auto-map-region-contract-check / --auto-reward-grant-check / --auto-reward-mail-fallback-check")
 	lines.append("数值: --auto-balance-catalog-check / --auto-pet-growth-threshold-check / --auto-pet-growth-observation-check / --auto-pet-growth-species-simulation-check / --auto-pet-growth-starter-profiles-check / --auto-balance-version-receipt-check / --auto-balance-snapshot-digest-check / --auto-combat-formula-parity-check / --auto-combat-v2-shadow-check / --auto-combat-formula-driver-ab-check / --auto-numeric-experiment-report-check / --numeric-experiment-report")
 	lines.append("GM地图: --auto-gm-10v10-map-check / --auto-facility-marker-check / --auto-facility-dialog-options-check / --auto-npc-quest-marker-check / --auto-stable-facility-check / --auto-qa-panel-check")
-	lines.append("完整清单: docs/phase_92_gm_qa_panel.md")
+	lines.append("完整清单: docs/bak/legacy_phase_notes/phase_92_gm_qa_panel.md")
 	return "\n".join(lines)
 
 
