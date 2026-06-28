@@ -141,9 +141,8 @@ static func active_skill_ids_for_form(form_id: String) -> Array[String]:
 
 
 static func active_skill_ids_for_actor(actor: Dictionary) -> Array[String]:
-	var result := _string_array(actor.get("activeSkillIds", []))
-	if not result.is_empty():
-		return _valid_unique_pet_skill_ids(result)
+	if actor.has("activeSkillIds"):
+		return _valid_unique_pet_skill_ids(_string_array(actor.get("activeSkillIds", [])))
 	var form_id := str(actor.get("formId", actor.get("templateId", "")))
 	return active_skill_ids_for_form(form_id)
 

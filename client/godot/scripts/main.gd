@@ -165,6 +165,7 @@ const DIALOG_ACTION_TALK_OPTIONAL_QUEST := "talk_optional_quest"
 const DIALOG_ACTION_HEAL := "heal"
 const DIALOG_ACTION_RECORD_POINT := "record_point"
 const DIALOG_ACTION_PET_SKILL_TRAIN := "pet_skill_train"
+const DIALOG_ACTION_PET_SKILL_OVERWRITE := "pet_skill_overwrite"
 const DIALOG_ACTION_STABLE := "stable"
 const DIALOG_ACTION_SHOP := "shop"
 const DIALOG_ACTION_OPEN_QUEST := "open_quest"
@@ -437,6 +438,7 @@ var mailbox_close_button: Button
 var mailbox_message_buttons: Dictionary = {}
 var mailbox_selected_mail_id: String = ""
 var training_partner_panel: PanelContainer
+var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
 var training_partner_add_button: Button
 var training_partner_remove_button: Button
@@ -844,6 +846,7 @@ var world_hud_refresh_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
 var map_world_bounds_cache := Rect2()
 var map_world_bounds_cache_valid: bool = false
 var runtime_target_fps_cache: int = 0
+var canvas_text_font: Font
 var perf_probe_enabled: bool = false
 var perf_probe_elapsed: float = 0.0
 var perf_probe_frames: int = 0
@@ -3589,6 +3592,15 @@ func _run_auto_training_partner_check() -> void:
 	var partner_count_ok := PlayerProgressModel.training_partner_count(player_profile) == 4
 	var initial_partners := PlayerProgressModel.training_partners(player_profile)
 	var clone_attack := int((initial_partners[0] as Dictionary).get("attack", 0)) if not initial_partners.is_empty() else 0
+	var panel_map_loaded := _load_map("firebud_training_yard")
+	_open_training_partner_panel()
+	await get_tree().process_frame
+	var first_panel_layout_ok := _training_partner_panel_layout_is_usable()
+	_close_training_partner_panel()
+	_open_training_partner_panel()
+	await get_tree().process_frame
+	var second_panel_layout_ok := _training_partner_panel_layout_is_usable()
+	_close_training_partner_panel()
 	var changed_player_profile := player_profile.duplicate(true)
 	var changed_player = changed_player_profile.get("player", {}) as Dictionary
 	changed_player["level"] = 8
@@ -3690,10 +3702,14 @@ func _run_auto_training_partner_check() -> void:
 		partner_exp_ok = partner_exp_ok and int(partner.get("level", 1)) > 1
 		var pet = partner.get("pet", {})
 		partner_exp_ok = partner_exp_ok and pet is Dictionary and int((pet as Dictionary).get("level", 1)) > 1
-	var status := "ok" if partner_count_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok else "failed"
-	print("training partner check ready: status=%s count=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s planned=%s" % [
+	var panel_layout_ok := panel_map_loaded and first_panel_layout_ok and second_panel_layout_ok
+	var status := "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok else "failed"
+	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s planned=%s" % [
 		status,
 		str(partner_count_ok),
+		str(panel_layout_ok),
+		str(first_panel_layout_ok),
+		str(second_panel_layout_ok),
 		str(cloned_independent_ok),
 		str(loaded),
 		str(zone_found),
@@ -16246,7 +16262,7 @@ func _run_auto_pet_skill_training_check() -> void:
 		and str(default_slots[6]) == ""
 	)
 	var before_coins := PlayerProgressModel.stone_coins(player_profile)
-	var learn_result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	var learn_result := PlayerProgressModel.learn_pet_skill_to_slot(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE, 7, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
 	player_profile = learn_result.get("profile", player_profile)
 	var after_learn_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	var after_learn_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_learn_pet)
@@ -16258,28 +16274,29 @@ func _run_auto_pet_skill_training_check() -> void:
 		and learned_focus
 		and str(after_learn_slots[6]) == BattleModel.PET_SKILL_FOCUS_BITE
 	)
-	var move_result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, 7, -1)
-	player_profile = move_result.get("profile", player_profile)
-	var after_move_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
-	var after_move_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_move_pet)
-	var move_ok := (
-		bool(move_result.get("ok", false))
-		and str(after_move_slots[5]) == BattleModel.PET_SKILL_FOCUS_BITE
-		and str(after_move_slots[6]) == BattleModel.PET_SKILL_STONE_GAZE
+	var sleep_known_before_replace := after_learn_skills is Array and (after_learn_skills as Array).has(BattleModel.PET_SKILL_SLEEP_POWDER)
+	var replace_result := PlayerProgressModel.learn_pet_skill_to_slot(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_SLEEP_POWDER, 6, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	player_profile = replace_result.get("profile", player_profile)
+	var after_replace_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var after_replace_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_replace_pet)
+	var after_replace_skills = after_replace_pet.get("activeSkillIds", [])
+	var after_replace_forgotten = after_replace_pet.get("forgottenSkillIds", [])
+	var replace_expected_cost := PetSkillTrainingModel.skill_cost(BattleModel.PET_SKILL_FOCUS_BITE)
+	if not sleep_known_before_replace:
+		replace_expected_cost += PetSkillTrainingModel.skill_cost(BattleModel.PET_SKILL_SLEEP_POWDER)
+	var replace_coins_ok := PlayerProgressModel.stone_coins(player_profile) == before_coins - replace_expected_cost
+	var replace_skills_ok := after_replace_skills is Array and (after_replace_skills as Array).has(BattleModel.PET_SKILL_SLEEP_POWDER) and not (after_replace_skills as Array).has(BattleModel.PET_SKILL_STONE_GAZE)
+	var replace_forgotten_ok := after_replace_forgotten is Array and (after_replace_forgotten as Array).has(BattleModel.PET_SKILL_STONE_GAZE)
+	var replace_slots_ok := str(after_replace_slots[5]) == BattleModel.PET_SKILL_SLEEP_POWDER and str(after_replace_slots[6]) == BattleModel.PET_SKILL_FOCUS_BITE
+	var replace_ok := (
+		bool(replace_result.get("ok", false))
+		and replace_coins_ok
+		and replace_skills_ok
+		and replace_forgotten_ok
+		and replace_slots_ok
 	)
-	var actor := PlayerProgressModel.actor_from_pet_instance(after_move_pet, BattleModel.PLAYER_PET_ID, BattleModel.SIDE_ALLY, "ally.front.3")
-	var actor_slot_ok := str(PetTemplateCatalog.pet_skill_action_for_actor_slot(actor, 6).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
-	pet_skill_selected_slot = 6
-	_open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
-	var panel_ok := (
-		pet_skill_panel != null
-		and pet_skill_panel.visible
-		and pet_skill_learn_button != null
-		and pet_skill_forget_button != null
-		and pet_skill_forget_button.visible
-		and not pet_skill_forget_button.disabled
-	)
-	_close_pet_skill_panel()
+	var actor := PlayerProgressModel.actor_from_pet_instance(after_replace_pet, BattleModel.PLAYER_PET_ID, BattleModel.SIDE_ALLY, "ally.front.3")
+	var actor_slot_ok := str(PetTemplateCatalog.pet_skill_action_for_actor_slot(actor, 6).get("id", "")) == BattleModel.PET_SKILL_SLEEP_POWDER
 	var battle_slot_ok := false
 	var button_label_ok := false
 	var loaded := _load_map("firebud_village_gate", "doctor_record")
@@ -16287,39 +16304,74 @@ func _run_auto_pet_skill_training_check() -> void:
 	if loaded and not zones.is_empty():
 		_start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
 		var battle_pet := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_PET_ID)
-		battle_slot_ok = str(PetTemplateCatalog.pet_skill_action_for_actor_slot(battle_pet, 6).get("id", "")) == BattleModel.PET_SKILL_FOCUS_BITE
+		battle_slot_ok = str(PetTemplateCatalog.pet_skill_action_for_actor_slot(battle_pet, 6).get("id", "")) == BattleModel.PET_SKILL_SLEEP_POWDER
 		_set_battle_command_owner("pet")
-		button_label_ok = _button_text_for_battle_command("switch_pet").find("集中咬击") >= 0
-	var forget_result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE)
-	player_profile = forget_result.get("profile", player_profile)
-	var after_forget_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
-	var after_forget_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_forget_pet)
-	var after_forget_skills = after_forget_pet.get("activeSkillIds", [])
-	var forgotten_skills = after_forget_pet.get("forgottenSkillIds", [])
-	var forget_ok := (
-		bool(forget_result.get("ok", false))
-		and after_forget_skills is Array
-		and not (after_forget_skills as Array).has(BattleModel.PET_SKILL_FOCUS_BITE)
-		and forgotten_skills is Array
-		and (forgotten_skills as Array).has(BattleModel.PET_SKILL_FOCUS_BITE)
-		and not after_forget_slots.has(BattleModel.PET_SKILL_FOCUS_BITE)
-		and str(after_forget_slots[5]) == ""
+		button_label_ok = _button_text_for_battle_command("switch_pet").find("催眠粉") >= 0
+		_end_battle(false)
+	pet_skill_selected_slot = 6
+	_open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	var panel_ok := (
+		pet_skill_panel != null
+		and pet_skill_panel.visible
+		and pet_skill_learn_button != null
+		and pet_skill_learn_button.visible
+		and pet_skill_learn_option != null
+		and pet_skill_learn_option.get_item_count() > 0
+		and pet_skill_learn_option.get_item_text(0).find("空技能") >= 0
+		and (pet_skill_move_up_button == null or not pet_skill_move_up_button.visible)
+		and (pet_skill_move_down_button == null or not pet_skill_move_down_button.visible)
+		and (pet_skill_forget_button == null or not pet_skill_forget_button.visible)
 	)
-	var status := "ok" if catalog_errors.is_empty() and trainer_found and default_slots_ok and learn_ok and move_ok and actor_slot_ok and battle_slot_ok and button_label_ok and panel_ok and forget_ok else "failed"
-	print("pet skill training check ready: status=%s errors=%d trainer=%s default=%s learn=%s move=%s forget=%s actor_slot=%s battle_slot=%s button=%s panel=%s slots=%s afterForgetSlots=%s" % [
+	if pet_skill_learn_option != null:
+		pet_skill_learn_option.select(0)
+	_on_pet_skill_learn_pressed()
+	var overwrite_dialog_ok := (
+		_dialog_is_open()
+		and str(active_dialog_interaction.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE
+		and dialog_option_button != null
+		and dialog_option_button.text == "覆盖"
+		and dialog_close_button != null
+		and dialog_close_button.text == "取消"
+	)
+	if overwrite_dialog_ok:
+		_confirm_dialog_action()
+	var after_clear_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var after_clear_slots := PlayerProgressModel.pet_skill_slots_for_instance(after_clear_pet)
+	var after_clear_skills = after_clear_pet.get("activeSkillIds", [])
+	var after_clear_forgotten = after_clear_pet.get("forgottenSkillIds", [])
+	var clear_ok := (
+		overwrite_dialog_ok
+		and after_clear_skills is Array
+		and not (after_clear_skills as Array).has(BattleModel.PET_SKILL_SLEEP_POWDER)
+		and after_clear_forgotten is Array
+		and (after_clear_forgotten as Array).has(BattleModel.PET_SKILL_SLEEP_POWDER)
+		and str(after_clear_slots[5]) == ""
+	)
+	_close_dialog()
+	_close_pet_skill_panel()
+	var status := "ok" if catalog_errors.is_empty() and trainer_found and default_slots_ok and learn_ok and replace_ok and actor_slot_ok and battle_slot_ok and button_label_ok and panel_ok and clear_ok else "failed"
+	print("pet skill training check ready: status=%s errors=%d trainer=%s default=%s learn=%s replace=%s replaceCoins=%s replaceSkills=%s replaceForgotten=%s replaceSlots=%s clear=%s actor_slot=%s battle_slot=%s button=%s panel=%s dialog=%s coins=%d skills=%s forgotten=%s slots=%s afterClearSlots=%s" % [
 		status,
 		catalog_errors.size(),
 		str(trainer_found),
 		str(default_slots_ok),
 		str(learn_ok),
-		str(move_ok),
-		str(forget_ok),
+		str(replace_ok),
+		str(replace_coins_ok),
+		str(replace_skills_ok),
+		str(replace_forgotten_ok),
+		str(replace_slots_ok),
+		str(clear_ok),
 		str(actor_slot_ok),
 		str(battle_slot_ok),
 		str(button_label_ok),
 		str(panel_ok),
-		str(after_move_slots),
-		str(after_forget_slots),
+		str(overwrite_dialog_ok),
+		PlayerProgressModel.stone_coins(player_profile),
+		str(after_replace_skills),
+		str(after_replace_forgotten),
+		str(after_replace_slots),
+		str(after_clear_slots),
 	])
 	if not catalog_errors.is_empty():
 		print("pet skill training errors: %s" % str(catalog_errors))
@@ -16336,20 +16388,19 @@ func _run_pet_skill_training_preview() -> void:
 	_set_world_log_message("Phase68：宠技训练。")
 	await get_tree().create_timer(0.45).timeout
 	_open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
-	pet_skill_selected_slot = 7
+	pet_skill_selected_slot = 6
 	_refresh_pet_skill_panel()
 	await get_tree().create_timer(0.85).timeout
-	var learn_result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, BattleModel.PET_SKILL_FOCUS_BITE, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
-	player_profile = learn_result.get("profile", player_profile)
-	pet_skill_selected_slot = int(learn_result.get("slot", 7))
-	_set_world_log_message(str(learn_result.get("message", "")))
-	_refresh_pet_skill_panel()
+	if pet_skill_learn_option != null:
+		for index in range(pet_skill_learn_option.get_item_count()):
+			if str(pet_skill_learn_option.get_item_metadata(index)) == BattleModel.PET_SKILL_FOCUS_BITE:
+				pet_skill_learn_option.select(index)
+				break
+	_on_pet_skill_learn_pressed()
+	await get_tree().create_timer(0.75).timeout
+	if _dialog_is_open() and str(active_dialog_interaction.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE:
+		_confirm_dialog_action()
 	await get_tree().create_timer(0.95).timeout
-	var move_result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, pet_skill_selected_slot, -1)
-	player_profile = move_result.get("profile", player_profile)
-	pet_skill_selected_slot = int(move_result.get("slot", pet_skill_selected_slot))
-	_set_world_log_message(str(move_result.get("message", "")))
-	_refresh_pet_skill_panel()
 	await get_tree().create_timer(0.9).timeout
 	_close_pet_skill_panel()
 	var zones := EncounterModel.encounter_zones(map_data)
@@ -19935,12 +19986,15 @@ func _build_hud() -> void:
 	training_partner_close_button.custom_minimum_size = Vector2(92, 44)
 	training_partner_close_button.pressed.connect(_close_training_partner_panel)
 	training_partner_header.add_child(training_partner_close_button)
+	training_partner_scroll = ScrollContainer.new()
+	training_partner_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	training_partner_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	training_partner_column.add_child(training_partner_scroll)
 	training_partner_label = Label.new()
 	training_partner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	training_partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	training_partner_label.add_theme_font_size_override("font_size", 16)
-	training_partner_column.add_child(training_partner_label)
+	training_partner_scroll.add_child(training_partner_label)
 	var training_partner_button_row := HBoxContainer.new()
 	training_partner_button_row.add_theme_constant_override("separation", 8)
 	training_partner_column.add_child(training_partner_button_row)
@@ -21188,8 +21242,7 @@ func _battle_trace_actor_snapshot(actor: Dictionary) -> Dictionary:
 	}
 
 
-func _build_theme() -> Theme:
-	var theme := Theme.new()
+func _build_cjk_system_font() -> SystemFont:
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray([
 		"Heiti SC",
@@ -21201,6 +21254,18 @@ func _build_theme() -> Theme:
 		"Noto Sans",
 		"Arial Unicode MS",
 	])
+	return font
+
+
+func _canvas_text_font() -> Font:
+	if canvas_text_font == null:
+		canvas_text_font = _build_cjk_system_font()
+	return canvas_text_font
+
+
+func _build_theme() -> Theme:
+	var theme := Theme.new()
+	var font := _build_cjk_system_font()
 	theme.default_font = font
 	theme.default_font_size = 18
 	return theme
@@ -24788,32 +24853,6 @@ func _create_pet_skill_panel() -> void:
 	pet_skill_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail_scroll.add_child(pet_skill_detail_label)
 
-	var move_row := HBoxContainer.new()
-	move_row.add_theme_constant_override("separation", 8)
-	detail_column.add_child(move_row)
-	pet_skill_move_up_button = Button.new()
-	pet_skill_move_up_button.text = "上移"
-	pet_skill_move_up_button.custom_minimum_size = Vector2(0, 44)
-	pet_skill_move_up_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_skill_move_up_button.pressed.connect(func() -> void:
-		_on_pet_skill_move_pressed(-1)
-	)
-	move_row.add_child(pet_skill_move_up_button)
-	pet_skill_move_down_button = Button.new()
-	pet_skill_move_down_button.text = "下移"
-	pet_skill_move_down_button.custom_minimum_size = Vector2(0, 44)
-	pet_skill_move_down_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_skill_move_down_button.pressed.connect(func() -> void:
-		_on_pet_skill_move_pressed(1)
-	)
-	move_row.add_child(pet_skill_move_down_button)
-	pet_skill_forget_button = Button.new()
-	pet_skill_forget_button.text = "遗忘"
-	pet_skill_forget_button.custom_minimum_size = Vector2(0, 44)
-	pet_skill_forget_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_skill_forget_button.pressed.connect(_on_pet_skill_forget_pressed)
-	move_row.add_child(pet_skill_forget_button)
-
 	var learn_row := HBoxContainer.new()
 	learn_row.add_theme_constant_override("separation", 8)
 	detail_column.add_child(learn_row)
@@ -25042,17 +25081,13 @@ func _refresh_pet_skill_detail(selected: Dictionary) -> void:
 	_sync_pet_skill_move_buttons(selected, skill_id)
 
 
-func _sync_pet_skill_move_buttons(selected: Dictionary, skill_id: String) -> void:
-	var has_skill := not selected.is_empty() and skill_id != ""
+func _sync_pet_skill_move_buttons(_selected: Dictionary, _skill_id: String) -> void:
 	if pet_skill_move_up_button != null:
-		pet_skill_move_up_button.disabled = not has_skill or pet_skill_selected_slot <= 1
+		pet_skill_move_up_button.visible = false
 	if pet_skill_move_down_button != null:
-		pet_skill_move_down_button.disabled = not has_skill or pet_skill_selected_slot >= PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		pet_skill_move_down_button.visible = false
 	if pet_skill_forget_button != null:
-		pet_skill_forget_button.visible = pet_skill_training_mode
-		var forget_check := PlayerProgressModel.can_forget_pet_skill(player_profile, pet_selected_instance_id, skill_id) if pet_skill_training_mode and has_skill else {"ok": false, "message": "请选择要遗忘的技能。"}
-		pet_skill_forget_button.disabled = not bool(forget_check.get("ok", false))
-		pet_skill_forget_button.tooltip_text = str(forget_check.get("message", ""))
+		pet_skill_forget_button.visible = false
 
 
 func _refresh_pet_skill_learn_controls(selected: Dictionary) -> void:
@@ -25065,23 +25100,25 @@ func _refresh_pet_skill_learn_controls(selected: Dictionary) -> void:
 	pet_skill_learn_option.clear()
 	var learnable_count := 0
 	if not selected.is_empty():
+		pet_skill_learn_option.add_item("空技能  0石币", learnable_count)
+		pet_skill_learn_option.set_item_metadata(learnable_count, "")
+		learnable_count += 1
 		for option in PlayerProgressModel.learnable_pet_skill_options(player_profile, pet_selected_instance_id, pet_skill_trainer_id):
-			if bool(option.get("learned", false)):
-				continue
 			var skill_id := str(option.get("id", ""))
 			if skill_id == "":
 				continue
 			var cost := int(option.get("cost", PetSkillTrainingModel.DEFAULT_COST))
-			pet_skill_learn_option.add_item("%s  %d石币" % [str(option.get("label", skill_id)), cost], learnable_count)
+			var label := "%s  已学" % str(option.get("label", skill_id)) if bool(option.get("learned", false)) else "%s  %d石币" % [str(option.get("label", skill_id)), cost]
+			pet_skill_learn_option.add_item(label, learnable_count)
 			pet_skill_learn_option.set_item_metadata(learnable_count, skill_id)
 			learnable_count += 1
 	if learnable_count == 0:
-		pet_skill_learn_option.add_item("没有可学技能", 0)
+		pet_skill_learn_option.add_item("请选择宠物", 0)
 		pet_skill_learn_option.set_item_metadata(0, "")
 		pet_skill_learn_button.disabled = true
 	else:
 		pet_skill_learn_option.select(0)
-		pet_skill_learn_button.disabled = selected.is_empty() or not _pet_skill_has_empty_slot(selected)
+		pet_skill_learn_button.disabled = selected.is_empty()
 
 
 func _pet_skill_has_empty_slot(instance: Dictionary) -> bool:
@@ -25122,9 +25159,25 @@ func _on_pet_skill_learn_pressed() -> void:
 		return
 	var index := pet_skill_learn_option.selected
 	var skill_id := str(pet_skill_learn_option.get_item_metadata(index))
-	if skill_id == "":
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
 		return
-	var result := PlayerProgressModel.learn_pet_skill(player_profile, pet_selected_instance_id, skill_id, pet_skill_trainer_id)
+	var existing_skill_id := _pet_skill_id_for_selected_slot(selected)
+	if existing_skill_id != "" and existing_skill_id != skill_id:
+		_open_pet_skill_overwrite_dialog(skill_id)
+		return
+	_apply_pet_skill_to_selected_slot(skill_id)
+
+
+func _pet_skill_id_for_selected_slot(instance: Dictionary) -> String:
+	var slots := PlayerProgressModel.pet_skill_slots_for_instance(instance)
+	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	return str(slots[slot - 1]) if slot - 1 < slots.size() else ""
+
+
+func _apply_pet_skill_to_selected_slot(skill_id: String) -> void:
+	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var result := PlayerProgressModel.learn_pet_skill_to_slot(player_profile, pet_selected_instance_id, skill_id, slot, pet_skill_trainer_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
 		pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
@@ -25134,6 +25187,48 @@ func _on_pet_skill_learn_pressed() -> void:
 	_refresh_pet_skill_panel()
 	if pet_panel != null and pet_panel.visible:
 		_refresh_pet_panel()
+
+
+func _open_pet_skill_overwrite_dialog(skill_id: String) -> void:
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty():
+		return
+	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var existing_skill_id := _pet_skill_id_for_selected_slot(selected)
+	if existing_skill_id == "":
+		_apply_pet_skill_to_selected_slot(skill_id)
+		return
+	var existing_label := BattleActionCatalog.label_for(existing_skill_id, existing_skill_id)
+	var next_label := "空技能" if skill_id == "" else BattleActionCatalog.label_for(skill_id, skill_id)
+	active_dialog_interaction = {
+		"id": "pet_skill_overwrite_%s_%d" % [pet_selected_instance_id, slot],
+		"name": "确认覆盖",
+		"actionType": DIALOG_ACTION_PET_SKILL_OVERWRITE,
+		"instanceId": pet_selected_instance_id,
+		"trainerId": pet_skill_trainer_id,
+		"slot": slot,
+		"skillId": skill_id,
+		"option": "覆盖",
+		"dialog": [
+			"%s 的技%d 当前是%s。" % [str(selected.get("name", "宠物")), slot, existing_label],
+			"是否覆盖为%s？" % next_label,
+		],
+	}
+	_update_dialog_text()
+	dialog_panel.move_to_front()
+	dialog_panel.visible = true
+	_layout_hud()
+
+
+func _apply_pet_skill_overwrite_from_dialog() -> void:
+	if active_dialog_interaction.is_empty():
+		return
+	pet_selected_instance_id = str(active_dialog_interaction.get("instanceId", pet_selected_instance_id))
+	pet_skill_trainer_id = str(active_dialog_interaction.get("trainerId", pet_skill_trainer_id))
+	pet_skill_selected_slot = clampi(int(active_dialog_interaction.get("slot", pet_skill_selected_slot)), 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var skill_id := str(active_dialog_interaction.get("skillId", ""))
+	_close_dialog()
+	_apply_pet_skill_to_selected_slot(skill_id)
 
 
 func _on_pet_skill_forget_pressed() -> void:
@@ -25506,8 +25601,10 @@ func _open_training_partner_panel() -> void:
 	_close_auto_settings_panel()
 	training_partner_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_layout_hud()
 	_refresh_training_partner_panel()
 	_layout_hud()
+	call_deferred("_layout_hud")
 
 
 func _close_training_partner_panel() -> void:
@@ -25526,6 +25623,8 @@ func _refresh_training_partner_panel() -> void:
 	lines.append("")
 	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
 	training_partner_label.text = "\n".join(lines)
+	if training_partner_scroll != null:
+		training_partner_scroll.scroll_vertical = 0
 	if training_partner_add_button != null:
 		training_partner_add_button.disabled = count >= 4
 	if training_partner_remove_button != null:
@@ -25534,6 +25633,22 @@ func _refresh_training_partner_panel() -> void:
 		training_partner_fill_button.disabled = count >= 4
 	if training_partner_clear_button != null:
 		training_partner_clear_button.disabled = count <= 0
+
+
+func _training_partner_panel_layout_is_usable() -> bool:
+	if training_partner_panel == null or training_partner_scroll == null or not training_partner_panel.visible:
+		return false
+	var viewport_size := _layout_size()
+	var margin := 18.0
+	var bottom := training_partner_panel.position.y + training_partner_panel.size.y
+	return (
+		training_partner_panel.position.x >= -1.0
+		and training_partner_panel.position.y >= margin
+		and training_partner_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
+		and training_partner_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
+		and bottom <= viewport_size.y + 1.0
+		and training_partner_scroll.size.y >= 80.0
+	)
 
 
 func _set_training_partner_count(count: int) -> void:
@@ -30208,6 +30323,8 @@ func _perform_dialog_action(action_id: String) -> void:
 			var trainer_id := str(active_dialog_interaction.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID))
 			_close_dialog()
 			_open_pet_skill_panel(true, trainer_id)
+		DIALOG_ACTION_PET_SKILL_OVERWRITE:
+			_apply_pet_skill_overwrite_from_dialog()
 		DIALOG_ACTION_STABLE:
 			_close_dialog()
 			_open_pet_panel(true)
@@ -30508,6 +30625,8 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_RECORD_POINT
 	if _dialog_item_is_pet_skill_trainer(item):
 		return DIALOG_ACTION_PET_SKILL_TRAIN
+	if _dialog_item_is_pet_skill_overwrite(item):
+		return DIALOG_ACTION_PET_SKILL_OVERWRITE
 	if _dialog_item_is_stable(item):
 		return DIALOG_ACTION_STABLE
 	if _dialog_item_is_rebirth(item):
@@ -30550,6 +30669,8 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return str(item.get("option", "保存"))
 		DIALOG_ACTION_PET_SKILL_TRAIN:
 			return str(item.get("option", "训练"))
+		DIALOG_ACTION_PET_SKILL_OVERWRITE:
+			return str(item.get("option", "覆盖"))
 		DIALOG_ACTION_STABLE:
 			return str(item.get("option", "兽栏"))
 		DIALOG_ACTION_SHOP:
@@ -30606,6 +30727,8 @@ func _refresh_dialog_action_buttons(item: Dictionary) -> void:
 	dialog_option_button.text = str(primary.get("label", "知道了"))
 	dialog_option_button.visible = true
 	dialog_option_button.disabled = false
+	if dialog_close_button != null:
+		dialog_close_button.text = "取消" if str(item.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE else "离开"
 	if dialog_button_row == null:
 		return
 	for index in range(1, options.size()):
@@ -30696,6 +30819,10 @@ func _active_dialog_is_pet_skill_trainer() -> bool:
 
 func _dialog_item_is_pet_skill_trainer(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == "pet_skill_trainer"
+
+
+func _dialog_item_is_pet_skill_overwrite(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE
 
 
 func _active_dialog_is_stable() -> bool:
@@ -31946,7 +32073,7 @@ func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: 
 	var label := str(plan.get("label", ""))
 	if label == "":
 		return
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	var label_width := float(plan.get("width", (112.0 if compact else 132.0) * visual_scale))
 	var font_size := int(plan.get("fontSize", maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))))
 	var origin := center + Vector2(-label_width * 0.5, 0)
@@ -31958,7 +32085,7 @@ func _battle_actor_label_draw_plan(actor: Dictionary, visual_scale: float, compa
 	var full_label := _battle_actor_label(actor)
 	if full_label == "":
 		return {"label": "", "width": 0.0, "fontSize": 0, "fits": true, "fullLabel": true}
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	var font_size := maxi(9, int(round((11.0 if compact else 15.0) * visual_scale)))
 	var min_font_size := 8
 	var base_width := (112.0 if compact else 132.0) * visual_scale
@@ -32032,7 +32159,7 @@ func _draw_battle_status_badges(actor: Dictionary, origin: Vector2, visual_scale
 	var status_ids := BattleStatusModel.active_status_ids(actor)
 	if status_ids.is_empty():
 		return
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	var badge_size := maxf(15.0, 18.0 * visual_scale)
 	var spacing := badge_size + 2.0 * visual_scale
 	var start_x := -spacing * float(status_ids.size() - 1) * 0.5
@@ -32076,7 +32203,7 @@ func _battle_status_badge_color(status_id: String) -> Color:
 
 
 func _draw_battle_float_texts() -> void:
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	for value in battle_float_texts:
 		var item := value as Dictionary
 		var age := float(item.get("age", 0.0))
@@ -32531,7 +32658,7 @@ func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
 	draw_circle(center + Vector2(1, 2), 12.5, Color(0.03, 0.04, 0.03, 0.58))
 	draw_circle(center, 12.0, fill)
 	draw_arc(center, 13.0, 0.0, TAU, 28, border, 2.2, true)
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	draw_string(font, center + Vector2(-9, 7), glyph, HORIZONTAL_ALIGNMENT_CENTER, 18.0, 22, text_color)
 
 
@@ -32785,7 +32912,7 @@ func _draw_facility_marker_label(item: Dictionary, marker: Vector2, selected: bo
 	var facility_label := InteractionModel.facility_label_for(item)
 	if facility_label == "":
 		return
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	var font_size := 14
 	var label_width := maxf(42.0, float(facility_label.length()) * 18.0 + 18.0)
 	var label_rect := Rect2(marker + Vector2(-label_width * 0.5, -62.0), Vector2(label_width, 22.0))
@@ -32820,7 +32947,7 @@ func _facility_marker_color(facility_type: String, selected: bool = false) -> Co
 
 
 func _draw_ground_pet_drops() -> void:
-	var font := ThemeDB.fallback_font
+	var font := _canvas_text_font()
 	for drop in _ground_pet_drops_on_map_fast(current_map_id):
 		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
 		var center := IsoMapModel.grid_to_world(map_data, cell)

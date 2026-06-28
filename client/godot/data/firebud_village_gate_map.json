@@ -320,7 +320,7 @@
       "action": "训练",
       "actionType": "pet_skill_trainer",
       "trainerId": "firebud_pet_skill_trainer",
-      "dialog": ["宠技训练师阿拓：宠物学会的技能，可以整理到技1到技7。想换哪个技位，就在这里调整。"],
+      "dialog": ["宠技训练师阿拓：先选技1到技7的目标位置，再学习技能覆盖过去；选空技能可以清出这个位置。"],
       "option": "训练"
     },
     {

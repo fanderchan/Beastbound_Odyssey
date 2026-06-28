@@ -2556,6 +2556,82 @@ static func learn_pet_skill(profile: Dictionary, instance_id: String, skill_id: 
 	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
 
 
+static func learn_pet_skill_to_slot(profile: Dictionary, instance_id: String, skill_id: String, slot: int, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var safe_slot := clampi(slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	var normalized_skill_id := skill_id.strip_edges()
+	var learning_empty := normalized_skill_id == ""
+	if not learning_empty:
+		var offered := PetSkillTrainingModel.trainer_skill_ids(trainer_id)
+		if not offered.has(normalized_skill_id):
+			return {"ok": false, "profile": normalized, "message": "这个训练师不会教该技能。"}
+		var action := BattleActionCatalog.action_by_id(normalized_skill_id)
+		if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
+			return {"ok": false, "profile": normalized, "message": "该技能不能作为宠物技能学习。"}
+	var cost := 0 if learning_empty else PetSkillTrainingModel.skill_cost(normalized_skill_id)
+	var instances: Array = normalized.get("petInstances", [])
+	for index in range(instances.size()):
+		if not (instances[index] is Dictionary):
+			continue
+		var instance := (instances[index] as Dictionary).duplicate(true)
+		if str(instance.get("instanceId", "")) != instance_id:
+			instances[index] = instance
+			continue
+		var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
+		var already_learned := not learning_empty and learned.has(normalized_skill_id)
+		if not learning_empty and not already_learned and stone_coins(normalized) < cost:
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "石币不足，需要%d石币。" % cost,
+			}
+		var slots := pet_skill_slots_for_instance(instance)
+		var previous_skill_id := str(slots[safe_slot - 1]) if safe_slot - 1 < slots.size() else ""
+		if previous_skill_id == normalized_skill_id:
+			return {
+				"ok": true,
+				"profile": normalized,
+				"message": "技%d 已经是%s。" % [safe_slot, "空技能" if learning_empty else BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id)],
+				"skillId": normalized_skill_id,
+				"slot": safe_slot,
+				"previousSkillId": previous_skill_id,
+			}
+		var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
+		if previous_skill_id != "":
+			learned.erase(previous_skill_id)
+			if not forgotten.has(previous_skill_id):
+				forgotten.append(previous_skill_id)
+		if not learning_empty:
+			if not learned.has(normalized_skill_id):
+				learned.append(normalized_skill_id)
+			forgotten.erase(normalized_skill_id)
+		for slot_index in range(slots.size()):
+			if normalized_skill_id != "" and str(slots[slot_index]) == normalized_skill_id:
+				slots[slot_index] = ""
+		slots[safe_slot - 1] = normalized_skill_id
+		instance["activeSkillIds"] = learned
+		instance["forgottenSkillIds"] = forgotten
+		instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, slots)
+		instances[index] = instance
+		normalized["petInstances"] = instances
+		if not learning_empty and not already_learned:
+			normalized[STONE_COINS_KEY] = maxi(0, stone_coins(normalized) - cost)
+		normalized = normalize_profile(normalized)
+		var learned_label := "空技能" if learning_empty else BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id)
+		var message := "%s 的技%d 已设为空技能。" % [str(instance.get("name", "宠物")), safe_slot] if learning_empty else "%s 学会了%s，配置到技%d。" % [str(instance.get("name", "宠物")), learned_label, safe_slot]
+		if already_learned and not learning_empty:
+			message = "%s 已把%s配置到技%d。" % [str(instance.get("name", "宠物")), learned_label, safe_slot]
+		return {
+			"ok": true,
+			"profile": normalized,
+			"message": message,
+			"skillId": normalized_skill_id,
+			"slot": safe_slot,
+			"previousSkillId": previous_skill_id,
+		}
+	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+
+
 static func can_forget_pet_skill(profile: Dictionary, instance_id: String, skill_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var normalized_skill_id := skill_id.strip_edges()
@@ -7484,11 +7560,9 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 		if template.has(key):
 			instance[key] = template.get(key)
 	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
-	for base_skill_id in PET_BASE_SKILL_IDS:
-		forgotten.erase(base_skill_id)
 	var learned: Array[String] = []
 	for skill_id in _valid_unique_pet_skill_ids(template.get("activeSkillIds", [])):
-		if PET_BASE_SKILL_IDS.has(skill_id) or not forgotten.has(skill_id):
+		if not forgotten.has(skill_id):
 			learned.append(skill_id)
 	for skill_id in _valid_unique_pet_skill_ids(instance.get("activeSkillIds", [])):
 		if forgotten.has(skill_id):
