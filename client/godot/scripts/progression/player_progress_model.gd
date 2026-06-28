@@ -2667,8 +2667,20 @@ static func server_contract_errors() -> Array[String]:
 	return ServerProfileContractModel.validation_errors()
 
 
+static func server_contract_profile_errors(profile: Dictionary) -> Array[String]:
+	return ServerProfileContractModel.profile_validation_errors(normalize_profile(profile))
+
+
+static func server_profile_contract() -> Dictionary:
+	return ServerProfileContractModel.contract()
+
+
 static func server_migration_preview(profile: Dictionary) -> Dictionary:
 	return ServerProfileContractModel.migration_preview(normalize_profile(profile))
+
+
+static func server_migration_manifest(profile: Dictionary) -> Dictionary:
+	return ServerProfileContractModel.migration_manifest(normalize_profile(profile))
 
 
 static func player_hp(profile: Dictionary) -> int:

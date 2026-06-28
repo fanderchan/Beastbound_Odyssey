@@ -11814,23 +11814,55 @@ func _run_auto_server_profile_contract_check() -> void:
 	profile_save_enabled = false
 	var profile := PlayerProgressModel.normalize_profile(PlayerProgressModel.default_profile())
 	var sync := PlayerProgressModel.server_sync_state(profile)
+	var contract := PlayerProgressModel.server_profile_contract()
 	var errors := PlayerProgressModel.server_contract_errors()
+	var profile_errors := PlayerProgressModel.server_contract_profile_errors(profile)
 	var preview := PlayerProgressModel.server_migration_preview(profile)
+	var manifest := PlayerProgressModel.server_migration_manifest(profile)
 	var counts := preview.get("counts", {}) as Dictionary
-	var sync_ok := int(sync.get("schemaVersion", 0)) == 1 and sync.has("dirtyModules")
-	var contract_ok := errors.is_empty() and int(preview.get("moduleCount", 0)) >= 9
+	var module_ids = contract.get("moduleIds", [])
+	var module_counts = preview.get("moduleCounts", {}) as Dictionary
+	var expected_modules_ok := (
+		module_ids is Array
+		and (module_ids as Array).has("equipment")
+		and (module_ids as Array).has("equipmentCompatibility")
+		and (module_ids as Array).has("wallet")
+		and (module_ids as Array).has("petCodex")
+		and (module_ids as Array).has("autoCaptureSettings")
+		and (module_ids as Array).has("trainingPartners")
+	)
+	var sync_ok := (
+		int(sync.get("schemaVersion", 0)) == 2
+		and str(sync.get("contractVersion", "")) == "profile_contract_v2"
+		and sync.has("dirtyModules")
+	)
+	var contract_ok := (
+		errors.is_empty()
+		and profile_errors.is_empty()
+		and int(preview.get("moduleCount", 0)) >= 24
+		and expected_modules_ok
+		and manifest.has("contract")
+		and manifest.has("preview")
+	)
 	var counts_ok := (
 		int(counts.get("pets", 0)) >= 4
 		and int(counts.get("backpackSlots", 0)) >= BackpackModel.BASE_SLOT_LIMIT
 		and int(counts.get("equipmentSlots", 0)) >= 8
+		and int(counts.get("equipmentInstances", 0)) >= 8
+		and int(counts.get("equipmentSlotInstanceIds", 0)) >= 8
+		and int(module_counts.get("wallet", 0)) >= 2
+		and int(module_counts.get("serverSync", 0)) >= 1
 	)
 	var status := "ok" if sync_ok and contract_ok and counts_ok else "failed"
-	print("server profile contract check ready: status=%s sync=%s contract=%s counts=%s modules=%d errors=%s" % [
+	print("server profile contract check ready: status=%s sync=%s contract=%s counts=%s modules=%d equipment_instances=%d equipment_slots=%d profile_errors=%s errors=%s" % [
 		status,
 		str(sync_ok),
 		str(contract_ok),
 		str(counts_ok),
 		int(preview.get("moduleCount", 0)),
+		int(counts.get("equipmentInstances", 0)),
+		int(counts.get("equipmentSlotInstanceIds", 0)),
+		" | ".join(profile_errors),
 		" | ".join(errors),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
