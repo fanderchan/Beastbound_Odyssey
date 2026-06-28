@@ -44,17 +44,10 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }
       if (req.method === "GET" && url.pathname === "/profiles/me") {
-        const result = service.getSession(bearerToken(req));
-        if (!result.ok) {
-          return sendResult(res, result);
-        }
-        return sendJson(res, 200, {
-          "ok": true,
-          "profileBinding": result.profileBinding,
-          "profileSummary": result.profileSummary,
-          "profile": null,
-          "message": "服务器已确认角色档案绑定，完整档案同步尚未接管。"
-        });
+        return sendResult(res, service.getProfile(bearerToken(req)));
+      }
+      if (req.method === "PUT" && url.pathname === "/profiles/me") {
+        return sendResult(res, service.saveProfile(bearerToken(req), await readJson(req)));
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});
     } catch (error) {
@@ -67,7 +60,12 @@ function sendResult(res, result) {
   if (result.ok) {
     return sendJson(res, 200, result);
   }
-  const status = result.code && result.code.includes("denied") ? 403 : 400;
+  let status = 400;
+  if (result.code && result.code.includes("denied")) {
+    status = 403;
+  } else if (result.code === "revision_conflict") {
+    status = 409;
+  }
   return sendJson(res, status, result);
 }
 

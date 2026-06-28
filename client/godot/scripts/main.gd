@@ -258,6 +258,7 @@ var auth_login_tab_button: Button
 var auth_register_tab_button: Button
 var auth_submit_button: Button
 var auth_http_request: HTTPRequest
+var profile_sync_http_request: HTTPRequest
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
@@ -583,6 +584,7 @@ var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
+var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
@@ -712,6 +714,11 @@ var auth_mode_register: bool = false
 var auth_server_mode: bool = false
 var auth_request_pending: bool = false
 var current_account_session: Dictionary = {}
+var server_profile_sync_state: String = "off"
+var server_profile_sync_pending_kind: String = ""
+var server_profile_sync_dirty: bool = false
+var server_profile_sync_expected_revision: int = 0
+var server_profile_sync_message: String = ""
 var profile_save_enabled: bool = true
 var profile_save_pending: bool = false
 var profile_save_debounce_remaining: float = 0.0
@@ -880,6 +887,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_auth_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
+	elif auto_server_profile_sync_check:
+		call_deferred("_run_auto_server_profile_sync_check")
 	elif auth_ux_preview:
 		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
@@ -1588,6 +1597,8 @@ func _apply_preview_window_args() -> void:
 			auth_auto_bypass = false
 		elif arg == "--auto-auth-server-client-check":
 			auto_auth_server_client_check = true
+		elif arg == "--auto-server-profile-sync-check":
+			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
 			auth_ux_preview = true
 			auth_auto_bypass = false
@@ -14847,13 +14858,59 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var profile_body := JSON.stringify({
 		"ok": true,
+		"profile": {"schemaVersion": 1, "player": {"level": 7}},
 		"profileBinding": {"playerId": "player_test"},
 		"profileSummary": summary,
 	}).to_utf8_buffer()
 	var parsed_profile := ServerAuthClientModel.parse_profile_response(200, profile_body)
+	var parsed_profile_body := parsed_profile.get("profile", {}) as Dictionary if parsed_profile.get("profile", {}) is Dictionary else {}
+	var parsed_profile_player := parsed_profile_body.get("player", {}) as Dictionary if parsed_profile_body.get("player", {}) is Dictionary else {}
 	var profile_parse_ok := (
 		bool(parsed_profile.get("ok", false))
 		and str((parsed_profile.get("profileSummary", {}) as Dictionary).get("playerId", "")) == "player_test"
+		and int(parsed_profile_player.get("level", 0)) == 7
+	)
+	var upload_spec := ServerAuthClientModel.profile_upload_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		{"schemaVersion": 1, "player": {"level": 7}},
+		3
+	)
+	var upload_body := str(upload_spec.get("body", ""))
+	var upload_request_ok := (
+		str(upload_spec.get("url", "")) == "http://127.0.0.1:8787/profiles/me"
+		and int(upload_spec.get("method", -1)) == HTTPClient.METHOD_PUT
+		and _packed_string_array(upload_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and upload_body.find("\"expectedRevision\":3") >= 0
+	)
+	var upload_response_body := JSON.stringify({
+		"ok": true,
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 4,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer()
+	var parsed_upload := ServerAuthClientModel.parse_profile_upload_response(200, upload_response_body)
+	var upload_parse_ok := (
+		bool(parsed_upload.get("ok", false))
+		and int((parsed_upload.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 4
+	)
+	var conflict_response_body := JSON.stringify({
+		"ok": false,
+		"code": "revision_conflict",
+		"message": "服务器档案已更新，请重新登录或重新拉取档案。",
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 5,
+		},
+	}).to_utf8_buffer()
+	var parsed_conflict := ServerAuthClientModel.parse_profile_upload_response(409, conflict_response_body)
+	var conflict_ok := (
+		not bool(parsed_conflict.get("ok", true))
+		and str(parsed_conflict.get("code", "")) == "revision_conflict"
+		and int((parsed_conflict.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 5
 	)
 	var error_body := JSON.stringify({
 		"ok": false,
@@ -14879,17 +14936,107 @@ func _run_auto_auth_server_client_check() -> void:
 		and not auth_server_url_input.visible
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_local_ok else "failed"
-	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s parse=%s profile_parse=%s error=%s ui_server=%s ui_local=%s" % [
+	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s error=%s ui_server=%s ui_local=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
+		str(upload_request_ok),
 		str(parse_ok),
 		str(profile_parse_ok),
+		str(upload_parse_ok),
+		str(conflict_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_local_ok),
 	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_profile_sync_check() -> void:
+	profile_save_enabled = false
+	var original_save_path := PlayerProgressModel.current_save_path()
+	var temp_save_path := "user://server_profile_sync_check/player_profile.json"
+	PlayerProgressModel.set_active_save_path(temp_save_path)
+	var session := {
+		"username": "syncuser",
+		"displayName": "同步猎人",
+		"role": AccountAuthModel.ROLE_PLAYER,
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+		"gmPluginInstalled": false,
+		"profileSavePath": "user://server_accounts/syncuser/player_profile.json",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverBaseUrl": "http://127.0.0.1:8787",
+		"serverSessionToken": "token_sync",
+		"serverProfileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 0,
+			"storageMode": "local_shadow",
+			"serverAuthority": "account_binding",
+		},
+	}
+	current_account_session = session
+	account_authenticated = true
+	player_profile = PlayerProgressModel.default_profile()
+	_apply_server_profile_summary(session.get("serverProfileSummary", {}) as Dictionary)
+	var revision_zero_ok := server_profile_sync_expected_revision == 0
+	var upload_spec := _server_profile_upload_spec()
+	var upload_ok := (
+		int(upload_spec.get("method", -1)) == HTTPClient.METHOD_PUT
+		and str(upload_spec.get("url", "")) == "http://127.0.0.1:8787/profiles/me"
+		and str(upload_spec.get("body", "")).find("\"expectedRevision\":0") >= 0
+	)
+	var save_response := ServerAuthClientModel.parse_profile_upload_response(200, JSON.stringify({
+		"ok": true,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 1,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	_apply_server_profile_summary(save_response.get("profileSummary", {}) as Dictionary)
+	var revision_one_ok := server_profile_sync_expected_revision == 1
+	var remote_profile := PlayerProgressModel.default_profile()
+	var remote_player := remote_profile.get("player", {}) as Dictionary
+	remote_player["name"] = "云端猎人"
+	remote_profile["player"] = remote_player
+	var pull_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": remote_profile,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 2,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	_apply_server_profile_pull_result(pull_response)
+	var pulled_player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
+	var pull_ok := str(pulled_player.get("name", "")) == "云端猎人" and server_profile_sync_expected_revision == 2
+	var conflict_response := ServerAuthClientModel.parse_profile_upload_response(409, JSON.stringify({
+		"ok": false,
+		"code": "revision_conflict",
+		"message": "服务器档案已更新，请重新登录或重新拉取档案。",
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 3,
+		},
+	}).to_utf8_buffer())
+	_apply_server_profile_upload_result(conflict_response)
+	var conflict_ok := server_profile_sync_state == "conflict" and server_profile_sync_expected_revision == 3
+	var status := "ok" if revision_zero_ok and upload_ok and revision_one_ok and pull_ok and conflict_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s upload=%s rev1=%s pull=%s conflict=%s state=%s rev=%d" % [
+		status,
+		str(revision_zero_ok),
+		str(upload_ok),
+		str(revision_one_ok),
+		str(pull_ok),
+		str(conflict_ok),
+		server_profile_sync_state,
+		server_profile_sync_expected_revision,
+	])
+	PlayerProgressModel.set_active_save_path(original_save_path)
 	get_tree().quit(0 if status == "ok" else 1)
 
 
@@ -18226,7 +18373,10 @@ func _request_profile_save(delay_seconds: float = 0.3) -> void:
 
 func _save_player_profile_now() -> bool:
 	_mark_progress_ui_caches_dirty()
-	return PlayerProgressModel.save_profile(player_profile)
+	var saved := PlayerProgressModel.save_profile(player_profile)
+	if saved:
+		_queue_server_profile_upload()
+	return saved
 
 
 func _mark_progress_ui_caches_dirty() -> void:
@@ -20450,6 +20600,11 @@ func _build_auth_panel() -> void:
 	auth_http_request.request_completed.connect(_on_auth_http_request_completed)
 	auth_panel.add_child(auth_http_request)
 
+	profile_sync_http_request = HTTPRequest.new()
+	profile_sync_http_request.timeout = 10.0
+	profile_sync_http_request.request_completed.connect(_on_profile_sync_http_request_completed)
+	auth_panel.add_child(profile_sync_http_request)
+
 	hud_root.add_child(auth_panel)
 	_set_auth_server_mode(false, false)
 	_set_auth_mode(false)
@@ -20635,6 +20790,7 @@ func _on_auth_http_request_completed(result: int, response_code: int, _headers: 
 			auth_message_label.text = str(parsed.get("message", "服务器登录失败。"))
 		return
 	var session := parsed.get("session", {}) as Dictionary
+	session["serverBaseUrl"] = ServerAuthClientModel.normalized_base_url(auth_server_url_input.text if auth_server_url_input != null else ServerAuthClientModel.DEFAULT_BASE_URL)
 	_remember_auth_session(session)
 	_apply_authenticated_session(session, false)
 	if auth_message_label != null:
@@ -20651,11 +20807,171 @@ func _packed_string_array(value) -> PackedStringArray:
 	return result
 
 
+func _is_server_account_session() -> bool:
+	return (
+		str(current_account_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
+		and str(current_account_session.get("serverSessionToken", "")).strip_edges() != ""
+	)
+
+
+func _server_profile_base_url() -> String:
+	var base_url := str(current_account_session.get("serverBaseUrl", "")).strip_edges()
+	if base_url == "" and auth_server_url_input != null:
+		base_url = auth_server_url_input.text
+	return ServerAuthClientModel.normalized_base_url(base_url)
+
+
+func _server_profile_token() -> String:
+	return str(current_account_session.get("serverSessionToken", "")).strip_edges()
+
+
+func _request_server_profile_pull() -> void:
+	if profile_sync_http_request == null or not _is_server_account_session():
+		return
+	var spec := ServerAuthClientModel.profile_request(_server_profile_base_url(), _server_profile_token())
+	_start_server_profile_sync_request("pull", spec)
+
+
+func _queue_server_profile_upload() -> void:
+	if not _is_server_account_session() or server_profile_sync_state == "off":
+		return
+	if server_profile_sync_state == "conflict":
+		return
+	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
+		server_profile_sync_dirty = true
+		return
+	_start_server_profile_sync_request("upload", _server_profile_upload_spec())
+
+
+func _server_profile_upload_spec() -> Dictionary:
+	return ServerAuthClientModel.profile_upload_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		player_profile,
+		server_profile_sync_expected_revision
+	)
+
+
+func _start_server_profile_sync_request(kind: String, spec: Dictionary) -> void:
+	if profile_sync_http_request == null:
+		return
+	server_profile_sync_pending_kind = kind
+	server_profile_sync_state = "loading" if kind == "pull" else "uploading"
+	server_profile_sync_message = ""
+	var err := profile_sync_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		server_profile_sync_pending_kind = ""
+		server_profile_sync_state = "ready"
+		server_profile_sync_message = "服务器档案同步请求失败。"
+
+
+func _on_profile_sync_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := server_profile_sync_pending_kind
+	server_profile_sync_pending_kind = ""
+	if result != HTTPRequest.RESULT_SUCCESS:
+		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
+		server_profile_sync_message = "服务器档案连接失败。"
+		return
+	if kind == "pull":
+		_apply_server_profile_pull_result(ServerAuthClientModel.parse_profile_response(response_code, body))
+	elif kind == "upload":
+		_apply_server_profile_upload_result(ServerAuthClientModel.parse_profile_upload_response(response_code, body))
+
+
+func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
+	if not bool(parsed.get("ok", false)):
+		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
+		server_profile_sync_message = str(parsed.get("message", "服务器档案读取失败。"))
+		return
+	var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
+	var remote_profile = parsed.get("profile", null)
+	if remote_profile is Dictionary:
+		player_profile = PlayerProgressModel.normalize_profile((remote_profile as Dictionary).duplicate(true))
+		_apply_auth_profile_metadata_fields(str(current_account_session.get("displayName", "")))
+		_apply_server_profile_summary(summary)
+		PlayerProgressModel.save_profile(player_profile)
+		server_profile_sync_state = "ready"
+		server_profile_sync_dirty = false
+		server_profile_sync_message = "已读取服务器档案。"
+		_refresh_account_panel()
+		_mark_progress_ui_caches_dirty()
+		_update_hud_text(true)
+		_layout_hud()
+		return
+	_apply_server_profile_summary(summary)
+	PlayerProgressModel.save_profile(player_profile)
+	server_profile_sync_state = "ready"
+	server_profile_sync_dirty = false
+	server_profile_sync_message = "服务器暂无档案，准备上传本地档案。"
+	_queue_server_profile_upload()
+
+
+func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
+	if not bool(parsed.get("ok", false)):
+		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
+		if str(parsed.get("code", "")) == "revision_conflict":
+			_apply_server_profile_summary(summary)
+			server_profile_sync_state = "conflict"
+			server_profile_sync_dirty = false
+			server_profile_sync_message = str(parsed.get("message", "服务器档案版本冲突。"))
+			_set_world_log_message(server_profile_sync_message)
+			_refresh_account_panel()
+			return
+		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
+		server_profile_sync_message = str(parsed.get("message", "服务器档案保存失败。"))
+		return
+	_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+	server_profile_sync_state = "ready"
+	server_profile_sync_message = str(parsed.get("message", "角色档案已同步。"))
+	_refresh_account_panel()
+	if server_profile_sync_dirty:
+		server_profile_sync_dirty = false
+		_queue_server_profile_upload()
+
+
+func _apply_server_profile_summary(summary: Dictionary) -> void:
+	if summary.is_empty():
+		return
+	current_account_session["serverProfileSummary"] = summary.duplicate(true)
+	server_profile_sync_expected_revision = maxi(0, int(summary.get("profileRevision", server_profile_sync_expected_revision)))
+	var sync_state := player_profile.get("serverSync", {}) as Dictionary if player_profile.get("serverSync", {}) is Dictionary else {}
+	sync_state["profileRevision"] = server_profile_sync_expected_revision
+	sync_state["lastServerRevision"] = server_profile_sync_expected_revision
+	sync_state["lastLocalSaveAtSec"] = int(Time.get_unix_time_from_system())
+	player_profile["serverSync"] = sync_state
+
+
+func _apply_auth_profile_metadata_fields(display_name: String) -> void:
+	var name := display_name.strip_edges()
+	if name == "":
+		name = str(current_account_session.get("username", "玩家"))
+	var player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
+	var current_name := str(player.get("name", player_profile.get("playerName", ""))).strip_edges()
+	if current_name == "" or current_name == "见习猎人":
+		player["name"] = name
+		player_profile["playerName"] = name
+	player_profile["player"] = player
+	player_profile["accountUsername"] = str(current_account_session.get("username", ""))
+	player_profile["accountRole"] = str(current_account_session.get("role", AccountAuthModel.ROLE_PLAYER))
+	player_profile["effectiveAccountRole"] = str(current_account_session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
+	if current_account_session.has("serverProfileSummary"):
+		player_profile["serverProfileSummary"] = current_account_session.get("serverProfileSummary", {})
+
+
 func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = false) -> void:
 	if session.is_empty():
 		return
 	current_account_session = session
 	account_authenticated = true
+	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
+	server_profile_sync_dirty = false
+	server_profile_sync_message = ""
+	server_profile_sync_expected_revision = int((session.get("serverProfileSummary", {}) as Dictionary).get("profileRevision", 0)) if session.get("serverProfileSummary", {}) is Dictionary else 0
 	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
 	var migrated := false
 	if migrate_legacy:
@@ -20675,20 +20991,12 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	_mark_progress_ui_caches_dirty()
 	_update_hud_text(true)
 	_layout_hud()
+	if _is_server_account_session():
+		_request_server_profile_pull()
 
 
 func _apply_auth_profile_metadata(display_name: String) -> void:
-	var name := display_name.strip_edges()
-	if name == "":
-		name = str(current_account_session.get("username", "玩家"))
-	var current_name := str(player_profile.get("playerName", "")).strip_edges()
-	if current_name == "" or current_name == "见习猎人":
-		player_profile["playerName"] = name
-	player_profile["accountUsername"] = str(current_account_session.get("username", ""))
-	player_profile["accountRole"] = str(current_account_session.get("role", AccountAuthModel.ROLE_PLAYER))
-	player_profile["effectiveAccountRole"] = str(current_account_session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
-	if current_account_session.has("serverProfileSummary"):
-		player_profile["serverProfileSummary"] = current_account_session.get("serverProfileSummary", {})
+	_apply_auth_profile_metadata_fields(display_name)
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	if profile_save_enabled:
 		_request_profile_save()
@@ -20756,7 +21064,8 @@ func _refresh_account_panel() -> void:
 		var summary := current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
 		var player_id := str(summary.get("playerId", "")).strip_edges()
 		var revision := int(summary.get("profileRevision", 0))
-		profile_line = "档案：%s r%d" % [player_id if player_id != "" else "服务器绑定", revision]
+		var sync_label := "同步中" if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading" else ("冲突" if server_profile_sync_state == "conflict" else "已连接")
+		profile_line = "档案：%s r%d %s" % [player_id if player_id != "" else "服务器绑定", revision, sync_label]
 	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存当前进度。" % [
 		display_name,
 		username if username != "" else "-",
@@ -20771,6 +21080,11 @@ func _switch_account_to_login() -> void:
 		_save_player_profile_now()
 	account_authenticated = false
 	current_account_session = {}
+	server_profile_sync_state = "off"
+	server_profile_sync_pending_kind = ""
+	server_profile_sync_dirty = false
+	server_profile_sync_expected_revision = 0
+	server_profile_sync_message = ""
 	PlayerProgressModel.reset_active_save_path()
 	player_profile = PlayerProgressModel.default_profile()
 	if auth_password_input != null:

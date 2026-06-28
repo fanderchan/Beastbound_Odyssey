@@ -33,7 +33,7 @@ Phase159 已经能在 Godot 登录面板选择 `服务器` 通道。本阶段把
 
 - `storageMode=local_shadow` 表示完整角色档案仍在客户端本地影子存档。
 - `serverAuthority=account_binding` 表示服务器当前只负责账号、会话、GM授权和角色绑定。
-- 下一阶段再做完整档案上传、下载、修订号冲突处理和服务端保存。
+- Phase161 已补上 JSON-store 级别的完整档案上传、下载和 revision 冲突处理；MySQL 权威服仍是后续阶段。
 
 ## 自测
 

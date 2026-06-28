@@ -39,6 +39,21 @@ static func profile_request(base_url: String, session_token: String) -> Dictiona
 	}
 
 
+static func profile_upload_request(base_url: String, session_token: String, profile: Dictionary, expected_revision: int) -> Dictionary:
+	return {
+		"url": "%s/profiles/me" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_PUT,
+		"body": JSON.stringify({
+			"expectedRevision": maxi(0, expected_revision),
+			"profile": profile,
+		}),
+	}
+
+
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
@@ -98,9 +113,34 @@ static func parse_profile_response(response_code: int, body: PackedByteArray) ->
 		}
 	return {
 		"ok": true,
+		"profile": data.get("profile", null),
 		"profileBinding": data.get("profileBinding", {}),
 		"profileSummary": data.get("profileSummary", {}),
 		"message": str(data.get("message", "已读取服务器档案摘要。")),
+		"response": data,
+	}
+
+
+static func parse_profile_upload_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var text := body.get_string_from_utf8()
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {"ok": false, "message": "服务器保存返回格式不正确。", "code": "bad_json"}
+	var data := parsed as Dictionary
+	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		return {
+			"ok": false,
+			"message": str(data.get("message", "服务器档案保存失败。")),
+			"code": str(data.get("code", "server_error")),
+			"profileSummary": data.get("profileSummary", {}),
+			"profileBinding": data.get("profileBinding", {}),
+			"response": data,
+		}
+	return {
+		"ok": true,
+		"profileBinding": data.get("profileBinding", {}),
+		"profileSummary": data.get("profileSummary", {}),
+		"message": str(data.get("message", "角色档案已同步。")),
 		"response": data,
 	}
 

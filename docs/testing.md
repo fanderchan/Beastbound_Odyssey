@@ -170,6 +170,14 @@ Phase150-C 完成后的参考结果：
 - `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=27 max_input_us=697 coalesced=true settled=true`
 - `--perf-probe`：启动期首次 HUD 构建约 `58.86ms`；稳定后 `hud_signature` 多数约 `0.02-0.06ms`，`process_total` 多数约 `0.12-0.33ms`。
 
+Phase161 账号/档案同步自测：
+
+- 服务端：`cd server/node && npm test`
+- 客户端：
+  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check`
+  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-sync-check`
+- 性能：继续跑 `--movement-spam-click-check` 和 `--perf-probe`，确认保存同步没有进入移动/HUD热路径。
+
 ## 验收口径
 
 可以接受：

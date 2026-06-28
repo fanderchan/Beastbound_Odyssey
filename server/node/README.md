@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase160 adds a lightweight profile binding summary for the Godot client, while full save synchronization still stays local-shadow only.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing; MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -35,6 +35,7 @@ Optional environment variables:
 - `POST /auth/logout`
 - `GET /auth/session`
 - `GET /profiles/me`
+- `PUT /profiles/me`
 - `GET /gm/tools`
 - `POST /gm/commands/{commandId}`
 
@@ -50,9 +51,19 @@ This prototype keeps the same rule as the Godot contract: the client may hide GM
 {
   "playerId": "player_acc_xxx",
   "profileRevision": 0,
-  "storageMode": "local_shadow",
-  "serverAuthority": "account_binding"
+  "storageMode": "server_document",
+  "serverAuthority": "profile_document",
+  "hasProfile": true
 }
 ```
 
-This is only a binding receipt. The server is not yet authoritative for the full character save.
+`PUT /profiles/me` accepts:
+
+```json
+{
+  "expectedRevision": 0,
+  "profile": {"schemaVersion": 1}
+}
+```
+
+The server increments `profileRevision` on success and returns `409 revision_conflict` if the expected revision is stale. This is enough for prototype server-login testing, but it is still a JSON-store implementation rather than the final MySQL-backed MMO profile authority.

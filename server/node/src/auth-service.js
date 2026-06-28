@@ -127,6 +127,62 @@ function createAuthService(options = {}) {
     });
   }
 
+  function getProfile(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const binding = profileBindingForAccount(data, resolved.account, now);
+    const profileDoc = data.profiles[binding.playerId] || null;
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profile: profileDoc && profileDoc.profile ? profileDoc.profile : null,
+    });
+  }
+
+  function saveProfile(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const profile = payload.profile;
+    if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+      return fail("invalid_profile", "角色档案必须是对象。");
+    }
+    const binding = profileBindingForAccount(data, resolved.account, now);
+    const currentRevision = Number(binding.profileRevision || 0);
+    const expectedRevision = Number(payload.expectedRevision || 0);
+    if (expectedRevision !== currentRevision) {
+      return fail("revision_conflict", "服务器档案已更新，请重新登录或重新拉取档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const nextRevision = currentRevision + 1;
+    binding.profileRevision = nextRevision;
+    binding.updatedAt = isoNow(now);
+    data.profileBindings[resolved.account.accountId] = binding;
+    data.profiles[binding.playerId] = {
+      playerId: binding.playerId,
+      accountId: resolved.account.accountId,
+      profileRevision: nextRevision,
+      profile: clone(profile),
+      updatedAt: binding.updatedAt,
+      schemaVersion: 1,
+    };
+    save(data);
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      message: "角色档案已同步。",
+    });
+  }
+
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
@@ -227,6 +283,8 @@ function createAuthService(options = {}) {
     login,
     logout,
     getSession,
+    getProfile,
+    saveProfile,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -272,6 +330,7 @@ function normalizeData(raw) {
     accounts: objectOrEmpty(data.accounts),
     sessions: objectOrEmpty(data.sessions),
     profileBindings: objectOrEmpty(data.profileBindings),
+    profiles: objectOrEmpty(data.profiles),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -341,17 +400,37 @@ function profileSummaryForAccount(account, data) {
   if (!binding) {
     return null;
   }
+  const profileDoc = data.profiles[binding.playerId] || null;
+  const hasProfile = Boolean(profileDoc && profileDoc.profile);
+  const revision = Number(binding.profileRevision || (profileDoc && profileDoc.profileRevision) || 0);
   return {
     accountId: account.accountId,
     username: account.username,
     displayName: account.displayName,
     playerId: binding.playerId,
-    profileRevision: Number(binding.profileRevision || 0),
-    storageMode: "local_shadow",
-    serverAuthority: "account_binding",
+    profileRevision: revision,
+    storageMode: hasProfile ? "server_document" : "local_shadow",
+    serverAuthority: hasProfile ? "profile_document" : "account_binding",
+    hasProfile,
     updatedAt: binding.updatedAt,
     schemaVersion: 1,
   };
+}
+
+function profileBindingForAccount(data, account, now) {
+  let binding = data.profileBindings[account.accountId] || null;
+  if (!binding) {
+    binding = {
+      accountId: account.accountId,
+      playerId: `player_${account.accountId.slice(4, 16)}`,
+      profileRevision: 0,
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.profileBindings[account.accountId] = binding;
+  }
+  return binding;
 }
 
 function effectiveRoleIsGm(data, account, now) {
