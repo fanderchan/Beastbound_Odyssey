@@ -48,6 +48,7 @@ const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const ServerAuthContractModel := preload("res://scripts/progression/server_auth_contract_model.gd")
+const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
@@ -250,10 +251,13 @@ var auth_message_label: Label
 var auth_username_input: LineEdit
 var auth_password_input: LineEdit
 var auth_display_name_input: LineEdit
+var auth_source_option: OptionButton
+var auth_server_url_input: LineEdit
 var auth_remember_check: CheckBox
 var auth_login_tab_button: Button
 var auth_register_tab_button: Button
 var auth_submit_button: Button
+var auth_http_request: HTTPRequest
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
@@ -578,6 +582,7 @@ var auto_map_panel_check: bool = false
 var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
+var auto_auth_server_client_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
@@ -704,6 +709,8 @@ var player_profile: Dictionary = {}
 var account_authenticated: bool = false
 var auth_auto_bypass: bool = false
 var auth_mode_register: bool = false
+var auth_server_mode: bool = false
+var auth_request_pending: bool = false
 var current_account_session: Dictionary = {}
 var profile_save_enabled: bool = true
 var profile_save_pending: bool = false
@@ -871,6 +878,8 @@ func _ready() -> void:
 	set_process(true)
 	if auto_auth_check:
 		call_deferred("_run_auto_auth_check")
+	elif auto_auth_server_client_check:
+		call_deferred("_run_auto_auth_server_client_check")
 	elif auth_ux_preview:
 		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
@@ -1577,6 +1586,8 @@ func _apply_preview_window_args() -> void:
 		elif arg == "--auto-auth-check":
 			auto_auth_check = true
 			auth_auto_bypass = false
+		elif arg == "--auto-auth-server-client-check":
+			auto_auth_server_client_check = true
 		elif arg == "--auth-ux-preview":
 			auth_ux_preview = true
 			auth_auto_bypass = false
@@ -14780,6 +14791,80 @@ func _run_auto_auth_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_auth_server_client_check() -> void:
+	profile_save_enabled = false
+	var register_spec := ServerAuthClientModel.register_request(
+		"http://127.0.0.1:8787/",
+		"RemoteUser",
+		"test1234",
+		"远程猎人"
+	)
+	var request_ok := (
+		str(register_spec.get("url", "")) == "http://127.0.0.1:8787/auth/register"
+		and int(register_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(register_spec.get("body", "")).find("\"RemoteUser\"") >= 0
+	)
+	var success_body := JSON.stringify({
+		"ok": true,
+		"account": {
+			"accountId": "acc_test",
+			"username": "remoteuser",
+			"displayName": "远程猎人",
+			"role": AccountAuthModel.ROLE_PLAYER,
+		},
+		"session": {
+			"sessionId": "sess_test",
+			"username": "remoteuser",
+			"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+			"token": "token_test",
+			"expiresAt": "2099-01-01T00:00:00.000Z",
+		},
+		"profileBinding": {"playerId": "player_test"},
+	}).to_utf8_buffer()
+	var parsed := ServerAuthClientModel.parse_auth_response(200, success_body)
+	var parsed_session := parsed.get("session", {}) as Dictionary
+	var parse_ok := (
+		bool(parsed.get("ok", false))
+		and str(parsed_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
+		and str(parsed_session.get("username", "")) == "remoteuser"
+		and str(parsed_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/player_profile.json"
+		and str(parsed_session.get("serverSessionToken", "")) == "token_test"
+	)
+	var error_body := JSON.stringify({
+		"ok": false,
+		"code": "wrong_password",
+		"message": "密码不正确。",
+	}).to_utf8_buffer()
+	var parsed_error := ServerAuthClientModel.parse_auth_response(400, error_body)
+	var error_ok := not bool(parsed_error.get("ok", true)) and str(parsed_error.get("code", "")) == "wrong_password"
+	_set_auth_server_mode(true)
+	var ui_server_ok := (
+		auth_server_mode
+		and auth_source_option != null
+		and auth_source_option.selected == 1
+		and auth_server_url_input != null
+		and auth_server_url_input.visible
+	)
+	_set_auth_server_mode(false, false)
+	var ui_local_ok := (
+		not auth_server_mode
+		and auth_source_option != null
+		and auth_source_option.selected == 0
+		and auth_server_url_input != null
+		and not auth_server_url_input.visible
+	)
+	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_local_ok else "failed"
+	print("auth server client check ready: status=%s request=%s parse=%s error=%s ui_server=%s ui_local=%s" % [
+		status,
+		str(request_ok),
+		str(parse_ok),
+		str(error_ok),
+		str(ui_server_ok),
+		str(ui_local_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _restore_auth_check_account_store(existed: bool, text: String) -> void:
 	var absolute_path := ProjectSettings.globalize_path(AccountAuthModel.ACCOUNT_STORE_PATH)
 	if existed:
@@ -20253,6 +20338,21 @@ func _build_auth_panel() -> void:
 	subtitle.add_theme_color_override("font_color", Color(0.86, 0.82, 0.70, 0.92))
 	outer.add_child(subtitle)
 
+	auth_source_option = OptionButton.new()
+	auth_source_option.custom_minimum_size = Vector2(0, 40)
+	auth_source_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_source_option.add_item("本地", 0)
+	auth_source_option.add_item("服务器", 1)
+	auth_source_option.item_selected.connect(_on_auth_source_selected)
+	outer.add_child(auth_source_option)
+
+	auth_server_url_input = LineEdit.new()
+	auth_server_url_input.placeholder_text = "服务器"
+	auth_server_url_input.text = ServerAuthClientModel.DEFAULT_BASE_URL
+	auth_server_url_input.custom_minimum_size = Vector2(0, 40)
+	auth_server_url_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(auth_server_url_input)
+
 	var tab_row := HBoxContainer.new()
 	tab_row.add_theme_constant_override("separation", 8)
 	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -20317,7 +20417,13 @@ func _build_auth_panel() -> void:
 	auth_submit_button.pressed.connect(_on_auth_submit_pressed)
 	outer.add_child(auth_submit_button)
 
+	auth_http_request = HTTPRequest.new()
+	auth_http_request.timeout = 8.0
+	auth_http_request.request_completed.connect(_on_auth_http_request_completed)
+	auth_panel.add_child(auth_http_request)
+
 	hud_root.add_child(auth_panel)
+	_set_auth_server_mode(false, false)
 	_set_auth_mode(false)
 	_prefill_auth_last_username()
 
@@ -20375,8 +20481,25 @@ func _set_auth_mode(register_mode: bool) -> void:
 		auth_display_name_input.visible = auth_mode_register
 	if auth_submit_button != null:
 		auth_submit_button.text = "注册并进入" if auth_mode_register else "进入游戏"
+		auth_submit_button.disabled = auth_request_pending
 	if auth_message_label != null:
 		auth_message_label.text = ""
+
+
+func _set_auth_server_mode(server_mode: bool, update_layout: bool = true) -> void:
+	auth_server_mode = server_mode
+	if auth_source_option != null:
+		auth_source_option.select(1 if auth_server_mode else 0)
+	if auth_server_url_input != null:
+		auth_server_url_input.visible = auth_server_mode
+	if auth_message_label != null:
+		auth_message_label.text = ""
+	if update_layout:
+		_layout_hud()
+
+
+func _on_auth_source_selected(index: int) -> void:
+	_set_auth_server_mode(index == 1)
 
 
 func _prefill_auth_last_username() -> void:
@@ -20416,8 +20539,13 @@ func _remember_auth_session(session: Dictionary) -> void:
 func _on_auth_submit_pressed() -> void:
 	if auth_username_input == null or auth_password_input == null:
 		return
+	if auth_request_pending:
+		return
 	var username := auth_username_input.text
 	var password := auth_password_input.text
+	if auth_server_mode:
+		_submit_server_auth_request(username, password)
+		return
 	var result := {}
 	if auth_mode_register:
 		var display_name := auth_display_name_input.text if auth_display_name_input != null else ""
@@ -20434,6 +20562,65 @@ func _on_auth_submit_pressed() -> void:
 	_apply_authenticated_session(session, migrate_legacy)
 	if auth_message_label != null:
 		auth_message_label.text = str(result.get("message", "已进入游戏。"))
+
+
+func _submit_server_auth_request(username: String, password: String) -> void:
+	if auth_http_request == null:
+		return
+	var base_url := auth_server_url_input.text if auth_server_url_input != null else ServerAuthClientModel.DEFAULT_BASE_URL
+	var request_spec := {}
+	if auth_mode_register:
+		var display_name := auth_display_name_input.text if auth_display_name_input != null else ""
+		request_spec = ServerAuthClientModel.register_request(base_url, username, password, display_name)
+	else:
+		request_spec = ServerAuthClientModel.login_request(base_url, username, password)
+	auth_request_pending = true
+	if auth_submit_button != null:
+		auth_submit_button.disabled = true
+	if auth_message_label != null:
+		auth_message_label.text = "正在连接服务器..."
+	var err := auth_http_request.request(
+		str(request_spec.get("url", "")),
+		_packed_string_array(request_spec.get("headers", [])),
+		int(request_spec.get("method", HTTPClient.METHOD_POST)),
+		str(request_spec.get("body", ""))
+	)
+	if err != OK:
+		auth_request_pending = false
+		if auth_submit_button != null:
+			auth_submit_button.disabled = false
+		if auth_message_label != null:
+			auth_message_label.text = "无法发起服务器请求。"
+
+
+func _on_auth_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	auth_request_pending = false
+	if auth_submit_button != null:
+		auth_submit_button.disabled = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if auth_message_label != null:
+			auth_message_label.text = "服务器连接失败。"
+		return
+	var parsed := ServerAuthClientModel.parse_auth_response(response_code, body)
+	if not bool(parsed.get("ok", false)):
+		if auth_message_label != null:
+			auth_message_label.text = str(parsed.get("message", "服务器登录失败。"))
+		return
+	var session := parsed.get("session", {}) as Dictionary
+	_remember_auth_session(session)
+	_apply_authenticated_session(session, false)
+	if auth_message_label != null:
+		auth_message_label.text = str(parsed.get("message", "已连接服务器。"))
+
+
+func _packed_string_array(value) -> PackedStringArray:
+	var result := PackedStringArray()
+	if value is PackedStringArray:
+		return value as PackedStringArray
+	if value is Array:
+		for item in value as Array:
+			result.append(str(item))
+	return result
 
 
 func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = false) -> void:
@@ -20530,11 +20717,14 @@ func _refresh_account_panel() -> void:
 		return
 	var display_name := str(current_account_session.get("displayName", "玩家")).strip_edges()
 	var username := str(current_account_session.get("username", "")).strip_edges()
+	var source := str(current_account_session.get("authSource", "local"))
+	var source_label := "服务器" if source == ServerAuthClientModel.SOURCE_SERVER else "本地"
 	if display_name == "":
 		display_name = username if username != "" else "玩家"
-	account_info_label.text = "当前角色：%s\n账号：%s\n切换账号前会保存当前进度。" % [
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n切换账号前会保存当前进度。" % [
 		display_name,
 		username if username != "" else "-",
+		source_label,
 	]
 
 
@@ -30891,7 +31081,7 @@ func _layout_hud() -> void:
 
 	if account_panel != null:
 		var account_width: float = minf(viewport_size.x - margin * 2.0, 440.0)
-		var account_height: float = minf(viewport_size.y - margin * 2.0, 216.0)
+		var account_height: float = minf(viewport_size.y - margin * 2.0, 244.0)
 		account_panel.position = Vector2((viewport_size.x - account_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - account_height) * 0.5))
 		account_panel.size = Vector2(account_width, account_height)
 		if battle_active:
@@ -30904,7 +31094,7 @@ func _layout_hud() -> void:
 
 	if auth_panel != null:
 		var auth_width: float = minf(viewport_size.x - margin * 2.0, 460.0)
-		var auth_height: float = minf(viewport_size.y - margin * 2.0, 470.0)
+		var auth_height: float = minf(viewport_size.y - margin * 2.0, 560.0)
 		auth_panel.position = Vector2((viewport_size.x - auth_width) * 0.5, maxf(margin, (viewport_size.y - auth_height) * 0.5))
 		auth_panel.size = Vector2(auth_width, auth_height)
 		if auth_panel.visible:
