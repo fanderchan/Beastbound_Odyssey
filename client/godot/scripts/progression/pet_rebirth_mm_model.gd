@@ -128,6 +128,14 @@ static func stone_completion(record: Dictionary) -> Dictionary:
 	}
 
 
+static func effective_stone_count(record: Dictionary) -> float:
+	return _effective_stone_count(record)
+
+
+static func pool_range_for_effective_stone_count(effective_count: float, stage: int) -> Dictionary:
+	return (_pool_range_for_effective_stone_count(effective_count, stage) as Dictionary).duplicate(true)
+
+
 static func helper_record_lines(record: Dictionary) -> Array[String]:
 	var normalized := normalized_helper_record(record, int(record.get("stage", STAGE_ONE)))
 	var points := normalized.get("stonePoints", {}) as Dictionary

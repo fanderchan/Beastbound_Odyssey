@@ -303,6 +303,10 @@ var shop_mode: String = "buy"
 var shop_selected_item_id: String = ""
 var shop_quantity: int = 1
 var shop_equip_after_buy: bool = false
+var shop_cached_backpack_slots: Array[Dictionary] = []
+var shop_cached_backpack_counts: Dictionary = {}
+var shop_detail_text_cache: Dictionary = {}
+var shop_equip_check_cache: Dictionary = {}
 var pet_panel: PanelContainer
 var pet_filter_option: OptionButton
 var pet_sort_option: OptionButton
@@ -499,6 +503,7 @@ var auto_pet_growth_check: bool = false
 var auto_pet_individual_growth_check: bool = false
 var auto_pet_cultivation_check: bool = false
 var auto_pet_rebirth_mm_check: bool = false
+var auto_pet_rebirth_mm_formula_check: bool = false
 var auto_pet_rename_check: bool = false
 var auto_pet_order_check: bool = false
 var auto_pet_recovery_check: bool = false
@@ -871,6 +876,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_cultivation_check")
 	elif auto_pet_rebirth_mm_check:
 		call_deferred("_run_auto_pet_rebirth_mm_check")
+	elif auto_pet_rebirth_mm_formula_check:
+		call_deferred("_run_auto_pet_rebirth_mm_formula_check")
 	elif auto_pet_rename_check:
 		call_deferred("_run_auto_pet_rename_check")
 	elif auto_pet_order_check:
@@ -1424,6 +1431,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_cultivation_check = true
 		elif arg == "--auto-pet-rebirth-mm-check":
 			auto_pet_rebirth_mm_check = true
+		elif arg == "--auto-pet-rebirth-mm-formula-check":
+			auto_pet_rebirth_mm_formula_check = true
 		elif arg == "--auto-pet-rename-check":
 			auto_pet_rename_check = true
 		elif arg == "--auto-pet-order-check":
@@ -1928,37 +1937,82 @@ func _run_movement_spam_click_check() -> void:
 func _run_shop_select_perf_check() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 999)
-	_open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
-	var item_ids := _shop_item_ids_for_mode("buy")
-	var item_shop_ok := not item_ids.is_empty()
-	var item_shop_elapsed_usec := 0
-	if item_shop_ok:
-		var started_usec := Time.get_ticks_usec()
-		for index in range(180):
-			_select_shop_item(str(item_ids[index % item_ids.size()]))
-		item_shop_elapsed_usec = Time.get_ticks_usec() - started_usec
-		item_shop_ok = shop_selected_item_id == str(item_ids[(180 - 1) % item_ids.size()])
-
-	_open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
-	var equipment_ids := _shop_item_ids_for_mode("buy")
-	var equipment_shop_ok := not equipment_ids.is_empty()
-	var equipment_shop_elapsed_usec := 0
-	if equipment_shop_ok:
-		var equipment_started_usec := Time.get_ticks_usec()
-		for index in range(120):
-			_select_shop_item(str(equipment_ids[index % equipment_ids.size()]))
-		equipment_shop_elapsed_usec = Time.get_ticks_usec() - equipment_started_usec
-		equipment_shop_ok = shop_selected_item_id == str(equipment_ids[(120 - 1) % equipment_ids.size()])
+	var item_elapsed_samples: Array[int] = []
+	var equipment_elapsed_samples: Array[int] = []
+	var item_count := 0
+	var equipment_count := 0
+	var item_shop_ok := true
+	var equipment_shop_ok := true
+	for sample_index in range(3):
+		var item_sample: Dictionary = await _shop_select_perf_sample(ShopCatalogModel.DEFAULT_SHOP_ID, 180)
+		item_elapsed_samples.append(int(item_sample.get("elapsedUsec", 0)))
+		item_count = int(item_sample.get("itemCount", item_count))
+		item_shop_ok = item_shop_ok and bool(item_sample.get("ok", false))
+		var equipment_sample: Dictionary = await _shop_select_perf_sample(FIREBUD_EQUIPMENT_SHOP_ID, 120)
+		equipment_elapsed_samples.append(int(equipment_sample.get("elapsedUsec", 0)))
+		equipment_count = int(equipment_sample.get("itemCount", equipment_count))
+		equipment_shop_ok = equipment_shop_ok and bool(equipment_sample.get("ok", false))
+	var item_shop_elapsed_usec := _median_int(item_elapsed_samples)
+	var equipment_shop_elapsed_usec := _median_int(equipment_elapsed_samples)
 	var status := "ok" if item_shop_ok and equipment_shop_ok else "failed"
-	print("shop select perf check ready: status=%s item_us=%d equipment_us=%d item_count=%d equipment_count=%d selected=%s" % [
+	print("shop select perf check ready: status=%s item_us=%d equipment_us=%d item_min_us=%d item_max_us=%d equipment_min_us=%d equipment_max_us=%d item_count=%d equipment_count=%d selected=%s samples=%d" % [
 		status,
 		item_shop_elapsed_usec,
 		equipment_shop_elapsed_usec,
-		item_ids.size(),
-		equipment_ids.size(),
+		_min_int(item_elapsed_samples),
+		_max_int(item_elapsed_samples),
+		_min_int(equipment_elapsed_samples),
+		_max_int(equipment_elapsed_samples),
+		item_count,
+		equipment_count,
 		shop_selected_item_id,
+		item_elapsed_samples.size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _shop_select_perf_sample(shop_id: String, select_count: int) -> Dictionary:
+	_open_shop_panel(shop_id)
+	await get_tree().process_frame
+	var item_ids := _shop_item_ids_for_mode("buy")
+	if item_ids.is_empty():
+		return {"ok": false, "elapsedUsec": 0, "itemCount": 0}
+	var started_usec := Time.get_ticks_usec()
+	for index in range(select_count):
+		_select_shop_item(str(item_ids[index % item_ids.size()]))
+	var elapsed_usec := Time.get_ticks_usec() - started_usec
+	var expected_selected := str(item_ids[(select_count - 1) % item_ids.size()])
+	return {
+		"ok": shop_selected_item_id == expected_selected,
+		"elapsedUsec": elapsed_usec,
+		"itemCount": item_ids.size(),
+	}
+
+
+func _median_int(values: Array[int]) -> int:
+	if values.is_empty():
+		return 0
+	var sorted_values := values.duplicate()
+	sorted_values.sort()
+	return int(sorted_values[sorted_values.size() / 2])
+
+
+func _min_int(values: Array[int]) -> int:
+	if values.is_empty():
+		return 0
+	var result := int(values[0])
+	for value in values:
+		result = mini(result, int(value))
+	return result
+
+
+func _max_int(values: Array[int]) -> int:
+	if values.is_empty():
+		return 0
+	var result := int(values[0])
+	for value in values:
+		result = maxi(result, int(value))
+	return result
 
 
 func _run_auto_mouse_click_check() -> void:
@@ -6556,6 +6610,131 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 		str(stage2_before_ok),
 		str(stage2_after_ok),
 		float(rebirth_bonus.get("attack", 0.0)),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_rebirth_mm_formula_check() -> void:
+	profile_save_enabled = false
+	var stage := PetRebirthMmModel.STAGE_ONE
+	var target_pet := {
+		"instanceId": "formula_target",
+		"formId": "blue_man_dragon_water10",
+		"growthSpeciesSeed": "formula_target_seed",
+		"name": "公式测试蓝人龙",
+		"level": PetRebirthMmModel.TARGET_REQUIRED_LEVEL,
+		"initialStats": {"maxHp": 58, "attack": 14, "defense": 9, "quick": 7},
+		"maxHp": 960,
+		"attack": 198,
+		"defense": 110,
+		"quick": 128,
+	}
+	var helper_pet := {
+		"instanceId": "formula_helper",
+		"formId": PetRebirthMmModel.helper_form_id_for_stage(stage),
+		"growthSpeciesProfileId": "pet_rebirth_mm_stage1_v1",
+		"growthSpeciesSeed": "formula_helper_seed",
+		"name": PetRebirthMmModel.helper_name_for_stage(stage),
+		"level": PetRebirthMmModel.HELPER_REQUIRED_LEVEL,
+		"initialStats": {"maxHp": 42, "attack": 7, "defense": 7, "quick": 7},
+		"maxHp": 410,
+		"attack": 88,
+		"defense": 82,
+		"quick": 90,
+	}
+	var scenarios: Array[Dictionary] = [
+		{"id": "empty", "points": {}, "effective": 0.0, "min": 0.00, "max": 0.10},
+		{"id": "single_attack", "points": {"attack": PetRebirthMmModel.STONE_CAPACITY}, "effective": 1.0, "min": 0.55, "max": 0.95},
+		{"id": "double_attack_defense", "points": {"attack": PetRebirthMmModel.STONE_CAPACITY, "defense": PetRebirthMmModel.STONE_CAPACITY}, "effective": 2.0, "min": 0.80, "max": 1.25},
+		{"id": "triple_no_hp", "points": {"attack": PetRebirthMmModel.STONE_CAPACITY, "defense": PetRebirthMmModel.STONE_CAPACITY, "quick": PetRebirthMmModel.STONE_CAPACITY}, "effective": 3.0, "min": 1.00, "max": 1.45},
+		{"id": "full", "points": {"maxHp": PetRebirthMmModel.STONE_CAPACITY, "attack": PetRebirthMmModel.STONE_CAPACITY, "defense": PetRebirthMmModel.STONE_CAPACITY, "quick": PetRebirthMmModel.STONE_CAPACITY}, "effective": 4.0, "min": 1.15, "max": 1.65},
+	]
+	var range_ok := true
+	for scenario in scenarios:
+		var record := PetRebirthMmModel.normalized_helper_record({
+			"stage": stage,
+			"stonePoints": scenario.get("points", {}),
+		}, stage)
+		var effective := PetRebirthMmModel.effective_stone_count(record)
+		var pool_range := PetRebirthMmModel.pool_range_for_effective_stone_count(effective, stage)
+		range_ok = range_ok \
+			and absf(effective - float(scenario.get("effective", 0.0))) <= 0.002 \
+			and absf(float(pool_range.get("min", 0.0)) - float(scenario.get("min", 0.0))) <= 0.002 \
+			and absf(float(pool_range.get("max", 0.0)) - float(scenario.get("max", 0.0))) <= 0.002
+	var almost_full_record := PetRebirthMmModel.normalized_helper_record({
+		"stage": stage,
+		"stonePoints": {
+			"maxHp": PetRebirthMmModel.STONE_CAPACITY,
+			"attack": PetRebirthMmModel.STONE_CAPACITY - 1,
+			"defense": PetRebirthMmModel.STONE_CAPACITY,
+			"quick": PetRebirthMmModel.STONE_CAPACITY,
+		},
+	}, stage)
+	var crumb_record := PetRebirthMmModel.normalized_helper_record({
+		"stage": stage,
+		"stonePoints": {
+			"maxHp": 1,
+			"attack": PetRebirthMmModel.STONE_CAPACITY,
+			"defense": 1,
+			"quick": 1,
+		},
+	}, stage)
+	var almost_full_effective := PetRebirthMmModel.effective_stone_count(almost_full_record)
+	var almost_full_range := PetRebirthMmModel.pool_range_for_effective_stone_count(almost_full_effective, stage)
+	var crumb_effective := PetRebirthMmModel.effective_stone_count(crumb_record)
+	var crumb_range := PetRebirthMmModel.pool_range_for_effective_stone_count(crumb_effective, stage)
+	var interpolation_ok := (
+		almost_full_effective > 3.95
+		and float(almost_full_range.get("min", 0.0)) > 1.13
+		and float(almost_full_range.get("max", 0.0)) > 1.63
+		and crumb_effective > 1.0
+		and crumb_effective < 1.05
+		and float(crumb_range.get("min", 0.0)) > 0.55
+		and float(crumb_range.get("max", 0.0)) > 0.95
+	)
+	var full_record := PetRebirthMmModel.normalized_helper_record({
+		"stage": stage,
+		"stonePoints": scenarios[4].get("points", {}),
+	}, stage)
+	helper_pet["petRebirthHelper"] = full_record
+	var preview := PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper_pet)
+	var preview_mid := float(preview.get("rebirthBonusInternalPower", 0.0))
+	var preview_ok := (
+		bool(preview.get("ok", false))
+		and str(preview.get("rebirthRollMode", "")) == "preview_median"
+		and absf(preview_mid - 1.4) <= 0.002
+	)
+	var seeded_a := {}
+	var seeded_b := {}
+	for index in range(32):
+		var candidate_a := PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper_pet, "formula_seed_%d" % index)
+		var candidate_b := PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper_pet, "formula_seed_%d" % (index + 100))
+		if absf(float(candidate_a.get("rebirthBonusInternalPower", 0.0)) - float(candidate_b.get("rebirthBonusInternalPower", 0.0))) > 0.001:
+			seeded_a = candidate_a
+			seeded_b = candidate_b
+			break
+	var seeded_min := minf(float(seeded_a.get("rebirthBonusInternalPower", 0.0)), float(seeded_b.get("rebirthBonusInternalPower", 0.0)))
+	var seeded_max := maxf(float(seeded_a.get("rebirthBonusInternalPower", 0.0)), float(seeded_b.get("rebirthBonusInternalPower", 0.0)))
+	var seeded_ok := (
+		not seeded_a.is_empty()
+		and str(seeded_a.get("rebirthRollMode", "")) == "random"
+		and str(seeded_b.get("rebirthRollMode", "")) == "random"
+		and seeded_min >= 1.15
+		and seeded_max <= 1.65
+		and seeded_max > seeded_min
+	)
+	var status := "ok" if range_ok and interpolation_ok and preview_ok and seeded_ok else "failed"
+	print("pet rebirth mm formula check ready: status=%s ranges=%s interpolation=%s preview=%s seeded=%s full_mid=%.3f seeded_min=%.3f seeded_max=%.3f almost_full_effective=%.3f crumb_effective=%.3f" % [
+		status,
+		str(range_ok),
+		str(interpolation_ok),
+		str(preview_ok),
+		str(seeded_ok),
+		preview_mid,
+		seeded_min,
+		seeded_max,
+		almost_full_effective,
+		crumb_effective,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -22735,6 +22914,39 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 func _close_shop_panel() -> void:
 	if _hide_control(shop_panel):
 		shop_selected_item_id = ""
+	_clear_shop_refresh_cache()
+
+
+func _clear_shop_refresh_cache() -> void:
+	shop_cached_backpack_slots.clear()
+	shop_cached_backpack_counts.clear()
+	shop_detail_text_cache.clear()
+	shop_equip_check_cache.clear()
+
+
+func _shop_cached_backpack_slots_for_ui() -> Array[Dictionary]:
+	if shop_cached_backpack_slots.is_empty():
+		shop_cached_backpack_slots = _backpack_slots_for_ui()
+	return shop_cached_backpack_slots
+
+
+func _shop_cached_backpack_counts_for_ui(slots: Array[Dictionary]) -> Dictionary:
+	if shop_cached_backpack_counts.is_empty():
+		shop_cached_backpack_counts = _backpack_counts_from_slots_for_ui(slots)
+	return shop_cached_backpack_counts
+
+
+func _shop_detail_text_cached(item_id: String, count: int) -> String:
+	var cache_key := "%s|%s|%s|%d" % [shop_active_id, shop_mode, item_id, count]
+	if not shop_detail_text_cache.has(cache_key):
+		shop_detail_text_cache[cache_key] = _shop_detail_text(item_id, count)
+	return str(shop_detail_text_cache.get(cache_key, ""))
+
+
+func _shop_can_equip_item_cached(item_id: String) -> Dictionary:
+	if not shop_equip_check_cache.has(item_id):
+		shop_equip_check_cache[item_id] = _can_equip_item_for_ui(item_id)
+	return (shop_equip_check_cache.get(item_id, {}) as Dictionary).duplicate(true)
 
 
 func _set_shop_mode(next_mode: String) -> void:
@@ -22748,28 +22960,30 @@ func _set_shop_mode(next_mode: String) -> void:
 func _select_shop_item(item_id: String) -> void:
 	if shop_selected_item_id == item_id:
 		return
+	var previous_selected_item_id := shop_selected_item_id
 	shop_selected_item_id = item_id
 	shop_quantity = 1
 	shop_equip_after_buy = false
-	_refresh_shop_panel(false)
+	_refresh_shop_panel(false, previous_selected_item_id)
 
 
-func _refresh_shop_panel(rebuild_list: bool = true) -> void:
+func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: String = "") -> void:
 	if shop_panel == null or shop_list_container == null or shop_detail_label == null:
 		return
 	if rebuild_list:
 		player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	if shop_title_label != null:
-		shop_title_label.text = ShopCatalogModel.label_for(shop_active_id)
-	if shop_coin_label != null:
-		var currency := ShopCatalogModel.currency_for(shop_active_id)
-		shop_coin_label.text = "%s %d" % [ShopCatalogModel.currency_label(currency), _profile_currency_amount_for_ui(currency)]
-	if shop_buy_button != null:
-		shop_buy_button.button_pressed = shop_mode == "buy"
-	if shop_sell_button != null:
-		shop_sell_button.button_pressed = shop_mode == "sell"
-	var backpack_slots_cache := _backpack_slots_for_ui()
-	var backpack_counts_cache := _backpack_counts_from_slots_for_ui(backpack_slots_cache)
+		_clear_shop_refresh_cache()
+		if shop_title_label != null:
+			shop_title_label.text = ShopCatalogModel.label_for(shop_active_id)
+		if shop_coin_label != null:
+			var currency := ShopCatalogModel.currency_for(shop_active_id)
+			shop_coin_label.text = "%s %d" % [ShopCatalogModel.currency_label(currency), _profile_currency_amount_for_ui(currency)]
+		if shop_buy_button != null:
+			shop_buy_button.button_pressed = shop_mode == "buy"
+		if shop_sell_button != null:
+			shop_sell_button.button_pressed = shop_mode == "sell"
+	var backpack_slots_cache := _shop_cached_backpack_slots_for_ui()
+	var backpack_counts_cache := _shop_cached_backpack_counts_for_ui(backpack_slots_cache)
 	var valid_ids := _shop_item_ids_for_mode(shop_mode, backpack_counts_cache)
 	if shop_selected_item_id == "" or not valid_ids.has(shop_selected_item_id):
 		shop_selected_item_id = valid_ids[0] if not valid_ids.is_empty() else ""
@@ -22799,30 +23013,53 @@ func _refresh_shop_panel(rebuild_list: bool = true) -> void:
 				shop_list_container.add_child(button)
 				shop_item_buttons[item_id] = button
 	else:
-		for item_id in valid_ids:
-			var button = shop_item_buttons.get(item_id)
-			if button is Button:
-				(button as Button).set_pressed_no_signal(item_id == shop_selected_item_id)
+		if previous_selected_item_id != "":
+			var previous_button = shop_item_buttons.get(previous_selected_item_id)
+			if previous_button is Button:
+				(previous_button as Button).set_pressed_no_signal(false)
+			var current_button = shop_item_buttons.get(shop_selected_item_id)
+			if current_button is Button:
+				(current_button as Button).set_pressed_no_signal(true)
+		else:
+			for item_id in valid_ids:
+				var button = shop_item_buttons.get(item_id)
+				if button is Button:
+					(button as Button).set_pressed_no_signal(item_id == shop_selected_item_id)
 	var quantity_max := _shop_quantity_max(shop_selected_item_id, backpack_slots_cache, backpack_counts_cache)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id, quantity_max)
-	shop_detail_label.bbcode_enabled = EquipmentModel.is_equipment(shop_selected_item_id)
-	shop_detail_label.text = _shop_detail_text(shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
+	var selected_is_equipment := EquipmentModel.is_equipment(shop_selected_item_id)
+	if shop_detail_label.bbcode_enabled != selected_is_equipment:
+		shop_detail_label.bbcode_enabled = selected_is_equipment
+	var next_detail_text := _shop_detail_text_cached(shop_selected_item_id, int(backpack_counts_cache.get(shop_selected_item_id, 0)))
+	if shop_detail_label.text != next_detail_text:
+		shop_detail_label.text = next_detail_text
 	_refresh_shop_quantity_controls(quantity_max)
-	_refresh_shop_equip_after_buy_button(quantity_max)
+	if selected_is_equipment or (shop_equip_after_buy_button != null and shop_equip_after_buy_button.visible):
+		_refresh_shop_equip_after_buy_button(quantity_max)
 	if shop_action_button != null:
-		shop_action_button.text = _shop_action_text()
-		shop_action_button.disabled = shop_selected_item_id == "" or quantity_max <= 0
-	if shop_repair_button != null:
+		var next_action_text := _shop_action_text()
+		if shop_action_button.text != next_action_text:
+			shop_action_button.text = next_action_text
+		var next_disabled := shop_selected_item_id == "" or quantity_max <= 0
+		if shop_action_button.disabled != next_disabled:
+			shop_action_button.disabled = next_disabled
+	if rebuild_list and shop_repair_button != null:
 		shop_repair_button.visible = shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
 		if shop_repair_button.visible:
 			var repair_quote := _equipment_repair_quote_for_ui()
 			var missing_durability := int(repair_quote.get("missingDurability", 0))
 			var repair_cost := int(repair_quote.get("cost", 0))
-			shop_repair_button.text = "修理 %d石币" % repair_cost if missing_durability > 0 else "修理"
-			shop_repair_button.disabled = missing_durability <= 0 or _profile_stone_coins_for_ui() < repair_cost
+			var next_repair_text := "修理 %d石币" % repair_cost if missing_durability > 0 else "修理"
+			if shop_repair_button.text != next_repair_text:
+				shop_repair_button.text = next_repair_text
+			var next_repair_disabled := missing_durability <= 0 or _profile_stone_coins_for_ui() < repair_cost
+			if shop_repair_button.disabled != next_repair_disabled:
+				shop_repair_button.disabled = next_repair_disabled
 		else:
-			shop_repair_button.text = "修理"
-			shop_repair_button.disabled = true
+			if shop_repair_button.text != "修理":
+				shop_repair_button.text = "修理"
+			if not shop_repair_button.disabled:
+				shop_repair_button.disabled = true
 
 
 func _shop_item_ids_for_mode(mode: String, counts: Dictionary = {}) -> Array[String]:
@@ -22908,17 +23145,29 @@ func _refresh_shop_quantity_controls(max_quantity: int = -1) -> void:
 	var controls_enabled := shop_selected_item_id != "" and effective_max > 0
 	if shop_quantity_spinbox != null:
 		shop_quantity_spinbox.set_block_signals(true)
-		shop_quantity_spinbox.min_value = 1
-		shop_quantity_spinbox.max_value = maxf(1.0, float(effective_max))
-		shop_quantity_spinbox.value = float(shop_quantity)
-		shop_quantity_spinbox.editable = controls_enabled
+		if shop_quantity_spinbox.min_value != 1:
+			shop_quantity_spinbox.min_value = 1
+		var next_max := maxf(1.0, float(effective_max))
+		if shop_quantity_spinbox.max_value != next_max:
+			shop_quantity_spinbox.max_value = next_max
+		var next_value := float(shop_quantity)
+		if shop_quantity_spinbox.value != next_value:
+			shop_quantity_spinbox.value = next_value
+		if shop_quantity_spinbox.editable != controls_enabled:
+			shop_quantity_spinbox.editable = controls_enabled
 		shop_quantity_spinbox.set_block_signals(false)
 	if shop_quantity_minus_button != null:
-		shop_quantity_minus_button.disabled = not controls_enabled or shop_quantity <= 1
+		var minus_disabled := not controls_enabled or shop_quantity <= 1
+		if shop_quantity_minus_button.disabled != minus_disabled:
+			shop_quantity_minus_button.disabled = minus_disabled
 	if shop_quantity_plus_button != null:
-		shop_quantity_plus_button.disabled = not controls_enabled or shop_quantity >= effective_max
+		var plus_disabled := not controls_enabled or shop_quantity >= effective_max
+		if shop_quantity_plus_button.disabled != plus_disabled:
+			shop_quantity_plus_button.disabled = plus_disabled
 	if shop_quantity_max_button != null:
-		shop_quantity_max_button.disabled = not controls_enabled or shop_quantity >= effective_max
+		var max_disabled := not controls_enabled or shop_quantity >= effective_max
+		if shop_quantity_max_button.disabled != max_disabled:
+			shop_quantity_max_button.disabled = max_disabled
 
 
 func _refresh_shop_equip_after_buy_button(quantity_max: int = -1) -> void:
@@ -22931,7 +23180,7 @@ func _refresh_shop_equip_after_buy_button(quantity_max: int = -1) -> void:
 		shop_equip_after_buy_button.button_pressed = false
 		shop_equip_after_buy_button.disabled = true
 		return
-	var equip_check := _can_equip_item_for_ui(shop_selected_item_id)
+	var equip_check := _shop_can_equip_item_cached(shop_selected_item_id)
 	var can_buy := (quantity_max if quantity_max >= 0 else _shop_quantity_max(shop_selected_item_id)) > 0
 	var can_equip := bool(equip_check.get("ok", false))
 	if not can_buy or not can_equip:

@@ -124,4 +124,5 @@ effectiveStoneCount = 1 + 3 * (1/50)^1.35 ≈ 1.015
 
 ```bash
 godot --headless --path client/godot --script "$(pwd)/.run/godot/earth_cub_rebirth_stone_matrix_simulation.gd"
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-rebirth-mm-formula-check
 ```

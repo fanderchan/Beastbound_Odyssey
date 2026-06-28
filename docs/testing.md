@@ -44,6 +44,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-growth-observation-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-rebirth-mm-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-rebirth-mm-formula-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-riding-system-check
 ```
 
@@ -112,6 +113,12 @@ Phase149 完成后的参考结果：
 - `--auto-player-stat-spam-perf-check`：`status=ok elapsed_ms=3.21 refresh_count=2 saves=1`
 - `--shop-select-perf-check`：`status=ok item_us=1513393 equipment_us=2145298`
 - `--perf-probe`：稳定后 `hud_signature` 约 `0.03-0.06ms`，`redraw_check` 约 `0.01-0.04ms`，`process_total` 多数约 `0.19-0.37ms`。
+
+Phase150-C 完成后的参考结果：
+
+- `--auto-pet-rebirth-mm-formula-check`：`status=ok ranges=true interpolation=true preview=true seeded=true full_mid=1.400`
+- `--auto-pet-rebirth-mm-check`：`status=ok catalog=true buy_stone=true feed=true rebirth=true stage2_claim=true`
+- `--shop-select-perf-check`：输出三轮样本的 `item_us/equipment_us` 中位数以及 `min/max`。当前严格布局后基线约 `item_us≈3.5s equipment_us≈5.9s`，说明真实点击后的商店详情排版仍是后续性能目标。
 
 Phase150-A 完成后的参考结果：
 
