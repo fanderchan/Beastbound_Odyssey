@@ -51,6 +51,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-aoi-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-battle-room-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -230,6 +231,13 @@ Phase168 在线 AOI 自测：
 - Godot AOI 合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
 - Godot 真实联网 AOI：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-aoi-live-check`
 - 回归：继续跑 `--auto-online-position-live-check`、`--auto-server-event-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 AOI 过滤发生在服务端和网络回包处理里，不进入每帧世界/HUD扫描。
+
+Phase169 切磋房间自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 切磋房间合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
+- Godot 真实联网切磋房间：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-battle-room-live-check`
+- 回归：继续跑 `--auto-server-event-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认房间事件只更新轻量缓存，不启动本地战斗循环或增加 HUD/移动热路径成本。
 
 ## 验收口径
 

@@ -210,6 +210,50 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(emptyState.party, null);
 });
 
+test("players can invite and accept duel battle rooms", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const challenger = service.register({"username": "battlea", "password": "test1234", "displayName": "挑战甲"});
+  const opponent = service.register({"username": "battleb", "password": "test1234", "displayName": "迎战乙"});
+  const outsider = service.register({"username": "battlec", "password": "test1234", "displayName": "旁观丙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  assert.equal(outsider.ok, true);
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "battleb"});
+  assert.equal(invite.ok, true);
+  assert.equal(invite.invite.status, "pending");
+  assert.equal(invite.invite.toUsername, "battleb");
+  assert.equal(events.some((event) => event.type === "battle.invite" && event.invite.inviteId === invite.invite.inviteId), true);
+
+  const opponentState = service.getBattleState(opponent.session.token);
+  assert.equal(opponentState.ok, true);
+  assert.equal(opponentState.room, null);
+  assert.equal(opponentState.incomingInvites.length, 1);
+
+  const outsiderAccept = service.acceptBattleInvite(outsider.session.token, invite.invite.inviteId);
+  assert.equal(outsiderAccept.ok, false);
+  assert.equal(outsiderAccept.code, "battle_invite_missing");
+
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.status, "ready");
+  assert.equal(accept.room.mode, "duel");
+  assert.equal(Boolean(accept.room.seed), true);
+  assert.deepEqual(accept.room.participants.map((player) => player.username), ["battlea", "battleb"]);
+  assert.equal(accept.room.participants[0].teamSnapshot.playerLevel, 1);
+  assert.equal(events.some((event) => event.type === "battle.room_ready" && event.room.roomId === accept.room.roomId), true);
+
+  const challengerState = service.getBattleState(challenger.session.token);
+  assert.equal(challengerState.ok, true);
+  assert.equal(challengerState.room.roomId, accept.room.roomId);
+
+  const busyInvite = service.inviteToBattle(outsider.session.token, {"username": "battleb"});
+  assert.equal(busyInvite.ok, false);
+  assert.equal(busyInvite.code, "battle_target_busy");
+});
+
 test("players can publish map positions into the online roster", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const scout = service.register({"username": "posa", "password": "test1234", "displayName": "同步甲"});
@@ -639,6 +683,66 @@ test("HTTP server exposes nearby and team chat endpoints", async (t) => {
   });
   assert.equal(outsiderTeam.ok, true);
   assert.equal(outsiderTeam.messages.length, 0);
+});
+
+test("HTTP server exposes battle room endpoints and websocket events", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const wsBase = `ws://127.0.0.1:${port}`;
+
+  const challenger = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpbata", "password": "test1234", "displayName": "挑战甲"}),
+  });
+  const opponent = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpbatb", "password": "test1234", "displayName": "迎战乙"}),
+  });
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+
+  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}`);
+  const reader = webSocketJsonReader(ws);
+  await webSocketOpen(ws);
+  const ready = await reader.next("events.ready");
+  assert.equal(ready.account.username, "httpbatb");
+
+  const invite = await fetchJson(`${base}/battle/invite`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "body": JSON.stringify({"username": "httpbatb"}),
+  });
+  assert.equal(invite.ok, true);
+  assert.equal(invite.invite.status, "pending");
+  const inviteEvent = await reader.next("battle.invite");
+  assert.equal(inviteEvent.invite.inviteId, invite.invite.inviteId);
+  assert.equal(inviteEvent.invite.fromUsername, "httpbata");
+
+  const state = await fetchJson(`${base}/battle/state`, {
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+  });
+  assert.equal(state.ok, true);
+  assert.equal(state.incomingInvites.length, 1);
+
+  const accept = await fetchJson(`${base}/battle/invites/${encodeURIComponent(invite.invite.inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+  });
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.status, "ready");
+  assert.equal(accept.room.participants.length, 2);
+  const roomEvent = await reader.next("battle.room_ready");
+  assert.equal(roomEvent.room.roomId, accept.room.roomId);
+  assert.equal(roomEvent.room.seed, accept.room.seed);
+  ws.close();
 });
 
 test("HTTP server exposes websocket event stream", async (t) => {

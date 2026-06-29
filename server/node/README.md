@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -54,6 +54,10 @@ Optional environment variables:
 - `POST /party/leave`
 - `GET /chat/messages?channel={channel}&limit={limit}`
 - `POST /chat/send`
+- `GET /battle/state`
+- `POST /battle/invite`
+- `POST /battle/invites/{inviteId}/accept`
+- `POST /battle/invites/{inviteId}/decline`
 - `GET /gm/tools`
 - `POST /gm/commands/{commandId}`
 
@@ -129,8 +133,21 @@ This is still a snapshot loop, not live movement authority. It does not yet prov
 - `POST /players/position` publishes `online.position` only to clients whose current AOI includes the actor's current or previous position; each recipient receives its own filtered roster snapshot.
 - `POST /chat/send` publishes `chat.message`; nearby messages are same-server public, while team messages are targeted to party members.
 - Party invite, accept, decline, and leave publish `party.invite`, `party.update`, or `party.invite_declined` to the affected accounts.
+- Battle invite and accept publish `battle.invite` and `battle.room_ready` to the affected accounts.
 
 The stream is an event fanout for already-authorized HTTP actions. It is not yet server-authoritative movement, explicit room subscription, combat room state, or anti-cheat validation.
+
+## Battle Room Boundary
+
+Duel rooms are the first server-owned battle entry point:
+
+- `POST /battle/invite` sends a pending duel invite to an online account.
+- `GET /battle/state` returns the current ready room and pending incoming/outgoing duel invites.
+- `POST /battle/invites/{inviteId}/accept` marks the invite accepted, creates a `ready` battle room, and generates a server seed.
+- `POST /battle/invites/{inviteId}/decline` declines one pending invite.
+- `battle.room_ready` includes `roomId`, `mode`, `status`, `seed`, participant account ids, and lightweight participant snapshots.
+
+This is room authority only. It does not yet run battle turns, resolve PvP damage, lock movement, consume items, or persist battle results.
 
 ## Chat Boundary
 
@@ -155,6 +172,8 @@ The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_ST
 - `party_invites`
 - `chat_messages`
 - `player_positions`
+- `battle_invites`
+- `battle_rooms`
 - `server_state`
 
 This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.

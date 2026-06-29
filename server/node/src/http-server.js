@@ -90,6 +90,20 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/chat/send") {
         return sendResult(res, service.sendChatMessage(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "GET" && url.pathname === "/battle/state") {
+        return sendResult(res, service.getBattleState(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/battle/invite") {
+        return sendResult(res, service.inviteToBattle(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/accept")) {
+        const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/accept".length));
+        return sendResult(res, service.acceptBattleInvite(bearerToken(req), inviteId));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/decline")) {
+        const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/decline".length));
+        return sendResult(res, service.declineBattleInvite(bearerToken(req), inviteId));
+      }
       if (req.method === "GET" && url.pathname === "/party/state") {
         return sendResult(res, service.getPartyState(bearerToken(req)));
       }

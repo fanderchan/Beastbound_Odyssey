@@ -25,6 +25,11 @@ const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest
 const ONLINE_AOI_SCOPE = "aoi";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
+const BATTLE_MODE_DUEL = "duel";
+const BATTLE_INVITE_PENDING = "pending";
+const BATTLE_INVITE_ACCEPTED = "accepted";
+const BATTLE_INVITE_DECLINED = "declined";
+const BATTLE_ROOM_READY = "ready";
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -687,6 +692,154 @@ function createAuthService(options = {}) {
     });
   }
 
+  function getBattleState(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    return ok(battleStatePayload(data, resolved.account.accountId));
+  }
+
+  function inviteToBattle(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
+    const target = data.accounts[targetUsername];
+    if (!target) {
+      return fail("battle_target_missing", "玩家不存在。");
+    }
+    if (target.accountId === resolved.account.accountId) {
+      return fail("battle_invite_self", "不能向自己发起切磋。");
+    }
+    const onlineTarget = activeOnlinePlayers(data, now).some((account) => account.accountId === target.accountId);
+    if (!onlineTarget) {
+      return fail("battle_target_offline", "对方不在线。");
+    }
+    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
+      return fail("battle_self_busy", "你已经在切磋房间中。");
+    }
+    if (activeBattleRoomForAccount(data, target.accountId)) {
+      return fail("battle_target_busy", "对方已经在切磋房间中。");
+    }
+    const pendingInvite = Object.values(data.battleInvites).find((invite) => (
+      invite &&
+      invite.status === BATTLE_INVITE_PENDING &&
+      invite.fromAccountId === resolved.account.accountId &&
+      invite.toAccountId === target.accountId
+    ));
+    if (pendingInvite) {
+      return ok({
+        invite: publicBattleInvite(pendingInvite, data),
+        room: null,
+        message: "切磋邀请已发送。",
+      });
+    }
+    const invite = {
+      inviteId: `battle_invite_${randomId()}`,
+      mode: BATTLE_MODE_DUEL,
+      fromAccountId: resolved.account.accountId,
+      toAccountId: target.accountId,
+      status: BATTLE_INVITE_PENDING,
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.battleInvites[invite.inviteId] = invite;
+    save(data);
+    emitServiceEvent({
+      type: "battle.invite",
+      targetAccountIds: [resolved.account.accountId, target.accountId],
+      invite: publicBattleInvite(invite, data),
+    });
+    return ok({
+      invite: publicBattleInvite(invite, data),
+      room: null,
+      message: "切磋邀请已发送。",
+    });
+  }
+
+  function acceptBattleInvite(token, inviteId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const invite = data.battleInvites[String(inviteId || "").trim()];
+    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
+      return fail("battle_invite_missing", "切磋邀请不存在。");
+    }
+    if (activeBattleRoomForAccount(data, invite.fromAccountId) || activeBattleRoomForAccount(data, invite.toAccountId)) {
+      return fail("battle_room_busy", "双方已有切磋房间。");
+    }
+    const challenger = accountById(data, invite.fromAccountId);
+    const opponent = accountById(data, invite.toAccountId);
+    if (!challenger || !opponent) {
+      return fail("battle_account_missing", "切磋账号不存在。");
+    }
+    invite.status = BATTLE_INVITE_ACCEPTED;
+    invite.updatedAt = isoNow(now);
+    data.battleInvites[invite.inviteId] = invite;
+    const room = {
+      roomId: `battle_room_${randomId()}`,
+      mode: BATTLE_MODE_DUEL,
+      status: BATTLE_ROOM_READY,
+      inviteId: invite.inviteId,
+      seed: randomBytes(8).toString("hex"),
+      participantAccountIds: [invite.fromAccountId, invite.toAccountId],
+      participants: [
+        battleParticipantSnapshot(data, challenger, "challenger"),
+        battleParticipantSnapshot(data, opponent, "opponent"),
+      ],
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.battleRooms[room.roomId] = room;
+    save(data);
+    emitServiceEvent({
+      type: "battle.room_ready",
+      targetAccountIds: room.participantAccountIds.slice(),
+      invite: publicBattleInvite(invite, data),
+      room: publicBattleRoom(room),
+    });
+    return ok({
+      invite: publicBattleInvite(invite, data),
+      room: publicBattleRoom(room),
+      message: "切磋房间已就绪。",
+    });
+  }
+
+  function declineBattleInvite(token, inviteId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const invite = data.battleInvites[String(inviteId || "").trim()];
+    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
+      return fail("battle_invite_missing", "切磋邀请不存在。");
+    }
+    invite.status = BATTLE_INVITE_DECLINED;
+    invite.updatedAt = isoNow(now);
+    data.battleInvites[invite.inviteId] = invite;
+    save(data);
+    emitServiceEvent({
+      type: "battle.invite_declined",
+      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
+      invite: publicBattleInvite(invite, data),
+      room: null,
+    });
+    return ok({
+      invite: publicBattleInvite(invite, data),
+      room: null,
+      message: "已拒绝切磋邀请。",
+    });
+  }
+
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
@@ -804,6 +957,10 @@ function createAuthService(options = {}) {
     leaveParty,
     listChatMessages,
     sendChatMessage,
+    getBattleState,
+    inviteToBattle,
+    acceptBattleInvite,
+    declineBattleInvite,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -855,6 +1012,8 @@ function normalizeData(raw) {
     partyInvites: objectOrEmpty(data.partyInvites),
     chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
     playerPositions: objectOrEmpty(data.playerPositions),
+    battleInvites: objectOrEmpty(data.battleInvites),
+    battleRooms: objectOrEmpty(data.battleRooms),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -1050,6 +1209,100 @@ function publicPartyInvite(invite, data) {
   };
 }
 
+function battleStatePayload(data, accountId) {
+  return {
+    room: publicBattleRoom(activeBattleRoomForAccount(data, accountId)),
+    incomingInvites: publicIncomingBattleInvites(data, accountId),
+    outgoingInvites: publicOutgoingBattleInvites(data, accountId),
+  };
+}
+
+function publicIncomingBattleInvites(data, accountId) {
+  return Object.values(data.battleInvites)
+    .filter((invite) => invite && invite.status === BATTLE_INVITE_PENDING && invite.toAccountId === accountId)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((invite) => publicBattleInvite(invite, data));
+}
+
+function publicOutgoingBattleInvites(data, accountId) {
+  return Object.values(data.battleInvites)
+    .filter((invite) => invite && invite.status === BATTLE_INVITE_PENDING && invite.fromAccountId === accountId)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((invite) => publicBattleInvite(invite, data));
+}
+
+function publicBattleInvite(invite, data) {
+  if (!invite) {
+    return {};
+  }
+  const from = accountById(data, invite.fromAccountId);
+  const to = accountById(data, invite.toAccountId);
+  return {
+    inviteId: invite.inviteId,
+    mode: invite.mode || BATTLE_MODE_DUEL,
+    fromUsername: from ? from.username : "",
+    fromDisplayName: from ? from.displayName : "",
+    toUsername: to ? to.username : "",
+    toDisplayName: to ? to.displayName : "",
+    status: invite.status,
+    createdAt: invite.createdAt,
+    updatedAt: invite.updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleRoom(room) {
+  if (!room) {
+    return null;
+  }
+  return {
+    roomId: room.roomId,
+    mode: room.mode || BATTLE_MODE_DUEL,
+    status: room.status,
+    seed: room.seed,
+    inviteId: room.inviteId,
+    participantAccountIds: Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [],
+    participants: Array.isArray(room.participants) ? clone(room.participants) : [],
+    createdAt: room.createdAt,
+    updatedAt: room.updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function battleParticipantSnapshot(data, account, side) {
+  const summary = profileSummaryForAccount(account, data);
+  const profileDoc = summary && summary.playerId ? data.profiles[summary.playerId] || null : null;
+  const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" ? profileDoc.profile : {};
+  const player = profile.player && typeof profile.player === "object" ? profile.player : {};
+  const pets = Array.isArray(profile.pets) ? profile.pets : [];
+  const battlePets = pets
+    .filter((pet) => pet && (pet.state === "battle" || pet.status === "battle" || pet.battleState === "battle"))
+    .slice(0, 5)
+    .map((pet) => ({
+      petId: String(pet.petId || pet.instanceId || pet.id || ""),
+      name: String(pet.name || pet.displayName || pet.speciesName || "宠物"),
+      speciesId: String(pet.speciesId || pet.templateId || ""),
+      level: Number(pet.level || 1),
+      schemaVersion: 1,
+    }));
+  const position = data.playerPositions[account.accountId] || null;
+  return {
+    accountId: account.accountId,
+    username: account.username,
+    displayName: account.displayName,
+    side,
+    profileSummary: summary || null,
+    position: position ? publicPlayerPosition(position) : null,
+    teamSnapshot: {
+      playerLevel: Number(player.level || 1),
+      battlePetCount: battlePets.length,
+      battlePets,
+      schemaVersion: 1,
+    },
+    schemaVersion: 1,
+  };
+}
+
 function createPartyForLeader(data, leaderAccountId, now, randomId) {
   const party = {
     partyId: `party_${randomId()}`,
@@ -1068,6 +1321,15 @@ function partyForAccount(data, accountId) {
     party &&
     Array.isArray(party.memberAccountIds) &&
     party.memberAccountIds.includes(accountId)
+  )) || null;
+}
+
+function activeBattleRoomForAccount(data, accountId) {
+  return Object.values(data.battleRooms).find((room) => (
+    room &&
+    room.status !== "closed" &&
+    Array.isArray(room.participantAccountIds) &&
+    room.participantAccountIds.includes(accountId)
   )) || null;
 }
 

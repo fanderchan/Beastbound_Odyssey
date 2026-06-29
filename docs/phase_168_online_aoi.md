@@ -75,6 +75,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase169：切磋房间和战斗种子，让双方同意后由服务端建立战斗上下文。
+1. Phase169：切磋房间和战斗种子已完成第一轮，双方同意后由服务端建立 `ready` 房间。
 2. Phase170：WebSocket 事件游标和断线补偿，避免短线重连丢关键状态。
 3. Phase171：服务器权威移动第一版，先做格子级速度/碰撞验证。

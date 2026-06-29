@@ -483,6 +483,7 @@ var server_event_socket: WebSocketPeer
 var server_event_state: String = "off"
 var server_event_reconnect_remaining: float = 0.0
 var server_event_seen: Array[Dictionary] = []
+var server_battle_state: Dictionary = {}
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -639,6 +640,7 @@ var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
 var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
+var auto_battle_room_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -956,6 +958,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
 		call_deferred("_run_auto_server_event_live_check")
+	elif auto_battle_room_live_check:
+		call_deferred("_run_auto_battle_room_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1682,6 +1686,8 @@ func _apply_preview_window_args() -> void:
 			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
 			auto_server_event_live_check = true
+		elif arg == "--auto-battle-room-live-check":
+			auto_battle_room_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15175,6 +15181,10 @@ func _run_auto_auth_server_client_check() -> void:
 	var party_accept_spec := ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787/", "token_test", "invite_test")
 	var party_decline_spec := ServerAuthClientModel.party_invite_decline_request("http://127.0.0.1:8787/", "token_test", "invite_test")
 	var party_leave_spec := ServerAuthClientModel.party_leave_request("http://127.0.0.1:8787/", "token_test")
+	var battle_state_spec := ServerAuthClientModel.battle_state_request("http://127.0.0.1:8787/", "token_test")
+	var battle_invite_spec := ServerAuthClientModel.battle_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
+	var battle_accept_spec := ServerAuthClientModel.battle_invite_accept_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
+	var battle_decline_spec := ServerAuthClientModel.battle_invite_decline_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var party_request_ok := (
 		str(party_state_spec.get("url", "")) == "http://127.0.0.1:8787/party/state"
 		and int(party_state_spec.get("method", -1)) == HTTPClient.METHOD_GET
@@ -15184,6 +15194,15 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(party_accept_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/accept"
 		and str(party_decline_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/decline"
 		and str(party_leave_spec.get("url", "")) == "http://127.0.0.1:8787/party/leave"
+	)
+	var battle_request_ok := (
+		str(battle_state_spec.get("url", "")) == "http://127.0.0.1:8787/battle/state"
+		and int(battle_state_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and str(battle_invite_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invite"
+		and int(battle_invite_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(battle_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
+		and str(battle_accept_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/accept"
+		and str(battle_decline_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/decline"
 	)
 	var parsed_party_state := ServerAuthClientModel.parse_party_state_response(200, JSON.stringify({
 		"ok": true,
@@ -15207,6 +15226,23 @@ func _run_auto_auth_server_client_check() -> void:
 		and (parsed_party_state.get("incomingInvites", []) as Array).size() == 1
 		and bool(parsed_party_action.get("ok", false))
 		and str((parsed_party_action.get("invite", {}) as Dictionary).get("status", "")) == "accepted"
+	)
+	var parsed_battle_state := ServerAuthClientModel.parse_battle_state_response(200, JSON.stringify({
+		"ok": true,
+		"room": null,
+		"incomingInvites": [{"inviteId": "battle_invite_test", "fromUsername": "friend"}],
+		"outgoingInvites": [],
+	}).to_utf8_buffer())
+	var parsed_battle_action := ServerAuthClientModel.parse_battle_action_response(200, JSON.stringify({
+		"ok": true,
+		"invite": {"inviteId": "battle_invite_test", "status": "accepted"},
+		"room": {"roomId": "battle_room_test", "status": "ready", "seed": "seed"},
+	}).to_utf8_buffer())
+	var battle_parse_ok := (
+		bool(parsed_battle_state.get("ok", false))
+		and (parsed_battle_state.get("incomingInvites", []) as Array).size() == 1
+		and bool(parsed_battle_action.get("ok", false))
+		and str((parsed_battle_action.get("room", {}) as Dictionary).get("status", "")) == "ready"
 	)
 	var chat_messages_spec := ServerAuthClientModel.chat_messages_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_NEARBY, 25)
 	var chat_send_spec := ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_TEAM, "队伍消息")
@@ -15276,9 +15312,9 @@ func _run_auto_auth_server_client_check() -> void:
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and event_contract_ok and party_request_ok and party_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s event=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s event=%s party=%s battle=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15295,6 +15331,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(position_request_ok and position_parse_ok),
 		str(event_contract_ok),
 		str(party_request_ok and party_parse_ok),
+		str(battle_request_ok and battle_parse_ok),
 		str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
@@ -15961,6 +15998,94 @@ func _run_auto_server_event_live_check() -> void:
 		server_event_state,
 		watcher_username,
 		actor_username,
+	])
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_battle_room_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "bra%s" % suffix
+	var opponent_username := "brb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"挑战甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"迎战乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	current_account_session = opponent_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	frames = 0
+	while frames < 720 and not _battle_invite_seen(invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var invite_event_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _server_event_type_seen("battle.invite") and _battle_invite_seen(invite_id)
+	var state_response := await _auto_http_request_spec(ServerAuthClientModel.battle_state_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", ""))
+	))
+	var state_parsed := ServerAuthClientModel.parse_battle_state_response(int(state_response.get("responseCode", 0)), state_response.get("body", PackedByteArray()) as PackedByteArray)
+	var state_ok := bool(state_parsed.get("ok", false)) and (state_parsed.get("incomingInvites", []) as Array).size() >= 1
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_id := str(accepted_room.get("roomId", ""))
+	frames = 0
+	while frames < 720 and not _battle_room_ready(room_id):
+		frames += 1
+		await get_tree().process_frame
+	var ready_event_ok := bool(accept_parsed.get("ok", false)) and room_id != "" and _server_event_type_seen("battle.room_ready") and _battle_room_ready(room_id)
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	var room_contract_ok := str(room.get("status", "")) == "ready" and str(room.get("seed", "")).strip_edges() != "" and participants.size() == 2
+	var status := "ok" if register_ok and stream_ready and invite_event_ok and state_ok and ready_event_ok and room_contract_ok else "failed"
+	print("battle room live check ready: status=%s register=%s stream=%s invite=%s state=%s ready=%s room=%s challenger=%s opponent=%s" % [
+		status,
+		str(register_ok),
+		str(stream_ready),
+		str(invite_event_ok),
+		str(state_ok),
+		str(ready_event_ok),
+		str(room_contract_ok),
+		challenger_username,
+		opponent_username,
 	])
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
@@ -22165,6 +22290,8 @@ func _handle_server_event(event: Dictionary) -> void:
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
 			_apply_party_event(event)
+		"battle.invite", "battle.room_ready", "battle.invite_declined":
+			_apply_battle_event(event)
 
 
 func _record_server_event_seen(event: Dictionary) -> void:
@@ -22229,6 +22356,50 @@ func _apply_party_event(event: Dictionary) -> void:
 			party_current_state["incomingInvites"] = invites
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
+
+
+func _apply_battle_event(event: Dictionary) -> void:
+	if not server_battle_state.has("incomingInvites"):
+		server_battle_state["incomingInvites"] = []
+	if not server_battle_state.has("outgoingInvites"):
+		server_battle_state["outgoingInvites"] = []
+	if event.has("room"):
+		server_battle_state["room"] = event.get("room", null)
+	if event.has("invite"):
+		var invite := event.get("invite", {}) as Dictionary if event.get("invite", {}) is Dictionary else {}
+		if not invite.is_empty():
+			var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
+			var invite_id := str(invite.get("inviteId", ""))
+			if str(invite.get("status", "")) == "pending":
+				var exists := false
+				for value in invites:
+					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
+						exists = true
+						break
+				if not exists:
+					invites.append(invite)
+			else:
+				invites = invites.filter(func(value) -> bool:
+					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
+				)
+			server_battle_state["incomingInvites"] = invites
+
+
+func _battle_invite_seen(invite_id: String) -> bool:
+	var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
+	for value in invites:
+		if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
+			return true
+	return false
+
+
+func _battle_room_ready(room_id: String = "") -> bool:
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	if str(room.get("status", "")) != "ready":
+		return false
+	if room_id.strip_edges() == "":
+		return str(room.get("roomId", "")).strip_edges() != ""
+	return str(room.get("roomId", "")) == room_id
 
 
 func _start_online_position_sync_if_needed() -> void:
@@ -22608,6 +22779,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_dirty = false
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
+	server_battle_state.clear()
 	_stop_server_event_stream()
 	_stop_online_position_sync()
 	PlayerProgressModel.reset_active_save_path()

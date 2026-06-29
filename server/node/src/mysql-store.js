@@ -97,6 +97,27 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_player_positions_map_updated (map_id, updated_at)
       );
+      CREATE TABLE IF NOT EXISTS battle_invites (
+        invite_id VARCHAR(96) PRIMARY KEY,
+        mode VARCHAR(24) NOT NULL,
+        from_account_id VARCHAR(80) NOT NULL,
+        to_account_id VARCHAR(80) NOT NULL,
+        status VARCHAR(24) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_battle_invites_to_status (to_account_id, status)
+      );
+      CREATE TABLE IF NOT EXISTS battle_rooms (
+        room_id VARCHAR(96) PRIMARY KEY,
+        mode VARCHAR(24) NOT NULL,
+        status VARCHAR(24) NOT NULL,
+        seed VARCHAR(64) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_battle_rooms_status (status)
+      );
     `);
     schemaReady = true;
   }
@@ -128,6 +149,8 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM party_invites");
       statements.push("DELETE FROM chat_messages");
       statements.push("DELETE FROM player_positions");
+      statements.push("DELETE FROM battle_invites");
+      statements.push("DELETE FROM battle_rooms");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
@@ -153,6 +176,12 @@ function createMysqlAuthStore(options = {}) {
       }
       for (const position of Object.values(objectOrEmpty(nextData.playerPositions))) {
         statements.push(insertPlayerPositionStatement(position));
+      }
+      for (const invite of Object.values(objectOrEmpty(nextData.battleInvites))) {
+        statements.push(insertBattleInviteStatement(invite));
+      }
+      for (const room of Object.values(objectOrEmpty(nextData.battleRooms))) {
+        statements.push(insertBattleRoomStatement(room));
       }
       statements.push("COMMIT");
       runMysql(config, config.database, `${statements.join(";\n")};`);
@@ -234,6 +263,14 @@ function insertChatMessageStatement(message) {
 
 function insertPlayerPositionStatement(position) {
   return `INSERT INTO player_positions (account_id, username, map_id, cell_x, cell_y, facing, moving, updated_at, document_json) VALUES (${sqlString(position.accountId)}, ${sqlString(position.username)}, ${sqlString(position.mapId)}, ${Number(position.cellX || 0)}, ${Number(position.cellY || 0)}, ${sqlString(position.facing)}, ${position.moving ? 1 : 0}, ${sqlString(position.updatedAt)}, ${sqlJson(position)})`;
+}
+
+function insertBattleInviteStatement(invite) {
+  return `INSERT INTO battle_invites (invite_id, mode, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.mode)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
+}
+
+function insertBattleRoomStatement(room) {
+  return `INSERT INTO battle_rooms (room_id, mode, status, seed, created_at, updated_at, document_json) VALUES (${sqlString(room.roomId)}, ${sqlString(room.mode)}, ${sqlString(room.status)}, ${sqlString(room.seed)}, ${sqlString(room.createdAt)}, ${sqlString(room.updatedAt)}, ${sqlJson(room)})`;
 }
 
 function sqlJson(value) {

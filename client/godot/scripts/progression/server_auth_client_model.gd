@@ -146,6 +146,35 @@ static func party_leave_request(base_url: String, session_token: String) -> Dict
 	}
 
 
+static func battle_state_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/battle/state" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func battle_invite_request(base_url: String, session_token: String, username: String) -> Dictionary:
+	return {
+		"url": "%s/battle/invite" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"username": username}),
+	}
+
+
+static func battle_invite_accept_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
+	return _battle_invite_action_request(base_url, session_token, invite_id, "accept")
+
+
+static func battle_invite_decline_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
+	return _battle_invite_action_request(base_url, session_token, invite_id, "decline")
+
+
 static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/mail/inbox" % normalized_base_url(base_url),
@@ -321,6 +350,27 @@ static func parse_party_action_response(response_code: int, body: PackedByteArra
 	return parsed
 
 
+static func parse_battle_state_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "切磋状态读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["room"] = response.get("room", null)
+	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
+	parsed["outgoingInvites"] = _dictionary_array(response.get("outgoingInvites", []))
+	return parsed
+
+
+static func parse_battle_action_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "切磋操作失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["room"] = response.get("room", null)
+	parsed["invite"] = response.get("invite", {}) if response.get("invite", {}) is Dictionary else {}
+	return parsed
+
+
 static func parse_mail_inbox_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "邮箱读取失败。")
 	if not bool(parsed.get("ok", false)):
@@ -470,6 +520,15 @@ static func _auth_request(base_url: String, endpoint: String, payload: Dictionar
 static func _party_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
 	return {
 		"url": "%s/party/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
+static func _battle_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
+	return {
+		"url": "%s/battle/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
 		"headers": ["Authorization: Bearer %s" % session_token],
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
