@@ -139,6 +139,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase173：战斗房间断线重连恢复到玩家可见战斗场景。
+1. Phase173 已完成：战斗房间断线重连恢复到玩家可见战斗场景。
 2. Phase174：逐步把普通点击寻路接入服务器 step ACK。
 3. Phase175：把服务器 `battle_event_list` 接入共享 10v10 战斗播放模板。
