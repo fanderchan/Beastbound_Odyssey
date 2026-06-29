@@ -487,6 +487,29 @@ var server_event_reconnect_remaining: float = 0.0
 var server_event_seen: Array[Dictionary] = []
 var server_event_last_seq: int = 0
 var server_battle_state: Dictionary = {}
+var player_action_panel: PanelContainer
+var player_action_title_label: Label
+var player_action_detail_label: Label
+var player_action_status_label: Label
+var player_action_battle_button: Button
+var player_action_party_apply_button: Button
+var player_action_party_invite_button: Button
+var player_action_close_button: Button
+var player_action_http_request: HTTPRequest
+var player_action_target: Dictionary = {}
+var player_action_request_pending: bool = false
+var player_action_pending_kind: String = ""
+var battle_invite_panel: PanelContainer
+var battle_invite_title_label: Label
+var battle_invite_detail_label: Label
+var battle_invite_status_label: Label
+var battle_invite_accept_button: Button
+var battle_invite_decline_button: Button
+var battle_invite_close_button: Button
+var battle_invite_http_request: HTTPRequest
+var battle_invite_current: Dictionary = {}
+var battle_invite_request_pending: bool = false
+var battle_invite_pending_kind: String = ""
 var server_battle_command_request_active: bool = false
 var server_battle_last_playback_turn_key: String = ""
 var server_battle_pending_closed_room: Dictionary = {}
@@ -642,6 +665,7 @@ var auto_auth_server_client_check: bool = false
 var auto_auth_server_live_check: bool = false
 var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
+var auto_player_interaction_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
 var auto_server_movement_live_check: bool = false
@@ -982,6 +1006,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_mail_live_check")
 	elif auto_party_live_check:
 		call_deferred("_run_auto_party_live_check")
+	elif auto_player_interaction_live_check:
+		call_deferred("_run_auto_player_interaction_live_check")
 	elif auto_chat_live_check:
 		call_deferred("_run_auto_chat_live_check")
 	elif auto_online_position_live_check:
@@ -1730,6 +1756,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_mail_live_check = true
 		elif arg == "--auto-party-live-check":
 			auto_party_live_check = true
+		elif arg == "--auto-player-interaction-live-check":
+			auto_player_interaction_live_check = true
 		elif arg == "--auto-chat-live-check":
 			auto_chat_live_check = true
 		elif arg == "--auto-online-position-live-check":
@@ -15302,6 +15330,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
+	var party_apply_spec := ServerAuthClientModel.party_apply_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var party_accept_spec := ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787/", "token_test", "invite_test")
 	var party_decline_spec := ServerAuthClientModel.party_invite_decline_request("http://127.0.0.1:8787/", "token_test", "invite_test")
 	var party_leave_spec := ServerAuthClientModel.party_leave_request("http://127.0.0.1:8787/", "token_test")
@@ -15319,10 +15348,13 @@ func _run_auto_auth_server_client_check() -> void:
 	var party_request_ok := (
 		str(party_state_spec.get("url", "")) == "http://127.0.0.1:8787/party/state"
 		and int(party_state_spec.get("method", -1)) == HTTPClient.METHOD_GET
-		and str(party_invite_spec.get("url", "")) == "http://127.0.0.1:8787/party/invite"
-		and int(party_invite_spec.get("method", -1)) == HTTPClient.METHOD_POST
-		and str(party_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
-		and str(party_accept_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/accept"
+			and str(party_invite_spec.get("url", "")) == "http://127.0.0.1:8787/party/invite"
+			and int(party_invite_spec.get("method", -1)) == HTTPClient.METHOD_POST
+			and str(party_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
+			and str(party_apply_spec.get("url", "")) == "http://127.0.0.1:8787/party/apply"
+			and int(party_apply_spec.get("method", -1)) == HTTPClient.METHOD_POST
+			and str(party_apply_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
+			and str(party_accept_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/accept"
 		and str(party_decline_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/decline"
 		and str(party_leave_spec.get("url", "")) == "http://127.0.0.1:8787/party/leave"
 	)
@@ -15727,6 +15759,166 @@ func _run_auto_party_live_check() -> void:
 		leader_username,
 		member_username,
 		party_online_players.size(),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_player_interaction_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var leader_username := "pia%s" % suffix
+	var member_username := "pib%s" % suffix
+	var applicant_username := "pic%s" % suffix
+	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
+	member_username = member_username.substr(0, mini(20, member_username.length()))
+	applicant_username = applicant_username.substr(0, mini(20, applicant_username.length()))
+	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		leader_username,
+		"test1234",
+		"队长甲"
+	))
+	var member_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		member_username,
+		"test1234",
+		"队员乙"
+	))
+	var applicant_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		applicant_username,
+		"test1234",
+		"申请丙"
+	))
+	var leader_parsed := ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
+	var member_parsed := ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
+	var applicant_parsed := ServerAuthClientModel.parse_auth_response(int(applicant_register.get("responseCode", 0)), applicant_register.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_session := leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
+	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
+	var applicant_session := applicant_parsed.get("session", {}) as Dictionary if applicant_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false)) and bool(applicant_parsed.get("ok", false))
+	var base_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(4, -1)
+	var leader_cell := base_cell
+	var member_cell := base_cell + Vector2i(1, 0)
+	var applicant_cell := base_cell + Vector2i(0, 1)
+	var leader_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		{"mapId": current_map_id, "cellX": leader_cell.x, "cellY": leader_cell.y, "facing": "east", "moving": false}
+	))
+	var member_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		{"mapId": current_map_id, "cellX": member_cell.x, "cellY": member_cell.y, "facing": "west", "moving": false}
+	))
+	var applicant_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(applicant_session.get("serverSessionToken", "")),
+		{"mapId": current_map_id, "cellX": applicant_cell.x, "cellY": applicant_cell.y, "facing": "north", "moving": false}
+	))
+	var leader_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(leader_position.get("responseCode", 0)), leader_position.get("body", PackedByteArray()) as PackedByteArray)
+	var member_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(member_position.get("responseCode", 0)), member_position.get("body", PackedByteArray()) as PackedByteArray)
+	var applicant_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(applicant_position.get("responseCode", 0)), applicant_position.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(leader_position_parsed.get("ok", false)) and bool(member_position_parsed.get("ok", false)) and bool(applicant_position_parsed.get("ok", false))
+	var party_invite_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		member_username
+	))
+	var party_invite_parsed := ServerAuthClientModel.parse_party_action_response(int(party_invite_response.get("responseCode", 0)), party_invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_state_response := await _auto_http_request_spec(ServerAuthClientModel.party_state_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", ""))
+	))
+	var member_state_parsed := ServerAuthClientModel.parse_party_state_response(int(member_state_response.get("responseCode", 0)), member_state_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_incoming: Array = member_state_parsed.get("incomingInvites", []) if member_state_parsed.get("incomingInvites", []) is Array else []
+	var party_invite_id := str((member_incoming[0] as Dictionary).get("inviteId", "")) if not member_incoming.is_empty() and member_incoming[0] is Dictionary else ""
+	var party_accept_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		party_invite_id
+	))
+	var party_accept_parsed := ServerAuthClientModel.parse_party_action_response(int(party_accept_response.get("responseCode", 0)), party_accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_party := party_accept_parsed.get("party", {}) as Dictionary if party_accept_parsed.get("party", {}) is Dictionary else {}
+	var party_ready_ok := bool(party_invite_parsed.get("ok", false)) and bool(party_accept_parsed.get("ok", false)) and int(accepted_party.get("memberCount", 0)) == 2
+
+	current_account_session = applicant_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_profile_sync_expected_revision = 0
+	player.global_position = IsoMapModel.grid_to_world(map_data, applicant_cell)
+	last_checked_player_cell = applicant_cell
+	party_current_state = {"party": null, "incomingInvites": [], "maxMembers": 5}
+	online_position_remote_players.clear()
+	var member_remote := {
+		"username": member_username,
+		"displayName": "队员乙",
+		"partyId": str(accepted_party.get("partyId", "")),
+		"partyRole": "member",
+		"position": {"mapId": current_map_id, "cellX": member_cell.x, "cellY": member_cell.y, "facing": "west", "moving": false},
+	}
+	online_position_remote_players.append(member_remote)
+	var hit_target := _online_remote_player_at_screen_point(_world_to_screen(IsoMapModel.grid_to_world(map_data, member_cell)))
+	_open_player_action_panel(hit_target)
+	var menu_ok := (
+		not hit_target.is_empty()
+		and player_action_panel != null
+		and player_action_panel.visible
+		and player_action_battle_button != null
+		and not player_action_battle_button.disabled
+		and player_action_party_apply_button != null
+		and not player_action_party_apply_button.disabled
+		and player_action_party_invite_button != null
+		and player_action_party_invite_button.disabled
+	)
+	_on_player_action_party_apply_pressed()
+	var frames := 0
+	while frames < 720 and (player_action_request_pending or party_request_pending):
+		frames += 1
+		await get_tree().process_frame
+	var leader_state_response := await _auto_http_request_spec(ServerAuthClientModel.party_state_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", ""))
+	))
+	var leader_state_parsed := ServerAuthClientModel.parse_party_state_response(int(leader_state_response.get("responseCode", 0)), leader_state_response.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_incoming: Array = leader_state_parsed.get("incomingInvites", []) if leader_state_parsed.get("incomingInvites", []) is Array else []
+	var application_ok := false
+	for value in leader_incoming:
+		if value is Dictionary and str((value as Dictionary).get("kind", "")) == "application" and str((value as Dictionary).get("fromUsername", "")) == applicant_username:
+			application_ok = true
+			break
+
+	var battle_invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		applicant_username
+	))
+	var battle_invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(battle_invite_response.get("responseCode", 0)), battle_invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var battle_invite := battle_invite_parsed.get("invite", {}) as Dictionary if battle_invite_parsed.get("invite", {}) is Dictionary else {}
+	server_battle_state.clear()
+	_apply_battle_event({"type": "battle.invite", "invite": battle_invite})
+	var popup_ok := bool(battle_invite_parsed.get("ok", false)) and battle_invite_panel != null and battle_invite_panel.visible and battle_invite_accept_button != null and not battle_invite_accept_button.disabled
+	_on_battle_invite_accept_pressed()
+	frames = 0
+	while frames < 720 and battle_invite_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var battle_accept_ok := not room.is_empty() and battle_active and str(room.get("status", "")) == "ready"
+	var status := "ok" if register_ok and positions_ok and party_ready_ok and menu_ok and application_ok and popup_ok and battle_accept_ok else "failed"
+	print("player interaction live check ready: status=%s register=%s positions=%s party=%s menu=%s application=%s popup=%s battle_accept=%s leader=%s member=%s applicant=%s" % [
+		status,
+		str(register_ok),
+		str(positions_ok),
+		str(party_ready_ok),
+		str(menu_ok),
+		str(application_ok),
+		str(popup_ok),
+		str(battle_accept_ok),
+		leader_username,
+		member_username,
+		applicant_username,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -17196,6 +17388,8 @@ func _run_auto_server_battle_close_live_check() -> void:
 	server_profile_sync_state = "ready"
 	server_battle_state.clear()
 	server_battle_pending_closed_room.clear()
+	_close_player_action_panel(false)
+	_close_battle_invite_panel(false)
 	server_event_last_seq = 0
 	server_event_seen.clear()
 	_start_server_event_stream_if_needed()
@@ -21540,9 +21734,15 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+		if (mouse_event.button_index == MOUSE_BUTTON_LEFT or mouse_event.button_index == MOUSE_BUTTON_RIGHT) and mouse_event.pressed:
 			if battle_active:
 				_select_battle_target_at_screen_point(mouse_event.position)
+				return
+			var remote_player := _online_remote_player_at_screen_point(mouse_event.position)
+			if not remote_player.is_empty():
+				_open_player_action_panel(remote_player)
+				return
+			if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
 				return
 			_set_click_move_target(mouse_event.position)
 	elif event is InputEventMouseMotion:
@@ -21554,6 +21754,10 @@ func _input(event: InputEvent) -> void:
 		if touch_event.pressed:
 			if battle_active:
 				_select_battle_target_at_screen_point(touch_event.position)
+				return
+			var remote_player := _online_remote_player_at_screen_point(touch_event.position)
+			if not remote_player.is_empty():
+				_open_player_action_panel(remote_player)
 				return
 			_set_click_move_target(touch_event.position)
 
@@ -23072,6 +23276,115 @@ func _build_hud() -> void:
 	party_panel.add_child(party_http_request)
 	hud_root.add_child(party_panel)
 
+	player_action_panel = _panel_container("PlayerActionPanel")
+	player_action_panel.visible = false
+	player_action_panel.z_index = 26
+	var player_action_column := VBoxContainer.new()
+	player_action_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_column.add_theme_constant_override("separation", 8)
+	player_action_panel.add_child(player_action_column)
+	var player_action_header := HBoxContainer.new()
+	player_action_header.add_theme_constant_override("separation", 8)
+	player_action_column.add_child(player_action_header)
+	player_action_title_label = Label.new()
+	player_action_title_label.text = "玩家互动"
+	player_action_title_label.add_theme_font_size_override("font_size", 20)
+	player_action_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_header.add_child(player_action_title_label)
+	player_action_close_button = Button.new()
+	player_action_close_button.text = "关闭"
+	player_action_close_button.custom_minimum_size = Vector2(82, 40)
+	player_action_close_button.pressed.connect(_close_player_action_panel)
+	player_action_header.add_child(player_action_close_button)
+	player_action_detail_label = Label.new()
+	player_action_detail_label.text = ""
+	player_action_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_action_detail_label.add_theme_font_size_override("font_size", 15)
+	player_action_detail_label.custom_minimum_size = Vector2(0, 42)
+	player_action_column.add_child(player_action_detail_label)
+	player_action_battle_button = Button.new()
+	player_action_battle_button.text = "发起切磋"
+	player_action_battle_button.custom_minimum_size = Vector2(0, 46)
+	player_action_battle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_battle_button.pressed.connect(_on_player_action_battle_pressed)
+	player_action_column.add_child(player_action_battle_button)
+	player_action_party_apply_button = Button.new()
+	player_action_party_apply_button.text = "加入队伍"
+	player_action_party_apply_button.custom_minimum_size = Vector2(0, 46)
+	player_action_party_apply_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_party_apply_button.pressed.connect(_on_player_action_party_apply_pressed)
+	player_action_column.add_child(player_action_party_apply_button)
+	player_action_party_invite_button = Button.new()
+	player_action_party_invite_button.text = "邀请入队"
+	player_action_party_invite_button.custom_minimum_size = Vector2(0, 46)
+	player_action_party_invite_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_party_invite_button.pressed.connect(_on_player_action_party_invite_pressed)
+	player_action_column.add_child(player_action_party_invite_button)
+	player_action_status_label = Label.new()
+	player_action_status_label.text = ""
+	player_action_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_action_status_label.add_theme_font_size_override("font_size", 14)
+	player_action_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	player_action_status_label.custom_minimum_size = Vector2(0, 32)
+	player_action_column.add_child(player_action_status_label)
+	player_action_http_request = HTTPRequest.new()
+	player_action_http_request.timeout = 8.0
+	player_action_http_request.request_completed.connect(_on_player_action_http_request_completed)
+	player_action_panel.add_child(player_action_http_request)
+	hud_root.add_child(player_action_panel)
+
+	battle_invite_panel = _panel_container("BattleInvitePanel")
+	battle_invite_panel.visible = false
+	battle_invite_panel.z_index = 27
+	var battle_invite_column := VBoxContainer.new()
+	battle_invite_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_invite_column.add_theme_constant_override("separation", 8)
+	battle_invite_panel.add_child(battle_invite_column)
+	battle_invite_title_label = Label.new()
+	battle_invite_title_label.text = "切磋邀请"
+	battle_invite_title_label.add_theme_font_size_override("font_size", 20)
+	battle_invite_column.add_child(battle_invite_title_label)
+	battle_invite_detail_label = Label.new()
+	battle_invite_detail_label.text = ""
+	battle_invite_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_invite_detail_label.add_theme_font_size_override("font_size", 15)
+	battle_invite_detail_label.custom_minimum_size = Vector2(0, 42)
+	battle_invite_column.add_child(battle_invite_detail_label)
+	var battle_invite_button_row := HBoxContainer.new()
+	battle_invite_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_invite_button_row.add_theme_constant_override("separation", 8)
+	battle_invite_column.add_child(battle_invite_button_row)
+	battle_invite_accept_button = Button.new()
+	battle_invite_accept_button.text = "接受"
+	battle_invite_accept_button.custom_minimum_size = Vector2(92, 44)
+	battle_invite_accept_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_invite_accept_button.pressed.connect(_on_battle_invite_accept_pressed)
+	battle_invite_button_row.add_child(battle_invite_accept_button)
+	battle_invite_decline_button = Button.new()
+	battle_invite_decline_button.text = "拒绝"
+	battle_invite_decline_button.custom_minimum_size = Vector2(92, 44)
+	battle_invite_decline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_invite_decline_button.pressed.connect(_on_battle_invite_decline_pressed)
+	battle_invite_button_row.add_child(battle_invite_decline_button)
+	battle_invite_close_button = Button.new()
+	battle_invite_close_button.text = "稍后"
+	battle_invite_close_button.custom_minimum_size = Vector2(92, 44)
+	battle_invite_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_invite_close_button.pressed.connect(_close_battle_invite_panel)
+	battle_invite_button_row.add_child(battle_invite_close_button)
+	battle_invite_status_label = Label.new()
+	battle_invite_status_label.text = ""
+	battle_invite_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_invite_status_label.add_theme_font_size_override("font_size", 14)
+	battle_invite_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	battle_invite_status_label.custom_minimum_size = Vector2(0, 30)
+	battle_invite_column.add_child(battle_invite_status_label)
+	battle_invite_http_request = HTTPRequest.new()
+	battle_invite_http_request.timeout = 8.0
+	battle_invite_http_request.request_completed.connect(_on_battle_invite_http_request_completed)
+	battle_invite_panel.add_child(battle_invite_http_request)
+	hud_root.add_child(battle_invite_panel)
+
 	mailbox_panel = _panel_container("MailboxPanel")
 	mailbox_panel.visible = false
 	mailbox_panel.z_index = 24
@@ -24125,6 +24438,10 @@ func _request_server_battle_state_restore() -> void:
 	var room = parsed.get("room", null)
 	if room is Dictionary:
 		_apply_server_battle_room_state(room as Dictionary, false)
+	else:
+		var latest_invite := _latest_incoming_battle_invite()
+		if not latest_invite.is_empty():
+			_open_battle_invite_panel(latest_invite)
 
 
 func _start_server_event_stream_if_needed() -> void:
@@ -24239,6 +24556,28 @@ func _chat_message_id_exists(message_id: String) -> bool:
 	return false
 
 
+func _party_invite_is_for_current(invite: Dictionary) -> bool:
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	if current_username == "":
+		return false
+	return str(invite.get("toUsername", "")).strip_edges() == current_username
+
+
+func _battle_invite_is_for_current(invite: Dictionary) -> bool:
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	if current_username == "":
+		return false
+	return str(invite.get("toUsername", "")).strip_edges() == current_username
+
+
+func _latest_incoming_battle_invite() -> Dictionary:
+	var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
+	for value in invites:
+		if value is Dictionary and str((value as Dictionary).get("status", "")) == "pending" and _battle_invite_is_for_current(value as Dictionary):
+			return (value as Dictionary).duplicate(true)
+	return {}
+
+
 func _apply_party_event(event: Dictionary) -> void:
 	if event.has("party"):
 		party_current_state["party"] = event.get("party", null)
@@ -24251,7 +24590,7 @@ func _apply_party_event(event: Dictionary) -> void:
 		if not invite.is_empty():
 			var invites: Array = party_current_state.get("incomingInvites", []) if party_current_state.get("incomingInvites", []) is Array else []
 			var invite_id := str(invite.get("inviteId", ""))
-			if str(invite.get("status", "")) == "pending":
+			if str(invite.get("status", "")) == "pending" and _party_invite_is_for_current(invite):
 				var exists := false
 				for value in invites:
 					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
@@ -24283,7 +24622,7 @@ func _apply_battle_event(event: Dictionary) -> void:
 		if not invite.is_empty():
 			var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
 			var invite_id := str(invite.get("inviteId", ""))
-			if str(invite.get("status", "")) == "pending":
+			if str(invite.get("status", "")) == "pending" and _battle_invite_is_for_current(invite):
 				var exists := false
 				for value in invites:
 					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
@@ -24291,10 +24630,13 @@ func _apply_battle_event(event: Dictionary) -> void:
 						break
 				if not exists:
 					invites.append(invite)
+					_open_battle_invite_panel(invite)
 			else:
 				invites = invites.filter(func(value) -> bool:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
-			)
+				)
+				if battle_invite_panel != null and battle_invite_panel.visible and str(battle_invite_current.get("inviteId", "")) == invite_id:
+					_close_battle_invite_panel(false)
 			server_battle_state["incomingInvites"] = invites
 	if event_type == "battle.room_closed":
 		var closed_room := event.get("room", {}) as Dictionary if event.get("room", {}) is Dictionary else {}
@@ -24303,6 +24645,7 @@ func _apply_battle_event(event: Dictionary) -> void:
 		_apply_server_battle_room_closed(closed_room)
 		return
 	if room_updated:
+		_close_battle_invite_panel(false)
 		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 		var turn_key := _server_battle_turn_key(turn)
 		var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
@@ -24951,6 +25294,7 @@ func _open_account_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -25154,10 +25498,12 @@ func _register_hud_panels() -> void:
 		pet_cultivation_panel,
 		codex_panel,
 		quest_panel,
-		map_panel,
-		chat_panel,
-		party_panel,
-		mailbox_panel,
+			map_panel,
+			chat_panel,
+			party_panel,
+			player_action_panel,
+			battle_invite_panel,
+			mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -25184,10 +25530,12 @@ func _register_hud_panels() -> void:
 		pet_cultivation_panel,
 		codex_panel,
 		quest_panel,
-		map_panel,
-		chat_panel,
-		party_panel,
-		mailbox_panel,
+			map_panel,
+			chat_panel,
+			party_panel,
+			player_action_panel,
+			battle_invite_panel,
+			mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -25338,6 +25686,7 @@ func _resolve_click_screen_point(screen_point: Vector2) -> void:
 	_close_quest_panel()
 	_close_map_panel()
 	_close_chat_panel()
+	_close_player_action_panel(false)
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -29591,6 +29940,7 @@ func _open_chat_panel() -> void:
 	_close_map_panel()
 	_close_party_panel()
 	_close_mailbox_panel()
+	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	chat_panel.visible = true
@@ -29817,6 +30167,7 @@ func _open_party_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -29856,37 +30207,39 @@ func _refresh_party_panel() -> void:
 		for value in invites:
 			if not (value is Dictionary):
 				continue
-			var invite := value as Dictionary
-			var invite_id := str(invite.get("inviteId", ""))
-			var row := HBoxContainer.new()
-			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			row.add_theme_constant_override("separation", 8)
-			var label := Label.new()
-			label.text = "%s 邀请你加入队伍" % _party_player_text({
-				"username": str(invite.get("fromUsername", "")),
-				"displayName": str(invite.get("fromDisplayName", "")),
-			})
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			label.add_theme_font_size_override("font_size", 15)
-			row.add_child(label)
-			var accept_button := Button.new()
-			accept_button.text = "加入"
-			accept_button.custom_minimum_size = Vector2(72, 42)
-			accept_button.disabled = party_request_pending
-			accept_button.pressed.connect(func() -> void:
-				_on_party_accept_pressed(invite_id)
-			)
-			row.add_child(accept_button)
-			var decline_button := Button.new()
-			decline_button.text = "拒绝"
-			decline_button.custom_minimum_size = Vector2(72, 42)
-			decline_button.disabled = party_request_pending
-			decline_button.pressed.connect(func() -> void:
-				_on_party_decline_pressed(invite_id)
-			)
-			row.add_child(decline_button)
-			party_invites_container.add_child(row)
+				var invite := value as Dictionary
+				var invite_id := str(invite.get("inviteId", ""))
+				var invite_kind := str(invite.get("kind", "invite"))
+				var row := HBoxContainer.new()
+				row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				row.add_theme_constant_override("separation", 8)
+				var label := Label.new()
+				var invite_player_text := _party_player_text({
+					"username": str(invite.get("fromUsername", "")),
+					"displayName": str(invite.get("fromDisplayName", "")),
+				})
+				label.text = "%s 申请加入队伍" % invite_player_text if invite_kind == "application" else "%s 邀请你加入队伍" % invite_player_text
+				label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				label.add_theme_font_size_override("font_size", 15)
+				row.add_child(label)
+				var accept_button := Button.new()
+				accept_button.text = "同意" if invite_kind == "application" else "加入"
+				accept_button.custom_minimum_size = Vector2(72, 42)
+				accept_button.disabled = party_request_pending
+				accept_button.pressed.connect(func() -> void:
+					_on_party_accept_pressed(invite_id)
+				)
+				row.add_child(accept_button)
+				var decline_button := Button.new()
+				decline_button.text = "拒绝"
+				decline_button.custom_minimum_size = Vector2(72, 42)
+				decline_button.disabled = party_request_pending
+				decline_button.pressed.connect(func() -> void:
+					_on_party_decline_pressed(invite_id)
+				)
+				row.add_child(decline_button)
+				party_invites_container.add_child(row)
 	var current_username := str(current_account_session.get("username", "")).strip_edges()
 	var has_online_rows := false
 	for value in party_online_players:
@@ -30121,6 +30474,269 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 	_refresh_party_request_controls()
 
 
+func _open_player_action_panel(target: Dictionary) -> void:
+	if battle_active or target.is_empty():
+		return
+	var username := str(target.get("username", "")).strip_edges()
+	if username == "" or username == str(current_account_session.get("username", "")).strip_edges():
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_party_panel(false)
+	_close_mailbox_panel(false)
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	player_action_target = target.duplicate(true)
+	if player_action_status_label != null:
+		player_action_status_label.text = ""
+	if player_action_panel != null:
+		player_action_panel.visible = true
+	_refresh_player_action_panel()
+	_layout_hud()
+
+
+func _close_player_action_panel(update_layout: bool = true) -> void:
+	player_action_target.clear()
+	player_action_request_pending = false
+	player_action_pending_kind = ""
+	_hide_control(player_action_panel, update_layout)
+
+
+func _refresh_player_action_panel() -> void:
+	if player_action_panel == null:
+		return
+	var has_session := _is_server_account_session()
+	var username := str(player_action_target.get("username", "")).strip_edges()
+	var target_name := _party_player_text(player_action_target)
+	var position := player_action_target.get("position", {}) as Dictionary if player_action_target.get("position", {}) is Dictionary else {}
+	var target_party_id := str(player_action_target.get("partyId", "")).strip_edges()
+	var target_party_role := str(player_action_target.get("partyRole", "")).strip_edges()
+	var current_party_value = party_current_state.get("party", null)
+	var current_has_party := current_party_value is Dictionary
+	var distance_text := ""
+	if player != null and not map_data.is_empty() and str(position.get("mapId", "")) == current_map_id:
+		var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+		var target_cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+		var distance := maxi(abs(player_cell.x - target_cell.x), abs(player_cell.y - target_cell.y))
+		distance_text = "距离%d格" % distance
+	if player_action_title_label != null:
+		player_action_title_label.text = "玩家互动"
+	if player_action_detail_label != null:
+		var party_text := "有队伍" if target_party_id != "" else "未组队"
+		if target_party_role == "leader":
+			party_text = "队长"
+		elif target_party_role == "member":
+			party_text = "队员"
+		player_action_detail_label.text = "%s\n%s%s" % [
+			target_name,
+			party_text,
+			"  %s" % distance_text if distance_text != "" else "",
+		]
+	var disabled := player_action_request_pending or not has_session or username == ""
+	if player_action_battle_button != null:
+		player_action_battle_button.disabled = disabled
+	if player_action_party_apply_button != null:
+		player_action_party_apply_button.disabled = disabled or current_has_party or target_party_id == ""
+		player_action_party_apply_button.text = "加入队伍" if target_party_id != "" else "对方未组队"
+	if player_action_party_invite_button != null:
+		player_action_party_invite_button.disabled = disabled or target_party_role != "" or not _party_can_invite()
+		player_action_party_invite_button.text = "邀请入队" if target_party_role == "" else "对方已组队"
+	if player_action_close_button != null:
+		player_action_close_button.disabled = player_action_request_pending
+	if player_action_status_label != null and not has_session:
+		player_action_status_label.text = "需要服务器账号登录。"
+
+
+func _on_player_action_battle_pressed() -> void:
+	var username := str(player_action_target.get("username", "")).strip_edges()
+	if username == "" or not _is_server_account_session():
+		return
+	_start_player_action_request("battle_invite", ServerAuthClientModel.battle_invite_request(_server_profile_base_url(), _server_profile_token(), username))
+
+
+func _on_player_action_party_apply_pressed() -> void:
+	var username := str(player_action_target.get("username", "")).strip_edges()
+	if username == "" or not _is_server_account_session():
+		return
+	_start_player_action_request("party_apply", ServerAuthClientModel.party_apply_request(_server_profile_base_url(), _server_profile_token(), username))
+
+
+func _on_player_action_party_invite_pressed() -> void:
+	var username := str(player_action_target.get("username", "")).strip_edges()
+	if username == "" or not _is_server_account_session():
+		return
+	_start_player_action_request("party_invite", ServerAuthClientModel.party_invite_request(_server_profile_base_url(), _server_profile_token(), username))
+
+
+func _start_player_action_request(kind: String, spec: Dictionary) -> void:
+	if player_action_http_request == null or player_action_request_pending:
+		return
+	player_action_pending_kind = kind
+	player_action_request_pending = true
+	if player_action_status_label != null:
+		match kind:
+			"battle_invite":
+				player_action_status_label.text = "正在发起切磋..."
+			"party_apply":
+				player_action_status_label.text = "正在申请入队..."
+			"party_invite":
+				player_action_status_label.text = "正在邀请入队..."
+			_:
+				player_action_status_label.text = "正在请求..."
+	_refresh_player_action_panel()
+	var err := player_action_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		player_action_request_pending = false
+		player_action_pending_kind = ""
+		if player_action_status_label != null:
+			player_action_status_label.text = "请求发送失败。"
+		_refresh_player_action_panel()
+
+
+func _on_player_action_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := player_action_pending_kind
+	player_action_pending_kind = ""
+	player_action_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if player_action_status_label != null:
+			player_action_status_label.text = "服务器连接失败。"
+		_refresh_player_action_panel()
+		return
+	if kind == "battle_invite":
+		var parsed_battle := ServerAuthClientModel.parse_battle_action_response(response_code, body)
+		if bool(parsed_battle.get("ok", false)):
+			if player_action_status_label != null:
+				player_action_status_label.text = str(parsed_battle.get("message", "切磋邀请已发送。"))
+			_set_world_log_message(str(parsed_battle.get("message", "切磋邀请已发送。")))
+		elif player_action_status_label != null:
+			player_action_status_label.text = str(parsed_battle.get("message", "切磋发起失败。"))
+	else:
+		var parsed_party := ServerAuthClientModel.parse_party_action_response(response_code, body)
+		if bool(parsed_party.get("ok", false)):
+			if player_action_status_label != null:
+				player_action_status_label.text = str(parsed_party.get("message", "队伍请求已发送。"))
+			_request_party_state()
+		elif player_action_status_label != null:
+			player_action_status_label.text = str(parsed_party.get("message", "队伍请求失败。"))
+	_refresh_player_action_panel()
+
+
+func _open_battle_invite_panel(invite: Dictionary) -> void:
+	if battle_active or invite.is_empty() or not _battle_invite_is_for_current(invite):
+		return
+	battle_invite_current = invite.duplicate(true)
+	if battle_invite_status_label != null:
+		battle_invite_status_label.text = ""
+	if battle_invite_panel != null:
+		battle_invite_panel.visible = true
+	_refresh_battle_invite_panel()
+	_layout_hud()
+
+
+func _close_battle_invite_panel(update_layout: bool = true) -> void:
+	battle_invite_current.clear()
+	battle_invite_request_pending = false
+	battle_invite_pending_kind = ""
+	_hide_control(battle_invite_panel, update_layout)
+
+
+func _refresh_battle_invite_panel() -> void:
+	if battle_invite_panel == null:
+		return
+	var from_player := {
+		"username": str(battle_invite_current.get("fromUsername", "")),
+		"displayName": str(battle_invite_current.get("fromDisplayName", "")),
+	}
+	if battle_invite_detail_label != null:
+		battle_invite_detail_label.text = "%s 向你发起切磋。" % _party_player_text(from_player)
+	var disabled := battle_invite_request_pending or not _is_server_account_session() or str(battle_invite_current.get("inviteId", "")).strip_edges() == ""
+	if battle_invite_accept_button != null:
+		battle_invite_accept_button.disabled = disabled
+	if battle_invite_decline_button != null:
+		battle_invite_decline_button.disabled = disabled
+	if battle_invite_close_button != null:
+		battle_invite_close_button.disabled = battle_invite_request_pending
+	if battle_invite_status_label != null and not _is_server_account_session():
+		battle_invite_status_label.text = "需要服务器账号登录。"
+
+
+func _on_battle_invite_accept_pressed() -> void:
+	var invite_id := str(battle_invite_current.get("inviteId", "")).strip_edges()
+	if invite_id == "" or not _is_server_account_session():
+		return
+	_start_battle_invite_request("accept", ServerAuthClientModel.battle_invite_accept_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+
+func _on_battle_invite_decline_pressed() -> void:
+	var invite_id := str(battle_invite_current.get("inviteId", "")).strip_edges()
+	if invite_id == "" or not _is_server_account_session():
+		return
+	_start_battle_invite_request("decline", ServerAuthClientModel.battle_invite_decline_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+
+func _start_battle_invite_request(kind: String, spec: Dictionary) -> void:
+	if battle_invite_http_request == null or battle_invite_request_pending:
+		return
+	battle_invite_pending_kind = kind
+	battle_invite_request_pending = true
+	if battle_invite_status_label != null:
+		battle_invite_status_label.text = "正在接受切磋..." if kind == "accept" else "正在拒绝切磋..."
+	_refresh_battle_invite_panel()
+	var err := battle_invite_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		battle_invite_request_pending = false
+		battle_invite_pending_kind = ""
+		if battle_invite_status_label != null:
+			battle_invite_status_label.text = "切磋请求发送失败。"
+		_refresh_battle_invite_panel()
+
+
+func _on_battle_invite_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := battle_invite_pending_kind
+	battle_invite_pending_kind = ""
+	battle_invite_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if battle_invite_status_label != null:
+			battle_invite_status_label.text = "切磋服务器连接失败。"
+		_refresh_battle_invite_panel()
+		return
+	var parsed := ServerAuthClientModel.parse_battle_action_response(response_code, body)
+	if bool(parsed.get("ok", false)):
+		if kind == "accept":
+			var room := parsed.get("room", {}) as Dictionary if parsed.get("room", {}) is Dictionary else {}
+			if not room.is_empty():
+				_apply_server_battle_room_state(room, true)
+			_close_battle_invite_panel()
+		else:
+			_close_battle_invite_panel()
+		_set_world_log_message(str(parsed.get("message", "切磋状态已更新。")))
+	elif battle_invite_status_label != null:
+		battle_invite_status_label.text = str(parsed.get("message", "切磋操作失败。"))
+	_refresh_battle_invite_panel()
+
+
 func _party_panel_layout_is_usable() -> bool:
 	if party_panel == null or not party_panel.visible:
 		return false
@@ -30153,6 +30769,7 @@ func _open_mailbox_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_party_panel()
+	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -36668,6 +37285,27 @@ func _layout_hud() -> void:
 	if party_panel.visible and action_bar != null:
 		action_bar.visible = false
 
+	var player_action_width: float = minf(viewport_size.x - margin * 2.0, 360.0)
+	var player_action_height := 278.0
+	player_action_panel.position = Vector2(
+		(viewport_size.x - player_action_width) * 0.5,
+		minf(viewport_size.y - player_action_height - margin, maxf(margin + 78.0, viewport_size.y - player_action_height - 120.0))
+	)
+	player_action_panel.size = Vector2(player_action_width, player_action_height)
+	if battle_active:
+		player_action_panel.visible = false
+	if player_action_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	var battle_invite_width: float = minf(viewport_size.x - margin * 2.0, 390.0)
+	var battle_invite_height := 184.0
+	battle_invite_panel.position = Vector2((viewport_size.x - battle_invite_width) * 0.5, maxf(margin + 72.0, (viewport_size.y - battle_invite_height) * 0.32))
+	battle_invite_panel.size = Vector2(battle_invite_width, battle_invite_height)
+	if battle_active:
+		battle_invite_panel.visible = false
+	if battle_invite_panel.visible and action_bar != null:
+		action_bar.visible = false
+
 	mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	mailbox_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
@@ -36985,11 +37623,39 @@ func _draw_online_remote_players() -> void:
 		draw_circle(marker_center, 4.0, Color(1.0, 0.88, 0.38, 0.96))
 		var label := _online_player_label(value)
 		if label != "":
-			var font_size := 14
-			var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
-			var rect := Rect2(center + Vector2(-label_width * 0.5, -66.0), Vector2(label_width, 22.0))
-			draw_rect(rect, Color(0.04, 0.07, 0.06, 0.70), true)
-			draw_string(font, rect.position + Vector2(0.0, 16.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, Color(0.94, 0.98, 0.90, 0.96))
+				var font_size := 14
+				var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
+				var rect := Rect2(center + Vector2(-label_width * 0.5, -66.0), Vector2(label_width, 22.0))
+				draw_rect(rect, Color(0.04, 0.07, 0.06, 0.70), true)
+				draw_string(font, rect.position + Vector2(0.0, 16.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, Color(0.94, 0.98, 0.90, 0.96))
+
+
+func _online_remote_player_at_screen_point(screen_point: Vector2) -> Dictionary:
+	if not _is_server_account_session() or online_position_remote_players.is_empty() or map_data.is_empty() or _is_ui_point(screen_point):
+		return {}
+	var world_point := _screen_to_world(screen_point)
+	for index in range(online_position_remote_players.size() - 1, -1, -1):
+		var value = online_position_remote_players[index]
+		if not (value is Dictionary):
+			continue
+		var player_info := value as Dictionary
+		var username := str(player_info.get("username", "")).strip_edges()
+		if username == "" or username == str(current_account_session.get("username", "")).strip_edges():
+			continue
+		var position := player_info.get("position", {}) as Dictionary if player_info.get("position", {}) is Dictionary else {}
+		if str(position.get("mapId", "")) != current_map_id:
+			continue
+		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+		if not IsoMapModel.is_inside(map_data, cell):
+			continue
+		var center := IsoMapModel.grid_to_world(map_data, cell)
+		var label := _online_player_label(player_info)
+		var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
+		var label_rect := Rect2(center + Vector2(-label_width * 0.5, -70.0), Vector2(label_width, 30.0))
+		var body_rect := Rect2(center + Vector2(-28.0, -50.0), Vector2(56.0, 92.0))
+		if label_rect.has_point(world_point) or body_rect.has_point(world_point) or world_point.distance_to(center + Vector2(0.0, -14.0)) <= 52.0:
+			return player_info.duplicate(true)
+	return {}
 
 
 func _online_facing_offset(facing: String) -> Vector2:

@@ -628,6 +628,7 @@ function createAuthService(options = {}) {
     const pendingInvite = Object.values(data.partyInvites).find((invite) => (
       invite &&
       invite.status === "pending" &&
+      String(invite.kind || "invite") === "invite" &&
       invite.partyId === party.partyId &&
       invite.toAccountId === target.accountId
     ));
@@ -643,6 +644,7 @@ function createAuthService(options = {}) {
       partyId: party.partyId,
       fromAccountId: resolved.account.accountId,
       toAccountId: target.accountId,
+      kind: "invite",
       status: "pending",
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
@@ -665,6 +667,77 @@ function createAuthService(options = {}) {
     });
   }
 
+  function applyToParty(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
+    const target = data.accounts[targetUsername];
+    if (!target) {
+      return fail("party_target_missing", "玩家不存在。");
+    }
+    if (target.accountId === resolved.account.accountId) {
+      return fail("party_apply_self", "不能申请加入自己的队伍。");
+    }
+    if (partyForAccount(data, resolved.account.accountId)) {
+      return fail("party_already_joined", "你已经在队伍中。");
+    }
+    const party = partyForAccount(data, target.accountId);
+    if (!party) {
+      return fail("party_target_no_party", "对方还没有队伍。");
+    }
+    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
+      return fail("party_full", "队伍人数已满。");
+    }
+    const leader = accountById(data, party.leaderAccountId);
+    if (!leader) {
+      return fail("party_missing", "队伍已经解散。");
+    }
+    const pendingApplication = Object.values(data.partyInvites).find((invite) => (
+      invite &&
+      invite.status === "pending" &&
+      String(invite.kind || "invite") === "application" &&
+      invite.partyId === party.partyId &&
+      invite.fromAccountId === resolved.account.accountId &&
+      invite.toAccountId === leader.accountId
+    ));
+    if (pendingApplication) {
+      return ok({
+        invite: publicPartyInvite(pendingApplication, data),
+        party: publicParty(party, data),
+        message: "入队申请已发送。",
+      });
+    }
+    const invite = {
+      inviteId: `invite_${randomId()}`,
+      partyId: party.partyId,
+      fromAccountId: resolved.account.accountId,
+      toAccountId: leader.accountId,
+      kind: "application",
+      status: "pending",
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.partyInvites[invite.inviteId] = invite;
+    party.updatedAt = isoNow(now);
+    data.parties[party.partyId] = party;
+    save(data);
+    emitServiceEvent({
+      type: "party.invite",
+      targetAccountIds: [resolved.account.accountId, leader.accountId],
+      party: publicParty(party, data),
+      invite: publicPartyInvite(invite, data),
+    });
+    return ok({
+      invite: publicPartyInvite(invite, data),
+      party: publicParty(party, data),
+      message: "入队申请已发送。",
+    });
+  }
+
   function acceptPartyInvite(token, inviteId) {
     const data = load();
     const resolved = resolveSession(data, token, now);
@@ -675,9 +748,6 @@ function createAuthService(options = {}) {
     if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
       return fail("party_invite_missing", "邀请不存在。");
     }
-    if (partyForAccount(data, resolved.account.accountId)) {
-      return fail("party_already_joined", "你已经在队伍中。");
-    }
     const party = data.parties[invite.partyId];
     if (!party) {
       invite.status = "expired";
@@ -686,10 +756,18 @@ function createAuthService(options = {}) {
       save(data);
       return fail("party_missing", "队伍已经解散。");
     }
+    const inviteKind = String(invite.kind || "invite");
+    const joiningAccountId = inviteKind === "application" ? invite.fromAccountId : resolved.account.accountId;
+    if (inviteKind === "application" && party.leaderAccountId !== resolved.account.accountId) {
+      return fail("party_not_leader", "只有队长可以同意入队申请。");
+    }
+    if (partyForAccount(data, joiningAccountId)) {
+      return fail("party_already_joined", "玩家已经在队伍中。");
+    }
     if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
       return fail("party_full", "队伍人数已满。");
     }
-    party.memberAccountIds.push(resolved.account.accountId);
+    party.memberAccountIds.push(joiningAccountId);
     party.updatedAt = isoNow(now);
     invite.status = "accepted";
     invite.updatedAt = isoNow(now);
@@ -698,14 +776,14 @@ function createAuthService(options = {}) {
     save(data);
     emitServiceEvent({
       type: "party.update",
-      targetAccountIds: party.memberAccountIds.slice(),
+      targetAccountIds: Array.from(new Set(party.memberAccountIds.concat([invite.fromAccountId, invite.toAccountId]))),
       party: publicParty(party, data),
       invite: publicPartyInvite(invite, data),
     });
     return ok({
       party: publicParty(party, data),
       invite: publicPartyInvite(invite, data),
-      message: "已加入队伍。",
+      message: inviteKind === "application" ? "已同意入队申请。" : "已加入队伍。",
     });
   }
 
@@ -732,7 +810,7 @@ function createAuthService(options = {}) {
     return ok({
       invite: publicPartyInvite(invite, data),
       party: publicPartyForAccount(data, resolved.account.accountId),
-      message: "已拒绝邀请。",
+      message: String(invite.kind || "invite") === "application" ? "已拒绝入队申请。" : "已拒绝邀请。",
     });
   }
 
@@ -1312,6 +1390,7 @@ function createAuthService(options = {}) {
     latestEventSeq,
     getPartyState,
     inviteToParty,
+    applyToParty,
     acceptPartyInvite,
     declinePartyInvite,
     leaveParty,
@@ -1568,10 +1647,11 @@ function publicIncomingPartyInvites(data, accountId) {
 function publicPartyInvite(invite, data) {
   const from = accountById(data, invite.fromAccountId);
   const to = accountById(data, invite.toAccountId);
-  return {
-    inviteId: invite.inviteId,
-    partyId: invite.partyId,
-    fromUsername: from ? from.username : "",
+    return {
+      inviteId: invite.inviteId,
+      partyId: invite.partyId,
+      kind: String(invite.kind || "invite"),
+      fromUsername: from ? from.username : "",
     fromDisplayName: from ? from.displayName : "",
     toUsername: to ? to.username : "",
     toDisplayName: to ? to.displayName : "",

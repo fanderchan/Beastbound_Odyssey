@@ -235,6 +235,25 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(busyInvite.ok, false);
   assert.equal(busyInvite.code, "party_target_busy");
 
+  const application = service.applyToParty(outsider.session.token, {"username": "partyb"});
+  assert.equal(application.ok, true);
+  assert.equal(application.invite.kind, "application");
+  assert.equal(application.invite.fromUsername, "partyc");
+  assert.equal(application.invite.toUsername, "partya");
+
+  const applicationLeaderState = service.getPartyState(leader.session.token);
+  assert.equal(applicationLeaderState.ok, true);
+  assert.equal(applicationLeaderState.incomingInvites.length, 1);
+  assert.equal(applicationLeaderState.incomingInvites[0].kind, "application");
+
+  const acceptApplication = service.acceptPartyInvite(leader.session.token, applicationLeaderState.incomingInvites[0].inviteId);
+  assert.equal(acceptApplication.ok, true);
+  assert.equal(acceptApplication.party.memberCount, 3);
+  assert.deepEqual(acceptApplication.party.members.map((player) => player.username), ["partya", "partyb", "partyc"]);
+
+  const leaveOutsider = service.leaveParty(outsider.session.token);
+  assert.equal(leaveOutsider.ok, true);
+
   const leaveMember = service.leaveParty(member.session.token);
   assert.equal(leaveMember.ok, true);
   const leaderState = service.getPartyState(leader.session.token);
@@ -1090,11 +1109,35 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(accept.ok, true);
   assert.equal(accept.party.memberCount, 2);
 
+  const application = await fetchJson(`${base}/party/apply`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+    "body": JSON.stringify({"username": "httppartyb"}),
+  });
+  assert.equal(application.ok, true);
+  assert.equal(application.invite.kind, "application");
+  assert.equal(application.invite.toUsername, "httppartya");
+
   const leaderState = await fetchJson(`${base}/party/state`, {
     "headers": {"authorization": `Bearer ${leader.session.token}`},
   });
   assert.equal(leaderState.ok, true);
   assert.equal(leaderState.party.members[0].role, "leader");
+  assert.equal(leaderState.incomingInvites.length, 1);
+  assert.equal(leaderState.incomingInvites[0].kind, "application");
+
+  const acceptApplication = await fetchJson(`${base}/party/invites/${encodeURIComponent(leaderState.incomingInvites[0].inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(acceptApplication.ok, true);
+  assert.equal(acceptApplication.party.memberCount, 3);
+
+  const outsiderLeave = await fetchJson(`${base}/party/leave`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+  });
+  assert.equal(outsiderLeave.ok, true);
 
   const leave = await fetchJson(`${base}/party/leave`, {
     "method": "POST",

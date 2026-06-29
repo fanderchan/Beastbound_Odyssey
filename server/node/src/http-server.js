@@ -132,6 +132,9 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/party/invite") {
         return sendResult(res, service.inviteToParty(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "POST" && url.pathname === "/party/apply") {
+        return sendResult(res, service.applyToParty(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "POST" && url.pathname.startsWith("/party/invites/") && url.pathname.endsWith("/accept")) {
         const inviteId = decodeURIComponent(url.pathname.slice("/party/invites/".length, -"/accept".length));
         return sendResult(res, service.acceptPartyInvite(bearerToken(req), inviteId));

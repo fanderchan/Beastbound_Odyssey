@@ -301,6 +301,13 @@ Phase180 联网切磋宠物指令自测：
 - Godot 真实联网宠物指令：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check`
 - 回归：继续跑 `--auto-server-battle-pet-snapshot-live-check`、`--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-server-battle-leave-ui-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认人物和宠物 actor 指令不会把 profile 读取、宠物列表扫描或战斗 UI 刷新放进 Godot 热路径。
 
+Phase181 玩家互动入口自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-auth-server-client-check`
+- Godot 真实联网玩家互动：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-player-interaction-live-check`
+- 回归：继续跑 `--auto-party-live-check`、`--auto-online-position-live-check`、`--auto-battle-room-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认点人菜单、入队申请和切磋邀请弹窗不进入移动/HUD热路径。
+
 ## 验收口径
 
 可以接受：

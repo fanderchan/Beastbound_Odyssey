@@ -153,6 +153,18 @@ static func party_invite_request(base_url: String, session_token: String, userna
 	}
 
 
+static func party_apply_request(base_url: String, session_token: String, username: String) -> Dictionary:
+	return {
+		"url": "%s/party/apply" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"username": username}),
+	}
+
+
 static func party_invite_accept_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
 	return _party_invite_action_request(base_url, session_token, invite_id, "accept")
 
