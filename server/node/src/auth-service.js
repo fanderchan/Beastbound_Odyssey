@@ -20,6 +20,8 @@ const CHAT_CHANNEL_TEAM = "team";
 const CHAT_TEXT_MAX_LENGTH = 120;
 const CHAT_HISTORY_LIMIT = 50;
 const MAX_CHAT_MESSAGES = 500;
+const POSITION_MAP_ID_MAX_LENGTH = 64;
+const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -298,25 +300,29 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const activeSessions = Object.values(data.sessions)
-      .filter((session) => session && !session.revokedAt && Date.parse(session.expiresAt) > now())
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-    const seenAccountIds = new Set();
-    const players = [];
-    for (const session of activeSessions) {
-      if (seenAccountIds.has(session.accountId)) {
-        continue;
-      }
-      const account = accountById(data, session.accountId);
-      if (!account) {
-        continue;
-      }
-      seenAccountIds.add(session.accountId);
-      players.push(publicOnlinePlayer(account, data));
-    }
+    const players = activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data));
     players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
     return ok({
       players,
+      party: publicPartyForAccount(data, resolved.account.accountId),
+    });
+  }
+
+  function updatePlayerPosition(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const position = normalizePlayerPositionPayload(payload, resolved.account, now);
+    if (!position.mapId) {
+      return fail("position_map_missing", "位置缺少地图。");
+    }
+    data.playerPositions[resolved.account.accountId] = position;
+    save(data);
+    return ok({
+      position: publicPlayerPosition(position),
+      players: activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data)),
       party: publicPartyForAccount(data, resolved.account.accountId),
     });
   }
@@ -670,6 +676,7 @@ function createAuthService(options = {}) {
     listInbox,
     markMailRead,
     listOnlinePlayers,
+    updatePlayerPosition,
     getPartyState,
     inviteToParty,
     acceptPartyInvite,
@@ -727,6 +734,7 @@ function normalizeData(raw) {
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
     chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
+    playerPositions: objectOrEmpty(data.playerPositions),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -804,6 +812,7 @@ function publicPlayerSearchResult(account, data) {
 function publicOnlinePlayer(account, data) {
   const summary = profileSummaryForAccount(account, data);
   const party = partyForAccount(data, account.accountId);
+  const position = data.playerPositions[account.accountId] || null;
   return {
     accountId: account.accountId,
     username: account.username,
@@ -811,6 +820,19 @@ function publicOnlinePlayer(account, data) {
     playerId: summary && summary.playerId ? summary.playerId : "",
     partyId: party ? party.partyId : "",
     partyRole: party && party.leaderAccountId === account.accountId ? "leader" : (party ? "member" : ""),
+    position: position ? publicPlayerPosition(position) : null,
+  };
+}
+
+function publicPlayerPosition(position) {
+  return {
+    mapId: position.mapId,
+    cellX: Number(position.cellX || 0),
+    cellY: Number(position.cellY || 0),
+    facing: position.facing,
+    moving: Boolean(position.moving),
+    updatedAt: position.updatedAt,
+    schemaVersion: 1,
   };
 }
 
@@ -933,6 +955,27 @@ function accountById(data, accountId) {
   return Object.values(data.accounts).find((account) => account && account.accountId === accountId) || null;
 }
 
+function activeOnlinePlayers(data, now) {
+  const activeSessions = Object.values(data.sessions)
+    .filter((session) => session && !session.revokedAt && Date.parse(session.expiresAt) > now())
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const seenAccountIds = new Set();
+  const players = [];
+  for (const session of activeSessions) {
+    if (seenAccountIds.has(session.accountId)) {
+      continue;
+    }
+    const account = accountById(data, session.accountId);
+    if (!account) {
+      continue;
+    }
+    seenAccountIds.add(session.accountId);
+    players.push(account);
+  }
+  players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+  return players;
+}
+
 function profileSummaryForAccount(account, data) {
   const binding = data.profileBindings[account.accountId] || null;
   if (!binding) {
@@ -1052,6 +1095,26 @@ function normalizeChatChannel(value) {
 
 function normalizeChatText(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, CHAT_TEXT_MAX_LENGTH);
+}
+
+function normalizePlayerPositionPayload(payload, account, now) {
+  const mapId = String(payload.mapId || payload.map || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH);
+  let facing = String(payload.facing || "south").trim().toLowerCase();
+  if (!POSITION_FACING_VALUES.has(facing)) {
+    facing = "south";
+  }
+  return {
+    accountId: account.accountId,
+    username: account.username,
+    displayName: account.displayName,
+    mapId,
+    cellX: clampInt(payload.cellX ?? payload.x, -9999, 9999, 0),
+    cellY: clampInt(payload.cellY ?? payload.y, -9999, 9999, 0),
+    facing,
+    moving: Boolean(payload.moving),
+    updatedAt: isoNow(now),
+    schemaVersion: 1,
+  };
 }
 
 function clampInt(value, minValue, maxValue, fallbackValue) {

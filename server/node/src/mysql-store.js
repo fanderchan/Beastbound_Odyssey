@@ -85,6 +85,18 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_chat_channel_created (channel, created_at),
         INDEX idx_chat_party_created (party_id, created_at)
       );
+      CREATE TABLE IF NOT EXISTS player_positions (
+        account_id VARCHAR(80) PRIMARY KEY,
+        username VARCHAR(32) NOT NULL,
+        map_id VARCHAR(64) NOT NULL,
+        cell_x INT NOT NULL DEFAULT 0,
+        cell_y INT NOT NULL DEFAULT 0,
+        facing VARCHAR(24) NOT NULL,
+        moving TINYINT NOT NULL DEFAULT 0,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_player_positions_map_updated (map_id, updated_at)
+      );
     `);
     schemaReady = true;
   }
@@ -115,6 +127,7 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM parties");
       statements.push("DELETE FROM party_invites");
       statements.push("DELETE FROM chat_messages");
+      statements.push("DELETE FROM player_positions");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
@@ -137,6 +150,9 @@ function createMysqlAuthStore(options = {}) {
         for (const message of nextData.chatMessages) {
           statements.push(insertChatMessageStatement(message));
         }
+      }
+      for (const position of Object.values(objectOrEmpty(nextData.playerPositions))) {
+        statements.push(insertPlayerPositionStatement(position));
       }
       statements.push("COMMIT");
       runMysql(config, config.database, `${statements.join(";\n")};`);
@@ -214,6 +230,10 @@ function insertPartyInviteStatement(invite) {
 
 function insertChatMessageStatement(message) {
   return `INSERT INTO chat_messages (message_id, channel, party_id, sender_account_id, created_at, document_json) VALUES (${sqlString(message.messageId)}, ${sqlString(message.channel)}, ${sqlString(message.partyId)}, ${sqlString(message.senderAccountId)}, ${sqlString(message.createdAt)}, ${sqlJson(message)})`;
+}
+
+function insertPlayerPositionStatement(position) {
+  return `INSERT INTO player_positions (account_id, username, map_id, cell_x, cell_y, facing, moving, updated_at, document_json) VALUES (${sqlString(position.accountId)}, ${sqlString(position.username)}, ${sqlString(position.mapId)}, ${Number(position.cellX || 0)}, ${Number(position.cellY || 0)}, ${sqlString(position.facing)}, ${position.moving ? 1 : 0}, ${sqlString(position.updatedAt)}, ${sqlJson(position)})`;
 }
 
 function sqlJson(value) {

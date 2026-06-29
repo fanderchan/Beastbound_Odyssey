@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -39,6 +39,7 @@ Optional environment variables:
 - `GET /auth/session`
 - `GET /players/search?username={username}`
 - `GET /players/online`
+- `POST /players/position`
 - `GET /profiles/me`
 - `PUT /profiles/me`
 - `GET /mail/inbox`
@@ -98,14 +99,24 @@ This stage deliberately does not support item attachments for player mail. Exist
 
 Parties are server state, not local Godot state:
 
-- `GET /players/online` lists accounts with active, non-revoked sessions and includes each player's party role when applicable.
+- `GET /players/online` lists accounts with active, non-revoked sessions and includes each player's party role and latest position when applicable.
 - `POST /party/invite` creates a party for the inviter when needed, then sends a pending invite to another online-capable account.
 - `GET /party/state` returns the current party and pending incoming invites for the session account.
 - `POST /party/invites/{inviteId}/accept` joins the invited account to the party.
 - `POST /party/invites/{inviteId}/decline` declines one pending invite.
 - `POST /party/leave` removes the current account from its party; if the leader leaves, the next member becomes leader, and an empty party dissolves.
 
-This phase does not yet synchronize map positions, following, or battle entry as a party.
+This party phase does not yet synchronize following or battle entry as a party.
+
+## Online Position Boundary
+
+Online visibility is now server state, not a local-only player list:
+
+- `POST /players/position` stores the current account's `mapId`, grid cell, facing, moving flag, and update time.
+- The response also returns the active online roster, so a client can upload its own position and refresh visible same-server players with one low-frequency request.
+- `GET /players/online` includes the latest position snapshot for each active account when one exists.
+
+This is still a snapshot loop, not live movement authority. It does not yet provide WebSocket push, range filtering, collision between players, following, party leader movement, or battle-room entry authority.
 
 ## Chat Boundary
 
@@ -129,6 +140,7 @@ The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_ST
 - `parties`
 - `party_invites`
 - `chat_messages`
+- `player_positions`
 - `server_state`
 
 This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.

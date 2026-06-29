@@ -72,6 +72,18 @@ static func online_players_request(base_url: String, session_token: String) -> D
 	}
 
 
+static func player_position_update_request(base_url: String, session_token: String, position: Dictionary) -> Dictionary:
+	return {
+		"url": "%s/players/position" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(position),
+	}
+
+
 static func party_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/party/state" % normalized_base_url(base_url),
@@ -190,6 +202,7 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 	if username == "":
 		return {"ok": false, "message": "服务器会话缺少账号。", "code": "missing_username"}
 	var local_session := {
+		"accountId": str(account.get("accountId", "")),
 		"username": username,
 		"displayName": display_name,
 		"role": role,
@@ -231,6 +244,17 @@ static func parse_online_players_response(response_code: int, body: PackedByteAr
 	if not bool(parsed.get("ok", false)):
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
+	parsed["players"] = _dictionary_array(response.get("players", []))
+	parsed["party"] = response.get("party", null)
+	return parsed
+
+
+static func parse_player_position_update_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "位置同步失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
 	return parsed

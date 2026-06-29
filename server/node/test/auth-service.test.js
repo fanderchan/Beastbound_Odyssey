@@ -210,6 +210,33 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(emptyState.party, null);
 });
 
+test("players can publish map positions into the online roster", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const scout = service.register({"username": "posa", "password": "test1234", "displayName": "同步甲"});
+  const watcher = service.register({"username": "posb", "password": "test1234", "displayName": "同步乙"});
+  assert.equal(scout.ok, true);
+  assert.equal(watcher.ok, true);
+
+  const updated = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 8,
+    "facing": "east",
+    "moving": true,
+  });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.position.mapId, "firebud_training_yard");
+  assert.equal(updated.position.cellX, 12);
+  assert.equal(updated.position.facing, "east");
+
+  const online = service.listOnlinePlayers(watcher.session.token);
+  assert.equal(online.ok, true);
+  const scoutRow = online.players.find((player) => player.username === "posa");
+  assert.notEqual(scoutRow, undefined);
+  assert.equal(scoutRow.position.mapId, "firebud_training_yard");
+  assert.equal(scoutRow.position.cellY, 8);
+});
+
 test("players can chat nearby and inside server parties", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "chata", "password": "test1234", "displayName": "聊甲"});
@@ -388,6 +415,27 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   });
   assert.equal(online.ok, true);
   assert.equal(online.players.some((player) => player.username === "httppartyb"), true);
+
+  const position = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 9,
+      "cellY": 11,
+      "facing": "northwest",
+      "moving": false,
+    }),
+  });
+  assert.equal(position.ok, true);
+  assert.equal(position.position.cellX, 9);
+  const onlineWithPosition = await fetchJson(`${base}/players/online`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(onlineWithPosition.ok, true);
+  const memberOnline = onlineWithPosition.players.find((player) => player.username === "httppartyb");
+  assert.equal(memberOnline.position.mapId, "firebud_training_yard");
+  assert.equal(memberOnline.position.facing, "northwest");
 
   const invite = await fetchJson(`${base}/party/invite`, {
     "method": "POST",

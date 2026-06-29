@@ -93,6 +93,8 @@ const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
+const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
+const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
@@ -468,6 +470,11 @@ var party_current_state: Dictionary = {}
 var party_online_players: Array[Dictionary] = []
 var party_request_pending: bool = false
 var party_pending_kind: String = ""
+var online_position_http_request: HTTPRequest
+var online_position_timer: Timer
+var online_position_request_pending: bool = false
+var online_position_remote_players: Array[Dictionary] = []
+var online_position_draw_signature_cache: String = ""
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -621,6 +628,7 @@ var auto_auth_server_live_check: bool = false
 var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
 var auto_chat_live_check: bool = false
+var auto_online_position_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -912,6 +920,7 @@ func _ready() -> void:
 	_build_path_line_overlay()
 	_build_camera()
 	_build_hud()
+	_build_online_position_sync()
 	if account_authenticated:
 		_save_profile_after_exp_pill_starter_update()
 		_show_exp_pill_starter_notice_if_needed()
@@ -931,6 +940,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_party_live_check")
 	elif auto_chat_live_check:
 		call_deferred("_run_auto_chat_live_check")
+	elif auto_online_position_live_check:
+		call_deferred("_run_auto_online_position_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1651,6 +1662,8 @@ func _apply_preview_window_args() -> void:
 			auto_party_live_check = true
 		elif arg == "--auto-chat-live-check":
 			auto_chat_live_check = true
+		elif arg == "--auto-online-position-live-check":
+			auto_online_position_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15077,6 +15090,45 @@ func _run_auto_auth_server_client_check() -> void:
 		and (parsed_online.get("players", []) as Array).size() == 1
 		and str(((parsed_online.get("players", []) as Array)[0] as Dictionary).get("partyRole", "")) == "leader"
 	)
+	var position_spec := ServerAuthClientModel.player_position_update_request("http://127.0.0.1:8787/", "token_test", {
+		"mapId": "firebud_training_yard",
+		"cellX": 8,
+		"cellY": 12,
+		"facing": "east",
+		"moving": true,
+	})
+	var position_request_ok := (
+		str(position_spec.get("url", "")) == "http://127.0.0.1:8787/players/position"
+		and int(position_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(position_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(position_spec.get("body", "")).find("\"mapId\":\"firebud_training_yard\"") >= 0
+		and str(position_spec.get("body", "")).find("\"cellX\":8") >= 0
+	)
+	var parsed_position := ServerAuthClientModel.parse_player_position_update_response(200, JSON.stringify({
+		"ok": true,
+		"position": {
+			"mapId": "firebud_training_yard",
+			"cellX": 8,
+			"cellY": 12,
+			"facing": "east",
+			"moving": true,
+		},
+		"players": [{
+			"username": "remoteuser",
+			"displayName": "远程猎人",
+			"position": {
+				"mapId": "firebud_training_yard",
+				"cellX": 9,
+				"cellY": 12,
+			},
+		}],
+		"party": null,
+	}).to_utf8_buffer())
+	var position_parse_ok := (
+		bool(parsed_position.get("ok", false))
+		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
+		and (parsed_position.get("players", []) as Array).size() == 1
+	)
 	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var party_accept_spec := ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787/", "token_test", "invite_test")
@@ -15183,9 +15235,9 @@ func _run_auto_auth_server_client_check() -> void:
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and party_request_ok and party_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and party_request_ok and party_parse_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15199,6 +15251,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_inbox_request_ok and mail_inbox_parse_ok),
 		str(mail_read_parse_ok),
 		str(online_request_ok and online_parse_ok),
+		str(position_request_ok and position_parse_ok),
 		str(party_request_ok and party_parse_ok),
 		str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
@@ -15563,6 +15616,95 @@ func _run_auto_chat_live_check() -> void:
 		member_username,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_online_position_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var leader_username := "opa%s" % suffix
+	var member_username := "opb%s" % suffix
+	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
+	member_username = member_username.substr(0, mini(20, member_username.length()))
+	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		leader_username,
+		"test1234",
+		"同步甲"
+	))
+	var member_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		member_username,
+		"test1234",
+		"同步乙"
+	))
+	var leader_parsed := ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
+	var member_parsed := ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_session := leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
+	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
+	var leader_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(1, -1)
+	var member_cell := leader_cell + Vector2i(1, 0)
+	var member_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": member_cell.x,
+			"cellY": member_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var member_position_parsed := ServerAuthClientModel.parse_player_position_update_response(
+		int(member_position_response.get("responseCode", 0)),
+		member_position_response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	var member_position_ok := bool(member_position_parsed.get("ok", false)) and int((member_position_parsed.get("position", {}) as Dictionary).get("cellX", -1)) == member_cell.x
+	current_account_session = leader_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	player.global_position = IsoMapModel.grid_to_world(map_data, leader_cell)
+	player.face_direction(Vector2.RIGHT)
+	last_checked_player_cell = leader_cell
+	online_position_remote_players.clear()
+	online_position_draw_signature_cache = ""
+	_request_online_position_snapshot()
+	var frames := 0
+	while frames < 720 and online_position_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var remote_ok := _online_remote_player_at(member_username, current_map_id, member_cell)
+	var self_hidden_ok := not _online_remote_player_at(leader_username, current_map_id, leader_cell)
+	var draw_signature_ok := online_position_draw_signature_cache.find(member_username) >= 0 or online_position_draw_signature_cache.find("acc_") >= 0
+	var status := "ok" if register_ok and member_position_ok and remote_ok and self_hidden_ok and draw_signature_ok else "failed"
+	print("online position live check ready: status=%s register=%s member_position=%s remote=%s self_hidden=%s draw_signature=%s leader=%s member=%s cell=%s" % [
+		status,
+		str(register_ok),
+		str(member_position_ok),
+		str(remote_ok),
+		str(self_hidden_ok),
+		str(draw_signature_ok),
+		leader_username,
+		member_username,
+		str(member_cell),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _online_remote_player_at(username: String, map_id: String, cell: Vector2i) -> bool:
+	for value in online_position_remote_players:
+		if not (value is Dictionary):
+			continue
+		var online_player := value as Dictionary
+		if str(online_player.get("username", "")) != username:
+			continue
+		var position := online_player.get("position", {}) as Dictionary if online_player.get("position", {}) is Dictionary else {}
+		if str(position.get("mapId", "")) != map_id:
+			continue
+		if int(position.get("cellX", 0)) == cell.x and int(position.get("cellY", 0)) == cell.y:
+			return true
+	return false
 
 
 func _chat_message_list_contains(messages: Array, text: String) -> bool:
@@ -19132,7 +19274,7 @@ func _queue_world_redraw_if_needed() -> void:
 func _world_draw_signature() -> String:
 	var ground_drops = player_profile.get("groundPetDrops", [])
 	var ground_drop_count := (ground_drops as Array).size() if ground_drops is Array else 0
-	return "%s|%s|%s|%s|%d|%s|%d|%s" % [
+	return "%s|%s|%s|%s|%d|%s|%d|%s|%s" % [
 		current_map_id,
 		str(has_target_marker),
 		str(target_marker),
@@ -19141,6 +19283,7 @@ func _world_draw_signature() -> String:
 		str(has_pending_interaction),
 		ground_drop_count,
 		_quest_marker_signature(),
+		online_position_draw_signature_cache,
 	]
 
 
@@ -19354,6 +19497,7 @@ func _draw() -> void:
 		_perf_add("draw_battle", draw_start)
 		return
 	_draw_isometric_map()
+	_draw_online_remote_players()
 	if has_target_marker:
 		_draw_target_marker(target_marker)
 	_perf_add("draw_world", draw_start)
@@ -21321,6 +21465,20 @@ func _build_hud() -> void:
 	_register_hud_panels()
 
 
+func _build_online_position_sync() -> void:
+	online_position_http_request = HTTPRequest.new()
+	online_position_http_request.timeout = 8.0
+	online_position_http_request.request_completed.connect(_on_online_position_http_request_completed)
+	add_child(online_position_http_request)
+	online_position_timer = Timer.new()
+	online_position_timer.wait_time = ONLINE_POSITION_SYNC_INTERVAL_SECONDS
+	online_position_timer.one_shot = false
+	online_position_timer.autostart = false
+	online_position_timer.timeout.connect(_on_online_position_timer_timeout)
+	add_child(online_position_timer)
+	_start_online_position_sync_if_needed()
+
+
 func _build_auth_panel() -> void:
 	auth_panel = _panel_container("AuthPanel")
 	auth_panel.visible = false
@@ -21655,6 +21813,116 @@ func _server_profile_token() -> String:
 	return str(current_account_session.get("serverSessionToken", "")).strip_edges()
 
 
+func _start_online_position_sync_if_needed() -> void:
+	if online_position_timer == null:
+		return
+	if _is_server_account_session():
+		if online_position_timer.is_stopped():
+			online_position_timer.start()
+		_request_online_position_snapshot()
+	else:
+		_stop_online_position_sync()
+
+
+func _stop_online_position_sync() -> void:
+	if online_position_timer != null:
+		online_position_timer.stop()
+	if online_position_http_request != null and online_position_request_pending:
+		online_position_http_request.cancel_request()
+	online_position_request_pending = false
+	online_position_remote_players.clear()
+	online_position_draw_signature_cache = ""
+	queue_redraw()
+
+
+func _on_online_position_timer_timeout() -> void:
+	_request_online_position_snapshot()
+
+
+func _request_online_position_snapshot() -> void:
+	if online_position_http_request == null or online_position_request_pending:
+		return
+	if not _is_server_account_session() or player == null or map_data.is_empty():
+		return
+	var spec := ServerAuthClientModel.player_position_update_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		_current_online_position_payload()
+	)
+	online_position_request_pending = true
+	var err := online_position_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_POST)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		online_position_request_pending = false
+
+
+func _current_online_position_payload() -> Dictionary:
+	var cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
+	return {
+		"mapId": current_map_id,
+		"cellX": cell.x,
+		"cellY": cell.y,
+		"facing": player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south",
+		"moving": player.is_auto_moving() if player != null and player.has_method("is_auto_moving") else false,
+	}
+
+
+func _on_online_position_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	online_position_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		return
+	var parsed := ServerAuthClientModel.parse_player_position_update_response(response_code, body)
+	if not bool(parsed.get("ok", false)):
+		return
+	_apply_online_position_players(parsed.get("players", []))
+
+
+func _apply_online_position_players(players) -> void:
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var current_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	var next_remote_players: Array[Dictionary] = []
+	if players is Array:
+		for value in players:
+			if not (value is Dictionary):
+				continue
+			var online_player := (value as Dictionary).duplicate(true)
+			var username := str(online_player.get("username", "")).strip_edges()
+			var account_id := str(online_player.get("accountId", "")).strip_edges()
+			if (current_username != "" and username == current_username) or (current_account_id != "" and account_id == current_account_id):
+				continue
+			var position = online_player.get("position", null)
+			if not (position is Dictionary):
+				continue
+			next_remote_players.append(online_player)
+			if next_remote_players.size() >= ONLINE_POSITION_MAX_REMOTE_PLAYERS:
+				break
+	online_position_remote_players = next_remote_players
+	var next_signature := _online_position_draw_signature(next_remote_players)
+	if next_signature != online_position_draw_signature_cache:
+		online_position_draw_signature_cache = next_signature
+		queue_redraw()
+
+
+func _online_position_draw_signature(players: Array[Dictionary]) -> String:
+	var parts: Array[String] = []
+	for value in players:
+		var position := value.get("position", {}) as Dictionary if value.get("position", {}) is Dictionary else {}
+		parts.append("%s:%s:%d,%d:%s:%s" % [
+			str(value.get("accountId", value.get("username", ""))),
+			str(position.get("mapId", "")),
+			int(position.get("cellX", 0)),
+			int(position.get("cellY", 0)),
+			str(position.get("facing", "")),
+			str(position.get("moving", false)),
+		])
+	parts.sort()
+	return "|".join(parts)
+
+
 func _request_server_profile_pull() -> void:
 	if profile_sync_http_request == null or not _is_server_account_session():
 		return
@@ -21822,7 +22090,10 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	_update_hud_text(true)
 	_layout_hud()
 	if _is_server_account_session():
+		_start_online_position_sync_if_needed()
 		_request_server_profile_pull()
+	else:
+		_stop_online_position_sync()
 
 
 func _apply_auth_profile_metadata(display_name: String) -> void:
@@ -21916,6 +22187,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_dirty = false
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
+	_stop_online_position_sync()
 	PlayerProgressModel.reset_active_save_path()
 	player_profile = PlayerProgressModel.default_profile()
 	if auth_password_input != null:
@@ -33225,6 +33497,64 @@ func _draw_isometric_map() -> void:
 	_draw_decor_cells()
 	_draw_interaction_points()
 	_draw_ground_pet_drops()
+
+
+func _draw_online_remote_players() -> void:
+	if online_position_remote_players.is_empty() or map_data.is_empty():
+		return
+	var font := _canvas_text_font()
+	for value in online_position_remote_players:
+		var position := value.get("position", {}) as Dictionary if value.get("position", {}) is Dictionary else {}
+		if str(position.get("mapId", "")) != current_map_id:
+			continue
+		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+		if not IsoMapModel.is_inside(map_data, cell):
+			continue
+		var center := IsoMapModel.grid_to_world(map_data, cell)
+		var moving := bool(position.get("moving", false))
+		var body_color := Color(0.20, 0.66, 0.72, 0.92) if not moving else Color(0.27, 0.76, 0.82, 0.96)
+		draw_circle(center + Vector2(0, 23), 19.0, Color(0.02, 0.04, 0.04, 0.32))
+		draw_rect(Rect2(center + Vector2(-15, -22), Vector2(30, 38)), body_color, true)
+		draw_circle(center + Vector2(0, -35), 9.0, Color(0.98, 0.75, 0.46, 0.96))
+		var facing_offset := _online_facing_offset(str(position.get("facing", "south")))
+		var marker_center := center + facing_offset * 18.0 + Vector2(0, -6)
+		draw_circle(marker_center, 4.0, Color(1.0, 0.88, 0.38, 0.96))
+		var label := _online_player_label(value)
+		if label != "":
+			var font_size := 14
+			var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
+			var rect := Rect2(center + Vector2(-label_width * 0.5, -66.0), Vector2(label_width, 22.0))
+			draw_rect(rect, Color(0.04, 0.07, 0.06, 0.70), true)
+			draw_string(font, rect.position + Vector2(0.0, 16.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, Color(0.94, 0.98, 0.90, 0.96))
+
+
+func _online_facing_offset(facing: String) -> Vector2:
+	match facing:
+		"east":
+			return Vector2.RIGHT
+		"southeast":
+			return Vector2(1, 1).normalized()
+		"south":
+			return Vector2.DOWN
+		"southwest":
+			return Vector2(-1, 1).normalized()
+		"west":
+			return Vector2.LEFT
+		"northwest":
+			return Vector2(-1, -1).normalized()
+		"north":
+			return Vector2.UP
+		"northeast":
+			return Vector2(1, -1).normalized()
+	return Vector2.DOWN
+
+
+func _online_player_label(player_info: Dictionary) -> String:
+	var display_name := str(player_info.get("displayName", "")).strip_edges()
+	var username := str(player_info.get("username", "")).strip_edges()
+	if display_name == "":
+		display_name = username
+	return display_name
 
 
 func _draw_battle_scene() -> void:
