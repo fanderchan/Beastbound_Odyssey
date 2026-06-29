@@ -4,7 +4,7 @@
 
 ## 目标
 
-- 将服务器 `room.battle.actors` 映射为 Godot 共享 10v10 战斗模板。
+- 将服务器 `room.battle.actors` 映射为 Godot 共享 N vs N 战斗模板。
 - 当前账号始终映射到我方 `ally.back.3`，对手映射到敌方 `enemy.back.3`。
 - 登录服务器账号后后台拉取 `/battle/state`，如果已有 ready 房间，直接进入战斗画面。
 - WebSocket 收到 `battle.room_ready` / `battle.command_submitted` / `battle.turn_resolved` 时同步同一个战斗画面。
@@ -32,7 +32,7 @@ client/godot/scripts/battle/server_battle_room_model.gd
 - `serverBattle`
 - `serverRoom`
 - `lastServerEventList`
-- `formationTemplate = 10v10`
+- `formationTemplate = 10v10`，作为 N vs N 的满编容量模板
 
 如果当前账号本回合已经提交命令，本地 phase 会变为 `server_waiting`，按钮隐藏并显示“指令已提交，等待对方。”；服务器进入下一回合后恢复为 `command`。
 
@@ -45,8 +45,7 @@ client/godot/scripts/battle/server_battle_room_model.gd
 
 ## 当前未做
 
-- 播放服务器 `battle_event_list` 的完整动画时间线。
-- 完整 10v10 队伍/宠物 actor 锁定。
+- 完整队伍/宠物 actor 锁定。
 - 宠物技能、精灵、道具、换宠、逃跑、自动战斗。
 - 房间离开、取消和超时。
 - 战斗结果、奖励、惩罚、击飞/记录点回写。
@@ -65,5 +64,5 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ## 下一步
 
 1. Phase174 已完成：普通点击寻路接入服务器 step ACK。
-2. Phase175：把服务器 `battle_event_list` 接入共享 10v10 战斗播放模板。
-3. Phase176：切磋房间离开、取消、超时和战斗结果回写。
+2. Phase175 已完成：联网点击移动拒绝纠偏。
+3. Phase176 已完成：把服务器 `battle_event_list` 接入共享 N vs N 战斗播放模板。

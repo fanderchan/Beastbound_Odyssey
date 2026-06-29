@@ -83,6 +83,8 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 如果改了战斗公式、战斗播放、自动战斗或数值表，追加：
 
 ```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-turn-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-auto-10v10-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-parity-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-driver-ab-check

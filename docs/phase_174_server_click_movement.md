@@ -37,6 +37,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn -- --perf-pr
 ## 下一步
 
 1. Phase175：已完成联网点击移动拒绝纠偏和有限重试。
-2. Phase176：把服务器 `battle_event_list` 接入共享 10v10 战斗播放模板。
+2. Phase176：把服务器 `battle_event_list` 接入共享 N vs N 战斗播放模板。
 3. Phase177：切磋房间离开、取消、超时和战斗结果回写。
 4. Phase178：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。

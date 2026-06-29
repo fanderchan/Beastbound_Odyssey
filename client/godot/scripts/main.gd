@@ -488,6 +488,7 @@ var server_event_seen: Array[Dictionary] = []
 var server_event_last_seq: int = 0
 var server_battle_state: Dictionary = {}
 var server_battle_command_request_active: bool = false
+var server_battle_last_playback_turn_key: String = ""
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -16910,11 +16911,24 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		frames += 1
 		await get_tree().process_frame
 	var turn_event_ok := _server_event_type_seen("battle.turn_resolved") and _battle_turn_resolved(room_id, 1)
+	frames = 0
+	while frames < 720 and _server_battle_event_playback_active():
+		frames += 1
+		await get_tree().process_frame
+	var playback_ok := (
+		battle_active
+		and BattleModel.uses_10v10_formation(battle_state)
+		and int(battle_state.get("round", 0)) == 2
+		and battle_last_round_applied_events >= turn_events.size()
+		and battle_last_round_event_types.has("attack")
+		and battle_last_round_event_types.has("defend")
+		and battle_last_event_damage >= 0
+	)
 	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	var room_round_ok := int(battle.get("round", 0)) == 2
-	var status := "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and room_ready_ok and command_submitted_ok and command_turn_ok and turn_event_ok and room_round_ok else "failed"
-	print("server battle turn live check ready: status=%s register=%s positions=%s stream=%s invite=%s room=%s submitted=%s turn=%s turn_event=%s round=%s room=%s challenger=%s opponent=%s" % [
+	var status := "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and room_ready_ok and command_submitted_ok and command_turn_ok and turn_event_ok and playback_ok and room_round_ok else "failed"
+	print("server battle turn live check ready: status=%s register=%s positions=%s stream=%s invite=%s room=%s submitted=%s turn=%s turn_event=%s playback=%s round=%s room=%s challenger=%s opponent=%s events=%s" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -16924,10 +16938,12 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		str(command_submitted_ok),
 		str(command_turn_ok),
 		str(turn_event_ok),
+		str(playback_ok),
 		str(room_round_ok),
 		room_id,
 		challenger_username,
 		opponent_username,
+		str(battle_last_round_event_types),
 	])
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
@@ -17045,9 +17061,20 @@ func _run_auto_server_battle_reconnect_live_check() -> void:
 	))
 	var challenger_command_parsed := ServerAuthClientModel.parse_battle_command_response(int(challenger_command_response.get("responseCode", 0)), challenger_command_response.get("body", PackedByteArray()) as PackedByteArray)
 	await _submit_server_battle_player_command("defend")
+	var frames := 0
+	while frames < 720 and _server_battle_event_playback_active():
+		frames += 1
+		await get_tree().process_frame
 	await get_tree().process_frame
 	var last_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
 	var updated_ally_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var playback_ok := (
+		battle_active
+		and BattleModel.uses_10v10_formation(battle_state)
+		and battle_last_round_applied_events >= 2
+		and battle_last_round_event_types.has("attack")
+		and battle_last_round_event_types.has("defend")
+	)
 	var turn_ok := (
 		bool(challenger_command_parsed.get("ok", false))
 		and not server_battle_command_request_active
@@ -17062,8 +17089,8 @@ func _run_auto_server_battle_reconnect_live_check() -> void:
 		and battle_command_panel != null
 		and battle_command_panel.visible
 	)
-	var status := "ok" if register_ok and positions_ok and room_ready_ok and state_ok and visible_ok and turn_ok and hp_sync_ok else "failed"
-	print("server battle reconnect live check ready: status=%s register=%s positions=%s room=%s state=%s visible=%s turn=%s hp_sync=%s room_id=%s challenger=%s opponent=%s" % [
+	var status := "ok" if register_ok and positions_ok and room_ready_ok and state_ok and visible_ok and turn_ok and playback_ok and hp_sync_ok else "failed"
+	print("server battle reconnect live check ready: status=%s register=%s positions=%s room=%s state=%s visible=%s turn=%s playback=%s hp_sync=%s room_id=%s challenger=%s opponent=%s events=%s" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -17071,10 +17098,12 @@ func _run_auto_server_battle_reconnect_live_check() -> void:
 		str(state_ok),
 		str(visible_ok),
 		str(turn_ok),
+		str(playback_ok),
 		str(hp_sync_ok),
 		room_id,
 		challenger_username,
 		opponent_username,
+		str(battle_last_round_event_types),
 	])
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
@@ -23402,7 +23431,15 @@ func _apply_battle_event(event: Dictionary) -> void:
 				)
 			server_battle_state["incomingInvites"] = invites
 	if room_updated:
-		_sync_server_battle_room_scene()
+		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
+		var turn_key := _server_battle_turn_key(turn)
+		var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
+		if same_turn_playing:
+			_sync_server_battle_snapshot_fields_during_playback(server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {})
+		else:
+			_sync_server_battle_room_scene()
+			if not turn.is_empty():
+				_play_server_battle_event_list(turn)
 
 
 func _apply_server_battle_room_state(room: Dictionary, force_start: bool = false) -> bool:
@@ -23426,6 +23463,9 @@ func _sync_server_battle_room_scene(force_start: bool = false) -> bool:
 		and str(battle_state.get("serverRoomId", "")) == room_id
 	)
 	if same_room and not force_start:
+		if _server_battle_event_playback_active():
+			_sync_server_battle_snapshot_fields_during_playback(room)
+			return true
 		var previous_phase := str(battle_state.get("phase", ""))
 		battle_state = next_state.duplicate(true)
 		_set_battle_command_owner("player")
@@ -23489,6 +23529,92 @@ func _battle_turn_resolved(room_id: String = "", round_number: int = 0) -> bool:
 		return false
 	var events: Array = event_list.get("events", []) if event_list.get("events", []) is Array else []
 	return events.size() > 0
+
+
+func _server_battle_turn_key(event_list: Dictionary) -> String:
+	if str(event_list.get("kind", "")) != "battle_event_list":
+		return ""
+	var room_id := str(event_list.get("roomId", battle_state.get("serverRoomId", ""))).strip_edges()
+	if room_id == "":
+		return ""
+	return "%s:r%d:t%d" % [
+		room_id,
+		maxi(1, int(event_list.get("round", 1))),
+		maxi(0, int(event_list.get("turnSeq", 0))),
+	]
+
+
+func _server_battle_event_playback_active() -> bool:
+	return (
+		_battle_is_server_authority()
+		and str(battle_state.get("phase", "")) == "round_events"
+		and (
+			battle_action_timer > 0.0
+			or battle_event_advance_pending
+			or not battle_current_event.is_empty()
+			or not battle_event_queue.is_empty()
+		)
+	)
+
+
+func _sync_server_battle_snapshot_fields_during_playback(room: Dictionary) -> void:
+	if room.is_empty() or battle_state.is_empty():
+		return
+	battle_state["serverRoom"] = room.duplicate(true)
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	if not battle.is_empty():
+		battle_state["serverBattle"] = battle.duplicate(true)
+		var last_event_list = battle.get("lastEventList", null)
+		if last_event_list is Dictionary:
+			battle_state["lastServerEventList"] = (last_event_list as Dictionary).duplicate(true)
+
+
+func _play_server_battle_event_list(event_list: Dictionary) -> bool:
+	if not _battle_is_server_authority():
+		return false
+	if str(event_list.get("kind", "")) != "battle_event_list":
+		return false
+	if _server_battle_event_playback_active():
+		return false
+	var turn_key := _server_battle_turn_key(event_list)
+	if turn_key != "" and turn_key == server_battle_last_playback_turn_key:
+		return false
+	var local_events := ServerBattleRoomModel.battle_events_from_server_event_list(battle_state, event_list)
+	if local_events.is_empty():
+		return false
+	if turn_key != "":
+		server_battle_last_playback_turn_key = turn_key
+	battle_state = ServerBattleRoomModel.state_at_server_event_list_start(battle_state, event_list)
+	battle_event_queue = local_events
+	battle_current_event.clear()
+	battle_current_event_duration = 0.0
+	battle_current_event_actor_snapshots.clear()
+	battle_action_timer = 0.0
+	battle_event_advance_pending = false
+	battle_round_end_status_processed = true
+	battle_end_pending = false
+	battle_enemy_response_pending = false
+	battle_pending_player_command.clear()
+	battle_pending_pet_command.clear()
+	battle_pending_spirit_id = ""
+	battle_pending_item_id = ""
+	battle_pending_capture_tool_id = ""
+	battle_pending_pet_skill_id = ""
+	battle_selected_target_id = ""
+	battle_selected_ally_target_id = ""
+	battle_hover_target_id = ""
+	battle_hover_ally_target_id = ""
+	battle_last_round_applied_events = 0
+	battle_last_round_event_types.clear()
+	battle_last_round_actor_order.clear()
+	battle_last_round_speeds.clear()
+	battle_last_round_enemy_target_ids.clear()
+	battle_state["phase"] = "round_events"
+	_set_battle_command_owner("player")
+	_sync_battle_buttons()
+	_layout_hud()
+	_play_next_battle_event()
+	return true
 
 
 func _start_online_position_sync_if_needed() -> void:
@@ -32651,8 +32777,17 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 	var parsed := ServerAuthClientModel.parse_battle_command_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if bool(parsed.get("ok", false)):
 		var room = parsed.get("room", null)
+		var turn := parsed.get("turn", {}) as Dictionary if parsed.get("turn", {}) is Dictionary else {}
 		if room is Dictionary:
-			_apply_server_battle_room_state(room as Dictionary, false)
+			var turn_key := _server_battle_turn_key(turn)
+			var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
+			server_battle_state["room"] = (room as Dictionary).duplicate(true)
+			if same_turn_playing:
+				_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
+			else:
+				_sync_server_battle_room_scene(false)
+			if not turn.is_empty():
+				_play_server_battle_event_list(turn)
 		else:
 			_set_battle_message("指令已提交。")
 		return
@@ -33216,6 +33351,10 @@ func _battle_state_should_end(state: Dictionary) -> bool:
 
 
 func _finish_battle_round_and_open_commands() -> void:
+	if bool(battle_state.get("serverAuthority", false)):
+		var last_server_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
+		if str(last_server_event_list.get("kind", "")) == "battle_event_list":
+			battle_state = ServerBattleRoomModel.state_with_server_event_actor_snapshot(battle_state, last_server_event_list)
 	battle_state["phase"] = "command"
 	battle_state = BattleModel.decrement_field_effects(battle_state)
 	battle_state["round"] = int(battle_state.get("round", 1)) + 1

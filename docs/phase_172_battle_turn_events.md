@@ -1,6 +1,6 @@
 # Phase172：房间回合命令和服务器战斗事件列表
 
-本阶段把联网切磋从“房间 ready”推进到“双方提交回合命令后由服务器产出事件列表”。它只做最小回合切面：`attack` / `defend`、两人命令凑齐、轻量 HP、`battle_event_list`；不接完整 10v10 队伍、道具、宠物技能、战斗结果回写或断线恢复到可见战斗场景。
+本阶段把联网切磋从“房间 ready”推进到“双方提交回合命令后由服务器产出事件列表”。它只做最小回合切面：`attack` / `defend`、两人命令凑齐、轻量 HP、`battle_event_list`；不接完整 N vs N 队伍、道具、宠物技能、战斗结果回写或断线恢复到可见战斗场景。
 
 ## 目标
 
@@ -111,7 +111,7 @@ POST /battle/rooms/{roomId}/commands
 
 ## 当前未做
 
-- 完整 10v10 队伍/宠物 actor 锁定。
+- 完整队伍/宠物 actor 锁定。
 - 宠物技能、精灵、道具、换宠、逃跑、自动战斗。
 - 本地战斗播放接管服务器事件列表。
 - 房间离开、取消、超时和断线恢复到可见战斗场景。
@@ -141,4 +141,4 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 1. Phase173 已完成：战斗房间断线重连恢复到玩家可见战斗场景。
 2. Phase174：逐步把普通点击寻路接入服务器 step ACK。
-3. Phase175：把服务器 `battle_event_list` 接入共享 10v10 战斗播放模板。
+3. Phase176 已完成：把服务器 `battle_event_list` 接入共享 N vs N 战斗播放模板。

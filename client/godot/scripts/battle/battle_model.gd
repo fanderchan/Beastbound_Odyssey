@@ -1823,6 +1823,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_switch_pet_event(state, event)
 	if event_type == "defend":
 		return _apply_defend_event(state, event)
+	if event_type == "target_missing":
+		return _apply_target_missing_event(state, event)
 	return state
 
 
@@ -3255,6 +3257,31 @@ static func _apply_defend_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetId"] = actor_id
 	state["lastParticipants"] = [actor_id]
 	state["message"] = "%s 进入防御姿态。" % str(actor.get("name", "我方"))
+	return state
+
+
+static func _apply_target_missing_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var actor_id := str(event.get("attackerId", ""))
+	var actor := actor_by_id(state, actor_id)
+	if actor.is_empty() or int(actor.get("hp", 0)) <= 0:
+		return state
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	actor = actors[actor_index_value] as Dictionary
+	actor["actionState"] = "idle"
+	actors[actor_index_value] = actor
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = actor_id
+	state["lastTargetId"] = ""
+	state["lastTargetIds"] = []
+	state["lastParticipants"] = [actor_id]
+	state["message"] = str(event.get("serverMessage", ""))
+	if str(state.get("message", "")) == "":
+		state["message"] = "%s 没有找到目标。" % str(actor.get("name", "我方"))
 	return state
 
 

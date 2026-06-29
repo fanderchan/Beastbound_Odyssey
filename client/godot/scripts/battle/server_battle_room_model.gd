@@ -29,13 +29,20 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 	var server_actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
 	var actors: Array[Dictionary] = []
 	var self_found := false
+	var session_server_side := _session_server_side(server_actors, session)
+	var side_counts := {
+		BattleModel.SIDE_ALLY: 0,
+		BattleModel.SIDE_ENEMY: 0,
+	}
 	for value in server_actors:
 		if not (value is Dictionary):
 			continue
 		var server_actor := value as Dictionary
 		var is_self := _actor_matches_session(server_actor, session)
 		self_found = self_found or is_self
-		actors.append(_battle_actor_from_server(server_actor, is_self))
+		var local_side := _local_side_for_server_actor(server_actor, session_server_side, is_self)
+		side_counts[local_side] = int(side_counts.get(local_side, 0)) + 1
+		actors.append(_battle_actor_from_server(server_actor, is_self, local_side, int(side_counts.get(local_side, 1))))
 	if not self_found and not actors.is_empty():
 		var fallback_self := actors[0].duplicate(true)
 		fallback_self["id"] = BattleModel.PLAYER_ACTOR_ID
@@ -72,6 +79,73 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 	return state
 
 
+static func battle_events_from_server_event_list(state: Dictionary, event_list: Dictionary) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	if str(event_list.get("kind", "")) != "battle_event_list":
+		return events
+	var raw_events: Array = event_list.get("events", []) if event_list.get("events", []) is Array else []
+	for value in raw_events:
+		if not (value is Dictionary):
+			continue
+		var local_event := _local_event_from_server_event(state, value as Dictionary)
+		if not local_event.is_empty():
+			events.append(local_event)
+	return events
+
+
+static func state_at_server_event_list_start(state: Dictionary, event_list: Dictionary) -> Dictionary:
+	var next_state := state.duplicate(true)
+	if str(event_list.get("kind", "")) != "battle_event_list":
+		return next_state
+	next_state["round"] = maxi(1, int(event_list.get("round", next_state.get("round", 1))))
+	next_state["phase"] = "round_events"
+	next_state["lastServerEventList"] = event_list.duplicate(true)
+	var started_actor_ids := {}
+	var raw_events: Array = event_list.get("events", []) if event_list.get("events", []) is Array else []
+	for value in raw_events:
+		if not (value is Dictionary):
+			continue
+		var server_event := value as Dictionary
+		if str(server_event.get("eventType", "")) != "basic_attack":
+			continue
+		var target_id := _local_actor_id_for_server_actor(
+			next_state,
+			str(server_event.get("targetActorId", "")),
+			str(server_event.get("targetAccountId", "")),
+			str(server_event.get("targetUsername", ""))
+		)
+		if target_id == "" or started_actor_ids.has(target_id):
+			continue
+		started_actor_ids[target_id] = true
+		next_state = BattleModel.set_actor_hp(next_state, target_id, int(server_event.get("hpBefore", 0)))
+	return next_state
+
+
+static func state_with_server_event_actor_snapshot(state: Dictionary, event_list: Dictionary) -> Dictionary:
+	var next_state := state.duplicate(true)
+	if str(event_list.get("kind", "")) != "battle_event_list":
+		return next_state
+	var server_actors: Array = event_list.get("actors", []) if event_list.get("actors", []) is Array else []
+	var guarding_ids: Array[String] = []
+	for value in server_actors:
+		if not (value is Dictionary):
+			continue
+		var server_actor := value as Dictionary
+		var actor_id := _local_actor_id_for_server_actor(
+			next_state,
+			str(server_actor.get("actorId", "")),
+			str(server_actor.get("accountId", "")),
+			str(server_actor.get("username", ""))
+		)
+		if actor_id == "":
+			continue
+		next_state = BattleModel.set_actor_hp(next_state, actor_id, int(server_actor.get("hp", 0)))
+		if bool(server_actor.get("guarding", false)) and int(server_actor.get("hp", 0)) > 0:
+			guarding_ids.append(actor_id)
+	next_state["guardingActorIds"] = guarding_ids
+	return next_state
+
+
 static func current_account_submitted(room: Dictionary, session: Dictionary) -> bool:
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	var account_id := str(session.get("accountId", "")).strip_edges()
@@ -88,10 +162,9 @@ static func target_command_payload_for_actor(actor: Dictionary) -> Dictionary:
 	}
 
 
-static func _battle_actor_from_server(server_actor: Dictionary, is_self: bool) -> Dictionary:
-	var side := BattleModel.SIDE_ALLY if is_self else BattleModel.SIDE_ENEMY
-	var actor_id := BattleModel.PLAYER_ACTOR_ID if is_self else "enemy_player"
-	var slot_id := BattleModel.slot_id(side, BattleModel.ROW_BACK, 3)
+static func _battle_actor_from_server(server_actor: Dictionary, is_self: bool, side: String, side_index: int) -> Dictionary:
+	var actor_id := BattleModel.PLAYER_ACTOR_ID if is_self else _local_actor_id_for_index(side, side_index)
+	var slot_id := _slot_id_for_local_index(side, side_index)
 	var max_hp := maxi(1, int(server_actor.get("maxHp", server_actor.get("hp", 120))))
 	var hp := clampi(int(server_actor.get("hp", max_hp)), 0, max_hp)
 	return {
@@ -148,6 +221,125 @@ static func _actor_matches_session(server_actor: Dictionary, session: Dictionary
 		return true
 	var username := str(session.get("username", "")).strip_edges()
 	return username != "" and str(server_actor.get("username", "")).strip_edges() == username
+
+
+static func _session_server_side(server_actors: Array, session: Dictionary) -> String:
+	for value in server_actors:
+		if value is Dictionary and _actor_matches_session(value as Dictionary, session):
+			return str((value as Dictionary).get("side", "")).strip_edges()
+	return ""
+
+
+static func _local_side_for_server_actor(server_actor: Dictionary, session_server_side: String, is_self: bool) -> String:
+	if is_self:
+		return BattleModel.SIDE_ALLY
+	if session_server_side != "" and str(server_actor.get("side", "")).strip_edges() == session_server_side:
+		return BattleModel.SIDE_ALLY
+	return BattleModel.SIDE_ENEMY
+
+
+static func _local_actor_id_for_index(side: String, side_index: int) -> String:
+	var index := maxi(1, side_index)
+	if side == BattleModel.SIDE_ENEMY:
+		return "enemy_player" if index == 1 else "enemy_player_%d" % index
+	return "ally_partner_%d" % index
+
+
+static func _slot_id_for_local_index(side: String, side_index: int) -> String:
+	var order: Array[int] = [8, 7, 9, 6, 10, 3, 2, 4, 1, 5]
+	var index := clampi(side_index, 1, order.size()) - 1
+	return BattleModel.slot_id_for_number(side, order[index])
+
+
+static func _local_event_from_server_event(state: Dictionary, server_event: Dictionary) -> Dictionary:
+	var event_type := str(server_event.get("eventType", ""))
+	var actor_id := _local_actor_id_for_server_actor(
+		state,
+		str(server_event.get("actorId", "")),
+		str(server_event.get("actorAccountId", "")),
+		str(server_event.get("actorUsername", ""))
+	)
+	if actor_id == "":
+		return {}
+	var actor := BattleModel.actor_by_id(state, actor_id)
+	var sequence := maxi(1, int(server_event.get("sequence", 0)))
+	if event_type == "defend":
+		return {
+			"type": "defend",
+			"attackerId": actor_id,
+			"targetId": actor_id,
+			"targetSide": str(actor.get("side", "")),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": str(server_event.get("actionId", "defend")),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type == "target_missing":
+		return {
+			"type": "target_missing",
+			"attackerId": actor_id,
+			"targetId": "",
+			"targetSide": "",
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": str(server_event.get("actionId", "attack")),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type != "basic_attack":
+		return {}
+	var target_id := _local_actor_id_for_server_actor(
+		state,
+		str(server_event.get("targetActorId", "")),
+		str(server_event.get("targetAccountId", "")),
+		str(server_event.get("targetUsername", ""))
+	)
+	if target_id == "":
+		return {}
+	var target := BattleModel.actor_by_id(state, target_id)
+	return {
+		"type": "attack",
+		"attackerId": actor_id,
+		"targetId": target_id,
+		"targetSide": str(target.get("side", BattleModel.SIDE_ENEMY)),
+		"damage": maxi(1, int(server_event.get("damage", 1))),
+		"speed": int(actor.get("quick", actor.get("speed", 0))),
+		"sequence": sequence,
+		"movementStyle": "melee",
+		"canDodge": false,
+		"canCritical": false,
+		"canCounter": false,
+		"canLaunch": false,
+		"actionId": str(server_event.get("actionId", "attack")),
+		"serverEventId": str(server_event.get("eventId", "")),
+		"serverEventType": event_type,
+		"serverMessage": str(server_event.get("message", "")),
+		"serverHpBefore": int(server_event.get("hpBefore", 0)),
+		"serverHpAfter": int(server_event.get("hpAfter", 0)),
+		"serverBlocked": bool(server_event.get("blocked", false)),
+		"serverDefeated": bool(server_event.get("defeated", false)),
+	}
+
+
+static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id: String, account_id: String, username: String) -> String:
+	var actor_id := server_actor_id.strip_edges()
+	var account := account_id.strip_edges()
+	var name := username.strip_edges()
+	var actors: Array = state.get("actors", []) if state.get("actors", []) is Array else []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if actor_id != "" and str(actor.get("serverActorId", "")).strip_edges() == actor_id:
+			return str(actor.get("id", ""))
+		if account != "" and str(actor.get("serverAccountId", "")).strip_edges() == account:
+			return str(actor.get("id", ""))
+		if name != "" and str(actor.get("serverUsername", "")).strip_edges() == name:
+			return str(actor.get("id", ""))
+	return ""
 
 
 static func _guarding_actor_ids(actors: Array[Dictionary]) -> Array[String]:
