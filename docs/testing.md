@@ -49,6 +49,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-chat-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -214,6 +215,13 @@ Phase166 在线位置快照自测：
 - 服务端：`cd server/node && npm test`
 - Godot 真实联网位置：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check`
 - 回归：继续跑 `--auto-auth-server-client-check`、`--auto-party-live-check`、`--auto-chat-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认位置同步走低频 Timer，不进入 HUD/移动每帧重计算。
+
+Phase167 WebSocket 事件通道自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 事件通道契约：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
+- Godot 真实联网事件：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check`
+- 回归：继续跑 `--auto-online-position-live-check`、`--auto-chat-live-check`、`--auto-party-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 WebSocket 每帧只做轻量 `poll()` 和限量包处理。
 
 ## 验收口径
 

@@ -541,6 +541,65 @@ test("HTTP server exposes nearby and team chat endpoints", async (t) => {
   assert.equal(outsiderTeam.messages.length, 0);
 });
 
+test("HTTP server exposes websocket event stream", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const wsBase = `ws://127.0.0.1:${port}`;
+
+  const watcher = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpwsa", "password": "test1234", "displayName": "推送甲"}),
+  });
+  const actor = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpwsb", "password": "test1234", "displayName": "推送乙"}),
+  });
+  assert.equal(watcher.ok, true);
+  assert.equal(actor.ok, true);
+
+  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(watcher.session.token)}`);
+  const reader = webSocketJsonReader(ws);
+  await webSocketOpen(ws);
+  const ready = await reader.next("events.ready");
+  assert.equal(ready.account.username, "httpwsa");
+  const snapshot = await reader.next("online.snapshot");
+  assert.equal(snapshot.players.some((player) => player.username === "httpwsb"), true);
+
+  const position = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${actor.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 18,
+      "cellY": 9,
+      "facing": "west",
+      "moving": true,
+    }),
+  });
+  assert.equal(position.ok, true);
+  const positionEvent = await reader.next("online.position");
+  assert.equal(positionEvent.username, "httpwsb");
+  assert.equal(positionEvent.position.cellX, 18);
+
+  const chat = await fetchJson(`${base}/chat/send`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${actor.session.token}`},
+    "body": JSON.stringify({"channel": "nearby", "text": "事件频道已通"}),
+  });
+  assert.equal(chat.ok, true);
+  const chatEvent = await reader.next("chat.message");
+  assert.equal(chatEvent.message.text, "事件频道已通");
+  ws.close();
+});
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -550,4 +609,84 @@ async function fetchJson(url, options = {}) {
     },
   });
   return response.json();
+}
+
+function webSocketOpen(ws) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("websocket open timeout")), 1000);
+    ws.addEventListener("open", () => {
+      clearTimeout(timer);
+      resolve();
+    }, {"once": true});
+    ws.addEventListener("error", (event) => {
+      clearTimeout(timer);
+      reject(new Error(`websocket error ${event.message || ""}`));
+    }, {"once": true});
+  });
+}
+
+async function webSocketDataText(data) {
+  if (typeof data === "string") {
+    return data;
+  }
+  if (data && typeof data.arrayBuffer === "function") {
+    return Buffer.from(await data.arrayBuffer()).toString("utf8");
+  }
+  return Buffer.from(data).toString("utf8");
+}
+
+function webSocketJsonReader(ws) {
+  const queue = [];
+  const waiters = [];
+  ws.addEventListener("message", async (event) => {
+    const data = await webSocketDataText(event.data);
+    queue.push(JSON.parse(data));
+    flush();
+  });
+  ws.addEventListener("error", (event) => {
+    const error = new Error(`websocket error ${event.message || ""}`);
+    while (waiters.length > 0) {
+      const waiter = waiters.shift();
+      clearTimeout(waiter.timer);
+      waiter.reject(error);
+    }
+  });
+  function next(type) {
+    const existingIndex = queue.findIndex((message) => !type || message.type === type);
+    if (existingIndex >= 0) {
+      const [message] = queue.splice(existingIndex, 1);
+      return Promise.resolve(message);
+    }
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        type,
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          const index = waiters.indexOf(waiter);
+          if (index >= 0) {
+            waiters.splice(index, 1);
+          }
+          reject(new Error(`websocket message timeout: ${type}`));
+        }, 1200),
+      };
+      waiters.push(waiter);
+      flush();
+    });
+  }
+  function flush() {
+    for (let waiterIndex = 0; waiterIndex < waiters.length; waiterIndex += 1) {
+      const waiter = waiters[waiterIndex];
+      const messageIndex = queue.findIndex((message) => !waiter.type || message.type === waiter.type);
+      if (messageIndex < 0) {
+        continue;
+      }
+      const [message] = queue.splice(messageIndex, 1);
+      waiters.splice(waiterIndex, 1);
+      waiterIndex -= 1;
+      clearTimeout(waiter.timer);
+      waiter.resolve(message);
+    }
+  }
+  return {next};
 }

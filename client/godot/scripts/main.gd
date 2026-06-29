@@ -95,6 +95,9 @@ const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
+const SERVER_EVENT_RECONNECT_SECONDS := 3.0
+const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
+const SERVER_EVENT_SEEN_MAX := 40
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
@@ -475,6 +478,10 @@ var online_position_timer: Timer
 var online_position_request_pending: bool = false
 var online_position_remote_players: Array[Dictionary] = []
 var online_position_draw_signature_cache: String = ""
+var server_event_socket: WebSocketPeer
+var server_event_state: String = "off"
+var server_event_reconnect_remaining: float = 0.0
+var server_event_seen: Array[Dictionary] = []
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -629,6 +636,7 @@ var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
+var auto_server_event_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -942,6 +950,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_chat_live_check")
 	elif auto_online_position_live_check:
 		call_deferred("_run_auto_online_position_live_check")
+	elif auto_server_event_live_check:
+		call_deferred("_run_auto_server_event_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1664,6 +1674,8 @@ func _apply_preview_window_args() -> void:
 			auto_chat_live_check = true
 		elif arg == "--auto-online-position-live-check":
 			auto_online_position_live_check = true
+		elif arg == "--auto-server-event-live-check":
+			auto_server_event_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15129,6 +15141,18 @@ func _run_auto_auth_server_client_check() -> void:
 		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
 		and (parsed_position.get("players", []) as Array).size() == 1
 	)
+	var event_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
+	var event_wss_url := ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
+	var parsed_event := ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
+		"type": "online.position",
+		"players": [{"username": "remoteuser"}],
+	}).to_utf8_buffer())
+	var event_contract_ok := (
+		event_url == "ws://127.0.0.1:8787/events?token=token_test"
+		and event_wss_url == "wss://example.test/game/events?token=token%20test"
+		and bool(parsed_event.get("ok", false))
+		and str(parsed_event.get("type", "")) == "online.position"
+	)
 	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var party_accept_spec := ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787/", "token_test", "invite_test")
@@ -15235,9 +15259,9 @@ func _run_auto_auth_server_client_check() -> void:
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and party_request_ok and party_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and event_contract_ok and party_request_ok and party_parse_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s event=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15252,6 +15276,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_read_parse_ok),
 		str(online_request_ok and online_parse_ok),
 		str(position_request_ok and position_parse_ok),
+		str(event_contract_ok),
 		str(party_request_ok and party_parse_ok),
 		str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
@@ -15692,6 +15717,98 @@ func _run_auto_online_position_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_server_event_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var watcher_username := "eva%s" % suffix
+	var actor_username := "evb%s" % suffix
+	watcher_username = watcher_username.substr(0, mini(20, watcher_username.length()))
+	actor_username = actor_username.substr(0, mini(20, actor_username.length()))
+	var watcher_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		watcher_username,
+		"test1234",
+		"事件甲"
+	))
+	var actor_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		actor_username,
+		"test1234",
+		"事件乙"
+	))
+	var watcher_parsed := ServerAuthClientModel.parse_auth_response(int(watcher_register.get("responseCode", 0)), watcher_register.get("body", PackedByteArray()) as PackedByteArray)
+	var actor_parsed := ServerAuthClientModel.parse_auth_response(int(actor_register.get("responseCode", 0)), actor_register.get("body", PackedByteArray()) as PackedByteArray)
+	var watcher_session := watcher_parsed.get("session", {}) as Dictionary if watcher_parsed.get("session", {}) is Dictionary else {}
+	var actor_session := actor_parsed.get("session", {}) as Dictionary if actor_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(watcher_parsed.get("ok", false)) and bool(actor_parsed.get("ok", false))
+	current_account_session = watcher_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_event_seen.clear()
+	online_position_remote_players.clear()
+	chat_messages.clear()
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var ready_ok := _server_event_type_seen("events.ready")
+	frames = 0
+	while frames < 720 and not _server_event_type_seen("online.snapshot"):
+		frames += 1
+		await get_tree().process_frame
+	var snapshot_ok := _server_event_type_seen("online.snapshot")
+	var actor_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(2, -1)
+	var actor_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(actor_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": actor_cell.x,
+			"cellY": actor_cell.y,
+			"facing": "west",
+			"moving": true,
+		}
+	))
+	var actor_position_parsed := ServerAuthClientModel.parse_player_position_update_response(
+		int(actor_position.get("responseCode", 0)),
+		actor_position.get("body", PackedByteArray()) as PackedByteArray
+	)
+	frames = 0
+	while frames < 720 and not _online_remote_player_at(actor_username, current_map_id, actor_cell):
+		frames += 1
+		await get_tree().process_frame
+	var position_event_ok := bool(actor_position_parsed.get("ok", false)) and _server_event_type_seen("online.position") and _online_remote_player_at(actor_username, current_map_id, actor_cell)
+	var chat_text := "事件消息%s" % suffix
+	var actor_chat := await _auto_http_request_spec(ServerAuthClientModel.chat_send_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(actor_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_NEARBY,
+		chat_text
+	))
+	var actor_chat_parsed := ServerAuthClientModel.parse_chat_send_response(int(actor_chat.get("responseCode", 0)), actor_chat.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 720 and not _chat_message_text_seen(chat_text):
+		frames += 1
+		await get_tree().process_frame
+	var chat_event_ok := bool(actor_chat_parsed.get("ok", false)) and _server_event_type_seen("chat.message") and _chat_message_text_seen(chat_text)
+	var status := "ok" if register_ok and ready_ok and snapshot_ok and position_event_ok and chat_event_ok else "failed"
+	print("server event live check ready: status=%s register=%s ready=%s snapshot=%s position=%s chat=%s state=%s watcher=%s actor=%s" % [
+		status,
+		str(register_ok),
+		str(ready_ok),
+		str(snapshot_ok),
+		str(position_event_ok),
+		str(chat_event_ok),
+		server_event_state,
+		watcher_username,
+		actor_username,
+	])
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _online_remote_player_at(username: String, map_id: String, cell: Vector2i) -> bool:
 	for value in online_position_remote_players:
 		if not (value is Dictionary):
@@ -15703,6 +15820,13 @@ func _online_remote_player_at(username: String, map_id: String, cell: Vector2i) 
 		if str(position.get("mapId", "")) != map_id:
 			continue
 		if int(position.get("cellX", 0)) == cell.x and int(position.get("cellY", 0)) == cell.y:
+			return true
+	return false
+
+
+func _chat_message_text_seen(text: String) -> bool:
+	for value in chat_messages:
+		if value is Dictionary and str((value as Dictionary).get("text", "")) == text:
 			return true
 	return false
 
@@ -19124,6 +19248,9 @@ func _process(delta: float) -> void:
 	_update_ground_pet_drop_expiration(delta)
 	_perf_add("timed_profile", section_start)
 	section_start = _perf_now()
+	_poll_server_event_stream(delta)
+	_perf_add("server_event", section_start)
+	section_start = _perf_now()
 	if has_target_marker and not player.is_auto_moving() and player.global_position.distance_to(target_marker) <= 6.0:
 		has_target_marker = false
 		has_target_cell = false
@@ -21813,6 +21940,140 @@ func _server_profile_token() -> String:
 	return str(current_account_session.get("serverSessionToken", "")).strip_edges()
 
 
+func _start_server_event_stream_if_needed() -> void:
+	if not _is_server_account_session():
+		_stop_server_event_stream()
+		return
+	if server_event_socket != null:
+		var state := server_event_socket.get_ready_state()
+		if state == WebSocketPeer.STATE_CONNECTING or state == WebSocketPeer.STATE_OPEN:
+			return
+	server_event_socket = WebSocketPeer.new()
+	var err := server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(_server_profile_base_url(), _server_profile_token()))
+	if err == OK:
+		server_event_state = "connecting"
+		server_event_reconnect_remaining = 0.0
+	else:
+		server_event_socket = null
+		server_event_state = "error"
+		server_event_reconnect_remaining = SERVER_EVENT_RECONNECT_SECONDS
+
+
+func _stop_server_event_stream() -> void:
+	if server_event_socket != null:
+		server_event_socket.close()
+	server_event_socket = null
+	server_event_state = "off"
+	server_event_reconnect_remaining = 0.0
+	server_event_seen.clear()
+
+
+func _poll_server_event_stream(delta: float) -> void:
+	if not _is_server_account_session():
+		if server_event_state != "off":
+			_stop_server_event_stream()
+		return
+	if server_event_socket == null:
+		server_event_reconnect_remaining = maxf(0.0, server_event_reconnect_remaining - maxf(0.0, delta))
+		if server_event_reconnect_remaining <= 0.0:
+			_start_server_event_stream_if_needed()
+		return
+	server_event_socket.poll()
+	var state := server_event_socket.get_ready_state()
+	if state == WebSocketPeer.STATE_OPEN:
+		server_event_state = "open"
+		var packet_count := 0
+		while server_event_socket.get_available_packet_count() > 0 and packet_count < SERVER_EVENT_MAX_PACKETS_PER_FRAME:
+			packet_count += 1
+			var parsed := ServerAuthClientModel.parse_event_stream_message(server_event_socket.get_packet())
+			if bool(parsed.get("ok", false)):
+				_handle_server_event(parsed.get("event", {}) as Dictionary if parsed.get("event", {}) is Dictionary else {})
+	elif state == WebSocketPeer.STATE_CLOSED:
+		server_event_socket = null
+		server_event_state = "closed"
+		server_event_reconnect_remaining = SERVER_EVENT_RECONNECT_SECONDS
+
+
+func _handle_server_event(event: Dictionary) -> void:
+	var event_type := str(event.get("type", "")).strip_edges()
+	if event_type == "":
+		return
+	_record_server_event_seen(event)
+	match event_type:
+		"events.ready":
+			server_event_state = "open"
+		"online.snapshot", "online.position":
+			_apply_online_position_players(event.get("players", []))
+		"chat.message":
+			_apply_chat_message_event(event)
+		"party.invite", "party.update", "party.invite_declined":
+			_apply_party_event(event)
+
+
+func _record_server_event_seen(event: Dictionary) -> void:
+	server_event_seen.append(event.duplicate(true))
+	while server_event_seen.size() > SERVER_EVENT_SEEN_MAX:
+		server_event_seen.pop_front()
+
+
+func _server_event_type_seen(event_type: String) -> bool:
+	for value in server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == event_type:
+			return true
+	return false
+
+
+func _apply_chat_message_event(event: Dictionary) -> void:
+	var message := event.get("message", {}) as Dictionary if event.get("message", {}) is Dictionary else {}
+	var channel := str(event.get("channel", message.get("channel", CHAT_CHANNEL_NEARBY)))
+	if message.is_empty() or not _chat_channel_is_valid(channel):
+		return
+	var message_id := str(message.get("messageId", "")).strip_edges()
+	if message_id != "" and _chat_message_id_exists(message_id):
+		return
+	chat_messages.append(_chat_message_from_server(message, channel))
+	while chat_messages.size() > CHAT_MAX_MESSAGES:
+		chat_messages.pop_front()
+	if chat_panel != null and chat_panel.visible and chat_active_channel == channel:
+		_refresh_chat_panel()
+
+
+func _chat_message_id_exists(message_id: String) -> bool:
+	for value in chat_messages:
+		if value is Dictionary and str((value as Dictionary).get("messageId", "")) == message_id:
+			return true
+	return false
+
+
+func _apply_party_event(event: Dictionary) -> void:
+	if event.has("party"):
+		party_current_state["party"] = event.get("party", null)
+	if not party_current_state.has("incomingInvites"):
+		party_current_state["incomingInvites"] = []
+	if not party_current_state.has("maxMembers"):
+		party_current_state["maxMembers"] = 5
+	if event.has("invite"):
+		var invite := event.get("invite", {}) as Dictionary if event.get("invite", {}) is Dictionary else {}
+		if not invite.is_empty():
+			var invites: Array = party_current_state.get("incomingInvites", []) if party_current_state.get("incomingInvites", []) is Array else []
+			var invite_id := str(invite.get("inviteId", ""))
+			if str(invite.get("status", "")) == "pending":
+				var exists := false
+				for value in invites:
+					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
+						exists = true
+						break
+				if not exists:
+					invites.append(invite)
+			else:
+				invites = invites.filter(func(value) -> bool:
+					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
+				)
+			party_current_state["incomingInvites"] = invites
+	if party_panel != null and party_panel.visible:
+		_refresh_party_panel()
+
+
 func _start_online_position_sync_if_needed() -> void:
 	if online_position_timer == null:
 		return
@@ -22090,9 +22351,11 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	_update_hud_text(true)
 	_layout_hud()
 	if _is_server_account_session():
+		_start_server_event_stream_if_needed()
 		_start_online_position_sync_if_needed()
 		_request_server_profile_pull()
 	else:
+		_stop_server_event_stream()
 		_stop_online_position_sync()
 
 
@@ -22187,6 +22450,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_dirty = false
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
+	_stop_server_event_stream()
 	_stop_online_position_sync()
 	PlayerProgressModel.reset_active_save_path()
 	player_profile = PlayerProgressModel.default_profile()

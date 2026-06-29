@@ -84,6 +84,15 @@ static func player_position_update_request(base_url: String, session_token: Stri
 	}
 
 
+static func event_stream_url(base_url: String, session_token: String) -> String:
+	var url := normalized_base_url(base_url)
+	if url.begins_with("https://"):
+		url = "wss://" + url.substr("https://".length())
+	elif url.begins_with("http://"):
+		url = "ws://" + url.substr("http://".length())
+	return "%s/events?token=%s" % [url, session_token.uri_encode()]
+
+
 static func party_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/party/state" % normalized_base_url(base_url),
@@ -258,6 +267,19 @@ static func parse_player_position_update_response(response_code: int, body: Pack
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
 	return parsed
+
+
+static func parse_event_stream_message(packet: PackedByteArray) -> Dictionary:
+	var text := packet.get_string_from_utf8()
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {"ok": false, "message": "服务器事件格式不正确。", "code": "bad_event_json"}
+	var event := parsed as Dictionary
+	return {
+		"ok": true,
+		"event": event,
+		"type": str(event.get("type", "")),
+	}
 
 
 static func parse_party_state_response(response_code: int, body: PackedByteArray) -> Dictionary:

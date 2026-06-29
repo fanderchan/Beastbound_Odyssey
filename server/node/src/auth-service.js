@@ -28,6 +28,7 @@ function createAuthService(options = {}) {
   const now = options.now || (() => Date.now());
   const randomId = options.randomId || (() => crypto.randomUUID());
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
+  const serviceEventListeners = new Set();
 
   function load() {
     return normalizeData(store.load());
@@ -35,6 +36,25 @@ function createAuthService(options = {}) {
 
   function save(data) {
     store.save(normalizeData(data));
+  }
+
+  function emitServiceEvent(event) {
+    const payload = {
+      schemaVersion: 1,
+      createdAt: isoNow(now),
+      ...event,
+    };
+    for (const listener of serviceEventListeners) {
+      listener(payload);
+    }
+  }
+
+  function onEvent(listener) {
+    if (typeof listener !== "function") {
+      return () => {};
+    }
+    serviceEventListeners.add(listener);
+    return () => serviceEventListeners.delete(listener);
   }
 
   function register(payload = {}) {
@@ -320,9 +340,18 @@ function createAuthService(options = {}) {
     }
     data.playerPositions[resolved.account.accountId] = position;
     save(data);
+    const players = activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data));
+    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    emitServiceEvent({
+      type: "online.position",
+      accountId: resolved.account.accountId,
+      username: resolved.account.username,
+      position: publicPlayerPosition(position),
+      players,
+    });
     return ok({
       position: publicPlayerPosition(position),
-      players: activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data)),
+      players,
       party: publicPartyForAccount(data, resolved.account.accountId),
     });
   }
@@ -391,6 +420,12 @@ function createAuthService(options = {}) {
     party.updatedAt = isoNow(now);
     data.parties[party.partyId] = party;
     save(data);
+    emitServiceEvent({
+      type: "party.invite",
+      targetAccountIds: [resolved.account.accountId, target.accountId],
+      party: publicParty(party, data),
+      invite: publicPartyInvite(invite, data),
+    });
     return ok({
       invite: publicPartyInvite(invite, data),
       party: publicParty(party, data),
@@ -429,6 +464,12 @@ function createAuthService(options = {}) {
     data.parties[party.partyId] = party;
     data.partyInvites[invite.inviteId] = invite;
     save(data);
+    emitServiceEvent({
+      type: "party.update",
+      targetAccountIds: party.memberAccountIds.slice(),
+      party: publicParty(party, data),
+      invite: publicPartyInvite(invite, data),
+    });
     return ok({
       party: publicParty(party, data),
       invite: publicPartyInvite(invite, data),
@@ -450,6 +491,12 @@ function createAuthService(options = {}) {
     invite.updatedAt = isoNow(now);
     data.partyInvites[invite.inviteId] = invite;
     save(data);
+    emitServiceEvent({
+      type: "party.invite_declined",
+      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
+      invite: publicPartyInvite(invite, data),
+      party: publicPartyForAccount(data, resolved.account.accountId),
+    });
     return ok({
       invite: publicPartyInvite(invite, data),
       party: publicPartyForAccount(data, resolved.account.accountId),
@@ -469,6 +516,7 @@ function createAuthService(options = {}) {
     }
     party.memberAccountIds = party.memberAccountIds.filter((accountId) => accountId !== resolved.account.accountId);
     if (party.memberAccountIds.length <= 0) {
+      const leavingPartyId = party.partyId;
       delete data.parties[party.partyId];
       for (const invite of Object.values(data.partyInvites)) {
         if (invite && invite.partyId === party.partyId && invite.status === "pending") {
@@ -478,6 +526,12 @@ function createAuthService(options = {}) {
         }
       }
       save(data);
+      emitServiceEvent({
+        type: "party.update",
+        targetAccountIds: [resolved.account.accountId],
+        party: null,
+        partyId: leavingPartyId,
+      });
       return ok({
         party: null,
         incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
@@ -490,6 +544,11 @@ function createAuthService(options = {}) {
     party.updatedAt = isoNow(now);
     data.parties[party.partyId] = party;
     save(data);
+    emitServiceEvent({
+      type: "party.update",
+      targetAccountIds: [resolved.account.accountId, ...party.memberAccountIds],
+      party: publicParty(party, data),
+    });
     return ok({
       party: null,
       incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
@@ -563,6 +622,13 @@ function createAuthService(options = {}) {
       data.chatMessages.shift();
     }
     save(data);
+    emitServiceEvent({
+      type: "chat.message",
+      targetAccountIds: channel === CHAT_CHANNEL_TEAM && party ? party.memberAccountIds.slice() : null,
+      channel,
+      message: publicChatMessage(message),
+      party: party ? publicParty(party, data) : null,
+    });
     return ok({
       message: publicChatMessage(message),
       party: party ? publicParty(party, data) : null,
@@ -677,6 +743,7 @@ function createAuthService(options = {}) {
     markMailRead,
     listOnlinePlayers,
     updatePlayerPosition,
+    onEvent,
     getPartyState,
     inviteToParty,
     acceptPartyInvite,

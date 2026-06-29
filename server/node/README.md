@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -40,6 +40,7 @@ Optional environment variables:
 - `GET /players/search?username={username}`
 - `GET /players/online`
 - `POST /players/position`
+- `WS /events?token={sessionToken}`
 - `GET /profiles/me`
 - `PUT /profiles/me`
 - `GET /mail/inbox`
@@ -118,6 +119,17 @@ Online visibility is now server state, not a local-only player list:
 
 This is still a snapshot loop, not live movement authority. It does not yet provide WebSocket push, range filtering, collision between players, following, party leader movement, or battle-room entry authority.
 
+## Event Stream Boundary
+
+`WS /events?token={sessionToken}` upgrades a valid server session to a lightweight WebSocket stream:
+
+- On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current online roster.
+- `POST /players/position` publishes `online.position` to connected clients, including the updated account position and roster snapshot.
+- `POST /chat/send` publishes `chat.message`; nearby messages are same-server public, while team messages are targeted to party members.
+- Party invite, accept, decline, and leave publish `party.invite`, `party.update`, or `party.invite_declined` to the affected accounts.
+
+The stream is an event fanout for already-authorized HTTP actions. It is not yet server-authoritative movement, area subscription, combat room state, or anti-cheat validation.
+
 ## Chat Boundary
 
 Chat is now server state, not a local-only Godot message list:
@@ -127,7 +139,7 @@ Chat is now server state, not a local-only Godot message list:
 - `GET /chat/messages?channel=team` returns party chat only when the current account is in a server party.
 - `POST /chat/send` with `channel=team` requires current server party membership and stores the party id on the message.
 
-Nearby chat is currently same-server public chat. It is not yet map-coordinate range chat, WebSocket push, moderation tooling, or persisted economy/battle authority.
+Nearby chat is currently same-server public chat. It is not yet map-coordinate range chat, moderation tooling, or persisted economy/battle authority.
 
 ## MySQL Store Boundary
 

@@ -9,6 +9,9 @@ const {
 const {
   createMysqlAuthStore,
 } = require("./mysql-store");
+const {
+  createEventHub,
+} = require("./event-hub");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -20,8 +23,9 @@ const DEFAULT_COMMAND_CATALOG = [
 function createHttpServer(options = {}) {
   const service = options.service || createAuthService();
   const commandCatalog = options.commandCatalog || DEFAULT_COMMAND_CATALOG;
+  const eventHub = options.eventHub || createEventHub(service);
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://127.0.0.1");
       if (req.method === "GET" && url.pathname === "/health") {
@@ -102,6 +106,14 @@ function createHttpServer(options = {}) {
       return sendJson(res, 500, {"ok": false, "code": "server_error", "message": error.message});
     }
   });
+  server.on("upgrade", (req, socket, head) => {
+    const handled = eventHub.handleUpgrade(req, socket, head);
+    if (!handled && !socket.destroyed) {
+      socket.destroy();
+    }
+  });
+  server.eventHub = eventHub;
+  return server;
 }
 
 function sendResult(res, result) {
