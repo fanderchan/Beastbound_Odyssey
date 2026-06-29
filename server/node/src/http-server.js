@@ -47,7 +47,13 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.searchPlayers(bearerToken(req), {"username": url.searchParams.get("username") || ""}));
       }
       if (req.method === "GET" && url.pathname === "/players/online") {
-        return sendResult(res, service.listOnlinePlayers(bearerToken(req)));
+        return sendResult(res, service.listOnlinePlayers(bearerToken(req), {
+          "scope": url.searchParams.get("scope") || "",
+          "mapId": url.searchParams.get("mapId") || "",
+          "cellX": url.searchParams.get("cellX") || "",
+          "cellY": url.searchParams.get("cellY") || "",
+          "radius": url.searchParams.get("radius") || "",
+        }));
       }
       if (req.method === "POST" && url.pathname === "/players/position") {
         return sendResult(res, service.updatePlayerPosition(bearerToken(req), await readJson(req)));

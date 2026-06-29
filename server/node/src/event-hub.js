@@ -41,6 +41,7 @@ function createEventHub(service) {
       socket,
       accountId: account.accountId || "",
       username: account.username || "",
+      token,
       buffer: Buffer.alloc(0),
     };
     clients.add(client);
@@ -53,12 +54,13 @@ function createEventHub(service) {
       schemaVersion: 1,
       createdAt: new Date().toISOString(),
     });
-    const online = service.listOnlinePlayers(token);
+    const online = service.listOnlinePlayers(token, {"scope": "aoi"});
     if (online.ok) {
       sendEvent(client, {
         type: "online.snapshot",
         players: online.players,
         party: online.party,
+        aoi: online.aoi,
         schemaVersion: 1,
         createdAt: new Date().toISOString(),
       });
@@ -71,8 +73,27 @@ function createEventHub(service) {
       if (!eventVisibleToClient(event, client)) {
         continue;
       }
-      sendEvent(client, event);
+      const prepared = eventForClient(client, event);
+      if (!prepared.visible) {
+        continue;
+      }
+      sendEvent(client, prepared.event);
     }
+  }
+
+  function eventForClient(client, event) {
+    if (!service || typeof service.eventForSession !== "function") {
+      return {visible: true, event};
+    }
+    const result = service.eventForSession(client.token, event);
+    if (!result.ok) {
+      client.socket.destroy();
+      return {visible: false, event};
+    }
+    return {
+      visible: result.visible !== false,
+      event: result.event || event,
+    };
   }
 
   function eventVisibleToClient(event, client) {

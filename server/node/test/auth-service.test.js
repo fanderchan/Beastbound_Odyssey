@@ -237,6 +237,68 @@ test("players can publish map positions into the online roster", () => {
   assert.equal(scoutRow.position.cellY, 8);
 });
 
+test("online roster can be filtered by map area of interest", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const watcher = service.register({"username": "aoia", "password": "test1234", "displayName": "观察甲"});
+  const nearby = service.register({"username": "aoib", "password": "test1234", "displayName": "附近乙"});
+  const distant = service.register({"username": "aoic", "password": "test1234", "displayName": "远处丙"});
+  const otherMap = service.register({"username": "aoid", "password": "test1234", "displayName": "异图丁"});
+  assert.equal(watcher.ok, true);
+  assert.equal(nearby.ok, true);
+  assert.equal(distant.ok, true);
+  assert.equal(otherMap.ok, true);
+
+  const watcherPosition = service.updatePlayerPosition(watcher.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(watcherPosition.ok, true);
+  assert.equal(watcherPosition.aoi.scope, "aoi");
+  service.updatePlayerPosition(nearby.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 11,
+    "facing": "west",
+    "moving": false,
+  });
+  service.updatePlayerPosition(distant.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 80,
+    "cellY": 80,
+    "facing": "west",
+    "moving": false,
+  });
+  service.updatePlayerPosition(otherMap.session.token, {
+    "mapId": "coral_coast",
+    "cellX": 12,
+    "cellY": 11,
+    "facing": "west",
+    "moving": false,
+  });
+
+  const all = service.listOnlinePlayers(watcher.session.token);
+  assert.equal(all.ok, true);
+  assert.deepEqual(all.players.map((player) => player.username).sort(), ["aoia", "aoib", "aoic", "aoid"]);
+
+  const scoped = service.listOnlinePlayers(watcher.session.token, {"scope": "aoi", "radius": 4});
+  assert.equal(scoped.ok, true);
+  assert.equal(scoped.aoi.scope, "aoi");
+  assert.deepEqual(scoped.players.map((player) => player.username).sort(), ["aoia", "aoib"]);
+
+  const explicit = service.listOnlinePlayers(watcher.session.token, {
+    "scope": "aoi",
+    "mapId": "firebud_training_yard",
+    "cellX": 80,
+    "cellY": 80,
+    "radius": 1,
+  });
+  assert.equal(explicit.ok, true);
+  assert.deepEqual(explicit.players.map((player) => player.username).sort(), ["aoia", "aoic"]);
+});
+
 test("players can chat nearby and inside server parties", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "chata", "password": "test1234", "displayName": "聊甲"});
@@ -407,8 +469,13 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
     "method": "POST",
     "body": JSON.stringify({"username": "httppartyb", "password": "test1234", "displayName": "队员乙"}),
   });
+  const distant = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httppartyc", "password": "test1234", "displayName": "远处丙"}),
+  });
   assert.equal(leader.ok, true);
   assert.equal(member.ok, true);
+  assert.equal(distant.ok, true);
 
   const online = await fetchJson(`${base}/players/online`, {
     "headers": {"authorization": `Bearer ${leader.session.token}`},
@@ -429,6 +496,30 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   });
   assert.equal(position.ok, true);
   assert.equal(position.position.cellX, 9);
+  const leaderPosition = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 8,
+      "cellY": 11,
+      "facing": "east",
+      "moving": false,
+    }),
+  });
+  assert.equal(leaderPosition.ok, true);
+  const distantPosition = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 80,
+      "cellY": 80,
+      "facing": "west",
+      "moving": false,
+    }),
+  });
+  assert.equal(distantPosition.ok, true);
   const onlineWithPosition = await fetchJson(`${base}/players/online`, {
     "headers": {"authorization": `Bearer ${leader.session.token}`},
   });
@@ -436,6 +527,15 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   const memberOnline = onlineWithPosition.players.find((player) => player.username === "httppartyb");
   assert.equal(memberOnline.position.mapId, "firebud_training_yard");
   assert.equal(memberOnline.position.facing, "northwest");
+  assert.equal(onlineWithPosition.players.some((player) => player.username === "httppartyc"), true);
+
+  const scopedOnline = await fetchJson(`${base}/players/online?scope=aoi&mapId=firebud_training_yard&cellX=8&cellY=11&radius=4`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(scopedOnline.ok, true);
+  assert.equal(scopedOnline.aoi.scope, "aoi");
+  assert.equal(scopedOnline.players.some((player) => player.username === "httppartyb"), true);
+  assert.equal(scopedOnline.players.some((player) => player.username === "httppartyc"), false);
 
   const invite = await fetchJson(`${base}/party/invite`, {
     "method": "POST",
@@ -562,8 +662,50 @@ test("HTTP server exposes websocket event stream", async (t) => {
     "method": "POST",
     "body": JSON.stringify({"username": "httpwsb", "password": "test1234", "displayName": "推送乙"}),
   });
+  const distant = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpwsc", "password": "test1234", "displayName": "远处丙"}),
+  });
   assert.equal(watcher.ok, true);
   assert.equal(actor.ok, true);
+  assert.equal(distant.ok, true);
+
+  const watcherPosition = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${watcher.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 10,
+      "cellY": 10,
+      "facing": "east",
+      "moving": false,
+    }),
+  });
+  assert.equal(watcherPosition.ok, true);
+  const actorInitialPosition = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${actor.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 12,
+      "cellY": 10,
+      "facing": "west",
+      "moving": false,
+    }),
+  });
+  assert.equal(actorInitialPosition.ok, true);
+  const distantInitialPosition = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 80,
+      "cellY": 80,
+      "facing": "west",
+      "moving": false,
+    }),
+  });
+  assert.equal(distantInitialPosition.ok, true);
 
   const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(watcher.session.token)}`);
   const reader = webSocketJsonReader(ws);
@@ -571,7 +713,9 @@ test("HTTP server exposes websocket event stream", async (t) => {
   const ready = await reader.next("events.ready");
   assert.equal(ready.account.username, "httpwsa");
   const snapshot = await reader.next("online.snapshot");
+  assert.equal(snapshot.aoi.scope, "aoi");
   assert.equal(snapshot.players.some((player) => player.username === "httpwsb"), true);
+  assert.equal(snapshot.players.some((player) => player.username === "httpwsc"), false);
 
   const position = await fetchJson(`${base}/players/position`, {
     "method": "POST",
@@ -588,6 +732,37 @@ test("HTTP server exposes websocket event stream", async (t) => {
   const positionEvent = await reader.next("online.position");
   assert.equal(positionEvent.username, "httpwsb");
   assert.equal(positionEvent.position.cellX, 18);
+  assert.equal(positionEvent.players.some((player) => player.username === "httpwsc"), false);
+
+  const distantStillFar = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 81,
+      "cellY": 80,
+      "facing": "west",
+      "moving": true,
+    }),
+  });
+  assert.equal(distantStillFar.ok, true);
+  await assert.rejects(reader.next("online.position"), /websocket message timeout: online.position/);
+
+  const distantMovedNear = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${distant.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 11,
+      "cellY": 12,
+      "facing": "north",
+      "moving": true,
+    }),
+  });
+  assert.equal(distantMovedNear.ok, true);
+  const movedNearEvent = await reader.next("online.position");
+  assert.equal(movedNearEvent.username, "httpwsc");
+  assert.equal(movedNearEvent.players.some((player) => player.username === "httpwsc"), true);
 
   const chat = await fetchJson(`${base}/chat/send`, {
     "method": "POST",

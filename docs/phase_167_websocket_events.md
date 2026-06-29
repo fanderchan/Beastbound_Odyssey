@@ -34,7 +34,7 @@ WS /events?token={sessionToken}
 - `POST /party/invites/{inviteId}/decline` -> `party.invite_declined`
 - `POST /party/leave` -> `party.update`
 
-所有事件都带 `schemaVersion` 和 `createdAt`。队伍和队聊事件会按账号过滤；附近聊天和在线位置当前仍是同服广播。
+所有事件都带 `schemaVersion` 和 `createdAt`。队伍和队聊事件会按账号过滤；Phase168 起在线位置按地图/格子 AOI 过滤。
 
 ## 客户端边界
 
@@ -47,7 +47,7 @@ WS /events?token={sessionToken}
 
 ## 当前未做
 
-- 地图/区域订阅和范围过滤。
+- 显式房间订阅和跨进程事件总线。
 - 服务器权威移动、碰撞、跟随和反作弊。
 - 战斗房间事件、战斗种子同步和双方确认入战。
 - WebSocket 层的消息确认、重放游标和断线补偿。
@@ -72,6 +72,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase168：地图/区域订阅和同屏过滤，减少同服广播噪音。
+1. Phase168：地图/格子 AOI 过滤已完成第一轮，减少同服在线位置广播噪音。
 2. Phase169：切磋房间和战斗种子，让双方同意后由服务端建立战斗上下文。
 3. Phase170：WebSocket 断线补偿和事件游标，避免短线重连丢关键队伍/战斗事件。

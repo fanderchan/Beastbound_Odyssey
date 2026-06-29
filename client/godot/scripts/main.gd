@@ -95,6 +95,7 @@ const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
+const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
 const SERVER_EVENT_SEEN_MAX := 40
@@ -636,6 +637,7 @@ var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
+var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
@@ -950,6 +952,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_chat_live_check")
 	elif auto_online_position_live_check:
 		call_deferred("_run_auto_online_position_live_check")
+	elif auto_online_aoi_live_check:
+		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
 		call_deferred("_run_auto_server_event_live_check")
 	elif auto_auth_server_client_check:
@@ -1674,6 +1678,8 @@ func _apply_preview_window_args() -> void:
 			auto_chat_live_check = true
 		elif arg == "--auto-online-position-live-check":
 			auto_online_position_live_check = true
+		elif arg == "--auto-online-aoi-live-check":
+			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
 			auto_server_event_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
@@ -15092,15 +15098,24 @@ func _run_auto_auth_server_client_check() -> void:
 		and int(online_spec.get("method", -1)) == HTTPClient.METHOD_GET
 		and _packed_string_array(online_spec.get("headers", [])).has("Authorization: Bearer token_test")
 	)
+	var online_aoi_spec := ServerAuthClientModel.online_players_request("http://127.0.0.1:8787/", "token_test", "aoi", {
+		"mapId": "firebud_training_yard",
+		"cellX": 8,
+		"cellY": 12,
+		"radius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+	})
+	online_request_ok = online_request_ok and str(online_aoi_spec.get("url", "")) == "http://127.0.0.1:8787/players/online?scope=aoi&mapId=firebud_training_yard&cellX=8&cellY=12&radius=18"
 	var parsed_online := ServerAuthClientModel.parse_online_players_response(200, JSON.stringify({
 		"ok": true,
 		"players": [{"username": "remoteuser", "displayName": "远程猎人", "partyRole": "leader"}],
 		"party": null,
+		"aoi": {"scope": "aoi", "radius": 18},
 	}).to_utf8_buffer())
 	var online_parse_ok := (
 		bool(parsed_online.get("ok", false))
 		and (parsed_online.get("players", []) as Array).size() == 1
 		and str(((parsed_online.get("players", []) as Array)[0] as Dictionary).get("partyRole", "")) == "leader"
+		and str((parsed_online.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
 	)
 	var position_spec := ServerAuthClientModel.player_position_update_request("http://127.0.0.1:8787/", "token_test", {
 		"mapId": "firebud_training_yard",
@@ -15135,11 +15150,13 @@ func _run_auto_auth_server_client_check() -> void:
 			},
 		}],
 		"party": null,
+		"aoi": {"scope": "aoi", "radius": 18},
 	}).to_utf8_buffer())
 	var position_parse_ok := (
 		bool(parsed_position.get("ok", false))
 		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
 		and (parsed_position.get("players", []) as Array).size() == 1
+		and str((parsed_position.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
 	)
 	var event_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url := ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
@@ -15714,6 +15731,146 @@ func _run_auto_online_position_live_check() -> void:
 		member_username,
 		str(member_cell),
 	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_online_aoi_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var watcher_username := "aoa%s" % suffix
+	var near_username := "aob%s" % suffix
+	var far_username := "aoc%s" % suffix
+	watcher_username = watcher_username.substr(0, mini(20, watcher_username.length()))
+	near_username = near_username.substr(0, mini(20, near_username.length()))
+	far_username = far_username.substr(0, mini(20, far_username.length()))
+	var watcher_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		watcher_username,
+		"test1234",
+		"视野甲"
+	))
+	var near_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		near_username,
+		"test1234",
+		"视野乙"
+	))
+	var far_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		far_username,
+		"test1234",
+		"远处丙"
+	))
+	var watcher_parsed := ServerAuthClientModel.parse_auth_response(int(watcher_register.get("responseCode", 0)), watcher_register.get("body", PackedByteArray()) as PackedByteArray)
+	var near_parsed := ServerAuthClientModel.parse_auth_response(int(near_register.get("responseCode", 0)), near_register.get("body", PackedByteArray()) as PackedByteArray)
+	var far_parsed := ServerAuthClientModel.parse_auth_response(int(far_register.get("responseCode", 0)), far_register.get("body", PackedByteArray()) as PackedByteArray)
+	var watcher_session := watcher_parsed.get("session", {}) as Dictionary if watcher_parsed.get("session", {}) is Dictionary else {}
+	var near_session := near_parsed.get("session", {}) as Dictionary if near_parsed.get("session", {}) is Dictionary else {}
+	var far_session := far_parsed.get("session", {}) as Dictionary if far_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(watcher_parsed.get("ok", false)) and bool(near_parsed.get("ok", false)) and bool(far_parsed.get("ok", false))
+	var watcher_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(1, -1)
+	var near_cell := watcher_cell + Vector2i(2, 0)
+	var far_cell := watcher_cell + Vector2i(ONLINE_POSITION_AOI_RADIUS_CELLS + 8, ONLINE_POSITION_AOI_RADIUS_CELLS + 8)
+	var moved_near_cell := watcher_cell + Vector2i(3, 2)
+	var near_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(near_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": near_cell.x,
+			"cellY": near_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var far_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(far_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": far_cell.x,
+			"cellY": far_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var near_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(near_position_response.get("responseCode", 0)), near_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var far_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(far_position_response.get("responseCode", 0)), far_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var seed_positions_ok := bool(near_position_parsed.get("ok", false)) and bool(far_position_parsed.get("ok", false))
+	current_account_session = watcher_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	player.global_position = IsoMapModel.grid_to_world(map_data, watcher_cell)
+	player.face_direction(Vector2.RIGHT)
+	last_checked_player_cell = watcher_cell
+	online_position_remote_players.clear()
+	online_position_draw_signature_cache = ""
+	_request_online_position_snapshot()
+	var frames := 0
+	while frames < 720 and online_position_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var near_visible := _online_remote_player_at(near_username, current_map_id, near_cell)
+	var far_hidden := not _online_remote_player_at(far_username, current_map_id, far_cell)
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	frames = 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var far_still_outside := far_cell + Vector2i(1, 0)
+	var far_outside_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(far_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": far_still_outside.x,
+			"cellY": far_still_outside.y,
+			"facing": "west",
+			"moving": true,
+		}
+	))
+	var far_outside_parsed := ServerAuthClientModel.parse_player_position_update_response(int(far_outside_response.get("responseCode", 0)), far_outside_response.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 120:
+		frames += 1
+		await get_tree().process_frame
+	var outside_event_hidden := bool(far_outside_parsed.get("ok", false)) and not _server_event_type_seen("online.position") and not _online_remote_player_at(far_username, current_map_id, far_still_outside)
+	var far_near_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(far_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": moved_near_cell.x,
+			"cellY": moved_near_cell.y,
+			"facing": "north",
+			"moving": true,
+		}
+	))
+	var far_near_parsed := ServerAuthClientModel.parse_player_position_update_response(int(far_near_response.get("responseCode", 0)), far_near_response.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 720 and not _online_remote_player_at(far_username, current_map_id, moved_near_cell):
+		frames += 1
+		await get_tree().process_frame
+	var moved_in_visible := bool(far_near_parsed.get("ok", false)) and _server_event_type_seen("online.position") and _online_remote_player_at(far_username, current_map_id, moved_near_cell)
+	var status := "ok" if register_ok and seed_positions_ok and near_visible and far_hidden and stream_ready and outside_event_hidden and moved_in_visible else "failed"
+	print("online aoi live check ready: status=%s register=%s seed=%s near=%s far_hidden=%s stream=%s outside_event_hidden=%s moved_in=%s watcher=%s near=%s far=%s" % [
+		status,
+		str(register_ok),
+		str(seed_positions_ok),
+		str(near_visible),
+		str(far_hidden),
+		str(stream_ready),
+		str(outside_event_hidden),
+		str(moved_in_visible),
+		watcher_username,
+		near_username,
+		far_username,
+	])
+	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
 
 
@@ -22129,6 +22286,7 @@ func _current_online_position_payload() -> Dictionary:
 		"cellY": cell.y,
 		"facing": player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south",
 		"moving": player.is_auto_moving() if player != null and player.has_method("is_auto_moving") else false,
+		"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
 	}
 
 

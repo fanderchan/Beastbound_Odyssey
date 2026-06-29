@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -39,6 +39,7 @@ Optional environment variables:
 - `GET /auth/session`
 - `GET /players/search?username={username}`
 - `GET /players/online`
+- `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
 - `POST /players/position`
 - `WS /events?token={sessionToken}`
 - `GET /profiles/me`
@@ -114,21 +115,22 @@ This party phase does not yet synchronize following or battle entry as a party.
 Online visibility is now server state, not a local-only player list:
 
 - `POST /players/position` stores the current account's `mapId`, grid cell, facing, moving flag, and update time.
-- The response also returns the active online roster, so a client can upload its own position and refresh visible same-server players with one low-frequency request.
-- `GET /players/online` includes the latest position snapshot for each active account when one exists.
+- The response also returns an AOI-filtered online roster, so a client can upload its own position and refresh visible nearby players with one low-frequency request.
+- `GET /players/online` without query parameters remains the full active roster for party/invite workflows.
+- `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}` returns only the current account plus players on the same map within a square cell radius. The default radius for position sync is 18 cells.
 
-This is still a snapshot loop, not live movement authority. It does not yet provide WebSocket push, range filtering, collision between players, following, party leader movement, or battle-room entry authority.
+This is still a snapshot loop, not live movement authority. It does not yet provide collision between players, following, party leader movement, battle-room entry authority, or anti-cheat movement validation.
 
 ## Event Stream Boundary
 
 `WS /events?token={sessionToken}` upgrades a valid server session to a lightweight WebSocket stream:
 
-- On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current online roster.
-- `POST /players/position` publishes `online.position` to connected clients, including the updated account position and roster snapshot.
+- On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current AOI-filtered online roster when the account already has a position.
+- `POST /players/position` publishes `online.position` only to clients whose current AOI includes the actor's current or previous position; each recipient receives its own filtered roster snapshot.
 - `POST /chat/send` publishes `chat.message`; nearby messages are same-server public, while team messages are targeted to party members.
 - Party invite, accept, decline, and leave publish `party.invite`, `party.update`, or `party.invite_declined` to the affected accounts.
 
-The stream is an event fanout for already-authorized HTTP actions. It is not yet server-authoritative movement, area subscription, combat room state, or anti-cheat validation.
+The stream is an event fanout for already-authorized HTTP actions. It is not yet server-authoritative movement, explicit room subscription, combat room state, or anti-cheat validation.
 
 ## Chat Boundary
 

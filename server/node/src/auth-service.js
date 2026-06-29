@@ -22,6 +22,9 @@ const CHAT_HISTORY_LIMIT = 50;
 const MAX_CHAT_MESSAGES = 500;
 const POSITION_MAP_ID_MAX_LENGTH = 64;
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
+const ONLINE_AOI_SCOPE = "aoi";
+const ONLINE_AOI_DEFAULT_RADIUS = 18;
+const ONLINE_AOI_MAX_RADIUS = 48;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -314,17 +317,20 @@ function createAuthService(options = {}) {
     });
   }
 
-  function listOnlinePlayers(token) {
+  function listOnlinePlayers(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const players = activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data));
+    const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
+    const aoi = normalizeOnlineAoiPayload(payload, viewerPosition);
+    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
     players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
     return ok({
       players,
       party: publicPartyForAccount(data, resolved.account.accountId),
+      aoi: publicOnlineAoi(aoi),
     });
   }
 
@@ -338,21 +344,67 @@ function createAuthService(options = {}) {
     if (!position.mapId) {
       return fail("position_map_missing", "位置缺少地图。");
     }
+    const previousPosition = data.playerPositions[resolved.account.accountId]
+      ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
+      : null;
     data.playerPositions[resolved.account.accountId] = position;
     save(data);
-    const players = activeOnlinePlayers(data, now).map((account) => publicOnlinePlayer(account, data));
+    const aoi = normalizeOnlineAoiPayload({
+      scope: ONLINE_AOI_SCOPE,
+      radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
+    }, position);
+    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
     players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
     emitServiceEvent({
       type: "online.position",
       accountId: resolved.account.accountId,
       username: resolved.account.username,
       position: publicPlayerPosition(position),
+      previousPosition,
       players,
+      aoi: publicOnlineAoi(aoi),
     });
     return ok({
       position: publicPlayerPosition(position),
       players,
       party: publicPartyForAccount(data, resolved.account.accountId),
+      aoi: publicOnlineAoi(aoi),
+    });
+  }
+
+  function eventForSession(token, event = {}) {
+    if (event && event.type === "online.position") {
+      return onlinePositionEventForSession(token, event);
+    }
+    return ok({
+      visible: true,
+      event,
+    });
+  }
+
+  function onlinePositionEventForSession(token, event = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
+    const aoi = normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, viewerPosition);
+    const isSelf = resolved.account.accountId === event.accountId;
+    const currentVisible = isSelf || onlinePositionVisibleToAoi(event.position, aoi);
+    const previousVisible = onlinePositionVisibleToAoi(event.previousPosition, aoi);
+    if (aoi.enabled && !currentVisible && !previousVisible) {
+      return ok({visible: false});
+    }
+    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
+    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    return ok({
+      visible: true,
+      event: {
+        ...event,
+        players,
+        aoi: publicOnlineAoi(aoi),
+      },
     });
   }
 
@@ -744,6 +796,7 @@ function createAuthService(options = {}) {
     listOnlinePlayers,
     updatePlayerPosition,
     onEvent,
+    eventForSession,
     getPartyState,
     inviteToParty,
     acceptPartyInvite,
@@ -1041,6 +1094,89 @@ function activeOnlinePlayers(data, now) {
   }
   players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
   return players;
+}
+
+function onlinePlayersForViewer(data, viewerAccount, aoi, now) {
+  return activeOnlinePlayers(data, now).filter((account) => (
+    onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)
+  ));
+}
+
+function onlineAccountVisibleToViewer(data, viewerAccount, account, aoi) {
+  if (!aoi || !aoi.enabled) {
+    return true;
+  }
+  if (viewerAccount && account.accountId === viewerAccount.accountId) {
+    return true;
+  }
+  return onlinePositionVisibleToAoi(data.playerPositions[account.accountId] || null, aoi);
+}
+
+function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
+  const scope = String(payload.scope || payload.viewScope || "").trim().toLowerCase();
+  const hasExplicitPosition = (
+    String(payload.mapId || payload.map || "").trim() !== "" ||
+    payload.cellX !== undefined ||
+    payload.cellY !== undefined ||
+    payload.x !== undefined ||
+    payload.y !== undefined
+  );
+  if (scope !== ONLINE_AOI_SCOPE && scope !== "nearby" && !hasExplicitPosition) {
+    return {
+      enabled: false,
+      scope: "all",
+      mapId: "",
+      cellX: 0,
+      cellY: 0,
+      radius: ONLINE_AOI_DEFAULT_RADIUS,
+    };
+  }
+  const source = hasExplicitPosition ? payload : (fallbackPosition || {});
+  const mapId = String(source.mapId || source.map || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH);
+  if (!mapId) {
+    return {
+      enabled: false,
+      scope: "all",
+      mapId: "",
+      cellX: 0,
+      cellY: 0,
+      radius: ONLINE_AOI_DEFAULT_RADIUS,
+    };
+  }
+  return {
+    enabled: true,
+    scope: ONLINE_AOI_SCOPE,
+    mapId,
+    cellX: clampInt(source.cellX ?? source.x, -9999, 9999, 0),
+    cellY: clampInt(source.cellY ?? source.y, -9999, 9999, 0),
+    radius: clampInt(payload.aoiRadius ?? payload.viewRadius ?? payload.radius, 1, ONLINE_AOI_MAX_RADIUS, ONLINE_AOI_DEFAULT_RADIUS),
+  };
+}
+
+function onlinePositionVisibleToAoi(position, aoi) {
+  if (!aoi || !aoi.enabled) {
+    return true;
+  }
+  if (!position || typeof position !== "object") {
+    return false;
+  }
+  if (String(position.mapId || "") !== aoi.mapId) {
+    return false;
+  }
+  const dx = Math.abs(Number(position.cellX || 0) - aoi.cellX);
+  const dy = Math.abs(Number(position.cellY || 0) - aoi.cellY);
+  return dx <= aoi.radius && dy <= aoi.radius;
+}
+
+function publicOnlineAoi(aoi) {
+  return {
+    scope: aoi && aoi.enabled ? ONLINE_AOI_SCOPE : "all",
+    mapId: aoi && aoi.enabled ? aoi.mapId : "",
+    cellX: aoi && aoi.enabled ? aoi.cellX : 0,
+    cellY: aoi && aoi.enabled ? aoi.cellY : 0,
+    radius: aoi && Number.isFinite(aoi.radius) ? aoi.radius : ONLINE_AOI_DEFAULT_RADIUS,
+    schemaVersion: 1,
+  };
 }
 
 function profileSummaryForAccount(account, data) {

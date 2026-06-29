@@ -63,9 +63,24 @@ static func player_search_request(base_url: String, session_token: String, usern
 	}
 
 
-static func online_players_request(base_url: String, session_token: String) -> Dictionary:
+static func online_players_request(base_url: String, session_token: String, scope: String = "", aoi: Dictionary = {}) -> Dictionary:
+	var url := "%s/players/online" % normalized_base_url(base_url)
+	var query := PackedStringArray()
+	var normalized_scope := scope.strip_edges()
+	if normalized_scope != "":
+		query.append("scope=%s" % normalized_scope.uri_encode())
+	if aoi.has("mapId"):
+		query.append("mapId=%s" % str(aoi.get("mapId", "")).uri_encode())
+	if aoi.has("cellX"):
+		query.append("cellX=%s" % str(aoi.get("cellX", "")).uri_encode())
+	if aoi.has("cellY"):
+		query.append("cellY=%s" % str(aoi.get("cellY", "")).uri_encode())
+	if aoi.has("radius"):
+		query.append("radius=%s" % str(aoi.get("radius", "")).uri_encode())
+	if not query.is_empty():
+		url += "?%s" % "&".join(query)
 	return {
-		"url": "%s/players/online" % normalized_base_url(base_url),
+		"url": url,
 		"headers": ["Authorization: Bearer %s" % session_token],
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
@@ -255,6 +270,7 @@ static func parse_online_players_response(response_code: int, body: PackedByteAr
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
+	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	return parsed
 
 
@@ -266,6 +282,7 @@ static func parse_player_position_update_response(response_code: int, body: Pack
 	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
+	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	return parsed
 
 
