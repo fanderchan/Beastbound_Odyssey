@@ -210,6 +210,45 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(emptyState.party, null);
 });
 
+test("players can chat nearby and inside server parties", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "chata", "password": "test1234", "displayName": "聊甲"});
+  const member = service.register({"username": "chatb", "password": "test1234", "displayName": "聊乙"});
+  const outsider = service.register({"username": "chatc", "password": "test1234", "displayName": "聊丙"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(outsider.ok, true);
+
+  const nearby = service.sendChatMessage(leader.session.token, {"channel": "nearby", "text": "火芽村集合"});
+  assert.equal(nearby.ok, true);
+  assert.equal(nearby.message.senderUsername, "chata");
+  const nearbyList = service.listChatMessages(member.session.token, {"channel": "nearby"});
+  assert.equal(nearbyList.ok, true);
+  assert.equal(nearbyList.messages.length, 1);
+  assert.equal(nearbyList.messages[0].text, "火芽村集合");
+
+  const blockedTeam = service.sendChatMessage(leader.session.token, {"channel": "team", "text": "队伍内见"});
+  assert.equal(blockedTeam.ok, false);
+  assert.equal(blockedTeam.code, "chat_team_missing");
+
+  const invite = service.inviteToParty(leader.session.token, {"username": "chatb"});
+  assert.equal(invite.ok, true);
+  const memberState = service.getPartyState(member.session.token);
+  const accept = service.acceptPartyInvite(member.session.token, memberState.incomingInvites[0].inviteId);
+  assert.equal(accept.ok, true);
+
+  const team = service.sendChatMessage(member.session.token, {"channel": "team", "text": "队伍频道已通"});
+  assert.equal(team.ok, true);
+  assert.equal(team.message.partyId, accept.party.partyId);
+  const leaderTeam = service.listChatMessages(leader.session.token, {"channel": "team"});
+  assert.equal(leaderTeam.ok, true);
+  assert.equal(leaderTeam.messages.length, 1);
+  assert.equal(leaderTeam.messages[0].text, "队伍频道已通");
+  const outsiderTeam = service.listChatMessages(outsider.session.token, {"channel": "team"});
+  assert.equal(outsiderTeam.ok, true);
+  assert.equal(outsiderTeam.messages.length, 0);
+});
+
 test("HTTP server exposes auth and session endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});
@@ -382,6 +421,76 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
     "headers": {"authorization": `Bearer ${member.session.token}`},
   });
   assert.equal(leave.ok, true);
+});
+
+test("HTTP server exposes nearby and team chat endpoints", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const leader = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpchata", "password": "test1234", "displayName": "聊甲"}),
+  });
+  const member = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpchatb", "password": "test1234", "displayName": "聊乙"}),
+  });
+  const outsider = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpchatc", "password": "test1234", "displayName": "聊丙"}),
+  });
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(outsider.ok, true);
+
+  const nearby = await fetchJson(`${base}/chat/send`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({"channel": "nearby", "text": "服务器附近频道"}),
+  });
+  assert.equal(nearby.ok, true);
+  const nearbyList = await fetchJson(`${base}/chat/messages?channel=nearby`, {
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(nearbyList.ok, true);
+  assert.equal(nearbyList.messages[0].text, "服务器附近频道");
+
+  const invite = await fetchJson(`${base}/party/invite`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({"username": "httpchatb"}),
+  });
+  assert.equal(invite.ok, true);
+  const memberState = await fetchJson(`${base}/party/state`, {
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  const accept = await fetchJson(`${base}/party/invites/${encodeURIComponent(memberState.incomingInvites[0].inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(accept.ok, true);
+
+  const team = await fetchJson(`${base}/chat/send`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({"channel": "team", "text": "队伍消息"}),
+  });
+  assert.equal(team.ok, true);
+  const leaderTeam = await fetchJson(`${base}/chat/messages?channel=team`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(leaderTeam.ok, true);
+  assert.equal(leaderTeam.messages.length, 1);
+  const outsiderTeam = await fetchJson(`${base}/chat/messages?channel=team`, {
+    "headers": {"authorization": `Bearer ${outsider.session.token}`},
+  });
+  assert.equal(outsiderTeam.ok, true);
+  assert.equal(outsiderTeam.messages.length, 0);
 });
 
 async function fetchJson(url, options = {}) {

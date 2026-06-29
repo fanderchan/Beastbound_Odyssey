@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -49,6 +49,8 @@ Optional environment variables:
 - `POST /party/invites/{inviteId}/accept`
 - `POST /party/invites/{inviteId}/decline`
 - `POST /party/leave`
+- `GET /chat/messages?channel={channel}&limit={limit}`
+- `POST /chat/send`
 - `GET /gm/tools`
 - `POST /gm/commands/{commandId}`
 
@@ -103,7 +105,18 @@ Parties are server state, not local Godot state:
 - `POST /party/invites/{inviteId}/decline` declines one pending invite.
 - `POST /party/leave` removes the current account from its party; if the leader leaves, the next member becomes leader, and an empty party dissolves.
 
-This phase does not yet synchronize map positions, team chat transport, following, or battle entry as a party.
+This phase does not yet synchronize map positions, following, or battle entry as a party.
+
+## Chat Boundary
+
+Chat is now server state, not a local-only Godot message list:
+
+- `GET /chat/messages?channel=nearby` returns the latest same-server nearby messages for the current account.
+- `POST /chat/send` with `channel=nearby` writes a nearby message for the current account.
+- `GET /chat/messages?channel=team` returns party chat only when the current account is in a server party.
+- `POST /chat/send` with `channel=team` requires current server party membership and stores the party id on the message.
+
+Nearby chat is currently same-server public chat. It is not yet map-coordinate range chat, WebSocket push, moderation tooling, or persisted economy/battle authority.
 
 ## MySQL Store Boundary
 
@@ -115,6 +128,7 @@ The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_ST
 - `mail_messages`
 - `parties`
 - `party_invites`
+- `chat_messages`
 - `server_state`
 
 This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.

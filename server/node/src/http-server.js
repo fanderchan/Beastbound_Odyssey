@@ -68,6 +68,15 @@ function createHttpServer(options = {}) {
         const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/read".length));
         return sendResult(res, service.markMailRead(bearerToken(req), mailId));
       }
+      if (req.method === "GET" && url.pathname === "/chat/messages") {
+        return sendResult(res, service.listChatMessages(bearerToken(req), {
+          "channel": url.searchParams.get("channel") || "",
+          "limit": url.searchParams.get("limit") || "",
+        }));
+      }
+      if (req.method === "POST" && url.pathname === "/chat/send") {
+        return sendResult(res, service.sendChatMessage(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/party/state") {
         return sendResult(res, service.getPartyState(bearerToken(req)));
       }

@@ -144,6 +144,30 @@ static func mail_read_request(base_url: String, session_token: String, mail_id: 
 	}
 
 
+static func chat_messages_request(base_url: String, session_token: String, channel: String, limit: int = 50) -> Dictionary:
+	return {
+		"url": "%s/chat/messages?channel=%s&limit=%d" % [normalized_base_url(base_url), channel.uri_encode(), clampi(limit, 1, 50)],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func chat_send_request(base_url: String, session_token: String, channel: String, text: String) -> Dictionary:
+	return {
+		"url": "%s/chat/send" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"channel": channel,
+			"text": text,
+		}),
+	}
+
+
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
@@ -264,6 +288,27 @@ static func parse_mail_read_response(response_code: int, body: PackedByteArray) 
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["mail"] = response.get("mail", {}) if response.get("mail", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_chat_messages_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "聊天读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["channel"] = str(response.get("channel", "nearby"))
+	parsed["messages"] = _dictionary_array(response.get("messages", []))
+	parsed["party"] = response.get("party", null)
+	return parsed
+
+
+static func parse_chat_send_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "消息发送失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["message"] = response.get("message", {}) if response.get("message", {}) is Dictionary else {}
+	parsed["party"] = response.get("party", null)
 	return parsed
 
 

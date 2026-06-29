@@ -75,6 +75,16 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_party_invites_to_status (to_account_id, status)
       );
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        message_id VARCHAR(96) PRIMARY KEY,
+        channel VARCHAR(24) NOT NULL,
+        party_id VARCHAR(96) NOT NULL DEFAULT '',
+        sender_account_id VARCHAR(80) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_chat_channel_created (channel, created_at),
+        INDEX idx_chat_party_created (party_id, created_at)
+      );
     `);
     schemaReady = true;
   }
@@ -104,6 +114,7 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM mail_messages");
       statements.push("DELETE FROM parties");
       statements.push("DELETE FROM party_invites");
+      statements.push("DELETE FROM chat_messages");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
@@ -121,6 +132,11 @@ function createMysqlAuthStore(options = {}) {
       }
       for (const invite of Object.values(objectOrEmpty(nextData.partyInvites))) {
         statements.push(insertPartyInviteStatement(invite));
+      }
+      if (Array.isArray(nextData.chatMessages)) {
+        for (const message of nextData.chatMessages) {
+          statements.push(insertChatMessageStatement(message));
+        }
       }
       statements.push("COMMIT");
       runMysql(config, config.database, `${statements.join(";\n")};`);
@@ -194,6 +210,10 @@ function insertPartyStatement(party) {
 
 function insertPartyInviteStatement(invite) {
   return `INSERT INTO party_invites (invite_id, party_id, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.partyId)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
+}
+
+function insertChatMessageStatement(message) {
+  return `INSERT INTO chat_messages (message_id, channel, party_id, sender_account_id, created_at, document_json) VALUES (${sqlString(message.messageId)}, ${sqlString(message.channel)}, ${sqlString(message.partyId)}, ${sqlString(message.senderAccountId)}, ${sqlString(message.createdAt)}, ${sqlJson(message)})`;
 }
 
 function sqlJson(value) {

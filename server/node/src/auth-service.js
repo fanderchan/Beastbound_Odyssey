@@ -15,6 +15,11 @@ const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
 const PARTY_MAX_MEMBERS = 5;
+const CHAT_CHANNEL_NEARBY = "nearby";
+const CHAT_CHANNEL_TEAM = "team";
+const CHAT_TEXT_MAX_LENGTH = 120;
+const CHAT_HISTORY_LIMIT = 50;
+const MAX_CHAT_MESSAGES = 500;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -486,6 +491,78 @@ function createAuthService(options = {}) {
     });
   }
 
+  function listChatMessages(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const channel = normalizeChatChannel(payload.channel || CHAT_CHANNEL_NEARBY);
+    if (!channel) {
+      return fail("chat_channel_invalid", "聊天频道不存在。");
+    }
+    const party = partyForAccount(data, resolved.account.accountId);
+    const limit = clampInt(payload.limit, 1, CHAT_HISTORY_LIMIT, CHAT_HISTORY_LIMIT);
+    let messages = [];
+    if (channel === CHAT_CHANNEL_TEAM) {
+      if (!party) {
+        return ok({channel, messages: [], party: null});
+      }
+      messages = data.chatMessages.filter((message) => message && message.channel === channel && message.partyId === party.partyId);
+    } else {
+      messages = data.chatMessages.filter((message) => message && message.channel === CHAT_CHANNEL_NEARBY);
+    }
+    messages = messages
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+      .slice(-limit)
+      .map(publicChatMessage);
+    return ok({
+      channel,
+      messages,
+      party: party ? publicParty(party, data) : null,
+    });
+  }
+
+  function sendChatMessage(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const channel = normalizeChatChannel(payload.channel || CHAT_CHANNEL_NEARBY);
+    if (!channel) {
+      return fail("chat_channel_invalid", "聊天频道不存在。");
+    }
+    const text = normalizeChatText(payload.text);
+    if (!text) {
+      return fail("chat_empty", "消息不能为空。");
+    }
+    const party = partyForAccount(data, resolved.account.accountId);
+    if (channel === CHAT_CHANNEL_TEAM && !party) {
+      return fail("chat_team_missing", "需要加入队伍才能发送队伍消息。");
+    }
+    const message = {
+      messageId: `chat_${randomId()}`,
+      channel,
+      partyId: channel === CHAT_CHANNEL_TEAM && party ? party.partyId : "",
+      senderAccountId: resolved.account.accountId,
+      senderUsername: resolved.account.username,
+      senderDisplayName: resolved.account.displayName,
+      text,
+      createdAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.chatMessages.push(message);
+    while (data.chatMessages.length > MAX_CHAT_MESSAGES) {
+      data.chatMessages.shift();
+    }
+    save(data);
+    return ok({
+      message: publicChatMessage(message),
+      party: party ? publicParty(party, data) : null,
+    });
+  }
+
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
@@ -598,6 +675,8 @@ function createAuthService(options = {}) {
     acceptPartyInvite,
     declinePartyInvite,
     leaveParty,
+    listChatMessages,
+    sendChatMessage,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -647,6 +726,7 @@ function normalizeData(raw) {
     mailMessages: objectOrEmpty(data.mailMessages),
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
+    chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -745,6 +825,19 @@ function publicMail(mail) {
     body: mail.body,
     createdAt: mail.createdAt,
     readAt: mail.readAt || null,
+    schemaVersion: 1,
+  };
+}
+
+function publicChatMessage(message) {
+  return {
+    messageId: message.messageId,
+    channel: message.channel,
+    partyId: message.partyId || "",
+    senderUsername: message.senderUsername,
+    senderDisplayName: message.senderDisplayName,
+    text: message.text,
+    createdAt: message.createdAt,
     schemaVersion: 1,
   };
 }
@@ -947,6 +1040,26 @@ function normalizeCommandIds(commandIds) {
 
 function normalizeMailText(value, maxLength) {
   return String(value || "").trim().replace(/\s+\n/g, "\n").slice(0, maxLength);
+}
+
+function normalizeChatChannel(value) {
+  const channel = String(value || "").trim().toLowerCase();
+  if (channel === CHAT_CHANNEL_NEARBY || channel === CHAT_CHANNEL_TEAM) {
+    return channel;
+  }
+  return "";
+}
+
+function normalizeChatText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, CHAT_TEXT_MAX_LENGTH);
+}
+
+function clampInt(value, minValue, maxValue, fallbackValue) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallbackValue;
+  }
+  return Math.max(minValue, Math.min(maxValue, Math.trunc(number)));
 }
 
 function isValidUsername(username) {

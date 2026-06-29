@@ -429,9 +429,14 @@ var chat_team_button: Button
 var chat_log_label: RichTextLabel
 var chat_input: LineEdit
 var chat_send_button: Button
+var chat_refresh_button: Button
+var chat_status_label: Label
 var chat_close_button: Button
+var chat_http_request: HTTPRequest
 var chat_active_channel: String = "system"
 var chat_messages: Array[Dictionary] = []
+var chat_request_pending: bool = false
+var chat_pending_kind: String = ""
 var mailbox_panel: PanelContainer
 var mailbox_list_container: VBoxContainer
 var mailbox_detail_label: RichTextLabel
@@ -615,6 +620,7 @@ var auto_auth_server_client_check: bool = false
 var auto_auth_server_live_check: bool = false
 var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
+var auto_chat_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -923,6 +929,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_mail_live_check")
 	elif auto_party_live_check:
 		call_deferred("_run_auto_party_live_check")
+	elif auto_chat_live_check:
+		call_deferred("_run_auto_chat_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1641,6 +1649,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_mail_live_check = true
 		elif arg == "--auto-party-live-check":
 			auto_party_live_check = true
+		elif arg == "--auto-chat-live-check":
+			auto_chat_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15105,6 +15115,44 @@ func _run_auto_auth_server_client_check() -> void:
 		and bool(parsed_party_action.get("ok", false))
 		and str((parsed_party_action.get("invite", {}) as Dictionary).get("status", "")) == "accepted"
 	)
+	var chat_messages_spec := ServerAuthClientModel.chat_messages_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_NEARBY, 25)
+	var chat_send_spec := ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_TEAM, "队伍消息")
+	var chat_request_ok := (
+		str(chat_messages_spec.get("url", "")) == "http://127.0.0.1:8787/chat/messages?channel=nearby&limit=25"
+		and int(chat_messages_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and _packed_string_array(chat_messages_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(chat_send_spec.get("url", "")) == "http://127.0.0.1:8787/chat/send"
+		and int(chat_send_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(chat_send_spec.get("body", "")).find("\"channel\":\"team\"") >= 0
+		and str(chat_send_spec.get("body", "")).find("\"text\":\"队伍消息\"") >= 0
+	)
+	var parsed_chat_messages := ServerAuthClientModel.parse_chat_messages_response(200, JSON.stringify({
+		"ok": true,
+		"channel": "nearby",
+		"messages": [{
+			"messageId": "chat_test",
+			"channel": "nearby",
+			"senderUsername": "remoteuser",
+			"senderDisplayName": "远程猎人",
+			"text": "火芽村集合",
+		}],
+		"party": null,
+	}).to_utf8_buffer())
+	var parsed_chat_send := ServerAuthClientModel.parse_chat_send_response(200, JSON.stringify({
+		"ok": true,
+		"message": {
+			"messageId": "chat_test",
+			"channel": "team",
+			"text": "队伍消息",
+		},
+	}).to_utf8_buffer())
+	var chat_parse_ok := (
+		bool(parsed_chat_messages.get("ok", false))
+		and str(parsed_chat_messages.get("channel", "")) == "nearby"
+		and (parsed_chat_messages.get("messages", []) as Array).size() == 1
+		and bool(parsed_chat_send.get("ok", false))
+		and str((parsed_chat_send.get("message", {}) as Dictionary).get("channel", "")) == "team"
+	)
 	var error_body := JSON.stringify({
 		"ok": false,
 		"code": "wrong_password",
@@ -15136,7 +15184,8 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and party_request_ok and party_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s party=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s party=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15151,6 +15200,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_read_parse_ok),
 		str(online_request_ok and online_parse_ok),
 		str(party_request_ok and party_parse_ok),
+		str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
@@ -15381,6 +15431,145 @@ func _run_auto_party_live_check() -> void:
 		party_online_players.size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_chat_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var leader_username := "gca%s" % suffix
+	var member_username := "gcb%s" % suffix
+	var outsider_username := "gcc%s" % suffix
+	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
+	member_username = member_username.substr(0, mini(20, member_username.length()))
+	outsider_username = outsider_username.substr(0, mini(20, outsider_username.length()))
+	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		leader_username,
+		"test1234",
+		"聊天甲"
+	))
+	var member_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		member_username,
+		"test1234",
+		"聊天乙"
+	))
+	var outsider_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		outsider_username,
+		"test1234",
+		"聊天丙"
+	))
+	var leader_parsed := ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
+	var member_parsed := ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
+	var outsider_parsed := ServerAuthClientModel.parse_auth_response(int(outsider_register.get("responseCode", 0)), outsider_register.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_session := leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
+	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
+	var outsider_session := outsider_parsed.get("session", {}) as Dictionary if outsider_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false)) and bool(outsider_parsed.get("ok", false))
+	var nearby_text := "附近消息%s" % suffix
+	var team_text := "队伍消息%s" % suffix
+	var nearby_send_response := await _auto_http_request_spec(ServerAuthClientModel.chat_send_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_NEARBY,
+		nearby_text
+	))
+	var nearby_send_parsed := ServerAuthClientModel.parse_chat_send_response(int(nearby_send_response.get("responseCode", 0)), nearby_send_response.get("body", PackedByteArray()) as PackedByteArray)
+	var nearby_fetch_response := await _auto_http_request_spec(ServerAuthClientModel.chat_messages_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_NEARBY,
+		50
+	))
+	var nearby_fetch_parsed := ServerAuthClientModel.parse_chat_messages_response(int(nearby_fetch_response.get("responseCode", 0)), nearby_fetch_response.get("body", PackedByteArray()) as PackedByteArray)
+	var nearby_messages: Array = nearby_fetch_parsed.get("messages", []) if nearby_fetch_parsed.get("messages", []) is Array else []
+	var nearby_ok := bool(nearby_send_parsed.get("ok", false)) and _chat_message_list_contains(nearby_messages, nearby_text)
+
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		member_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_party_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_state_response := await _auto_http_request_spec(ServerAuthClientModel.party_state_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", ""))
+	))
+	var member_state_parsed := ServerAuthClientModel.parse_party_state_response(int(member_state_response.get("responseCode", 0)), member_state_response.get("body", PackedByteArray()) as PackedByteArray)
+	var incoming: Array = member_state_parsed.get("incomingInvites", []) if member_state_parsed.get("incomingInvites", []) is Array else []
+	var invite_id := str((incoming[0] as Dictionary).get("inviteId", "")) if not incoming.is_empty() and incoming[0] is Dictionary else ""
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_party_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var party_ok := bool(invite_parsed.get("ok", false)) and bool(accept_parsed.get("ok", false))
+	var team_send_response := await _auto_http_request_spec(ServerAuthClientModel.chat_send_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_TEAM,
+		team_text
+	))
+	var team_send_parsed := ServerAuthClientModel.parse_chat_send_response(int(team_send_response.get("responseCode", 0)), team_send_response.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_team_response := await _auto_http_request_spec(ServerAuthClientModel.chat_messages_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_TEAM,
+		50
+	))
+	var leader_team_parsed := ServerAuthClientModel.parse_chat_messages_response(int(leader_team_response.get("responseCode", 0)), leader_team_response.get("body", PackedByteArray()) as PackedByteArray)
+	var outsider_team_response := await _auto_http_request_spec(ServerAuthClientModel.chat_messages_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(outsider_session.get("serverSessionToken", "")),
+		CHAT_CHANNEL_TEAM,
+		50
+	))
+	var outsider_team_parsed := ServerAuthClientModel.parse_chat_messages_response(int(outsider_team_response.get("responseCode", 0)), outsider_team_response.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_team_messages: Array = leader_team_parsed.get("messages", []) if leader_team_parsed.get("messages", []) is Array else []
+	var outsider_team_messages: Array = outsider_team_parsed.get("messages", []) if outsider_team_parsed.get("messages", []) is Array else []
+	var team_ok := bool(team_send_parsed.get("ok", false)) and _chat_message_list_contains(leader_team_messages, team_text) and not _chat_message_list_contains(outsider_team_messages, team_text)
+
+	current_account_session = member_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_profile_sync_expected_revision = 0
+	chat_messages.clear()
+	chat_active_channel = CHAT_CHANNEL_NEARBY
+	_open_chat_panel()
+	var frames := 0
+	while frames < 720 and chat_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var nearby_ui_ok := chat_panel != null and chat_panel.visible and chat_log_label != null and chat_log_label.text.find(nearby_text) >= 0
+	_set_chat_channel(CHAT_CHANNEL_TEAM)
+	frames = 0
+	while frames < 720 and chat_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var team_ui_ok := chat_panel != null and chat_panel.visible and chat_log_label != null and chat_log_label.text.find(team_text) >= 0
+	var status := "ok" if register_ok and nearby_ok and party_ok and team_ok and nearby_ui_ok and team_ui_ok else "failed"
+	print("chat live check ready: status=%s register=%s nearby=%s party=%s team=%s nearby_ui=%s team_ui=%s leader=%s member=%s" % [
+		status,
+		str(register_ok),
+		str(nearby_ok),
+		str(party_ok),
+		str(team_ok),
+		str(nearby_ui_ok),
+		str(team_ui_ok),
+		leader_username,
+		member_username,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _chat_message_list_contains(messages: Array, text: String) -> bool:
+	for value in messages:
+		if value is Dictionary and str((value as Dictionary).get("text", "")) == text:
+			return true
+	return false
 
 
 func _auto_http_request_spec(spec: Dictionary) -> Dictionary:
@@ -15855,23 +16044,23 @@ func _run_auto_chat_panel_check() -> void:
 		chat_nearby_button != null
 		and chat_nearby_button.button_pressed
 		and chat_input != null
-		and chat_input.editable
-		and chat_input.text == ""
+		and not chat_input.editable
 		and chat_send_button != null
-		and not chat_send_button.disabled
-		and chat_log_label != null
-		and chat_log_label.text.find("见习猎人") >= 0
-		and chat_log_label.text.find("你好") >= 0
+		and chat_send_button.disabled
+		and chat_status_label != null
+		and chat_status_label.text.find("服务器账号") >= 0
 	)
 	_set_chat_channel(CHAT_CHANNEL_TEAM)
-	_append_chat_message(CHAT_CHANNEL_TEAM, "集合", "陪练伙伴1")
 	await get_tree().process_frame
 	var team_ok := (
 		chat_team_button != null
 		and chat_team_button.button_pressed
-		and chat_log_label != null
-		and chat_log_label.text.find("陪练伙伴1") >= 0
-		and chat_log_label.text.find("集合") >= 0
+		and chat_input != null
+		and not chat_input.editable
+		and chat_send_button != null
+		and chat_send_button.disabled
+		and chat_status_label != null
+		and chat_status_label.text.find("服务器账号") >= 0
 	)
 	_set_chat_channel(CHAT_CHANNEL_SYSTEM)
 	await get_tree().process_frame
@@ -20294,6 +20483,11 @@ func _build_hud() -> void:
 	chat_title_label.add_theme_font_size_override("font_size", 21)
 	chat_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_header.add_child(chat_title_label)
+	chat_refresh_button = Button.new()
+	chat_refresh_button.text = "刷新"
+	chat_refresh_button.custom_minimum_size = Vector2(80, 44)
+	chat_refresh_button.pressed.connect(_request_chat_messages)
+	chat_header.add_child(chat_refresh_button)
 	chat_close_button = Button.new()
 	chat_close_button.text = "关闭"
 	chat_close_button.custom_minimum_size = Vector2(92, 44)
@@ -20310,6 +20504,13 @@ func _build_hud() -> void:
 	chat_tab_row.add_child(chat_nearby_button)
 	chat_team_button = _chat_channel_button("队伍", CHAT_CHANNEL_TEAM)
 	chat_tab_row.add_child(chat_team_button)
+	chat_status_label = Label.new()
+	chat_status_label.text = ""
+	chat_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	chat_status_label.add_theme_font_size_override("font_size", 14)
+	chat_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	chat_status_label.custom_minimum_size = Vector2(0, 28)
+	chat_column.add_child(chat_status_label)
 
 	var chat_scroll := ScrollContainer.new()
 	chat_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -20342,6 +20543,10 @@ func _build_hud() -> void:
 	chat_send_button.custom_minimum_size = Vector2(92, 44)
 	chat_send_button.pressed.connect(_on_chat_send_pressed)
 	chat_input_row.add_child(chat_send_button)
+	chat_http_request = HTTPRequest.new()
+	chat_http_request.timeout = 8.0
+	chat_http_request.request_completed.connect(_on_chat_http_request_completed)
+	chat_panel.add_child(chat_http_request)
 	hud_root.add_child(chat_panel)
 
 	party_panel = _panel_container("PartyPanel")
@@ -25927,6 +26132,7 @@ func _open_chat_panel() -> void:
 	_close_auto_settings_panel()
 	chat_panel.visible = true
 	_refresh_chat_panel()
+	_request_chat_messages()
 	_layout_hud()
 
 
@@ -25954,6 +26160,8 @@ func _chat_channel_is_valid(channel: String) -> bool:
 func _set_chat_channel(channel: String) -> void:
 	chat_active_channel = channel if _chat_channel_is_valid(channel) else CHAT_CHANNEL_SYSTEM
 	_refresh_chat_panel()
+	if chat_panel != null and chat_panel.visible:
+		_request_chat_messages()
 
 
 func _append_chat_message(channel: String, text: String, author: String = "") -> void:
@@ -25965,6 +26173,8 @@ func _append_chat_message(channel: String, text: String, author: String = "") ->
 		"channel": normalized_channel,
 		"author": author.strip_edges(),
 		"text": stripped,
+		"createdAt": "",
+		"messageId": "",
 	})
 	while chat_messages.size() > CHAT_MAX_MESSAGES:
 		chat_messages.pop_front()
@@ -25998,11 +26208,25 @@ func _refresh_chat_panel() -> void:
 	if chat_log_label != null:
 		chat_log_label.text = "\n".join(lines)
 	if chat_input != null:
-		var can_send := chat_active_channel != CHAT_CHANNEL_SYSTEM
+		var can_send := chat_active_channel != CHAT_CHANNEL_SYSTEM and _is_server_account_session() and not chat_request_pending
 		chat_input.editable = can_send
-		chat_input.placeholder_text = "输入消息" if can_send else "系统频道不可输入"
+		if chat_active_channel == CHAT_CHANNEL_SYSTEM:
+			chat_input.placeholder_text = "系统频道不可输入"
+		elif not _is_server_account_session():
+			chat_input.placeholder_text = "需要服务器账号"
+		else:
+			chat_input.placeholder_text = "输入消息"
 	if chat_send_button != null:
-		chat_send_button.disabled = chat_active_channel == CHAT_CHANNEL_SYSTEM
+		chat_send_button.disabled = chat_active_channel == CHAT_CHANNEL_SYSTEM or not _is_server_account_session() or chat_request_pending
+	if chat_refresh_button != null:
+		chat_refresh_button.disabled = chat_active_channel == CHAT_CHANNEL_SYSTEM or not _is_server_account_session() or chat_request_pending
+	if chat_status_label != null:
+		if chat_active_channel == CHAT_CHANNEL_SYSTEM:
+			chat_status_label.text = ""
+		elif not _is_server_account_session():
+			chat_status_label.text = "需要服务器账号登录。"
+		elif chat_status_label.text.strip_edges() == "":
+			chat_status_label.text = "聊天已同步。"
 
 
 func _on_chat_send_pressed() -> void:
@@ -26011,9 +26235,106 @@ func _on_chat_send_pressed() -> void:
 	var text := chat_input.text.strip_edges()
 	if text == "":
 		return
-	_append_chat_message(chat_active_channel, text, _local_player_name())
-	chat_input.text = ""
+	if not _is_server_account_session():
+		if chat_status_label != null:
+			chat_status_label.text = "需要服务器账号登录。"
+		_refresh_chat_panel()
+		return
+	_start_chat_request("send", ServerAuthClientModel.chat_send_request(_server_profile_base_url(), _server_profile_token(), chat_active_channel, text))
+
+
+func _request_chat_messages() -> void:
+	if chat_active_channel == CHAT_CHANNEL_SYSTEM:
+		_refresh_chat_panel()
+		return
+	if not _is_server_account_session():
+		if chat_status_label != null:
+			chat_status_label.text = "需要服务器账号登录。"
+		_refresh_chat_panel()
+		return
+	_start_chat_request("messages", ServerAuthClientModel.chat_messages_request(_server_profile_base_url(), _server_profile_token(), chat_active_channel, CHAT_MAX_MESSAGES))
+
+
+func _start_chat_request(kind: String, spec: Dictionary) -> void:
+	if chat_http_request == null or chat_request_pending:
+		return
+	chat_pending_kind = kind
+	chat_request_pending = true
+	if chat_status_label != null:
+		chat_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
 	_refresh_chat_panel()
+	var err := chat_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		chat_request_pending = false
+		chat_pending_kind = ""
+		if chat_status_label != null:
+			chat_status_label.text = "无法发起聊天请求。"
+		_refresh_chat_panel()
+
+
+func _on_chat_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := chat_pending_kind
+	chat_pending_kind = ""
+	chat_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if chat_status_label != null:
+			chat_status_label.text = "聊天服务器连接失败。"
+		_refresh_chat_panel()
+		return
+	if kind == "messages":
+		var parsed_messages := ServerAuthClientModel.parse_chat_messages_response(response_code, body)
+		if bool(parsed_messages.get("ok", false)):
+			var channel := str(parsed_messages.get("channel", chat_active_channel))
+			_replace_chat_channel_messages(channel, parsed_messages.get("messages", []))
+			if chat_status_label != null:
+				chat_status_label.text = "聊天已同步。"
+		elif chat_status_label != null:
+			chat_status_label.text = str(parsed_messages.get("message", "聊天读取失败。"))
+	elif kind == "send":
+		var parsed_send := ServerAuthClientModel.parse_chat_send_response(response_code, body)
+		if bool(parsed_send.get("ok", false)):
+			if chat_input != null:
+				chat_input.text = ""
+			if chat_status_label != null:
+				chat_status_label.text = "消息已发送。"
+			_request_chat_messages()
+			return
+		elif chat_status_label != null:
+			chat_status_label.text = str(parsed_send.get("message", "消息发送失败。"))
+	_refresh_chat_panel()
+
+
+func _replace_chat_channel_messages(channel: String, server_messages) -> void:
+	var normalized_channel := channel if _chat_channel_is_valid(channel) else CHAT_CHANNEL_NEARBY
+	var retained: Array[Dictionary] = []
+	for value in chat_messages:
+		if value is Dictionary and str((value as Dictionary).get("channel", "")) != normalized_channel:
+			retained.append((value as Dictionary).duplicate(true))
+	chat_messages = retained
+	if server_messages is Array:
+		for value in server_messages:
+			if value is Dictionary:
+				chat_messages.append(_chat_message_from_server(value as Dictionary, normalized_channel))
+	while chat_messages.size() > CHAT_MAX_MESSAGES:
+		chat_messages.pop_front()
+
+
+func _chat_message_from_server(message: Dictionary, channel: String) -> Dictionary:
+	var author := str(message.get("senderDisplayName", message.get("senderUsername", ""))).strip_edges()
+	if author == "":
+		author = str(message.get("senderUsername", "")).strip_edges()
+	return {
+		"channel": channel,
+		"author": author,
+		"text": str(message.get("text", "")),
+		"createdAt": str(message.get("createdAt", "")),
+		"messageId": str(message.get("messageId", "")),
+	}
 
 
 func _open_party_panel() -> void:
