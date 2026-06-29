@@ -199,6 +199,19 @@ static func battle_invite_decline_request(base_url: String, session_token: Strin
 	return _battle_invite_action_request(base_url, session_token, invite_id, "decline")
 
 
+static func battle_invite_cancel_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
+	return _battle_invite_action_request(base_url, session_token, invite_id, "cancel")
+
+
+static func battle_room_leave_request(base_url: String, session_token: String, room_id: String) -> Dictionary:
+	return {
+		"url": "%s/battle/rooms/%s/leave" % [normalized_base_url(base_url), room_id.uri_encode()],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func battle_command_submit_request(base_url: String, session_token: String, room_id: String, command: Dictionary) -> Dictionary:
 	return {
 		"url": "%s/battle/rooms/%s/commands" % [normalized_base_url(base_url), room_id.uri_encode()],
@@ -427,6 +440,7 @@ static func parse_battle_action_response(response_code: int, body: PackedByteArr
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["room"] = response.get("room", null)
 	parsed["invite"] = response.get("invite", {}) if response.get("invite", {}) is Dictionary else {}
+	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
 	return parsed
 
 
@@ -438,6 +452,7 @@ static func parse_battle_command_response(response_code: int, body: PackedByteAr
 	parsed["room"] = response.get("room", null)
 	parsed["command"] = response.get("command", {}) if response.get("command", {}) is Dictionary else {}
 	parsed["turn"] = response.get("turn", null)
+	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
 	return parsed
 
 

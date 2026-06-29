@@ -33,13 +33,19 @@ const BATTLE_MODE_DUEL = "duel";
 const BATTLE_INVITE_PENDING = "pending";
 const BATTLE_INVITE_ACCEPTED = "accepted";
 const BATTLE_INVITE_DECLINED = "declined";
+const BATTLE_INVITE_CANCELLED = "cancelled";
+const BATTLE_INVITE_EXPIRED = "expired";
 const BATTLE_ROOM_READY = "ready";
+const BATTLE_ROOM_CLOSED = "closed";
 const BATTLE_PHASE_COMMAND = "command";
+const BATTLE_PHASE_FINISHED = "finished";
 const BATTLE_ACTION_ATTACK = "attack";
 const BATTLE_ACTION_DEFEND = "defend";
 const BATTLE_ACTOR_MAX_HP = 120;
 const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
+const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
+const BATTLE_COMMAND_TIMEOUT_MS = 90 * 1000;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -849,7 +855,19 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expireBattleTimeoutsAndEmit(data);
     return ok(battleStatePayload(data, resolved.account.accountId));
+  }
+
+  function expireBattleTimeoutsAndEmit(data) {
+    const timeoutEvents = expireBattleTimeouts(data, now);
+    if (timeoutEvents.length > 0) {
+      save(data);
+      for (const event of timeoutEvents) {
+        emitServiceEvent(event);
+      }
+    }
+    return timeoutEvents;
   }
 
   function inviteToBattle(token, payload = {}) {
@@ -897,6 +915,7 @@ function createAuthService(options = {}) {
       status: BATTLE_INVITE_PENDING,
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
+      expiresAt: new Date(now() + BATTLE_INVITE_TTL_MS).toISOString(),
       schemaVersion: 1,
     };
     data.battleInvites[invite.inviteId] = invite;
@@ -922,6 +941,12 @@ function createAuthService(options = {}) {
     const invite = data.battleInvites[String(inviteId || "").trim()];
     if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
       return fail("battle_invite_missing", "切磋邀请不存在。");
+    }
+    if (battleInviteIsExpired(invite, now)) {
+      const event = expireBattleInvite(data, invite, now);
+      save(data);
+      emitServiceEvent(event);
+      return fail("battle_invite_missing", "切磋邀请已过期。");
     }
     if (activeBattleRoomForAccount(data, invite.fromAccountId) || activeBattleRoomForAccount(data, invite.toAccountId)) {
       return fail("battle_room_busy", "双方已有切磋房间。");
@@ -997,12 +1022,74 @@ function createAuthService(options = {}) {
     });
   }
 
+  function cancelBattleInvite(token, inviteId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const invite = data.battleInvites[String(inviteId || "").trim()];
+    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.fromAccountId !== resolved.account.accountId) {
+      return fail("battle_invite_missing", "切磋邀请不存在。");
+    }
+    invite.status = BATTLE_INVITE_CANCELLED;
+    invite.updatedAt = isoNow(now);
+    data.battleInvites[invite.inviteId] = invite;
+    save(data);
+    emitServiceEvent({
+      type: "battle.invite_cancelled",
+      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
+      invite: publicBattleInvite(invite, data),
+      room: null,
+    });
+    return ok({
+      invite: publicBattleInvite(invite, data),
+      room: null,
+      message: "切磋邀请已取消。",
+    });
+  }
+
+  function leaveBattleRoom(token, roomId = "") {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    expireBattleTimeoutsAndEmit(data);
+    const normalizedRoomId = String(roomId || "").trim();
+    const room = normalizedRoomId !== "" ? data.battleRooms[normalizedRoomId] || null : activeBattleRoomForAccount(data, resolved.account.accountId);
+    if (!room || room.status === BATTLE_ROOM_CLOSED) {
+      return fail("battle_room_missing", "切磋房间不存在。");
+    }
+    if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
+      return fail("battle_room_forbidden", "你不在这个切磋房间中。");
+    }
+    const result = battleRoomResultForLeave(room, resolved.account.accountId, now);
+    closeBattleRoomWithResult(room, result, now);
+    data.battleRooms[room.roomId] = room;
+    save(data);
+    emitServiceEvent({
+      type: "battle.room_closed",
+      targetAccountIds: room.participantAccountIds.slice(),
+      roomId: room.roomId,
+      reason: result.reason,
+      result: publicBattleResult(result),
+      room: publicBattleRoom(room),
+    });
+    return ok({
+      room: publicBattleRoom(room),
+      result: publicBattleResult(result),
+      message: "已离开切磋房间。",
+    });
+  }
+
   function submitBattleCommand(token, roomId, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expireBattleTimeoutsAndEmit(data);
     const normalizedRoomId = String(roomId || payload.roomId || "").trim();
     const room = data.battleRooms[normalizedRoomId] || null;
     if (!room || room.status === "closed") {
@@ -1067,6 +1154,16 @@ function createAuthService(options = {}) {
         turn,
         room: publicBattleRoom(room),
       });
+      if (room.status === BATTLE_ROOM_CLOSED && room.battle && room.battle.result) {
+        emitServiceEvent({
+          type: "battle.room_closed",
+          targetAccountIds: room.participantAccountIds.slice(),
+          roomId: room.roomId,
+          reason: String(room.closeReason || room.battle.result.reason || "battle_result"),
+          result: publicBattleResult(room.battle.result),
+          room: publicBattleRoom(room),
+        });
+      }
     }
     return ok({
       room: publicBattleRoom(room),
@@ -1200,6 +1297,8 @@ function createAuthService(options = {}) {
     inviteToBattle,
     acceptBattleInvite,
     declineBattleInvite,
+    cancelBattleInvite,
+    leaveBattleRoom,
     submitBattleCommand,
     grantGm,
     listGmTools,
@@ -1497,6 +1596,7 @@ function publicBattleInvite(invite, data) {
     status: invite.status,
     createdAt: invite.createdAt,
     updatedAt: invite.updatedAt,
+    expiresAt: invite.expiresAt || "",
     schemaVersion: 1,
   };
 }
@@ -1515,6 +1615,9 @@ function publicBattleRoom(room) {
     entry: room.entry && typeof room.entry === "object" ? clone(room.entry) : null,
     participants: Array.isArray(room.participants) ? clone(room.participants) : [],
     battle: publicBattleRoomBattle(room.battle || null),
+    closeReason: String(room.closeReason || ""),
+    closedByAccountId: String(room.closedByAccountId || ""),
+    closedAt: room.closedAt || "",
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
     schemaVersion: 1,
@@ -1533,7 +1636,24 @@ function publicBattleRoomBattle(battle) {
     submittedAccountIds: Array.isArray(battle.submittedAccountIds) ? battle.submittedAccountIds.slice() : [],
     actors: Array.isArray(battle.actors) ? battle.actors.map(publicBattleActor) : [],
     lastEventList: battle.lastEventList && typeof battle.lastEventList === "object" ? clone(battle.lastEventList) : null,
+    result: battle.result && typeof battle.result === "object" ? publicBattleResult(battle.result) : null,
+    commandDeadlineAt: battle.commandDeadlineAt || "",
     updatedAt: battle.updatedAt || "",
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleResult(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return null;
+  }
+  return {
+    kind: "battle_result",
+    reason: String(result.reason || ""),
+    winnerAccountId: String(result.winnerAccountId || ""),
+    loserAccountIds: Array.isArray(result.loserAccountIds) ? result.loserAccountIds.map((value) => String(value)) : [],
+    closedByAccountId: String(result.closedByAccountId || ""),
+    endedAt: String(result.endedAt || ""),
     schemaVersion: 1,
   };
 }
@@ -1681,6 +1801,8 @@ function createBattleRoomBattleState(room, now) {
     actors,
     lastEventList: null,
     eventLog: [],
+    result: null,
+    commandDeadlineAt: new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString(),
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
@@ -1701,6 +1823,9 @@ function battleRoomBattleStateForMutation(room, now) {
   room.battle.phase = String(room.battle.phase || BATTLE_PHASE_COMMAND);
   room.battle.round = Math.max(1, Number(room.battle.round || 1));
   room.battle.turnSeq = Math.max(0, Number(room.battle.turnSeq || 0));
+  if (!room.battle.commandDeadlineAt) {
+    room.battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
+  }
   return room.battle;
 }
 
@@ -1847,14 +1972,23 @@ function resolveBattleRoomTurn(room, battle, now) {
     actors: battle.actors.map(publicBattleActor),
     resolvedAt: isoNow(now),
   };
+  const result = battleResultForResolvedActors(room, battle, now);
+  if (result) {
+    eventList.result = publicBattleResult(result);
+  }
   battle.lastEventList = eventList;
   battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([eventList]).slice(-20) : [eventList];
   battle.commands = {};
   battle.submittedAccountIds = [];
   battle.round = round + 1;
   battle.phase = BATTLE_PHASE_COMMAND;
+  battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
   battle.updatedAt = eventList.resolvedAt;
   room.updatedAt = eventList.resolvedAt;
+  if (result) {
+    closeBattleRoomWithResult(room, result, now);
+    eventList.actors = battle.actors.map(publicBattleActor);
+  }
   return clone(eventList);
 }
 
@@ -1865,6 +1999,126 @@ function battleCommandSortValue(battle, command) {
 
 function battleActorByAccountId(battle, accountId) {
   return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => actor && actor.accountId === accountId) || null;
+}
+
+function battleResultForResolvedActors(room, battle, now) {
+  const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  const livingSides = new Set(actors
+    .filter((actor) => actor && Number(actor.hp || 0) > 0)
+    .map((actor) => String(actor.side || ""))
+    .filter(Boolean));
+  if (livingSides.size > 1) {
+    return null;
+  }
+  const winnerSide = livingSides.size === 1 ? Array.from(livingSides)[0] : "";
+  const winner = actors.find((actor) => actor && String(actor.side || "") === winnerSide && Number(actor.hp || 0) > 0) || null;
+  const winnerAccountId = winner ? String(winner.accountId || "") : "";
+  const loserAccountIds = requiredBattleCommandAccountIds(room).filter((accountId) => accountId !== winnerAccountId);
+  return {
+    reason: "defeat",
+    winnerAccountId,
+    loserAccountIds,
+    closedByAccountId: "",
+    endedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
+function battleRoomResultForLeave(room, leavingAccountId, now) {
+  const winnerAccountId = requiredBattleCommandAccountIds(room).find((accountId) => accountId !== leavingAccountId) || "";
+  return {
+    reason: "leave",
+    winnerAccountId,
+    loserAccountIds: leavingAccountId ? [leavingAccountId] : [],
+    closedByAccountId: leavingAccountId,
+    endedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
+function battleRoomResultForTimeout(room, battle, now) {
+  const submitted = submittedBattleCommandAccountIds(battle);
+  const required = requiredBattleCommandAccountIds(room);
+  const missing = required.filter((accountId) => !submitted.includes(accountId));
+  const winnerAccountId = submitted.length === 1 ? submitted[0] : "";
+  return {
+    reason: "timeout",
+    winnerAccountId,
+    loserAccountIds: missing,
+    closedByAccountId: missing[0] || "",
+    endedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
+function closeBattleRoomWithResult(room, result, now) {
+  const battle = battleRoomBattleStateForMutation(room, now);
+  room.status = BATTLE_ROOM_CLOSED;
+  room.closeReason = String(result.reason || "closed");
+  room.closedByAccountId = String(result.closedByAccountId || "");
+  room.closedAt = String(result.endedAt || isoNow(now));
+  room.updatedAt = room.closedAt;
+  battle.phase = BATTLE_PHASE_FINISHED;
+  battle.result = {...result, kind: "battle_result"};
+  battle.commands = {};
+  battle.submittedAccountIds = [];
+  battle.commandDeadlineAt = "";
+  battle.updatedAt = room.closedAt;
+  return room;
+}
+
+function battleInviteIsExpired(invite, now) {
+  if (!invite || invite.status !== BATTLE_INVITE_PENDING) {
+    return false;
+  }
+  const createdMs = Number.isFinite(Date.parse(invite.createdAt || "")) ? Date.parse(invite.createdAt || "") : now();
+  const expiresAt = invite.expiresAt || new Date(createdMs + BATTLE_INVITE_TTL_MS).toISOString();
+  return Date.parse(expiresAt) <= now();
+}
+
+function expireBattleInvite(data, invite, now) {
+  invite.status = BATTLE_INVITE_EXPIRED;
+  invite.updatedAt = isoNow(now);
+  data.battleInvites[invite.inviteId] = invite;
+  return {
+    type: "battle.invite_expired",
+    targetAccountIds: [invite.fromAccountId, invite.toAccountId],
+    invite: publicBattleInvite(invite, data),
+    room: null,
+  };
+}
+
+function expireBattleTimeouts(data, now) {
+  const events = [];
+  for (const invite of Object.values(data.battleInvites)) {
+    if (battleInviteIsExpired(invite, now)) {
+      events.push(expireBattleInvite(data, invite, now));
+    }
+  }
+  for (const room of Object.values(data.battleRooms)) {
+    if (!room || room.status === BATTLE_ROOM_CLOSED) {
+      continue;
+    }
+    const battle = battleRoomBattleStateForMutation(room, now);
+    if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND || !battle.commandDeadlineAt) {
+      continue;
+    }
+    if (Date.parse(battle.commandDeadlineAt) > now()) {
+      continue;
+    }
+    const result = battleRoomResultForTimeout(room, battle, now);
+    closeBattleRoomWithResult(room, result, now);
+    data.battleRooms[room.roomId] = room;
+    events.push({
+      type: "battle.room_closed",
+      targetAccountIds: room.participantAccountIds.slice(),
+      roomId: room.roomId,
+      reason: result.reason,
+      result: publicBattleResult(result),
+      room: publicBattleRoom(room),
+    });
+  }
+  return events;
 }
 
 function battleDefendEvent(room, battle, command, actor, round, sequence) {

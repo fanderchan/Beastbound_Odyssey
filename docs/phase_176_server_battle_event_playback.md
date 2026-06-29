@@ -52,6 +52,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase177：切磋房间离开、取消、超时和战斗结果回写。
+1. Phase177 已完成：切磋房间离开、取消、超时和战斗结果回写。
 2. Phase178：服务端战斗 actor 扩展到玩家队伍/宠物快照，继续沿用 N vs N 模型。
-3. Phase179：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。
+3. Phase179：正式玩家 UI 接入“离开切磋”，同时保留服务端权威关闭。
+4. Phase180：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。

@@ -402,6 +402,103 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   assert.equal(staleRound.code, "battle_command_round_mismatch");
 });
 
+test("duel battle rooms can cancel, leave, timeout, and finish with results", () => {
+  let nowMs = Date.parse("2026-06-29T00:00:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => nowMs,
+  });
+  const events = [];
+  service.onEvent((event) => events.push(event));
+
+  const challenger = service.register({"username": "closea", "password": "test1234", "displayName": "关闭甲"});
+  const opponent = service.register({"username": "closeb", "password": "test1234", "displayName": "关闭乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const cancelInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  assert.equal(cancelInvite.ok, true);
+  assert.equal(Boolean(cancelInvite.invite.expiresAt), true);
+  const cancel = service.cancelBattleInvite(challenger.session.token, cancelInvite.invite.inviteId);
+  assert.equal(cancel.ok, true);
+  assert.equal(cancel.invite.status, "cancelled");
+  assert.equal(events.some((event) => event.type === "battle.invite_cancelled" && event.invite.inviteId === cancelInvite.invite.inviteId), true);
+  const acceptCancelled = service.acceptBattleInvite(opponent.session.token, cancelInvite.invite.inviteId);
+  assert.equal(acceptCancelled.ok, false);
+  assert.equal(acceptCancelled.code, "battle_invite_missing");
+
+  const leaveInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  const leaveAccept = service.acceptBattleInvite(opponent.session.token, leaveInvite.invite.inviteId);
+  assert.equal(leaveAccept.ok, true);
+  const leave = service.leaveBattleRoom(opponent.session.token, leaveAccept.room.roomId);
+  assert.equal(leave.ok, true);
+  assert.equal(leave.room.status, "closed");
+  assert.equal(leave.result.reason, "leave");
+  assert.equal(leave.result.winnerAccountId, challenger.account.accountId);
+  assert.equal(service.getBattleState(challenger.session.token).room, null);
+  assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "leave"), true);
+
+  const timeoutInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  assert.equal(timeoutInvite.ok, true);
+  nowMs += 3 * 60 * 1000;
+  const expiredState = service.getBattleState(opponent.session.token);
+  assert.equal(expiredState.ok, true);
+  assert.equal(expiredState.incomingInvites.length, 0);
+  assert.equal(events.some((event) => event.type === "battle.invite_expired" && event.invite.inviteId === timeoutInvite.invite.inviteId), true);
+
+  const roomInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  const roomAccept = service.acceptBattleInvite(opponent.session.token, roomInvite.invite.inviteId);
+  assert.equal(roomAccept.ok, true);
+  nowMs += 91 * 1000;
+  const timeoutState = service.getBattleState(challenger.session.token);
+  assert.equal(timeoutState.ok, true);
+  assert.equal(timeoutState.room, null);
+  assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "timeout"), true);
+
+  const lateInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  const lateAccept = service.acceptBattleInvite(opponent.session.token, lateInvite.invite.inviteId);
+  assert.equal(lateAccept.ok, true);
+  nowMs += 91 * 1000;
+  const timeoutEventsBeforeLateCommand = events.filter((event) => event.type === "battle.room_closed" && event.reason === "timeout").length;
+  const lateCommand = service.submitBattleCommand(challenger.session.token, lateAccept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetUsername": "closeb",
+  });
+  assert.equal(lateCommand.ok, false);
+  assert.equal(lateCommand.code, "battle_room_missing");
+  assert.equal(events.filter((event) => event.type === "battle.room_closed" && event.reason === "timeout").length, timeoutEventsBeforeLateCommand + 1);
+
+  const resultInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
+  const resultAccept = service.acceptBattleInvite(opponent.session.token, resultInvite.invite.inviteId);
+  assert.equal(resultAccept.ok, true);
+  let activeRoom = resultAccept.room;
+  let finalCommand = null;
+  for (let guard = 0; guard < 20 && activeRoom && activeRoom.status !== "closed"; guard += 1) {
+    const round = activeRoom.battle.round;
+    const first = service.submitBattleCommand(challenger.session.token, activeRoom.roomId, {
+      "round": round,
+      "actionId": "attack",
+      "targetUsername": "closeb",
+    });
+    assert.equal(first.ok, true);
+    const second = service.submitBattleCommand(opponent.session.token, activeRoom.roomId, {
+      "round": round,
+      "actionId": "defend",
+    });
+    assert.equal(second.ok, true);
+    finalCommand = second;
+    activeRoom = second.room;
+  }
+  assert.equal(finalCommand.ok, true);
+  assert.equal(finalCommand.room.status, "closed");
+  assert.equal(finalCommand.turn.result.reason, "defeat");
+  assert.equal(finalCommand.room.battle.result.winnerAccountId, challenger.account.accountId);
+  assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "defeat"), true);
+});
+
 test("duel battle rooms require nearby settled positions", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "nearba", "password": "test1234", "displayName": "近战甲"});
@@ -1050,6 +1147,17 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   assert.equal(turnEvent.turn.kind, "battle_event_list");
   assert.equal(turnEvent.turn.round, 1);
   assert.equal(turnEvent.room.battle.round, 2);
+  const leave = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/leave`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+  });
+  assert.equal(leave.ok, true);
+  assert.equal(leave.room.status, "closed");
+  assert.equal(leave.result.reason, "leave");
+  const closeEvent = await reader.next("battle.room_closed");
+  assert.equal(closeEvent.roomId, accept.room.roomId);
+  assert.equal(closeEvent.reason, "leave");
+  assert.equal(closeEvent.room.status, "closed");
   ws.close();
 });
 

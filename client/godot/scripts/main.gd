@@ -489,6 +489,7 @@ var server_event_last_seq: int = 0
 var server_battle_state: Dictionary = {}
 var server_battle_command_request_active: bool = false
 var server_battle_last_playback_turn_key: String = ""
+var server_battle_pending_closed_room: Dictionary = {}
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -652,6 +653,7 @@ var auto_server_event_replay_live_check: bool = false
 var auto_battle_room_live_check: bool = false
 var auto_server_battle_turn_live_check: bool = false
 var auto_server_battle_reconnect_live_check: bool = false
+var auto_server_battle_close_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -999,6 +1001,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_turn_live_check")
 	elif auto_server_battle_reconnect_live_check:
 		call_deferred("_run_auto_server_battle_reconnect_live_check")
+	elif auto_server_battle_close_live_check:
+		call_deferred("_run_auto_server_battle_close_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1739,6 +1743,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_turn_live_check = true
 		elif arg == "--auto-server-battle-reconnect-live-check":
 			auto_server_battle_reconnect_live_check = true
+		elif arg == "--auto-server-battle-close-live-check":
+			auto_server_battle_close_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15288,6 +15294,8 @@ func _run_auto_auth_server_client_check() -> void:
 	var battle_invite_spec := ServerAuthClientModel.battle_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var battle_accept_spec := ServerAuthClientModel.battle_invite_accept_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var battle_decline_spec := ServerAuthClientModel.battle_invite_decline_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
+	var battle_cancel_spec := ServerAuthClientModel.battle_invite_cancel_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
+	var battle_leave_spec := ServerAuthClientModel.battle_room_leave_request("http://127.0.0.1:8787/", "token_test", "battle_room_test")
 	var battle_command_spec := ServerAuthClientModel.battle_command_submit_request("http://127.0.0.1:8787/", "token_test", "battle_room_test", {
 		"round": 1,
 		"actionId": "attack",
@@ -15311,6 +15319,10 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(battle_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
 		and str(battle_accept_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/accept"
 		and str(battle_decline_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/decline"
+		and str(battle_cancel_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/cancel"
+		and int(battle_cancel_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(battle_leave_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/leave"
+		and int(battle_leave_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/commands"
 		and int(battle_command_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("body", "")).find("\"actionId\":\"attack\"") >= 0
@@ -15348,6 +15360,7 @@ func _run_auto_auth_server_client_check() -> void:
 		"ok": true,
 		"invite": {"inviteId": "battle_invite_test", "status": "accepted"},
 		"room": {"roomId": "battle_room_test", "status": "ready", "seed": "seed"},
+		"result": {"reason": "leave", "winnerAccountId": "account_test"},
 	}).to_utf8_buffer())
 	var parsed_battle_command := ServerAuthClientModel.parse_battle_command_response(200, JSON.stringify({
 		"ok": true,
@@ -15369,14 +15382,17 @@ func _run_auto_auth_server_client_check() -> void:
 			"round": 1,
 			"events": [{"eventType": "basic_attack", "damage": 20}],
 		},
+		"result": {"reason": "defeat", "winnerAccountId": "account_test"},
 	}).to_utf8_buffer())
 	var battle_parse_ok := (
 		bool(parsed_battle_state.get("ok", false))
 		and (parsed_battle_state.get("incomingInvites", []) as Array).size() == 1
 		and bool(parsed_battle_action.get("ok", false))
 		and str((parsed_battle_action.get("room", {}) as Dictionary).get("status", "")) == "ready"
+		and str((parsed_battle_action.get("result", {}) as Dictionary).get("reason", "")) == "leave"
 		and bool(parsed_battle_command.get("ok", false))
 		and str((parsed_battle_command.get("turn", {}) as Dictionary).get("kind", "")) == "battle_event_list"
+		and str((parsed_battle_command.get("result", {}) as Dictionary).get("reason", "")) == "defeat"
 	)
 	var chat_messages_spec := ServerAuthClientModel.chat_messages_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_NEARBY, 25)
 	var chat_send_spec := ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_TEAM, "队伍消息")
@@ -17104,6 +17120,165 @@ func _run_auto_server_battle_reconnect_live_check() -> void:
 		challenger_username,
 		opponent_username,
 		str(battle_last_round_event_types),
+	])
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_battle_close_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "bca%s" % suffix
+	var opponent_username := "bcb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"关闭甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"关闭乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var battle_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(7, -1)
+	var challenger_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var opponent_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x + 1,
+			"cellY": battle_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_position_response.get("responseCode", 0)), challenger_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
+	current_account_session = opponent_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	server_event_last_seq = 0
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var cancel_invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var cancel_invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(cancel_invite_response.get("responseCode", 0)), cancel_invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var cancel_invite := cancel_invite_parsed.get("invite", {}) as Dictionary if cancel_invite_parsed.get("invite", {}) is Dictionary else {}
+	var cancel_invite_id := str(cancel_invite.get("inviteId", ""))
+	frames = 0
+	while frames < 720 and not _battle_invite_seen(cancel_invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var cancel_invite_seen := cancel_invite_id != "" and _server_event_type_seen("battle.invite") and _battle_invite_seen(cancel_invite_id)
+	server_event_seen.clear()
+	var cancel_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_cancel_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		cancel_invite_id
+	))
+	var cancel_parsed := ServerAuthClientModel.parse_battle_action_response(int(cancel_response.get("responseCode", 0)), cancel_response.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 720 and not _server_event_type_seen("battle.invite_cancelled"):
+		frames += 1
+		await get_tree().process_frame
+	var cancel_ok := (
+		bool(cancel_invite_parsed.get("ok", false))
+		and cancel_invite_seen
+		and bool(cancel_parsed.get("ok", false))
+		and _server_event_type_seen("battle.invite_cancelled")
+		and not _battle_invite_seen(cancel_invite_id)
+	)
+	server_event_seen.clear()
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	frames = 0
+	while frames < 720 and not _battle_invite_seen(invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var invite_event_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _server_event_type_seen("battle.invite") and _battle_invite_seen(invite_id)
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_id := str(accepted_room.get("roomId", ""))
+	frames = 0
+	while frames < 720 and not _battle_room_ready(room_id):
+		frames += 1
+		await get_tree().process_frame
+	var ready_event_ok := bool(accept_parsed.get("ok", false)) and room_id != "" and _server_event_type_seen("battle.room_ready") and _battle_room_ready(room_id)
+	var battle_started_ok := battle_active and bool(battle_state.get("serverAuthority", false)) and str(battle_state.get("serverRoomId", "")) == room_id
+	server_event_seen.clear()
+	var leave_response := await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		room_id
+	))
+	var leave_parsed := ServerAuthClientModel.parse_battle_action_response(int(leave_response.get("responseCode", 0)), leave_response.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 720 and (not _server_event_type_seen("battle.room_closed") or battle_active):
+		frames += 1
+		await get_tree().process_frame
+	var close_event_ok := _server_event_type_seen("battle.room_closed")
+	var leave_ok := bool(leave_parsed.get("ok", false)) and close_event_ok and not battle_active and not server_battle_command_request_active
+	var log_ok := world_log_message.find("离开") >= 0 or world_log_message.find("切磋") >= 0
+	var status := "ok" if register_ok and positions_ok and stream_ready and cancel_ok and invite_event_ok and ready_event_ok and battle_started_ok and leave_ok and log_ok else "failed"
+	print("server battle close live check ready: status=%s register=%s positions=%s stream=%s cancel=%s invite=%s ready=%s started=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
+		status,
+		str(register_ok),
+		str(positions_ok),
+		str(stream_ready),
+		str(cancel_ok),
+		str(invite_event_ok),
+		str(ready_event_ok),
+		str(battle_started_ok),
+		str(leave_ok),
+		str(log_ok),
+		room_id,
+		challenger_username,
+		opponent_username,
+		world_log_message.replace("\n", " / "),
 	])
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
@@ -23335,7 +23510,7 @@ func _handle_server_event(event: Dictionary) -> void:
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
 			_apply_party_event(event)
-		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.command_submitted", "battle.turn_resolved":
+		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.invite_cancelled", "battle.invite_expired", "battle.command_submitted", "battle.turn_resolved", "battle.room_closed":
 			_apply_battle_event(event)
 
 
@@ -23404,6 +23579,7 @@ func _apply_party_event(event: Dictionary) -> void:
 
 
 func _apply_battle_event(event: Dictionary) -> void:
+	var event_type := str(event.get("type", "")).strip_edges()
 	if not server_battle_state.has("incomingInvites"):
 		server_battle_state["incomingInvites"] = []
 	if not server_battle_state.has("outgoingInvites"):
@@ -23428,8 +23604,14 @@ func _apply_battle_event(event: Dictionary) -> void:
 			else:
 				invites = invites.filter(func(value) -> bool:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
-				)
+			)
 			server_battle_state["incomingInvites"] = invites
+	if event_type == "battle.room_closed":
+		var closed_room := event.get("room", {}) as Dictionary if event.get("room", {}) is Dictionary else {}
+		if closed_room.is_empty() and server_battle_state.get("room", {}) is Dictionary:
+			closed_room = server_battle_state.get("room", {}) as Dictionary
+		_apply_server_battle_room_closed(closed_room)
+		return
 	if room_updated:
 		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 		var turn_key := _server_battle_turn_key(turn)
@@ -23447,6 +23629,123 @@ func _apply_server_battle_room_state(room: Dictionary, force_start: bool = false
 		return false
 	server_battle_state["room"] = room.duplicate(true)
 	return _sync_server_battle_room_scene(force_start)
+
+
+func _apply_server_battle_room_closed(room: Dictionary) -> void:
+	if room.is_empty():
+		return
+	server_battle_state["room"] = room.duplicate(true)
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	if _server_battle_event_playback_active() and room_id != "" and room_id == str(battle_state.get("serverRoomId", "")):
+		server_battle_pending_closed_room = room.duplicate(true)
+		_sync_server_battle_snapshot_fields_during_playback(room)
+		return
+	_finish_server_battle_from_closed_room(room)
+
+
+func _server_battle_closed_room_from_state() -> Dictionary:
+	if not server_battle_pending_closed_room.is_empty():
+		return server_battle_pending_closed_room.duplicate(true)
+	var state_room := battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	if str(state_room.get("status", "")).strip_edges() == "closed":
+		return state_room.duplicate(true)
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	var active_room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
+	if str(room.get("status", "")).strip_edges() == "closed" and (active_room_id == "" or active_room_id == room_id):
+		return room.duplicate(true)
+	var last_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
+	var result := last_event_list.get("result", {}) as Dictionary if last_event_list.get("result", {}) is Dictionary else {}
+	if result.is_empty():
+		return {}
+	var synthesized := state_room.duplicate(true) if not state_room.is_empty() else room.duplicate(true)
+	if synthesized.is_empty():
+		synthesized = {"roomId": active_room_id}
+	synthesized["status"] = "closed"
+	synthesized["closeReason"] = str(result.get("reason", synthesized.get("closeReason", "battle_result")))
+	var battle := synthesized.get("battle", {}) as Dictionary if synthesized.get("battle", {}) is Dictionary else {}
+	battle["result"] = result.duplicate(true)
+	synthesized["battle"] = battle
+	return synthesized
+
+
+func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary:
+	var closed_room := room.duplicate(true)
+	if closed_room.is_empty():
+		closed_room = _server_battle_closed_room_from_state()
+	var message := _server_battle_result_message(closed_room)
+	if message == "":
+		message = "切磋已结束。"
+	var result_key := _server_battle_result_key(closed_room)
+	server_battle_pending_closed_room.clear()
+	server_battle_command_request_active = false
+	server_battle_state["room"] = null
+	_end_battle(true)
+	_set_world_log_message(message)
+	return {
+		"result": result_key,
+		"message": message,
+		"room": closed_room,
+	}
+
+
+func _server_battle_result_payload(room: Dictionary) -> Dictionary:
+	var result := room.get("result", {}) as Dictionary if room.get("result", {}) is Dictionary else {}
+	if not result.is_empty():
+		return result
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	return battle.get("result", {}) as Dictionary if battle.get("result", {}) is Dictionary else {}
+
+
+func _server_battle_result_key(room: Dictionary) -> String:
+	var result := _server_battle_result_payload(room)
+	var winner_account_id := str(result.get("winnerAccountId", "")).strip_edges()
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if winner_account_id != "" and self_account_id != "":
+		return "victory" if winner_account_id == self_account_id else "defeat"
+	var reason := str(result.get("reason", room.get("closeReason", ""))).strip_edges()
+	if reason == "leave" and str(result.get("closedByAccountId", room.get("closedByAccountId", ""))).strip_edges() == self_account_id:
+		return "escape"
+	if reason == "timeout" and _server_battle_result_loser_contains_self(result):
+		return "timeout"
+	return "server"
+
+
+func _server_battle_result_loser_contains_self(result: Dictionary) -> bool:
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if self_account_id == "":
+		return false
+	var loser_ids: Array = result.get("loserAccountIds", []) if result.get("loserAccountIds", []) is Array else []
+	for value in loser_ids:
+		if str(value) == self_account_id:
+			return true
+	return false
+
+
+func _server_battle_result_message(room: Dictionary) -> String:
+	var result := _server_battle_result_payload(room)
+	var reason := str(result.get("reason", room.get("closeReason", ""))).strip_edges()
+	var winner_account_id := str(result.get("winnerAccountId", "")).strip_edges()
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	var closed_by_account_id := str(result.get("closedByAccountId", room.get("closedByAccountId", ""))).strip_edges()
+	if reason == "leave":
+		if self_account_id != "" and closed_by_account_id == self_account_id:
+			return "你已离开切磋。"
+		if self_account_id != "" and winner_account_id == self_account_id:
+			return "对方已离开切磋，你获胜。"
+		return "切磋已结束。"
+	if reason == "timeout":
+		if self_account_id != "" and winner_account_id == self_account_id:
+			return "对方超时，切磋获胜。"
+		if _server_battle_result_loser_contains_self(result) or (self_account_id != "" and closed_by_account_id == self_account_id):
+			return "指令超时，切磋结束。"
+		return "切磋因超时结束。"
+	if reason == "defeat" or reason == "battle_result":
+		if self_account_id != "" and winner_account_id == self_account_id:
+			return "切磋胜利。"
+		if winner_account_id != "":
+			return "切磋落败。"
+	return "切磋已结束。"
 
 
 func _sync_server_battle_room_scene(force_start: bool = false) -> bool:
@@ -23884,6 +24183,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	if previous_server_token != next_server_token:
 		server_event_last_seq = 0
 		server_event_seen.clear()
+		server_battle_pending_closed_room.clear()
 	current_account_session = session
 	account_authenticated = true
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
@@ -24011,6 +24311,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
 	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
 	server_event_last_seq = 0
 	_stop_server_event_stream()
 	_stop_online_position_sync()
@@ -25009,6 +25310,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	world_log_message = ""
 	if bool(next_battle_state.get("serverAuthority", false)):
 		battle_state = next_battle_state.duplicate(true)
+		server_battle_pending_closed_room.clear()
 	else:
 		battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
 	_refresh_battle_target_seed()
@@ -25086,6 +25388,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_active = false
 	battle_state.clear()
 	server_battle_command_request_active = false
+	server_battle_pending_closed_room.clear()
 	battle_action_timer = 0.0
 	battle_end_pending = false
 	battle_enemy_response_pending = false
@@ -25165,6 +25468,8 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		_end_battle(true)
 		_set_world_log_message("战斗结束。")
 		return {}
+	if bool(battle_state.get("serverAuthority", false)):
+		return _finish_server_battle_from_closed_room(_server_battle_closed_room_from_state())
 	_sync_profile_battle_items_from_battle_state(false)
 	_sync_profile_capture_tools_from_battle_state(false)
 	_update_battle_player_zero_hp_seen()
@@ -32781,13 +33086,18 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		if room is Dictionary:
 			var turn_key := _server_battle_turn_key(turn)
 			var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
+			var room_closed := str((room as Dictionary).get("status", "")).strip_edges() == "closed"
 			server_battle_state["room"] = (room as Dictionary).duplicate(true)
 			if same_turn_playing:
 				_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
 			else:
 				_sync_server_battle_room_scene(false)
 			if not turn.is_empty():
-				_play_server_battle_event_list(turn)
+				var playback_started := _play_server_battle_event_list(turn)
+				if room_closed and not playback_started:
+					_apply_server_battle_room_closed(room as Dictionary)
+			elif room_closed:
+				_apply_server_battle_room_closed(room as Dictionary)
 		else:
 			_set_battle_message("指令已提交。")
 		return
@@ -33355,6 +33665,10 @@ func _finish_battle_round_and_open_commands() -> void:
 		var last_server_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
 		if str(last_server_event_list.get("kind", "")) == "battle_event_list":
 			battle_state = ServerBattleRoomModel.state_with_server_event_actor_snapshot(battle_state, last_server_event_list)
+		var closed_room := _server_battle_closed_room_from_state()
+		if not closed_room.is_empty():
+			_finish_server_battle_from_closed_room(closed_room)
+			return
 	battle_state["phase"] = "command"
 	battle_state = BattleModel.decrement_field_effects(battle_state)
 	battle_state["round"] = int(battle_state.get("round", 1)) + 1

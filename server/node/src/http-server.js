@@ -114,9 +114,17 @@ function createHttpServer(options = {}) {
         const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/decline".length));
         return sendResult(res, service.declineBattleInvite(bearerToken(req), inviteId));
       }
+      if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/cancel")) {
+        const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/cancel".length));
+        return sendResult(res, service.cancelBattleInvite(bearerToken(req), inviteId));
+      }
       if (req.method === "POST" && url.pathname.startsWith("/battle/rooms/") && url.pathname.endsWith("/commands")) {
         const roomId = decodeURIComponent(url.pathname.slice("/battle/rooms/".length, -"/commands".length));
         return sendResult(res, service.submitBattleCommand(bearerToken(req), roomId, await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/battle/rooms/") && url.pathname.endsWith("/leave")) {
+        const roomId = decodeURIComponent(url.pathname.slice("/battle/rooms/".length, -"/leave".length));
+        return sendResult(res, service.leaveBattleRoom(bearerToken(req), roomId));
       }
       if (req.method === "GET" && url.pathname === "/party/state") {
         return sendResult(res, service.getPartyState(bearerToken(req)));
