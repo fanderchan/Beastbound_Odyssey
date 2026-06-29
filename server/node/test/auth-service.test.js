@@ -159,6 +159,57 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(blocked.code, "mail_missing");
 });
 
+test("players can invite, accept, and leave server parties", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "partya", "password": "test1234", "displayName": "队长"});
+  const member = service.register({"username": "partyb", "password": "test1234", "displayName": "队员"});
+  const outsider = service.register({"username": "partyc", "password": "test1234", "displayName": "路人"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(outsider.ok, true);
+
+  const online = service.listOnlinePlayers(leader.session.token);
+  assert.equal(online.ok, true);
+  assert.deepEqual(online.players.map((player) => player.username).sort(), ["partya", "partyb", "partyc"]);
+
+  const invite = service.inviteToParty(leader.session.token, {"username": "partyb"});
+  assert.equal(invite.ok, true);
+  assert.equal(invite.party.memberCount, 1);
+  assert.equal(invite.party.members[0].role, "leader");
+  assert.equal(invite.invite.toUsername, "partyb");
+
+  const memberState = service.getPartyState(member.session.token);
+  assert.equal(memberState.ok, true);
+  assert.equal(memberState.party, null);
+  assert.equal(memberState.incomingInvites.length, 1);
+
+  const outsiderAccept = service.acceptPartyInvite(outsider.session.token, memberState.incomingInvites[0].inviteId);
+  assert.equal(outsiderAccept.ok, false);
+  assert.equal(outsiderAccept.code, "party_invite_missing");
+
+  const accept = service.acceptPartyInvite(member.session.token, memberState.incomingInvites[0].inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.party.memberCount, 2);
+  assert.deepEqual(accept.party.members.map((player) => player.username), ["partya", "partyb"]);
+
+  const busyInvite = service.inviteToParty(outsider.session.token, {"username": "partyb"});
+  assert.equal(busyInvite.ok, false);
+  assert.equal(busyInvite.code, "party_target_busy");
+
+  const leaveMember = service.leaveParty(member.session.token);
+  assert.equal(leaveMember.ok, true);
+  const leaderState = service.getPartyState(leader.session.token);
+  assert.equal(leaderState.ok, true);
+  assert.equal(leaderState.party.memberCount, 1);
+  assert.equal(leaderState.party.members[0].username, "partya");
+
+  const leaveLeader = service.leaveParty(leader.session.token);
+  assert.equal(leaveLeader.ok, true);
+  const emptyState = service.getPartyState(leader.session.token);
+  assert.equal(emptyState.ok, true);
+  assert.equal(emptyState.party, null);
+});
+
 test("HTTP server exposes auth and session endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});
@@ -271,6 +322,66 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
   });
   assert.equal(read.ok, true);
   assert.notEqual(read.mail.readAt, null);
+});
+
+test("HTTP server exposes online roster and party endpoints", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const leader = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httppartya", "password": "test1234", "displayName": "队长甲"}),
+  });
+  const member = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httppartyb", "password": "test1234", "displayName": "队员乙"}),
+  });
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+
+  const online = await fetchJson(`${base}/players/online`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(online.ok, true);
+  assert.equal(online.players.some((player) => player.username === "httppartyb"), true);
+
+  const invite = await fetchJson(`${base}/party/invite`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({"username": "httppartyb"}),
+  });
+  assert.equal(invite.ok, true);
+  assert.equal(invite.party.memberCount, 1);
+
+  const memberState = await fetchJson(`${base}/party/state`, {
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(memberState.ok, true);
+  assert.equal(memberState.incomingInvites.length, 1);
+
+  const accept = await fetchJson(`${base}/party/invites/${encodeURIComponent(memberState.incomingInvites[0].inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(accept.ok, true);
+  assert.equal(accept.party.memberCount, 2);
+
+  const leaderState = await fetchJson(`${base}/party/state`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(leaderState.ok, true);
+  assert.equal(leaderState.party.members[0].role, "leader");
+
+  const leave = await fetchJson(`${base}/party/leave`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(leave.ok, true);
 });
 
 async function fetchJson(url, options = {}) {

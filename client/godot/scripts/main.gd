@@ -242,6 +242,7 @@ var codex_menu_button: Button
 var quest_menu_button: Button
 var map_menu_button: Button
 var chat_menu_button: Button
+var party_menu_button: Button
 var mailbox_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
@@ -449,6 +450,19 @@ var mailbox_selected_source: String = "server"
 var mailbox_server_messages: Array[Dictionary] = []
 var mailbox_request_pending: bool = false
 var mailbox_pending_kind: String = ""
+var party_panel: PanelContainer
+var party_status_label: Label
+var party_members_container: VBoxContainer
+var party_invites_container: VBoxContainer
+var party_online_container: VBoxContainer
+var party_refresh_button: Button
+var party_leave_button: Button
+var party_close_button: Button
+var party_http_request: HTTPRequest
+var party_current_state: Dictionary = {}
+var party_online_players: Array[Dictionary] = []
+var party_request_pending: bool = false
+var party_pending_kind: String = ""
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -600,6 +614,7 @@ var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
 var auto_auth_server_live_check: bool = false
 var auto_server_mail_live_check: bool = false
+var auto_party_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -906,6 +921,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_auth_server_live_check")
 	elif auto_server_mail_live_check:
 		call_deferred("_run_auto_server_mail_live_check")
+	elif auto_party_live_check:
+		call_deferred("_run_auto_party_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1622,6 +1639,8 @@ func _apply_preview_window_args() -> void:
 			auto_auth_server_live_check = true
 		elif arg == "--auto-server-mail-live-check":
 			auto_server_mail_live_check = true
+		elif arg == "--auto-party-live-check":
+			auto_party_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -15032,6 +15051,60 @@ func _run_auto_auth_server_client_check() -> void:
 		bool(parsed_mail_read.get("ok", false))
 		and str((parsed_mail_read.get("mail", {}) as Dictionary).get("readAt", "")) != ""
 	)
+	var online_spec := ServerAuthClientModel.online_players_request("http://127.0.0.1:8787/", "token_test")
+	var online_request_ok := (
+		str(online_spec.get("url", "")) == "http://127.0.0.1:8787/players/online"
+		and int(online_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and _packed_string_array(online_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
+	var parsed_online := ServerAuthClientModel.parse_online_players_response(200, JSON.stringify({
+		"ok": true,
+		"players": [{"username": "remoteuser", "displayName": "远程猎人", "partyRole": "leader"}],
+		"party": null,
+	}).to_utf8_buffer())
+	var online_parse_ok := (
+		bool(parsed_online.get("ok", false))
+		and (parsed_online.get("players", []) as Array).size() == 1
+		and str(((parsed_online.get("players", []) as Array)[0] as Dictionary).get("partyRole", "")) == "leader"
+	)
+	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
+	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
+	var party_accept_spec := ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787/", "token_test", "invite_test")
+	var party_decline_spec := ServerAuthClientModel.party_invite_decline_request("http://127.0.0.1:8787/", "token_test", "invite_test")
+	var party_leave_spec := ServerAuthClientModel.party_leave_request("http://127.0.0.1:8787/", "token_test")
+	var party_request_ok := (
+		str(party_state_spec.get("url", "")) == "http://127.0.0.1:8787/party/state"
+		and int(party_state_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and str(party_invite_spec.get("url", "")) == "http://127.0.0.1:8787/party/invite"
+		and int(party_invite_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(party_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
+		and str(party_accept_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/accept"
+		and str(party_decline_spec.get("url", "")) == "http://127.0.0.1:8787/party/invites/invite_test/decline"
+		and str(party_leave_spec.get("url", "")) == "http://127.0.0.1:8787/party/leave"
+	)
+	var parsed_party_state := ServerAuthClientModel.parse_party_state_response(200, JSON.stringify({
+		"ok": true,
+		"party": {
+			"partyId": "party_test",
+			"members": [{"username": "remoteuser", "role": "leader"}],
+			"memberCount": 1,
+			"maxMembers": 5,
+		},
+		"incomingInvites": [{"inviteId": "invite_test", "fromUsername": "friend"}],
+		"maxMembers": 5,
+	}).to_utf8_buffer())
+	var parsed_party_action := ServerAuthClientModel.parse_party_action_response(200, JSON.stringify({
+		"ok": true,
+		"party": {"partyId": "party_test", "memberCount": 2},
+		"invite": {"inviteId": "invite_test", "status": "accepted"},
+	}).to_utf8_buffer())
+	var party_parse_ok := (
+		bool(parsed_party_state.get("ok", false))
+		and (parsed_party_state.get("party", {}) is Dictionary)
+		and (parsed_party_state.get("incomingInvites", []) as Array).size() == 1
+		and bool(parsed_party_action.get("ok", false))
+		and str((parsed_party_action.get("invite", {}) as Dictionary).get("status", "")) == "accepted"
+	)
 	var error_body := JSON.stringify({
 		"ok": false,
 		"code": "wrong_password",
@@ -15062,7 +15135,8 @@ func _run_auto_auth_server_client_check() -> void:
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and party_request_ok and party_parse_ok else "failed"
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s party=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15075,6 +15149,8 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_send_request_ok),
 		str(mail_inbox_request_ok and mail_inbox_parse_ok),
 		str(mail_read_parse_ok),
+		str(online_request_ok and online_parse_ok),
+		str(party_request_ok and party_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
@@ -15202,6 +15278,107 @@ func _run_auto_server_mail_live_check() -> void:
 		sender_username,
 		recipient_username,
 		mailbox_server_messages.size(),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_party_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var leader_username := "gpa%s" % suffix
+	var member_username := "gpb%s" % suffix
+	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
+	member_username = member_username.substr(0, mini(20, member_username.length()))
+	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		leader_username,
+		"test1234",
+		"队长甲"
+	))
+	var member_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		member_username,
+		"test1234",
+		"队员乙"
+	))
+	var leader_parsed := ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
+	var member_parsed := ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_session := leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
+	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
+	var online_response := await _auto_http_request_spec(ServerAuthClientModel.online_players_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", ""))
+	))
+	var online_parsed := ServerAuthClientModel.parse_online_players_response(int(online_response.get("responseCode", 0)), online_response.get("body", PackedByteArray()) as PackedByteArray)
+	var online_players: Array = online_parsed.get("players", []) if online_parsed.get("players", []) is Array else []
+	var online_ok := bool(online_parsed.get("ok", false)) and online_players.size() >= 2
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		member_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_party_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite_ok := bool(invite_parsed.get("ok", false))
+	var member_state_response := await _auto_http_request_spec(ServerAuthClientModel.party_state_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", ""))
+	))
+	var member_state_parsed := ServerAuthClientModel.parse_party_state_response(int(member_state_response.get("responseCode", 0)), member_state_response.get("body", PackedByteArray()) as PackedByteArray)
+	var incoming: Array = member_state_parsed.get("incomingInvites", []) if member_state_parsed.get("incomingInvites", []) is Array else []
+	var invite_id := str((incoming[0] as Dictionary).get("inviteId", "")) if not incoming.is_empty() and incoming[0] is Dictionary else ""
+	var invite_seen_ok := bool(member_state_parsed.get("ok", false)) and invite_id != ""
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_party_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_party := accept_parsed.get("party", {}) as Dictionary if accept_parsed.get("party", {}) is Dictionary else {}
+	var accept_ok := bool(accept_parsed.get("ok", false)) and int(accepted_party.get("memberCount", 0)) == 2
+
+	current_account_session = member_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_profile_sync_expected_revision = 0
+	party_current_state = {}
+	party_online_players.clear()
+	_open_party_panel()
+	var frames := 0
+	while frames < 720 and (party_request_pending or not (party_current_state.get("party", null) is Dictionary) or party_online_players.is_empty()):
+		frames += 1
+		await get_tree().process_frame
+	var panel_party := party_current_state.get("party", {}) as Dictionary if party_current_state.get("party", {}) is Dictionary else {}
+	var panel_members: Array = panel_party.get("members", []) if panel_party.get("members", []) is Array else []
+	var ui_ok := (
+		party_panel != null
+		and party_panel.visible
+		and _party_panel_layout_is_usable()
+		and panel_members.size() == 2
+		and party_online_players.size() >= 2
+		and party_members_container != null
+		and party_members_container.get_child_count() >= 2
+	)
+	_on_party_leave_pressed()
+	frames = 0
+	while frames < 720 and (party_request_pending or party_current_state.get("party", null) is Dictionary):
+		frames += 1
+		await get_tree().process_frame
+	var leave_ok := not (party_current_state.get("party", null) is Dictionary)
+	var status := "ok" if register_ok and online_ok and invite_ok and invite_seen_ok and accept_ok and ui_ok and leave_ok else "failed"
+	print("party live check ready: status=%s register=%s online=%s invite=%s seen=%s accept=%s ui=%s leave=%s leader=%s member=%s online_count=%d" % [
+		status,
+		str(register_ok),
+		str(online_ok),
+		str(invite_ok),
+		str(invite_seen_ok),
+		str(accept_ok),
+		str(ui_ok),
+		str(leave_ok),
+		leader_username,
+		member_username,
+		party_online_players.size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -19177,6 +19354,11 @@ func _build_hud() -> void:
 	chat_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	chat_menu_button.pressed.connect(_open_chat_panel)
 	action_row.add_child(chat_menu_button)
+	party_menu_button = Button.new()
+	party_menu_button.text = "队伍"
+	party_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	party_menu_button.pressed.connect(_open_party_panel)
+	action_row.add_child(party_menu_button)
 	mailbox_menu_button = Button.new()
 	mailbox_menu_button.text = "邮箱"
 	mailbox_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -20161,6 +20343,89 @@ func _build_hud() -> void:
 	chat_send_button.pressed.connect(_on_chat_send_pressed)
 	chat_input_row.add_child(chat_send_button)
 	hud_root.add_child(chat_panel)
+
+	party_panel = _panel_container("PartyPanel")
+	party_panel.visible = false
+	party_panel.z_index = 24
+	var party_column := VBoxContainer.new()
+	party_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	party_column.add_theme_constant_override("separation", 8)
+	party_panel.add_child(party_column)
+
+	var party_header := HBoxContainer.new()
+	party_header.add_theme_constant_override("separation", 10)
+	party_column.add_child(party_header)
+	var party_title_label := Label.new()
+	party_title_label.text = "队伍"
+	party_title_label.add_theme_font_size_override("font_size", 21)
+	party_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_header.add_child(party_title_label)
+	party_refresh_button = Button.new()
+	party_refresh_button.text = "刷新"
+	party_refresh_button.custom_minimum_size = Vector2(80, 44)
+	party_refresh_button.pressed.connect(_request_party_state)
+	party_header.add_child(party_refresh_button)
+	party_leave_button = Button.new()
+	party_leave_button.text = "离队"
+	party_leave_button.custom_minimum_size = Vector2(80, 44)
+	party_leave_button.pressed.connect(_on_party_leave_pressed)
+	party_header.add_child(party_leave_button)
+	party_close_button = Button.new()
+	party_close_button.text = "关闭"
+	party_close_button.custom_minimum_size = Vector2(92, 44)
+	party_close_button.pressed.connect(_close_party_panel)
+	party_header.add_child(party_close_button)
+
+	party_status_label = Label.new()
+	party_status_label.text = ""
+	party_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	party_status_label.add_theme_font_size_override("font_size", 15)
+	party_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	party_status_label.custom_minimum_size = Vector2(0, 30)
+	party_column.add_child(party_status_label)
+
+	var party_scroll := ScrollContainer.new()
+	party_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	party_column.add_child(party_scroll)
+	var party_content := VBoxContainer.new()
+	party_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_content.add_theme_constant_override("separation", 10)
+	party_scroll.add_child(party_content)
+
+	var party_members_title := Label.new()
+	party_members_title.text = "成员"
+	party_members_title.add_theme_font_size_override("font_size", 17)
+	party_content.add_child(party_members_title)
+	party_members_container = VBoxContainer.new()
+	party_members_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_members_container.add_theme_constant_override("separation", 7)
+	party_content.add_child(party_members_container)
+
+	var party_invites_title := Label.new()
+	party_invites_title.text = "邀请"
+	party_invites_title.add_theme_font_size_override("font_size", 17)
+	party_content.add_child(party_invites_title)
+	party_invites_container = VBoxContainer.new()
+	party_invites_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invites_container.add_theme_constant_override("separation", 7)
+	party_content.add_child(party_invites_container)
+
+	var party_online_title := Label.new()
+	party_online_title.text = "在线玩家"
+	party_online_title.add_theme_font_size_override("font_size", 17)
+	party_content.add_child(party_online_title)
+	party_online_container = VBoxContainer.new()
+	party_online_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_online_container.add_theme_constant_override("separation", 7)
+	party_content.add_child(party_online_container)
+
+	party_http_request = HTTPRequest.new()
+	party_http_request.timeout = 8.0
+	party_http_request.request_completed.connect(_on_party_http_request_completed)
+	party_panel.add_child(party_http_request)
+	hud_root.add_child(party_panel)
 
 	mailbox_panel = _panel_container("MailboxPanel")
 	mailbox_panel.visible = false
@@ -21396,6 +21661,7 @@ func _open_account_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -21596,6 +21862,7 @@ func _register_hud_panels() -> void:
 		quest_panel,
 		map_panel,
 		chat_panel,
+		party_panel,
 		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
@@ -21625,6 +21892,7 @@ func _register_hud_panels() -> void:
 		quest_panel,
 		map_panel,
 		chat_panel,
+		party_panel,
 		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
@@ -25653,6 +25921,7 @@ func _open_chat_panel() -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_map_panel()
+	_close_party_panel()
 	_close_mailbox_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -25747,6 +26016,342 @@ func _on_chat_send_pressed() -> void:
 	_refresh_chat_panel()
 
 
+func _open_party_panel() -> void:
+	if battle_active:
+		return
+	_set_hang_mode(false)
+	_close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_mailbox_panel()
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if party_panel != null:
+		party_panel.visible = true
+	_refresh_party_panel()
+	_request_party_state()
+	_layout_hud()
+
+
+func _close_party_panel(update_layout: bool = true) -> void:
+	_hide_control(party_panel, update_layout)
+
+
+func _refresh_party_panel() -> void:
+	if party_panel == null or party_members_container == null or party_invites_container == null or party_online_container == null:
+		return
+	_clear_container_children(party_members_container)
+	_clear_container_children(party_invites_container)
+	_clear_container_children(party_online_container)
+	var party_value = party_current_state.get("party", null)
+	var party := party_value as Dictionary if party_value is Dictionary else {}
+	var members: Array = party.get("members", []) if party.get("members", []) is Array else []
+	if party.is_empty() or members.is_empty():
+		party_members_container.add_child(_party_info_label("当前没有队伍。"))
+	else:
+		for value in members:
+			if not (value is Dictionary):
+				continue
+			var member := value as Dictionary
+			var role := "队长" if str(member.get("role", "")) == "leader" else "队员"
+			party_members_container.add_child(_party_info_label("%s  %s" % [role, _party_player_text(member)]))
+	var invites: Array = party_current_state.get("incomingInvites", []) if party_current_state.get("incomingInvites", []) is Array else []
+	if invites.is_empty():
+		party_invites_container.add_child(_party_info_label("暂无邀请。"))
+	else:
+		for value in invites:
+			if not (value is Dictionary):
+				continue
+			var invite := value as Dictionary
+			var invite_id := str(invite.get("inviteId", ""))
+			var row := HBoxContainer.new()
+			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_theme_constant_override("separation", 8)
+			var label := Label.new()
+			label.text = "%s 邀请你加入队伍" % _party_player_text({
+				"username": str(invite.get("fromUsername", "")),
+				"displayName": str(invite.get("fromDisplayName", "")),
+			})
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			label.add_theme_font_size_override("font_size", 15)
+			row.add_child(label)
+			var accept_button := Button.new()
+			accept_button.text = "加入"
+			accept_button.custom_minimum_size = Vector2(72, 42)
+			accept_button.disabled = party_request_pending
+			accept_button.pressed.connect(func() -> void:
+				_on_party_accept_pressed(invite_id)
+			)
+			row.add_child(accept_button)
+			var decline_button := Button.new()
+			decline_button.text = "拒绝"
+			decline_button.custom_minimum_size = Vector2(72, 42)
+			decline_button.disabled = party_request_pending
+			decline_button.pressed.connect(func() -> void:
+				_on_party_decline_pressed(invite_id)
+			)
+			row.add_child(decline_button)
+			party_invites_container.add_child(row)
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var has_online_rows := false
+	for value in party_online_players:
+		var player := value as Dictionary
+		var username := str(player.get("username", "")).strip_edges()
+		if username == "":
+			continue
+		has_online_rows = true
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+		var label := Label.new()
+		label.text = _party_online_player_text(player)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 15)
+		row.add_child(label)
+		var invite_button := Button.new()
+		invite_button.custom_minimum_size = Vector2(78, 42)
+		var player_party_role := str(player.get("partyRole", "")).strip_edges()
+		if username == current_username:
+			invite_button.text = "自己"
+			invite_button.disabled = true
+		elif player_party_role != "":
+			invite_button.text = "组队中"
+			invite_button.disabled = true
+		elif not _party_can_invite():
+			invite_button.text = "邀请"
+			invite_button.disabled = true
+		else:
+			invite_button.text = "邀请"
+			invite_button.disabled = party_request_pending
+			invite_button.pressed.connect(func() -> void:
+				_on_party_invite_pressed(username)
+			)
+		row.add_child(invite_button)
+		party_online_container.add_child(row)
+	if not has_online_rows:
+		party_online_container.add_child(_party_info_label("暂无在线玩家。"))
+	_refresh_party_request_controls()
+
+
+func _clear_container_children(container: Container) -> void:
+	for child in container.get_children():
+		child.queue_free()
+
+
+func _party_info_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 15)
+	return label
+
+
+func _party_player_text(player: Dictionary) -> String:
+	var display_name := str(player.get("displayName", "")).strip_edges()
+	var username := str(player.get("username", "")).strip_edges()
+	if display_name == "":
+		display_name = username if username != "" else "玩家"
+	return "%s（%s）" % [display_name, username] if username != "" and username != display_name else display_name
+
+
+func _party_online_player_text(player: Dictionary) -> String:
+	var role := str(player.get("partyRole", "")).strip_edges()
+	var suffix := ""
+	if role == "leader":
+		suffix = "  队长"
+	elif role == "member":
+		suffix = "  队员"
+	return "%s%s" % [_party_player_text(player), suffix]
+
+
+func _party_can_invite() -> bool:
+	if not _is_server_account_session() or party_request_pending:
+		return false
+	var party_value = party_current_state.get("party", null)
+	if not (party_value is Dictionary):
+		return true
+	var party := party_value as Dictionary
+	var leader_account_id := str(party.get("leaderAccountId", ""))
+	var summary_value = current_account_session.get("serverProfileSummary", {})
+	var current_account_id := ""
+	if summary_value is Dictionary:
+		current_account_id = str((summary_value as Dictionary).get("accountId", ""))
+	if current_account_id != "":
+		return leader_account_id == current_account_id
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var members: Array = party.get("members", []) if party.get("members", []) is Array else []
+	for value in members:
+		if value is Dictionary:
+			var member := value as Dictionary
+			if str(member.get("username", "")) == current_username:
+				return str(member.get("role", "")) == "leader"
+	return false
+
+
+func _refresh_party_request_controls() -> void:
+	var has_server_session := _is_server_account_session()
+	if party_refresh_button != null:
+		party_refresh_button.disabled = party_request_pending or not has_server_session
+	if party_leave_button != null:
+		party_leave_button.disabled = party_request_pending or not has_server_session or not (party_current_state.get("party", null) is Dictionary)
+	if party_status_label != null:
+		if not has_server_session:
+			party_status_label.text = "需要服务器账号登录。"
+		elif party_status_label.text.strip_edges() == "":
+			party_status_label.text = "队伍状态已同步。" if not party_request_pending else "正在同步..."
+
+
+func _request_party_state() -> void:
+	if not _is_server_account_session():
+		if party_status_label != null:
+			party_status_label.text = "需要服务器账号登录。"
+		_refresh_party_request_controls()
+		return
+	_start_party_request("state", ServerAuthClientModel.party_state_request(_server_profile_base_url(), _server_profile_token()))
+
+
+func _request_party_online() -> void:
+	if not _is_server_account_session():
+		return
+	_start_party_request("online", ServerAuthClientModel.online_players_request(_server_profile_base_url(), _server_profile_token()))
+
+
+func _on_party_invite_pressed(username: String) -> void:
+	if username.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_party_request("invite", ServerAuthClientModel.party_invite_request(_server_profile_base_url(), _server_profile_token(), username))
+
+
+func _on_party_accept_pressed(invite_id: String) -> void:
+	if invite_id.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_party_request("accept", ServerAuthClientModel.party_invite_accept_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+
+func _on_party_decline_pressed(invite_id: String) -> void:
+	if invite_id.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_party_request("decline", ServerAuthClientModel.party_invite_decline_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+
+func _on_party_leave_pressed() -> void:
+	if not _is_server_account_session():
+		return
+	_start_party_request("leave", ServerAuthClientModel.party_leave_request(_server_profile_base_url(), _server_profile_token()))
+
+
+func _start_party_request(kind: String, spec: Dictionary) -> void:
+	if party_http_request == null or party_request_pending:
+		return
+	party_pending_kind = kind
+	party_request_pending = true
+	_refresh_party_request_controls()
+	if party_status_label != null:
+		match kind:
+			"online":
+				party_status_label.text = "正在读取在线玩家..."
+			"invite":
+				party_status_label.text = "正在发送邀请..."
+			"accept":
+				party_status_label.text = "正在加入队伍..."
+			"decline":
+				party_status_label.text = "正在拒绝邀请..."
+			"leave":
+				party_status_label.text = "正在离开队伍..."
+			_:
+				party_status_label.text = "正在同步队伍..."
+	var err := party_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		party_request_pending = false
+		party_pending_kind = ""
+		if party_status_label != null:
+			party_status_label.text = "无法发起队伍请求。"
+		_refresh_party_request_controls()
+
+
+func _on_party_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := party_pending_kind
+	party_pending_kind = ""
+	party_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if party_status_label != null:
+			party_status_label.text = "队伍服务器连接失败。"
+		_refresh_party_request_controls()
+		return
+	if kind == "state":
+		var parsed_state := ServerAuthClientModel.parse_party_state_response(response_code, body)
+		if bool(parsed_state.get("ok", false)):
+			party_current_state = {
+				"party": parsed_state.get("party", null),
+				"incomingInvites": parsed_state.get("incomingInvites", []),
+				"maxMembers": int(parsed_state.get("maxMembers", 5)),
+			}
+			if party_status_label != null:
+				party_status_label.text = "队伍状态已同步。"
+			_refresh_party_panel()
+			_request_party_online()
+			return
+		elif party_status_label != null:
+			party_status_label.text = str(parsed_state.get("message", "队伍状态读取失败。"))
+	elif kind == "online":
+		var parsed_online := ServerAuthClientModel.parse_online_players_response(response_code, body)
+		if bool(parsed_online.get("ok", false)):
+			party_online_players.clear()
+			var raw_players = parsed_online.get("players", [])
+			if raw_players is Array:
+				for value in raw_players:
+					if value is Dictionary:
+						party_online_players.append((value as Dictionary).duplicate(true))
+			if party_status_label != null:
+				party_status_label.text = "在线玩家已刷新。"
+		elif party_status_label != null:
+			party_status_label.text = str(parsed_online.get("message", "在线玩家读取失败。"))
+	else:
+		var parsed_action := ServerAuthClientModel.parse_party_action_response(response_code, body)
+		if bool(parsed_action.get("ok", false)):
+			if party_status_label != null:
+				party_status_label.text = str(parsed_action.get("message", "队伍已更新。"))
+			_request_party_state()
+			return
+		elif party_status_label != null:
+			party_status_label.text = str(parsed_action.get("message", "队伍操作失败。"))
+	_refresh_party_panel()
+	_refresh_party_request_controls()
+
+
+func _party_panel_layout_is_usable() -> bool:
+	if party_panel == null or not party_panel.visible:
+		return false
+	var viewport_size := _layout_size()
+	var margin := 18.0
+	var bottom := party_panel.position.y + party_panel.size.y
+	return (
+		party_panel.position.x >= -1.0
+		and party_panel.position.y >= margin
+		and party_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
+		and party_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
+		and bottom <= viewport_size.y - margin + 1.0
+	)
+
+
 func _open_mailbox_panel() -> void:
 	if battle_active:
 		return
@@ -25763,6 +26368,7 @@ func _open_mailbox_panel() -> void:
 	_close_quest_panel()
 	_close_map_panel()
 	_close_chat_panel()
+	_close_party_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -26123,6 +26729,7 @@ func _open_training_partner_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
 	_close_auto_settings_panel()
 	training_partner_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
@@ -26220,6 +26827,7 @@ func _open_auto_settings_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
 	auto_settings_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_auto_settings_panel()
@@ -26250,6 +26858,7 @@ func _open_qa_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_numeric_workbench_panel(false)
@@ -26284,6 +26893,7 @@ func _open_numeric_workbench_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
@@ -31992,6 +32602,13 @@ func _layout_hud() -> void:
 	if battle_active:
 		chat_panel.visible = false
 	if chat_panel.visible and action_bar != null:
+		action_bar.visible = false
+
+	party_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	party_panel.size = Vector2(codex_width, codex_height)
+	if battle_active:
+		party_panel.visible = false
+	if party_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))

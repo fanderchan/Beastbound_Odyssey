@@ -14,6 +14,7 @@ const MAX_AUDIT_ROWS = 500;
 const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
+const PARTY_MAX_MEMBERS = 5;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -286,6 +287,205 @@ function createAuthService(options = {}) {
     });
   }
 
+  function listOnlinePlayers(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const activeSessions = Object.values(data.sessions)
+      .filter((session) => session && !session.revokedAt && Date.parse(session.expiresAt) > now())
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    const seenAccountIds = new Set();
+    const players = [];
+    for (const session of activeSessions) {
+      if (seenAccountIds.has(session.accountId)) {
+        continue;
+      }
+      const account = accountById(data, session.accountId);
+      if (!account) {
+        continue;
+      }
+      seenAccountIds.add(session.accountId);
+      players.push(publicOnlinePlayer(account, data));
+    }
+    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    return ok({
+      players,
+      party: publicPartyForAccount(data, resolved.account.accountId),
+    });
+  }
+
+  function getPartyState(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    return ok(partyStatePayload(data, resolved.account.accountId));
+  }
+
+  function inviteToParty(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
+    const target = data.accounts[targetUsername];
+    if (!target) {
+      return fail("party_target_missing", "玩家不存在。");
+    }
+    if (target.accountId === resolved.account.accountId) {
+      return fail("party_invite_self", "不能邀请自己。");
+    }
+    const targetParty = partyForAccount(data, target.accountId);
+    if (targetParty) {
+      return fail("party_target_busy", "对方已经在队伍中。");
+    }
+    let party = partyForAccount(data, resolved.account.accountId);
+    if (!party) {
+      party = createPartyForLeader(data, resolved.account.accountId, now, randomId);
+    }
+    if (party.leaderAccountId !== resolved.account.accountId) {
+      return fail("party_not_leader", "只有队长可以邀请。");
+    }
+    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
+      return fail("party_full", "队伍人数已满。");
+    }
+    const pendingInvite = Object.values(data.partyInvites).find((invite) => (
+      invite &&
+      invite.status === "pending" &&
+      invite.partyId === party.partyId &&
+      invite.toAccountId === target.accountId
+    ));
+    if (pendingInvite) {
+      return ok({
+        invite: publicPartyInvite(pendingInvite, data),
+        party: publicParty(party, data),
+        message: "邀请已发送。",
+      });
+    }
+    const invite = {
+      inviteId: `invite_${randomId()}`,
+      partyId: party.partyId,
+      fromAccountId: resolved.account.accountId,
+      toAccountId: target.accountId,
+      status: "pending",
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    data.partyInvites[invite.inviteId] = invite;
+    party.updatedAt = isoNow(now);
+    data.parties[party.partyId] = party;
+    save(data);
+    return ok({
+      invite: publicPartyInvite(invite, data),
+      party: publicParty(party, data),
+      message: "邀请已发送。",
+    });
+  }
+
+  function acceptPartyInvite(token, inviteId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const invite = data.partyInvites[String(inviteId || "").trim()];
+    if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
+      return fail("party_invite_missing", "邀请不存在。");
+    }
+    if (partyForAccount(data, resolved.account.accountId)) {
+      return fail("party_already_joined", "你已经在队伍中。");
+    }
+    const party = data.parties[invite.partyId];
+    if (!party) {
+      invite.status = "expired";
+      invite.updatedAt = isoNow(now);
+      data.partyInvites[invite.inviteId] = invite;
+      save(data);
+      return fail("party_missing", "队伍已经解散。");
+    }
+    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
+      return fail("party_full", "队伍人数已满。");
+    }
+    party.memberAccountIds.push(resolved.account.accountId);
+    party.updatedAt = isoNow(now);
+    invite.status = "accepted";
+    invite.updatedAt = isoNow(now);
+    data.parties[party.partyId] = party;
+    data.partyInvites[invite.inviteId] = invite;
+    save(data);
+    return ok({
+      party: publicParty(party, data),
+      invite: publicPartyInvite(invite, data),
+      message: "已加入队伍。",
+    });
+  }
+
+  function declinePartyInvite(token, inviteId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const invite = data.partyInvites[String(inviteId || "").trim()];
+    if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
+      return fail("party_invite_missing", "邀请不存在。");
+    }
+    invite.status = "declined";
+    invite.updatedAt = isoNow(now);
+    data.partyInvites[invite.inviteId] = invite;
+    save(data);
+    return ok({
+      invite: publicPartyInvite(invite, data),
+      party: publicPartyForAccount(data, resolved.account.accountId),
+      message: "已拒绝邀请。",
+    });
+  }
+
+  function leaveParty(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const party = partyForAccount(data, resolved.account.accountId);
+    if (!party) {
+      return fail("party_missing", "你还没有队伍。");
+    }
+    party.memberAccountIds = party.memberAccountIds.filter((accountId) => accountId !== resolved.account.accountId);
+    if (party.memberAccountIds.length <= 0) {
+      delete data.parties[party.partyId];
+      for (const invite of Object.values(data.partyInvites)) {
+        if (invite && invite.partyId === party.partyId && invite.status === "pending") {
+          invite.status = "expired";
+          invite.updatedAt = isoNow(now);
+          data.partyInvites[invite.inviteId] = invite;
+        }
+      }
+      save(data);
+      return ok({
+        party: null,
+        incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
+        message: "已离开队伍。",
+      });
+    }
+    if (party.leaderAccountId === resolved.account.accountId) {
+      party.leaderAccountId = party.memberAccountIds[0];
+    }
+    party.updatedAt = isoNow(now);
+    data.parties[party.partyId] = party;
+    save(data);
+    return ok({
+      party: null,
+      incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
+      message: "已离开队伍。",
+    });
+  }
+
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
@@ -392,6 +592,12 @@ function createAuthService(options = {}) {
     sendMail,
     listInbox,
     markMailRead,
+    listOnlinePlayers,
+    getPartyState,
+    inviteToParty,
+    acceptPartyInvite,
+    declinePartyInvite,
+    leaveParty,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -439,6 +645,8 @@ function normalizeData(raw) {
     profileBindings: objectOrEmpty(data.profileBindings),
     profiles: objectOrEmpty(data.profiles),
     mailMessages: objectOrEmpty(data.mailMessages),
+    parties: objectOrEmpty(data.parties),
+    partyInvites: objectOrEmpty(data.partyInvites),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -513,6 +721,19 @@ function publicPlayerSearchResult(account, data) {
   };
 }
 
+function publicOnlinePlayer(account, data) {
+  const summary = profileSummaryForAccount(account, data);
+  const party = partyForAccount(data, account.accountId);
+  return {
+    accountId: account.accountId,
+    username: account.username,
+    displayName: account.displayName,
+    playerId: summary && summary.playerId ? summary.playerId : "",
+    partyId: party ? party.partyId : "",
+    partyRole: party && party.leaderAccountId === account.accountId ? "leader" : (party ? "member" : ""),
+  };
+}
+
 function publicMail(mail) {
   return {
     mailId: mail.mailId,
@@ -526,6 +747,97 @@ function publicMail(mail) {
     readAt: mail.readAt || null,
     schemaVersion: 1,
   };
+}
+
+function partyStatePayload(data, accountId) {
+  return {
+    party: publicPartyForAccount(data, accountId),
+    incomingInvites: publicIncomingPartyInvites(data, accountId),
+    maxMembers: PARTY_MAX_MEMBERS,
+  };
+}
+
+function publicPartyForAccount(data, accountId) {
+  const party = partyForAccount(data, accountId);
+  return party ? publicParty(party, data) : null;
+}
+
+function publicParty(party, data) {
+  if (!party) {
+    return null;
+  }
+  const members = [];
+  for (const accountId of party.memberAccountIds || []) {
+    const account = accountById(data, accountId);
+    if (!account) {
+      continue;
+    }
+    members.push({
+      accountId: account.accountId,
+      username: account.username,
+      displayName: account.displayName,
+      role: account.accountId === party.leaderAccountId ? "leader" : "member",
+    });
+  }
+  return {
+    partyId: party.partyId,
+    leaderAccountId: party.leaderAccountId,
+    members,
+    memberCount: members.length,
+    maxMembers: PARTY_MAX_MEMBERS,
+    createdAt: party.createdAt,
+    updatedAt: party.updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function publicIncomingPartyInvites(data, accountId) {
+  return Object.values(data.partyInvites)
+    .filter((invite) => invite && invite.status === "pending" && invite.toAccountId === accountId)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((invite) => publicPartyInvite(invite, data));
+}
+
+function publicPartyInvite(invite, data) {
+  const from = accountById(data, invite.fromAccountId);
+  const to = accountById(data, invite.toAccountId);
+  return {
+    inviteId: invite.inviteId,
+    partyId: invite.partyId,
+    fromUsername: from ? from.username : "",
+    fromDisplayName: from ? from.displayName : "",
+    toUsername: to ? to.username : "",
+    toDisplayName: to ? to.displayName : "",
+    status: invite.status,
+    createdAt: invite.createdAt,
+    updatedAt: invite.updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function createPartyForLeader(data, leaderAccountId, now, randomId) {
+  const party = {
+    partyId: `party_${randomId()}`,
+    leaderAccountId,
+    memberAccountIds: [leaderAccountId],
+    createdAt: isoNow(now),
+    updatedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+  data.parties[party.partyId] = party;
+  return party;
+}
+
+function partyForAccount(data, accountId) {
+  return Object.values(data.parties).find((party) => (
+    party &&
+    Array.isArray(party.memberAccountIds) &&
+    party.memberAccountIds.includes(accountId)
+  )) || null;
+}
+
+function accountById(data, accountId) {
+  return Object.values(data.accounts).find((account) => account && account.accountId === accountId) || null;
 }
 
 function profileSummaryForAccount(account, data) {

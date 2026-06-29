@@ -42,6 +42,9 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/players/search") {
         return sendResult(res, service.searchPlayers(bearerToken(req), {"username": url.searchParams.get("username") || ""}));
       }
+      if (req.method === "GET" && url.pathname === "/players/online") {
+        return sendResult(res, service.listOnlinePlayers(bearerToken(req)));
+      }
       if (req.method === "GET" && url.pathname === "/gm/tools") {
         return sendResult(res, service.listGmTools(bearerToken(req), commandCatalog));
       }
@@ -64,6 +67,23 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname.startsWith("/mail/") && url.pathname.endsWith("/read")) {
         const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/read".length));
         return sendResult(res, service.markMailRead(bearerToken(req), mailId));
+      }
+      if (req.method === "GET" && url.pathname === "/party/state") {
+        return sendResult(res, service.getPartyState(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/party/invite") {
+        return sendResult(res, service.inviteToParty(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/party/invites/") && url.pathname.endsWith("/accept")) {
+        const inviteId = decodeURIComponent(url.pathname.slice("/party/invites/".length, -"/accept".length));
+        return sendResult(res, service.acceptPartyInvite(bearerToken(req), inviteId));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/party/invites/") && url.pathname.endsWith("/decline")) {
+        const inviteId = decodeURIComponent(url.pathname.slice("/party/invites/".length, -"/decline".length));
+        return sendResult(res, service.declinePartyInvite(bearerToken(req), inviteId));
+      }
+      if (req.method === "POST" && url.pathname === "/party/leave") {
+        return sendResult(res, service.leaveParty(bearerToken(req)));
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});
     } catch (error) {

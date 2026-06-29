@@ -55,6 +55,26 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_mail_recipient_created (recipient_account_id, created_at)
       );
+      CREATE TABLE IF NOT EXISTS parties (
+        party_id VARCHAR(96) PRIMARY KEY,
+        leader_account_id VARCHAR(80) NOT NULL,
+        member_count INT NOT NULL DEFAULT 0,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_parties_leader (leader_account_id)
+      );
+      CREATE TABLE IF NOT EXISTS party_invites (
+        invite_id VARCHAR(96) PRIMARY KEY,
+        party_id VARCHAR(96) NOT NULL,
+        from_account_id VARCHAR(80) NOT NULL,
+        to_account_id VARCHAR(80) NOT NULL,
+        status VARCHAR(24) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_party_invites_to_status (to_account_id, status)
+      );
     `);
     schemaReady = true;
   }
@@ -82,6 +102,8 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM sessions");
       statements.push("DELETE FROM profiles");
       statements.push("DELETE FROM mail_messages");
+      statements.push("DELETE FROM parties");
+      statements.push("DELETE FROM party_invites");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
@@ -93,6 +115,12 @@ function createMysqlAuthStore(options = {}) {
       }
       for (const mail of Object.values(objectOrEmpty(nextData.mailMessages))) {
         statements.push(insertMailStatement(mail));
+      }
+      for (const party of Object.values(objectOrEmpty(nextData.parties))) {
+        statements.push(insertPartyStatement(party));
+      }
+      for (const invite of Object.values(objectOrEmpty(nextData.partyInvites))) {
+        statements.push(insertPartyInviteStatement(invite));
       }
       statements.push("COMMIT");
       runMysql(config, config.database, `${statements.join(";\n")};`);
@@ -157,6 +185,15 @@ function insertProfileStatement(profile) {
 
 function insertMailStatement(mail) {
   return `INSERT INTO mail_messages (mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json) VALUES (${sqlString(mail.mailId)}, ${sqlString(mail.senderAccountId)}, ${sqlString(mail.recipientAccountId)}, ${sqlString(mail.title)}, ${sqlString(mail.createdAt)}, ${sqlNullable(mail.readAt)}, ${sqlJson(mail)})`;
+}
+
+function insertPartyStatement(party) {
+  const memberCount = Array.isArray(party.memberAccountIds) ? party.memberAccountIds.length : 0;
+  return `INSERT INTO parties (party_id, leader_account_id, member_count, created_at, updated_at, document_json) VALUES (${sqlString(party.partyId)}, ${sqlString(party.leaderAccountId)}, ${Number(memberCount)}, ${sqlString(party.createdAt)}, ${sqlString(party.updatedAt)}, ${sqlJson(party)})`;
+}
+
+function insertPartyInviteStatement(invite) {
+  return `INSERT INTO party_invites (invite_id, party_id, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.partyId)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
 }
 
 function sqlJson(value) {

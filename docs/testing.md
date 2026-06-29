@@ -46,6 +46,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -192,6 +193,12 @@ Phase163 玩家文本邮件自测：
 - 服务端：`cd server/node && npm test`
 - Godot 服务器邮件：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check`
 - Godot 系统附件邮箱：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3200 -- --auto-mailbox-check`
+
+Phase164 在线队伍自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 服务器队伍：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check`
+- 性能：继续跑 `--movement-spam-click-check` 和 `--perf-probe`，确认在线队伍请求只发生在打开面板或点击按钮时。
 
 ## 验收口径
 

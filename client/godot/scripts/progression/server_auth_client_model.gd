@@ -63,6 +63,53 @@ static func player_search_request(base_url: String, session_token: String, usern
 	}
 
 
+static func online_players_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/players/online" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func party_state_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/party/state" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func party_invite_request(base_url: String, session_token: String, username: String) -> Dictionary:
+	return {
+		"url": "%s/party/invite" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"username": username}),
+	}
+
+
+static func party_invite_accept_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
+	return _party_invite_action_request(base_url, session_token, invite_id, "accept")
+
+
+static func party_invite_decline_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
+	return _party_invite_action_request(base_url, session_token, invite_id, "decline")
+
+
+static func party_leave_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/party/leave" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/mail/inbox" % normalized_base_url(base_url),
@@ -152,6 +199,38 @@ static func parse_player_search_response(response_code: int, body: PackedByteArr
 			if value is Dictionary:
 				players.append((value as Dictionary).duplicate(true))
 	parsed["players"] = players
+	return parsed
+
+
+static func parse_online_players_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "在线玩家读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["players"] = _dictionary_array(response.get("players", []))
+	parsed["party"] = response.get("party", null)
+	return parsed
+
+
+static func parse_party_state_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "队伍状态读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["party"] = response.get("party", null)
+	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
+	parsed["maxMembers"] = int(response.get("maxMembers", 5))
+	return parsed
+
+
+static func parse_party_action_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "队伍操作失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["party"] = response.get("party", null)
+	parsed["invite"] = response.get("invite", {}) if response.get("invite", {}) is Dictionary else {}
+	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
 	return parsed
 
 
@@ -255,6 +334,15 @@ static func _parse_server_json(response_code: int, body: PackedByteArray, fallba
 	}
 
 
+static func _dictionary_array(value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if value is Array:
+		for entry in value:
+			if entry is Dictionary:
+				result.append((entry as Dictionary).duplicate(true))
+	return result
+
+
 static func profile_save_path_for_username(username: String) -> String:
 	var normalized := AccountAuthModel.normalized_username(username)
 	if normalized == "":
@@ -268,4 +356,13 @@ static func _auth_request(base_url: String, endpoint: String, payload: Dictionar
 		"headers": ["Content-Type: application/json"],
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
+	}
+
+
+static func _party_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
+	return {
+		"url": "%s/party/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
 	}
