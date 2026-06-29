@@ -34,15 +34,29 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 		BattleModel.SIDE_ALLY: 0,
 		BattleModel.SIDE_ENEMY: 0,
 	}
+	var kind_counts := {
+		BattleModel.SIDE_ALLY: {},
+		BattleModel.SIDE_ENEMY: {},
+	}
 	for value in server_actors:
 		if not (value is Dictionary):
 			continue
 		var server_actor := value as Dictionary
-		var is_self := _actor_matches_session(server_actor, session)
-		self_found = self_found or is_self
-		var local_side := _local_side_for_server_actor(server_actor, session_server_side, is_self)
+		var is_self_account := _actor_matches_session(server_actor, session)
+		self_found = self_found or is_self_account
+		var local_side := _local_side_for_server_actor(server_actor, session_server_side, is_self_account)
 		side_counts[local_side] = int(side_counts.get(local_side, 0)) + 1
-		actors.append(_battle_actor_from_server(server_actor, is_self, local_side, int(side_counts.get(local_side, 1))))
+		var kind := _server_actor_kind(server_actor)
+		var local_kind_counts := kind_counts.get(local_side, {}) as Dictionary
+		local_kind_counts[kind] = int(local_kind_counts.get(kind, 0)) + 1
+		kind_counts[local_side] = local_kind_counts
+		actors.append(_battle_actor_from_server(
+			server_actor,
+			is_self_account,
+			local_side,
+			int(side_counts.get(local_side, 1)),
+			int(local_kind_counts.get(kind, 1))
+		))
 	if not self_found and not actors.is_empty():
 		var fallback_self := actors[0].duplicate(true)
 		fallback_self["id"] = BattleModel.PLAYER_ACTOR_ID
@@ -157,22 +171,25 @@ static func current_account_submitted(room: Dictionary, session: Dictionary) -> 
 
 static func target_command_payload_for_actor(actor: Dictionary) -> Dictionary:
 	return {
+		"targetActorId": str(actor.get("serverActorId", "")).strip_edges(),
 		"targetAccountId": str(actor.get("serverAccountId", "")).strip_edges(),
 		"targetUsername": str(actor.get("serverUsername", "")).strip_edges(),
 	}
 
 
-static func _battle_actor_from_server(server_actor: Dictionary, is_self: bool, side: String, side_index: int) -> Dictionary:
-	var actor_id := BattleModel.PLAYER_ACTOR_ID if is_self else _local_actor_id_for_index(side, side_index)
-	var slot_id := _slot_id_for_local_index(side, side_index)
+static func _battle_actor_from_server(server_actor: Dictionary, is_self_account: bool, side: String, side_index: int, kind_index: int) -> Dictionary:
+	var kind := _server_actor_kind(server_actor)
+	var actor_id := _local_actor_id_for_server_kind(side, kind, is_self_account, kind_index)
+	var slot_id := _slot_id_for_server_actor(side, server_actor, side_index, kind_index)
 	var max_hp := maxi(1, int(server_actor.get("maxHp", server_actor.get("hp", 120))))
 	var hp := clampi(int(server_actor.get("hp", max_hp)), 0, max_hp)
 	return {
 		"id": actor_id,
 		"name": str(server_actor.get("displayName", server_actor.get("username", "猎人"))),
 		"side": side,
-		"kind": "player",
+		"kind": kind,
 		"slotId": slot_id,
+		"level": maxi(1, int(server_actor.get("level", 1))),
 		"hp": hp,
 		"maxHp": max_hp,
 		"quick": maxi(1, int(server_actor.get("speed", server_actor.get("quick", 60)))),
@@ -185,11 +202,16 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self: bool, s
 		"statuses": {},
 		"statusResist": {},
 		"statusImmune": {},
-		"passiveSkillIds": [],
+		"passiveSkillIds": _string_array(server_actor.get("passiveSkillIds", [])),
+		"activeSkillIds": _string_array(server_actor.get("activeSkillIds", [])),
 		"serverActorId": str(server_actor.get("actorId", "")),
 		"serverAccountId": str(server_actor.get("accountId", "")),
 		"serverUsername": str(server_actor.get("username", "")),
 		"serverSide": str(server_actor.get("side", "")),
+		"serverKind": kind,
+		"serverPetId": str(server_actor.get("petId", "")),
+		"formId": str(server_actor.get("formId", "")),
+		"petId": str(server_actor.get("petId", "")),
 		"serverGuarding": bool(server_actor.get("guarding", false)),
 		"serverDefeated": bool(server_actor.get("defeated", false)),
 	}
@@ -238,17 +260,48 @@ static func _local_side_for_server_actor(server_actor: Dictionary, session_serve
 	return BattleModel.SIDE_ENEMY
 
 
-static func _local_actor_id_for_index(side: String, side_index: int) -> String:
-	var index := maxi(1, side_index)
+static func _server_actor_kind(server_actor: Dictionary) -> String:
+	var kind := str(server_actor.get("kind", "player")).strip_edges()
+	return "pet" if kind == "pet" else "player"
+
+
+static func _local_actor_id_for_server_kind(side: String, kind: String, is_self_account: bool, kind_index: int) -> String:
+	var index := maxi(1, kind_index)
+	if is_self_account:
+		return BattleModel.PLAYER_ACTOR_ID if kind != "pet" else "ally_pet"
 	if side == BattleModel.SIDE_ENEMY:
+		if kind == "pet":
+			return "enemy_pet" if index == 1 else "enemy_pet_%d" % index
 		return "enemy_player" if index == 1 else "enemy_player_%d" % index
+	if kind == "pet":
+		return "ally_partner_pet_%d" % index
 	return "ally_partner_%d" % index
+
+
+static func _slot_id_for_server_actor(side: String, server_actor: Dictionary, side_index: int, kind_index: int) -> String:
+	var kind := _server_actor_kind(server_actor)
+	var slot_number := int(server_actor.get("slotNumber", 0))
+	if slot_number <= 0:
+		slot_number = 3 if kind == "pet" or kind_index <= 1 else clampi(kind_index + 2, 1, BattleModel.SLOTS_PER_ROW)
+	slot_number = clampi(slot_number, 1, BattleModel.SLOTS_PER_ROW)
+	var row := BattleModel.ROW_FRONT if kind == "pet" else BattleModel.ROW_BACK
+	return BattleModel.slot_id(side, row, slot_number)
 
 
 static func _slot_id_for_local_index(side: String, side_index: int) -> String:
 	var order: Array[int] = [8, 7, 9, 6, 10, 3, 2, 4, 1, 5]
 	var index := clampi(side_index, 1, order.size()) - 1
 	return BattleModel.slot_id_for_number(side, order[index])
+
+
+static func _string_array(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			var text := str(item).strip_edges()
+			if text != "":
+				result.append(text)
+	return result
 
 
 static func _local_event_from_server_event(state: Dictionary, server_event: Dictionary) -> Dictionary:

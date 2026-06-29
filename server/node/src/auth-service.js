@@ -46,6 +46,21 @@ const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 90 * 1000;
+const BATTLE_ACTOR_KIND_PLAYER = "player";
+const BATTLE_ACTOR_KIND_PET = "pet";
+const BATTLE_PET_MAX_PER_PARTICIPANT = 1;
+const DEFAULT_PLAYER_BATTLE_STATS = {
+  maxHp: 120,
+  attack: 18,
+  defense: 6,
+  quick: 70,
+};
+const DEFAULT_PET_BATTLE_STATS = {
+  maxHp: 90,
+  attack: 12,
+  defense: 6,
+  quick: 50,
+};
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -1665,12 +1680,21 @@ function publicBattleActor(actor) {
     username: String(actor.username || ""),
     displayName: String(actor.displayName || actor.username || ""),
     side: String(actor.side || ""),
+    kind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
     slotId: String(actor.slotId || ""),
+    slotNumber: Number(actor.slotNumber || 0),
+    level: Number(actor.level || 1),
+    petId: String(actor.petId || ""),
+    formId: String(actor.formId || ""),
     hp: Number(actor.hp || 0),
     maxHp: Number(actor.maxHp || BATTLE_ACTOR_MAX_HP),
     speed: Number(actor.speed || 0),
+    attack: Number(actor.attack || 0),
+    defense: Number(actor.defense || 0),
     guarding: Boolean(actor.guarding),
     defeated: Boolean(actor.defeated),
+    activeSkillIds: Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((value) => String(value)) : [],
+    passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
     schemaVersion: 1,
   };
 }
@@ -1686,6 +1710,7 @@ function publicBattleCommand(command) {
     accountId: String(command.accountId || ""),
     username: String(command.username || ""),
     actionId: String(command.actionId || ""),
+    targetActorId: String(command.targetActorId || ""),
     targetAccountId: String(command.targetAccountId || ""),
     submittedAt: String(command.submittedAt || ""),
     schemaVersion: 1,
@@ -1696,18 +1721,8 @@ function battleParticipantSnapshot(data, account, side) {
   const summary = profileSummaryForAccount(account, data);
   const profileDoc = summary && summary.playerId ? data.profiles[summary.playerId] || null : null;
   const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" ? profileDoc.profile : {};
-  const player = profile.player && typeof profile.player === "object" ? profile.player : {};
-  const pets = Array.isArray(profile.pets) ? profile.pets : [];
-  const battlePets = pets
-    .filter((pet) => pet && (pet.state === "battle" || pet.status === "battle" || pet.battleState === "battle"))
-    .slice(0, 5)
-    .map((pet) => ({
-      petId: String(pet.petId || pet.instanceId || pet.id || ""),
-      name: String(pet.name || pet.displayName || pet.speciesName || "宠物"),
-      speciesId: String(pet.speciesId || pet.templateId || ""),
-      level: Number(pet.level || 1),
-      schemaVersion: 1,
-    }));
+  const playerSnapshot = battlePlayerSnapshotFromProfile(profile, account);
+  const battlePets = battlePetSnapshotsFromProfile(profile).slice(0, BATTLE_PET_MAX_PER_PARTICIPANT);
   const position = data.playerPositions[account.accountId] || null;
   return {
     accountId: account.accountId,
@@ -1717,13 +1732,96 @@ function battleParticipantSnapshot(data, account, side) {
     profileSummary: summary || null,
     position: position ? publicPlayerPosition(position) : null,
     teamSnapshot: {
-      playerLevel: Number(player.level || 1),
+      playerLevel: Number(playerSnapshot.level || 1),
+      player: playerSnapshot,
       battlePetCount: battlePets.length,
       battlePets,
       schemaVersion: 1,
     },
     schemaVersion: 1,
   };
+}
+
+function battlePlayerSnapshotFromProfile(profile, account) {
+  const player = profile && profile.player && typeof profile.player === "object" ? profile.player : {};
+  const baseStats = player.baseStats && typeof player.baseStats === "object" ? player.baseStats : {};
+  const maxHp = positiveNumber(player.maxHp, positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp));
+  return {
+    kind: BATTLE_ACTOR_KIND_PLAYER,
+    name: String(player.name || account.displayName || account.username || "猎人"),
+    level: positiveNumber(player.level, 1),
+    hp: clampNumber(player.hp, 1, maxHp, maxHp),
+    maxHp,
+    attack: positiveNumber(baseStats.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
+    defense: positiveNumber(baseStats.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    quick: positiveNumber(baseStats.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+    schemaVersion: 1,
+  };
+}
+
+function battlePetSnapshotsFromProfile(profile) {
+  const petInstances = Array.isArray(profile.petInstances) ? profile.petInstances : (Array.isArray(profile.pets) ? profile.pets : []);
+  const activePetInstanceId = String(profile.activePetInstanceId || "").trim();
+  const battlePets = petInstances
+    .filter((pet) => pet && typeof pet === "object" && !Array.isArray(pet))
+    .filter((pet) => petBattleStateIsActive(pet))
+    .sort((a, b) => {
+      const aActive = String(a.instanceId || a.petId || a.id || "") === activePetInstanceId ? 0 : 1;
+      const bActive = String(b.instanceId || b.petId || b.id || "") === activePetInstanceId ? 0 : 1;
+      return aActive - bActive;
+    })
+    .map(battlePetSnapshotFromProfilePet)
+    .filter((pet) => pet.petId !== "" && pet.hp > 0);
+  return battlePets;
+}
+
+function battlePetSnapshotFromProfilePet(pet) {
+  const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
+  const petId = String(pet.instanceId || pet.petId || pet.id || "").trim();
+  return {
+    kind: BATTLE_ACTOR_KIND_PET,
+    petId,
+    name: String(pet.name || pet.displayName || pet.speciesName || "宠物"),
+    formId: String(pet.formId || pet.templateId || pet.speciesId || ""),
+    speciesId: String(pet.speciesId || pet.templateId || pet.formId || ""),
+    level: positiveNumber(pet.level, 1),
+    hp: clampNumber(pet.hp, 1, maxHp, maxHp),
+    maxHp,
+    attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
+    defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
+    activeSkillIds: stringArray(pet.activeSkillIds),
+    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    schemaVersion: 1,
+  };
+}
+
+function petBattleStateIsActive(pet) {
+  const state = String(pet.state || pet.status || pet.battleState || "").trim();
+  return state === "battle";
+}
+
+function stringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function positiveNumber(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return Number(fallback || 1);
+  }
+  return parsed;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return Math.max(min, Math.min(max, Number(fallback || max)));
+  }
+  return Math.max(min, Math.min(max, parsed));
 }
 
 function createPartyForLeader(data, leaderAccountId, now, randomId) {
@@ -1831,24 +1929,82 @@ function battleRoomBattleStateForMutation(room, now) {
 
 function battleRoomActors(room) {
   const participants = Array.isArray(room.participants) ? room.participants : [];
-  return participants.map((participant, index) => {
+  const actors = [];
+  participants.forEach((participant, index) => {
     const side = String(participant.side || (index === 0 ? "challenger" : "opponent"));
-    const hp = BATTLE_ACTOR_MAX_HP + Math.max(0, Number(participant.teamSnapshot && participant.teamSnapshot.playerLevel || 1) - 1) * 4;
-    return {
-      actorId: `duel_${side}_player`,
-      accountId: String(participant.accountId || ""),
-      username: String(participant.username || ""),
-      displayName: String(participant.displayName || participant.username || ""),
-      side,
-      slotId: side === "challenger" ? "ally.back.3" : "enemy.back.3",
-      hp,
-      maxHp: hp,
-      speed: side === "challenger" ? 70 : 68,
-      guarding: false,
-      defeated: false,
-      schemaVersion: 1,
-    };
-  }).filter((actor) => actor.accountId !== "");
+    const playerActor = battlePlayerActorFromParticipant(participant, side);
+    if (playerActor.accountId !== "") {
+      actors.push(playerActor);
+    }
+    const battlePets = participant.teamSnapshot && Array.isArray(participant.teamSnapshot.battlePets)
+      ? participant.teamSnapshot.battlePets
+      : [];
+    battlePets.slice(0, BATTLE_PET_MAX_PER_PARTICIPANT).forEach((pet, petIndex) => {
+      const petActor = battlePetActorFromParticipant(participant, side, pet, petIndex);
+      if (petActor.accountId !== "" && petActor.petId !== "") {
+        actors.push(petActor);
+      }
+    });
+  });
+  return actors;
+}
+
+function battlePlayerActorFromParticipant(participant, side) {
+  const player = participant.teamSnapshot && participant.teamSnapshot.player && typeof participant.teamSnapshot.player === "object"
+    ? participant.teamSnapshot.player
+    : {};
+  const level = positiveNumber(player.level || (participant.teamSnapshot && participant.teamSnapshot.playerLevel), 1);
+  const maxHp = positiveNumber(player.maxHp, BATTLE_ACTOR_MAX_HP + Math.max(0, level - 1) * 4);
+  const hp = clampNumber(player.hp, 1, maxHp, maxHp);
+  return {
+    actorId: `duel_${side}_player`,
+    accountId: String(participant.accountId || ""),
+    username: String(participant.username || ""),
+    displayName: String(player.name || participant.displayName || participant.username || ""),
+    side,
+    kind: BATTLE_ACTOR_KIND_PLAYER,
+    slotId: `${side}.back.3`,
+    slotNumber: 3,
+    level,
+    hp,
+    maxHp,
+    speed: positiveNumber(player.quick, side === "challenger" ? 70 : 68),
+    attack: positiveNumber(player.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
+    defense: positiveNumber(player.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    guarding: false,
+    defeated: hp <= 0,
+    schemaVersion: 1,
+  };
+}
+
+function battlePetActorFromParticipant(participant, side, pet, petIndex) {
+  const slotNumber = petIndex + 3;
+  const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
+  const hp = clampNumber(pet.hp, 1, maxHp, maxHp);
+  const petId = String(pet.petId || pet.instanceId || pet.id || "").trim();
+  return {
+    actorId: `duel_${side}_pet_${petId || petIndex + 1}`,
+    accountId: String(participant.accountId || ""),
+    username: String(participant.username || ""),
+    displayName: String(pet.name || "宠物"),
+    side,
+    kind: BATTLE_ACTOR_KIND_PET,
+    petId,
+    formId: String(pet.formId || pet.speciesId || ""),
+    slotId: `${side}.front.${slotNumber}`,
+    slotNumber,
+    level: positiveNumber(pet.level, 1),
+    hp,
+    maxHp,
+    speed: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
+    attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
+    defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    guarding: false,
+    defeated: hp <= 0,
+    activeSkillIds: stringArray(pet.activeSkillIds),
+    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    schemaVersion: 1,
+  };
 }
 
 function requiredBattleCommandAccountIds(room) {
@@ -1867,14 +2023,21 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
   if (!actionId) {
     return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
   }
-  const targetAccountId = battleCommandTargetAccountId(payload, data, room, account.accountId, actionId);
-  if (!targetAccountId) {
+  const actor = battlePlayerActorByAccountId(battle, account.accountId);
+  if (!actor || Number(actor.hp || 0) <= 0) {
+    return fail("battle_command_actor_missing", "当前无法提交战斗命令。");
+  }
+  const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, actionId);
+  if (!targetActor) {
     return fail("battle_command_target_missing", "战斗目标不存在。");
   }
-  if (actionId === BATTLE_ACTION_ATTACK && targetAccountId === account.accountId) {
+  if (actionId === BATTLE_ACTION_ATTACK && targetActor.actorId === actor.actorId) {
     return fail("battle_command_target_invalid", "攻击目标不能是自己。");
   }
-  if (!requiredBattleCommandAccountIds(room).includes(targetAccountId)) {
+  if (actionId === BATTLE_ACTION_ATTACK && String(targetActor.side || "") === String(actor.side || "")) {
+    return fail("battle_command_target_invalid", "攻击目标必须是对方。");
+  }
+  if (!requiredBattleCommandAccountIds(room).includes(targetActor.accountId)) {
     return fail("battle_command_target_invalid", "目标不在切磋房间中。");
   }
   return ok({
@@ -1885,7 +2048,10 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       accountId: account.accountId,
       username: account.username,
       actionId,
-      targetAccountId,
+      actorId: actor.actorId,
+      targetActorId: targetActor.actorId,
+      targetAccountId: targetActor.accountId,
+      targetUsername: targetActor.username,
       submittedAt: isoNow(now),
       schemaVersion: 1,
     },
@@ -1903,20 +2069,25 @@ function normalizeBattleActionId(value) {
   return "";
 }
 
-function battleCommandTargetAccountId(payload, data, room, actorAccountId, actionId) {
+function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
   if (actionId === BATTLE_ACTION_DEFEND) {
-    return actorAccountId;
+    return actor;
+  }
+  const explicitActorId = String(payload.targetActorId || payload.actorId || "").trim();
+  if (explicitActorId) {
+    return battleActorByActorId(battle, explicitActorId);
   }
   const explicitAccountId = String(payload.targetAccountId || payload.targetAccount || "").trim();
   if (explicitAccountId) {
-    return explicitAccountId;
+    return battlePlayerActorByAccountId(battle, explicitAccountId);
   }
   const targetUsername = normalizeUsername(payload.targetUsername || payload.username || "");
   if (targetUsername) {
     const target = data.accounts[targetUsername];
-    return target ? target.accountId : "";
+    return target ? battlePlayerActorByAccountId(battle, target.accountId) : null;
   }
-  return requiredBattleCommandAccountIds(room).find((accountId) => accountId !== actorAccountId) || "";
+  const targetAccountId = requiredBattleCommandAccountIds(room).find((accountId) => accountId !== actor.accountId) || "";
+  return targetAccountId ? battlePlayerActorByAccountId(battle, targetAccountId) : null;
 }
 
 function resolveBattleRoomTurn(room, battle, now) {
@@ -1930,7 +2101,7 @@ function resolveBattleRoomTurn(room, battle, now) {
   }
   for (const command of orderedCommands) {
     if (String(command.actionId || "") === BATTLE_ACTION_DEFEND) {
-      const actor = battleActorByAccountId(battle, command.accountId);
+      const actor = battlePlayerActorByAccountId(battle, command.accountId);
       if (actor && Number(actor.hp || 0) > 0) {
         actor.guarding = true;
       }
@@ -1939,7 +2110,7 @@ function resolveBattleRoomTurn(room, battle, now) {
   const events = [];
   let sequence = 1;
   for (const command of orderedCommands) {
-    const actor = battleActorByAccountId(battle, command.accountId);
+    const actor = battlePlayerActorByAccountId(battle, command.accountId);
     if (!actor || Number(actor.hp || 0) <= 0) {
       continue;
     }
@@ -1948,7 +2119,7 @@ function resolveBattleRoomTurn(room, battle, now) {
       sequence += 1;
       continue;
     }
-    const target = battleActorByAccountId(battle, command.targetAccountId);
+    const target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
     if (!target || Number(target.hp || 0) <= 0) {
       events.push(battleTargetMissingEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
@@ -1993,12 +2164,24 @@ function resolveBattleRoomTurn(room, battle, now) {
 }
 
 function battleCommandSortValue(battle, command) {
-  const actor = battleActorByAccountId(battle, command.accountId);
+  const actor = battlePlayerActorByAccountId(battle, command.accountId);
   return actor ? Number(actor.speed || 0) : 0;
 }
 
-function battleActorByAccountId(battle, accountId) {
-  return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => actor && actor.accountId === accountId) || null;
+function battlePlayerActorByAccountId(battle, accountId) {
+  return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => (
+    actor &&
+    actor.accountId === accountId &&
+    String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER
+  )) || null;
+}
+
+function battleActorByActorId(battle, actorId) {
+  const normalizedActorId = String(actorId || "").trim();
+  if (!normalizedActorId) {
+    return null;
+  }
+  return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => actor && String(actor.actorId || "") === normalizedActorId) || null;
 }
 
 function battleResultForResolvedActors(room, battle, now) {
@@ -2130,6 +2313,7 @@ function battleDefendEvent(room, battle, command, actor, round, sequence) {
     actorAccountId: actor.accountId,
     actorUsername: actor.username,
     actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
     actionId: BATTLE_ACTION_DEFEND,
     damage: 0,
     animation: {
@@ -2151,7 +2335,9 @@ function battleTargetMissingEvent(room, battle, command, actor, round, sequence)
     actorAccountId: actor.accountId,
     actorUsername: actor.username,
     actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
     actionId: BATTLE_ACTION_ATTACK,
+    targetActorId: String(command.targetActorId || ""),
     targetAccountId: String(command.targetAccountId || ""),
     damage: 0,
     animation: {
@@ -2173,9 +2359,11 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     actorAccountId: actor.accountId,
     actorUsername: actor.username,
     actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
     targetAccountId: target.accountId,
     targetUsername: target.username,
     targetActorId: target.actorId,
+    targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
     actionId: BATTLE_ACTION_ATTACK,
     damage,
     blocked: Boolean(target.guarding),

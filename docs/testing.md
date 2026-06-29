@@ -59,6 +59,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -87,6 +88,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-auto-10v10-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-parity-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-driver-ab-check
@@ -276,6 +278,12 @@ Phase177 切磋房间关闭和结果回写自测：
 - Godot 关闭合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
 - Godot 真实联网关闭：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check`
 - 回归：继续跑 `--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认关闭结果只退出服务器权威切磋，不触发本地 PvE 奖励、捕宠、任务或击飞结算。
+
+Phase178 服务器人物与宠物快照自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 真实联网宠物快照：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check`
+- 回归：继续跑 `--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认宠物快照进入服务器 battle actors，但不把 profile 读取或宠物列表扫描放进 Godot 热路径。
 
 ## 验收口径
 

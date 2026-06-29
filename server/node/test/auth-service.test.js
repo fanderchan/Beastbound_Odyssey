@@ -12,6 +12,44 @@ const {
   DEFAULT_COMMAND_CATALOG,
 } = require("../src/http-server");
 
+function battleProfile(name, playerStats, petStats = null) {
+  const petId = petStats && petStats.petId ? petStats.petId : "";
+  const profile = {
+    "player": {
+      "name": name,
+      "level": Number(playerStats.level || 1),
+      "hp": Number(playerStats.hp || playerStats.maxHp || 120),
+      "maxHp": Number(playerStats.maxHp || 120),
+      "baseStats": {
+        "maxHp": Number(playerStats.maxHp || 120),
+        "attack": Number(playerStats.attack || 18),
+        "defense": Number(playerStats.defense || 6),
+        "quick": Number(playerStats.quick || 70),
+      },
+    },
+    "activePetInstanceId": petId,
+    "petInstances": [],
+  };
+  if (petStats) {
+    profile.petInstances.push({
+      "instanceId": petId,
+      "petId": petId,
+      "formId": String(petStats.formId || "bui_normal_red_fire10"),
+      "name": String(petStats.name || "宠物"),
+      "state": "battle",
+      "level": Number(petStats.level || 1),
+      "hp": Number(petStats.hp || petStats.maxHp || 90),
+      "maxHp": Number(petStats.maxHp || 90),
+      "attack": Number(petStats.attack || 12),
+      "defense": Number(petStats.defense || 6),
+      "quick": Number(petStats.quick || 50),
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "passiveSkillIds": ["test_passive"],
+    });
+  }
+  return profile;
+}
+
 test("register/login/session keeps players away from GM tools", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
 
@@ -400,6 +438,79 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   });
   assert.equal(staleRound.ok, false);
   assert.equal(staleRound.code, "battle_command_round_mismatch");
+});
+
+test("duel battle rooms snapshot active battle pets as targetable actors", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "peta", "password": "test1234", "displayName": "宠物甲"});
+  const opponent = service.register({"username": "petb", "password": "test1234", "displayName": "宠物乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  const challengerProfile = service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("宠物甲", {"level": 12, "hp": 156, "maxHp": 160, "attack": 28, "defense": 12, "quick": 76}, {
+      "petId": "pet_a_active",
+      "name": "甲的布伊",
+      "level": 9,
+      "hp": 88,
+      "maxHp": 90,
+      "attack": 20,
+      "defense": 9,
+      "quick": 64,
+    }),
+  });
+  const opponentProfile = service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("宠物乙", {"level": 11, "hp": 150, "maxHp": 152, "attack": 25, "defense": 11, "quick": 72}, {
+      "petId": "pet_b_active",
+      "name": "乙的布伊",
+      "level": 8,
+      "hp": 70,
+      "maxHp": 72,
+      "attack": 19,
+      "defense": 8,
+      "quick": 62,
+    }),
+  });
+  assert.equal(challengerProfile.ok, true);
+  assert.equal(opponentProfile.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "petb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.participants[0].teamSnapshot.battlePetCount, 1);
+  assert.equal(accept.room.battle.actors.length, 4);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "peta" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "peta" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "petb" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "petb" && actor.kind === "pet");
+  assert.equal(challengerPlayer.attack, 28);
+  assert.equal(challengerPet.petId, "pet_a_active");
+  assert.equal(opponentPet.displayName, "乙的布伊");
+  assert.equal(opponentPet.hp, 70);
+  assert.equal(opponentPet.activeSkillIds.includes("pet_attack"), true);
+
+  const first = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetActorId": opponentPet.actorId,
+  });
+  assert.equal(first.ok, true);
+  assert.equal(first.command.targetActorId, opponentPet.actorId);
+  const second = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "defend",
+  });
+  assert.equal(second.ok, true);
+  const attack = second.turn.events.find((event) => event.eventType === "basic_attack");
+  assert.equal(attack.targetActorId, opponentPet.actorId);
+  assert.equal(attack.targetKind, "pet");
+  const updatedOpponentPet = second.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
+  const updatedOpponentPlayer = second.room.battle.actors.find((actor) => actor.actorId === opponentPlayer.actorId);
+  assert.equal(updatedOpponentPet.hp < opponentPet.hp, true);
+  assert.equal(updatedOpponentPlayer.hp, opponentPlayer.hp);
 });
 
 test("duel battle rooms can cancel, leave, timeout, and finish with results", () => {

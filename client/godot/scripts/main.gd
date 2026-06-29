@@ -654,6 +654,7 @@ var auto_battle_room_live_check: bool = false
 var auto_server_battle_turn_live_check: bool = false
 var auto_server_battle_reconnect_live_check: bool = false
 var auto_server_battle_close_live_check: bool = false
+var auto_server_battle_pet_snapshot_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -1003,6 +1004,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_reconnect_live_check")
 	elif auto_server_battle_close_live_check:
 		call_deferred("_run_auto_server_battle_close_live_check")
+	elif auto_server_battle_pet_snapshot_live_check:
+		call_deferred("_run_auto_server_battle_pet_snapshot_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1745,6 +1748,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_reconnect_live_check = true
 		elif arg == "--auto-server-battle-close-live-check":
 			auto_server_battle_close_live_check = true
+		elif arg == "--auto-server-battle-pet-snapshot-live-check":
+			auto_server_battle_pet_snapshot_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -17282,6 +17287,248 @@ func _run_auto_server_battle_close_live_check() -> void:
 	])
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_battle_pet_snapshot_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "bpa%s" % suffix
+	var opponent_username := "bpb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"宠物甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"宠物乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var challenger_profile := _server_battle_pet_snapshot_test_profile("宠物甲", "pet_a_active", "甲布伊", {
+		"level": 12,
+		"hp": 156,
+		"maxHp": 160,
+		"attack": 28,
+		"defense": 12,
+		"quick": 76,
+	}, {
+		"level": 9,
+		"hp": 88,
+		"maxHp": 90,
+		"attack": 20,
+		"defense": 9,
+		"quick": 64,
+	})
+	var opponent_profile := _server_battle_pet_snapshot_test_profile("宠物乙", "pet_b_active", "乙布伊", {
+		"level": 11,
+		"hp": 150,
+		"maxHp": 152,
+		"attack": 25,
+		"defense": 11,
+		"quick": 72,
+	}, {
+		"level": 8,
+		"hp": 70,
+		"maxHp": 72,
+		"attack": 19,
+		"defense": 8,
+		"quick": 62,
+	})
+	var challenger_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		challenger_profile,
+		0
+	))
+	var opponent_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		opponent_profile,
+		0
+	))
+	var challenger_upload := ServerAuthClientModel.parse_profile_upload_response(int(challenger_upload_response.get("responseCode", 0)), challenger_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_upload := ServerAuthClientModel.parse_profile_upload_response(int(opponent_upload_response.get("responseCode", 0)), opponent_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var upload_ok := bool(challenger_upload.get("ok", false)) and bool(opponent_upload.get("ok", false))
+	var battle_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(8, -1)
+	var challenger_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var opponent_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x + 1,
+			"cellY": battle_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_position_response.get("responseCode", 0)), challenger_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
+	current_account_session = opponent_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	server_event_last_seq = 0
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	frames = 0
+	while frames < 720 and not _battle_invite_seen(invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _battle_invite_seen(invite_id)
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_id := str(accepted_room.get("roomId", ""))
+	frames = 0
+	while frames < 720 and not _battle_room_ready(room_id):
+		frames += 1
+		await get_tree().process_frame
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var room_battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var server_actors: Array = room_battle.get("actors", []) if room_battle.get("actors", []) is Array else []
+	var server_pet_count := 0
+	var opponent_pet_actor_id := ""
+	for value in server_actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if str(actor.get("kind", "")) == "pet":
+			server_pet_count += 1
+		if str(actor.get("username", "")) == opponent_username and str(actor.get("kind", "")) == "pet":
+			opponent_pet_actor_id = str(actor.get("actorId", ""))
+	var ready_ok := bool(accept_parsed.get("ok", false)) and room_id != "" and server_pet_count == 2 and opponent_pet_actor_id != ""
+	var ally_pet := BattleModel.actor_by_id(battle_state, "ally_pet")
+	var enemy_pet := BattleModel.actor_by_id(battle_state, "enemy_pet")
+	var visible_ok := (
+		battle_active
+		and not ally_pet.is_empty()
+		and not enemy_pet.is_empty()
+		and str(ally_pet.get("serverPetId", "")) == "pet_b_active"
+		and str(enemy_pet.get("serverPetId", "")) == "pet_a_active"
+		and int(ally_pet.get("hp", 0)) == 70
+	)
+	server_event_seen.clear()
+	var challenger_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		room_id,
+		{
+			"round": 1,
+			"actionId": "attack",
+			"targetActorId": opponent_pet_actor_id,
+		}
+	))
+	var challenger_command_parsed := ServerAuthClientModel.parse_battle_command_response(int(challenger_command_response.get("responseCode", 0)), challenger_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	await _submit_server_battle_player_command("defend")
+	frames = 0
+	while frames < 720 and _server_battle_event_playback_active():
+		frames += 1
+		await get_tree().process_frame
+	await get_tree().process_frame
+	var last_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
+	var events: Array = last_event_list.get("events", []) if last_event_list.get("events", []) is Array else []
+	var pet_target_event_ok := false
+	for value in events:
+		if value is Dictionary and str((value as Dictionary).get("targetActorId", "")) == opponent_pet_actor_id and str((value as Dictionary).get("targetKind", "")) == "pet":
+			pet_target_event_ok = true
+			break
+	var updated_ally_pet := BattleModel.actor_by_id(battle_state, "ally_pet")
+	var pet_hp_sync_ok := not updated_ally_pet.is_empty() and int(updated_ally_pet.get("hp", 0)) < int(ally_pet.get("hp", 0))
+	var command_ok := bool(challenger_command_parsed.get("ok", false)) and pet_target_event_ok and pet_hp_sync_ok
+	var status := "ok" if register_ok and upload_ok and positions_ok and stream_ready and invite_ok and ready_ok and visible_ok and command_ok else "failed"
+	print("server battle pet snapshot live check ready: status=%s register=%s upload=%s positions=%s stream=%s invite=%s ready=%s visible=%s command=%s pets=%d room_id=%s challenger=%s opponent=%s ally_pet_hp=%d updated_ally_pet_hp=%d" % [
+		status,
+		str(register_ok),
+		str(upload_ok),
+		str(positions_ok),
+		str(stream_ready),
+		str(invite_ok),
+		str(ready_ok),
+		str(visible_ok),
+		str(command_ok),
+		server_pet_count,
+		room_id,
+		challenger_username,
+		opponent_username,
+		int(ally_pet.get("hp", 0)),
+		int(updated_ally_pet.get("hp", 0)),
+	])
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _server_battle_pet_snapshot_test_profile(display_name: String, pet_id: String, pet_name: String, player_stats: Dictionary, pet_stats: Dictionary) -> Dictionary:
+	return {
+		"player": {
+			"name": display_name,
+			"level": maxi(1, int(player_stats.get("level", 1))),
+			"hp": maxi(1, int(player_stats.get("hp", player_stats.get("maxHp", 120)))),
+			"maxHp": maxi(1, int(player_stats.get("maxHp", 120))),
+			"baseStats": {
+				"maxHp": maxi(1, int(player_stats.get("maxHp", 120))),
+				"attack": maxi(1, int(player_stats.get("attack", 18))),
+				"defense": maxi(1, int(player_stats.get("defense", 6))),
+				"quick": maxi(1, int(player_stats.get("quick", 70))),
+			},
+		},
+		"activePetInstanceId": pet_id,
+		"petInstances": [{
+			"instanceId": pet_id,
+			"petId": pet_id,
+			"formId": "bui_normal_red_fire10",
+			"name": pet_name,
+			"state": "battle",
+			"level": maxi(1, int(pet_stats.get("level", 1))),
+			"hp": maxi(1, int(pet_stats.get("hp", pet_stats.get("maxHp", 90)))),
+			"maxHp": maxi(1, int(pet_stats.get("maxHp", 90))),
+			"attack": maxi(1, int(pet_stats.get("attack", 12))),
+			"defense": maxi(1, int(pet_stats.get("defense", 6))),
+			"quick": maxi(1, int(pet_stats.get("quick", 50))),
+			"activeSkillIds": ["pet_attack", "pet_defend"],
+			"passiveSkillIds": ["test_passive"],
+		}],
+	}
 
 
 func _online_remote_player_at(username: String, map_id: String, cell: Vector2i) -> bool:

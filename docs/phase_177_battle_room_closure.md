@@ -93,6 +93,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase178：服务端战斗 actor 扩展到玩家队伍/宠物快照，继续沿用 N vs N 模型。
+1. Phase178 已完成：服务端战斗 actor 扩展到人物 + 当前战斗宠快照，继续沿用 N vs N 模型。
 2. Phase179：正式玩家 UI 接入“离开切磋”，同时保留服务端权威关闭。
-3. Phase180：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。
+3. Phase180：服务端宠物命令和基础宠物技能事件。
+4. Phase181：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。
