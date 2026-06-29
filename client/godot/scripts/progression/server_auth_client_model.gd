@@ -99,13 +99,16 @@ static func player_position_update_request(base_url: String, session_token: Stri
 	}
 
 
-static func event_stream_url(base_url: String, session_token: String) -> String:
+static func event_stream_url(base_url: String, session_token: String, last_event_seq: int = 0) -> String:
 	var url := normalized_base_url(base_url)
 	if url.begins_with("https://"):
 		url = "wss://" + url.substr("https://".length())
 	elif url.begins_with("http://"):
 		url = "ws://" + url.substr("http://".length())
-	return "%s/events?token=%s" % [url, session_token.uri_encode()]
+	var query := "token=%s" % session_token.uri_encode()
+	if last_event_seq > 0:
+		query += "&lastEventSeq=%d" % last_event_seq
+	return "%s/events?%s" % [url, query]
 
 
 static func party_state_request(base_url: String, session_token: String) -> Dictionary:

@@ -37,12 +37,16 @@ function createEventHub(service) {
       "",
     ].join("\r\n"));
     const account = session.account || {};
+    const lastEventSeq = normalizeEventSeq(url.searchParams.get("lastEventSeq") || url.searchParams.get("afterSeq") || "0");
     const client = {
       socket,
       accountId: account.accountId || "",
       username: account.username || "",
       token,
       buffer: Buffer.alloc(0),
+      lastSentEventSeq: lastEventSeq,
+      pendingLiveEvents: [],
+      replaying: true,
     };
     clients.add(client);
     socket.on("data", (chunk) => handleSocketData(client, chunk));
@@ -65,6 +69,9 @@ function createEventHub(service) {
         createdAt: new Date().toISOString(),
       });
     }
+    replayEventsForClient(client, lastEventSeq);
+    client.replaying = false;
+    drainPendingLiveEvents(client);
     return true;
   }
 
@@ -77,7 +84,11 @@ function createEventHub(service) {
       if (!prepared.visible) {
         continue;
       }
-      sendEvent(client, prepared.event);
+      if (client.replaying) {
+        queuePendingLiveEvent(client, prepared.event);
+      } else {
+        sendSequencedEvent(client, prepared.event);
+      }
     }
   }
 
@@ -104,6 +115,20 @@ function createEventHub(service) {
     return targetAccountIds.includes(client.accountId);
   }
 
+  function replayEventsForClient(client, lastEventSeq) {
+    if (!service || typeof service.listEventsForSession !== "function") {
+      return;
+    }
+    const replay = service.listEventsForSession(client.token, {"afterSeq": lastEventSeq});
+    if (!replay.ok || !Array.isArray(replay.events)) {
+      client.socket.destroy();
+      return;
+    }
+    for (const event of replay.events) {
+      sendSequencedEvent(client, event);
+    }
+  }
+
   function close() {
     unsubscribe();
     for (const client of clients) {
@@ -122,6 +147,41 @@ function createEventHub(service) {
     close,
     clientCount,
   };
+}
+
+function queuePendingLiveEvent(client, event) {
+  const eventSeq = normalizeEventSeq(event && event.eventSeq);
+  if (eventSeq > 0 && eventSeq <= normalizeEventSeq(client.lastSentEventSeq)) {
+    return;
+  }
+  if (eventSeq > 0 && client.pendingLiveEvents.some((pending) => normalizeEventSeq(pending && pending.eventSeq) === eventSeq)) {
+    return;
+  }
+  client.pendingLiveEvents.push(event);
+}
+
+function drainPendingLiveEvents(client) {
+  client.pendingLiveEvents.sort((a, b) => pendingEventSortSeq(a) - pendingEventSortSeq(b));
+  for (const event of client.pendingLiveEvents) {
+    sendSequencedEvent(client, event);
+  }
+  client.pendingLiveEvents = [];
+}
+
+function pendingEventSortSeq(event) {
+  const eventSeq = normalizeEventSeq(event && event.eventSeq);
+  return eventSeq > 0 ? eventSeq : Number.MAX_SAFE_INTEGER;
+}
+
+function sendSequencedEvent(client, event) {
+  const eventSeq = normalizeEventSeq(event && event.eventSeq);
+  if (eventSeq > 0) {
+    if (eventSeq <= normalizeEventSeq(client.lastSentEventSeq)) {
+      return;
+    }
+    client.lastSentEventSeq = eventSeq;
+  }
+  sendEvent(client, event);
 }
 
 function sendEvent(client, event) {
@@ -216,6 +276,14 @@ function encodeFrame(opcode, payload) {
     header.writeBigUInt64BE(BigInt(data.length), 2);
   }
   return Buffer.concat([header, data]);
+}
+
+function normalizeEventSeq(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return 0;
+  }
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number));
 }
 
 function writeHttpError(socket, status, message) {

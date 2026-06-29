@@ -118,6 +118,14 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_battle_rooms_status (status)
       );
+      CREATE TABLE IF NOT EXISTS service_events (
+        event_seq BIGINT PRIMARY KEY,
+        event_id VARCHAR(96) NOT NULL,
+        event_type VARCHAR(64) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_service_events_type_seq (event_type, event_seq)
+      );
     `);
     schemaReady = true;
   }
@@ -151,6 +159,7 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM player_positions");
       statements.push("DELETE FROM battle_invites");
       statements.push("DELETE FROM battle_rooms");
+      statements.push("DELETE FROM service_events");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
@@ -182,6 +191,11 @@ function createMysqlAuthStore(options = {}) {
       }
       for (const room of Object.values(objectOrEmpty(nextData.battleRooms))) {
         statements.push(insertBattleRoomStatement(room));
+      }
+      if (Array.isArray(nextData.serviceEvents)) {
+        for (const event of nextData.serviceEvents) {
+          statements.push(insertServiceEventStatement(event));
+        }
       }
       statements.push("COMMIT");
       runMysql(config, config.database, `${statements.join(";\n")};`);
@@ -271,6 +285,10 @@ function insertBattleInviteStatement(invite) {
 
 function insertBattleRoomStatement(room) {
   return `INSERT INTO battle_rooms (room_id, mode, status, seed, created_at, updated_at, document_json) VALUES (${sqlString(room.roomId)}, ${sqlString(room.mode)}, ${sqlString(room.status)}, ${sqlString(room.seed)}, ${sqlString(room.createdAt)}, ${sqlString(room.updatedAt)}, ${sqlJson(room)})`;
+}
+
+function insertServiceEventStatement(event) {
+  return `INSERT INTO service_events (event_seq, event_id, event_type, created_at, document_json) VALUES (${Number(event.eventSeq || 0)}, ${sqlString(event.eventId)}, ${sqlString(event.type)}, ${sqlString(event.createdAt)}, ${sqlJson(event)})`;
 }
 
 function sqlJson(value) {

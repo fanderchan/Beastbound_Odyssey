@@ -745,6 +745,62 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   ws.close();
 });
 
+test("HTTP server replays websocket battle events after cursor", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const wsBase = `ws://127.0.0.1:${port}`;
+
+  const challenger = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "replaya", "password": "test1234", "displayName": "补发甲"}),
+  });
+  const opponent = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "replayb", "password": "test1234", "displayName": "补发乙"}),
+  });
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+
+  const invite = await fetchJson(`${base}/battle/invite`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "body": JSON.stringify({"username": "replayb"}),
+  });
+  assert.equal(invite.ok, true);
+  const firstWs = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}`);
+  const firstReader = webSocketJsonReader(firstWs);
+  await webSocketOpen(firstWs);
+  await firstReader.next("events.ready");
+  const inviteEvent = await firstReader.next("battle.invite");
+  assert.equal(inviteEvent.invite.inviteId, invite.invite.inviteId);
+  assert.equal(Number.isInteger(inviteEvent.eventSeq), true);
+  assert.equal(inviteEvent.eventSeq > 0, true);
+  firstWs.close();
+
+  const accept = await fetchJson(`${base}/battle/invites/${encodeURIComponent(invite.invite.inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+  });
+  assert.equal(accept.ok, true);
+  const secondWs = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}&lastEventSeq=${inviteEvent.eventSeq}`);
+  const secondReader = webSocketJsonReader(secondWs);
+  await webSocketOpen(secondWs);
+  await secondReader.next("events.ready");
+  const roomEvent = await secondReader.next("battle.room_ready");
+  assert.equal(roomEvent.room.roomId, accept.room.roomId);
+  assert.equal(roomEvent.eventSeq > inviteEvent.eventSeq, true);
+  await assert.rejects(secondReader.next("battle.invite"), /websocket message timeout: battle.invite/);
+  secondWs.close();
+});
+
 test("HTTP server exposes websocket event stream", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});

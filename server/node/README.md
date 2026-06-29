@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -42,6 +42,7 @@ Optional environment variables:
 - `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
 - `POST /players/position`
 - `WS /events?token={sessionToken}`
+- `WS /events?token={sessionToken}&lastEventSeq={eventSeq}`
 - `GET /profiles/me`
 - `PUT /profiles/me`
 - `GET /mail/inbox`
@@ -130,12 +131,14 @@ This is still a snapshot loop, not live movement authority. It does not yet prov
 `WS /events?token={sessionToken}` upgrades a valid server session to a lightweight WebSocket stream:
 
 - On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current AOI-filtered online roster when the account already has a position.
+- Clients may reconnect with `lastEventSeq`; the server replays later critical `chat.message`, `party.*`, and `battle.*` events visible to that account.
+- `online.position` is intentionally not replayed because `online.snapshot` is the reconnect state source for visible players.
 - `POST /players/position` publishes `online.position` only to clients whose current AOI includes the actor's current or previous position; each recipient receives its own filtered roster snapshot.
 - `POST /chat/send` publishes `chat.message`; nearby messages are same-server public, while team messages are targeted to party members.
 - Party invite, accept, decline, and leave publish `party.invite`, `party.update`, or `party.invite_declined` to the affected accounts.
 - Battle invite and accept publish `battle.invite` and `battle.room_ready` to the affected accounts.
 
-The stream is an event fanout for already-authorized HTTP actions. It is not yet server-authoritative movement, explicit room subscription, combat room state, or anti-cheat validation.
+The stream is an event fanout for already-authorized HTTP actions. Replay history is bounded and meant for short reconnects, not permanent offline mail. It is not yet server-authoritative movement, explicit room subscription, combat room state, or anti-cheat validation.
 
 ## Battle Room Boundary
 
@@ -174,6 +177,7 @@ The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_ST
 - `player_positions`
 - `battle_invites`
 - `battle_rooms`
+- `service_events`
 - `server_state`
 
 This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.

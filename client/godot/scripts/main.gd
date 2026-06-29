@@ -483,6 +483,7 @@ var server_event_socket: WebSocketPeer
 var server_event_state: String = "off"
 var server_event_reconnect_remaining: float = 0.0
 var server_event_seen: Array[Dictionary] = []
+var server_event_last_seq: int = 0
 var server_battle_state: Dictionary = {}
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
@@ -640,6 +641,7 @@ var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
 var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
+var auto_server_event_replay_live_check: bool = false
 var auto_battle_room_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
@@ -958,6 +960,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
 		call_deferred("_run_auto_server_event_live_check")
+	elif auto_server_event_replay_live_check:
+		call_deferred("_run_auto_server_event_replay_live_check")
 	elif auto_battle_room_live_check:
 		call_deferred("_run_auto_battle_room_live_check")
 	elif auto_auth_server_client_check:
@@ -1686,6 +1690,8 @@ func _apply_preview_window_args() -> void:
 			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
 			auto_server_event_live_check = true
+		elif arg == "--auto-server-event-replay-live-check":
+			auto_server_event_replay_live_check = true
 		elif arg == "--auto-battle-room-live-check":
 			auto_battle_room_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
@@ -15166,15 +15172,19 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var event_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url := ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
+	var event_replay_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test", 42)
 	var parsed_event := ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
 		"type": "online.position",
+		"eventSeq": 43,
 		"players": [{"username": "remoteuser"}],
 	}).to_utf8_buffer())
 	var event_contract_ok := (
 		event_url == "ws://127.0.0.1:8787/events?token=token_test"
 		and event_wss_url == "wss://example.test/game/events?token=token%20test"
+		and event_replay_url == "ws://127.0.0.1:8787/events?token=token_test&lastEventSeq=42"
 		and bool(parsed_event.get("ok", false))
 		and str(parsed_event.get("type", "")) == "online.position"
+		and int((parsed_event.get("event", {}) as Dictionary).get("eventSeq", 0)) == 43
 	)
 	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
@@ -15939,6 +15949,7 @@ func _run_auto_server_event_live_check() -> void:
 	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	account_authenticated = true
 	server_profile_sync_state = "ready"
+	server_event_last_seq = 0
 	server_event_seen.clear()
 	online_position_remote_players.clear()
 	chat_messages.clear()
@@ -16003,6 +16014,87 @@ func _run_auto_server_event_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_server_event_replay_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "era%s" % suffix
+	var opponent_username := "erb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"补发甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"补发乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	current_account_session = opponent_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_event_seen.clear()
+	server_event_last_seq = 0
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and not _battle_invite_seen(invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var invite_seq := server_event_last_seq
+	var invite_replayed_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _server_event_type_seen("battle.invite") and _battle_invite_seen(invite_id) and invite_seq > 0
+	_stop_server_event_stream()
+	server_event_seen.clear()
+	server_battle_state.clear()
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_id := str(accepted_room.get("roomId", ""))
+	_start_server_event_stream_if_needed()
+	frames = 0
+	while frames < 720 and not _battle_room_ready(room_id):
+		frames += 1
+		await get_tree().process_frame
+	var room_seq := server_event_last_seq
+	var room_replayed_ok := bool(accept_parsed.get("ok", false)) and room_id != "" and _server_event_type_seen("battle.room_ready") and _battle_room_ready(room_id) and room_seq > invite_seq
+	var invite_not_replayed_again := not _server_event_type_seen("battle.invite")
+	var status := "ok" if register_ok and invite_replayed_ok and room_replayed_ok and invite_not_replayed_again else "failed"
+	print("server event replay live check ready: status=%s register=%s invite=%s room=%s cursor=%s invite_seq=%d room_seq=%d challenger=%s opponent=%s" % [
+		status,
+		str(register_ok),
+		str(invite_replayed_ok),
+		str(room_replayed_ok),
+		str(invite_not_replayed_again),
+		invite_seq,
+		room_seq,
+		challenger_username,
+		opponent_username,
+	])
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_room_live_check() -> void:
 	profile_save_enabled = false
 	var suffix := str(Time.get_ticks_usec() % 10000000000)
@@ -16032,6 +16124,7 @@ func _run_auto_battle_room_live_check() -> void:
 	account_authenticated = true
 	server_profile_sync_state = "ready"
 	server_battle_state.clear()
+	server_event_last_seq = 0
 	server_event_seen.clear()
 	_start_server_event_stream_if_needed()
 	var frames := 0
@@ -22231,7 +22324,7 @@ func _start_server_event_stream_if_needed() -> void:
 		if state == WebSocketPeer.STATE_CONNECTING or state == WebSocketPeer.STATE_OPEN:
 			return
 	server_event_socket = WebSocketPeer.new()
-	var err := server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(_server_profile_base_url(), _server_profile_token()))
+	var err := server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(_server_profile_base_url(), _server_profile_token(), server_event_last_seq))
 	if err == OK:
 		server_event_state = "connecting"
 		server_event_reconnect_remaining = 0.0
@@ -22280,6 +22373,11 @@ func _handle_server_event(event: Dictionary) -> void:
 	var event_type := str(event.get("type", "")).strip_edges()
 	if event_type == "":
 		return
+	var event_seq := int(event.get("eventSeq", 0))
+	if event_seq > 0 and event_seq <= server_event_last_seq:
+		return
+	if event_seq > 0:
+		server_event_last_seq = event_seq
 	_record_server_event_seen(event)
 	match event_type:
 		"events.ready":
@@ -22654,6 +22752,11 @@ func _apply_auth_profile_metadata_fields(display_name: String) -> void:
 func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = false) -> void:
 	if session.is_empty():
 		return
+	var previous_server_token := _server_profile_token()
+	var next_server_token := str(session.get("serverSessionToken", "")).strip_edges()
+	if previous_server_token != next_server_token:
+		server_event_last_seq = 0
+		server_event_seen.clear()
 	current_account_session = session
 	account_authenticated = true
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
@@ -22780,6 +22883,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
 	server_battle_state.clear()
+	server_event_last_seq = 0
 	_stop_server_event_stream()
 	_stop_online_position_sync()
 	PlayerProgressModel.reset_active_save_path()

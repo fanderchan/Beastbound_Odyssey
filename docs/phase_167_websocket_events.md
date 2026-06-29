@@ -74,4 +74,4 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 1. Phase168：地图/格子 AOI 过滤已完成第一轮，减少同服在线位置广播噪音。
 2. Phase169：切磋房间和战斗种子，让双方同意后由服务端建立战斗上下文。
-3. Phase170：WebSocket 断线补偿和事件游标，避免短线重连丢关键队伍/战斗事件。
+3. Phase170：WebSocket 断线补偿和事件游标已完成第一轮，短线重连可以补收关键队伍/战斗事件。

@@ -63,7 +63,7 @@ POST /battle/invites/{inviteId}/decline
 ## 当前未做
 
 - 战斗房间内的回合命令提交和服务器结算。
-- 房间超时、取消、离开、重连补偿。
+- 房间超时、取消、离开。
 - 房间内 10v10 站位锁定和双方 profile 完整队伍快照。
 - 移动锁、观战、战斗结果回写和奖励/惩罚。
 
@@ -86,6 +86,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase170：WebSocket 事件游标和断线补偿，保证房间邀请/ready 短线可恢复。
+1. Phase170：WebSocket 事件游标和断线补偿已完成第一轮，房间邀请/ready 短线可恢复。
 2. Phase171：服务器权威移动第一版，进入切磋前校验距离、地图和移动状态。
 3. Phase172：房间内回合命令提交和服务器战斗事件列表。

@@ -12,6 +12,7 @@ const ROLE_GM = "gm";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_AUDIT_ROWS = 500;
 const MAX_PLAYER_SEARCH_RESULTS = 12;
+const MAX_SERVICE_EVENTS = 500;
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
 const PARTY_MAX_MEMBERS = 5;
@@ -48,10 +49,22 @@ function createAuthService(options = {}) {
 
   function emitServiceEvent(event) {
     const payload = {
+      ...event,
       schemaVersion: 1,
       createdAt: isoNow(now),
-      ...event,
     };
+    if (serviceEventIsReplayable(payload)) {
+      const data = load();
+      const eventSeq = nextServiceEventSeq(data);
+      payload.eventId = `server_event_${eventSeq}`;
+      payload.eventSeq = eventSeq;
+      data.serviceEventSeq = eventSeq;
+      data.serviceEvents.push(clone(payload));
+      while (data.serviceEvents.length > MAX_SERVICE_EVENTS) {
+        data.serviceEvents.shift();
+      }
+      save(data);
+    }
     for (const listener of serviceEventListeners) {
       listener(payload);
     }
@@ -378,8 +391,50 @@ function createAuthService(options = {}) {
   }
 
   function eventForSession(token, event = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    return eventForResolvedSession(data, resolved, event);
+  }
+
+  function listEventsForSession(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const afterSeq = normalizeEventSeq(payload.afterSeq ?? payload.lastEventSeq ?? 0);
+    const throughSeq = normalizeEventSeq(payload.throughSeq ?? payload.maxEventSeq ?? Number.MAX_SAFE_INTEGER);
+    const events = [];
+    for (const event of data.serviceEvents) {
+      const eventSeq = normalizeEventSeq(event && event.eventSeq);
+      if (eventSeq <= afterSeq || eventSeq > throughSeq) {
+        continue;
+      }
+      if (!serviceEventVisibleToAccount(event, resolved.account.accountId)) {
+        continue;
+      }
+      const prepared = eventForResolvedSession(data, resolved, event);
+      if (prepared.ok && prepared.visible !== false) {
+        events.push(prepared.event || event);
+      }
+    }
+    return ok({
+      events,
+      latestEventSeq: normalizeEventSeq(data.serviceEventSeq),
+    });
+  }
+
+  function latestEventSeq() {
+    const data = load();
+    return normalizeEventSeq(data.serviceEventSeq);
+  }
+
+  function eventForResolvedSession(data, resolved, event = {}) {
     if (event && event.type === "online.position") {
-      return onlinePositionEventForSession(token, event);
+      return onlinePositionEventForResolvedSession(data, resolved, event);
     }
     return ok({
       visible: true,
@@ -387,12 +442,7 @@ function createAuthService(options = {}) {
     });
   }
 
-  function onlinePositionEventForSession(token, event = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
+  function onlinePositionEventForResolvedSession(data, resolved, event = {}) {
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
     const aoi = normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, viewerPosition);
     const isSelf = resolved.account.accountId === event.accountId;
@@ -950,6 +1000,8 @@ function createAuthService(options = {}) {
     updatePlayerPosition,
     onEvent,
     eventForSession,
+    listEventsForSession,
+    latestEventSeq,
     getPartyState,
     inviteToParty,
     acceptPartyInvite,
@@ -1001,6 +1053,12 @@ function createJsonAuthStore(filePath) {
 
 function normalizeData(raw) {
   const data = raw && typeof raw === "object" ? clone(raw) : {};
+  const serviceEvents = normalizeServiceEvents(data.serviceEvents);
+  const serviceEventSeq = Math.max(
+    normalizeEventSeq(data.serviceEventSeq),
+    0,
+    ...serviceEvents.map((event) => normalizeEventSeq(event.eventSeq))
+  );
   return {
     schemaVersion: 1,
     accounts: objectOrEmpty(data.accounts),
@@ -1018,6 +1076,8 @@ function normalizeData(raw) {
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
     authEvents: Array.isArray(data.authEvents) ? data.authEvents : [],
+    serviceEventSeq,
+    serviceEvents,
   };
 }
 
@@ -1525,6 +1585,43 @@ function recordAuthEvent(data, type, username, okValue, message, now) {
     createdAt: isoNow(now),
     schemaVersion: 1,
   });
+}
+
+function normalizeServiceEvents(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((event) => event && typeof event === "object" && !Array.isArray(event))
+    .map((event) => clone(event))
+    .filter((event) => normalizeEventSeq(event.eventSeq) > 0 && String(event.type || "").trim() !== "")
+    .sort((a, b) => normalizeEventSeq(a.eventSeq) - normalizeEventSeq(b.eventSeq))
+    .slice(-MAX_SERVICE_EVENTS);
+}
+
+function nextServiceEventSeq(data) {
+  return normalizeEventSeq(data.serviceEventSeq) + 1;
+}
+
+function normalizeEventSeq(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return 0;
+  }
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number));
+}
+
+function serviceEventVisibleToAccount(event, accountId) {
+  const targetAccountIds = event && Array.isArray(event.targetAccountIds) ? event.targetAccountIds : null;
+  if (!targetAccountIds) {
+    return true;
+  }
+  return targetAccountIds.includes(accountId);
+}
+
+function serviceEventIsReplayable(event) {
+  const type = String(event && event.type || "");
+  return type === "chat.message" || type.startsWith("party.") || type.startsWith("battle.");
 }
 
 function normalizeUsername(username) {
