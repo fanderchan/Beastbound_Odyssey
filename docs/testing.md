@@ -54,6 +54,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-replay-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-battle-room-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -254,6 +255,13 @@ Phase171 服务器权威移动自测：
 - Godot 移动合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
 - Godot 真实联网移动：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-movement-live-check`
 - 回归：继续跑 `--auto-battle-room-live-check`、`--auto-server-event-replay-live-check`、`--auto-server-event-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认服务器 step 没进入 Godot 每帧热路径，且切磋 ready 前会校验同图、近距离、停稳状态。
+
+Phase172 房间回合命令和服务器战斗事件列表自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 回合合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
+- Godot 真实联网回合：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check`
+- 回归：继续跑 `--auto-battle-room-live-check`、`--auto-server-event-replay-live-check`、`--auto-server-event-live-check`、`--auto-server-movement-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认回合命令通过 HTTP/WebSocket 轻量缓存流转，不启动本地战斗循环，也不进入 Godot 每帧热路径。
 
 ## 验收口径
 

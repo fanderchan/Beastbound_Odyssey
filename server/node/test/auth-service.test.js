@@ -330,6 +330,78 @@ test("server movement steps are authoritative and bounded", () => {
   assert.equal(jump.code, "movement_step_too_far");
 });
 
+test("duel battle rooms resolve turn commands into event lists", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const challenger = service.register({"username": "turna", "password": "test1234", "displayName": "回合甲"});
+  const opponent = service.register({"username": "turnb", "password": "test1234", "displayName": "回合乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "west",
+    "moving": false,
+  });
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "turnb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.battle.phase, "command");
+  assert.equal(accept.room.battle.round, 1);
+  assert.equal(accept.room.battle.actors.length, 2);
+
+  const firstCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetUsername": "turnb",
+  });
+  assert.equal(firstCommand.ok, true);
+  assert.equal(firstCommand.turn, null);
+  assert.equal(firstCommand.room.battle.submittedAccountIds.includes(challenger.account.accountId), true);
+  assert.equal(events.some((event) => event.type === "battle.command_submitted" && event.roomId === accept.room.roomId), true);
+
+  const duplicate = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetUsername": "turnb",
+  });
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "battle_command_duplicate");
+
+  const secondCommand = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "defend",
+  });
+  assert.equal(secondCommand.ok, true);
+  assert.equal(secondCommand.turn.kind, "battle_event_list");
+  assert.equal(secondCommand.turn.round, 1);
+  assert.equal(secondCommand.turn.events.length, 2);
+  assert.equal(secondCommand.turn.events.some((event) => event.eventType === "basic_attack" && event.targetUsername === "turnb" && event.damage > 0), true);
+  assert.equal(secondCommand.turn.events.some((event) => event.eventType === "defend" && event.actorUsername === "turnb"), true);
+  assert.equal(secondCommand.room.battle.round, 2);
+  assert.equal(secondCommand.room.battle.submittedAccountIds.length, 0);
+  assert.equal(secondCommand.room.battle.lastEventList.round, 1);
+  assert.equal(events.some((event) => event.type === "battle.turn_resolved" && event.turn.kind === "battle_event_list"), true);
+
+  const staleRound = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetUsername": "turnb",
+  });
+  assert.equal(staleRound.ok, false);
+  assert.equal(staleRound.code, "battle_command_round_mismatch");
+});
+
 test("duel battle rooms require nearby settled positions", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "nearba", "password": "test1234", "displayName": "近战甲"});
@@ -924,6 +996,38 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   const roomEvent = await reader.next("battle.room_ready");
   assert.equal(roomEvent.room.roomId, accept.room.roomId);
   assert.equal(roomEvent.room.seed, accept.room.seed);
+
+  const challengerCommand = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/commands`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "body": JSON.stringify({
+      "round": 1,
+      "actionId": "attack",
+      "targetUsername": "httpbatb",
+    }),
+  });
+  assert.equal(challengerCommand.ok, true);
+  assert.equal(challengerCommand.turn, null);
+  const commandEvent = await reader.next("battle.command_submitted");
+  assert.equal(commandEvent.roomId, accept.room.roomId);
+  assert.equal(commandEvent.submittedUsername, "httpbata");
+
+  const opponentCommand = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/commands`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+    "body": JSON.stringify({
+      "round": 1,
+      "actionId": "defend",
+    }),
+  });
+  assert.equal(opponentCommand.ok, true);
+  assert.equal(opponentCommand.turn.kind, "battle_event_list");
+  assert.equal(opponentCommand.turn.events.length, 2);
+  const turnEvent = await reader.next("battle.turn_resolved");
+  assert.equal(turnEvent.roomId, accept.room.roomId);
+  assert.equal(turnEvent.turn.kind, "battle_event_list");
+  assert.equal(turnEvent.turn.round, 1);
+  assert.equal(turnEvent.room.battle.round, 2);
   ws.close();
 });
 

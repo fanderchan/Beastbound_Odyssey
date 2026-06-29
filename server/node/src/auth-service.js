@@ -33,6 +33,12 @@ const BATTLE_INVITE_PENDING = "pending";
 const BATTLE_INVITE_ACCEPTED = "accepted";
 const BATTLE_INVITE_DECLINED = "declined";
 const BATTLE_ROOM_READY = "ready";
+const BATTLE_PHASE_COMMAND = "command";
+const BATTLE_ACTION_ATTACK = "attack";
+const BATTLE_ACTION_DEFEND = "defend";
+const BATTLE_ACTOR_MAX_HP = 120;
+const BATTLE_BASE_ATTACK_DAMAGE = 18;
+const BATTLE_DEFEND_REDUCTION = 8;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -924,6 +930,7 @@ function createAuthService(options = {}) {
       updatedAt: isoNow(now),
       schemaVersion: 1,
     };
+    room.battle = createBattleRoomBattleState(room, now);
     data.battleRooms[room.roomId] = room;
     save(data);
     emitServiceEvent({
@@ -963,6 +970,85 @@ function createAuthService(options = {}) {
       invite: publicBattleInvite(invite, data),
       room: null,
       message: "已拒绝切磋邀请。",
+    });
+  }
+
+  function submitBattleCommand(token, roomId, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const normalizedRoomId = String(roomId || payload.roomId || "").trim();
+    const room = data.battleRooms[normalizedRoomId] || null;
+    if (!room || room.status === "closed") {
+      return fail("battle_room_missing", "切磋房间不存在。");
+    }
+    if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
+      return fail("battle_room_forbidden", "你不在这个切磋房间中。");
+    }
+    const battle = battleRoomBattleStateForMutation(room, now);
+    if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
+      return fail("battle_command_phase_invalid", "当前不能提交回合命令。", {
+        room: publicBattleRoom(room),
+      });
+    }
+    const expectedRound = Number(battle.round || 1);
+    const commandRound = clampInt(payload.round, 1, Number.MAX_SAFE_INTEGER, expectedRound);
+    if (commandRound !== expectedRound) {
+      return fail("battle_command_round_mismatch", "回合已变化，请重新同步。", {
+        expectedRound,
+        room: publicBattleRoom(room),
+      });
+    }
+    if (battle.commands && battle.commands[resolved.account.accountId]) {
+      return fail("battle_command_duplicate", "本回合命令已经提交。", {
+        room: publicBattleRoom(room),
+      });
+    }
+    const commandResult = normalizeBattleCommandPayload(payload, data, room, battle, resolved.account, now, randomId);
+    if (!commandResult.ok) {
+      return commandResult;
+    }
+    battle.commands[resolved.account.accountId] = commandResult.command;
+    battle.submittedAccountIds = submittedBattleCommandAccountIds(battle);
+    battle.updatedAt = isoNow(now);
+    room.updatedAt = battle.updatedAt;
+    const commandSubmittedAccountIds = battle.submittedAccountIds.slice();
+    const commandSubmittedRoom = publicBattleRoom(room);
+    let turn = null;
+    const readyToResolve = requiredBattleCommandAccountIds(room).every((accountId) => battle.commands[accountId]);
+    if (readyToResolve) {
+      turn = resolveBattleRoomTurn(room, battle, now);
+    }
+    data.battleRooms[room.roomId] = room;
+    save(data);
+    emitServiceEvent({
+      type: "battle.command_submitted",
+      targetAccountIds: room.participantAccountIds.slice(),
+      roomId: room.roomId,
+      round: expectedRound,
+      submittedAccountId: resolved.account.accountId,
+      submittedUsername: resolved.account.username,
+      submittedAccountIds: commandSubmittedAccountIds,
+      requiredAccountIds: requiredBattleCommandAccountIds(room),
+      room: commandSubmittedRoom,
+    });
+    if (turn) {
+      emitServiceEvent({
+        type: "battle.turn_resolved",
+        targetAccountIds: room.participantAccountIds.slice(),
+        roomId: room.roomId,
+        round: turn.round,
+        turn,
+        room: publicBattleRoom(room),
+      });
+    }
+    return ok({
+      room: publicBattleRoom(room),
+      command: publicBattleCommand(commandResult.command),
+      turn,
+      message: turn ? "本回合已结算。" : "回合命令已提交。",
     });
   }
 
@@ -1090,6 +1176,7 @@ function createAuthService(options = {}) {
     inviteToBattle,
     acceptBattleInvite,
     declineBattleInvite,
+    submitBattleCommand,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -1403,8 +1490,60 @@ function publicBattleRoom(room) {
     participantAccountIds: Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [],
     entry: room.entry && typeof room.entry === "object" ? clone(room.entry) : null,
     participants: Array.isArray(room.participants) ? clone(room.participants) : [],
+    battle: publicBattleRoomBattle(room.battle || null),
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleRoomBattle(battle) {
+  if (!battle || typeof battle !== "object" || Array.isArray(battle)) {
+    return null;
+  }
+  return {
+    round: Number(battle.round || 1),
+    phase: String(battle.phase || BATTLE_PHASE_COMMAND),
+    turnSeq: Number(battle.turnSeq || 0),
+    requiredAccountIds: Array.isArray(battle.requiredAccountIds) ? battle.requiredAccountIds.slice() : [],
+    submittedAccountIds: Array.isArray(battle.submittedAccountIds) ? battle.submittedAccountIds.slice() : [],
+    actors: Array.isArray(battle.actors) ? battle.actors.map(publicBattleActor) : [],
+    lastEventList: battle.lastEventList && typeof battle.lastEventList === "object" ? clone(battle.lastEventList) : null,
+    updatedAt: battle.updatedAt || "",
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleActor(actor) {
+  return {
+    actorId: String(actor.actorId || ""),
+    accountId: String(actor.accountId || ""),
+    username: String(actor.username || ""),
+    displayName: String(actor.displayName || actor.username || ""),
+    side: String(actor.side || ""),
+    slotId: String(actor.slotId || ""),
+    hp: Number(actor.hp || 0),
+    maxHp: Number(actor.maxHp || BATTLE_ACTOR_MAX_HP),
+    speed: Number(actor.speed || 0),
+    guarding: Boolean(actor.guarding),
+    defeated: Boolean(actor.defeated),
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleCommand(command) {
+  if (!command || typeof command !== "object") {
+    return {};
+  }
+  return {
+    commandId: String(command.commandId || ""),
+    roomId: String(command.roomId || ""),
+    round: Number(command.round || 1),
+    accountId: String(command.accountId || ""),
+    username: String(command.username || ""),
+    actionId: String(command.actionId || ""),
+    targetAccountId: String(command.targetAccountId || ""),
+    submittedAt: String(command.submittedAt || ""),
     schemaVersion: 1,
   };
 }
@@ -1504,6 +1643,282 @@ function battleRoomEntryCheck(data, invite) {
       schemaVersion: 1,
     },
   });
+}
+
+function createBattleRoomBattleState(room, now) {
+  const actors = battleRoomActors(room);
+  return {
+    round: 1,
+    phase: BATTLE_PHASE_COMMAND,
+    turnSeq: 0,
+    requiredAccountIds: requiredBattleCommandAccountIds(room),
+    submittedAccountIds: [],
+    commands: {},
+    actors,
+    lastEventList: null,
+    eventLog: [],
+    updatedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
+function battleRoomBattleStateForMutation(room, now) {
+  if (!room.battle || typeof room.battle !== "object" || Array.isArray(room.battle)) {
+    room.battle = createBattleRoomBattleState(room, now);
+  }
+  if (!Array.isArray(room.battle.actors) || room.battle.actors.length === 0) {
+    room.battle.actors = battleRoomActors(room);
+  }
+  if (!room.battle.commands || typeof room.battle.commands !== "object" || Array.isArray(room.battle.commands)) {
+    room.battle.commands = {};
+  }
+  room.battle.requiredAccountIds = requiredBattleCommandAccountIds(room);
+  room.battle.submittedAccountIds = submittedBattleCommandAccountIds(room.battle);
+  room.battle.phase = String(room.battle.phase || BATTLE_PHASE_COMMAND);
+  room.battle.round = Math.max(1, Number(room.battle.round || 1));
+  room.battle.turnSeq = Math.max(0, Number(room.battle.turnSeq || 0));
+  return room.battle;
+}
+
+function battleRoomActors(room) {
+  const participants = Array.isArray(room.participants) ? room.participants : [];
+  return participants.map((participant, index) => {
+    const side = String(participant.side || (index === 0 ? "challenger" : "opponent"));
+    const hp = BATTLE_ACTOR_MAX_HP + Math.max(0, Number(participant.teamSnapshot && participant.teamSnapshot.playerLevel || 1) - 1) * 4;
+    return {
+      actorId: `duel_${side}_player`,
+      accountId: String(participant.accountId || ""),
+      username: String(participant.username || ""),
+      displayName: String(participant.displayName || participant.username || ""),
+      side,
+      slotId: side === "challenger" ? "ally.back.3" : "enemy.back.3",
+      hp,
+      maxHp: hp,
+      speed: side === "challenger" ? 70 : 68,
+      guarding: false,
+      defeated: false,
+      schemaVersion: 1,
+    };
+  }).filter((actor) => actor.accountId !== "");
+}
+
+function requiredBattleCommandAccountIds(room) {
+  return Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [];
+}
+
+function submittedBattleCommandAccountIds(battle) {
+  if (!battle || !battle.commands || typeof battle.commands !== "object" || Array.isArray(battle.commands)) {
+    return [];
+  }
+  return Object.keys(battle.commands).filter((accountId) => battle.commands[accountId]).sort();
+}
+
+function normalizeBattleCommandPayload(payload, data, room, battle, account, now, randomId) {
+  const actionId = normalizeBattleActionId(payload.actionId || payload.action || payload.command || BATTLE_ACTION_ATTACK);
+  if (!actionId) {
+    return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
+  }
+  const targetAccountId = battleCommandTargetAccountId(payload, data, room, account.accountId, actionId);
+  if (!targetAccountId) {
+    return fail("battle_command_target_missing", "战斗目标不存在。");
+  }
+  if (actionId === BATTLE_ACTION_ATTACK && targetAccountId === account.accountId) {
+    return fail("battle_command_target_invalid", "攻击目标不能是自己。");
+  }
+  if (!requiredBattleCommandAccountIds(room).includes(targetAccountId)) {
+    return fail("battle_command_target_invalid", "目标不在切磋房间中。");
+  }
+  return ok({
+    command: {
+      commandId: `battle_command_${randomId()}`,
+      roomId: room.roomId,
+      round: Number(battle.round || 1),
+      accountId: account.accountId,
+      username: account.username,
+      actionId,
+      targetAccountId,
+      submittedAt: isoNow(now),
+      schemaVersion: 1,
+    },
+  });
+}
+
+function normalizeBattleActionId(value) {
+  const actionId = String(value || "").trim().toLowerCase();
+  if (actionId === BATTLE_ACTION_ATTACK || actionId === "basic_attack") {
+    return BATTLE_ACTION_ATTACK;
+  }
+  if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard") {
+    return BATTLE_ACTION_DEFEND;
+  }
+  return "";
+}
+
+function battleCommandTargetAccountId(payload, data, room, actorAccountId, actionId) {
+  if (actionId === BATTLE_ACTION_DEFEND) {
+    return actorAccountId;
+  }
+  const explicitAccountId = String(payload.targetAccountId || payload.targetAccount || "").trim();
+  if (explicitAccountId) {
+    return explicitAccountId;
+  }
+  const targetUsername = normalizeUsername(payload.targetUsername || payload.username || "");
+  if (targetUsername) {
+    const target = data.accounts[targetUsername];
+    return target ? target.accountId : "";
+  }
+  return requiredBattleCommandAccountIds(room).find((accountId) => accountId !== actorAccountId) || "";
+}
+
+function resolveBattleRoomTurn(room, battle, now) {
+  battle.turnSeq = Number(battle.turnSeq || 0) + 1;
+  const round = Number(battle.round || 1);
+  const orderedCommands = Object.values(battle.commands)
+    .filter((command) => command && typeof command === "object")
+    .sort((a, b) => battleCommandSortValue(battle, b) - battleCommandSortValue(battle, a));
+  for (const actor of battle.actors) {
+    actor.guarding = false;
+  }
+  for (const command of orderedCommands) {
+    if (String(command.actionId || "") === BATTLE_ACTION_DEFEND) {
+      const actor = battleActorByAccountId(battle, command.accountId);
+      if (actor && Number(actor.hp || 0) > 0) {
+        actor.guarding = true;
+      }
+    }
+  }
+  const events = [];
+  let sequence = 1;
+  for (const command of orderedCommands) {
+    const actor = battleActorByAccountId(battle, command.accountId);
+    if (!actor || Number(actor.hp || 0) <= 0) {
+      continue;
+    }
+    if (String(command.actionId || "") === BATTLE_ACTION_DEFEND) {
+      events.push(battleDefendEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      continue;
+    }
+    const target = battleActorByAccountId(battle, command.targetAccountId);
+    if (!target || Number(target.hp || 0) <= 0) {
+      events.push(battleTargetMissingEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      continue;
+    }
+    const damage = battleAttackDamage(room, battle, command, target);
+    const hpBefore = Number(target.hp || 0);
+    target.hp = Math.max(0, hpBefore - damage);
+    target.defeated = target.hp <= 0;
+    events.push(battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, target.hp, damage));
+    sequence += 1;
+  }
+  const eventList = {
+    schemaVersion: 1,
+    kind: "battle_event_list",
+    roomId: room.roomId,
+    round,
+    turnSeq: battle.turnSeq,
+    phase: "resolved",
+    events,
+    actors: battle.actors.map(publicBattleActor),
+    resolvedAt: isoNow(now),
+  };
+  battle.lastEventList = eventList;
+  battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([eventList]).slice(-20) : [eventList];
+  battle.commands = {};
+  battle.submittedAccountIds = [];
+  battle.round = round + 1;
+  battle.phase = BATTLE_PHASE_COMMAND;
+  battle.updatedAt = eventList.resolvedAt;
+  room.updatedAt = eventList.resolvedAt;
+  return clone(eventList);
+}
+
+function battleCommandSortValue(battle, command) {
+  const actor = battleActorByAccountId(battle, command.accountId);
+  return actor ? Number(actor.speed || 0) : 0;
+}
+
+function battleActorByAccountId(battle, accountId) {
+  return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => actor && actor.accountId === accountId) || null;
+}
+
+function battleDefendEvent(room, battle, command, actor, round, sequence) {
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "defend",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actionId: BATTLE_ACTION_DEFEND,
+    damage: 0,
+    animation: {
+      actor: "defend",
+      targetReaction: "none",
+      observer: "watch_target",
+    },
+    message: `${actor.displayName || actor.username} 摆出防御姿态。`,
+    schemaVersion: 1,
+  };
+}
+
+function battleTargetMissingEvent(room, battle, command, actor, round, sequence) {
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "target_missing",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actionId: BATTLE_ACTION_ATTACK,
+    targetAccountId: String(command.targetAccountId || ""),
+    damage: 0,
+    animation: {
+      actor: "watch_target",
+      targetReaction: "none",
+      observer: "idle",
+    },
+    message: `${actor.displayName || actor.username} 没有找到目标。`,
+    schemaVersion: 1,
+  };
+}
+
+function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage) {
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "basic_attack",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    targetAccountId: target.accountId,
+    targetUsername: target.username,
+    targetActorId: target.actorId,
+    actionId: BATTLE_ACTION_ATTACK,
+    damage,
+    blocked: Boolean(target.guarding),
+    hpBefore,
+    hpAfter,
+    defeated: hpAfter <= 0,
+    animation: {
+      actor: "attack",
+      targetReaction: hpAfter <= 0 ? "knockdown" : "hurt",
+      observer: "watch_target",
+    },
+    message: `${actor.displayName || actor.username} 攻击了 ${target.displayName || target.username}，造成 ${damage} 点伤害。`,
+    schemaVersion: 1,
+  };
+}
+
+function battleAttackDamage(room, battle, command, target) {
+  const seed = `${room.seed || room.roomId}:${battle.turnSeq}:${battle.round}:${command.accountId}:${command.targetAccountId}`;
+  const roll = Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 4), 16) % 7;
+  const reduction = target.guarding ? BATTLE_DEFEND_REDUCTION : 0;
+  return Math.max(1, BATTLE_BASE_ATTACK_DAMAGE + roll - reduction);
 }
 
 function accountById(data, accountId) {
