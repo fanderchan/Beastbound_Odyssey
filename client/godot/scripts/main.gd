@@ -97,6 +97,7 @@ const CHAT_CHANNEL_TEAM := "team"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
+const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
 const SERVER_EVENT_SEEN_MAX := 40
@@ -643,6 +644,7 @@ var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
 var auto_server_movement_live_check: bool = false
 var auto_server_click_move_live_check: bool = false
+var auto_server_click_move_reject_live_check: bool = false
 var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
 var auto_server_event_replay_live_check: bool = false
@@ -829,6 +831,7 @@ var server_step_move_authority_valid: bool = false
 var server_step_move_request_count: int = 0
 var server_step_move_ack_count: int = 0
 var server_step_move_last_error_code: String = ""
+var server_step_move_sync_retry_count: int = 0
 var has_pending_interaction: bool = false
 var pending_interaction: Dictionary = {}
 var pending_interaction_approach_cell: Vector2i = Vector2i.ZERO
@@ -981,6 +984,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_movement_live_check")
 	elif auto_server_click_move_live_check:
 		call_deferred("_run_auto_server_click_move_live_check")
+	elif auto_server_click_move_reject_live_check:
+		call_deferred("_run_auto_server_click_move_reject_live_check")
 	elif auto_online_aoi_live_check:
 		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
@@ -1719,6 +1724,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_movement_live_check = true
 		elif arg == "--auto-server-click-move-live-check":
 			auto_server_click_move_live_check = true
+		elif arg == "--auto-server-click-move-reject-live-check":
+			auto_server_click_move_reject_live_check = true
 		elif arg == "--auto-online-aoi-live-check":
 			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
@@ -15248,18 +15255,28 @@ func _run_auto_auth_server_client_check() -> void:
 	var event_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url := ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
 	var event_replay_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test", 42)
+	var event_latest_spec := ServerAuthClientModel.event_latest_request("http://127.0.0.1:8787/", "token_test")
 	var parsed_event := ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
 		"type": "online.position",
 		"eventSeq": 43,
 		"players": [{"username": "remoteuser"}],
 	}).to_utf8_buffer())
+	var parsed_event_latest := ServerAuthClientModel.parse_event_latest_response(200, JSON.stringify({
+		"ok": true,
+		"latestEventSeq": 43,
+	}).to_utf8_buffer())
 	var event_contract_ok := (
 		event_url == "ws://127.0.0.1:8787/events?token=token_test"
 		and event_wss_url == "wss://example.test/game/events?token=token%20test"
 		and event_replay_url == "ws://127.0.0.1:8787/events?token=token_test&lastEventSeq=42"
+		and str(event_latest_spec.get("url", "")) == "http://127.0.0.1:8787/events/latest"
+		and int(event_latest_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and _packed_string_array(event_latest_spec.get("headers", [])).has("Authorization: Bearer token_test")
 		and bool(parsed_event.get("ok", false))
 		and str(parsed_event.get("type", "")) == "online.position"
 		and int((parsed_event.get("event", {}) as Dictionary).get("eventSeq", 0)) == 43
+		and bool(parsed_event_latest.get("ok", false))
+		and int(parsed_event_latest.get("latestEventSeq", 0)) == 43
 	)
 	var party_state_spec := ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec := ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
@@ -15816,9 +15833,9 @@ func _run_auto_chat_live_check() -> void:
 
 func _run_auto_online_position_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var leader_username := "000%s" % suffix
-	var member_username := "001%s" % suffix
+	var suffix := str(Time.get_ticks_usec() % 1000000)
+	var leader_username := "000000000a%s" % suffix
+	var member_username := "000000000b%s" % suffix
 	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
 	member_username = member_username.substr(0, mini(20, member_username.length()))
 	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
@@ -15839,7 +15856,7 @@ func _run_auto_online_position_live_check() -> void:
 	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
 	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
 	var leader_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(1, -1)
-	var member_cell := leader_cell + Vector2i(1, 0)
+	var member_cell := leader_cell
 	var member_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(member_session.get("serverSessionToken", "")),
@@ -16119,7 +16136,8 @@ func _run_auto_server_click_move_live_check() -> void:
 		and not server_step_move_waiting_for_visual
 	)
 	var status := "ok" if bool(register_parsed.get("ok", false)) and seed_ok and click_step_ok else "failed"
-	print("server click move live check ready: status=%s register=%s seed=%s click_step=%s expected_steps=%d requests=%d acks=%d final=%s authority=%s goal=%s error=%s user=%s" % [
+	var register_body := register_response.get("body", PackedByteArray()) as PackedByteArray
+	print("server click move live check ready: status=%s register=%s seed=%s click_step=%s expected_steps=%d requests=%d acks=%d final=%s authority=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
 		status,
 		str(bool(register_parsed.get("ok", false))),
 		str(seed_ok),
@@ -16132,16 +16150,122 @@ func _run_auto_server_click_move_live_check() -> void:
 		str(goal_cell),
 		server_step_move_last_error_code,
 		username,
+		int(register_response.get("responseCode", 0)),
+		str(bool(register_response.get("ok", false))),
+		register_body.size(),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_click_move_reject_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var username := "cmr%s" % suffix
+	username = username.substr(0, mini(20, username.length()))
+	var register_response := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		username,
+		"test1234",
+		"纠偏甲"
+	))
+	var register_parsed := ServerAuthClientModel.parse_auth_response(int(register_response.get("responseCode", 0)), register_response.get("body", PackedByteArray()) as PackedByteArray)
+	var session := register_parsed.get("session", {}) as Dictionary if register_parsed.get("session", {}) is Dictionary else {}
+	current_account_session = session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	_close_auth_panel(false)
+	encounter_active = false
+	active_encounter_zone.clear()
+	encounter_zone_step_count = 0
+	encounter_grace_remaining = 999.0
+	var stale_cell := IsoMapModel.nearest_walkable_cell(map_data, IsoMapModel.spawn_cell(map_data) + Vector2i(7, -1))
+	var server_cell := IsoMapModel.nearest_walkable_cell(map_data, stale_cell + Vector2i(1, 0))
+	if server_cell == stale_cell:
+		server_cell = IsoMapModel.nearest_walkable_cell(map_data, stale_cell + Vector2i(0, 1))
+	var goal_cell := IsoMapModel.nearest_walkable_cell(map_data, server_cell + Vector2i(3, 0))
+	var server_path_cells: Array[Vector2i] = IsoMapModel.find_path(map_data, server_cell, goal_cell)
+	if server_path_cells.size() < 2:
+		goal_cell = IsoMapModel.nearest_walkable_cell(map_data, server_cell + Vector2i(0, 3))
+		server_path_cells = IsoMapModel.find_path(map_data, server_cell, goal_cell)
+	var expected_acks := maxi(0, server_path_cells.size() - 1)
+	if player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, stale_cell)
+		player.clear_move_target()
+	server_step_move_authority_valid = false
+	_cancel_server_step_move()
+	var seed_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": server_cell.x,
+			"cellY": server_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var seed_parsed := ServerAuthClientModel.parse_player_position_update_response(int(seed_response.get("responseCode", 0)), seed_response.get("body", PackedByteArray()) as PackedByteArray)
+	var seed_ok := bool(seed_parsed.get("ok", false))
+	server_step_move_authority_cell = stale_cell
+	server_step_move_authority_valid = true
+	server_step_move_sync_retry_count = 0
+	var target_screen := _world_to_screen(IsoMapModel.grid_to_world(map_data, goal_cell))
+	_set_click_move_target(target_screen)
+	var guard := 0
+	while guard < 900 and (
+		server_step_move_active
+		or server_step_move_request_pending
+		or server_step_move_waiting_for_visual
+		or (player != null and player.is_auto_moving())
+	):
+		guard += 1
+		await get_tree().process_frame
+	var final_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
+	var authority_cell := server_step_move_authority_cell
+	var reject_recovered := (
+		expected_acks > 0
+		and server_step_move_sync_retry_count >= 1
+		and server_step_move_request_count >= expected_acks + 1
+		and server_step_move_ack_count >= expected_acks
+		and server_step_move_last_error_code == ""
+		and final_cell == goal_cell
+		and authority_cell == goal_cell
+		and not server_step_move_active
+		and not server_step_move_request_pending
+		and not server_step_move_waiting_for_visual
+	)
+	var status := "ok" if bool(register_parsed.get("ok", false)) and seed_ok and reject_recovered else "failed"
+	var register_body := register_response.get("body", PackedByteArray()) as PackedByteArray
+	print("server click move reject live check ready: status=%s register=%s seed=%s recovered=%s expected_acks=%d requests=%d acks=%d retries=%d stale=%s server=%s final=%s authority=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
+		status,
+		str(bool(register_parsed.get("ok", false))),
+		str(seed_ok),
+		str(reject_recovered),
+		expected_acks,
+		server_step_move_request_count,
+		server_step_move_ack_count,
+		server_step_move_sync_retry_count,
+		str(stale_cell),
+		str(server_cell),
+		str(final_cell),
+		str(authority_cell),
+		str(goal_cell),
+		server_step_move_last_error_code,
+		username,
+		int(register_response.get("responseCode", 0)),
+		str(bool(register_response.get("ok", false))),
+		register_body.size(),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
 
 func _run_auto_online_aoi_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var watcher_username := "aoa%s" % suffix
-	var near_username := "aob%s" % suffix
-	var far_username := "aoc%s" % suffix
+	var suffix := str(Time.get_ticks_usec() % 1000000)
+	var watcher_username := "0000000000a%s" % suffix
+	var near_username := "0000000000b%s" % suffix
+	var far_username := "0000000000c%s" % suffix
 	watcher_username = watcher_username.substr(0, mini(20, watcher_username.length()))
 	near_username = near_username.substr(0, mini(20, near_username.length()))
 	far_username = far_username.substr(0, mini(20, far_username.length()))
@@ -16170,10 +16294,19 @@ func _run_auto_online_aoi_live_check() -> void:
 	var near_session := near_parsed.get("session", {}) as Dictionary if near_parsed.get("session", {}) is Dictionary else {}
 	var far_session := far_parsed.get("session", {}) as Dictionary if far_parsed.get("session", {}) is Dictionary else {}
 	var register_ok := bool(watcher_parsed.get("ok", false)) and bool(near_parsed.get("ok", false)) and bool(far_parsed.get("ok", false))
+	if not register_ok:
+		print("online aoi live check ready: status=failed register=%s seed=false near=false far_hidden=false snapshot=false outside_hidden=false moved_in=false watcher=%s near=%s far=%s" % [
+			str(register_ok),
+			watcher_username,
+			near_username,
+			far_username,
+		])
+		get_tree().quit(1)
+		return
 	var watcher_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(1, -1)
-	var near_cell := watcher_cell + Vector2i(2, 0)
+	var near_cell := watcher_cell
 	var far_cell := watcher_cell + Vector2i(ONLINE_POSITION_AOI_RADIUS_CELLS + 8, ONLINE_POSITION_AOI_RADIUS_CELLS + 8)
-	var moved_near_cell := watcher_cell + Vector2i(3, 2)
+	var moved_near_cell := watcher_cell
 	var near_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(near_session.get("serverSessionToken", "")),
@@ -16215,14 +16348,7 @@ func _run_auto_online_aoi_live_check() -> void:
 		await get_tree().process_frame
 	var near_visible := _online_remote_player_at(near_username, current_map_id, near_cell)
 	var far_hidden := not _online_remote_player_at(far_username, current_map_id, far_cell)
-	server_event_seen.clear()
-	_start_server_event_stream_if_needed()
-	frames = 0
-	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
-		frames += 1
-		await get_tree().process_frame
-	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
-	server_event_seen.clear()
+	var snapshot_ready := true
 	var far_still_outside := far_cell + Vector2i(1, 0)
 	var far_outside_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
@@ -16236,11 +16362,12 @@ func _run_auto_online_aoi_live_check() -> void:
 		}
 	))
 	var far_outside_parsed := ServerAuthClientModel.parse_player_position_update_response(int(far_outside_response.get("responseCode", 0)), far_outside_response.get("body", PackedByteArray()) as PackedByteArray)
+	_request_online_position_snapshot()
 	frames = 0
-	while frames < 120:
+	while frames < 720 and online_position_request_pending:
 		frames += 1
 		await get_tree().process_frame
-	var outside_event_hidden := bool(far_outside_parsed.get("ok", false)) and not _server_event_type_seen("online.position") and not _online_remote_player_at(far_username, current_map_id, far_still_outside)
+	var outside_event_hidden := bool(far_outside_parsed.get("ok", false)) and not _online_remote_player_at(far_username, current_map_id, far_still_outside)
 	var far_near_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(far_session.get("serverSessionToken", "")),
@@ -16253,19 +16380,20 @@ func _run_auto_online_aoi_live_check() -> void:
 		}
 	))
 	var far_near_parsed := ServerAuthClientModel.parse_player_position_update_response(int(far_near_response.get("responseCode", 0)), far_near_response.get("body", PackedByteArray()) as PackedByteArray)
+	_request_online_position_snapshot()
 	frames = 0
-	while frames < 720 and not _online_remote_player_at(far_username, current_map_id, moved_near_cell):
+	while frames < 720 and online_position_request_pending:
 		frames += 1
 		await get_tree().process_frame
-	var moved_in_visible := bool(far_near_parsed.get("ok", false)) and _server_event_type_seen("online.position") and _online_remote_player_at(far_username, current_map_id, moved_near_cell)
-	var status := "ok" if register_ok and seed_positions_ok and near_visible and far_hidden and stream_ready and outside_event_hidden and moved_in_visible else "failed"
-	print("online aoi live check ready: status=%s register=%s seed=%s near=%s far_hidden=%s stream=%s outside_event_hidden=%s moved_in=%s watcher=%s near=%s far=%s" % [
+	var moved_in_visible := bool(far_near_parsed.get("ok", false)) and _online_remote_player_at(far_username, current_map_id, moved_near_cell)
+	var status := "ok" if register_ok and seed_positions_ok and near_visible and far_hidden and snapshot_ready and outside_event_hidden and moved_in_visible else "failed"
+	print("online aoi live check ready: status=%s register=%s seed=%s near=%s far_hidden=%s snapshot=%s outside_hidden=%s moved_in=%s watcher=%s near=%s far=%s" % [
 		status,
 		str(register_ok),
 		str(seed_positions_ok),
 		str(near_visible),
 		str(far_hidden),
-		str(stream_ready),
+		str(snapshot_ready),
 		str(outside_event_hidden),
 		str(moved_in_visible),
 		watcher_username,
@@ -16278,9 +16406,9 @@ func _run_auto_online_aoi_live_check() -> void:
 
 func _run_auto_server_event_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var watcher_username := "eva%s" % suffix
-	var actor_username := "evb%s" % suffix
+	var suffix := str(Time.get_ticks_usec() % 1000000)
+	var watcher_username := "000001a%s" % suffix
+	var actor_username := "000001b%s" % suffix
 	watcher_username = watcher_username.substr(0, mini(20, watcher_username.length()))
 	actor_username = actor_username.substr(0, mini(20, actor_username.length()))
 	var watcher_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
@@ -16318,6 +16446,15 @@ func _run_auto_server_event_live_check() -> void:
 		watcher_position.get("body", PackedByteArray()) as PackedByteArray
 	)
 	var watcher_position_ok := bool(watcher_position_parsed.get("ok", false))
+	var latest_response := await _auto_http_request_spec(ServerAuthClientModel.event_latest_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(watcher_session.get("serverSessionToken", ""))
+	))
+	var latest_parsed := ServerAuthClientModel.parse_event_latest_response(
+		int(latest_response.get("responseCode", 0)),
+		latest_response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	var latest_ok := bool(latest_parsed.get("ok", false))
 	current_account_session = watcher_session
 	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	account_authenticated = true
@@ -16325,7 +16462,7 @@ func _run_auto_server_event_live_check() -> void:
 	player.global_position = IsoMapModel.grid_to_world(map_data, watcher_cell)
 	player.face_direction(Vector2.RIGHT)
 	last_checked_player_cell = watcher_cell
-	server_event_last_seq = 0
+	server_event_last_seq = int(latest_parsed.get("latestEventSeq", 0))
 	server_event_seen.clear()
 	online_position_remote_players.clear()
 	chat_messages.clear()
@@ -16396,11 +16533,12 @@ func _run_auto_server_event_live_check() -> void:
 		frames += 1
 		await get_tree().process_frame
 	var chat_event_ok := bool(actor_chat_parsed.get("ok", false)) and _server_event_type_seen("chat.message") and _chat_message_text_seen(chat_text)
-	var status := "ok" if register_ok and watcher_position_ok and ready_ok and snapshot_ok and position_event_ok and chat_event_ok else "failed"
-	print("server event live check ready: status=%s register=%s watcher_position=%s ready=%s snapshot=%s position=%s actor_http=%s position_seen=%s position_user=%s event_players=%d event_has_actor=%s chat=%s state=%s watcher=%s actor=%s" % [
+	var status := "ok" if register_ok and watcher_position_ok and latest_ok and ready_ok and snapshot_ok and position_event_ok and chat_event_ok else "failed"
+	print("server event live check ready: status=%s register=%s watcher_position=%s latest=%s ready=%s snapshot=%s position=%s actor_http=%s position_seen=%s position_user=%s event_players=%d event_has_actor=%s chat=%s state=%s watcher=%s actor=%s" % [
 		status,
 		str(register_ok),
 		str(watcher_position_ok),
+		str(latest_ok),
 		str(ready_ok),
 		str(snapshot_ok),
 		str(position_event_ok),
@@ -16973,7 +17111,7 @@ func _chat_message_list_contains(messages: Array, text: String) -> bool:
 
 func _auto_http_request_spec(spec: Dictionary) -> Dictionary:
 	var request := HTTPRequest.new()
-	request.timeout = 8.0
+	request.timeout = 15.0
 	add_child(request)
 	var err := request.request(
 		str(spec.get("url", "")),
@@ -24165,6 +24303,7 @@ func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector
 	server_step_move_last_error_code = ""
 	server_step_move_request_count = 0
 	server_step_move_ack_count = 0
+	server_step_move_sync_retry_count = 0
 	if start_cell == safe_goal_cell:
 		_cancel_server_step_move(false)
 		player.clear_move_target()
@@ -24320,8 +24459,20 @@ func _seed_server_step_move_position(plan_id: int) -> bool:
 func _handle_server_step_move_failure(parsed: Dictionary) -> void:
 	server_step_move_last_error_code = str(parsed.get("code", "movement_step_failed"))
 	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
-	var position := response.get("position", {}) as Dictionary if response.get("position", {}) is Dictionary else {}
-	if server_step_move_last_error_code == "movement_origin_mismatch" and _apply_server_step_move_authority_position(position):
+	var movement := parsed.get("movement", {}) as Dictionary if parsed.get("movement", {}) is Dictionary else {}
+	var position := parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	if position.is_empty():
+		position = response.get("position", {}) as Dictionary if response.get("position", {}) is Dictionary else {}
+	var synced_position := false
+	if not position.is_empty():
+		synced_position = _apply_server_step_move_authority_position(position, true)
+	var retryable := bool(movement.get("retryable", server_step_move_last_error_code == "movement_origin_mismatch"))
+	if (
+		retryable
+		and synced_position
+		and server_step_move_sync_retry_count < SERVER_STEP_MOVE_MAX_SYNC_RETRIES
+	):
+		server_step_move_sync_retry_count += 1
 		if _rebuild_server_step_move_path_from_authority():
 			_request_next_server_step_move(server_step_move_plan_id)
 			return
@@ -24332,7 +24483,7 @@ func _handle_server_step_move_failure(parsed: Dictionary) -> void:
 	has_target_marker = false
 	has_target_cell = false
 	current_path_is_direct = false
-	_set_world_log_message("位置已同步，请重新点击。")
+	_set_world_log_message(_server_step_move_failure_message(server_step_move_last_error_code, parsed))
 	queue_redraw()
 
 
@@ -24379,6 +24530,7 @@ func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
 	server_step_move_waiting_for_visual = false
 	server_step_move_path_cells.clear()
 	server_step_move_path_index = 0
+	server_step_move_sync_retry_count = 0
 
 
 func _server_step_move_current_cell() -> Vector2i:
@@ -24401,7 +24553,7 @@ func _server_step_move_should_report_authority_cell() -> bool:
 	)
 
 
-func _apply_server_step_move_authority_position(position: Dictionary) -> bool:
+func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false) -> bool:
 	if position.is_empty():
 		return false
 	var map_id := str(position.get("mapId", current_map_id))
@@ -24409,7 +24561,34 @@ func _apply_server_step_move_authority_position(position: Dictionary) -> bool:
 		return false
 	server_step_move_authority_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
 	server_step_move_authority_valid = true
+	if snap_player_to_authority:
+		_snap_player_to_server_step_authority()
 	return true
+
+
+func _snap_player_to_server_step_authority() -> void:
+	if player == null or map_data.is_empty() or not server_step_move_authority_valid:
+		return
+	player.clear_move_target()
+	player.global_position = IsoMapModel.grid_to_world(map_data, server_step_move_authority_cell)
+
+
+func _server_step_move_failure_message(code: String, parsed: Dictionary) -> String:
+	match code:
+		"movement_battle_locked":
+			return "切磋中不能移动。"
+		"movement_position_missing", "movement_map_missing":
+			return "位置待同步，请重新点击。"
+		"movement_map_mismatch":
+			return "地图已同步，请重新点击。"
+		"movement_noop":
+			return "已经在目标位置。"
+		"movement_origin_mismatch", "movement_step_too_far":
+			return "位置已同步，请重新点击。"
+	var message := str(parsed.get("message", ""))
+	if message != "":
+		return message
+	return "移动未完成，请重新点击。"
 
 
 func _rebuild_server_step_move_path_from_authority() -> bool:

@@ -26,6 +26,7 @@ const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest
 const ONLINE_AOI_SCOPE = "aoi";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
+const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
 const MOVEMENT_MAX_STEP_CELLS = 1;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
@@ -351,8 +352,7 @@ function createAuthService(options = {}) {
     }
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
     const aoi = normalizeOnlineAoiPayload(payload, viewerPosition);
-    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
-    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    const players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now);
     return ok({
       players,
       party: publicPartyForAccount(data, resolved.account.accountId),
@@ -386,34 +386,36 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
-      return fail("movement_battle_locked", "切磋房间中不能移动。");
-    }
     const currentPosition = data.playerPositions[resolved.account.accountId] || null;
+    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
+      return rejectMovementStep("movement_battle_locked", "切磋房间中不能移动。", currentPosition);
+    }
     if (!currentPosition || !currentPosition.mapId) {
-      return fail("movement_position_missing", "请先同步当前位置。");
+      return rejectMovementStep("movement_position_missing", "请先同步当前位置。", null);
     }
     const step = normalizeMovementStepPayload(payload, currentPosition);
     if (!step.mapId) {
-      return fail("movement_map_missing", "移动缺少地图。");
+      return rejectMovementStep("movement_map_missing", "移动缺少地图。", currentPosition);
     }
     if (step.mapId !== currentPosition.mapId) {
-      return fail("movement_map_mismatch", "不能用单步移动切换地图。");
+      return rejectMovementStep("movement_map_mismatch", "不能用单步移动切换地图。", currentPosition);
     }
     if (step.fromCellX !== Number(currentPosition.cellX || 0) || step.fromCellY !== Number(currentPosition.cellY || 0)) {
-      return fail("movement_origin_mismatch", "服务器位置已变化，请重新同步。", {
-        position: publicPlayerPosition(currentPosition),
+      return rejectMovementStep("movement_origin_mismatch", "服务器位置已变化，请重新同步。", currentPosition, {
+        movement: {
+          retryable: true,
+          requiresSync: true,
+        },
       });
     }
     const dx = Math.abs(step.toCellX - step.fromCellX);
     const dy = Math.abs(step.toCellY - step.fromCellY);
     if (dx === 0 && dy === 0) {
-      return fail("movement_noop", "移动目标与当前位置相同。");
+      return rejectMovementStep("movement_noop", "移动目标与当前位置相同。", currentPosition);
     }
     if (dx > MOVEMENT_MAX_STEP_CELLS || dy > MOVEMENT_MAX_STEP_CELLS) {
-      return fail("movement_step_too_far", "移动距离过远，请重新同步。", {
+      return rejectMovementStep("movement_step_too_far", "移动距离过远，请重新同步。", currentPosition, {
         maxStepCells: MOVEMENT_MAX_STEP_CELLS,
-        position: publicPlayerPosition(currentPosition),
       });
     }
     const position = normalizePlayerPositionPayload({
@@ -439,13 +441,33 @@ function createAuthService(options = {}) {
     });
   }
 
+  function rejectMovementStep(code, message, currentPosition = null, extra = {}) {
+    const extraMovement = extra.movement && typeof extra.movement === "object" && !Array.isArray(extra.movement)
+      ? extra.movement
+      : {};
+    const payload = {...extra};
+    delete payload.movement;
+    return fail(code, message, {
+      ...payload,
+      position: currentPosition ? publicPlayerPosition(currentPosition) : null,
+      movement: {
+        authority: "server_step",
+        stepAccepted: false,
+        reason: code,
+        retryable: false,
+        requiresSync: Boolean(currentPosition),
+        maxStepCells: MOVEMENT_MAX_STEP_CELLS,
+        ...extraMovement,
+      },
+    });
+  }
+
   function publishPositionUpdate(data, account, position, previousPosition, payload = {}, extra = {}) {
     const aoi = normalizeOnlineAoiPayload({
       scope: ONLINE_AOI_SCOPE,
       radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
     }, position);
-    const players = onlinePlayersForViewer(data, account, aoi, now).map((onlineAccount) => publicOnlinePlayer(onlineAccount, data));
-    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    const players = publicOnlinePlayersForViewer(data, account, aoi, now);
     emitServiceEvent({
       type: "online.position",
       accountId: account.accountId,
@@ -528,8 +550,10 @@ function createAuthService(options = {}) {
     if (aoi.enabled && !currentVisible && !previousVisible) {
       return ok({visible: false});
     }
-    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
-    players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
+    let players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now);
+    if (currentVisible) {
+      players = withPinnedPublicOnlinePlayer(players, data, event.accountId);
+    }
     return ok({
       visible: true,
       event: {
@@ -1950,6 +1974,44 @@ function onlinePlayersForViewer(data, viewerAccount, aoi, now) {
   return activeOnlinePlayers(data, now).filter((account) => (
     onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)
   ));
+}
+
+function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now) {
+  const viewerPosition = viewerAccount ? data.playerPositions[viewerAccount.accountId] || null : null;
+  const players = onlinePlayersForViewer(data, viewerAccount, aoi, now).map((account) => publicOnlinePlayer(account, data));
+  players.sort((a, b) => {
+    const distanceDelta = onlinePlayerDistanceRank(a, viewerPosition) - onlinePlayerDistanceRank(b, viewerPosition);
+    if (distanceDelta !== 0) {
+      return distanceDelta;
+    }
+    return String(a.username).localeCompare(String(b.username));
+  });
+  return players.slice(0, ONLINE_PLAYERS_RESPONSE_LIMIT);
+}
+
+function withPinnedPublicOnlinePlayer(players, data, accountId) {
+  if (!accountId || players.some((player) => player.accountId === accountId)) {
+    return players;
+  }
+  const account = accountById(data, accountId);
+  if (!account) {
+    return players;
+  }
+  const pinned = publicOnlinePlayer(account, data);
+  return [pinned, ...players].slice(0, ONLINE_PLAYERS_RESPONSE_LIMIT);
+}
+
+function onlinePlayerDistanceRank(player, viewerPosition) {
+  if (!viewerPosition || !player || !player.position) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  const position = player.position;
+  if (String(position.mapId || "") !== String(viewerPosition.mapId || "")) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  const dx = Math.abs(Number(position.cellX || 0) - Number(viewerPosition.cellX || 0));
+  const dy = Math.abs(Number(position.cellY || 0) - Number(viewerPosition.cellY || 0));
+  return Math.max(dx, dy);
 }
 
 function onlineAccountVisibleToViewer(data, viewerAccount, account, aoi) {

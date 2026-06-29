@@ -123,6 +123,15 @@ static func event_stream_url(base_url: String, session_token: String, last_event
 	return "%s/events?%s" % [url, query]
 
 
+static func event_latest_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/events/latest" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
 static func party_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/party/state" % normalized_base_url(base_url),
@@ -262,6 +271,8 @@ static func chat_send_request(base_url: String, session_token: String, channel: 
 
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var text := body.get_string_from_utf8()
+	if text.strip_edges() == "":
+		return {"ok": false, "message": "服务器返回为空。", "code": "bad_json"}
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
 		return {"ok": false, "message": "服务器返回格式不正确。", "code": "bad_json"}
@@ -344,8 +355,6 @@ static func parse_player_position_update_response(response_code: int, body: Pack
 
 static func parse_movement_step_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "移动提交失败。")
-	if not bool(parsed.get("ok", false)):
-		return parsed
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
 	parsed["players"] = _dictionary_array(response.get("players", []))
@@ -367,6 +376,15 @@ static func parse_event_stream_message(packet: PackedByteArray) -> Dictionary:
 		"event": event,
 		"type": str(event.get("type", "")),
 	}
+
+
+static func parse_event_latest_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "事件游标读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["latestEventSeq"] = int(response.get("latestEventSeq", 0))
+	return parsed
 
 
 static func parse_party_state_response(response_code: int, body: PackedByteArray) -> Dictionary:
@@ -526,6 +544,8 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 
 static func _parse_server_json(response_code: int, body: PackedByteArray, fallback_message: String) -> Dictionary:
 	var text := body.get_string_from_utf8()
+	if text.strip_edges() == "":
+		return {"ok": false, "message": "服务器返回为空。", "code": "bad_json", "response": {}}
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
 		return {"ok": false, "message": "服务器返回格式不正确。", "code": "bad_json"}

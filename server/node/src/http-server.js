@@ -43,6 +43,13 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/auth/session") {
         return sendResult(res, service.getSession(bearerToken(req)));
       }
+      if (req.method === "GET" && url.pathname === "/events/latest") {
+        const session = service.getSession(bearerToken(req));
+        if (!session.ok) {
+          return sendResult(res, session);
+        }
+        return sendJson(res, 200, {"ok": true, "latestEventSeq": service.latestEventSeq()});
+      }
       if (req.method === "GET" && url.pathname === "/players/search") {
         return sendResult(res, service.searchPlayers(bearerToken(req), {"username": url.searchParams.get("username") || ""}));
       }

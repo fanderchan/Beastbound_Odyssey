@@ -758,6 +758,25 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(step.authority, "server_step");
   assert.equal(step.position.cellX, 10);
   assert.equal(step.position.movementSeq, 1);
+  const staleStep = await fetchJson(`${base}/movement/step`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "fromCellX": 9,
+      "fromCellY": 11,
+      "toCellX": 10,
+      "toCellY": 11,
+      "moving": false,
+    }),
+  });
+  assert.equal(staleStep.ok, false);
+  assert.equal(staleStep.code, "movement_origin_mismatch");
+  assert.equal(staleStep.position.cellX, 10);
+  assert.equal(staleStep.movement.authority, "server_step");
+  assert.equal(staleStep.movement.stepAccepted, false);
+  assert.equal(staleStep.movement.retryable, true);
+  assert.equal(staleStep.movement.requiresSync, true);
   const jump = await fetchJson(`${base}/movement/step`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${member.session.token}`},
@@ -771,6 +790,9 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   });
   assert.equal(jump.ok, false);
   assert.equal(jump.code, "movement_step_too_far");
+  assert.equal(jump.position.cellX, 10);
+  assert.equal(jump.movement.stepAccepted, false);
+  assert.equal(jump.movement.maxStepCells, 1);
   const leaderPosition = await fetchJson(`${base}/players/position`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${leader.session.token}`},
@@ -1175,7 +1197,13 @@ test("HTTP server exposes websocket event stream", async (t) => {
   });
   assert.equal(distantInitialPosition.ok, true);
 
-  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(watcher.session.token)}`);
+  const latest = await fetchJson(`${base}/events/latest`, {
+    "headers": {"authorization": `Bearer ${watcher.session.token}`},
+  });
+  assert.equal(latest.ok, true);
+  assert.equal(Number.isInteger(latest.latestEventSeq), true);
+
+  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(watcher.session.token)}&lastEventSeq=${latest.latestEventSeq}`);
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");

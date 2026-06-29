@@ -44,6 +44,7 @@ Optional environment variables:
 - `POST /movement/step`
 - `WS /events?token={sessionToken}`
 - `WS /events?token={sessionToken}&lastEventSeq={eventSeq}`
+- `GET /events/latest`
 - `GET /profiles/me`
 - `PUT /profiles/me`
 - `GET /mail/inbox`
@@ -155,6 +156,7 @@ This does not yet provide full path authority, collision between players/NPCs, p
 `WS /events?token={sessionToken}` upgrades a valid server session to a lightweight WebSocket stream:
 
 - On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current AOI-filtered online roster when the account already has a position.
+- `GET /events/latest` returns the latest service cursor for an authenticated session, so local checks can subscribe from the current edge instead of replaying old development events.
 - Clients may reconnect with `lastEventSeq`; the server replays later critical `chat.message`, `party.*`, and `battle.*` events visible to that account.
 - `online.position` is intentionally not replayed because `online.snapshot` is the reconnect state source for visible players.
 - `POST /players/position` publishes `online.position` only to clients whose current AOI includes the actor's current or previous position; each recipient receives its own filtered roster snapshot.
