@@ -220,6 +220,20 @@ test("players can invite and accept duel battle rooms", () => {
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
   assert.equal(outsider.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "west",
+    "moving": false,
+  });
 
   const invite = service.inviteToBattle(challenger.session.token, {"username": "battleb"});
   assert.equal(invite.ok, true);
@@ -241,6 +255,7 @@ test("players can invite and accept duel battle rooms", () => {
   assert.equal(accept.room.status, "ready");
   assert.equal(accept.room.mode, "duel");
   assert.equal(Boolean(accept.room.seed), true);
+  assert.equal(accept.room.entry.distanceCells, 1);
   assert.deepEqual(accept.room.participants.map((player) => player.username), ["battlea", "battleb"]);
   assert.equal(accept.room.participants[0].teamSnapshot.playerLevel, 1);
   assert.equal(events.some((event) => event.type === "battle.room_ready" && event.room.roomId === accept.room.roomId), true);
@@ -252,6 +267,121 @@ test("players can invite and accept duel battle rooms", () => {
   const busyInvite = service.inviteToBattle(outsider.session.token, {"username": "battleb"});
   assert.equal(busyInvite.ok, false);
   assert.equal(busyInvite.code, "battle_target_busy");
+});
+
+test("server movement steps are authoritative and bounded", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const scout = service.register({"username": "movea", "password": "test1234", "displayName": "移动甲"});
+  assert.equal(scout.ok, true);
+
+  const missing = service.movePlayerStep(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 10,
+    "fromCellY": 10,
+    "toCellX": 11,
+    "toCellY": 10,
+  });
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "movement_position_missing");
+
+  const seed = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(seed.ok, true);
+  const step = service.movePlayerStep(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 10,
+    "fromCellY": 10,
+    "toCellX": 11,
+    "toCellY": 10,
+    "moving": false,
+  });
+  assert.equal(step.ok, true);
+  assert.equal(step.authority, "server_step");
+  assert.equal(step.position.cellX, 11);
+  assert.equal(step.position.movementSeq, 1);
+  assert.equal(step.movement.stepAccepted, true);
+  assert.equal(events.some((event) => event.type === "online.position" && event.authority === "server_step" && event.position.cellX === 11), true);
+
+  const stale = service.movePlayerStep(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 10,
+    "fromCellY": 10,
+    "toCellX": 11,
+    "toCellY": 11,
+  });
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "movement_origin_mismatch");
+
+  const jump = service.movePlayerStep(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 11,
+    "fromCellY": 10,
+    "toCellX": 14,
+    "toCellY": 10,
+  });
+  assert.equal(jump.ok, false);
+  assert.equal(jump.code, "movement_step_too_far");
+});
+
+test("duel battle rooms require nearby settled positions", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "nearba", "password": "test1234", "displayName": "近战甲"});
+  const opponent = service.register({"username": "nearbb", "password": "test1234", "displayName": "近战乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "nearbb"});
+  assert.equal(invite.ok, true);
+  const missing = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "battle_position_missing");
+
+  service.updatePlayerPosition(challenger.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 30,
+    "cellY": 10,
+    "facing": "west",
+    "moving": false,
+  });
+  const far = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(far.ok, false);
+  assert.equal(far.code, "battle_distance_too_far");
+
+  service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "west",
+    "moving": true,
+  });
+  const moving = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(moving.ok, false);
+  assert.equal(moving.code, "battle_player_moving");
+
+  service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "west",
+    "moving": false,
+  });
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.entry.distanceCells, 1);
 });
 
 test("players can publish map positions into the online roster", () => {
@@ -540,6 +670,35 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   });
   assert.equal(position.ok, true);
   assert.equal(position.position.cellX, 9);
+  const step = await fetchJson(`${base}/movement/step`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "fromCellX": 9,
+      "fromCellY": 11,
+      "toCellX": 10,
+      "toCellY": 11,
+      "moving": false,
+    }),
+  });
+  assert.equal(step.ok, true);
+  assert.equal(step.authority, "server_step");
+  assert.equal(step.position.cellX, 10);
+  assert.equal(step.position.movementSeq, 1);
+  const jump = await fetchJson(`${base}/movement/step`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "fromCellX": 10,
+      "fromCellY": 11,
+      "toCellX": 14,
+      "toCellY": 11,
+    }),
+  });
+  assert.equal(jump.ok, false);
+  assert.equal(jump.code, "movement_step_too_far");
   const leaderPosition = await fetchJson(`${base}/players/position`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${leader.session.token}`},
@@ -570,7 +729,7 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(onlineWithPosition.ok, true);
   const memberOnline = onlineWithPosition.players.find((player) => player.username === "httppartyb");
   assert.equal(memberOnline.position.mapId, "firebud_training_yard");
-  assert.equal(memberOnline.position.facing, "northwest");
+  assert.equal(memberOnline.position.facing, "east");
   assert.equal(onlineWithPosition.players.some((player) => player.username === "httppartyc"), true);
 
   const scopedOnline = await fetchJson(`${base}/players/online?scope=aoi&mapId=firebud_training_yard&cellX=8&cellY=11&radius=4`, {
@@ -708,6 +867,28 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   });
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
+  await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 10,
+      "cellY": 10,
+      "facing": "east",
+      "moving": false,
+    }),
+  });
+  await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 11,
+      "cellY": 10,
+      "facing": "west",
+      "moving": false,
+    }),
+  });
 
   const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}`);
   const reader = webSocketJsonReader(ws);
@@ -738,6 +919,7 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   });
   assert.equal(accept.ok, true);
   assert.equal(accept.room.status, "ready");
+  assert.equal(accept.room.entry.distanceCells, 1);
   assert.equal(accept.room.participants.length, 2);
   const roomEvent = await reader.next("battle.room_ready");
   assert.equal(roomEvent.room.roomId, accept.room.roomId);
@@ -768,6 +950,28 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
   });
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
+  await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 10,
+      "cellY": 10,
+      "facing": "east",
+      "moving": false,
+    }),
+  });
+  await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "cellX": 11,
+      "cellY": 10,
+      "facing": "west",
+      "moving": false,
+    }),
+  });
 
   const invite = await fetchJson(`${base}/battle/invite`, {
     "method": "POST",

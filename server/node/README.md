@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -41,6 +41,7 @@ Optional environment variables:
 - `GET /players/online`
 - `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
 - `POST /players/position`
+- `POST /movement/step`
 - `WS /events?token={sessionToken}`
 - `WS /events?token={sessionToken}&lastEventSeq={eventSeq}`
 - `GET /profiles/me`
@@ -124,7 +125,29 @@ Online visibility is now server state, not a local-only player list:
 - `GET /players/online` without query parameters remains the full active roster for party/invite workflows.
 - `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}` returns only the current account plus players on the same map within a square cell radius. The default radius for position sync is 18 cells.
 
-This is still a snapshot loop, not live movement authority. It does not yet provide collision between players, following, party leader movement, battle-room entry authority, or anti-cheat movement validation.
+`POST /players/position` remains a seed/snapshot sync path. It is not a trusted movement command.
+
+## Movement Boundary
+
+The first server-authoritative movement slice is `POST /movement/step`:
+
+```json
+{
+  "mapId": "firebud_training_yard",
+  "fromCellX": 10,
+  "fromCellY": 10,
+  "toCellX": 11,
+  "toCellY": 10
+}
+```
+
+- The account must already have a server position from `/players/position`.
+- `fromCellX/fromCellY` must match the current server position.
+- The target cell must be on the same map and within one grid cell.
+- The response includes `authority: "server_step"` and a monotonic `movementSeq`.
+- The accepted step publishes `online.position` like other position changes.
+
+This does not yet provide full path authority, collision between players/NPCs, party follow movement, map transfer authority, or anti-cheat timing checks.
 
 ## Event Stream Boundary
 
@@ -148,9 +171,10 @@ Duel rooms are the first server-owned battle entry point:
 - `GET /battle/state` returns the current ready room and pending incoming/outgoing duel invites.
 - `POST /battle/invites/{inviteId}/accept` marks the invite accepted, creates a `ready` battle room, and generates a server seed.
 - `POST /battle/invites/{inviteId}/decline` declines one pending invite.
-- `battle.room_ready` includes `roomId`, `mode`, `status`, `seed`, participant account ids, and lightweight participant snapshots.
+- `battle.room_ready` includes `roomId`, `mode`, `status`, `seed`, participant account ids, entry map/distance, and lightweight participant snapshots.
+- Accepting a duel invite now requires both accounts to have synchronized positions, be on the same map, be within 4 cells, and not be moving.
 
-This is room authority only. It does not yet run battle turns, resolve PvP damage, lock movement, consume items, or persist battle results.
+This is room authority only. It does not yet run battle turns, resolve PvP damage, consume items, or persist battle results.
 
 ## Chat Boundary
 

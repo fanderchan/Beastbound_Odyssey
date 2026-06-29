@@ -99,6 +99,18 @@ static func player_position_update_request(base_url: String, session_token: Stri
 	}
 
 
+static func movement_step_request(base_url: String, session_token: String, step: Dictionary) -> Dictionary:
+	return {
+		"url": "%s/movement/step" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(step),
+	}
+
+
 static func event_stream_url(base_url: String, session_token: String, last_event_seq: int = 0) -> String:
 	var url := normalized_base_url(base_url)
 	if url.begins_with("https://"):
@@ -315,6 +327,20 @@ static func parse_player_position_update_response(response_code: int, body: Pack
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_movement_step_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "移动提交失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
+	parsed["players"] = _dictionary_array(response.get("players", []))
+	parsed["party"] = response.get("party", null)
+	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
+	parsed["authority"] = str(response.get("authority", ""))
+	parsed["movement"] = response.get("movement", {}) if response.get("movement", {}) is Dictionary else {}
 	return parsed
 
 

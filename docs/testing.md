@@ -49,6 +49,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-chat-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-movement-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-aoi-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-replay-live-check
@@ -246,6 +247,13 @@ Phase170 WebSocket 游标和断线补发自测：
 - Godot 事件游标合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
 - Godot 真实联网断线补发：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-replay-live-check`
 - 回归：继续跑 `--auto-server-event-live-check`、`--auto-battle-room-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 replay 只补关键事件，不把 `online.position` 历史插回玩家可见列表。
+
+Phase171 服务器权威移动自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 移动合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
+- Godot 真实联网移动：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-movement-live-check`
+- 回归：继续跑 `--auto-battle-room-live-check`、`--auto-server-event-replay-live-check`、`--auto-server-event-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认服务器 step 没进入 Godot 每帧热路径，且切磋 ready 前会校验同图、近距离、停稳状态。
 
 ## 验收口径
 

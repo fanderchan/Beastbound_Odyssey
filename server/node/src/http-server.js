@@ -58,6 +58,9 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/players/position") {
         return sendResult(res, service.updatePlayerPosition(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "POST" && url.pathname === "/movement/step") {
+        return sendResult(res, service.movePlayerStep(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/gm/tools") {
         return sendResult(res, service.listGmTools(bearerToken(req), commandCatalog));
       }

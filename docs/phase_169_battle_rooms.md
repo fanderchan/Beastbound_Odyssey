@@ -87,5 +87,5 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ## 下一步
 
 1. Phase170：WebSocket 事件游标和断线补偿已完成第一轮，房间邀请/ready 短线可恢复。
-2. Phase171：服务器权威移动第一版，进入切磋前校验距离、地图和移动状态。
+2. Phase171：服务器权威移动第一版已完成，进入切磋前会校验距离、地图和移动状态。
 3. Phase172：房间内回合命令提交和服务器战斗事件列表。

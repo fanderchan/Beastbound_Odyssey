@@ -639,6 +639,7 @@ var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
+var auto_server_movement_live_check: bool = false
 var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
 var auto_server_event_replay_live_check: bool = false
@@ -956,6 +957,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_chat_live_check")
 	elif auto_online_position_live_check:
 		call_deferred("_run_auto_online_position_live_check")
+	elif auto_server_movement_live_check:
+		call_deferred("_run_auto_server_movement_live_check")
 	elif auto_online_aoi_live_check:
 		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
@@ -1686,6 +1689,8 @@ func _apply_preview_window_args() -> void:
 			auto_chat_live_check = true
 		elif arg == "--auto-online-position-live-check":
 			auto_online_position_live_check = true
+		elif arg == "--auto-server-movement-live-check":
+			auto_server_movement_live_check = true
 		elif arg == "--auto-online-aoi-live-check":
 			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
@@ -15143,6 +15148,20 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(position_spec.get("body", "")).find("\"mapId\":\"firebud_training_yard\"") >= 0
 		and str(position_spec.get("body", "")).find("\"cellX\":8") >= 0
 	)
+	var movement_spec := ServerAuthClientModel.movement_step_request("http://127.0.0.1:8787/", "token_test", {
+		"mapId": "firebud_training_yard",
+		"fromCellX": 8,
+		"fromCellY": 12,
+		"toCellX": 9,
+		"toCellY": 12,
+	})
+	var movement_request_ok := (
+		str(movement_spec.get("url", "")) == "http://127.0.0.1:8787/movement/step"
+		and int(movement_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(movement_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(movement_spec.get("body", "")).find("\"fromCellX\":8") >= 0
+		and str(movement_spec.get("body", "")).find("\"toCellX\":9") >= 0
+	)
 	var parsed_position := ServerAuthClientModel.parse_player_position_update_response(200, JSON.stringify({
 		"ok": true,
 		"position": {
@@ -15169,6 +15188,30 @@ func _run_auto_auth_server_client_check() -> void:
 		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
 		and (parsed_position.get("players", []) as Array).size() == 1
 		and str((parsed_position.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
+	)
+	var parsed_movement := ServerAuthClientModel.parse_movement_step_response(200, JSON.stringify({
+		"ok": true,
+		"position": {
+			"mapId": "firebud_training_yard",
+			"cellX": 9,
+			"cellY": 12,
+			"movementSeq": 1,
+			"authority": "server_step",
+		},
+		"movement": {
+			"authority": "server_step",
+			"stepAccepted": true,
+			"movementSeq": 1,
+		},
+		"authority": "server_step",
+		"players": [],
+		"aoi": {"scope": "aoi", "radius": 18},
+	}).to_utf8_buffer())
+	var movement_parse_ok := (
+		bool(parsed_movement.get("ok", false))
+		and str(parsed_movement.get("authority", "")) == "server_step"
+		and int((parsed_movement.get("position", {}) as Dictionary).get("movementSeq", 0)) == 1
+		and bool((parsed_movement.get("movement", {}) as Dictionary).get("stepAccepted", false))
 	)
 	var event_url := ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url := ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
@@ -15322,9 +15365,9 @@ func _run_auto_auth_server_client_check() -> void:
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s event=%s party=%s battle=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -15339,6 +15382,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_read_parse_ok),
 		str(online_request_ok and online_parse_ok),
 		str(position_request_ok and position_parse_ok),
+		str(movement_request_ok and movement_parse_ok),
 		str(event_contract_ok),
 		str(party_request_ok and party_parse_ok),
 		str(battle_request_ok and battle_parse_ok),
@@ -15710,8 +15754,8 @@ func _run_auto_chat_live_check() -> void:
 func _run_auto_online_position_live_check() -> void:
 	profile_save_enabled = false
 	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var leader_username := "opa%s" % suffix
-	var member_username := "opb%s" % suffix
+	var leader_username := "000%s" % suffix
+	var member_username := "001%s" % suffix
 	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
 	member_username = member_username.substr(0, mini(20, member_username.length()))
 	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
@@ -15777,6 +15821,164 @@ func _run_auto_online_position_live_check() -> void:
 		leader_username,
 		member_username,
 		str(member_cell),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_movement_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "mva%s" % suffix
+	var opponent_username := "mvb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"移动甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"移动乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var base_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(3, -1)
+	var challenger_seed_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": base_cell.x,
+			"cellY": base_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var opponent_seed_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": base_cell.x + 2,
+			"cellY": base_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var challenger_seed_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_seed_response.get("responseCode", 0)), challenger_seed_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_seed_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_seed_response.get("responseCode", 0)), opponent_seed_response.get("body", PackedByteArray()) as PackedByteArray)
+	var seed_ok := bool(challenger_seed_parsed.get("ok", false)) and bool(opponent_seed_parsed.get("ok", false))
+	var step_response := await _auto_http_request_spec(ServerAuthClientModel.movement_step_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"fromCellX": base_cell.x,
+			"fromCellY": base_cell.y,
+			"toCellX": base_cell.x + 1,
+			"toCellY": base_cell.y,
+			"moving": false,
+		}
+	))
+	var step_parsed := ServerAuthClientModel.parse_movement_step_response(int(step_response.get("responseCode", 0)), step_response.get("body", PackedByteArray()) as PackedByteArray)
+	var step_position := step_parsed.get("position", {}) as Dictionary if step_parsed.get("position", {}) is Dictionary else {}
+	var step_ok := (
+		bool(step_parsed.get("ok", false))
+		and str(step_parsed.get("authority", "")) == "server_step"
+		and int(step_position.get("cellX", -1)) == base_cell.x + 1
+		and int(step_position.get("movementSeq", 0)) >= 1
+	)
+	var jump_response := await _auto_http_request_spec(ServerAuthClientModel.movement_step_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"fromCellX": base_cell.x + 1,
+			"fromCellY": base_cell.y,
+			"toCellX": base_cell.x + 5,
+			"toCellY": base_cell.y,
+		}
+	))
+	var jump_parsed := ServerAuthClientModel.parse_movement_step_response(int(jump_response.get("responseCode", 0)), jump_response.get("body", PackedByteArray()) as PackedByteArray)
+	var jump_rejected := not bool(jump_parsed.get("ok", true)) and str(jump_parsed.get("code", "")) == "movement_step_too_far"
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": base_cell.x + 2,
+			"cellY": base_cell.y,
+			"facing": "west",
+			"moving": true,
+		}
+	))
+	var moving_accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var moving_accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(moving_accept_response.get("responseCode", 0)), moving_accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var moving_rejected := not bool(moving_accept_parsed.get("ok", true)) and str(moving_accept_parsed.get("code", "")) == "battle_player_moving"
+	await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": base_cell.x + 2,
+			"cellY": base_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_entry := room.get("entry", {}) as Dictionary if room.get("entry", {}) is Dictionary else {}
+	var room_ok := bool(accept_parsed.get("ok", false)) and str(room.get("status", "")) == "ready" and int(room_entry.get("distanceCells", -1)) == 1
+	var locked_response := await _auto_http_request_spec(ServerAuthClientModel.movement_step_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"fromCellX": base_cell.x + 1,
+			"fromCellY": base_cell.y,
+			"toCellX": base_cell.x + 1,
+			"toCellY": base_cell.y + 1,
+		}
+	))
+	var locked_parsed := ServerAuthClientModel.parse_movement_step_response(int(locked_response.get("responseCode", 0)), locked_response.get("body", PackedByteArray()) as PackedByteArray)
+	var battle_locked := not bool(locked_parsed.get("ok", true)) and str(locked_parsed.get("code", "")) == "movement_battle_locked"
+	var status := "ok" if register_ok and seed_ok and step_ok and jump_rejected and bool(invite_parsed.get("ok", false)) and moving_rejected and room_ok and battle_locked else "failed"
+	print("server movement live check ready: status=%s register=%s seed=%s step=%s jump=%s moving_gate=%s room=%s battle_lock=%s challenger=%s opponent=%s" % [
+		status,
+		str(register_ok),
+		str(seed_ok),
+		str(step_ok),
+		str(jump_rejected),
+		str(moving_rejected),
+		str(room_ok),
+		str(battle_locked),
+		challenger_username,
+		opponent_username,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -16038,6 +16240,32 @@ func _run_auto_server_event_replay_live_check() -> void:
 	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
 	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var replay_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(4, -1)
+	var replay_challenger_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": replay_cell.x,
+			"cellY": replay_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var replay_opponent_position := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": replay_cell.x + 1,
+			"cellY": replay_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var replay_challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(replay_challenger_position.get("responseCode", 0)), replay_challenger_position.get("body", PackedByteArray()) as PackedByteArray)
+	var replay_opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(replay_opponent_position.get("responseCode", 0)), replay_opponent_position.get("body", PackedByteArray()) as PackedByteArray)
+	var replay_positions_ok := bool(replay_challenger_position_parsed.get("ok", false)) and bool(replay_opponent_position_parsed.get("ok", false))
 	current_account_session = opponent_session
 	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	account_authenticated = true
@@ -16079,10 +16307,11 @@ func _run_auto_server_event_replay_live_check() -> void:
 	var room_seq := server_event_last_seq
 	var room_replayed_ok := bool(accept_parsed.get("ok", false)) and room_id != "" and _server_event_type_seen("battle.room_ready") and _battle_room_ready(room_id) and room_seq > invite_seq
 	var invite_not_replayed_again := not _server_event_type_seen("battle.invite")
-	var status := "ok" if register_ok and invite_replayed_ok and room_replayed_ok and invite_not_replayed_again else "failed"
-	print("server event replay live check ready: status=%s register=%s invite=%s room=%s cursor=%s invite_seq=%d room_seq=%d challenger=%s opponent=%s" % [
+	var status := "ok" if register_ok and replay_positions_ok and invite_replayed_ok and room_replayed_ok and invite_not_replayed_again else "failed"
+	print("server event replay live check ready: status=%s register=%s positions=%s invite=%s room=%s cursor=%s invite_seq=%d room_seq=%d challenger=%s opponent=%s" % [
 		status,
 		str(register_ok),
+		str(replay_positions_ok),
 		str(invite_replayed_ok),
 		str(room_replayed_ok),
 		str(invite_not_replayed_again),
@@ -16119,6 +16348,32 @@ func _run_auto_battle_room_live_check() -> void:
 	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
 	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var battle_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(4, -1)
+	var challenger_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var opponent_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x + 1,
+			"cellY": battle_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_position_response.get("responseCode", 0)), challenger_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
 	current_account_session = opponent_session
 	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	account_authenticated = true
@@ -16168,10 +16423,11 @@ func _run_auto_battle_room_live_check() -> void:
 	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
 	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
 	var room_contract_ok := str(room.get("status", "")) == "ready" and str(room.get("seed", "")).strip_edges() != "" and participants.size() == 2
-	var status := "ok" if register_ok and stream_ready and invite_event_ok and state_ok and ready_event_ok and room_contract_ok else "failed"
-	print("battle room live check ready: status=%s register=%s stream=%s invite=%s state=%s ready=%s room=%s challenger=%s opponent=%s" % [
+	var status := "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and state_ok and ready_event_ok and room_contract_ok else "failed"
+	print("battle room live check ready: status=%s register=%s positions=%s stream=%s invite=%s state=%s ready=%s room=%s challenger=%s opponent=%s" % [
 		status,
 		str(register_ok),
+		str(positions_ok),
 		str(stream_ready),
 		str(invite_event_ok),
 		str(state_ok),

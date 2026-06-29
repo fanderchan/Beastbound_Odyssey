@@ -68,6 +68,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase171：服务器权威移动第一版，进入切磋前校验距离、地图和移动状态。
+1. Phase171：服务器权威移动第一版已完成，进入切磋前会校验距离、地图和移动状态。
 2. Phase172：房间内回合命令提交和服务器战斗事件列表。
 3. Phase173：战斗房间断线重连恢复到玩家可见战斗场景。

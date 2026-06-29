@@ -26,6 +26,8 @@ const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest
 const ONLINE_AOI_SCOPE = "aoi";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
+const MOVEMENT_MAX_STEP_CELLS = 1;
+const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
 const BATTLE_INVITE_PENDING = "pending";
 const BATTLE_INVITE_ACCEPTED = "accepted";
@@ -367,26 +369,95 @@ function createAuthService(options = {}) {
       : null;
     data.playerPositions[resolved.account.accountId] = position;
     save(data);
+    return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
+      authority: "client_snapshot",
+    });
+  }
+
+  function movePlayerStep(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
+      return fail("movement_battle_locked", "切磋房间中不能移动。");
+    }
+    const currentPosition = data.playerPositions[resolved.account.accountId] || null;
+    if (!currentPosition || !currentPosition.mapId) {
+      return fail("movement_position_missing", "请先同步当前位置。");
+    }
+    const step = normalizeMovementStepPayload(payload, currentPosition);
+    if (!step.mapId) {
+      return fail("movement_map_missing", "移动缺少地图。");
+    }
+    if (step.mapId !== currentPosition.mapId) {
+      return fail("movement_map_mismatch", "不能用单步移动切换地图。");
+    }
+    if (step.fromCellX !== Number(currentPosition.cellX || 0) || step.fromCellY !== Number(currentPosition.cellY || 0)) {
+      return fail("movement_origin_mismatch", "服务器位置已变化，请重新同步。", {
+        position: publicPlayerPosition(currentPosition),
+      });
+    }
+    const dx = Math.abs(step.toCellX - step.fromCellX);
+    const dy = Math.abs(step.toCellY - step.fromCellY);
+    if (dx === 0 && dy === 0) {
+      return fail("movement_noop", "移动目标与当前位置相同。");
+    }
+    if (dx > MOVEMENT_MAX_STEP_CELLS || dy > MOVEMENT_MAX_STEP_CELLS) {
+      return fail("movement_step_too_far", "移动距离过远，请重新同步。", {
+        maxStepCells: MOVEMENT_MAX_STEP_CELLS,
+        position: publicPlayerPosition(currentPosition),
+      });
+    }
+    const position = normalizePlayerPositionPayload({
+      mapId: currentPosition.mapId,
+      cellX: step.toCellX,
+      cellY: step.toCellY,
+      facing: normalizeMovementFacing(payload.facing, step),
+      moving: Boolean(payload.moving),
+    }, resolved.account, now);
+    position.movementSeq = Number(currentPosition.movementSeq || 0) + 1;
+    position.authority = "server_step";
+    const previousPosition = publicPlayerPosition(currentPosition);
+    data.playerPositions[resolved.account.accountId] = position;
+    save(data);
+    return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
+      authority: "server_step",
+      movement: {
+        authority: "server_step",
+        stepAccepted: true,
+        movementSeq: position.movementSeq,
+        maxStepCells: MOVEMENT_MAX_STEP_CELLS,
+      },
+    });
+  }
+
+  function publishPositionUpdate(data, account, position, previousPosition, payload = {}, extra = {}) {
     const aoi = normalizeOnlineAoiPayload({
       scope: ONLINE_AOI_SCOPE,
       radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
     }, position);
-    const players = onlinePlayersForViewer(data, resolved.account, aoi, now).map((account) => publicOnlinePlayer(account, data));
+    const players = onlinePlayersForViewer(data, account, aoi, now).map((onlineAccount) => publicOnlinePlayer(onlineAccount, data));
     players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
     emitServiceEvent({
       type: "online.position",
-      accountId: resolved.account.accountId,
-      username: resolved.account.username,
+      accountId: account.accountId,
+      username: account.username,
       position: publicPlayerPosition(position),
       previousPosition,
       players,
       aoi: publicOnlineAoi(aoi),
+      authority: extra.authority || "client_snapshot",
+      movement: extra.movement || null,
     });
     return ok({
       position: publicPlayerPosition(position),
       players,
-      party: publicPartyForAccount(data, resolved.account.accountId),
+      party: publicPartyForAccount(data, account.accountId),
       aoi: publicOnlineAoi(aoi),
+      authority: extra.authority || "client_snapshot",
+      movement: extra.movement || null,
     });
   }
 
@@ -830,6 +901,10 @@ function createAuthService(options = {}) {
     if (!challenger || !opponent) {
       return fail("battle_account_missing", "切磋账号不存在。");
     }
+    const entryCheck = battleRoomEntryCheck(data, invite);
+    if (!entryCheck.ok) {
+      return entryCheck;
+    }
     invite.status = BATTLE_INVITE_ACCEPTED;
     invite.updatedAt = isoNow(now);
     data.battleInvites[invite.inviteId] = invite;
@@ -840,6 +915,7 @@ function createAuthService(options = {}) {
       inviteId: invite.inviteId,
       seed: randomBytes(8).toString("hex"),
       participantAccountIds: [invite.fromAccountId, invite.toAccountId],
+      entry: entryCheck.entry,
       participants: [
         battleParticipantSnapshot(data, challenger, "challenger"),
         battleParticipantSnapshot(data, opponent, "opponent"),
@@ -998,6 +1074,7 @@ function createAuthService(options = {}) {
     markMailRead,
     listOnlinePlayers,
     updatePlayerPosition,
+    movePlayerStep,
     onEvent,
     eventForSession,
     listEventsForSession,
@@ -1170,6 +1247,8 @@ function publicPlayerPosition(position) {
     cellY: Number(position.cellY || 0),
     facing: position.facing,
     moving: Boolean(position.moving),
+    movementSeq: Number(position.movementSeq || 0),
+    authority: String(position.authority || "client_snapshot"),
     updatedAt: position.updatedAt,
     schemaVersion: 1,
   };
@@ -1322,6 +1401,7 @@ function publicBattleRoom(room) {
     seed: room.seed,
     inviteId: room.inviteId,
     participantAccountIds: Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [],
+    entry: room.entry && typeof room.entry === "object" ? clone(room.entry) : null,
     participants: Array.isArray(room.participants) ? clone(room.participants) : [],
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
@@ -1391,6 +1471,39 @@ function activeBattleRoomForAccount(data, accountId) {
     Array.isArray(room.participantAccountIds) &&
     room.participantAccountIds.includes(accountId)
   )) || null;
+}
+
+function battleRoomEntryCheck(data, invite) {
+  const challengerPosition = data.playerPositions[invite.fromAccountId] || null;
+  const opponentPosition = data.playerPositions[invite.toAccountId] || null;
+  if (!challengerPosition || !opponentPosition || !challengerPosition.mapId || !opponentPosition.mapId) {
+    return fail("battle_position_missing", "切磋前需要双方同步当前位置。");
+  }
+  if (String(challengerPosition.mapId) !== String(opponentPosition.mapId)) {
+    return fail("battle_map_mismatch", "双方不在同一张地图，无法开始切磋。");
+  }
+  if (challengerPosition.moving || opponentPosition.moving) {
+    return fail("battle_player_moving", "双方需要停稳后才能开始切磋。");
+  }
+  const dx = Math.abs(Number(challengerPosition.cellX || 0) - Number(opponentPosition.cellX || 0));
+  const dy = Math.abs(Number(challengerPosition.cellY || 0) - Number(opponentPosition.cellY || 0));
+  const distanceCells = Math.max(dx, dy);
+  if (distanceCells > BATTLE_ROOM_ENTRY_MAX_DISTANCE) {
+    return fail("battle_distance_too_far", "距离太远，无法开始切磋。", {
+      distanceCells,
+      maxDistanceCells: BATTLE_ROOM_ENTRY_MAX_DISTANCE,
+    });
+  }
+  return ok({
+    entry: {
+      mapId: String(challengerPosition.mapId),
+      distanceCells,
+      maxDistanceCells: BATTLE_ROOM_ENTRY_MAX_DISTANCE,
+      challengerPosition: publicPlayerPosition(challengerPosition),
+      opponentPosition: publicPlayerPosition(opponentPosition),
+      schemaVersion: 1,
+    },
+  });
 }
 
 function accountById(data, accountId) {
@@ -1677,6 +1790,49 @@ function normalizePlayerPositionPayload(payload, account, now) {
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
+}
+
+function normalizeMovementStepPayload(payload = {}, currentPosition = {}) {
+  const fallbackCellX = Number(currentPosition.cellX || 0);
+  const fallbackCellY = Number(currentPosition.cellY || 0);
+  return {
+    mapId: String(payload.mapId || payload.toMapId || currentPosition.mapId || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH),
+    fromCellX: clampInt(payload.fromCellX ?? payload.fromX, -9999, 9999, fallbackCellX),
+    fromCellY: clampInt(payload.fromCellY ?? payload.fromY, -9999, 9999, fallbackCellY),
+    toCellX: clampInt(payload.toCellX ?? payload.targetCellX ?? payload.cellX ?? payload.x, -9999, 9999, fallbackCellX),
+    toCellY: clampInt(payload.toCellY ?? payload.targetCellY ?? payload.cellY ?? payload.y, -9999, 9999, fallbackCellY),
+  };
+}
+
+function normalizeMovementFacing(facing, step) {
+  const explicitFacing = String(facing || "").trim().toLowerCase();
+  if (POSITION_FACING_VALUES.has(explicitFacing)) {
+    return explicitFacing;
+  }
+  const dx = Math.sign(Number(step.toCellX || 0) - Number(step.fromCellX || 0));
+  const dy = Math.sign(Number(step.toCellY || 0) - Number(step.fromCellY || 0));
+  if (dx > 0 && dy < 0) {
+    return "northeast";
+  }
+  if (dx > 0 && dy > 0) {
+    return "southeast";
+  }
+  if (dx < 0 && dy > 0) {
+    return "southwest";
+  }
+  if (dx < 0 && dy < 0) {
+    return "northwest";
+  }
+  if (dx > 0) {
+    return "east";
+  }
+  if (dx < 0) {
+    return "west";
+  }
+  if (dy < 0) {
+    return "north";
+  }
+  return "south";
 }
 
 function clampInt(value, minValue, maxValue, fallbackValue) {
