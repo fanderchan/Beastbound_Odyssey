@@ -1,34 +1,44 @@
-# Phase163：玩家交互 4 小时纵切规划
+# Phase163：玩家交互 4 小时纵切
 
 目标：在服务器-only 入口之后，做第一个可以用两个客户端验证的玩家交互纵切。优先选择“文本邮件 + MySQL 持久化”，因为它风险低、闭环清楚，并且会沉淀后续组队、家族、PK 都要复用的账号查找、玩家身份、服务端持久化和双客户端验证流程。
 
-## 4 小时建议任务
+## 已落地内容
 
-1. MySQL 持久化起步（约 60 分钟）
-   - 新增 `server/node/src/mysql-store.js` 或等价适配层。
-   - 用环境变量配置 MySQL 连接，默认仍可回退 JSON-store 便于自测。
-   - 建表：`accounts`、`sessions`、`profiles`、`mail_messages`。
-   - 增加 `npm test` 覆盖 MySQL 适配层的最小读写契约。
+1. MySQL 持久化起步
+   - 新增 `server/node/src/mysql-store.js`。
+   - 用环境变量配置 MySQL 连接，默认仍回退 JSON-store 便于自测。
+   - 建表：`accounts`、`sessions`、`profiles`、`mail_messages`、`server_state`。
+   - 现阶段 MySQL store 镜像服务端文档和关键表，后续再拆成真正事务模型。
 
-2. 邮件服务端 API（约 60 分钟）
-   - `GET /players/search?username=...`：按账号名精确查找收件人。
+2. 邮件服务端 API
+   - `GET /players/search?username=...`：按账号名查找收件人。
    - `POST /mail/send`：发送文本邮件，服务端写入发件人、收件人、标题、正文、时间。
    - `GET /mail/inbox`：读取当前账号收件箱。
    - `POST /mail/{mailId}/read`：标记已读。
    - 本阶段不做物品附件，避免先碰背包经济安全边界。
 
-3. Godot 邮件 UI（约 90 分钟）
+3. Godot 邮件 UI
    - 复用现有 `邮箱` 入口，接服务器收件箱。
-   - 新增“写信”页：收件账号、标题、正文、发送。
+   - 新增“写信”区：收件账号、标题、正文、发送。
    - 收件箱支持刷新、查看详情、标记已读。
-   - 未登录服务器时不显示本地假数据，只提示需要服务器会话。
+   - 系统奖励附件仍在本地 profile 邮箱领取；玩家邮件第一版只支持文本。
 
-4. 双客户端验证（约 30 分钟）
+4. 双账号验证
    - 启动 Node 服务。
-   - 用两个账号开两个 Godot 客户端。
    - A 给 B 发邮件。
    - B 刷新收件箱看到邮件并标记已读。
-   - 重启服务后邮件仍存在，证明 MySQL 持久化生效。
+   - `--auto-server-mail-live-check` 覆盖 Godot 端真实联网收件箱 UI。
+
+## 验证入口
+
+```sh
+cd server/node
+npm test
+
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3200 -- --auto-auth-server-client-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3200 -- --auto-mailbox-check
+```
 
 ## 后续顺序
 

@@ -45,6 +45,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -185,6 +186,12 @@ Phase162 服务器-only / 多开前置自测：
 - 先启动服务端：`cd server/node && npm start`
 - 单客户端真实联网登录：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check`
 - 双客户端并发时，在两个终端同时运行上一条命令；两个进程应各自输出 `status=ok`，并创建不同服务器账号和档案 revision。
+
+Phase163 玩家文本邮件自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 服务器邮件：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check`
+- Godot 系统附件邮箱：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3200 -- --auto-mailbox-check`
 
 ## 验收口径
 

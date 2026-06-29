@@ -435,9 +435,20 @@ var mailbox_panel: PanelContainer
 var mailbox_list_container: VBoxContainer
 var mailbox_detail_label: RichTextLabel
 var mailbox_claim_button: Button
+var mailbox_refresh_button: Button
+var mailbox_recipient_input: LineEdit
+var mailbox_title_input: LineEdit
+var mailbox_body_input: TextEdit
+var mailbox_send_button: Button
+var mailbox_status_label: Label
 var mailbox_close_button: Button
+var mailbox_http_request: HTTPRequest
 var mailbox_message_buttons: Dictionary = {}
 var mailbox_selected_mail_id: String = ""
+var mailbox_selected_source: String = "server"
+var mailbox_server_messages: Array[Dictionary] = []
+var mailbox_request_pending: bool = false
+var mailbox_pending_kind: String = ""
 var training_partner_panel: PanelContainer
 var training_partner_scroll: ScrollContainer
 var training_partner_label: Label
@@ -588,6 +599,7 @@ var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
 var auto_auth_server_live_check: bool = false
+var auto_server_mail_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -892,6 +904,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_auth_check")
 	elif auto_auth_server_live_check:
 		call_deferred("_run_auto_auth_server_live_check")
+	elif auto_server_mail_live_check:
+		call_deferred("_run_auto_server_mail_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1606,6 +1620,8 @@ func _apply_preview_window_args() -> void:
 			auto_auth_server_client_check = true
 		elif arg == "--auto-auth-server-live-check":
 			auto_auth_server_live_check = true
+		elif arg == "--auto-server-mail-live-check":
+			auto_server_mail_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -14961,6 +14977,61 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(parsed_conflict.get("code", "")) == "revision_conflict"
 		and int((parsed_conflict.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 5
 	)
+	var player_search_spec := ServerAuthClientModel.player_search_request("http://127.0.0.1:8787/", "token_test", "remote")
+	var player_search_request_ok := (
+		str(player_search_spec.get("url", "")) == "http://127.0.0.1:8787/players/search?username=remote"
+		and int(player_search_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and _packed_string_array(player_search_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
+	var parsed_player_search := ServerAuthClientModel.parse_player_search_response(200, JSON.stringify({
+		"ok": true,
+		"players": [{"username": "remoteuser", "displayName": "远程猎人"}],
+	}).to_utf8_buffer())
+	var player_search_parse_ok := (
+		bool(parsed_player_search.get("ok", false))
+		and (parsed_player_search.get("players", []) as Array).size() == 1
+		and str(((parsed_player_search.get("players", []) as Array)[0] as Dictionary).get("username", "")) == "remoteuser"
+	)
+	var mail_send_spec := ServerAuthClientModel.mail_send_request("http://127.0.0.1:8787/", "token_test", "friend", "你好", "火芽村见。")
+	var mail_send_request_ok := (
+		str(mail_send_spec.get("url", "")) == "http://127.0.0.1:8787/mail/send"
+		and int(mail_send_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(mail_send_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(mail_send_spec.get("body", "")).find("\"recipientUsername\":\"friend\"") >= 0
+	)
+	var mail_inbox_spec := ServerAuthClientModel.mail_inbox_request("http://127.0.0.1:8787/", "token_test")
+	var mail_inbox_request_ok := (
+		str(mail_inbox_spec.get("url", "")) == "http://127.0.0.1:8787/mail/inbox"
+		and int(mail_inbox_spec.get("method", -1)) == HTTPClient.METHOD_GET
+	)
+	var parsed_mail_inbox := ServerAuthClientModel.parse_mail_inbox_response(200, JSON.stringify({
+		"ok": true,
+		"unreadCount": 1,
+		"messages": [{
+			"mailId": "mail_test",
+			"senderUsername": "remoteuser",
+			"title": "你好",
+			"body": "火芽村见。",
+			"createdAt": "2099-01-01T00:00:00.000Z",
+			"readAt": null,
+		}],
+	}).to_utf8_buffer())
+	var mail_inbox_parse_ok := (
+		bool(parsed_mail_inbox.get("ok", false))
+		and int(parsed_mail_inbox.get("unreadCount", 0)) == 1
+		and (parsed_mail_inbox.get("messages", []) as Array).size() == 1
+	)
+	var parsed_mail_read := ServerAuthClientModel.parse_mail_read_response(200, JSON.stringify({
+		"ok": true,
+		"mail": {
+			"mailId": "mail_test",
+			"readAt": "2099-01-01T00:00:01.000Z",
+		},
+	}).to_utf8_buffer())
+	var mail_read_parse_ok := (
+		bool(parsed_mail_read.get("ok", false))
+		and str((parsed_mail_read.get("mail", {}) as Dictionary).get("readAt", "")) != ""
+	)
 	var error_body := JSON.stringify({
 		"ok": false,
 		"code": "wrong_password",
@@ -14990,7 +15061,8 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
@@ -14999,6 +15071,10 @@ func _run_auto_auth_server_client_check() -> void:
 		str(profile_parse_ok),
 		str(upload_parse_ok),
 		str(conflict_ok),
+		str(player_search_request_ok and player_search_parse_ok),
+		str(mail_send_request_ok),
+		str(mail_inbox_request_ok and mail_inbox_parse_ok),
+		str(mail_read_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
@@ -15057,6 +15133,100 @@ func _run_auto_auth_server_live_check() -> void:
 		server_profile_sync_message,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_mail_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var sender_username := "gma%s" % suffix
+	var recipient_username := "gmb%s" % suffix
+	sender_username = sender_username.substr(0, mini(20, sender_username.length()))
+	recipient_username = recipient_username.substr(0, mini(20, recipient_username.length()))
+	var sender_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		sender_username,
+		"test1234",
+		"邮件甲"
+	))
+	var recipient_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		recipient_username,
+		"test1234",
+		"邮件乙"
+	))
+	var sender_parsed := ServerAuthClientModel.parse_auth_response(int(sender_register.get("responseCode", 0)), sender_register.get("body", PackedByteArray()) as PackedByteArray)
+	var recipient_parsed := ServerAuthClientModel.parse_auth_response(int(recipient_register.get("responseCode", 0)), recipient_register.get("body", PackedByteArray()) as PackedByteArray)
+	var sender_session := sender_parsed.get("session", {}) as Dictionary if sender_parsed.get("session", {}) is Dictionary else {}
+	var recipient_session := recipient_parsed.get("session", {}) as Dictionary if recipient_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(sender_parsed.get("ok", false)) and bool(recipient_parsed.get("ok", false))
+	var send_response := await _auto_http_request_spec(ServerAuthClientModel.mail_send_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(sender_session.get("serverSessionToken", "")),
+		recipient_username,
+		"组队吗",
+		"火芽村门口见。"
+	))
+	var send_parsed := ServerAuthClientModel.parse_mail_send_response(int(send_response.get("responseCode", 0)), send_response.get("body", PackedByteArray()) as PackedByteArray)
+	var send_ok := bool(send_parsed.get("ok", false))
+	current_account_session = recipient_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_profile_sync_expected_revision = 0
+	mailbox_server_messages.clear()
+	_open_mailbox_panel()
+	var frames := 0
+	while frames < 360 and mailbox_request_pending:
+		frames += 1
+		await get_tree().process_frame
+	var inbox_ok := false
+	var ui_ok := false
+	for message in mailbox_server_messages:
+		if str(message.get("senderUsername", "")) == sender_username and str(message.get("body", "")).find("火芽村") >= 0:
+			inbox_ok = true
+			break
+	ui_ok = (
+		mailbox_panel != null
+		and mailbox_panel.visible
+		and mailbox_detail_label != null
+		and mailbox_detail_label.text.find("火芽村门口见") >= 0
+		and mailbox_message_buttons.size() >= 1
+	)
+	var status := "ok" if register_ok and send_ok and inbox_ok and ui_ok else "failed"
+	print("server mail live check ready: status=%s register=%s send=%s inbox=%s ui=%s sender=%s recipient=%s messages=%d" % [
+		status,
+		str(register_ok),
+		str(send_ok),
+		str(inbox_ok),
+		str(ui_ok),
+		sender_username,
+		recipient_username,
+		mailbox_server_messages.size(),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _auto_http_request_spec(spec: Dictionary) -> Dictionary:
+	var request := HTTPRequest.new()
+	request.timeout = 8.0
+	add_child(request)
+	var err := request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		request.queue_free()
+		return {"ok": false, "responseCode": 0, "body": PackedByteArray()}
+	var completed = await request.request_completed
+	request.queue_free()
+	return {
+		"ok": int(completed[0]) == HTTPRequest.RESULT_SUCCESS,
+		"responseCode": int(completed[1]),
+		"headers": completed[2],
+		"body": completed[3],
+	}
 
 
 func _run_auto_server_profile_sync_check() -> void:
@@ -20009,6 +20179,11 @@ func _build_hud() -> void:
 	mailbox_title_label.add_theme_font_size_override("font_size", 21)
 	mailbox_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_header.add_child(mailbox_title_label)
+	mailbox_refresh_button = Button.new()
+	mailbox_refresh_button.text = "刷新"
+	mailbox_refresh_button.custom_minimum_size = Vector2(80, 44)
+	mailbox_refresh_button.pressed.connect(_request_server_mailbox_inbox)
+	mailbox_header.add_child(mailbox_refresh_button)
 	mailbox_close_button = Button.new()
 	mailbox_close_button.text = "关闭"
 	mailbox_close_button.custom_minimum_size = Vector2(92, 44)
@@ -20053,6 +20228,46 @@ func _build_hud() -> void:
 	mailbox_claim_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_claim_button.pressed.connect(_on_mailbox_claim_pressed)
 	mailbox_detail_column.add_child(mailbox_claim_button)
+
+	var mailbox_compose_title := Label.new()
+	mailbox_compose_title.text = "写信"
+	mailbox_compose_title.add_theme_font_size_override("font_size", 17)
+	mailbox_detail_column.add_child(mailbox_compose_title)
+	mailbox_recipient_input = LineEdit.new()
+	mailbox_recipient_input.placeholder_text = "收件账号"
+	mailbox_recipient_input.max_length = 20
+	mailbox_recipient_input.custom_minimum_size = Vector2(0, 40)
+	mailbox_recipient_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_detail_column.add_child(mailbox_recipient_input)
+	mailbox_title_input = LineEdit.new()
+	mailbox_title_input.placeholder_text = "标题"
+	mailbox_title_input.max_length = 40
+	mailbox_title_input.custom_minimum_size = Vector2(0, 40)
+	mailbox_title_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_detail_column.add_child(mailbox_title_input)
+	mailbox_body_input = TextEdit.new()
+	mailbox_body_input.placeholder_text = "正文"
+	mailbox_body_input.custom_minimum_size = Vector2(0, 88)
+	mailbox_body_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_body_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	mailbox_detail_column.add_child(mailbox_body_input)
+	mailbox_send_button = Button.new()
+	mailbox_send_button.text = "发送"
+	mailbox_send_button.custom_minimum_size = Vector2(0, 46)
+	mailbox_send_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_send_button.pressed.connect(_on_mailbox_send_pressed)
+	mailbox_detail_column.add_child(mailbox_send_button)
+	mailbox_status_label = Label.new()
+	mailbox_status_label.text = ""
+	mailbox_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mailbox_status_label.add_theme_font_size_override("font_size", 14)
+	mailbox_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	mailbox_status_label.custom_minimum_size = Vector2(0, 32)
+	mailbox_detail_column.add_child(mailbox_status_label)
+	mailbox_http_request = HTTPRequest.new()
+	mailbox_http_request.timeout = 8.0
+	mailbox_http_request.request_completed.connect(_on_mailbox_http_request_completed)
+	mailbox_panel.add_child(mailbox_http_request)
 	hud_root.add_child(mailbox_panel)
 
 	training_partner_panel = _panel_container("TrainingPartnerPanel")
@@ -25557,6 +25772,8 @@ func _open_mailbox_panel() -> void:
 	_save_profile_after_exp_pill_starter_update()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_panel()
+	if _is_server_account_session():
+		_request_server_mailbox_inbox()
 	_layout_hud()
 
 
@@ -25569,50 +25786,64 @@ func _refresh_mailbox_panel() -> void:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_mailbox_menu_button()
-	var messages := PlayerProgressModel.mailbox_messages(player_profile)
+	var messages := _mailbox_combined_entries()
 	var selected_exists := false
-	for message in messages:
-		if str(message.get("mailId", "")) == mailbox_selected_mail_id:
+	for entry in messages:
+		if str(entry.get("key", "")) == mailbox_selected_mail_id:
 			selected_exists = true
 			break
 	if not selected_exists:
-		mailbox_selected_mail_id = str(messages[0].get("mailId", "")) if not messages.is_empty() else ""
+		mailbox_selected_mail_id = str(messages[0].get("key", "")) if not messages.is_empty() else ""
+		mailbox_selected_source = str(messages[0].get("source", "server")) if not messages.is_empty() else "server"
 	for child in mailbox_list_container.get_children():
 		child.queue_free()
 	mailbox_message_buttons.clear()
 	if messages.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "没有邮件。"
+		empty_label.text = "没有邮件。" if not mailbox_request_pending else "正在读取..."
 		empty_label.add_theme_font_size_override("font_size", 16)
 		mailbox_list_container.add_child(empty_label)
 	else:
-		for message in messages:
-			var mail_id := str(message.get("mailId", ""))
+		for entry in messages:
+			var key := str(entry.get("key", ""))
+			var source := str(entry.get("source", "server"))
 			var button := Button.new()
-			button.text = PlayerProgressModel.mailbox_message_button_text(message)
+			button.text = _mailbox_entry_button_text(entry)
 			button.toggle_mode = true
-			button.button_pressed = mail_id == mailbox_selected_mail_id
+			button.button_pressed = key == mailbox_selected_mail_id
 			button.custom_minimum_size = Vector2(0, 72)
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			button.add_theme_font_size_override("font_size", 14)
-			var captured_mail_id := mail_id
+			var captured_key := key
+			var captured_source := source
 			button.pressed.connect(func() -> void:
-				_select_mailbox_message(captured_mail_id)
+				_select_mailbox_message(captured_key, captured_source)
 			)
 			mailbox_list_container.add_child(button)
-			mailbox_message_buttons[mail_id] = button
-	var selected := PlayerProgressModel.mailbox_message_by_id(player_profile, mailbox_selected_mail_id)
+			mailbox_message_buttons[key] = button
+	var selected := _mailbox_entry_by_key(mailbox_selected_mail_id)
 	if selected.is_empty():
-		mailbox_detail_label.text = "没有可领取的邮件。"
+		mailbox_detail_label.text = "没有邮件。"
 		mailbox_claim_button.disabled = true
+		mailbox_claim_button.visible = true
 		mailbox_claim_button.tooltip_text = ""
+		_refresh_mailbox_request_controls()
 		return
-	var items := _mailbox_item_entries(selected)
+	var selected_source := str(selected.get("source", "server"))
+	var selected_message := selected.get("message", {}) as Dictionary if selected.get("message", {}) is Dictionary else {}
+	if selected_source == "server":
+		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
+		mailbox_claim_button.disabled = true
+		mailbox_claim_button.visible = true
+		mailbox_claim_button.tooltip_text = "玩家邮件暂不支持附件。"
+		_refresh_mailbox_request_controls()
+		return
+	var items := _mailbox_item_entries(selected_message)
 	var lines: Array[String] = []
-	lines.append(str(selected.get("title", "系统邮件")))
-	lines.append("来自：%s" % str(selected.get("sender", "系统")))
-	lines.append("到期：%s" % PlayerProgressModel.mailbox_expiry_text(selected))
-	var body := str(selected.get("body", "")).strip_edges()
+	lines.append(str(selected_message.get("title", "系统邮件")))
+	lines.append("来自：%s" % str(selected_message.get("sender", "系统")))
+	lines.append("到期：%s" % PlayerProgressModel.mailbox_expiry_text(selected_message))
+	var body := str(selected_message.get("body", "")).strip_edges()
 	if body != "":
 		lines.append("")
 		lines.append(body)
@@ -25621,17 +25852,24 @@ func _refresh_mailbox_panel() -> void:
 	mailbox_detail_label.text = "\n".join(lines)
 	mailbox_claim_button.disabled = items.is_empty()
 	mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。"
+	_refresh_mailbox_request_controls()
 
 
-func _select_mailbox_message(mail_id: String) -> void:
+func _select_mailbox_message(mail_id: String, source: String = "local") -> void:
 	mailbox_selected_mail_id = mail_id
+	mailbox_selected_source = source
+	if source == "server":
+		var server_mail := _server_mailbox_message_by_key(mail_id)
+		if not server_mail.is_empty() and str(server_mail.get("readAt", "")).strip_edges() == "":
+			_request_server_mailbox_read(str(server_mail.get("mailId", "")))
 	_refresh_mailbox_panel()
 
 
 func _on_mailbox_claim_pressed() -> void:
-	if mailbox_selected_mail_id == "":
+	if mailbox_selected_mail_id == "" or mailbox_selected_source == "server":
 		return
-	var result := PlayerProgressModel.mailbox_claim_message(player_profile, mailbox_selected_mail_id)
+	var local_mail_id := _mailbox_key_id(mailbox_selected_mail_id, "local:")
+	var result := PlayerProgressModel.mailbox_claim_message(player_profile, local_mail_id)
 	player_profile = result.get("profile", player_profile)
 	if profile_save_enabled:
 		_save_player_profile_now()
@@ -25646,8 +25884,204 @@ func _on_mailbox_claim_pressed() -> void:
 func _refresh_mailbox_menu_button() -> void:
 	if mailbox_menu_button == null:
 		return
-	var count := PlayerProgressModel.mailbox_unclaimed_count(player_profile)
+	var count := PlayerProgressModel.mailbox_unclaimed_count(player_profile) + _server_mailbox_unread_count()
 	mailbox_menu_button.text = "邮箱" if count <= 0 else "邮箱%d" % count
+
+
+func _mailbox_combined_entries() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for message in mailbox_server_messages:
+		var mail_id := str(message.get("mailId", "")).strip_edges()
+		if mail_id == "":
+			continue
+		result.append({
+			"key": "server:%s" % mail_id,
+			"source": "server",
+			"message": message,
+		})
+	for message in PlayerProgressModel.mailbox_messages(player_profile):
+		var mail_id := str(message.get("mailId", "")).strip_edges()
+		if mail_id == "":
+			continue
+		result.append({
+			"key": "local:%s" % mail_id,
+			"source": "local",
+			"message": message,
+		})
+	return result
+
+
+func _mailbox_entry_by_key(key: String) -> Dictionary:
+	for entry in _mailbox_combined_entries():
+		if str(entry.get("key", "")) == key:
+			return entry
+	return {}
+
+
+func _mailbox_entry_button_text(entry: Dictionary) -> String:
+	var source := str(entry.get("source", "server"))
+	var message := entry.get("message", {}) as Dictionary if entry.get("message", {}) is Dictionary else {}
+	if source == "server":
+		var status := "未读" if str(message.get("readAt", "")).strip_edges() == "" else "已读"
+		var title := str(message.get("title", "玩家邮件"))
+		var sender := str(message.get("senderDisplayName", message.get("senderUsername", "玩家")))
+		return "%s\n%s  %s" % [title, sender, status]
+	return PlayerProgressModel.mailbox_message_button_text(message)
+
+
+func _server_mailbox_detail_text(message: Dictionary) -> String:
+	var lines: Array[String] = []
+	lines.append(str(message.get("title", "玩家邮件")))
+	var sender := str(message.get("senderDisplayName", message.get("senderUsername", "玩家"))).strip_edges()
+	if sender == "":
+		sender = "玩家"
+	lines.append("来自：%s" % sender)
+	var created_at := str(message.get("createdAt", "")).strip_edges()
+	if created_at != "":
+		lines.append("时间：%s" % created_at)
+	lines.append("状态：%s" % ("未读" if str(message.get("readAt", "")).strip_edges() == "" else "已读"))
+	var body := str(message.get("body", "")).strip_edges()
+	if body != "":
+		lines.append("")
+		lines.append(body)
+	lines.append("")
+	lines.append("附件：无")
+	return "\n".join(lines)
+
+
+func _server_mailbox_message_by_key(key: String) -> Dictionary:
+	var mail_id := _mailbox_key_id(key, "server:")
+	for message in mailbox_server_messages:
+		if str(message.get("mailId", "")) == mail_id:
+			return message
+	return {}
+
+
+func _server_mailbox_unread_count() -> int:
+	var count := 0
+	for message in mailbox_server_messages:
+		if str(message.get("readAt", "")).strip_edges() == "":
+			count += 1
+	return count
+
+
+func _mailbox_key_id(key: String, prefix: String) -> String:
+	return key.substr(prefix.length()) if key.begins_with(prefix) else key
+
+
+func _refresh_mailbox_request_controls() -> void:
+	if mailbox_refresh_button != null:
+		mailbox_refresh_button.disabled = mailbox_request_pending or not _is_server_account_session()
+	if mailbox_send_button != null:
+		mailbox_send_button.disabled = mailbox_request_pending or not _is_server_account_session()
+	if mailbox_status_label != null and not _is_server_account_session():
+		mailbox_status_label.text = "需要服务器账号登录。"
+
+
+func _request_server_mailbox_inbox() -> void:
+	if not _is_server_account_session():
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "需要服务器账号登录。"
+		_refresh_mailbox_request_controls()
+		return
+	_start_mailbox_request("inbox", ServerAuthClientModel.mail_inbox_request(_server_profile_base_url(), _server_profile_token()))
+
+
+func _request_server_mailbox_read(mail_id: String) -> void:
+	if mail_id.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_mailbox_request("read", ServerAuthClientModel.mail_read_request(_server_profile_base_url(), _server_profile_token(), mail_id))
+
+
+func _on_mailbox_send_pressed() -> void:
+	if not _is_server_account_session():
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "需要服务器账号登录。"
+		return
+	if mailbox_recipient_input == null or mailbox_title_input == null or mailbox_body_input == null:
+		return
+	var recipient := mailbox_recipient_input.text.strip_edges()
+	var title := mailbox_title_input.text.strip_edges()
+	var body := mailbox_body_input.text.strip_edges()
+	if recipient == "" or title == "" or body == "":
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "收件账号、标题和正文都要填写。"
+		return
+	_start_mailbox_request("send", ServerAuthClientModel.mail_send_request(_server_profile_base_url(), _server_profile_token(), recipient, title, body))
+
+
+func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
+	if mailbox_http_request == null:
+		return
+	if mailbox_request_pending:
+		return
+	mailbox_pending_kind = kind
+	mailbox_request_pending = true
+	_refresh_mailbox_request_controls()
+	if mailbox_status_label != null:
+		mailbox_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
+	var err := mailbox_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		mailbox_request_pending = false
+		mailbox_pending_kind = ""
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "无法发起邮箱请求。"
+		_refresh_mailbox_request_controls()
+
+
+func _on_mailbox_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind := mailbox_pending_kind
+	mailbox_pending_kind = ""
+	mailbox_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "邮箱服务器连接失败。"
+		_refresh_mailbox_request_controls()
+		return
+	if kind == "inbox":
+		var parsed_inbox := ServerAuthClientModel.parse_mail_inbox_response(response_code, body)
+		if bool(parsed_inbox.get("ok", false)):
+			mailbox_server_messages.clear()
+			var raw_messages = parsed_inbox.get("messages", [])
+			if raw_messages is Array:
+				for value in raw_messages:
+					if value is Dictionary:
+						mailbox_server_messages.append((value as Dictionary).duplicate(true))
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "邮箱已刷新。"
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = str(parsed_inbox.get("message", "邮箱读取失败。"))
+	elif kind == "send":
+		var parsed_send := ServerAuthClientModel.parse_mail_send_response(response_code, body)
+		if bool(parsed_send.get("ok", false)):
+			if mailbox_title_input != null:
+				mailbox_title_input.text = ""
+			if mailbox_body_input != null:
+				mailbox_body_input.text = ""
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "邮件已发送。"
+			_request_server_mailbox_inbox()
+			return
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = str(parsed_send.get("message", "邮件发送失败。"))
+	elif kind == "read":
+		var parsed_read := ServerAuthClientModel.parse_mail_read_response(response_code, body)
+		if bool(parsed_read.get("ok", false)):
+			var read_mail := parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
+			for index in range(mailbox_server_messages.size()):
+				if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
+					mailbox_server_messages[index] = read_mail
+					break
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
+	_refresh_mailbox_panel()
+	_refresh_mailbox_menu_button()
+	_refresh_mailbox_request_controls()
 
 
 func _mailbox_item_entries(message: Dictionary) -> Array[Dictionary]:

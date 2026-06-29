@@ -11,6 +11,9 @@ const ROLE_PLAYER = "player";
 const ROLE_GM = "gm";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_AUDIT_ROWS = 500;
+const MAX_PLAYER_SEARCH_RESULTS = 12;
+const MAIL_TITLE_MAX_LENGTH = 40;
+const MAIL_BODY_MAX_LENGTH = 500;
 
 function createAuthService(options = {}) {
   const store = options.store || createMemoryAuthStore();
@@ -183,6 +186,106 @@ function createAuthService(options = {}) {
     });
   }
 
+  function searchPlayers(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const username = normalizeUsername(payload.username || payload.query || "");
+    if (!username) {
+      return ok({"players": []});
+    }
+    const players = Object.values(data.accounts)
+      .filter((account) => account && account.username && account.username.includes(username))
+      .sort((a, b) => String(a.username).localeCompare(String(b.username)))
+      .slice(0, MAX_PLAYER_SEARCH_RESULTS)
+      .map((account) => publicPlayerSearchResult(account, data));
+    return ok({players});
+  }
+
+  function sendMail(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const recipientUsername = normalizeUsername(payload.recipientUsername || payload.toUsername || payload.username || "");
+    const recipient = data.accounts[recipientUsername];
+    if (!recipient) {
+      return fail("recipient_missing", "收件账号不存在。");
+    }
+    if (recipient.accountId === resolved.account.accountId) {
+      return fail("recipient_self", "不能给自己发送邮件。");
+    }
+    const title = normalizeMailText(payload.title, MAIL_TITLE_MAX_LENGTH);
+    if (!title) {
+      return fail("invalid_title", "邮件标题不能为空。");
+    }
+    const body = normalizeMailText(payload.body, MAIL_BODY_MAX_LENGTH);
+    if (!body) {
+      return fail("invalid_body", "邮件正文不能为空。");
+    }
+    const mail = {
+      mailId: `mail_${randomId()}`,
+      senderAccountId: resolved.account.accountId,
+      senderUsername: resolved.account.username,
+      senderDisplayName: resolved.account.displayName,
+      recipientAccountId: recipient.accountId,
+      recipientUsername: recipient.username,
+      recipientDisplayName: recipient.displayName,
+      title,
+      body,
+      createdAt: isoNow(now),
+      readAt: null,
+      schemaVersion: 1,
+    };
+    data.mailMessages[mail.mailId] = mail;
+    save(data);
+    return ok({
+      mail: publicMail(mail),
+      message: "邮件已发送。",
+    });
+  }
+
+  function listInbox(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const messages = Object.values(data.mailMessages)
+      .filter((mail) => mail && mail.recipientAccountId === resolved.account.accountId)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      .map(publicMail);
+    return ok({
+      messages,
+      unreadCount: messages.filter((mail) => !mail.readAt).length,
+    });
+  }
+
+  function markMailRead(token, mailId) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const normalizedMailId = String(mailId || "").trim();
+    const mail = data.mailMessages[normalizedMailId];
+    if (!mail || mail.recipientAccountId !== resolved.account.accountId) {
+      return fail("mail_missing", "邮件不存在。");
+    }
+    if (!mail.readAt) {
+      mail.readAt = isoNow(now);
+      data.mailMessages[normalizedMailId] = mail;
+      save(data);
+    }
+    return ok({
+      mail: publicMail(mail),
+      message: "邮件已读。",
+    });
+  }
+
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
@@ -285,6 +388,10 @@ function createAuthService(options = {}) {
     getSession,
     getProfile,
     saveProfile,
+    searchPlayers,
+    sendMail,
+    listInbox,
+    markMailRead,
     grantGm,
     listGmTools,
     authorizeGmCommand,
@@ -331,6 +438,7 @@ function normalizeData(raw) {
     sessions: objectOrEmpty(data.sessions),
     profileBindings: objectOrEmpty(data.profileBindings),
     profiles: objectOrEmpty(data.profiles),
+    mailMessages: objectOrEmpty(data.mailMessages),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -393,6 +501,31 @@ function publicSession(session, account, data, token = "") {
     result.token = token;
   }
   return result;
+}
+
+function publicPlayerSearchResult(account, data) {
+  const summary = profileSummaryForAccount(account, data);
+  return {
+    accountId: account.accountId,
+    username: account.username,
+    displayName: account.displayName,
+    playerId: summary && summary.playerId ? summary.playerId : "",
+  };
+}
+
+function publicMail(mail) {
+  return {
+    mailId: mail.mailId,
+    senderUsername: mail.senderUsername,
+    senderDisplayName: mail.senderDisplayName,
+    recipientUsername: mail.recipientUsername,
+    recipientDisplayName: mail.recipientDisplayName,
+    title: mail.title,
+    body: mail.body,
+    createdAt: mail.createdAt,
+    readAt: mail.readAt || null,
+    schemaVersion: 1,
+  };
 }
 
 function profileSummaryForAccount(account, data) {
@@ -498,6 +631,10 @@ function normalizeCommandIds(commandIds) {
     }
   }
   return result.length > 0 ? result : ["*"];
+}
+
+function normalizeMailText(value, maxLength) {
+  return String(value || "").trim().replace(/\s+\n/g, "\n").slice(0, maxLength);
 }
 
 function isValidUsername(username) {

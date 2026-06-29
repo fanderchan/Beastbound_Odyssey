@@ -54,6 +54,49 @@ static func profile_upload_request(base_url: String, session_token: String, prof
 	}
 
 
+static func player_search_request(base_url: String, session_token: String, username: String) -> Dictionary:
+	return {
+		"url": "%s/players/search?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/mail/inbox" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func mail_send_request(base_url: String, session_token: String, recipient_username: String, title: String, body: String) -> Dictionary:
+	return {
+		"url": "%s/mail/send" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"recipientUsername": recipient_username,
+			"title": title,
+			"body": body,
+		}),
+	}
+
+
+static func mail_read_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
+	return {
+		"url": "%s/mail/%s/read" % [normalized_base_url(base_url), mail_id.uri_encode()],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
@@ -96,6 +139,53 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 		"account": account,
 		"response": data,
 	}
+
+
+static func parse_player_search_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "玩家搜索失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var players: Array[Dictionary] = []
+	var raw_players = (parsed.get("response", {}) as Dictionary).get("players", [])
+	if raw_players is Array:
+		for value in raw_players:
+			if value is Dictionary:
+				players.append((value as Dictionary).duplicate(true))
+	parsed["players"] = players
+	return parsed
+
+
+static func parse_mail_inbox_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "邮箱读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var messages: Array[Dictionary] = []
+	var raw_messages = (parsed.get("response", {}) as Dictionary).get("messages", [])
+	if raw_messages is Array:
+		for value in raw_messages:
+			if value is Dictionary:
+				messages.append((value as Dictionary).duplicate(true))
+	parsed["messages"] = messages
+	parsed["unreadCount"] = int((parsed.get("response", {}) as Dictionary).get("unreadCount", 0))
+	return parsed
+
+
+static func parse_mail_send_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "邮件发送失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["mail"] = response.get("mail", {}) if response.get("mail", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_mail_read_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "邮件标记失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["mail"] = response.get("mail", {}) if response.get("mail", {}) is Dictionary else {}
+	return parsed
 
 
 static func parse_profile_response(response_code: int, body: PackedByteArray) -> Dictionary:
@@ -141,6 +231,26 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 		"profileBinding": data.get("profileBinding", {}),
 		"profileSummary": data.get("profileSummary", {}),
 		"message": str(data.get("message", "角色档案已同步。")),
+		"response": data,
+	}
+
+
+static func _parse_server_json(response_code: int, body: PackedByteArray, fallback_message: String) -> Dictionary:
+	var text := body.get_string_from_utf8()
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {"ok": false, "message": "服务器返回格式不正确。", "code": "bad_json"}
+	var data := parsed as Dictionary
+	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		return {
+			"ok": false,
+			"message": str(data.get("message", fallback_message)),
+			"code": str(data.get("code", "server_error")),
+			"response": data,
+		}
+	return {
+		"ok": true,
+		"message": str(data.get("message", "")),
 		"response": data,
 	}
 

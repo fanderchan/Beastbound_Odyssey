@@ -6,6 +6,9 @@ const {
   createAuthService,
   createJsonAuthStore,
 } = require("./auth-service");
+const {
+  createMysqlAuthStore,
+} = require("./mysql-store");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -36,6 +39,9 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/auth/session") {
         return sendResult(res, service.getSession(bearerToken(req)));
       }
+      if (req.method === "GET" && url.pathname === "/players/search") {
+        return sendResult(res, service.searchPlayers(bearerToken(req), {"username": url.searchParams.get("username") || ""}));
+      }
       if (req.method === "GET" && url.pathname === "/gm/tools") {
         return sendResult(res, service.listGmTools(bearerToken(req), commandCatalog));
       }
@@ -48,6 +54,16 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "PUT" && url.pathname === "/profiles/me") {
         return sendResult(res, service.saveProfile(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/mail/inbox") {
+        return sendResult(res, service.listInbox(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/mail/send") {
+        return sendResult(res, service.sendMail(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname.startsWith("/mail/") && url.pathname.endsWith("/read")) {
+        const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/read".length));
+        return sendResult(res, service.markMailRead(bearerToken(req), mailId));
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});
     } catch (error) {
@@ -106,15 +122,24 @@ function bearerToken(req) {
 
 if (require.main === module) {
   const port = Number(process.env.BEASTBOUND_AUTH_PORT || 8787);
-  const storePath = process.env.BEASTBOUND_AUTH_STORE_PATH || path.resolve(process.cwd(), ".local/auth-store.json");
-  const service = createAuthService({"store": createJsonAuthStore(storePath)});
+  const service = createAuthService({"store": createDefaultStore()});
   const server = createHttpServer({service});
   server.listen(port, "127.0.0.1", () => {
     console.log(`Beastbound auth server listening on http://127.0.0.1:${port}`);
   });
 }
 
+function createDefaultStore() {
+  const storeMode = String(process.env.BEASTBOUND_AUTH_STORE || process.env.BEASTBOUND_STORE || "json").trim().toLowerCase();
+  if (storeMode === "mysql") {
+    return createMysqlAuthStore();
+  }
+  const storePath = process.env.BEASTBOUND_AUTH_STORE_PATH || path.resolve(process.cwd(), ".local/auth-store.json");
+  return createJsonAuthStore(storePath);
+}
+
 module.exports = {
   createHttpServer,
   DEFAULT_COMMAND_CATALOG,
+  createDefaultStore,
 };
