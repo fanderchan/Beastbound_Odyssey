@@ -43,7 +43,8 @@ function battleProfile(name, playerStats, petStats = null) {
       "attack": Number(petStats.attack || 12),
       "defense": Number(petStats.defense || 6),
       "quick": Number(petStats.quick || 50),
-      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "", ""],
       "passiveSkillIds": ["test_passive"],
     });
   }
@@ -482,6 +483,7 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(accept.ok, true);
   assert.equal(accept.room.participants[0].teamSnapshot.battlePetCount, 1);
   assert.equal(accept.room.battle.actors.length, 4);
+  assert.equal(accept.room.battle.requiredActorIds.length, 4);
   const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "peta" && actor.kind === "player");
   const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "peta" && actor.kind === "pet");
   const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "petb" && actor.kind === "player");
@@ -491,24 +493,49 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(opponentPet.displayName, "乙的布伊");
   assert.equal(opponentPet.hp, 70);
   assert.equal(opponentPet.activeSkillIds.includes("pet_attack"), true);
+  assert.equal(opponentPet.activeSkillIds.includes("pet_bui_charge"), true);
 
   const first = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
     "actionId": "attack",
+    "actorId": challengerPlayer.actorId,
     "targetActorId": opponentPet.actorId,
   });
   assert.equal(first.ok, true);
   assert.equal(first.command.targetActorId, opponentPet.actorId);
+  assert.equal(first.turn, null);
   const second = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
     "round": 1,
     "actionId": "defend",
+    "actorId": opponentPlayer.actorId,
   });
   assert.equal(second.ok, true);
-  const attack = second.turn.events.find((event) => event.eventType === "basic_attack");
+  assert.equal(second.turn, null);
+  const third = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "pet_bui_charge",
+    "actorId": challengerPet.actorId,
+    "targetActorId": opponentPet.actorId,
+  });
+  assert.equal(third.ok, true);
+  assert.equal(third.turn, null);
+  const fourth = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "pet_defend",
+    "actorId": opponentPet.actorId,
+  });
+  assert.equal(fourth.ok, true);
+  assert.equal(fourth.turn.kind, "battle_event_list");
+  assert.equal(fourth.turn.events.length, 4);
+  const attack = fourth.turn.events.find((event) => event.eventType === "basic_attack" && event.actorId === challengerPlayer.actorId);
+  const petSkill = fourth.turn.events.find((event) => event.eventType === "pet_skill" && event.actorId === challengerPet.actorId);
   assert.equal(attack.targetActorId, opponentPet.actorId);
   assert.equal(attack.targetKind, "pet");
-  const updatedOpponentPet = second.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
-  const updatedOpponentPlayer = second.room.battle.actors.find((actor) => actor.actorId === opponentPlayer.actorId);
+  assert.equal(petSkill.targetActorId, opponentPet.actorId);
+  assert.equal(petSkill.actionId, "pet_bui_charge");
+  assert.equal(petSkill.damage > 0, true);
+  const updatedOpponentPet = fourth.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
+  const updatedOpponentPlayer = fourth.room.battle.actors.find((actor) => actor.actorId === opponentPlayer.actorId);
   assert.equal(updatedOpponentPet.hp < opponentPet.hp, true);
   assert.equal(updatedOpponentPlayer.hp, opponentPlayer.hp);
 });

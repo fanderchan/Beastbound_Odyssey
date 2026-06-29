@@ -81,5 +81,5 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 ## 下一步
 
 1. Phase179：正式玩家 UI 接入“离开切磋”，同时保留服务端权威关闭。已完成，见 `docs/phase_179_server_battle_leave_ui.md`。
-2. Phase180：服务端宠物命令和基础宠物技能事件。
+2. Phase180：服务端宠物命令和基础宠物技能事件。已完成，见 `docs/phase_180_server_battle_pet_commands.md`。
 3. Phase181：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。

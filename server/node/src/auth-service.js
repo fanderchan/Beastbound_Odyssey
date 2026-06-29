@@ -41,6 +41,9 @@ const BATTLE_PHASE_COMMAND = "command";
 const BATTLE_PHASE_FINISHED = "finished";
 const BATTLE_ACTION_ATTACK = "attack";
 const BATTLE_ACTION_DEFEND = "defend";
+const BATTLE_ACTION_PET_ATTACK = "pet_attack";
+const BATTLE_ACTION_PET_DEFEND = "pet_defend";
+const BATTLE_ACTION_PET_BUI_CHARGE = "pet_bui_charge";
 const BATTLE_ACTOR_MAX_HP = 120;
 const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
@@ -1127,23 +1130,25 @@ function createAuthService(options = {}) {
         room: publicBattleRoom(room),
       });
     }
-    if (battle.commands && battle.commands[resolved.account.accountId]) {
-      return fail("battle_command_duplicate", "本回合命令已经提交。", {
-        room: publicBattleRoom(room),
-      });
-    }
     const commandResult = normalizeBattleCommandPayload(payload, data, room, battle, resolved.account, now, randomId);
     if (!commandResult.ok) {
       return commandResult;
     }
-    battle.commands[resolved.account.accountId] = commandResult.command;
+    if (battle.commands && battle.commands[commandResult.command.actorId]) {
+      return fail("battle_command_duplicate", "本回合命令已经提交。", {
+        room: publicBattleRoom(room),
+      });
+    }
+    battle.commands[commandResult.command.actorId] = commandResult.command;
+    battle.submittedActorIds = submittedBattleCommandActorIds(battle);
     battle.submittedAccountIds = submittedBattleCommandAccountIds(battle);
     battle.updatedAt = isoNow(now);
     room.updatedAt = battle.updatedAt;
+    const commandSubmittedActorIds = battle.submittedActorIds.slice();
     const commandSubmittedAccountIds = battle.submittedAccountIds.slice();
     const commandSubmittedRoom = publicBattleRoom(room);
     let turn = null;
-    const readyToResolve = requiredBattleCommandAccountIds(room).every((accountId) => battle.commands[accountId]);
+    const readyToResolve = requiredBattleCommandActorIds(battle).every((actorId) => battle.commands[actorId]);
     if (readyToResolve) {
       turn = resolveBattleRoomTurn(room, battle, now);
     }
@@ -1156,8 +1161,12 @@ function createAuthService(options = {}) {
       round: expectedRound,
       submittedAccountId: resolved.account.accountId,
       submittedUsername: resolved.account.username,
+      submittedActorId: commandResult.command.actorId,
+      submittedActorKind: commandResult.command.actorKind,
+      submittedActorIds: commandSubmittedActorIds,
       submittedAccountIds: commandSubmittedAccountIds,
       requiredAccountIds: requiredBattleCommandAccountIds(room),
+      requiredActorIds: requiredBattleCommandActorIds(battle),
       room: commandSubmittedRoom,
     });
     if (turn) {
@@ -1649,6 +1658,8 @@ function publicBattleRoomBattle(battle) {
     turnSeq: Number(battle.turnSeq || 0),
     requiredAccountIds: Array.isArray(battle.requiredAccountIds) ? battle.requiredAccountIds.slice() : [],
     submittedAccountIds: Array.isArray(battle.submittedAccountIds) ? battle.submittedAccountIds.slice() : [],
+    requiredActorIds: Array.isArray(battle.requiredActorIds) ? battle.requiredActorIds.slice() : [],
+    submittedActorIds: Array.isArray(battle.submittedActorIds) ? battle.submittedActorIds.slice() : [],
     actors: Array.isArray(battle.actors) ? battle.actors.map(publicBattleActor) : [],
     lastEventList: battle.lastEventList && typeof battle.lastEventList === "object" ? clone(battle.lastEventList) : null,
     result: battle.result && typeof battle.result === "object" ? publicBattleResult(battle.result) : null,
@@ -1694,6 +1705,7 @@ function publicBattleActor(actor) {
     guarding: Boolean(actor.guarding),
     defeated: Boolean(actor.defeated),
     activeSkillIds: Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((value) => String(value)) : [],
+    petSkillSlots: Array.isArray(actor.petSkillSlots) ? actor.petSkillSlots.map((value) => String(value)) : [],
     passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
     schemaVersion: 1,
   };
@@ -1709,9 +1721,13 @@ function publicBattleCommand(command) {
     round: Number(command.round || 1),
     accountId: String(command.accountId || ""),
     username: String(command.username || ""),
+    actorId: String(command.actorId || ""),
+    actorKind: String(command.actorKind || BATTLE_ACTOR_KIND_PLAYER),
     actionId: String(command.actionId || ""),
+    skillId: String(command.skillId || ""),
     targetActorId: String(command.targetActorId || ""),
     targetAccountId: String(command.targetAccountId || ""),
+    targetUsername: String(command.targetUsername || ""),
     submittedAt: String(command.submittedAt || ""),
     schemaVersion: 1,
   };
@@ -1791,6 +1807,7 @@ function battlePetSnapshotFromProfilePet(pet) {
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
     activeSkillIds: stringArray(pet.activeSkillIds),
+    petSkillSlots: stringArray(pet.petSkillSlots),
     passiveSkillIds: stringArray(pet.passiveSkillIds),
     schemaVersion: 1,
   };
@@ -1895,6 +1912,8 @@ function createBattleRoomBattleState(room, now) {
     turnSeq: 0,
     requiredAccountIds: requiredBattleCommandAccountIds(room),
     submittedAccountIds: [],
+    requiredActorIds: requiredBattleCommandActorIdsFromActors(actors),
+    submittedActorIds: [],
     commands: {},
     actors,
     lastEventList: null,
@@ -1917,6 +1936,8 @@ function battleRoomBattleStateForMutation(room, now) {
     room.battle.commands = {};
   }
   room.battle.requiredAccountIds = requiredBattleCommandAccountIds(room);
+  room.battle.requiredActorIds = requiredBattleCommandActorIds(room.battle);
+  room.battle.submittedActorIds = submittedBattleCommandActorIds(room.battle);
   room.battle.submittedAccountIds = submittedBattleCommandAccountIds(room.battle);
   room.battle.phase = String(room.battle.phase || BATTLE_PHASE_COMMAND);
   room.battle.round = Math.max(1, Number(room.battle.round || 1));
@@ -2002,6 +2023,7 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex) {
     guarding: false,
     defeated: hp <= 0,
     activeSkillIds: stringArray(pet.activeSkillIds),
+    petSkillSlots: stringArray(pet.petSkillSlots),
     passiveSkillIds: stringArray(pet.passiveSkillIds),
     schemaVersion: 1,
   };
@@ -2011,31 +2033,66 @@ function requiredBattleCommandAccountIds(room) {
   return Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [];
 }
 
-function submittedBattleCommandAccountIds(battle) {
+function requiredBattleCommandActorIds(battle) {
+  return requiredBattleCommandActorIdsFromActors(Array.isArray(battle.actors) ? battle.actors : []);
+}
+
+function requiredBattleCommandActorIdsFromActors(actors) {
+  return actors
+    .filter((actor) => actor && Number(actor.hp || 0) > 0 && String(actor.accountId || "") !== "")
+    .map((actor) => String(actor.actorId || ""))
+    .filter(Boolean)
+    .sort();
+}
+
+function battleCommandValues(battle) {
   if (!battle || !battle.commands || typeof battle.commands !== "object" || Array.isArray(battle.commands)) {
     return [];
   }
-  return Object.keys(battle.commands).filter((accountId) => battle.commands[accountId]).sort();
+  return Object.values(battle.commands).filter((command) => command && typeof command === "object");
+}
+
+function submittedBattleCommandActorIds(battle) {
+  return battleCommandValues(battle)
+    .map((command) => String(command.actorId || ""))
+    .filter(Boolean)
+    .sort();
+}
+
+function submittedBattleCommandAccountIds(battle) {
+  const accountIds = new Set();
+  for (const command of battleCommandValues(battle)) {
+    const accountId = String(command.accountId || "");
+    if (accountId) {
+      accountIds.add(accountId);
+    }
+  }
+  return Array.from(accountIds).sort();
 }
 
 function normalizeBattleCommandPayload(payload, data, room, battle, account, now, randomId) {
-  const actionId = normalizeBattleActionId(payload.actionId || payload.action || payload.command || BATTLE_ACTION_ATTACK);
-  if (!actionId) {
-    return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
-  }
-  const actor = battlePlayerActorByAccountId(battle, account.accountId);
+  const actor = battleCommandActorForPayload(payload, battle, account);
   if (!actor || Number(actor.hp || 0) <= 0) {
     return fail("battle_command_actor_missing", "当前无法提交战斗命令。");
   }
-  const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, actionId);
+  if (!requiredBattleCommandActorIds(battle).includes(String(actor.actorId || ""))) {
+    return fail("battle_command_actor_missing", "当前无法提交战斗命令。");
+  }
+  const action = normalizeBattleActionForActor(payload.actionId || payload.action || payload.command || BATTLE_ACTION_ATTACK, actor);
+  if (!action.ok) {
+    return action;
+  }
+  const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, action.actionId);
   if (!targetActor) {
     return fail("battle_command_target_missing", "战斗目标不存在。");
   }
-  if (actionId === BATTLE_ACTION_ATTACK && targetActor.actorId === actor.actorId) {
-    return fail("battle_command_target_invalid", "攻击目标不能是自己。");
-  }
-  if (actionId === BATTLE_ACTION_ATTACK && String(targetActor.side || "") === String(actor.side || "")) {
-    return fail("battle_command_target_invalid", "攻击目标必须是对方。");
+  if (battleActionRequiresEnemyTarget(action.actionKind)) {
+    if (targetActor.actorId === actor.actorId) {
+      return fail("battle_command_target_invalid", "攻击目标不能是自己。");
+    }
+    if (String(targetActor.side || "") === String(actor.side || "")) {
+      return fail("battle_command_target_invalid", "攻击目标必须是对方。");
+    }
   }
   if (!requiredBattleCommandAccountIds(room).includes(targetActor.accountId)) {
     return fail("battle_command_target_invalid", "目标不在切磋房间中。");
@@ -2047,8 +2104,11 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       round: Number(battle.round || 1),
       accountId: account.accountId,
       username: account.username,
-      actionId,
       actorId: actor.actorId,
+      actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+      actionId: action.actionId,
+      actionKind: action.actionKind,
+      skillId: action.skillId || "",
       targetActorId: targetActor.actorId,
       targetAccountId: targetActor.accountId,
       targetUsername: targetActor.username,
@@ -2058,22 +2118,49 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
   });
 }
 
-function normalizeBattleActionId(value) {
+function battleCommandActorForPayload(payload, battle, account) {
+  const explicitActorId = String(payload.actorId || payload.sourceActorId || "").trim();
+  if (explicitActorId) {
+    const actor = battleActorByActorId(battle, explicitActorId);
+    return actor && String(actor.accountId || "") === account.accountId ? actor : null;
+  }
+  return battlePlayerActorByAccountId(battle, account.accountId);
+}
+
+function normalizeBattleActionForActor(value, actor) {
   const actionId = String(value || "").trim().toLowerCase();
+  const actorKind = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER);
+  if (actorKind === BATTLE_ACTOR_KIND_PET) {
+    if (actionId === BATTLE_ACTION_ATTACK || actionId === "basic_attack" || actionId === BATTLE_ACTION_PET_ATTACK) {
+      return ok({actionId: BATTLE_ACTION_PET_ATTACK, actionKind: "attack", skillId: BATTLE_ACTION_PET_ATTACK});
+    }
+    if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard" || actionId === BATTLE_ACTION_PET_DEFEND) {
+      return ok({actionId: BATTLE_ACTION_PET_DEFEND, actionKind: "defend", skillId: BATTLE_ACTION_PET_DEFEND});
+    }
+    const activeSkillIds = Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((item) => String(item || "").trim()) : [];
+    if (activeSkillIds.includes(actionId)) {
+      return ok({actionId, actionKind: "pet_skill", skillId: actionId});
+    }
+    return fail("battle_command_action_invalid", "宠物没有这个技能。");
+  }
   if (actionId === BATTLE_ACTION_ATTACK || actionId === "basic_attack") {
-    return BATTLE_ACTION_ATTACK;
+    return ok({actionId: BATTLE_ACTION_ATTACK, actionKind: "attack", skillId: ""});
   }
   if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard") {
-    return BATTLE_ACTION_DEFEND;
+    return ok({actionId: BATTLE_ACTION_DEFEND, actionKind: "defend", skillId: ""});
   }
-  return "";
+  return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
+}
+
+function battleActionRequiresEnemyTarget(actionKind) {
+  return actionKind === "attack" || actionKind === "pet_skill";
 }
 
 function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
   if (actionId === BATTLE_ACTION_DEFEND) {
     return actor;
   }
-  const explicitActorId = String(payload.targetActorId || payload.actorId || "").trim();
+  const explicitActorId = String(payload.targetActorId || "").trim();
   if (explicitActorId) {
     return battleActorByActorId(battle, explicitActorId);
   }
@@ -2100,8 +2187,8 @@ function resolveBattleRoomTurn(room, battle, now) {
     actor.guarding = false;
   }
   for (const command of orderedCommands) {
-    if (String(command.actionId || "") === BATTLE_ACTION_DEFEND) {
-      const actor = battlePlayerActorByAccountId(battle, command.accountId);
+    if (String(command.actionKind || command.actionId || "") === "defend" || String(command.actionId || "") === BATTLE_ACTION_DEFEND || String(command.actionId || "") === BATTLE_ACTION_PET_DEFEND) {
+      const actor = battleActorByActorId(battle, command.actorId);
       if (actor && Number(actor.hp || 0) > 0) {
         actor.guarding = true;
       }
@@ -2110,11 +2197,11 @@ function resolveBattleRoomTurn(room, battle, now) {
   const events = [];
   let sequence = 1;
   for (const command of orderedCommands) {
-    const actor = battlePlayerActorByAccountId(battle, command.accountId);
+    const actor = battleActorByActorId(battle, command.actorId);
     if (!actor || Number(actor.hp || 0) <= 0) {
       continue;
     }
-    if (String(command.actionId || "") === BATTLE_ACTION_DEFEND) {
+    if (String(command.actionKind || command.actionId || "") === "defend" || String(command.actionId || "") === BATTLE_ACTION_DEFEND || String(command.actionId || "") === BATTLE_ACTION_PET_DEFEND) {
       events.push(battleDefendEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
       continue;
@@ -2125,7 +2212,7 @@ function resolveBattleRoomTurn(room, battle, now) {
       sequence += 1;
       continue;
     }
-    const damage = battleAttackDamage(room, battle, command, target);
+    const damage = battleAttackDamage(room, battle, command, actor, target);
     const hpBefore = Number(target.hp || 0);
     target.hp = Math.max(0, hpBefore - damage);
     target.defeated = target.hp <= 0;
@@ -2150,7 +2237,9 @@ function resolveBattleRoomTurn(room, battle, now) {
   battle.lastEventList = eventList;
   battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([eventList]).slice(-20) : [eventList];
   battle.commands = {};
+  battle.submittedActorIds = [];
   battle.submittedAccountIds = [];
+  battle.requiredActorIds = requiredBattleCommandActorIds(battle);
   battle.round = round + 1;
   battle.phase = BATTLE_PHASE_COMMAND;
   battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
@@ -2164,7 +2253,7 @@ function resolveBattleRoomTurn(room, battle, now) {
 }
 
 function battleCommandSortValue(battle, command) {
-  const actor = battlePlayerActorByAccountId(battle, command.accountId);
+  const actor = battleActorByActorId(battle, command.actorId);
   return actor ? Number(actor.speed || 0) : 0;
 }
 
@@ -2220,15 +2309,21 @@ function battleRoomResultForLeave(room, leavingAccountId, now) {
 }
 
 function battleRoomResultForTimeout(room, battle, now) {
-  const submitted = submittedBattleCommandAccountIds(battle);
-  const required = requiredBattleCommandAccountIds(room);
-  const missing = required.filter((accountId) => !submitted.includes(accountId));
-  const winnerAccountId = submitted.length === 1 ? submitted[0] : "";
+  const submittedActorIds = submittedBattleCommandActorIds(battle);
+  const missingActorIds = requiredBattleCommandActorIds(battle).filter((actorId) => !submittedActorIds.includes(actorId));
+  const missingAccountIds = Array.from(new Set(missingActorIds
+    .map((actorId) => battleActorByActorId(battle, actorId))
+    .filter(Boolean)
+    .map((actor) => String(actor.accountId || ""))
+    .filter(Boolean)));
+  const submittedAccountIds = submittedBattleCommandAccountIds(battle);
+  const participantAccountIds = requiredBattleCommandAccountIds(room);
+  const winnerAccountId = submittedAccountIds.length === 1 && missingAccountIds.length > 0 ? submittedAccountIds[0] : "";
   return {
     reason: "timeout",
     winnerAccountId,
-    loserAccountIds: missing,
-    closedByAccountId: missing[0] || "",
+    loserAccountIds: missingAccountIds.length > 0 ? missingAccountIds : participantAccountIds.filter((accountId) => accountId !== winnerAccountId),
+    closedByAccountId: missingAccountIds[0] || "",
     endedAt: isoNow(now),
     schemaVersion: 1,
   };
@@ -2244,6 +2339,7 @@ function closeBattleRoomWithResult(room, result, now) {
   battle.phase = BATTLE_PHASE_FINISHED;
   battle.result = {...result, kind: "battle_result"};
   battle.commands = {};
+  battle.submittedActorIds = [];
   battle.submittedAccountIds = [];
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
@@ -2305,6 +2401,7 @@ function expireBattleTimeouts(data, now) {
 }
 
 function battleDefendEvent(room, battle, command, actor, round, sequence) {
+  const actionId = String(command.actionId || BATTLE_ACTION_DEFEND);
   return {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
     eventType: "defend",
@@ -2314,7 +2411,8 @@ function battleDefendEvent(room, battle, command, actor, round, sequence) {
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
-    actionId: BATTLE_ACTION_DEFEND,
+    actionId,
+    skillId: String(command.skillId || ""),
     damage: 0,
     animation: {
       actor: "defend",
@@ -2336,7 +2434,8 @@ function battleTargetMissingEvent(room, battle, command, actor, round, sequence)
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
-    actionId: BATTLE_ACTION_ATTACK,
+    actionId: String(command.actionId || BATTLE_ACTION_ATTACK),
+    skillId: String(command.skillId || ""),
     targetActorId: String(command.targetActorId || ""),
     targetAccountId: String(command.targetAccountId || ""),
     damage: 0,
@@ -2351,9 +2450,14 @@ function battleTargetMissingEvent(room, battle, command, actor, round, sequence)
 }
 
 function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage) {
+  const actionKind = String(command.actionKind || "attack");
+  const actionId = String(command.actionId || BATTLE_ACTION_ATTACK);
+  const skillId = String(command.skillId || "");
+  const eventType = actionKind === "pet_skill" ? "pet_skill" : "basic_attack";
+  const actionLabel = actionKind === "pet_skill" ? "使用技能" : "攻击了";
   return {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
-    eventType: "basic_attack",
+    eventType,
     round,
     sequence,
     actorAccountId: actor.accountId,
@@ -2364,7 +2468,8 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     targetUsername: target.username,
     targetActorId: target.actorId,
     targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
-    actionId: BATTLE_ACTION_ATTACK,
+    actionId,
+    skillId,
     damage,
     blocked: Boolean(target.guarding),
     hpBefore,
@@ -2375,16 +2480,23 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
       targetReaction: hpAfter <= 0 ? "knockdown" : "hurt",
       observer: "watch_target",
     },
-    message: `${actor.displayName || actor.username} 攻击了 ${target.displayName || target.username}，造成 ${damage} 点伤害。`,
+    message: `${actor.displayName || actor.username} ${actionLabel} ${target.displayName || target.username}，造成 ${damage} 点伤害。`,
     schemaVersion: 1,
   };
 }
 
-function battleAttackDamage(room, battle, command, target) {
-  const seed = `${room.seed || room.roomId}:${battle.turnSeq}:${battle.round}:${command.accountId}:${command.targetAccountId}`;
+function battleAttackDamage(room, battle, command, actor, target) {
+  const seed = `${room.seed || room.roomId}:${battle.turnSeq}:${battle.round}:${command.actorId}:${command.targetActorId}`;
   const roll = Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 4), 16) % 7;
   const reduction = target.guarding ? BATTLE_DEFEND_REDUCTION : 0;
-  return Math.max(1, BATTLE_BASE_ATTACK_DAMAGE + roll - reduction);
+  let baseDamage = BATTLE_BASE_ATTACK_DAMAGE;
+  if (String(actor.kind || "") === BATTLE_ACTOR_KIND_PET) {
+    baseDamage = Math.max(8, Math.round(Number(actor.attack || DEFAULT_PET_BATTLE_STATS.attack) * 0.75));
+  }
+  if (String(command.actionKind || "") === "pet_skill") {
+    baseDamage += 12;
+  }
+  return Math.max(1, baseDamage + roll - reduction);
 }
 
 function accountById(data, accountId) {

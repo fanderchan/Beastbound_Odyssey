@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 
 
 static func is_restorable_room(room: Dictionary) -> bool:
@@ -165,8 +166,15 @@ static func current_account_submitted(room: Dictionary, session: Dictionary) -> 
 	var account_id := str(session.get("accountId", "")).strip_edges()
 	if account_id == "":
 		return false
-	var submitted: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
-	return submitted.has(account_id)
+	var required_actor_ids := _account_required_actor_ids(battle, account_id)
+	if required_actor_ids.is_empty():
+		var submitted_accounts: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
+		return submitted_accounts.has(account_id)
+	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
+	for actor_id in required_actor_ids:
+		if not submitted_actor_ids.has(actor_id):
+			return false
+	return true
 
 
 static func target_command_payload_for_actor(actor: Dictionary) -> Dictionary:
@@ -204,6 +212,7 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"statusImmune": {},
 		"passiveSkillIds": _string_array(server_actor.get("passiveSkillIds", [])),
 		"activeSkillIds": _string_array(server_actor.get("activeSkillIds", [])),
+		"petSkillSlots": _string_array(server_actor.get("petSkillSlots", [])),
 		"serverActorId": str(server_actor.get("actorId", "")),
 		"serverAccountId": str(server_actor.get("accountId", "")),
 		"serverUsername": str(server_actor.get("username", "")),
@@ -224,8 +233,7 @@ static func _local_phase_for_room(battle: Dictionary, session: Dictionary) -> St
 	var account_id := str(session.get("accountId", "")).strip_edges()
 	if account_id == "":
 		return "command"
-	var submitted: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
-	return "server_waiting" if submitted.has(account_id) else "command"
+	return "server_waiting" if _account_submitted_all_required_actors(battle, account_id) else "command"
 
 
 static func _message_for_room(battle: Dictionary, session: Dictionary) -> String:
@@ -233,8 +241,55 @@ static func _message_for_room(battle: Dictionary, session: Dictionary) -> String
 	if phase == "server_waiting":
 		return "指令已提交，等待对方。"
 	if phase == "command":
+		var account_id := str(session.get("accountId", "")).strip_edges()
+		if account_id != "" and _account_submitted_some_required_actors(battle, account_id):
+			return "请选择宠物指令。"
 		return "切磋已恢复，请选择指令。"
 	return "切磋状态已同步。"
+
+
+static func _account_required_actor_ids(battle: Dictionary, account_id: String) -> Array[String]:
+	var required: Array = battle.get("requiredActorIds", []) if battle.get("requiredActorIds", []) is Array else []
+	var required_map := {}
+	for value in required:
+		var actor_id := str(value).strip_edges()
+		if actor_id != "":
+			required_map[actor_id] = true
+	var result: Array[String] = []
+	var actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var actor_id := str(actor.get("actorId", "")).strip_edges()
+		if actor_id == "" or (not required_map.is_empty() and not required_map.has(actor_id)):
+			continue
+		if str(actor.get("accountId", "")).strip_edges() == account_id and int(actor.get("hp", 0)) > 0:
+			result.append(actor_id)
+	return result
+
+
+static func _account_submitted_all_required_actors(battle: Dictionary, account_id: String) -> bool:
+	var required_actor_ids := _account_required_actor_ids(battle, account_id)
+	if required_actor_ids.is_empty():
+		var submitted_accounts: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
+		return submitted_accounts.has(account_id)
+	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
+	for actor_id in required_actor_ids:
+		if not submitted_actor_ids.has(actor_id):
+			return false
+	return true
+
+
+static func _account_submitted_some_required_actors(battle: Dictionary, account_id: String) -> bool:
+	var required_actor_ids := _account_required_actor_ids(battle, account_id)
+	if required_actor_ids.is_empty():
+		return false
+	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
+	for actor_id in required_actor_ids:
+		if submitted_actor_ids.has(actor_id):
+			return true
+	return false
 
 
 static func _actor_matches_session(server_actor: Dictionary, session: Dictionary) -> bool:
@@ -342,7 +397,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 		}
-	if event_type != "basic_attack":
+	if event_type != "basic_attack" and event_type != "pet_skill":
 		return {}
 	var target_id := _local_actor_id_for_server_actor(
 		state,
@@ -353,6 +408,32 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 	if target_id == "":
 		return {}
 	var target := BattleModel.actor_by_id(state, target_id)
+	if event_type == "pet_skill":
+		var skill_id := str(server_event.get("skillId", server_event.get("actionId", "pet_bui_charge")))
+		return {
+			"type": "skill_attack",
+			"attackerId": actor_id,
+			"targetId": target_id,
+			"targetSide": str(target.get("side", BattleModel.SIDE_ENEMY)),
+			"damage": maxi(1, int(server_event.get("damage", 1))),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"movementStyle": "melee",
+			"canDodge": false,
+			"canCritical": false,
+			"canCounter": false,
+			"canLaunch": false,
+			"skillId": skill_id,
+			"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
+			"actionId": str(server_event.get("actionId", skill_id)),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+			"serverHpBefore": int(server_event.get("hpBefore", 0)),
+			"serverHpAfter": int(server_event.get("hpAfter", 0)),
+			"serverBlocked": bool(server_event.get("blocked", false)),
+			"serverDefeated": bool(server_event.get("defeated", false)),
+		}
 	return {
 		"type": "attack",
 		"attackerId": actor_id,

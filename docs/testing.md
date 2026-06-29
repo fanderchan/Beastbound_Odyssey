@@ -61,6 +61,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
@@ -91,6 +92,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-auto-10v10-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-parity-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-driver-ab-check
@@ -286,6 +288,18 @@ Phase178 服务器人物与宠物快照自测：
 - 服务端：`cd server/node && npm test`
 - Godot 真实联网宠物快照：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check`
 - 回归：继续跑 `--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认宠物快照进入服务器 battle actors，但不把 profile 读取或宠物列表扫描放进 Godot 热路径。
+
+Phase179 联网切磋离开按钮自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 真实联网离开：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check`
+- 回归：继续跑 `--auto-server-battle-close-live-check`、`--auto-server-battle-pet-snapshot-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认“离开”走服务端关闭房间，不走本地 PvE 逃跑结算。
+
+Phase180 联网切磋宠物指令自测：
+
+- 服务端：`cd server/node && npm test`
+- Godot 真实联网宠物指令：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check`
+- 回归：继续跑 `--auto-server-battle-pet-snapshot-live-check`、`--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-server-battle-leave-ui-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认人物和宠物 actor 指令不会把 profile 读取、宠物列表扫描或战斗 UI 刷新放进 Godot 热路径。
 
 ## 验收口径
 
