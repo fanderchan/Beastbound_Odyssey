@@ -642,6 +642,7 @@ var auto_party_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
 var auto_server_movement_live_check: bool = false
+var auto_server_click_move_live_check: bool = false
 var auto_online_aoi_live_check: bool = false
 var auto_server_event_live_check: bool = false
 var auto_server_event_replay_live_check: bool = false
@@ -813,6 +814,21 @@ var has_pending_click_move_target: bool = false
 var pending_click_move_goal_cell := Vector2i.ZERO
 var pending_click_move_marker_cell := Vector2i.ZERO
 var pending_click_move_marker_point := Vector2.ZERO
+var server_step_move_active: bool = false
+var server_step_move_request_pending: bool = false
+var server_step_move_waiting_for_visual: bool = false
+var server_step_move_plan_id: int = 0
+var server_step_move_path_cells: Array[Vector2i] = []
+var server_step_move_path_index: int = 0
+var server_step_move_goal_cell := Vector2i.ZERO
+var server_step_move_marker_cell := Vector2i.ZERO
+var server_step_move_marker_point := Vector2.ZERO
+var server_step_move_visual_target_cell := Vector2i.ZERO
+var server_step_move_authority_cell := Vector2i.ZERO
+var server_step_move_authority_valid: bool = false
+var server_step_move_request_count: int = 0
+var server_step_move_ack_count: int = 0
+var server_step_move_last_error_code: String = ""
 var has_pending_interaction: bool = false
 var pending_interaction: Dictionary = {}
 var pending_interaction_approach_cell: Vector2i = Vector2i.ZERO
@@ -963,6 +979,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_online_position_live_check")
 	elif auto_server_movement_live_check:
 		call_deferred("_run_auto_server_movement_live_check")
+	elif auto_server_click_move_live_check:
+		call_deferred("_run_auto_server_click_move_live_check")
 	elif auto_online_aoi_live_check:
 		call_deferred("_run_auto_online_aoi_live_check")
 	elif auto_server_event_live_check:
@@ -1699,6 +1717,8 @@ func _apply_preview_window_args() -> void:
 			auto_online_position_live_check = true
 		elif arg == "--auto-server-movement-live-check":
 			auto_server_movement_live_check = true
+		elif arg == "--auto-server-click-move-live-check":
+			auto_server_click_move_live_check = true
 		elif arg == "--auto-online-aoi-live-check":
 			auto_online_aoi_live_check = true
 		elif arg == "--auto-server-event-live-check":
@@ -16026,6 +16046,96 @@ func _run_auto_server_movement_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_server_click_move_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var username := "cma%s" % suffix
+	username = username.substr(0, mini(20, username.length()))
+	var register_response := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		username,
+		"test1234",
+		"步进甲"
+	))
+	var register_parsed := ServerAuthClientModel.parse_auth_response(int(register_response.get("responseCode", 0)), register_response.get("body", PackedByteArray()) as PackedByteArray)
+	var session := register_parsed.get("session", {}) as Dictionary if register_parsed.get("session", {}) is Dictionary else {}
+	current_account_session = session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	_close_auth_panel(false)
+	encounter_active = false
+	active_encounter_zone.clear()
+	encounter_zone_step_count = 0
+	encounter_grace_remaining = 999.0
+	var start_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(7, -1)
+	var goal_cell := IsoMapModel.nearest_walkable_cell(map_data, start_cell + Vector2i(3, 0))
+	var path_cells: Array[Vector2i] = IsoMapModel.find_path(map_data, start_cell, goal_cell)
+	if path_cells.size() < 2:
+		goal_cell = IsoMapModel.nearest_walkable_cell(map_data, start_cell + Vector2i(0, 3))
+		path_cells = IsoMapModel.find_path(map_data, start_cell, goal_cell)
+	var expected_steps := maxi(0, path_cells.size() - 1)
+	if player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, start_cell)
+		player.clear_move_target()
+	server_step_move_authority_valid = false
+	_cancel_server_step_move()
+	var seed_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": start_cell.x,
+			"cellY": start_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var seed_parsed := ServerAuthClientModel.parse_player_position_update_response(int(seed_response.get("responseCode", 0)), seed_response.get("body", PackedByteArray()) as PackedByteArray)
+	var seed_position := seed_parsed.get("position", {}) as Dictionary if seed_parsed.get("position", {}) is Dictionary else {}
+	var seed_ok := bool(seed_parsed.get("ok", false)) and _apply_server_step_move_authority_position(seed_position)
+	var target_screen := _world_to_screen(IsoMapModel.grid_to_world(map_data, goal_cell))
+	_set_click_move_target(target_screen)
+	var guard := 0
+	while guard < 900 and (
+		server_step_move_active
+		or server_step_move_request_pending
+		or server_step_move_waiting_for_visual
+		or (player != null and player.is_auto_moving())
+	):
+		guard += 1
+		await get_tree().process_frame
+	var final_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
+	var authority_cell := server_step_move_authority_cell
+	var click_step_ok := (
+		expected_steps > 0
+		and server_step_move_request_count >= expected_steps
+		and server_step_move_ack_count >= expected_steps
+		and server_step_move_last_error_code == ""
+		and final_cell == goal_cell
+		and authority_cell == goal_cell
+		and not server_step_move_active
+		and not server_step_move_request_pending
+		and not server_step_move_waiting_for_visual
+	)
+	var status := "ok" if bool(register_parsed.get("ok", false)) and seed_ok and click_step_ok else "failed"
+	print("server click move live check ready: status=%s register=%s seed=%s click_step=%s expected_steps=%d requests=%d acks=%d final=%s authority=%s goal=%s error=%s user=%s" % [
+		status,
+		str(bool(register_parsed.get("ok", false))),
+		str(seed_ok),
+		str(click_step_ok),
+		expected_steps,
+		server_step_move_request_count,
+		server_step_move_ack_count,
+		str(final_cell),
+		str(authority_cell),
+		str(goal_cell),
+		server_step_move_last_error_code,
+		username,
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_online_aoi_live_check() -> void:
 	profile_save_enabled = false
 	var suffix := str(Time.get_ticks_usec() % 10000000000)
@@ -23291,13 +23401,21 @@ func _request_online_position_snapshot() -> void:
 
 
 func _current_online_position_payload() -> Dictionary:
-	var cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
+	var use_server_step_cell := _server_step_move_should_report_authority_cell()
+	var cell: Vector2i = Vector2i.ZERO
+	var moving: bool = false
+	if use_server_step_cell:
+		cell = server_step_move_authority_cell
+		moving = server_step_move_active or server_step_move_request_pending or server_step_move_waiting_for_visual
+	elif player != null and not map_data.is_empty():
+		cell = IsoMapModel.world_to_grid(map_data, player.global_position)
+		moving = player.is_auto_moving() if player.has_method("is_auto_moving") else false
 	return {
 		"mapId": current_map_id,
 		"cellX": cell.x,
 		"cellY": cell.y,
 		"facing": player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south",
-		"moving": player.is_auto_moving() if player != null and player.has_method("is_auto_moving") else false,
+		"moving": moving,
 		"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
 	}
 
@@ -23309,6 +23427,8 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 	var parsed := ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
 		return
+	if _is_server_account_session():
+		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
 	_apply_online_position_players(parsed.get("players", []))
 
 
@@ -23987,6 +24107,7 @@ func _update_pending_click_move(delta: float) -> void:
 		_resolve_pending_click_screen_point()
 	if has_pending_click_move_target and click_move_repath_cooldown <= 0.0:
 		_apply_pending_click_move_target()
+	_update_server_step_move()
 
 
 func _apply_pending_click_move_target() -> void:
@@ -23999,7 +24120,7 @@ func _apply_pending_click_move_target() -> void:
 	if _click_move_target_matches_current(goal_cell, marker_cell):
 		return
 	click_move_repath_apply_count += 1
-	_set_move_target_cell(goal_cell, marker_point, marker_cell)
+	_set_click_move_target_cell(goal_cell, marker_point, marker_cell)
 	click_move_repath_cooldown = CLICK_MOVE_REPATH_INTERVAL_SECONDS
 
 
@@ -24016,7 +24137,329 @@ func _clear_pending_click_move_target(reset_cooldown: bool = true) -> void:
 		click_move_repath_cooldown = 0.0
 
 
+func _set_click_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	if _should_use_server_step_movement():
+		return _set_server_step_move_target_cell(goal_cell, marker_point, marker_cell)
+	return _set_move_target_cell(goal_cell, marker_point, marker_cell)
+
+
+func _should_use_server_step_movement() -> bool:
+	return (
+		_is_server_account_session()
+		and player != null
+		and not map_data.is_empty()
+		and not battle_active
+		and not encounter_active
+		and not hang_mode_active
+	)
+
+
+func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	_clear_pending_click_move_target(false)
+	if not IsoMapModel.is_inside(map_data, goal_cell):
+		return false
+	var had_authority := server_step_move_authority_valid
+	var start_cell := _server_step_move_current_cell()
+	var safe_goal_cell := IsoMapModel.nearest_walkable_cell(map_data, goal_cell)
+	server_step_move_plan_id += 1
+	server_step_move_last_error_code = ""
+	server_step_move_request_count = 0
+	server_step_move_ack_count = 0
+	if start_cell == safe_goal_cell:
+		_cancel_server_step_move(false)
+		player.clear_move_target()
+		current_path_cells.clear()
+		current_path_cells.append(safe_goal_cell)
+		current_path_is_direct = true
+		target_cell = marker_cell
+		has_target_cell = true
+		target_marker = marker_point
+		has_target_marker = true
+		return true
+	var path_cells: Array[Vector2i] = IsoMapModel.find_path(map_data, start_cell, safe_goal_cell)
+	if path_cells.size() < 2:
+		_cancel_server_step_move(false)
+		player.clear_move_target()
+		current_path_cells.clear()
+		has_target_marker = false
+		has_target_cell = false
+		current_path_is_direct = false
+		return false
+	server_step_move_active = true
+	server_step_move_request_pending = false
+	server_step_move_waiting_for_visual = false
+	server_step_move_path_cells.clear()
+	for cell in path_cells:
+		server_step_move_path_cells.append(cell)
+	server_step_move_path_index = 0
+	server_step_move_goal_cell = safe_goal_cell
+	server_step_move_marker_cell = marker_cell
+	server_step_move_marker_point = marker_point
+	server_step_move_visual_target_cell = start_cell
+	server_step_move_authority_cell = start_cell
+	server_step_move_authority_valid = had_authority
+	player.clear_move_target()
+	current_path_cells.clear()
+	for cell in path_cells:
+		current_path_cells.append(cell)
+	current_path_is_direct = IsoMapModel.is_direct_path_clear(map_data, start_cell, safe_goal_cell)
+	target_cell = marker_cell
+	has_target_cell = true
+	target_marker = marker_point
+	has_target_marker = true
+	_request_next_server_step_move(server_step_move_plan_id)
+	return true
+
+
+func _update_server_step_move() -> void:
+	if not server_step_move_active:
+		return
+	if server_step_move_request_pending:
+		return
+	if server_step_move_waiting_for_visual:
+		if player != null and player.is_auto_moving():
+			return
+		server_step_move_waiting_for_visual = false
+		if server_step_move_path_index >= server_step_move_path_cells.size() - 1:
+			_finish_server_step_move()
+			return
+	if server_step_move_path_index < server_step_move_path_cells.size() - 1:
+		_request_next_server_step_move(server_step_move_plan_id)
+	else:
+		_finish_server_step_move()
+
+
+func _request_next_server_step_move(plan_id: int) -> void:
+	if plan_id != server_step_move_plan_id or not server_step_move_active or server_step_move_request_pending:
+		return
+	if not _is_server_account_session() or server_step_move_path_index >= server_step_move_path_cells.size() - 1:
+		return
+	if not server_step_move_authority_valid:
+		var seeded := await _seed_server_step_move_position(plan_id)
+		if not seeded:
+			return
+	var from_cell := server_step_move_authority_cell
+	if server_step_move_path_cells[server_step_move_path_index] != from_cell:
+		if not _rebuild_server_step_move_path_from_authority():
+			return
+	var to_cell := server_step_move_path_cells[server_step_move_path_index + 1]
+	server_step_move_request_pending = true
+	server_step_move_request_count += 1
+	var response := await _auto_http_request_spec(ServerAuthClientModel.movement_step_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		{
+			"mapId": current_map_id,
+			"fromCellX": from_cell.x,
+			"fromCellY": from_cell.y,
+			"toCellX": to_cell.x,
+			"toCellY": to_cell.y,
+			"facing": _facing_for_grid_step(from_cell, to_cell),
+			"moving": true,
+			"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+		}
+	))
+	if plan_id != server_step_move_plan_id:
+		return
+	server_step_move_request_pending = false
+	var parsed := ServerAuthClientModel.parse_movement_step_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if not bool(parsed.get("ok", false)):
+		_handle_server_step_move_failure(parsed)
+		return
+	var position := parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	if not _apply_server_step_move_authority_position(position):
+		_handle_server_step_move_failure({"code": "movement_position_missing", "message": "服务器位置缺失。"})
+		return
+	_apply_online_position_players(parsed.get("players", []))
+	server_step_move_ack_count += 1
+	server_step_move_last_error_code = ""
+	var ack_cell := server_step_move_authority_cell
+	server_step_move_path_index = mini(server_step_move_path_index + 1, server_step_move_path_cells.size() - 1)
+	server_step_move_visual_target_cell = ack_cell
+	server_step_move_waiting_for_visual = true
+	if player != null:
+		var step_points: Array[Vector2] = [IsoMapModel.grid_to_world(map_data, ack_cell)]
+		player.set_path(step_points)
+	_sync_server_step_current_path_cells()
+	queue_redraw()
+
+
+func _seed_server_step_move_position(plan_id: int) -> bool:
+	if not _is_server_account_session() or player == null or map_data.is_empty():
+		_cancel_server_step_move()
+		return false
+	var cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		{
+			"mapId": current_map_id,
+			"cellX": cell.x,
+			"cellY": cell.y,
+			"facing": player.get_facing_key() if player.has_method("get_facing_key") else "south",
+			"moving": false,
+			"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+		}
+	))
+	if plan_id != server_step_move_plan_id:
+		return false
+	var parsed := ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if not bool(parsed.get("ok", false)):
+		server_step_move_last_error_code = str(parsed.get("code", "movement_seed_failed"))
+		_cancel_server_step_move()
+		return false
+	var position := parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	_apply_online_position_players(parsed.get("players", []))
+	if not _apply_server_step_move_authority_position(position):
+		server_step_move_last_error_code = "movement_seed_missing_position"
+		_cancel_server_step_move()
+		return false
+	return _rebuild_server_step_move_path_from_authority()
+
+
+func _handle_server_step_move_failure(parsed: Dictionary) -> void:
+	server_step_move_last_error_code = str(parsed.get("code", "movement_step_failed"))
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	var position := response.get("position", {}) as Dictionary if response.get("position", {}) is Dictionary else {}
+	if server_step_move_last_error_code == "movement_origin_mismatch" and _apply_server_step_move_authority_position(position):
+		if _rebuild_server_step_move_path_from_authority():
+			_request_next_server_step_move(server_step_move_plan_id)
+			return
+	_cancel_server_step_move()
+	if player != null:
+		player.clear_move_target()
+	current_path_cells.clear()
+	has_target_marker = false
+	has_target_cell = false
+	current_path_is_direct = false
+	_set_world_log_message("位置已同步，请重新点击。")
+	queue_redraw()
+
+
+func _finish_server_step_move() -> void:
+	if not server_step_move_active:
+		return
+	server_step_move_active = false
+	server_step_move_request_pending = false
+	server_step_move_waiting_for_visual = false
+	server_step_move_path_index = maxi(0, server_step_move_path_cells.size() - 1)
+	_sync_server_step_current_path_cells()
+	_publish_server_step_move_stop(server_step_move_plan_id)
+
+
+func _publish_server_step_move_stop(plan_id: int) -> void:
+	if not _is_server_account_session() or not server_step_move_authority_valid:
+		return
+	var cell := server_step_move_authority_cell
+	var response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		{
+			"mapId": current_map_id,
+			"cellX": cell.x,
+			"cellY": cell.y,
+			"facing": player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south",
+			"moving": false,
+			"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+		}
+	))
+	if plan_id != server_step_move_plan_id:
+		return
+	var parsed := ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
+		_apply_online_position_players(parsed.get("players", []))
+
+
+func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
+	if invalidate_plan:
+		server_step_move_plan_id += 1
+	server_step_move_active = false
+	server_step_move_request_pending = false
+	server_step_move_waiting_for_visual = false
+	server_step_move_path_cells.clear()
+	server_step_move_path_index = 0
+
+
+func _server_step_move_current_cell() -> Vector2i:
+	if server_step_move_authority_valid and current_map_id != "":
+		return server_step_move_authority_cell
+	if player != null and not map_data.is_empty():
+		return IsoMapModel.world_to_grid(map_data, player.global_position)
+	return Vector2i.ZERO
+
+
+func _server_step_move_should_report_authority_cell() -> bool:
+	return (
+		_is_server_account_session()
+		and server_step_move_authority_valid
+		and (
+			server_step_move_active
+			or server_step_move_request_pending
+			or server_step_move_waiting_for_visual
+		)
+	)
+
+
+func _apply_server_step_move_authority_position(position: Dictionary) -> bool:
+	if position.is_empty():
+		return false
+	var map_id := str(position.get("mapId", current_map_id))
+	if map_id != current_map_id:
+		return false
+	server_step_move_authority_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+	server_step_move_authority_valid = true
+	return true
+
+
+func _rebuild_server_step_move_path_from_authority() -> bool:
+	if not server_step_move_active or not server_step_move_authority_valid:
+		_cancel_server_step_move()
+		return false
+	var path_cells: Array[Vector2i] = IsoMapModel.find_path(map_data, server_step_move_authority_cell, server_step_move_goal_cell)
+	if path_cells.size() < 2:
+		_cancel_server_step_move()
+		return false
+	server_step_move_path_cells.clear()
+	for cell in path_cells:
+		server_step_move_path_cells.append(cell)
+	server_step_move_path_index = 0
+	current_path_cells.clear()
+	for cell in path_cells:
+		current_path_cells.append(cell)
+	current_path_is_direct = IsoMapModel.is_direct_path_clear(map_data, server_step_move_authority_cell, server_step_move_goal_cell)
+	return true
+
+
+func _sync_server_step_current_path_cells() -> void:
+	current_path_cells.clear()
+	for index in range(server_step_move_path_index, server_step_move_path_cells.size()):
+		current_path_cells.append(server_step_move_path_cells[index])
+
+
+func _facing_for_grid_step(from_cell: Vector2i, to_cell: Vector2i) -> String:
+	var delta := to_cell - from_cell
+	if delta.x > 0 and delta.y < 0:
+		return "northeast"
+	if delta.x > 0 and delta.y > 0:
+		return "southeast"
+	if delta.x < 0 and delta.y < 0:
+		return "northwest"
+	if delta.x < 0 and delta.y > 0:
+		return "southwest"
+	if delta.x > 0:
+		return "east"
+	if delta.x < 0:
+		return "west"
+	if delta.y < 0:
+		return "north"
+	if delta.y > 0:
+		return "south"
+	return player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south"
+
+
 func _set_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	_cancel_server_step_move()
 	_clear_pending_click_move_target(false)
 	if not IsoMapModel.is_inside(map_data, goal_cell):
 		return false
@@ -34505,6 +34948,7 @@ func _stop_hang_activity(message: String = "", clear_stone: bool = true) -> void
 
 
 func _clear_navigation_state() -> void:
+	_cancel_server_step_move()
 	_clear_pending_click_move_target()
 	current_path_cells.clear()
 	current_path_is_direct = false

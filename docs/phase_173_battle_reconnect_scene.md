@@ -64,6 +64,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase174：逐步把普通点击寻路接入服务器 step ACK。
+1. Phase174 已完成：普通点击寻路接入服务器 step ACK。
 2. Phase175：把服务器 `battle_event_list` 接入共享 10v10 战斗播放模板。
 3. Phase176：切磋房间离开、取消、超时和战斗结果回写。

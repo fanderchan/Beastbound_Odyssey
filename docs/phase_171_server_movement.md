@@ -97,4 +97,4 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 1. Phase172：房间内回合命令提交和服务器战斗事件列表已完成第一版。
 2. Phase173：战斗房间断线重连恢复到玩家可见战斗场景。
-3. Phase174：逐步把普通点击寻路接入服务器 step ACK。
+3. Phase174 已完成：普通点击寻路接入服务器 step ACK。
