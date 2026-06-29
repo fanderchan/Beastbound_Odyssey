@@ -54,7 +54,7 @@
 - 宠物暂时只是服务器 actor，可以作为攻击目标；还不能单独下宠物技能命令。
 - 服务器不在战斗中实时读取 profile，也不回写宠物受伤到正式 profile。
 - 未同步服务器 profile 的账号继续使用 Phase177 的纯人物轻量 actor。
-- 完整队伍快照、宠物技能、换宠、道具、逃跑和结算回写留到后续阶段。
+- 完整队伍快照、宠物技能、换宠、道具和结算回写留到后续阶段。
 
 ## 验证
 
@@ -65,6 +65,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --movement-spam-click-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1600 -- --perf-probe
 ```
@@ -79,6 +80,6 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 
 ## 下一步
 
-1. Phase179：正式玩家 UI 接入“离开切磋”，同时保留服务端权威关闭。
+1. Phase179：正式玩家 UI 接入“离开切磋”，同时保留服务端权威关闭。已完成，见 `docs/phase_179_server_battle_leave_ui.md`。
 2. Phase180：服务端宠物命令和基础宠物技能事件。
 3. Phase181：逐步把地图碰撞、玩家碰撞和移动速度校验服务端化。
