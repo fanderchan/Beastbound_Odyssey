@@ -62,7 +62,7 @@ const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 99 * 1000;
-const BATTLE_RECONNECT_GRACE_MS = 30 * 1000;
+const BATTLE_RECONNECT_GRACE_MS = 300 * 1000;
 const BATTLE_ACTOR_KIND_PLAYER = "player";
 const BATTLE_ACTOR_KIND_PET = "pet";
 const BATTLE_PET_MAX_PER_PARTICIPANT = 5;
@@ -2153,6 +2153,13 @@ function markBattleConnectionForAccount(data, accountId, connected, now = () => 
       disconnectedAt: connected ? "" : (previous.disconnectedAt || timestamp),
       schemaVersion: 1,
     };
+    if (connected && previous.disconnectedAt) {
+      const battle = battleRoomBattleStateForMutation(room, now);
+      if (String(battle.phase || "") === BATTLE_PHASE_COMMAND) {
+        battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
+        battle.updatedAt = timestamp;
+      }
+    }
     if (
       Boolean(previous.connected) !== next.connected ||
       String(previous.disconnectedAt || "") !== String(next.disconnectedAt || "") ||
@@ -2183,6 +2190,18 @@ function battleRoomReconnectExpiredAccountIds(room, now) {
     });
 }
 
+function battleRoomHasDisconnectedParticipant(room) {
+  if (!room || room.status === BATTLE_ROOM_CLOSED) {
+    return false;
+  }
+  const state = battleRoomConnectionStateForMutation(room);
+  return (Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [])
+    .some((accountId) => {
+      const entry = state[accountId] || {};
+      return !entry.connected && Boolean(entry.disconnectedAt);
+    });
+}
+
 function nextBattleMaintenanceDelayMs(data, now) {
   if (!data) {
     return null;
@@ -2203,7 +2222,8 @@ function nextBattleMaintenanceDelayMs(data, now) {
       continue;
     }
     const battle = battleRoomBattleStateForMutation(room, now);
-    if (String(battle.phase || "") === BATTLE_PHASE_COMMAND && battle.commandDeadlineAt) {
+    const hasDisconnectedParticipant = battleRoomHasDisconnectedParticipant(room);
+    if (!hasDisconnectedParticipant && String(battle.phase || "") === BATTLE_PHASE_COMMAND && battle.commandDeadlineAt) {
       const commandMs = Date.parse(battle.commandDeadlineAt);
       if (Number.isFinite(commandMs)) {
         nextAt = Math.min(nextAt, commandMs);
@@ -3327,6 +3347,8 @@ function expireBattleTimeouts(data, now) {
     let result = null;
     if (disconnectedAccountIds.length > 0) {
       result = battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now);
+    } else if (battleRoomHasDisconnectedParticipant(room)) {
+      continue;
     } else if (
       String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
       battle.commandDeadlineAt &&
