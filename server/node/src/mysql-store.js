@@ -3,6 +3,7 @@
 const {execFileSync} = require("node:child_process");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
+const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
@@ -180,15 +181,15 @@ function createMysqlAuthStore(options = {}) {
   return {
     load() {
       ensureSchema();
-      const output = runMysql(config, config.database, "SELECT JSON_UNQUOTE(JSON_EXTRACT(document_json, '$')) FROM server_state WHERE state_key = 'auth';", {"silent": true});
+      const output = runMysql(config, config.database, "SELECT CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth';");
       const text = output.trim();
       if (!text) {
         return {};
       }
       try {
         return JSON.parse(text);
-      } catch {
-        return {};
+      } catch (error) {
+        throw new Error(`MySQL 账号状态 JSON 解析失败：${error.message}`);
       }
     },
     save(nextData) {
@@ -288,6 +289,7 @@ function mysqlConfig(options) {
     password: options.password || process.env.BEASTBOUND_MYSQL_PASSWORD || "",
     database: options.database || process.env.BEASTBOUND_MYSQL_DATABASE || DEFAULT_DATABASE,
     createDatabase: boolConfig(options.createDatabase, process.env.BEASTBOUND_MYSQL_CREATE_DATABASE),
+    outputMaxBufferBytes: Number(options.outputMaxBufferBytes || process.env.BEASTBOUND_MYSQL_OUTPUT_MAX_BUFFER_BYTES || DEFAULT_OUTPUT_MAX_BUFFER_BYTES),
   };
 }
 
@@ -311,6 +313,7 @@ function runMysql(config, database, sql, options = {}) {
     return execFileSync(config.mysqlPath, args, {
       "encoding": "utf8",
       "input": sql,
+      "maxBuffer": config.outputMaxBufferBytes,
       "stdio": ["pipe", "pipe", "pipe"],
     });
   } catch (error) {

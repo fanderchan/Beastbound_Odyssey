@@ -154,6 +154,58 @@ process.stdin.on("end", () => {
   }
 });
 
+test("mysql store loads state documents larger than the Node default buffer", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-load-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  stdin += chunk;
+});
+process.stdin.on("end", () => {
+  if (!stdin.includes("SELECT CAST(document_json AS CHAR) FROM server_state")) {
+    return;
+  }
+  const largeNote = "x".repeat(2 * 1024 * 1024);
+  process.stdout.write(JSON.stringify({
+    accounts: {
+      biguser: {
+        accountId: "acc_biguser",
+        username: "biguser",
+        displayName: "Big User",
+        role: "player",
+        createdAt: "2026-06-30T00:00:00.000Z",
+        updatedAt: "2026-06-30T00:00:00.000Z",
+        note: largeNote,
+      },
+    },
+    sessions: {},
+    profileBindings: {},
+    profiles: {},
+    authEvents: [],
+    serviceEvents: [],
+  }) + "\\n");
+});
+`, {"mode": 0o755});
+  try {
+    const store = createMysqlAuthStore({
+      "mysqlPath": fakeMysqlPath,
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "tester",
+      "password": "",
+      "database": "beastbound_test",
+      "createDatabase": false,
+    });
+    const loaded = store.load();
+    assert.equal(Object.keys(loaded.accounts || {}).length, 1);
+    assert.equal(loaded.accounts.biguser.note.length, 2 * 1024 * 1024);
+  } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
 test("register/login/session keeps players away from GM tools", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
 
