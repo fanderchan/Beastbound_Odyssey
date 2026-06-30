@@ -93,13 +93,20 @@ function createAuthService(options = {}) {
   const randomId = options.randomId || (() => crypto.randomUUID());
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
   const serviceEventListeners = new Set();
+  let cachedData = null;
 
   function load() {
-    return normalizeData(store.load());
+    if (!cachedData) {
+      cachedData = normalizeData(store.load());
+      cachedData.playerPositions = {};
+    }
+    return cachedData;
   }
 
   function save(data) {
-    store.save(normalizeData(data));
+    const normalized = normalizeData(data);
+    store.save(persistentDataForStore(normalized));
+    cachedData = normalized;
   }
 
   function emitServiceEvent(event) {
@@ -420,7 +427,6 @@ function createAuthService(options = {}) {
       ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
       : null;
     data.playerPositions[resolved.account.accountId] = position;
-    save(data);
     return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
       authority: "client_snapshot",
     });
@@ -475,7 +481,6 @@ function createAuthService(options = {}) {
     position.authority = "server_step";
     const previousPosition = publicPlayerPosition(currentPosition);
     data.playerPositions[resolved.account.accountId] = position;
-    save(data);
     return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
       authority: "server_step",
       movement: {
@@ -1390,7 +1395,7 @@ function createAuthService(options = {}) {
   }
 
   function snapshot() {
-    return load();
+    return clone(load());
   }
 
   return {
@@ -1492,6 +1497,12 @@ function normalizeData(raw) {
     serviceEventSeq,
     serviceEvents,
   };
+}
+
+function persistentDataForStore(data) {
+  const persistent = normalizeData(data);
+  persistent.playerPositions = {};
+  return persistent;
 }
 
 function createSessionForAccount(data, account, now, randomBytes) {

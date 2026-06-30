@@ -18,6 +18,28 @@ const {
   createMysqlAuthStore,
 } = require("../src/mysql-store");
 
+function createCountingAuthStore(initialData = null) {
+  const store = createMemoryAuthStore(initialData);
+  const counts = {
+    loads: 0,
+    saves: 0,
+  };
+  return {
+    counts,
+    load() {
+      counts.loads += 1;
+      return store.load();
+    },
+    save(nextData) {
+      counts.saves += 1;
+      store.save(nextData);
+    },
+    snapshot() {
+      return store.load();
+    },
+  };
+}
+
 function battleProfile(name, playerStats, petStats = null) {
   const petId = petStats && petStats.petId ? petStats.petId : "";
   const profile = {
@@ -541,6 +563,41 @@ test("server movement steps are authoritative and bounded", () => {
   });
   assert.equal(jump.ok, false);
   assert.equal(jump.code, "movement_step_too_far");
+});
+
+test("online positions are runtime-only and do not trigger store writes", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({"store": store});
+  const scout = service.register({"username": "movepersist", "password": "test1234", "displayName": "移动持久化"});
+  assert.equal(scout.ok, true);
+  const loadsAfterRegister = store.counts.loads;
+  const savesAfterRegister = store.counts.saves;
+
+  const seed = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(seed.ok, true);
+  const step = service.movePlayerStep(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 10,
+    "fromCellY": 10,
+    "toCellX": 11,
+    "toCellY": 10,
+    "moving": false,
+  });
+  assert.equal(step.ok, true);
+  assert.equal(step.position.cellX, 11);
+  assert.equal(store.counts.loads, loadsAfterRegister);
+  assert.equal(store.counts.saves, savesAfterRegister);
+
+  const runtimePosition = service.snapshot().playerPositions[scout.account.accountId];
+  assert.equal(runtimePosition.cellX, 11);
+  assert.equal(runtimePosition.authority, "server_step");
+  assert.equal(store.snapshot().playerPositions[scout.account.accountId], undefined);
 });
 
 test("duel battle rooms resolve turn commands into event lists", () => {

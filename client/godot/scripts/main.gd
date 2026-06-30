@@ -872,6 +872,7 @@ var server_step_move_request_count: int = 0
 var server_step_move_ack_count: int = 0
 var server_step_move_last_error_code: String = ""
 var server_step_move_sync_retry_count: int = 0
+var server_step_world_move_enabled: bool = false
 var has_pending_interaction: bool = false
 var pending_interaction: Dictionary = {}
 var pending_interaction_approach_cell: Vector2i = Vector2i.ZERO
@@ -1581,6 +1582,8 @@ func _apply_preview_window_args() -> void:
 			startup_auth_base_url = arg.substr("--server-url=".length())
 		elif arg.begins_with("--auth-server-url="):
 			startup_auth_base_url = arg.substr("--auth-server-url=".length())
+		elif arg == "--server-step-world-move":
+			server_step_world_move_enabled = true
 		elif arg == "--preview-mobile-portrait":
 			pass
 		elif arg == "--full-client-preview":
@@ -16257,13 +16260,16 @@ func _run_auto_online_position_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _live_check_username(prefix: String) -> String:
+	var clean_prefix := prefix.to_lower().substr(0, mini(6, prefix.length()))
+	var seed := "%s:%s:%d:%d:%d" % [clean_prefix, str(Time.get_unix_time_from_system()), OS.get_process_id(), Time.get_ticks_usec(), randi()]
+	return ("%s%s" % [clean_prefix, seed.sha256_text().substr(0, 14)]).substr(0, 20)
+
+
 func _run_auto_server_movement_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var challenger_username := "mva%s" % suffix
-	var opponent_username := "mvb%s" % suffix
-	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
-	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_username := _live_check_username("mva")
+	var opponent_username := _live_check_username("mvb")
 	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		challenger_username,
@@ -16417,9 +16423,7 @@ func _run_auto_server_movement_live_check() -> void:
 
 func _run_auto_server_click_move_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var username := "cma%s" % suffix
-	username = username.substr(0, mini(20, username.length()))
+	var username := _live_check_username("cma")
 	var register_response := await _auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		username,
@@ -16461,8 +16465,7 @@ func _run_auto_server_click_move_live_check() -> void:
 		}
 	))
 	var seed_parsed := ServerAuthClientModel.parse_player_position_update_response(int(seed_response.get("responseCode", 0)), seed_response.get("body", PackedByteArray()) as PackedByteArray)
-	var seed_position := seed_parsed.get("position", {}) as Dictionary if seed_parsed.get("position", {}) is Dictionary else {}
-	var seed_ok := bool(seed_parsed.get("ok", false)) and _apply_server_step_move_authority_position(seed_position)
+	var seed_ok := bool(seed_parsed.get("ok", false))
 	var target_screen := _world_to_screen(IsoMapModel.grid_to_world(map_data, goal_cell))
 	_set_click_move_target(target_screen)
 	var guard := 0
@@ -16475,30 +16478,47 @@ func _run_auto_server_click_move_live_check() -> void:
 		guard += 1
 		await get_tree().process_frame
 	var final_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
-	var authority_cell := server_step_move_authority_cell
-	var click_step_ok := (
+	var publish_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": final_cell.x,
+			"cellY": final_cell.y,
+			"facing": player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south",
+			"moving": false,
+		}
+	))
+	var publish_parsed := ServerAuthClientModel.parse_player_position_update_response(int(publish_response.get("responseCode", 0)), publish_response.get("body", PackedByteArray()) as PackedByteArray)
+	var publish_position := publish_parsed.get("position", {}) as Dictionary if publish_parsed.get("position", {}) is Dictionary else {}
+	var publish_ok := (
+		bool(publish_parsed.get("ok", false))
+		and int(publish_position.get("cellX", -999)) == final_cell.x
+		and int(publish_position.get("cellY", -999)) == final_cell.y
+	)
+	var local_click_ok := (
 		expected_steps > 0
-		and server_step_move_request_count >= expected_steps
-		and server_step_move_ack_count >= expected_steps
+		and server_step_move_request_count == 0
+		and server_step_move_ack_count == 0
 		and server_step_move_last_error_code == ""
 		and final_cell == goal_cell
-		and authority_cell == goal_cell
 		and not server_step_move_active
 		and not server_step_move_request_pending
 		and not server_step_move_waiting_for_visual
+		and world_log_message.find("位置已同步") < 0
 	)
-	var status := "ok" if bool(register_parsed.get("ok", false)) and seed_ok and click_step_ok else "failed"
+	var status := "ok" if bool(register_parsed.get("ok", false)) and seed_ok and local_click_ok and publish_ok else "failed"
 	var register_body := register_response.get("body", PackedByteArray()) as PackedByteArray
-	print("server click move live check ready: status=%s register=%s seed=%s click_step=%s expected_steps=%d requests=%d acks=%d final=%s authority=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
+	print("server click move live check ready: status=%s register=%s seed=%s local_click=%s publish=%s expected_steps=%d requests=%d acks=%d final=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
 		status,
 		str(bool(register_parsed.get("ok", false))),
 		str(seed_ok),
-		str(click_step_ok),
+		str(local_click_ok),
+		str(publish_ok),
 		expected_steps,
 		server_step_move_request_count,
 		server_step_move_ack_count,
 		str(final_cell),
-		str(authority_cell),
 		str(goal_cell),
 		server_step_move_last_error_code,
 		username,
@@ -16511,9 +16531,8 @@ func _run_auto_server_click_move_live_check() -> void:
 
 func _run_auto_server_click_move_reject_live_check() -> void:
 	profile_save_enabled = false
-	var suffix := str(Time.get_ticks_usec() % 10000000000)
-	var username := "cmr%s" % suffix
-	username = username.substr(0, mini(20, username.length()))
+	server_step_world_move_enabled = true
+	var username := _live_check_username("cmr")
 	var register_response := await _auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		username,
@@ -26222,7 +26241,7 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 	var parsed := ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
 		return
-	if _is_server_account_session():
+	if _server_step_move_should_report_authority_cell():
 		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
 	_apply_online_position_players(parsed.get("players", []))
 
@@ -26977,7 +26996,8 @@ func _set_click_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, mar
 
 func _should_use_server_step_movement() -> bool:
 	return (
-		_is_server_account_session()
+		server_step_world_move_enabled
+		and _is_server_account_session()
 		and player != null
 		and not map_data.is_empty()
 		and not battle_active
