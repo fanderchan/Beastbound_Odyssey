@@ -463,16 +463,27 @@ static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id:
 	var account := account_id.strip_edges()
 	var name := username.strip_edges()
 	var actors: Array = state.get("actors", []) if state.get("actors", []) is Array else []
-	for value in actors:
-		if not (value is Dictionary):
-			continue
-		var actor := value as Dictionary
-		if actor_id != "" and str(actor.get("serverActorId", "")).strip_edges() == actor_id:
-			return str(actor.get("id", ""))
-		if account != "" and str(actor.get("serverAccountId", "")).strip_edges() == account:
-			return str(actor.get("id", ""))
-		if name != "" and str(actor.get("serverUsername", "")).strip_edges() == name:
-			return str(actor.get("id", ""))
+	if actor_id != "":
+		for value in actors:
+			if not (value is Dictionary):
+				continue
+			var actor := value as Dictionary
+			if str(actor.get("serverActorId", "")).strip_edges() == actor_id:
+				return str(actor.get("id", ""))
+	if account != "":
+		for value in actors:
+			if not (value is Dictionary):
+				continue
+			var actor := value as Dictionary
+			if str(actor.get("serverAccountId", "")).strip_edges() == account:
+				return str(actor.get("id", ""))
+	if name != "":
+		for value in actors:
+			if not (value is Dictionary):
+				continue
+			var actor := value as Dictionary
+			if str(actor.get("serverUsername", "")).strip_edges() == name:
+				return str(actor.get("id", ""))
 	return ""
 
 

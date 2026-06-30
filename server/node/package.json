@@ -6,7 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/http-server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "ops": "node scripts/server-ops.js",
+    "mysql:smoke": "node scripts/mysql-live-smoke.js"
   },
   "engines": {
     "node": ">=22"

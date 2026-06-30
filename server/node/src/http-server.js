@@ -211,10 +211,11 @@ function bearerToken(req) {
 
 if (require.main === module) {
   const port = Number(process.env.BEASTBOUND_AUTH_PORT || 8787);
+  const host = process.env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
   const service = createAuthService({"store": createDefaultStore()});
   const server = createHttpServer({service});
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`Beastbound auth server listening on http://127.0.0.1:${port}`);
+  server.listen(port, host, () => {
+    console.log(`Beastbound auth server listening on http://${host}:${port}`);
   });
 }
 

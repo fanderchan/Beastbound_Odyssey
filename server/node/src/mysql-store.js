@@ -12,8 +12,10 @@ function createMysqlAuthStore(options = {}) {
     if (schemaReady) {
       return;
     }
-    const database = checkedIdentifier(config.database);
-    runMysql(config, "", `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;`);
+    if (config.createDatabase) {
+      const database = checkedIdentifier(config.database);
+      runMysql(config, "", `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;`);
+    }
     runMysql(config, config.database, `
       CREATE TABLE IF NOT EXISTS server_state (
         state_key VARCHAR(64) PRIMARY KEY,
@@ -32,10 +34,20 @@ function createMysqlAuthStore(options = {}) {
       CREATE TABLE IF NOT EXISTS sessions (
         session_id VARCHAR(80) PRIMARY KEY,
         account_id VARCHAR(80) NOT NULL,
+        token_hash CHAR(64) NOT NULL,
         expires_at VARCHAR(40) NOT NULL,
         revoked_at VARCHAR(40) NULL,
         document_json JSON NOT NULL,
-        INDEX idx_sessions_account_id (account_id)
+        INDEX idx_sessions_account_id (account_id),
+        UNIQUE KEY uq_sessions_token_hash (token_hash)
+      );
+      CREATE TABLE IF NOT EXISTS profile_bindings (
+        account_id VARCHAR(80) PRIMARY KEY,
+        player_id VARCHAR(80) NOT NULL,
+        profile_revision INT NOT NULL DEFAULT 0,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        UNIQUE KEY uq_profile_bindings_player_id (player_id)
       );
       CREATE TABLE IF NOT EXISTS profiles (
         player_id VARCHAR(80) PRIMARY KEY,
@@ -118,6 +130,41 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_battle_rooms_status (status)
       );
+      CREATE TABLE IF NOT EXISTS gm_user_grants (
+        account_id VARCHAR(80) PRIMARY KEY,
+        username VARCHAR(32) NOT NULL,
+        enabled TINYINT NOT NULL DEFAULT 1,
+        expires_at VARCHAR(40) NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_gm_user_grants_username (username)
+      );
+      CREATE TABLE IF NOT EXISTS gm_command_grants (
+        account_id VARCHAR(80) NOT NULL,
+        command_id VARCHAR(80) NOT NULL,
+        enabled TINYINT NOT NULL DEFAULT 1,
+        document_json JSON NOT NULL,
+        PRIMARY KEY (account_id, command_id)
+      );
+      CREATE TABLE IF NOT EXISTS gm_command_audit (
+        audit_id VARCHAR(96) PRIMARY KEY,
+        username VARCHAR(32) NOT NULL,
+        command_id VARCHAR(80) NOT NULL,
+        ok TINYINT NOT NULL DEFAULT 0,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_gm_command_audit_username_created (username, created_at),
+        INDEX idx_gm_command_audit_command_created (command_id, created_at)
+      );
+      CREATE TABLE IF NOT EXISTS auth_events (
+        event_id VARCHAR(96) PRIMARY KEY,
+        event_type VARCHAR(64) NOT NULL,
+        username VARCHAR(32) NOT NULL,
+        ok TINYINT NOT NULL DEFAULT 0,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_auth_events_username_created (username, created_at),
+        INDEX idx_auth_events_type_created (event_type, created_at)
+      );
       CREATE TABLE IF NOT EXISTS service_events (
         event_seq BIGINT PRIMARY KEY,
         event_id VARCHAR(96) NOT NULL,
@@ -151,6 +198,7 @@ function createMysqlAuthStore(options = {}) {
       statements.push(upsertStateStatement(nextData));
       statements.push("DELETE FROM accounts");
       statements.push("DELETE FROM sessions");
+      statements.push("DELETE FROM profile_bindings");
       statements.push("DELETE FROM profiles");
       statements.push("DELETE FROM mail_messages");
       statements.push("DELETE FROM parties");
@@ -159,12 +207,19 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM player_positions");
       statements.push("DELETE FROM battle_invites");
       statements.push("DELETE FROM battle_rooms");
+      statements.push("DELETE FROM gm_user_grants");
+      statements.push("DELETE FROM gm_command_grants");
+      statements.push("DELETE FROM gm_command_audit");
+      statements.push("DELETE FROM auth_events");
       statements.push("DELETE FROM service_events");
       for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
         statements.push(insertAccountStatement(account));
       }
       for (const session of Object.values(objectOrEmpty(nextData.sessions))) {
         statements.push(insertSessionStatement(session));
+      }
+      for (const binding of Object.values(objectOrEmpty(nextData.profileBindings))) {
+        statements.push(insertProfileBindingStatement(binding));
       }
       for (const profile of Object.values(objectOrEmpty(nextData.profiles))) {
         statements.push(insertProfileStatement(profile));
@@ -192,6 +247,27 @@ function createMysqlAuthStore(options = {}) {
       for (const room of Object.values(objectOrEmpty(nextData.battleRooms))) {
         statements.push(insertBattleRoomStatement(room));
       }
+      for (const grant of Object.values(objectOrEmpty(nextData.gmUserGrants))) {
+        statements.push(insertGmUserGrantStatement(grant));
+      }
+      for (const grants of Object.values(objectOrEmpty(nextData.gmCommandGrants))) {
+        if (!Array.isArray(grants)) {
+          continue;
+        }
+        for (const grant of grants) {
+          statements.push(insertGmCommandGrantStatement(grant));
+        }
+      }
+      if (Array.isArray(nextData.gmCommandAudit)) {
+        for (const audit of nextData.gmCommandAudit) {
+          statements.push(insertGmCommandAuditStatement(audit));
+        }
+      }
+      if (Array.isArray(nextData.authEvents)) {
+        for (const event of nextData.authEvents) {
+          statements.push(insertAuthEventStatement(event));
+        }
+      }
       if (Array.isArray(nextData.serviceEvents)) {
         for (const event of nextData.serviceEvents) {
           statements.push(insertServiceEventStatement(event));
@@ -211,6 +287,7 @@ function mysqlConfig(options) {
     user: options.user || process.env.BEASTBOUND_MYSQL_USER || "root",
     password: options.password || process.env.BEASTBOUND_MYSQL_PASSWORD || "",
     database: options.database || process.env.BEASTBOUND_MYSQL_DATABASE || DEFAULT_DATABASE,
+    createDatabase: boolConfig(options.createDatabase, process.env.BEASTBOUND_MYSQL_CREATE_DATABASE),
   };
 }
 
@@ -251,7 +328,11 @@ function insertAccountStatement(account) {
 }
 
 function insertSessionStatement(session) {
-  return `INSERT INTO sessions (session_id, account_id, expires_at, revoked_at, document_json) VALUES (${sqlString(session.sessionId)}, ${sqlString(session.accountId)}, ${sqlString(session.expiresAt)}, ${sqlNullable(session.revokedAt)}, ${sqlJson(session)})`;
+  return `INSERT INTO sessions (session_id, account_id, token_hash, expires_at, revoked_at, document_json) VALUES (${sqlString(session.sessionId)}, ${sqlString(session.accountId)}, ${sqlString(session.tokenHash)}, ${sqlString(session.expiresAt)}, ${sqlNullable(session.revokedAt)}, ${sqlJson(session)})`;
+}
+
+function insertProfileBindingStatement(binding) {
+  return `INSERT INTO profile_bindings (account_id, player_id, profile_revision, updated_at, document_json) VALUES (${sqlString(binding.accountId)}, ${sqlString(binding.playerId)}, ${Number(binding.profileRevision || 0)}, ${sqlString(binding.updatedAt || binding.createdAt)}, ${sqlJson(binding)})`;
 }
 
 function insertProfileStatement(profile) {
@@ -287,6 +368,22 @@ function insertBattleRoomStatement(room) {
   return `INSERT INTO battle_rooms (room_id, mode, status, seed, created_at, updated_at, document_json) VALUES (${sqlString(room.roomId)}, ${sqlString(room.mode)}, ${sqlString(room.status)}, ${sqlString(room.seed)}, ${sqlString(room.createdAt)}, ${sqlString(room.updatedAt)}, ${sqlJson(room)})`;
 }
 
+function insertGmUserGrantStatement(grant) {
+  return `INSERT INTO gm_user_grants (account_id, username, enabled, expires_at, document_json) VALUES (${sqlString(grant.accountId)}, ${sqlString(grant.username)}, ${grant.enabled ? 1 : 0}, ${sqlNullable(grant.expiresAt)}, ${sqlJson(grant)})`;
+}
+
+function insertGmCommandGrantStatement(grant) {
+  return `INSERT INTO gm_command_grants (account_id, command_id, enabled, document_json) VALUES (${sqlString(grant.accountId)}, ${sqlString(grant.commandId)}, ${grant.enabled ? 1 : 0}, ${sqlJson(grant)})`;
+}
+
+function insertGmCommandAuditStatement(audit) {
+  return `INSERT INTO gm_command_audit (audit_id, username, command_id, ok, created_at, document_json) VALUES (${sqlString(audit.auditId)}, ${sqlString(audit.username)}, ${sqlString(audit.commandId)}, ${audit.ok ? 1 : 0}, ${sqlString(audit.createdAt)}, ${sqlJson(audit)})`;
+}
+
+function insertAuthEventStatement(event) {
+  return `INSERT INTO auth_events (event_id, event_type, username, ok, created_at, document_json) VALUES (${sqlString(event.eventId)}, ${sqlString(event.type)}, ${sqlString(event.username)}, ${event.ok ? 1 : 0}, ${sqlString(event.createdAt)}, ${sqlJson(event)})`;
+}
+
 function insertServiceEventStatement(event) {
   return `INSERT INTO service_events (event_seq, event_id, event_type, created_at, document_json) VALUES (${Number(event.eventSeq || 0)}, ${sqlString(event.eventId)}, ${sqlString(event.type)}, ${sqlString(event.createdAt)}, ${sqlJson(event)})`;
 }
@@ -316,6 +413,14 @@ function checkedIdentifier(value) {
 
 function objectOrEmpty(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function boolConfig(optionValue, envValue) {
+  if (optionValue !== undefined) {
+    return Boolean(optionValue);
+  }
+  const value = String(envValue || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
 }
 
 module.exports = {

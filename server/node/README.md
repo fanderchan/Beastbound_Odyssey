@@ -25,10 +25,39 @@ http://127.0.0.1:8787
 Optional environment variables:
 
 - `BEASTBOUND_AUTH_PORT`: local port, default `8787`.
+- `BEASTBOUND_AUTH_HOST`: bind host, default `127.0.0.1`. Use `0.0.0.0` for LAN playtests.
 - `BEASTBOUND_AUTH_STORE_PATH`: JSON prototype store path, default `.local/auth-store.json`.
 - `BEASTBOUND_AUTH_STORE` or `BEASTBOUND_STORE`: set to `mysql` to use the optional MySQL-backed store.
 - `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
+- `BEASTBOUND_MYSQL_CREATE_DATABASE`: set to `1` only when the configured MySQL user is allowed to create the database. Local live-server setup creates the database once with root, then runs the app account with this set to `0`.
 - `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
+
+## Local MySQL Live Server
+
+The repeatable local setup flow is:
+
+```sh
+BEASTBOUND_MYSQL_ROOT_PASSWORD='...' node scripts/setup-local-mysql.js
+BEASTBOUND_MIGRATE_PASSWORD='...' node scripts/migrate-local-userdata-to-mysql.js --username auth1373
+BEASTBOUND_SMOKE_PASSWORD='...' node scripts/mysql-live-smoke.js --username auth1373
+```
+
+Then start the server with the ignored local env file:
+
+```sh
+npm run ops -- start
+```
+
+Useful local operations:
+
+```sh
+npm run ops -- status
+npm run ops -- backup
+npm run ops -- stop
+npm run ops -- restart
+```
+
+See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN playtest boundary.
 
 ## Current Endpoints
 

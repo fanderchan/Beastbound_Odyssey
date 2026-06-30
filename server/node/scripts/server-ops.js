@@ -1,0 +1,241 @@
+"use strict";
+
+const fs = require("node:fs");
+const http = require("node:http");
+const os = require("node:os");
+const path = require("node:path");
+const {spawn, execFileSync} = require("node:child_process");
+
+const repoRoot = path.resolve(__dirname, "../../..");
+const serverRoot = path.resolve(repoRoot, "server/node");
+const localDir = path.resolve(serverRoot, ".local");
+const envPath = path.resolve(localDir, "mysql.env");
+const pidPath = path.resolve(localDir, "server.pid");
+const logPath = path.resolve(localDir, "dev-server.log");
+const backupDir = path.resolve(localDir, "backups");
+
+async function main() {
+  const command = String(process.argv[2] || "status").trim().toLowerCase();
+  const env = loadRuntimeEnv();
+  if (command === "start") {
+    await startServer(env);
+  } else if (command === "stop") {
+    stopServer();
+  } else if (command === "restart") {
+    stopServer({"quiet": true});
+    await startServer(env);
+  } else if (command === "backup") {
+    backupMysql(env);
+  } else if (command === "status") {
+    await printStatus(env);
+  } else {
+    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup");
+  }
+}
+
+async function startServer(env) {
+  fs.mkdirSync(localDir, {"recursive": true});
+  const existingPid = readPid();
+  if (existingPid && processAlive(existingPid)) {
+    console.log(JSON.stringify({"ok": true, "alreadyRunning": true, "pid": existingPid, "url": publicUrl(env)}, null, 2));
+    return;
+  }
+  const existingHealth = await requestHealth(env).catch(() => null);
+  if (existingHealth && existingHealth.ok) {
+    console.log(JSON.stringify({"ok": true, "alreadyRunning": true, "pid": null, "url": publicUrl(env), "health": existingHealth}, null, 2));
+    return;
+  }
+  const logFd = fs.openSync(logPath, "a");
+  const child = spawn(process.execPath, ["src/http-server.js"], {
+    cwd: serverRoot,
+    env: {...process.env, ...env},
+    detached: true,
+    stdio: ["ignore", logFd, logFd],
+  });
+  fs.writeFileSync(pidPath, `${child.pid}\n`);
+  child.unref();
+  console.log(JSON.stringify({"ok": true, "started": true, "pid": child.pid, "url": publicUrl(env), "logPath": logPath}, null, 2));
+}
+
+function stopServer(options = {}) {
+  const pid = readPid();
+  if (!pid) {
+    if (!options.quiet) {
+      console.log(JSON.stringify({"ok": true, "stopped": false, "message": "No pid file."}, null, 2));
+    }
+    return;
+  }
+  if (processAlive(pid)) {
+    process.kill(pid, "SIGTERM");
+  }
+  fs.rmSync(pidPath, {"force": true});
+  if (!options.quiet) {
+    console.log(JSON.stringify({"ok": true, "stopped": true, "pid": pid}, null, 2));
+  }
+}
+
+async function printStatus(env) {
+  const pid = readPid();
+  const health = await requestHealth(env).catch((error) => ({"ok": false, "error": error.message}));
+  const counts = mysqlCounts(env);
+  console.log(JSON.stringify({
+    ok: Boolean(health.ok),
+    pid: pid || null,
+    pidAlive: pid ? processAlive(pid) : false,
+    url: publicUrl(env),
+    localUrl: `http://127.0.0.1:${env.BEASTBOUND_AUTH_PORT || "8787"}`,
+    lanIps: lanIps(),
+    health,
+    mysql: {
+      database: env.BEASTBOUND_MYSQL_DATABASE,
+      user: env.BEASTBOUND_MYSQL_USER,
+      counts,
+    },
+  }, null, 2));
+}
+
+function backupMysql(env) {
+  fs.mkdirSync(backupDir, {"recursive": true});
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const database = env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey";
+  const filePath = path.resolve(backupDir, `${database}-${stamp}.sql`);
+  const dumpPath = process.env.BEASTBOUND_MYSQLDUMP_BIN || "mysqldump";
+  const output = execFileSync(dumpPath, [
+    "--protocol=tcp",
+    "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
+    "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
+    "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
+    `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
+    "--skip-lock-tables",
+    "--skip-add-locks",
+    "--no-tablespaces",
+    "--skip-masking-policies",
+    "--skip-add-drop-masking-policy",
+    "--set-gtid-purged=OFF",
+    database,
+  ], {"encoding": "buffer"});
+  fs.writeFileSync(filePath, output);
+  console.log(JSON.stringify({"ok": true, "backupPath": filePath, "bytes": output.length}, null, 2));
+}
+
+function mysqlCounts(env) {
+  try {
+    const output = execFileSync(env.BEASTBOUND_MYSQL_BIN || "mysql", [
+      "--protocol=tcp",
+      "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
+      "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
+      "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
+      `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
+      "--batch",
+      "--raw",
+      "--skip-column-names",
+      env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey",
+      "-e",
+      "SELECT 'accounts', COUNT(*) FROM accounts UNION ALL SELECT 'profiles', COUNT(*) FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'player_positions', COUNT(*) FROM player_positions UNION ALL SELECT 'battle_rooms', COUNT(*) FROM battle_rooms UNION ALL SELECT 'service_events', COUNT(*) FROM service_events;",
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "pipe"]});
+    const counts = {};
+    for (const line of output.trim().split(/\r?\n/)) {
+      const [key, value] = line.split(/\t/);
+      if (key) {
+        counts[key] = Number(value || 0);
+      }
+    }
+    return counts;
+  } catch (error) {
+    return {"error": error.message};
+  }
+}
+
+function requestHealth(env) {
+  const port = Number(env.BEASTBOUND_AUTH_PORT || 8787);
+  return new Promise((resolve, reject) => {
+    const req = http.request({"host": "127.0.0.1", port, "path": "/health", "method": "GET", "timeout": 1500}, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    req.on("timeout", () => {
+      req.destroy(new Error("health timeout"));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function publicUrl(env) {
+  const host = env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
+  const port = env.BEASTBOUND_AUTH_PORT || "8787";
+  if (host === "0.0.0.0") {
+    const ip = lanIps()[0] || "127.0.0.1";
+    return `http://${ip}:${port}`;
+  }
+  return `http://${host}:${port}`;
+}
+
+function lanIps() {
+  const result = [];
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.family === "IPv4" && !entry.internal) {
+        result.push(entry.address);
+      }
+    }
+  }
+  return result;
+}
+
+function loadRuntimeEnv() {
+  const env = {};
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+      const match = line.match(/^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+      if (!match) {
+        continue;
+      }
+      env[match[1]] = unquoteShellValue(match[2].trim());
+    }
+  }
+  return {
+    ...env,
+    BEASTBOUND_AUTH_STORE: env.BEASTBOUND_AUTH_STORE || "mysql",
+    BEASTBOUND_AUTH_HOST: env.BEASTBOUND_AUTH_HOST || "0.0.0.0",
+    BEASTBOUND_AUTH_PORT: env.BEASTBOUND_AUTH_PORT || "8787",
+  };
+}
+
+function readPid() {
+  if (!fs.existsSync(pidPath)) {
+    return 0;
+  }
+  return Number(fs.readFileSync(pidPath, "utf8").trim() || 0);
+}
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function unquoteShellValue(value) {
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replace(/'\\''/g, "'");
+  }
+  if (value.startsWith("\"") && value.endsWith("\"")) {
+    return value.slice(1, -1).replace(/\\"/g, "\"");
+  }
+  return value;
+}
+
+main().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
+});
