@@ -1065,7 +1065,7 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   const roomInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
   const roomAccept = service.acceptBattleInvite(opponent.session.token, roomInvite.invite.inviteId);
   assert.equal(roomAccept.ok, true);
-  nowMs += 91 * 1000;
+  nowMs += 100 * 1000;
   const timeoutState = service.getBattleState(challenger.session.token);
   assert.equal(timeoutState.ok, true);
   assert.equal(timeoutState.room, null);
@@ -1074,7 +1074,7 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   const lateInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
   const lateAccept = service.acceptBattleInvite(opponent.session.token, lateInvite.invite.inviteId);
   assert.equal(lateAccept.ok, true);
-  nowMs += 91 * 1000;
+  nowMs += 100 * 1000;
   const timeoutEventsBeforeLateCommand = events.filter((event) => event.type === "battle.room_closed" && event.reason === "timeout").length;
   const lateCommand = service.submitBattleCommand(challenger.session.token, lateAccept.room.roomId, {
     "round": 1,
@@ -1176,6 +1176,98 @@ test("duel battle rooms require nearby settled positions", () => {
   const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
   assert.equal(accept.room.entry.distanceCells, 1);
+});
+
+test("battle rooms are runtime-only and are not restored from the auth store", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({"store": store});
+  const challenger = service.register({"username": "runtimea", "password": "test1234", "displayName": "运行甲"});
+  const opponent = service.register({"username": "runtimeb", "password": "test1234", "displayName": "运行乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "runtimeb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.notEqual(service.snapshot().battleRooms[accept.room.roomId], undefined);
+  assert.deepEqual(store.snapshot().battleRooms, {});
+  assert.deepEqual(store.snapshot().battleInvites, {});
+
+  const restarted = createAuthService({"store": store});
+  const restartedState = restarted.getBattleState(challenger.session.token);
+  assert.equal(restartedState.ok, true);
+  assert.equal(restartedState.room, null);
+});
+
+test("battle rooms preserve short reconnects and close after disconnect grace", () => {
+  let nowMs = Date.parse("2026-01-01T00:00:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => nowMs,
+  });
+  const challenger = service.register({"username": "recona", "password": "test1234", "displayName": "重连甲"});
+  const opponent = service.register({"username": "reconb", "password": "test1234", "displayName": "重连乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "reconb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const roomId = accept.room.roomId;
+
+  const disconnected = service.markBattleConnection(challenger.session.token, false);
+  assert.equal(disconnected.ok, true);
+  nowMs += 20 * 1000;
+  const reconnected = service.markBattleConnection(challenger.session.token, true);
+  assert.equal(reconnected.ok, true);
+  assert.equal(reconnected.room.roomId, roomId);
+  assert.equal(service.getBattleState(challenger.session.token).room.roomId, roomId);
+
+  service.markBattleConnection(challenger.session.token, false);
+  nowMs += 31 * 1000;
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+  assert.equal(maintenance.events.some((event) => event.type === "battle.room_closed" && event.reason === "disconnect_timeout"), true);
+  assert.equal(service.getBattleState(challenger.session.token).room, null);
+  assert.equal(service.getBattleState(opponent.session.token).room, null);
+  const closedRoom = service.snapshot().battleRooms[roomId];
+  assert.equal(closedRoom.status, "closed");
+  assert.equal(closedRoom.battle.result.winnerAccountId, opponent.account.accountId);
+  assert.deepEqual(closedRoom.battle.result.loserAccountIds, [challenger.account.accountId]);
+});
+
+test("battle rooms close cleanly when both participants miss reconnect grace", () => {
+  let nowMs = Date.parse("2026-01-01T01:00:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => nowMs,
+  });
+  const challenger = service.register({"username": "bothdropa", "password": "test1234", "displayName": "双断甲"});
+  const opponent = service.register({"username": "bothdropb", "password": "test1234", "displayName": "双断乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "bothdropb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const roomId = accept.room.roomId;
+  service.markBattleConnection(challenger.session.token, false);
+  service.markBattleConnection(opponent.session.token, false);
+  nowMs += 31 * 1000;
+
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+  assert.equal(service.getBattleState(challenger.session.token).room, null);
+  assert.equal(service.getBattleState(opponent.session.token).room, null);
+  const closedRoom = service.snapshot().battleRooms[roomId];
+  assert.equal(closedRoom.status, "closed");
+  assert.equal(closedRoom.battle.result.reason, "disconnect_timeout");
+  assert.equal(closedRoom.battle.result.winnerAccountId, "");
+  assert.deepEqual(closedRoom.battle.result.loserAccountIds.sort(), [challenger.account.accountId, opponent.account.accountId].sort());
 });
 
 test("players can publish map positions into the online roster", () => {

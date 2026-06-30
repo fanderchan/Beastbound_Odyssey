@@ -49,9 +49,17 @@ function createEventHub(service) {
       replaying: true,
     };
     clients.add(client);
+    markBattleConnection(service, token, true);
     socket.on("data", (chunk) => handleSocketData(client, chunk));
-    socket.on("close", () => clients.delete(client));
-    socket.on("error", () => clients.delete(client));
+    const cleanup = () => {
+      if (!clients.has(client)) {
+        return;
+      }
+      clients.delete(client);
+      markBattleConnection(service, token, false);
+    };
+    socket.on("close", cleanup);
+    socket.on("error", cleanup);
     sendEvent(client, {
       type: "events.ready",
       account,
@@ -147,6 +155,17 @@ function createEventHub(service) {
     close,
     clientCount,
   };
+}
+
+function markBattleConnection(service, token, connected) {
+  if (!service || typeof service.markBattleConnection !== "function") {
+    return;
+  }
+  try {
+    service.markBattleConnection(token, connected);
+  } catch {
+    // Socket lifecycle cleanup must not tear down the HTTP server.
+  }
 }
 
 function queuePendingLiveEvent(client, event) {

@@ -61,7 +61,8 @@ const BATTLE_ACTOR_MAX_HP = 120;
 const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
-const BATTLE_COMMAND_TIMEOUT_MS = 90 * 1000;
+const BATTLE_COMMAND_TIMEOUT_MS = 99 * 1000;
+const BATTLE_RECONNECT_GRACE_MS = 30 * 1000;
 const BATTLE_ACTOR_KIND_PLAYER = "player";
 const BATTLE_ACTOR_KIND_PET = "pet";
 const BATTLE_PET_MAX_PER_PARTICIPANT = 5;
@@ -94,11 +95,14 @@ function createAuthService(options = {}) {
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
   const serviceEventListeners = new Set();
   let cachedData = null;
+  let battleMaintenanceTimer = null;
 
   function load() {
     if (!cachedData) {
       cachedData = normalizeData(store.load());
       cachedData.playerPositions = {};
+      cachedData.battleInvites = {};
+      cachedData.battleRooms = {};
     }
     return cachedData;
   }
@@ -107,6 +111,7 @@ function createAuthService(options = {}) {
     const normalized = normalizeData(data);
     store.save(persistentDataForStore(normalized));
     cachedData = normalized;
+    scheduleBattleMaintenance(cachedData);
   }
 
   function emitServiceEvent(event) {
@@ -973,12 +978,14 @@ function createAuthService(options = {}) {
   }
 
   function getBattleState(token) {
-    const data = load();
+    let data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
     expireBattleTimeoutsAndEmit(data);
+    data = load();
+    markBattleConnectionForAccount(data, resolved.account.accountId, true, now);
     return ok(battleStatePayload(data, resolved.account.accountId));
   }
 
@@ -990,7 +997,51 @@ function createAuthService(options = {}) {
         emitServiceEvent(event);
       }
     }
+    scheduleBattleMaintenance(load());
     return timeoutEvents;
+  }
+
+  function runBattleMaintenance() {
+    const data = load();
+    const events = expireBattleTimeoutsAndEmit(data);
+    return ok({events});
+  }
+
+  function markBattleConnection(token, connected) {
+    let data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    expireBattleTimeoutsAndEmit(data);
+    data = load();
+    const changed = markBattleConnectionForAccount(data, resolved.account.accountId, connected, now);
+    if (changed) {
+      scheduleBattleMaintenance(data);
+    }
+    return ok({
+      accountId: resolved.account.accountId,
+      connected: Boolean(connected),
+      room: publicBattleRoom(activeBattleRoomForAccount(data, resolved.account.accountId)),
+    });
+  }
+
+  function scheduleBattleMaintenance(data = null) {
+    if (battleMaintenanceTimer) {
+      clearTimeout(battleMaintenanceTimer);
+      battleMaintenanceTimer = null;
+    }
+    const nextDelay = nextBattleMaintenanceDelayMs(data || cachedData, now);
+    if (nextDelay === null) {
+      return;
+    }
+    battleMaintenanceTimer = setTimeout(() => {
+      battleMaintenanceTimer = null;
+      runBattleMaintenance();
+    }, Math.max(10, nextDelay + 25));
+    if (typeof battleMaintenanceTimer.unref === "function") {
+      battleMaintenanceTimer.unref();
+    }
   }
 
   function inviteToBattle(token, payload = {}) {
@@ -1103,6 +1154,7 @@ function createAuthService(options = {}) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    battleRoomConnectionStateForMutation(room);
     data.battleRooms[room.roomId] = room;
     save(data);
     emitServiceEvent({
@@ -1416,6 +1468,8 @@ function createAuthService(options = {}) {
     eventForSession,
     listEventsForSession,
     latestEventSeq,
+    markBattleConnection,
+    runBattleMaintenance,
     getPartyState,
     inviteToParty,
     applyToParty,
@@ -1502,6 +1556,12 @@ function normalizeData(raw) {
 function persistentDataForStore(data) {
   const persistent = normalizeData(data);
   persistent.playerPositions = {};
+  persistent.battleInvites = {};
+  persistent.battleRooms = {};
+  persistent.serviceEvents = persistent.serviceEvents.filter((event) => {
+    const type = String(event && event.type || "");
+    return !type.startsWith("battle.");
+  });
   return persistent;
 }
 
@@ -2053,6 +2113,118 @@ function activeBattleRoomForAccount(data, accountId) {
     Array.isArray(room.participantAccountIds) &&
     room.participantAccountIds.includes(accountId)
   )) || null;
+}
+
+function battleRoomConnectionStateForMutation(room) {
+  if (!room.connectionState || typeof room.connectionState !== "object" || Array.isArray(room.connectionState)) {
+    room.connectionState = {};
+  }
+  for (const accountId of Array.isArray(room.participantAccountIds) ? room.participantAccountIds : []) {
+    if (!room.connectionState[accountId] || typeof room.connectionState[accountId] !== "object" || Array.isArray(room.connectionState[accountId])) {
+      room.connectionState[accountId] = {
+        connected: true,
+        lastSeenAt: room.updatedAt || room.createdAt || "",
+        disconnectedAt: "",
+        schemaVersion: 1,
+      };
+    }
+  }
+  return room.connectionState;
+}
+
+function markBattleConnectionForAccount(data, accountId, connected, now = () => Date.now()) {
+  let changed = false;
+  const timestamp = isoNow(now);
+  for (const room of Object.values(data.battleRooms)) {
+    if (
+      !room ||
+      room.status === BATTLE_ROOM_CLOSED ||
+      !Array.isArray(room.participantAccountIds) ||
+      !room.participantAccountIds.includes(accountId)
+    ) {
+      continue;
+    }
+    const state = battleRoomConnectionStateForMutation(room);
+    const previous = state[accountId] || {};
+    const next = {
+      ...previous,
+      connected: Boolean(connected),
+      lastSeenAt: timestamp,
+      disconnectedAt: connected ? "" : (previous.disconnectedAt || timestamp),
+      schemaVersion: 1,
+    };
+    if (
+      Boolean(previous.connected) !== next.connected ||
+      String(previous.disconnectedAt || "") !== String(next.disconnectedAt || "") ||
+      String(previous.lastSeenAt || "") !== String(next.lastSeenAt || "")
+    ) {
+      state[accountId] = next;
+      room.updatedAt = timestamp;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function battleRoomReconnectExpiredAccountIds(room, now) {
+  if (!room || room.status === BATTLE_ROOM_CLOSED) {
+    return [];
+  }
+  const state = battleRoomConnectionStateForMutation(room);
+  const nowMs = now();
+  return (Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [])
+    .filter((accountId) => {
+      const entry = state[accountId] || {};
+      if (entry.connected || !entry.disconnectedAt) {
+        return false;
+      }
+      const disconnectedMs = Date.parse(entry.disconnectedAt);
+      return Number.isFinite(disconnectedMs) && disconnectedMs + BATTLE_RECONNECT_GRACE_MS <= nowMs;
+    });
+}
+
+function nextBattleMaintenanceDelayMs(data, now) {
+  if (!data) {
+    return null;
+  }
+  const nowMs = now();
+  let nextAt = Number.POSITIVE_INFINITY;
+  for (const invite of Object.values(data.battleInvites || {})) {
+    if (!invite || invite.status !== BATTLE_INVITE_PENDING || !invite.expiresAt) {
+      continue;
+    }
+    const expiresMs = Date.parse(invite.expiresAt);
+    if (Number.isFinite(expiresMs)) {
+      nextAt = Math.min(nextAt, expiresMs);
+    }
+  }
+  for (const room of Object.values(data.battleRooms || {})) {
+    if (!room || room.status === BATTLE_ROOM_CLOSED) {
+      continue;
+    }
+    const battle = battleRoomBattleStateForMutation(room, now);
+    if (String(battle.phase || "") === BATTLE_PHASE_COMMAND && battle.commandDeadlineAt) {
+      const commandMs = Date.parse(battle.commandDeadlineAt);
+      if (Number.isFinite(commandMs)) {
+        nextAt = Math.min(nextAt, commandMs);
+      }
+    }
+    const state = battleRoomConnectionStateForMutation(room);
+    for (const accountId of Array.isArray(room.participantAccountIds) ? room.participantAccountIds : []) {
+      const entry = state[accountId] || {};
+      if (entry.connected || !entry.disconnectedAt) {
+        continue;
+      }
+      const disconnectedMs = Date.parse(entry.disconnectedAt);
+      if (Number.isFinite(disconnectedMs)) {
+        nextAt = Math.min(nextAt, disconnectedMs + BATTLE_RECONNECT_GRACE_MS);
+      }
+    }
+  }
+  if (!Number.isFinite(nextAt)) {
+    return null;
+  }
+  return Math.max(0, nextAt - nowMs);
 }
 
 function battleRoomEntryCheck(data, invite) {
@@ -2709,6 +2881,23 @@ function battleRoomResultForTimeout(room, battle, now) {
   };
 }
 
+function battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now) {
+  const participantAccountIds = requiredBattleCommandAccountIds(room);
+  const disconnected = Array.from(new Set((Array.isArray(disconnectedAccountIds) ? disconnectedAccountIds : [])
+    .map((accountId) => String(accountId || ""))
+    .filter((accountId) => participantAccountIds.includes(accountId))));
+  const stillConnected = participantAccountIds.filter((accountId) => !disconnected.includes(accountId));
+  const winnerAccountId = disconnected.length === 1 ? stillConnected[0] || "" : "";
+  return {
+    reason: "disconnect_timeout",
+    winnerAccountId,
+    loserAccountIds: disconnected.length > 0 ? disconnected : participantAccountIds.slice(),
+    closedByAccountId: disconnected[0] || "",
+    endedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
 function closeBattleRoomWithResult(data, room, result, now) {
   const battle = battleRoomBattleStateForMutation(room, now);
   room.status = BATTLE_ROOM_CLOSED;
@@ -3134,13 +3323,20 @@ function expireBattleTimeouts(data, now) {
       continue;
     }
     const battle = battleRoomBattleStateForMutation(room, now);
-    if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND || !battle.commandDeadlineAt) {
+    const disconnectedAccountIds = battleRoomReconnectExpiredAccountIds(room, now);
+    let result = null;
+    if (disconnectedAccountIds.length > 0) {
+      result = battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now);
+    } else if (
+      String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
+      battle.commandDeadlineAt &&
+      Date.parse(battle.commandDeadlineAt) <= now()
+    ) {
+      result = battleRoomResultForTimeout(room, battle, now);
+    }
+    if (!result) {
       continue;
     }
-    if (Date.parse(battle.commandDeadlineAt) > now()) {
-      continue;
-    }
-    const result = battleRoomResultForTimeout(room, battle, now);
     closeBattleRoomWithResult(data, room, result, now);
     data.battleRooms[room.roomId] = room;
     events.push({
