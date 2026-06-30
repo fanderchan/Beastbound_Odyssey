@@ -325,6 +325,13 @@ Phase187 联网切磋换宠自测：
 - Godot 真实联网换宠：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-switch-pet-live-check`
 - 回归：继续跑 `--auto-server-battle-pet-command-live-check`、`--auto-server-battle-target-mapping-check`、`--auto-server-battle-turn-live-check` 和 `--perf-probe`，确认换宠不会提前套用服务器最终 actor 快照，也不会让旧出战宠继续要求下达宠物指令。
 
+Phase188 联网切磋物品自测：
+
+- 服务端：`node --check server/node/src/auth-service.js && cd server/node && npm test`
+- Godot 脚本检查：`godot --headless --path client/godot --check-only --quit`
+- Godot 真实联网物品：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-item-live-check`
+- 回归：继续跑 `--auto-server-battle-switch-pet-live-check` 和 `--perf-probe`，确认联网物品事件按服务器目标 actor 播放，不影响主动换宠规则；宠物倒下仍不自动换宠。
+
 ## 验收口径
 
 可以接受：

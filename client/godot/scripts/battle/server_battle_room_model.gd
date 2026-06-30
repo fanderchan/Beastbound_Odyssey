@@ -80,7 +80,7 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 		"serverRoomSeed": str(room.get("seed", "")),
 		"targetSeed": str(room.get("seed", battle_id_for_room(room))),
 		"message": _message_for_room(battle, session),
-		"itemBag": {},
+		"itemBag": _item_bag_for_session(room, session),
 		"captureToolBag": {},
 		"petParty": _pet_party_for_session(room, session),
 		"fieldEffects": [],
@@ -122,7 +122,8 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 		if not (value is Dictionary):
 			continue
 		var server_event := value as Dictionary
-		if str(server_event.get("eventType", "")) != "basic_attack":
+		var event_type := str(server_event.get("eventType", ""))
+		if event_type != "basic_attack" and event_type != "pet_skill" and event_type != "item_heal":
 			continue
 		var target_id := _local_actor_id_for_server_actor(
 			next_state,
@@ -271,6 +272,24 @@ static func _pet_party_entry_from_server_pet(server_pet: Dictionary) -> Dictiona
 		"petSkillSlots": _string_array(server_pet.get("petSkillSlots", [])),
 		"passiveSkillIds": _string_array(server_pet.get("passiveSkillIds", [])),
 	}
+
+
+static func _item_bag_for_session(room: Dictionary, session: Dictionary) -> Dictionary:
+	var account_id := str(session.get("accountId", "")).strip_edges()
+	var username := str(session.get("username", "")).strip_edges()
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	for value in participants:
+		if not (value is Dictionary):
+			continue
+		var participant := value as Dictionary
+		if (
+			(account_id != "" and str(participant.get("accountId", "")).strip_edges() == account_id)
+			or (username != "" and str(participant.get("username", "")).strip_edges() == username)
+		):
+			var snapshot := participant.get("teamSnapshot", {}) as Dictionary if participant.get("teamSnapshot", {}) is Dictionary else {}
+			var bag := snapshot.get("battleItemBag", {}) as Dictionary if snapshot.get("battleItemBag", {}) is Dictionary else {}
+			return bag.duplicate(true)
+	return {}
 
 
 static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, server_actor: Dictionary) -> Dictionary:
@@ -498,6 +517,37 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverPreviousPetId": str(server_event.get("previousPetId", "")),
 			"serverPreviousPetActorId": str(server_event.get("previousPetActorId", "")),
 			"serverNextPetActorId": str(server_event.get("nextPetActorId", "")),
+		}
+	if event_type == "item_heal":
+		var item_target_id := _local_actor_id_for_server_actor(
+			state,
+			str(server_event.get("targetActorId", "")),
+			str(server_event.get("targetAccountId", "")),
+			str(server_event.get("targetUsername", "")),
+			str(server_event.get("targetKind", ""))
+		)
+		if item_target_id == "":
+			return {}
+		var item_target := BattleModel.actor_by_id(state, item_target_id)
+		return {
+			"type": "item_heal",
+			"attackerId": actor_id,
+			"targetId": item_target_id,
+			"targetSide": str(item_target.get("side", BattleModel.SIDE_ALLY)),
+			"heal": maxi(0, int(server_event.get("heal", server_event.get("healed", 0)))),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"itemName": str(server_event.get("itemName", "物品")),
+			"itemId": str(server_event.get("itemId", server_event.get("actionId", ""))),
+			"actionId": str(server_event.get("actionId", server_event.get("itemId", ""))),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+			"serverHpBefore": int(server_event.get("hpBefore", 0)),
+			"serverHpAfter": int(server_event.get("hpAfter", 0)),
+			"serverHealed": int(server_event.get("healed", 0)),
+			"remainingItemCount": int(server_event.get("remainingItemCount", -1)),
+			"serverRemainingItemCount": int(server_event.get("remainingItemCount", -1)),
 		}
 	if event_type != "basic_attack" and event_type != "pet_skill":
 		return {}

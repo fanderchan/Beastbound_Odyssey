@@ -1843,7 +1843,11 @@ static func _apply_item_consuming_event(state: Dictionary, event: Dictionary, ap
 		"_apply_item_cleanse_event":
 			next_state = _apply_item_cleanse_event(next_state, normalized)
 	if bool(next_state.get("lastEventApplied", false)):
-		next_state = consume_item(next_state, str(event.get("itemId", "")))
+		var remaining_item_count := int(event.get("remainingItemCount", -1))
+		if remaining_item_count >= 0:
+			next_state = set_item_count(next_state, str(event.get("itemId", "")), remaining_item_count)
+		else:
+			next_state = consume_item(next_state, str(event.get("itemId", "")))
 	return next_state
 
 

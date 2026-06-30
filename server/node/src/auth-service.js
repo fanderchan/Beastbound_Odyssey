@@ -46,6 +46,17 @@ const BATTLE_ACTION_PET_DEFEND = "pet_defend";
 const BATTLE_ACTION_PET_BUI_CHARGE = "pet_bui_charge";
 const BATTLE_ACTION_SWITCH_PET = "switch_pet";
 const BATTLE_ACTION_ITEM = "item";
+const BATTLE_ITEM_MEAT_SMALL = "item_meat_small";
+const BATTLE_ITEM_HEAL_SINGLE = "item_heal_single_5";
+const BATTLE_ITEM_IDS = [BATTLE_ITEM_MEAT_SMALL, BATTLE_ITEM_HEAL_SINGLE];
+const BATTLE_ITEM_HEAL_AMOUNTS = {
+  [BATTLE_ITEM_MEAT_SMALL]: 28,
+  [BATTLE_ITEM_HEAL_SINGLE]: 42,
+};
+const BATTLE_ITEM_LABELS = {
+  [BATTLE_ITEM_MEAT_SMALL]: "肉",
+  [BATTLE_ITEM_HEAL_SINGLE]: "回复药5",
+};
 const BATTLE_ACTOR_MAX_HP = 120;
 const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
@@ -1866,10 +1877,40 @@ function battleParticipantSnapshot(data, account, side) {
       player: playerSnapshot,
       battlePetCount: battlePets.length,
       battlePets,
+      battleItemBag: battleItemBagFromProfile(profile),
       schemaVersion: 1,
     },
     schemaVersion: 1,
   };
+}
+
+function battleItemBagFromProfile(profile) {
+  const slots = profileBackpackSlots(profile);
+  const bag = {};
+  for (const itemId of BATTLE_ITEM_IDS) {
+    bag[itemId] = backpackItemCount(slots, itemId);
+  }
+  return bag;
+}
+
+function profileBackpackSlots(profile) {
+  return profile && Array.isArray(profile.backpackSlots) ? profile.backpackSlots : [];
+}
+
+function backpackItemCount(slots, itemId) {
+  if (!Array.isArray(slots)) {
+    return 0;
+  }
+  return slots.reduce((total, slot) => {
+    if (!slot || typeof slot !== "object" || Array.isArray(slot)) {
+      return total;
+    }
+    if (String(slot.itemId || "") !== itemId) {
+      return total;
+    }
+    const count = Math.max(0, Math.trunc(Number(slot.count || 0)));
+    return total + count;
+  }, 0);
 }
 
 function battlePlayerSnapshotFromProfile(profile, account) {
@@ -2240,17 +2281,25 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
   if (!requiredBattleCommandActorIds(battle).includes(String(actor.actorId || ""))) {
     return fail("battle_command_actor_missing", "当前无法提交战斗命令。");
   }
-  const action = normalizeBattleActionForActor(payload.actionId || payload.action || payload.command || BATTLE_ACTION_ATTACK, actor);
+  const action = normalizeBattleActionForActor(payload.actionId || payload.action || payload.command || BATTLE_ACTION_ATTACK, actor, payload.itemId || payload.item || "");
   if (!action.ok) {
     return action;
   }
   let switchPet = null;
+  let itemId = "";
   if (action.actionKind === BATTLE_ACTION_SWITCH_PET) {
     const switchResult = battleSwitchPetForPayload(payload, room, battle, account);
     if (!switchResult.ok) {
       return switchResult;
     }
     switchPet = switchResult.pet;
+  }
+  if (action.actionKind === BATTLE_ACTION_ITEM) {
+    itemId = String(action.itemId || action.actionId || "").trim();
+    const itemResult = battleItemForCommand(room, account.accountId, itemId);
+    if (!itemResult.ok) {
+      return itemResult;
+    }
   }
   const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, action.actionId);
   if (!targetActor) {
@@ -2262,6 +2311,14 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
     }
     if (String(targetActor.side || "") === String(actor.side || "")) {
       return fail("battle_command_target_invalid", "攻击目标必须是对方。");
+    }
+  }
+  if (battleActionRequiresAllyTarget(action.actionKind)) {
+    if (String(targetActor.side || "") !== String(actor.side || "")) {
+      return fail("battle_command_target_invalid", "物品目标必须是我方。");
+    }
+    if (Number(targetActor.hp || 0) <= 0) {
+      return fail("battle_command_target_invalid", "倒下目标暂不能使用这个物品。");
     }
   }
   if (!requiredBattleCommandAccountIds(room).includes(targetActor.accountId)) {
@@ -2280,7 +2337,7 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       actionKind: action.actionKind,
       skillId: action.skillId || "",
       petId: switchPet ? String(switchPet.petId || "") : "",
-      itemId: "",
+      itemId,
       targetActorId: targetActor.actorId,
       targetAccountId: targetActor.accountId,
       targetUsername: targetActor.username,
@@ -2323,7 +2380,22 @@ function battleSwitchPetForPayload(payload, room, battle, account) {
   return ok({pet});
 }
 
-function normalizeBattleActionForActor(value, actor) {
+function battleItemForCommand(room, accountId, itemId) {
+  const normalizedItemId = normalizeBattleItemId(itemId);
+  if (normalizedItemId === "") {
+    return fail("battle_command_item_unsupported", "联网切磋暂只支持回复药和肉。");
+  }
+  const participant = battleParticipantByAccountId(room, accountId);
+  if (!participant) {
+    return fail("battle_command_item_missing", "未找到你的战斗物品。");
+  }
+  if (participantBattleItemCount(participant, normalizedItemId) <= 0) {
+    return fail("battle_command_item_missing", `${battleItemLabel(normalizedItemId)} 不够了。`);
+  }
+  return ok({itemId: normalizedItemId});
+}
+
+function normalizeBattleActionForActor(value, actor, itemValue = "") {
   const actionId = String(value || "").trim().toLowerCase();
   const actorKind = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER);
   if (actorKind === BATTLE_ACTOR_KIND_PET) {
@@ -2348,14 +2420,22 @@ function normalizeBattleActionForActor(value, actor) {
   if (actionId === BATTLE_ACTION_SWITCH_PET || actionId === "change_pet") {
     return ok({actionId: BATTLE_ACTION_SWITCH_PET, actionKind: BATTLE_ACTION_SWITCH_PET, skillId: ""});
   }
+  const itemId = normalizeBattleItemId(actionId === BATTLE_ACTION_ITEM ? itemValue : actionId);
+  if (itemId !== "") {
+    return ok({actionId: itemId, actionKind: BATTLE_ACTION_ITEM, skillId: "", itemId});
+  }
   if (actionId === BATTLE_ACTION_ITEM || actionId.startsWith("item_")) {
-    return fail("battle_command_item_unsupported", "联网切磋物品命令暂未开放。");
+    return fail("battle_command_item_unsupported", "联网切磋暂只支持回复药和肉。");
   }
   return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
 }
 
 function battleActionRequiresEnemyTarget(actionKind) {
   return actionKind === "attack" || actionKind === "pet_skill";
+}
+
+function battleActionRequiresAllyTarget(actionKind) {
+  return actionKind === BATTLE_ACTION_ITEM;
 }
 
 function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
@@ -2374,6 +2454,9 @@ function battleCommandTargetActor(payload, data, room, battle, actor, actionId) 
   if (targetUsername) {
     const target = data.accounts[targetUsername];
     return target ? battlePlayerActorByAccountId(battle, target.accountId) : null;
+  }
+  if (normalizeBattleItemId(actionId) !== "") {
+    return actor;
   }
   const targetAccountId = requiredBattleCommandAccountIds(room).find((accountId) => accountId !== actor.accountId) || "";
   return targetAccountId ? battlePlayerActorByAccountId(battle, targetAccountId) : null;
@@ -2413,6 +2496,11 @@ function resolveBattleRoomTurn(data, room, battle, now) {
       sequence += 1;
       continue;
     }
+    if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_ITEM) {
+      events.push(battleItemHealEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      continue;
+    }
     const target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
     if (!target || Number(target.hp || 0) <= 0) {
       events.push(battleTargetMissingEvent(room, battle, command, actor, round, sequence));
@@ -2423,6 +2511,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
     const hpBefore = Number(target.hp || 0);
     target.hp = Math.max(0, hpBefore - damage);
     target.defeated = target.hp <= 0;
+    syncParticipantPetSnapshotHp(room, target);
     events.push(battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, target.hp, damage));
     sequence += 1;
   }
@@ -2502,6 +2591,55 @@ function participantBattlePets(participant) {
     ? participant.teamSnapshot
     : {};
   return Array.isArray(snapshot.battlePets) ? snapshot.battlePets : [];
+}
+
+function participantBattleItemBag(participant) {
+  if (!participant || typeof participant !== "object" || Array.isArray(participant)) {
+    return {};
+  }
+  if (!participant.teamSnapshot || typeof participant.teamSnapshot !== "object" || Array.isArray(participant.teamSnapshot)) {
+    participant.teamSnapshot = {};
+  }
+  if (!participant.teamSnapshot.battleItemBag || typeof participant.teamSnapshot.battleItemBag !== "object" || Array.isArray(participant.teamSnapshot.battleItemBag)) {
+    participant.teamSnapshot.battleItemBag = {};
+  }
+  for (const itemId of BATTLE_ITEM_IDS) {
+    participant.teamSnapshot.battleItemBag[itemId] = Math.max(0, Math.trunc(Number(participant.teamSnapshot.battleItemBag[itemId] || 0)));
+  }
+  return participant.teamSnapshot.battleItemBag;
+}
+
+function participantBattleItemCount(participant, itemId) {
+  const normalizedItemId = normalizeBattleItemId(itemId);
+  if (normalizedItemId === "") {
+    return 0;
+  }
+  const bag = participantBattleItemBag(participant);
+  return Math.max(0, Math.trunc(Number(bag[normalizedItemId] || 0)));
+}
+
+function setParticipantBattleItemCount(participant, itemId, count) {
+  const normalizedItemId = normalizeBattleItemId(itemId);
+  if (normalizedItemId === "") {
+    return;
+  }
+  const bag = participantBattleItemBag(participant);
+  bag[normalizedItemId] = Math.max(0, Math.trunc(Number(count || 0)));
+}
+
+function normalizeBattleItemId(value) {
+  const itemId = String(value || "").trim().toLowerCase();
+  return BATTLE_ITEM_IDS.includes(itemId) ? itemId : "";
+}
+
+function battleItemLabel(itemId) {
+  const normalizedItemId = normalizeBattleItemId(itemId);
+  return BATTLE_ITEM_LABELS[normalizedItemId] || "物品";
+}
+
+function battleItemHealAmount(itemId) {
+  const normalizedItemId = normalizeBattleItemId(itemId);
+  return Math.max(0, Math.trunc(Number(BATTLE_ITEM_HEAL_AMOUNTS[normalizedItemId] || 0)));
 }
 
 function battleResultForResolvedActors(room, battle, now) {
@@ -2614,6 +2752,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
       profileRevision: Number(binding.profileRevision || profileDoc.profileRevision || 0),
       playerHp: null,
       petHps: [],
+      battleItemBag: null,
       schemaVersion: 1,
     };
     let changed = false;
@@ -2665,6 +2804,11 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
       summary.petHps.push(applied.publicHp);
       writtenPetIds.add(petId);
     }
+    const itemWriteback = participant
+      ? applyBattleItemBagToProfile(profile, participantBattleItemBag(participant))
+      : {changed: false, publicItemBag: battleItemBagFromProfile(profile)};
+    changed = changed || itemWriteback.changed;
+    summary.battleItemBag = itemWriteback.publicItemBag;
     if (!changed) {
       continue;
     }
@@ -2746,6 +2890,62 @@ function applyBattleActorHpToProfilePet(profile, actor) {
       schemaVersion: 1,
     },
   };
+}
+
+function applyBattleItemBagToProfile(profile, battleItemBag) {
+  const nextBag = {};
+  const sourceBag = battleItemBag && typeof battleItemBag === "object" && !Array.isArray(battleItemBag) ? battleItemBag : {};
+  for (const itemId of BATTLE_ITEM_IDS) {
+    nextBag[itemId] = Math.max(0, Math.trunc(Number(sourceBag[itemId] || 0)));
+  }
+  const previousBag = battleItemBagFromProfile(profile);
+  const changed = BATTLE_ITEM_IDS.some((itemId) => Number(previousBag[itemId] || 0) !== Number(nextBag[itemId] || 0));
+  if (changed) {
+    profile.backpackSlots = backpackSlotsWithBattleItemCounts(profileBackpackSlots(profile), nextBag);
+  }
+  return {
+    changed,
+    publicItemBag: clone(nextBag),
+  };
+}
+
+function backpackSlotsWithBattleItemCounts(slots, counts) {
+  const nextSlots = Array.isArray(slots) ? clone(slots) : [];
+  for (const itemId of BATTLE_ITEM_IDS) {
+    setBackpackSlotItemCount(nextSlots, itemId, Math.max(0, Math.trunc(Number(counts[itemId] || 0))));
+  }
+  return nextSlots;
+}
+
+function setBackpackSlotItemCount(slots, itemId, count) {
+  const stackLimit = 20;
+  let remaining = Math.max(0, Math.trunc(Number(count || 0)));
+  for (let index = 0; index < slots.length; index += 1) {
+    const slot = slots[index] && typeof slots[index] === "object" && !Array.isArray(slots[index]) ? slots[index] : {};
+    if (String(slot.itemId || "") !== itemId) {
+      slots[index] = slot;
+      continue;
+    }
+    if (remaining > 0) {
+      slot.itemId = itemId;
+      slot.count = Math.min(stackLimit, remaining);
+      remaining -= slot.count;
+      slots[index] = slot;
+    } else {
+      slots[index] = {};
+    }
+  }
+  while (remaining > 0) {
+    const stackCount = Math.min(stackLimit, remaining);
+    const emptyIndex = slots.findIndex((slot) => !slot || typeof slot !== "object" || Array.isArray(slot) || String(slot.itemId || "") === "");
+    const nextSlot = {itemId, count: stackCount};
+    if (emptyIndex >= 0) {
+      slots[emptyIndex] = nextSlot;
+    } else {
+      slots.push(nextSlot);
+    }
+    remaining -= stackCount;
+  }
 }
 
 function profilePetIdentityValues(pet) {
@@ -2993,6 +3193,68 @@ function battleTargetMissingEvent(room, battle, command, actor, round, sequence)
   };
 }
 
+function battleItemHealEvent(room, battle, command, actor, round, sequence) {
+  const itemId = normalizeBattleItemId(command.itemId || command.actionId);
+  const participant = battleParticipantByAccountId(room, actor.accountId);
+  const target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
+  if (
+    itemId === "" ||
+    !participant ||
+    participantBattleItemCount(participant, itemId) <= 0 ||
+    !target ||
+    Number(target.hp || 0) <= 0 ||
+    String(target.side || "") !== String(actor.side || "")
+  ) {
+    return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
+  }
+  const heal = battleItemHealAmount(itemId);
+  if (heal <= 0) {
+    return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
+  }
+  const hpBefore = Number(target.hp || 0);
+  const maxHp = battleActorWritebackMaxHp(target);
+  const hpAfter = Math.min(maxHp, hpBefore + heal);
+  setParticipantBattleItemCount(participant, itemId, participantBattleItemCount(participant, itemId) - 1);
+  target.hp = hpAfter;
+  target.defeated = hpAfter <= 0;
+  syncParticipantPetSnapshotHp(room, target);
+  const healed = Math.max(0, hpAfter - hpBefore);
+  const itemName = battleItemLabel(itemId);
+  const targetName = target.displayName || target.username || "目标";
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "item_heal",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    targetAccountId: target.accountId,
+    targetUsername: target.username,
+    targetActorId: target.actorId,
+    targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+    actionId: itemId,
+    itemId,
+    itemName,
+    heal,
+    healed,
+    hpBefore,
+    hpAfter,
+    remainingItemCount: participantBattleItemCount(participant, itemId),
+    damage: 0,
+    animation: {
+      actor: "item",
+      targetReaction: "heal",
+      observer: "watch_target",
+    },
+    message: healed > 0
+      ? `${actor.displayName || actor.username} 使用${itemName}，${targetName} 回复 ${healed} 点生命。`
+      : `${actor.displayName || actor.username} 使用${itemName}，${targetName} 生命已经充足。`,
+    schemaVersion: 1,
+  };
+}
+
 function battleSwitchPetEvent(room, battle, command, actor, round, sequence) {
   const participant = battleParticipantByAccountId(room, actor.accountId);
   const battlePets = participantBattlePets(participant);
@@ -3057,6 +3319,22 @@ function updateParticipantPetAfterSwitch(participant, previousPetActor, nextPetI
       pet.state = BATTLE_PET_STATE_BATTLE;
       pet.activeInBattle = true;
     }
+  }
+}
+
+function syncParticipantPetSnapshotHp(room, actor) {
+  if (!actor || String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
+    return;
+  }
+  const participant = battleParticipantByAccountId(room, actor.accountId);
+  for (const pet of participantBattlePets(participant)) {
+    if (String(pet.petId || "") !== String(actor.petId || "")) {
+      continue;
+    }
+    pet.hp = battleActorWritebackHp(actor);
+    pet.maxHp = battleActorWritebackMaxHp(actor);
+    pet.state = pet.hp > 0 ? (pet.activeInBattle ? BATTLE_PET_STATE_BATTLE : BATTLE_PET_STATE_STANDBY) : "rest";
+    return;
   }
 }
 

@@ -760,6 +760,153 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(challengerAfter.profileSummary.profileRevision, 2);
 });
 
+test("duel battle rooms snapshot and resolve server-authoritative battle items", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "itema", "password": "test1234", "displayName": "道具甲"});
+  const opponent = service.register({"username": "itemb", "password": "test1234", "displayName": "道具乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  const challengerProfile = battleProfile("道具甲", {"level": 12, "hp": 150, "maxHp": 150, "attack": 20, "defense": 8, "quick": 90}, {
+    "petId": "pet_item_a",
+    "name": "甲布伊",
+    "state": "battle",
+    "hp": 40,
+    "maxHp": 90,
+    "attack": 16,
+    "defense": 7,
+    "quick": 50,
+  });
+  challengerProfile.backpackSlots = [
+    {"itemId": "item_heal_single_5", "count": 2},
+    {"itemId": "item_meat_small", "count": 1},
+  ];
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": challengerProfile,
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("道具乙", {"level": 12, "hp": 150, "maxHp": 150, "attack": 18, "defense": 8, "quick": 70}, {
+      "petId": "pet_item_b",
+      "name": "乙布伊",
+      "state": "battle",
+      "hp": 80,
+      "maxHp": 90,
+      "attack": 16,
+      "defense": 7,
+      "quick": 50,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "itemb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_meat_small, 1);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "itema" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "itema" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "itemb" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "itemb" && actor.kind === "pet");
+
+  const enemyTarget = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_heal_single_5",
+    "itemId": "item_heal_single_5",
+    "targetActorId": opponentPet.actorId,
+  });
+  assert.equal(enemyTarget.ok, false);
+  assert.equal(enemyTarget.code, "battle_command_target_invalid");
+
+  const unsupported = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_heal_all_5",
+    "itemId": "item_heal_all_5",
+    "targetActorId": challengerPet.actorId,
+  });
+  assert.equal(unsupported.ok, false);
+  assert.equal(unsupported.code, "battle_command_item_unsupported");
+
+  const itemCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_heal_single_5",
+    "itemId": "item_heal_single_5",
+    "targetActorId": challengerPet.actorId,
+  });
+  assert.equal(itemCommand.ok, true);
+  assert.equal(itemCommand.command.actionKind, "item");
+  assert.equal(itemCommand.command.itemId, "item_heal_single_5");
+  assert.equal(itemCommand.room.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
+  assert.equal(itemCommand.turn, null);
+
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const roundOne = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(roundOne.ok, true);
+  assert.equal(roundOne.turn.kind, "battle_event_list");
+  const healEvent = roundOne.turn.events.find((event) => event.eventType === "item_heal");
+  assert.equal(healEvent.itemId, "item_heal_single_5");
+  assert.equal(healEvent.targetActorId, challengerPet.actorId);
+  assert.equal(healEvent.targetKind, "pet");
+  assert.equal(healEvent.hpBefore, 40);
+  assert.equal(healEvent.hpAfter, 82);
+  assert.equal(healEvent.remainingItemCount, 1);
+
+  const meatCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_meat_small",
+    "itemId": "item_meat_small",
+    "targetActorId": challengerPlayer.actorId,
+  });
+  assert.equal(meatCommand.ok, true);
+  assert.equal(meatCommand.room.participants[0].teamSnapshot.battleItemBag.item_meat_small, 1);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const roundTwo = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(roundTwo.ok, true);
+  const meatEvent = roundTwo.turn.events.find((event) => event.eventType === "item_heal" && event.itemId === "item_meat_small");
+  assert.equal(meatEvent.targetActorId, challengerPlayer.actorId);
+  assert.equal(meatEvent.remainingItemCount, 0);
+
+  const leave = service.leaveBattleRoom(opponent.session.token, accept.room.roomId);
+  assert.equal(leave.ok, true);
+  const challengerAfter = service.getProfile(challenger.session.token);
+  assert.equal(challengerAfter.ok, true);
+  const storedPet = challengerAfter.profile.petInstances.find((pet) => pet.instanceId === "pet_item_a");
+  assert.equal(storedPet.hp, 82);
+  assert.equal(challengerAfter.profile.backpackSlots.filter((slot) => slot.itemId === "item_heal_single_5").reduce((total, slot) => total + slot.count, 0), 1);
+  assert.equal(challengerAfter.profile.backpackSlots.filter((slot) => slot.itemId === "item_meat_small").reduce((total, slot) => total + slot.count, 0), 0);
+});
+
 test("duel battle rooms can cancel, leave, timeout, and finish with results", () => {
   let nowMs = Date.parse("2026-06-29T00:00:00.000Z");
   const service = createAuthService({
