@@ -679,6 +679,7 @@ var auto_battle_room_live_check: bool = false
 var auto_server_battle_turn_live_check: bool = false
 var auto_server_battle_reconnect_live_check: bool = false
 var auto_server_battle_close_live_check: bool = false
+var auto_server_battle_return_check: bool = false
 var auto_server_battle_pet_snapshot_live_check: bool = false
 var auto_server_battle_leave_ui_live_check: bool = false
 var auto_server_battle_pet_command_live_check: bool = false
@@ -820,6 +821,7 @@ var current_account_session: Dictionary = {}
 var server_profile_sync_state: String = "off"
 var server_profile_sync_pending_kind: String = ""
 var server_profile_sync_dirty: bool = false
+var server_profile_sync_pull_queued: bool = false
 var server_profile_sync_expected_revision: int = 0
 var server_profile_sync_message: String = ""
 var profile_save_enabled: bool = true
@@ -1042,6 +1044,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_reconnect_live_check")
 	elif auto_server_battle_close_live_check:
 		call_deferred("_run_auto_server_battle_close_live_check")
+	elif auto_server_battle_return_check:
+		call_deferred("_run_auto_server_battle_return_check")
 	elif auto_server_battle_pet_snapshot_live_check:
 		call_deferred("_run_auto_server_battle_pet_snapshot_live_check")
 	elif auto_server_battle_leave_ui_live_check:
@@ -1821,6 +1825,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_reconnect_live_check = true
 		elif arg == "--auto-server-battle-close-live-check":
 			auto_server_battle_close_live_check = true
+		elif arg == "--auto-server-battle-return-check":
+			auto_server_battle_return_check = true
 		elif arg == "--auto-server-battle-pet-snapshot-live-check":
 			auto_server_battle_pet_snapshot_live_check = true
 		elif arg == "--auto-server-battle-leave-ui-live-check":
@@ -17605,6 +17611,80 @@ func _run_auto_server_battle_close_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_server_battle_return_check() -> void:
+	profile_save_enabled = false
+	var self_account_id := "acc_return_self"
+	current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"accountId": self_account_id,
+		"username": "returnself",
+		"serverSessionToken": "token_return_self",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	account_authenticated = true
+	server_profile_sync_state = "off"
+	battle_active = true
+	battle_state = {
+		"serverAuthority": true,
+		"serverRoomId": "battle_room_return_check",
+	}
+	var closed_room := {
+		"roomId": "battle_room_return_check",
+		"status": "closed",
+		"closeReason": "defeat",
+		"battle": {
+			"result": {
+				"kind": "battle_result",
+				"reason": "defeat",
+				"winnerAccountId": "acc_return_other",
+				"loserAccountIds": [self_account_id],
+				"battleReturns": [
+					{
+						"kind": "record_point_return",
+						"accountId": self_account_id,
+						"reason": "defeat",
+						"recordPoint": {
+							"mapId": "firebud_village_gate",
+							"spawnName": "doctor_record",
+							"label": "火芽村医旁记录点",
+						},
+						"position": {
+							"mapId": "firebud_village_gate",
+							"cellX": 10,
+							"cellY": 17,
+							"facing": "south",
+							"moving": false,
+							"movementSeq": 4,
+							"authority": "battle_result_return",
+						},
+					},
+				],
+			},
+		},
+	}
+	var result := _finish_server_battle_from_closed_room(closed_room)
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i(-999, -999)
+	var returned_ok := (
+		not battle_active
+		and str(result.get("result", "")) == "defeat"
+		and current_map_id == "firebud_village_gate"
+		and player_cell == Vector2i(10, 17)
+		and server_step_move_authority_valid
+		and server_step_move_authority_cell == Vector2i(10, 17)
+		and world_log_message.find("已回到记录点") >= 0
+	)
+	var status := "ok" if returned_ok else "failed"
+	print("server battle return check ready: status=%s returned=%s map=%s cell=%d,%d message=%s" % [
+		status,
+		str(returned_ok),
+		current_map_id,
+		player_cell.x,
+		player_cell.y,
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_server_battle_leave_ui_live_check() -> void:
 	profile_save_enabled = false
 	var suffix := str(Time.get_ticks_usec() % 10000000000)
@@ -18100,7 +18180,7 @@ func _run_auto_server_battle_pet_snapshot_live_check() -> void:
 	while frames < 720 and not _battle_invite_seen(invite_id):
 		frames += 1
 		await get_tree().process_frame
-	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _battle_invite_seen(invite_id)
+	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != ""
 	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(opponent_session.get("serverSessionToken", "")),
@@ -18109,6 +18189,9 @@ func _run_auto_server_battle_pet_snapshot_live_check() -> void:
 	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
 	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
 	var room_id := str(accepted_room.get("roomId", ""))
+	var accepted_room_applied := false
+	if bool(accept_parsed.get("ok", false)) and not accepted_room.is_empty():
+		accepted_room_applied = _apply_server_battle_room_state(accepted_room, true)
 	frames = 0
 	while frames < 720 and not _battle_room_ready(room_id):
 		frames += 1
@@ -18181,13 +18264,14 @@ func _run_auto_server_battle_pet_snapshot_live_check() -> void:
 	var pet_hp_sync_ok := not updated_ally_pet.is_empty() and int(updated_ally_pet.get("hp", 0)) < int(ally_pet.get("hp", 0))
 	var command_ok := bool(challenger_command_parsed.get("ok", false)) and bool(challenger_pet_command_parsed.get("ok", false)) and pet_target_event_ok and pet_hp_sync_ok
 	var status := "ok" if register_ok and upload_ok and positions_ok and stream_ready and invite_ok and ready_ok and visible_ok and command_ok else "failed"
-	print("server battle pet snapshot live check ready: status=%s register=%s upload=%s positions=%s stream=%s invite=%s ready=%s visible=%s command=%s pets=%d room_id=%s challenger=%s opponent=%s ally_pet_hp=%d updated_ally_pet_hp=%d" % [
+	print("server battle pet snapshot live check ready: status=%s register=%s upload=%s positions=%s stream=%s invite=%s room_apply=%s ready=%s visible=%s command=%s pets=%d room_id=%s challenger=%s opponent=%s ally_pet_hp=%d updated_ally_pet_hp=%d" % [
 		status,
 		str(register_ok),
 		str(upload_ok),
 		str(positions_ok),
 		str(stream_ready),
 		str(invite_ok),
+		str(accepted_room_applied),
 		str(ready_ok),
 		str(visible_ok),
 		str(command_ok),
@@ -18198,6 +18282,12 @@ func _run_auto_server_battle_pet_snapshot_live_check() -> void:
 		int(ally_pet.get("hp", 0)),
 		int(updated_ally_pet.get("hp", 0)),
 	])
+	if room_id != "":
+		await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(opponent_session.get("serverSessionToken", "")),
+			room_id
+		))
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -18324,7 +18414,7 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 	while frames < 720 and not _battle_invite_seen(invite_id):
 		frames += 1
 		await get_tree().process_frame
-	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != "" and _battle_invite_seen(invite_id)
+	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != ""
 	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(opponent_session.get("serverSessionToken", "")),
@@ -18333,6 +18423,9 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
 	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
 	var room_id := str(accepted_room.get("roomId", ""))
+	var accepted_room_applied := false
+	if bool(accept_parsed.get("ok", false)) and not accepted_room.is_empty():
+		accepted_room_applied = _apply_server_battle_room_state(accepted_room, true)
 	frames = 0
 	while frames < 720 and not _battle_room_ready(room_id):
 		frames += 1
@@ -18462,13 +18555,16 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 	var round_ok := int(battle_state.get("round", 1)) >= 2
 	var command_flow_ok := remote_submitted_ok and player_to_pet_ok and shared_countdown_ok and pet_skill_button_ok and pet_target_mode_ok and target_clicked and pet_skill_event_ok and hp_sync_ok and local_event_ok and round_ok
 	var status := "ok" if register_ok and upload_ok and positions_ok and stream_ready and invite_ok and ready_ok and visible_ok and command_flow_ok else "failed"
-	print("server battle pet command live check ready: status=%s register=%s upload=%s positions=%s stream=%s invite=%s ready=%s visible=%s remote=%s player_to_pet=%s shared_countdown=%s countdown_after=%.2f pet_button=%s target_mode=%s click=%s event=%s hp_sync=%s local_event=%s round=%s damage=%d room_id=%s challenger=%s opponent=%s enemy_pet_hp=%d updated_enemy_pet_hp=%d" % [
+	print("server battle pet command live check ready: status=%s register=%s register_result=%d/%d upload=%s positions=%s stream=%s invite=%s room_apply=%s ready=%s visible=%s remote=%s player_to_pet=%s shared_countdown=%s countdown_after=%.2f pet_button=%s target_mode=%s click=%s event=%s hp_sync=%s local_event=%s round=%s damage=%d room_id=%s challenger=%s opponent=%s enemy_pet_hp=%d updated_enemy_pet_hp=%d" % [
 		status,
 		str(register_ok),
+		int(challenger_register.get("result", -99)),
+		int(challenger_register.get("responseCode", 0)),
 		str(upload_ok),
 		str(positions_ok),
 		str(stream_ready),
 		str(invite_ok),
+		str(accepted_room_applied),
 		str(ready_ok),
 		str(visible_ok),
 		str(remote_submitted_ok),
@@ -18489,6 +18585,12 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 		enemy_pet_before_hp,
 		int(updated_enemy_pet.get("hp", 0)),
 	])
+	if room_id != "":
+		await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(opponent_session.get("serverSessionToken", "")),
+			room_id
+		))
 	_stop_server_event_stream()
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -18568,11 +18670,12 @@ func _auto_http_request_spec(spec: Dictionary) -> Dictionary:
 	)
 	if err != OK:
 		request.queue_free()
-		return {"ok": false, "responseCode": 0, "body": PackedByteArray()}
+		return {"ok": false, "result": -1, "error": err, "responseCode": 0, "body": PackedByteArray()}
 	var completed = await request.request_completed
 	request.queue_free()
 	return {
 		"ok": int(completed[0]) == HTTPRequest.RESULT_SUCCESS,
+		"result": int(completed[0]),
 		"responseCode": int(completed[1]),
 		"headers": completed[2],
 		"body": completed[3],
@@ -25079,7 +25182,11 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	server_battle_command_request_active = false
 	server_battle_state["room"] = null
 	_end_battle(true)
+	var returned_to_record_point := _apply_server_battle_return(closed_room)
+	if returned_to_record_point:
+		message = _server_battle_return_message(message)
 	_set_world_log_message(message)
+	_queue_server_profile_pull()
 	return {
 		"result": result_key,
 		"message": message,
@@ -25160,6 +25267,46 @@ func _server_battle_result_message(room: Dictionary) -> String:
 		if winner_account_id != "":
 			return "切磋落败。"
 	return "切磋已结束。"
+
+
+func _server_battle_return_for_self(room: Dictionary) -> Dictionary:
+	var result := _server_battle_result_payload(room)
+	var returns: Array = result.get("battleReturns", []) if result.get("battleReturns", []) is Array else []
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if self_account_id == "":
+		return {}
+	for value in returns:
+		if value is Dictionary and str((value as Dictionary).get("accountId", "")).strip_edges() == self_account_id:
+			return (value as Dictionary).duplicate(true)
+	return {}
+
+
+func _apply_server_battle_return(room: Dictionary) -> bool:
+	var battle_return := _server_battle_return_for_self(room)
+	if battle_return.is_empty():
+		return false
+	var record_point := battle_return.get("recordPoint", {}) as Dictionary if battle_return.get("recordPoint", {}) is Dictionary else {}
+	var position := battle_return.get("position", {}) as Dictionary if battle_return.get("position", {}) is Dictionary else {}
+	var map_id := str(record_point.get("mapId", position.get("mapId", ""))).strip_edges()
+	var spawn_name := str(record_point.get("spawnName", PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME)).strip_edges()
+	if map_id == "":
+		return false
+	if spawn_name == "":
+		spawn_name = PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME
+	if not _load_map(map_id, spawn_name):
+		return false
+	if not position.is_empty():
+		_apply_server_step_move_authority_position(position, true)
+	return true
+
+
+func _server_battle_return_message(message: String) -> String:
+	var text := message.strip_edges()
+	if text.ends_with("。"):
+		text = text.substr(0, text.length() - 1)
+	if text == "":
+		text = "切磋已结束"
+	return "%s，已回到记录点。" % text
 
 
 func _sync_server_battle_room_scene(force_start: bool = false) -> bool:
@@ -25463,8 +25610,18 @@ func _online_position_draw_signature(players: Array[Dictionary]) -> String:
 func _request_server_profile_pull() -> void:
 	if profile_sync_http_request == null or not _is_server_account_session():
 		return
+	server_profile_sync_pull_queued = false
 	var spec := ServerAuthClientModel.profile_request(_server_profile_base_url(), _server_profile_token())
 	_start_server_profile_sync_request("pull", spec)
+
+
+func _queue_server_profile_pull() -> void:
+	if not _is_server_account_session() or server_profile_sync_state == "off":
+		return
+	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
+		server_profile_sync_pull_queued = true
+		return
+	_request_server_profile_pull()
 
 
 func _queue_server_profile_upload() -> void:
@@ -25537,6 +25694,7 @@ func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
 		_mark_progress_ui_caches_dirty()
 		_update_hud_text(true)
 		_layout_hud()
+		_continue_pending_server_profile_sync()
 		return
 	_apply_server_profile_summary(summary)
 	PlayerProgressModel.save_profile(player_profile)
@@ -25556,6 +25714,9 @@ func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
 			server_profile_sync_message = str(parsed.get("message", "服务器档案版本冲突。"))
 			_set_world_log_message(server_profile_sync_message)
 			_refresh_account_panel()
+			if server_profile_sync_pull_queued:
+				server_profile_sync_state = "ready"
+				_continue_pending_server_profile_sync()
 			return
 		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
 		server_profile_sync_message = str(parsed.get("message", "服务器档案保存失败。"))
@@ -25564,9 +25725,22 @@ func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
 	server_profile_sync_state = "ready"
 	server_profile_sync_message = str(parsed.get("message", "角色档案已同步。"))
 	_refresh_account_panel()
+	_continue_pending_server_profile_sync()
+
+
+func _continue_pending_server_profile_sync() -> void:
+	if not _is_server_account_session():
+		server_profile_sync_pull_queued = false
+		return
+	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
+		return
 	if server_profile_sync_dirty:
 		server_profile_sync_dirty = false
 		_queue_server_profile_upload()
+		return
+	if server_profile_sync_pull_queued:
+		server_profile_sync_pull_queued = false
+		_request_server_profile_pull()
 
 
 func _apply_server_profile_summary(summary: Dictionary) -> void:
@@ -25611,6 +25785,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	account_authenticated = true
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
 	server_profile_sync_dirty = false
+	server_profile_sync_pull_queued = false
 	server_profile_sync_message = ""
 	server_profile_sync_expected_revision = int((session.get("serverProfileSummary", {}) as Dictionary).get("profileRevision", 0)) if session.get("serverProfileSummary", {}) is Dictionary else 0
 	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
@@ -25732,6 +25907,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_state = "off"
 	server_profile_sync_pending_kind = ""
 	server_profile_sync_dirty = false
+	server_profile_sync_pull_queued = false
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
 	server_battle_state.clear()

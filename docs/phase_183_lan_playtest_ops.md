@@ -76,6 +76,6 @@ ipconfig getifaddr en0 || ipconfig getifaddr en1
 
 - The current server is suitable for LAN playtests, not public internet operation.
 - Profile data is still stored as a JSON document mirrored into MySQL inspection tables.
-- Battle result HP/reward/punishment profile writeback is not complete yet.
+- Battle result HP writeback for player and active battle pet is available after room close; `defeat/timeout` now returns losers to their record point. Rewards, punishment receipts, knock-away animation, capture, items, and full team authority still need future phases.
 - Full 5-pet team battle, item use, capture, switch pet, and equipment/inventory authority still need future phases.
 - Movement still needs server-side map collision, player collision, speed validation, transfer authority, and party follow.

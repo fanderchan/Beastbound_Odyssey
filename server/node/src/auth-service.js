@@ -52,6 +52,12 @@ const BATTLE_COMMAND_TIMEOUT_MS = 90 * 1000;
 const BATTLE_ACTOR_KIND_PLAYER = "player";
 const BATTLE_ACTOR_KIND_PET = "pet";
 const BATTLE_PET_MAX_PER_PARTICIPANT = 1;
+const DEFAULT_RECORD_POINT = {
+  mapId: "firebud_village_gate",
+  spawnName: "doctor_record",
+  label: "火芽村医旁记录点",
+};
+const DEFAULT_RECORD_POINT_CELL = [10, 17];
 const DEFAULT_PLAYER_BATTLE_STATS = {
   maxHp: 120,
   attack: 18,
@@ -1161,7 +1167,7 @@ function createAuthService(options = {}) {
       return fail("battle_room_forbidden", "你不在这个切磋房间中。");
     }
     const result = battleRoomResultForLeave(room, resolved.account.accountId, now);
-    closeBattleRoomWithResult(room, result, now);
+    closeBattleRoomWithResult(data, room, result, now);
     data.battleRooms[room.roomId] = room;
     save(data);
     emitServiceEvent({
@@ -1228,7 +1234,7 @@ function createAuthService(options = {}) {
     let turn = null;
     const readyToResolve = requiredBattleCommandActorIds(battle).every((actorId) => battle.commands[actorId]);
     if (readyToResolve) {
-      turn = resolveBattleRoomTurn(room, battle, now);
+      turn = resolveBattleRoomTurn(data, room, battle, now);
     }
     data.battleRooms[room.roomId] = room;
     save(data);
@@ -1760,6 +1766,22 @@ function publicBattleResult(result) {
     loserAccountIds: Array.isArray(result.loserAccountIds) ? result.loserAccountIds.map((value) => String(value)) : [],
     closedByAccountId: String(result.closedByAccountId || ""),
     endedAt: String(result.endedAt || ""),
+    battleReturns: Array.isArray(result.battleReturns) ? result.battleReturns.map(publicBattleReturn) : [],
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleReturn(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return {};
+  }
+  return {
+    kind: "record_point_return",
+    accountId: String(entry.accountId || ""),
+    reason: String(entry.reason || ""),
+    recordPoint: entry.recordPoint && typeof entry.recordPoint === "object" ? clone(entry.recordPoint) : null,
+    position: entry.position && typeof entry.position === "object" ? publicPlayerPosition(entry.position) : null,
+    updatedAt: String(entry.updatedAt || ""),
     schemaVersion: 1,
   };
 }
@@ -2257,7 +2279,7 @@ function battleCommandTargetActor(payload, data, room, battle, actor, actionId) 
   return targetAccountId ? battlePlayerActorByAccountId(battle, targetAccountId) : null;
 }
 
-function resolveBattleRoomTurn(room, battle, now) {
+function resolveBattleRoomTurn(data, room, battle, now) {
   battle.turnSeq = Number(battle.turnSeq || 0) + 1;
   const round = Number(battle.round || 1);
   const orderedCommands = Object.values(battle.commands)
@@ -2326,8 +2348,9 @@ function resolveBattleRoomTurn(room, battle, now) {
   battle.updatedAt = eventList.resolvedAt;
   room.updatedAt = eventList.resolvedAt;
   if (result) {
-    closeBattleRoomWithResult(room, result, now);
+    closeBattleRoomWithResult(data, room, result, now);
     eventList.actors = battle.actors.map(publicBattleActor);
+    eventList.result = publicBattleResult(battle.result);
   }
   return clone(eventList);
 }
@@ -2409,7 +2432,7 @@ function battleRoomResultForTimeout(room, battle, now) {
   };
 }
 
-function closeBattleRoomWithResult(room, result, now) {
+function closeBattleRoomWithResult(data, room, result, now) {
   const battle = battleRoomBattleStateForMutation(room, now);
   room.status = BATTLE_ROOM_CLOSED;
   room.closeReason = String(result.reason || "closed");
@@ -2423,7 +2446,293 @@ function closeBattleRoomWithResult(room, result, now) {
   battle.submittedAccountIds = [];
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
+  battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now);
+  battle.result.battleReturns = applyBattleRoomResultReturns(data, room, battle.result, now);
   return room;
+}
+
+function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
+  const updatedAt = String(result && result.endedAt || room.closedAt || isoNow(now));
+  const writeback = {
+    kind: "battle_profile_writeback",
+    roomId: String(room.roomId || ""),
+    reason: String(result && result.reason || room.closeReason || ""),
+    updatedAt,
+    profiles: [],
+    skippedProfiles: [],
+    schemaVersion: 1,
+  };
+  if (!data || !battle || !Array.isArray(battle.actors)) {
+    return writeback;
+  }
+  for (const accountId of requiredBattleCommandAccountIds(room)) {
+    const binding = data.profileBindings[String(accountId || "")] || null;
+    if (!binding || !binding.playerId) {
+      writeback.skippedProfiles.push({accountId, reason: "profile_binding_missing"});
+      continue;
+    }
+    const profileDoc = data.profiles[binding.playerId] || null;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? clone(profileDoc.profile)
+      : null;
+    if (!profile) {
+      writeback.skippedProfiles.push({accountId, playerId: binding.playerId, reason: "profile_document_missing"});
+      continue;
+    }
+    const accountActors = battle.actors.filter((actor) => actor && String(actor.accountId || "") === String(accountId || ""));
+    const summary = {
+      accountId: String(accountId || ""),
+      playerId: String(binding.playerId || ""),
+      profileRevision: Number(binding.profileRevision || profileDoc.profileRevision || 0),
+      playerHp: null,
+      petHps: [],
+      schemaVersion: 1,
+    };
+    let changed = false;
+    const playerActor = accountActors.find((actor) => String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER) || null;
+    if (playerActor) {
+      const applied = applyBattleActorHpToProfilePlayer(profile, playerActor);
+      changed = changed || applied.changed;
+      summary.playerHp = applied.publicHp;
+    }
+    const petActors = accountActors.filter((actor) => String(actor.kind || "") === BATTLE_ACTOR_KIND_PET);
+    for (const petActor of petActors) {
+      const applied = applyBattleActorHpToProfilePet(profile, petActor);
+      if (!applied.found) {
+        writeback.skippedProfiles.push({
+          accountId: String(accountId || ""),
+          playerId: String(binding.playerId || ""),
+          petId: String(petActor.petId || ""),
+          reason: "pet_instance_missing",
+        });
+        continue;
+      }
+      changed = changed || applied.changed;
+      summary.petHps.push(applied.publicHp);
+    }
+    if (!changed) {
+      continue;
+    }
+    const nextRevision = Number(binding.profileRevision || profileDoc.profileRevision || 0) + 1;
+    binding.profileRevision = nextRevision;
+    binding.updatedAt = updatedAt;
+    data.profileBindings[String(accountId || "")] = binding;
+    data.profiles[binding.playerId] = {
+      ...profileDoc,
+      playerId: binding.playerId,
+      accountId: String(accountId || ""),
+      profileRevision: nextRevision,
+      profile,
+      updatedAt,
+      schemaVersion: 1,
+    };
+    summary.profileRevision = nextRevision;
+    writeback.profiles.push(summary);
+  }
+  return writeback;
+}
+
+function applyBattleActorHpToProfilePlayer(profile, actor) {
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const hp = battleActorWritebackHp(actor);
+  const maxHp = battleActorWritebackMaxHp(actor);
+  const previousHp = Number(profile.player.hp);
+  const changed = !Number.isFinite(previousHp) || previousHp !== hp;
+  if (changed) {
+    profile.player.hp = hp;
+  }
+  return {
+    changed,
+    publicHp: {
+      actorId: String(actor.actorId || ""),
+      hp,
+      maxHp,
+      schemaVersion: 1,
+    },
+  };
+}
+
+function applyBattleActorHpToProfilePet(profile, actor) {
+  const petCollections = [];
+  if (Array.isArray(profile.petInstances)) {
+    petCollections.push(profile.petInstances);
+  }
+  if (Array.isArray(profile.pets) && profile.pets !== profile.petInstances) {
+    petCollections.push(profile.pets);
+  }
+  const actorPetId = String(actor.petId || "").trim();
+  let pet = null;
+  for (const collection of petCollections) {
+    pet = collection.find((item) => profilePetIdentityValues(item).includes(actorPetId)) || null;
+    if (pet) {
+      break;
+    }
+  }
+  if (!pet) {
+    return {found: false, changed: false, publicHp: null};
+  }
+  const hp = battleActorWritebackHp(actor);
+  const maxHp = battleActorWritebackMaxHp(actor);
+  const previousHp = Number(pet.hp);
+  const changed = !Number.isFinite(previousHp) || previousHp !== hp;
+  if (changed) {
+    pet.hp = hp;
+  }
+  return {
+    found: true,
+    changed,
+    publicHp: {
+      actorId: String(actor.actorId || ""),
+      petId: actorPetId,
+      hp,
+      maxHp,
+      schemaVersion: 1,
+    },
+  };
+}
+
+function profilePetIdentityValues(pet) {
+  if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
+    return [];
+  }
+  return [pet.instanceId, pet.petId, pet.id]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+function battleActorWritebackMaxHp(actor) {
+  const maxHp = Number(actor && actor.maxHp);
+  return Number.isFinite(maxHp) && maxHp > 0 ? maxHp : 1;
+}
+
+function battleActorWritebackHp(actor) {
+  const maxHp = battleActorWritebackMaxHp(actor);
+  const hp = Number(actor && actor.hp);
+  if (!Number.isFinite(hp)) {
+    return maxHp;
+  }
+  return Math.max(0, Math.min(maxHp, hp));
+}
+
+function applyBattleRoomResultReturns(data, room, result, now) {
+  const returnAccountIds = battleReturnAccountIdsForResult(room, result);
+  const entries = [];
+  for (const accountId of returnAccountIds) {
+    const account = accountById(data, accountId);
+    if (!account) {
+      continue;
+    }
+    const recordPoint = recordPointForAccount(data, accountId);
+    const spawnCell = spawnCellForRecordPoint(recordPoint);
+    const previousPosition = data.playerPositions[accountId] || null;
+    const position = normalizePlayerPositionPayload({
+      mapId: recordPoint.mapId,
+      cellX: spawnCell[0],
+      cellY: spawnCell[1],
+      facing: "south",
+      moving: false,
+    }, account, now);
+    position.authority = "battle_result_return";
+    position.movementSeq = Number(previousPosition && previousPosition.movementSeq || 0) + 1;
+    position.returnReason = String(result.reason || room.closeReason || "");
+    data.playerPositions[accountId] = position;
+    entries.push({
+      kind: "record_point_return",
+      accountId,
+      reason: position.returnReason,
+      recordPoint,
+      position,
+      updatedAt: position.updatedAt,
+      schemaVersion: 1,
+    });
+  }
+  return entries;
+}
+
+function battleReturnAccountIdsForResult(room, result) {
+  const reason = String(result && result.reason || room && room.closeReason || "");
+  if (reason !== "defeat" && reason !== "timeout") {
+    return [];
+  }
+  const loserIds = Array.isArray(result && result.loserAccountIds) ? result.loserAccountIds : [];
+  return loserIds
+    .map((value) => String(value || "").trim())
+    .filter((value, index, array) => value !== "" && array.indexOf(value) === index);
+}
+
+function recordPointForAccount(data, accountId) {
+  const binding = data.profileBindings[String(accountId || "")] || null;
+  const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+  const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+    ? profileDoc.profile
+    : {};
+  return normalizeRecordPoint(profile.recordPoint);
+}
+
+function normalizeRecordPoint(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const mapId = String(source.mapId || DEFAULT_RECORD_POINT.mapId).trim() || DEFAULT_RECORD_POINT.mapId;
+  const spawnName = String(source.spawnName || DEFAULT_RECORD_POINT.spawnName).trim() || DEFAULT_RECORD_POINT.spawnName;
+  const label = String(source.label || DEFAULT_RECORD_POINT.label).trim() || DEFAULT_RECORD_POINT.label;
+  return {
+    mapId,
+    spawnName,
+    label,
+    schemaVersion: 1,
+  };
+}
+
+function spawnCellForRecordPoint(recordPoint) {
+  return spawnCellForMapSpawn(recordPoint.mapId, recordPoint.spawnName);
+}
+
+function spawnCellForMapSpawn(mapId, spawnName) {
+  const mapDoc = mapDocumentById(mapId);
+  const spawnPoints = mapDoc && mapDoc.spawnPoints && typeof mapDoc.spawnPoints === "object" && !Array.isArray(mapDoc.spawnPoints)
+    ? mapDoc.spawnPoints
+    : {};
+  const explicit = spawnPoints[String(spawnName || "")];
+  if (Array.isArray(explicit) && explicit.length >= 2) {
+    return [clampInt(explicit[0], -9999, 9999, DEFAULT_RECORD_POINT_CELL[0]), clampInt(explicit[1], -9999, 9999, DEFAULT_RECORD_POINT_CELL[1])];
+  }
+  const fallback = Array.isArray(mapDoc && mapDoc.spawnCell) ? mapDoc.spawnCell : DEFAULT_RECORD_POINT_CELL;
+  return [clampInt(fallback[0], -9999, 9999, DEFAULT_RECORD_POINT_CELL[0]), clampInt(fallback[1], -9999, 9999, DEFAULT_RECORD_POINT_CELL[1])];
+}
+
+let mapDocumentCache = null;
+
+function mapDocumentById(mapId) {
+  const normalizedMapId = String(mapId || "").trim();
+  if (!normalizedMapId) {
+    return null;
+  }
+  if (!mapDocumentCache) {
+    mapDocumentCache = loadMapDocumentCache();
+  }
+  return mapDocumentCache[normalizedMapId] || null;
+}
+
+function loadMapDocumentCache() {
+  const cache = {};
+  const dataDir = path.resolve(__dirname, "../../..", "client/godot/data");
+  try {
+    for (const fileName of fs.readdirSync(dataDir)) {
+      if (!fileName.endsWith("_map.json")) {
+        continue;
+      }
+      const filePath = path.join(dataDir, fileName);
+      const doc = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      const mapId = String(doc && doc.id || "").trim();
+      if (mapId) {
+        cache[mapId] = doc;
+      }
+    }
+  } catch {
+    // Map data is a convenience for battle return cells; default record point remains usable without it.
+  }
+  return cache;
 }
 
 function battleInviteIsExpired(invite, now) {
@@ -2466,7 +2775,7 @@ function expireBattleTimeouts(data, now) {
       continue;
     }
     const result = battleRoomResultForTimeout(room, battle, now);
-    closeBattleRoomWithResult(room, result, now);
+    closeBattleRoomWithResult(data, room, result, now);
     data.battleRooms[room.roomId] = room;
     events.push({
       type: "battle.room_closed",

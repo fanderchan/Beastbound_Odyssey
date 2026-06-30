@@ -59,6 +59,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 4000 -- --auto-server-battle-return-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
@@ -90,6 +91,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-turn-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-reconnect-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 4000 -- --auto-server-battle-return-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
@@ -307,6 +309,14 @@ Phase181 玩家互动入口自测：
 - Godot 合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-auth-server-client-check`
 - Godot 真实联网玩家互动：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-player-interaction-live-check`
 - 回归：继续跑 `--auto-party-live-check`、`--auto-online-position-live-check`、`--auto-battle-room-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认点人菜单、入队申请和切磋邀请弹窗不进入移动/HUD热路径。
+
+Phase186 MySQL stdin 保存和宠物指令稳定性自测：
+
+- 服务端：`cd server/node && npm test`
+- MySQL store 语法：`node --check server/node/src/mysql-store.js && node --check server/node/test/auth-service.test.js`
+- Godot 真实联网宠物指令：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check`
+- Godot 真实联网宠物快照：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-snapshot-live-check`
+- 回归：确认 MySQL 保存走 stdin 而不是 `mysql -e` 超长参数；宠物 live check 接受切磋后可直接应用 HTTP 返回的房间状态，结束后不残留 open battle room。
 
 ## 验收口径
 

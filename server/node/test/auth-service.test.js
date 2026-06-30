@@ -1,6 +1,9 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 const {once} = require("node:events");
 const {
@@ -11,6 +14,9 @@ const {
   createHttpServer,
   DEFAULT_COMMAND_CATALOG,
 } = require("../src/http-server");
+const {
+  createMysqlAuthStore,
+} = require("../src/mysql-store");
 
 function battleProfile(name, playerStats, petStats = null) {
   const petId = petStats && petStats.petId ? petStats.petId : "";
@@ -50,6 +56,71 @@ function battleProfile(name, playerStats, petStats = null) {
   }
   return profile;
 }
+
+test("mysql store sends generated SQL through stdin", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  stdin += chunk;
+});
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
+    argv: process.argv.slice(2),
+    stdinLength: stdin.length,
+    hasExecuteArg: process.argv.slice(2).includes("-e"),
+    hasServerState: stdin.includes("INSERT INTO server_state"),
+  }) + "\\n");
+});
+`, {"mode": 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      "mysqlPath": fakeMysqlPath,
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "tester",
+      "password": "secret",
+      "database": "beastbound_test",
+      "createDatabase": false,
+    });
+    store.save({
+      "accounts": {
+        "mysqlprobe": {
+          "accountId": "acc_mysqlprobe",
+          "username": "mysqlprobe",
+          "displayName": "MySQL探针",
+          "role": "player",
+          "createdAt": "2026-06-30T00:00:00.000Z",
+          "updatedAt": "2026-06-30T00:00:00.000Z",
+          "note": "x".repeat(4096),
+        },
+      },
+      "sessions": {},
+      "profileBindings": {},
+      "profiles": {},
+      "authEvents": [],
+      "serviceEvents": [],
+    });
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.ok(calls.length >= 2);
+    assert.ok(calls.every((call) => call.hasExecuteArg === false));
+    assert.ok(calls.some((call) => call.hasServerState));
+    assert.ok(calls.some((call) => call.stdinLength > 4096));
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
 
 test("register/login/session keeps players away from GM tools", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
@@ -557,6 +628,21 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   const updatedOpponentPlayer = fourth.room.battle.actors.find((actor) => actor.actorId === opponentPlayer.actorId);
   assert.equal(updatedOpponentPet.hp < opponentPet.hp, true);
   assert.equal(updatedOpponentPlayer.hp, opponentPlayer.hp);
+
+  const leave = service.leaveBattleRoom(challenger.session.token, accept.room.roomId);
+  assert.equal(leave.ok, true);
+  assert.equal(leave.room.status, "closed");
+  const opponentAfter = service.getProfile(opponent.session.token);
+  assert.equal(opponentAfter.ok, true);
+  const storedOpponentPet = opponentAfter.profile.petInstances.find((pet) => pet.instanceId === opponentPet.petId);
+  assert.equal(storedOpponentPet.hp, updatedOpponentPet.hp);
+  assert.equal(opponentAfter.profileSummary.profileRevision, 2);
+  const challengerAfter = service.getProfile(challenger.session.token);
+  assert.equal(challengerAfter.profileSummary.profileRevision, 1);
+  const storedRoom = service.snapshot().battleRooms[accept.room.roomId];
+  assert.equal(storedRoom.battle.profileWriteback.profiles.length, 1);
+  assert.equal(storedRoom.battle.profileWriteback.profiles[0].accountId, opponent.account.accountId);
+  assert.equal(storedRoom.battle.profileWriteback.profiles[0].petHps[0].hp, updatedOpponentPet.hp);
 });
 
 test("duel battle rooms can cancel, leave, timeout, and finish with results", () => {
@@ -653,6 +739,17 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(finalCommand.room.status, "closed");
   assert.equal(finalCommand.turn.result.reason, "defeat");
   assert.equal(finalCommand.room.battle.result.winnerAccountId, challenger.account.accountId);
+  assert.equal(finalCommand.room.battle.result.battleReturns.length, 1);
+  assert.equal(finalCommand.room.battle.result.battleReturns[0].accountId, opponent.account.accountId);
+  assert.equal(finalCommand.room.battle.result.battleReturns[0].recordPoint.mapId, "firebud_village_gate");
+  assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellX, 10);
+  assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellY, 17);
+  assert.equal(finalCommand.turn.result.battleReturns[0].position.authority, "battle_result_return");
+  const returnedOpponentPosition = service.snapshot().playerPositions[opponent.account.accountId];
+  assert.equal(returnedOpponentPosition.mapId, "firebud_village_gate");
+  assert.equal(returnedOpponentPosition.cellX, 10);
+  assert.equal(returnedOpponentPosition.cellY, 17);
+  assert.equal(returnedOpponentPosition.authority, "battle_result_return");
   assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "defeat"), true);
 });
 

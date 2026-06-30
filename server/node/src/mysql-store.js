@@ -274,7 +274,7 @@ function createMysqlAuthStore(options = {}) {
         }
       }
       statements.push("COMMIT");
-      runMysql(config, config.database, `${statements.join(";\n")};`);
+      runMysqlSaveStatements(config, config.database, statements);
     },
   };
 }
@@ -307,9 +307,12 @@ function runMysql(config, database, sql, options = {}) {
   if (database) {
     args.push(database);
   }
-  args.push("-e", sql);
   try {
-    return execFileSync(config.mysqlPath, args, {"encoding": "utf8", "stdio": ["ignore", "pipe", "pipe"]});
+    return execFileSync(config.mysqlPath, args, {
+      "encoding": "utf8",
+      "input": sql,
+      "stdio": ["pipe", "pipe", "pipe"],
+    });
   } catch (error) {
     if (options.silent) {
       return "";
@@ -317,6 +320,38 @@ function runMysql(config, database, sql, options = {}) {
     const stderr = error && error.stderr ? String(error.stderr).trim() : "";
     throw new Error(stderr || "MySQL 命令执行失败。");
   }
+}
+
+function runMysqlSaveStatements(config, database, statements) {
+  try {
+    return runMysql(config, database, `${statements.join(";\n")};`);
+  } catch (error) {
+    const diagnosis = diagnoseMysqlSaveFailure(config, database, statements);
+    if (diagnosis !== "") {
+      throw new Error(`${error.message} (${diagnosis})`);
+    }
+    throw error;
+  }
+}
+
+function diagnoseMysqlSaveFailure(config, database, statements) {
+  for (let index = 0; index < statements.length - 1; index += 1) {
+    try {
+      runMysql(config, database, `${statements.slice(0, index + 1).join(";\n")};`);
+    } catch (error) {
+      return `statement ${index + 1}/${statements.length}: ${summarizeStatement(statements[index])}: ${error.message}`;
+    }
+  }
+  return "";
+}
+
+function summarizeStatement(statement) {
+  const text = String(statement || "").trim().replace(/\s+/g, " ");
+  const match = text.match(/^(INSERT INTO|DELETE FROM|UPDATE|START TRANSACTION)\s+`?([A-Za-z0-9_]+)?/i);
+  if (match) {
+    return [match[1].toUpperCase(), match[2] || ""].join(" ").trim();
+  }
+  return text.slice(0, 48);
 }
 
 function upsertStateStatement(data) {
