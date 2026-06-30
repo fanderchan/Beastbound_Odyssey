@@ -13,6 +13,7 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_AUDIT_ROWS = 500;
 const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAX_SERVICE_EVENTS = 500;
+const MAX_BATTLE_RECORDS = 10000;
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
 const PARTY_MAX_MEMBERS = 5;
@@ -989,6 +990,26 @@ function createAuthService(options = {}) {
     return ok(battleStatePayload(data, resolved.account.accountId));
   }
 
+  function getBattleRecordSummary(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.opponentUsername || "");
+    if (!targetUsername) {
+      return fail("battle_record_target_missing", "请选择要查询的玩家。");
+    }
+    const target = data.accounts[targetUsername] || null;
+    if (!target) {
+      return fail("battle_record_target_missing", "玩家不存在。");
+    }
+    return ok({
+      summary: battleRecordSummaryAgainst(data, resolved.account, target),
+      message: "已读取对战战绩。",
+    });
+  }
+
   function expireBattleTimeoutsAndEmit(data) {
     const timeoutEvents = expireBattleTimeouts(data, now);
     if (timeoutEvents.length > 0) {
@@ -1479,6 +1500,7 @@ function createAuthService(options = {}) {
     listChatMessages,
     sendChatMessage,
     getBattleState,
+    getBattleRecordSummary,
     inviteToBattle,
     acceptBattleInvite,
     declineBattleInvite,
@@ -1544,6 +1566,7 @@ function normalizeData(raw) {
     playerPositions: objectOrEmpty(data.playerPositions),
     battleInvites: objectOrEmpty(data.battleInvites),
     battleRooms: objectOrEmpty(data.battleRooms),
+    battleRecords: normalizeBattleRecords(data.battleRecords),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
     gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
@@ -1853,6 +1876,7 @@ function publicBattleResult(result) {
     winnerAccountId: String(result.winnerAccountId || ""),
     loserAccountIds: Array.isArray(result.loserAccountIds) ? result.loserAccountIds.map((value) => String(value)) : [],
     closedByAccountId: String(result.closedByAccountId || ""),
+    battleRecordId: String(result.battleRecordId || ""),
     endedAt: String(result.endedAt || ""),
     battleReturns: Array.isArray(result.battleReturns) ? result.battleReturns.map(publicBattleReturn) : [],
     schemaVersion: 1,
@@ -2946,6 +2970,7 @@ function battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now)
 
 function closeBattleRoomWithResult(data, room, result, now) {
   const battle = battleRoomBattleStateForMutation(room, now);
+  const recordId = `battle_record_${String(room.roomId || "").replace(/^battle_room_/, "")}`;
   room.status = BATTLE_ROOM_CLOSED;
   room.closeReason = String(result.reason || "closed");
   room.closedByAccountId = String(result.closedByAccountId || "");
@@ -2959,9 +2984,119 @@ function closeBattleRoomWithResult(data, room, result, now) {
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
   battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now);
-  battle.result.battleReturns = applyBattleRoomResultReturns(data, room, battle.result, now);
+  const battleReturns = applyBattleRoomResultReturns(data, room, battle.result, now);
+  battle.result.battleReturns = battleReturns;
+  battle.result.battleRecordId = recordId;
+  result.battleReturns = battleReturns;
+  result.battleRecordId = recordId;
+  appendBattleRecord(data, battleRecordForClosedRoom(data, room, battle.result, recordId));
   return room;
 }
+
+function appendBattleRecord(data, record) {
+  if (!record || typeof record !== "object" || Array.isArray(record) || String(record.recordId || "").trim() === "") {
+    return;
+  }
+  if (!Array.isArray(data.battleRecords)) {
+    data.battleRecords = [];
+  }
+  const recordId = String(record.recordId || "");
+  const existingIndex = data.battleRecords.findIndex((value) => value && String(value.recordId || "") === recordId);
+  if (existingIndex >= 0) {
+    data.battleRecords[existingIndex] = record;
+  } else {
+    data.battleRecords.push(record);
+  }
+  while (data.battleRecords.length > MAX_BATTLE_RECORDS) {
+    data.battleRecords.shift();
+  }
+}
+
+
+function battleRecordForClosedRoom(data, room, result, recordId) {
+  const participantAccountIds = requiredBattleCommandAccountIds(room);
+  const winnerAccountId = String(result && result.winnerAccountId || "");
+  const loserAccountIds = Array.isArray(result && result.loserAccountIds)
+    ? result.loserAccountIds.map((value) => String(value || "")).filter(Boolean)
+    : [];
+  const endedAt = String(result && result.endedAt || room.closedAt || room.updatedAt || "");
+  const createdAt = String(room.createdAt || "");
+  const startedMs = Date.parse(createdAt);
+  const endedMs = Date.parse(endedAt);
+  const battle = room.battle && typeof room.battle === "object" && !Array.isArray(room.battle) ? room.battle : {};
+  return {
+    recordId: String(recordId || `battle_record_${room.roomId || crypto.randomUUID()}`),
+    roomId: String(room.roomId || ""),
+    mode: String(room.mode || BATTLE_MODE_DUEL),
+    reason: String(result && result.reason || room.closeReason || "closed"),
+    winnerAccountId,
+    loserAccountIds,
+    closedByAccountId: String(result && result.closedByAccountId || room.closedByAccountId || ""),
+    participantAccountIds,
+    participants: participantAccountIds.map((accountId) => battleRecordParticipant(data, room, accountId)),
+    round: Math.max(0, Number(battle.round || 1) - 1),
+    turnSeq: Math.max(0, Number(battle.turnSeq || 0)),
+    startedAt: createdAt,
+    endedAt,
+    durationSeconds: Number.isFinite(startedMs) && Number.isFinite(endedMs) && endedMs >= startedMs ? Math.floor((endedMs - startedMs) / 1000) : 0,
+    schemaVersion: 1,
+  };
+}
+
+
+function battleRecordParticipant(data, room, accountId) {
+  const account = accountById(data, accountId);
+  const participant = battleParticipantByAccountId(room, accountId);
+  return {
+    accountId: String(accountId || ""),
+    username: String(account && account.username || participant && participant.username || ""),
+    displayName: String(account && account.displayName || participant && participant.displayName || account && account.username || ""),
+    role: String(participant && participant.role || ""),
+    schemaVersion: 1,
+  };
+}
+
+
+function battleRecordSummaryAgainst(data, selfAccount, targetAccount) {
+  const selfAccountId = String(selfAccount && selfAccount.accountId || "");
+  const targetAccountId = String(targetAccount && targetAccount.accountId || "");
+  const records = normalizeBattleRecords(data.battleRecords).filter((record) => {
+    const participantIds = Array.isArray(record.participantAccountIds) ? record.participantAccountIds.map((value) => String(value || "")) : [];
+    return participantIds.includes(selfAccountId) && participantIds.includes(targetAccountId);
+  });
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  let latestEndedAt = "";
+  for (const record of records) {
+    const winnerAccountId = String(record.winnerAccountId || "");
+    const loserAccountIds = Array.isArray(record.loserAccountIds) ? record.loserAccountIds.map((value) => String(value || "")) : [];
+    if (winnerAccountId === selfAccountId) {
+      wins += 1;
+    } else if (loserAccountIds.includes(selfAccountId) || winnerAccountId === targetAccountId) {
+      losses += 1;
+    } else {
+      draws += 1;
+    }
+    if (String(record.endedAt || "") > latestEndedAt) {
+      latestEndedAt = String(record.endedAt || "");
+    }
+  }
+  return {
+    accountId: selfAccountId,
+    username: String(selfAccount && selfAccount.username || ""),
+    targetAccountId,
+    targetUsername: String(targetAccount && targetAccount.username || ""),
+    targetDisplayName: String(targetAccount && targetAccount.displayName || targetAccount && targetAccount.username || ""),
+    total: records.length,
+    wins,
+    losses,
+    draws,
+    latestEndedAt,
+    schemaVersion: 1,
+  };
+}
+
 
 function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
   const updatedAt = String(result && result.endedAt || room.closedAt || isoNow(now));
@@ -3886,6 +4021,55 @@ function normalizeServiceEvents(value) {
     .sort((a, b) => normalizeEventSeq(a.eventSeq) - normalizeEventSeq(b.eventSeq))
     .slice(-MAX_SERVICE_EVENTS);
 }
+
+
+function normalizeBattleRecords(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((record) => record && typeof record === "object" && !Array.isArray(record))
+    .map((record) => {
+      const participantAccountIds = Array.isArray(record.participantAccountIds)
+        ? record.participantAccountIds.map((entry) => String(entry || "")).filter(Boolean)
+        : [];
+      const loserAccountIds = Array.isArray(record.loserAccountIds)
+        ? record.loserAccountIds.map((entry) => String(entry || "")).filter(Boolean)
+        : [];
+      const participants = Array.isArray(record.participants)
+        ? record.participants
+          .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+          .map((entry) => ({
+            accountId: String(entry.accountId || ""),
+            username: String(entry.username || ""),
+            displayName: String(entry.displayName || entry.username || ""),
+            role: String(entry.role || ""),
+            schemaVersion: 1,
+          }))
+        : [];
+      return {
+        recordId: String(record.recordId || ""),
+        roomId: String(record.roomId || ""),
+        mode: String(record.mode || BATTLE_MODE_DUEL),
+        reason: String(record.reason || ""),
+        winnerAccountId: String(record.winnerAccountId || ""),
+        loserAccountIds,
+        closedByAccountId: String(record.closedByAccountId || ""),
+        participantAccountIds,
+        participants,
+        round: Math.max(0, Math.trunc(Number(record.round || 0))),
+        turnSeq: Math.max(0, Math.trunc(Number(record.turnSeq || 0))),
+        startedAt: String(record.startedAt || ""),
+        endedAt: String(record.endedAt || ""),
+        durationSeconds: Math.max(0, Math.trunc(Number(record.durationSeconds || 0))),
+        schemaVersion: 1,
+      };
+    })
+    .filter((record) => record.recordId !== "" && record.roomId !== "" && record.participantAccountIds.length >= 2)
+    .sort((a, b) => String(a.endedAt || "").localeCompare(String(b.endedAt || "")))
+    .slice(-MAX_BATTLE_RECORDS);
+}
+
 
 function nextServiceEventSeq(data) {
   return normalizeEventSeq(data.serviceEventSeq) + 1;

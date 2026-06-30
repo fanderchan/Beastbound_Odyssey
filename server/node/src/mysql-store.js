@@ -131,6 +131,21 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_battle_rooms_status (status)
       );
+      CREATE TABLE IF NOT EXISTS battle_records (
+        record_id VARCHAR(96) PRIMARY KEY,
+        room_id VARCHAR(96) NOT NULL,
+        mode VARCHAR(24) NOT NULL,
+        reason VARCHAR(40) NOT NULL,
+        winner_account_id VARCHAR(80) NOT NULL,
+        closed_by_account_id VARCHAR(80) NOT NULL,
+        ended_at VARCHAR(40) NOT NULL,
+        participant_account_ids JSON NOT NULL,
+        loser_account_ids JSON NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_battle_records_room (room_id),
+        INDEX idx_battle_records_winner_ended (winner_account_id, ended_at),
+        INDEX idx_battle_records_reason_ended (reason, ended_at)
+      );
       CREATE TABLE IF NOT EXISTS gm_user_grants (
         account_id VARCHAR(80) PRIMARY KEY,
         username VARCHAR(32) NOT NULL,
@@ -208,6 +223,7 @@ function createMysqlAuthStore(options = {}) {
       statements.push("DELETE FROM player_positions");
       statements.push("DELETE FROM battle_invites");
       statements.push("DELETE FROM battle_rooms");
+      statements.push("DELETE FROM battle_records");
       statements.push("DELETE FROM gm_user_grants");
       statements.push("DELETE FROM gm_command_grants");
       statements.push("DELETE FROM gm_command_audit");
@@ -247,6 +263,11 @@ function createMysqlAuthStore(options = {}) {
       }
       for (const room of Object.values(objectOrEmpty(nextData.battleRooms))) {
         statements.push(insertBattleRoomStatement(room));
+      }
+      if (Array.isArray(nextData.battleRecords)) {
+        for (const record of nextData.battleRecords) {
+          statements.push(insertBattleRecordStatement(record));
+        }
       }
       for (const grant of Object.values(objectOrEmpty(nextData.gmUserGrants))) {
         statements.push(insertGmUserGrantStatement(grant));
@@ -404,6 +425,10 @@ function insertBattleInviteStatement(invite) {
 
 function insertBattleRoomStatement(room) {
   return `INSERT INTO battle_rooms (room_id, mode, status, seed, created_at, updated_at, document_json) VALUES (${sqlString(room.roomId)}, ${sqlString(room.mode)}, ${sqlString(room.status)}, ${sqlString(room.seed)}, ${sqlString(room.createdAt)}, ${sqlString(room.updatedAt)}, ${sqlJson(room)})`;
+}
+
+function insertBattleRecordStatement(record) {
+  return `INSERT INTO battle_records (record_id, room_id, mode, reason, winner_account_id, closed_by_account_id, ended_at, participant_account_ids, loser_account_ids, document_json) VALUES (${sqlString(record.recordId)}, ${sqlString(record.roomId)}, ${sqlString(record.mode)}, ${sqlString(record.reason)}, ${sqlString(record.winnerAccountId)}, ${sqlString(record.closedByAccountId)}, ${sqlString(record.endedAt)}, ${sqlJson(record.participantAccountIds || [])}, ${sqlJson(record.loserAccountIds || [])}, ${sqlJson(record)})`;
 }
 
 function insertGmUserGrantStatement(grant) {

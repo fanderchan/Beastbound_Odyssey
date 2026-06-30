@@ -103,6 +103,11 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/battle/state") {
         return sendResult(res, service.getBattleState(bearerToken(req)));
       }
+      if (req.method === "GET" && url.pathname === "/battle/records/summary") {
+        return sendResult(res, service.getBattleRecordSummary(bearerToken(req), {
+          "username": url.searchParams.get("username") || "",
+        }));
+      }
       if (req.method === "POST" && url.pathname === "/battle/invite") {
         return sendResult(res, service.inviteToBattle(bearerToken(req), await readJson(req)));
       }
@@ -212,7 +217,9 @@ function bearerToken(req) {
 if (require.main === module) {
   const port = Number(process.env.BEASTBOUND_AUTH_PORT || 8787);
   const host = process.env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
-  const service = createAuthService({"store": createDefaultStore()});
+  const store = createDefaultStore();
+  store.load();
+  const service = createAuthService({store});
   const server = createHttpServer({service});
   server.listen(port, host, () => {
     console.log(`Beastbound auth server listening on http://${host}:${port}`);

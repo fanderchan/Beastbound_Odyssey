@@ -129,6 +129,7 @@ process.stdin.on("end", () => {
     stdinLength: stdin.length,
     hasExecuteArg: process.argv.slice(2).includes("-e"),
     hasServerState: stdin.includes("INSERT INTO server_state"),
+    hasBattleRecords: stdin.includes("INSERT INTO battle_records"),
   }) + "\\n");
 });
 `, {"mode": 0o755});
@@ -158,6 +159,25 @@ process.stdin.on("end", () => {
       "sessions": {},
       "profileBindings": {},
       "profiles": {},
+      "battleRecords": [
+        {
+          "recordId": "battle_record_mysqlprobe",
+          "roomId": "battle_room_mysqlprobe",
+          "mode": "duel",
+          "reason": "leave",
+          "winnerAccountId": "acc_mysqlprobe",
+          "loserAccountIds": ["acc_other"],
+          "closedByAccountId": "acc_other",
+          "participantAccountIds": ["acc_mysqlprobe", "acc_other"],
+          "participants": [],
+          "round": 1,
+          "turnSeq": 1,
+          "startedAt": "2026-06-30T00:00:00.000Z",
+          "endedAt": "2026-06-30T00:01:00.000Z",
+          "durationSeconds": 60,
+          "schemaVersion": 1,
+        },
+      ],
       "authEvents": [],
       "serviceEvents": [],
     });
@@ -165,6 +185,7 @@ process.stdin.on("end", () => {
     assert.ok(calls.length >= 2);
     assert.ok(calls.every((call) => call.hasExecuteArg === false));
     assert.ok(calls.some((call) => call.hasServerState));
+    assert.ok(calls.some((call) => call.hasBattleRecords));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
   } finally {
     if (previousLogPath === undefined) {
@@ -1126,8 +1147,24 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(leave.room.status, "closed");
   assert.equal(leave.result.reason, "leave");
   assert.equal(leave.result.winnerAccountId, challenger.account.accountId);
+  assert.equal(leave.result.battleRecordId.startsWith("battle_record_"), true);
   assert.equal(service.getBattleState(challenger.session.token).room, null);
   assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "leave"), true);
+  const leaveRecord = service.snapshot().battleRecords.find((record) => record.roomId === leaveAccept.room.roomId);
+  assert.equal(leaveRecord.reason, "leave");
+  assert.equal(leaveRecord.winnerAccountId, challenger.account.accountId);
+  assert.deepEqual(leaveRecord.loserAccountIds, [opponent.account.accountId]);
+  assert.equal(leaveRecord.participants.length, 2);
+  const winnerSummary = service.getBattleRecordSummary(challenger.session.token, {"username": "closeb"});
+  assert.equal(winnerSummary.ok, true);
+  assert.equal(winnerSummary.summary.total, 1);
+  assert.equal(winnerSummary.summary.wins, 1);
+  assert.equal(winnerSummary.summary.losses, 0);
+  const loserSummary = service.getBattleRecordSummary(opponent.session.token, {"username": "closea"});
+  assert.equal(loserSummary.ok, true);
+  assert.equal(loserSummary.summary.total, 1);
+  assert.equal(loserSummary.summary.wins, 0);
+  assert.equal(loserSummary.summary.losses, 1);
 
   const timeoutInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
   assert.equal(timeoutInvite.ok, true);
@@ -1188,6 +1225,7 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(finalCommand.room.battle.result.battleReturns.length, 1);
   assert.equal(finalCommand.room.battle.result.battleReturns[0].accountId, opponent.account.accountId);
   assert.equal(finalCommand.room.battle.result.battleReturns[0].recordPoint.mapId, "firebud_village_gate");
+  assert.equal(finalCommand.room.battle.result.battleRecordId.startsWith("battle_record_"), true);
   assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellX, 10);
   assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellY, 17);
   assert.equal(finalCommand.turn.result.battleReturns[0].position.authority, "battle_result_return");
@@ -1970,6 +2008,14 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   assert.equal(leave.ok, true);
   assert.equal(leave.room.status, "closed");
   assert.equal(leave.result.reason, "leave");
+  assert.equal(leave.result.battleRecordId.startsWith("battle_record_"), true);
+  const summary = await fetchJson(`${base}/battle/records/summary?username=httpbatb`, {
+    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+  });
+  assert.equal(summary.ok, true);
+  assert.equal(summary.summary.total, 1);
+  assert.equal(summary.summary.wins, 1);
+  assert.equal(summary.summary.losses, 0);
   const closeEvent = await reader.next("battle.room_closed");
   assert.equal(closeEvent.roomId, accept.room.roomId);
   assert.equal(closeEvent.reason, "leave");

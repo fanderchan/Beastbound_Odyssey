@@ -492,6 +492,7 @@ var player_action_title_label: Label
 var player_action_detail_label: Label
 var player_action_status_label: Label
 var player_action_battle_button: Button
+var player_action_record_button: Button
 var player_action_party_apply_button: Button
 var player_action_party_invite_button: Button
 var player_action_close_button: Button
@@ -499,6 +500,10 @@ var player_action_http_request: HTTPRequest
 var player_action_target: Dictionary = {}
 var player_action_request_pending: bool = false
 var player_action_pending_kind: String = ""
+var battle_result_panel: PanelContainer
+var battle_result_title_label: Label
+var battle_result_detail_label: Label
+var battle_result_close_button: Button
 var battle_invite_panel: PanelContainer
 var battle_invite_title_label: Label
 var battle_invite_detail_label: Label
@@ -17668,9 +17673,15 @@ func _run_auto_server_battle_close_live_check() -> void:
 		await get_tree().process_frame
 	var close_event_ok := _server_event_type_seen("battle.room_closed")
 	var leave_ok := bool(leave_parsed.get("ok", false)) and close_event_ok and not battle_active and not server_battle_command_request_active
-	var log_ok := world_log_message.find("离开") >= 0 or world_log_message.find("切磋") >= 0
-	var status := "ok" if register_ok and positions_ok and decline_stream_ready and decline_notice_ok and stream_ready and cancel_ok and invite_event_ok and ready_event_ok and battle_started_ok and leave_ok and log_ok else "failed"
-	print("server battle close live check ready: status=%s register=%s positions=%s decline_stream=%s decline=%s stream=%s cancel=%s invite=%s ready=%s started=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
+	var log_ok := world_log_message.find("落败") >= 0 and world_log_message.find("离开") >= 0
+	var settlement_ok := (
+		battle_result_panel != null
+		and battle_result_panel.visible
+		and battle_result_title_label != null
+		and battle_result_title_label.text.find("落败") >= 0
+	)
+	var status := "ok" if register_ok and positions_ok and decline_stream_ready and decline_notice_ok and stream_ready and cancel_ok and invite_event_ok and ready_event_ok and battle_started_ok and leave_ok and log_ok and settlement_ok else "failed"
+	print("server battle close live check ready: status=%s register=%s positions=%s decline_stream=%s decline=%s stream=%s cancel=%s invite=%s ready=%s started=%s leave=%s log=%s settlement=%s room_id=%s challenger=%s opponent=%s message=%s" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -17683,6 +17694,7 @@ func _run_auto_server_battle_close_live_check() -> void:
 		str(battle_started_ok),
 		str(leave_ok),
 		str(log_ok),
+		str(settlement_ok),
 		room_id,
 		challenger_username,
 		opponent_username,
@@ -24503,6 +24515,12 @@ func _build_hud() -> void:
 	player_action_battle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	player_action_battle_button.pressed.connect(_on_player_action_battle_pressed)
 	player_action_column.add_child(player_action_battle_button)
+	player_action_record_button = Button.new()
+	player_action_record_button.text = "查询战绩"
+	player_action_record_button.custom_minimum_size = Vector2(0, 46)
+	player_action_record_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_action_record_button.pressed.connect(_on_player_action_record_pressed)
+	player_action_column.add_child(player_action_record_button)
 	player_action_party_apply_button = Button.new()
 	player_action_party_apply_button.text = "加入队伍"
 	player_action_party_apply_button.custom_minimum_size = Vector2(0, 46)
@@ -24527,6 +24545,32 @@ func _build_hud() -> void:
 	player_action_http_request.request_completed.connect(_on_player_action_http_request_completed)
 	player_action_panel.add_child(player_action_http_request)
 	hud_root.add_child(player_action_panel)
+
+	battle_result_panel = _panel_container("BattleResultPanel")
+	battle_result_panel.visible = false
+	battle_result_panel.z_index = 31
+	var battle_result_column := VBoxContainer.new()
+	battle_result_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_result_column.add_theme_constant_override("separation", 10)
+	battle_result_panel.add_child(battle_result_column)
+	battle_result_title_label = Label.new()
+	battle_result_title_label.text = "切磋结算"
+	battle_result_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_result_title_label.add_theme_font_size_override("font_size", 22)
+	battle_result_column.add_child(battle_result_title_label)
+	battle_result_detail_label = Label.new()
+	battle_result_detail_label.text = ""
+	battle_result_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_result_detail_label.add_theme_font_size_override("font_size", 16)
+	battle_result_detail_label.custom_minimum_size = Vector2(0, 74)
+	battle_result_column.add_child(battle_result_detail_label)
+	battle_result_close_button = Button.new()
+	battle_result_close_button.text = "确定"
+	battle_result_close_button.custom_minimum_size = Vector2(0, 46)
+	battle_result_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_result_close_button.pressed.connect(_close_battle_result_panel)
+	battle_result_column.add_child(battle_result_close_button)
+	hud_root.add_child(battle_result_panel)
 
 	battle_invite_panel = _panel_container("BattleInvitePanel")
 	battle_invite_panel.visible = false
@@ -25956,6 +26000,7 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if returned_to_record_point:
 		message = _server_battle_return_message(message)
 	_set_world_log_message(message)
+	_open_battle_result_panel(closed_room, result_key, message)
 	_queue_server_profile_pull()
 	return {
 		"result": result_key,
@@ -25996,7 +26041,7 @@ func _server_battle_result_key(room: Dictionary) -> String:
 		return "victory" if winner_account_id == self_account_id else "defeat"
 	var reason := str(result.get("reason", room.get("closeReason", ""))).strip_edges()
 	if reason == "leave" and str(result.get("closedByAccountId", room.get("closedByAccountId", ""))).strip_edges() == self_account_id:
-		return "escape"
+		return "defeat"
 	if reason == "timeout" and _server_battle_result_loser_contains_self(result):
 		return "timeout"
 	return "server"
@@ -26021,7 +26066,7 @@ func _server_battle_result_message(room: Dictionary) -> String:
 	var closed_by_account_id := str(result.get("closedByAccountId", room.get("closedByAccountId", ""))).strip_edges()
 	if reason == "leave":
 		if self_account_id != "" and closed_by_account_id == self_account_id:
-			return "你已离开切磋。"
+			return "你已离开切磋，本场落败。"
 		if self_account_id != "" and winner_account_id == self_account_id:
 			return "对方已离开切磋，你获胜。"
 		return "切磋已结束。"
@@ -26037,6 +26082,71 @@ func _server_battle_result_message(room: Dictionary) -> String:
 		if winner_account_id != "":
 			return "切磋落败。"
 	return "切磋已结束。"
+
+
+func _open_battle_result_panel(room: Dictionary, result_key: String, message: String) -> void:
+	if battle_result_panel == null:
+		return
+	if battle_result_title_label != null:
+		battle_result_title_label.text = _battle_result_title(result_key)
+	if battle_result_detail_label != null:
+		var details: Array[String] = []
+		if message.strip_edges() != "":
+			details.append(message.strip_edges())
+		var opponent_text := _battle_result_opponent_text(room)
+		if opponent_text != "":
+			details.append("对手：%s" % opponent_text)
+		battle_result_detail_label.text = "\n".join(details)
+	battle_result_panel.visible = true
+	_layout_hud()
+
+
+func _close_battle_result_panel(update_layout: bool = true) -> void:
+	_hide_control(battle_result_panel, update_layout)
+
+
+func _battle_result_title(result_key: String) -> String:
+	match result_key:
+		"victory":
+			return "切磋胜利"
+		"defeat":
+			return "切磋落败"
+		"timeout":
+			return "切磋超时"
+		_:
+			return "切磋结束"
+
+
+func _battle_result_opponent_text(room: Dictionary) -> String:
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	for value in participants:
+		if not (value is Dictionary):
+			continue
+		var participant := value as Dictionary
+		if str(participant.get("accountId", "")).strip_edges() == self_account_id:
+			continue
+		var display_name := str(participant.get("displayName", "")).strip_edges()
+		var username := str(participant.get("username", "")).strip_edges()
+		if display_name != "":
+			return display_name
+		if username != "":
+			return username
+	var result := _server_battle_result_payload(room)
+	var result_participants: Array = result.get("participants", []) if result.get("participants", []) is Array else []
+	for value in result_participants:
+		if not (value is Dictionary):
+			continue
+		var participant := value as Dictionary
+		if str(participant.get("accountId", "")).strip_edges() == self_account_id:
+			continue
+		var display_name := str(participant.get("displayName", "")).strip_edges()
+		var username := str(participant.get("username", "")).strip_edges()
+		if display_name != "":
+			return display_name
+		if username != "":
+			return username
+	return ""
 
 
 func _server_battle_return_for_self(room: Dictionary) -> Dictionary:
@@ -31649,6 +31759,21 @@ func _party_player_text(player: Dictionary) -> String:
 	return "%s（%s）" % [display_name, username] if username != "" and username != display_name else display_name
 
 
+func _battle_record_summary_text(summary: Dictionary) -> String:
+	var target := _party_player_text({
+		"username": str(summary.get("targetUsername", "")),
+		"displayName": str(summary.get("targetDisplayName", "")),
+	})
+	var total := maxi(0, int(summary.get("total", 0)))
+	var wins := maxi(0, int(summary.get("wins", 0)))
+	var losses := maxi(0, int(summary.get("losses", 0)))
+	var draws := maxi(0, int(summary.get("draws", 0)))
+	if total <= 0:
+		return "与%s暂无切磋战绩。" % target
+	var draw_text := "，平 %d" % draws if draws > 0 else ""
+	return "与%s：共 %d 场，胜 %d，负 %d%s。" % [target, total, wins, losses, draw_text]
+
+
 func _party_online_player_text(player: Dictionary) -> String:
 	var role := str(player.get("partyRole", "")).strip_edges()
 	var suffix := ""
@@ -31892,6 +32017,8 @@ func _refresh_player_action_panel() -> void:
 	var disabled := player_action_request_pending or not has_session or username == ""
 	if player_action_battle_button != null:
 		player_action_battle_button.disabled = disabled
+	if player_action_record_button != null:
+		player_action_record_button.disabled = disabled
 	if player_action_party_apply_button != null:
 		player_action_party_apply_button.disabled = disabled or current_has_party or target_party_id == ""
 		player_action_party_apply_button.text = "加入队伍" if target_party_id != "" else "对方未组队"
@@ -31909,6 +32036,13 @@ func _on_player_action_battle_pressed() -> void:
 	if username == "" or not _is_server_account_session():
 		return
 	_start_player_action_request("battle_invite", ServerAuthClientModel.battle_invite_request(_server_profile_base_url(), _server_profile_token(), username))
+
+
+func _on_player_action_record_pressed() -> void:
+	var username := str(player_action_target.get("username", "")).strip_edges()
+	if username == "" or not _is_server_account_session():
+		return
+	_start_player_action_request("battle_record", ServerAuthClientModel.battle_record_summary_request(_server_profile_base_url(), _server_profile_token(), username))
 
 
 func _on_player_action_party_apply_pressed() -> void:
@@ -31934,6 +32068,8 @@ func _start_player_action_request(kind: String, spec: Dictionary) -> void:
 		match kind:
 			"battle_invite":
 				player_action_status_label.text = "正在发起切磋..."
+			"battle_record":
+				player_action_status_label.text = "正在查询战绩..."
 			"party_apply":
 				player_action_status_label.text = "正在申请入队..."
 			"party_invite":
@@ -31972,6 +32108,16 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 			_set_world_log_message(str(parsed_battle.get("message", "切磋邀请已发送。")))
 		elif player_action_status_label != null:
 			player_action_status_label.text = str(parsed_battle.get("message", "切磋发起失败。"))
+	elif kind == "battle_record":
+		var parsed_record := ServerAuthClientModel.parse_battle_record_summary_response(response_code, body)
+		if bool(parsed_record.get("ok", false)):
+			var summary := parsed_record.get("summary", {}) as Dictionary if parsed_record.get("summary", {}) is Dictionary else {}
+			var record_text := _battle_record_summary_text(summary)
+			if player_action_status_label != null:
+				player_action_status_label.text = record_text
+			_set_world_log_message(record_text)
+		elif player_action_status_label != null:
+			player_action_status_label.text = str(parsed_record.get("message", "战绩查询失败。"))
 	else:
 		var parsed_party := ServerAuthClientModel.parse_party_action_response(response_code, body)
 		if bool(parsed_party.get("ok", false)):
@@ -38718,7 +38864,7 @@ func _layout_hud() -> void:
 		action_bar.visible = false
 
 	var player_action_width: float = minf(viewport_size.x - margin * 2.0, 360.0)
-	var player_action_height := 278.0
+	var player_action_height := minf(viewport_size.y - margin * 2.0, 346.0)
 	player_action_panel.position = Vector2(
 		(viewport_size.x - player_action_width) * 0.5,
 		minf(viewport_size.y - player_action_height - margin, maxf(margin + 78.0, viewport_size.y - player_action_height - 120.0))
@@ -38737,6 +38883,17 @@ func _layout_hud() -> void:
 		battle_invite_panel.visible = false
 	if battle_invite_panel.visible and action_bar != null:
 		action_bar.visible = false
+
+	if battle_result_panel != null:
+		var battle_result_width: float = minf(viewport_size.x - margin * 2.0, 420.0)
+		var battle_result_height := 184.0
+		battle_result_panel.position = Vector2(
+			(viewport_size.x - battle_result_width) * 0.5,
+			maxf(margin + 72.0, (viewport_size.y - battle_result_height) * 0.34)
+		)
+		battle_result_panel.size = Vector2(battle_result_width, battle_result_height)
+		if battle_result_panel.visible and action_bar != null:
+			action_bar.visible = false
 
 	mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	mailbox_panel.size = Vector2(codex_width, codex_height)

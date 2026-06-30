@@ -191,6 +191,15 @@ static func battle_state_request(base_url: String, session_token: String) -> Dic
 	}
 
 
+static func battle_record_summary_request(base_url: String, session_token: String, username: String) -> Dictionary:
+	return {
+		"url": "%s/battle/records/summary?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
 static func battle_invite_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/battle/invite" % normalized_base_url(base_url),
@@ -442,6 +451,15 @@ static func parse_battle_state_response(response_code: int, body: PackedByteArra
 	parsed["room"] = response.get("room", null)
 	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
 	parsed["outgoingInvites"] = _dictionary_array(response.get("outgoingInvites", []))
+	return parsed
+
+
+static func parse_battle_record_summary_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "对战战绩读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["summary"] = response.get("summary", {}) if response.get("summary", {}) is Dictionary else {}
 	return parsed
 
 
