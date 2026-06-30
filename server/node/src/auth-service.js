@@ -2674,14 +2674,6 @@ function resolveBattleRoomTurn(data, room, battle, now) {
   for (const actor of battle.actors) {
     actor.guarding = false;
   }
-  for (const command of orderedCommands) {
-    if (String(command.actionKind || command.actionId || "") === "defend" || String(command.actionId || "") === BATTLE_ACTION_DEFEND || String(command.actionId || "") === BATTLE_ACTION_PET_DEFEND) {
-      const actor = battleActorByActorId(battle, command.actorId);
-      if (actor && Number(actor.hp || 0) > 0) {
-        actor.guarding = true;
-      }
-    }
-  }
   const events = [];
   let sequence = 1;
   for (const command of orderedCommands) {
@@ -2690,6 +2682,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === "defend" || String(command.actionId || "") === BATTLE_ACTION_DEFEND || String(command.actionId || "") === BATTLE_ACTION_PET_DEFEND) {
+      actor.guarding = true;
       events.push(battleDefendEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
       continue;

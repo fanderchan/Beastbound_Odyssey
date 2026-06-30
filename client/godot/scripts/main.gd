@@ -17529,7 +17529,7 @@ func _run_auto_server_battle_close_live_check() -> void:
 	var challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_position_response.get("responseCode", 0)), challenger_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var positions_ok := bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
-	current_account_session = opponent_session
+	current_account_session = challenger_session
 	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	account_authenticated = true
 	server_profile_sync_state = "ready"
@@ -17541,6 +17541,56 @@ func _run_auto_server_battle_close_live_check() -> void:
 	server_event_seen.clear()
 	_start_server_event_stream_if_needed()
 	var frames := 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var decline_stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var decline_invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var decline_invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(decline_invite_response.get("responseCode", 0)), decline_invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var decline_invite := decline_invite_parsed.get("invite", {}) as Dictionary if decline_invite_parsed.get("invite", {}) is Dictionary else {}
+	var decline_invite_id := str(decline_invite.get("inviteId", ""))
+	frames = 0
+	while frames < 720 and not _battle_outgoing_invite_seen(decline_invite_id):
+		frames += 1
+		await get_tree().process_frame
+	var decline_outgoing_seen := decline_invite_id != "" and _server_event_type_seen("battle.invite") and _battle_outgoing_invite_seen(decline_invite_id)
+	server_event_seen.clear()
+	var decline_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_decline_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		decline_invite_id
+	))
+	var decline_parsed := ServerAuthClientModel.parse_battle_action_response(int(decline_response.get("responseCode", 0)), decline_response.get("body", PackedByteArray()) as PackedByteArray)
+	frames = 0
+	while frames < 720 and (not _server_event_type_seen("battle.invite_declined") or _battle_outgoing_invite_seen(decline_invite_id)):
+		frames += 1
+		await get_tree().process_frame
+	var decline_notice_ok := (
+		bool(decline_invite_parsed.get("ok", false))
+		and decline_outgoing_seen
+		and bool(decline_parsed.get("ok", false))
+		and _server_event_type_seen("battle.invite_declined")
+		and not _battle_outgoing_invite_seen(decline_invite_id)
+		and world_log_message.find("拒绝了你的切磋邀请") >= 0
+	)
+	_stop_server_event_stream()
+	current_account_session = opponent_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	_close_player_action_panel(false)
+	_close_battle_invite_panel(false)
+	server_event_last_seq = 0
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	frames = 0
 	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
 		frames += 1
 		await get_tree().process_frame
@@ -17619,11 +17669,13 @@ func _run_auto_server_battle_close_live_check() -> void:
 	var close_event_ok := _server_event_type_seen("battle.room_closed")
 	var leave_ok := bool(leave_parsed.get("ok", false)) and close_event_ok and not battle_active and not server_battle_command_request_active
 	var log_ok := world_log_message.find("离开") >= 0 or world_log_message.find("切磋") >= 0
-	var status := "ok" if register_ok and positions_ok and stream_ready and cancel_ok and invite_event_ok and ready_event_ok and battle_started_ok and leave_ok and log_ok else "failed"
-	print("server battle close live check ready: status=%s register=%s positions=%s stream=%s cancel=%s invite=%s ready=%s started=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
+	var status := "ok" if register_ok and positions_ok and decline_stream_ready and decline_notice_ok and stream_ready and cancel_ok and invite_event_ok and ready_event_ok and battle_started_ok and leave_ok and log_ok else "failed"
+	print("server battle close live check ready: status=%s register=%s positions=%s decline_stream=%s decline=%s stream=%s cancel=%s invite=%s ready=%s started=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
+		str(decline_stream_ready),
+		str(decline_notice_ok),
 		str(stream_ready),
 		str(cancel_ok),
 		str(invite_event_ok),
@@ -25715,6 +25767,13 @@ func _battle_invite_is_for_current(invite: Dictionary) -> bool:
 	return str(invite.get("toUsername", "")).strip_edges() == current_username
 
 
+func _battle_invite_is_from_current(invite: Dictionary) -> bool:
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	if current_username == "":
+		return false
+	return str(invite.get("fromUsername", "")).strip_edges() == current_username
+
+
 func _latest_incoming_battle_invite() -> Dictionary:
 	var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
 	for value in invites:
@@ -25766,8 +25825,12 @@ func _apply_battle_event(event: Dictionary) -> void:
 		var invite := event.get("invite", {}) as Dictionary if event.get("invite", {}) is Dictionary else {}
 		if not invite.is_empty():
 			var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
+			var outgoing_invites: Array = server_battle_state.get("outgoingInvites", []) if server_battle_state.get("outgoingInvites", []) is Array else []
 			var invite_id := str(invite.get("inviteId", ""))
-			if str(invite.get("status", "")) == "pending" and _battle_invite_is_for_current(invite):
+			var invite_status := str(invite.get("status", ""))
+			var invite_for_current := _battle_invite_is_for_current(invite)
+			var invite_from_current := _battle_invite_is_from_current(invite)
+			if invite_status == "pending" and invite_for_current:
 				var exists := false
 				for value in invites:
 					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
@@ -25783,6 +25846,32 @@ func _apply_battle_event(event: Dictionary) -> void:
 				if battle_invite_panel != null and battle_invite_panel.visible and str(battle_invite_current.get("inviteId", "")) == invite_id:
 					_close_battle_invite_panel(false)
 			server_battle_state["incomingInvites"] = invites
+			if invite_status == "pending" and invite_from_current:
+				var outgoing_exists := false
+				for index in range(outgoing_invites.size()):
+					var value = outgoing_invites[index]
+					if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
+						outgoing_invites[index] = invite
+						outgoing_exists = true
+						break
+				if not outgoing_exists:
+					outgoing_invites.append(invite)
+			else:
+				outgoing_invites = outgoing_invites.filter(func(value) -> bool:
+					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
+				)
+			server_battle_state["outgoingInvites"] = outgoing_invites
+			if event_type == "battle.invite_declined" and invite_from_current:
+				var target_player := {
+					"username": str(invite.get("toUsername", "")),
+					"displayName": str(invite.get("toDisplayName", "")),
+				}
+				var message := "%s 拒绝了你的切磋邀请。" % _party_player_text(target_player)
+				_set_world_log_message(message)
+				if player_action_status_label != null:
+					player_action_status_label.text = message
+				if player_action_panel != null and player_action_panel.visible:
+					_refresh_player_action_panel()
 	if event_type == "battle.room_closed":
 		var closed_room := event.get("room", {}) as Dictionary if event.get("room", {}) is Dictionary else {}
 		if closed_room.is_empty() and server_battle_state.get("room", {}) is Dictionary:
@@ -26052,6 +26141,14 @@ func _battle_is_server_authority() -> bool:
 
 func _battle_invite_seen(invite_id: String) -> bool:
 	var invites: Array = server_battle_state.get("incomingInvites", []) if server_battle_state.get("incomingInvites", []) is Array else []
+	for value in invites:
+		if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
+			return true
+	return false
+
+
+func _battle_outgoing_invite_seen(invite_id: String) -> bool:
+	var invites: Array = server_battle_state.get("outgoingInvites", []) if server_battle_state.get("outgoingInvites", []) is Array else []
 	for value in invites:
 		if value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id:
 			return true
