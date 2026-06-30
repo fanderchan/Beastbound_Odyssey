@@ -82,6 +82,7 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 		"message": _message_for_room(battle, session),
 		"itemBag": {},
 		"captureToolBag": {},
+		"petParty": _pet_party_for_session(room, session),
 		"fieldEffects": [],
 		"guardingActorIds": _guarding_actor_ids(actors),
 		"actors": actors,
@@ -127,7 +128,8 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 			next_state,
 			str(server_event.get("targetActorId", "")),
 			str(server_event.get("targetAccountId", "")),
-			str(server_event.get("targetUsername", ""))
+			str(server_event.get("targetUsername", "")),
+			str(server_event.get("targetKind", ""))
 		)
 		if target_id == "" or started_actor_ids.has(target_id):
 			continue
@@ -150,11 +152,13 @@ static func state_with_server_event_actor_snapshot(state: Dictionary, event_list
 			next_state,
 			str(server_actor.get("actorId", "")),
 			str(server_actor.get("accountId", "")),
-			str(server_actor.get("username", ""))
+			str(server_actor.get("username", "")),
+			_server_actor_kind(server_actor),
+			str(server_actor.get("petId", ""))
 		)
 		if actor_id == "":
 			continue
-		next_state = BattleModel.set_actor_hp(next_state, actor_id, int(server_actor.get("hp", 0)))
+		next_state = _apply_server_actor_snapshot(next_state, actor_id, server_actor)
 		if bool(server_actor.get("guarding", false)) and int(server_actor.get("hp", 0)) > 0:
 			guarding_ids.append(actor_id)
 	next_state["guardingActorIds"] = guarding_ids
@@ -224,6 +228,84 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"serverGuarding": bool(server_actor.get("guarding", false)),
 		"serverDefeated": bool(server_actor.get("defeated", false)),
 	}
+
+
+static func _pet_party_for_session(room: Dictionary, session: Dictionary) -> Array[Dictionary]:
+	var account_id := str(session.get("accountId", "")).strip_edges()
+	var username := str(session.get("username", "")).strip_edges()
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	for value in participants:
+		if not (value is Dictionary):
+			continue
+		var participant := value as Dictionary
+		if (
+			(account_id != "" and str(participant.get("accountId", "")).strip_edges() == account_id)
+			or (username != "" and str(participant.get("username", "")).strip_edges() == username)
+		):
+			var snapshot := participant.get("teamSnapshot", {}) as Dictionary if participant.get("teamSnapshot", {}) is Dictionary else {}
+			var pets: Array = snapshot.get("battlePets", []) if snapshot.get("battlePets", []) is Array else []
+			var result: Array[Dictionary] = []
+			for pet_value in pets:
+				if pet_value is Dictionary:
+					result.append(_pet_party_entry_from_server_pet(pet_value as Dictionary))
+			return result
+	return []
+
+
+static func _pet_party_entry_from_server_pet(server_pet: Dictionary) -> Dictionary:
+	var pet_id := str(server_pet.get("petId", server_pet.get("instanceId", ""))).strip_edges()
+	var active := bool(server_pet.get("activeInBattle", false)) or str(server_pet.get("state", "")) == BattleModel.PET_STATE_BATTLE
+	return {
+		"petId": pet_id,
+		"instanceId": pet_id,
+		"name": str(server_pet.get("name", "宠物")),
+		"state": BattleModel.PET_STATE_BATTLE if active else BattleModel.PET_STATE_STANDBY,
+		"actorId": BattleModel.PLAYER_PET_ID if active else "",
+		"hp": maxi(0, int(server_pet.get("hp", 0))),
+		"maxHp": maxi(1, int(server_pet.get("maxHp", 1))),
+		"quick": maxi(1, int(server_pet.get("quick", server_pet.get("speed", 50)))),
+		"attack": maxi(1, int(server_pet.get("attack", 12))),
+		"defense": maxi(1, int(server_pet.get("defense", 6))),
+		"formId": str(server_pet.get("formId", "")),
+		"activeSkillIds": _string_array(server_pet.get("activeSkillIds", [])),
+		"petSkillSlots": _string_array(server_pet.get("petSkillSlots", [])),
+		"passiveSkillIds": _string_array(server_pet.get("passiveSkillIds", [])),
+	}
+
+
+static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, server_actor: Dictionary) -> Dictionary:
+	var next_state := state.duplicate(true)
+	var actors: Array = next_state.get("actors", []) if next_state.get("actors", []) is Array else []
+	for index in range(actors.size()):
+		if not (actors[index] is Dictionary):
+			continue
+		var actor := (actors[index] as Dictionary).duplicate(true)
+		if str(actor.get("id", "")) != actor_id:
+			continue
+		var max_hp := maxi(1, int(server_actor.get("maxHp", actor.get("maxHp", 1))))
+		actor["name"] = str(server_actor.get("displayName", actor.get("name", "")))
+		actor["hp"] = clampi(int(server_actor.get("hp", actor.get("hp", max_hp))), 0, max_hp)
+		actor["maxHp"] = max_hp
+		actor["quick"] = maxi(1, int(server_actor.get("speed", actor.get("quick", 60))))
+		actor["attack"] = maxi(1, int(server_actor.get("attack", actor.get("attack", 18))))
+		actor["defense"] = maxi(1, int(server_actor.get("defense", actor.get("defense", 8))))
+		actor["serverActorId"] = str(server_actor.get("actorId", actor.get("serverActorId", "")))
+		actor["serverAccountId"] = str(server_actor.get("accountId", actor.get("serverAccountId", "")))
+		actor["serverUsername"] = str(server_actor.get("username", actor.get("serverUsername", "")))
+		actor["serverSide"] = str(server_actor.get("side", actor.get("serverSide", "")))
+		actor["serverKind"] = _server_actor_kind(server_actor)
+		actor["serverPetId"] = str(server_actor.get("petId", actor.get("serverPetId", "")))
+		actor["petId"] = str(server_actor.get("petId", actor.get("petId", "")))
+		actor["formId"] = str(server_actor.get("formId", actor.get("formId", "")))
+		actor["activeSkillIds"] = _string_array(server_actor.get("activeSkillIds", actor.get("activeSkillIds", [])))
+		actor["petSkillSlots"] = _string_array(server_actor.get("petSkillSlots", actor.get("petSkillSlots", [])))
+		actor["passiveSkillIds"] = _string_array(server_actor.get("passiveSkillIds", actor.get("passiveSkillIds", [])))
+		actor["serverGuarding"] = bool(server_actor.get("guarding", false))
+		actor["serverDefeated"] = bool(server_actor.get("defeated", false))
+		actors[index] = actor
+		next_state["actors"] = actors
+		return next_state
+	return next_state
 
 
 static func _local_phase_for_room(battle: Dictionary, session: Dictionary) -> String:
@@ -365,7 +447,8 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		state,
 		str(server_event.get("actorId", "")),
 		str(server_event.get("actorAccountId", "")),
-		str(server_event.get("actorUsername", ""))
+		str(server_event.get("actorUsername", "")),
+		str(server_event.get("actorKind", ""))
 	)
 	if actor_id == "":
 		return {}
@@ -397,13 +480,33 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 		}
+	if event_type == "switch_pet":
+		if str(actor.get("side", "")) != BattleModel.SIDE_ALLY:
+			return {}
+		return {
+			"type": "switch_pet",
+			"attackerId": actor_id,
+			"targetId": BattleModel.PLAYER_PET_ID,
+			"targetSide": BattleModel.SIDE_ALLY,
+			"petId": str(server_event.get("petId", "")),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": "switch_pet",
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+			"serverPreviousPetId": str(server_event.get("previousPetId", "")),
+			"serverPreviousPetActorId": str(server_event.get("previousPetActorId", "")),
+			"serverNextPetActorId": str(server_event.get("nextPetActorId", "")),
+		}
 	if event_type != "basic_attack" and event_type != "pet_skill":
 		return {}
 	var target_id := _local_actor_id_for_server_actor(
 		state,
 		str(server_event.get("targetActorId", "")),
 		str(server_event.get("targetAccountId", "")),
-		str(server_event.get("targetUsername", ""))
+		str(server_event.get("targetUsername", "")),
+		str(server_event.get("targetKind", ""))
 	)
 	if target_id == "":
 		return {}
@@ -458,10 +561,12 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 	}
 
 
-static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id: String, account_id: String, username: String) -> String:
+static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id: String, account_id: String, username: String, kind: String = "", pet_id: String = "") -> String:
 	var actor_id := server_actor_id.strip_edges()
 	var account := account_id.strip_edges()
 	var name := username.strip_edges()
+	var normalized_kind := kind.strip_edges()
+	var normalized_pet_id := pet_id.strip_edges()
 	var actors: Array = state.get("actors", []) if state.get("actors", []) is Array else []
 	if actor_id != "":
 		for value in actors:
@@ -475,6 +580,8 @@ static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id:
 			if not (value is Dictionary):
 				continue
 			var actor := value as Dictionary
+			if normalized_kind != "" and str(actor.get("serverKind", actor.get("kind", ""))).strip_edges() != normalized_kind:
+				continue
 			if str(actor.get("serverAccountId", "")).strip_edges() == account:
 				return str(actor.get("id", ""))
 	if name != "":
@@ -482,7 +589,21 @@ static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id:
 			if not (value is Dictionary):
 				continue
 			var actor := value as Dictionary
+			if normalized_kind != "" and str(actor.get("serverKind", actor.get("kind", ""))).strip_edges() != normalized_kind:
+				continue
 			if str(actor.get("serverUsername", "")).strip_edges() == name:
+				return str(actor.get("id", ""))
+	if normalized_kind == "pet" and normalized_pet_id != "":
+		for value in actors:
+			if not (value is Dictionary):
+				continue
+			var actor := value as Dictionary
+			if str(actor.get("serverKind", actor.get("kind", ""))).strip_edges() != "pet":
+				continue
+			if (
+				str(actor.get("serverPetId", "")).strip_edges() == normalized_pet_id
+				or str(actor.get("petId", "")).strip_edges() == normalized_pet_id
+			):
 				return str(actor.get("id", ""))
 	return ""
 

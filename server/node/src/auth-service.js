@@ -44,6 +44,8 @@ const BATTLE_ACTION_DEFEND = "defend";
 const BATTLE_ACTION_PET_ATTACK = "pet_attack";
 const BATTLE_ACTION_PET_DEFEND = "pet_defend";
 const BATTLE_ACTION_PET_BUI_CHARGE = "pet_bui_charge";
+const BATTLE_ACTION_SWITCH_PET = "switch_pet";
+const BATTLE_ACTION_ITEM = "item";
 const BATTLE_ACTOR_MAX_HP = 120;
 const BATTLE_BASE_ATTACK_DAMAGE = 18;
 const BATTLE_DEFEND_REDUCTION = 8;
@@ -51,7 +53,10 @@ const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 90 * 1000;
 const BATTLE_ACTOR_KIND_PLAYER = "player";
 const BATTLE_ACTOR_KIND_PET = "pet";
-const BATTLE_PET_MAX_PER_PARTICIPANT = 1;
+const BATTLE_PET_MAX_PER_PARTICIPANT = 5;
+const BATTLE_ACTIVE_PET_MAX_PER_PARTICIPANT = 1;
+const BATTLE_PET_STATE_BATTLE = "battle";
+const BATTLE_PET_STATE_STANDBY = "standby";
 const DEFAULT_RECORD_POINT = {
   mapId: "firebud_village_gate",
   spawnName: "doctor_record",
@@ -1224,6 +1229,7 @@ function createAuthService(options = {}) {
       });
     }
     battle.commands[commandResult.command.actorId] = commandResult.command;
+    battle.requiredActorIds = requiredBattleCommandActorIds(battle);
     battle.submittedActorIds = submittedBattleCommandActorIds(battle);
     battle.submittedAccountIds = submittedBattleCommandAccountIds(battle);
     battle.updatedAt = isoNow(now);
@@ -1232,7 +1238,7 @@ function createAuthService(options = {}) {
     const commandSubmittedAccountIds = battle.submittedAccountIds.slice();
     const commandSubmittedRoom = publicBattleRoom(room);
     let turn = null;
-    const readyToResolve = requiredBattleCommandActorIds(battle).every((actorId) => battle.commands[actorId]);
+    const readyToResolve = battle.requiredActorIds.every((actorId) => battle.commands[actorId]);
     if (readyToResolve) {
       turn = resolveBattleRoomTurn(data, room, battle, now);
     }
@@ -1799,6 +1805,9 @@ function publicBattleActor(actor) {
     level: Number(actor.level || 1),
     petId: String(actor.petId || ""),
     formId: String(actor.formId || ""),
+    speciesId: String(actor.speciesId || ""),
+    petState: String(actor.petState || ""),
+    activeInBattle: Boolean(actor.activeInBattle),
     hp: Number(actor.hp || 0),
     maxHp: Number(actor.maxHp || BATTLE_ACTOR_MAX_HP),
     speed: Number(actor.speed || 0),
@@ -1826,7 +1835,10 @@ function publicBattleCommand(command) {
     actorId: String(command.actorId || ""),
     actorKind: String(command.actorKind || BATTLE_ACTOR_KIND_PLAYER),
     actionId: String(command.actionId || ""),
+    actionKind: String(command.actionKind || ""),
     skillId: String(command.skillId || ""),
+    petId: String(command.petId || ""),
+    itemId: String(command.itemId || ""),
     targetActorId: String(command.targetActorId || ""),
     targetAccountId: String(command.targetAccountId || ""),
     targetUsername: String(command.targetUsername || ""),
@@ -1881,27 +1893,33 @@ function battlePetSnapshotsFromProfile(profile) {
   const petInstances = Array.isArray(profile.petInstances) ? profile.petInstances : (Array.isArray(profile.pets) ? profile.pets : []);
   const activePetInstanceId = String(profile.activePetInstanceId || "").trim();
   const battlePets = petInstances
-    .filter((pet) => pet && typeof pet === "object" && !Array.isArray(pet))
-    .filter((pet) => petBattleStateIsActive(pet))
+    .map((pet, index) => ({pet, index}))
+    .filter((entry) => entry.pet && typeof entry.pet === "object" && !Array.isArray(entry.pet))
+    .filter((entry) => petBattleStateIsAvailable(entry.pet, activePetInstanceId))
     .sort((a, b) => {
-      const aActive = String(a.instanceId || a.petId || a.id || "") === activePetInstanceId ? 0 : 1;
-      const bActive = String(b.instanceId || b.petId || b.id || "") === activePetInstanceId ? 0 : 1;
-      return aActive - bActive;
+      const aActive = petIsActiveBattlePet(a.pet, activePetInstanceId) ? 0 : 1;
+      const bActive = petIsActiveBattlePet(b.pet, activePetInstanceId) ? 0 : 1;
+      return aActive - bActive || a.index - b.index;
     })
-    .map(battlePetSnapshotFromProfilePet)
+    .slice(0, BATTLE_PET_MAX_PER_PARTICIPANT)
+    .map((entry, index) => battlePetSnapshotFromProfilePet(entry.pet, activePetInstanceId, index))
     .filter((pet) => pet.petId !== "" && pet.hp > 0);
   return battlePets;
 }
 
-function battlePetSnapshotFromProfilePet(pet) {
+function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyIndex = 0) {
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
   const petId = String(pet.instanceId || pet.petId || pet.id || "").trim();
+  const activeInBattle = petIsActiveBattlePet(pet, activePetInstanceId);
   return {
     kind: BATTLE_ACTOR_KIND_PET,
     petId,
+    partyIndex: Math.max(0, Number(partyIndex || 0)),
     name: String(pet.name || pet.displayName || pet.speciesName || "宠物"),
     formId: String(pet.formId || pet.templateId || pet.speciesId || ""),
     speciesId: String(pet.speciesId || pet.templateId || pet.formId || ""),
+    state: activeInBattle ? BATTLE_PET_STATE_BATTLE : BATTLE_PET_STATE_STANDBY,
+    activeInBattle,
     level: positiveNumber(pet.level, 1),
     hp: clampNumber(pet.hp, 1, maxHp, maxHp),
     maxHp,
@@ -1915,9 +1933,21 @@ function battlePetSnapshotFromProfilePet(pet) {
   };
 }
 
-function petBattleStateIsActive(pet) {
+function petBattleStateIsAvailable(pet, activePetInstanceId = "") {
+  if (petIsActiveBattlePet(pet, activePetInstanceId)) {
+    return true;
+  }
   const state = String(pet.state || pet.status || pet.battleState || "").trim();
-  return state === "battle";
+  return state === BATTLE_PET_STATE_STANDBY;
+}
+
+function petIsActiveBattlePet(pet, activePetInstanceId = "") {
+  const petId = String(pet && (pet.instanceId || pet.petId || pet.id) || "").trim();
+  if (petId !== "" && petId === String(activePetInstanceId || "").trim()) {
+    return true;
+  }
+  const state = String(pet && (pet.state || pet.status || pet.battleState) || "").trim();
+  return state === BATTLE_PET_STATE_BATTLE;
 }
 
 function stringArray(value) {
@@ -2062,7 +2092,10 @@ function battleRoomActors(room) {
     const battlePets = participant.teamSnapshot && Array.isArray(participant.teamSnapshot.battlePets)
       ? participant.teamSnapshot.battlePets
       : [];
-    battlePets.slice(0, BATTLE_PET_MAX_PER_PARTICIPANT).forEach((pet, petIndex) => {
+    battlePets
+      .filter((pet) => pet && (pet.activeInBattle || String(pet.state || "") === BATTLE_PET_STATE_BATTLE))
+      .slice(0, BATTLE_ACTIVE_PET_MAX_PER_PARTICIPANT)
+      .forEach((pet, petIndex) => {
       const petActor = battlePetActorFromParticipant(participant, side, pet, petIndex);
       if (petActor.accountId !== "" && petActor.petId !== "") {
         actors.push(petActor);
@@ -2113,7 +2146,10 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex) {
     side,
     kind: BATTLE_ACTOR_KIND_PET,
     petId,
+    activeInBattle: true,
     formId: String(pet.formId || pet.speciesId || ""),
+    speciesId: String(pet.speciesId || pet.formId || ""),
+    petState: BATTLE_PET_STATE_BATTLE,
     slotId: `${side}.front.${slotNumber}`,
     slotNumber,
     level: positiveNumber(pet.level, 1),
@@ -2136,15 +2172,39 @@ function requiredBattleCommandAccountIds(room) {
 }
 
 function requiredBattleCommandActorIds(battle) {
-  return requiredBattleCommandActorIdsFromActors(Array.isArray(battle.actors) ? battle.actors : []);
+  return requiredBattleCommandActorIdsFromActors(Array.isArray(battle.actors) ? battle.actors : [], battle.commands || {});
 }
 
-function requiredBattleCommandActorIdsFromActors(actors) {
+function requiredBattleCommandActorIdsFromActors(actors, commands = {}) {
+  const switchPetAccountIds = battleSwitchPetCommandAccountIds(commands);
   return actors
     .filter((actor) => actor && Number(actor.hp || 0) > 0 && String(actor.accountId || "") !== "")
+    .filter((actor) => {
+      if (String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
+        return true;
+      }
+      return !switchPetAccountIds.has(String(actor.accountId || ""));
+    })
     .map((actor) => String(actor.actorId || ""))
     .filter(Boolean)
     .sort();
+}
+
+function battleSwitchPetCommandAccountIds(commands = {}) {
+  const accountIds = new Set();
+  for (const command of Object.values(commands || {})) {
+    if (!command || typeof command !== "object") {
+      continue;
+    }
+    if (String(command.actionKind || command.actionId || "") !== BATTLE_ACTION_SWITCH_PET) {
+      continue;
+    }
+    const accountId = String(command.accountId || "");
+    if (accountId) {
+      accountIds.add(accountId);
+    }
+  }
+  return accountIds;
 }
 
 function battleCommandValues(battle) {
@@ -2184,6 +2244,14 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
   if (!action.ok) {
     return action;
   }
+  let switchPet = null;
+  if (action.actionKind === BATTLE_ACTION_SWITCH_PET) {
+    const switchResult = battleSwitchPetForPayload(payload, room, battle, account);
+    if (!switchResult.ok) {
+      return switchResult;
+    }
+    switchPet = switchResult.pet;
+  }
   const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, action.actionId);
   if (!targetActor) {
     return fail("battle_command_target_missing", "战斗目标不存在。");
@@ -2211,6 +2279,8 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       actionId: action.actionId,
       actionKind: action.actionKind,
       skillId: action.skillId || "",
+      petId: switchPet ? String(switchPet.petId || "") : "",
+      itemId: "",
       targetActorId: targetActor.actorId,
       targetAccountId: targetActor.accountId,
       targetUsername: targetActor.username,
@@ -2227,6 +2297,30 @@ function battleCommandActorForPayload(payload, battle, account) {
     return actor && String(actor.accountId || "") === account.accountId ? actor : null;
   }
   return battlePlayerActorByAccountId(battle, account.accountId);
+}
+
+function battleSwitchPetForPayload(payload, room, battle, account) {
+  const petId = String(payload.petId || payload.targetPetId || payload.switchPetId || "").trim();
+  if (petId === "") {
+    return fail("battle_command_pet_missing", "请选择要换上的宠物。");
+  }
+  const participant = battleParticipantByAccountId(room, account.accountId);
+  if (!participant) {
+    return fail("battle_command_pet_missing", "未找到你的出战队伍。");
+  }
+  const battlePets = participantBattlePets(participant);
+  const pet = battlePets.find((entry) => String(entry.petId || "") === petId) || null;
+  if (!pet) {
+    return fail("battle_command_pet_missing", "这只宠物不在当前队伍中。");
+  }
+  if (Number(pet.hp || 0) <= 0) {
+    return fail("battle_command_pet_unavailable", "这只宠物已经无法出战。");
+  }
+  const activePetActor = activePetActorByAccountId(battle, account.accountId);
+  if (activePetActor && String(activePetActor.petId || "") === petId) {
+    return fail("battle_command_pet_invalid", "这只宠物已经在战斗中。");
+  }
+  return ok({pet});
 }
 
 function normalizeBattleActionForActor(value, actor) {
@@ -2251,6 +2345,12 @@ function normalizeBattleActionForActor(value, actor) {
   if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard") {
     return ok({actionId: BATTLE_ACTION_DEFEND, actionKind: "defend", skillId: ""});
   }
+  if (actionId === BATTLE_ACTION_SWITCH_PET || actionId === "change_pet") {
+    return ok({actionId: BATTLE_ACTION_SWITCH_PET, actionKind: BATTLE_ACTION_SWITCH_PET, skillId: ""});
+  }
+  if (actionId === BATTLE_ACTION_ITEM || actionId.startsWith("item_")) {
+    return fail("battle_command_item_unsupported", "联网切磋物品命令暂未开放。");
+  }
   return fail("battle_command_action_invalid", "暂不支持这个战斗命令。");
 }
 
@@ -2259,7 +2359,7 @@ function battleActionRequiresEnemyTarget(actionKind) {
 }
 
 function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
-  if (actionId === BATTLE_ACTION_DEFEND) {
+  if (actionId === BATTLE_ACTION_DEFEND || actionId === BATTLE_ACTION_SWITCH_PET) {
     return actor;
   }
   const explicitActorId = String(payload.targetActorId || "").trim();
@@ -2305,6 +2405,11 @@ function resolveBattleRoomTurn(data, room, battle, now) {
     }
     if (String(command.actionKind || command.actionId || "") === "defend" || String(command.actionId || "") === BATTLE_ACTION_DEFEND || String(command.actionId || "") === BATTLE_ACTION_PET_DEFEND) {
       events.push(battleDefendEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      continue;
+    }
+    if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_SWITCH_PET) {
+      events.push(battleSwitchPetEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
       continue;
     }
@@ -2368,12 +2473,35 @@ function battlePlayerActorByAccountId(battle, accountId) {
   )) || null;
 }
 
+function activePetActorByAccountId(battle, accountId) {
+  return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => (
+    actor &&
+    actor.accountId === accountId &&
+    String(actor.kind || "") === BATTLE_ACTOR_KIND_PET &&
+    Number(actor.hp || 0) > 0
+  )) || null;
+}
+
 function battleActorByActorId(battle, actorId) {
   const normalizedActorId = String(actorId || "").trim();
   if (!normalizedActorId) {
     return null;
   }
   return (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => actor && String(actor.actorId || "") === normalizedActorId) || null;
+}
+
+function battleParticipantByAccountId(room, accountId) {
+  const normalizedAccountId = String(accountId || "");
+  return (Array.isArray(room.participants) ? room.participants : []).find((participant) => (
+    participant && String(participant.accountId || "") === normalizedAccountId
+  )) || null;
+}
+
+function participantBattlePets(participant) {
+  const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object"
+    ? participant.teamSnapshot
+    : {};
+  return Array.isArray(snapshot.battlePets) ? snapshot.battlePets : [];
 }
 
 function battleResultForResolvedActors(room, battle, now) {
@@ -2496,6 +2624,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
       summary.playerHp = applied.publicHp;
     }
     const petActors = accountActors.filter((actor) => String(actor.kind || "") === BATTLE_ACTOR_KIND_PET);
+    const writtenPetIds = new Set();
     for (const petActor of petActors) {
       const applied = applyBattleActorHpToProfilePet(profile, petActor);
       if (!applied.found) {
@@ -2509,6 +2638,32 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
       }
       changed = changed || applied.changed;
       summary.petHps.push(applied.publicHp);
+      writtenPetIds.add(String(petActor.petId || ""));
+    }
+    const participant = battleParticipantByAccountId(room, accountId);
+    for (const petSnapshot of participantBattlePets(participant)) {
+      const petId = String(petSnapshot.petId || "").trim();
+      if (petId === "" || writtenPetIds.has(petId)) {
+        continue;
+      }
+      const applied = applyBattleActorHpToProfilePet(profile, {
+        actorId: `team_snapshot:${petId}`,
+        petId,
+        hp: petSnapshot.hp,
+        maxHp: petSnapshot.maxHp,
+      });
+      if (!applied.found) {
+        writeback.skippedProfiles.push({
+          accountId: String(accountId || ""),
+          playerId: String(binding.playerId || ""),
+          petId,
+          reason: "pet_instance_missing",
+        });
+        continue;
+      }
+      changed = changed || applied.changed;
+      summary.petHps.push(applied.publicHp);
+      writtenPetIds.add(petId);
     }
     if (!changed) {
       continue;
@@ -2836,6 +2991,73 @@ function battleTargetMissingEvent(room, battle, command, actor, round, sequence)
     message: `${actor.displayName || actor.username} 没有找到目标。`,
     schemaVersion: 1,
   };
+}
+
+function battleSwitchPetEvent(room, battle, command, actor, round, sequence) {
+  const participant = battleParticipantByAccountId(room, actor.accountId);
+  const battlePets = participantBattlePets(participant);
+  const nextPetId = String(command.petId || "").trim();
+  const nextPet = battlePets.find((pet) => String(pet.petId || "") === nextPetId) || null;
+  const previousPetActor = activePetActorByAccountId(battle, actor.accountId);
+  if (!participant || !nextPet || Number(nextPet.hp || 0) <= 0 || (previousPetActor && String(previousPetActor.petId || "") === nextPetId)) {
+    return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
+  }
+  const previousPetId = previousPetActor ? String(previousPetActor.petId || "") : "";
+  updateParticipantPetAfterSwitch(participant, previousPetActor, nextPetId);
+  const nextPetActor = battlePetActorFromParticipant(participant, String(actor.side || ""), nextPet, 0);
+  const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  const previousIndex = previousPetActor ? actors.findIndex((entry) => entry && String(entry.actorId || "") === String(previousPetActor.actorId || "")) : -1;
+  if (previousIndex >= 0) {
+    actors[previousIndex] = nextPetActor;
+  } else {
+    actors.push(nextPetActor);
+  }
+  battle.actors = actors;
+  battle.requiredActorIds = requiredBattleCommandActorIds(battle);
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: BATTLE_ACTION_SWITCH_PET,
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    actionId: BATTLE_ACTION_SWITCH_PET,
+    petId: nextPetId,
+    previousPetId,
+    previousPetActorId: previousPetActor ? String(previousPetActor.actorId || "") : "",
+    nextPetActorId: String(nextPetActor.actorId || ""),
+    nextPet: publicBattleActor(nextPetActor),
+    targetActorId: String(nextPetActor.actorId || ""),
+    targetAccountId: String(nextPetActor.accountId || ""),
+    targetUsername: String(nextPetActor.username || ""),
+    damage: 0,
+    animation: {
+      actor: "switch_pet",
+      targetReaction: "switch_in",
+      observer: "watch_target",
+    },
+    message: `${actor.displayName || actor.username} 换上了 ${nextPetActor.displayName || "宠物"}。`,
+    schemaVersion: 1,
+  };
+}
+
+function updateParticipantPetAfterSwitch(participant, previousPetActor, nextPetId) {
+  const battlePets = participantBattlePets(participant);
+  for (const pet of battlePets) {
+    const petId = String(pet.petId || "");
+    if (previousPetActor && petId === String(previousPetActor.petId || "")) {
+      pet.hp = battleActorWritebackHp(previousPetActor);
+      pet.maxHp = battleActorWritebackMaxHp(previousPetActor);
+      pet.state = pet.hp > 0 ? BATTLE_PET_STATE_STANDBY : "rest";
+      pet.activeInBattle = false;
+    }
+    if (petId === nextPetId) {
+      pet.state = BATTLE_PET_STATE_BATTLE;
+      pet.activeInBattle = true;
+    }
+  }
 }
 
 function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage) {

@@ -2820,6 +2820,9 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 	state["petParty"] = party
 	state["phase"] = "round_events"
 	state["lastEventApplied"] = true
+	state["lastEventType"] = "switch_pet"
+	state["lastDamage"] = 0
+	state["lastHeal"] = 0
 	state["lastAttackerId"] = attacker_id
 	state["lastTargetId"] = PLAYER_PET_ID
 	state["lastTargetIds"] = [PLAYER_PET_ID]

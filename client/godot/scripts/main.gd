@@ -683,6 +683,7 @@ var auto_server_battle_return_check: bool = false
 var auto_server_battle_pet_snapshot_live_check: bool = false
 var auto_server_battle_leave_ui_live_check: bool = false
 var auto_server_battle_pet_command_live_check: bool = false
+var auto_server_battle_switch_pet_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
 var auto_server_profile_sync_check: bool = false
@@ -1052,6 +1053,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_leave_ui_live_check")
 	elif auto_server_battle_pet_command_live_check:
 		call_deferred("_run_auto_server_battle_pet_command_live_check")
+	elif auto_server_battle_switch_pet_live_check:
+		call_deferred("_run_auto_server_battle_switch_pet_live_check")
 	elif auto_server_battle_target_mapping_check:
 		call_deferred("_run_auto_server_battle_target_mapping_check")
 	elif auto_server_battle_stale_room_check:
@@ -1833,6 +1836,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_leave_ui_live_check = true
 		elif arg == "--auto-server-battle-pet-command-live-check":
 			auto_server_battle_pet_command_live_check = true
+		elif arg == "--auto-server-battle-switch-pet-live-check":
+			auto_server_battle_switch_pet_live_check = true
 		elif arg == "--auto-server-battle-target-mapping-check":
 			auto_server_battle_target_mapping_check = true
 		elif arg == "--auto-server-battle-stale-room-check":
@@ -18595,6 +18600,342 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_server_battle_switch_pet_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var challenger_username := "bsa%s" % suffix
+	var opponent_username := "bsb%s" % suffix
+	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
+	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var challenger_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		challenger_username,
+		"test1234",
+		"换宠甲"
+	))
+	var opponent_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		opponent_username,
+		"test1234",
+		"换宠乙"
+	))
+	var challenger_parsed := ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_parsed := ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
+	var challenger_session := challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
+	var opponent_session := opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var active_pet_id := "pet_switch_a_active"
+	var standby_pet_id := "pet_switch_a_standby"
+	var opponent_pet_id := "pet_switch_b_active"
+	var challenger_profile := _server_battle_switch_pet_test_profile("换宠甲", active_pet_id, "甲出战布伊", standby_pet_id, "甲待机布伊", {
+		"level": 15,
+		"hp": 180,
+		"maxHp": 180,
+		"attack": 32,
+		"defense": 14,
+		"quick": 70,
+	}, {
+		"level": 11,
+		"hp": 88,
+		"maxHp": 90,
+		"attack": 23,
+		"defense": 9,
+		"quick": 55,
+	}, {
+		"level": 12,
+		"hp": 104,
+		"maxHp": 108,
+		"attack": 28,
+		"defense": 10,
+		"quick": 82,
+	})
+	var opponent_profile := _server_battle_pet_snapshot_test_profile("换宠乙", opponent_pet_id, "乙布伊", {
+		"level": 14,
+		"hp": 170,
+		"maxHp": 170,
+		"attack": 30,
+		"defense": 12,
+		"quick": 75,
+	}, {
+		"level": 10,
+		"hp": 96,
+		"maxHp": 96,
+		"attack": 24,
+		"defense": 9,
+		"quick": 78,
+	})
+	var challenger_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		challenger_profile,
+		0
+	))
+	var opponent_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		opponent_profile,
+		0
+	))
+	var challenger_upload := ServerAuthClientModel.parse_profile_upload_response(int(challenger_upload_response.get("responseCode", 0)), challenger_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_upload := ServerAuthClientModel.parse_profile_upload_response(int(opponent_upload_response.get("responseCode", 0)), opponent_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var upload_ok := bool(challenger_upload.get("ok", false)) and bool(opponent_upload.get("ok", false))
+	var battle_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(12, -1)
+	var challenger_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var opponent_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x + 1,
+			"cellY": battle_cell.y,
+			"facing": "west",
+			"moving": false,
+		}
+	))
+	var challenger_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(challenger_position_response.get("responseCode", 0)), challenger_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
+	current_account_session = challenger_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	server_event_last_seq = 0
+	server_event_seen.clear()
+	_start_server_event_stream_if_needed()
+	var frames := 0
+	while frames < 720 and server_event_state != "open" and not _server_event_type_seen("events.ready"):
+		frames += 1
+		await get_tree().process_frame
+	var stream_ready := server_event_state == "open" or _server_event_type_seen("events.ready")
+	server_event_seen.clear()
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(challenger_session.get("serverSessionToken", "")),
+		opponent_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	var invite_ok := bool(invite_parsed.get("ok", false)) and invite_id != ""
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var accepted_room := accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
+	var room_id := str(accepted_room.get("roomId", ""))
+	var accepted_room_applied := false
+	if bool(accept_parsed.get("ok", false)) and not accepted_room.is_empty():
+		accepted_room_applied = _apply_server_battle_room_state(accepted_room, true)
+	frames = 0
+	while frames < 720 and not _battle_room_ready(room_id):
+		frames += 1
+		await get_tree().process_frame
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var room_battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var server_actors: Array = room_battle.get("actors", []) if room_battle.get("actors", []) is Array else []
+	var required_actor_ids: Array = room_battle.get("requiredActorIds", []) if room_battle.get("requiredActorIds", []) is Array else []
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	var challenger_player_actor_id := ""
+	var challenger_pet_actor_id := ""
+	var opponent_player_actor_id := ""
+	var opponent_pet_actor_id := ""
+	for value in server_actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var actor_username := str(actor.get("username", ""))
+		var actor_kind := str(actor.get("kind", ""))
+		var actor_id := str(actor.get("actorId", ""))
+		if actor_username == challenger_username and actor_kind == "player":
+			challenger_player_actor_id = actor_id
+		elif actor_username == challenger_username and actor_kind == "pet":
+			challenger_pet_actor_id = actor_id
+		elif actor_username == opponent_username and actor_kind == "player":
+			opponent_player_actor_id = actor_id
+		elif actor_username == opponent_username and actor_kind == "pet":
+			opponent_pet_actor_id = actor_id
+	var challenger_pet_count := 0
+	var standby_snapshot_ok := false
+	for participant_value in participants:
+		if not (participant_value is Dictionary):
+			continue
+		var participant := participant_value as Dictionary
+		if str(participant.get("username", "")) != challenger_username:
+			continue
+		var snapshot := participant.get("teamSnapshot", {}) as Dictionary if participant.get("teamSnapshot", {}) is Dictionary else {}
+		var battle_pets: Array = snapshot.get("battlePets", []) if snapshot.get("battlePets", []) is Array else []
+		challenger_pet_count = battle_pets.size()
+		for pet_value in battle_pets:
+			if not (pet_value is Dictionary):
+				continue
+			var pet := pet_value as Dictionary
+			if str(pet.get("petId", pet.get("instanceId", ""))) == standby_pet_id:
+				standby_snapshot_ok = str(pet.get("state", "")) == BattleModel.PET_STATE_STANDBY and not bool(pet.get("activeInBattle", false))
+				break
+	var ready_ok := (
+		bool(accept_parsed.get("ok", false))
+		and room_id != ""
+		and challenger_player_actor_id != ""
+		and challenger_pet_actor_id != ""
+		and opponent_player_actor_id != ""
+		and opponent_pet_actor_id != ""
+		and required_actor_ids.has(challenger_player_actor_id)
+		and required_actor_ids.has(challenger_pet_actor_id)
+		and required_actor_ids.has(opponent_player_actor_id)
+		and required_actor_ids.has(opponent_pet_actor_id)
+		and challenger_pet_count == 2
+		and standby_snapshot_ok
+	)
+	var ally_pet := BattleModel.actor_by_id(battle_state, "ally_pet")
+	var visible_ok := (
+		battle_active
+		and not ally_pet.is_empty()
+		and str(ally_pet.get("serverPetId", "")) == active_pet_id
+		and BattleModel.is_pet_switchable(battle_state, standby_pet_id)
+	)
+	_on_battle_command_pressed("switch_pet")
+	await get_tree().process_frame
+	var standby_command_id := ""
+	for key in battle_switch_pet_button_pet_ids.keys():
+		if str(battle_switch_pet_button_pet_ids.get(key, "")) == standby_pet_id:
+			standby_command_id = str(key)
+			break
+	var standby_button := battle_command_buttons.get(standby_command_id) as Button
+	var menu_ok := (
+		battle_command_owner == "switch_pet"
+		and standby_command_id != ""
+		and standby_button != null
+		and standby_button.visible
+		and not standby_button.disabled
+	)
+	if standby_command_id != "":
+		_on_battle_command_pressed(standby_command_id)
+	frames = 0
+	while frames < 720 and server_battle_command_request_active:
+		frames += 1
+		await get_tree().process_frame
+	var room_after_switch := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var battle_after_switch := room_after_switch.get("battle", {}) as Dictionary if room_after_switch.get("battle", {}) is Dictionary else {}
+	var required_after_switch: Array = battle_after_switch.get("requiredActorIds", []) if battle_after_switch.get("requiredActorIds", []) is Array else []
+	var submitted_after_switch: Array = battle_after_switch.get("submittedActorIds", []) if battle_after_switch.get("submittedActorIds", []) is Array else []
+	var switch_submit_ok := (
+		not server_battle_command_request_active
+		and required_after_switch.has(challenger_player_actor_id)
+		and not required_after_switch.has(challenger_pet_actor_id)
+		and submitted_after_switch.has(challenger_player_actor_id)
+		and not _server_battle_needs_self_pet_command()
+	)
+	server_event_seen.clear()
+	var opponent_player_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		room_id,
+		{
+			"round": 1,
+			"actorId": opponent_player_actor_id,
+			"actionId": "defend",
+		}
+	))
+	var opponent_player_command := ServerAuthClientModel.parse_battle_command_response(int(opponent_player_command_response.get("responseCode", 0)), opponent_player_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var opponent_pet_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(opponent_session.get("serverSessionToken", "")),
+		room_id,
+		{
+			"round": 1,
+			"actorId": opponent_pet_actor_id,
+			"actionId": "pet_defend",
+		}
+	))
+	var opponent_pet_command := ServerAuthClientModel.parse_battle_command_response(int(opponent_pet_command_response.get("responseCode", 0)), opponent_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var remote_commands_ok := bool(opponent_player_command.get("ok", false)) and bool(opponent_pet_command.get("ok", false))
+	var remote_turn := opponent_pet_command.get("turn", {}) as Dictionary if opponent_pet_command.get("turn", {}) is Dictionary else {}
+	var remote_room := opponent_pet_command.get("room", {}) as Dictionary if opponent_pet_command.get("room", {}) is Dictionary else {}
+	if not remote_turn.is_empty() and not remote_room.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str(remote_room.get("roomId", "")).strip_edges():
+		server_battle_state["room"] = remote_room.duplicate(true)
+		_sync_server_battle_snapshot_fields_during_playback(remote_room)
+		_play_server_battle_event_list(remote_turn)
+	frames = 0
+	while frames < 900 and (not _battle_turn_resolved(room_id, 1) or _server_battle_event_playback_active() or int(battle_state.get("round", 1)) < 2):
+		frames += 1
+		await get_tree().process_frame
+	await get_tree().process_frame
+	var last_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
+	var events: Array = last_event_list.get("events", []) if last_event_list.get("events", []) is Array else []
+	var switch_event_ok := false
+	var next_pet_actor_id := ""
+	for event_value in events:
+		if not (event_value is Dictionary):
+			continue
+		var event := event_value as Dictionary
+		if str(event.get("eventType", "")) == "switch_pet" and str(event.get("petId", "")) == standby_pet_id:
+			switch_event_ok = true
+			next_pet_actor_id = str(event.get("nextPetActorId", ""))
+			break
+	var updated_room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var updated_battle := updated_room.get("battle", {}) as Dictionary if updated_room.get("battle", {}) is Dictionary else {}
+	var updated_required_actor_ids: Array = updated_battle.get("requiredActorIds", []) if updated_battle.get("requiredActorIds", []) is Array else []
+	var updated_ally_pet := BattleModel.actor_by_id(battle_state, "ally_pet")
+	var actor_switched_ok := (
+		not updated_ally_pet.is_empty()
+		and str(updated_ally_pet.get("serverPetId", updated_ally_pet.get("petId", ""))) == standby_pet_id
+		and str(updated_ally_pet.get("serverActorId", "")) == next_pet_actor_id
+	)
+	var next_required_ok := next_pet_actor_id != "" and updated_required_actor_ids.has(next_pet_actor_id) and not updated_required_actor_ids.has(challenger_pet_actor_id)
+	var local_event_ok := battle_last_round_event_types.has("switch_pet") or str(battle_state.get("lastPetId", "")) == standby_pet_id
+	var round_ok := int(battle_state.get("round", 1)) >= 2
+	var command_flow_ok := menu_ok and switch_submit_ok and remote_commands_ok and switch_event_ok and actor_switched_ok and next_required_ok and local_event_ok and round_ok
+	var status := "ok" if register_ok and upload_ok and positions_ok and stream_ready and invite_ok and accepted_room_applied and ready_ok and visible_ok and command_flow_ok else "failed"
+	print("server battle switch pet live check ready: status=%s register=%s upload=%s positions=%s stream=%s invite=%s room_apply=%s ready=%s visible=%s menu=%s switch_submit=%s remote=%s switch_event=%s actor=%s next_required=%s local_event=%s round=%s old_pet=%s next_pet=%s last_pet=%s event_types=%s room_id=%s challenger=%s opponent=%s" % [
+		status,
+		str(register_ok),
+		str(upload_ok),
+		str(positions_ok),
+		str(stream_ready),
+		str(invite_ok),
+		str(accepted_room_applied),
+		str(ready_ok),
+		str(visible_ok),
+		str(menu_ok),
+		str(switch_submit_ok),
+		str(remote_commands_ok),
+		str(switch_event_ok),
+		str(actor_switched_ok),
+		str(next_required_ok),
+		str(local_event_ok),
+		str(round_ok),
+		challenger_pet_actor_id,
+		next_pet_actor_id,
+		str(battle_state.get("lastPetId", "")),
+		str(battle_last_round_event_types),
+		room_id,
+		challenger_username,
+		opponent_username,
+	])
+	if room_id != "":
+		await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(challenger_session.get("serverSessionToken", "")),
+			room_id
+		))
+	_stop_server_event_stream()
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _server_battle_pet_snapshot_test_profile(display_name: String, pet_id: String, pet_name: String, player_stats: Dictionary, pet_stats: Dictionary) -> Dictionary:
 	return {
 		"player": {
@@ -18627,6 +18968,30 @@ func _server_battle_pet_snapshot_test_profile(display_name: String, pet_id: Stri
 			"passiveSkillIds": ["test_passive"],
 		}],
 	}
+
+
+func _server_battle_switch_pet_test_profile(display_name: String, active_pet_id: String, active_pet_name: String, standby_pet_id: String, standby_pet_name: String, player_stats: Dictionary, active_pet_stats: Dictionary, standby_pet_stats: Dictionary) -> Dictionary:
+	var profile := _server_battle_pet_snapshot_test_profile(display_name, active_pet_id, active_pet_name, player_stats, active_pet_stats)
+	var pets: Array = profile.get("petInstances", []) if profile.get("petInstances", []) is Array else []
+	pets.append({
+		"instanceId": standby_pet_id,
+		"petId": standby_pet_id,
+		"formId": "bui_normal_yellow_wind10",
+		"name": standby_pet_name,
+		"state": "standby",
+		"level": maxi(1, int(standby_pet_stats.get("level", 1))),
+		"hp": maxi(1, int(standby_pet_stats.get("hp", standby_pet_stats.get("maxHp", 90)))),
+		"maxHp": maxi(1, int(standby_pet_stats.get("maxHp", 90))),
+		"attack": maxi(1, int(standby_pet_stats.get("attack", 12))),
+		"defense": maxi(1, int(standby_pet_stats.get("defense", 6))),
+		"quick": maxi(1, int(standby_pet_stats.get("quick", 50))),
+		"activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"],
+		"petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "", ""],
+		"passiveSkillIds": ["test_passive"],
+	})
+	profile["petInstances"] = pets
+	profile["activePetInstanceId"] = active_pet_id
+	return profile
 
 
 func _online_remote_player_at(username: String, map_id: String, cell: Vector2i) -> bool:
@@ -25114,13 +25479,17 @@ func _apply_battle_event(event: Dictionary) -> void:
 		return
 	if room_updated:
 		_close_battle_invite_panel(false)
+		var updated_room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
 		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 		var turn_key := _server_battle_turn_key(turn)
 		var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
 		if same_turn_playing:
-			_sync_server_battle_snapshot_fields_during_playback(server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {})
+			_sync_server_battle_snapshot_fields_during_playback(updated_room)
 		else:
-			_sync_server_battle_room_scene()
+			if not turn.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str(updated_room.get("roomId", "")).strip_edges():
+				_sync_server_battle_snapshot_fields_during_playback(updated_room)
+			else:
+				_sync_server_battle_room_scene()
 			if not turn.is_empty():
 				_play_server_battle_event_list(turn)
 
@@ -34836,14 +35205,20 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		if battle_command_owner == "pet":
 			_on_pet_battle_command_pressed(command_id)
 			return
+		if battle_command_owner == "switch_pet":
+			_on_switch_pet_battle_command_pressed(command_id)
+			return
 		elif battle_command_owner != "player":
 			_set_battle_message("联网切磋暂只支持攻击、防御、宠物指令和离开。")
 			return
 		elif command_id == "run":
 			_leave_server_battle_room()
 			return
+		if command_id == "switch_pet":
+			_open_switch_pet_command_menu()
+			return
 		if not ["attack", "defend", "help"].has(command_id):
-			_set_battle_message("联网切磋暂只支持攻击、防御和离开。")
+			_set_battle_message("联网切磋暂只支持攻击、防御、换宠和离开。")
 			return
 	if battle_command_owner == "pet":
 		_on_pet_battle_command_pressed(command_id)
@@ -34918,7 +35293,7 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 	_open_pet_command_or_start_round()
 
 
-func _submit_server_battle_player_command(command_id: String, target_id: String = "") -> void:
+func _submit_server_battle_player_command(command_id: String, target_id: String = "", pet_id: String = "") -> void:
 	if not _battle_is_server_authority():
 		return
 	if server_battle_command_request_active:
@@ -34927,9 +35302,13 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 	if command_id == "run":
 		_leave_server_battle_room()
 		return
-	var action_id := "attack" if command_id == "attack" else "defend" if command_id == "defend" else ""
+	var action_id := "attack" if command_id == "attack" else "defend" if command_id == "defend" else "switch_pet" if command_id == "switch_pet" else ""
 	if action_id == "":
-		_set_battle_message("联网切磋暂只支持攻击和防御。")
+		_set_battle_message("联网切磋暂只支持攻击、防御和换宠。")
+		return
+	var switch_pet_id := pet_id.strip_edges()
+	if action_id == "switch_pet" and switch_pet_id == "":
+		_set_battle_message("没有选择待机宠物。")
 		return
 	var room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
 	if room_id == "":
@@ -34955,9 +35334,11 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		for key in target_payload.keys():
 			if str(target_payload[key]).strip_edges() != "":
 				payload[key] = target_payload[key]
+	elif action_id == "switch_pet":
+		payload["petId"] = switch_pet_id
 	server_battle_command_request_active = true
 	battle_state["phase"] = "server_waiting"
-	_set_battle_message("指令已提交，等待服务器确认。")
+	_set_battle_message("换宠指令已提交，等待服务器确认。" if action_id == "switch_pet" else "指令已提交，等待服务器确认。")
 	_sync_battle_buttons()
 	_layout_hud()
 	var response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
@@ -34981,7 +35362,10 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 			if same_turn_playing:
 				_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
 			else:
-				_sync_server_battle_room_scene(false)
+				if not turn.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str((room as Dictionary).get("roomId", "")).strip_edges():
+					_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
+				else:
+					_sync_server_battle_room_scene(false)
 			if not turn.is_empty():
 				var playback_started := _play_server_battle_event_list(turn)
 				if room_closed and not playback_started:
@@ -35095,7 +35479,10 @@ func _submit_server_battle_pet_command(command_id: String, target_id: String = "
 			if same_turn_playing:
 				_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
 			else:
-				_sync_server_battle_room_scene(false)
+				if not turn.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str((room as Dictionary).get("roomId", "")).strip_edges():
+					_sync_server_battle_snapshot_fields_during_playback(room as Dictionary)
+				else:
+					_sync_server_battle_room_scene(false)
 			if not turn.is_empty():
 				var playback_started := _play_server_battle_event_list(turn)
 				if room_closed and not playback_started:
@@ -35353,6 +35740,9 @@ func _on_switch_pet_battle_command_pressed(command_id: String) -> void:
 				_set_battle_message("%s 正在休息，不能出战。" % str(entry.get("name", "宠物")))
 			_:
 				_set_battle_message("%s 不能出战。" % str(entry.get("name", "宠物")))
+		return
+	if _battle_is_server_authority():
+		_submit_server_battle_player_command("switch_pet", "", pet_id)
 		return
 	_submit_switch_pet_player_command(pet_id)
 
@@ -36516,6 +36906,8 @@ func _sync_battle_buttons() -> void:
 							button.disabled = not has_enemy
 						"defend", "run", "help":
 							button.disabled = not can_command
+						"switch_pet":
+							button.disabled = BattleModel.switchable_pet_entries(battle_state).is_empty()
 						_:
 							button.disabled = true
 				else:
