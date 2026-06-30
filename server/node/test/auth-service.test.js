@@ -786,6 +786,81 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(storedRoom.battle.profileWriteback.profiles[0].petHps[0].hp, updatedOpponentPet.hp);
 });
 
+test("duel battle rooms close when a player is defeated even if their pet survives", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "playerkoa", "password": "test1234", "displayName": "人物胜"});
+  const opponent = service.register({"username": "playerkob", "password": "test1234", "displayName": "人物败"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("人物胜", {"level": 12, "hp": 150, "maxHp": 150, "attack": 80, "defense": 8, "quick": 90}, {
+      "petId": "pet_ko_a",
+      "name": "甲布伊",
+      "state": "battle",
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 16,
+      "defense": 7,
+      "quick": 50,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("人物败", {"level": 12, "hp": 12, "maxHp": 150, "attack": 18, "defense": 1, "quick": 70}, {
+      "petId": "pet_ko_b",
+      "name": "乙布伊",
+      "state": "battle",
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 16,
+      "defense": 7,
+      "quick": 50,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "playerkob"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "playerkoa" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "playerkoa" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "playerkob" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "playerkob" && actor.kind === "pet");
+
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": opponentPlayer.actorId,
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const final = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(final.ok, true);
+  assert.equal(final.room.status, "closed");
+  assert.equal(final.turn.result.reason, "defeat");
+  assert.equal(final.room.battle.result.winnerAccountId, challenger.account.accountId);
+  assert.deepEqual(final.room.battle.result.loserAccountIds, [opponent.account.accountId]);
+  const updatedOpponentPlayer = final.room.battle.actors.find((actor) => actor.actorId === opponentPlayer.actorId);
+  const updatedOpponentPet = final.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
+  assert.equal(updatedOpponentPlayer.hp, 0);
+  assert.equal(updatedOpponentPet.hp, 90);
+  assert.equal(final.turn.events.some((event) => event.eventType === "defend" && event.actorId === opponentPet.actorId), false);
+});
+
 test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "swapa", "password": "test1234", "displayName": "换宠甲"});

@@ -2717,6 +2717,9 @@ function resolveBattleRoomTurn(data, room, battle, now) {
     syncParticipantPetSnapshotHp(room, target);
     events.push(battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, target.hp, damage));
     sequence += 1;
+    if (battleDefeatedPlayerAccountIds(room, battle).length > 0) {
+      break;
+    }
   }
   const eventList = {
     schemaVersion: 1,
@@ -2847,6 +2850,23 @@ function battleItemHealAmount(itemId) {
 
 function battleResultForResolvedActors(room, battle, now) {
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  const defeatedPlayerAccountIds = battleDefeatedPlayerAccountIds(room, battle);
+  if (defeatedPlayerAccountIds.length > 0) {
+    const winner = actors.find((actor) => (
+      actor &&
+      requiredBattleCommandAccountIds(room).includes(String(actor.accountId || "")) &&
+      String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER &&
+      Number(actor.hp || 0) > 0
+    )) || null;
+    return {
+      reason: "defeat",
+      winnerAccountId: winner ? String(winner.accountId || "") : "",
+      loserAccountIds: defeatedPlayerAccountIds,
+      closedByAccountId: "",
+      endedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+  }
   const livingSides = new Set(actors
     .filter((actor) => actor && Number(actor.hp || 0) > 0)
     .map((actor) => String(actor.side || ""))
@@ -2866,6 +2886,19 @@ function battleResultForResolvedActors(room, battle, now) {
     endedAt: isoNow(now),
     schemaVersion: 1,
   };
+}
+
+function battleDefeatedPlayerAccountIds(room, battle) {
+  const participantAccountIds = requiredBattleCommandAccountIds(room);
+  const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  return participantAccountIds.filter((accountId) => {
+    const playerActor = actors.find((actor) => (
+      actor &&
+      String(actor.accountId || "") === String(accountId || "") &&
+      String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER
+    )) || null;
+    return playerActor && Number(playerActor.hp || 0) <= 0;
+  });
 }
 
 function battleRoomResultForLeave(room, leavingAccountId, now) {
