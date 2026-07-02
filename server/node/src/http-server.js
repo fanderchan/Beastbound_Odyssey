@@ -129,6 +129,10 @@ function createHttpServer(options = {}) {
         const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/read".length));
         return sendResult(res, service.markMailRead(bearerToken(req), mailId));
       }
+      if (req.method === "POST" && url.pathname.startsWith("/mail/") && url.pathname.endsWith("/claim")) {
+        const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/claim".length));
+        return sendResult(res, service.claimMailAttachments(bearerToken(req), mailId));
+      }
       if (req.method === "GET" && url.pathname === "/chat/messages") {
         return sendResult(res, service.listChatMessages(bearerToken(req), {
           "channel": url.searchParams.get("channel") || "",

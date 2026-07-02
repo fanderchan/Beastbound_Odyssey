@@ -307,6 +307,8 @@ var player_rebirth_preview_close_button: Button
 var player_rebirth_confirm_pending: bool = false
 var player_rebirth_request_pending: bool = false
 var quest_action_request_pending: bool = false
+var server_quest_record_event_queue: Array[Dictionary] = []
+var server_quest_record_event_queue_running: bool = false
 var profile_action_request_pending: bool = false
 var equipment_panel: PanelContainer
 var equipment_grid: Control
@@ -685,6 +687,7 @@ var auto_auth_server_live_check: bool = false
 var auto_startup_login_check: bool = false
 var auto_server_mail_live_check: bool = false
 var auto_party_live_check: bool = false
+var auto_party_member_follow_check: bool = false
 var auto_player_interaction_live_check: bool = false
 var auto_chat_live_check: bool = false
 var auto_online_position_live_check: bool = false
@@ -845,6 +848,7 @@ var server_profile_sync_state: String = "off"
 var server_profile_sync_pending_kind: String = ""
 var server_profile_sync_dirty: bool = false
 var server_profile_sync_pull_queued: bool = false
+var server_profile_sync_deferred_pull_result: Dictionary = {}
 var server_profile_sync_expected_revision: int = 0
 var server_profile_sync_message: String = ""
 var profile_save_enabled: bool = true
@@ -1043,6 +1047,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_mail_live_check")
 	elif auto_party_live_check:
 		call_deferred("_run_auto_party_live_check")
+	elif auto_party_member_follow_check:
+		call_deferred("_run_auto_party_member_follow_check")
 	elif auto_player_interaction_live_check:
 		call_deferred("_run_auto_player_interaction_live_check")
 	elif auto_chat_live_check:
@@ -1838,6 +1844,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_mail_live_check = true
 		elif arg == "--auto-party-live-check":
 			auto_party_live_check = true
+		elif arg == "--auto-party-member-follow-check":
+			auto_party_member_follow_check = true
 		elif arg == "--auto-player-interaction-live-check":
 			auto_player_interaction_live_check = true
 		elif arg == "--auto-chat-live-check":
@@ -2302,6 +2310,116 @@ func _run_movement_perf_check() -> void:
 		current_path_cells.size(),
 	])
 	get_tree().quit(0 if moved else 1)
+
+
+func _run_auto_party_member_follow_check() -> void:
+	profile_save_enabled = false
+	world_log_message = ""
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var saved_session := current_account_session.duplicate(true)
+	var saved_party_state := party_current_state.duplicate(true)
+	current_account_session = {
+		"accountId": "member_account",
+		"username": "member",
+		"displayName": "队员",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "leader_account",
+			"members": [
+				{"accountId": "leader_account", "username": "leader", "role": "leader"},
+				{"accountId": "member_account", "username": "member", "role": "member"},
+			],
+		},
+		"incomingInvites": [],
+		"maxMembers": 5,
+	}
+	var start_cell := Vector2i.ZERO
+	var follow_cell := Vector2i.ZERO
+	var click_block_cell := Vector2i.ZERO
+	var target_found := false
+	if loaded:
+		start_cell = IsoMapModel.nearest_walkable_cell(map_data, IsoMapModel.spawn_cell(map_data) + Vector2i(3, -1))
+		var offsets: Array[Vector2i] = [
+			Vector2i(1, 0),
+			Vector2i(0, 1),
+			Vector2i(-1, 0),
+			Vector2i(0, -1),
+			Vector2i(2, 0),
+			Vector2i(0, 2),
+		]
+		for offset in offsets:
+			var candidate := IsoMapModel.nearest_walkable_cell(map_data, start_cell + offset)
+			var candidate_path: Array[Vector2i] = IsoMapModel.find_path(map_data, start_cell, candidate)
+			if candidate != start_cell and candidate_path.size() >= 2:
+				follow_cell = candidate
+				target_found = true
+				break
+		for offset in offsets:
+			var candidate := IsoMapModel.nearest_walkable_cell(map_data, follow_cell + offset)
+			if candidate != follow_cell:
+				click_block_cell = candidate
+				break
+	if loaded and target_found and player != null:
+		player.global_position = IsoMapModel.grid_to_world(map_data, start_cell)
+		player.clear_move_target()
+		current_path_cells.clear()
+		current_path_is_direct = false
+		has_target_marker = false
+		has_target_cell = false
+	server_step_move_authority_valid = false
+	var applied: bool = loaded and target_found and _apply_server_step_move_authority_position({
+		"mapId": current_map_id,
+		"cellX": follow_cell.x,
+		"cellY": follow_cell.y,
+		"facing": "east",
+		"moving": false,
+		"authority": "party_follow",
+	}, true)
+	var immediate_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and loaded else Vector2i.ZERO
+	var smooth_started: bool = (
+		applied
+		and player != null
+		and player.is_auto_moving()
+		and immediate_cell == start_cell
+		and server_step_move_authority_cell == follow_cell
+	)
+	_apply_party_event({
+		"party": (party_current_state.get("party", {}) as Dictionary).duplicate(true),
+	})
+	var event_preserved_follow: bool = player != null and player.is_auto_moving()
+	for _step in range(90):
+		await get_tree().physics_frame
+		if player != null and not player.is_auto_moving():
+			break
+	var final_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and loaded else Vector2i.ZERO
+	var reached_follow: bool = final_cell == follow_cell
+	var click_blocked: bool = false
+	if loaded and target_found and click_block_cell != Vector2i.ZERO:
+		click_blocked = (
+			not _set_click_move_target_cell(click_block_cell, IsoMapModel.grid_to_world(map_data, click_block_cell), click_block_cell)
+			and world_log_message.find("队伍中由队长带队移动") >= 0
+		)
+	current_account_session = saved_session
+	party_current_state = saved_party_state
+	var status := "ok" if loaded and target_found and smooth_started and event_preserved_follow and reached_follow and click_blocked else "failed"
+	print("party member follow check ready: status=%s loaded=%s target=%s smooth=%s event_preserved=%s reached=%s click_blocked=%s start=%s follow=%s final=%s log=%s" % [
+		status,
+		str(loaded),
+		str(target_found),
+		str(smooth_started),
+		str(event_preserved_follow),
+		str(reached_follow),
+		str(click_blocked),
+		str(start_cell),
+		str(follow_cell),
+		str(final_cell),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
 
 
 func _run_movement_spam_click_check() -> void:
@@ -4033,6 +4151,14 @@ func _run_auto_training_partner_check() -> void:
 	changed_player_profile["player"] = changed_player
 	changed_player_profile = PlayerProgressModel.normalize_profile(changed_player_profile)
 	var cloned_independent_ok := not initial_partners.is_empty() and int((PlayerProgressModel.training_partners(changed_player_profile)[0] as Dictionary).get("attack", -1)) == clone_attack
+	var server_action_spec := ServerAuthClientModel.profile_action_request("http://127.0.0.1:1234", "token", "training_partner_set_count", {"count": 3})
+	var server_action_body = JSON.parse_string(str(server_action_spec.get("body", "")))
+	var server_action_contract_ok := (
+		server_action_body is Dictionary
+		and str((server_action_body as Dictionary).get("action", "")) == "training_partner_set_count"
+		and (server_action_body as Dictionary).get("payload", {}) is Dictionary
+		and int(((server_action_body as Dictionary).get("payload", {}) as Dictionary).get("count", -1)) == 3
+	)
 	var loaded := _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
 	var zone_found := not zones.is_empty()
@@ -4212,14 +4338,15 @@ func _run_auto_training_partner_check() -> void:
 	current_account_session = saved_session
 	player_profile = saved_profile
 	var panel_layout_ok := panel_map_loaded and first_panel_layout_ok and second_panel_layout_ok
-	var status := "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok and mixed_party_team_ok and mixed_reward_ok else "failed"
-	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
+	var status := "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and server_action_contract_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok and mixed_party_team_ok and mixed_reward_ok else "failed"
+	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s server_action=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
 		status,
 		str(partner_count_ok),
 		str(panel_layout_ok),
 		str(first_panel_layout_ok),
 		str(second_panel_layout_ok),
 		str(cloned_independent_ok),
+		str(server_action_contract_ok),
 		str(loaded),
 		str(zone_found),
 		str(ally_count_ok),
@@ -9055,14 +9182,35 @@ func _run_auto_mailbox_check() -> void:
 		and mailbox_detail_label != null
 		and mailbox_detail_label.text.find("经验丹") >= 0
 	)
+	mailbox_server_messages = [{
+		"mailId": "mail_server_item_check",
+		"senderUsername": "serverfriend",
+		"senderDisplayName": "远方猎人",
+		"title": "补给",
+		"body": "带上肉。",
+		"items": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2}],
+		"createdAt": "2099-01-01T00:00:00.000Z",
+		"readAt": null,
+	}]
+	mailbox_selected_mail_id = "server:mail_server_item_check"
+	mailbox_selected_source = "server"
+	_refresh_mailbox_panel()
+	var server_ui_ok := (
+		mailbox_claim_button != null
+			and not mailbox_claim_button.disabled
+			and mailbox_detail_label != null
+			and mailbox_detail_label.text.find("附件") >= 0
+			and mailbox_detail_label.text.find("肉 x2") >= 0
+		)
 	_close_mailbox_panel()
-	var status := "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok else "failed"
-	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s messages=%d" % [
+	var status := "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and server_ui_ok else "failed"
+	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s server_ui=%s messages=%d" % [
 		status,
 		str(mailbox_ok),
 		str(claim_full_ok),
 		str(claim_ok),
 		str(ui_ok),
+		str(server_ui_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -9448,6 +9596,68 @@ func _run_auto_shop_check() -> void:
 		and shop_action_button.text.begins_with("出售 x1")
 		and sell_meat_button_text.find("可卖 4石币") >= 0
 	)
+	_set_shop_mode("buy")
+	await get_tree().process_frame
+	var saved_session := current_account_session.duplicate(true)
+	var saved_sync_state := server_profile_sync_state
+	var saved_expected_revision := server_profile_sync_expected_revision
+	current_account_session = {
+		"accountId": "shop_profile_recovery_account",
+		"username": "shop_profile_recovery",
+		"displayName": "商店恢复",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	server_profile_sync_state = "ready"
+	var before_recovery_meat := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL)
+	var before_recovery_coins := PlayerProgressModel.stone_coins(player_profile)
+	shop_action_request_pending = true
+	_refresh_shop_panel(false)
+	var pending_meat_button = shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null)
+	var pending_action_ok := shop_action_button != null and shop_action_button.disabled
+	var pending_quantity_ok := shop_quantity_spinbox != null and not shop_quantity_spinbox.editable
+	var pending_plus_ok := shop_quantity_plus_button != null and shop_quantity_plus_button.disabled
+	var pending_item_ok := pending_meat_button is Button and (pending_meat_button as Button).disabled
+	var pending_ui_ok := (
+		pending_action_ok
+		and pending_quantity_ok
+		and pending_plus_ok
+		and pending_item_ok
+	)
+	var recovery_profile := PlayerProgressModel.with_stone_coins(player_profile, before_recovery_coins - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL))
+	recovery_profile = PlayerProgressModel.with_backpack_slots(
+		recovery_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(recovery_profile), BattleModel.ITEM_MEAT_SMALL, before_recovery_meat + 1)
+	)
+	_apply_server_profile_pull_result({
+		"ok": true,
+		"profile": recovery_profile,
+		"profileSummary": {
+			"playerId": "player_shop_profile_recovery",
+			"profileRevision": 2,
+		},
+		"message": "已读取服务器档案。",
+	}, false)
+	shop_action_request_pending = false
+	_refresh_shop_panel()
+	var recovery_detail_text := shop_detail_label.text if shop_detail_label != null else ""
+	var recovery_profile_count_ok := PlayerProgressModel.backpack_item_count(player_profile, BattleModel.ITEM_MEAT_SMALL) == before_recovery_meat + 1
+	var recovery_profile_coin_ok := PlayerProgressModel.stone_coins(player_profile) == before_recovery_coins - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL)
+	var recovery_detail_ok := recovery_detail_text.find("x%d" % [before_recovery_meat + 1]) >= 0
+	var recovery_coin_label_ok := shop_coin_label != null and shop_coin_label.text.find(str(before_recovery_coins - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL))) >= 0
+	var recovery_action_enabled_ok := shop_action_button != null and not shop_action_button.disabled
+	var missing_profile_recovery_ok := (
+		pending_ui_ok
+		and recovery_profile_count_ok
+		and recovery_profile_coin_ok
+		and recovery_detail_ok
+		and recovery_coin_label_ok
+		and recovery_action_enabled_ok
+	)
+	current_account_session = saved_session
+	server_profile_sync_state = saved_sync_state
+	server_profile_sync_expected_revision = saved_expected_revision
 	_close_shop_panel()
 
 	var reward_state := _battle_reward_test_state("battle_reward_check", base_profile)
@@ -9461,8 +9671,8 @@ func _run_auto_shop_check() -> void:
 		and reward_log.find("石币") >= 0
 	)
 
-	var status := "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and quantity_ui_ok and sell_tab_ok and reward_coin_ok else "failed"
-	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s quantity_ui=%s sell_tab=%s reward_coin=%s coins=%d reward=%d" % [
+	var status := "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and quantity_ui_ok and sell_tab_ok and missing_profile_recovery_ok and reward_coin_ok else "failed"
+	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s quantity_ui=%s sell_tab=%s profile_recovery=%s pending_ui=%s pending_action=%s pending_quantity=%s pending_plus=%s pending_item=%s recovery_count=%s recovery_coin=%s recovery_detail=%s recovery_coin_label=%s recovery_action=%s reward_coin=%s coins=%d reward=%d" % [
 		status,
 		str(catalog_ok),
 		str(default_coin_ok),
@@ -9476,6 +9686,17 @@ func _run_auto_shop_check() -> void:
 		str(shop_panel_ok),
 		str(quantity_ui_ok),
 		str(sell_tab_ok),
+		str(missing_profile_recovery_ok),
+		str(pending_ui_ok),
+		str(pending_action_ok),
+		str(pending_quantity_ok),
+		str(pending_plus_ok),
+		str(pending_item_ok),
+		str(recovery_profile_count_ok),
+		str(recovery_profile_coin_ok),
+		str(recovery_detail_ok),
+		str(recovery_coin_label_ok),
+		str(recovery_action_enabled_ok),
 		str(reward_coin_ok),
 		PlayerProgressModel.stone_coins(reward_profile),
 		stone_reward,
@@ -12202,6 +12423,7 @@ func _run_auto_encounter_loop_check() -> void:
 
 	var natural_direct := false
 	var natural_no_prompt := false
+	var party_member_grass_block := false
 	var grace_started := false
 	var grace_blocks := false
 	var grace_one_second := false
@@ -12238,16 +12460,110 @@ func _run_auto_encounter_loop_check() -> void:
 		var grace_before_finish := encounter_grace_remaining > 0.0
 		_update_encounter_grace(0.02)
 		grace_one_second = grace_before_finish and encounter_grace_remaining <= 0.0
+		var saved_session := current_account_session.duplicate(true)
+		var saved_party_state := party_current_state.duplicate(true)
+		var saved_auth_auto_bypass := auth_auto_bypass
+		var saved_world_log_message := world_log_message
+		loaded = _load_map("firebud_village_gate", "from_training_yard")
+		forced_zones = map_data.get("encounterZones", [])
+		forced_zone = (forced_zones[0] as Dictionary).duplicate(true)
+		forced_zone["encounterRate"] = 1.0
+		forced_zones[0] = forced_zone
+		map_data["encounterZones"] = forced_zones
+		cells = EncounterModel.cells_for_zone(forced_zone)
+		current_account_session = {
+			"accountId": "account_member",
+			"username": "member",
+			"displayName": "队员",
+			"authSource": ServerAuthClientModel.SOURCE_SERVER,
+			"serverSessionToken": "token_member",
+			"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		}
+		party_current_state = {
+			"party": {
+				"leaderAccountId": "account_leader",
+				"members": [
+					{"accountId": "account_leader", "username": "leader", "role": "leader"},
+					{"accountId": "account_member", "username": "member", "role": "member"},
+				],
+			},
+		}
+		auth_auto_bypass = false
+		world_log_message = ""
+		encounter_zone_step_count = 0
+		encounter_grace_remaining = 0.0
+		server_party_encounter_request_pending = false
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		for index in range(1, ENCOUNTER_SAFE_STEPS + 2):
+			player.global_position = IsoMapModel.grid_to_world(map_data, cells[index] as Vector2i)
+			_update_encounter_zone_check()
+			if world_log_message.find("队伍中只有队长可以触发遇敌") >= 0:
+				break
+		party_member_grass_block = (
+			world_log_message.find("队伍中只有队长可以触发遇敌") >= 0
+			and world_log_message.find("队伍遇敌由队长触发") < 0
+			and not battle_active
+			and not encounter_active
+			and not server_party_encounter_request_pending
+		)
+		current_account_session = saved_session
+		party_current_state = saved_party_state
+		auth_auto_bypass = saved_auth_auto_bypass
+		world_log_message = saved_world_log_message
 
 	var stone_consumed := false
 	var stone_effect := false
 	var stone_wait := false
 	var stone_triggered := false
+	var party_member_stone_block := false
 	if zone_found:
 		_load_map("firebud_village_gate", "from_training_yard")
 		zones = EncounterModel.encounter_zones(map_data)
 		zone = zones[0] as Dictionary
 		cells = EncounterModel.cells_for_zone(zone)
+		var saved_stone_session := current_account_session.duplicate(true)
+		var saved_stone_party_state := party_current_state.duplicate(true)
+		var saved_stone_auth_auto_bypass := auth_auto_bypass
+		var saved_stone_world_log_message := world_log_message
+		player_profile = PlayerProgressModel.default_profile()
+		player_profile = PlayerProgressModel.with_backpack_slots(
+			player_profile,
+			BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(player_profile), ENCOUNTER_STONE_LOW_ID, 1)
+		)
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		current_account_session = {
+			"accountId": "account_member",
+			"username": "member",
+			"displayName": "队员",
+			"authSource": ServerAuthClientModel.SOURCE_SERVER,
+			"serverSessionToken": "token_member",
+			"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		}
+		party_current_state = {
+			"party": {
+				"leaderAccountId": "account_leader",
+				"members": [
+					{"accountId": "account_leader", "username": "leader", "role": "leader"},
+					{"accountId": "account_member", "username": "member", "role": "member"},
+				],
+			},
+		}
+		auth_auto_bypass = false
+		world_log_message = ""
+		var before_member_stones := PlayerProgressModel.backpack_item_count(player_profile, ENCOUNTER_STONE_LOW_ID)
+		await _use_backpack_encounter_stone(ENCOUNTER_STONE_LOW_ID)
+		party_member_stone_block = (
+			PlayerProgressModel.backpack_item_count(player_profile, ENCOUNTER_STONE_LOW_ID) == before_member_stones
+			and not _encounter_stone_active()
+			and not hang_session_request_active
+			and world_log_message.find("队伍中只有队长可以使用") >= 0
+		)
+		current_account_session = saved_stone_session
+		party_current_state = saved_stone_party_state
+		auth_auto_bypass = saved_stone_auth_auto_bypass
+		world_log_message = saved_stone_world_log_message
 		player_profile = PlayerProgressModel.default_profile()
 		player_profile = PlayerProgressModel.with_backpack_slots(
 			player_profile,
@@ -12266,8 +12582,8 @@ func _run_auto_encounter_loop_check() -> void:
 		await get_tree().process_frame
 		stone_triggered = battle_active and encounter_panel != null and not encounter_panel.visible
 
-	var status := "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and natural_direct and natural_no_prompt and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
-	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s natural=%s no_prompt=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
+	var status := "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and natural_direct and natural_no_prompt and party_member_grass_block and party_member_stone_block and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
+	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s natural=%s no_prompt=%s member_grass=%s member_stone=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -12279,6 +12595,8 @@ func _run_auto_encounter_loop_check() -> void:
 		str(hang_stopped),
 		str(natural_direct),
 		str(natural_no_prompt),
+		str(party_member_grass_block),
+		str(party_member_stone_block),
 		str(grace_started),
 		str(grace_blocks),
 		str(grace_one_second),
@@ -13314,7 +13632,7 @@ func _run_chat_panel_preview() -> void:
 	chat_messages.clear()
 	player_profile = PlayerProgressModel.default_profile()
 	_load_map("firebud_village_gate", "from_training_yard")
-	_set_world_log_message("Phase77：系统消息进入系统频道。")
+	_set_world_log_message("Phase77：聊天系统频道与世界日志分离。")
 	_append_chat_message(CHAT_CHANNEL_NEARBY, "附近频道测试消息。", "见习猎人")
 	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "陪练伙伴1")
 	_open_chat_panel()
@@ -13541,8 +13859,50 @@ func _run_auto_hang_settings_check() -> void:
 	_on_hang_button_pressed()
 	var manual_stop_ok := not _encounter_stone_active() and not hang_mode_active and stop_button != null and stop_button.text == "挂机"
 
-	var status := "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok else "failed"
-	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s hp=%d" % [
+	var party_member_hang_block := false
+	if zone_found and not cells.is_empty() and player != null:
+		var saved_session := current_account_session.duplicate(true)
+		var saved_party_state := party_current_state.duplicate(true)
+		var saved_auth_auto_bypass := auth_auto_bypass
+		var saved_world_log_message := world_log_message
+		current_account_session = {
+			"accountId": "account_member",
+			"username": "member",
+			"displayName": "队员",
+			"authSource": ServerAuthClientModel.SOURCE_SERVER,
+			"serverSessionToken": "token_member",
+			"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		}
+		party_current_state = {
+			"party": {
+				"leaderAccountId": "account_leader",
+				"members": [
+					{"accountId": "account_leader", "username": "leader", "role": "leader"},
+					{"accountId": "account_member", "username": "member", "role": "member"},
+				],
+			},
+		}
+		auth_auto_bypass = false
+		player_profile = PlayerProgressModel.default_profile()
+		world_log_message = ""
+		_set_hang_mode(false)
+		_clear_encounter_stone_effect(false, false)
+		player.global_position = IsoMapModel.grid_to_world(map_data, cells[0] as Vector2i)
+		last_checked_player_cell = cells[0] as Vector2i
+		_start_hang_walk()
+		party_member_hang_block = (
+			not hang_mode_active
+			and not player.is_auto_moving()
+			and not hang_session_request_active
+			and world_log_message.find("队伍中只有队长可以开始挂机") >= 0
+		)
+		current_account_session = saved_session
+		party_current_state = saved_party_state
+		auth_auto_bypass = saved_auth_auto_bypass
+		world_log_message = saved_world_log_message
+
+	var status := "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok and party_member_hang_block else "failed"
+	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s member_hang=%s hp=%d" % [
 		status,
 		str(default_ok),
 		str(custom_ok),
@@ -13553,6 +13913,7 @@ func _run_auto_hang_settings_check() -> void:
 		str(low_stop_ok),
 		str(never_ok),
 		str(manual_stop_ok),
+		str(party_member_hang_block),
 		PlayerProgressModel.player_hp(player_profile),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -15597,6 +15958,42 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_equipment_equip.get("equipment", {}) as Dictionary).get("slot", "")) == "right_hand_weapon"
 		and (parsed_equipment_equip.get("questMessages", []) as Array).size() == 1
 	)
+	var saved_shop_equip_profile := player_profile.duplicate(true)
+	var saved_shop_equip_session := current_account_session.duplicate(true)
+	player_profile = PlayerProgressModel.normalize_profile({
+		"schemaVersion": 1,
+		"stoneCoins": 55,
+		"backpackSlots": [{"itemId": "weapon_wooden_club", "count": 1}],
+	})
+	var parsed_shop_equip_after_buy := ServerAuthClientModel.parse_equipment_equip_response(200, JSON.stringify({
+		"ok": true,
+		"message": "装备木棒。",
+		"profile": {
+			"schemaVersion": 1,
+			"equipmentSlots": {"right_hand_weapon": "weapon_wooden_club"},
+			"backpackSlots": [],
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 8,
+		},
+		"equipment": {
+			"itemId": "weapon_wooden_club",
+			"slot": "right_hand_weapon",
+			"previousItemId": "",
+		},
+		"questMessages": ["任务完成：装备木棒。"],
+	}).to_utf8_buffer())
+	var applied_shop_equip_after_buy := _apply_server_equipment_equip_result(parsed_shop_equip_after_buy)
+	var shop_equip_after_buy_profile := player_profile.get("equipmentSlots", {}) as Dictionary if player_profile.get("equipmentSlots", {}) is Dictionary else {}
+	var shop_equip_after_buy_apply_ok := (
+		bool(applied_shop_equip_after_buy.get("ok", false))
+		and str(shop_equip_after_buy_profile.get("right_hand_weapon", "")) == "weapon_wooden_club"
+		and int((applied_shop_equip_after_buy.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 8
+		and (_string_array_values(applied_shop_equip_after_buy.get("logLines", []))).size() >= 2
+	)
+	player_profile = saved_shop_equip_profile
+	current_account_session = saved_shop_equip_session
 	var equipment_enhance_spec := ServerAuthClientModel.equipment_enhance_request(
 		"http://127.0.0.1:8787/",
 		"token_test",
@@ -15806,21 +16203,6 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_quest_claim.get("claim", {}) as Dictionary).get("rewardChoiceId", "")) == "rope_pack"
 		and (parsed_quest_claim.get("questMessages", []) as Array).size() == 1
 	)
-	var conflict_response_body := JSON.stringify({
-		"ok": false,
-		"code": "revision_conflict",
-		"message": "服务器档案已更新，请重新登录或重新拉取档案。",
-		"profileSummary": {
-			"playerId": "player_test",
-			"profileRevision": 5,
-		},
-	}).to_utf8_buffer()
-	var parsed_conflict := ServerAuthClientModel.parse_profile_upload_response(409, conflict_response_body)
-	var conflict_ok := (
-		not bool(parsed_conflict.get("ok", true))
-		and str(parsed_conflict.get("code", "")) == "revision_conflict"
-		and int((parsed_conflict.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 5
-	)
 	var player_search_spec := ServerAuthClientModel.player_search_request("http://127.0.0.1:8787/", "token_test", "remote")
 	var player_search_request_ok := (
 		str(player_search_spec.get("url", "")) == "http://127.0.0.1:8787/players/search?username=remote"
@@ -15875,6 +16257,35 @@ func _run_auto_auth_server_client_check() -> void:
 	var mail_read_parse_ok := (
 		bool(parsed_mail_read.get("ok", false))
 		and str((parsed_mail_read.get("mail", {}) as Dictionary).get("readAt", "")) != ""
+	)
+	var mail_claim_spec := ServerAuthClientModel.mail_claim_request("http://127.0.0.1:8787/", "token_test", "mail_test")
+	var mail_claim_request_ok := (
+		str(mail_claim_spec.get("url", "")) == "http://127.0.0.1:8787/mail/mail_test/claim"
+		and int(mail_claim_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(mail_claim_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
+	var parsed_mail_claim := ServerAuthClientModel.parse_mail_claim_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"backpackSlots": [{"itemId": "item_meat_small", "count": 1}],
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 9,
+		},
+		"mail": null,
+		"claim": {
+			"mailId": "mail_test",
+			"addedItems": [{"itemId": "item_meat_small", "count": 1}],
+			"remainingItems": [],
+		},
+	}).to_utf8_buffer())
+	var mail_claim_parse_ok := (
+		bool(parsed_mail_claim.get("ok", false))
+		and int((parsed_mail_claim.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 9
+		and (parsed_mail_claim.get("profile", {}) as Dictionary).has("backpackSlots")
+		and str((parsed_mail_claim.get("claim", {}) as Dictionary).get("mailId", "")) == "mail_test"
 	)
 	var online_spec := ServerAuthClientModel.online_players_request("http://127.0.0.1:8787/", "token_test")
 	var online_request_ok := (
@@ -16123,9 +16534,35 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_battle_command.get("turn", {}) as Dictionary).get("kind", "")) == "battle_event_list"
 		and str((parsed_battle_command.get("result", {}) as Dictionary).get("reason", "")) == "defeat"
 	)
+	var saved_battle_active_for_lock := battle_active
+	var saved_battle_state_for_lock := battle_state.duplicate(true)
+	var saved_battle_command_owner_for_lock := battle_command_owner
+	var saved_server_battle_command_request_active_for_lock := server_battle_command_request_active
+	battle_active = true
+	battle_command_owner = "player"
+	server_battle_command_request_active = false
+	battle_state = {
+		"serverAuthority": true,
+		"serverRoomId": "battle_room_lock_check",
+		"phase": "server_waiting",
+		"message": "等待服务器",
+	}
+	_on_battle_command_pressed("run")
+	var server_battle_locked_leave_guard_ok := (
+		not server_battle_command_request_active
+		and str(battle_state.get("serverRoomId", "")) == "battle_room_lock_check"
+		and str(battle_state.get("phase", "")) == "server_waiting"
+		and str(battle_state.get("message", "")) == "等待服务器"
+	)
+	battle_active = saved_battle_active_for_lock
+	battle_state = saved_battle_state_for_lock
+	battle_command_owner = saved_battle_command_owner_for_lock
+	server_battle_command_request_active = saved_server_battle_command_request_active_for_lock
+	var saved_account_authenticated := account_authenticated
 	var saved_session := current_account_session.duplicate(true)
 	var saved_party_state := party_current_state.duplicate(true)
 	var saved_auth_auto_bypass := auth_auto_bypass
+	account_authenticated = true
 	current_account_session = {
 		"accountId": "account_test",
 		"username": "self",
@@ -16151,12 +16588,156 @@ func _run_auto_auth_server_client_check() -> void:
 		},
 	}
 	var member_server_encounter_block_ok := not _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	account_authenticated = false
 	current_account_session = {}
 	party_current_state = {"party": null}
 	auth_auto_bypass = false
-	var offline_normal_encounter_block_ok := not _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	var unauthenticated_encounter_block_ok := not _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	account_authenticated = true
+	current_account_session = {
+		"username": "local_player",
+		"displayName": "本地猎人",
+		"role": AccountAuthModel.ROLE_PLAYER,
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+		"profileSavePath": "user://accounts/local_player/player_profile.json",
+	}
+	var local_account_encounter_ok := not _should_start_server_party_encounter() and _can_start_local_encounter_model()
 	auth_auto_bypass = true
 	var offline_check_local_fallback_ok := not _should_start_server_party_encounter() and _can_start_local_encounter_model()
+	account_authenticated = true
+	current_account_session = {
+		"accountId": "account_test",
+		"username": "self",
+		"displayName": "自己",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	auth_auto_bypass = false
+	party_current_state = {"party": null}
+	var guardian_solo_server_route_ok := _guardian_battle_route_for_current_session() == "server"
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "account_test",
+			"members": [{"accountId": "account_test", "username": "self", "role": "leader"}],
+		},
+	}
+	var guardian_leader_server_route_ok := _guardian_battle_route_for_current_session() == "server"
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "account_other",
+			"members": [{"accountId": "account_test", "username": "self", "role": "member"}],
+		},
+	}
+	var guardian_member_block_route_ok := _guardian_battle_route_for_current_session() == "server_member_block"
+	account_authenticated = false
+	current_account_session = {}
+	party_current_state = {"party": null}
+	auth_auto_bypass = false
+	var guardian_offline_block_route_ok := _guardian_battle_route_for_current_session() == "login_required"
+	auth_auto_bypass = true
+	var guardian_local_route_ok := _guardian_battle_route_for_current_session() == "local"
+	var guardian_rng := RandomNumberGenerator.new()
+	guardian_rng.seed = 16
+	var guardian_fixed_pets: Array[Dictionary] = []
+	for index in range(10):
+		guardian_fixed_pets.append({
+			"formId": "wuli_normal_tough_earth10" if index % 2 == 0 else "wuli_normal_orange_fire10",
+			"name": "契约守护兽%d" % [index + 1],
+			"level": 101 + index,
+			"battleStats": {
+				"maxHp": 1000 + index * 20,
+				"attack": 120 + index,
+				"defense": 80 + index,
+				"agility": 90 + index,
+			},
+		})
+	var guardian_zone := EncounterModel.zone_with_selected_wild_pet({
+		"id": "guardian_contract_floor",
+		"name": "契约守护兽",
+		"encounterGroupId": "shadow_oath_rebirth_guardian",
+		"sourceInteractionId": "guardian_contract_npc",
+		"enemyCount": 10,
+		"formationTemplate": "10v10",
+		"fixedWildPets": guardian_fixed_pets,
+	}, guardian_rng, 10)
+	var guardian_request_spec := ServerAuthClientModel.party_battle_encounter_request("http://127.0.0.1:8787/", "token_test", guardian_zone, EncounterModel.enemy_count(guardian_zone, 10))
+	var guardian_request_body = JSON.parse_string(str(guardian_request_spec.get("body", "")))
+	var guardian_body := guardian_request_body as Dictionary if guardian_request_body is Dictionary else {}
+	var guardian_body_zone := guardian_body.get("encounterZone", {}) as Dictionary if guardian_body.get("encounterZone", {}) is Dictionary else {}
+	var guardian_selected_pets: Array = guardian_body_zone.get("selectedWildPets", []) if guardian_body_zone.get("selectedWildPets", []) is Array else []
+	var guardian_route_ok := (
+		guardian_solo_server_route_ok
+		and guardian_leader_server_route_ok
+		and guardian_member_block_route_ok
+		and guardian_offline_block_route_ok
+		and guardian_local_route_ok
+		and str(guardian_body_zone.get("encounterGroupId", "")) == "shadow_oath_rebirth_guardian"
+		and str(guardian_body_zone.get("sourceInteractionId", "")) == "guardian_contract_npc"
+		and int(guardian_body.get("enemyCount", 0)) == 10
+		and guardian_selected_pets.size() == 10
+	)
+	current_account_session = {
+		"accountId": "account_test",
+		"username": "self",
+		"displayName": "自己",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	auth_auto_bypass = false
+	party_current_state = {"party": null}
+	var saved_profile_for_local_battle := player_profile.duplicate(true)
+	var saved_profile_sync_state := server_profile_sync_state
+	var saved_world_log := world_log_message
+	server_profile_sync_state = "off"
+	player_profile = PlayerProgressModel.default_profile()
+	var before_local_battle_coins := PlayerProgressModel.stone_coins(player_profile)
+	var before_local_battle_proofs := PlayerProgressModel.rebirth_trial_proof_count(player_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID)
+	_start_battle(BattleModel.create_wild_battle({
+		"id": "server_local_writeback_guard",
+		"name": "服务器本地结算保护",
+		"sourceEncounterGroupId": PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID,
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "本地保护乌力",
+			"level": 1,
+			"battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "agility": 1},
+		},
+	}))
+	var local_battle_block_result := _finish_battle_and_return_to_world("victory")
+	var local_battle_writeback_block_ok := (
+		bool(local_battle_block_result.get("blocked", false))
+		and str(local_battle_block_result.get("code", "")) == "server_local_battle_writeback_blocked"
+		and not battle_active
+		and PlayerProgressModel.stone_coins(player_profile) == before_local_battle_coins
+		and PlayerProgressModel.rebirth_trial_proof_count(player_profile, PlayerProgressModel.REBIRTH_FINAL_BOSS_PROOF_ID) == before_local_battle_proofs
+	)
+	server_quest_record_event_queue.clear()
+	server_quest_record_event_queue_running = false
+	player_profile = PlayerProgressModel.default_profile()
+	var server_quest_before_claimable := PlayerProgressModel.can_claim_active_quest(player_profile)
+	var server_quest_guard_messages := _record_quest_event_and_maybe_claim({
+		"type": "talk",
+		"targetId": "trainer",
+	})
+	var queued_server_quest_event: Dictionary = {}
+	if not server_quest_record_event_queue.is_empty():
+		queued_server_quest_event = server_quest_record_event_queue[0]
+	var queued_server_quest_payload := queued_server_quest_event.get("event", {}) as Dictionary if queued_server_quest_event.get("event", {}) is Dictionary else {}
+	var server_quest_record_guard_ok := (
+		server_quest_guard_messages.is_empty()
+		and server_quest_record_event_queue.size() == 1
+		and str(queued_server_quest_payload.get("type", "")) == "talk"
+		and str(queued_server_quest_payload.get("targetId", "")) == "trainer"
+		and PlayerProgressModel.can_claim_active_quest(player_profile) == server_quest_before_claimable
+	)
+	server_quest_record_event_queue.clear()
+	server_quest_record_event_queue_running = false
+	player_profile = saved_profile_for_local_battle
+	server_profile_sync_state = saved_profile_sync_state
+	world_log_message = saved_world_log
+	account_authenticated = saved_account_authenticated
 	current_account_session = saved_session
 	party_current_state = saved_party_state
 	auth_auto_bypass = saved_auth_auto_bypass
@@ -16164,8 +16745,11 @@ func _run_auto_auth_server_client_check() -> void:
 		solo_server_encounter_route_ok
 		and leader_server_encounter_route_ok
 		and member_server_encounter_block_ok
-		and offline_normal_encounter_block_ok
+		and unauthenticated_encounter_block_ok
+		and local_account_encounter_ok
 		and offline_check_local_fallback_ok
+		and guardian_route_ok
+		and local_battle_writeback_block_ok
 	)
 	var party_pve_state := ServerBattleRoomModel.battle_state_from_room({
 		"roomId": "battle_room_party_pve_contract",
@@ -16292,46 +16876,49 @@ func _run_auto_auth_server_client_check() -> void:
 		and auth_server_url_input.visible
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
-	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
+	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
-	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok else "failed"
+	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok else "failed"
 	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_enhance_request_ok and equipment_enhance_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_repair_request_ok and equipment_repair_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_synthesis_request_ok and equipment_synthesis_parse_ok else "failed"
 	status = "ok" if status == "ok" and player_rebirth_request_ok and player_rebirth_parse_ok else "failed"
-	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok else "failed"
-	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
+	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok else "failed"
+	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s encounter_route=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
 		str(profile_action_request_ok and profile_action_parse_ok),
-		str(shop_transaction_request_ok and shop_transaction_parse_ok),
+		str(shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok),
 		str(equipment_equip_request_ok and equipment_equip_parse_ok),
 		str(equipment_enhance_request_ok and equipment_enhance_parse_ok),
 		str(equipment_repair_request_ok and equipment_repair_parse_ok),
 		str(equipment_synthesis_request_ok and equipment_synthesis_parse_ok),
 		str(player_rebirth_request_ok and player_rebirth_parse_ok),
-		str(quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok),
+		str(quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok),
 		str(parse_ok),
 		str(profile_parse_ok),
 		str(upload_parse_ok),
-		str(conflict_ok),
 		str(player_search_request_ok and player_search_parse_ok),
 		str(mail_send_request_ok),
 		str(mail_inbox_request_ok and mail_inbox_parse_ok),
 		str(mail_read_parse_ok),
+		str(mail_claim_request_ok and mail_claim_parse_ok),
 		str(online_request_ok and online_parse_ok),
 		str(position_request_ok and position_parse_ok),
 		str(movement_request_ok and movement_parse_ok),
-			str(event_contract_ok),
-			str(party_request_ok and party_parse_ok),
-			str(battle_request_ok and battle_parse_ok),
-			str(server_encounter_route_ok),
+				str(event_contract_ok),
+				str(party_request_ok and party_parse_ok),
+				str(battle_request_ok and battle_parse_ok),
+				str(server_battle_locked_leave_guard_ok),
+				str(server_encounter_route_ok),
+			str(guardian_route_ok),
+			str(local_battle_writeback_block_ok),
 			str(party_pve_mapping_ok),
 			str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
@@ -18841,8 +19428,8 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	}
 	server_battle_state.clear()
 	server_battle_state_poll_request_active = false
-	var restore_gate_ok := _server_battle_should_poll_room_restore()
-	var restore_start_ok := restore_gate_ok and _apply_server_battle_room_state(room, true) and battle_active and str(battle_state.get("serverRoomId", "")) == "target_mapping_room"
+	var restore_poll_blocked_ok := not _server_battle_should_poll_room_restore()
+	var explicit_restore_start_ok := _apply_server_battle_room_state(room, true) and battle_active and str(battle_state.get("serverRoomId", "")) == "target_mapping_room"
 	battle_state["phase"] = "command"
 	var active_poll_gate_ok := _server_battle_should_poll_waiting_state()
 	var pve_closed_room := room.duplicate(true)
@@ -18876,6 +19463,10 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 				"trainingPartners": [],
 			},
 		}],
+		"skippedProfiles": [{
+			"accountId": "acc_b",
+			"reason": "profile_binding_missing",
+		}],
 	}
 	pve_closed_room["battle"] = pve_battle
 	if battle_result_panel != null:
@@ -18892,6 +19483,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and pve_result_detail.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
 		and pve_result_detail.find("骑宠 骑宠布伊 获得 66 点经验（基础60，组队+10%）。") >= 0
 		and pve_result_detail.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and pve_result_detail.find("本次战斗结果未写入服务器，请重新登录后确认。") >= 0
 		and pve_result_detail.find("对手：") < 0
 		and pve_result_title.find("切磋") < 0
 	)
@@ -18902,6 +19494,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and pve_message.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
 		and pve_message.find("骑宠 骑宠布伊 获得 66 点经验（基础60，组队+10%）。") >= 0
 		and pve_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and pve_message.find("本次战斗结果未写入服务器，请重新登录后确认。") >= 0
 		and world_log_message == pve_message
 	)
 	var zero_exp_line_ok := _server_battle_exp_log_line("人物", {
@@ -19040,8 +19633,59 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and world_log_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
 		and world_log_message.find("队伍战斗已结束") < 0
 	)
-	var status := "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
+	var duel_hang_session := {
+		HangSettingsModel.SESSION_ENABLED_KEY: true,
+		HangSettingsModel.SESSION_MODE_KEY: "walk",
+		HangSettingsModel.SESSION_BATTLE_COUNT_KEY: 4,
+		HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY: 0,
+	}
+	player_profile = PlayerProgressModel.with_hang_session(PlayerProgressModel.default_profile(), duel_hang_session)
+	_set_hang_mode(true)
+	var duel_hang_closed_room := {
+		"roomId": "duel_hang_writeback_room",
+		"mode": "duel",
+		"status": "closed",
+		"participantAccountIds": ["acc_b", "acc_other"],
+		"participants": [
+			{"accountId": "acc_b", "username": "attacker_owner", "displayName": "挂机号"},
+			{"accountId": "acc_other", "username": "other_owner", "displayName": "对手号"},
+		],
+		"battle": {
+			"result": {
+				"reason": "defeat",
+				"winnerAccountId": "acc_other",
+				"loserAccountIds": ["acc_b"],
+			},
+			"profileWriteback": {
+				"profiles": [{
+					"accountId": "acc_b",
+					"hang": {
+						"enabled": false,
+						"mode": "walk",
+						"battleCount": 5,
+						"captureSuccessCount": 1,
+						"lastStopReason": "low_hp",
+						"pendingResume": false,
+						"stopped": true,
+						"stopReason": "low_hp",
+					},
+				}],
+			},
+		},
+	}
+	if battle_result_panel != null:
+		battle_result_panel.visible = false
+	_finish_server_battle_from_closed_room(duel_hang_closed_room)
+	var duel_hang_after := PlayerProgressModel.hang_session(player_profile)
+	var duel_hang_writeback_ok := (
+		not bool(duel_hang_after.get(HangSettingsModel.SESSION_ENABLED_KEY, true))
+		and int(duel_hang_after.get(HangSettingsModel.SESSION_BATTLE_COUNT_KEY, 0)) == 5
+		and int(duel_hang_after.get(HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY, 0)) == 1
+		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
+		and not hang_mode_active
+	)
+	var status := "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_blocked_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_blocked=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
@@ -19051,12 +19695,14 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		str(playback_target_ok),
 		str(combo_mapping_ok),
 		str(poll_target_ok),
-		str(restore_start_ok),
+		str(restore_poll_blocked_ok),
+		str(explicit_restore_start_ok),
 		str(active_poll_gate_ok),
 		str(pve_popup_ok),
 		str(pve_message_ok),
 		str(zero_exp_line_ok),
 		str(closed_event_finished_ok),
+		str(duel_hang_writeback_ok),
 		str(local_event.get("targetId", "")),
 		before_enemy_pet_hp,
 		after_enemy_pet_hp,
@@ -21003,6 +21649,28 @@ func _run_auto_server_profile_sync_check() -> void:
 		not bool(upload_denied_response.get("ok", true))
 		and str(upload_denied_response.get("code", "")) == "profile_upload_denied"
 	)
+	server_profile_sync_state = "uploading"
+	server_profile_sync_dirty = true
+	server_profile_sync_pull_queued = false
+	server_profile_sync_pending_kind = ""
+	var legacy_conflict_response := ServerAuthClientModel.parse_profile_upload_response(409, JSON.stringify({
+		"ok": false,
+		"code": "revision_conflict",
+		"message": "服务器档案已更新，请重新登录或重新拉取档案。",
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 99,
+		},
+	}).to_utf8_buffer())
+	_apply_server_profile_upload_result(legacy_conflict_response)
+	var upload_conflict_disabled_ok := (
+		server_profile_sync_state == "ready"
+		and server_profile_sync_pending_kind == ""
+		and not server_profile_sync_dirty
+		and not server_profile_sync_pull_queued
+		and server_profile_sync_message.find("整档上传已禁用") >= 0
+		and server_profile_sync_expected_revision == 0
+	)
 	var remote_profile := PlayerProgressModel.default_profile()
 	var remote_player := remote_profile.get("player", {}) as Dictionary
 	remote_player["name"] = "云端猎人"
@@ -21020,13 +21688,70 @@ func _run_auto_server_profile_sync_check() -> void:
 	_apply_server_profile_pull_result(pull_response)
 	var pulled_player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
 	var pull_ok := str(pulled_player.get("name", "")) == "云端猎人" and server_profile_sync_expected_revision == 2
-	var status := "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and pull_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s pull=%s state=%s rev=%d" % [
+	server_profile_sync_pull_queued = false
+	server_profile_sync_deferred_pull_result.clear()
+	server_profile_sync_state = "ready"
+	_open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+	_queue_server_profile_pull()
+	var panel_queue_defer_ok := (
+		shop_panel != null
+		and shop_panel.visible
+		and server_profile_sync_pull_queued
+		and server_profile_sync_state == "ready"
+		and server_profile_sync_pending_kind == ""
+	)
+	server_profile_sync_pull_queued = false
+	_close_shop_panel()
+	var panel_profile := PlayerProgressModel.default_profile()
+	var panel_player := panel_profile.get("player", {}) as Dictionary
+	panel_player["name"] = "面板猎人"
+	panel_profile["player"] = panel_player
+	player_profile = PlayerProgressModel.normalize_profile(panel_profile)
+	server_profile_sync_expected_revision = 2
+	server_profile_sync_state = "ready"
+	server_profile_sync_pull_queued = false
+	server_profile_sync_deferred_pull_result.clear()
+	_open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+	var deferred_remote_profile := PlayerProgressModel.default_profile()
+	var deferred_player := deferred_remote_profile.get("player", {}) as Dictionary
+	deferred_player["name"] = "延迟猎人"
+	deferred_remote_profile["player"] = deferred_player
+	var deferred_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": deferred_remote_profile,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 3,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	_apply_server_profile_pull_result(deferred_response)
+	var deferred_hold_player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
+	var panel_response_defer_ok := (
+		shop_panel != null
+		and shop_panel.visible
+		and str(deferred_hold_player.get("name", "")) == "面板猎人"
+		and not server_profile_sync_deferred_pull_result.is_empty()
+		and server_profile_sync_expected_revision == 2
+	)
+	_close_shop_panel()
+	var deferred_applied_player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
+	var panel_deferred_apply_ok := (
+		str(deferred_applied_player.get("name", "")) == "延迟猎人"
+		and server_profile_sync_expected_revision == 3
+		and server_profile_sync_deferred_pull_result.is_empty()
+	)
+	var panel_defer_ok := panel_queue_defer_ok and panel_response_defer_ok and panel_deferred_apply_ok
+	var status := "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and panel_defer_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
 		str(no_upload_ok),
 		str(upload_denied_ok),
+		str(upload_conflict_disabled_ok),
 		str(pull_ok),
+		str(panel_defer_ok),
 		server_profile_sync_state,
 		server_profile_sync_expected_revision,
 	])
@@ -21371,7 +22096,9 @@ func _run_auto_chat_panel_check() -> void:
 	chat_messages.clear()
 	player_profile = PlayerProgressModel.default_profile()
 	var loaded := _load_map("firebud_village_gate", "from_training_yard")
-	_set_world_log_message("系统频道测试")
+	_set_world_log_message("世界日志独立测试")
+	var world_log_chat_count := chat_messages.size()
+	_append_chat_message(CHAT_CHANNEL_SYSTEM, "显式系统频道测试", "系统")
 	_open_chat_panel()
 	await get_tree().process_frame
 	var system_ok := (
@@ -21384,7 +22111,10 @@ func _run_auto_chat_panel_check() -> void:
 		and chat_send_button != null
 		and chat_send_button.disabled
 		and chat_log_label != null
-		and chat_log_label.text.find("系统频道测试") >= 0
+		and world_log_message == "世界日志独立测试"
+		and world_log_chat_count == 0
+		and chat_log_label.text.find("显式系统频道测试") >= 0
+		and chat_log_label.text.find("世界日志独立测试") < 0
 	)
 	_set_chat_channel(CHAT_CHANNEL_NEARBY)
 	await get_tree().process_frame
@@ -21416,7 +22146,11 @@ func _run_auto_chat_panel_check() -> void:
 	)
 	_set_chat_channel(CHAT_CHANNEL_SYSTEM)
 	await get_tree().process_frame
-	var system_persist_ok := chat_log_label != null and chat_log_label.text.find("系统频道测试") >= 0
+	var system_persist_ok := (
+		chat_log_label != null
+		and chat_log_label.text.find("显式系统频道测试") >= 0
+		and chat_log_label.text.find("世界日志独立测试") < 0
+	)
 	for index in range(CHAT_MAX_MESSAGES + 3):
 		_append_chat_message(CHAT_CHANNEL_SYSTEM, "滚动消息%d" % index, "系统")
 	var capped_ok := chat_messages.size() <= CHAT_MAX_MESSAGES
@@ -22680,9 +23414,23 @@ func _run_auto_battle_item_count_check() -> void:
 	if battle_command_buttons.has("attack"):
 		var zero_button := battle_command_buttons["attack"] as Button
 		zero_disabled = zero_button != null and zero_button.disabled and zero_button.text.find("x0") >= 0
+	var unsupported_item_id := "item_unknown_999"
+	battle_state = BattleModel.set_item_count(battle_state, unsupported_item_id, 1)
+	_set_battle_command_owner("item")
+	_sync_battle_buttons()
+	var unsupported_disabled := not _battle_item_can_use_now(unsupported_item_id, true, true, true)
+	battle_state["serverAuthority"] = true
+	battle_state["serverRoomId"] = "unsupported_item_guard_room"
+	await _submit_server_battle_player_command("item", BattleModel.player_actor_id(battle_state), "", unsupported_item_id)
+	var unsupported_server_guard := (
+		not server_battle_command_request_active
+		and str(battle_state.get("message", "")).find("联网战斗暂不支持这个物品") >= 0
+	)
+	battle_state["serverAuthority"] = false
 	var count_consumed := before_count == 2 and after_count == 1
-	var status := "ok" if loaded and zone_found and item_menu_open and label_ok and saw_event and count_consumed and returned_to_command and zero_disabled else "failed"
-	print("battle item count check ready: status=%s menu=%s label=%s event=%s before=%d after=%d returned=%s zero_disabled=%s" % [
+	var unsupported_guard_ok := unsupported_disabled and unsupported_server_guard
+	var status := "ok" if loaded and zone_found and item_menu_open and label_ok and saw_event and count_consumed and returned_to_command and zero_disabled and unsupported_guard_ok else "failed"
+	print("battle item count check ready: status=%s menu=%s label=%s event=%s before=%d after=%d returned=%s zero_disabled=%s unsupported=%s" % [
 		status,
 		str(item_menu_open),
 		str(label_ok),
@@ -22691,6 +23439,7 @@ func _run_auto_battle_item_count_check() -> void:
 		after_count,
 		str(returned_to_command),
 		str(zero_disabled),
+		str(unsupported_guard_ok),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -23886,6 +24635,8 @@ func _battle_auto_has_capture_space() -> bool:
 
 
 func _battle_auto_submit_item_action(item_id: String, target_id: String = "") -> bool:
+	if not _battle_item_supported_in_combat(item_id):
+		return false
 	if not BattleModel.has_item(battle_state, item_id):
 		return false
 	var requires_selection := BattleActionCatalog.action_requires_selection(item_id)
@@ -27239,14 +27990,8 @@ func _update_server_battle_waiting_state_poll(delta: float) -> void:
 
 
 func _server_battle_should_poll_room_restore() -> bool:
-	return (
-		_is_server_account_session()
-		and _current_player_is_party_member()
-		and not battle_active
-		and not encounter_active
-		and not server_party_encounter_request_pending
-		and not server_battle_state_poll_request_active
-	)
+	# Room restore is explicit on login and server events; idle polling can reopen stale party-member rooms.
+	return false
 
 
 func _update_server_battle_room_restore_poll(delta: float) -> void:
@@ -27518,6 +28263,7 @@ func _latest_incoming_battle_invite() -> Dictionary:
 
 
 func _apply_party_event(event: Dictionary) -> void:
+	var was_party_member := _current_player_is_party_member()
 	if event.has("party"):
 		party_current_state["party"] = event.get("party", null)
 	if not party_current_state.has("incomingInvites"):
@@ -27542,7 +28288,7 @@ func _apply_party_event(event: Dictionary) -> void:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
 				)
 			party_current_state["incomingInvites"] = invites
-	if _current_player_is_party_member():
+	if _current_player_is_party_member() and not was_party_member:
 		_stop_party_member_local_movement(false)
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
@@ -27718,7 +28464,7 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 		message = "战斗已结束。" if is_party_pve else "切磋已结束。"
 	var log_message := _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
 	var result_key := _server_battle_result_key(closed_room)
-	var hang_result := _apply_server_party_pve_hang_writeback(closed_room) if is_party_pve else {}
+	var hang_result := _apply_server_battle_hang_writeback(closed_room)
 	server_battle_pending_closed_room.clear()
 	server_battle_command_request_active = false
 	server_battle_state_poll_request_active = false
@@ -27731,6 +28477,10 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if returned_to_record_point:
 		log_message = _server_battle_return_message(log_message)
 		message = _server_battle_return_message(message)
+	var writeback_warning_lines := _server_battle_writeback_warning_lines_for_current_account(closed_room)
+	if not writeback_warning_lines.is_empty():
+		log_message = _append_unique_message_lines(log_message, writeback_warning_lines)
+		message = _append_unique_message_lines(message, writeback_warning_lines)
 	_set_world_log_message(log_message)
 	if not is_party_pve:
 		_open_battle_result_panel(closed_room, result_key, message)
@@ -27958,7 +28708,59 @@ func _server_battle_profile_writeback_for_current_account(room: Dictionary) -> D
 	return {}
 
 
-func _apply_server_party_pve_hang_writeback(room: Dictionary) -> Dictionary:
+func _server_battle_profile_writeback_skips_for_current_account(room: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if self_account_id == "":
+		return result
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var writeback := battle.get("profileWriteback", {}) as Dictionary if battle.get("profileWriteback", {}) is Dictionary else {}
+	var skipped_profiles: Array = writeback.get("skippedProfiles", []) if writeback.get("skippedProfiles", []) is Array else []
+	for value in skipped_profiles:
+		if value is Dictionary and str((value as Dictionary).get("accountId", "")).strip_edges() == self_account_id:
+			result.append((value as Dictionary).duplicate(true))
+	return result
+
+
+func _server_battle_writeback_warning_lines_for_current_account(room: Dictionary) -> Array[String]:
+	var skipped_profiles := _server_battle_profile_writeback_skips_for_current_account(room)
+	var lines: Array[String] = []
+	if skipped_profiles.is_empty():
+		return lines
+	var profile_missing := false
+	var pet_missing := false
+	var other_skip := false
+	for entry in skipped_profiles:
+		match str(entry.get("reason", "")).strip_edges():
+			"profile_binding_missing", "profile_document_missing":
+				profile_missing = true
+			"pet_instance_missing":
+				pet_missing = true
+			_:
+				other_skip = true
+	if profile_missing:
+		lines.append("本次战斗结果未写入服务器，请重新登录后确认。")
+	if pet_missing:
+		lines.append("部分宠物战斗状态未写入服务器，请打开宠物面板确认。")
+	if other_skip:
+		lines.append("部分战斗结果未写入服务器，请重新登录后确认。")
+	return lines
+
+
+func _append_unique_message_lines(message: String, extra_lines: Array[String]) -> String:
+	var lines: Array[String] = []
+	for value in message.split("\n", false):
+		var text := str(value).strip_edges()
+		if text != "" and not lines.has(text):
+			lines.append(text)
+	for value in extra_lines:
+		var text := str(value).strip_edges()
+		if text != "" and not lines.has(text):
+			lines.append(text)
+	return "\n".join(lines)
+
+
+func _apply_server_battle_hang_writeback(room: Dictionary) -> Dictionary:
 	var profile_entry := _server_battle_profile_writeback_for_current_account(room)
 	var hang := profile_entry.get("hang", {}) as Dictionary if profile_entry.get("hang", {}) is Dictionary else {}
 	if hang.is_empty():
@@ -28486,6 +29288,10 @@ func _online_position_draw_signature(players: Array[Dictionary]) -> String:
 func _request_server_profile_pull() -> void:
 	if profile_sync_http_request == null or not _is_server_account_session():
 		return
+	if _server_profile_pull_should_wait_for_profile_panel():
+		server_profile_sync_pull_queued = true
+		server_profile_sync_message = "服务器档案将在面板关闭后同步。"
+		return
 	server_profile_sync_pull_queued = false
 	var spec := ServerAuthClientModel.profile_request(_server_profile_base_url(), _server_profile_token())
 	_start_server_profile_sync_request("pull", spec)
@@ -28493,6 +29299,10 @@ func _request_server_profile_pull() -> void:
 
 func _queue_server_profile_pull() -> void:
 	if not _is_server_account_session() or server_profile_sync_state == "off":
+		return
+	if _server_profile_pull_should_wait_for_profile_panel():
+		server_profile_sync_pull_queued = true
+		server_profile_sync_message = "服务器档案将在面板关闭后同步。"
 		return
 	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
 		server_profile_sync_pull_queued = true
@@ -28545,10 +29355,13 @@ func _on_profile_sync_http_request_completed(result: int, response_code: int, _h
 		_apply_server_profile_upload_result(ServerAuthClientModel.parse_profile_upload_response(response_code, body))
 
 
-func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
+func _apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = true) -> void:
 	if not bool(parsed.get("ok", false)):
 		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
 		server_profile_sync_message = str(parsed.get("message", "服务器档案读取失败。"))
+		return
+	if allow_defer and _server_profile_pull_should_wait_for_profile_panel():
+		_defer_server_profile_pull_result(parsed)
 		return
 	var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
 	var remote_profile = parsed.get("profile", null)
@@ -28574,39 +29387,66 @@ func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
 
 
 func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
-	if not bool(parsed.get("ok", false)):
-		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
-		if str(parsed.get("code", "")) == "revision_conflict":
-			_apply_server_profile_summary(summary)
-			server_profile_sync_state = "ready"
-			server_profile_sync_dirty = false
-			server_profile_sync_pull_queued = false
-			server_profile_sync_message = "服务器档案已更新，正在拉取最新档案。"
-			_set_world_log_message(server_profile_sync_message)
-			_refresh_account_panel()
-			_request_server_profile_pull()
-			return
-		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
-		server_profile_sync_message = str(parsed.get("message", "服务器档案保存失败。"))
-		return
-	_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-	server_profile_sync_state = "ready"
-	server_profile_sync_message = str(parsed.get("message", "角色档案已同步。"))
+	var had_pull_queued := server_profile_sync_pull_queued
+	server_profile_sync_state = "ready" if _is_server_account_session() else "off"
+	server_profile_sync_dirty = false
+	var code := str(parsed.get("code", "")).strip_edges()
+	if code == "profile_upload_denied" or code == "revision_conflict" or bool(parsed.get("ok", false)):
+		server_profile_sync_message = "角色档案由服务器专用接口保存，整档上传已禁用。"
+	else:
+		server_profile_sync_message = str(parsed.get("message", "角色档案由服务器专用接口保存，整档上传已禁用。"))
 	_refresh_account_panel()
-	_continue_pending_server_profile_sync()
+	if had_pull_queued:
+		_continue_pending_server_profile_sync()
 
 
 func _continue_pending_server_profile_sync() -> void:
 	if not _is_server_account_session():
 		server_profile_sync_pull_queued = false
+		server_profile_sync_deferred_pull_result.clear()
 		return
 	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
+		return
+	if _server_profile_pull_should_wait_for_profile_panel():
 		return
 	if server_profile_sync_dirty:
 		server_profile_sync_dirty = false
 	if server_profile_sync_pull_queued:
 		server_profile_sync_pull_queued = false
 		_request_server_profile_pull()
+
+
+func _server_profile_pull_should_wait_for_profile_panel() -> bool:
+	return (
+		(backpack_panel != null and backpack_panel.visible)
+		or (shop_panel != null and shop_panel.visible)
+		or shop_action_request_pending
+		or equipment_action_request_pending
+		or profile_action_request_pending
+		or quest_action_request_pending
+	)
+
+
+func _defer_server_profile_pull_result(parsed: Dictionary) -> void:
+	server_profile_sync_deferred_pull_result = parsed.duplicate(true)
+	server_profile_sync_state = "ready" if _is_server_account_session() else "off"
+	server_profile_sync_dirty = false
+	server_profile_sync_message = "服务器档案已延后同步，关闭面板后刷新。"
+
+
+func _apply_deferred_server_profile_pull_if_idle() -> void:
+	if _server_profile_pull_should_wait_for_profile_panel():
+		return
+	if not server_profile_sync_deferred_pull_result.is_empty():
+		var parsed := server_profile_sync_deferred_pull_result.duplicate(true)
+		server_profile_sync_deferred_pull_result.clear()
+		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
+		var revision := int(summary.get("profileRevision", 0))
+		if revision <= 0 or revision >= server_profile_sync_expected_revision:
+			_apply_server_profile_pull_result(parsed, false)
+		_continue_pending_server_profile_sync()
+		return
+	_continue_pending_server_profile_sync()
 
 
 func _apply_server_profile_summary(summary: Dictionary) -> void:
@@ -28675,6 +29515,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
 	server_profile_sync_dirty = false
 	server_profile_sync_pull_queued = false
+	server_profile_sync_deferred_pull_result.clear()
 	server_profile_sync_message = ""
 	server_profile_sync_expected_revision = int((session.get("serverProfileSummary", {}) as Dictionary).get("profileRevision", 0)) if session.get("serverProfileSummary", {}) is Dictionary else 0
 	profile_save_pending = false
@@ -28803,6 +29644,7 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_pending_kind = ""
 	server_profile_sync_dirty = false
 	server_profile_sync_pull_queued = false
+	server_profile_sync_deferred_pull_result.clear()
 	server_profile_sync_expected_revision = 0
 	server_profile_sync_message = ""
 	server_battle_state.clear()
@@ -29491,8 +30333,9 @@ func _apply_server_step_move_authority_position(position: Dictionary, snap_playe
 	if position.is_empty():
 		return false
 	var map_id := str(position.get("mapId", current_map_id))
-	if map_id != current_map_id:
-		var authority := str(position.get("authority", "")).strip_edges()
+	var authority := str(position.get("authority", "")).strip_edges()
+	var changed_map := map_id != current_map_id
+	if changed_map:
 		if authority != "party_follow" or not snap_player_to_authority:
 			return false
 		if not _load_map(map_id):
@@ -29501,7 +30344,10 @@ func _apply_server_step_move_authority_position(position: Dictionary, snap_playe
 	server_step_move_authority_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
 	server_step_move_authority_valid = true
 	if snap_player_to_authority:
-		_snap_player_to_server_step_authority()
+		if authority == "party_follow" and not changed_map:
+			_set_party_follow_move_target(server_step_move_authority_cell)
+		else:
+			_snap_player_to_server_step_authority()
 	return true
 
 
@@ -29510,6 +30356,43 @@ func _snap_player_to_server_step_authority() -> void:
 		return
 	player.clear_move_target()
 	player.global_position = IsoMapModel.grid_to_world(map_data, server_step_move_authority_cell)
+
+
+func _set_party_follow_move_target(authority_cell: Vector2i) -> void:
+	if player == null or map_data.is_empty():
+		return
+	var target_cell := IsoMapModel.nearest_walkable_cell(map_data, authority_cell)
+	var target_point := IsoMapModel.grid_to_world(map_data, target_cell)
+	var start_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	if start_cell == target_cell or player.global_position.distance_to(target_point) <= 4.0:
+		player.global_position = target_point
+		player.clear_move_target()
+		current_path_cells.clear()
+		current_path_is_direct = false
+		has_target_marker = false
+		has_target_cell = false
+		_clear_pending_click_move_target()
+		queue_redraw()
+		return
+	var path_cells: Array[Vector2i] = IsoMapModel.find_path(map_data, start_cell, target_cell)
+	var path_points: Array[Vector2] = IsoMapModel.path_to_world_points(map_data, path_cells, false)
+	if path_points.is_empty():
+		player.global_position = target_point
+		player.clear_move_target()
+		current_path_cells.clear()
+		current_path_is_direct = false
+		has_target_marker = false
+		has_target_cell = false
+		_clear_pending_click_move_target()
+		queue_redraw()
+		return
+	player.set_path(path_points)
+	current_path_cells = path_cells
+	current_path_is_direct = IsoMapModel.is_direct_path_clear(map_data, start_cell, target_cell)
+	has_target_marker = false
+	has_target_cell = false
+	_clear_pending_click_move_target()
+	queue_redraw()
 
 
 func _server_step_move_failure_message(code: String, parsed: Dictionary) -> String:
@@ -29689,18 +30572,51 @@ func _start_guardian_battle_from_dialog() -> void:
 		_set_world_log_message("暂时无法挑战%s。" % str(interaction.get("name", "守护兽")))
 		_update_dialog_text()
 		return
+	var route := _guardian_battle_route_for_current_session()
+	if route == "server_member_block":
+		_set_world_log_message("队伍挑战由队长发起。")
+		_update_dialog_text()
+		return
+	if route == "login_required":
+		_set_world_log_message("请先登录服务器账号。")
+		_update_dialog_text()
+		return
 	_close_dialog()
 	if player != null:
 		player.clear_move_target()
 	_clear_navigation_state()
 	active_encounter_zone.clear()
 	encounter_active = false
+	var source_name := str(interaction.get("name", "守护兽")).strip_edges()
+	if source_name == "":
+		source_name = "守护兽"
+	zone["sourceInteractionId"] = str(interaction.get("id", ""))
+	zone["sourceInteractionName"] = source_name
+	zone["interactionId"] = str(interaction.get("id", ""))
+	if route == "server":
+		_start_server_party_encounter(
+			zone,
+			"挑战%s，正在同步。" % source_name,
+			"%s挑战开始。" % source_name,
+			"挑战同步失败，请重试。"
+		)
+		return
 	var enemy_count := EncounterModel.enemy_count(zone, _encounter_enemy_count_fallback())
 	var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, enemy_count)
 	var guardian_state := _battle_state_for_encounter_zone(selected_zone)
 	guardian_state["sourceInteractionId"] = str(interaction.get("id", ""))
-	guardian_state["sourceInteractionName"] = str(interaction.get("name", ""))
+	guardian_state["sourceInteractionName"] = source_name
 	_start_battle(guardian_state)
+
+
+func _guardian_battle_route_for_current_session() -> String:
+	if _should_start_server_party_encounter():
+		return "server"
+	if _is_server_account_session():
+		return "server_member_block"
+	if not _can_start_local_encounter_model():
+		return "login_required"
+	return "local"
 
 
 func _guardian_zone_for_interaction(item: Dictionary) -> Dictionary:
@@ -29723,8 +30639,6 @@ func _update_encounter_zone_check() -> void:
 	if player == null or map_data.is_empty() or encounter_active or battle_active or server_party_encounter_request_pending or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
 		return
 	if encounter_grace_remaining > 0.0:
-		return
-	if _current_player_is_party_member():
 		return
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	if player_cell == last_checked_player_cell:
@@ -29750,7 +30664,7 @@ func _trigger_encounter(zone: Dictionary) -> void:
 		_start_server_party_encounter(zone)
 		return
 	if _is_server_account_session():
-		_set_world_log_message("队伍遇敌由队长触发。")
+		_set_world_log_message(_server_encounter_block_message())
 		return
 	if not _can_start_local_encounter_model():
 		_set_world_log_message("请先登录服务器账号。")
@@ -29773,16 +30687,26 @@ func _can_start_local_encounter_model() -> bool:
 	var party_value = party_current_state.get("party", null)
 	if party_value is Dictionary:
 		return false
-	return auth_auto_bypass
+	if _is_server_account_session():
+		return false
+	return auth_auto_bypass or account_authenticated
 
 
-func _start_server_party_encounter(zone: Dictionary) -> void:
+func _server_encounter_block_message() -> String:
+	if _current_player_is_party_member():
+		return "队伍中只有队长可以触发遇敌。"
+	if party_current_state.get("party", null) is Dictionary:
+		return "队伍状态未同步，暂不能触发遇敌。"
+	return "当前状态不能触发遇敌，请稍后再试。"
+
+
+func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。") -> void:
 	if server_party_encounter_request_pending or battle_active or zone.is_empty():
 		return
 	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
 	var enemy_count := EncounterModel.enemy_count(active_encounter_zone, _encounter_enemy_count_fallback())
 	server_party_encounter_request_pending = true
-	_set_world_log_message("遭遇野生宠物，正在同步。")
+	_set_world_log_message(pending_message)
 	var response := await _auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
 		_server_profile_base_url(),
 		_server_profile_token(),
@@ -29798,13 +30722,16 @@ func _start_server_party_encounter(zone: Dictionary) -> void:
 		var room = parsed.get("room", null)
 		active_encounter_zone.clear()
 		if room is Dictionary:
-			_set_world_log_message(str(parsed.get("message", "遭遇了野生宠物。")))
+			var message := success_message.strip_edges()
+			if message == "":
+				message = str(parsed.get("message", "遭遇了野生宠物。"))
+			_set_world_log_message(message)
 			_apply_server_battle_room_state(room as Dictionary, true)
 		else:
 			_set_world_log_message("战斗房间缺失，请重试。")
 		return
 	active_encounter_zone.clear()
-	_set_world_log_message(str(parsed.get("message", "遇敌同步失败，请重试。")))
+	_set_world_log_message(str(parsed.get("message", failure_message)))
 
 
 func _encounter_enemy_count_fallback() -> int:
@@ -30042,6 +30969,8 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		return {}
 	if bool(battle_state.get("serverAuthority", false)):
 		return _finish_server_battle_from_closed_room(_server_battle_closed_room_from_state())
+	if _server_account_local_battle_writeback_blocked():
+		return _finish_local_battle_without_profile_writeback_for_server_account()
 	_sync_profile_battle_items_from_battle_state(false)
 	_sync_profile_capture_tools_from_battle_state(false)
 	_update_battle_player_zero_hp_seen()
@@ -30085,6 +31014,25 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	if route_to_healer_after_battle:
 		call_deferred("_route_to_hang_healer")
 	return result
+
+
+func _server_account_local_battle_writeback_blocked() -> bool:
+	return _is_server_account_session() and not auth_auto_bypass
+
+
+func _finish_local_battle_without_profile_writeback_for_server_account() -> Dictionary:
+	var message := "服务器账号战斗需由服务器结算，本地战斗结果未写入档案。"
+	_end_battle(true)
+	_set_world_log_message(message)
+	_queue_server_profile_pull()
+	return {
+		"ok": false,
+		"blocked": true,
+		"code": "server_local_battle_writeback_blocked",
+		"profile": player_profile,
+		"logLines": [message],
+		"message": message,
+	}
 
 
 func _captured_pet_count_from_battle_result(result: Dictionary) -> int:
@@ -30227,6 +31175,9 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 
 func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 	var messages: Array[String] = []
+	if _is_server_account_session() and not auth_auto_bypass:
+		_queue_server_quest_record_event(event)
+		return messages
 	if _local_profile_mutation_blocked_for_server_only("任务进度", false):
 		messages.append("任务进度需要连接服务器后同步。")
 		return messages
@@ -30250,6 +31201,34 @@ func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 	return filtered
 
 
+func _queue_server_quest_record_event(event: Dictionary, quest_id: String = "") -> void:
+	if event.is_empty():
+		return
+	server_quest_record_event_queue.append({
+		"event": event.duplicate(true),
+		"questId": quest_id.strip_edges(),
+	})
+	if server_quest_record_event_queue_running:
+		return
+	server_quest_record_event_queue_running = true
+	call_deferred("_process_server_quest_record_event_queue")
+
+
+func _process_server_quest_record_event_queue() -> void:
+	while not server_quest_record_event_queue.is_empty():
+		var queued: Dictionary = server_quest_record_event_queue.pop_front()
+		if not _is_server_account_session() or auth_auto_bypass:
+			continue
+		var event: Dictionary = queued.get("event", {}) as Dictionary if queued.get("event", {}) is Dictionary else {}
+		if event.is_empty():
+			continue
+		var parsed: Dictionary = await _submit_server_quest_record(event, str(queued.get("questId", "")))
+		var log_lines: Array[String] = _string_array_values(parsed.get("logLines", []))
+		if not log_lines.is_empty():
+			_set_world_log_message("\n".join(log_lines))
+	server_quest_record_event_queue_running = false
+
+
 func _set_world_log_message(text: String) -> void:
 	var stripped := text.strip_edges()
 	world_log_message = stripped
@@ -30258,7 +31237,6 @@ func _set_world_log_message(text: String) -> void:
 			var line := str(raw_line).strip_edges()
 			if line != "":
 				world_log_history.append(line)
-				_append_chat_message(CHAT_CHANNEL_SYSTEM, line, "系统")
 	while world_log_history.size() > WORLD_LOG_MAX_LINES:
 		world_log_history.pop_front()
 	var display_text := "\n".join(world_log_history)
@@ -30338,7 +31316,9 @@ func _open_backpack_panel() -> void:
 
 func _close_backpack_panel() -> void:
 	backpack_pending_use_item_id = ""
-	_hide_control(backpack_panel)
+	var changed := _hide_control(backpack_panel)
+	if changed:
+		_apply_deferred_server_profile_pull_if_idle()
 
 
 func _open_equipment_panel() -> void:
@@ -32458,8 +33438,22 @@ func _equip_selected_backpack_item(item_id: String) -> void:
 func _submit_server_equipment_equip(item_id: String) -> void:
 	if item_id == "" or not EquipmentModel.is_equipment(item_id) or not _is_server_account_session():
 		return
-	equipment_action_request_pending = true
+	var parsed := await _request_server_equipment_equip(item_id, true)
+	var log_lines: Array[String] = _string_array_values(parsed.get("logLines", []))
+	_set_world_log_message("\n".join(log_lines))
+	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
+	_refresh_equipment_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _request_server_equipment_equip(item_id: String, refresh_backpack_before: bool = true) -> Dictionary:
+	if item_id == "" or not EquipmentModel.is_equipment(item_id) or not _is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
+	equipment_action_request_pending = true
+	if refresh_backpack_before:
+		_refresh_backpack_panel()
 	var response := await _auto_http_request_spec(ServerAuthClientModel.equipment_equip_request(
 		_server_profile_base_url(),
 		_server_profile_token(),
@@ -32467,8 +33461,12 @@ func _submit_server_equipment_equip(item_id: String) -> void:
 	))
 	equipment_action_request_pending = false
 	if not _is_server_account_session():
-		return
+		return {"ok": false, "message": "装备同步已取消。", "logLines": ["装备同步已取消。"]}
 	var parsed := ServerAuthClientModel.parse_equipment_equip_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	return _apply_server_equipment_equip_result(parsed)
+
+
+func _apply_server_equipment_equip_result(parsed: Dictionary) -> Dictionary:
 	var log_lines: Array[String] = [str(parsed.get("message", "装备失败。"))]
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
@@ -32489,12 +33487,8 @@ func _submit_server_equipment_equip(item_id: String) -> void:
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
-	_set_world_log_message("\n".join(log_lines))
-	backpack_pending_use_item_id = ""
-	_refresh_backpack_panel()
-	_refresh_equipment_panel()
-	if status_label != null:
-		_update_hud_text()
+	parsed["logLines"] = log_lines
+	return parsed
 
 
 func _use_backpack_player_exp_item(item_id: String) -> void:
@@ -32527,6 +33521,9 @@ func _use_backpack_encounter_stone(item_id: String) -> void:
 	var item_label := BackpackModel.label_for(item_id)
 	if hang_session_request_active:
 		_set_world_log_message("挂机同步中，请稍候。")
+		return
+	if _current_player_is_party_member():
+		_set_world_log_message("队伍中只有队长可以使用%s。" % item_label)
 		return
 	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
 		_set_world_log_message("%s 不够了。" % item_label)
@@ -32927,6 +33924,7 @@ func _close_shop_panel() -> void:
 	if _hide_control(shop_panel):
 		shop_selected_item_id = ""
 		shop_detail_update_queued = false
+		_apply_deferred_server_profile_pull_if_idle()
 	_clear_shop_refresh_cache()
 
 
@@ -33028,6 +34026,10 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			shop_buy_button.button_pressed = shop_mode == "buy"
 		if shop_sell_button != null:
 			shop_sell_button.button_pressed = shop_mode == "sell"
+	if shop_buy_button != null:
+		shop_buy_button.disabled = shop_action_request_pending
+	if shop_sell_button != null:
+		shop_sell_button.disabled = shop_action_request_pending
 	var backpack_slots_cache := _shop_cached_backpack_slots_for_ui()
 	var backpack_counts_cache := _shop_cached_backpack_counts_for_ui(backpack_slots_cache)
 	var valid_ids: Array[String] = []
@@ -33053,6 +34055,7 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 				button.toggle_mode = true
 				button.button_pressed = item_id == shop_selected_item_id
 				button.text = _shop_item_button_text(item_id, int(backpack_counts_cache.get(item_id, 0)))
+				button.disabled = shop_action_request_pending
 				button.custom_minimum_size = Vector2(0, 58)
 				button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				button.pressed.connect(func() -> void:
@@ -33065,14 +34068,17 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			var previous_button = shop_item_buttons.get(previous_selected_item_id)
 			if previous_button is Button:
 				(previous_button as Button).set_pressed_no_signal(false)
+				(previous_button as Button).disabled = shop_action_request_pending
 			var current_button = shop_item_buttons.get(shop_selected_item_id)
 			if current_button is Button:
 				(current_button as Button).set_pressed_no_signal(true)
+				(current_button as Button).disabled = shop_action_request_pending
 		else:
 			for item_id in shop_item_buttons.keys():
-				var button = shop_item_buttons.get(str(item_id))
-				if button is Button:
-					(button as Button).set_pressed_no_signal(str(item_id) == shop_selected_item_id)
+					var button = shop_item_buttons.get(str(item_id))
+					if button is Button:
+						(button as Button).set_pressed_no_signal(str(item_id) == shop_selected_item_id)
+						(button as Button).disabled = shop_action_request_pending
 	var quantity_max := _shop_quantity_max_cached(shop_selected_item_id, backpack_slots_cache, backpack_counts_cache)
 	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id, quantity_max)
 	var selected_is_equipment := EquipmentModel.is_equipment(shop_selected_item_id)
@@ -33093,6 +34099,7 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			shop_action_button.disabled = next_disabled
 	if rebuild_list and shop_repair_button != null:
 		shop_repair_button.visible = shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
+	if shop_repair_button != null:
 		if shop_repair_button.visible:
 			var repair_quote := _equipment_repair_quote_for_ui()
 			var missing_durability := int(repair_quote.get("missingDurability", 0))
@@ -33190,7 +34197,7 @@ func _set_shop_quantity(value: int) -> void:
 
 func _refresh_shop_quantity_controls(max_quantity: int = -1) -> void:
 	var effective_max := max_quantity if max_quantity >= 0 else _shop_quantity_max(shop_selected_item_id)
-	var controls_enabled := shop_selected_item_id != "" and effective_max > 0
+	var controls_enabled := shop_selected_item_id != "" and effective_max > 0 and not shop_action_request_pending
 	if shop_quantity_spinbox != null:
 		shop_quantity_spinbox.set_block_signals(true)
 		if shop_quantity_spinbox.min_value != 1:
@@ -33233,7 +34240,7 @@ func _refresh_shop_equip_after_buy_button(quantity_max: int = -1) -> void:
 	var can_equip := bool(equip_check.get("ok", false))
 	if not can_buy or not can_equip:
 		shop_equip_after_buy = false
-	shop_equip_after_buy_button.disabled = not can_buy or not can_equip
+	shop_equip_after_buy_button.disabled = shop_action_request_pending or not can_buy or not can_equip
 	shop_equip_after_buy_button.button_pressed = shop_equip_after_buy
 	shop_equip_after_buy_button.text = "购买后装备" if can_equip else "购买后装备（未满足）"
 
@@ -33321,11 +34328,12 @@ func _submit_server_shop_action() -> void:
 		request_item_id,
 		request_amount
 	))
-	shop_action_request_pending = false
 	if not _is_server_account_session():
+		shop_action_request_pending = false
 		return
 	var parsed := ServerAuthClientModel.parse_shop_transaction_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines: Array[String] = [str(parsed.get("message", "商店交易失败。"))]
+	var should_equip_after_buy := false
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
 		if server_profile is Dictionary:
@@ -33338,19 +34346,62 @@ func _submit_server_shop_action() -> void:
 				if quest_message != "":
 					log_lines.append(quest_message)
 			if requested_equip_after_buy:
-				log_lines.append("已购买。联网装备更换请从背包执行。")
+				should_equip_after_buy = true
 			_mark_progress_ui_caches_dirty()
 		else:
-			log_lines = ["商店交易成功，但服务器没有返回档案，请重新拉取。"]
-			_queue_server_profile_pull()
+			log_lines = [str(parsed.get("message", "商店交易成功。")), "正在读取服务器档案。"]
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message)
+				if quest_message != "":
+					log_lines.append(quest_message)
+			_set_world_log_message("\n".join(log_lines))
+			var recovery_parsed := await _pull_server_profile_after_authoritative_shop_action()
+			if not _is_server_account_session():
+				shop_action_request_pending = false
+				return
+			if bool(recovery_parsed.get("ok", false)) and recovery_parsed.get("profile", null) is Dictionary:
+				log_lines = [str(parsed.get("message", "商店交易成功。")), "已刷新服务器档案。"]
+				for message in parsed.get("questMessages", []):
+					var recovery_quest_message := str(message)
+					if recovery_quest_message != "":
+						log_lines.append(recovery_quest_message)
+				if requested_equip_after_buy:
+					should_equip_after_buy = true
+			else:
+				log_lines = ["商店交易成功，但服务器没有返回档案，请重新拉取。"]
+				_queue_server_profile_pull()
 	else:
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
+	if should_equip_after_buy:
+		var equip_parsed := await _request_server_equipment_equip(request_item_id, false)
+		log_lines.append_array(_string_array_values(equip_parsed.get("logLines", [])))
+	shop_action_request_pending = false
 	_refresh_shop_after_action(request_mode, request_item_id)
 	_set_world_log_message("\n".join(log_lines))
 	if status_label != null:
 		_update_hud_text()
+
+
+func _pull_server_profile_after_authoritative_shop_action() -> Dictionary:
+	if not _is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "code": "not_server_session"}
+	server_profile_sync_state = "loading"
+	server_profile_sync_message = "正在读取服务器档案。"
+	var response := await _auto_http_request_spec(ServerAuthClientModel.profile_request(
+		_server_profile_base_url(),
+		_server_profile_token()
+	))
+	if not _is_server_account_session():
+		return {"ok": false, "message": "服务器档案同步已取消。", "code": "session_cancelled"}
+	var parsed: Dictionary
+	if bool(response.get("ok", false)):
+		parsed = ServerAuthClientModel.parse_profile_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	else:
+		parsed = {"ok": false, "message": "服务器档案连接失败。", "code": "connection_failed"}
+	_apply_server_profile_pull_result(parsed, false)
+	return parsed
 
 
 func _refresh_shop_after_action(previous_mode: String, previous_item_id: String) -> void:
@@ -35252,9 +36303,10 @@ func _refresh_mailbox_panel() -> void:
 	var selected_message := selected.get("message", {}) as Dictionary if selected.get("message", {}) is Dictionary else {}
 	if selected_source == "server":
 		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
-		mailbox_claim_button.disabled = true
+		var server_items := _mailbox_item_entries(selected_message)
+		mailbox_claim_button.disabled = mailbox_request_pending or server_items.is_empty()
 		mailbox_claim_button.visible = true
-		mailbox_claim_button.tooltip_text = "玩家邮件暂不支持附件。"
+		mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。" if not server_items.is_empty() else ""
 		_refresh_mailbox_request_controls()
 		return
 	var items := _mailbox_item_entries(selected_message)
@@ -35269,7 +36321,7 @@ func _refresh_mailbox_panel() -> void:
 	lines.append("")
 	lines.append("附件：%s" % BackpackModel.item_amounts_text(items))
 	mailbox_detail_label.text = "\n".join(lines)
-	mailbox_claim_button.disabled = items.is_empty()
+	mailbox_claim_button.disabled = mailbox_request_pending or items.is_empty()
 	mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。"
 	_refresh_mailbox_request_controls()
 
@@ -35285,7 +36337,12 @@ func _select_mailbox_message(mail_id: String, source: String = "local") -> void:
 
 
 func _on_mailbox_claim_pressed() -> void:
-	if mailbox_selected_mail_id == "" or mailbox_selected_source == "server":
+	if mailbox_selected_mail_id == "":
+		return
+	if mailbox_selected_source == "server":
+		var server_mail_id := _mailbox_key_id(mailbox_selected_mail_id, "server:")
+		if server_mail_id != "":
+			_request_server_mailbox_claim(server_mail_id)
 		return
 	var local_mail_id := _mailbox_key_id(mailbox_selected_mail_id, "local:")
 	var result := PlayerProgressModel.mailbox_claim_message(player_profile, local_mail_id)
@@ -35363,8 +36420,9 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 	if body != "":
 		lines.append("")
 		lines.append(body)
+	var items := _mailbox_item_entries(message)
 	lines.append("")
-	lines.append("附件：无")
+	lines.append("附件：无" if items.is_empty() else "附件：%s" % BackpackModel.item_amounts_text(items))
 	return "\n".join(lines)
 
 
@@ -35410,6 +36468,12 @@ func _request_server_mailbox_read(mail_id: String) -> void:
 	if mail_id.strip_edges() == "" or not _is_server_account_session():
 		return
 	_start_mailbox_request("read", ServerAuthClientModel.mail_read_request(_server_profile_base_url(), _server_profile_token(), mail_id))
+
+
+func _request_server_mailbox_claim(mail_id: String) -> void:
+	if mail_id.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_mailbox_request("claim", ServerAuthClientModel.mail_claim_request(_server_profile_base_url(), _server_profile_token(), mail_id))
 
 
 func _on_mailbox_send_pressed() -> void:
@@ -35488,16 +36552,50 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 			return
 		elif mailbox_status_label != null:
 			mailbox_status_label.text = str(parsed_send.get("message", "邮件发送失败。"))
-	elif kind == "read":
-		var parsed_read := ServerAuthClientModel.parse_mail_read_response(response_code, body)
-		if bool(parsed_read.get("ok", false)):
-			var read_mail := parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
-			for index in range(mailbox_server_messages.size()):
-				if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
-					mailbox_server_messages[index] = read_mail
-					break
-		elif mailbox_status_label != null:
-			mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
+		elif kind == "read":
+			var parsed_read := ServerAuthClientModel.parse_mail_read_response(response_code, body)
+			if bool(parsed_read.get("ok", false)):
+				var read_mail := parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
+				for index in range(mailbox_server_messages.size()):
+					if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
+						mailbox_server_messages[index] = read_mail
+						break
+			elif mailbox_status_label != null:
+				mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
+		elif kind == "claim":
+			var parsed_claim := ServerAuthClientModel.parse_mail_claim_response(response_code, body)
+			if bool(parsed_claim.get("ok", false)):
+				var server_profile = parsed_claim.get("profile", null)
+				if server_profile is Dictionary:
+					player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+					if profile_save_enabled:
+						PlayerProgressModel.save_profile(player_profile)
+				var summary = parsed_claim.get("profileSummary", {})
+				if summary is Dictionary:
+					_apply_server_profile_summary(summary as Dictionary)
+				var claim_mail_id := _mailbox_key_id(mailbox_selected_mail_id, "server:")
+				var claim_mail = parsed_claim.get("mail", null)
+				var replaced := false
+				if claim_mail is Dictionary:
+					for index in range(mailbox_server_messages.size()):
+						if str(mailbox_server_messages[index].get("mailId", "")) == str((claim_mail as Dictionary).get("mailId", "")):
+							mailbox_server_messages[index] = (claim_mail as Dictionary).duplicate(true)
+							replaced = true
+							break
+					if not replaced:
+						mailbox_server_messages.append((claim_mail as Dictionary).duplicate(true))
+				else:
+					for index in range(mailbox_server_messages.size() - 1, -1, -1):
+						if str(mailbox_server_messages[index].get("mailId", "")) == claim_mail_id:
+							mailbox_server_messages.remove_at(index)
+				if mailbox_status_label != null:
+					mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件已领取。"))
+				_set_world_log_message(str(parsed_claim.get("message", "邮件附件已领取。")))
+				if backpack_panel != null and backpack_panel.visible:
+					_refresh_backpack_panel()
+				_update_hud_text(true)
+			elif mailbox_status_label != null:
+				mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件领取失败。"))
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_request_controls()
@@ -35576,14 +36674,15 @@ func _refresh_training_partner_panel() -> void:
 	training_partner_label.text = "\n".join(lines)
 	if training_partner_scroll != null:
 		training_partner_scroll.scroll_vertical = 0
+	var server_request_pending := _is_server_account_session() and profile_action_request_pending
 	if training_partner_add_button != null:
-		training_partner_add_button.disabled = count >= available_slots
+		training_partner_add_button.disabled = server_request_pending or count >= available_slots
 	if training_partner_remove_button != null:
-		training_partner_remove_button.disabled = count <= 0
+		training_partner_remove_button.disabled = server_request_pending or count <= 0
 	if training_partner_fill_button != null:
-		training_partner_fill_button.disabled = count >= available_slots
+		training_partner_fill_button.disabled = server_request_pending or count >= available_slots
 	if training_partner_clear_button != null:
-		training_partner_clear_button.disabled = count <= 0
+		training_partner_clear_button.disabled = server_request_pending or count <= 0
 
 
 func _training_partner_panel_layout_is_usable() -> bool:
@@ -35605,6 +36704,20 @@ func _training_partner_panel_layout_is_usable() -> bool:
 func _set_training_partner_count(count: int) -> void:
 	var available_slots := _training_partner_available_slots()
 	var target_count := clampi(count, 0, available_slots)
+	if _is_server_account_session():
+		_refresh_training_partner_panel()
+		var parsed := await _submit_server_profile_action("training_partner_set_count", {"count": target_count}, "设置陪练伙伴失败。")
+		var log_lines := _string_array_values(parsed.get("logLines", []))
+		if log_lines.is_empty():
+			var fallback_count := PlayerProgressModel.training_partner_count(player_profile)
+			log_lines.append("队伍伙伴 %d/%d。" % [fallback_count, _training_partner_available_slots()])
+		_set_world_log_message("\n".join(log_lines))
+		_refresh_training_partner_panel()
+		_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("设置陪练伙伴"):
+		_refresh_training_partner_panel()
+		return
 	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, target_count)
 	if profile_save_enabled:
 		_save_player_profile_now()
@@ -35619,19 +36732,19 @@ func _on_training_partner_add_pressed() -> void:
 		_set_world_log_message("队伍槽位已满，请先离队或移除伙伴。")
 		_refresh_training_partner_panel()
 		return
-	_set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) + 1)
+	await _set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) + 1)
 
 
 func _on_training_partner_remove_pressed() -> void:
-	_set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) - 1)
+	await _set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) - 1)
 
 
 func _on_training_partner_fill_pressed() -> void:
-	_set_training_partner_count(_training_partner_available_slots())
+	await _set_training_partner_count(_training_partner_available_slots())
 
 
 func _on_training_partner_clear_pressed() -> void:
-	_set_training_partner_count(0)
+	await _set_training_partner_count(0)
 
 
 func _open_auto_settings_panel() -> void:
@@ -38801,7 +39914,7 @@ func _has_expired_ground_pet_drop(now_sec: int) -> bool:
 func _on_battle_command_pressed(command_id: String) -> void:
 	if not battle_active:
 		return
-	if _battle_commands_locked() and command_id != "run":
+	if _battle_commands_locked():
 		return
 	if _battle_is_server_authority():
 		var leave_label := _battle_player_run_label()
@@ -38950,6 +40063,9 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		_set_battle_message("没有选择待机宠物。")
 		return
 	if command_id == "item":
+		if not _battle_item_supported_in_combat(item_action_id):
+			_set_battle_message("联网战斗暂不支持这个物品。")
+			return
 		if not BattleModel.has_item(battle_state, item_action_id):
 			_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_action_id, "物品"))
 			return
@@ -39347,6 +40463,10 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
 	battle_pending_capture_tool_id = ""
+	if not _battle_item_supported_in_combat(item_id):
+		_set_battle_message("这个物品暂时无法在战斗中使用。")
+		_set_battle_command_owner("player")
+		return
 	if _battle_is_server_authority():
 		if not BattleModel.has_item(battle_state, item_id):
 			_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_id, "物品"))
@@ -39620,6 +40740,14 @@ func _battle_item_id_for_command(command_id: String) -> String:
 			return ""
 
 
+func _battle_item_supported_in_combat(item_id: String) -> bool:
+	match item_id.strip_edges():
+		BattleModel.ITEM_MEAT_SMALL, BattleModel.ITEM_HEAL_SINGLE, BattleModel.ITEM_HEAL_ALL, BattleModel.ITEM_POISON_SINGLE, BattleModel.ITEM_POISON_ALL, BattleModel.ITEM_CLEANSE_SINGLE:
+			return true
+		_:
+			return false
+
+
 func _battle_item_anchor_target_id(item_id: String) -> String:
 	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ALLY):
 		return BattleModel.player_actor_id(battle_state)
@@ -39629,7 +40757,7 @@ func _battle_item_anchor_target_id(item_id: String) -> String:
 
 
 func _battle_item_can_use_now(item_id: String, can_command: bool, has_ally: bool, has_enemy: bool) -> bool:
-	if item_id == "" or not can_command or not BattleModel.has_item(battle_state, item_id):
+	if item_id == "" or not can_command or not _battle_item_supported_in_combat(item_id) or not BattleModel.has_item(battle_state, item_id):
 		return false
 	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ALLY) and not has_ally:
 		return false
@@ -39660,6 +40788,9 @@ func _on_item_battle_command_pressed(command_id: String) -> void:
 	var item_id := _battle_item_id_for_command(command_id)
 	if item_id == "":
 		_set_battle_message("这个物品栏位暂未开放。")
+		return
+	if not _battle_item_supported_in_combat(item_id):
+		_set_battle_message("这个物品暂时无法在战斗中使用。")
 		return
 	if not BattleModel.has_item(battle_state, item_id):
 		_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_id, "物品"))
@@ -41955,6 +43086,9 @@ func _start_hang_walk() -> void:
 		return
 	if hang_session_request_active:
 		_set_world_log_message("挂机同步中，请稍候。")
+		return
+	if _current_player_is_party_member():
+		_set_world_log_message("队伍中只有队长可以开始挂机。")
 		return
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	var zone := EncounterModel.zone_for_cell(map_data, player_cell)

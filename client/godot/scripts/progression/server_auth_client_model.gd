@@ -466,6 +466,15 @@ static func mail_read_request(base_url: String, session_token: String, mail_id: 
 	}
 
 
+static func mail_claim_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
+	return {
+		"url": "%s/mail/%s/claim" % [normalized_base_url(base_url), mail_id.uri_encode()],
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func chat_messages_request(base_url: String, session_token: String, channel: String, limit: int = 50) -> Dictionary:
 	return {
 		"url": "%s/chat/messages?channel=%s&limit=%d" % [normalized_base_url(base_url), channel.uri_encode(), clampi(limit, 1, 50)],
@@ -703,6 +712,17 @@ static func parse_mail_read_response(response_code: int, body: PackedByteArray) 
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["mail"] = response.get("mail", {}) if response.get("mail", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_mail_claim_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "邮件附件领取失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["mail"] = response.get("mail", null)
+	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
 	return parsed
 
 
