@@ -13,7 +13,8 @@
     "from_tide_echo_cave": [21, 7],
     "from_ember_core_cave": [21, 8],
     "from_gale_breath_cave": [21, 9],
-    "from_shadow_oath_cavern": [22, 10]
+    "from_shadow_oath_cavern": [22, 10],
+    "from_level_grass_trial_ground": [25, 5]
   },
   "blockedCells": [
     [8, 4],
@@ -42,6 +43,8 @@
     {"cell": [23, 8], "kind": "grass"},
     {"cell": [24, 9], "kind": "flower"},
     {"cell": [25, 10], "kind": "grass"},
+    {"cell": [25, 5], "kind": "grass"},
+    {"cell": [26, 5], "kind": "flower"},
     {"cell": [24, 17], "kind": "grass"}
   ],
   "encounterZones": [
@@ -57,7 +60,7 @@
           "name": "野生乌力",
           "weight": 70,
           "levelMin": 1,
-          "levelMax": 2,
+          "levelMax": 1,
           "battleStats": {
             "maxHp": 80,
             "attack": 10,
@@ -70,7 +73,7 @@
           "name": "高速乌力",
           "weight": 20,
           "levelMin": 1,
-          "levelMax": 3,
+          "levelMax": 1,
           "battleStats": {
             "maxHp": 92,
             "attack": 11,
@@ -82,8 +85,8 @@
           "formId": "wuli_normal_tough_earth10",
           "name": "高防乌力",
           "weight": 10,
-          "levelMin": 2,
-          "levelMax": 3,
+          "levelMin": 1,
+          "levelMax": 1,
           "battleStats": {
             "maxHp": 110,
             "attack": 9,
@@ -160,6 +163,17 @@
       "action": "进入",
       "trigger": "arrive",
       "toMap": "shadow_oath_cavern",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_level_grass_trial_ground",
+      "name": "等级草丛试验场入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [25, 5],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "level_grass_trial_ground",
       "toSpawn": "from_firebud_village"
     },
     {

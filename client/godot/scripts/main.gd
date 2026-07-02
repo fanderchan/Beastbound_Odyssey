@@ -81,6 +81,7 @@ const MAP_DATA_PATHS := {
 	"shadow_oath_cavern_f3": "res://data/shadow_oath_cavern_f3_map.json",
 	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
 	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
+	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
 	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
@@ -101,6 +102,8 @@ const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
 const SERVER_EVENT_SEEN_MAX := 40
+const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
+const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
@@ -126,6 +129,7 @@ const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
 const BATTLE_COMMAND_COUNTDOWN_SECONDS := 99.0
+const BATTLE_TEAM_COMPANION_SLOT_NUMBERS: Array[int] = [1, 2, 4, 5]
 const BATTLE_AUTO_ATTACK_STEP_DELAY := 0.16
 const BATTLE_PASSIVE_LABEL_FONT_SIZE := 15
 const BATTLE_PASSIVE_MAX_LINES := 2
@@ -301,6 +305,8 @@ var player_rebirth_preview_label: RichTextLabel
 var player_rebirth_execute_button: Button
 var player_rebirth_preview_close_button: Button
 var player_rebirth_confirm_pending: bool = false
+var player_rebirth_request_pending: bool = false
+var quest_action_request_pending: bool = false
 var equipment_panel: PanelContainer
 var equipment_grid: Control
 var equipment_stats_label: Label
@@ -311,6 +317,7 @@ var equipment_synthesis_open_button: Button
 var equipment_close_button: Button
 var equipment_slot_buttons: Dictionary = {}
 var equipment_selected_slot_id: String = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
+var equipment_action_request_pending: bool = false
 var equipment_synthesis_panel: PanelContainer
 var equipment_synthesis_list_container: VBoxContainer
 var equipment_synthesis_detail_label: RichTextLabel
@@ -340,6 +347,7 @@ var shop_mode: String = "buy"
 var shop_selected_item_id: String = ""
 var shop_quantity: int = 1
 var shop_equip_after_buy: bool = false
+var shop_action_request_pending: bool = false
 var shop_cached_backpack_slots: Array[Dictionary] = []
 var shop_cached_backpack_counts: Dictionary = {}
 var shop_detail_text_cache: Dictionary = {}
@@ -487,6 +495,10 @@ var server_event_reconnect_remaining: float = 0.0
 var server_event_seen: Array[Dictionary] = []
 var server_event_last_seq: int = 0
 var server_battle_state: Dictionary = {}
+var server_party_encounter_request_pending: bool = false
+var server_battle_waiting_poll_elapsed: float = 0.0
+var server_battle_room_restore_poll_elapsed: float = 0.0
+var server_battle_state_poll_request_active: bool = false
 var player_action_panel: PanelContainer
 var player_action_title_label: Label
 var player_action_detail_label: Label
@@ -591,6 +603,7 @@ var auto_capture_settings_check: bool = false
 var auto_training_partner_check: bool = false
 var auto_hang_settings_check: bool = false
 var auto_gm_10v10_map_check: bool = false
+var auto_level_grass_trial_map_check: bool = false
 var auto_battle_formation_check: bool = false
 var auto_battle_target_check: bool = false
 var auto_battle_round_check: bool = false
@@ -692,6 +705,8 @@ var auto_server_battle_switch_pet_live_check: bool = false
 var auto_server_battle_item_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
+var auto_server_solo_pve_live_check: bool = false
+var auto_server_party_pve_sync_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
@@ -1068,6 +1083,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_target_mapping_check")
 	elif auto_server_battle_stale_room_check:
 		call_deferred("_run_auto_server_battle_stale_room_check")
+	elif auto_server_solo_pve_live_check:
+		call_deferred("_run_auto_server_solo_pve_live_check")
+	elif auto_server_party_pve_sync_live_check:
+		call_deferred("_run_auto_server_party_pve_sync_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
@@ -1094,6 +1113,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_hang_settings_check")
 	elif auto_gm_10v10_map_check:
 		call_deferred("_run_auto_gm_10v10_map_check")
+	elif auto_level_grass_trial_map_check:
+		call_deferred("_run_auto_level_grass_trial_map_check")
 	elif auto_battle_item_check:
 		call_deferred("_run_auto_battle_item_check")
 	elif auto_battle_item_count_check:
@@ -1650,6 +1671,8 @@ func _apply_preview_window_args() -> void:
 			auto_hang_settings_check = true
 		elif arg == "--auto-gm-10v10-map-check":
 			auto_gm_10v10_map_check = true
+		elif arg == "--auto-level-grass-trial-map-check":
+			auto_level_grass_trial_map_check = true
 		elif arg == "--auto-battle-formation-check":
 			auto_battle_formation_check = true
 		elif arg == "--auto-battle-target-check":
@@ -1855,6 +1878,10 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_target_mapping_check = true
 		elif arg == "--auto-server-battle-stale-room-check":
 			auto_server_battle_stale_room_check = true
+		elif arg == "--auto-server-solo-pve-live-check":
+			auto_server_solo_pve_live_check = true
+		elif arg == "--auto-server-party-pve-sync-live-check":
+			auto_server_party_pve_sync_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
 		elif arg == "--auth-ux-preview":
@@ -3075,6 +3102,93 @@ func _run_auto_gm_10v10_map_check() -> void:
 	get_tree().quit(0 if status == "ok" else 1)
 
 
+func _run_auto_level_grass_trial_map_check() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var expected_levels := [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+	var village_loaded := _load_map("firebud_village_gate", "from_training_yard")
+	await get_tree().process_frame
+	var village_zone := _encounter_zone_by_id("village_grass") if village_loaded else {}
+	var village_pool := EncounterModel.wild_pet_pool(village_zone) if not village_zone.is_empty() else []
+	var village_level_ok := village_loaded and village_pool.size() > 0
+	for value in village_pool:
+		var entry := value as Dictionary
+		village_level_ok = village_level_ok and int(entry.get("levelMin", 0)) == 1 and int(entry.get("levelMax", 0)) == 1
+	var entrance := InteractionModel.find_by_id(map_data, "warp_to_level_grass_trial_ground") if village_loaded else {}
+	var entrance_ok := (
+		village_loaded
+		and not entrance.is_empty()
+		and str(entrance.get("toMap", "")) == "level_grass_trial_ground"
+		and str(entrance.get("toSpawn", "")) == "from_firebud_village"
+		and not InteractionModel.blocks_movement(entrance)
+	)
+	var loaded := _load_map("level_grass_trial_ground", "from_firebud_village")
+	await get_tree().process_frame
+	var loaded_player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null else Vector2i.ZERO
+	var spawn_ok := loaded and current_map_id == "level_grass_trial_ground" and loaded_player_cell == Vector2i(18, 32)
+	var return_warp := InteractionModel.find_by_id(map_data, "level_grass_return_firebud") if loaded else {}
+	var return_ok := (
+		loaded
+		and not return_warp.is_empty()
+		and str(return_warp.get("toMap", "")) == "firebud_village_gate"
+		and str(return_warp.get("toSpawn", "")) == "from_level_grass_trial_ground"
+		and not InteractionModel.blocks_movement(return_warp)
+	)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 910140
+	var zone_count := EncounterModel.encounter_zones(map_data).size() if loaded else 0
+	var zones_ok := loaded and zone_count == expected_levels.size()
+	var signs_ok := loaded
+	var selected_levels_ok := loaded
+	var max_enemy_level := 0
+	var max_enemy_count := 0
+	var max_formation_ok := false
+	for level in expected_levels:
+		var zone_id := "level_grass_%03d" % level
+		var zone := _encounter_zone_by_id(zone_id) if loaded else {}
+		var zone_ok := (
+			not zone.is_empty()
+			and str(zone.get("name", "")) == "%d级草丛" % level
+			and int(zone.get("enemyCount", 0)) == 10
+			and str(zone.get("formationTemplate", "")) == BattleModel.FORMATION_TEMPLATE_10V10
+			and str(zone.get("encounterGroupId", "")) == zone_id
+			and EncounterModel.encounter_rate(zone) >= 0.999
+		)
+		var pool := EncounterModel.wild_pet_pool(zone) if not zone.is_empty() else []
+		var pool_entry := pool[0] as Dictionary if pool.size() > 0 and pool[0] is Dictionary else {}
+		zone_ok = zone_ok and not pool_entry.is_empty()
+		zone_ok = zone_ok and int(pool_entry.get("levelMin", 0)) == level and int(pool_entry.get("levelMax", 0)) == level
+		zones_ok = zones_ok and zone_ok
+		var selected := EncounterModel.selected_wild_pet(zone, rng) if not zone.is_empty() else {}
+		selected_levels_ok = selected_levels_ok and int(selected.get("level", 0)) == level
+		var sign := InteractionModel.find_by_id(map_data, "%s_sign" % zone_id) if loaded else {}
+		signs_ok = signs_ok and not sign.is_empty() and str(sign.get("kind", "")) == "sign" and str(sign.get("facilityLabel", "")) == "%d级草丛" % level
+		if level == 140 and not zone.is_empty():
+			var selected_zone := EncounterModel.zone_with_selected_wild_pet(zone, rng, 10)
+			var battle_check_state := BattleModel.create_training_partner_battle(selected_zone, 10)
+			max_enemy_count = BattleModel.side_actor_count(battle_check_state, BattleModel.SIDE_ENEMY)
+			max_formation_ok = BattleModel.uses_10v10_formation(battle_check_state)
+			max_enemy_level = int(BattleModel.actor_by_id(battle_check_state, "enemy_front_1").get("level", 0))
+	var max_battle_ok := max_enemy_count == 10 and max_enemy_level == 140 and max_formation_ok
+	var status := "ok" if village_level_ok and entrance_ok and loaded and spawn_ok and return_ok and zones_ok and signs_ok and selected_levels_ok and max_battle_ok else "failed"
+	print("level grass trial map check ready: status=%s village_level=%s entrance=%s loaded=%s spawn=%s return=%s zone_count=%d zones=%s signs=%s selected_levels=%s max_enemy_count=%d max_enemy_level=%d max_formation=%s" % [
+		status,
+		str(village_level_ok),
+		str(entrance_ok),
+		str(loaded),
+		str(spawn_ok),
+		str(return_ok),
+		zone_count,
+		str(zones_ok),
+		str(signs_ok),
+		str(selected_levels_ok),
+		max_enemy_count,
+		max_enemy_level,
+		str(max_formation_ok),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_battle_check() -> void:
 	var loaded: bool = _load_map("firebud_village_gate", "from_training_yard")
 	var zones := EncounterModel.encounter_zones(map_data)
@@ -3532,7 +3646,7 @@ func _run_auto_capture_settings_check() -> void:
 				"defense": 6,
 				"agility": 48,
 			},
-		},
+	},
 	}
 	var selected_auto_zone := auto_zone.duplicate(true)
 	_start_battle(BattleModel.create_wild_battle(selected_auto_zone))
@@ -3989,9 +4103,92 @@ func _run_auto_training_partner_check() -> void:
 		partner_exp_ok = partner_exp_ok and int(partner.get("level", 1)) > 1
 		var pet = partner.get("pet", {})
 		partner_exp_ok = partner_exp_ok and pet is Dictionary and int((pet as Dictionary).get("level", 1)) > 1
+	var saved_party_state := party_current_state.duplicate(true)
+	var saved_session := current_account_session.duplicate(true)
+	var saved_profile := player_profile.duplicate(true)
+	var mixed_party_team_ok := false
+	var mixed_reward_ok := false
+	if zone_found:
+		current_account_session = {
+			"accountId": "acc_self_party_mix",
+			"username": "self_party_mix",
+			"serverProfileSummary": {"accountId": "acc_self_party_mix"},
+		}
+		var mixed_profile := PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+		player_profile = mixed_profile
+		party_current_state = {
+			"party": {
+				"members": [
+					{"accountId": "acc_self_party_mix", "username": "self_party_mix", "displayName": "自己", "role": "leader"},
+					{
+						"accountId": "acc_remote_party_mix",
+						"username": "remote_party_mix",
+						"displayName": "真人队友",
+						"role": "member",
+						"teamSnapshot": {
+							"playerLevel": 11,
+							"player": {"name": "真人队友", "level": 11, "hp": 150, "maxHp": 150, "attack": 22, "defense": 9, "quick": 73},
+							"battlePets": [{
+								"petId": "remote_pet_mix",
+								"name": "队友布伊",
+								"formId": "bui_normal_red_fire10",
+								"state": BattleModel.PET_STATE_BATTLE,
+								"activeInBattle": true,
+								"level": 11,
+								"hp": 110,
+								"maxHp": 110,
+								"attack": 18,
+								"defense": 8,
+								"quick": 69,
+							}],
+						},
+					},
+				],
+			},
+			"incomingInvites": [],
+			"maxMembers": 5,
+		}
+		var mixed_state := _local_battle_state_with_current_team(BattleModel.create_training_partner_battle(zones[0] as Dictionary, 10))
+		var mixed_partner3 := BattleModel.actor_by_id(mixed_state, "ally_training_partner_3")
+		var mixed_active_ids: Array = mixed_state.get("activeTrainingPartnerIds", []) if mixed_state.get("activeTrainingPartnerIds", []) is Array else []
+		mixed_party_team_ok = (
+			BattleModel.side_actor_count(mixed_state, BattleModel.SIDE_ALLY) == 10
+			and not BattleModel.actor_by_id(mixed_state, "ally_party_member_1").is_empty()
+			and not BattleModel.actor_by_id(mixed_state, "ally_party_member_pet_1").is_empty()
+			and not BattleModel.actor_by_id(mixed_state, "ally_training_partner_1").is_empty()
+			and not BattleModel.actor_by_id(mixed_state, "ally_training_partner_3").is_empty()
+			and BattleModel.actor_by_id(mixed_state, "ally_training_partner_4").is_empty()
+			and str(mixed_partner3.get("slotId", "")) == "ally.back.5"
+			and mixed_active_ids.size() == 3
+			and not mixed_active_ids.has("training_partner_4")
+			and BattleModel.occupied_slots_are_unique(mixed_state)
+		)
+		var mixed_reward_state := mixed_state.duplicate(true)
+		var mixed_reward_actors: Array = mixed_reward_state.get("actors", [])
+		for actor_index in range(mixed_reward_actors.size()):
+			if not (mixed_reward_actors[actor_index] is Dictionary):
+				continue
+			var actor := (mixed_reward_actors[actor_index] as Dictionary).duplicate(true)
+			if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
+				actor["hp"] = 0
+			mixed_reward_actors[actor_index] = actor
+		mixed_reward_state["actors"] = mixed_reward_actors
+		var mixed_reward_result := PlayerProgressModel.apply_battle_result(mixed_profile, mixed_reward_state, "victory")
+		var mixed_reward_profile := mixed_reward_result.get("profile", mixed_profile) as Dictionary
+		var mixed_reward_partners := PlayerProgressModel.training_partners(mixed_reward_profile)
+		mixed_reward_ok = mixed_reward_partners.size() == 4
+		for index in range(mixed_reward_partners.size()):
+			var partner := mixed_reward_partners[index]
+			if index < 3:
+				mixed_reward_ok = mixed_reward_ok and int(partner.get("level", 1)) > 1
+			else:
+				mixed_reward_ok = mixed_reward_ok and int(partner.get("level", 1)) == 1
+	party_current_state = saved_party_state
+	current_account_session = saved_session
+	player_profile = saved_profile
 	var panel_layout_ok := panel_map_loaded and first_panel_layout_ok and second_panel_layout_ok
-	var status := "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok else "failed"
-	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s planned=%s" % [
+	var status := "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok and mixed_party_team_ok and mixed_reward_ok else "failed"
+	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
 		status,
 		str(partner_count_ok),
 		str(panel_layout_ok),
@@ -4011,6 +4208,8 @@ func _run_auto_training_partner_check() -> void:
 		str(seen_partner_actor),
 		str(seen_partner_pet),
 		str(partner_exp_ok),
+		str(mixed_party_team_ok),
+		str(mixed_reward_ok),
 		",".join(planned_actor_ids),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -13686,6 +13885,8 @@ func _run_equipment_slot_detail_preview() -> void:
 
 func _run_auto_quest_chain_check() -> void:
 	profile_save_enabled = false
+	account_authenticated = false
+	current_account_session = {}
 	var validation_ok := QuestModel.validation_errors().is_empty()
 	var profile := PlayerProgressModel.default_profile()
 	var start_ok := (
@@ -13969,14 +14170,17 @@ func _run_auto_quest_chain_check() -> void:
 		)
 		_confirm_dialog_action()
 		await get_tree().process_frame
+		var ui_active_quest_id := PlayerProgressModel.active_quest_id(player_profile)
+		var ui_task_text := _current_task_text()
+		var ui_world_log := world_log_message
 		ui_advance_ok = (
-			PlayerProgressModel.active_quest_id(player_profile) == "quest_buy_supply"
-			and world_log_message.find("完成任务「认识训练师」") >= 0
-			and _current_task_text().find("补给准备") >= 0
+			ui_active_quest_id == "quest_buy_supply"
+			and ui_world_log.find("完成任务「认识训练师」") >= 0
+			and ui_task_text.find("补给准备") >= 0
 		)
 	var status := "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -13995,6 +14199,9 @@ func _run_auto_quest_chain_check() -> void:
 		str(rebirth_quest_ok),
 		str(ui_open_ok),
 		str(ui_advance_ok),
+		PlayerProgressModel.active_quest_id(player_profile),
+		_current_task_text(),
+		world_log_message.replace("\n", " / "),
 		PlayerProgressModel.quest_progress_text(profile),
 		PlayerProgressModel.stone_coins(profile),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL),
@@ -15227,6 +15434,288 @@ func _run_auto_auth_server_client_check() -> void:
 		bool(parsed_upload.get("ok", false))
 		and int((parsed_upload.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 4
 	)
+	var shop_transaction_spec := ServerAuthClientModel.shop_transaction_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"buy",
+		"firebud_item_shop",
+		"item_meat_small",
+		2
+	)
+	var shop_transaction_request_ok := (
+		str(shop_transaction_spec.get("url", "")) == "http://127.0.0.1:8787/shops/transaction"
+		and int(shop_transaction_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(shop_transaction_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(shop_transaction_spec.get("body", "")).find("\"shopId\":\"firebud_item_shop\"") >= 0
+		and str(shop_transaction_spec.get("body", "")).find("\"amount\":2") >= 0
+	)
+	var parsed_shop_transaction := ServerAuthClientModel.parse_shop_transaction_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {"schemaVersion": 1, "stoneCoins": 84},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 6,
+		},
+		"transaction": {
+			"mode": "buy",
+			"shopId": "firebud_item_shop",
+			"itemId": "item_meat_small",
+			"amount": 2,
+			"price": 16,
+			"currency": "stoneCoins",
+		},
+		"questMessages": ["任务更新：补给准备 1/1。"],
+	}).to_utf8_buffer())
+	var shop_transaction_parse_ok := (
+		bool(parsed_shop_transaction.get("ok", false))
+		and int((parsed_shop_transaction.get("profile", {}) as Dictionary).get("stoneCoins", 0)) == 84
+		and int((parsed_shop_transaction.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 6
+		and int((parsed_shop_transaction.get("transaction", {}) as Dictionary).get("price", 0)) == 16
+		and (parsed_shop_transaction.get("questMessages", []) as Array).size() == 1
+	)
+	var equipment_equip_spec := ServerAuthClientModel.equipment_equip_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"weapon_wooden_club"
+	)
+	var equipment_equip_request_ok := (
+		str(equipment_equip_spec.get("url", "")) == "http://127.0.0.1:8787/equipment/equip"
+		and int(equipment_equip_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(equipment_equip_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(equipment_equip_spec.get("body", "")).find("\"itemId\":\"weapon_wooden_club\"") >= 0
+	)
+	var parsed_equipment_equip := ServerAuthClientModel.parse_equipment_equip_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"equipmentSlots": {"right_hand_weapon": "weapon_wooden_club"},
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 7,
+		},
+		"equipment": {
+			"itemId": "weapon_wooden_club",
+			"slot": "right_hand_weapon",
+			"previousItemId": "weapon_stone_dagger",
+		},
+		"questMessages": ["任务完成：装备木棒。"],
+	}).to_utf8_buffer())
+	var equipment_equip_parse_ok := (
+		bool(parsed_equipment_equip.get("ok", false))
+		and int((parsed_equipment_equip.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 7
+		and str((parsed_equipment_equip.get("equipment", {}) as Dictionary).get("slot", "")) == "right_hand_weapon"
+		and (parsed_equipment_equip.get("questMessages", []) as Array).size() == 1
+	)
+	var equipment_enhance_spec := ServerAuthClientModel.equipment_enhance_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"right_hand_weapon"
+	)
+	var equipment_enhance_request_ok := (
+		str(equipment_enhance_spec.get("url", "")) == "http://127.0.0.1:8787/equipment/enhance"
+		and int(equipment_enhance_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(equipment_enhance_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(equipment_enhance_spec.get("body", "")).find("\"slotId\":\"right_hand_weapon\"") >= 0
+	)
+	var parsed_equipment_enhance := ServerAuthClientModel.parse_equipment_enhance_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"equipmentEnhancement": {"right_hand_weapon": {"itemId": "weapon_wooden_club", "level": 1}},
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 8,
+		},
+		"enhancement": {
+			"slotId": "right_hand_weapon",
+			"itemId": "weapon_wooden_club",
+			"level": 1,
+			"materialId": "equip_frag_wood_basic",
+			"materialCount": 1,
+			"stoneCost": 20,
+		},
+		"questMessages": ["任务更新：强化装备 1/1。"],
+	}).to_utf8_buffer())
+	var equipment_enhance_parse_ok := (
+		bool(parsed_equipment_enhance.get("ok", false))
+		and int((parsed_equipment_enhance.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 8
+		and int((parsed_equipment_enhance.get("enhancement", {}) as Dictionary).get("level", 0)) == 1
+		and (parsed_equipment_enhance.get("questMessages", []) as Array).size() == 1
+	)
+	var equipment_repair_spec := ServerAuthClientModel.equipment_repair_all_request(
+		"http://127.0.0.1:8787/",
+		"token_test"
+	)
+	var equipment_repair_request_ok := (
+		str(equipment_repair_spec.get("url", "")) == "http://127.0.0.1:8787/equipment/repair-all"
+		and int(equipment_repair_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(equipment_repair_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
+	var parsed_equipment_repair := ServerAuthClientModel.parse_equipment_repair_all_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"stoneCoins": 94,
+			"equipmentDurability": {"right_hand_weapon": 30},
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 9,
+		},
+		"repair": {
+			"missingDurability": 28,
+			"cost": 6,
+			"repairedSlots": [{"slotId": "right_hand_weapon", "itemId": "weapon_wooden_club"}],
+		},
+	}).to_utf8_buffer())
+	var equipment_repair_parse_ok := (
+		bool(parsed_equipment_repair.get("ok", false))
+		and int((parsed_equipment_repair.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 9
+		and int((parsed_equipment_repair.get("repair", {}) as Dictionary).get("cost", 0)) == 6
+		and int((parsed_equipment_repair.get("profile", {}) as Dictionary).get("stoneCoins", 0)) == 94
+	)
+	var equipment_synthesis_spec := ServerAuthClientModel.equipment_synthesize_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"craft_hardwood_club"
+	)
+	var equipment_synthesis_request_ok := (
+		str(equipment_synthesis_spec.get("url", "")) == "http://127.0.0.1:8787/equipment/synthesize"
+		and int(equipment_synthesis_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(equipment_synthesis_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(equipment_synthesis_spec.get("body", "")).find("\"recipeId\":\"craft_hardwood_club\"") >= 0
+	)
+	var parsed_equipment_synthesis := ServerAuthClientModel.parse_equipment_synthesize_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"stoneCoins": 80,
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 10,
+		},
+		"synthesis": {
+			"recipeId": "craft_hardwood_club",
+			"outputItemId": "weapon_hardwood_club",
+			"outputCount": 1,
+			"stoneCost": 20,
+		},
+		"questMessages": ["任务更新：合成装备 1/1。"],
+	}).to_utf8_buffer())
+	var equipment_synthesis_parse_ok := (
+		bool(parsed_equipment_synthesis.get("ok", false))
+		and int((parsed_equipment_synthesis.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 10
+		and str((parsed_equipment_synthesis.get("synthesis", {}) as Dictionary).get("outputItemId", "")) == "weapon_hardwood_club"
+		and (parsed_equipment_synthesis.get("questMessages", []) as Array).size() == 1
+	)
+	var player_rebirth_spec := ServerAuthClientModel.player_rebirth_request(
+		"http://127.0.0.1:8787/",
+		"token_test"
+	)
+	var player_rebirth_request_ok := (
+		str(player_rebirth_spec.get("url", "")) == "http://127.0.0.1:8787/player/rebirth"
+		and int(player_rebirth_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(player_rebirth_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
+	var parsed_player_rebirth := ServerAuthClientModel.parse_player_rebirth_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"rebirthCount": 1,
+			"player": {"level": 1, "exp": 0, "nextExp": 122},
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 11,
+		},
+		"rebirth": {
+			"fromCount": 0,
+			"targetCount": 1,
+			"rewardItems": [{"itemId": "armor_grace_cloth_3", "count": 1}],
+		},
+		"returnEntry": {
+			"recordPoint": {"label": "火芽村医旁记录点"},
+			"position": {"mapId": "firebud_village_gate", "cellX": 10, "cellY": 17},
+		},
+	}).to_utf8_buffer())
+	var player_rebirth_parse_ok := (
+		bool(parsed_player_rebirth.get("ok", false))
+		and int((parsed_player_rebirth.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 11
+		and int((parsed_player_rebirth.get("rebirth", {}) as Dictionary).get("targetCount", 0)) == 1
+		and str(((parsed_player_rebirth.get("returnEntry", {}) as Dictionary).get("recordPoint", {}) as Dictionary).get("label", "")) == "火芽村医旁记录点"
+	)
+	var quest_record_spec := ServerAuthClientModel.quest_record_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		{"type": "talk", "targetId": "trainer"}
+	)
+	var quest_record_request_ok := (
+		str(quest_record_spec.get("url", "")) == "http://127.0.0.1:8787/quests/record"
+		and int(quest_record_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(quest_record_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(quest_record_spec.get("body", "")).find("\"type\":\"talk\"") >= 0
+		and str(quest_record_spec.get("body", "")).find("\"targetId\":\"trainer\"") >= 0
+	)
+	var parsed_quest_record := ServerAuthClientModel.parse_quest_action_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"activeQuestId": "quest_buy_supply",
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 12,
+		},
+		"progress": {
+			"questId": "quest_intro_talk",
+			"ready": true,
+		},
+		"questMessages": ["完成任务「认识训练师」，获得20石币、物品。"],
+	}).to_utf8_buffer())
+	var quest_record_parse_ok := (
+		bool(parsed_quest_record.get("ok", false))
+		and int((parsed_quest_record.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 12
+		and str((parsed_quest_record.get("progress", {}) as Dictionary).get("questId", "")) == "quest_intro_talk"
+		and (parsed_quest_record.get("questMessages", []) as Array).size() == 1
+	)
+	var quest_claim_spec := ServerAuthClientModel.quest_claim_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"quest_capture_wuli",
+		"rope_pack"
+	)
+	var quest_claim_request_ok := (
+		str(quest_claim_spec.get("url", "")) == "http://127.0.0.1:8787/quests/claim"
+		and int(quest_claim_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(quest_claim_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(quest_claim_spec.get("body", "")).find("\"questId\":\"quest_capture_wuli\"") >= 0
+		and str(quest_claim_spec.get("body", "")).find("\"rewardChoiceId\":\"rope_pack\"") >= 0
+	)
+	var parsed_quest_claim := ServerAuthClientModel.parse_quest_action_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"stoneCoins": 60,
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 13,
+		},
+		"claim": {
+			"questId": "quest_capture_wuli",
+			"rewardChoiceId": "rope_pack",
+		},
+		"questMessages": ["完成任务「捕捉乌力」，获得60石币。"],
+	}).to_utf8_buffer())
+	var quest_claim_parse_ok := (
+		bool(parsed_quest_claim.get("ok", false))
+		and int((parsed_quest_claim.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 13
+		and str((parsed_quest_claim.get("claim", {}) as Dictionary).get("rewardChoiceId", "")) == "rope_pack"
+		and (parsed_quest_claim.get("questMessages", []) as Array).size() == 1
+	)
 	var conflict_response_body := JSON.stringify({
 		"ok": false,
 		"code": "revision_conflict",
@@ -15438,6 +15927,7 @@ func _run_auto_auth_server_client_check() -> void:
 	var battle_accept_spec := ServerAuthClientModel.battle_invite_accept_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var battle_decline_spec := ServerAuthClientModel.battle_invite_decline_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var battle_cancel_spec := ServerAuthClientModel.battle_invite_cancel_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
+	var party_battle_encounter_spec := ServerAuthClientModel.party_battle_encounter_request("http://127.0.0.1:8787/", "token_test", {"id": "zone_test"}, 10)
 	var battle_leave_spec := ServerAuthClientModel.battle_room_leave_request("http://127.0.0.1:8787/", "token_test", "battle_room_test")
 	var battle_command_spec := ServerAuthClientModel.battle_command_submit_request("http://127.0.0.1:8787/", "token_test", "battle_room_test", {
 		"round": 1,
@@ -15467,6 +15957,9 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(battle_decline_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/decline"
 		and str(battle_cancel_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invites/battle_invite_test/cancel"
 		and int(battle_cancel_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(party_battle_encounter_spec.get("url", "")) == "http://127.0.0.1:8787/battle/party-encounter"
+		and int(party_battle_encounter_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(party_battle_encounter_spec.get("body", "")).find("\"enemyCount\":10") >= 0
 		and str(battle_leave_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/leave"
 		and int(battle_leave_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/commands"
@@ -15525,7 +16018,7 @@ func _run_auto_auth_server_client_check() -> void:
 		},
 		"turn": {
 			"kind": "battle_event_list",
-			"round": 1,
+		"round": 1,
 			"events": [{"eventType": "basic_attack", "damage": 20}],
 		},
 		"result": {"reason": "defeat", "winnerAccountId": "account_test"},
@@ -15539,6 +16032,109 @@ func _run_auto_auth_server_client_check() -> void:
 		and bool(parsed_battle_command.get("ok", false))
 		and str((parsed_battle_command.get("turn", {}) as Dictionary).get("kind", "")) == "battle_event_list"
 		and str((parsed_battle_command.get("result", {}) as Dictionary).get("reason", "")) == "defeat"
+	)
+	var saved_session := current_account_session.duplicate(true)
+	var saved_party_state := party_current_state.duplicate(true)
+	var saved_auth_auto_bypass := auth_auto_bypass
+	current_account_session = {
+		"accountId": "account_test",
+		"username": "self",
+		"displayName": "自己",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	auth_auto_bypass = false
+	party_current_state = {"party": null}
+	var solo_server_encounter_route_ok := _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "account_test",
+			"members": [{"accountId": "account_test", "username": "self", "role": "leader"}],
+		},
+	}
+	var leader_server_encounter_route_ok := _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "account_other",
+			"members": [{"accountId": "account_test", "username": "self", "role": "member"}],
+		},
+	}
+	var member_server_encounter_block_ok := not _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	current_account_session = {}
+	party_current_state = {"party": null}
+	auth_auto_bypass = false
+	var offline_normal_encounter_block_ok := not _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	auth_auto_bypass = true
+	var offline_check_local_fallback_ok := not _should_start_server_party_encounter() and _can_start_local_encounter_model()
+	current_account_session = saved_session
+	party_current_state = saved_party_state
+	auth_auto_bypass = saved_auth_auto_bypass
+	var server_encounter_route_ok := (
+		solo_server_encounter_route_ok
+		and leader_server_encounter_route_ok
+		and member_server_encounter_block_ok
+		and offline_normal_encounter_block_ok
+		and offline_check_local_fallback_ok
+	)
+	var party_pve_state := ServerBattleRoomModel.battle_state_from_room({
+		"roomId": "battle_room_party_pve_contract",
+		"mode": "party_pve",
+		"status": "ready",
+		"seed": "party_seed",
+		"participantAccountIds": ["account_test"],
+		"participants": [],
+		"battle": {
+			"round": 1,
+			"phase": "command",
+			"requiredActorIds": ["srv_self_player"],
+			"submittedActorIds": [],
+			"actors": [
+				{
+					"actorId": "srv_self_player",
+					"accountId": "account_test",
+					"username": "self",
+					"displayName": "自己",
+					"side": "ally",
+					"kind": "player",
+					"slotId": "ally.back.3",
+					"slotNumber": 3,
+					"hp": 120,
+					"maxHp": 120,
+					"ridePetInstanceId": "ride_test",
+					"ridePetName": "骑宠",
+					"ridePetFormId": "bui_normal_yellow_wind10",
+					"ridePetHp": 80,
+					"ridePetMaxHp": 90,
+					"ridePetBattleState": "riding",
+				},
+				{
+					"actorId": "srv_enemy_wild",
+					"side": "enemy",
+					"kind": "wild_pet",
+					"displayName": "野生乌力",
+					"slotId": "enemy.back.2",
+					"slotNumber": 2,
+					"hp": 99,
+					"maxHp": 99,
+					"formId": "wuli_normal_orange_fire10",
+				},
+			],
+		},
+	}, {
+		"accountId": "account_test",
+		"username": "self",
+	})
+	var party_self_actor := BattleModel.actor_by_id(party_pve_state, BattleModel.PLAYER_ACTOR_ID)
+	var party_enemy_actor := BattleModel.actor_by_id(party_pve_state, "enemy_pet")
+	var party_pve_mapping_ok := (
+		not party_pve_state.is_empty()
+		and str(party_pve_state.get("serverRoomMode", "")) == "party_pve"
+		and str(party_self_actor.get("ridePetInstanceId", "")) == "ride_test"
+		and int(party_self_actor.get("ridePetHp", 0)) == 80
+		and str(party_enemy_actor.get("kind", "")) == "wild_pet"
+		and str(party_enemy_actor.get("slotId", "")) == "enemy.back.2"
+		and int(party_enemy_actor.get("hp", 0)) == int(party_enemy_actor.get("maxHp", -1))
 	)
 	var chat_messages_spec := ServerAuthClientModel.chat_messages_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_NEARBY, 25)
 	var chat_send_spec := ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_TEAM, "队伍消息")
@@ -15607,14 +16203,28 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
+	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok else "failed"
+	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok else "failed"
+	status = "ok" if status == "ok" and equipment_enhance_request_ok and equipment_enhance_parse_ok else "failed"
+	status = "ok" if status == "ok" and equipment_repair_request_ok and equipment_repair_parse_ok else "failed"
+	status = "ok" if status == "ok" and equipment_synthesis_request_ok and equipment_synthesis_parse_ok else "failed"
+	status = "ok" if status == "ok" and player_rebirth_request_ok and player_rebirth_parse_ok else "failed"
+	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s encounter_route=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
+		str(shop_transaction_request_ok and shop_transaction_parse_ok),
+		str(equipment_equip_request_ok and equipment_equip_parse_ok),
+		str(equipment_enhance_request_ok and equipment_enhance_parse_ok),
+		str(equipment_repair_request_ok and equipment_repair_parse_ok),
+		str(equipment_synthesis_request_ok and equipment_synthesis_parse_ok),
+		str(player_rebirth_request_ok and player_rebirth_parse_ok),
+		str(quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok),
 		str(parse_ok),
 		str(profile_parse_ok),
 		str(upload_parse_ok),
@@ -15626,10 +16236,12 @@ func _run_auto_auth_server_client_check() -> void:
 		str(online_request_ok and online_parse_ok),
 		str(position_request_ok and position_parse_ok),
 		str(movement_request_ok and movement_parse_ok),
-		str(event_contract_ok),
-		str(party_request_ok and party_parse_ok),
-		str(battle_request_ok and battle_parse_ok),
-		str(chat_request_ok and chat_parse_ok),
+			str(event_contract_ok),
+			str(party_request_ok and party_parse_ok),
+			str(battle_request_ok and battle_parse_ok),
+			str(server_encounter_route_ok),
+			str(party_pve_mapping_ok),
+			str(chat_request_ok and chat_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
@@ -17253,7 +17865,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		room_id,
 		{
 			"round": 1,
-			"actionId": "attack",
+		"actionId": "attack",
 			"targetUsername": opponent_username,
 		}
 	))
@@ -17960,6 +18572,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			"defense": 8,
 			"quick": 61,
 			"slotNumber": 3,
+			"spiritIds": ["spirit_moist_1"],
 		},
 		{
 			"actorId": "actor_b_pet",
@@ -17996,9 +18609,12 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"username": "attacker_owner",
 	}
 	var state := ServerBattleRoomModel.battle_state_from_room(room, session)
+	var self_spirit_ok := BattleModel.actor_spirit_ids(state, BattleModel.PLAYER_ACTOR_ID).has("spirit_moist_1")
 	var event_list := {
 		"kind": "battle_event_list",
+		"roomId": "target_mapping_room",
 		"round": 1,
+		"turnSeq": 1,
 		"events": [{
 			"eventId": "evt_target_pet",
 			"eventType": "basic_attack",
@@ -18047,20 +18663,793 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	var ledger := BattleEventLedger.build_from_applied_state(applied_state, local_event, {}, {"durationSeconds": 0.62}) if not local_event.is_empty() else {}
 	var playback_event := BattleEventLedger.playback_event(local_event, ledger) if not ledger.is_empty() else {}
 	var playback_target_ok := str(ledger.get("resolvedTargetId", "")) == "enemy_pet" and str(playback_event.get("targetId", "")) == "enemy_pet"
-	var status := "ok" if converted_target_ok and converted_attacker_ok and hp_target_ok and message_target_ok and playback_target_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s hp=%s message=%s playback=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d text=%s" % [
+	var combo_event_list := event_list.duplicate(true)
+	combo_event_list["events"] = [{
+		"eventId": "evt_combo_pet",
+		"eventType": "combo_attack",
+		"sequence": 1,
+		"actorId": "actor_b_player",
+		"actorAccountId": "acc_b",
+		"actorUsername": "attacker_owner",
+		"participantActorIds": ["actor_b_player", "actor_b_pet"],
+		"targetActorId": "actor_a_pet",
+		"targetAccountId": "acc_a",
+		"targetUsername": "target_owner",
+		"targetKind": "pet",
+		"actionId": "attack",
+		"damage": 42,
+		"hpBefore": 88,
+		"hpAfter": 46,
+	}]
+	var combo_local_events := ServerBattleRoomModel.battle_events_from_server_event_list(state, combo_event_list)
+	var combo_local_event := combo_local_events[0] as Dictionary if not combo_local_events.is_empty() and combo_local_events[0] is Dictionary else {}
+	var combo_participant_ids: Array = combo_local_event.get("participantIds", []) if combo_local_event.get("participantIds", []) is Array else []
+	var combo_mapping_ok := (
+		str(combo_local_event.get("type", "")) == "combo_attack"
+		and str(combo_local_event.get("targetId", "")) == "enemy_pet"
+		and combo_participant_ids.has(BattleModel.PLAYER_ACTOR_ID)
+		and combo_participant_ids.has(BattleModel.PLAYER_PET_ID)
+	)
+	var polled_room := room.duplicate(true)
+	var polled_battle := (polled_room.get("battle", {}) as Dictionary).duplicate(true) if polled_room.get("battle", {}) is Dictionary else {}
+	polled_battle["round"] = 2
+	polled_battle["phase"] = "command"
+	polled_battle["lastEventList"] = event_list.duplicate(true)
+	polled_room["battle"] = polled_battle
+	current_account_session = {
+		"accountId": "acc_b",
+		"username": "attacker_owner",
+	}
+	account_authenticated = true
+	server_battle_state.clear()
+	server_battle_state["room"] = room.duplicate(true)
+	server_battle_last_playback_turn_key = ""
+	_start_battle(state)
+	battle_state["phase"] = "server_waiting"
+	_apply_polled_server_battle_room(polled_room, "target_mapping_room")
+	var poll_started_ok := _server_battle_event_playback_active() or str(battle_state.get("phase", "")) == "round_events"
+	var frames := 0
+	while frames < 360 and (_server_battle_event_playback_active() or int(battle_state.get("round", 1)) < 2):
+		frames += 1
+		await get_tree().process_frame
+	var polled_enemy_player_hp := int(BattleModel.actor_by_id(battle_state, "enemy_player").get("hp", 0))
+	var polled_enemy_pet_hp := int(BattleModel.actor_by_id(battle_state, "enemy_pet").get("hp", 0))
+	var poll_round_ok := int(battle_state.get("round", 1)) >= 2
+	var poll_target_ok := poll_started_ok and poll_round_ok and polled_enemy_pet_hp == 71 and polled_enemy_player_hp == before_enemy_player_hp
+	_end_battle(true)
+	party_current_state = {
+		"party": {
+			"leaderAccountId": "acc_a",
+			"members": [
+				{"accountId": "acc_a", "username": "target_owner", "displayName": "队长", "role": "leader"},
+				{"accountId": "acc_b", "username": "attacker_owner", "displayName": "队员", "role": "member"},
+			],
+		},
+		"incomingInvites": [],
+		"maxMembers": 5,
+	}
+	current_account_session = {
+		"accountId": "acc_b",
+		"username": "attacker_owner",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_target_mapping",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	server_battle_state.clear()
+	server_battle_state_poll_request_active = false
+	var restore_gate_ok := _server_battle_should_poll_room_restore()
+	var restore_start_ok := restore_gate_ok and _apply_server_battle_room_state(room, true) and battle_active and str(battle_state.get("serverRoomId", "")) == "target_mapping_room"
+	battle_state["phase"] = "command"
+	var active_poll_gate_ok := _server_battle_should_poll_waiting_state()
+	var pve_closed_room := room.duplicate(true)
+	pve_closed_room["mode"] = "party_pve"
+	pve_closed_room["status"] = "closed"
+	var pve_battle := (pve_closed_room.get("battle", {}) as Dictionary).duplicate(true) if pve_closed_room.get("battle", {}) is Dictionary else {}
+	var pve_actors: Array = []
+	for value in server_actors:
+		if value is Dictionary:
+			var actor := (value as Dictionary).duplicate(true)
+			if str(actor.get("side", "")) == "challenger":
+				actor["side"] = "enemy"
+				actor["hp"] = 0
+			else:
+				actor["side"] = "ally"
+			pve_actors.append(actor)
+	pve_battle["actors"] = pve_actors
+	pve_battle["result"] = {
+		"reason": "defeat",
+		"winnerAccountId": "acc_b",
+		"loserAccountIds": [],
+	}
+	pve_battle["profileWriteback"] = {
+		"profiles": [{
+			"accountId": "acc_b",
+			"exp": {
+				"amount": 286,
+				"player": {"name": "高等级猎人", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10},
+				"ridePets": [{"name": "骑宠布伊", "amount": 66, "baseAmount": 60, "partyBonusPercent": 10}],
+				"pets": [{"name": "出战布伊", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10}],
+				"trainingPartners": [],
+			},
+		}],
+	}
+	pve_closed_room["battle"] = pve_battle
+	if battle_result_panel != null:
+		battle_result_panel.visible = false
+	var pve_result := _finish_server_battle_from_closed_room(pve_closed_room)
+	var pve_no_popup_ok := battle_result_panel == null or not battle_result_panel.visible
+	var pve_message := str(pve_result.get("message", ""))
+	var pve_message_ok := (
+		pve_message.find("战斗胜利。") >= 0
+		and pve_message.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and pve_message.find("骑宠 骑宠布伊 获得 66 点经验（基础60，组队+10%）。") >= 0
+		and pve_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and world_log_message == pve_message
+	)
+	var zero_exp_line_ok := _server_battle_exp_log_line("人物", {
+		"name": "普通测试号",
+		"amount": 0,
+		"killCount": 0,
+	}, "人物") == "人物 普通测试号 获得 0 点经验（未击倒怪物）。"
+	var closed_event_open_room := {
+		"roomId": "closed_event_pve_room",
+		"mode": "party_pve",
+		"status": "ready",
+		"participantAccountIds": ["acc_b"],
+		"participants": [],
+		"battle": {
+			"round": 1,
+			"phase": "command",
+			"requiredActorIds": ["closed_event_ally"],
+			"submittedActorIds": [],
+			"actors": [
+				{
+					"actorId": "closed_event_ally",
+					"accountId": "acc_b",
+					"username": "attacker_owner",
+					"displayName": "普通测试号",
+					"side": "ally",
+					"kind": "player",
+					"slotId": "ally.back.3",
+					"slotNumber": 3,
+					"hp": 120,
+					"maxHp": 120,
+				},
+				{
+					"actorId": "closed_event_enemy",
+					"side": "enemy",
+					"kind": "wild_pet",
+					"displayName": "野生乌力",
+					"slotId": "enemy.front.1",
+					"slotNumber": 1,
+					"hp": 12,
+					"maxHp": 12,
+					"formId": "wuli_normal_orange_fire10",
+				},
+			],
+		},
+	}
+	current_account_session = {
+		"accountId": "acc_b",
+		"username": "attacker_owner",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_closed_event",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	account_authenticated = true
+	server_battle_state.clear()
+	server_battle_last_playback_turn_key = ""
+	var closed_event_state := ServerBattleRoomModel.battle_state_from_room(closed_event_open_room, current_account_session)
+	var closed_event_start_ok := not closed_event_state.is_empty()
+	if closed_event_start_ok:
+		_start_battle(closed_event_state)
+		battle_state["phase"] = "server_waiting"
+	var closed_event_room := closed_event_open_room.duplicate(true)
+	closed_event_room["status"] = "closed"
+	closed_event_room["closeReason"] = "defeat"
+	var closed_event_battle := (closed_event_room.get("battle", {}) as Dictionary).duplicate(true)
+	closed_event_battle["phase"] = "finished"
+	closed_event_battle["round"] = 2
+	var closed_event_actors: Array = []
+	for value in closed_event_battle.get("actors", []):
+		var actor := (value as Dictionary).duplicate(true) if value is Dictionary else {}
+		if str(actor.get("actorId", "")) == "closed_event_enemy":
+			actor["hp"] = 0
+		closed_event_actors.append(actor)
+	closed_event_battle["actors"] = closed_event_actors
+	closed_event_battle["lastEventList"] = {
+		"kind": "battle_event_list",
+		"roomId": "closed_event_pve_room",
+		"round": 1,
+		"turnSeq": 1,
+		"events": [{
+			"eventId": "closed_event_pve_room:r1:e1",
+			"eventType": "basic_attack",
+			"round": 1,
+			"sequence": 1,
+			"actorAccountId": "acc_b",
+			"actorUsername": "attacker_owner",
+			"actorId": "closed_event_ally",
+			"actorKind": "player",
+			"targetActorId": "closed_event_enemy",
+			"targetKind": "wild_pet",
+			"actionId": "attack",
+			"damage": 12,
+			"hpBefore": 12,
+			"hpAfter": 0,
+			"defeated": true,
+			"message": "普通测试号 攻击了 野生乌力，造成 12 点伤害。",
+		}],
+		"actors": closed_event_actors,
+		"result": {
+			"reason": "defeat",
+			"winnerAccountId": "acc_b",
+			"loserAccountIds": [],
+		},
+	}
+	closed_event_battle["result"] = {
+		"reason": "defeat",
+		"winnerAccountId": "acc_b",
+		"loserAccountIds": [],
+	}
+	closed_event_battle["profileWriteback"] = {
+		"profiles": [{
+			"accountId": "acc_b",
+			"exp": {
+				"amount": 220,
+				"player": {"name": "高等级猎人", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10},
+				"ridePets": [],
+				"pets": [{"name": "出战布伊", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10}],
+				"trainingPartners": [],
+			},
+		}],
+	}
+	closed_event_room["battle"] = closed_event_battle
+	if closed_event_start_ok:
+		_apply_battle_event({
+			"type": "battle.room_closed",
+			"room": closed_event_room,
+		})
+	var closed_event_deferred_ok := closed_event_start_ok and battle_active and (_server_battle_event_playback_active() or str(battle_state.get("phase", "")) == "round_events")
+	var closed_event_frames := 0
+	while closed_event_frames < 720 and battle_active:
+		closed_event_frames += 1
+		await get_tree().process_frame
+	var closed_event_finished_ok := (
+		closed_event_deferred_ok
+		and not battle_active
+		and world_log_message.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and world_log_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and world_log_message.find("队伍战斗已结束") < 0
+	)
+	var status := "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_start_ok and active_poll_gate_ok and pve_no_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore=%s active_poll=%s pve_no_popup=%s pve_message=%s zero_exp=%s closed_event=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
+		str(self_spirit_ok),
 		str(hp_target_ok),
 		str(message_target_ok),
 		str(playback_target_ok),
+		str(combo_mapping_ok),
+		str(poll_target_ok),
+		str(restore_start_ok),
+		str(active_poll_gate_ok),
+		str(pve_no_popup_ok),
+		str(pve_message_ok),
+		str(zero_exp_line_ok),
+		str(closed_event_finished_ok),
 		str(local_event.get("targetId", "")),
 		before_enemy_pet_hp,
 		after_enemy_pet_hp,
 		before_enemy_player_hp,
 		after_enemy_player_hp,
+		polled_enemy_pet_hp,
+		polled_enemy_player_hp,
 		message.replace("\n", " / "),
+		pve_message.replace("\n", " / "),
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_solo_pve_live_check() -> void:
+	profile_save_enabled = false
+	auth_auto_bypass = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var username := ("spve%s" % suffix).substr(0, 20)
+	var register_response := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		username,
+		"test1234",
+		"单人同步号"
+	))
+	var register_parsed := ServerAuthClientModel.parse_auth_response(int(register_response.get("responseCode", 0)), register_response.get("body", PackedByteArray()) as PackedByteArray)
+	var session := register_parsed.get("session", {}) as Dictionary if register_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(register_parsed.get("ok", false)) and str(session.get("serverSessionToken", "")).strip_edges() != ""
+	var profile := _server_battle_pet_snapshot_test_profile("单人同步号", "solo_pve_pet", "单人布伊", {
+		"level": 6,
+		"hp": 128,
+		"maxHp": 128,
+		"attack": 24,
+		"defense": 8,
+		"quick": 72,
+	}, {
+		"level": 5,
+		"hp": 96,
+		"maxHp": 96,
+		"attack": 18,
+		"defense": 7,
+		"quick": 64,
+	})
+	var upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		profile,
+		0
+	))
+	var upload_parsed := ServerAuthClientModel.parse_profile_upload_response(int(upload_response.get("responseCode", 0)), upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var upload_ok := bool(upload_parsed.get("ok", false))
+	var position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		{
+			"mapId": "firebud_village_gate",
+			"cellX": 15,
+			"cellY": 17,
+			"facing": "south",
+			"moving": false,
+		}
+	))
+	var position_parsed := ServerAuthClientModel.parse_player_position_update_response(int(position_response.get("responseCode", 0)), position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var position_ok := bool(position_parsed.get("ok", false))
+	current_account_session = session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	party_current_state = {
+		"party": null,
+		"incomingInvites": [],
+		"maxMembers": 5,
+	}
+	server_profile_sync_state = "ready"
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	var route_ok := _should_start_server_party_encounter() and not _can_start_local_encounter_model()
+	var encounter_zone := {
+		"id": "client_solo_pve_grass",
+		"name": "单人同步草丛",
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "单人同步乌力",
+			"level": 3,
+			"battleStats": {
+				"maxHp": 80,
+				"attack": 10,
+				"defense": 5,
+				"quick": 40,
+			},
+		},
+	}
+	_trigger_encounter(encounter_zone)
+	var frames := 0
+	while frames < 360 and (server_party_encounter_request_pending or not battle_active):
+		frames += 1
+		await get_tree().process_frame
+	var room_value = server_battle_state.get("room", null)
+	var room := room_value as Dictionary if room_value is Dictionary else {}
+	var battle_value = room.get("battle", null)
+	var server_battle := battle_value as Dictionary if battle_value is Dictionary else {}
+	var participant_ids: Array = room.get("participantAccountIds", []) if room.get("participantAccountIds", []) is Array else []
+	var actors: Array = server_battle.get("actors", []) if server_battle.get("actors", []) is Array else []
+	var room_id := str(room.get("roomId", ""))
+	var server_room_ok := (
+		battle_active
+		and room_id != ""
+		and str(battle_state.get("serverRoomId", "")) == room_id
+		and str(battle_state.get("serverRoomMode", "")) == "party_pve"
+		and str(room.get("mode", "")) == "party_pve"
+		and str(room.get("partyId", "")) == ""
+		and participant_ids.size() == 1
+		and actors.filter(func(actor): return actor is Dictionary and str((actor as Dictionary).get("side", "")) == "ally").size() >= 2
+		and actors.filter(func(actor): return actor is Dictionary and str((actor as Dictionary).get("side", "")) == "enemy").size() == 1
+	)
+	var message_ok := world_log_message.find("队伍遇敌由队长触发") < 0 and world_log_message.find("请先登录服务器账号") < 0
+	if room_id != "":
+		await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(session.get("serverSessionToken", "")),
+			room_id
+		))
+	_end_battle(true)
+	_stop_server_event_stream()
+	var status := "ok" if register_ok and upload_ok and position_ok and route_ok and server_room_ok and message_ok else "failed"
+	print("server solo pve live check ready: status=%s register=%s upload=%s position=%s route=%s server_room=%s message=%s room=%s participants=%d actors=%d username=%s log=%s" % [
+		status,
+		str(register_ok),
+		str(upload_ok),
+		str(position_ok),
+		str(route_ok),
+		str(server_room_ok),
+		str(message_ok),
+		room_id,
+		participant_ids.size(),
+		actors.size(),
+		username,
+		world_log_message.replace("\n", " / "),
+	])
+	get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_party_pve_sync_live_check() -> void:
+	profile_save_enabled = false
+	var suffix := str(Time.get_ticks_usec() % 10000000000)
+	var leader_username := ("pva%s" % suffix).substr(0, 20)
+	var member_username := ("pvb%s" % suffix).substr(0, 20)
+	var leader_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		leader_username,
+		"test1234",
+		"队伍同步甲"
+	))
+	var member_register := await _auto_http_request_spec(ServerAuthClientModel.register_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		member_username,
+		"test1234",
+		"队伍同步乙"
+	))
+	var leader_parsed := ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
+	var member_parsed := ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_session := leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
+	var member_session := member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
+	var register_ok := bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
+	var leader_profile := _server_battle_pet_snapshot_test_profile("队伍同步甲", "pve_leader_pet", "甲布伊", {
+		"level": 24,
+		"hp": 210,
+		"maxHp": 210,
+		"attack": 36,
+		"defense": 14,
+		"quick": 82,
+	}, {
+		"level": 18,
+		"hp": 150,
+		"maxHp": 150,
+		"attack": 28,
+		"defense": 11,
+		"quick": 75,
+	})
+	var member_profile := _server_battle_pet_snapshot_test_profile("队伍同步乙", "pve_member_pet", "乙布伊", {
+		"level": 23,
+		"hp": 205,
+		"maxHp": 205,
+		"attack": 34,
+		"defense": 13,
+		"quick": 80,
+	}, {
+		"level": 17,
+		"hp": 145,
+		"maxHp": 145,
+		"attack": 27,
+		"defense": 11,
+		"quick": 73,
+	})
+	var leader_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		leader_profile,
+		0
+	))
+	var member_upload_response := await _auto_http_request_spec(ServerAuthClientModel.profile_upload_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		member_profile,
+		0
+	))
+	var leader_upload := ServerAuthClientModel.parse_profile_upload_response(int(leader_upload_response.get("responseCode", 0)), leader_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_upload := ServerAuthClientModel.parse_profile_upload_response(int(member_upload_response.get("responseCode", 0)), member_upload_response.get("body", PackedByteArray()) as PackedByteArray)
+	var upload_ok := bool(leader_upload.get("ok", false)) and bool(member_upload.get("ok", false))
+	var battle_cell := IsoMapModel.spawn_cell(map_data) + Vector2i(4, 2)
+	var leader_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var member_position_response := await _auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		{
+			"mapId": current_map_id,
+			"cellX": battle_cell.x,
+			"cellY": battle_cell.y,
+			"facing": "east",
+			"moving": false,
+		}
+	))
+	var leader_position := ServerAuthClientModel.parse_player_position_update_response(int(leader_position_response.get("responseCode", 0)), leader_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_position := ServerAuthClientModel.parse_player_position_update_response(int(member_position_response.get("responseCode", 0)), member_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok := bool(leader_position.get("ok", false)) and bool(member_position.get("ok", false))
+	var invite_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		member_username
+	))
+	var invite_parsed := ServerAuthClientModel.parse_party_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var invite := invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
+	var invite_id := str(invite.get("inviteId", ""))
+	var accept_response := await _auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		invite_id
+	))
+	var accept_parsed := ServerAuthClientModel.parse_party_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var party := accept_parsed.get("party", {}) as Dictionary if accept_parsed.get("party", {}) is Dictionary else {}
+	var members: Array = party.get("members", []) if party.get("members", []) is Array else []
+	var party_ok := bool(invite_parsed.get("ok", false)) and bool(accept_parsed.get("ok", false)) and members.size() == 2
+	current_account_session = member_session
+	current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	account_authenticated = true
+	server_profile_sync_state = "ready"
+	party_current_state = {
+		"party": party,
+		"incomingInvites": [],
+		"maxMembers": 5,
+	}
+	server_battle_state.clear()
+	server_battle_pending_closed_room.clear()
+	var encounter_zone := {
+		"id": "client_sync_grass",
+		"name": "同步草丛",
+		"formationTemplate": "10v10",
+		"selectedWildPet": {
+			"formId": "wuli_normal_orange_fire10",
+			"name": "同步乌力",
+			"level": 5,
+			"battleStats": {
+				"maxHp": 180,
+				"attack": 10,
+				"defense": 6,
+				"quick": 45,
+			},
+		},
+	}
+	var first_encounter_response := await _auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		encounter_zone,
+		2
+	))
+	var first_encounter := ServerAuthClientModel.parse_battle_action_response(int(first_encounter_response.get("responseCode", 0)), first_encounter_response.get("body", PackedByteArray()) as PackedByteArray)
+	var first_room := first_encounter.get("room", {}) as Dictionary if first_encounter.get("room", {}) is Dictionary else {}
+	var first_room_id := str(first_room.get("roomId", ""))
+	var first_start_ok := bool(first_encounter.get("ok", false)) and first_room_id != "" and _apply_server_battle_room_state(first_room, true)
+	var first_leave_response := await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		first_room_id
+	))
+	var first_leave := ServerAuthClientModel.parse_battle_action_response(int(first_leave_response.get("responseCode", 0)), first_leave_response.get("body", PackedByteArray()) as PackedByteArray)
+	var first_closed_room := first_leave.get("room", {}) as Dictionary if first_leave.get("room", {}) is Dictionary else {}
+	if battle_result_panel != null:
+		battle_result_panel.visible = false
+	var first_result := _finish_server_battle_from_closed_room(first_closed_room)
+	var first_no_popup_ok := battle_result_panel == null or not battle_result_panel.visible
+	var first_message_ok := str(first_result.get("message", "")).find("切磋") < 0 and world_log_message.find("切磋") < 0
+	var first_cleanup_ok := bool(first_leave.get("ok", false)) and not battle_active and first_no_popup_ok and first_message_ok
+	var second_encounter_response := await _auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		encounter_zone,
+		2
+	))
+	var second_encounter := ServerAuthClientModel.parse_battle_action_response(int(second_encounter_response.get("responseCode", 0)), second_encounter_response.get("body", PackedByteArray()) as PackedByteArray)
+	var second_room := second_encounter.get("room", {}) as Dictionary if second_encounter.get("room", {}) is Dictionary else {}
+	var second_room_id := str(second_room.get("roomId", ""))
+	var second_start_ok := bool(second_encounter.get("ok", false)) and second_room_id != "" and _apply_server_battle_room_state(second_room, true)
+	var second_battle := second_room.get("battle", {}) as Dictionary if second_room.get("battle", {}) is Dictionary else {}
+	var actors: Array = second_battle.get("actors", []) if second_battle.get("actors", []) is Array else []
+	var leader_player_id := ""
+	var leader_pet_id := ""
+	var member_player_id := ""
+	var member_pet_id := ""
+	var enemy_id := ""
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var actor_id := str(actor.get("actorId", ""))
+		if str(actor.get("side", "")) == "enemy" and enemy_id == "":
+			enemy_id = actor_id
+		elif str(actor.get("username", "")) == leader_username and str(actor.get("kind", "")) == "player":
+			leader_player_id = actor_id
+		elif str(actor.get("username", "")) == leader_username and str(actor.get("kind", "")) == "pet":
+			leader_pet_id = actor_id
+		elif str(actor.get("username", "")) == member_username and str(actor.get("kind", "")) == "player":
+			member_player_id = actor_id
+		elif str(actor.get("username", "")) == member_username and str(actor.get("kind", "")) == "pet":
+			member_pet_id = actor_id
+	var actor_ids_ok := leader_player_id != "" and leader_pet_id != "" and member_player_id != "" and member_pet_id != "" and enemy_id != ""
+	var leader_player_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 1,
+			"actorId": leader_player_id,
+			"actionId": "attack",
+			"targetActorId": enemy_id,
+		}
+	))
+	var leader_pet_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 1,
+			"actorId": leader_pet_id,
+			"actionId": "pet_attack",
+			"targetActorId": enemy_id,
+		}
+	))
+	var member_player_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 1,
+			"actorId": member_player_id,
+			"actionId": "defend",
+		}
+	))
+	var member_pet_command_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 1,
+			"actorId": member_pet_id,
+			"actionId": "pet_defend",
+		}
+	))
+	var leader_player_command := ServerAuthClientModel.parse_battle_command_response(int(leader_player_command_response.get("responseCode", 0)), leader_player_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var leader_pet_command := ServerAuthClientModel.parse_battle_command_response(int(leader_pet_command_response.get("responseCode", 0)), leader_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_player_command := ServerAuthClientModel.parse_battle_command_response(int(member_player_command_response.get("responseCode", 0)), member_player_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_pet_command := ServerAuthClientModel.parse_battle_command_response(int(member_pet_command_response.get("responseCode", 0)), member_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
+	var resolved_room := member_pet_command.get("room", {}) as Dictionary if member_pet_command.get("room", {}) is Dictionary else {}
+	var resolved_turn := member_pet_command.get("turn", {}) as Dictionary if member_pet_command.get("turn", {}) is Dictionary else {}
+	var commands_ok := (
+		bool(leader_player_command.get("ok", false))
+		and bool(leader_pet_command.get("ok", false))
+		and bool(member_player_command.get("ok", false))
+		and bool(member_pet_command.get("ok", false))
+		and str(resolved_turn.get("kind", "")) == "battle_event_list"
+	)
+	var server_round := 0
+	if resolved_room.get("battle", {}) is Dictionary:
+		server_round = int((resolved_room.get("battle", {}) as Dictionary).get("round", 0))
+	var local_before_round := int(battle_state.get("round", 0))
+	var local_before_phase := str(battle_state.get("phase", ""))
+	battle_state["round"] = 1
+	battle_state["phase"] = "round_events"
+	battle_event_queue.clear()
+	battle_current_event.clear()
+	battle_action_timer = 0.0
+	battle_event_advance_pending = false
+	server_battle_last_playback_turn_key = _server_battle_turn_key(resolved_turn)
+	server_battle_command_request_active = false
+	server_battle_state_poll_request_active = false
+	server_battle_state["room"] = second_room.duplicate(true)
+	var active_poll_ok := _server_battle_should_poll_waiting_state()
+	_apply_polled_server_battle_room(resolved_room, second_room_id)
+	var playback_started_ok := _server_battle_event_playback_active() or str(battle_state.get("phase", "")) == "round_events"
+	var frames := 0
+	while frames < 720 and (_server_battle_event_playback_active() or int(battle_state.get("round", 1)) < 2):
+		frames += 1
+		await get_tree().process_frame
+	var local_round_after := int(battle_state.get("round", 0))
+	var local_phase_after := str(battle_state.get("phase", ""))
+	var sync_ok := battle_active and local_round_after >= 2 and server_round >= 2 and local_phase_after == "command"
+	var playback_or_sync_ok := playback_started_ok or sync_ok
+	var idle_round_events_sync_ok := active_poll_ok and sync_ok
+	var member_round2_player_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 2,
+			"actorId": member_player_id,
+			"actionId": "defend",
+		}
+	))
+	var member_round2_pet_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 2,
+			"actorId": member_pet_id,
+			"actionId": "pet_defend",
+		}
+	))
+	var member_round2_player := ServerAuthClientModel.parse_battle_command_response(int(member_round2_player_response.get("responseCode", 0)), member_round2_player_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_round2_pet := ServerAuthClientModel.parse_battle_command_response(int(member_round2_pet_response.get("responseCode", 0)), member_round2_pet_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_round2_room := member_round2_pet.get("room", {}) as Dictionary if member_round2_pet.get("room", {}) is Dictionary else {}
+	if member_round2_room.is_empty():
+		member_round2_room = member_round2_player.get("room", {}) as Dictionary if member_round2_player.get("room", {}) is Dictionary else {}
+	var member_round2_commands_ok := bool(member_round2_player.get("ok", false)) and bool(member_round2_pet.get("ok", false)) and not member_round2_room.is_empty()
+	var actor_missing_response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		second_room_id,
+		{
+			"round": 2,
+			"actorId": "missing_actor_for_sync_check",
+			"actionId": "defend",
+		}
+	))
+	var actor_missing := ServerAuthClientModel.parse_battle_command_response(int(actor_missing_response.get("responseCode", 0)), actor_missing_response.get("body", PackedByteArray()) as PackedByteArray)
+	var actor_missing_room := actor_missing.get("room", {}) as Dictionary if actor_missing.get("room", {}) is Dictionary else {}
+	var actor_missing_room_ok := not bool(actor_missing.get("ok", false)) and str(actor_missing.get("code", "")) == "battle_command_actor_missing" and not actor_missing_room.is_empty()
+	var auto_waiting_lock_ok := false
+	if member_round2_commands_ok:
+		server_battle_state["room"] = member_round2_room.duplicate(true)
+		_sync_server_battle_room_scene(false)
+		battle_state["phase"] = "command"
+		_set_battle_command_owner("player")
+		battle_auto_attack_enabled = true
+		battle_auto_attack_delay = 0.0
+		server_battle_command_request_active = false
+		_update_battle_auto_attack(0.25)
+		await get_tree().process_frame
+		auto_waiting_lock_ok = (
+			not server_battle_command_request_active
+			and str(battle_state.get("phase", "")) == "server_waiting"
+			and str(battle_state.get("message", "")).find("等待") >= 0
+		)
+		battle_auto_attack_enabled = false
+	var second_no_popup_ok := battle_result_panel == null or not battle_result_panel.visible
+	if second_room_id != "":
+		await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(member_session.get("serverSessionToken", "")),
+			second_room_id
+		))
+	_end_battle(true)
+	_stop_server_event_stream()
+	var status := "ok" if register_ok and upload_ok and positions_ok and party_ok and first_start_ok and first_cleanup_ok and second_start_ok and actor_ids_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and second_no_popup_ok else "failed"
+	print("server party pve sync live check ready: status=%s register=%s upload=%s positions=%s party=%s first_start=%s first_cleanup=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s no_popup=%s first_message=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
+		status,
+		str(register_ok),
+		str(upload_ok),
+		str(positions_ok),
+		str(party_ok),
+		str(first_start_ok),
+		str(first_cleanup_ok),
+		str(second_start_ok),
+		str(actor_ids_ok),
+		str(commands_ok),
+		str(member_round2_commands_ok),
+		str(actor_missing_room_ok),
+		str(auto_waiting_lock_ok),
+		str(active_poll_ok),
+		str(idle_round_events_sync_ok),
+		str(playback_started_ok),
+		str(playback_or_sync_ok),
+		str(sync_ok),
+		str(second_no_popup_ok),
+		str(first_result.get("message", "")).replace("\n", " / "),
+		local_before_round,
+		local_before_phase,
+		server_round,
+		local_round_after,
+		local_phase_after,
+		second_room_id,
+		leader_username,
+		member_username,
 	])
 	get_tree().quit(0 if status == "ok" else 1)
 
@@ -19494,7 +20883,13 @@ func _run_auto_server_profile_sync_check() -> void:
 		},
 	}).to_utf8_buffer())
 	_apply_server_profile_upload_result(conflict_response)
-	var conflict_ok := server_profile_sync_state == "conflict" and server_profile_sync_expected_revision == 3
+	var conflict_ok := (
+		server_profile_sync_state == "loading"
+		and server_profile_sync_pending_kind == "pull"
+		and server_profile_sync_expected_revision == 3
+		and not server_profile_sync_dirty
+		and not server_profile_sync_pull_queued
+	)
 	var status := "ok" if revision_zero_ok and upload_ok and revision_one_ok and pull_ok and conflict_ok else "failed"
 	print("server profile sync check ready: status=%s rev0=%s upload=%s rev1=%s pull=%s conflict=%s state=%s rev=%d" % [
 		status,
@@ -21927,7 +23322,9 @@ func _battle_buttons_match_request() -> bool:
 
 
 func _battle_player_run_label() -> String:
-	return "离开" if _battle_is_server_authority() else "逃跑"
+	if _battle_is_server_authority() and not _current_server_battle_is_party_pve():
+		return "离开"
+	return "逃跑"
 
 
 func _set_battle_command_owner(owner: String) -> void:
@@ -22030,6 +23427,8 @@ func _update_battle_auto_attack(delta: float) -> void:
 	if not battle_auto_attack_enabled or not battle_active:
 		return
 	if _battle_commands_locked():
+		return
+	if _battle_is_server_authority() and _sync_server_battle_command_owner_from_room():
 		return
 	if battle_auto_attack_delay > 0.0:
 		battle_auto_attack_delay = maxf(0.0, battle_auto_attack_delay - _scaled_battle_delta(delta))
@@ -22789,6 +24188,9 @@ func _process(delta: float) -> void:
 			var server_event_start := _perf_now()
 			_poll_server_event_stream(delta)
 			_perf_add("server_event", server_event_start)
+		var server_battle_poll_start := _perf_now()
+		_update_server_battle_waiting_state_poll(delta)
+		_perf_add("server_battle_poll", server_battle_poll_start)
 		_update_hud_text()
 		_update_battle_debug_window()
 		queue_redraw()
@@ -22820,6 +24222,9 @@ func _process(delta: float) -> void:
 	section_start = _perf_now()
 	_poll_server_event_stream(delta)
 	_perf_add("server_event", section_start)
+	section_start = _perf_now()
+	_update_server_battle_room_restore_poll(delta)
+	_perf_add("server_battle_restore_poll", section_start)
 	section_start = _perf_now()
 	if has_target_marker and not player.is_auto_moving() and player.global_position.distance_to(target_marker) <= 6.0:
 		has_target_marker = false
@@ -23014,7 +24419,8 @@ func _world_hud_signature() -> String:
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
 	var partners = player_profile.get("trainingPartners", [])
 	var partner_count := (partners as Array).size() if partners is Array else 0
-	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%s|%s|%s" % [
+	var party_other_count := _current_party_other_members_for_battle().size()
+	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%d|%s|%s|%s" % [
 		current_map_id,
 		_movement_status_name(),
 		str(battle_active),
@@ -23024,6 +24430,7 @@ func _world_hud_signature() -> String:
 		player_cell.x,
 		player_cell.y,
 		partner_count,
+		party_other_count,
 		_task_tracker_signature_for_hud(),
 		str(_world_menu_is_open()),
 		str(_dialog_is_open()),
@@ -25661,6 +27068,142 @@ func _server_profile_token() -> String:
 	return str(current_account_session.get("serverSessionToken", "")).strip_edges()
 
 
+func _server_battle_should_poll_waiting_state() -> bool:
+	var phase := str(battle_state.get("phase", "")).strip_edges()
+	return (
+		_battle_is_server_authority()
+		and (phase == "server_waiting" or phase == "command" or phase == "round_events")
+		and not server_battle_command_request_active
+		and not server_battle_state_poll_request_active
+		and not _server_battle_event_playback_active()
+	)
+
+
+func _update_server_battle_waiting_state_poll(delta: float) -> void:
+	if not _server_battle_should_poll_waiting_state():
+		server_battle_waiting_poll_elapsed = 0.0
+		return
+	server_battle_waiting_poll_elapsed += maxf(0.0, delta)
+	if server_battle_waiting_poll_elapsed < SERVER_BATTLE_WAITING_POLL_SECONDS:
+		return
+	server_battle_waiting_poll_elapsed = 0.0
+	_request_server_battle_waiting_state_poll()
+
+
+func _server_battle_should_poll_room_restore() -> bool:
+	return (
+		_is_server_account_session()
+		and _current_player_is_party_member()
+		and not battle_active
+		and not encounter_active
+		and not server_party_encounter_request_pending
+		and not server_battle_state_poll_request_active
+	)
+
+
+func _update_server_battle_room_restore_poll(delta: float) -> void:
+	if not _server_battle_should_poll_room_restore():
+		server_battle_room_restore_poll_elapsed = 0.0
+		return
+	server_battle_room_restore_poll_elapsed += maxf(0.0, delta)
+	if server_battle_room_restore_poll_elapsed < SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS:
+		return
+	server_battle_room_restore_poll_elapsed = 0.0
+	_request_server_battle_room_restore_poll()
+
+
+func _request_server_battle_room_restore_poll() -> void:
+	if not _server_battle_should_poll_room_restore():
+		return
+	var token := _server_profile_token()
+	var base_url := _server_profile_base_url()
+	if token == "" or base_url == "":
+		return
+	server_battle_state_poll_request_active = true
+	var response := await _auto_http_request_spec(ServerAuthClientModel.battle_state_request(base_url, token))
+	server_battle_state_poll_request_active = false
+	if not _is_server_account_session() or token != _server_profile_token():
+		return
+	if battle_active or encounter_active or server_party_encounter_request_pending:
+		return
+	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if not bool(parsed.get("ok", false)):
+		return
+	server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
+	server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
+	var room = parsed.get("room", null)
+	if room is Dictionary and ServerBattleRoomModel.is_restorable_room(room as Dictionary):
+		_stop_party_member_local_movement(false)
+		if _apply_server_battle_room_state(room as Dictionary, true):
+			server_battle_room_restore_poll_elapsed = 0.0
+
+
+func _request_server_battle_waiting_state_poll() -> void:
+	if not _server_battle_should_poll_waiting_state():
+		return
+	var token := _server_profile_token()
+	var base_url := _server_profile_base_url()
+	var expected_room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
+	if token == "" or base_url == "" or expected_room_id == "":
+		return
+	server_battle_state_poll_request_active = true
+	var response := await _auto_http_request_spec(ServerAuthClientModel.battle_state_request(base_url, token))
+	server_battle_state_poll_request_active = false
+	if not _is_server_account_session() or token != _server_profile_token():
+		return
+	if not _battle_is_server_authority() or str(battle_state.get("serverRoomId", "")).strip_edges() != expected_room_id:
+		return
+	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if not bool(parsed.get("ok", false)):
+		return
+	var room = parsed.get("room", null)
+	if room is Dictionary:
+		_apply_polled_server_battle_room(room as Dictionary, expected_room_id)
+	elif _battle_is_server_authority():
+		_clear_stale_server_battle_room(_server_battle_stale_room_message())
+
+
+func _apply_polled_server_battle_room(room: Dictionary, expected_room_id: String = "") -> void:
+	if room.is_empty() or not _battle_is_server_authority():
+		return
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	var active_room_id := expected_room_id.strip_edges()
+	if active_room_id == "":
+		active_room_id = str(battle_state.get("serverRoomId", "")).strip_edges()
+	if active_room_id != "" and room_id != "" and room_id != active_room_id:
+		return
+	server_battle_state["room"] = room.duplicate(true)
+	var room_closed := str(room.get("status", "")).strip_edges() == "closed"
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var last_event_list := battle.get("lastEventList", {}) as Dictionary if battle.get("lastEventList", {}) is Dictionary else {}
+	if not last_event_list.is_empty():
+		var turn_key := _server_battle_turn_key(last_event_list)
+		var same_turn_playing := turn_key != "" and turn_key == server_battle_last_playback_turn_key and _server_battle_event_playback_active()
+		if same_turn_playing:
+			_sync_server_battle_snapshot_fields_during_playback(room)
+			return
+		var is_new_turn := turn_key == "" or turn_key != server_battle_last_playback_turn_key
+		if is_new_turn:
+			_sync_server_battle_snapshot_fields_during_playback(room)
+			var playback_started := _play_server_battle_event_list(last_event_list)
+			if not playback_started:
+				if room_closed:
+					_apply_server_battle_room_closed(room)
+			else:
+					_sync_server_battle_room_scene(false)
+			return
+	var room_round := maxi(1, int(battle.get("round", battle_state.get("round", 1))))
+	var local_round := maxi(1, int(battle_state.get("round", 1)))
+	var room_phase := str(battle.get("phase", "")).strip_edges()
+	var local_phase := str(battle_state.get("phase", "")).strip_edges()
+	if room_closed:
+		_apply_server_battle_room_closed(room)
+	elif room_round != local_round:
+		_sync_server_battle_room_scene(false)
+	elif local_phase == "server_waiting" and room_phase == "command":
+		_sync_server_battle_room_scene(false)
+
+
 func _request_server_battle_state_restore() -> void:
 	if not _is_server_account_session():
 		return
@@ -25679,7 +27222,7 @@ func _request_server_battle_state_restore() -> void:
 		_apply_server_battle_room_state(room as Dictionary, false)
 	else:
 		if _battle_is_server_authority():
-			_clear_stale_server_battle_room("切磋房间已失效，已回到地图。")
+			_clear_stale_server_battle_room(_server_battle_stale_room_message())
 		var latest_invite := _latest_incoming_battle_invite()
 		if not latest_invite.is_empty():
 			_open_battle_invite_panel(latest_invite)
@@ -25851,8 +27394,13 @@ func _apply_party_event(event: Dictionary) -> void:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
 				)
 			party_current_state["incomingInvites"] = invites
+	if _current_player_is_party_member():
+		_stop_party_member_local_movement(false)
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
+	if training_partner_panel != null and training_partner_panel.visible:
+		_refresh_training_partner_panel()
+	_update_hud_text(true)
 
 
 func _apply_battle_event(event: Dictionary) -> void:
@@ -25920,7 +27468,10 @@ func _apply_battle_event(event: Dictionary) -> void:
 		var closed_room := event.get("room", {}) as Dictionary if event.get("room", {}) is Dictionary else {}
 		if closed_room.is_empty() and server_battle_state.get("room", {}) is Dictionary:
 			closed_room = server_battle_state.get("room", {}) as Dictionary
-		_apply_server_battle_room_closed(closed_room)
+		if _server_battle_closed_room_has_unplayed_turn(closed_room):
+			_apply_polled_server_battle_room(closed_room, str(closed_room.get("roomId", "")))
+		else:
+			_apply_server_battle_room_closed(closed_room)
 		return
 	if room_updated:
 		_close_battle_invite_panel(false)
@@ -25931,12 +27482,17 @@ func _apply_battle_event(event: Dictionary) -> void:
 		if same_turn_playing:
 			_sync_server_battle_snapshot_fields_during_playback(updated_room)
 		else:
-			if not turn.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str(updated_room.get("roomId", "")).strip_edges():
-				_sync_server_battle_snapshot_fields_during_playback(updated_room)
-			else:
-				_sync_server_battle_room_scene()
-			if not turn.is_empty():
-				_play_server_battle_event_list(turn)
+				if not turn.is_empty() and _battle_is_server_authority() and str(battle_state.get("serverRoomId", "")).strip_edges() == str(updated_room.get("roomId", "")).strip_edges():
+					_sync_server_battle_snapshot_fields_during_playback(updated_room)
+				else:
+					_sync_server_battle_room_scene()
+				if not turn.is_empty():
+					var playback_started := _play_server_battle_event_list(turn)
+					if not playback_started:
+						if str(updated_room.get("status", "")).strip_edges() == "closed":
+							_apply_server_battle_room_closed(updated_room)
+						else:
+							_sync_server_battle_room_scene(false)
 
 
 func _apply_server_battle_room_state(room: Dictionary, force_start: bool = false) -> bool:
@@ -25956,6 +27512,26 @@ func _apply_server_battle_room_closed(room: Dictionary) -> void:
 		_sync_server_battle_snapshot_fields_during_playback(room)
 		return
 	_finish_server_battle_from_closed_room(room)
+
+
+func _server_battle_closed_room_has_unplayed_turn(room: Dictionary) -> bool:
+	if room.is_empty() or not _battle_is_server_authority():
+		return false
+	if str(room.get("status", "")).strip_edges() != "closed":
+		return false
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	if room_id == "" or room_id != str(battle_state.get("serverRoomId", "")).strip_edges():
+		return false
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var last_event_list := battle.get("lastEventList", {}) as Dictionary if battle.get("lastEventList", {}) is Dictionary else {}
+	if str(last_event_list.get("kind", "")).strip_edges() != "battle_event_list":
+		return false
+	var turn_key := _server_battle_turn_key(last_event_list)
+	if turn_key == "":
+		return false
+	if _server_battle_event_playback_active():
+		return true
+	return turn_key != server_battle_last_playback_turn_key
 
 
 func _server_battle_closed_room_from_state() -> Dictionary:
@@ -25988,23 +27564,31 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	var closed_room := room.duplicate(true)
 	if closed_room.is_empty():
 		closed_room = _server_battle_closed_room_from_state()
-	var message := _server_battle_result_message(closed_room)
+	var is_party_pve := _server_battle_room_is_party_pve(closed_room)
+	var message := _server_party_pve_result_message(closed_room) if is_party_pve else _server_battle_result_message(closed_room)
 	if message == "":
-		message = "切磋已结束。"
+		message = "战斗已结束。" if is_party_pve else "切磋已结束。"
+	var log_message := _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
 	var result_key := _server_battle_result_key(closed_room)
 	server_battle_pending_closed_room.clear()
 	server_battle_command_request_active = false
+	server_battle_state_poll_request_active = false
+	server_battle_waiting_poll_elapsed = 0.0
+	server_battle_room_restore_poll_elapsed = 0.0
+	server_battle_last_playback_turn_key = ""
 	server_battle_state["room"] = null
 	_end_battle(true)
 	var returned_to_record_point := _apply_server_battle_return(closed_room)
 	if returned_to_record_point:
+		log_message = _server_battle_return_message(log_message)
 		message = _server_battle_return_message(message)
-	_set_world_log_message(message)
-	_open_battle_result_panel(closed_room, result_key, message)
+	_set_world_log_message(log_message)
+	if not is_party_pve:
+		_open_battle_result_panel(closed_room, result_key, message)
 	_queue_server_profile_pull()
 	return {
 		"result": result_key,
-		"message": message,
+		"message": log_message,
 		"room": closed_room,
 	}
 
@@ -26015,6 +27599,9 @@ func _server_battle_room_missing_error(parsed: Dictionary) -> bool:
 
 func _clear_stale_server_battle_room(message: String = "切磋房间已失效，已回到地图。") -> void:
 	server_battle_command_request_active = false
+	server_battle_state_poll_request_active = false
+	server_battle_waiting_poll_elapsed = 0.0
+	server_battle_room_restore_poll_elapsed = 0.0
 	server_battle_pending_closed_room.clear()
 	server_battle_last_playback_turn_key = ""
 	server_battle_state["room"] = null
@@ -26031,6 +27618,32 @@ func _server_battle_result_payload(room: Dictionary) -> Dictionary:
 		return result
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	return battle.get("result", {}) as Dictionary if battle.get("result", {}) is Dictionary else {}
+
+
+func _server_battle_room_mode(room: Dictionary) -> String:
+	var mode := str(room.get("mode", "")).strip_edges()
+	if mode != "":
+		return mode
+	var state_room := battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	return str(state_room.get("mode", battle_state.get("serverRoomMode", ""))).strip_edges()
+
+
+func _server_battle_room_is_party_pve(room: Dictionary) -> bool:
+	return _server_battle_room_mode(room) == "party_pve"
+
+
+func _current_server_battle_is_party_pve() -> bool:
+	var state_room := battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	if _server_battle_room_is_party_pve(state_room):
+		return true
+	var server_room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	if _server_battle_room_is_party_pve(server_room):
+		return true
+	return str(battle_state.get("serverRoomMode", "")).strip_edges() == "party_pve"
+
+
+func _server_battle_stale_room_message() -> String:
+	return "队伍战斗已结束，已回到地图。" if _current_server_battle_is_party_pve() else "切磋房间已失效，已回到地图。"
 
 
 func _server_battle_result_key(room: Dictionary) -> String:
@@ -26082,6 +27695,177 @@ func _server_battle_result_message(room: Dictionary) -> String:
 		if winner_account_id != "":
 			return "切磋落败。"
 	return "切磋已结束。"
+
+
+func _server_party_pve_result_message(room: Dictionary) -> String:
+	var result := _server_battle_result_payload(room)
+	var reason := str(result.get("reason", room.get("closeReason", ""))).strip_edges()
+	if reason == "escape":
+		return "已逃离战斗。"
+	if reason == "leave":
+		return "你已离开队伍战斗。"
+	if reason == "timeout" or reason == "disconnect_timeout":
+		return "队伍战斗超时结束。"
+	if _server_battle_result_loser_contains_self(result):
+		return "战斗失败。"
+	if _server_party_pve_has_living_enemy(room):
+		return "战斗失败。"
+	return "战斗胜利。"
+
+
+func _server_party_pve_result_log_message(room: Dictionary, base_message: String) -> String:
+	var lines: Array[String] = []
+	var base_text := base_message.strip_edges()
+	if base_text != "":
+		lines.append(base_text)
+	for line in _server_battle_exp_log_lines_for_current_account(room):
+		if line != "" and not lines.has(line):
+			lines.append(line)
+	for line in _server_battle_reward_log_lines_for_current_account(room):
+		if line != "" and not lines.has(line):
+			lines.append(line)
+	return "\n".join(lines)
+
+
+func _server_battle_exp_log_lines_for_current_account(room: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var profile_entry := _server_battle_profile_writeback_for_current_account(room)
+	var exp := profile_entry.get("exp", {}) as Dictionary if profile_entry.get("exp", {}) is Dictionary else {}
+	if exp.is_empty():
+		return lines
+	var fallback_amount := maxi(0, int(exp.get("amount", 0)))
+	var player := exp.get("player", {}) as Dictionary if exp.get("player", {}) is Dictionary else {}
+	if not player.is_empty():
+		var player_line := _server_battle_exp_log_line("人物", player, "人物", fallback_amount)
+		if player_line != "":
+			lines.append(player_line)
+	var ride_pets: Array = exp.get("ridePets", []) if exp.get("ridePets", []) is Array else []
+	for value in ride_pets:
+		if value is Dictionary:
+			var ride_line := _server_battle_exp_log_line("骑宠", value as Dictionary, "骑宠", fallback_amount)
+			if ride_line != "":
+				lines.append(ride_line)
+	var pets: Array = exp.get("pets", []) if exp.get("pets", []) is Array else []
+	for value in pets:
+		if value is Dictionary:
+			var pet_line := _server_battle_exp_log_line("宠物", value as Dictionary, "宠物", fallback_amount)
+			if pet_line != "":
+				lines.append(pet_line)
+	var partners: Array = exp.get("trainingPartners", []) if exp.get("trainingPartners", []) is Array else []
+	for value in partners:
+		if not (value is Dictionary):
+			continue
+		var partner := value as Dictionary
+		var partner_player := partner.get("player", {}) as Dictionary if partner.get("player", {}) is Dictionary else {}
+		if not partner_player.is_empty():
+			var partner_line := _server_battle_exp_log_line("伙伴", partner_player, "伙伴", fallback_amount)
+			if partner_line != "":
+				lines.append(partner_line)
+		var partner_pet := partner.get("pet", {}) as Dictionary if partner.get("pet", {}) is Dictionary else {}
+		if not partner_pet.is_empty():
+			var partner_pet_line := _server_battle_exp_log_line("伙伴宠", partner_pet, "伙伴宠", fallback_amount)
+			if partner_pet_line != "":
+				lines.append(partner_pet_line)
+	return lines
+
+
+func _server_battle_exp_log_line(role_name: String, entry: Dictionary, fallback_name: String, fallback_amount: int = -1) -> String:
+	var amount := maxi(0, int(entry.get("amount", fallback_amount)))
+	var display_name := _server_battle_exp_entry_name(entry, fallback_name)
+	if amount <= 0:
+		var kill_count := maxi(0, int(entry.get("killCount", 0)))
+		if kill_count <= 0:
+			return "%s %s 获得 0 点经验（未击倒怪物）。" % [role_name, display_name]
+		return "%s %s 获得 0 点经验。" % [role_name, display_name]
+	var base_amount := amount
+	if entry.has("baseAmount"):
+		base_amount = maxi(0, int(entry.get("baseAmount", amount)))
+	elif entry.has("scaledAmount"):
+		base_amount = maxi(0, int(entry.get("scaledAmount", amount)))
+	if base_amount <= 0:
+		base_amount = amount
+	var bonus_percent := maxi(0, int(entry.get("partyBonusPercent", 0)))
+	if bonus_percent <= 0:
+		bonus_percent = maxi(0, int(round(float(entry.get("partyBonusRate", 0.0)) * 100.0)))
+	if bonus_percent > 0:
+		return "%s %s 获得 %d 点经验（基础%d，组队+%d%%）。" % [role_name, display_name, amount, base_amount, bonus_percent]
+	return "%s %s 获得 %d 点经验。" % [role_name, display_name, amount]
+
+
+func _server_battle_profile_writeback_for_current_account(room: Dictionary) -> Dictionary:
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if self_account_id == "":
+		return {}
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var writeback := battle.get("profileWriteback", {}) as Dictionary if battle.get("profileWriteback", {}) is Dictionary else {}
+	var profiles: Array = writeback.get("profiles", []) if writeback.get("profiles", []) is Array else []
+	for value in profiles:
+		if value is Dictionary and str((value as Dictionary).get("accountId", "")).strip_edges() == self_account_id:
+			return (value as Dictionary).duplicate(true)
+	return {}
+
+
+func _server_battle_exp_entry_name(entry: Dictionary, fallback: String) -> String:
+	var display_name := str(entry.get("name", entry.get("displayName", ""))).strip_edges()
+	if display_name != "":
+		return display_name
+	return fallback
+
+
+func _server_battle_reward_log_lines_for_current_account(room: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var profile_entry := _server_battle_profile_writeback_for_current_account(room)
+	var rewards := profile_entry.get("rewards", {}) as Dictionary if profile_entry.get("rewards", {}) is Dictionary else {}
+	if not rewards.is_empty():
+		var stone_coins := maxi(0, int(rewards.get("stoneCoins", 0)))
+		if stone_coins > 0:
+			lines.append("获得 %d 石币。" % stone_coins)
+		var added_text := BackpackModel.item_amounts_text(_server_battle_item_amounts(rewards.get("addedItems", [])))
+		if added_text != "":
+			lines.append("获得 %s。" % added_text)
+		var lost_text := BackpackModel.item_amounts_text(_server_battle_item_amounts(rewards.get("lostItems", [])))
+		if lost_text != "":
+			lines.append("背包已满，%s 未进入背包。" % lost_text)
+	var quests := profile_entry.get("quests", {}) as Dictionary if profile_entry.get("quests", {}) is Dictionary else {}
+	var quest_messages: Array = quests.get("messages", []) if quests.get("messages", []) is Array else []
+	for value in quest_messages:
+		var message := str(value).strip_edges()
+		if message != "":
+			lines.append(message)
+	var hang := profile_entry.get("hang", {}) as Dictionary if profile_entry.get("hang", {}) is Dictionary else {}
+	if bool(hang.get("stopped", false)) and str(hang.get("lastStopReason", "")) == "capture_target":
+		lines.append("捕捉目标已完成，挂机已停止。")
+	return lines
+
+
+func _server_battle_item_amounts(value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not (value is Array):
+		return result
+	for entry_value in value:
+		if not (entry_value is Dictionary):
+			continue
+		var entry := entry_value as Dictionary
+		var item_id := str(entry.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(entry.get("count", 0)))
+		if item_id != "" and count > 0:
+			result.append({
+				"itemId": item_id,
+				"count": count,
+			})
+	return result
+
+
+func _server_party_pve_has_living_enemy(room: Dictionary) -> bool:
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if str(actor.get("side", "")).strip_edges() == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
+			return true
+	return false
 
 
 func _open_battle_result_panel(room: Dictionary, result_key: String, message: String) -> void:
@@ -26448,8 +28232,11 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 	var parsed := ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
 		return
-	if _server_step_move_should_report_authority_cell():
-		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
+	var own_position := parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	if _should_apply_online_self_position(own_position):
+		_apply_server_step_move_authority_position(own_position, true)
+	elif _server_step_move_should_report_authority_cell():
+		_apply_server_step_move_authority_position(own_position)
 	_apply_online_position_players(parsed.get("players", []))
 
 
@@ -26465,6 +28252,9 @@ func _apply_online_position_players(players) -> void:
 			var username := str(online_player.get("username", "")).strip_edges()
 			var account_id := str(online_player.get("accountId", "")).strip_edges()
 			if (current_username != "" and username == current_username) or (current_account_id != "" and account_id == current_account_id):
+				var self_position := online_player.get("position", {}) as Dictionary if online_player.get("position", {}) is Dictionary else {}
+				if _should_apply_online_self_position(self_position):
+					_apply_server_step_move_authority_position(self_position, true)
 				continue
 			var position = online_player.get("position", null)
 			if not (position is Dictionary):
@@ -26597,14 +28387,13 @@ func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
 		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
 		if str(parsed.get("code", "")) == "revision_conflict":
 			_apply_server_profile_summary(summary)
-			server_profile_sync_state = "conflict"
+			server_profile_sync_state = "ready"
 			server_profile_sync_dirty = false
-			server_profile_sync_message = str(parsed.get("message", "服务器档案版本冲突。"))
+			server_profile_sync_pull_queued = false
+			server_profile_sync_message = "服务器档案已更新，正在拉取最新档案。"
 			_set_world_log_message(server_profile_sync_message)
 			_refresh_account_panel()
-			if server_profile_sync_pull_queued:
-				server_profile_sync_state = "ready"
-				_continue_pending_server_profile_sync()
+			_request_server_profile_pull()
 			return
 		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
 		server_profile_sync_message = str(parsed.get("message", "服务器档案保存失败。"))
@@ -26669,6 +28458,9 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 		server_event_last_seq = 0
 		server_event_seen.clear()
 		server_battle_pending_closed_room.clear()
+		server_battle_state_poll_request_active = false
+		server_battle_waiting_poll_elapsed = 0.0
+		server_battle_room_restore_poll_elapsed = 0.0
 	current_account_session = session
 	account_authenticated = true
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
@@ -26676,12 +28468,18 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	server_profile_sync_pull_queued = false
 	server_profile_sync_message = ""
 	server_profile_sync_expected_revision = int((session.get("serverProfileSummary", {}) as Dictionary).get("profileRevision", 0)) if session.get("serverProfileSummary", {}) is Dictionary else 0
+	profile_save_pending = false
+	profile_save_debounce_remaining = 0.0
 	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
 	var migrated := false
 	if migrate_legacy:
 		migrated = PlayerProgressModel.copy_legacy_save_to_active_if_missing()
 	player_profile = PlayerProgressModel.load_profile()
-	_apply_auth_profile_metadata(str(session.get("displayName", "")))
+	if _is_server_account_session():
+		_apply_auth_profile_metadata_fields(str(session.get("displayName", "")))
+		player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	else:
+		_apply_auth_profile_metadata(str(session.get("displayName", "")))
 	_close_auth_panel(false)
 	_close_account_panel(false)
 	_refresh_gm_visibility()
@@ -26800,6 +28598,9 @@ func _switch_account_to_login() -> void:
 	server_profile_sync_message = ""
 	server_battle_state.clear()
 	server_battle_pending_closed_room.clear()
+	server_battle_state_poll_request_active = false
+	server_battle_waiting_poll_elapsed = 0.0
+	server_battle_room_restore_poll_elapsed = 0.0
 	server_event_last_seq = 0
 	_stop_server_event_stream()
 	_stop_online_position_sync()
@@ -27196,6 +28997,9 @@ func _clear_pending_click_move_target(reset_cooldown: bool = true) -> void:
 
 
 func _set_click_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	if _current_player_is_party_member():
+		_stop_party_member_local_movement(true)
+		return false
 	if _should_use_server_step_movement():
 		return _set_server_step_move_target_cell(goal_cell, marker_point, marker_cell)
 	return _set_move_target_cell(goal_cell, marker_point, marker_cell)
@@ -27479,7 +29283,12 @@ func _apply_server_step_move_authority_position(position: Dictionary, snap_playe
 		return false
 	var map_id := str(position.get("mapId", current_map_id))
 	if map_id != current_map_id:
-		return false
+		var authority := str(position.get("authority", "")).strip_edges()
+		if authority != "party_follow" or not snap_player_to_authority:
+			return false
+		if not _load_map(map_id):
+			return false
+		_set_world_log_message("已跟随队长切换地图。")
 	server_step_move_authority_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
 	server_step_move_authority_valid = true
 	if snap_player_to_authority:
@@ -27498,6 +29307,8 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 	match code:
 		"movement_battle_locked":
 			return "切磋中不能移动。"
+		"movement_party_member_locked":
+			return "队伍中由队长带队移动。"
 		"movement_position_missing", "movement_map_missing":
 			return "位置待同步，请重新点击。"
 		"movement_map_mismatch":
@@ -27700,9 +29511,11 @@ func _guardian_zone_for_interaction(item: Dictionary) -> Dictionary:
 
 
 func _update_encounter_zone_check() -> void:
-	if player == null or map_data.is_empty() or encounter_active or battle_active or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
+	if player == null or map_data.is_empty() or encounter_active or battle_active or server_party_encounter_request_pending or _dialog_is_open() or has_pending_interaction or _world_menu_is_open():
 		return
 	if encounter_grace_remaining > 0.0:
+		return
+	if _current_player_is_party_member():
 		return
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	if player_cell == last_checked_player_cell:
@@ -27720,17 +29533,73 @@ func _update_encounter_zone_check() -> void:
 
 
 func _trigger_encounter(zone: Dictionary) -> void:
-	if encounter_active or battle_active or zone.is_empty():
+	if encounter_active or battle_active or server_party_encounter_request_pending or zone.is_empty():
 		return
 	player.clear_move_target()
 	_clear_navigation_state()
+	if _should_start_server_party_encounter():
+		_start_server_party_encounter(zone)
+		return
+	if _is_server_account_session():
+		_set_world_log_message("队伍遇敌由队长触发。")
+		return
+	if not _can_start_local_encounter_model():
+		_set_world_log_message("请先登录服务器账号。")
+		return
 	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
 	encounter_active = true
 	_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
 
 
+func _should_start_server_party_encounter() -> bool:
+	if not _is_server_account_session():
+		return false
+	var party_value = party_current_state.get("party", null)
+	if not (party_value is Dictionary):
+		return true
+	return _current_party_role() == "leader"
+
+
+func _can_start_local_encounter_model() -> bool:
+	var party_value = party_current_state.get("party", null)
+	if party_value is Dictionary:
+		return false
+	return auth_auto_bypass
+
+
+func _start_server_party_encounter(zone: Dictionary) -> void:
+	if server_party_encounter_request_pending or battle_active or zone.is_empty():
+		return
+	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
+	var enemy_count := EncounterModel.enemy_count(active_encounter_zone, _encounter_enemy_count_fallback())
+	server_party_encounter_request_pending = true
+	_set_world_log_message("遭遇野生宠物，正在同步。")
+	var response := await _auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		active_encounter_zone,
+		enemy_count
+	))
+	server_party_encounter_request_pending = false
+	if battle_active:
+		active_encounter_zone.clear()
+		return
+	var parsed := ServerAuthClientModel.parse_battle_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		var room = parsed.get("room", null)
+		active_encounter_zone.clear()
+		if room is Dictionary:
+			_set_world_log_message(str(parsed.get("message", "遭遇了野生宠物。")))
+			_apply_server_battle_room_state(room as Dictionary, true)
+		else:
+			_set_world_log_message("战斗房间缺失，请重试。")
+		return
+	active_encounter_zone.clear()
+	_set_world_log_message(str(parsed.get("message", "遇敌同步失败，请重试。")))
+
+
 func _encounter_enemy_count_fallback() -> int:
-	return 10 if PlayerProgressModel.training_partner_count(player_profile) > 0 else 1
+	return 10 if _effective_battle_team_character_count() > 1 else 1
 
 
 func _battle_state_for_encounter_zone(zone: Dictionary) -> Dictionary:
@@ -27806,7 +29675,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		battle_state = next_battle_state.duplicate(true)
 		server_battle_pending_closed_room.clear()
 	else:
-		battle_state = PlayerProgressModel.apply_profile_to_battle_state(player_profile, next_battle_state.duplicate(true))
+		battle_state = _local_battle_state_with_current_team(next_battle_state.duplicate(true))
 	_refresh_battle_target_seed()
 	battle_active = true
 	server_battle_command_request_active = false
@@ -28153,9 +30022,11 @@ func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 	player_profile = progress_result.get("profile", player_profile)
 	if not bool(progress_result.get("changed", false)):
 		return messages
+	_mark_progress_ui_caches_dirty()
 	if bool(progress_result.get("ready", false)) and PlayerProgressModel.active_quest_auto_claim(player_profile):
 		var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
 		player_profile = claim_result.get("profile", player_profile)
+		_mark_progress_ui_caches_dirty()
 		messages.append(str(claim_result.get("message", "")))
 	else:
 		messages.append(str(progress_result.get("message", "")))
@@ -28518,11 +30389,16 @@ func _refresh_player_rebirth_preview_panel() -> void:
 	if player_rebirth_execute_button != null:
 		var preview := PlayerProgressModel.rebirth_preview(player_profile)
 		var can_execute := bool(preview.get("ok", false))
-		player_rebirth_execute_button.disabled = not can_execute
-		player_rebirth_execute_button.text = "确认转生" if player_rebirth_confirm_pending and can_execute else "执行转生"
+		player_rebirth_execute_button.disabled = player_rebirth_request_pending or not can_execute
+		if player_rebirth_request_pending:
+			player_rebirth_execute_button.text = "转生中"
+		else:
+			player_rebirth_execute_button.text = "确认转生" if player_rebirth_confirm_pending and can_execute else "执行转生"
 
 
 func _on_player_rebirth_execute_pressed() -> void:
+	if player_rebirth_request_pending:
+		return
 	var preview := PlayerProgressModel.rebirth_preview(player_profile)
 	if not bool(preview.get("ok", false)):
 		player_rebirth_confirm_pending = false
@@ -28532,6 +30408,9 @@ func _on_player_rebirth_execute_pressed() -> void:
 		player_rebirth_confirm_pending = true
 		_refresh_player_rebirth_preview_panel()
 		_set_world_log_message("再次点击确认转生。")
+		return
+	if _is_server_account_session():
+		await _submit_server_player_rebirth()
 		return
 	var result := PlayerProgressModel.execute_rebirth(player_profile)
 	player_profile = result.get("profile", player_profile)
@@ -28547,6 +30426,123 @@ func _on_player_rebirth_execute_pressed() -> void:
 		_save_player_profile_now()
 	_refresh_player_rebirth_preview_panel()
 	_update_hud_text()
+
+
+func _submit_server_player_rebirth() -> void:
+	if not _is_server_account_session():
+		return
+	player_rebirth_request_pending = true
+	_refresh_player_rebirth_preview_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.player_rebirth_request(
+		_server_profile_base_url(),
+		_server_profile_token()
+	))
+	player_rebirth_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_player_rebirth_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "转生失败。"))]
+	if bool(parsed.get("ok", false)):
+		player_rebirth_confirm_pending = false
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			var return_entry := parsed.get("returnEntry", {}) as Dictionary if parsed.get("returnEntry", {}) is Dictionary else {}
+			var record_point := return_entry.get("recordPoint", {}) as Dictionary if return_entry.get("recordPoint", {}) is Dictionary else {}
+			var point_label := str(record_point.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
+			if point_label != "":
+				log_lines.append("转生后已回到记录点「%s」。" % point_label)
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			_mark_progress_ui_caches_dirty()
+			_queue_server_profile_pull()
+		else:
+			log_lines = ["转生成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		player_rebirth_confirm_pending = false
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_refresh_player_rebirth_preview_panel()
+	if player_status_panel != null and player_status_panel.visible:
+		_refresh_player_status_panel()
+	_refresh_quick_bar()
+	_set_world_log_message("\n".join(log_lines))
+	if status_label != null:
+		_update_hud_text()
+
+
+func _submit_server_quest_record(event: Dictionary, quest_id: String = "") -> Dictionary:
+	if not _is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
+	quest_action_request_pending = true
+	if quest_panel != null and quest_panel.visible:
+		_refresh_quest_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.quest_record_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		event,
+		quest_id
+	))
+	quest_action_request_pending = false
+	var parsed := ServerAuthClientModel.parse_quest_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	return _apply_server_quest_action_result(parsed, "任务同步失败。")
+
+
+func _submit_server_quest_claim(quest_id: String = "", reward_choice_id: String = "") -> Dictionary:
+	if not _is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
+	quest_action_request_pending = true
+	if quest_panel != null and quest_panel.visible:
+		_refresh_quest_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.quest_claim_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		quest_id,
+		reward_choice_id
+	))
+	quest_action_request_pending = false
+	var parsed := ServerAuthClientModel.parse_quest_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	return _apply_server_quest_action_result(parsed, "领取任务奖励失败。")
+
+
+func _apply_server_quest_action_result(parsed: Dictionary, fallback_message: String) -> Dictionary:
+	var log_lines: Array[String] = []
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			_mark_progress_ui_caches_dirty()
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message).strip_edges()
+				if quest_message != "":
+					log_lines.append(quest_message)
+			if log_lines.is_empty():
+				var success_message := str(parsed.get("message", "任务已同步。")).strip_edges()
+				if success_message != "":
+					log_lines.append(success_message)
+		else:
+			log_lines.append("任务已提交，但服务器没有返回档案，请重新拉取。")
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+		var error_message := str(parsed.get("message", fallback_message)).strip_edges()
+		log_lines.append(error_message if error_message != "" else fallback_message)
+	if log_lines.is_empty():
+		log_lines.append(fallback_message)
+	parsed["logLines"] = log_lines
+	if quest_panel != null and quest_panel.visible:
+		_refresh_quest_panel()
+	if status_label != null:
+		_update_hud_text()
+	return parsed
 
 
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
@@ -28779,9 +30775,9 @@ func _refresh_equipment_detail() -> void:
 		var quote := PlayerProgressModel.equipment_enhance_quote(player_profile, equipment_selected_slot_id)
 		var can_show_enhance := item_id != "" and EquipmentModel.enhance_max_for(item_id) > 0
 		equipment_enhance_button.visible = can_show_enhance
-		equipment_enhance_button.disabled = not can_show_enhance or not bool(quote.get("ok", false))
+		equipment_enhance_button.disabled = equipment_action_request_pending or not can_show_enhance or not bool(quote.get("ok", false))
 		if bool(quote.get("ok", false)):
-			equipment_enhance_button.text = "强化 +%d" % maxi(1, int(quote.get("nextLevel", 1)))
+			equipment_enhance_button.text = "强化中" if equipment_action_request_pending else "强化 +%d" % maxi(1, int(quote.get("nextLevel", 1)))
 			equipment_enhance_button.tooltip_text = "%s x%d，%d石币" % [
 				BackpackModel.label_for(str(quote.get("materialId", ""))),
 				maxi(1, int(quote.get("materialCount", 1))),
@@ -29063,11 +31059,57 @@ func _on_equipment_unequip_pressed() -> void:
 
 
 func _on_equipment_enhance_pressed() -> void:
+	if equipment_action_request_pending:
+		return
+	if _is_server_account_session():
+		await _submit_server_equipment_enhance(equipment_selected_slot_id)
+		return
 	var result := PlayerProgressModel.enhance_equipment_slot(player_profile, equipment_selected_slot_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
+	_refresh_equipment_panel()
+	_refresh_backpack_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _submit_server_equipment_enhance(slot_id: String) -> void:
+	if slot_id == "" or not _is_server_account_session():
+		return
+	equipment_action_request_pending = true
+	_refresh_equipment_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.equipment_enhance_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		slot_id
+	))
+	equipment_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_equipment_enhance_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "强化失败。"))]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message)
+				if quest_message != "":
+					log_lines.append(quest_message)
+			_mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["强化成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_set_world_log_message("\n".join(log_lines))
 	_refresh_equipment_panel()
 	_refresh_backpack_panel()
 	if status_label != null:
@@ -29113,8 +31155,8 @@ func _refresh_equipment_synthesis_panel() -> void:
 		var can_synthesize := false
 		if not selected_recipe.is_empty():
 			can_synthesize = bool(PlayerProgressModel.can_synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id).get("ok", false))
-		equipment_synthesis_action_button.disabled = not can_synthesize
-		equipment_synthesis_action_button.text = "合成"
+		equipment_synthesis_action_button.disabled = equipment_action_request_pending or not can_synthesize
+		equipment_synthesis_action_button.text = "合成中" if equipment_action_request_pending else "合成"
 
 
 func _select_equipment_synthesis_recipe(recipe_id: String) -> void:
@@ -29165,7 +31207,10 @@ func _equipment_synthesis_detail_text(recipe: Dictionary) -> String:
 
 
 func _on_equipment_synthesis_pressed() -> void:
-	if equipment_synthesis_selected_recipe_id == "":
+	if equipment_synthesis_selected_recipe_id == "" or equipment_action_request_pending:
+		return
+	if _is_server_account_session():
+		await _submit_server_equipment_synthesis(equipment_synthesis_selected_recipe_id)
 		return
 	var result := PlayerProgressModel.synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id)
 	player_profile = result.get("profile", player_profile)
@@ -29173,6 +31218,49 @@ func _on_equipment_synthesis_pressed() -> void:
 		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_synthesis_panel()
+	_refresh_quick_bar()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _submit_server_equipment_synthesis(recipe_id: String) -> void:
+	if recipe_id == "" or not _is_server_account_session():
+		return
+	equipment_action_request_pending = true
+	_refresh_equipment_synthesis_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.equipment_synthesize_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		recipe_id
+	))
+	equipment_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_equipment_synthesize_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "合成失败。"))]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message)
+				if quest_message != "":
+					log_lines.append(quest_message)
+			_mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["合成成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_set_world_log_message("\n".join(log_lines))
+	_refresh_equipment_synthesis_panel()
+	_refresh_backpack_panel()
+	_refresh_equipment_panel()
 	_refresh_quick_bar()
 	if status_label != null:
 		_update_hud_text()
@@ -29267,7 +31355,7 @@ func _refresh_backpack_panel() -> void:
 			backpack_use_button.text = str(item_actions.get("useButtonText", "使用"))
 		if backpack_equip_button != null:
 			backpack_equip_button.visible = bool(item_actions.get("equipButtonVisible", false))
-			backpack_equip_button.disabled = bool(item_actions.get("equipButtonDisabled", true))
+			backpack_equip_button.disabled = equipment_action_request_pending or bool(item_actions.get("equipButtonDisabled", true))
 		if backpack_quick_bind_row != null:
 			backpack_quick_bind_row.visible = bool(item_actions.get("quickBindVisible", false))
 		for index in range(backpack_quick_bind_buttons.size()):
@@ -30056,7 +32144,10 @@ func _on_backpack_equip_pressed() -> void:
 
 
 func _equip_selected_backpack_item(item_id: String) -> void:
-	if item_id == "" or not EquipmentModel.is_equipment(item_id):
+	if item_id == "" or not EquipmentModel.is_equipment(item_id) or equipment_action_request_pending:
+		return
+	if _is_server_account_session():
+		await _submit_server_equipment_equip(item_id)
 		return
 	var result := PlayerProgressModel.equip_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
@@ -30070,6 +32161,48 @@ func _equip_selected_backpack_item(item_id: String) -> void:
 		}))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
+	_set_world_log_message("\n".join(log_lines))
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+	_refresh_equipment_panel()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _submit_server_equipment_equip(item_id: String) -> void:
+	if item_id == "" or not EquipmentModel.is_equipment(item_id) or not _is_server_account_session():
+		return
+	equipment_action_request_pending = true
+	_refresh_backpack_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.equipment_equip_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		item_id
+	))
+	equipment_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_equipment_equip_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "装备失败。"))]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message)
+				if quest_message != "":
+					log_lines.append(quest_message)
+			_mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["装备成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
 	_set_world_log_message("\n".join(log_lines))
 	backpack_pending_use_item_id = ""
 	_refresh_backpack_panel()
@@ -30597,7 +32730,7 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 		var next_action_text := _shop_action_text()
 		if shop_action_button.text != next_action_text:
 			shop_action_button.text = next_action_text
-		var next_disabled := shop_selected_item_id == "" or quantity_max <= 0
+		var next_disabled := shop_action_request_pending or shop_selected_item_id == "" or quantity_max <= 0
 		if shop_action_button.disabled != next_disabled:
 			shop_action_button.disabled = next_disabled
 	if rebuild_list and shop_repair_button != null:
@@ -30606,10 +32739,10 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			var repair_quote := _equipment_repair_quote_for_ui()
 			var missing_durability := int(repair_quote.get("missingDurability", 0))
 			var repair_cost := int(repair_quote.get("cost", 0))
-			var next_repair_text := "修理 %d石币" % repair_cost if missing_durability > 0 else "修理"
+			var next_repair_text := "修理中" if shop_action_request_pending else ("修理 %d石币" % repair_cost if missing_durability > 0 else "修理")
 			if shop_repair_button.text != next_repair_text:
 				shop_repair_button.text = next_repair_text
-			var next_repair_disabled := missing_durability <= 0 or _profile_stone_coins_for_ui() < repair_cost
+			var next_repair_disabled := shop_action_request_pending or missing_durability <= 0 or _profile_stone_coins_for_ui() < repair_cost
 			if shop_repair_button.disabled != next_repair_disabled:
 				shop_repair_button.disabled = next_repair_disabled
 		else:
@@ -30771,7 +32904,10 @@ func _shop_action_text() -> String:
 
 
 func _on_shop_action_pressed() -> void:
-	if shop_selected_item_id == "":
+	if shop_selected_item_id == "" or shop_action_request_pending:
+		return
+	if _is_server_account_session():
+		await _submit_server_shop_action()
 		return
 	var result := PlayerProgressModel.sell_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity) if shop_mode == "sell" else PlayerProgressModel.buy_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity)
 	player_profile = result.get("profile", player_profile)
@@ -30807,12 +32943,116 @@ func _on_shop_action_pressed() -> void:
 		_update_hud_text()
 
 
+func _submit_server_shop_action() -> void:
+	if shop_selected_item_id == "" or not _is_server_account_session():
+		return
+	var request_mode := shop_mode
+	var request_shop_id := shop_active_id
+	var request_item_id := shop_selected_item_id
+	var request_amount := shop_quantity
+	var requested_equip_after_buy := shop_equip_after_buy and request_mode == "buy" and EquipmentModel.is_equipment(request_item_id)
+	shop_action_request_pending = true
+	_refresh_shop_panel(false)
+	var response := await _auto_http_request_spec(ServerAuthClientModel.shop_transaction_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		request_mode,
+		request_shop_id,
+		request_item_id,
+		request_amount
+	))
+	shop_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_shop_transaction_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "商店交易失败。"))]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			for message in parsed.get("questMessages", []):
+				var quest_message := str(message)
+				if quest_message != "":
+					log_lines.append(quest_message)
+			if requested_equip_after_buy:
+				log_lines.append("已购买。联网装备更换请从背包执行。")
+			_mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["商店交易成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_refresh_shop_after_action(request_mode, request_item_id)
+	_set_world_log_message("\n".join(log_lines))
+	if status_label != null:
+		_update_hud_text()
+
+
+func _refresh_shop_after_action(previous_mode: String, previous_item_id: String) -> void:
+	if previous_mode == "sell" and _backpack_item_count_for_ui(previous_item_id) <= 0:
+		shop_selected_item_id = _first_shop_item_id_for_mode(previous_mode)
+	shop_quantity = _clamped_shop_quantity(shop_quantity, shop_selected_item_id)
+	if previous_mode != "buy" or not EquipmentModel.is_equipment(previous_item_id):
+		shop_equip_after_buy = false
+	_refresh_shop_panel()
+
+
 func _on_shop_repair_pressed() -> void:
+	if shop_action_request_pending:
+		return
+	if _is_server_account_session():
+		await _submit_server_equipment_repair_all()
+		return
 	var result := PlayerProgressModel.repair_all_equipment(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
+	_refresh_shop_panel()
+	if equipment_panel != null and equipment_panel.visible:
+		_refresh_equipment_panel()
+	if player_status_panel != null and player_status_panel.visible:
+		_refresh_player_status_panel()
+	_refresh_quick_bar()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _submit_server_equipment_repair_all() -> void:
+	if not _is_server_account_session():
+		return
+	shop_action_request_pending = true
+	_refresh_shop_panel()
+	var response := await _auto_http_request_spec(ServerAuthClientModel.equipment_repair_all_request(
+		_server_profile_base_url(),
+		_server_profile_token()
+	))
+	shop_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_equipment_repair_all_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [str(parsed.get("message", "修理失败。"))]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			_mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["修理成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_set_world_log_message("\n".join(log_lines))
 	_refresh_shop_panel()
 	if equipment_panel != null and equipment_panel.visible:
 		_refresh_equipment_panel()
@@ -31759,6 +33999,231 @@ func _party_player_text(player: Dictionary) -> String:
 	return "%s（%s）" % [display_name, username] if username != "" and username != display_name else display_name
 
 
+func _current_party_members() -> Array[Dictionary]:
+	var party_value = party_current_state.get("party", null)
+	if not (party_value is Dictionary):
+		return []
+	var party := party_value as Dictionary
+	var values: Array = party.get("members", []) if party.get("members", []) is Array else []
+	var result: Array[Dictionary] = []
+	for value in values:
+		if value is Dictionary:
+			result.append((value as Dictionary).duplicate(true))
+	return result
+
+
+func _current_account_id_for_party() -> String:
+	var account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if account_id != "":
+		return account_id
+	var summary_value = current_account_session.get("serverProfileSummary", {})
+	if summary_value is Dictionary:
+		return str((summary_value as Dictionary).get("accountId", "")).strip_edges()
+	return ""
+
+
+func _party_member_is_current_player(member: Dictionary) -> bool:
+	var current_account_id := _current_account_id_for_party()
+	var member_account_id := str(member.get("accountId", "")).strip_edges()
+	if current_account_id != "" and member_account_id == current_account_id:
+		return true
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var username := str(member.get("username", "")).strip_edges()
+	return current_username != "" and username == current_username
+
+
+func _current_party_other_members_for_battle() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for member in _current_party_members():
+		if _party_member_is_current_player(member):
+			continue
+		result.append(member)
+		if result.size() >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size():
+			break
+	return result
+
+
+func _training_partner_raw_count() -> int:
+	var partners = player_profile.get("trainingPartners", [])
+	if not (partners is Array):
+		return 0
+	return (partners as Array).size()
+
+
+func _training_partner_available_slots() -> int:
+	return maxi(0, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size() - _current_party_other_members_for_battle().size())
+
+
+func _effective_training_partner_count() -> int:
+	return mini(_training_partner_raw_count(), _training_partner_available_slots())
+
+
+func _effective_battle_team_character_count() -> int:
+	return 1 + _current_party_other_members_for_battle().size() + _effective_training_partner_count()
+
+
+func _profile_with_effective_training_partners(limit: int) -> Dictionary:
+	var normalized := PlayerProgressModel.normalize_profile(player_profile)
+	var partners := PlayerProgressModel.training_partners(normalized)
+	var limited: Array[Dictionary] = []
+	var count := mini(partners.size(), maxi(0, limit))
+	for index in range(count):
+		limited.append((partners[index] as Dictionary).duplicate(true))
+	normalized["trainingPartners"] = limited
+	return PlayerProgressModel.normalize_profile(normalized)
+
+
+func _local_battle_state_with_current_team(base_state: Dictionary) -> Dictionary:
+	var next_state := base_state.duplicate(true)
+	var members := _current_party_other_members_for_battle()
+	var used_member_slots := mini(members.size(), BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size())
+	for index in range(used_member_slots):
+		var slot_number := BATTLE_TEAM_COMPANION_SLOT_NUMBERS[index]
+		next_state = _battle_state_with_actor(next_state, _party_member_battle_player_actor(members[index], index, slot_number))
+		next_state = _battle_state_with_actor(next_state, _party_member_battle_pet_actor(members[index], index, slot_number))
+	var partner_slots: Array[int] = []
+	for index in range(used_member_slots, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size()):
+		partner_slots.append(BATTLE_TEAM_COMPANION_SLOT_NUMBERS[index])
+	next_state["trainingPartnerSlotNumbers"] = partner_slots
+	next_state["partyRealMemberActorCount"] = used_member_slots
+	next_state["partyTrainingPartnerSlotCount"] = partner_slots.size()
+	var battle_profile := _profile_with_effective_training_partners(partner_slots.size())
+	return PlayerProgressModel.apply_profile_to_battle_state(battle_profile, next_state)
+
+
+func _battle_state_with_actor(state: Dictionary, actor: Dictionary) -> Dictionary:
+	if actor.is_empty():
+		return state
+	var next_state := state.duplicate(true)
+	var actors: Array = next_state.get("actors", []) if next_state.get("actors", []) is Array else []
+	var actor_id := str(actor.get("id", "")).strip_edges()
+	if actor_id == "":
+		return state
+	var replaced := false
+	for index in range(actors.size()):
+		if actors[index] is Dictionary and str((actors[index] as Dictionary).get("id", "")) == actor_id:
+			actors[index] = actor
+			replaced = true
+			break
+	if not replaced:
+		actors.append(actor)
+	next_state["actors"] = actors
+	return next_state
+
+
+func _party_member_team_snapshot(member: Dictionary) -> Dictionary:
+	var snapshot = member.get("teamSnapshot", {})
+	return (snapshot as Dictionary).duplicate(true) if snapshot is Dictionary else {}
+
+
+func _party_member_battle_player_actor(member: Dictionary, index: int, slot_number: int) -> Dictionary:
+	var snapshot := _party_member_team_snapshot(member)
+	var player_value = snapshot.get("player", {})
+	var player_snapshot := player_value as Dictionary if player_value is Dictionary else {}
+	var max_hp := maxi(1, int(player_snapshot.get("maxHp", 120)))
+	var display_name := str(player_snapshot.get("name", "")).strip_edges()
+	if display_name == "":
+		display_name = _party_player_text(member)
+	return {
+		"id": "ally_party_member_%d" % [index + 1],
+		"partyMemberUsername": str(member.get("username", "")),
+		"accountId": str(member.get("accountId", "")),
+		"name": display_name,
+		"side": BattleModel.SIDE_ALLY,
+		"kind": "player",
+		"slotId": BattleModel.slot_id(BattleModel.SIDE_ALLY, BattleModel.ROW_BACK, slot_number),
+		"level": maxi(1, int(player_snapshot.get("level", snapshot.get("playerLevel", 1)))),
+		"hp": clampi(int(player_snapshot.get("hp", max_hp)), 1, max_hp),
+		"maxHp": max_hp,
+		"attack": maxi(1, int(player_snapshot.get("attack", 18))),
+		"defense": maxi(1, int(player_snapshot.get("defense", 6))),
+		"quick": maxi(1, int(player_snapshot.get("quick", player_snapshot.get("speed", 70)))),
+		"actionState": "idle",
+		"statuses": BattleStatusModel.empty_statuses(),
+		"statusResist": {},
+		"statusImmune": {},
+	}
+
+
+func _party_member_active_battle_pet(member: Dictionary) -> Dictionary:
+	var snapshot := _party_member_team_snapshot(member)
+	var pets: Array = snapshot.get("battlePets", []) if snapshot.get("battlePets", []) is Array else []
+	var first_pet: Dictionary = {}
+	for value in pets:
+		if not (value is Dictionary):
+			continue
+		var pet := value as Dictionary
+		if first_pet.is_empty():
+			first_pet = pet.duplicate(true)
+		if bool(pet.get("activeInBattle", false)) or str(pet.get("state", "")) == BattleModel.PET_STATE_BATTLE:
+			return pet.duplicate(true)
+	return first_pet
+
+
+func _party_member_battle_pet_actor(member: Dictionary, index: int, slot_number: int) -> Dictionary:
+	var pet := _party_member_active_battle_pet(member)
+	if pet.is_empty():
+		return {}
+	var max_hp := maxi(1, int(pet.get("maxHp", 90)))
+	var form_id := str(pet.get("formId", pet.get("speciesId", ""))).strip_edges()
+	var actor_id := "ally_party_member_pet_%d" % [index + 1]
+	var stat_overrides := {
+		"hp": clampi(int(pet.get("hp", max_hp)), 1, max_hp),
+		"maxHp": max_hp,
+		"quick": maxi(1, int(pet.get("quick", pet.get("speed", 50)))),
+		"attack": maxi(1, int(pet.get("attack", 12))),
+		"defense": maxi(1, int(pet.get("defense", 6))),
+	}
+	var actor := PetTemplateCatalog.actor_from_form(
+		form_id,
+		actor_id,
+		BattleModel.SIDE_ALLY,
+		"pet",
+		BattleModel.slot_id(BattleModel.SIDE_ALLY, BattleModel.ROW_FRONT, slot_number),
+		str(pet.get("name", "队友宠物")),
+		stat_overrides
+	)
+	if actor.is_empty():
+		actor = {
+			"id": actor_id,
+			"name": str(pet.get("name", "队友宠物")),
+			"side": BattleModel.SIDE_ALLY,
+			"kind": "pet",
+			"slotId": BattleModel.slot_id(BattleModel.SIDE_ALLY, BattleModel.ROW_FRONT, slot_number),
+			"hp": stat_overrides.get("hp", max_hp),
+			"maxHp": max_hp,
+			"quick": stat_overrides.get("quick", 50),
+			"attack": stat_overrides.get("attack", 12),
+			"defense": stat_overrides.get("defense", 6),
+			"actionState": "idle",
+			"petBattleState": BattleModel.PET_STATE_BATTLE,
+			"statuses": BattleStatusModel.empty_statuses(),
+			"statusResist": {},
+			"statusImmune": {},
+		}
+	actor["partyMemberUsername"] = str(member.get("username", ""))
+	actor["accountId"] = str(member.get("accountId", ""))
+	actor["petId"] = str(pet.get("petId", pet.get("instanceId", "")))
+	actor["instanceId"] = str(pet.get("petId", pet.get("instanceId", "")))
+	actor["level"] = maxi(1, int(pet.get("level", 1)))
+	actor["activeSkillIds"] = _string_array_values(pet.get("activeSkillIds", []))
+	actor["petSkillSlots"] = _string_array_values(pet.get("petSkillSlots", []))
+	actor["passiveSkillIds"] = _string_array_values(pet.get("passiveSkillIds", []))
+	actor["petBattleState"] = BattleModel.PET_STATE_BATTLE
+	return BattlePassiveCatalog.apply_actor_passive_effects(actor)
+
+
+func _string_array_values(value) -> Array[String]:
+	var result: Array[String] = []
+	if not (value is Array):
+		return result
+	for item in value:
+		var text := str(item).strip_edges()
+		if text != "":
+			result.append(text)
+	return result
+
+
 func _battle_record_summary_text(summary: Dictionary) -> String:
 	var target := _party_player_text({
 		"username": str(summary.get("targetUsername", "")),
@@ -31772,6 +34237,52 @@ func _battle_record_summary_text(summary: Dictionary) -> String:
 		return "与%s暂无切磋战绩。" % target
 	var draw_text := "，平 %d" % draws if draws > 0 else ""
 	return "与%s：共 %d 场，胜 %d，负 %d%s。" % [target, total, wins, losses, draw_text]
+
+
+func _current_party_role() -> String:
+	var party_value = party_current_state.get("party", null)
+	if not (party_value is Dictionary):
+		return ""
+	var party := party_value as Dictionary
+	var current_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	if current_account_id != "" and str(party.get("leaderAccountId", "")).strip_edges() == current_account_id:
+		return "leader"
+	var members: Array = party.get("members", []) if party.get("members", []) is Array else []
+	for value in members:
+		if not (value is Dictionary):
+			continue
+		var member := value as Dictionary
+		var account_id := str(member.get("accountId", "")).strip_edges()
+		var username := str(member.get("username", "")).strip_edges()
+		if (current_account_id != "" and account_id == current_account_id) or (current_username != "" and username == current_username):
+			return str(member.get("role", "")).strip_edges()
+	return ""
+
+
+func _current_player_is_party_member() -> bool:
+	return _current_party_role() == "member"
+
+
+func _stop_party_member_local_movement(show_message: bool = false) -> void:
+	_cancel_server_step_move()
+	if player != null:
+		player.clear_move_target()
+	current_path_cells.clear()
+	has_target_marker = false
+	has_target_cell = false
+	current_path_is_direct = false
+	_clear_pending_click_move_target()
+	if show_message:
+		_set_world_log_message("队伍中由队长带队移动。")
+	queue_redraw()
+
+
+func _should_apply_online_self_position(position: Dictionary) -> bool:
+	if position.is_empty():
+		return false
+	var authority := str(position.get("authority", "")).strip_edges()
+	return authority == "party_follow" or (_current_player_is_party_member() and str(position.get("mapId", "")).strip_edges() != "")
 
 
 func _party_online_player_text(player: Dictionary) -> String:
@@ -31914,6 +34425,9 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 			if party_status_label != null:
 				party_status_label.text = "队伍状态已同步。"
 			_refresh_party_panel()
+			if training_partner_panel != null and training_partner_panel.visible:
+				_refresh_training_partner_panel()
+			_update_hud_text(true)
 			_request_party_online()
 			return
 		elif party_status_label != null:
@@ -32640,21 +35154,27 @@ func _refresh_training_partner_panel() -> void:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	var count := PlayerProgressModel.training_partner_count(player_profile)
+	var real_member_count := _current_party_other_members_for_battle().size()
+	var available_slots := _training_partner_available_slots()
+	var active_count := mini(count, available_slots)
 	var lines: Array[String] = []
-	lines.append("队伍：%d/4" % count)
-	lines.append("草丛遇敌时，会组成最多 5 人 5 宠的练级队。")
+	lines.append("队伍：自己 1 / 真人队友 %d / 伙伴 %d，最多 5 人。" % [real_member_count, active_count])
+	lines.append("伙伴槽位：%d/%d" % [count, available_slots])
+	lines.append("草丛遇敌时，真人队友优先占位，伙伴补满剩余位置。")
 	lines.append("陪练会复制加入时的人物和出战宠属性，之后独立获得经验。")
+	if count > available_slots:
+		lines.append("当前真人队友已占位，本场只会上阵前 %d 个伙伴。" % active_count)
 	lines.append("")
 	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
 	training_partner_label.text = "\n".join(lines)
 	if training_partner_scroll != null:
 		training_partner_scroll.scroll_vertical = 0
 	if training_partner_add_button != null:
-		training_partner_add_button.disabled = count >= 4
+		training_partner_add_button.disabled = count >= available_slots
 	if training_partner_remove_button != null:
 		training_partner_remove_button.disabled = count <= 0
 	if training_partner_fill_button != null:
-		training_partner_fill_button.disabled = count >= 4
+		training_partner_fill_button.disabled = count >= available_slots
 	if training_partner_clear_button != null:
 		training_partner_clear_button.disabled = count <= 0
 
@@ -32676,16 +35196,22 @@ func _training_partner_panel_layout_is_usable() -> bool:
 
 
 func _set_training_partner_count(count: int) -> void:
-	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, count)
+	var available_slots := _training_partner_available_slots()
+	var target_count := clampi(count, 0, available_slots)
+	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, target_count)
 	if profile_save_enabled:
 		_save_player_profile_now()
 	var next_count := PlayerProgressModel.training_partner_count(player_profile)
-	_set_world_log_message("练级伙伴 %d/4。" % next_count)
+	_set_world_log_message("队伍伙伴 %d/%d。" % [next_count, available_slots])
 	_refresh_training_partner_panel()
 	_update_hud_text()
 
 
 func _on_training_partner_add_pressed() -> void:
+	if PlayerProgressModel.training_partner_count(player_profile) >= _training_partner_available_slots():
+		_set_world_log_message("队伍槽位已满，请先离队或移除伙伴。")
+		_refresh_training_partner_panel()
+		return
 	_set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) + 1)
 
 
@@ -32694,7 +35220,7 @@ func _on_training_partner_remove_pressed() -> void:
 
 
 func _on_training_partner_fill_pressed() -> void:
-	_set_training_partner_count(4)
+	_set_training_partner_count(_training_partner_available_slots())
 
 
 func _on_training_partner_clear_pressed() -> void:
@@ -33858,8 +36384,8 @@ func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 			quest_selected_reward_choice_id = ""
 	if quest_claim_button != null:
 		quest_claim_button.visible = can_claim
-		quest_claim_button.disabled = not can_claim or (not choices.is_empty() and quest_selected_reward_choice_id == "")
-		quest_claim_button.text = "领取奖励"
+		quest_claim_button.disabled = quest_action_request_pending or not can_claim or (not choices.is_empty() and quest_selected_reward_choice_id == "")
+		quest_claim_button.text = "领取中" if quest_action_request_pending else "领取奖励"
 
 
 func _on_quest_reward_choice_selected(index: int) -> void:
@@ -33871,10 +36397,23 @@ func _on_quest_reward_choice_selected(index: int) -> void:
 
 
 func _on_quest_claim_pressed() -> void:
+	if quest_action_request_pending:
+		return
 	var quest := PlayerProgressModel.active_quest(player_profile)
 	var choice_id := quest_selected_reward_choice_id if QuestModel.has_reward_choices(quest) else ""
+	if _is_server_account_session():
+		var parsed := await _submit_server_quest_claim(str(quest.get("id", "")), choice_id)
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		if bool(parsed.get("ok", false)):
+			quest_selected_reward_choice_id = ""
+		_refresh_quest_panel()
+		if status_label != null:
+			_update_hud_text()
+		return
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile, choice_id)
 	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)):
+		_mark_progress_ui_caches_dirty()
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
@@ -35758,6 +38297,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 	if _battle_commands_locked() and command_id != "run":
 		return
 	if _battle_is_server_authority():
+		var leave_label := _battle_player_run_label()
 		if battle_command_owner == "pet":
 			_on_pet_battle_command_pressed(command_id)
 			return
@@ -35767,10 +38307,16 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		if battle_command_owner == "item":
 			_on_item_battle_command_pressed(command_id)
 			return
-		elif battle_command_owner != "player":
-			_set_battle_message("联网切磋暂只支持攻击、防御、物品、换宠、宠物指令和离开。")
+		if battle_command_owner == "spirit":
+			_on_spirit_battle_command_pressed(command_id)
 			return
-		elif command_id == "run":
+		if battle_command_owner == "capture":
+			_on_capture_battle_command_pressed(command_id)
+			return
+		if battle_command_owner != "player":
+			_set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉、换宠、宠物指令和%s。" % leave_label)
+			return
+		if command_id == "run":
 			_leave_server_battle_room()
 			return
 		if command_id == "switch_pet":
@@ -35779,8 +38325,14 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		if command_id == "item":
 			_open_item_command_menu()
 			return
+		if command_id == "spirit":
+			_open_spirit_command_menu()
+			return
+		if command_id == "capture":
+			_open_capture_command_menu()
+			return
 		if not ["attack", "defend", "help"].has(command_id):
-			_set_battle_message("联网切磋暂只支持攻击、防御、物品、换宠和离开。")
+			_set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉、换宠和%s。" % leave_label)
 			return
 	if battle_command_owner == "pet":
 		_on_pet_battle_command_pressed(command_id)
@@ -35813,7 +38365,10 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		"switch_pet":
 			_open_switch_pet_command_menu()
 		"help":
-			_set_battle_message("选择攻击、防御、物品、换宠或离开。" if _battle_is_server_authority() else "选择攻击或逃跑。")
+			if _battle_is_server_authority():
+				_set_battle_message("选择攻击、防御、物品、换宠或%s。" % _battle_player_run_label())
+			else:
+				_set_battle_message("选择攻击或逃跑。")
 		_:
 			_set_battle_message("这个指令稍后开放。")
 
@@ -35864,10 +38419,24 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 	if command_id == "run":
 		_leave_server_battle_room()
 		return
+	if _sync_server_battle_command_owner_from_room():
+		return
 	var item_action_id := item_id.strip_edges()
-	var action_id := "attack" if command_id == "attack" else "defend" if command_id == "defend" else "switch_pet" if command_id == "switch_pet" else item_action_id if command_id == "item" else ""
+	var action_id := ""
+	var capture_tool_id := ""
+	match command_id:
+		"attack":
+			action_id = "attack"
+		"defend":
+			action_id = "defend"
+		"switch_pet":
+			action_id = "switch_pet"
+		"capture":
+			action_id = "capture"
+		"item", "spirit":
+			action_id = item_action_id
 	if action_id == "":
-		_set_battle_message("联网切磋暂只支持攻击、防御、物品和换宠。")
+		_set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉和换宠。")
 		return
 	var switch_pet_id := pet_id.strip_edges()
 	if action_id == "switch_pet" and switch_pet_id == "":
@@ -35875,7 +38444,7 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		return
 	if command_id == "item":
 		if item_action_id != BattleModel.ITEM_HEAL_SINGLE and item_action_id != BattleModel.ITEM_MEAT_SMALL:
-			_set_battle_message("联网切磋暂只开放回复药和肉。")
+			_set_battle_message("联网战斗暂只开放回复药和肉。")
 			return
 		if not BattleModel.has_item(battle_state, item_action_id):
 			_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_action_id, "物品"))
@@ -35883,9 +38452,25 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		if target_id.strip_edges() == "":
 			_set_battle_message("请选择物品目标。")
 			return
+	if command_id == "spirit":
+		var player_actor_id := BattleModel.player_actor_id(battle_state)
+		if not BattleModel.actor_has_spirit(battle_state, player_actor_id, action_id):
+			_set_battle_message("当前装备没有提供%s。" % BattleActionCatalog.label_for(action_id, "精灵"))
+			return
+		if not BattleActionCatalog.action_is_all(action_id) and target_id.strip_edges() == "":
+			_set_battle_message("请选择精灵目标。")
+			return
+	if command_id == "capture":
+		capture_tool_id = CaptureToolCatalog.normalized_tool_id(battle_pending_capture_tool_id)
+		if not BattleModel.has_capture_tool(battle_state, capture_tool_id):
+			_set_battle_message("%s 不够了。" % CaptureToolCatalog.full_name_for(capture_tool_id))
+			return
+		if target_id.strip_edges() == "":
+			_set_battle_message("请选择捕捉目标。")
+			return
 	var room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
 	if room_id == "":
-		_set_battle_message("切磋房间状态缺失，请重新同步。")
+		_set_battle_message("战斗房间状态缺失，请重新同步。")
 		return
 	var payload := {
 		"round": maxi(1, int(battle_state.get("round", 1))),
@@ -35895,12 +38480,18 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 	var player_server_actor_id := str(player_actor.get("serverActorId", "")).strip_edges()
 	if player_server_actor_id != "":
 		payload["actorId"] = player_server_actor_id
-	if action_id == "attack" or command_id == "item":
-		var target_actor := BattleModel.actor_by_id(battle_state, target_id)
+	if action_id == "attack" or command_id == "item" or command_id == "spirit" or command_id == "capture":
+		var resolved_target_id: String = target_id
+		if command_id == "spirit" and resolved_target_id.strip_edges() == "" and BattleActionCatalog.action_is_all(action_id):
+			if BattleActionCatalog.action_can_target_side(action_id, BattleModel.SIDE_ALLY):
+				resolved_target_id = BattleModel.player_actor_id(battle_state)
+			elif BattleActionCatalog.action_can_target_side(action_id, BattleModel.SIDE_ENEMY):
+				resolved_target_id = BattleModel.living_enemy_id(battle_state)
+		var target_actor := BattleModel.actor_by_id(battle_state, resolved_target_id)
 		if target_actor.is_empty():
 			_set_battle_message("没有可选择的目标。")
 			return
-		var target_payload := ServerBattleRoomModel.target_command_payload_for_actor(target_actor)
+		var target_payload: Dictionary = ServerBattleRoomModel.target_command_payload_for_actor(target_actor)
 		if str(target_payload.get("targetActorId", "")).strip_edges() == "" and str(target_payload.get("targetAccountId", "")).strip_edges() == "" and str(target_payload.get("targetUsername", "")).strip_edges() == "":
 			_set_battle_message("目标状态缺失，请重新同步。")
 			return
@@ -35909,11 +38500,15 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 				payload[key] = target_payload[key]
 		if command_id == "item":
 			payload["itemId"] = item_action_id
+		elif command_id == "spirit":
+			payload["spiritId"] = action_id
+		elif command_id == "capture":
+			payload["captureToolId"] = capture_tool_id
 	elif action_id == "switch_pet":
 		payload["petId"] = switch_pet_id
 	server_battle_command_request_active = true
 	battle_state["phase"] = "server_waiting"
-	_set_battle_message("换宠指令已提交，等待服务器确认。" if action_id == "switch_pet" else "物品指令已提交，等待服务器确认。" if command_id == "item" else "指令已提交，等待服务器确认。")
+	_set_battle_message("换宠指令已提交，等待服务器确认。" if action_id == "switch_pet" else "物品指令已提交，等待服务器确认。" if command_id == "item" else "精灵指令已提交，等待服务器确认。" if command_id == "spirit" else "捕捉指令已提交，等待服务器确认。" if command_id == "capture" else "指令已提交，等待服务器确认。")
 	_sync_battle_buttons()
 	_layout_hud()
 	var response := await _auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
@@ -35945,6 +38540,8 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 				var playback_started := _play_server_battle_event_list(turn)
 				if room_closed and not playback_started:
 					_apply_server_battle_room_closed(room as Dictionary)
+				elif not playback_started:
+					_sync_server_battle_room_scene(false)
 			elif room_closed:
 				_apply_server_battle_room_closed(room as Dictionary)
 			elif _server_battle_needs_self_pet_command():
@@ -35952,10 +38549,12 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		else:
 			_set_battle_message("指令已提交。")
 		return
+	if _apply_server_battle_command_error_room(parsed):
+		return
 	battle_state["phase"] = "command"
 	_reset_battle_command_countdown()
 	if _server_battle_room_missing_error(parsed):
-		_clear_stale_server_battle_room("切磋房间已失效，已回到地图。")
+		_clear_stale_server_battle_room(_server_battle_stale_room_message())
 		return
 	_set_battle_message(str(parsed.get("message", "指令提交失败，请重试。")))
 	_sync_battle_buttons()
@@ -35978,6 +38577,74 @@ func _server_battle_needs_self_pet_command() -> bool:
 	return not submitted_actor_ids.has(pet_server_actor_id)
 
 
+func _server_battle_current_account_submitted() -> bool:
+	if not _battle_is_server_authority():
+		return false
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	if room.is_empty():
+		var state_room := battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+		room = state_room
+	if room.is_empty():
+		return false
+	return ServerBattleRoomModel.current_account_submitted(room, current_account_session)
+
+
+func _server_battle_actor_submitted(actor_id: String) -> bool:
+	if actor_id.strip_edges() == "":
+		return false
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
+	return submitted_actor_ids.has(actor_id)
+
+
+func _server_battle_self_player_submitted() -> bool:
+	var player_actor := BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
+	var player_server_actor_id := str(player_actor.get("serverActorId", "")).strip_edges()
+	return _server_battle_actor_submitted(player_server_actor_id)
+
+
+func _sync_server_battle_command_owner_from_room() -> bool:
+	if not _battle_is_server_authority():
+		return false
+	if _server_battle_current_account_submitted():
+		battle_state["phase"] = "server_waiting"
+		_set_battle_command_owner("player")
+		var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+		var mode := str(room.get("mode", battle_state.get("serverRoomMode", ""))).strip_edges()
+		_set_battle_message("指令已提交，等待队友。" if mode == "party_pve" else "指令已提交，等待对方。")
+		_sync_battle_buttons()
+		_layout_hud()
+		return true
+	if battle_command_owner == "player" and _server_battle_self_player_submitted() and _server_battle_needs_self_pet_command():
+		_open_server_battle_pet_command()
+		return true
+	return false
+
+
+func _server_battle_command_error_should_sync(parsed: Dictionary) -> bool:
+	var code := str(parsed.get("code", "")).strip_edges()
+	return [
+		"battle_command_actor_missing",
+		"battle_command_duplicate",
+		"battle_command_phase_invalid",
+		"battle_command_round_mismatch",
+	].has(code)
+
+
+func _apply_server_battle_command_error_room(parsed: Dictionary) -> bool:
+	if not _server_battle_command_error_should_sync(parsed):
+		return false
+	var room = parsed.get("room", null)
+	if not (room is Dictionary):
+		return false
+	server_battle_state["room"] = (room as Dictionary).duplicate(true)
+	if not _sync_server_battle_room_scene(false):
+		return false
+	_sync_server_battle_command_owner_from_room()
+	return true
+
+
 func _open_server_battle_pet_command() -> void:
 	if not _server_battle_needs_self_pet_command():
 		return
@@ -35994,6 +38661,8 @@ func _submit_server_battle_pet_command(command_id: String, target_id: String = "
 	if server_battle_command_request_active:
 		_set_battle_message("正在提交指令。")
 		return
+	if _sync_server_battle_command_owner_from_room():
+		return
 	var pet_actor := BattleModel.actor_by_id(battle_state, BattleModel.controlled_pet_id(battle_state))
 	var pet_server_actor_id := str(pet_actor.get("serverActorId", "")).strip_edges()
 	if pet_actor.is_empty() or pet_server_actor_id == "":
@@ -36009,7 +38678,7 @@ func _submit_server_battle_pet_command(command_id: String, target_id: String = "
 		return
 	var room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
 	if room_id == "":
-		_set_battle_message("切磋房间状态缺失，请重新同步。")
+		_set_battle_message("战斗房间状态缺失，请重新同步。")
 		return
 	var payload := {
 		"round": maxi(1, int(battle_state.get("round", 1))),
@@ -36062,15 +38731,19 @@ func _submit_server_battle_pet_command(command_id: String, target_id: String = "
 				var playback_started := _play_server_battle_event_list(turn)
 				if room_closed and not playback_started:
 					_apply_server_battle_room_closed(room as Dictionary)
+				elif not playback_started:
+					_sync_server_battle_room_scene(false)
 			elif room_closed:
 				_apply_server_battle_room_closed(room as Dictionary)
 		else:
 			_set_battle_message("宠物指令已提交。")
 		return
+	if _apply_server_battle_command_error_room(parsed):
+		return
 	battle_state["phase"] = "command"
 	_reset_battle_command_countdown()
 	if _server_battle_room_missing_error(parsed):
-		_clear_stale_server_battle_room("切磋房间已失效，已回到地图。")
+		_clear_stale_server_battle_room(_server_battle_stale_room_message())
 		return
 	_open_server_battle_pet_command()
 	_set_battle_message(str(parsed.get("message", "宠物指令提交失败，请重试。")))
@@ -36081,16 +38754,18 @@ func _submit_server_battle_pet_command(command_id: String, target_id: String = "
 func _leave_server_battle_room() -> void:
 	if not _battle_is_server_authority():
 		return
+	var leave_label := _battle_player_run_label()
+	var leave_action := "逃离" if leave_label == "逃跑" else "离开"
 	if server_battle_command_request_active:
-		_set_battle_message("正在处理切磋请求。")
+		_set_battle_message("正在处理战斗请求。")
 		return
 	var room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
 	if room_id == "":
-		_set_battle_message("切磋房间状态缺失，请重新同步。")
+		_set_battle_message("战斗房间状态缺失，请重新同步。")
 		return
 	server_battle_command_request_active = true
 	battle_state["phase"] = "server_waiting"
-	_set_battle_message("正在离开切磋。")
+	_set_battle_message("正在%s战斗。" % leave_action)
 	_sync_battle_buttons()
 	_layout_hud()
 	var response := await _auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
@@ -36107,14 +38782,14 @@ func _leave_server_battle_room() -> void:
 		if room is Dictionary:
 			_apply_server_battle_room_closed(room as Dictionary)
 		else:
-			_set_battle_message("已离开切磋。")
+			_set_battle_message("已%s战斗。" % leave_action)
 		return
 	battle_state["phase"] = "command"
 	_reset_battle_command_countdown()
 	if _server_battle_room_missing_error(parsed):
-		_clear_stale_server_battle_room("切磋房间已失效，已回到地图。")
+		_clear_stale_server_battle_room(_server_battle_stale_room_message())
 		return
-	_set_battle_message(str(parsed.get("message", "离开切磋失败，请重试。")))
+	_set_battle_message(str(parsed.get("message", "%s战斗失败，请重试。" % leave_action)))
 	_sync_battle_buttons()
 	_layout_hud()
 
@@ -36128,6 +38803,15 @@ func _submit_spirit_player_command(spirit_id: String, target_id: String = "") ->
 	if not BattleModel.actor_has_spirit(battle_state, player_id, spirit_id):
 		_set_battle_message("当前装备没有提供%s。" % BattleActionCatalog.label_for(spirit_id, "精灵"))
 		_set_battle_command_owner("player")
+		return
+	if _battle_is_server_authority():
+		var server_target_id := target_id
+		if BattleActionCatalog.action_is_all(spirit_id):
+			if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY):
+				server_target_id = player_id
+			elif BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY):
+				server_target_id = BattleModel.living_enemy_id(battle_state)
+		_submit_server_battle_player_command("spirit", server_target_id, "", spirit_id)
 		return
 	var command := {
 		"command": "spirit",
@@ -36161,7 +38845,7 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 	battle_pending_capture_tool_id = ""
 	if _battle_is_server_authority():
 		if item_id != BattleModel.ITEM_HEAL_SINGLE and item_id != BattleModel.ITEM_MEAT_SMALL:
-			_set_battle_message("联网切磋暂只开放回复药和肉。")
+			_set_battle_message("联网战斗暂只开放回复药和肉。")
 			_set_battle_command_owner("player")
 			return
 		if not BattleModel.has_item(battle_state, item_id):
@@ -36430,7 +39114,7 @@ func _on_item_battle_command_pressed(command_id: String) -> void:
 				_set_battle_command_owner("player")
 				_set_battle_message("重新选择人物指令。")
 			_:
-				_set_battle_message("联网切磋暂只开放回复药和肉。")
+				_set_battle_message("联网战斗暂只开放回复药和肉。")
 		return
 	match command_id:
 		"attack":
@@ -36666,9 +39350,11 @@ func _play_next_battle_event() -> void:
 			if str(event.get("type", "")) == "capture":
 				if bool(battle_state.get("lastCaptureSuccess", false)):
 					battle_auto_capture_success_seen = true
-				_sync_profile_capture_tools_from_battle_state()
+				if not _battle_is_server_authority():
+					_sync_profile_capture_tools_from_battle_state()
 			elif _battle_event_consumes_item(str(event.get("type", ""))):
-				_sync_profile_battle_items_from_battle_state()
+				if not _battle_is_server_authority():
+					_sync_profile_battle_items_from_battle_state()
 		if not bool(battle_state.get("lastEventApplied", false)):
 			battle_current_event_actor_snapshots.clear()
 			continue
@@ -37517,6 +40203,16 @@ func _sync_battle_buttons() -> void:
 							button.disabled = not can_command
 						"item":
 							button.disabled = not has_ally or (not BattleModel.has_item(battle_state, BattleModel.ITEM_HEAL_SINGLE) and not BattleModel.has_item(battle_state, BattleModel.ITEM_MEAT_SMALL))
+						"spirit":
+							var has_usable_spirit := false
+							for spirit_id in _player_spirit_ids_for_battle():
+								if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ALLY) and has_ally:
+									has_usable_spirit = true
+									break
+								if BattleActionCatalog.action_can_target_side(spirit_id, BattleModel.SIDE_ENEMY) and has_enemy:
+									has_usable_spirit = true
+									break
+							button.disabled = not has_usable_spirit
 						"switch_pet":
 							button.disabled = BattleModel.switchable_pet_entries(battle_state).is_empty()
 						_:
@@ -37736,8 +40432,34 @@ func _perform_dialog_action(action_id: String) -> void:
 			_close_dialog()
 
 
+func _run_server_dialog_quest_claim(quest_id: String = "") -> void:
+	var parsed := await _submit_server_quest_claim(quest_id)
+	_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+	if bool(parsed.get("ok", false)):
+		_close_dialog()
+	else:
+		_update_dialog_text()
+	if status_label != null:
+		_update_hud_text()
+
+
+func _run_server_dialog_quest_record(event: Dictionary, quest_id: String = "") -> void:
+	var parsed := await _submit_server_quest_record(event, quest_id)
+	var log_lines := _string_array_values(parsed.get("logLines", []))
+	var progress := parsed.get("progress", {}) as Dictionary if parsed.get("progress", {}) is Dictionary else {}
+	if bool(parsed.get("ok", false)) and bool(progress.get("changed", false)) and not log_lines.is_empty():
+		_set_world_log_message("\n".join(log_lines))
+		_close_dialog()
+		if status_label != null:
+			_update_hud_text()
+		return
+	_update_dialog_text()
+
+
 func _claim_dialog_quest_reward() -> void:
 	if active_dialog_interaction.is_empty():
+		return
+	if quest_action_request_pending:
 		return
 	if not _active_dialog_can_claim_quest():
 		_update_dialog_text()
@@ -37747,8 +40469,13 @@ func _claim_dialog_quest_reward() -> void:
 		_open_quest_panel()
 		_set_world_log_message("请选择任务奖励。")
 		return
+	if _is_server_account_session():
+		_run_server_dialog_quest_claim()
+		return
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
 	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)):
+		_mark_progress_ui_caches_dirty()
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
@@ -37763,13 +40490,20 @@ func _claim_dialog_quest_reward() -> void:
 func _claim_dialog_optional_quest_reward() -> void:
 	if active_dialog_interaction.is_empty():
 		return
+	if quest_action_request_pending:
+		return
 	var quest := _optional_dialog_quest(active_dialog_interaction)
 	var quest_id := str(quest.get("id", ""))
 	if quest_id == "" or not PlayerProgressModel.can_claim_optional_quest(player_profile, quest_id):
 		_update_dialog_text()
 		return
+	if _is_server_account_session():
+		_run_server_dialog_quest_claim(quest_id)
+		return
 	var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
 	player_profile = claim_result.get("profile", player_profile)
+	if bool(claim_result.get("ok", false)):
+		_mark_progress_ui_caches_dirty()
 	if bool(claim_result.get("ok", false)) and profile_save_enabled:
 		_save_player_profile_now()
 	_set_world_log_message(str(claim_result.get("message", "")))
@@ -37783,6 +40517,14 @@ func _claim_dialog_optional_quest_reward() -> void:
 
 func _complete_dialog_talk_quest() -> void:
 	if active_dialog_interaction.is_empty():
+		return
+	if quest_action_request_pending:
+		return
+	if _is_server_account_session():
+		_run_server_dialog_quest_record({
+			"type": "talk",
+			"targetId": str(active_dialog_interaction.get("id", "")),
+		})
 		return
 	var quest_messages := _record_quest_event_and_maybe_claim({
 		"type": "talk",
@@ -37802,10 +40544,18 @@ func _complete_dialog_talk_quest() -> void:
 func _complete_dialog_optional_talk_quest() -> void:
 	if active_dialog_interaction.is_empty():
 		return
+	if quest_action_request_pending:
+		return
 	var quest := _optional_dialog_quest(active_dialog_interaction)
 	var quest_id := str(quest.get("id", ""))
 	if quest_id == "":
 		_update_dialog_text()
+		return
+	if _is_server_account_session():
+		_run_server_dialog_quest_record({
+			"type": "talk",
+			"targetId": str(active_dialog_interaction.get("id", "")),
+		}, quest_id)
 		return
 	var messages: Array[String] = []
 	var progress_result := PlayerProgressModel.record_optional_quest_event(player_profile, quest_id, {
@@ -37814,9 +40564,11 @@ func _complete_dialog_optional_talk_quest() -> void:
 	})
 	player_profile = progress_result.get("profile", player_profile)
 	if bool(progress_result.get("changed", false)):
+		_mark_progress_ui_caches_dirty()
 		if bool(progress_result.get("ready", false)) and QuestModel.auto_claim_on_ready(quest) and not QuestModel.has_reward_choices(quest):
 			var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
 			player_profile = claim_result.get("profile", player_profile)
+			_mark_progress_ui_caches_dirty()
 			messages.append(str(claim_result.get("message", "")))
 		else:
 			messages.append(str(progress_result.get("message", "")))
@@ -39041,11 +41793,12 @@ func _update_hud_text(force: bool = false) -> void:
 		status_text = "万兽纪元  |  %s  |  %s  |  %s" % [str(map_data.get("name", "未知地图")), layout_name, move_name]
 		if has_pending_interaction:
 			target_text = str(pending_interaction.get("name", "交互点"))
-		detail_text = "坐标  %d,%d\n目标  %s\n伙伴  %d/4\n任务  -  %s" % [
+		detail_text = "坐标  %d,%d\n目标  %s\n伙伴  %d/%d\n任务  -  %s" % [
 			player_cell.x,
 			player_cell.y,
 			target_text,
-			_training_partner_count(),
+			_effective_training_partner_count(),
+			_training_partner_available_slots(),
 			_current_task_text(),
 			]
 	_perf_add("hud_text_build", build_start)
@@ -40144,6 +42897,13 @@ func _draw_interaction_points() -> void:
 			draw_line(marker + Vector2(-13, -18), marker + Vector2(13, -18), Color(0.95, 0.82, 0.46, 0.95), 4.0)
 			draw_circle(marker + Vector2(0, -31), 9.0, Color(0.98, 0.78, 0.34, 0.98))
 			draw_arc(marker + Vector2(0, -31), 13.0, 0.0, TAU, 24, Color(0.55, 0.79, 1.0, 0.76), 2.0, true)
+		elif item_kind == "sign":
+			var board_rect := Rect2(marker + Vector2(-26, -47), Vector2(52, 28))
+			draw_line(marker + Vector2(0, 16), marker + Vector2(0, -18), Color(0.42, 0.27, 0.14, 0.98), 5.0)
+			draw_rect(board_rect, Color(0.05, 0.04, 0.03, 0.55), true)
+			draw_rect(board_rect.grow(-2.0), Color(0.58, 0.38, 0.18, 0.97), true)
+			draw_line(board_rect.position + Vector2(5, 8), board_rect.position + Vector2(47, 8), Color(0.82, 0.62, 0.30, 0.95), 2.0)
+			draw_line(board_rect.position + Vector2(5, 20), board_rect.position + Vector2(47, 20), Color(0.32, 0.20, 0.10, 0.55), 2.0)
 		else:
 			var blocks_movement := InteractionModel.blocks_movement(item)
 			var body_color := Color(0.74, 0.36, 0.25, 0.98) if blocks_movement else Color(0.22, 0.58, 0.66, 0.98)

@@ -81,6 +81,30 @@ function createHttpServer(options = {}) {
       if (req.method === "PUT" && url.pathname === "/profiles/me") {
         return sendResult(res, service.saveProfile(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "POST" && url.pathname === "/shops/transaction") {
+        return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/equipment/equip") {
+        return sendResult(res, service.equipmentEquip(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/equipment/enhance") {
+        return sendResult(res, service.equipmentEnhance(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/equipment/repair-all") {
+        return sendResult(res, service.equipmentRepairAll(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/equipment/synthesize") {
+        return sendResult(res, service.equipmentSynthesize(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/player/rebirth") {
+        return sendResult(res, service.playerRebirth(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/quests/record") {
+        return sendResult(res, service.questRecord(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/quests/claim") {
+        return sendResult(res, service.questClaim(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/mail/inbox") {
         return sendResult(res, service.listInbox(bearerToken(req)));
       }
@@ -103,6 +127,12 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/battle/state") {
         return sendResult(res, service.getBattleState(bearerToken(req)));
       }
+      if (req.method === "GET" && url.pathname === "/battle/debug/trace") {
+        return sendResult(res, service.getBattleTrace(bearerToken(req), {
+          "roomId": url.searchParams.get("roomId") || "",
+          "limit": url.searchParams.get("limit") || "",
+        }));
+      }
       if (req.method === "GET" && url.pathname === "/battle/records/summary") {
         return sendResult(res, service.getBattleRecordSummary(bearerToken(req), {
           "username": url.searchParams.get("username") || "",
@@ -110,6 +140,9 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/battle/invite") {
         return sendResult(res, service.inviteToBattle(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/battle/party-encounter") {
+        return sendResult(res, service.startPartyEncounter(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/accept")) {
         const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/accept".length));

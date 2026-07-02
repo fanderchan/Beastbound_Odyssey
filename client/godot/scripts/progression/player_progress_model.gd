@@ -6603,15 +6603,29 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 static func _apply_training_partners_to_battle_state(profile: Dictionary, state: Dictionary) -> Dictionary:
 	var next_state := state.duplicate(true)
 	var partners := training_partners(profile)
-	for index in range(partners.size()):
+	var slot_numbers: Array[int] = []
+	var slot_numbers_value = state.get("trainingPartnerSlotNumbers", [])
+	if slot_numbers_value is Array:
+		for value in slot_numbers_value:
+			var slot_number := clampi(int(value), 1, 5)
+			if not slot_numbers.has(slot_number):
+				slot_numbers.append(slot_number)
+	var active_partner_ids: Array[String] = []
+	var partner_count := partners.size()
+	if not slot_numbers.is_empty():
+		partner_count = mini(partner_count, slot_numbers.size())
+	for index in range(partner_count):
 		var partner := partners[index]
-		var slot_number := TrainingPartnerModel.slot_number_for_index(index)
+		var slot_number := slot_numbers[index] if index < slot_numbers.size() else TrainingPartnerModel.slot_number_for_index(index)
 		var partner_actor := _training_partner_actor(partner, index, slot_number)
 		if not partner_actor.is_empty():
 			next_state["actors"] = _actors_with_replaced_actor(next_state, partner_actor)
+			active_partner_ids.append(str(partner.get("partnerId", TrainingPartnerModel.partner_id_for_index(index))))
 		var pet_actor := _training_partner_pet_actor(partner, index, slot_number)
 		if not pet_actor.is_empty():
 			next_state["actors"] = _actors_with_replaced_actor(next_state, pet_actor)
+	if state.has("trainingPartnerSlotNumbers"):
+		next_state["activeTrainingPartnerIds"] = active_partner_ids
 	return next_state
 
 
@@ -6729,7 +6743,7 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 				level_up_lines.append("%s 升到 Lv%d。" % [str(instance.get("name", "宠物")), int((pet_award.get("entry", {}) as Dictionary).get("level", 1))])
 			break
 		next_profile["petInstances"] = instances
-		var partner_award := _award_training_partner_exp(next_profile, exp_reward)
+		var partner_award := _award_training_partner_exp(next_profile, exp_reward, state.get("activeTrainingPartnerIds", null))
 		next_profile = partner_award.get("profile", next_profile)
 		for line in partner_award.get("levelUpLines", []):
 			level_up_lines.append(str(line))
@@ -7123,12 +7137,22 @@ static func _award_exp(entry: Dictionary, amount: int, max_level: int = MAX_PLAY
 	}
 
 
-static func _award_training_partner_exp(profile: Dictionary, amount: int) -> Dictionary:
+static func _award_training_partner_exp(profile: Dictionary, amount: int, active_partner_ids_value = null) -> Dictionary:
 	var next_profile := profile.duplicate(true)
 	var partners := training_partners(next_profile)
+	var restrict_to_active := active_partner_ids_value is Array
+	var active_partner_ids: Array[String] = []
+	if restrict_to_active:
+		for value in active_partner_ids_value:
+			var partner_id := str(value).strip_edges()
+			if partner_id != "" and not active_partner_ids.has(partner_id):
+				active_partner_ids.append(partner_id)
 	var lines: Array[String] = []
 	for index in range(partners.size()):
 		var partner := partners[index]
+		var current_partner_id := str(partner.get("partnerId", TrainingPartnerModel.partner_id_for_index(index)))
+		if restrict_to_active and not active_partner_ids.has(current_partner_id):
+			continue
 		var before_level := maxi(1, int(partner.get("level", 1)))
 		var partner_award := _award_exp(partner, amount)
 		partner = partner_award.get("entry", partner)

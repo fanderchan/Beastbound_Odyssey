@@ -127,7 +127,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		SIDE_ENEMY,
 		"wild_pet",
 		"enemy.front.3",
-		int(enemy_stats.get("hp", enemy_stats.get("maxHp", 80))),
+		int(enemy_stats.get("maxHp", 80)),
 		int(enemy_stats.get("maxHp", 80)),
 		int(enemy_stats.get("quick", enemy_stats.get("agility", 48))),
 		int(enemy_stats.get("attack", 10)),
@@ -309,7 +309,7 @@ static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, ene
 			SIDE_ENEMY,
 			"wild_pet",
 			slot_id_for_number(SIDE_ENEMY, battle_slot_number),
-			int(base_stats.get("hp", max_hp)),
+			max_hp,
 			max_hp,
 			int(base_stats.get("quick", base_stats.get("agility", 48))) + (index % SLOTS_PER_ROW) * 2,
 			int(base_stats.get("attack", 10)),
@@ -894,7 +894,8 @@ static func consume_capture_tool(state: Dictionary, tool_id: String) -> Dictiona
 
 
 static func living_enemy_id(state: Dictionary) -> String:
-	return first_living_actor_id(state, SIDE_ENEMY)
+	var ordered := living_actor_ids_by_battle_order(state, SIDE_ENEMY)
+	return ordered[0] if not ordered.is_empty() else ""
 
 
 static func living_ally_id(state: Dictionary) -> String:
@@ -1828,6 +1829,17 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	return state
 
 
+static func _server_message_for_event(event: Dictionary) -> String:
+	return str(event.get("serverMessage", "")).strip_edges()
+
+
+static func _apply_server_message_override(state: Dictionary, event: Dictionary) -> Dictionary:
+	var server_message := _server_message_for_event(event)
+	if server_message != "":
+		state["message"] = server_message
+	return state
+
+
 static func _apply_item_consuming_event(state: Dictionary, event: Dictionary, apply_method: String) -> Dictionary:
 	var next_state := state
 	var normalized := _normalize_item_event(event)
@@ -1848,6 +1860,7 @@ static func _apply_item_consuming_event(state: Dictionary, event: Dictionary, ap
 			next_state = set_item_count(next_state, str(event.get("itemId", "")), remaining_item_count)
 		else:
 			next_state = consume_item(next_state, str(event.get("itemId", "")))
+		next_state = _apply_server_message_override(next_state, event)
 	return next_state
 
 
@@ -1964,6 +1977,32 @@ static func _apply_status_tick_event(state: Dictionary, event: Dictionary) -> Di
 
 
 static func _status_hit_check_for_event(state: Dictionary, event: Dictionary, target: Dictionary, status_id: String) -> Dictionary:
+	var target_id := str(target.get("id", ""))
+	var forced_result_per_target = event.get("forcedStatusResultPerTarget", {})
+	if forced_result_per_target is Dictionary and (forced_result_per_target as Dictionary).has(target_id):
+		var forced_map := forced_result_per_target as Dictionary
+		var forced_roll_map := event.get("forcedStatusRollPerTarget", {}) as Dictionary if event.get("forcedStatusRollPerTarget", {}) is Dictionary else {}
+		var forced_chance_map := event.get("forcedStatusChancePerTarget", {}) as Dictionary if event.get("forcedStatusChancePerTarget", {}) is Dictionary else {}
+		var forced_resistance_map := event.get("forcedStatusResistancePerTarget", {}) as Dictionary if event.get("forcedStatusResistancePerTarget", {}) is Dictionary else {}
+		var forced_result := str(forced_map.get(target_id, "resisted"))
+		return {
+			"hit": forced_result == "applied",
+			"result": forced_result,
+			"chance": float(forced_chance_map.get(target_id, event.get("forcedStatusChance", -1.0))),
+			"roll": float(forced_roll_map.get(target_id, event.get("forcedStatusRoll", -1.0))),
+			"resistance": float(forced_resistance_map.get(target_id, event.get("forcedStatusResistance", 0.0))),
+			"immune": forced_result == "immune",
+		}
+	var forced_result_single := str(event.get("forcedStatusResult", ""))
+	if forced_result_single != "":
+		return {
+			"hit": forced_result_single == "applied",
+			"result": forced_result_single,
+			"chance": float(event.get("forcedStatusChance", -1.0)),
+			"roll": float(event.get("forcedStatusRoll", -1.0)),
+			"resistance": float(event.get("forcedStatusResistance", 0.0)),
+			"immune": forced_result_single == "immune",
+		}
 	var immune := _status_immunity_for_actor(target, status_id)
 	if immune:
 		return {
@@ -2223,7 +2262,7 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 			state["message"] = "%s 使用%s，%s 回避了。" % [dodged_attacker_name, str(event.get("skillName", "技能")), dodged_target_name]
 		else:
 			state["message"] = "%s 攻击了 %s，%s 回避了。" % [dodged_attacker_name, dodged_target_name, dodged_target_name]
-		return state
+		return _apply_server_message_override(state, event)
 
 	damage = _resolved_damage_for_event(state, event, target_id, declared_target_id, participant_ids)
 	critical = _damage_event_is_critical(state, event, attacker_id, target_id)
@@ -2310,7 +2349,7 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 			state["message"] += " %s 被击飞。" % target_name
 	elif next_hp <= 0:
 		state["message"] += " %s 倒下了。" % target_name
-	return state
+	return _apply_server_message_override(state, event)
 
 
 static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -2833,7 +2872,7 @@ static func _apply_switch_pet_event(state: Dictionary, event: Dictionary) -> Dic
 	state["lastPetId"] = pet_id
 	state["lastParticipants"] = [attacker_id]
 	state["message"] = "%s 换上了 %s。" % [str(attacker.get("name", "我方")), str(next_pet.get("name", "宠物"))]
-	return state
+	return _apply_server_message_override(state, event)
 
 
 static func _apply_field_effect_event(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -3264,7 +3303,7 @@ static func _apply_defend_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetId"] = actor_id
 	state["lastParticipants"] = [actor_id]
 	state["message"] = "%s 进入防御姿态。" % str(actor.get("name", "我方"))
-	return state
+	return _apply_server_message_override(state, event)
 
 
 static func _apply_target_missing_event(state: Dictionary, event: Dictionary) -> Dictionary:

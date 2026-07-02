@@ -152,6 +152,34 @@
       "bossMode": "interaction_guardian"
     },
     {
+      "id": "level_grass_trial_field",
+      "label": "等级草丛试验场",
+      "type": "field",
+      "mapIds": ["level_grass_trial_ground"],
+      "entryMapId": "level_grass_trial_ground",
+      "levelRange": {"min": 10, "max": 140},
+      "safeReturn": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "from_level_grass_trial_ground"
+      },
+      "encounterGroups": [
+        "level_grass_010",
+        "level_grass_020",
+        "level_grass_030",
+        "level_grass_040",
+        "level_grass_050",
+        "level_grass_060",
+        "level_grass_070",
+        "level_grass_080",
+        "level_grass_090",
+        "level_grass_100",
+        "level_grass_110",
+        "level_grass_120",
+        "level_grass_130",
+        "level_grass_140"
+      ]
+    },
+    {
       "id": "gm_training_ground",
       "label": "GM练级测试场",
       "type": "gm",

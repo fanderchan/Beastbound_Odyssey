@@ -54,6 +54,7 @@ function battleProfile(name, playerStats, petStats = null) {
         "defense": Number(playerStats.defense || 6),
         "quick": Number(playerStats.quick || 70),
       },
+      "comboRateOverride": playerStats.comboRateOverride,
     },
     "activePetInstanceId": petId,
     "petInstances": [],
@@ -74,8 +75,73 @@ function battleProfile(name, playerStats, petStats = null) {
       "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge"],
       "petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "", ""],
       "passiveSkillIds": ["test_passive"],
+      "comboRateOverride": petStats.comboRateOverride,
     });
   }
+  return profile;
+}
+
+function profileItemCount(profile, itemId) {
+  const slots = Array.isArray(profile && profile.backpackSlots) ? profile.backpackSlots : [];
+  return slots.reduce((total, slot) => {
+    if (!slot || typeof slot !== "object" || Array.isArray(slot)) {
+      return total;
+    }
+    if (String(slot.itemId || "") !== itemId) {
+      return total;
+    }
+    return total + Math.max(0, Math.trunc(Number(slot.count || 0)));
+  }, 0);
+}
+
+function playerRebirthReadyProfile(name) {
+  const profile = battleProfile(name, {
+    "level": 80,
+    "hp": 220,
+    "maxHp": 220,
+    "attack": 45,
+    "defense": 30,
+    "quick": 90,
+  }, {
+    "petId": "rebirth_active_pet",
+    "formId": "bui_normal_red_fire10",
+    "name": "随行布伊",
+    "level": 60,
+    "hp": 160,
+    "maxHp": 160,
+    "attack": 40,
+    "defense": 20,
+    "quick": 80,
+  });
+  profile.rebirthQuestCompletions = ["rebirth_1"];
+  profile.rebirthTrialProofs = {"shadow_oath_rebirth_guardian": 1};
+  profile.backpackSlots = [
+    {"itemId": "ring_earth_trial", "count": 1},
+    {"itemId": "ring_water_trial", "count": 1},
+    {"itemId": "ring_fire_trial", "count": 1},
+    {"itemId": "ring_wind_trial", "count": 1},
+    ...Array.from({"length": 11}, () => ({})),
+  ];
+  profile.petInstances.push({
+    "instanceId": "rebirth_beast_earth_1",
+    "petId": "rebirth_beast_earth_1",
+    "formId": "rebirth_beast_earth_lv50",
+    "templateId": "rebirth_beast_earth_lv50",
+    "name": "地灵转生兽",
+    "state": "standby",
+    "level": 50,
+    "hp": 520,
+    "maxHp": 520,
+    "attack": 76,
+    "defense": 92,
+    "quick": 48,
+  });
+  profile.nextPetInstanceSerial = 10;
+  profile.recordPoint = {
+    "mapId": "firebud_village_gate",
+    "spawnName": "doctor_record",
+    "label": "火芽村医旁记录点",
+  };
   return profile;
 }
 
@@ -353,6 +419,294 @@ test("profiles sync with revision conflict protection", () => {
   assert.equal(conflict.profileSummary.profileRevision, 1);
 });
 
+test("server shop transactions validate price, currency, backpack, and buy quests", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "shopuser", "password": "test1234", "displayName": "商店玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("商店玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 100;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  profile.activeQuestId = "quest_buy_supply";
+  profile.questStates = {"quest_buy_supply": {"questId": "quest_buy_supply", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const buy = service.shopTransaction(token, {
+    "mode": "buy",
+    "shopId": "firebud_item_shop",
+    "itemId": "item_meat_small",
+    "amount": 1,
+  });
+  assert.equal(buy.ok, true);
+  assert.equal(buy.profileSummary.profileRevision, 2);
+  assert.equal(buy.transaction.price, 8);
+  assert.equal(buy.profile.stoneCoins, 92);
+  assert.equal(profileItemCount(buy.profile, "item_meat_small"), 1);
+  assert.equal(profileItemCount(buy.profile, "capture_rope_basic"), 1);
+  assert.equal(buy.profile.activeQuestId, "quest_use_meat");
+  assert.equal(buy.questMessages.some((message) => String(message).includes("补给准备")), true);
+
+  const sell = service.shopTransaction(token, {
+    "mode": "sell",
+    "shopId": "firebud_item_shop",
+    "itemId": "item_meat_small",
+    "amount": 1,
+  });
+  assert.equal(sell.ok, true);
+  assert.equal(sell.profileSummary.profileRevision, 3);
+  assert.equal(sell.transaction.price, 4);
+  assert.equal(sell.profile.stoneCoins, 96);
+  assert.equal(profileItemCount(sell.profile, "item_meat_small"), 0);
+
+  const expensive = service.shopTransaction(token, {
+    "mode": "buy",
+    "shopId": "firebud_diamond_shop",
+    "itemId": "thunder_dragon_egg",
+    "amount": 999,
+  });
+  assert.equal(expensive.ok, false);
+  assert.equal(expensive.code, "not_enough_currency");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
+});
+
+test("server equipment equip validates ownership, swaps equipment, and advances quests", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "equipuser", "password": "test1234", "displayName": "装备玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("装备玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.backpackSlots = [
+    {"itemId": "weapon_wooden_club", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_stone_dagger"};
+  profile.equipmentDurability = {"right_hand_weapon": 30};
+  profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_stone_dagger", "level": 0, "history": []}};
+  profile.equipmentWearCounters = {"right_hand_weapon": {"itemId": "weapon_stone_dagger", "attackCount": 0, "hitCount": 0}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "backpack",
+      "slotId": "",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test",
+    },
+    "equip_000002": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000002",
+      "itemId": "weapon_stone_dagger",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_stone_dagger", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_stone_dagger", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "starter",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000002"};
+  profile.nextEquipmentInstanceSerial = 3;
+  profile.activeQuestId = "quest_equip_weapon";
+  profile.questStates = {"quest_equip_weapon": {"questId": "quest_equip_weapon", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const equipped = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});
+  assert.equal(equipped.ok, true);
+  assert.equal(equipped.profileSummary.profileRevision, 2);
+  assert.equal(equipped.equipment.slot, "right_hand_weapon");
+  assert.equal(equipped.equipment.previousItemId, "weapon_stone_dagger");
+  assert.equal(equipped.profile.equipmentSlots.right_hand_weapon, "weapon_wooden_club");
+  assert.equal(equipped.profile.equipmentSlotInstanceIds.right_hand_weapon, "equip_000001");
+  assert.equal(equipped.profile.equipmentInstances.equip_000001.location, "equipped");
+  assert.equal(equipped.profile.equipmentInstances.equip_000002.location, "backpack");
+  assert.equal(profileItemCount(equipped.profile, "weapon_wooden_club"), 0);
+  assert.equal(profileItemCount(equipped.profile, "weapon_stone_dagger"), 1);
+  assert.equal(equipped.profile.activeQuestId, "quest_buy_spirit_armor");
+  assert.equal(equipped.questMessages.some((message) => String(message).includes("装备木棒")), true);
+
+  const missing = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "equipment_item_missing");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+});
+
+test("server equipment enhance validates equipped slot, consumes cost, and updates instance", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "enhanceuser", "password": "test1234", "displayName": "强化玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("强化玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 120;
+  profile.backpackSlots = [
+    {"itemId": "equip_frag_wood_basic", "count": 3},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
+  profile.equipmentDurability = {"right_hand_weapon": 30};
+  profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "level": 0, "history": []}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "starter",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.nextEquipmentInstanceSerial = 2;
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const enhanced = service.equipmentEnhance(token, {"slotId": "right_hand_weapon"});
+  assert.equal(enhanced.ok, true);
+  assert.equal(enhanced.profileSummary.profileRevision, 2);
+  assert.equal(enhanced.enhancement.level, 1);
+  assert.equal(enhanced.enhancement.materialId, "equip_frag_wood_basic");
+  assert.equal(enhanced.profile.stoneCoins, 100);
+  assert.equal(profileItemCount(enhanced.profile, "equip_frag_wood_basic"), 2);
+  assert.equal(enhanced.profile.equipmentEnhancement.right_hand_weapon.level, 1);
+  assert.equal(enhanced.profile.equipmentInstances.equip_000001.enhancement.level, 1);
+
+  const second = service.equipmentEnhance(token, {"slotId": "right_hand_weapon"});
+  assert.equal(second.ok, true);
+  assert.equal(second.profileSummary.profileRevision, 3);
+  assert.equal(second.enhancement.level, 2);
+  assert.equal(profileItemCount(second.profile, "equip_frag_wood_basic"), 0);
+  assert.equal(second.profile.stoneCoins, 60);
+
+  const missing = service.equipmentEnhance(token, {"slotId": "right_hand_weapon"});
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "equipment_enhance_material_missing");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
+});
+
+test("server equipment repair validates missing durability, consumes coins, and updates instances", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "repairuser", "password": "test1234", "displayName": "修理玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("修理玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 20;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
+  profile.equipmentDurability = {"right_hand_weapon": 2};
+  profile.equipmentWearCounters = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "attackCount": 37, "hitCount": 0}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 2,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 37, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "starter",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.nextEquipmentInstanceSerial = 2;
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const repaired = service.equipmentRepairAll(token);
+  assert.equal(repaired.ok, true);
+  assert.equal(repaired.profileSummary.profileRevision, 2);
+  assert.equal(repaired.repair.missingDurability, 28);
+  assert.equal(repaired.repair.cost, 6);
+  assert.equal(repaired.profile.stoneCoins, 14);
+  assert.equal(repaired.profile.equipmentDurability.right_hand_weapon, 30);
+  assert.equal(repaired.profile.equipmentWearCounters.right_hand_weapon.attackCount, 0);
+  assert.equal(repaired.profile.equipmentInstances.equip_000001.durability, 30);
+  assert.equal(repaired.profile.equipmentInstances.equip_000001.wearCounters.attackCount, 0);
+
+  const notNeeded = service.equipmentRepairAll(token);
+  assert.equal(notNeeded.ok, false);
+  assert.equal(notNeeded.code, "equipment_repair_not_needed");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+});
+
+test("server equipment synthesis validates materials, currency, backpack, and instances", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "synthuser", "password": "test1234", "displayName": "合成玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("合成玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 50;
+  profile.backpackSlots = [
+    {"itemId": "equip_frag_wood_basic", "count": 3},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {};
+  profile.nextEquipmentInstanceSerial = 1;
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const synthesized = service.equipmentSynthesize(token, {"recipeId": "craft_hardwood_club"});
+  assert.equal(synthesized.ok, true);
+  assert.equal(synthesized.profileSummary.profileRevision, 2);
+  assert.equal(synthesized.synthesis.outputItemId, "weapon_hardwood_club");
+  assert.equal(synthesized.synthesis.stoneCost, 20);
+  assert.equal(synthesized.profile.stoneCoins, 30);
+  assert.equal(profileItemCount(synthesized.profile, "equip_frag_wood_basic"), 0);
+  assert.equal(profileItemCount(synthesized.profile, "weapon_hardwood_club"), 1);
+  assert.equal(synthesized.synthesis.instanceIds.length, 1);
+  const instanceId = synthesized.synthesis.instanceIds[0];
+  assert.equal(synthesized.profile.equipmentInstances[instanceId].itemId, "weapon_hardwood_club");
+  assert.equal(synthesized.profile.equipmentInstances[instanceId].location, "backpack");
+  assert.equal(synthesized.profile.equipmentInstances[instanceId].source, "synthesis");
+
+  const missing = service.equipmentSynthesize(token, {"recipeId": "craft_hardwood_club"});
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "equipment_synthesis_material_missing");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+});
+
+test("server player rebirth consumes trial requirements and writes authoritative profile", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "rebirthuser", "password": "test1234", "displayName": "转生玩家"});
+  const token = registered.session.token;
+  const profile = playerRebirthReadyProfile("转生玩家");
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+  service.updatePlayerPosition(token, {"mapId": "level_grass_trial_ground", "cellX": 12, "cellY": 8, "facing": "east", "moving": false});
+
+  const reborn = service.playerRebirth(token);
+  assert.equal(reborn.ok, true);
+  assert.equal(reborn.profileSummary.profileRevision, 2);
+  assert.equal(reborn.profile.rebirthCount, 1);
+  assert.equal(reborn.profile.player.level, 1);
+  assert.equal(reborn.profile.player.exp, 0);
+  assert.equal(reborn.profile.player.nextExp, 122);
+  assert.equal(reborn.profile.rebirthHistory.length, 1);
+  assert.equal(reborn.profile.rebirthHistory[0].toRebirth, 1);
+  assert.equal(reborn.profile.rebirthHistory[0].questId, "rebirth_1");
+  assert.equal(profileItemCount(reborn.profile, "ring_earth_trial"), 0);
+  assert.equal(profileItemCount(reborn.profile, "ring_water_trial"), 0);
+  assert.equal(profileItemCount(reborn.profile, "ring_fire_trial"), 0);
+  assert.equal(profileItemCount(reborn.profile, "ring_wind_trial"), 0);
+  assert.equal(profileItemCount(reborn.profile, "armor_grace_cloth_3"), 1);
+  assert.equal(reborn.profile.rebirthTrialProofs.shadow_oath_rebirth_guardian, undefined);
+  assert.equal(reborn.profile.petInstances.some((pet) => pet.formId === "rebirth_beast_earth_lv50"), false);
+  const starter = reborn.profile.petInstances.find((pet) => pet.formId === "rebirth_starter_earth_cub");
+  assert.equal(Boolean(starter), true);
+  assert.equal(starter.state, "battle");
+  assert.equal(reborn.profile.activePetInstanceId, starter.instanceId);
+  assert.equal(reborn.rebirth.consumedRingIds.length, 4);
+  assert.equal(reborn.rebirth.consumedPets[0].formId, "rebirth_beast_earth_lv50");
+  assert.equal(reborn.rebirth.rewardItems[0].itemId, "armor_grace_cloth_3");
+  assert.equal(reborn.returnEntry.position.authority, "player_rebirth_return");
+  assert.equal(reborn.returnEntry.position.mapId, "firebud_village_gate");
+
+  const second = service.playerRebirth(token);
+  assert.equal(second.ok, false);
+  assert.equal(second.code, "player_rebirth_not_ready");
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+});
+
 test("players can search and send text mail across accounts", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const sender = service.register({"username": "maila", "password": "test1234", "displayName": "甲"});
@@ -404,6 +758,26 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(leader.ok, true);
   assert.equal(member.ok, true);
   assert.equal(outsider.ok, true);
+  const leaderProfile = service.saveProfile(leader.session.token, {
+    profile: battleProfile("队长", {level: 12, hp: 140, maxHp: 140, attack: 24, defense: 10, quick: 72}, {
+      petId: "party_leader_pet",
+      name: "队长布伊",
+      level: 12,
+      hp: 100,
+      maxHp: 100,
+    }),
+  });
+  const memberProfile = service.saveProfile(member.session.token, {
+    profile: battleProfile("队员", {level: 9, hp: 130, maxHp: 130, attack: 21, defense: 8, quick: 66}, {
+      petId: "party_member_pet",
+      name: "队员布伊",
+      level: 9,
+      hp: 95,
+      maxHp: 95,
+    }),
+  });
+  assert.equal(leaderProfile.ok, true);
+  assert.equal(memberProfile.ok, true);
 
   const online = service.listOnlinePlayers(leader.session.token);
   assert.equal(online.ok, true);
@@ -428,6 +802,9 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(accept.ok, true);
   assert.equal(accept.party.memberCount, 2);
   assert.deepEqual(accept.party.members.map((player) => player.username), ["partya", "partyb"]);
+  const acceptedMember = accept.party.members.find((player) => player.username === "partyb");
+  assert.equal(acceptedMember.teamSnapshot.player.name, "队员");
+  assert.equal(acceptedMember.teamSnapshot.battlePets[0].petId, "party_member_pet");
 
   const busyInvite = service.inviteToParty(outsider.session.token, {"username": "partyb"});
   assert.equal(busyInvite.ok, false);
@@ -584,6 +961,98 @@ test("server movement steps are authoritative and bounded", () => {
   });
   assert.equal(jump.ok, false);
   assert.equal(jump.code, "movement_step_too_far");
+});
+
+test("party members follow the leader and cannot move independently", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "followa", "password": "test1234", "displayName": "跟随甲"});
+  const member = service.register({"username": "followb", "password": "test1234", "displayName": "跟随乙"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+
+  const leaderSeed = service.updatePlayerPosition(leader.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  const memberSeed = service.updatePlayerPosition(member.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 9,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(leaderSeed.ok, true);
+  assert.equal(memberSeed.ok, true);
+
+  const invite = service.inviteToParty(leader.session.token, {"username": "followb"});
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.party.memberCount, 2);
+
+  const memberMove = service.movePlayerStep(member.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 9,
+    "fromCellY": 10,
+    "toCellX": 8,
+    "toCellY": 10,
+  });
+  assert.equal(memberMove.ok, false);
+  assert.equal(memberMove.code, "movement_party_member_locked");
+  assert.equal(memberMove.position.cellX, 9);
+
+  const memberSnapshot = service.updatePlayerPosition(member.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 30,
+    "cellY": 30,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(memberSnapshot.ok, true);
+  assert.equal(memberSnapshot.position.cellX, 9);
+  assert.equal(memberSnapshot.position.cellY, 10);
+  assert.equal(memberSnapshot.position.authority, "party_follow");
+
+  const leaderStep = service.movePlayerStep(leader.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 10,
+    "fromCellY": 10,
+    "toCellX": 11,
+    "toCellY": 10,
+    "moving": false,
+  });
+  assert.equal(leaderStep.ok, true);
+  assert.equal(leaderStep.position.cellX, 11);
+  const snapshot = service.snapshot();
+  const followerPosition = snapshot.playerPositions[member.account.accountId];
+  assert.equal(followerPosition.cellX, 10);
+  assert.equal(followerPosition.cellY, 10);
+  assert.equal(followerPosition.authority, "party_follow");
+  const followerOnline = leaderStep.players.find((player) => player.accountId === member.account.accountId);
+  assert.equal(followerOnline.position.cellX, 10);
+  assert.equal(followerOnline.position.authority, "party_follow");
+
+  const leaderMapSwitch = service.updatePlayerPosition(leader.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 15,
+    "cellY": 20,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(leaderMapSwitch.ok, true);
+  assert.equal(leaderMapSwitch.position.mapId, "firebud_village_gate");
+  const switchedSnapshot = service.snapshot();
+  const switchedFollowerPosition = switchedSnapshot.playerPositions[member.account.accountId];
+  assert.equal(switchedFollowerPosition.mapId, "firebud_village_gate");
+  assert.equal(switchedFollowerPosition.cellX, 15);
+  assert.equal(switchedFollowerPosition.cellY, 20);
+  assert.equal(switchedFollowerPosition.authority, "party_follow");
+  const switchedFollowerOnline = leaderMapSwitch.players.find((player) => player.accountId === member.account.accountId);
+  assert.equal(switchedFollowerOnline.position.mapId, "firebud_village_gate");
+  assert.equal(switchedFollowerOnline.position.cellX, 15);
+  assert.equal(switchedFollowerOnline.position.authority, "party_follow");
 });
 
 test("online positions are runtime-only and do not trigger store writes", () => {
@@ -807,6 +1276,1622 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(storedRoom.battle.profileWriteback.profiles[0].petHps[0].hp, updatedOpponentPet.hp);
 });
 
+test("party pve encounters create one shared server room and wait for all players", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pveleader", "password": "test1234", "displayName": "队长号"});
+  const member = service.register({"username": "pvemember", "password": "test1234", "displayName": "队员号"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+
+  const leaderProfile = battleProfile("队长号", {"level": 20, "hp": 180, "maxHp": 180, "attack": 30, "defense": 12, "quick": 78}, {
+    "petId": "leader_battle_pet",
+    "name": "队长布伊",
+    "level": 16,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 24,
+    "defense": 10,
+    "quick": 70,
+  });
+  leaderProfile.trainingPartners = [{
+    "partnerId": "leader_partner_1",
+    "name": "队长伙伴",
+    "level": 12,
+    "hp": 130,
+    "maxHp": 130,
+    "attack": 23,
+    "defense": 9,
+    "quick": 65,
+    "pet": {
+      "petId": "leader_partner_pet_1",
+      "name": "伙伴布伊",
+      "formId": "bui_normal_red_fire10",
+      "level": 12,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 18,
+      "defense": 8,
+      "quick": 62,
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    },
+  }];
+  const memberProfile = battleProfileWithPets("队员号", {"level": 19, "hp": 170, "maxHp": 170, "attack": 28, "defense": 11, "quick": 76}, [
+    {
+      "petId": "member_battle_pet",
+      "name": "队员布伊",
+      "state": "battle",
+      "level": 15,
+      "hp": 116,
+      "maxHp": 116,
+      "attack": 23,
+      "defense": 10,
+      "quick": 69,
+    },
+    {
+      "petId": "member_ride_pet",
+      "name": "队员骑宠",
+      "formId": "bui_normal_yellow_wind10",
+      "state": "riding",
+      "level": 18,
+      "hp": 160,
+      "maxHp": 160,
+      "attack": 10,
+      "defense": 10,
+      "quick": 80,
+    },
+  ]);
+  memberProfile.ridePetInstanceId = "member_ride_pet";
+  assert.equal(service.saveProfile(leader.session.token, {"expectedRevision": 0, "profile": leaderProfile}).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {"expectedRevision": 0, "profile": memberProfile}).ok, true);
+
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvemember"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 10,
+    "encounterZone": {
+      "id": "test_grass",
+      "name": "测试草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "满血乌力",
+        "level": 8,
+        "battleStats": {
+          "maxHp": 240,
+          "attack": 14,
+          "defense": 8,
+          "quick": 48,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.mode, "party_pve");
+  assert.equal(encounter.room.participantAccountIds.length, 2);
+  const memberState = service.getBattleState(member.session.token);
+  assert.equal(memberState.ok, true);
+  assert.equal(memberState.room.roomId, encounter.room.roomId);
+
+  const actors = encounter.room.battle.actors;
+  const enemies = actors.filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 10);
+  assert.equal(enemies.every((actor) => actor.kind === "wild_pet" && actor.hp === actor.maxHp), true);
+  const memberPlayer = actors.find((actor) => actor.username === "pvemember" && actor.kind === "player");
+  assert.equal(memberPlayer.ridePetInstanceId, "member_ride_pet");
+  assert.equal(memberPlayer.ridePetHp, 160);
+  assert.equal(actors.some((actor) => actor.displayName === "队长伙伴"), true);
+  assert.equal(encounter.room.battle.requiredActorIds.length, 4);
+
+  const leaderPlayer = actors.find((actor) => actor.username === "pveleader" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pveleader" && actor.kind === "pet");
+  const memberPet = actors.find((actor) => actor.username === "pvemember" && actor.kind === "pet");
+  const firstEnemy = enemies[0];
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && firstEnemy), true);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.turn.kind, "battle_event_list");
+  assert.equal(resolved.turn.events.some((event) => event.actorId.startsWith("party_pve_enemy_")), true);
+  assert.equal(resolved.room.battle.round, 2);
+});
+
+test("party pve encounters support a solo server account without local battle fallback", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "solopve", "password": "test1234", "displayName": "单人练级号"});
+  assert.equal(solo.ok, true);
+
+  const profile = battleProfile("单人练级号", {"level": 6, "hp": 128, "maxHp": 128, "attack": 24, "defense": 8, "quick": 72}, {
+    "petId": "solo_battle_pet",
+    "name": "单人布伊",
+    "level": 5,
+    "hp": 96,
+    "maxHp": 96,
+    "attack": 18,
+    "defense": 7,
+    "quick": 64,
+  });
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 15,
+    "cellY": 17,
+    "facing": "south",
+    "moving": false,
+  }).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "solo_grass",
+      "name": "单人草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "单人乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 80, "attack": 10, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.mode, "party_pve");
+  assert.equal(encounter.room.partyId, "");
+  assert.deepEqual(encounter.room.participantAccountIds, [solo.account.accountId]);
+  assert.equal(encounter.message, "遭遇了野生宠物。");
+  const storedRoom = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.equal(storedRoom.leaderAccountId, solo.account.accountId);
+
+  const actors = encounter.room.battle.actors;
+  assert.equal(actors.some((actor) => actor.accountId === solo.account.accountId && actor.kind === "player"), true);
+  assert.equal(actors.some((actor) => actor.accountId === solo.account.accountId && actor.kind === "pet"), true);
+  assert.equal(actors.filter((actor) => actor.side === "enemy").length, 1);
+  assert.deepEqual(encounter.room.battle.requiredAccountIds, [solo.account.accountId]);
+
+  const restored = service.getBattleState(solo.session.token);
+  assert.equal(restored.ok, true);
+  assert.equal(restored.room.roomId, encounter.room.roomId);
+});
+
+test("party pve escape closes room without win or loss result", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pveescapeone", "password": "test1234", "displayName": "逃跑玩家"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("逃跑玩家", {
+    "level": 5,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 8,
+    "quick": 90,
+  }, {
+    "petId": "escape_pet",
+    "name": "逃跑布伊",
+    "level": 5,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 15,
+    "defense": 7,
+    "quick": 70,
+  });
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "escape_grass",
+      "name": "逃跑草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "逃跑乌力",
+        "level": 3,
+        "expReward": 200,
+        "battleStats": {"maxHp": 80, "attack": 10, "defense": 5, "quick": 40},
+      },
+      "rewards": {
+        "stoneCoins": {"count": 99},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const leave = service.leaveBattleRoom(solo.session.token, encounter.room.roomId);
+  assert.equal(leave.ok, true);
+  assert.equal(leave.message, "已逃离战斗。");
+  assert.equal(leave.room.status, "closed");
+  assert.equal(leave.result.reason, "escape");
+  assert.equal(leave.result.winnerAccountId, "");
+  assert.deepEqual(leave.result.loserAccountIds, []);
+  assert.equal(leave.result.closedByAccountId, solo.account.accountId);
+
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  assert.equal(after.profile.player.level, 5);
+  assert.equal(after.profile.stoneCoins || 0, 0);
+  assert.equal(after.profileSummary.profileRevision, 1);
+
+  const snapshot = service.snapshot();
+  const storedRoom = snapshot.battleRooms[encounter.room.roomId];
+  assert.equal(storedRoom.battle.profileWriteback.profiles.length, 0);
+  const record = snapshot.battleRecords.find((entry) => entry.roomId === encounter.room.roomId);
+  assert.equal(Boolean(record), true);
+  assert.equal(record.mode, "party_pve");
+  assert.equal(record.reason, "escape");
+  assert.equal(record.winnerAccountId, "");
+  assert.deepEqual(record.loserAccountIds, []);
+  assert.equal(record.expSummaries.length, 0);
+});
+
+test("party pve capture command stores captured wild pet and consumes capture tool", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvecaptureone", "password": "test1234", "displayName": "捕捉玩家"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("捕捉玩家", {
+    "level": 5,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 8,
+    "quick": 90,
+  });
+  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  profile.captureTools = {"capture_net": 1};
+  profile.petCodexSeenFormIds = [];
+  profile.petCodexCapturedFormIds = [];
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_grass",
+      "name": "捕捉草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "捕捉乌力",
+        "level": 3,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {
+          "maxHp": 80,
+          "attack": 1,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.participants[0].teamSnapshot.captureToolBag.capture_net, 1);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && enemy), true);
+  assert.equal(enemy.catchable, true);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const captureEvent = resolved.turn.events.find((event) => event.eventType === "capture");
+  assert.equal(Boolean(captureEvent), true);
+  assert.equal(captureEvent.success, true);
+  assert.equal(captureEvent.captureToolId, "capture_net");
+  assert.equal(captureEvent.remainingCaptureToolCount, 0);
+
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(Boolean(writeback), true);
+  assert.equal(writeback.captureToolBag.capture_net, 0);
+  assert.equal(writeback.capturedPets.length, 1);
+  assert.equal(writeback.capturedPets[0].formId, "wuli_normal_orange_fire10");
+  assert.equal(writeback.capturedPets[0].state, "standby");
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  const captured = after.profile.petInstances.find((pet) => pet.formId === "wuli_normal_orange_fire10" && pet.isNew === true);
+  assert.equal(Boolean(captured), true);
+  assert.equal(captured.state, "standby");
+  assert.equal(captured.level, 3);
+  assert.equal(after.profile.petCodexCapturedFormIds.includes("wuli_normal_orange_fire10"), true);
+  const remainingNetCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
+    sum + (slot && slot.itemId === "capture_net" ? Number(slot.count || 0) : 0)
+  ), 0);
+  assert.equal(remainingNetCount, 0);
+});
+
+test("party pve retargets defeated enemies and writes exp to participants", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pveexpone", "password": "test1234", "displayName": "经验队长"});
+  const member = service.register({"username": "pveexptwo", "password": "test1234", "displayName": "经验队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+
+  const leaderProfile = battleProfile("经验队长", {"level": 1, "hp": 120, "maxHp": 120, "attack": 24, "defense": 8, "quick": 90, "comboRateOverride": 0}, {
+    "petId": "exp_leader_pet",
+    "name": "队长布伊",
+    "level": 1,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 22,
+    "defense": 6,
+    "quick": 89,
+    "comboRateOverride": 0,
+  });
+  leaderProfile.ridePetInstanceId = "exp_ride_pet";
+  leaderProfile.petInstances.push({
+    "instanceId": "exp_ride_pet",
+    "petId": "exp_ride_pet",
+    "formId": "bui_normal_blue_water10",
+    "name": "经验骑宠",
+    "state": "riding",
+    "level": 1,
+    "hp": 95,
+    "maxHp": 95,
+    "attack": 12,
+    "defense": 7,
+    "quick": 72,
+    "activeSkillIds": ["pet_attack", "pet_defend"],
+    "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    "passiveSkillIds": [],
+  });
+  leaderProfile.trainingPartners = [{
+    "partnerId": "exp_partner_1",
+    "name": "经验伙伴",
+    "level": 1,
+    "exp": 0,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 22,
+    "defense": 7,
+    "quick": 88,
+    "pet": {
+      "petId": "exp_partner_pet_1",
+      "name": "经验伙伴宠",
+      "level": 1,
+      "exp": 0,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 18,
+      "defense": 6,
+      "quick": 86,
+    },
+  }];
+  const memberProfile = battleProfile("经验队员", {"level": 1, "hp": 120, "maxHp": 120, "attack": 23, "defense": 8, "quick": 88, "comboRateOverride": 0}, {
+    "petId": "exp_member_pet",
+    "name": "队员布伊",
+    "level": 1,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 21,
+    "defense": 6,
+    "quick": 87,
+    "comboRateOverride": 0,
+  });
+  assert.equal(service.saveProfile(leader.session.token, {"expectedRevision": 0, "profile": leaderProfile}).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {"expectedRevision": 0, "profile": memberProfile}).ok, true);
+
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 18, "cellY": 18, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 18, "cellY": 18, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveexptwo"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+	  const encounter = service.startPartyEncounter(leader.session.token, {
+	    "enemyCount": 2,
+	    "encounterZone": {
+	      "id": "exp_grass",
+	      "name": "经验草丛",
+	      "formationTemplate": "10v10",
+	      "selectedWildPet": {
+	        "formId": "wuli_normal_orange_fire10",
+	        "name": "经验乌力",
+	        "level": 1,
+	        "expReward": 200,
+	        "battleStats": {
+	          "maxHp": 10,
+	          "attack": 30,
+	          "defense": 20,
+	          "quick": 80,
+	        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pveexpone" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pveexpone" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pveexptwo" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pveexptwo" && actor.kind === "pet");
+  const firstEnemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && firstEnemy), true);
+
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  assert.equal(resolved.turn.events.some((event) => event.eventType === "target_missing"), false);
+  const attackEvents = resolved.turn.events.filter((event) => event.eventType === "basic_attack" || event.eventType === "pet_skill");
+  assert.equal(attackEvents.some((event) => event.targetActorId !== firstEnemy.actorId), true);
+
+  const leaderAfter = service.getProfile(leader.session.token);
+  const memberAfter = service.getProfile(member.session.token);
+  assert.equal(leaderAfter.ok, true);
+  assert.equal(memberAfter.ok, true);
+  assert.equal(leaderAfter.profile.player.level > 1, true);
+  assert.equal(memberAfter.profile.player.level, 1);
+  assert.equal(leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_leader_pet").level > 1, true);
+  assert.equal(leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_ride_pet").level > 1, true);
+  assert.equal(memberAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_member_pet").level, 1);
+  assert.equal(leaderAfter.profile.trainingPartners[0].level, 1);
+  assert.equal(leaderAfter.profile.trainingPartners[0].pet.level, 1);
+
+  const storedRoom = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.equal(storedRoom.battle.expCredits.length, 2);
+  const creditRecipients = storedRoom.battle.expCredits.flatMap((credit) => credit.recipients || []);
+  assert.equal(creditRecipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "player" && entry.amount === 220 && entry.partyBonusPercent === 10), true);
+  assert.equal(creditRecipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "ride_pet" && entry.amount === 132 && entry.baseAmount === 120), true);
+  assert.equal(creditRecipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "pet" && entry.petId === "exp_leader_pet" && entry.amount === 220), true);
+  assert.equal(creditRecipients.some((entry) => entry.accountId === member.account.accountId), false);
+  const storedLeaderWriteback = storedRoom.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  const storedMemberWriteback = storedRoom.battle.profileWriteback.profiles.find((entry) => entry.accountId === member.account.accountId);
+  assert.equal(storedLeaderWriteback.exp.amount, 572);
+  assert.equal(storedLeaderWriteback.exp.player.amount, 220);
+  assert.equal(storedLeaderWriteback.exp.player.baseAmount, 200);
+  assert.equal(storedLeaderWriteback.exp.player.partyBonusPercent, 10);
+  assert.equal(storedLeaderWriteback.exp.pets[0].petId, "exp_leader_pet");
+  assert.equal(storedLeaderWriteback.exp.pets[0].amount, 220);
+  assert.equal(storedLeaderWriteback.exp.ridePets[0].petId, "exp_ride_pet");
+  assert.equal(storedLeaderWriteback.exp.ridePets[0].amount, 132);
+  assert.equal(storedLeaderWriteback.exp.ridePets[0].levelsGained > 0, true);
+  assert.equal(storedMemberWriteback.exp.amount, 0);
+  assert.equal(storedMemberWriteback.exp.player.amount, 0);
+  assert.equal(storedMemberWriteback.exp.player.killCount, 0);
+  assert.equal(storedMemberWriteback.exp.pets[0].petId, "exp_member_pet");
+  assert.equal(storedMemberWriteback.exp.pets[0].amount, 0);
+  const publicLeaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  assert.equal(publicLeaderWriteback.exp.amount, 572);
+  assert.equal(publicLeaderWriteback.exp.ridePets[0].name, "经验骑宠");
+  const expRecord = service.snapshot().battleRecords.find((record) => record.roomId === encounter.room.roomId);
+  assert.equal(expRecord.expSummaries.some((entry) => entry.accountId === leader.account.accountId && entry.amount === 572), true);
+  assert.equal(expRecord.expSummaries.some((entry) => entry.accountId === member.account.accountId && entry.amount === 0), true);
+  assert.equal(expRecord.profileWriteback.profiles.length, 2);
+});
+
+test("party pve victory writes stone coins and item drops to profile", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pverewardone", "password": "test1234", "displayName": "奖励玩家"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("奖励玩家", {"level": 8, "hp": 140, "maxHp": 140, "attack": 999, "defense": 20, "quick": 200, "comboRateOverride": 0}, {
+    "petId": "reward_pet",
+    "name": "奖励布伊",
+    "level": 8,
+    "hp": 100,
+    "maxHp": 100,
+    "attack": 1,
+    "defense": 10,
+    "quick": 80,
+    "comboRateOverride": 0,
+  });
+  profile.stoneCoins = 7;
+  profile.backpackSlots = [];
+  profile.captureTools = {};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "reward_grass",
+      "name": "奖励草丛",
+      "encounterGroupId": "firebud_grass_01",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "奖励乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const pet = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "pet");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && pet && enemy), true);
+  assert.equal(service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": pet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(Boolean(writeback && writeback.rewards), true);
+  assert.equal(writeback.rewards.tableId, "firebud_grass_01");
+  assert.equal(writeback.rewards.stoneCoins > 0, true);
+  assert.equal(writeback.rewards.addedItems.some((entry) => entry.itemId === "item_meat_small" && entry.count >= 1), true);
+  assert.equal(writeback.rewards.addedItems.some((entry) => entry.itemId === "capture_rope_basic" && entry.count >= 1), true);
+  assert.equal(writeback.captureToolBag.capture_rope_basic >= 1, true);
+
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  assert.equal(after.profile.stoneCoins, 7 + writeback.rewards.stoneCoins);
+  const meatCount = (after.profile.backpackSlots || []).reduce((sum, slot) => sum + (slot && slot.itemId === "item_meat_small" ? Number(slot.count || 0) : 0), 0);
+  const ropeCount = (after.profile.backpackSlots || []).reduce((sum, slot) => sum + (slot && slot.itemId === "capture_rope_basic" ? Number(slot.count || 0) : 0), 0);
+  assert.equal(meatCount >= 1, true);
+  assert.equal(ropeCount >= 1, true);
+  assert.equal(after.profile.captureTools.capture_rope_basic, ropeCount);
+  const record = service.snapshot().battleRecords.find((entry) => entry.roomId === encounter.room.roomId);
+  assert.equal(Boolean(record && record.profileWriteback.profiles[0].rewards), true);
+});
+
+test("party pve victory advances auto-claim battle quest and hang session", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvequestone", "password": "test1234", "displayName": "任务玩家"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("任务玩家", {"level": 8, "hp": 140, "maxHp": 140, "attack": 999, "defense": 20, "quick": 200, "comboRateOverride": 0}, {
+    "petId": "quest_pet",
+    "name": "任务布伊",
+    "level": 8,
+    "hp": 100,
+    "maxHp": 100,
+    "attack": 1,
+    "defense": 10,
+    "quick": 80,
+    "comboRateOverride": 0,
+  });
+  profile.stoneCoins = 11;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_first_victory";
+  profile.questStates = {"quest_first_victory": {"questId": "quest_first_victory", "status": "active", "progress": 0}};
+  profile.hangSettings = {"captureTargetCount": 0};
+  profile.hangSession = {"enabled": true, "mode": "walk", "battleCount": 2, "captureSuccessCount": 0};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "quest_grass",
+      "name": "任务草丛",
+      "encounterGroupId": "firebud_grass_01",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "任务乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const pet = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "pet");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && pet && enemy), true);
+  assert.equal(service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": pet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(Boolean(writeback && writeback.quests), true);
+  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_first_victory"), true);
+  assert.equal(writeback.quests.activeQuestId, "quest_capture_wuli");
+  assert.equal(writeback.hang.battleCount, 3);
+
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  assert.equal(after.profile.questStates.quest_first_victory.status, "claimed");
+  assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
+  assert.equal(after.profile.hangSession.battleCount, 3);
+  assert.equal(after.profile.stoneCoins, 11 + writeback.rewards.stoneCoins + 30);
+  const healCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
+    sum + (slot && slot.itemId === "item_heal_single_5" ? Number(slot.count || 0) : 0)
+  ), 0);
+  assert.equal(healCount >= 1, true);
+  const record = service.snapshot().battleRecords.find((entry) => entry.roomId === encounter.room.roomId);
+  assert.equal(Boolean(record && record.profileWriteback.profiles[0].quests), true);
+});
+
+test("quest record endpoint advances and auto-claims talk quests server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "questrecorda", "password": "test1234", "displayName": "任务记录"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("任务记录", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_intro_talk";
+  profile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const recorded = service.questRecord(player.session.token, {
+    "event": {"type": "talk", "targetId": "trainer"},
+  });
+  assert.equal(recorded.ok, true);
+  assert.equal(recorded.profileSummary.profileRevision, 2);
+  assert.equal(recorded.progress.questId, "quest_intro_talk");
+  assert.equal(recorded.progress.ready, true);
+  assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
+  assert.equal(recorded.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(recorded.profile.stoneCoins, 20);
+  assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
+  assert.equal(recorded.questMessages.some((message) => String(message).includes("认识训练师")), true);
+});
+
+test("quest claim endpoint requires reward choice and grants selected rewards server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "questclaima", "password": "test1234", "displayName": "任务领取"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("任务领取", {"level": 5, "hp": 130, "maxHp": 130}, null);
+  profile.stoneCoins = 3;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_capture_wuli";
+  profile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "ready", "progress": 1}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const missingChoice = service.questClaim(player.session.token, {"questId": "quest_capture_wuli"});
+  assert.equal(missingChoice.ok, false);
+  assert.equal(missingChoice.code, "quest_reward_choice_required");
+  assert.equal(missingChoice.requiresChoice, true);
+
+  const claimed = service.questClaim(player.session.token, {
+    "questId": "quest_capture_wuli",
+    "rewardChoiceId": "rope_pack",
+  });
+  assert.equal(claimed.ok, true);
+  assert.equal(claimed.profileSummary.profileRevision, 2);
+  assert.equal(claimed.claim.questId, "quest_capture_wuli");
+  assert.equal(claimed.claim.rewardChoiceId, "rope_pack");
+  assert.equal(claimed.claim.rewards.stoneCoins, 60);
+  assert.equal(claimed.profile.stoneCoins, 63);
+  assert.equal(profileItemCount(claimed.profile, "capture_rope_basic"), 4);
+  assert.equal(claimed.profile.captureTools.capture_rope_basic, 4);
+  assert.equal(claimed.profile.questStates.quest_capture_wuli.status, "claimed");
+  assert.equal(claimed.profile.activeQuestId, "quest_rebirth_1_guidance");
+});
+
+test("party pve capture advances capture quest and stops hang capture target", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvequestcap", "password": "test1234", "displayName": "捕捉任务"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("捕捉任务", {
+    "level": 5,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 8,
+    "quick": 90,
+  });
+  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  profile.captureTools = {"capture_net": 1};
+  profile.activeQuestId = "quest_capture_wuli";
+  profile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "active", "progress": 0}};
+  profile.hangSettings = {"captureTargetCount": 1};
+  profile.hangSession = {"enabled": true, "mode": "encounter_stone", "battleCount": 1, "captureSuccessCount": 0};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_quest_grass",
+      "name": "捕捉任务草丛",
+      "encounterGroupId": "firebud_grass_01",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "任务乌力",
+        "level": 3,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && enemy), true);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(resolved.ok, true);
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(writeback.capturedPets[0].lineId, "wuli");
+  assert.equal(writeback.quests.events.some((entry) => entry.questId === "quest_capture_wuli" && entry.ready === true), true);
+  assert.equal(writeback.quests.claimed.length, 0);
+  assert.equal(writeback.hang.captureSuccessCount, 1);
+  assert.equal(writeback.hang.enabled, false);
+  assert.equal(writeback.hang.lastStopReason, "capture_target");
+
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  assert.equal(after.profile.questStates.quest_capture_wuli.status, "ready");
+  assert.equal(after.profile.questStates.quest_capture_wuli.progress, 1);
+  assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
+  assert.equal(after.profile.hangSession.enabled, false);
+  assert.equal(after.profile.hangSession.battleCount, 2);
+  assert.equal(after.profile.hangSession.captureSuccessCount, 1);
+  assert.equal(after.profile.hangSession.lastStopReason, "capture_target");
+});
+
+test("party pve spirit event advances battle quest chain from server event log", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvequestspirit", "password": "test1234", "displayName": "精灵任务"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("精灵任务", {
+    "level": 8,
+    "hp": 140,
+    "maxHp": 140,
+    "attack": 20,
+    "defense": 20,
+    "quick": 200,
+    "comboRateOverride": 0,
+  });
+  profile.stoneCoins = 13;
+  profile.backpackSlots = [];
+  profile.equipmentSlots = {"body": "armor_toxin_wrap"};
+  profile.equipmentDurability = {"body": 30};
+  profile.activeQuestId = "quest_use_poison_spirit";
+  profile.questStates = {"quest_use_poison_spirit": {"questId": "quest_use_poison_spirit", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "spirit_quest_grass",
+      "name": "精灵任务草丛",
+      "encounterGroupId": "firebud_grass_01",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "精灵乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && enemy), true);
+  assert.equal(player.spiritIds.includes("spirit_poison_1"), true);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "spirit_poison_1",
+    "targetActorId": enemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_use_poison_spirit"), true);
+  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_first_victory"), true);
+  assert.equal(writeback.quests.activeQuestId, "quest_capture_wuli");
+
+  const after = service.getProfile(solo.session.token);
+  assert.equal(after.ok, true);
+  assert.equal(after.profile.questStates.quest_use_poison_spirit.status, "claimed");
+  assert.equal(after.profile.questStates.quest_first_victory.status, "claimed");
+  assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
+  assert.equal(after.profile.stoneCoins, 13 + writeback.rewards.stoneCoins + 50);
+  const blessedClubCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
+    sum + (slot && slot.itemId === "weapon_blessed_club" ? Number(slot.count || 0) : 0)
+  ), 0);
+  assert.equal(blessedClubCount, 1);
+});
+
+test("party pve derives enemy exp from stats when expReward is omitted", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pveformulaa", "password": "test1234", "displayName": "公式队长"});
+  const member = service.register({"username": "pveformulab", "password": "test1234", "displayName": "公式队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("公式队长", {"level": 1, "hp": 120, "maxHp": 120, "attack": 18, "defense": 8, "quick": 90}, {
+      "petId": "formula_leader_pet",
+      "name": "公式布伊",
+      "level": 1,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 140,
+      "defense": 6,
+      "quick": 120,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("公式队员", {"level": 1, "hp": 120, "maxHp": 120, "attack": 18, "defense": 8, "quick": 60}, {
+      "petId": "formula_member_pet",
+      "name": "旁观布伊",
+      "level": 1,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 12,
+      "defense": 6,
+      "quick": 50,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_village_gate", "cellX": 15, "cellY": 17, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_village_gate", "cellX": 15, "cellY": 17, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveformulab"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "formula_grass",
+      "name": "公式草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "野生乌力",
+        "level": 1,
+        "battleStats": {
+          "maxHp": 80,
+          "attack": 10,
+          "defense": 6,
+          "agility": 48,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pveformulaa" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pveformulaa" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pveformulab" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pveformulab" && actor.kind === "pet");
+  const enemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
+  const storedEnemy = service.snapshot().battleRooms[encounter.room.roomId].battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(storedEnemy.expReward, 30);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const attackEvent = resolved.turn.events.find((event) => event.actorId === leaderPet.actorId && event.eventType === "basic_attack");
+  assert.equal(Boolean(attackEvent), true);
+  assert.equal(attackEvent.expCredits[0].rawBaseAmount, 30);
+  const leaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  assert.equal(leaderWriteback.exp.amount, 33);
+  assert.equal(leaderWriteback.exp.pets[0].petId, "formula_leader_pet");
+  assert.equal(leaderWriteback.exp.pets[0].baseAmount, 30);
+  assert.equal(leaderWriteback.exp.pets[0].amount, 33);
+  assert.equal(leaderWriteback.exp.pets[0].partyBonusPercent, 10);
+});
+
+test("party pve wild enemies choose random living targets instead of first slot", () => {
+  let randomByteValue = 0;
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "randomBytes": (size) => Buffer.alloc(size, randomByteValue++ % 256),
+  });
+  const leader = service.register({"username": "pvewilda", "password": "test1234", "displayName": "随机队长"});
+  const member = service.register({"username": "pvewildb", "password": "test1234", "displayName": "随机队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("随机队长", {"level": 12, "hp": 180, "maxHp": 180, "attack": 20, "defense": 20, "quick": 80}, {
+      "petId": "wild_leader_pet",
+      "name": "随机队长宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 20,
+      "defense": 10,
+      "quick": 70,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("随机队员", {"level": 12, "hp": 180, "maxHp": 180, "attack": 20, "defense": 20, "quick": 78}, {
+      "petId": "wild_member_pet",
+      "name": "随机队员宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 20,
+      "defense": 10,
+      "quick": 68,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvewildb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "wild_target_grass",
+      "name": "随机目标草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "随机乌力",
+        "level": 1,
+        "battleStats": {
+          "maxHp": 500,
+          "attack": 10,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.seed, "0404040404040404");
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvewilda" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvewilda" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvewildb" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvewildb" && actor.kind === "pet");
+  const enemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  const enemyAttack = resolved.turn.events.find((event) => event.actorId === enemy.actorId && event.eventType === "basic_attack");
+  assert.equal(Boolean(enemyAttack), true);
+  assert.equal(enemyAttack.targetRule, "wild_random");
+  assert.equal(enemyAttack.targetCandidateCount, 4);
+  assert.equal(enemyAttack.targetActorId, leaderPlayer.actorId);
+  assert.notEqual(enemyAttack.targetActorId, leaderPet.actorId);
+});
+
+test("party pve wild random targets are distributed across live rounds", () => {
+  let randomByteValue = 4;
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "randomBytes": (size) => Buffer.alloc(size, randomByteValue++ % 256),
+  });
+  const leader = service.register({"username": "pvewildspread1", "password": "test1234", "displayName": "分散队长"});
+  const member = service.register({"username": "pvewildspread2", "password": "test1234", "displayName": "分散队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("分散队长", {"level": 12, "hp": 999, "maxHp": 999, "attack": 1, "defense": 80, "quick": 220}, {
+      "petId": "wild_spread_leader_pet",
+      "name": "分散队长宠",
+      "level": 12,
+      "hp": 999,
+      "maxHp": 999,
+      "attack": 1,
+      "defense": 80,
+      "quick": 210,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("分散队员", {"level": 12, "hp": 999, "maxHp": 999, "attack": 1, "defense": 80, "quick": 205}, {
+      "petId": "wild_spread_member_pet",
+      "name": "分散队员宠",
+      "level": 12,
+      "hp": 999,
+      "maxHp": 999,
+      "attack": 1,
+      "defense": 80,
+      "quick": 200,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 21, "cellY": 21, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 21, "cellY": 21, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvewildspread2"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 4,
+    "encounterZone": {
+      "id": "wild_spread_grass",
+      "name": "野怪分散草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "分散乌力",
+        "level": 1,
+        "comboRateOverride": 0,
+        "battleStats": {
+          "maxHp": 5000,
+          "attack": 1,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvewildspread1" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvewildspread1" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvewildspread2" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvewildspread2" && actor.kind === "pet");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet), true);
+  const commandActors = [
+    {token: leader.session.token, actor: leaderPlayer, actionId: "defend"},
+    {token: leader.session.token, actor: leaderPet, actionId: "pet_defend"},
+    {token: member.session.token, actor: memberPlayer, actionId: "defend"},
+    {token: member.session.token, actor: memberPet, actionId: "pet_defend"},
+  ];
+  const targetCounts = new Map();
+  let round = 1;
+  for (let index = 0; index < 5; index += 1) {
+    let resolved = null;
+    commandActors.forEach((entry, commandIndex) => {
+      resolved = service.submitBattleCommand(entry.token, encounter.room.roomId, {
+        "round": round,
+        "actorId": entry.actor.actorId,
+        "actionId": entry.actionId,
+      });
+      assert.equal(resolved.ok, true);
+      if (commandIndex < commandActors.length - 1) {
+        assert.equal(resolved.turn, null);
+      }
+    });
+    assert.equal(Boolean(resolved.turn), true);
+    const wildEvents = resolved.turn.events.filter((event) => (
+      event.eventType === "basic_attack" &&
+      event.targetRule === "wild_random" &&
+      String(event.actorId || "").startsWith("party_pve_enemy_")
+    ));
+    assert.equal(wildEvents.length, 4);
+    for (const event of wildEvents) {
+      targetCounts.set(event.targetActorId, (targetCounts.get(event.targetActorId) || 0) + 1);
+      assert.equal(event.targetCandidateCount, 4);
+    }
+    round = resolved.room.battle.round;
+  }
+  assert.ok(targetCounts.size > 1, `expected wild targets to spread, got ${JSON.stringify(Object.fromEntries(targetCounts))}`);
+  const trace = service.getBattleTrace(leader.session.token, {"roomId": encounter.room.roomId, "limit": 10});
+  assert.equal(trace.ok, true);
+  assert.equal(trace.traces.some((entry) => (
+    entry.type === "battle_turn_resolved" &&
+    entry.details &&
+    Object.keys(entry.details.wildAiTargetCounts || {}).length > 1
+  )), true);
+});
+
+test("party pve wild enemies can combo when random targets match", () => {
+  const seedBytes = [0, 1, 2, 3, 41];
+  let randomByteIndex = 0;
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "randomBytes": (size) => Buffer.alloc(size, seedBytes[randomByteIndex++] ?? 42),
+  });
+  const leader = service.register({"username": "pvewildca", "password": "test1234", "displayName": "野合队长"});
+  const member = service.register({"username": "pvewildcb", "password": "test1234", "displayName": "野合队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("野合队长", {"level": 12, "hp": 180, "maxHp": 180, "attack": 20, "defense": 20, "quick": 80}, {
+      "petId": "wild_combo_leader_pet",
+      "name": "野合队长宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 20,
+      "defense": 10,
+      "quick": 70,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("野合队员", {"level": 12, "hp": 180, "maxHp": 180, "attack": 20, "defense": 20, "quick": 78}, {
+      "petId": "wild_combo_member_pet",
+      "name": "野合队员宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 20,
+      "defense": 10,
+      "quick": 68,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvewildcb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 2,
+    "encounterZone": {
+      "id": "wild_combo_grass",
+      "name": "野怪合击草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "野合乌力",
+        "level": 1,
+        "battleStats": {
+          "maxHp": 500,
+          "attack": 10,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.seed, "2929292929292929");
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvewildca" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvewildca" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvewildcb" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvewildcb" && actor.kind === "pet");
+  const enemyOne = actors.find((actor) => actor.actorId === "party_pve_enemy_front_1");
+  const enemyTwo = actors.find((actor) => actor.actorId === "party_pve_enemy_front_2");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemyOne && enemyTwo), true);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  const comboEvent = resolved.turn.events.find((event) => event.eventType === "combo_attack" && event.actorId === enemyTwo.actorId);
+  assert.equal(Boolean(comboEvent), true);
+  assert.deepEqual(comboEvent.participantActorIds, [enemyTwo.actorId, enemyOne.actorId]);
+  assert.equal(comboEvent.targetActorId, leaderPlayer.actorId);
+  assert.equal(comboEvent.expCredits, undefined);
+});
+
+test("party pve collapses adjacent same-target attacks into combo events and shared kill credit", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pvecomboa", "password": "test1234", "displayName": "合击队长"});
+  const member = service.register({"username": "pvecombob", "password": "test1234", "displayName": "合击队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("合击队长", {"level": 1, "hp": 120, "maxHp": 120, "attack": 24, "defense": 8, "quick": 100, "comboRateOverride": 1}, {
+      "petId": "combo_leader_pet",
+      "name": "合击布伊",
+      "level": 1,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 22,
+      "defense": 6,
+      "quick": 99,
+      "comboRateOverride": 1,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("合击队员", {"level": 1, "hp": 120, "maxHp": 120, "attack": 20, "defense": 8, "quick": 40}, {
+      "petId": "combo_member_pet",
+      "name": "旁观布伊",
+      "level": 1,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 18,
+      "defense": 6,
+      "quick": 39,
+    }),
+  }).ok, true);
+
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 18, "cellY": 18, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 18, "cellY": 18, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvecombob"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "combo_grass",
+      "name": "合击草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "合击乌力",
+        "level": 1,
+        "expReward": 100,
+        "battleStats": {
+          "maxHp": 30,
+          "attack": 1,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvecomboa" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvecomboa" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvecombob" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvecombob" && actor.kind === "pet");
+  const enemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
+
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const comboEvent = resolved.turn.events.find((event) => event.eventType === "combo_attack");
+  assert.equal(Boolean(comboEvent), true);
+  assert.deepEqual(comboEvent.participantActorIds, [leaderPlayer.actorId, leaderPet.actorId]);
+  assert.equal(comboEvent.targetActorId, enemy.actorId);
+  assert.equal(comboEvent.defeated, true);
+  assert.equal(comboEvent.expCredits.length, 1);
+  const recipients = comboEvent.expCredits[0].recipients || [];
+  assert.equal(recipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "player" && entry.amount === 110), true);
+  assert.equal(recipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "pet" && entry.petId === "combo_leader_pet" && entry.amount === 110), true);
+  assert.equal(recipients.some((entry) => entry.accountId === member.account.accountId), false);
+  const leaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  const memberWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === member.account.accountId);
+  assert.equal(leaderWriteback.exp.amount, 220);
+  assert.equal(memberWriteback.exp.amount, 0);
+  const trace = service.getBattleTrace(leader.session.token, {"roomId": encounter.room.roomId, "limit": 20});
+  assert.equal(trace.ok, true);
+  assert.equal(trace.traces.some((entry) => (
+    entry.type === "battle_turn_resolved" &&
+    entry.details.comboEventCount === 1 &&
+    entry.details.comboParticipantCount === 2
+  )), true);
+});
+
+test("party pve retargets defeated command targets from highest monster slot", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pveordera", "password": "test1234", "displayName": "顺序队长"});
+  const member = service.register({"username": "pveorderb", "password": "test1234", "displayName": "顺序队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("顺序队长", {"level": 12, "hp": 180, "maxHp": 180, "attack": 520, "defense": 20, "quick": 100, "comboRateOverride": 0}, {
+      "petId": "order_leader_pet",
+      "name": "顺序队长宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 500,
+      "defense": 10,
+      "quick": 99,
+      "comboRateOverride": 0,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("顺序队员", {"level": 12, "hp": 180, "maxHp": 180, "attack": 510, "defense": 20, "quick": 98, "comboRateOverride": 0}, {
+      "petId": "order_member_pet",
+      "name": "顺序队员宠",
+      "level": 12,
+      "hp": 120,
+      "maxHp": 120,
+      "attack": 490,
+      "defense": 10,
+      "quick": 97,
+      "comboRateOverride": 0,
+    }),
+  }).ok, true);
+
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 20, "cellY": 20, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveorderb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 10,
+    "encounterZone": {
+      "id": "order_grass",
+      "name": "顺序草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "顺序乌力",
+        "level": 1,
+        "battleStats": {
+          "maxHp": 10,
+          "attack": 1,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pveordera" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pveordera" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pveorderb" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pveorderb" && actor.kind === "pet");
+  const firstEnemy = actors.find((actor) => actor.slotId === "enemy.front.1");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && firstEnemy), true);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  const playerAttackEvents = resolved.turn.events.filter((event) => (
+    (event.eventType === "basic_attack" || event.eventType === "pet_skill") &&
+    [leaderPlayer.actorId, leaderPet.actorId, memberPlayer.actorId, memberPet.actorId].includes(event.actorId)
+  ));
+  assert.equal(playerAttackEvents[0].targetActorId, "party_pve_enemy_front_1");
+  assert.equal(playerAttackEvents[1].targetActorId, "party_pve_enemy_back_5");
+  assert.equal(playerAttackEvents[2].targetActorId, "party_pve_enemy_back_4");
+  assert.equal(resolved.turn.events.some((event) => event.eventType === "target_missing"), false);
+});
+
+test("party pve victory applies StoneAge-style high level exp decay floor", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "pvezeroa", "password": "test1234", "displayName": "高等队长"});
+  const member = service.register({"username": "pvezerob", "password": "test1234", "displayName": "高等队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("高等队长", {"level": 131, "hp": 500, "maxHp": 500, "attack": 520, "defense": 80, "quick": 100, "comboRateOverride": 0}, {
+      "petId": "zero_leader_pet",
+      "name": "高等队长宠",
+      "level": 131,
+      "hp": 400,
+      "maxHp": 400,
+      "attack": 480,
+      "defense": 70,
+      "quick": 99,
+      "comboRateOverride": 0,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("高等队员", {"level": 131, "hp": 500, "maxHp": 500, "attack": 510, "defense": 80, "quick": 98, "comboRateOverride": 0}, {
+      "petId": "zero_member_pet",
+      "name": "高等队员宠",
+      "level": 131,
+      "hp": 400,
+      "maxHp": 400,
+      "attack": 470,
+      "defense": 70,
+      "quick": 97,
+      "comboRateOverride": 0,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 22, "cellY": 22, "facing": "east", "moving": false});
+  service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 22, "cellY": 22, "facing": "east", "moving": false});
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvezerob"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 2,
+    "encounterZone": {
+      "id": "zero_exp_grass",
+      "name": "零经验草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "低级乌力",
+        "level": 1,
+        "battleStats": {
+          "maxHp": 10,
+          "attack": 1,
+          "defense": 1,
+          "quick": 10,
+        },
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvezeroa" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvezeroa" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvezerob" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvezerob" && actor.kind === "pet");
+  const firstEnemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && firstEnemy), true);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": firstEnemy.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": firstEnemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const profiles = resolved.room.battle.profileWriteback.profiles;
+  const leaderWriteback = profiles.find((entry) => entry.accountId === leader.account.accountId);
+  assert.equal(Boolean(leaderWriteback && leaderWriteback.exp), true);
+  assert.equal(leaderWriteback.exp.amount, 2);
+  assert.equal(leaderWriteback.exp.player.amount, 1);
+  assert.equal(leaderWriteback.exp.player.baseAmount, 1);
+  assert.equal(leaderWriteback.exp.player.partyBonusPercent, 10);
+  assert.equal(leaderWriteback.exp.ridePets.length, 0);
+  assert.equal(leaderWriteback.exp.pets[0].amount, 1);
+  const memberWriteback = profiles.find((entry) => entry.accountId === member.account.accountId);
+  assert.equal(Boolean(memberWriteback && memberWriteback.exp), true);
+  assert.equal(memberWriteback.exp.amount, 0);
+  assert.equal(memberWriteback.exp.player.amount, 0);
+  assert.equal(memberWriteback.exp.pets[0].amount, 0);
+  assert.equal(service.getProfile(leader.session.token).profile.player.level, 131);
+  assert.equal(service.getProfile(member.session.token).profile.player.level, 131);
+  const leaderState = service.getBattleState(leader.session.token);
+  assert.equal(leaderState.ok, true);
+  assert.equal(leaderState.room.status, "closed");
+  assert.equal(leaderState.room.roomId, encounter.room.roomId);
+  assert.equal(leaderState.room.battle.profileWriteback.profiles[0].exp.amount, 2);
+  const trace = service.getBattleTrace(leader.session.token, {"roomId": encounter.room.roomId, "limit": 20});
+  assert.equal(trace.ok, true);
+  assert.equal(trace.traces.some((entry) => entry.type === "battle_room_closed" && entry.details.profileWritebackCount >= 1), true);
+  assert.equal(trace.traces.some((entry) => entry.type === "battle_turn_resolved" && entry.details.expCreditCount === 2), true);
+  assert.equal(trace.traces.some((entry) => entry.type === "battle_state_query" && entry.details.returnedClosedRoom === true), true);
+});
+
 test("duel battle rooms close when a player is defeated even if their pet survives", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "playerkoa", "password": "test1234", "displayName": "人物胜"});
@@ -983,6 +3068,10 @@ test("duel battle rooms snapshot and resolve server-authoritative battle items",
   });
   challengerProfile.backpackSlots = [
     {"itemId": "item_heal_single_5", "count": 2},
+    {"itemId": "item_heal_all_5", "count": 1},
+    {"itemId": "item_poison_single_5", "count": 1},
+    {"itemId": "item_poison_all_5", "count": 1},
+    {"itemId": "item_cleanse_single_5", "count": 1},
     {"itemId": "item_meat_small", "count": 1},
   ];
   assert.equal(service.saveProfile(challenger.session.token, {
@@ -1009,6 +3098,10 @@ test("duel battle rooms snapshot and resolve server-authoritative battle items",
   const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
   assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_heal_all_5, 1);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_poison_single_5, 1);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_poison_all_5, 1);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_cleanse_single_5, 1);
   assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_meat_small, 1);
   const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "itema" && actor.kind === "player");
   const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "itema" && actor.kind === "pet");
@@ -1028,8 +3121,8 @@ test("duel battle rooms snapshot and resolve server-authoritative battle items",
   const unsupported = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
     "actorId": challengerPlayer.actorId,
-    "actionId": "item_heal_all_5",
-    "itemId": "item_heal_all_5",
+    "actionId": "item_unknown_999",
+    "itemId": "item_unknown_999",
     "targetActorId": challengerPet.actorId,
   });
   assert.equal(unsupported.ok, false);
@@ -1110,6 +3203,238 @@ test("duel battle rooms snapshot and resolve server-authoritative battle items",
   assert.equal(storedPet.hp, 82);
   assert.equal(challengerAfter.profile.backpackSlots.filter((slot) => slot.itemId === "item_heal_single_5").reduce((total, slot) => total + slot.count, 0), 1);
   assert.equal(challengerAfter.profile.backpackSlots.filter((slot) => slot.itemId === "item_meat_small").reduce((total, slot) => total + slot.count, 0), 0);
+});
+
+test("duel battle rooms resolve expanded battle items and pet status skills", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "statusa", "password": "test1234", "displayName": "状态甲"});
+  const opponent = service.register({"username": "statusb", "password": "test1234", "displayName": "状态乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  const challengerProfile = battleProfile("状态甲", {"level": 18, "hp": 160, "maxHp": 160, "attack": 22, "defense": 8, "quick": 90}, {
+    "petId": "pet_status_a",
+    "name": "催眠布伊",
+    "state": "battle",
+    "hp": 70,
+    "maxHp": 90,
+    "attack": 14,
+    "defense": 7,
+    "quick": 70,
+  });
+  challengerProfile.petInstances[0].activeSkillIds = ["pet_attack", "pet_defend", "pet_sleep_powder"];
+  challengerProfile.petInstances[0].petSkillSlots = ["pet_attack", "pet_defend", "pet_sleep_powder", "", "", "", ""];
+  challengerProfile.backpackSlots = [
+    {"itemId": "item_heal_all_5", "count": 1},
+    {"itemId": "item_poison_single_5", "count": 1},
+  ];
+  const opponentProfile = battleProfile("状态乙", {"level": 18, "hp": 160, "maxHp": 160, "attack": 20, "defense": 8, "quick": 80}, {
+    "petId": "pet_status_b",
+    "name": "受术布伊",
+    "state": "battle",
+    "hp": 75,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 7,
+    "quick": 60,
+  });
+  opponentProfile.backpackSlots = [
+    {"itemId": "item_cleanse_single_5", "count": 1},
+  ];
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": challengerProfile,
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": opponentProfile,
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "statusb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_heal_all_5, 1);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_poison_single_5, 1);
+  assert.equal(accept.room.participants[1].teamSnapshot.battleItemBag.item_cleanse_single_5, 1);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "statusa" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "statusa" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "statusb" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "statusb" && actor.kind === "pet");
+
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_heal_all_5",
+    "itemId": "item_heal_all_5",
+    "targetActorId": challengerPlayer.actorId,
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_sleep_powder",
+    "targetActorId": opponentPet.actorId,
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const roundOne = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(roundOne.ok, true);
+  const healAllEvent = roundOne.turn.events.find((event) => event.eventType === "item_heal_all");
+  assert.equal(Boolean(healAllEvent), true);
+  assert.equal(healAllEvent.itemId, "item_heal_all_5");
+  assert.equal(healAllEvent.remainingItemCount, 0);
+  assert.ok(Array.isArray(healAllEvent.targets));
+  const statusEvent = roundOne.turn.events.find((event) => event.eventType === "skill_status");
+  assert.equal(Boolean(statusEvent), true);
+  assert.equal(statusEvent.skillId, "pet_sleep_powder");
+  assert.equal(statusEvent.targetActorId, opponentPet.actorId);
+  assert.equal(statusEvent.statusId, "sleep");
+  assert.ok(["applied", "resisted", "immune"].includes(statusEvent.statusResult));
+  if (statusEvent.statusResult === "applied") {
+    const updatedOpponentPet = roundOne.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
+    assert.equal(Boolean(updatedOpponentPet.statuses.sleep), true);
+  }
+
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "item_poison_single_5",
+    "itemId": "item_poison_single_5",
+    "targetActorId": opponentPlayer.actorId,
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "item_cleanse_single_5",
+    "itemId": "item_cleanse_single_5",
+    "targetActorId": opponentPlayer.actorId,
+  }).ok, true);
+  const roundTwo = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 2,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(roundTwo.ok, true);
+  const poisonEvent = roundTwo.turn.events.find((event) => event.eventType === "item_poison");
+  assert.equal(Boolean(poisonEvent), true);
+  assert.equal(poisonEvent.itemId, "item_poison_single_5");
+  assert.equal(poisonEvent.targetActorId, opponentPlayer.actorId);
+  assert.equal(poisonEvent.remainingItemCount, 0);
+  assert.ok(["applied", "resisted", "immune", "target_down"].includes(poisonEvent.statusResult));
+  const cleanseEvent = roundTwo.turn.events.find((event) => event.eventType === "item_cleanse");
+  assert.equal(Boolean(cleanseEvent), true);
+  assert.equal(cleanseEvent.itemId, "item_cleanse_single_5");
+  assert.equal(cleanseEvent.targetActorId, opponentPlayer.actorId);
+  assert.equal(cleanseEvent.remainingItemCount, 0);
+});
+
+test("duel battle rooms snapshot and resolve equipment spirits", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "spirita", "password": "test1234", "displayName": "精灵甲"});
+  const opponent = service.register({"username": "spiritb", "password": "test1234", "displayName": "精灵乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+
+  const challengerProfile = battleProfile("精灵甲", {"level": 12, "hp": 150, "maxHp": 150, "attack": 18, "defense": 8, "quick": 72}, {
+    "petId": "pet_spirit_a",
+    "name": "受伤布伊",
+    "state": "battle",
+    "hp": 40,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 7,
+    "quick": 55,
+  });
+  challengerProfile.equipmentSlots = {
+    "accessory_left": "accessory_firebud_charm",
+    "accessory_right": "accessory_wind_ring",
+    "left_hand_weapon": "weapon_training_spear",
+    "body": "armor_moist_cloth",
+  };
+  challengerProfile.equipmentDurability = {
+    "accessory_left": 30,
+    "accessory_right": 30,
+    "left_hand_weapon": 30,
+    "body": 30,
+  };
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": challengerProfile,
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("精灵乙", {"level": 12, "hp": 150, "maxHp": 150, "attack": 18, "defense": 8, "quick": 70}, {
+      "petId": "pet_spirit_b",
+      "name": "乙布伊",
+      "state": "battle",
+      "hp": 80,
+      "maxHp": 90,
+      "attack": 12,
+      "defense": 7,
+      "quick": 54,
+    }),
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "spiritb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.deepEqual(
+    accept.room.participants[0].teamSnapshot.player.spiritIds.sort(),
+    ["spirit_grace_1", "spirit_moist_1", "spirit_poison_1", "spirit_poison_mist_1"].sort()
+  );
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "spirita" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "spirita" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "spiritb" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "spiritb" && actor.kind === "pet");
+  assert.equal(challengerPlayer.spiritIds.includes("spirit_moist_1"), true);
+
+  const spiritCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "spirit_moist_1",
+    "spiritId": "spirit_moist_1",
+    "targetActorId": challengerPet.actorId,
+  });
+  assert.equal(spiritCommand.ok, true);
+  assert.equal(spiritCommand.command.actionKind, "spirit");
+  assert.equal(spiritCommand.command.spiritId, "spirit_moist_1");
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const resolved = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  const spiritEvent = resolved.turn.events.find((event) => event.eventType === "spirit_heal");
+  assert.equal(spiritEvent.spiritId, "spirit_moist_1");
+  assert.equal(spiritEvent.targetActorId, challengerPet.actorId);
+  assert.equal(spiritEvent.healed, 18);
+  assert.equal(spiritEvent.hpAfter, 58);
+  const updatedPet = resolved.room.battle.actors.find((actor) => actor.actorId === challengerPet.actorId);
+  assert.equal(updatedPet.hp, 58);
 });
 
 test("duel battle rooms can cancel, leave, timeout, and finish with results", () => {
@@ -1573,6 +3898,383 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(tools.code, "gm_denied");
 });
 
+test("HTTP server exposes server-authoritative shop transaction endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpshop", "password": "test1234", "displayName": "接口商店"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口商店", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 20;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const buy = await fetchJson(`${base}/shops/transaction`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({
+      "mode": "buy",
+      "shopId": "firebud_item_shop",
+      "itemId": "item_meat_small",
+      "amount": 2,
+    }),
+  });
+  assert.equal(buy.ok, true);
+  assert.equal(buy.profileSummary.profileRevision, 2);
+  assert.equal(buy.transaction.price, 16);
+  assert.equal(buy.profile.stoneCoins, 4);
+  assert.equal(profileItemCount(buy.profile, "item_meat_small"), 2);
+
+  const denied = await fetchJson(`${base}/shops/transaction`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({
+      "mode": "buy",
+      "shopId": "firebud_item_shop",
+      "itemId": "item_heal_all_5",
+      "amount": 1,
+    }),
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "not_enough_currency");
+});
+
+test("HTTP server exposes server-authoritative quest record and claim endpoints", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpquest", "password": "test1234", "displayName": "接口任务"}),
+  });
+  assert.equal(registered.ok, true);
+  const introProfile = battleProfile("接口任务", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  introProfile.stoneCoins = 0;
+  introProfile.backpackSlots = [];
+  introProfile.activeQuestId = "quest_intro_talk";
+  introProfile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
+  const savedIntro = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, "profile": introProfile}),
+  });
+  assert.equal(savedIntro.ok, true);
+
+  const recorded = await fetchJson(`${base}/quests/record`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"event": {"type": "talk", "targetId": "trainer"}}),
+  });
+  assert.equal(recorded.ok, true);
+  assert.equal(recorded.profileSummary.profileRevision, 2);
+  assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
+  assert.equal(recorded.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(recorded.profile.stoneCoins, 20);
+  assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
+
+  const captureProfile = battleProfile("接口任务", {"level": 5, "hp": 130, "maxHp": 130}, null);
+  captureProfile.stoneCoins = 1;
+  captureProfile.backpackSlots = [];
+  captureProfile.activeQuestId = "quest_capture_wuli";
+  captureProfile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "ready", "progress": 1}};
+  const savedCapture = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 2, "profile": captureProfile}),
+  });
+  assert.equal(savedCapture.ok, true);
+
+  const denied = await fetchJson(`${base}/quests/claim`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"questId": "quest_capture_wuli"}),
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "quest_reward_choice_required");
+
+  const claimed = await fetchJson(`${base}/quests/claim`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"questId": "quest_capture_wuli", "rewardChoiceId": "capture_net_pack"}),
+  });
+  assert.equal(claimed.ok, true);
+  assert.equal(claimed.profileSummary.profileRevision, 4);
+  assert.equal(claimed.claim.rewardChoiceId, "capture_net_pack");
+  assert.equal(claimed.profile.stoneCoins, 61);
+  assert.equal(profileItemCount(claimed.profile, "capture_net"), 2);
+  assert.equal(claimed.profile.captureTools.capture_net, 2);
+});
+
+test("HTTP server exposes server-authoritative equipment equip endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpequip", "password": "test1234", "displayName": "接口装备"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口装备", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.backpackSlots = [
+    {"itemId": "weapon_wooden_club", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_stone_dagger"};
+  profile.equipmentDurability = {"right_hand_weapon": 30};
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const equipped = await fetchJson(`${base}/equipment/equip`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"itemId": "weapon_wooden_club"}),
+  });
+  assert.equal(equipped.ok, true);
+  assert.equal(equipped.profileSummary.profileRevision, 2);
+  assert.equal(equipped.equipment.slot, "right_hand_weapon");
+  assert.equal(equipped.profile.equipmentSlots.right_hand_weapon, "weapon_wooden_club");
+  assert.equal(profileItemCount(equipped.profile, "weapon_stone_dagger"), 1);
+
+  const denied = await fetchJson(`${base}/equipment/equip`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"itemId": "weapon_stone_axe"}),
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "equipment_item_missing");
+});
+
+test("HTTP server exposes server-authoritative equipment enhance endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpenhance", "password": "test1234", "displayName": "接口强化"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口强化", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 50;
+  profile.backpackSlots = [
+    {"itemId": "equip_frag_wood_basic", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
+  profile.equipmentDurability = {"right_hand_weapon": 30};
+  profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "level": 0, "history": []}};
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const enhanced = await fetchJson(`${base}/equipment/enhance`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"slotId": "right_hand_weapon"}),
+  });
+  assert.equal(enhanced.ok, true);
+  assert.equal(enhanced.profileSummary.profileRevision, 2);
+  assert.equal(enhanced.enhancement.level, 1);
+  assert.equal(enhanced.profile.stoneCoins, 30);
+  assert.equal(profileItemCount(enhanced.profile, "equip_frag_wood_basic"), 0);
+
+  const denied = await fetchJson(`${base}/equipment/enhance`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"slotId": "right_hand_weapon"}),
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "equipment_enhance_material_missing");
+});
+
+test("HTTP server exposes server-authoritative equipment repair endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httprepair", "password": "test1234", "displayName": "接口修理"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口修理", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 20;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
+  profile.equipmentDurability = {"right_hand_weapon": 2};
+  profile.equipmentWearCounters = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "attackCount": 37, "hitCount": 0}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 2,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 37, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "starter",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.nextEquipmentInstanceSerial = 2;
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const repaired = await fetchJson(`${base}/equipment/repair-all`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(repaired.ok, true);
+  assert.equal(repaired.profileSummary.profileRevision, 2);
+  assert.equal(repaired.repair.missingDurability, 28);
+  assert.equal(repaired.repair.cost, 6);
+  assert.equal(repaired.profile.stoneCoins, 14);
+  assert.equal(repaired.profile.equipmentDurability.right_hand_weapon, 30);
+  assert.equal(repaired.profile.equipmentWearCounters.right_hand_weapon.attackCount, 0);
+  assert.equal(repaired.profile.equipmentInstances.equip_000001.durability, 30);
+  assert.equal(repaired.profile.equipmentInstances.equip_000001.wearCounters.attackCount, 0);
+
+  const denied = await fetchJson(`${base}/equipment/repair-all`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "equipment_repair_not_needed");
+});
+
+test("HTTP server exposes server-authoritative equipment synthesis endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpsynth", "password": "test1234", "displayName": "接口合成"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口合成", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 50;
+  profile.backpackSlots = [
+    {"itemId": "equip_frag_wood_basic", "count": 3},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const synthesized = await fetchJson(`${base}/equipment/synthesize`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"recipeId": "craft_hardwood_club"}),
+  });
+  assert.equal(synthesized.ok, true);
+  assert.equal(synthesized.profileSummary.profileRevision, 2);
+  assert.equal(synthesized.synthesis.outputItemId, "weapon_hardwood_club");
+  assert.equal(synthesized.profile.stoneCoins, 30);
+  assert.equal(profileItemCount(synthesized.profile, "weapon_hardwood_club"), 1);
+
+  const denied = await fetchJson(`${base}/equipment/synthesize`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"recipeId": "craft_hardwood_club"}),
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "equipment_synthesis_material_missing");
+});
+
+test("HTTP server exposes server-authoritative player rebirth endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httprebirth", "password": "test1234", "displayName": "接口转生"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = playerRebirthReadyProfile("接口转生");
+  const saved = await fetchJson(`${base}/profiles/me`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"expectedRevision": 0, profile}),
+  });
+  assert.equal(saved.ok, true);
+
+  const reborn = await fetchJson(`${base}/player/rebirth`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(reborn.ok, true);
+  assert.equal(reborn.profileSummary.profileRevision, 2);
+  assert.equal(reborn.profile.rebirthCount, 1);
+  assert.equal(reborn.profile.player.level, 1);
+  assert.equal(profileItemCount(reborn.profile, "armor_grace_cloth_3"), 1);
+  assert.equal(reborn.profile.petInstances.some((pet) => pet.formId === "rebirth_starter_earth_cub"), true);
+
+  const denied = await fetchJson(`${base}/player/rebirth`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "player_rebirth_not_ready");
+  assert.equal(denied.profileSummary.profileRevision, 2);
+});
+
 test("HTTP server exposes player search and mail endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});
@@ -1817,6 +4519,129 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
     "headers": {"authorization": `Bearer ${member.session.token}`},
   });
   assert.equal(leave.ok, true);
+});
+
+test("HTTP server exposes party pve encounter endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const leader = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httppvea", "password": "test1234", "displayName": "队战甲"}),
+  });
+  const member = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httppveb", "password": "test1234", "displayName": "队战乙"}),
+  });
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  for (const account of [leader, member]) {
+    const position = await fetchJson(`${base}/players/position`, {
+      "method": "POST",
+      "headers": {"authorization": `Bearer ${account.session.token}`},
+      "body": JSON.stringify({
+        "mapId": "firebud_training_yard",
+        "cellX": 14,
+        "cellY": 14,
+        "facing": "east",
+        "moving": false,
+      }),
+    });
+    assert.equal(position.ok, true);
+  }
+  const invite = await fetchJson(`${base}/party/invite`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({"username": "httppveb"}),
+  });
+  assert.equal(invite.ok, true);
+  const memberState = await fetchJson(`${base}/party/state`, {
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  const accept = await fetchJson(`${base}/party/invites/${encodeURIComponent(memberState.incomingInvites[0].inviteId)}/accept`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+  });
+  assert.equal(accept.ok, true);
+  const encounter = await fetchJson(`${base}/battle/party-encounter`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+    "body": JSON.stringify({
+      "enemyCount": 3,
+      "encounterZone": {
+        "id": "http_grass",
+        "name": "HTTP 草丛",
+        "selectedWildPet": {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "HTTP 乌力",
+          "level": 3,
+          "battleStats": {"maxHp": 99, "attack": 10, "defense": 6, "quick": 40},
+        },
+      },
+    }),
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.mode, "party_pve");
+  const enemies = encounter.room.battle.actors.filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 3);
+  assert.equal(enemies.every((actor) => actor.hp === actor.maxHp), true);
+});
+
+test("HTTP server exposes solo pve encounter endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const solo = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpsolopve", "password": "test1234", "displayName": "HTTP 单人"}),
+  });
+  assert.equal(solo.ok, true);
+  const position = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${solo.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_village_gate",
+      "cellX": 15,
+      "cellY": 17,
+      "facing": "south",
+      "moving": false,
+    }),
+  });
+  assert.equal(position.ok, true);
+  const encounter = await fetchJson(`${base}/battle/party-encounter`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${solo.session.token}`},
+    "body": JSON.stringify({
+      "enemyCount": 1,
+      "encounterZone": {
+        "id": "http_solo_grass",
+        "name": "HTTP 单人草丛",
+        "selectedWildPet": {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "HTTP 单人乌力",
+          "level": 3,
+          "battleStats": {"maxHp": 88, "attack": 10, "defense": 6, "quick": 40},
+        },
+      },
+    }),
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.mode, "party_pve");
+  assert.deepEqual(encounter.room.participantAccountIds, [solo.account.accountId]);
+  assert.equal(encounter.message, "遭遇了野生宠物。");
+  const enemies = encounter.room.battle.actors.filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 1);
+  assert.equal(enemies[0].hp, enemies[0].maxHp);
 });
 
 test("HTTP server exposes nearby and team chat endpoints", async (t) => {

@@ -1,0 +1,611 @@
+{
+  "id": "level_grass_trial_ground",
+  "name": "等级草丛试验场",
+  "gridSize": [40, 36],
+  "tileSize": [80, 40],
+  "origin": [800, 96],
+  "spawnCell": [18, 32],
+  "spawnPoints": {
+    "default": [18, 32],
+    "from_firebud_village": [18, 32]
+  },
+  "blockedCells": [
+    [3, 3],
+    [4, 3],
+    [35, 3],
+    [36, 3],
+    [3, 33],
+    [36, 33]
+  ],
+  "decorCells": [
+    {"cell": [5, 5], "kind": "grass"},
+    {"cell": [6, 5], "kind": "grass"},
+    {"cell": [8, 6], "kind": "flower"},
+    {"cell": [9, 7], "kind": "grass"},
+    {"cell": [5, 9], "kind": "grass"},
+    {"cell": [6, 9], "kind": "grass"},
+    {"cell": [8, 10], "kind": "flower"},
+    {"cell": [9, 11], "kind": "grass"},
+    {"cell": [5, 13], "kind": "grass"},
+    {"cell": [6, 13], "kind": "grass"},
+    {"cell": [8, 14], "kind": "flower"},
+    {"cell": [9, 15], "kind": "grass"},
+    {"cell": [5, 17], "kind": "grass"},
+    {"cell": [6, 17], "kind": "grass"},
+    {"cell": [8, 18], "kind": "flower"},
+    {"cell": [9, 19], "kind": "grass"},
+    {"cell": [5, 21], "kind": "grass"},
+    {"cell": [6, 21], "kind": "grass"},
+    {"cell": [8, 22], "kind": "flower"},
+    {"cell": [9, 23], "kind": "grass"},
+    {"cell": [5, 25], "kind": "grass"},
+    {"cell": [6, 25], "kind": "grass"},
+    {"cell": [8, 26], "kind": "flower"},
+    {"cell": [9, 27], "kind": "grass"},
+    {"cell": [5, 29], "kind": "grass"},
+    {"cell": [6, 29], "kind": "grass"},
+    {"cell": [8, 30], "kind": "flower"},
+    {"cell": [9, 31], "kind": "grass"},
+    {"cell": [24, 5], "kind": "grass"},
+    {"cell": [25, 5], "kind": "grass"},
+    {"cell": [27, 6], "kind": "flower"},
+    {"cell": [28, 7], "kind": "grass"},
+    {"cell": [24, 9], "kind": "grass"},
+    {"cell": [25, 9], "kind": "grass"},
+    {"cell": [27, 10], "kind": "flower"},
+    {"cell": [28, 11], "kind": "grass"},
+    {"cell": [24, 13], "kind": "grass"},
+    {"cell": [25, 13], "kind": "grass"},
+    {"cell": [27, 14], "kind": "flower"},
+    {"cell": [28, 15], "kind": "grass"},
+    {"cell": [24, 17], "kind": "grass"},
+    {"cell": [25, 17], "kind": "grass"},
+    {"cell": [27, 18], "kind": "flower"},
+    {"cell": [28, 19], "kind": "grass"},
+    {"cell": [24, 21], "kind": "grass"},
+    {"cell": [25, 21], "kind": "grass"},
+    {"cell": [27, 22], "kind": "flower"},
+    {"cell": [28, 23], "kind": "grass"},
+    {"cell": [24, 25], "kind": "grass"},
+    {"cell": [25, 25], "kind": "grass"},
+    {"cell": [27, 26], "kind": "flower"},
+    {"cell": [28, 27], "kind": "grass"},
+    {"cell": [24, 29], "kind": "grass"},
+    {"cell": [25, 29], "kind": "grass"},
+    {"cell": [27, 30], "kind": "flower"},
+    {"cell": [28, 31], "kind": "grass"}
+  ],
+  "encounterZones": [
+    {
+      "id": "level_grass_010",
+      "name": "10级草丛",
+      "rects": [[5, 5, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_010",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "10级乌力",
+          "weight": 1,
+          "levelMin": 10,
+          "levelMax": 10,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 200,
+            "attack": 30,
+            "defense": 16,
+            "agility": 50
+          }
+        }
+      ],
+      "previewText": "10级草丛里有一群10级野生宠物。"
+    },
+    {
+      "id": "level_grass_020",
+      "name": "20级草丛",
+      "rects": [[5, 9, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_020",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "20级乌力",
+          "weight": 1,
+          "levelMin": 20,
+          "levelMax": 20,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 320,
+            "attack": 50,
+            "defense": 26,
+            "agility": 60
+          }
+        }
+      ],
+      "previewText": "20级草丛里有一群20级野生宠物。"
+    },
+    {
+      "id": "level_grass_030",
+      "name": "30级草丛",
+      "rects": [[5, 13, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_030",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "30级乌力",
+          "weight": 1,
+          "levelMin": 30,
+          "levelMax": 30,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 440,
+            "attack": 70,
+            "defense": 36,
+            "agility": 70
+          }
+        }
+      ],
+      "previewText": "30级草丛里有一群30级野生宠物。"
+    },
+    {
+      "id": "level_grass_040",
+      "name": "40级草丛",
+      "rects": [[5, 17, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_040",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "40级乌力",
+          "weight": 1,
+          "levelMin": 40,
+          "levelMax": 40,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 560,
+            "attack": 90,
+            "defense": 46,
+            "agility": 80
+          }
+        }
+      ],
+      "previewText": "40级草丛里有一群40级野生宠物。"
+    },
+    {
+      "id": "level_grass_050",
+      "name": "50级草丛",
+      "rects": [[5, 21, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_050",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "50级乌力",
+          "weight": 1,
+          "levelMin": 50,
+          "levelMax": 50,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 680,
+            "attack": 110,
+            "defense": 56,
+            "agility": 90
+          }
+        }
+      ],
+      "previewText": "50级草丛里有一群50级野生宠物。"
+    },
+    {
+      "id": "level_grass_060",
+      "name": "60级草丛",
+      "rects": [[5, 25, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_060",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "60级乌力",
+          "weight": 1,
+          "levelMin": 60,
+          "levelMax": 60,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 800,
+            "attack": 130,
+            "defense": 66,
+            "agility": 100
+          }
+        }
+      ],
+      "previewText": "60级草丛里有一群60级野生宠物。"
+    },
+    {
+      "id": "level_grass_070",
+      "name": "70级草丛",
+      "rects": [[5, 29, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_070",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "70级乌力",
+          "weight": 1,
+          "levelMin": 70,
+          "levelMax": 70,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 920,
+            "attack": 150,
+            "defense": 76,
+            "agility": 110
+          }
+        }
+      ],
+      "previewText": "70级草丛里有一群70级野生宠物。"
+    },
+    {
+      "id": "level_grass_080",
+      "name": "80级草丛",
+      "rects": [[24, 5, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_080",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "80级乌力",
+          "weight": 1,
+          "levelMin": 80,
+          "levelMax": 80,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1040,
+            "attack": 170,
+            "defense": 86,
+            "agility": 120
+          }
+        }
+      ],
+      "previewText": "80级草丛里有一群80级野生宠物。"
+    },
+    {
+      "id": "level_grass_090",
+      "name": "90级草丛",
+      "rects": [[24, 9, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_090",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "90级乌力",
+          "weight": 1,
+          "levelMin": 90,
+          "levelMax": 90,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1160,
+            "attack": 190,
+            "defense": 96,
+            "agility": 130
+          }
+        }
+      ],
+      "previewText": "90级草丛里有一群90级野生宠物。"
+    },
+    {
+      "id": "level_grass_100",
+      "name": "100级草丛",
+      "rects": [[24, 13, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_100",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "100级乌力",
+          "weight": 1,
+          "levelMin": 100,
+          "levelMax": 100,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1280,
+            "attack": 210,
+            "defense": 106,
+            "agility": 140
+          }
+        }
+      ],
+      "previewText": "100级草丛里有一群100级野生宠物。"
+    },
+    {
+      "id": "level_grass_110",
+      "name": "110级草丛",
+      "rects": [[24, 17, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_110",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "110级乌力",
+          "weight": 1,
+          "levelMin": 110,
+          "levelMax": 110,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1400,
+            "attack": 230,
+            "defense": 116,
+            "agility": 150
+          }
+        }
+      ],
+      "previewText": "110级草丛里有一群110级野生宠物。"
+    },
+    {
+      "id": "level_grass_120",
+      "name": "120级草丛",
+      "rects": [[24, 21, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_120",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "120级乌力",
+          "weight": 1,
+          "levelMin": 120,
+          "levelMax": 120,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1520,
+            "attack": 250,
+            "defense": 126,
+            "agility": 160
+          }
+        }
+      ],
+      "previewText": "120级草丛里有一群120级野生宠物。"
+    },
+    {
+      "id": "level_grass_130",
+      "name": "130级草丛",
+      "rects": [[24, 25, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_130",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "130级乌力",
+          "weight": 1,
+          "levelMin": 130,
+          "levelMax": 130,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1640,
+            "attack": 270,
+            "defense": 136,
+            "agility": 170
+          }
+        }
+      ],
+      "previewText": "130级草丛里有一群130级野生宠物。"
+    },
+    {
+      "id": "level_grass_140",
+      "name": "140级草丛",
+      "rects": [[24, 29, 5, 3]],
+      "encounterRate": 1.0,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "level_grass_140",
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "140级乌力",
+          "weight": 1,
+          "levelMin": 140,
+          "levelMax": 140,
+          "catchable": false,
+          "battleStats": {
+            "maxHp": 1760,
+            "attack": 290,
+            "defense": 146,
+            "agility": 180
+          }
+        }
+      ],
+      "previewText": "140级草丛里有一群140级野生宠物。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "level_grass_return_firebud",
+      "name": "返回火芽村入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [18, 33],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_level_grass_trial_ground"
+    },
+    {
+      "id": "level_grass_010_sign",
+      "name": "10级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 4],
+      "facilityLabel": "10级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是10级草丛，固定出现10只Lv10野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_020_sign",
+      "name": "20级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 8],
+      "facilityLabel": "20级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是20级草丛，固定出现10只Lv20野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_030_sign",
+      "name": "30级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 12],
+      "facilityLabel": "30级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是30级草丛，固定出现10只Lv30野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_040_sign",
+      "name": "40级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 16],
+      "facilityLabel": "40级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是40级草丛，固定出现10只Lv40野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_050_sign",
+      "name": "50级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 20],
+      "facilityLabel": "50级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是50级草丛，固定出现10只Lv50野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_060_sign",
+      "name": "60级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 24],
+      "facilityLabel": "60级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是60级草丛，固定出现10只Lv60野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_070_sign",
+      "name": "70级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [7, 28],
+      "facilityLabel": "70级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是70级草丛，固定出现10只Lv70野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_080_sign",
+      "name": "80级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 4],
+      "facilityLabel": "80级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是80级草丛，固定出现10只Lv80野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_090_sign",
+      "name": "90级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 8],
+      "facilityLabel": "90级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是90级草丛，固定出现10只Lv90野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_100_sign",
+      "name": "100级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 12],
+      "facilityLabel": "100级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是100级草丛，固定出现10只Lv100野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_110_sign",
+      "name": "110级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 16],
+      "facilityLabel": "110级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是110级草丛，固定出现10只Lv110野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_120_sign",
+      "name": "120级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 20],
+      "facilityLabel": "120级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是120级草丛，固定出现10只Lv120野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_130_sign",
+      "name": "130级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 24],
+      "facilityLabel": "130级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是130级草丛，固定出现10只Lv130野生宠物。"],
+      "option": "知道了"
+    },
+    {
+      "id": "level_grass_140_sign",
+      "name": "140级草丛木牌",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [26, 28],
+      "facilityLabel": "140级草丛",
+      "action": "查看",
+      "dialog": ["木牌：前方是140级草丛，固定出现10只Lv140野生宠物。"],
+      "option": "知道了"
+    }
+  ]
+}

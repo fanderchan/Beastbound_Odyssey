@@ -54,6 +54,123 @@ static func profile_upload_request(base_url: String, session_token: String, prof
 	}
 
 
+static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
+	return {
+		"url": "%s/shops/transaction" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"mode": mode,
+			"shopId": shop_id,
+			"itemId": item_id,
+			"amount": maxi(1, amount),
+		}),
+	}
+
+
+static func equipment_equip_request(base_url: String, session_token: String, item_id: String) -> Dictionary:
+	return {
+		"url": "%s/equipment/equip" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"itemId": item_id,
+		}),
+	}
+
+
+static func equipment_enhance_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
+	return {
+		"url": "%s/equipment/enhance" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"slotId": slot_id,
+		}),
+	}
+
+
+static func equipment_repair_all_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/equipment/repair-all" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
+static func equipment_synthesize_request(base_url: String, session_token: String, recipe_id: String) -> Dictionary:
+	return {
+		"url": "%s/equipment/synthesize" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"recipeId": recipe_id,
+		}),
+	}
+
+
+static func player_rebirth_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/player/rebirth" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
+static func quest_record_request(base_url: String, session_token: String, event: Dictionary, quest_id: String = "") -> Dictionary:
+	var payload := {
+		"event": event,
+	}
+	if quest_id.strip_edges() != "":
+		payload["questId"] = quest_id.strip_edges()
+	return {
+		"url": "%s/quests/record" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(payload),
+	}
+
+
+static func quest_claim_request(base_url: String, session_token: String, quest_id: String = "", reward_choice_id: String = "") -> Dictionary:
+	var payload := {}
+	if quest_id.strip_edges() != "":
+		payload["questId"] = quest_id.strip_edges()
+	if reward_choice_id.strip_edges() != "":
+		payload["rewardChoiceId"] = reward_choice_id.strip_edges()
+	return {
+		"url": "%s/quests/claim" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(payload),
+	}
+
+
 static func player_search_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/players/search?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
@@ -209,6 +326,21 @@ static func battle_invite_request(base_url: String, session_token: String, usern
 		],
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"username": username}),
+	}
+
+
+static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, enemy_count: int) -> Dictionary:
+	return {
+		"url": "%s/battle/party-encounter" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"encounterZone": encounter_zone,
+			"enemyCount": enemy_count,
+		}),
 	}
 
 
@@ -476,13 +608,13 @@ static func parse_battle_action_response(response_code: int, body: PackedByteArr
 
 static func parse_battle_command_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "回合命令提交失败。")
-	if not bool(parsed.get("ok", false)):
-		return parsed
-	var response := parsed.get("response", {}) as Dictionary
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
 	parsed["room"] = response.get("room", null)
 	parsed["command"] = response.get("command", {}) if response.get("command", {}) is Dictionary else {}
 	parsed["turn"] = response.get("turn", null)
 	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
+	if not bool(parsed.get("ok", false)):
+		return parsed
 	return parsed
 
 
@@ -587,6 +719,83 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 	}
 
 
+static func parse_shop_transaction_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "商店交易失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["transaction"] = response.get("transaction", {}) if response.get("transaction", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_equipment_equip_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "装备失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["equipment"] = response.get("equipment", {}) if response.get("equipment", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_equipment_enhance_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "强化失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["enhancement"] = response.get("enhancement", {}) if response.get("enhancement", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_equipment_repair_all_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "修理失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["repair"] = response.get("repair", {}) if response.get("repair", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_equipment_synthesize_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "合成失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["synthesis"] = response.get("synthesis", {}) if response.get("synthesis", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_player_rebirth_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "转生失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["rebirth"] = response.get("rebirth", {}) if response.get("rebirth", {}) is Dictionary else {}
+	parsed["returnEntry"] = response.get("returnEntry", {}) if response.get("returnEntry", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_quest_action_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "任务同步失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["progress"] = response.get("progress", {}) if response.get("progress", {}) is Dictionary else {}
+	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
 static func _parse_server_json(response_code: int, body: PackedByteArray, fallback_message: String) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	if text.strip_edges() == "":
@@ -615,6 +824,16 @@ static func _dictionary_array(value) -> Array[Dictionary]:
 		for entry in value:
 			if entry is Dictionary:
 				result.append((entry as Dictionary).duplicate(true))
+	return result
+
+
+static func _string_array(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for entry in value:
+			var text := str(entry)
+			if text != "":
+				result.append(text)
 	return result
 
 
