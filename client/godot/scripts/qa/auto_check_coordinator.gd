@@ -3460,6 +3460,7 @@ func _run_auto_battle_pet_target_check() -> void:
 	await host.get_tree().process_frame
 	var initial_target_id = "enemy_front_5"
 	var pet_skill_target_id = "enemy_back_1"
+	host.battle_state = host._set_battle_actor_fields(host.battle_state, pet_skill_target_id, {"dodgeRateOverride": 0.0})
 	var initial_actor = BattleModel.actor_by_id(host.battle_state, initial_target_id)
 	var initial_screen = host._world_to_screen(host._battle_slot_world_position(str(initial_actor.get("slotId", "")))) if not initial_actor.is_empty() else Vector2.ZERO
 	host._on_battle_command_pressed("attack")
