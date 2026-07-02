@@ -20457,6 +20457,10 @@ func _run_auto_server_battle_item_live_check() -> void:
 	challenger_profile["backpackSlots"] = [
 		{"itemId": BattleModel.ITEM_HEAL_SINGLE, "count": 2},
 		{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 1},
+		{"itemId": BattleModel.ITEM_HEAL_ALL, "count": 1},
+		{"itemId": BattleModel.ITEM_POISON_SINGLE, "count": 1},
+		{"itemId": BattleModel.ITEM_POISON_ALL, "count": 1},
+		{"itemId": BattleModel.ITEM_CLEANSE_SINGLE, "count": 1},
 	]
 	var opponent_profile := _server_battle_pet_snapshot_test_profile("道具乙", opponent_pet_id, "乙布伊", {
 		"level": 13,
@@ -20566,6 +20570,10 @@ func _run_auto_server_battle_item_live_check() -> void:
 	var initial_item_ok := (
 		BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE) == 2
 		and BattleModel.item_count(battle_state, BattleModel.ITEM_MEAT_SMALL) == 1
+		and BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_ALL) == 1
+		and BattleModel.item_count(battle_state, BattleModel.ITEM_POISON_SINGLE) == 1
+		and BattleModel.item_count(battle_state, BattleModel.ITEM_POISON_ALL) == 1
+		and BattleModel.item_count(battle_state, BattleModel.ITEM_CLEANSE_SINGLE) == 1
 	)
 	var initial_pet_hp := int(BattleModel.actor_by_id(battle_state, "ally_pet").get("hp", 0))
 	var ready_ok := (
@@ -20579,22 +20587,30 @@ func _run_auto_server_battle_item_live_check() -> void:
 	)
 	_on_battle_command_pressed("item")
 	await get_tree().process_frame
+	var heal_all_button := battle_command_buttons.get("attack") as Button
 	var heal_button := battle_command_buttons.get("spirit") as Button
+	var poison_button := battle_command_buttons.get("capture") as Button
+	var poison_all_button := battle_command_buttons.get("defend") as Button
+	var cleanse_button := battle_command_buttons.get("item") as Button
 	var meat_button := battle_command_buttons.get("switch_pet") as Button
-	var unsupported_button := battle_command_buttons.get("attack") as Button
 	var menu_ok := (
 		battle_command_owner == "item"
+		and heal_all_button != null
+		and not heal_all_button.disabled
 		and heal_button != null
 		and not heal_button.disabled
+		and poison_button != null
+		and not poison_button.disabled
+		and poison_all_button != null
+		and not poison_all_button.disabled
+		and cleanse_button != null
+		and not cleanse_button.disabled
 		and meat_button != null
 		and not meat_button.disabled
-		and unsupported_button != null
-		and unsupported_button.disabled
 	)
-	_on_battle_command_pressed("spirit")
+	_on_battle_command_pressed("attack")
 	await get_tree().process_frame
-	var target_mode_ok := battle_target_mode == "ally_item_single"
-	_submit_item_player_command(BattleModel.ITEM_HEAL_SINGLE, "ally_pet")
+	var target_mode_ok := battle_target_mode == "enemy" or battle_target_mode == ""
 	var frames := 0
 	while frames < 720 and server_battle_command_request_active:
 		frames += 1
@@ -20605,7 +20621,7 @@ func _run_auto_server_battle_item_live_check() -> void:
 	var item_submit_ok := (
 		not server_battle_command_request_active
 		and submitted_after_item.has(challenger_player_actor_id)
-		and BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE) == 2
+		and BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_ALL) == 1
 		and battle_command_owner == "pet"
 	)
 	await _submit_server_battle_pet_command("defend", "", BattleModel.PET_SKILL_DEFEND)
@@ -20655,21 +20671,33 @@ func _run_auto_server_battle_item_live_check() -> void:
 		if not (event_value is Dictionary):
 			continue
 		var event := event_value as Dictionary
-		if str(event.get("eventType", "")) != "item_heal":
+		if str(event.get("eventType", "")) != "item_heal_all":
 			continue
+		var item_targets: Array = event.get("targets", []) if event.get("targets", []) is Array else []
+		var pet_target_ok := false
+		for target_value in item_targets:
+			if not (target_value is Dictionary):
+				continue
+			var target_summary := target_value as Dictionary
+			if str(target_summary.get("targetActorId", "")) != challenger_pet_actor_id:
+				continue
+			pet_target_ok = (
+				str(target_summary.get("targetKind", "")) == "pet"
+				and int(target_summary.get("hpBefore", 0)) == 45
+				and int(target_summary.get("hpAfter", 0)) == 69
+				and int(target_summary.get("healed", 0)) == 24
+			)
+			break
 		item_event_ok = (
-			str(event.get("itemId", "")) == BattleModel.ITEM_HEAL_SINGLE
-			and str(event.get("targetActorId", "")) == challenger_pet_actor_id
-			and str(event.get("targetKind", "")) == "pet"
-			and int(event.get("hpBefore", 0)) == 45
-			and int(event.get("hpAfter", 0)) == 87
-			and int(event.get("remainingItemCount", -1)) == 1
+			str(event.get("itemId", "")) == BattleModel.ITEM_HEAL_ALL
+			and int(event.get("remainingItemCount", -1)) == 0
+			and pet_target_ok
 		)
 		break
 	var healed_pet_hp := int(BattleModel.actor_by_id(battle_state, "ally_pet").get("hp", 0))
-	var local_item_ok := BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_SINGLE) == 1
+	var local_item_ok := BattleModel.item_count(battle_state, BattleModel.ITEM_HEAL_ALL) == 0
 	var round_ok := int(battle_state.get("round", 1)) >= 2
-	var playback_ok := item_event_ok and healed_pet_hp == 87 and battle_last_round_event_types.has("item_heal") and local_item_ok and round_ok
+	var playback_ok := item_event_ok and healed_pet_hp == 69 and battle_last_round_event_types.has("item_heal_all") and local_item_ok and round_ok
 	var status := "ok" if register_ok and upload_ok and positions_ok and invite_ok and accepted_room_applied and ready_ok and menu_ok and target_mode_ok and item_submit_ok and pet_submit_ok and remote_commands_ok and playback_ok else "failed"
 	print("server battle item live check ready: status=%s register=%s upload=%s positions=%s invite=%s room_apply=%s ready=%s menu=%s target_mode=%s item_submit=%s pet_submit=%s remote=%s item_event=%s healed_hp=%d local_item=%s round=%s room_id=%s challenger=%s opponent=%s" % [
 		status,
@@ -38443,9 +38471,6 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		_set_battle_message("没有选择待机宠物。")
 		return
 	if command_id == "item":
-		if item_action_id != BattleModel.ITEM_HEAL_SINGLE and item_action_id != BattleModel.ITEM_MEAT_SMALL:
-			_set_battle_message("联网战斗暂只开放回复药和肉。")
-			return
 		if not BattleModel.has_item(battle_state, item_action_id):
 			_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_action_id, "物品"))
 			return
@@ -38482,7 +38507,7 @@ func _submit_server_battle_player_command(command_id: String, target_id: String 
 		payload["actorId"] = player_server_actor_id
 	if action_id == "attack" or command_id == "item" or command_id == "spirit" or command_id == "capture":
 		var resolved_target_id: String = target_id
-		if command_id == "spirit" and resolved_target_id.strip_edges() == "" and BattleActionCatalog.action_is_all(action_id):
+		if (command_id == "spirit" or command_id == "item") and resolved_target_id.strip_edges() == "" and BattleActionCatalog.action_is_all(action_id):
 			if BattleActionCatalog.action_can_target_side(action_id, BattleModel.SIDE_ALLY):
 				resolved_target_id = BattleModel.player_actor_id(battle_state)
 			elif BattleActionCatalog.action_can_target_side(action_id, BattleModel.SIDE_ENEMY):
@@ -38844,19 +38869,21 @@ func _submit_item_player_command(item_id: String, target_id: String = "") -> voi
 	battle_pending_spirit_id = ""
 	battle_pending_capture_tool_id = ""
 	if _battle_is_server_authority():
-		if item_id != BattleModel.ITEM_HEAL_SINGLE and item_id != BattleModel.ITEM_MEAT_SMALL:
-			_set_battle_message("联网战斗暂只开放回复药和肉。")
-			_set_battle_command_owner("player")
-			return
 		if not BattleModel.has_item(battle_state, item_id):
 			_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_id, "物品"))
 			_set_battle_command_owner("player")
 			return
-		if target_id.strip_edges() == "":
+		var server_target_id := target_id.strip_edges()
+		if server_target_id == "" and BattleActionCatalog.action_is_all(item_id):
+			server_target_id = _battle_item_anchor_target_id(item_id)
+		if server_target_id == "":
 			_set_battle_message("请选择物品目标。")
 			return
-		battle_selected_ally_target_id = target_id
-		_submit_server_battle_player_command("item", target_id, "", item_id)
+		if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ALLY):
+			battle_selected_ally_target_id = server_target_id
+		elif BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ENEMY):
+			battle_selected_target_id = server_target_id
+		_submit_server_battle_player_command("item", server_target_id, "", item_id)
 		return
 	var command := {
 		"command": "item",
@@ -39096,51 +39123,73 @@ func _begin_single_item_target_selection(item_id: String) -> void:
 	queue_redraw()
 
 
-func _on_item_battle_command_pressed(command_id: String) -> void:
-	if _battle_is_server_authority():
-		match command_id:
-			"spirit":
-				_begin_single_item_target_selection(BattleModel.ITEM_HEAL_SINGLE)
-			"switch_pet":
-				_begin_single_item_target_selection(BattleModel.ITEM_MEAT_SMALL)
-			"help":
-				battle_pending_item_id = ""
-				battle_pending_spirit_id = ""
-				battle_target_mode = "enemy"
-				battle_selected_target_id = ""
-				battle_selected_ally_target_id = ""
-				battle_hover_target_id = ""
-				battle_hover_ally_target_id = ""
-				_set_battle_command_owner("player")
-				_set_battle_message("重新选择人物指令。")
-			_:
-				_set_battle_message("联网战斗暂只开放回复药和肉。")
-		return
+func _battle_item_id_for_command(command_id: String) -> String:
 	match command_id:
 		"attack":
-			_submit_item_player_command(BattleModel.ITEM_HEAL_ALL)
+			return BattleModel.ITEM_HEAL_ALL
 		"spirit":
-			_begin_single_item_target_selection(BattleModel.ITEM_HEAL_SINGLE)
+			return BattleModel.ITEM_HEAL_SINGLE
 		"capture":
-			_begin_single_item_target_selection(BattleModel.ITEM_POISON_SINGLE)
+			return BattleModel.ITEM_POISON_SINGLE
 		"defend":
-			_submit_item_player_command(BattleModel.ITEM_POISON_ALL)
+			return BattleModel.ITEM_POISON_ALL
 		"item":
-			_begin_single_item_target_selection(BattleModel.ITEM_CLEANSE_SINGLE)
+			return BattleModel.ITEM_CLEANSE_SINGLE
 		"switch_pet":
-			_begin_single_item_target_selection(BattleModel.ITEM_MEAT_SMALL)
-		"help":
-			battle_pending_item_id = ""
-			battle_pending_spirit_id = ""
-			battle_target_mode = "enemy"
-			battle_selected_target_id = ""
-			battle_selected_ally_target_id = ""
-			battle_hover_target_id = ""
-			battle_hover_ally_target_id = ""
-			_set_battle_command_owner("player")
-			_set_battle_message("重新选择人物指令。")
+			return BattleModel.ITEM_MEAT_SMALL
 		_:
-			_set_battle_message("这个物品栏位暂未开放。")
+			return ""
+
+
+func _battle_item_anchor_target_id(item_id: String) -> String:
+	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ALLY):
+		return BattleModel.player_actor_id(battle_state)
+	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ENEMY):
+		return BattleModel.living_enemy_id(battle_state)
+	return ""
+
+
+func _battle_item_can_use_now(item_id: String, can_command: bool, has_ally: bool, has_enemy: bool) -> bool:
+	if item_id == "" or not can_command or not BattleModel.has_item(battle_state, item_id):
+		return false
+	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ALLY) and not has_ally:
+		return false
+	if BattleActionCatalog.action_can_target_side(item_id, BattleModel.SIDE_ENEMY) and not has_enemy:
+		return false
+	return true
+
+
+func _battle_has_usable_item(can_command: bool, has_ally: bool, has_enemy: bool) -> bool:
+	for command_id in ["attack", "spirit", "capture", "defend", "item", "switch_pet"]:
+		if _battle_item_can_use_now(_battle_item_id_for_command(command_id), can_command, has_ally, has_enemy):
+			return true
+	return false
+
+
+func _on_item_battle_command_pressed(command_id: String) -> void:
+	if command_id == "help":
+		battle_pending_item_id = ""
+		battle_pending_spirit_id = ""
+		battle_target_mode = "enemy"
+		battle_selected_target_id = ""
+		battle_selected_ally_target_id = ""
+		battle_hover_target_id = ""
+		battle_hover_ally_target_id = ""
+		_set_battle_command_owner("player")
+		_set_battle_message("重新选择人物指令。")
+		return
+	var item_id := _battle_item_id_for_command(command_id)
+	if item_id == "":
+		_set_battle_message("这个物品栏位暂未开放。")
+		return
+	if not BattleModel.has_item(battle_state, item_id):
+		_set_battle_message("%s 不够了。" % BattleActionCatalog.label_for(item_id, "物品"))
+		_sync_battle_buttons()
+		return
+	if BattleActionCatalog.action_is_all(item_id):
+		_submit_item_player_command(item_id)
+	else:
+		_begin_single_item_target_selection(item_id)
 
 
 func _begin_pet_skill_target_selection(skill_id: String) -> void:
@@ -39945,21 +39994,23 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		queue_redraw()
 		return true
 	if battle_target_mode == "enemy_item_single":
+		var pending_enemy_item_id := battle_pending_item_id if battle_pending_item_id != "" else BattleModel.ITEM_POISON_SINGLE
+		var pending_enemy_item_label := BattleActionCatalog.label_for(pending_enemy_item_id, "物品")
 		var item_enemy_target_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
 		if item_enemy_target_id == "":
 			var item_ally_target_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ALLY)
 			if item_ally_target_id != "":
-				_set_battle_message("%s只能选择敌方单体。" % BattleActionCatalog.label_for(BattleModel.ITEM_POISON_SINGLE, "毒粉5"))
+				_set_battle_message("%s只能选择敌方单体。" % pending_enemy_item_label)
 			return false
 		battle_selected_target_id = item_enemy_target_id
 		battle_hover_info_actor_id = item_enemy_target_id
 		_update_battle_passive_panel()
 		var item_enemy_target := BattleModel.actor_by_id(battle_state, item_enemy_target_id)
 		_set_battle_message("%s：%s" % [
-			BattleActionCatalog.label_for(BattleModel.ITEM_POISON_SINGLE, "毒粉5"),
+			pending_enemy_item_label,
 			str(item_enemy_target.get("name", "敌人")),
 		])
-		_submit_item_player_command(BattleModel.ITEM_POISON_SINGLE, item_enemy_target_id)
+		_submit_item_player_command(pending_enemy_item_id, item_enemy_target_id)
 		queue_redraw()
 		return true
 	var actor_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
@@ -40156,22 +40207,10 @@ func _sync_battle_buttons() -> void:
 						button.disabled = true
 			elif battle_command_owner == "item":
 				match str(command_id):
-					"attack":
-						button.disabled = true if _battle_is_server_authority() else (not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_HEAL_ALL))
-					"spirit":
-						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_HEAL_SINGLE)
-					"capture":
-						button.disabled = true if _battle_is_server_authority() else (not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_SINGLE))
-					"defend":
-						button.disabled = true if _battle_is_server_authority() else (not has_enemy or not BattleModel.has_item(battle_state, BattleModel.ITEM_POISON_ALL))
-					"item":
-						button.disabled = true if _battle_is_server_authority() else (not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_CLEANSE_SINGLE))
-					"switch_pet":
-						button.disabled = not has_ally or not BattleModel.has_item(battle_state, BattleModel.ITEM_MEAT_SMALL)
 					"help":
 						button.disabled = not can_command
 					_:
-						button.disabled = true
+						button.disabled = not _battle_item_can_use_now(_battle_item_id_for_command(str(command_id)), can_command, has_ally, has_enemy)
 			elif battle_command_owner == "capture":
 				match str(command_id):
 					"attack":
@@ -40202,7 +40241,7 @@ func _sync_battle_buttons() -> void:
 						"defend", "run", "help":
 							button.disabled = not can_command
 						"item":
-							button.disabled = not has_ally or (not BattleModel.has_item(battle_state, BattleModel.ITEM_HEAL_SINGLE) and not BattleModel.has_item(battle_state, BattleModel.ITEM_MEAT_SMALL))
+							button.disabled = not _battle_has_usable_item(can_command, has_ally, has_enemy)
 						"spirit":
 							var has_usable_spirit := false
 							for spirit_id in _player_spirit_ids_for_battle():
