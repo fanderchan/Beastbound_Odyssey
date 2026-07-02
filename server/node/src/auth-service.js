@@ -120,6 +120,11 @@ const BATTLE_PET_STATE_RIDING = "riding";
 const BATTLE_PET_STATE_STORAGE = "storage";
 const BATTLE_PET_STORAGE_LIMIT = 20;
 const BATTLE_CAPTURE_TOOL_EMPTY_HAND = "empty_hand";
+const ENCOUNTER_STONE_ITEM_IDS = new Set([
+  "encounter_stone_low",
+  "encounter_stone_mid",
+  "encounter_stone_high",
+]);
 const BATTLE_PARTY_PVE_PLAYER_SLOTS = [3, 4, 2, 5, 1];
 const BATTLE_PARTY_PVE_PARTNER_SLOTS = [1, 2, 4, 5];
 const BATTLE_EXP_FULL_LEVEL_DELTA = 5;
@@ -133,6 +138,12 @@ const BATTLE_PARTY_EXP_BONUS_RATES = Object.freeze({
 });
 const BACKPACK_BASE_SLOT_LIMIT = 15;
 const BACKPACK_SLOT_LIMIT = 20;
+const DEFAULT_STONE_COINS = 120;
+const DEFAULT_DIAMONDS = 999999;
+const DEV_DIAMONDS_GRANT_VERSION = 1;
+const EQUIPMENT_SLOTS_VERSION = 5;
+const EQUIPMENT_STARTER_SET_VERSION = 1;
+const EXP_PILL_STARTER_VERSION = 2;
 const DEFAULT_RECORD_POINT = {
   mapId: "firebud_village_gate",
   spawnName: "doctor_record",
@@ -279,6 +290,7 @@ function createAuthService(options = {}) {
       updatedAt: isoNow(now),
       schemaVersion: 1,
     };
+    ensureProfileForAccount(data, account, now);
     recordAuthEvent(data, "register", username, true, "", now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     save(data);
@@ -305,13 +317,14 @@ function createAuthService(options = {}) {
       save(data);
       return fail("wrong_password", "密码不正确。");
     }
+    const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     recordAuthEvent(data, "login", username, true, "", now);
     save(data);
     return ok({
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
-      profileBinding: data.profileBindings[account.accountId] || null,
+      profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(account, data),
     });
   }
@@ -334,10 +347,14 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    if (ensured.created) {
+      save(data);
+    }
     return ok({
       account: publicAccount(resolved.account),
       session: publicSession(resolved.session, resolved.account, data),
-      profileBinding: data.profileBindings[resolved.account.accountId] || null,
+      profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
     });
   }
@@ -348,13 +365,17 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const profileDoc = data.profiles[binding.playerId] || null;
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    if (ensured.created) {
+      save(data);
+    }
+    const binding = ensured.binding;
+    const profileDoc = ensured.profileDoc;
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: profileDoc && profileDoc.profile ? profileDoc.profile : null,
+      profile: profileDoc && profileDoc.profile ? clone(profileDoc.profile) : null,
     });
   }
 
@@ -395,6 +416,119 @@ function createAuthService(options = {}) {
       profileBinding: binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       message: "角色档案已同步。",
+    });
+  }
+
+  function startHangSession(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const profileDoc = ensured.profileDoc;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? clone(profileDoc.profile)
+      : null;
+    if (!profile) {
+      return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const mode = normalizeHangMode(payload.mode || payload.type);
+    if (!mode) {
+      return fail("hang_mode_invalid", "挂机模式不正确。", {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const settings = normalizeHangSettings(payload.settings);
+    profile.hangSettings = settings;
+    let session = normalizeHangSession(profile.hangSession);
+    const origin = normalizeHangOriginPayload(payload);
+    session = {
+      ...session,
+      enabled: true,
+      mode,
+      pendingResume: false,
+      lastStopReason: "",
+      originMapId: origin.mapId || session.originMapId,
+      originCell: origin.originCell,
+    };
+    if (mode === "encounter_stone") {
+      const itemId = String(payload.itemId || payload.encounterStoneItemId || "").trim();
+      if (!ENCOUNTER_STONE_ITEM_IDS.has(itemId)) {
+        return fail("hang_item_invalid", "遇敌石道具不正确。", {
+          profileBinding: ensured.binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      const slots = normalizeBackpackSlots(profileBackpackSlots(profile));
+      if (backpackItemCount(slots, itemId) <= 0) {
+        return fail("item_not_enough", "遇敌石不够。", {
+          profileBinding: ensured.binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      profile.backpackSlots = consumeBackpackItem(slots, itemId, 1);
+      profile.captureTools = captureToolBagFromProfile(profile);
+    }
+    profile.hangSession = session;
+    const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
+    save(data);
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: persisted.binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profile: clone(profile),
+      hang: publicHangSession(session),
+      message: mode === "encounter_stone" ? "遇敌石已生效。" : "开始挂机。",
+    });
+  }
+
+  function stopHangSession(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const profileDoc = ensured.profileDoc;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? clone(profileDoc.profile)
+      : null;
+    if (!profile) {
+      return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const previousSession = normalizeHangSession(profile.hangSession);
+    const reason = normalizeHangStopReason(payload.reason || payload.message || "manual");
+    const nextSession = {
+      ...previousSession,
+      enabled: false,
+      pendingResume: Boolean(payload.pendingResume),
+      lastStopReason: reason,
+    };
+    profile.hangSession = nextSession;
+    const changed = JSON.stringify(previousSession) !== JSON.stringify(nextSession);
+    let binding = ensured.binding;
+    if (changed) {
+      const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
+      binding = persisted.binding;
+      save(data);
+    } else if (ensured.created) {
+      save(data);
+    }
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profile: clone(profile),
+      hang: publicHangSession(nextSession),
+      message: "挂机已停止。",
     });
   }
 
@@ -2266,6 +2400,8 @@ function createAuthService(options = {}) {
     getSession,
     getProfile,
     saveProfile,
+    startHangSession,
+    stopHangSession,
     playerRebirth,
     questRecord,
     questClaim,
@@ -7309,7 +7445,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
     const questWriteback = applyBattleQuestProgressToProfile(profile, room, battle, result, accountId, captureWriteback.capturedPets);
     changed = changed || questWriteback.changed;
     summary.quests = questWriteback.publicQuests;
-    const hangWriteback = applyBattleHangSessionToProfile(profile, room, battle, result, captureWriteback.capturedPets.length);
+    const hangWriteback = applyBattleHangSessionToProfile(profile, room, battle, result, accountId, captureWriteback.capturedPets.length);
     changed = changed || hangWriteback.changed;
     summary.hang = hangWriteback.publicHang;
     if (summary.rewards || summary.quests) {
@@ -7350,7 +7486,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
   return writeback;
 }
 
-function applyBattleHangSessionToProfile(profile, room, battle, result, capturedCount) {
+function applyBattleHangSessionToProfile(profile, room, battle, result, accountId, capturedCount) {
   if (String(room && room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE || !result || typeof result !== "object") {
     return {changed: false, publicHang: null};
   }
@@ -7369,6 +7505,12 @@ function applyBattleHangSessionToProfile(profile, room, battle, result, captured
     nextSession.pendingResume = false;
     nextSession.lastStopReason = "capture_target";
   }
+  const lowHpStop = hangLowHpStopForBattleAccount(settings, battle, accountId);
+  if (nextSession.enabled && lowHpStop.shouldStop) {
+    nextSession.enabled = false;
+    nextSession.pendingResume = lowHpStop.pendingResume;
+    nextSession.lastStopReason = lowHpStop.reason;
+  }
   const changed = JSON.stringify(previousSession) !== JSON.stringify(nextSession);
   if (changed) {
     profile.hangSession = nextSession;
@@ -7381,9 +7523,42 @@ function applyBattleHangSessionToProfile(profile, room, battle, result, captured
       battleCount: Math.max(0, Math.trunc(Number(nextSession.battleCount || 0))),
       captureSuccessCount: Math.max(0, Math.trunc(Number(nextSession.captureSuccessCount || 0))),
       lastStopReason: String(nextSession.lastStopReason || ""),
+      pendingResume: Boolean(nextSession.pendingResume),
       stopped: previousSession.enabled && !nextSession.enabled,
+      stopReason: lowHpStop.shouldStop ? lowHpStop.reason : "",
       schemaVersion: 1,
     },
+  };
+}
+
+function hangLowHpStopForBattleAccount(settings, battle, accountId) {
+  const threshold = Math.trunc(Number(settings && settings.lowHpStopPercent || 0));
+  if (threshold === -1) {
+    return {shouldStop: false, reason: "", pendingResume: false};
+  }
+  const playerActor = battlePlayerActorByAccountId(battle, String(accountId || ""));
+  if (!playerActor) {
+    return {shouldStop: false, reason: "", pendingResume: false};
+  }
+  const hp = Math.max(0, Math.trunc(Number(playerActor.hp || 0)));
+  const maxHp = Math.max(1, Math.trunc(Number(playerActor.maxHp || 1)));
+  let shouldStop = false;
+  let reason = "";
+  if (threshold === 0) {
+    shouldStop = hp <= 0;
+    reason = "player_defeated";
+  } else {
+    const hpPercent = hp / maxHp * 100;
+    shouldStop = hpPercent < threshold;
+    reason = "low_hp";
+  }
+  if (!shouldStop) {
+    return {shouldStop: false, reason: "", pendingResume: false};
+  }
+  return {
+    shouldStop: true,
+    reason,
+    pendingResume: String(settings && settings.lowHpAction || "stop") === "town_heal" && settings.resumeAfterHeal !== false,
   };
 }
 
@@ -7415,6 +7590,41 @@ function normalizeHangSession(value) {
       Math.trunc(Number(rawCell[0] || 0)),
       Math.trunc(Number(rawCell[1] || 0)),
     ],
+  };
+}
+
+function normalizeHangMode(value) {
+  const mode = String(value || "").trim();
+  return ["walk", "encounter_stone"].includes(mode) ? mode : "";
+}
+
+function normalizeHangOriginPayload(payload = {}) {
+  const rawCell = Array.isArray(payload.originCell) ? payload.originCell : [payload.cellX ?? payload.x, payload.cellY ?? payload.y];
+  return {
+    mapId: String(payload.originMapId || payload.mapId || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH),
+    originCell: [
+      clampInt(rawCell[0], -9999, 9999, 0),
+      clampInt(rawCell[1], -9999, 9999, 0),
+    ],
+  };
+}
+
+function normalizeHangStopReason(value) {
+  return String(value || "").trim().replace(/\s+/g, "_").slice(0, 48) || "manual";
+}
+
+function publicHangSession(session) {
+  const normalized = normalizeHangSession(session);
+  return {
+    enabled: Boolean(normalized.enabled),
+    mode: String(normalized.mode || ""),
+    captureSuccessCount: Math.max(0, Math.trunc(Number(normalized.captureSuccessCount || 0))),
+    battleCount: Math.max(0, Math.trunc(Number(normalized.battleCount || 0))),
+    pendingResume: Boolean(normalized.pendingResume),
+    lastStopReason: String(normalized.lastStopReason || ""),
+    originMapId: String(normalized.originMapId || ""),
+    originCell: Array.isArray(normalized.originCell) ? normalized.originCell.slice(0, 2) : [0, 0],
+    schemaVersion: 1,
   };
 }
 
@@ -11207,6 +11417,288 @@ function publicOnlineAoi(aoi) {
     cellX: aoi && aoi.enabled ? aoi.cellX : 0,
     cellY: aoi && aoi.enabled ? aoi.cellY : 0,
     radius: aoi && Number.isFinite(aoi.radius) ? aoi.radius : ONLINE_AOI_DEFAULT_RADIUS,
+    schemaVersion: 1,
+  };
+}
+
+function ensureProfileForAccount(data, account, now) {
+  const binding = profileBindingForAccount(data, account, now);
+  const existingDoc = data.profiles[binding.playerId] || null;
+  if (existingDoc && existingDoc.profile && typeof existingDoc.profile === "object" && !Array.isArray(existingDoc.profile)) {
+    return {binding, profileDoc: existingDoc, created: false};
+  }
+  const updatedAt = String(binding.updatedAt || isoNow(now));
+  const revision = Math.max(0, Math.trunc(Number(binding.profileRevision || 0)));
+  binding.profileRevision = revision;
+  binding.updatedAt = updatedAt;
+  data.profileBindings[account.accountId] = binding;
+  data.profiles[binding.playerId] = {
+    playerId: binding.playerId,
+    accountId: account.accountId,
+    profileRevision: revision,
+    profile: createDefaultServerProfile(account),
+    updatedAt,
+    schemaVersion: 1,
+  };
+  return {binding, profileDoc: data.profiles[binding.playerId], created: true};
+}
+
+function createDefaultServerProfile(account) {
+  const displayName = String(account && (account.displayName || account.username) || "").trim() || "见习猎人";
+  const starterEquipmentSlots = defaultStarterEquipmentSlots();
+  const profile = {
+    schemaVersion: 1,
+    player: {
+      name: displayName,
+      level: 1,
+      exp: 0,
+      nextExp: battleExpToNextLevel(1),
+      baseStats: clone(DEFAULT_PLAYER_BATTLE_STATS),
+      statPoints: 0,
+      hp: DEFAULT_PLAYER_BATTLE_STATS.maxHp,
+      maxHp: DEFAULT_PLAYER_BATTLE_STATS.maxHp,
+    },
+    activePetInstanceId: "pet_bui_main",
+    nextPetInstanceSerial: 5,
+    nextPetDropSerial: 1,
+    stoneCoins: DEFAULT_STONE_COINS,
+    diamonds: DEFAULT_DIAMONDS,
+    devDiamondsGrantVersion: DEV_DIAMONDS_GRANT_VERSION,
+    petInstances: [
+      createDefaultServerPet("pet_bui_main", "我的布伊", "bui_normal_red_fire10", BATTLE_PET_STATE_BATTLE, 1),
+      createDefaultServerPet("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", BATTLE_PET_STATE_STANDBY, 1),
+      createDefaultServerPet("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", BATTLE_PET_STATE_STANDBY, 1),
+      createDefaultServerPet("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", "rest", 1),
+    ].filter((pet) => pet && Object.keys(pet).length > 0),
+    groundPetDrops: [],
+    ridePetInstanceId: "",
+    backpackSlots: defaultStartingBackpackSlots(),
+    backpackExtraSlots: 0,
+    quickSlots: ["", "", ""],
+    equipmentSlots: starterEquipmentSlots,
+    equipmentInstances: {},
+    equipmentSlotInstanceIds: {},
+    nextEquipmentInstanceSerial: 1,
+    equipmentDurability: fullEquipmentDurabilityForSlots(starterEquipmentSlots),
+    equipmentEnhancement: zeroValueForEquipmentSlots(starterEquipmentSlots),
+    equipmentWearCounters: zeroValueForEquipmentSlots(starterEquipmentSlots),
+    equipmentExpPillCharge: {},
+    equipmentSlotsVersion: EQUIPMENT_SLOTS_VERSION,
+    equipmentStarterSetVersion: EQUIPMENT_STARTER_SET_VERSION,
+    expPillStarterVersion: EXP_PILL_STARTER_VERSION,
+    mailboxMessages: [],
+    petRebirthMmStage2Claimed: false,
+    petRebirthMmGuide: defaultPetRebirthMmGuide(),
+    captureTools: defaultStartingCaptureTools(),
+    activeQuestId: firstQuestId(),
+    questStates: {},
+    petCodexSeenFormIds: [],
+    petCodexCapturedFormIds: [],
+    autoBattleSettings: defaultAutoBattleSettings(),
+    autoCaptureSettings: defaultAutoCaptureSettings(),
+    hangSettings: defaultHangSettings(),
+    hangSession: defaultHangSession(),
+    trainingPartners: [],
+    playerGrowth: defaultPlayerGrowth(),
+    battleResultReceipts: [],
+    serverSync: defaultServerSyncState(),
+    recordPoint: clone(DEFAULT_RECORD_POINT),
+    unlockedAbilities: [],
+    rebirthCount: 0,
+    rebirthHistory: [],
+    rebirthQuestCompletions: [],
+    rebirthTrialProofs: {},
+  };
+  if (profile.petInstances.length <= 0) {
+    profile.activePetInstanceId = "";
+  }
+  return profile;
+}
+
+function createDefaultServerPet(instanceId, name, formId, state, level) {
+  const template = petTemplateForFormId(formId);
+  const baseStats = objectOrEmpty(template.baseStats);
+  const maxHp = Math.max(1, Math.trunc(Number(baseStats.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+  return {
+    instanceId,
+    petId: instanceId,
+    templateId: formId,
+    formId,
+    speciesId: formId,
+    lineId: String(template.lineId || ""),
+    lineName: String(template.lineName || ""),
+    subtypeId: String(template.subtypeId || ""),
+    subtypeName: String(template.subtypeName || ""),
+    formName: String(template.formName || name || "宠物"),
+    name: String(name || template.formName || "宠物"),
+    state,
+    level: Math.max(1, Math.min(MAX_PET_LEVEL, Math.trunc(Number(level || 1)))),
+    exp: 0,
+    nextExp: battleExpToNextLevel(level),
+    hp: maxHp,
+    maxHp,
+    attack: Math.max(1, Math.trunc(Number(baseStats.attack || DEFAULT_PET_BATTLE_STATS.attack))),
+    defense: Math.max(1, Math.trunc(Number(baseStats.defense || DEFAULT_PET_BATTLE_STATS.defense))),
+    quick: Math.max(1, Math.trunc(Number(baseStats.quick || baseStats.agility || DEFAULT_PET_BATTLE_STATS.quick))),
+    elements: clone(objectOrEmpty(template.elements)),
+    growthProfileId: String(template.growthProfileId || "balanced"),
+    activeSkillIds: stringArray(template.activeSkillIds),
+    petSkillSlots: stringArray(template.petSkillSlots),
+    passiveSkillIds: stringArray(template.passiveSkillIds),
+    capturedSerial: Math.max(1, Math.trunc(Number(level || 1))),
+    source: "server_starter",
+    schemaVersion: 1,
+  };
+}
+
+function defaultStartingBackpackSlots() {
+  const counts = {};
+  for (const item of bagItems()) {
+    const itemId = String(item && item.id || "").trim();
+    const count = Math.max(0, Math.trunc(Number(item && item.startingCount || 0)));
+    if (itemId && count > 0) {
+      counts[itemId] = count;
+    }
+  }
+  return backpackSlotsFromCounts(counts, BACKPACK_BASE_SLOT_LIMIT);
+}
+
+function defaultStartingCaptureTools() {
+  const result = {};
+  for (const tool of battleCaptureToolEntries()) {
+    const toolId = String(tool && tool.id || "").trim();
+    if (!toolId || toolId === BATTLE_CAPTURE_TOOL_EMPTY_HAND || tool.consumable === false) {
+      continue;
+    }
+    result[toolId] = Math.max(0, Math.trunc(Number(tool.startingCount || 0)));
+  }
+  return result;
+}
+
+function defaultStarterEquipmentSlots() {
+  return {
+    accessory_left: "accessory_firebud_charm",
+    accessory_right: "accessory_wind_ring",
+    head: "helm_leather_cap",
+    left_hand_weapon: "weapon_training_spear",
+    body: "armor_moist_cloth",
+    right_hand_weapon: "weapon_stone_dagger",
+    hands: "gloves_hide",
+    feet: "boots_grass",
+    exp_pill: "",
+  };
+}
+
+function fullEquipmentDurabilityForSlots(slots) {
+  const result = {};
+  for (const [slotId, itemId] of Object.entries(objectOrEmpty(slots))) {
+    const maxDurability = equipmentItemMaxDurability(itemId);
+    if (slotId && itemId && maxDurability > 0) {
+      result[slotId] = maxDurability;
+    }
+  }
+  return result;
+}
+
+function zeroValueForEquipmentSlots(slots) {
+  const result = {};
+  for (const slotId of Object.keys(objectOrEmpty(slots))) {
+    if (slotId) {
+      result[slotId] = 0;
+    }
+  }
+  return result;
+}
+
+function defaultPetRebirthMmGuide() {
+  return {
+    status: "available",
+    step: "start",
+    mm1InstanceId: "",
+    targetInstanceId: "",
+    schemaVersion: 1,
+  };
+}
+
+function defaultAutoBattleSettings() {
+  return {
+    playerFirstRoundAction: "attack",
+    playerNormalAction: "attack",
+    petFirstRoundSlot: 1,
+    petNormalSlot: 1,
+    targetMode: "first_living",
+    healingEnabled: true,
+    playerHpPercent: 45,
+    petHpPercent: 45,
+    healPriority: ["spirit_moist_1", BATTLE_ITEM_MEAT_SMALL, BATTLE_ITEM_HEAL_SINGLE, "spirit_grace_1", BATTLE_ITEM_HEAL_ALL],
+  };
+}
+
+function defaultAutoCaptureSettings() {
+  return {
+    enabled: false,
+    targetMode: "all",
+    targetFormId: "",
+    targetManualText: "",
+    hpPercent: 100,
+    levelComparator: "=",
+    levelValue: 1,
+    preferredToolId: BATTLE_CAPTURE_TOOL_EMPTY_HAND,
+    noTargetAction: "escape",
+    capturePetSkillSlot: 2,
+    autoDiscardLowPower: true,
+    lowPowerThreshold: 31,
+  };
+}
+
+function defaultHangSettings() {
+  return {
+    lowHpStopPercent: 0,
+    lowHpAction: "stop",
+    resumeAfterHeal: true,
+    captureTargetCount: 0,
+  };
+}
+
+function defaultHangSession() {
+  return {
+    enabled: false,
+    mode: "",
+    captureSuccessCount: 0,
+    battleCount: 0,
+    pendingResume: false,
+    lastStopReason: "",
+    originMapId: "",
+    originCell: [0, 0],
+  };
+}
+
+function defaultPlayerGrowth() {
+  return {
+    schemaVersion: 1,
+    statPointSources: {
+      level_up: 0,
+      rebirth: 0,
+      quest: 0,
+      item: 0,
+      gm: 0,
+    },
+    skillSources: [],
+    rebirthGrowth: {
+      rebirthCount: 0,
+      statBonusPerRebirth: {},
+      notes: [],
+    },
+  };
+}
+
+function defaultServerSyncState() {
+  return {
+    profileRevision: 0,
+    lastServerRevision: 0,
+    lastLocalSaveAtSec: 0,
+    pending: false,
+    conflict: false,
     schemaVersion: 1,
   };
 }

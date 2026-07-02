@@ -39,7 +39,7 @@ static func profile_request(base_url: String, session_token: String) -> Dictiona
 	}
 
 
-static func profile_upload_request(base_url: String, session_token: String, profile: Dictionary, expected_revision: int) -> Dictionary:
+static func profile_upload_disabled_probe_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/profiles/me" % normalized_base_url(base_url),
 		"headers": [
@@ -47,11 +47,13 @@ static func profile_upload_request(base_url: String, session_token: String, prof
 			"Authorization: Bearer %s" % session_token,
 		],
 		"method": HTTPClient.METHOD_PUT,
-		"body": JSON.stringify({
-			"expectedRevision": maxi(0, expected_revision),
-			"profile": profile,
-		}),
+		"body": JSON.stringify({"profile": {}}),
 	}
+
+
+# Legacy auto checks still call this name; it intentionally sends only the disabled probe.
+static func profile_upload_request(base_url: String, session_token: String, _profile: Dictionary, _expected_revision: int) -> Dictionary:
+	return profile_upload_disabled_probe_request(base_url, session_token)
 
 
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
@@ -340,6 +342,44 @@ static func party_battle_encounter_request(base_url: String, session_token: Stri
 		"body": JSON.stringify({
 			"encounterZone": encounter_zone,
 			"enemyCount": enemy_count,
+		}),
+	}
+
+
+static func hang_session_start_request(base_url: String, session_token: String, mode: String, map_id: String, cell: Vector2i, settings: Dictionary = {}, item_id: String = "") -> Dictionary:
+	var body := {
+		"mode": mode,
+		"mapId": map_id,
+		"originMapId": map_id,
+		"originCell": [cell.x, cell.y],
+		"cellX": cell.x,
+		"cellY": cell.y,
+		"settings": settings,
+	}
+	if item_id.strip_edges() != "":
+		body["itemId"] = item_id.strip_edges()
+	return {
+		"url": "%s/hang/session/start" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(body),
+	}
+
+
+static func hang_session_stop_request(base_url: String, session_token: String, reason: String = "manual", pending_resume: bool = false) -> Dictionary:
+	return {
+		"url": "%s/hang/session/stop" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"reason": reason,
+			"pendingResume": pending_resume,
 		}),
 	}
 
@@ -717,6 +757,16 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 		"message": str(data.get("message", "角色档案已同步。")),
 		"response": data,
 	}
+
+
+static func parse_hang_session_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "挂机同步失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["hang"] = response.get("hang", {}) if response.get("hang", {}) is Dictionary else {}
+	return parsed
 
 
 static func parse_shop_transaction_response(response_code: int, body: PackedByteArray) -> Dictionary:

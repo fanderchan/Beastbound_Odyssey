@@ -328,7 +328,7 @@ test("register/login/session keeps players away from GM tools", () => {
   assert.equal(registered.account.passwordHash, undefined);
   assert.equal(registered.session.effectiveRole, "player");
   assert.equal(Boolean(registered.session.token), true);
-  assert.equal(registered.profileSummary.storageMode, "local_shadow");
+  assert.equal(registered.profileSummary.storageMode, "server_document");
   assert.equal(registered.profileSummary.profileRevision, 0);
   assert.match(registered.profileSummary.playerId, /^player_/);
 
@@ -389,9 +389,10 @@ test("profiles sync with revision conflict protection", () => {
 
   const emptyProfile = service.getProfile(token);
   assert.equal(emptyProfile.ok, true);
-  assert.equal(emptyProfile.profile, null);
+  assert.equal(emptyProfile.profile.player.name, "同步猎人");
+  assert.equal(emptyProfile.profile.player.level, 1);
   assert.equal(emptyProfile.profileSummary.profileRevision, 0);
-  assert.equal(emptyProfile.profileSummary.storageMode, "local_shadow");
+  assert.equal(emptyProfile.profileSummary.storageMode, "server_document");
 
   const saved = service.saveProfile(token, {
     "expectedRevision": 0,
@@ -1098,6 +1099,14 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   const opponent = service.register({"username": "turnb", "password": "test1234", "displayName": "回合乙"});
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("回合甲", {"level": 8, "hp": 140, "maxHp": 140, "attack": 28, "defense": 10, "quick": 80}, null),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("回合乙", {"level": 8, "hp": 140, "maxHp": 140, "attack": 22, "defense": 10, "quick": 70}, null),
+  }).ok, true);
   service.updatePlayerPosition(challenger.session.token, {
     "mapId": "firebud_training_yard",
     "cellX": 10,
@@ -2077,6 +2086,93 @@ test("party pve capture advances capture quest and stops hang capture target", (
   assert.equal(after.profile.hangSession.battleCount, 2);
   assert.equal(after.profile.hangSession.captureSuccessCount, 1);
   assert.equal(after.profile.hangSession.lastStopReason, "capture_target");
+});
+
+test("hang session endpoints start encounter stone and stop server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "hangstoneone", "password": "test1234", "displayName": "遇敌石玩家"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("遇敌石玩家", {"level": 5, "hp": 120, "maxHp": 120});
+  profile.backpackSlots = [{"itemId": "encounter_stone_low", "count": 1}];
+  profile.hangSettings = {"captureTargetCount": 0};
+  profile.hangSession = {"enabled": false, "mode": "", "battleCount": 4, "captureSuccessCount": 1};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const started = service.startHangSession(player.session.token, {
+    "mode": "encounter_stone",
+    "itemId": "encounter_stone_low",
+    "mapId": "firebud_village_gate",
+    "originCell": [11, 15],
+    "settings": {"lowHpStopPercent": 30, "lowHpAction": "town_heal", "resumeAfterHeal": true, "captureTargetCount": 2},
+  });
+  assert.equal(started.ok, true);
+  assert.equal(started.profile.hangSession.enabled, true);
+  assert.equal(started.profile.hangSession.mode, "encounter_stone");
+  assert.deepEqual(started.profile.hangSession.originCell, [11, 15]);
+  assert.equal(started.profile.hangSession.battleCount, 4);
+  assert.equal(started.profile.hangSession.captureSuccessCount, 1);
+  assert.equal(started.profile.hangSettings.captureTargetCount, 2);
+  assert.equal(profileItemCount(started.profile, "encounter_stone_low"), 0);
+
+  const stopped = service.stopHangSession(player.session.token, {"reason": "manual"});
+  assert.equal(stopped.ok, true);
+  assert.equal(stopped.profile.hangSession.enabled, false);
+  assert.equal(stopped.profile.hangSession.lastStopReason, "manual");
+});
+
+test("party pve victory stops hang when player remains below low hp threshold", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "hanglowhpone", "password": "test1234", "displayName": "低血挂机"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("低血挂机", {
+    "level": 8,
+    "hp": 40,
+    "maxHp": 120,
+    "attack": 999,
+    "defense": 20,
+    "quick": 200,
+    "comboRateOverride": 0,
+  }, null);
+  profile.backpackSlots = [];
+  profile.hangSettings = {"lowHpStopPercent": 50, "lowHpAction": "town_heal", "resumeAfterHeal": true, "captureTargetCount": 0};
+  profile.hangSession = {"enabled": true, "mode": "walk", "battleCount": 2, "captureSuccessCount": 0};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(player.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "low_hp_grass",
+      "name": "低血草丛",
+      "encounterGroupId": "firebud_grass_01",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "低血乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const playerActor = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": playerActor.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === player.account.accountId);
+  assert.equal(writeback.hang.enabled, false);
+  assert.equal(writeback.hang.lastStopReason, "low_hp");
+  assert.equal(writeback.hang.pendingResume, true);
+  assert.equal(writeback.hang.battleCount, 3);
+
+  const after = service.getProfile(player.session.token);
+  assert.equal(after.profile.hangSession.enabled, false);
+  assert.equal(after.profile.hangSession.lastStopReason, "low_hp");
+  assert.equal(after.profile.hangSession.pendingResume, true);
 });
 
 test("party pve spirit event advances battle quest chain from server event log", () => {
@@ -3450,6 +3546,14 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   const opponent = service.register({"username": "closeb", "password": "test1234", "displayName": "关闭乙"});
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("关闭甲", {"level": 12, "hp": 160, "maxHp": 160, "attack": 90, "defense": 12, "quick": 90}, null),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("关闭乙", {"level": 8, "hp": 48, "maxHp": 48, "attack": 16, "defense": 1, "quick": 50}, null),
+  }).ok, true);
   service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
   service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
 
@@ -3859,17 +3963,17 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   });
   assert.equal(session.ok, true);
   assert.equal(session.account.username, "httpuser");
-  assert.equal(session.profileSummary.storageMode, "local_shadow");
+  assert.equal(session.profileSummary.storageMode, "server_document");
 
   const profile = await fetchJson(`${base}/profiles/me`, {
     "headers": {"authorization": `Bearer ${registered.session.token}`},
   });
   assert.equal(profile.ok, true);
-  assert.equal(profile.profile, null);
+  assert.equal(profile.profile.player.level, 1);
   assert.equal(profile.profileSummary.playerId, registered.profileSummary.playerId);
-  assert.equal(profile.profileSummary.serverAuthority, "account_binding");
+  assert.equal(profile.profileSummary.serverAuthority, "profile_document");
 
-  const savedProfile = await fetchJson(`${base}/profiles/me`, {
+  const deniedUpload = await fetchJson(`${base}/profiles/me`, {
     "method": "PUT",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
     "body": JSON.stringify({
@@ -3877,10 +3981,10 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
       "profile": {"schemaVersion": 1, "player": {"level": 9}},
     }),
   });
-  assert.equal(savedProfile.ok, true);
-  assert.equal(savedProfile.profileSummary.profileRevision, 1);
+  assert.equal(deniedUpload.ok, false);
+  assert.equal(deniedUpload.code, "profile_upload_denied");
 
-  const conflict = await fetchJson(`${base}/profiles/me`, {
+  const deniedConflictUpload = await fetchJson(`${base}/profiles/me`, {
     "method": "PUT",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
     "body": JSON.stringify({
@@ -3888,8 +3992,8 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
       "profile": {"schemaVersion": 1, "player": {"level": 1}},
     }),
   });
-  assert.equal(conflict.ok, false);
-  assert.equal(conflict.code, "revision_conflict");
+  assert.equal(deniedConflictUpload.ok, false);
+  assert.equal(deniedConflictUpload.code, "profile_upload_denied");
 
   const tools = await fetchJson(`${base}/gm/tools`, {
     "headers": {"authorization": `Bearer ${registered.session.token}`},
@@ -3915,11 +4019,7 @@ test("HTTP server exposes server-authoritative shop transaction endpoint", async
   const profile = battleProfile("接口商店", {"level": 1, "hp": 120, "maxHp": 120}, null);
   profile.stoneCoins = 20;
   profile.backpackSlots = Array.from({"length": 15}, () => ({}));
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const buy = await fetchJson(`${base}/shops/transaction`, {
@@ -3971,11 +4071,7 @@ test("HTTP server exposes server-authoritative quest record and claim endpoints"
   introProfile.backpackSlots = [];
   introProfile.activeQuestId = "quest_intro_talk";
   introProfile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
-  const savedIntro = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, "profile": introProfile}),
-  });
+  const savedIntro = service.saveProfile(registered.session.token, {"expectedRevision": 0, "profile": introProfile});
   assert.equal(savedIntro.ok, true);
 
   const recorded = await fetchJson(`${base}/quests/record`, {
@@ -3995,11 +4091,7 @@ test("HTTP server exposes server-authoritative quest record and claim endpoints"
   captureProfile.backpackSlots = [];
   captureProfile.activeQuestId = "quest_capture_wuli";
   captureProfile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "ready", "progress": 1}};
-  const savedCapture = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 2, "profile": captureProfile}),
-  });
+  const savedCapture = service.saveProfile(registered.session.token, {"expectedRevision": 2, "profile": captureProfile});
   assert.equal(savedCapture.ok, true);
 
   const denied = await fetchJson(`${base}/quests/claim`, {
@@ -4044,11 +4136,7 @@ test("HTTP server exposes server-authoritative equipment equip endpoint", async 
   ];
   profile.equipmentSlots = {"right_hand_weapon": "weapon_stone_dagger"};
   profile.equipmentDurability = {"right_hand_weapon": 30};
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const equipped = await fetchJson(`${base}/equipment/equip`, {
@@ -4094,11 +4182,7 @@ test("HTTP server exposes server-authoritative equipment enhance endpoint", asyn
   profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
   profile.equipmentDurability = {"right_hand_weapon": 30};
   profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "level": 0, "history": []}};
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const enhanced = await fetchJson(`${base}/equipment/enhance`, {
@@ -4157,11 +4241,7 @@ test("HTTP server exposes server-authoritative equipment repair endpoint", async
   };
   profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
   profile.nextEquipmentInstanceSerial = 2;
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const repaired = await fetchJson(`${base}/equipment/repair-all`, {
@@ -4206,11 +4286,7 @@ test("HTTP server exposes server-authoritative equipment synthesis endpoint", as
     {"itemId": "equip_frag_wood_basic", "count": 3},
     ...Array.from({"length": 14}, () => ({})),
   ];
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const synthesized = await fetchJson(`${base}/equipment/synthesize`, {
@@ -4248,11 +4324,7 @@ test("HTTP server exposes server-authoritative player rebirth endpoint", async (
   });
   assert.equal(registered.ok, true);
   const profile = playerRebirthReadyProfile("接口转生");
-  const saved = await fetchJson(`${base}/profiles/me`, {
-    "method": "PUT",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"expectedRevision": 0, profile}),
-  });
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
   const reborn = await fetchJson(`${base}/player/rebirth`, {
@@ -4644,6 +4716,58 @@ test("HTTP server exposes solo pve encounter endpoint", async (t) => {
   assert.equal(enemies[0].hp, enemies[0].maxHp);
 });
 
+test("HTTP server exposes hang session endpoints", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httphang", "password": "test1234", "displayName": "HTTP 挂机"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("HTTP 挂机", {"level": 6, "hp": 120, "maxHp": 120}, null);
+  profile.backpackSlots = [{"itemId": "encounter_stone_low", "count": 1}];
+  profile.hangSettings = {"captureTargetCount": 0};
+  assert.equal(service.saveProfile(registered.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const started = await fetchJson(`${base}/hang/session/start`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({
+      "mode": "encounter_stone",
+      "itemId": "encounter_stone_low",
+      "mapId": "firebud_village_gate",
+      "originCell": [11, 15],
+      "settings": {
+        "lowHpStopPercent": 35,
+        "lowHpAction": "town_heal",
+        "resumeAfterHeal": true,
+        "captureTargetCount": 2,
+      },
+    }),
+  });
+  assert.equal(started.ok, true);
+  assert.equal(started.profile.hangSession.enabled, true);
+  assert.equal(started.profile.hangSession.mode, "encounter_stone");
+  assert.deepEqual(started.profile.hangSession.originCell, [11, 15]);
+  assert.equal(started.profile.hangSettings.captureTargetCount, 2);
+  assert.equal(profileItemCount(started.profile, "encounter_stone_low"), 0);
+
+  const stopped = await fetchJson(`${base}/hang/session/stop`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"reason": "manual"}),
+  });
+  assert.equal(stopped.ok, true);
+  assert.equal(stopped.profile.hangSession.enabled, false);
+  assert.equal(stopped.profile.hangSession.lastStopReason, "manual");
+});
+
 test("HTTP server exposes nearby and team chat endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});
@@ -4737,6 +4861,14 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   });
   assert.equal(challenger.ok, true);
   assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("挑战甲", {"level": 8, "hp": 140, "maxHp": 140, "attack": 28, "defense": 10, "quick": 80}, null),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("迎战乙", {"level": 8, "hp": 140, "maxHp": 140, "attack": 22, "defense": 10, "quick": 70}, null),
+  }).ok, true);
   await fetchJson(`${base}/players/position`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${challenger.session.token}`},

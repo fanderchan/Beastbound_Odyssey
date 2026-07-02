@@ -958,6 +958,7 @@ var hang_heal_resume_active: bool = false
 var hang_heal_resume_mode: String = ""
 var hang_heal_resume_map_id: String = ""
 var hang_heal_resume_cell: Vector2i = Vector2i.ZERO
+var hang_session_request_active: bool = false
 var encounter_stone_item_id: String = ""
 var encounter_stone_interval: float = 0.0
 var encounter_stone_remaining: float = 0.0
@@ -12749,16 +12750,17 @@ func _run_auto_server_auth_contract_check() -> void:
 	var endpoints_ok := (
 		endpoint_ids is Array
 		and (endpoint_ids as Array).has("login")
-		and (endpoint_ids as Array).has("session")
-		and (endpoint_ids as Array).has("gmCommand")
-		and (endpoint_ids as Array).has("profileSync")
-		and (endpoint_ids as Array).size() >= 8
+			and (endpoint_ids as Array).has("session")
+			and (endpoint_ids as Array).has("gmCommand")
+			and (endpoint_ids as Array).has("profileUploadDisabled")
+			and (endpoint_ids as Array).size() >= 8
 	)
 	var security_ok := (
 		bool(security.get("serverAuthoritativeGm", false))
 		and bool(security.get("serverComputesEffectiveRole", false))
-		and bool(security.get("gmCommandRequiresRoleGrantAndAudit", false))
-		and bool(security.get("localPluginIgnoredInProduction", false))
+			and bool(security.get("gmCommandRequiresRoleGrantAndAudit", false))
+			and bool(security.get("localPluginIgnoredInProduction", false))
+			and bool(security.get("clientCannotUploadFullProfile", false))
 	)
 	var paths_ok := (
 		str(paths.get("accountStorePath", "")) == AccountAuthModel.ACCOUNT_STORE_PATH
@@ -15407,32 +15409,27 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_profile.get("profileSummary", {}) as Dictionary).get("playerId", "")) == "player_test"
 		and int(parsed_profile_player.get("level", 0)) == 7
 	)
-	var upload_spec := ServerAuthClientModel.profile_upload_request(
+	var upload_spec := ServerAuthClientModel.profile_upload_disabled_probe_request(
 		"http://127.0.0.1:8787/",
-		"token_test",
-		{"schemaVersion": 1, "player": {"level": 7}},
-		3
+		"token_test"
 	)
 	var upload_body := str(upload_spec.get("body", ""))
 	var upload_request_ok := (
 		str(upload_spec.get("url", "")) == "http://127.0.0.1:8787/profiles/me"
 		and int(upload_spec.get("method", -1)) == HTTPClient.METHOD_PUT
 		and _packed_string_array(upload_spec.get("headers", [])).has("Authorization: Bearer token_test")
-		and upload_body.find("\"expectedRevision\":3") >= 0
+		and upload_body.find("\"schemaVersion\"") < 0
+		and upload_body.find("\"expectedRevision\"") < 0
 	)
 	var upload_response_body := JSON.stringify({
-		"ok": true,
-		"profileSummary": {
-			"playerId": "player_test",
-			"profileRevision": 4,
-			"storageMode": "server_document",
-			"serverAuthority": "profile_document",
-		},
+		"ok": false,
+		"code": "profile_upload_denied",
+		"message": "角色档案由服务器专用接口写入，禁止客户端整档上传。",
 	}).to_utf8_buffer()
-	var parsed_upload := ServerAuthClientModel.parse_profile_upload_response(200, upload_response_body)
+	var parsed_upload := ServerAuthClientModel.parse_profile_upload_response(403, upload_response_body)
 	var upload_parse_ok := (
-		bool(parsed_upload.get("ok", false))
-		and int((parsed_upload.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 4
+		not bool(parsed_upload.get("ok", true))
+		and str(parsed_upload.get("code", "")) == "profile_upload_denied"
 	)
 	var shop_transaction_spec := ServerAuthClientModel.shop_transaction_request(
 		"http://127.0.0.1:8787/",
@@ -16279,7 +16276,13 @@ func _run_auto_auth_server_live_check() -> void:
 	while frames < 420 and (server_profile_sync_state == "loading" or server_profile_sync_state == "uploading"):
 		frames += 1
 		await get_tree().process_frame
-	var sync_ok := server_profile_sync_state == "ready" and server_profile_sync_expected_revision >= 1
+	var live_summary := current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
+	var sync_ok := (
+		server_profile_sync_state == "ready"
+		and str(live_summary.get("storageMode", "")) == "server_document"
+		and str(live_summary.get("playerId", "")).strip_edges() != ""
+		and server_profile_sync_expected_revision >= 0
+	)
 	_open_account_panel()
 	await get_tree().process_frame
 	var account_panel_ok := (
@@ -16322,7 +16325,13 @@ func _run_auto_startup_login_check() -> void:
 	while frames < 420 and (server_profile_sync_state == "loading" or server_profile_sync_state == "uploading"):
 		frames += 1
 		await get_tree().process_frame
-	var sync_ok := server_profile_sync_state == "ready" and server_profile_sync_expected_revision >= 1
+	var startup_summary := current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
+	var sync_ok := (
+		server_profile_sync_state == "ready"
+		and str(startup_summary.get("storageMode", "")) == "server_document"
+		and str(startup_summary.get("playerId", "")).strip_edges() != ""
+		and server_profile_sync_expected_revision >= 0
+	)
 	var auth_panel_hidden_ok := auth_panel == null or not auth_panel.visible
 	var world_ok := world_log_message.find("已进入游戏") >= 0 or account_authenticated
 	var status := "ok" if auth_ok and sync_ok and auth_panel_hidden_ok and world_ok else "failed"
@@ -20866,24 +20875,24 @@ func _run_auto_server_profile_sync_check() -> void:
 	account_authenticated = true
 	player_profile = PlayerProgressModel.default_profile()
 	_apply_server_profile_summary(session.get("serverProfileSummary", {}) as Dictionary)
+	server_profile_sync_state = "ready"
 	var revision_zero_ok := server_profile_sync_expected_revision == 0
-	var upload_spec := _server_profile_upload_spec()
-	var upload_ok := (
-		int(upload_spec.get("method", -1)) == HTTPClient.METHOD_PUT
-		and str(upload_spec.get("url", "")) == "http://127.0.0.1:8787/profiles/me"
-		and str(upload_spec.get("body", "")).find("\"expectedRevision\":0") >= 0
+	_queue_server_profile_upload()
+	var no_upload_ok := (
+		server_profile_sync_state == "ready"
+		and server_profile_sync_pending_kind == ""
+		and not server_profile_sync_dirty
+		and server_profile_sync_expected_revision == 0
 	)
-	var save_response := ServerAuthClientModel.parse_profile_upload_response(200, JSON.stringify({
-		"ok": true,
-		"profileSummary": {
-			"playerId": "player_sync",
-			"profileRevision": 1,
-			"storageMode": "server_document",
-			"serverAuthority": "profile_document",
-		},
+	var upload_denied_response := ServerAuthClientModel.parse_profile_upload_response(403, JSON.stringify({
+		"ok": false,
+		"code": "profile_upload_denied",
+		"message": "角色档案由服务器专用接口写入，禁止客户端整档上传。",
 	}).to_utf8_buffer())
-	_apply_server_profile_summary(save_response.get("profileSummary", {}) as Dictionary)
-	var revision_one_ok := server_profile_sync_expected_revision == 1
+	var upload_denied_ok := (
+		not bool(upload_denied_response.get("ok", true))
+		and str(upload_denied_response.get("code", "")) == "profile_upload_denied"
+	)
 	var remote_profile := PlayerProgressModel.default_profile()
 	var remote_player := remote_profile.get("player", {}) as Dictionary
 	remote_player["name"] = "云端猎人"
@@ -20901,31 +20910,13 @@ func _run_auto_server_profile_sync_check() -> void:
 	_apply_server_profile_pull_result(pull_response)
 	var pulled_player := player_profile.get("player", {}) as Dictionary if player_profile.get("player", {}) is Dictionary else {}
 	var pull_ok := str(pulled_player.get("name", "")) == "云端猎人" and server_profile_sync_expected_revision == 2
-	var conflict_response := ServerAuthClientModel.parse_profile_upload_response(409, JSON.stringify({
-		"ok": false,
-		"code": "revision_conflict",
-		"message": "服务器档案已更新，请重新登录或重新拉取档案。",
-		"profileSummary": {
-			"playerId": "player_sync",
-			"profileRevision": 3,
-		},
-	}).to_utf8_buffer())
-	_apply_server_profile_upload_result(conflict_response)
-	var conflict_ok := (
-		server_profile_sync_state == "loading"
-		and server_profile_sync_pending_kind == "pull"
-		and server_profile_sync_expected_revision == 3
-		and not server_profile_sync_dirty
-		and not server_profile_sync_pull_queued
-	)
-	var status := "ok" if revision_zero_ok and upload_ok and revision_one_ok and pull_ok and conflict_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s upload=%s rev1=%s pull=%s conflict=%s state=%s rev=%d" % [
+	var status := "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and pull_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s pull=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
-		str(upload_ok),
-		str(revision_one_ok),
+		str(no_upload_ok),
+		str(upload_denied_ok),
 		str(pull_ok),
-		str(conflict_ok),
 		server_profile_sync_state,
 		server_profile_sync_expected_revision,
 	])
@@ -23718,6 +23709,9 @@ func _battle_auto_capture_no_target_action() -> String:
 func _battle_auto_capture_escape_without_target() -> void:
 	var message := "捕获成功。没有符合条件的捕捉目标，自动逃跑。" if battle_auto_capture_success_seen else "自动捉宠：没有符合条件目标，自动逃跑。"
 	_set_battle_message(message)
+	if _battle_is_server_authority():
+		_leave_server_battle_room()
+		return
 	_battle_escape()
 	if world_log_message != "":
 		_set_world_log_message("%s\n%s" % [message, world_log_message])
@@ -24322,10 +24316,7 @@ func _request_profile_save(delay_seconds: float = 0.3) -> void:
 
 func _save_player_profile_now() -> bool:
 	_mark_progress_ui_caches_dirty()
-	var saved := PlayerProgressModel.save_profile(player_profile)
-	if saved:
-		_queue_server_profile_upload()
-	return saved
+	return PlayerProgressModel.save_profile(player_profile)
 
 
 func _mark_progress_ui_caches_dirty() -> void:
@@ -27598,6 +27589,7 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 		message = "战斗已结束。" if is_party_pve else "切磋已结束。"
 	var log_message := _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
 	var result_key := _server_battle_result_key(closed_room)
+	var hang_result := _apply_server_party_pve_hang_writeback(closed_room) if is_party_pve else {}
 	server_battle_pending_closed_room.clear()
 	server_battle_command_request_active = false
 	server_battle_state_poll_request_active = false
@@ -27614,6 +27606,8 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if not is_party_pve:
 		_open_battle_result_panel(closed_room, result_key, message)
 	_queue_server_profile_pull()
+	if bool(hang_result.get("routeToHealer", false)):
+		call_deferred("_route_to_hang_healer")
 	return {
 		"result": result_key,
 		"message": log_message,
@@ -27833,6 +27827,41 @@ func _server_battle_profile_writeback_for_current_account(room: Dictionary) -> D
 	return {}
 
 
+func _apply_server_party_pve_hang_writeback(room: Dictionary) -> Dictionary:
+	var profile_entry := _server_battle_profile_writeback_for_current_account(room)
+	var hang := profile_entry.get("hang", {}) as Dictionary if profile_entry.get("hang", {}) is Dictionary else {}
+	if hang.is_empty():
+		return {}
+	var stopped := bool(hang.get("stopped", false))
+	var reason := str(hang.get("lastStopReason", hang.get("stopReason", ""))).strip_edges()
+	var pending_resume := bool(hang.get("pendingResume", false))
+	if stopped:
+		_set_hang_mode(false)
+		if _encounter_stone_active():
+			_clear_encounter_stone_effect(false, false)
+		var session := PlayerProgressModel.hang_session(player_profile)
+		session[HangSettingsModel.SESSION_ENABLED_KEY] = false
+		session[HangSettingsModel.SESSION_PENDING_RESUME_KEY] = pending_resume
+		session[HangSettingsModel.SESSION_LAST_STOP_REASON_KEY] = reason
+		if hang.has("battleCount"):
+			session[HangSettingsModel.SESSION_BATTLE_COUNT_KEY] = maxi(0, int(hang.get("battleCount", session.get(HangSettingsModel.SESSION_BATTLE_COUNT_KEY, 0))))
+		if hang.has("captureSuccessCount"):
+			session[HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY] = maxi(0, int(hang.get("captureSuccessCount", session.get(HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY, 0))))
+		player_profile = PlayerProgressModel.with_hang_session(player_profile, session)
+	else:
+		var current_session := PlayerProgressModel.hang_session(player_profile)
+		if hang.has("battleCount"):
+			current_session[HangSettingsModel.SESSION_BATTLE_COUNT_KEY] = maxi(0, int(hang.get("battleCount", current_session.get(HangSettingsModel.SESSION_BATTLE_COUNT_KEY, 0))))
+		if hang.has("captureSuccessCount"):
+			current_session[HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY] = maxi(0, int(hang.get("captureSuccessCount", current_session.get(HangSettingsModel.SESSION_CAPTURE_SUCCESS_COUNT_KEY, 0))))
+		player_profile = PlayerProgressModel.with_hang_session(player_profile, current_session)
+	return {
+		"stopped": stopped,
+		"reason": reason,
+		"routeToHealer": stopped and pending_resume and ["low_hp", "player_defeated"].has(reason),
+	}
+
+
 func _server_battle_exp_entry_name(entry: Dictionary, fallback: String) -> String:
 	var display_name := str(entry.get("name", entry.get("displayName", ""))).strip_edges()
 	if display_name != "":
@@ -27861,8 +27890,15 @@ func _server_battle_reward_log_lines_for_current_account(room: Dictionary) -> Ar
 		if message != "":
 			lines.append(message)
 	var hang := profile_entry.get("hang", {}) as Dictionary if profile_entry.get("hang", {}) is Dictionary else {}
-	if bool(hang.get("stopped", false)) and str(hang.get("lastStopReason", "")) == "capture_target":
-		lines.append("捕捉目标已完成，挂机已停止。")
+	if bool(hang.get("stopped", false)):
+		var hang_reason := str(hang.get("lastStopReason", hang.get("stopReason", ""))).strip_edges()
+		match hang_reason:
+			"capture_target":
+				lines.append("捕捉目标已完成，挂机已停止。")
+			"player_defeated":
+				lines.append("人物倒下过，正在回村治疗。" if bool(hang.get("pendingResume", false)) else "人物倒下过，挂机已停止。")
+			"low_hp":
+				lines.append("人物生命偏低，正在回村治疗。" if bool(hang.get("pendingResume", false)) else "人物生命偏低，挂机已停止。")
 	return lines
 
 
@@ -28335,19 +28371,13 @@ func _queue_server_profile_upload() -> void:
 		return
 	if server_profile_sync_state == "conflict":
 		return
+	server_profile_sync_dirty = false
 	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
-		server_profile_sync_dirty = true
+		server_profile_sync_pull_queued = true
 		return
-	_start_server_profile_sync_request("upload", _server_profile_upload_spec())
-
-
-func _server_profile_upload_spec() -> Dictionary:
-	return ServerAuthClientModel.profile_upload_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		player_profile,
-		server_profile_sync_expected_revision
-	)
+	server_profile_sync_pending_kind = ""
+	server_profile_sync_state = "ready"
+	server_profile_sync_message = "服务器档案由专用接口保存。"
 
 
 func _start_server_profile_sync_request(kind: String, spec: Dictionary) -> void:
@@ -28406,8 +28436,7 @@ func _apply_server_profile_pull_result(parsed: Dictionary) -> void:
 	PlayerProgressModel.save_profile(player_profile)
 	server_profile_sync_state = "ready"
 	server_profile_sync_dirty = false
-	server_profile_sync_message = "服务器暂无角色档案，正在创建服务器档案。"
-	_queue_server_profile_upload()
+	server_profile_sync_message = "服务器未返回角色档案，请重新登录。"
 
 
 func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
@@ -28441,8 +28470,6 @@ func _continue_pending_server_profile_sync() -> void:
 		return
 	if server_profile_sync_dirty:
 		server_profile_sync_dirty = false
-		_queue_server_profile_upload()
-		return
 	if server_profile_sync_pull_queued:
 		server_profile_sync_pull_queued = false
 		_request_server_profile_pull()
@@ -28458,6 +28485,26 @@ func _apply_server_profile_summary(summary: Dictionary) -> void:
 	sync_state["lastServerRevision"] = server_profile_sync_expected_revision
 	sync_state["lastLocalSaveAtSec"] = int(Time.get_unix_time_from_system())
 	player_profile["serverSync"] = sync_state
+
+
+func _apply_server_profile_payload(parsed: Dictionary) -> bool:
+	var summary = parsed.get("profileSummary", {})
+	if summary is Dictionary:
+		_apply_server_profile_summary(summary as Dictionary)
+	var server_profile = parsed.get("profile", null)
+	if not (server_profile is Dictionary):
+		return false
+	player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+	if profile_save_enabled:
+		PlayerProgressModel.save_profile(player_profile)
+	_mark_progress_ui_caches_dirty()
+	_refresh_quick_bar()
+	_refresh_backpack_panel()
+	if pet_panel != null and pet_panel.visible:
+		_refresh_pet_panel()
+	if status_label != null:
+		_update_hud_text()
+	return true
 
 
 func _apply_auth_profile_metadata_fields(display_name: String) -> void:
@@ -28604,7 +28651,7 @@ func _refresh_account_panel() -> void:
 		var revision := int(summary.get("profileRevision", 0))
 		var sync_label := "同步中" if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading" else ("冲突" if server_profile_sync_state == "conflict" else "已连接")
 		profile_line = "档案：%s r%d %s" % [player_id if player_id != "" else "服务器绑定", revision, sync_label]
-	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存并同步当前进度。" % [
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存本地缓存，进度以服务器为准。" % [
 		display_name,
 		username if username != "" else "-",
 		source_label,
@@ -32255,6 +32302,9 @@ func _use_backpack_player_exp_item(item_id: String) -> void:
 
 func _use_backpack_encounter_stone(item_id: String) -> void:
 	var item_label := BackpackModel.label_for(item_id)
+	if hang_session_request_active:
+		_set_world_log_message("挂机同步中，请稍候。")
+		return
 	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
 		_set_world_log_message("%s 不够了。" % item_label)
 		return
@@ -32262,6 +32312,17 @@ func _use_backpack_encounter_stone(item_id: String) -> void:
 	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
 	if zone.is_empty():
 		_set_world_log_message("需要站在遇敌区域，才能使用%s。" % item_label)
+		return
+	if _server_hang_session_enabled():
+		var server_started := await _request_server_hang_session_start("encounter_stone", player_cell, item_id)
+		if not server_started:
+			return
+		_activate_encounter_stone(item_id)
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
 		return
 	var slots := BackpackModel.consume(PlayerProgressModel.backpack_slots(player_profile), item_id, 1)
 	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, slots)
@@ -32294,15 +32355,18 @@ func _encounter_stone_active() -> bool:
 	return encounter_stone_item_id != "" and encounter_stone_interval > 0.0 and encounter_stone_remaining > 0.0
 
 
-func _clear_encounter_stone_effect(show_message: bool = false) -> void:
+func _clear_encounter_stone_effect(show_message: bool = false, sync_server: bool = true) -> void:
 	var item_label := BackpackModel.label_for(encounter_stone_item_id, "遇敌石")
-	if _encounter_stone_active():
+	var was_active := _encounter_stone_active()
+	if was_active:
 		player_profile = PlayerProgressModel.stop_hang_session(player_profile, "encounter_stone_end")
 	encounter_stone_item_id = ""
 	encounter_stone_interval = 0.0
 	encounter_stone_remaining = 0.0
 	encounter_stone_elapsed = 0.0
 	_sync_hang_button_text()
+	if was_active and sync_server:
+		_request_server_hang_session_stop("encounter_stone_end")
 	if show_message:
 		_set_world_log_message("%s 效果结束。" % item_label)
 
@@ -40729,10 +40793,17 @@ func _complete_hang_heal_resume() -> void:
 		var zone := EncounterModel.zone_for_cell(map_data, player_cell)
 		if zone.is_empty():
 			player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_no_zone")
+			_request_server_hang_session_stop("heal_resume_no_zone")
 			_set_world_log_message("已回到挂机点附近，但这里不是遇敌区域，挂机已停止。")
 			if profile_save_enabled:
 				_save_player_profile_now()
 			return
+		if _server_hang_session_enabled():
+			var server_started := await _request_server_hang_session_start("walk", player_cell)
+			if not server_started:
+				player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_server_failed")
+				_set_world_log_message("治疗完成，但服务器恢复挂机失败，挂机已停止。")
+				return
 		player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
 		_set_hang_mode(true)
 		_set_world_log_message("治疗完成，已回到挂机点，继续挂机。")
@@ -40740,6 +40811,7 @@ func _complete_hang_heal_resume() -> void:
 			_save_player_profile_now()
 		return
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_encounter_stone_ended")
+	_request_server_hang_session_stop("heal_resume_encounter_stone_ended")
 	_set_world_log_message("治疗完成，已回到挂机点；遇敌石效果已结束，请重新使用。")
 	if profile_save_enabled:
 		_save_player_profile_now()
@@ -40748,6 +40820,7 @@ func _complete_hang_heal_resume() -> void:
 func _stop_hang_heal_resume_route(message: String) -> void:
 	_clear_hang_heal_resume_route()
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, "heal_resume_route_failed")
+	_request_server_hang_session_stop("heal_resume_route_failed")
 	_set_world_log_message(message)
 	if profile_save_enabled:
 		_save_player_profile_now()
@@ -41335,6 +41408,65 @@ func _world_to_screen(world_point: Vector2) -> Vector2:
 	)
 
 
+func _server_hang_session_enabled() -> bool:
+	return _is_server_account_session() and _server_profile_token().strip_edges() != ""
+
+
+func _request_server_hang_session_start(mode: String, cell: Vector2i, item_id: String = "") -> bool:
+	if not _server_hang_session_enabled():
+		return false
+	if hang_session_request_active:
+		_set_world_log_message("挂机同步中，请稍候。")
+		return false
+	hang_session_request_active = true
+	var response := await _auto_http_request_spec(ServerAuthClientModel.hang_session_start_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		mode,
+		current_map_id,
+		cell,
+		PlayerProgressModel.hang_settings(player_profile),
+		item_id
+	))
+	hang_session_request_active = false
+	if not _server_hang_session_enabled():
+		return false
+	var parsed := ServerAuthClientModel.parse_hang_session_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		if not _apply_server_profile_payload(parsed):
+			_queue_server_profile_pull()
+		return true
+	var summary = parsed.get("profileSummary", {})
+	if summary is Dictionary:
+		_apply_server_profile_summary(summary as Dictionary)
+	_set_world_log_message(str(parsed.get("message", "挂机同步失败。")))
+	return false
+
+
+func _request_server_hang_session_stop(reason: String = "manual", pending_resume: bool = false) -> void:
+	if not _server_hang_session_enabled():
+		return
+	if hang_session_request_active:
+		return
+	hang_session_request_active = true
+	var response := await _auto_http_request_spec(ServerAuthClientModel.hang_session_stop_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		reason,
+		pending_resume
+	))
+	hang_session_request_active = false
+	if not _server_hang_session_enabled():
+		return
+	var parsed := ServerAuthClientModel.parse_hang_session_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		_apply_server_profile_payload(parsed)
+		return
+	var summary = parsed.get("profileSummary", {})
+	if summary is Dictionary:
+		_apply_server_profile_summary(summary as Dictionary)
+
+
 func _on_hang_button_pressed() -> void:
 	if player == null:
 		return
@@ -41346,6 +41478,9 @@ func _on_hang_button_pressed() -> void:
 
 func _start_hang_walk() -> void:
 	if player == null or map_data.is_empty() or battle_active or encounter_active:
+		return
+	if hang_session_request_active:
+		_set_world_log_message("挂机同步中，请稍候。")
 		return
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
@@ -41360,6 +41495,13 @@ func _start_hang_walk() -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_clear_encounter_stone_effect(false)
+	if _server_hang_session_enabled():
+		var server_started := await _request_server_hang_session_start("walk", player_cell)
+		if not server_started:
+			return
+		_set_hang_mode(true)
+		_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
+		return
 	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
 	_set_hang_mode(true)
 	_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
@@ -41427,15 +41569,18 @@ func _stop_auto_move() -> void:
 	_stop_hang_activity("", false)
 
 
-func _stop_hang_activity(message: String = "", clear_stone: bool = true) -> void:
+func _stop_hang_activity(message: String = "", clear_stone: bool = true, sync_server: bool = true) -> void:
+	var was_active := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
 	_set_hang_mode(false)
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, message)
 	if player != null:
 		player.clear_move_target()
 	_clear_navigation_state()
 	if clear_stone:
-		_clear_encounter_stone_effect(false)
+		_clear_encounter_stone_effect(false, false)
 	_sync_hang_button_text()
+	if was_active and sync_server:
+		_request_server_hang_session_stop("manual" if message == "" else message)
 	if message != "":
 		_set_world_log_message(message)
 

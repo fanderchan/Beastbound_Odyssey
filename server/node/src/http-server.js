@@ -79,7 +79,12 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.getProfile(bearerToken(req)));
       }
       if (req.method === "PUT" && url.pathname === "/profiles/me") {
-        return sendResult(res, service.saveProfile(bearerToken(req), await readJson(req)));
+        await readJson(req);
+        return sendJson(res, 403, {
+          ok: false,
+          code: "profile_upload_denied",
+          message: "角色档案由服务器专用接口写入，禁止客户端整档上传。",
+        });
       }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
@@ -104,6 +109,12 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/quests/claim") {
         return sendResult(res, service.questClaim(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/session/start") {
+        return sendResult(res, service.startHangSession(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/session/stop") {
+        return sendResult(res, service.stopHangSession(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/mail/inbox") {
         return sendResult(res, service.listInbox(bearerToken(req)));

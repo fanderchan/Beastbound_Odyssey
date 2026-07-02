@@ -31,9 +31,10 @@ static func contract() -> Dictionary:
 			"serverAuthoritativeGm": true,
 			"serverComputesEffectiveRole": true,
 			"passwordHashServerOnlyAfterCutover": true,
-			"gmCommandRequiresRoleGrantAndAudit": true,
-			"localPluginIgnoredInProduction": true,
-			"clientMayHideButNeverAuthorizeGm": true,
+				"gmCommandRequiresRoleGrantAndAudit": true,
+				"localPluginIgnoredInProduction": true,
+				"clientMayHideButNeverAuthorizeGm": true,
+				"clientCannotUploadFullProfile": true,
 		},
 	}
 
@@ -61,10 +62,11 @@ static func validation_errors() -> Array[String]:
 		"serverAuthoritativeGm",
 		"serverComputesEffectiveRole",
 		"passwordHashServerOnlyAfterCutover",
-		"gmCommandRequiresRoleGrantAndAudit",
-		"localPluginIgnoredInProduction",
-		"clientMayHideButNeverAuthorizeGm",
-	]:
+			"gmCommandRequiresRoleGrantAndAudit",
+			"localPluginIgnoredInProduction",
+			"clientMayHideButNeverAuthorizeGm",
+			"clientCannotUploadFullProfile",
+		]:
 		if not bool(security.get(key, false)):
 			errors.append("securityRules.%s 必须为 true" % key)
 	return errors
@@ -134,7 +136,7 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("logout", "POST", "/auth/logout", "session", "注销当前会话。"),
 		_endpoint("session", "GET", "/auth/session", "session", "查询服务端计算后的账号和 effectiveRole。"),
 		_endpoint("profileMe", "GET", "/profiles/me", "session", "读取当前账号绑定的玩家档案。"),
-		_endpoint("profileSync", "PUT", "/profiles/me", "session_revision", "按 profile contract 提交档案模块变更。"),
+		_endpoint("profileUploadDisabled", "PUT", "/profiles/me", "disabled", "整档上传已退役，普通玩法必须走服务端专用事务接口。"),
 		_endpoint("shopTransaction", "POST", "/shops/transaction", "session", "服务端校验商店购买/出售并回写档案。"),
 		_endpoint("equipmentEquip", "POST", "/equipment/equip", "session", "服务端校验背包装备并回写档案。"),
 		_endpoint("equipmentEnhance", "POST", "/equipment/enhance", "session", "服务端校验材料、石币和强化上限后强化已装备物品。"),
@@ -143,6 +145,8 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("playerRebirth", "POST", "/player/rebirth", "session", "服务端校验人物转生条件、试炼材料、奖励和回记录点。"),
 		_endpoint("questRecord", "POST", "/quests/record", "session", "服务端记录任务事件并回写任务进度。"),
 		_endpoint("questClaim", "POST", "/quests/claim", "session", "服务端领取主线/可选任务奖励并回写档案。"),
+		_endpoint("hangSessionStart", "POST", "/hang/session/start", "session", "服务端开启走动挂机或遇敌石挂机，并在遇敌石模式扣除道具。"),
+		_endpoint("hangSessionStop", "POST", "/hang/session/stop", "session", "服务端停止挂机会话并回写停止原因。"),
 		_endpoint("gmTools", "GET", "/gm/tools", "gm_session", "读取当前账号可见的GM工具入口。"),
 		_endpoint("gmCommand", "POST", "/gm/commands/{commandId}", "gm_command_grant", "执行GM命令，服务端必须重新鉴权并写审计。"),
 	]

@@ -1,6 +1,6 @@
 # Phase160：服务器账号档案摘要
 
-> 当前入口已经在 Phase162 切换为服务器-only，`storageMode=local_shadow` 只代表历史过渡阶段。
+> 当前入口已经切换为服务器权威档案，`storageMode=local_shadow` 只代表历史过渡阶段。
 
 ## 目标
 
@@ -19,8 +19,9 @@ Phase159 已经能在 Godot 登录面板选择 `服务器` 通道。本阶段把
 {
   "playerId": "player_xxx",
   "profileRevision": 0,
-  "storageMode": "local_shadow",
-  "serverAuthority": "account_binding"
+  "storageMode": "server_document",
+  "serverAuthority": "profile_document",
+  "hasProfile": true
 }
 ```
 
@@ -33,9 +34,9 @@ Phase159 已经能在 Godot 登录面板选择 `服务器` 通道。本阶段把
 
 ## 边界
 
-- `storageMode=local_shadow` 表示完整角色档案仍在客户端本地影子存档。
-- `serverAuthority=account_binding` 表示服务器当前只负责账号、会话、GM授权和角色绑定。
-- Phase161 已补上 JSON-store 级别的完整档案上传、下载和 revision 冲突处理；MySQL 权威服仍是后续阶段。
+- 历史阶段的 `storageMode=local_shadow` 表示完整角色档案仍在客户端本地影子存档。
+- 当前阶段应返回 `storageMode=server_document` 和 `serverAuthority=profile_document`。
+- 公开 HTTP `PUT /profiles/me` 已退役；角色数据写入必须走服务端专用事务接口。
 
 ## 自测
 

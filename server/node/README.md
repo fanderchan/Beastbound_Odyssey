@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. Phase172 adds room turn command submission and a server-produced battle event list. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. Phase172 adds room turn command submission and a server-produced battle event list. Phase189 adds server-authoritative hang/encounter-stone sessions. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
 
 ## Run Tests
 
@@ -75,7 +75,9 @@ See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN pla
 - `WS /events?token={sessionToken}&lastEventSeq={eventSeq}`
 - `GET /events/latest`
 - `GET /profiles/me`
-- `PUT /profiles/me`
+- `PUT /profiles/me` (disabled; returns `403 profile_upload_denied`)
+- `POST /hang/session/start`
+- `POST /hang/session/stop`
 - `GET /mail/inbox`
 - `POST /mail/send`
 - `POST /mail/{mailId}/read`
@@ -112,16 +114,16 @@ This prototype keeps the same rule as the Godot contract: the client may hide GM
 }
 ```
 
-`PUT /profiles/me` accepts:
+`PUT /profiles/me` is intentionally disabled for player clients:
 
 ```json
 {
-  "expectedRevision": 0,
-  "profile": {"schemaVersion": 1}
+  "ok": false,
+  "code": "profile_upload_denied"
 }
 ```
 
-The server increments `profileRevision` on success and returns `409 revision_conflict` if the expected revision is stale.
+Gameplay writes must go through server-authoritative transaction endpoints such as shops, equipment, quests, rebirth, movement, hang/encounter-stone sessions, and battle settlement. Internal migration and test tooling may still call the service layer directly, but the public HTTP API must not accept full-profile overwrites from a client.
 
 ## Mail Boundary
 
