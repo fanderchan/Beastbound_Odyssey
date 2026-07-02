@@ -3,6 +3,11 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const {createProfileActionsDomain} = require("./auth/profile-actions");
+const {createQuestDomain} = require("./auth/quest");
+const {createMailChatDomain} = require("./auth/mail-chat");
+const {createPartyDomain} = require("./auth/party");
+const {createBattleRoomDomain} = require("./auth/battle-room");
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
@@ -495,325 +500,6 @@ function createAuthService(options = {}) {
     });
   }
 
-  function startHangSession(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const ensured = ensureProfileForAccount(data, resolved.account, now);
-    const profileDoc = ensured.profileDoc;
-    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
-      ? clone(profileDoc.profile)
-      : null;
-    if (!profile) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: ensured.binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const mode = normalizeHangMode(payload.mode || payload.type);
-    if (!mode) {
-      return fail("hang_mode_invalid", "挂机模式不正确。", {
-        profileBinding: ensured.binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const party = partyForAccount(data, resolved.account.accountId);
-    const partyLeaderAccountId = party ? String(party.leaderAccountId || "") : resolved.account.accountId;
-    if (party && partyLeaderAccountId !== resolved.account.accountId) {
-      return fail("hang_party_leader_required", mode === "encounter_stone" ? "队伍中只有队长可以使用遇敌石。" : "队伍中只有队长可以开始挂机。", {
-        profileBinding: ensured.binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const settings = normalizeHangSettings(payload.settings);
-    profile.hangSettings = settings;
-    let session = normalizeHangSession(profile.hangSession);
-    const origin = normalizeHangOriginPayload(payload);
-    session = {
-      ...session,
-      enabled: true,
-      mode,
-      pendingResume: false,
-      lastStopReason: "",
-      originMapId: origin.mapId || session.originMapId,
-      originCell: origin.originCell,
-    };
-    if (mode === "encounter_stone") {
-      const itemId = String(payload.itemId || payload.encounterStoneItemId || "").trim();
-      if (!ENCOUNTER_STONE_ITEM_IDS.has(itemId)) {
-        return fail("hang_item_invalid", "遇敌石道具不正确。", {
-          profileBinding: ensured.binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
-        });
-      }
-      const slots = normalizeBackpackSlots(profileBackpackSlots(profile));
-      if (backpackItemCount(slots, itemId) <= 0) {
-        return fail("item_not_enough", "遇敌石不够。", {
-          profileBinding: ensured.binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
-        });
-      }
-      profile.backpackSlots = consumeBackpackItem(slots, itemId, 1);
-      profile.captureTools = captureToolBagFromProfile(profile);
-    }
-    profile.hangSession = session;
-    const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
-    save(data);
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: persisted.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      hang: publicHangSession(session),
-      message: mode === "encounter_stone" ? "遇敌石已生效。" : "开始挂机。",
-    });
-  }
-
-  function stopHangSession(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const ensured = ensureProfileForAccount(data, resolved.account, now);
-    const profileDoc = ensured.profileDoc;
-    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
-      ? clone(profileDoc.profile)
-      : null;
-    if (!profile) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: ensured.binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const previousSession = normalizeHangSession(profile.hangSession);
-    const reason = normalizeHangStopReason(payload.reason || payload.message || "manual");
-    const nextSession = {
-      ...previousSession,
-      enabled: false,
-      pendingResume: Boolean(payload.pendingResume),
-      lastStopReason: reason,
-    };
-    profile.hangSession = nextSession;
-    const changed = JSON.stringify(previousSession) !== JSON.stringify(nextSession);
-    let binding = ensured.binding;
-    if (changed) {
-      const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
-      binding = persisted.binding;
-      save(data);
-    } else if (ensured.created) {
-      save(data);
-    }
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      hang: publicHangSession(nextSession),
-      message: "挂机已停止。",
-    });
-  }
-
-  function profileAction(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const ensured = ensureProfileForAccount(data, resolved.account, now);
-    const binding = ensured.binding;
-    const profileDoc = ensured.profileDoc;
-    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const action = normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command);
-    if (!PROFILE_ACTION_IDS.has(action)) {
-      return fail("profile_action_invalid", "档案操作不正确。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const profile = clone(profileDoc.profile);
-    const params = objectOrEmpty(payload.payload || payload.params || payload);
-    const actionResult = applyProfileActionToProfile(profile, action, params, now);
-    if (!actionResult.ok) {
-      return fail(actionResult.code || "profile_action_failed", actionResult.message || "档案操作失败。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-        result: publicProfileActionResult(action, actionResult),
-      });
-    }
-    const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
-    save(data);
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: persisted.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      result: publicProfileActionResult(action, actionResult),
-      logLines: profileActionLogLines(actionResult),
-      message: actionResult.message || "角色档案已更新。",
-    });
-  }
-
-  function playerRebirth(token) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const profileDoc = data.profiles[binding.playerId] || null;
-    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const profile = clone(profileDoc.profile);
-    const rebirthResult = executePlayerRebirthToProfile(profile);
-    if (!rebirthResult.ok) {
-      return fail(rebirthResult.code || "player_rebirth_not_ready", rebirthResult.message || "暂时不能转生。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-        rebirth: rebirthResult.rebirth || null,
-      });
-    }
-    const updatedAt = isoNow(now);
-    const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
-      playerId: binding.playerId,
-      accountId: resolved.account.accountId,
-      profileRevision: nextRevision,
-      profile,
-      updatedAt,
-      schemaVersion: 1,
-    };
-    const returnEntry = applyPlayerRebirthReturn(data, resolved.account, now);
-    save(data);
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      rebirth: rebirthResult.rebirth,
-      returnEntry,
-      message: rebirthResult.message,
-    });
-  }
-
-  function questRecord(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const profileDoc = data.profiles[binding.playerId] || null;
-    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const event = normalizedQuestEventPayload(payload.event && typeof payload.event === "object" && !Array.isArray(payload.event) ? payload.event : payload);
-    if (String(event.type || "") === "") {
-      return fail("quest_event_invalid", "任务事件为空。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const profile = clone(profileDoc.profile);
-    const questId = String(payload.questId || event.questId || "").trim();
-    const progress = questId !== ""
-      ? recordQuestEventByIdToProfile(profile, questId, event)
-      : recordQuestEventToProfile(profile, event);
-    if (!progress.ok) {
-      return fail(progress.code || "quest_event_invalid", progress.message || "任务无法推进。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const questMessages = [];
-    if (progress.changed && progress.message) {
-      questMessages.push(progress.message);
-    }
-    if (progress.ready) {
-      const quest = questById(progress.questId);
-      if (quest && Boolean(quest.autoClaimOnReady) && questRewardChoices(quest).length <= 0) {
-        const claim = claimQuestByIdToProfile(profile, progress.questId, "", !questIsOptional(quest));
-        if (claim.ok && claim.message) {
-          questMessages.push(claim.message);
-        }
-      }
-    }
-    const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
-    save(data);
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: persisted.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      progress: publicQuestProgress(progress),
-      questMessages,
-      message: questMessages.filter(Boolean).join("\n") || progress.message || "任务已同步。",
-    });
-  }
-
-  function questClaim(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const profileDoc = data.profiles[binding.playerId] || null;
-    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const profile = clone(profileDoc.profile);
-    const requestedQuestId = String(payload.questId || payload.id || "").trim();
-    const questId = requestedQuestId !== "" ? requestedQuestId : currentProfileQuestId(profile);
-    const quest = questById(questId);
-    if (!quest) {
-      return fail("quest_missing", "当前没有可领取的任务奖励。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const rewardChoiceId = String(payload.rewardChoiceId || payload.choiceId || "").trim();
-    const claim = claimQuestByIdToProfile(profile, questId, rewardChoiceId, !questIsOptional(quest));
-    if (!claim.ok) {
-      return fail(claim.code || "quest_claim_failed", claim.message || "领取任务奖励失败。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-        requiresChoice: Boolean(claim.requiresChoice),
-      });
-    }
-    const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
-    save(data);
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: persisted.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      claim: publicQuestClaim(claim),
-      questMessages: [claim.message].filter(Boolean),
-      message: claim.message,
-    });
-  }
-
   function shopTransaction(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
@@ -1234,207 +920,6 @@ function createAuthService(options = {}) {
     return ok({players});
   }
 
-  function sendMail(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const recipientUsername = normalizeUsername(payload.recipientUsername || payload.toUsername || payload.username || "");
-    const recipient = data.accounts[recipientUsername];
-    if (!recipient) {
-      return fail("recipient_missing", "收件账号不存在。");
-    }
-    if (recipient.accountId === resolved.account.accountId) {
-      return fail("recipient_self", "不能给自己发送邮件。");
-    }
-    const title = normalizeMailText(payload.title, MAIL_TITLE_MAX_LENGTH);
-    if (!title) {
-      return fail("invalid_title", "邮件标题不能为空。");
-    }
-    const body = normalizeMailText(payload.body, MAIL_BODY_MAX_LENGTH);
-    if (!body) {
-      return fail("invalid_body", "邮件正文不能为空。");
-    }
-    const attachments = normalizeMailItems(payload.items || payload.attachments || []);
-    let senderProfileDoc = null;
-    let senderProfile = null;
-    let senderBinding = null;
-    if (attachments.length > 0) {
-      senderBinding = profileBindingForAccount(data, resolved.account, now);
-      senderProfileDoc = data.profiles[senderBinding.playerId] || null;
-      if (!senderProfileDoc || !senderProfileDoc.profile || typeof senderProfileDoc.profile !== "object" || Array.isArray(senderProfileDoc.profile)) {
-        return fail("profile_missing", "请先创建角色档案。", {
-          profileBinding: senderBinding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
-        });
-      }
-      senderProfile = clone(senderProfileDoc.profile);
-      const senderSlots = normalizeBackpackSlots(profileBackpackSlots(senderProfile));
-      for (const item of attachments) {
-        if (backpackItemCount(senderSlots, item.itemId) < item.count) {
-          return fail("mail_attachment_not_enough", `${bagItemLabel(item.itemId)} 数量不够。`, {
-            itemId: item.itemId,
-            required: item.count,
-          });
-        }
-      }
-      let nextSlots = senderSlots;
-      for (const item of attachments) {
-        nextSlots = consumeBackpackItem(nextSlots, item.itemId, item.count);
-      }
-      senderProfile.backpackSlots = normalizeBackpackSlots(nextSlots);
-      senderProfile.captureTools = captureToolBagFromProfile(senderProfile);
-      const updatedAt = isoNow(now);
-      const nextRevision = Number(senderBinding.profileRevision || 0) + 1;
-      senderBinding.profileRevision = nextRevision;
-      senderBinding.updatedAt = updatedAt;
-      data.profileBindings[resolved.account.accountId] = senderBinding;
-      data.profiles[senderBinding.playerId] = {
-        playerId: senderBinding.playerId,
-        accountId: resolved.account.accountId,
-        profileRevision: nextRevision,
-        profile: senderProfile,
-        updatedAt,
-        schemaVersion: 1,
-      };
-    }
-    const mail = {
-      mailId: `mail_${randomId()}`,
-      senderAccountId: resolved.account.accountId,
-      senderUsername: resolved.account.username,
-      senderDisplayName: resolved.account.displayName,
-      recipientAccountId: recipient.accountId,
-      recipientUsername: recipient.username,
-      recipientDisplayName: recipient.displayName,
-      title,
-      body,
-      items: attachments,
-      createdAt: isoNow(now),
-      readAt: null,
-      schemaVersion: 1,
-    };
-    data.mailMessages[mail.mailId] = mail;
-    save(data);
-    return ok({
-      mail: publicMail(mail),
-      profileSummary: senderBinding ? profileSummaryForAccount(resolved.account, data) : undefined,
-      profile: senderProfile ? clone(senderProfile) : undefined,
-      message: "邮件已发送。",
-    });
-  }
-
-  function listInbox(token) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const messages = Object.values(data.mailMessages)
-      .filter((mail) => mail && mail.recipientAccountId === resolved.account.accountId)
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-      .map(publicMail);
-    return ok({
-      messages,
-      unreadCount: messages.filter((mail) => !mail.readAt).length,
-    });
-  }
-
-  function markMailRead(token, mailId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const normalizedMailId = String(mailId || "").trim();
-    const mail = data.mailMessages[normalizedMailId];
-    if (!mail || mail.recipientAccountId !== resolved.account.accountId) {
-      return fail("mail_missing", "邮件不存在。");
-    }
-    if (!mail.readAt) {
-      mail.readAt = isoNow(now);
-      data.mailMessages[normalizedMailId] = mail;
-      save(data);
-    }
-    return ok({
-      mail: publicMail(mail),
-      message: "邮件已读。",
-    });
-  }
-
-  function claimMailAttachments(token, mailId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const normalizedMailId = String(mailId || "").trim();
-    const mail = data.mailMessages[normalizedMailId];
-    if (!mail || mail.recipientAccountId !== resolved.account.accountId) {
-      return fail("mail_missing", "邮件不存在。");
-    }
-    const attachments = normalizeMailItems(mail.items || []);
-    if (attachments.length <= 0) {
-      return fail("mail_no_attachments", "邮件没有可领取附件。", {
-        mail: publicMail(mail),
-      });
-    }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const profileDoc = data.profiles[binding.playerId] || null;
-    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
-      return fail("profile_missing", "请先创建角色档案。", {
-        profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    const profile = clone(profileDoc.profile);
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), attachments);
-    if (addResult.addedItems.length <= 0) {
-      return fail("backpack_full", "背包已满，无法领取邮件附件。", {
-        mail: publicMail(mail),
-        profileSummary: profileSummaryForAccount(resolved.account, data),
-      });
-    }
-    profile.backpackSlots = normalizeBackpackSlots(addResult.slots);
-    profile.captureTools = captureToolBagFromProfile(profile);
-    const remaining = normalizeMailItems(addResult.lostItems);
-    if (remaining.length > 0) {
-      mail.items = remaining;
-      data.mailMessages[normalizedMailId] = mail;
-    } else {
-      delete data.mailMessages[normalizedMailId];
-    }
-    const updatedAt = isoNow(now);
-    const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
-      playerId: binding.playerId,
-      accountId: resolved.account.accountId,
-      profileRevision: nextRevision,
-      profile,
-      updatedAt,
-      schemaVersion: 1,
-    };
-    save(data);
-    const message = "领取邮件附件：%s。".replace("%s", itemAmountText(addResult.addedItems));
-    return ok({
-      account: publicAccount(resolved.account),
-      profileBinding: binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(profile),
-      mail: remaining.length > 0 ? publicMail(mail) : null,
-      claim: {
-        mailId: normalizedMailId,
-        addedItems: addResult.addedItems,
-        remainingItems: remaining,
-        schemaVersion: 1,
-      },
-      message: remaining.length > 0 ? `${message} 背包空间不足，剩余附件留在邮箱。` : message,
-    });
-  }
-
   function listOnlinePlayers(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
@@ -1692,409 +1177,6 @@ function createAuthService(options = {}) {
     });
   }
 
-  function getPartyState(token) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    return ok(partyStatePayload(data, resolved.account.accountId));
-  }
-
-  function inviteToParty(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
-    const target = data.accounts[targetUsername];
-    if (!target) {
-      return fail("party_target_missing", "玩家不存在。");
-    }
-    if (target.accountId === resolved.account.accountId) {
-      return fail("party_invite_self", "不能邀请自己。");
-    }
-    const targetParty = partyForAccount(data, target.accountId);
-    if (targetParty) {
-      return fail("party_target_busy", "对方已经在队伍中。");
-    }
-    let party = partyForAccount(data, resolved.account.accountId);
-    if (!party) {
-      party = createPartyForLeader(data, resolved.account.accountId, now, randomId);
-    }
-    if (party.leaderAccountId !== resolved.account.accountId) {
-      return fail("party_not_leader", "只有队长可以邀请。");
-    }
-    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
-      return fail("party_full", "队伍人数已满。");
-    }
-    const pendingInvite = Object.values(data.partyInvites).find((invite) => (
-      invite &&
-      invite.status === "pending" &&
-      String(invite.kind || "invite") === "invite" &&
-      invite.partyId === party.partyId &&
-      invite.toAccountId === target.accountId
-    ));
-    if (pendingInvite) {
-      return ok({
-        invite: publicPartyInvite(pendingInvite, data),
-        party: publicParty(party, data),
-        message: "邀请已发送。",
-      });
-    }
-    const invite = {
-      inviteId: `invite_${randomId()}`,
-      partyId: party.partyId,
-      fromAccountId: resolved.account.accountId,
-      toAccountId: target.accountId,
-      kind: "invite",
-      status: "pending",
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    data.partyInvites[invite.inviteId] = invite;
-    party.updatedAt = isoNow(now);
-    data.parties[party.partyId] = party;
-    save(data);
-    emitServiceEvent({
-      type: "party.invite",
-      targetAccountIds: [resolved.account.accountId, target.accountId],
-      party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
-    });
-    return ok({
-      invite: publicPartyInvite(invite, data),
-      party: publicParty(party, data),
-      message: "邀请已发送。",
-    });
-  }
-
-  function applyToParty(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
-    const target = data.accounts[targetUsername];
-    if (!target) {
-      return fail("party_target_missing", "玩家不存在。");
-    }
-    if (target.accountId === resolved.account.accountId) {
-      return fail("party_apply_self", "不能申请加入自己的队伍。");
-    }
-    if (partyForAccount(data, resolved.account.accountId)) {
-      return fail("party_already_joined", "你已经在队伍中。");
-    }
-    const party = partyForAccount(data, target.accountId);
-    if (!party) {
-      return fail("party_target_no_party", "对方还没有队伍。");
-    }
-    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
-      return fail("party_full", "队伍人数已满。");
-    }
-    const leader = accountById(data, party.leaderAccountId);
-    if (!leader) {
-      return fail("party_missing", "队伍已经解散。");
-    }
-    const pendingApplication = Object.values(data.partyInvites).find((invite) => (
-      invite &&
-      invite.status === "pending" &&
-      String(invite.kind || "invite") === "application" &&
-      invite.partyId === party.partyId &&
-      invite.fromAccountId === resolved.account.accountId &&
-      invite.toAccountId === leader.accountId
-    ));
-    if (pendingApplication) {
-      return ok({
-        invite: publicPartyInvite(pendingApplication, data),
-        party: publicParty(party, data),
-        message: "入队申请已发送。",
-      });
-    }
-    const invite = {
-      inviteId: `invite_${randomId()}`,
-      partyId: party.partyId,
-      fromAccountId: resolved.account.accountId,
-      toAccountId: leader.accountId,
-      kind: "application",
-      status: "pending",
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    data.partyInvites[invite.inviteId] = invite;
-    party.updatedAt = isoNow(now);
-    data.parties[party.partyId] = party;
-    save(data);
-    emitServiceEvent({
-      type: "party.invite",
-      targetAccountIds: [resolved.account.accountId, leader.accountId],
-      party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
-    });
-    return ok({
-      invite: publicPartyInvite(invite, data),
-      party: publicParty(party, data),
-      message: "入队申请已发送。",
-    });
-  }
-
-  function acceptPartyInvite(token, inviteId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const invite = data.partyInvites[String(inviteId || "").trim()];
-    if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
-      return fail("party_invite_missing", "邀请不存在。");
-    }
-    const party = data.parties[invite.partyId];
-    if (!party) {
-      invite.status = "expired";
-      invite.updatedAt = isoNow(now);
-      data.partyInvites[invite.inviteId] = invite;
-      save(data);
-      return fail("party_missing", "队伍已经解散。");
-    }
-    const inviteKind = String(invite.kind || "invite");
-    const joiningAccountId = inviteKind === "application" ? invite.fromAccountId : resolved.account.accountId;
-    if (inviteKind === "application" && party.leaderAccountId !== resolved.account.accountId) {
-      return fail("party_not_leader", "只有队长可以同意入队申请。");
-    }
-    if (partyForAccount(data, joiningAccountId)) {
-      return fail("party_already_joined", "玩家已经在队伍中。");
-    }
-    if (party.memberAccountIds.length >= PARTY_MAX_MEMBERS) {
-      return fail("party_full", "队伍人数已满。");
-    }
-    party.memberAccountIds.push(joiningAccountId);
-    party.updatedAt = isoNow(now);
-    invite.status = "accepted";
-    invite.updatedAt = isoNow(now);
-    data.parties[party.partyId] = party;
-    data.partyInvites[invite.inviteId] = invite;
-    save(data);
-    emitServiceEvent({
-      type: "party.update",
-      targetAccountIds: Array.from(new Set(party.memberAccountIds.concat([invite.fromAccountId, invite.toAccountId]))),
-      party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
-    });
-    return ok({
-      party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
-      message: inviteKind === "application" ? "已同意入队申请。" : "已加入队伍。",
-    });
-  }
-
-  function declinePartyInvite(token, inviteId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const invite = data.partyInvites[String(inviteId || "").trim()];
-    if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
-      return fail("party_invite_missing", "邀请不存在。");
-    }
-    invite.status = "declined";
-    invite.updatedAt = isoNow(now);
-    data.partyInvites[invite.inviteId] = invite;
-    save(data);
-    emitServiceEvent({
-      type: "party.invite_declined",
-      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicPartyInvite(invite, data),
-      party: publicPartyForAccount(data, resolved.account.accountId),
-    });
-    return ok({
-      invite: publicPartyInvite(invite, data),
-      party: publicPartyForAccount(data, resolved.account.accountId),
-      message: String(invite.kind || "invite") === "application" ? "已拒绝入队申请。" : "已拒绝邀请。",
-    });
-  }
-
-  function leaveParty(token) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const party = partyForAccount(data, resolved.account.accountId);
-    if (!party) {
-      return fail("party_missing", "你还没有队伍。");
-    }
-    party.memberAccountIds = party.memberAccountIds.filter((accountId) => accountId !== resolved.account.accountId);
-    if (party.memberAccountIds.length <= 0) {
-      const leavingPartyId = party.partyId;
-      delete data.parties[party.partyId];
-      for (const invite of Object.values(data.partyInvites)) {
-        if (invite && invite.partyId === party.partyId && invite.status === "pending") {
-          invite.status = "expired";
-          invite.updatedAt = isoNow(now);
-          data.partyInvites[invite.inviteId] = invite;
-        }
-      }
-      save(data);
-      emitServiceEvent({
-        type: "party.update",
-        targetAccountIds: [resolved.account.accountId],
-        party: null,
-        partyId: leavingPartyId,
-      });
-      return ok({
-        party: null,
-        incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
-        message: "已离开队伍。",
-      });
-    }
-    if (party.leaderAccountId === resolved.account.accountId) {
-      party.leaderAccountId = party.memberAccountIds[0];
-    }
-    party.updatedAt = isoNow(now);
-    data.parties[party.partyId] = party;
-    save(data);
-    emitServiceEvent({
-      type: "party.update",
-      targetAccountIds: [resolved.account.accountId, ...party.memberAccountIds],
-      party: publicParty(party, data),
-    });
-    return ok({
-      party: null,
-      incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
-      message: "已离开队伍。",
-    });
-  }
-
-  function listChatMessages(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const channel = normalizeChatChannel(payload.channel || CHAT_CHANNEL_NEARBY);
-    if (!channel) {
-      return fail("chat_channel_invalid", "聊天频道不存在。");
-    }
-    const party = partyForAccount(data, resolved.account.accountId);
-    const limit = clampInt(payload.limit, 1, CHAT_HISTORY_LIMIT, CHAT_HISTORY_LIMIT);
-    let messages = [];
-    if (channel === CHAT_CHANNEL_TEAM) {
-      if (!party) {
-        return ok({channel, messages: [], party: null});
-      }
-      messages = data.chatMessages.filter((message) => message && message.channel === channel && message.partyId === party.partyId);
-    } else {
-      messages = data.chatMessages.filter((message) => message && message.channel === CHAT_CHANNEL_NEARBY);
-    }
-    messages = messages
-      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
-      .slice(-limit)
-      .map(publicChatMessage);
-    return ok({
-      channel,
-      messages,
-      party: party ? publicParty(party, data) : null,
-    });
-  }
-
-  function sendChatMessage(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const channel = normalizeChatChannel(payload.channel || CHAT_CHANNEL_NEARBY);
-    if (!channel) {
-      return fail("chat_channel_invalid", "聊天频道不存在。");
-    }
-    const text = normalizeChatText(payload.text);
-    if (!text) {
-      return fail("chat_empty", "消息不能为空。");
-    }
-    const party = partyForAccount(data, resolved.account.accountId);
-    if (channel === CHAT_CHANNEL_TEAM && !party) {
-      return fail("chat_team_missing", "需要加入队伍才能发送队伍消息。");
-    }
-    const message = {
-      messageId: `chat_${randomId()}`,
-      channel,
-      partyId: channel === CHAT_CHANNEL_TEAM && party ? party.partyId : "",
-      senderAccountId: resolved.account.accountId,
-      senderUsername: resolved.account.username,
-      senderDisplayName: resolved.account.displayName,
-      text,
-      createdAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    data.chatMessages.push(message);
-    while (data.chatMessages.length > MAX_CHAT_MESSAGES) {
-      data.chatMessages.shift();
-    }
-    save(data);
-    emitServiceEvent({
-      type: "chat.message",
-      targetAccountIds: channel === CHAT_CHANNEL_TEAM && party ? party.memberAccountIds.slice() : null,
-      channel,
-      message: publicChatMessage(message),
-      party: party ? publicParty(party, data) : null,
-    });
-    return ok({
-      message: publicChatMessage(message),
-      party: party ? publicParty(party, data) : null,
-    });
-  }
-
-  function getBattleState(token) {
-    let data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    expireBattleTimeoutsAndEmit(data);
-    data = load();
-    markBattleConnectionForAccount(data, resolved.account.accountId, true, now);
-    const payload = battleStatePayload(data, resolved.account.accountId, now);
-    recordBattleStateTrace(data, resolved.account.accountId, payload, now);
-    return ok(payload);
-  }
-
-  function getBattleTrace(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    return ok({
-      traces: publicBattleTraceRows(data, resolved.account, payload, now),
-      message: "已读取战斗诊断日志。",
-    });
-  }
-
-  function getBattleRecordSummary(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.opponentUsername || "");
-    if (!targetUsername) {
-      return fail("battle_record_target_missing", "请选择要查询的玩家。");
-    }
-    const target = data.accounts[targetUsername] || null;
-    if (!target) {
-      return fail("battle_record_target_missing", "玩家不存在。");
-    }
-    return ok({
-      summary: battleRecordSummaryAgainst(data, resolved.account, target),
-      message: "已读取对战战绩。",
-    });
-  }
-
   function expireBattleTimeoutsAndEmit(data) {
     const timeoutEvents = expireBattleTimeouts(data, now);
     if (timeoutEvents.length > 0) {
@@ -2148,402 +1230,6 @@ function createAuthService(options = {}) {
     if (typeof battleMaintenanceTimer.unref === "function") {
       battleMaintenanceTimer.unref();
     }
-  }
-
-  function inviteToBattle(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
-    const target = data.accounts[targetUsername];
-    if (!target) {
-      return fail("battle_target_missing", "玩家不存在。");
-    }
-    if (target.accountId === resolved.account.accountId) {
-      return fail("battle_invite_self", "不能向自己发起切磋。");
-    }
-    const onlineTarget = activeOnlinePlayers(data, now).some((account) => account.accountId === target.accountId);
-    if (!onlineTarget) {
-      return fail("battle_target_offline", "对方不在线。");
-    }
-    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
-      return fail("battle_self_busy", "你已经在切磋房间中。");
-    }
-    if (activeBattleRoomForAccount(data, target.accountId)) {
-      return fail("battle_target_busy", "对方已经在切磋房间中。");
-    }
-    const pendingInvite = Object.values(data.battleInvites).find((invite) => (
-      invite &&
-      invite.status === BATTLE_INVITE_PENDING &&
-      invite.fromAccountId === resolved.account.accountId &&
-      invite.toAccountId === target.accountId
-    ));
-    if (pendingInvite) {
-      return ok({
-        invite: publicBattleInvite(pendingInvite, data),
-        room: null,
-        message: "切磋邀请已发送。",
-      });
-    }
-    const invite = {
-      inviteId: `battle_invite_${randomId()}`,
-      mode: BATTLE_MODE_DUEL,
-      fromAccountId: resolved.account.accountId,
-      toAccountId: target.accountId,
-      status: BATTLE_INVITE_PENDING,
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      expiresAt: new Date(now() + BATTLE_INVITE_TTL_MS).toISOString(),
-      schemaVersion: 1,
-    };
-    data.battleInvites[invite.inviteId] = invite;
-    save(data);
-    emitServiceEvent({
-      type: "battle.invite",
-      targetAccountIds: [resolved.account.accountId, target.accountId],
-      invite: publicBattleInvite(invite, data),
-    });
-    return ok({
-      invite: publicBattleInvite(invite, data),
-      room: null,
-      message: "切磋邀请已发送。",
-    });
-  }
-
-  function acceptBattleInvite(token, inviteId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const invite = data.battleInvites[String(inviteId || "").trim()];
-    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
-      return fail("battle_invite_missing", "切磋邀请不存在。");
-    }
-    if (battleInviteIsExpired(invite, now)) {
-      const event = expireBattleInvite(data, invite, now);
-      save(data);
-      emitServiceEvent(event);
-      return fail("battle_invite_missing", "切磋邀请已过期。");
-    }
-    if (activeBattleRoomForAccount(data, invite.fromAccountId) || activeBattleRoomForAccount(data, invite.toAccountId)) {
-      return fail("battle_room_busy", "双方已有切磋房间。");
-    }
-    const challenger = accountById(data, invite.fromAccountId);
-    const opponent = accountById(data, invite.toAccountId);
-    if (!challenger || !opponent) {
-      return fail("battle_account_missing", "切磋账号不存在。");
-    }
-    const entryCheck = battleRoomEntryCheck(data, invite);
-    if (!entryCheck.ok) {
-      return entryCheck;
-    }
-    invite.status = BATTLE_INVITE_ACCEPTED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
-    const room = {
-      roomId: `battle_room_${randomId()}`,
-      mode: BATTLE_MODE_DUEL,
-      status: BATTLE_ROOM_READY,
-      inviteId: invite.inviteId,
-      seed: randomBytes(8).toString("hex"),
-      participantAccountIds: [invite.fromAccountId, invite.toAccountId],
-      entry: entryCheck.entry,
-      participants: [
-        battleParticipantSnapshot(data, challenger, "challenger"),
-        battleParticipantSnapshot(data, opponent, "opponent"),
-      ],
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    room.battle = createBattleRoomBattleState(room, now);
-    battleRoomConnectionStateForMutation(room);
-    data.battleRooms[room.roomId] = room;
-    recordBattleTrace(data, room, "duel_room_created", {
-      participantCount: room.participantAccountIds.length,
-      actorCount: Array.isArray(room.battle.actors) ? room.battle.actors.length : 0,
-    }, now);
-    save(data);
-    emitServiceEvent({
-      type: "battle.room_ready",
-      targetAccountIds: room.participantAccountIds.slice(),
-      invite: publicBattleInvite(invite, data),
-      room: publicBattleRoom(room),
-    });
-    return ok({
-      invite: publicBattleInvite(invite, data),
-      room: publicBattleRoom(room),
-      message: "切磋房间已就绪。",
-    });
-  }
-
-  function startPartyEncounter(token, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    expireBattleTimeoutsAndEmit(data);
-    const party = partyForAccount(data, resolved.account.accountId);
-    const partyLeaderAccountId = party ? String(party.leaderAccountId || "") : resolved.account.accountId;
-    if (party && partyLeaderAccountId !== resolved.account.accountId) {
-      return fail("party_encounter_leader_required", "队伍遇敌由队长触发。");
-    }
-    const memberAccountIds = (party && Array.isArray(party.memberAccountIds) ? party.memberAccountIds : [resolved.account.accountId])
-      .map((accountId) => String(accountId || ""))
-      .filter((accountId) => accountById(data, accountId));
-    if (memberAccountIds.length < 1) {
-      return fail("party_encounter_party_missing", "缺少参战账号。");
-    }
-    const busyAccountId = memberAccountIds.find((accountId) => activeBattleRoomForAccount(data, accountId));
-    if (busyAccountId) {
-      const busyAccount = accountById(data, busyAccountId);
-      return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "队员"} 已在战斗房间中。`);
-    }
-    const participants = memberAccountIds
-      .map((accountId) => accountById(data, accountId))
-      .filter(Boolean)
-      .map((account) => battleParticipantSnapshot(data, account, BATTLE_SIDE_ALLY));
-    const encounter = partyEncounterSnapshotFromPayload(payload, participants);
-    const room = {
-      roomId: `battle_room_${randomId()}`,
-      mode: BATTLE_MODE_PARTY_PVE,
-      status: BATTLE_ROOM_READY,
-      inviteId: "",
-      partyId: party ? party.partyId : "",
-      leaderAccountId: partyLeaderAccountId,
-      seed: randomBytes(8).toString("hex"),
-      participantAccountIds: memberAccountIds,
-      entry: partyEncounterEntry(data, party || {
-        leaderAccountId: resolved.account.accountId,
-        memberAccountIds,
-      }),
-      participants,
-      encounter,
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    room.battle = createBattleRoomBattleState(room, now);
-    battleRoomConnectionStateForMutation(room);
-    data.battleRooms[room.roomId] = room;
-    recordBattleTrace(data, room, "party_pve_room_created", {
-      enemyCount: Number(room.encounter && room.encounter.enemyCount || 0),
-      participantCount: room.participantAccountIds.length,
-      actorCount: Array.isArray(room.battle.actors) ? room.battle.actors.length : 0,
-    }, now);
-    save(data);
-    emitServiceEvent({
-      type: "battle.room_ready",
-      targetAccountIds: room.participantAccountIds.slice(),
-      invite: null,
-      room: publicBattleRoom(room),
-    });
-    return ok({
-      room: publicBattleRoom(room),
-      message: memberAccountIds.length > 1 ? "队伍遭遇了野生宠物。" : "遭遇了野生宠物。",
-    });
-  }
-
-  function declineBattleInvite(token, inviteId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const invite = data.battleInvites[String(inviteId || "").trim()];
-    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
-      return fail("battle_invite_missing", "切磋邀请不存在。");
-    }
-    invite.status = BATTLE_INVITE_DECLINED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
-    save(data);
-    emitServiceEvent({
-      type: "battle.invite_declined",
-      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicBattleInvite(invite, data),
-      room: null,
-    });
-    return ok({
-      invite: publicBattleInvite(invite, data),
-      room: null,
-      message: "已拒绝切磋邀请。",
-    });
-  }
-
-  function cancelBattleInvite(token, inviteId) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    const invite = data.battleInvites[String(inviteId || "").trim()];
-    if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.fromAccountId !== resolved.account.accountId) {
-      return fail("battle_invite_missing", "切磋邀请不存在。");
-    }
-    invite.status = BATTLE_INVITE_CANCELLED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
-    save(data);
-    emitServiceEvent({
-      type: "battle.invite_cancelled",
-      targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicBattleInvite(invite, data),
-      room: null,
-    });
-    return ok({
-      invite: publicBattleInvite(invite, data),
-      room: null,
-      message: "切磋邀请已取消。",
-    });
-  }
-
-  function leaveBattleRoom(token, roomId = "") {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    expireBattleTimeoutsAndEmit(data);
-    const normalizedRoomId = String(roomId || "").trim();
-    const room = normalizedRoomId !== "" ? data.battleRooms[normalizedRoomId] || null : activeBattleRoomForAccount(data, resolved.account.accountId);
-    if (!room || room.status === BATTLE_ROOM_CLOSED) {
-      return fail("battle_room_missing", "战斗房间不存在。");
-    }
-    if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
-      return fail("battle_room_forbidden", "你不在这个战斗房间中。");
-    }
-    const result = battleRoomResultForLeave(room, resolved.account.accountId, now);
-    closeBattleRoomWithResult(data, room, result, now);
-    data.battleRooms[room.roomId] = room;
-    save(data);
-    emitServiceEvent({
-      type: "battle.room_closed",
-      targetAccountIds: room.participantAccountIds.slice(),
-      roomId: room.roomId,
-      reason: result.reason,
-      result: publicBattleResult(result),
-      room: publicBattleRoom(room),
-    });
-    const isPartyPve = String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE;
-    return ok({
-      room: publicBattleRoom(room),
-      result: publicBattleResult(result),
-      message: isPartyPve ? "已逃离战斗。" : "已离开切磋房间。",
-    });
-  }
-
-  function submitBattleCommand(token, roomId, payload = {}) {
-    const data = load();
-    const resolved = resolveSession(data, token, now);
-    if (!resolved.ok) {
-      return fail(resolved.code, resolved.message);
-    }
-    expireBattleTimeoutsAndEmit(data);
-    const normalizedRoomId = String(roomId || payload.roomId || "").trim();
-    const room = data.battleRooms[normalizedRoomId] || null;
-    if (!room || room.status === "closed") {
-      return fail("battle_room_missing", "切磋房间不存在。");
-    }
-    if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
-      return fail("battle_room_forbidden", "你不在这个切磋房间中。");
-    }
-    const battle = battleRoomBattleStateForMutation(room, now);
-    if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
-      return fail("battle_command_phase_invalid", "当前不能提交回合命令。", {
-        room: publicBattleRoom(room),
-      });
-    }
-    const expectedRound = Number(battle.round || 1);
-    const commandRound = clampInt(payload.round, 1, Number.MAX_SAFE_INTEGER, expectedRound);
-    if (commandRound !== expectedRound) {
-      return fail("battle_command_round_mismatch", "回合已变化，请重新同步。", {
-        expectedRound,
-        room: publicBattleRoom(room),
-      });
-    }
-    const commandResult = normalizeBattleCommandPayload(payload, data, room, battle, resolved.account, now, randomId);
-    if (!commandResult.ok) {
-      return {
-        ...commandResult,
-        room: publicBattleRoom(room),
-      };
-    }
-    if (battle.commands && battle.commands[commandResult.command.actorId]) {
-      return fail("battle_command_duplicate", "本回合命令已经提交。", {
-        room: publicBattleRoom(room),
-      });
-    }
-    battle.commands[commandResult.command.actorId] = commandResult.command;
-    battle.requiredActorIds = requiredBattleCommandActorIds(battle);
-    battle.submittedActorIds = submittedBattleCommandActorIds(battle);
-    battle.submittedAccountIds = submittedBattleCommandAccountIds(battle);
-    battle.updatedAt = isoNow(now);
-    room.updatedAt = battle.updatedAt;
-    const commandSubmittedActorIds = battle.submittedActorIds.slice();
-    const commandSubmittedAccountIds = battle.submittedAccountIds.slice();
-    const commandSubmittedRoom = publicBattleRoom(room);
-    let turn = null;
-    const readyToResolve = battle.requiredActorIds.every((actorId) => battle.commands[actorId]);
-    recordBattleTrace(data, room, "battle_command_submitted", {
-      accountId: resolved.account.accountId,
-      actorId: commandResult.command.actorId,
-      actionId: commandResult.command.actionId,
-      round: expectedRound,
-      submittedActorCount: commandSubmittedActorIds.length,
-      requiredActorCount: requiredBattleCommandActorIds(battle).length,
-      readyToResolve,
-    }, now);
-    if (readyToResolve) {
-      turn = resolveBattleRoomTurn(data, room, battle, now);
-    }
-    data.battleRooms[room.roomId] = room;
-    save(data);
-    emitServiceEvent({
-      type: "battle.command_submitted",
-      targetAccountIds: room.participantAccountIds.slice(),
-      roomId: room.roomId,
-      round: expectedRound,
-      submittedAccountId: resolved.account.accountId,
-      submittedUsername: resolved.account.username,
-      submittedActorId: commandResult.command.actorId,
-      submittedActorKind: commandResult.command.actorKind,
-      submittedActorIds: commandSubmittedActorIds,
-      submittedAccountIds: commandSubmittedAccountIds,
-      requiredAccountIds: requiredBattleCommandAccountIds(room),
-      requiredActorIds: requiredBattleCommandActorIds(battle),
-      room: commandSubmittedRoom,
-    });
-    if (turn) {
-      emitServiceEvent({
-        type: "battle.turn_resolved",
-        targetAccountIds: room.participantAccountIds.slice(),
-        roomId: room.roomId,
-        round: turn.round,
-        turn,
-        room: publicBattleRoom(room),
-      });
-      if (room.status === BATTLE_ROOM_CLOSED && room.battle && room.battle.result) {
-        emitServiceEvent({
-          type: "battle.room_closed",
-          targetAccountIds: room.participantAccountIds.slice(),
-          roomId: room.roomId,
-          reason: String(room.closeReason || room.battle.result.reason || "battle_result"),
-          result: publicBattleResult(room.battle.result),
-          room: publicBattleRoom(room),
-        });
-      }
-    }
-    return ok({
-      room: publicBattleRoom(room),
-      command: publicBattleCommand(commandResult.command),
-      turn,
-      message: turn ? "本回合已结算。" : "回合命令已提交。",
-    });
   }
 
   function grantGm(payload = {}) {
@@ -2641,6 +1327,126 @@ function createAuthService(options = {}) {
     return clone(load());
   }
 
+  const domainContext = {
+    BATTLE_INVITE_ACCEPTED,
+    BATTLE_INVITE_CANCELLED,
+    BATTLE_INVITE_DECLINED,
+    BATTLE_INVITE_PENDING,
+    BATTLE_INVITE_TTL_MS,
+    BATTLE_MODE_DUEL,
+    BATTLE_MODE_PARTY_PVE,
+    BATTLE_PHASE_COMMAND,
+    BATTLE_ROOM_CLOSED,
+    BATTLE_ROOM_READY,
+    BATTLE_SIDE_ALLY,
+    CHAT_CHANNEL_NEARBY,
+    CHAT_CHANNEL_TEAM,
+    CHAT_HISTORY_LIMIT,
+    ENCOUNTER_STONE_ITEM_IDS,
+    MAIL_BODY_MAX_LENGTH,
+    MAIL_TITLE_MAX_LENGTH,
+    MAX_CHAT_MESSAGES,
+    PARTY_MAX_MEMBERS,
+    PROFILE_ACTION_IDS,
+    accountById,
+    activeBattleRoomForAccount,
+    activeOnlinePlayers,
+    addRewardItemsToBackpack,
+    applyPlayerRebirthReturn,
+    applyProfileActionToProfile,
+    backpackItemCount,
+    battleInviteIsExpired,
+    battleParticipantSnapshot,
+    battleRecordSummaryAgainst,
+    battleRoomBattleStateForMutation,
+    battleRoomConnectionStateForMutation,
+    battleRoomEntryCheck,
+    battleRoomResultForLeave,
+    battleStatePayload,
+    captureToolBagFromProfile,
+    claimQuestByIdToProfile,
+    clampInt,
+    clone,
+    closeBattleRoomWithResult,
+    consumeBackpackItem,
+    createBattleRoomBattleState,
+    createPartyForLeader,
+    currentProfileQuestId,
+    emitServiceEvent,
+    ensureProfileForAccount,
+    executePlayerRebirthToProfile,
+    expireBattleInvite,
+    expireBattleTimeoutsAndEmit,
+    fail,
+    isoNow,
+    itemAmountText,
+    load,
+    markBattleConnectionForAccount,
+    normalizeBackpackSlots,
+    normalizeBattleCommandPayload,
+    normalizeChatChannel,
+    normalizeChatText,
+    normalizeHangMode,
+    normalizeHangOriginPayload,
+    normalizeHangSession,
+    normalizeHangSettings,
+    normalizeHangStopReason,
+    normalizeMailItems,
+    normalizeMailText,
+    normalizeProfileActionId,
+    normalizeUsername,
+    normalizedQuestEventPayload,
+    now,
+    objectOrEmpty,
+    ok,
+    partyEncounterEntry,
+    partyEncounterSnapshotFromPayload,
+    partyForAccount,
+    partyStatePayload,
+    persistProfileForAccount,
+    profileActionLogLines,
+    profileBackpackSlots,
+    profileBindingForAccount,
+    profileSummaryForAccount,
+    publicAccount,
+    publicBattleCommand,
+    publicBattleInvite,
+    publicBattleResult,
+    publicBattleRoom,
+    publicBattleTraceRows,
+    publicChatMessage,
+    publicHangSession,
+    publicIncomingPartyInvites,
+    publicMail,
+    publicParty,
+    publicPartyForAccount,
+    publicPartyInvite,
+    publicProfileActionResult,
+    publicQuestClaim,
+    publicQuestProgress,
+    questById,
+    questIsOptional,
+    questRewardChoices,
+    randomBytes,
+    randomId,
+    recordBattleStateTrace,
+    recordBattleTrace,
+    recordQuestEventByIdToProfile,
+    recordQuestEventToProfile,
+    requiredBattleCommandAccountIds,
+    requiredBattleCommandActorIds,
+    resolveBattleRoomTurn,
+    resolveSession,
+    save,
+    submittedBattleCommandAccountIds,
+    submittedBattleCommandActorIds,
+  };
+  const profileActions = createProfileActionsDomain(domainContext);
+  const quest = createQuestDomain(domainContext);
+  const mailChat = createMailChatDomain(domainContext);
+  const party = createPartyDomain(domainContext);
+  const battleRoom = createBattleRoomDomain(domainContext);
+
   return {
     register,
     login,
@@ -2648,22 +1454,22 @@ function createAuthService(options = {}) {
     getSession,
     getProfile,
     saveProfile,
-    profileAction,
-    startHangSession,
-    stopHangSession,
-    playerRebirth,
-    questRecord,
-    questClaim,
+    profileAction: profileActions.profileAction,
+    startHangSession: profileActions.startHangSession,
+    stopHangSession: profileActions.stopHangSession,
+    playerRebirth: profileActions.playerRebirth,
+    questRecord: quest.questRecord,
+    questClaim: quest.questClaim,
     shopTransaction,
     equipmentEquip,
     equipmentEnhance,
     equipmentRepairAll,
     equipmentSynthesize,
     searchPlayers,
-    sendMail,
-    listInbox,
-    markMailRead,
-    claimMailAttachments,
+    sendMail: mailChat.sendMail,
+    listInbox: mailChat.listInbox,
+    markMailRead: mailChat.markMailRead,
+    claimMailAttachments: mailChat.claimMailAttachments,
     listOnlinePlayers,
     updatePlayerPosition,
     movePlayerStep,
@@ -2673,24 +1479,24 @@ function createAuthService(options = {}) {
     latestEventSeq,
     markBattleConnection,
     runBattleMaintenance,
-    getPartyState,
-    inviteToParty,
-    applyToParty,
-    acceptPartyInvite,
-    declinePartyInvite,
-    leaveParty,
-    listChatMessages,
-    sendChatMessage,
-    getBattleState,
-    getBattleTrace,
-    getBattleRecordSummary,
-    inviteToBattle,
-    acceptBattleInvite,
-    startPartyEncounter,
-    declineBattleInvite,
-    cancelBattleInvite,
-    leaveBattleRoom,
-    submitBattleCommand,
+    getPartyState: party.getPartyState,
+    inviteToParty: party.inviteToParty,
+    applyToParty: party.applyToParty,
+    acceptPartyInvite: party.acceptPartyInvite,
+    declinePartyInvite: party.declinePartyInvite,
+    leaveParty: party.leaveParty,
+    listChatMessages: mailChat.listChatMessages,
+    sendChatMessage: mailChat.sendChatMessage,
+    getBattleState: battleRoom.getBattleState,
+    getBattleTrace: battleRoom.getBattleTrace,
+    getBattleRecordSummary: battleRoom.getBattleRecordSummary,
+    inviteToBattle: battleRoom.inviteToBattle,
+    acceptBattleInvite: battleRoom.acceptBattleInvite,
+    startPartyEncounter: battleRoom.startPartyEncounter,
+    declineBattleInvite: battleRoom.declineBattleInvite,
+    cancelBattleInvite: battleRoom.cancelBattleInvite,
+    leaveBattleRoom: battleRoom.leaveBattleRoom,
+    submitBattleCommand: battleRoom.submitBattleCommand,
     grantGm,
     listGmTools,
     authorizeGmCommand,
