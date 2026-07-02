@@ -3788,6 +3788,28 @@ func _run_auto_capture_settings_check() -> void:
 	var no_target_escape_ok := no_target_submit and not battle_active
 	await get_tree().process_frame
 
+	player_profile = PlayerProgressModel.with_auto_capture_settings(PlayerProgressModel.default_profile(), no_target_settings)
+	_start_battle(BattleModel.create_wild_battle(EncounterModel.zone_with_selected_wild_pet(auto_zone, encounter_rng)))
+	await get_tree().process_frame
+	battle_state["serverAuthority"] = true
+	battle_state["serverRoomId"] = "auto_capture_duel_guard_room"
+	battle_state["serverRoomMode"] = "duel"
+	battle_state["phase"] = "command"
+	server_battle_command_request_active = false
+	_set_battle_auto_attack_enabled(true, false)
+	var server_duel_no_target_submit := _submit_battle_auto_player_action()
+	await get_tree().process_frame
+	var server_duel_no_auto_leave_ok := (
+		server_duel_no_target_submit
+		and battle_active
+		and not server_battle_command_request_active
+		and not battle_auto_attack_enabled
+		and str(battle_state.get("phase", "")) == "command"
+		and str(battle_state.get("message", "")).find("切磋中不会自动离开") >= 0
+	)
+	_end_battle(true)
+	await get_tree().process_frame
+
 	var success_message_settings := settings.duplicate(true)
 	success_message_settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_EQ
 	success_message_settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 1
@@ -3927,8 +3949,8 @@ func _run_auto_capture_settings_check() -> void:
 		and gm_random_formation_ok
 		and gm_two_slot_ok
 	)
-	var status := "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
-	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
+	var status := "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
 		status,
 		str(normalized_ok),
 		str(power_ok),
@@ -3942,6 +3964,7 @@ func _run_auto_capture_settings_check() -> void:
 		str(heal_hold_no_ally_attack_ok),
 		str(heal_hold_pet_defend_seen),
 		str(no_target_escape_ok),
+		str(server_duel_no_auto_leave_ok),
 		str(success_no_target_message_ok),
 		target_id,
 		str(target_match_ok),
@@ -4631,7 +4654,30 @@ func _run_auto_capture_tools_check() -> void:
 	await get_tree().process_frame
 	var target_id := BattleModel.living_enemy_id(battle_state)
 	var menu_open_ok := false
+	var server_main_capture_enabled_ok := false
+	var server_help_mentions_capture_ok := false
 	if target_id != "":
+		battle_state["serverAuthority"] = true
+		battle_state["serverRoomId"] = "capture_tools_server_menu_check"
+		_set_battle_command_owner("player")
+		_sync_battle_buttons()
+		var capture_entry_button := battle_command_buttons.get("capture") as Button
+		server_main_capture_enabled_ok = (
+			_battle_is_server_authority()
+			and battle_command_owner == "player"
+			and capture_entry_button != null
+			and not capture_entry_button.disabled
+		)
+		_on_battle_command_pressed("help")
+		var server_help_message := str(battle_state.get("message", ""))
+		server_help_mentions_capture_ok = (
+			server_help_message.find("精灵") >= 0
+			and server_help_message.find("捕捉") >= 0
+		)
+		battle_state.erase("serverAuthority")
+		battle_state.erase("serverRoomId")
+		_set_battle_command_owner("player")
+		_sync_battle_buttons()
 		_on_battle_command_pressed("capture")
 		var empty_button := battle_command_buttons.get("attack") as Button
 		var rope_button := battle_command_buttons.get("spirit") as Button
@@ -4691,9 +4737,11 @@ func _run_auto_capture_tools_check() -> void:
 	var saw_capture: bool = await _auto_wait_for_event_type("capture", 1200)
 	var ui_success_ok := saw_capture and bool(battle_state.get("lastCaptureSuccess", false)) and str(battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 	var reinforced_consumed_ok := PlayerProgressModel.capture_tool_count(player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
-	var status := "ok" if loaded and zone_found and menu_open_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
-	print("capture tools check ready: status=%s menu=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f log=%s" % [
+	var status := "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_help_mentions_capture_ok and menu_open_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s server_main_capture=%s server_help_capture=%s menu=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f log=%s" % [
 		status,
+		str(server_main_capture_enabled_ok),
+		str(server_help_mentions_capture_ok),
 		str(menu_open_ok),
 		str(empty_no_consume_ok),
 		str(rope_fail_consumes_ok),
@@ -18787,8 +18835,22 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	if battle_result_panel != null:
 		battle_result_panel.visible = false
 	var pve_result := _finish_server_battle_from_closed_room(pve_closed_room)
-	var pve_no_popup_ok := battle_result_panel == null or not battle_result_panel.visible
 	var pve_message := str(pve_result.get("message", ""))
+	var pve_result_title := battle_result_title_label.text if battle_result_title_label != null else ""
+	var pve_result_detail := battle_result_detail_label.text if battle_result_detail_label != null else ""
+	var pve_popup_ok := (
+		battle_result_panel != null
+		and battle_result_panel.visible
+		and pve_result_title == "战斗胜利"
+		and pve_result_detail.find("战斗胜利。") >= 0
+		and pve_result_detail.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and pve_result_detail.find("骑宠 骑宠布伊 获得 66 点经验（基础60，组队+10%）。") >= 0
+		and pve_result_detail.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
+		and pve_result_detail.find("对手：") < 0
+		and pve_result_title.find("切磋") < 0
+	)
+	if pve_popup_ok:
+		_close_battle_result_panel(false)
 	var pve_message_ok := (
 		pve_message.find("战斗胜利。") >= 0
 		and pve_message.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
@@ -18932,8 +18994,8 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and world_log_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
 		and world_log_message.find("队伍战斗已结束") < 0
 	)
-	var status := "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_start_ok and active_poll_gate_ok and pve_no_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore=%s active_poll=%s pve_no_popup=%s pve_message=%s zero_exp=%s closed_event=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s closed_text=%s" % [
+	var status := "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
@@ -18945,7 +19007,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		str(poll_target_ok),
 		str(restore_start_ok),
 		str(active_poll_gate_ok),
-		str(pve_no_popup_ok),
+		str(pve_popup_ok),
 		str(pve_message_ok),
 		str(zero_exp_line_ok),
 		str(closed_event_finished_ok),
@@ -18958,6 +19020,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		polled_enemy_player_hp,
 		message.replace("\n", " / "),
 		pve_message.replace("\n", " / "),
+		("%s / %s" % [pve_result_title, pve_result_detail]).replace("\n", " / "),
 		world_log_message.replace("\n", " / "),
 	])
 	get_tree().quit(0 if status == "ok" else 1)
@@ -23711,6 +23774,10 @@ func _battle_auto_capture_escape_without_target() -> void:
 	var message := "捕获成功。没有符合条件的捕捉目标，自动逃跑。" if battle_auto_capture_success_seen else "自动捉宠：没有符合条件目标，自动逃跑。"
 	_set_battle_message(message)
 	if _battle_is_server_authority():
+		if not _current_server_battle_is_party_pve():
+			_set_battle_auto_attack_enabled(false, false)
+			_set_battle_message("自动捉宠：切磋中不会自动离开，已停止自动战斗。")
+			return
 		_leave_server_battle_room()
 		return
 	_battle_escape()
@@ -27606,6 +27673,8 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	_set_world_log_message(log_message)
 	if not is_party_pve:
 		_open_battle_result_panel(closed_room, result_key, message)
+	else:
+		_open_battle_result_panel(closed_room, result_key, log_message, "战斗", false)
 	_queue_server_profile_pull()
 	if bool(hang_result.get("routeToHealer", false)):
 		call_deferred("_route_to_hang_healer")
@@ -27933,17 +28002,17 @@ func _server_party_pve_has_living_enemy(room: Dictionary) -> bool:
 	return false
 
 
-func _open_battle_result_panel(room: Dictionary, result_key: String, message: String) -> void:
+func _open_battle_result_panel(room: Dictionary, result_key: String, message: String, title_prefix: String = "切磋", include_opponent: bool = true) -> void:
 	if battle_result_panel == null:
 		return
 	if battle_result_title_label != null:
-		battle_result_title_label.text = _battle_result_title(result_key)
+		battle_result_title_label.text = _battle_result_title(result_key, title_prefix)
 	if battle_result_detail_label != null:
 		var details: Array[String] = []
 		if message.strip_edges() != "":
 			details.append(message.strip_edges())
-		var opponent_text := _battle_result_opponent_text(room)
-		if opponent_text != "":
+		var opponent_text := _battle_result_opponent_text(room) if include_opponent else ""
+		if include_opponent and opponent_text != "":
 			details.append("对手：%s" % opponent_text)
 		battle_result_detail_label.text = "\n".join(details)
 	battle_result_panel.visible = true
@@ -27954,16 +28023,19 @@ func _close_battle_result_panel(update_layout: bool = true) -> void:
 	_hide_control(battle_result_panel, update_layout)
 
 
-func _battle_result_title(result_key: String) -> String:
+func _battle_result_title(result_key: String, prefix: String = "切磋") -> String:
+	var safe_prefix := prefix.strip_edges()
+	if safe_prefix == "":
+		safe_prefix = "战斗"
 	match result_key:
 		"victory":
-			return "切磋胜利"
+			return "%s胜利" % safe_prefix
 		"defeat":
-			return "切磋落败"
+			return "%s落败" % safe_prefix if safe_prefix == "切磋" else "%s失败" % safe_prefix
 		"timeout":
-			return "切磋超时"
+			return "%s超时" % safe_prefix
 		_:
-			return "切磋结束"
+			return "%s结束" % safe_prefix
 
 
 func _battle_result_opponent_text(room: Dictionary) -> String:
@@ -38691,7 +38763,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 			_open_switch_pet_command_menu()
 		"help":
 			if _battle_is_server_authority():
-				_set_battle_message("选择攻击、防御、物品、换宠或%s。" % _battle_player_run_label())
+				_set_battle_message("选择攻击、防御、物品、精灵、捕捉、换宠或%s。" % _battle_player_run_label())
 			else:
 				_set_battle_message("选择攻击或逃跑。")
 		_:
@@ -40534,6 +40606,8 @@ func _sync_battle_buttons() -> void:
 				if _battle_is_server_authority():
 					match str(command_id):
 						"attack":
+							button.disabled = not has_enemy
+						"capture":
 							button.disabled = not has_enemy
 						"defend", "run", "help":
 							button.disabled = not can_command
