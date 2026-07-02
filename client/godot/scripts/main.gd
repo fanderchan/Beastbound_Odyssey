@@ -11,6 +11,7 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
+const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
@@ -274,6 +275,7 @@ var auth_register_tab_button: Button
 var auth_submit_button: Button
 var auth_http_request: HTTPRequest
 var profile_sync_http_request: HTTPRequest
+var server_sync_coordinator
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
@@ -1010,6 +1012,12 @@ func _bootstrap_auth_state() -> void:
 		account_authenticated = false
 		current_account_session = {}
 		PlayerProgressModel.reset_active_save_path()
+
+
+func _server_sync():
+	if server_sync_coordinator == null:
+		server_sync_coordinator = ServerSyncCoordinator.new(self)
+	return server_sync_coordinator
 
 
 func _ready() -> void:
@@ -29286,199 +29294,55 @@ func _online_position_draw_signature(players: Array[Dictionary]) -> String:
 
 
 func _request_server_profile_pull() -> void:
-	if profile_sync_http_request == null or not _is_server_account_session():
-		return
-	if _server_profile_pull_should_wait_for_profile_panel():
-		server_profile_sync_pull_queued = true
-		server_profile_sync_message = "服务器档案将在面板关闭后同步。"
-		return
-	server_profile_sync_pull_queued = false
-	var spec := ServerAuthClientModel.profile_request(_server_profile_base_url(), _server_profile_token())
-	_start_server_profile_sync_request("pull", spec)
+	_server_sync().request_profile_pull()
 
 
 func _queue_server_profile_pull() -> void:
-	if not _is_server_account_session() or server_profile_sync_state == "off":
-		return
-	if _server_profile_pull_should_wait_for_profile_panel():
-		server_profile_sync_pull_queued = true
-		server_profile_sync_message = "服务器档案将在面板关闭后同步。"
-		return
-	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
-		server_profile_sync_pull_queued = true
-		return
-	_request_server_profile_pull()
+	_server_sync().queue_profile_pull()
 
 
 func _queue_server_profile_upload() -> void:
-	if not _is_server_account_session() or server_profile_sync_state == "off":
-		return
-	if server_profile_sync_state == "conflict":
-		return
-	server_profile_sync_dirty = false
-	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
-		server_profile_sync_pull_queued = true
-		return
-	server_profile_sync_pending_kind = ""
-	server_profile_sync_state = "ready"
-	server_profile_sync_message = "服务器档案由专用接口保存。"
+	_server_sync().queue_profile_upload()
 
 
 func _start_server_profile_sync_request(kind: String, spec: Dictionary) -> void:
-	if profile_sync_http_request == null:
-		return
-	server_profile_sync_pending_kind = kind
-	server_profile_sync_state = "loading" if kind == "pull" else "uploading"
-	server_profile_sync_message = ""
-	var err := profile_sync_http_request.request(
-		str(spec.get("url", "")),
-		_packed_string_array(spec.get("headers", [])),
-		int(spec.get("method", HTTPClient.METHOD_GET)),
-		str(spec.get("body", ""))
-	)
-	if err != OK:
-		server_profile_sync_pending_kind = ""
-		server_profile_sync_state = "ready"
-		server_profile_sync_message = "服务器档案同步请求失败。"
+	_server_sync().start_server_profile_sync_request(kind, spec)
 
 
 func _on_profile_sync_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	var kind := server_profile_sync_pending_kind
-	server_profile_sync_pending_kind = ""
-	if result != HTTPRequest.RESULT_SUCCESS:
-		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
-		server_profile_sync_message = "服务器档案连接失败。"
-		return
-	if kind == "pull":
-		_apply_server_profile_pull_result(ServerAuthClientModel.parse_profile_response(response_code, body))
-	elif kind == "upload":
-		_apply_server_profile_upload_result(ServerAuthClientModel.parse_profile_upload_response(response_code, body))
+	_server_sync().on_profile_sync_http_request_completed(result, response_code, _headers, body)
 
 
 func _apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = true) -> void:
-	if not bool(parsed.get("ok", false)):
-		server_profile_sync_state = "ready" if _is_server_account_session() else "off"
-		server_profile_sync_message = str(parsed.get("message", "服务器档案读取失败。"))
-		return
-	if allow_defer and _server_profile_pull_should_wait_for_profile_panel():
-		_defer_server_profile_pull_result(parsed)
-		return
-	var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
-	var remote_profile = parsed.get("profile", null)
-	if remote_profile is Dictionary:
-		player_profile = PlayerProgressModel.normalize_profile((remote_profile as Dictionary).duplicate(true))
-		_apply_auth_profile_metadata_fields(str(current_account_session.get("displayName", "")))
-		_apply_server_profile_summary(summary)
-		PlayerProgressModel.save_profile(player_profile)
-		server_profile_sync_state = "ready"
-		server_profile_sync_dirty = false
-		server_profile_sync_message = "已读取服务器档案。"
-		_refresh_account_panel()
-		_mark_progress_ui_caches_dirty()
-		_update_hud_text(true)
-		_layout_hud()
-		_continue_pending_server_profile_sync()
-		return
-	_apply_server_profile_summary(summary)
-	PlayerProgressModel.save_profile(player_profile)
-	server_profile_sync_state = "ready"
-	server_profile_sync_dirty = false
-	server_profile_sync_message = "服务器未返回角色档案，请重新登录。"
+	_server_sync().apply_server_profile_pull_result(parsed, allow_defer)
 
 
 func _apply_server_profile_upload_result(parsed: Dictionary) -> void:
-	var had_pull_queued := server_profile_sync_pull_queued
-	server_profile_sync_state = "ready" if _is_server_account_session() else "off"
-	server_profile_sync_dirty = false
-	var code := str(parsed.get("code", "")).strip_edges()
-	if code == "profile_upload_denied" or code == "revision_conflict" or bool(parsed.get("ok", false)):
-		server_profile_sync_message = "角色档案由服务器专用接口保存，整档上传已禁用。"
-	else:
-		server_profile_sync_message = str(parsed.get("message", "角色档案由服务器专用接口保存，整档上传已禁用。"))
-	_refresh_account_panel()
-	if had_pull_queued:
-		_continue_pending_server_profile_sync()
+	_server_sync().apply_server_profile_upload_result(parsed)
 
 
 func _continue_pending_server_profile_sync() -> void:
-	if not _is_server_account_session():
-		server_profile_sync_pull_queued = false
-		server_profile_sync_deferred_pull_result.clear()
-		return
-	if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading":
-		return
-	if _server_profile_pull_should_wait_for_profile_panel():
-		return
-	if server_profile_sync_dirty:
-		server_profile_sync_dirty = false
-	if server_profile_sync_pull_queued:
-		server_profile_sync_pull_queued = false
-		_request_server_profile_pull()
+	_server_sync().continue_pending_server_profile_sync()
 
 
 func _server_profile_pull_should_wait_for_profile_panel() -> bool:
-	return (
-		(backpack_panel != null and backpack_panel.visible)
-		or (shop_panel != null and shop_panel.visible)
-		or shop_action_request_pending
-		or equipment_action_request_pending
-		or profile_action_request_pending
-		or quest_action_request_pending
-	)
+	return _server_sync().server_profile_pull_should_wait_for_profile_panel()
 
 
 func _defer_server_profile_pull_result(parsed: Dictionary) -> void:
-	server_profile_sync_deferred_pull_result = parsed.duplicate(true)
-	server_profile_sync_state = "ready" if _is_server_account_session() else "off"
-	server_profile_sync_dirty = false
-	server_profile_sync_message = "服务器档案已延后同步，关闭面板后刷新。"
+	_server_sync().defer_server_profile_pull_result(parsed)
 
 
 func _apply_deferred_server_profile_pull_if_idle() -> void:
-	if _server_profile_pull_should_wait_for_profile_panel():
-		return
-	if not server_profile_sync_deferred_pull_result.is_empty():
-		var parsed := server_profile_sync_deferred_pull_result.duplicate(true)
-		server_profile_sync_deferred_pull_result.clear()
-		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
-		var revision := int(summary.get("profileRevision", 0))
-		if revision <= 0 or revision >= server_profile_sync_expected_revision:
-			_apply_server_profile_pull_result(parsed, false)
-		_continue_pending_server_profile_sync()
-		return
-	_continue_pending_server_profile_sync()
+	_server_sync().apply_deferred_server_profile_pull_if_idle()
 
 
 func _apply_server_profile_summary(summary: Dictionary) -> void:
-	if summary.is_empty():
-		return
-	current_account_session["serverProfileSummary"] = summary.duplicate(true)
-	server_profile_sync_expected_revision = maxi(0, int(summary.get("profileRevision", server_profile_sync_expected_revision)))
-	var sync_state := player_profile.get("serverSync", {}) as Dictionary if player_profile.get("serverSync", {}) is Dictionary else {}
-	sync_state["profileRevision"] = server_profile_sync_expected_revision
-	sync_state["lastServerRevision"] = server_profile_sync_expected_revision
-	sync_state["lastLocalSaveAtSec"] = int(Time.get_unix_time_from_system())
-	player_profile["serverSync"] = sync_state
+	_server_sync().apply_server_profile_summary(summary)
 
 
 func _apply_server_profile_payload(parsed: Dictionary) -> bool:
-	var summary = parsed.get("profileSummary", {})
-	if summary is Dictionary:
-		_apply_server_profile_summary(summary as Dictionary)
-	var server_profile = parsed.get("profile", null)
-	if not (server_profile is Dictionary):
-		return false
-	player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-	if profile_save_enabled:
-		PlayerProgressModel.save_profile(player_profile)
-	_mark_progress_ui_caches_dirty()
-	_refresh_quick_bar()
-	_refresh_backpack_panel()
-	if pet_panel != null and pet_panel.visible:
-		_refresh_pet_panel()
-	if status_label != null:
-		_update_hud_text()
-	return true
+	return _server_sync().apply_server_profile_payload(parsed)
 
 
 func _apply_auth_profile_metadata_fields(display_name: String) -> void:
@@ -31202,31 +31066,11 @@ func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 
 
 func _queue_server_quest_record_event(event: Dictionary, quest_id: String = "") -> void:
-	if event.is_empty():
-		return
-	server_quest_record_event_queue.append({
-		"event": event.duplicate(true),
-		"questId": quest_id.strip_edges(),
-	})
-	if server_quest_record_event_queue_running:
-		return
-	server_quest_record_event_queue_running = true
-	call_deferred("_process_server_quest_record_event_queue")
+	_server_sync().queue_server_quest_record_event(event, quest_id)
 
 
 func _process_server_quest_record_event_queue() -> void:
-	while not server_quest_record_event_queue.is_empty():
-		var queued: Dictionary = server_quest_record_event_queue.pop_front()
-		if not _is_server_account_session() or auth_auto_bypass:
-			continue
-		var event: Dictionary = queued.get("event", {}) as Dictionary if queued.get("event", {}) is Dictionary else {}
-		if event.is_empty():
-			continue
-		var parsed: Dictionary = await _submit_server_quest_record(event, str(queued.get("questId", "")))
-		var log_lines: Array[String] = _string_array_values(parsed.get("logLines", []))
-		if not log_lines.is_empty():
-			_set_world_log_message("\n".join(log_lines))
-	server_quest_record_event_queue_running = false
+	await _server_sync().process_server_quest_record_event_queue()
 
 
 func _set_world_log_message(text: String) -> void:
@@ -31681,110 +31525,19 @@ func _submit_server_player_rebirth() -> void:
 
 
 func _submit_server_quest_record(event: Dictionary, quest_id: String = "") -> Dictionary:
-	if not _is_server_account_session():
-		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
-	quest_action_request_pending = true
-	if quest_panel != null and quest_panel.visible:
-		_refresh_quest_panel()
-	var response := await _auto_http_request_spec(ServerAuthClientModel.quest_record_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		event,
-		quest_id
-	))
-	quest_action_request_pending = false
-	var parsed := ServerAuthClientModel.parse_quest_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	return _apply_server_quest_action_result(parsed, "任务同步失败。")
+	return await _server_sync().submit_server_quest_record(event, quest_id)
 
 
 func _submit_server_quest_claim(quest_id: String = "", reward_choice_id: String = "") -> Dictionary:
-	if not _is_server_account_session():
-		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
-	quest_action_request_pending = true
-	if quest_panel != null and quest_panel.visible:
-		_refresh_quest_panel()
-	var response := await _auto_http_request_spec(ServerAuthClientModel.quest_claim_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		quest_id,
-		reward_choice_id
-	))
-	quest_action_request_pending = false
-	var parsed := ServerAuthClientModel.parse_quest_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	return _apply_server_quest_action_result(parsed, "领取任务奖励失败。")
+	return await _server_sync().submit_server_quest_claim(quest_id, reward_choice_id)
 
 
 func _apply_server_quest_action_result(parsed: Dictionary, fallback_message: String) -> Dictionary:
-	var log_lines: Array[String] = []
-	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-			_mark_progress_ui_caches_dirty()
-			for message in parsed.get("questMessages", []):
-				var quest_message := str(message).strip_edges()
-				if quest_message != "":
-					log_lines.append(quest_message)
-			if log_lines.is_empty():
-				var success_message := str(parsed.get("message", "任务已同步。")).strip_edges()
-				if success_message != "":
-					log_lines.append(success_message)
-		else:
-			log_lines.append("任务已提交，但服务器没有返回档案，请重新拉取。")
-			_queue_server_profile_pull()
-	else:
-		var summary = parsed.get("profileSummary", {})
-		if summary is Dictionary:
-			_apply_server_profile_summary(summary as Dictionary)
-		var error_message := str(parsed.get("message", fallback_message)).strip_edges()
-		log_lines.append(error_message if error_message != "" else fallback_message)
-	if log_lines.is_empty():
-		log_lines.append(fallback_message)
-	parsed["logLines"] = log_lines
-	if quest_panel != null and quest_panel.visible:
-		_refresh_quest_panel()
-	if status_label != null:
-		_update_hud_text()
-	return parsed
+	return _server_sync().apply_server_quest_action_result(parsed, fallback_message)
 
 
 func _submit_server_profile_action(action: String, payload: Dictionary = {}, fallback_message: String = "档案操作失败。") -> Dictionary:
-	if not _is_server_account_session():
-		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
-	if profile_action_request_pending:
-		return {"ok": false, "message": "档案操作同步中，请稍候。", "logLines": ["档案操作同步中，请稍候。"]}
-	profile_action_request_pending = true
-	var response := await _auto_http_request_spec(ServerAuthClientModel.profile_action_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		action,
-		payload
-	))
-	profile_action_request_pending = false
-	var parsed := ServerAuthClientModel.parse_profile_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	var log_lines := _string_array_values(parsed.get("logLines", []))
-	if bool(parsed.get("ok", false)):
-		if _apply_server_profile_payload(parsed):
-			if log_lines.is_empty():
-				var success_message := str(parsed.get("message", "角色档案已更新。")).strip_edges()
-				if success_message != "":
-					log_lines.append(success_message)
-		else:
-			log_lines = ["操作已提交，但服务器没有返回档案，请重新拉取。"]
-			_queue_server_profile_pull()
-	else:
-		var summary = parsed.get("profileSummary", {})
-		if summary is Dictionary:
-			_apply_server_profile_summary(summary as Dictionary)
-		var error_message := str(parsed.get("message", fallback_message)).strip_edges()
-		log_lines.append(error_message if error_message != "" else fallback_message)
-	if log_lines.is_empty():
-		log_lines.append(fallback_message)
-	parsed["logLines"] = log_lines
-	return parsed
+	return await _server_sync().submit_server_profile_action(action, payload, fallback_message)
 
 
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
@@ -43014,62 +42767,15 @@ func _world_to_screen(world_point: Vector2) -> Vector2:
 
 
 func _server_hang_session_enabled() -> bool:
-	return _is_server_account_session() and _server_profile_token().strip_edges() != ""
+	return _server_sync().server_hang_session_enabled()
 
 
 func _request_server_hang_session_start(mode: String, cell: Vector2i, item_id: String = "") -> bool:
-	if not _server_hang_session_enabled():
-		return false
-	if hang_session_request_active:
-		_set_world_log_message("挂机同步中，请稍候。")
-		return false
-	hang_session_request_active = true
-	var response := await _auto_http_request_spec(ServerAuthClientModel.hang_session_start_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		mode,
-		current_map_id,
-		cell,
-		PlayerProgressModel.hang_settings(player_profile),
-		item_id
-	))
-	hang_session_request_active = false
-	if not _server_hang_session_enabled():
-		return false
-	var parsed := ServerAuthClientModel.parse_hang_session_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	if bool(parsed.get("ok", false)):
-		if not _apply_server_profile_payload(parsed):
-			_queue_server_profile_pull()
-		return true
-	var summary = parsed.get("profileSummary", {})
-	if summary is Dictionary:
-		_apply_server_profile_summary(summary as Dictionary)
-	_set_world_log_message(str(parsed.get("message", "挂机同步失败。")))
-	return false
+	return await _server_sync().request_server_hang_session_start(mode, cell, item_id)
 
 
 func _request_server_hang_session_stop(reason: String = "manual", pending_resume: bool = false) -> void:
-	if not _server_hang_session_enabled():
-		return
-	if hang_session_request_active:
-		return
-	hang_session_request_active = true
-	var response := await _auto_http_request_spec(ServerAuthClientModel.hang_session_stop_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		reason,
-		pending_resume
-	))
-	hang_session_request_active = false
-	if not _server_hang_session_enabled():
-		return
-	var parsed := ServerAuthClientModel.parse_hang_session_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	if bool(parsed.get("ok", false)):
-		_apply_server_profile_payload(parsed)
-		return
-	var summary = parsed.get("profileSummary", {})
-	if summary is Dictionary:
-		_apply_server_profile_summary(summary as Dictionary)
+	await _server_sync().request_server_hang_session_stop(reason, pending_resume)
 
 
 func _on_hang_button_pressed() -> void:
