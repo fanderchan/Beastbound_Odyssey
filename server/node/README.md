@@ -126,7 +126,7 @@ This prototype keeps the same rule as the Godot contract: the client may hide GM
 
 Gameplay writes must go through server-authoritative transaction endpoints such as `POST /profile/action`, shops, equipment, quests, rebirth, movement, hang/encounter-stone sessions, and battle settlement. Internal migration and test tooling may still call the service layer directly, but the public HTTP API must not accept full-profile overwrites from a client.
 
-`POST /profile/action` is a whitelisted profile transaction endpoint for ordinary world and pet-management actions that do not need a dedicated route yet. Current action ids cover backpack slot unlocks, village healing, record-point saving, world item use, pet skill slot updates, pet state/stable/party/lock changes, pet rename/drop/pickup/cleanup, MM guide rewards, and pet cultivation/rebirth. The server reloads the authoritative profile, validates the action, persists the new revision, and returns the updated profile document.
+`POST /profile/action` is a whitelisted profile transaction endpoint for ordinary world and pet-management actions that do not need a dedicated route yet. Current action ids cover player stat allocation, backpack slot unlocks, village healing, record-point saving, world item use, pet skill slot updates, pet state/stable/party/lock changes, pet rename/drop/pickup/cleanup, MM guide rewards, and pet cultivation/rebirth. The server reloads the authoritative profile, validates the action, persists the new revision, and returns the updated profile document.
 
 ## Mail Boundary
 

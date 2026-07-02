@@ -158,6 +158,13 @@ const DEFAULT_PLAYER_BATTLE_STATS = {
   defense: 6,
   quick: 70,
 };
+const PLAYER_STAT_KEYS = ["maxHp", "attack", "defense", "quick"];
+const PLAYER_STAT_LABELS = Object.freeze({
+  maxHp: "生命",
+  attack: "攻击",
+  defense: "防御",
+  quick: "敏捷",
+});
 const DEFAULT_PET_BATTLE_STATS = {
   maxHp: 90,
   attack: 12,
@@ -204,6 +211,7 @@ const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
   },
 };
 const PROFILE_ACTION_IDS = new Set([
+  "player_stat_allocate",
   "backpack_unlock_slot",
   "village_heal",
   "record_point_save",
@@ -10047,6 +10055,8 @@ function normalizeProfileActionId(value) {
 
 function applyProfileActionToProfile(profile, action, params, now) {
   switch (action) {
+    case "player_stat_allocate":
+      return applyPlayerStatAllocateAction(profile, params);
     case "backpack_unlock_slot":
       return applyBackpackUnlockSlotAction(profile, params);
     case "village_heal":
@@ -10105,6 +10115,8 @@ function publicProfileActionResult(action, result) {
     message: String(source.message || ""),
     itemId: String(source.itemId || ""),
     instanceId: String(source.instanceId || source.petId || ""),
+    statKey: String(source.statKey || ""),
+    gain: Math.max(0, Math.trunc(Number(source.gain || 0))),
     dropId: String(source.dropId || ""),
     slot: Math.max(0, Math.trunc(Number(source.slot || 0))),
     cost: Math.max(0, Math.trunc(Number(source.cost || 0))),
@@ -10191,6 +10203,51 @@ function consumeProfileBackpackItem(profile, itemId, count = 1) {
   profile.backpackSlots = consumeBackpackItem(slots, normalizedItemId, required);
   profile.captureTools = captureToolBagFromProfile(profile);
   return true;
+}
+
+function playerStatPointGainFor(statKey) {
+  const gains = objectOrEmpty(playerGrowthDocument().pointGains);
+  return Math.max(1, Math.trunc(Number(gains[statKey] || 1)));
+}
+
+function playerBaseStatsFromPlayer(player) {
+  const source = objectOrEmpty(player && player.baseStats);
+  const result = {};
+  for (const key of PLAYER_STAT_KEYS) {
+    result[key] = Math.max(1, Math.trunc(Number(source[key] || DEFAULT_PLAYER_BATTLE_STATS[key] || 1)));
+  }
+  return result;
+}
+
+function applyPlayerStatAllocateAction(profile, params) {
+  const statKey = String(params.statKey || params.key || params.stat || "").trim();
+  if (!PLAYER_STAT_KEYS.includes(statKey)) {
+    return {ok: false, code: "player_stat_invalid", message: "不能分配这个属性。"};
+  }
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const player = profile.player;
+  const points = Math.max(0, Math.trunc(Number(player.statPoints || 0)));
+  if (points <= 0) {
+    return {ok: false, code: "player_stat_points_empty", message: "没有可分配属性点。", statKey};
+  }
+  const baseStats = playerBaseStatsFromPlayer(player);
+  const gain = playerStatPointGainFor(statKey);
+  baseStats[statKey] = Math.max(1, Math.trunc(Number(baseStats[statKey] || DEFAULT_PLAYER_BATTLE_STATS[statKey] || 1)) + gain);
+  player.baseStats = baseStats;
+  player.statPoints = points - 1;
+  if (statKey === "maxHp") {
+    player.hp = Math.max(1, Math.trunc(Number(player.hp || DEFAULT_PLAYER_BATTLE_STATS.maxHp)) + gain);
+    player.maxHp = Math.max(baseStats.maxHp, Math.trunc(Number(player.maxHp || DEFAULT_PLAYER_BATTLE_STATS.maxHp)) + gain);
+  }
+  profile.player = player;
+  return {
+    ok: true,
+    message: `${PLAYER_STAT_LABELS[statKey] || statKey} 提升到 ${baseStats[statKey]}。`,
+    statKey,
+    gain,
+  };
 }
 
 function applyBackpackUnlockSlotAction(profile, params) {

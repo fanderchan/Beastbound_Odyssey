@@ -12802,7 +12802,13 @@ func _run_auto_server_auth_contract_check() -> void:
 			and (endpoint_ids as Array).has("session")
 			and (endpoint_ids as Array).has("gmCommand")
 			and (endpoint_ids as Array).has("profileUploadDisabled")
-			and (endpoint_ids as Array).size() >= 8
+			and (endpoint_ids as Array).has("profileAction")
+			and (endpoint_ids as Array).has("shopTransaction")
+			and (endpoint_ids as Array).has("equipmentSynthesize")
+			and (endpoint_ids as Array).has("playerRebirth")
+			and (endpoint_ids as Array).has("questRecord")
+			and (endpoint_ids as Array).has("questClaim")
+			and (endpoint_ids as Array).size() >= 17
 	)
 	var security_ok := (
 		bool(security.get("serverAuthoritativeGm", false))
@@ -12810,6 +12816,8 @@ func _run_auto_server_auth_contract_check() -> void:
 			and bool(security.get("gmCommandRequiresRoleGrantAndAudit", false))
 			and bool(security.get("localPluginIgnoredInProduction", false))
 			and bool(security.get("clientCannotUploadFullProfile", false))
+			and bool(security.get("clientGameplayRequiresServerSession", false))
+			and bool(security.get("gameplayWritesUseTransactionEndpoints", false))
 	)
 	var paths_ok := (
 		str(paths.get("accountStorePath", "")) == AccountAuthModel.ACCOUNT_STORE_PATH
@@ -15480,6 +15488,42 @@ func _run_auto_auth_server_client_check() -> void:
 		not bool(parsed_upload.get("ok", true))
 		and str(parsed_upload.get("code", "")) == "profile_upload_denied"
 	)
+	var profile_action_spec := ServerAuthClientModel.profile_action_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"player_stat_allocate",
+		{"statKey": "attack"}
+	)
+	var profile_action_request_ok := (
+		str(profile_action_spec.get("url", "")) == "http://127.0.0.1:8787/profile/action"
+		and int(profile_action_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and _packed_string_array(profile_action_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(profile_action_spec.get("body", "")).find("\"action\":\"player_stat_allocate\"") >= 0
+		and str(profile_action_spec.get("body", "")).find("\"statKey\":\"attack\"") >= 0
+	)
+	var parsed_profile_action := ServerAuthClientModel.parse_profile_action_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"player": {"statPoints": 0, "baseStats": {"attack": 19}},
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 14,
+		},
+		"result": {
+			"action": "player_stat_allocate",
+			"statKey": "attack",
+			"gain": 1,
+		},
+		"logLines": ["攻击 提升到 19。"],
+	}).to_utf8_buffer())
+	var profile_action_parse_ok := (
+		bool(parsed_profile_action.get("ok", false))
+		and int((parsed_profile_action.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 14
+		and str((parsed_profile_action.get("result", {}) as Dictionary).get("statKey", "")) == "attack"
+		and (parsed_profile_action.get("logLines", []) as Array).size() == 1
+	)
 	var shop_transaction_spec := ServerAuthClientModel.shop_transaction_request(
 		"http://127.0.0.1:8787/",
 		"token_test",
@@ -16249,6 +16293,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var status := "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok and conflict_ok else "failed"
+	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
 	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_enhance_request_ok and equipment_enhance_parse_ok else "failed"
@@ -16259,11 +16304,12 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok else "failed"
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s encounter_route=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s conflict=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s online=%s position=%s movement=%s event=%s party=%s battle=%s encounter_route=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
+		str(profile_action_request_ok and profile_action_parse_ok),
 		str(shop_transaction_request_ok and shop_transaction_parse_ok),
 		str(equipment_equip_request_ok and equipment_equip_parse_ok),
 		str(equipment_enhance_request_ok and equipment_enhance_parse_ok),
@@ -27144,6 +27190,21 @@ func _is_server_account_session() -> bool:
 	)
 
 
+func _local_profile_mutation_blocked_for_server_only(action_label: String, emit_message: bool = true) -> bool:
+	if not AUTH_SERVER_ONLY:
+		return false
+	if _is_server_account_session():
+		return false
+	if auth_auto_bypass or not profile_save_enabled:
+		return false
+	if emit_message:
+		var label := action_label.strip_edges()
+		if label == "":
+			label = "该操作"
+		_set_world_log_message("%s 需要连接服务器后执行，服务器版不会本地改档。" % label)
+	return true
+
+
 func _server_profile_base_url() -> String:
 	var base_url := str(current_account_session.get("serverBaseUrl", "")).strip_edges()
 	if base_url == "" and auth_server_url_input != null:
@@ -30166,6 +30227,9 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 
 func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 	var messages: Array[String] = []
+	if _local_profile_mutation_blocked_for_server_only("任务进度", false):
+		messages.append("任务进度需要连接服务器后同步。")
+		return messages
 	var progress_result := PlayerProgressModel.record_quest_event(player_profile, event)
 	player_profile = progress_result.get("profile", player_profile)
 	if not bool(progress_result.get("changed", false)):
@@ -30411,6 +30475,16 @@ func _on_player_status_equipment_pressed() -> void:
 
 
 func _on_player_status_allocate_pressed(stat_key: String) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("player_stat_allocate", {"statKey": stat_key}, "分配属性点失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_request_player_status_refresh()
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("分配属性点"):
+		return
 	var result := PlayerProgressModel.allocate_player_stat_point_fast(player_profile, stat_key)
 	player_profile = result.get("profile", player_profile)
 	var ok := bool(result.get("ok", false))
@@ -30559,6 +30633,10 @@ func _on_player_rebirth_execute_pressed() -> void:
 		return
 	if _is_server_account_session():
 		await _submit_server_player_rebirth()
+		return
+	if _local_profile_mutation_blocked_for_server_only("人物转生"):
+		player_rebirth_confirm_pending = false
+		_refresh_player_rebirth_preview_panel()
 		return
 	var result := PlayerProgressModel.execute_rebirth(player_profile)
 	player_profile = result.get("profile", player_profile)
@@ -31232,6 +31310,8 @@ func _select_equipment_slot(slot_id: String) -> void:
 
 
 func _on_equipment_unequip_pressed() -> void:
+	if _local_profile_mutation_blocked_for_server_only("卸下装备"):
+		return
 	var result := PlayerProgressModel.unequip_slot(player_profile, equipment_selected_slot_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -31247,6 +31327,8 @@ func _on_equipment_enhance_pressed() -> void:
 		return
 	if _is_server_account_session():
 		await _submit_server_equipment_enhance(equipment_selected_slot_id)
+		return
+	if _local_profile_mutation_blocked_for_server_only("装备强化"):
 		return
 	var result := PlayerProgressModel.enhance_equipment_slot(player_profile, equipment_selected_slot_id)
 	player_profile = result.get("profile", player_profile)
@@ -31395,6 +31477,8 @@ func _on_equipment_synthesis_pressed() -> void:
 		return
 	if _is_server_account_session():
 		await _submit_server_equipment_synthesis(equipment_synthesis_selected_recipe_id)
+		return
+	if _local_profile_mutation_blocked_for_server_only("装备合成"):
 		return
 	var result := PlayerProgressModel.synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id)
 	player_profile = result.get("profile", player_profile)
@@ -31698,6 +31782,8 @@ func _unlock_backpack_slot_from_dialog() -> void:
 			return
 		active_dialog_interaction["dialog"] = [message, "当前钻石：%d" % _profile_diamonds_for_ui()]
 		_update_dialog_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("背包扩容"):
 		return
 	var result := PlayerProgressModel.unlock_backpack_slot(player_profile, extra_index)
 	player_profile = result.get("profile", player_profile)
@@ -32347,6 +32433,8 @@ func _equip_selected_backpack_item(item_id: String) -> void:
 	if _is_server_account_session():
 		await _submit_server_equipment_equip(item_id)
 		return
+	if _local_profile_mutation_blocked_for_server_only("装备更换"):
+		return
 	var result := PlayerProgressModel.equip_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -32419,6 +32507,8 @@ func _use_backpack_player_exp_item(item_id: String) -> void:
 		_refresh_quick_bar()
 		if status_label != null:
 			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("使用物品"):
 		return
 	var result := PlayerProgressModel.use_world_player_exp_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
@@ -32651,6 +32741,8 @@ func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> D
 		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
 		result["ok"] = bool(parsed.get("ok", false))
 		return result
+	if _local_profile_mutation_blocked_for_server_only("使用物品"):
+		return {"ok": false, "message": "使用物品需要连接服务器后执行。"}
 	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -32678,6 +32770,8 @@ func _use_world_pet_exp_item_and_log(item_id: String, instance_id: String) -> Di
 		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
 		result["ok"] = bool(parsed.get("ok", false))
 		return result
+	if _local_profile_mutation_blocked_for_server_only("使用物品"):
+		return {"ok": false, "message": "使用物品需要连接服务器后执行。"}
 	var result := PlayerProgressModel.use_world_pet_exp_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -32699,6 +32793,8 @@ func _use_world_mm_stone_item_and_log(item_id: String, instance_id: String) -> D
 		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
 		result["ok"] = bool(parsed.get("ok", false))
 		return result
+	if _local_profile_mutation_blocked_for_server_only("使用物品"):
+		return {"ok": false, "message": "使用物品需要连接服务器后执行。"}
 	var result := PlayerProgressModel.use_world_mm_stone_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -32720,6 +32816,8 @@ func _use_backpack_pet_egg_item(item_id: String) -> void:
 		_refresh_quick_bar()
 		if status_label != null:
 			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("使用宠物蛋"):
 		return
 	var result := PlayerProgressModel.use_world_pet_egg_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
@@ -33169,6 +33267,8 @@ func _on_shop_action_pressed() -> void:
 	if _is_server_account_session():
 		await _submit_server_shop_action()
 		return
+	if _local_profile_mutation_blocked_for_server_only("商店交易"):
+		return
 	var result := PlayerProgressModel.sell_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity) if shop_mode == "sell" else PlayerProgressModel.buy_shop_item(player_profile, shop_active_id, shop_selected_item_id, shop_quantity)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -33267,6 +33367,8 @@ func _on_shop_repair_pressed() -> void:
 		return
 	if _is_server_account_session():
 		await _submit_server_equipment_repair_all()
+		return
+	if _local_profile_mutation_blocked_for_server_only("装备修理"):
 		return
 	var result := PlayerProgressModel.repair_all_equipment(player_profile)
 	player_profile = result.get("profile", player_profile)
@@ -33702,6 +33804,8 @@ func _on_pet_skill_move_pressed(direction: int) -> void:
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 		return
+	if _local_profile_mutation_blocked_for_server_only("宠物技能调整"):
+		return
 	var result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, pet_skill_selected_slot, direction)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
@@ -33751,6 +33855,8 @@ func _apply_pet_skill_to_selected_slot(skill_id: String) -> void:
 		_refresh_pet_skill_panel()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
+		return
+	if _local_profile_mutation_blocked_for_server_only("宠物技能学习"):
 		return
 	var result := PlayerProgressModel.learn_pet_skill_to_slot(player_profile, pet_selected_instance_id, skill_id, slot, pet_skill_trainer_id)
 	player_profile = result.get("profile", player_profile)
@@ -33824,6 +33930,8 @@ func _on_pet_skill_forget_pressed() -> void:
 		_refresh_pet_skill_panel()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
+		return
+	if _local_profile_mutation_blocked_for_server_only("宠物技能遗忘"):
 		return
 	var result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, skill_id)
 	player_profile = result.get("profile", player_profile)
@@ -36708,6 +36816,8 @@ func _on_quest_claim_pressed() -> void:
 		_refresh_quest_panel()
 		if status_label != null:
 			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("领取任务奖励"):
 		return
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile, choice_id)
 	player_profile = claim_result.get("profile", player_profile)
@@ -40882,6 +40992,8 @@ func _claim_dialog_quest_reward() -> void:
 	if _is_server_account_session():
 		_run_server_dialog_quest_claim()
 		return
+	if _local_profile_mutation_blocked_for_server_only("领取任务奖励"):
+		return
 	var claim_result := PlayerProgressModel.claim_active_quest(player_profile)
 	player_profile = claim_result.get("profile", player_profile)
 	if bool(claim_result.get("ok", false)):
@@ -40910,6 +41022,8 @@ func _claim_dialog_optional_quest_reward() -> void:
 	if _is_server_account_session():
 		_run_server_dialog_quest_claim(quest_id)
 		return
+	if _local_profile_mutation_blocked_for_server_only("领取任务奖励"):
+		return
 	var claim_result := PlayerProgressModel.claim_optional_quest(player_profile, quest_id)
 	player_profile = claim_result.get("profile", player_profile)
 	if bool(claim_result.get("ok", false)):
@@ -40935,6 +41049,8 @@ func _complete_dialog_talk_quest() -> void:
 			"type": "talk",
 			"targetId": str(active_dialog_interaction.get("id", "")),
 		})
+		return
+	if _local_profile_mutation_blocked_for_server_only("任务进度"):
 		return
 	var quest_messages := _record_quest_event_and_maybe_claim({
 		"type": "talk",
@@ -40966,6 +41082,8 @@ func _complete_dialog_optional_talk_quest() -> void:
 			"type": "talk",
 			"targetId": str(active_dialog_interaction.get("id", "")),
 		}, quest_id)
+		return
+	if _local_profile_mutation_blocked_for_server_only("任务进度"):
 		return
 	var messages: Array[String] = []
 	var progress_result := PlayerProgressModel.record_optional_quest_event(player_profile, quest_id, {
@@ -41014,6 +41132,8 @@ func _apply_dialog_healer(from_hang_auto: bool = false) -> void:
 			_update_hud_text()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
+		return
+	if _local_profile_mutation_blocked_for_server_only("村医治疗"):
 		return
 	var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
 	player_profile = heal_result.get("profile", player_profile)
@@ -41168,6 +41288,8 @@ func _claim_pet_rebirth_mm_stage2_from_dialog() -> void:
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 		return
+	if _local_profile_mutation_blocked_for_server_only("领取宠物转生奖励"):
+		return
 	var result := PlayerProgressModel.claim_pet_rebirth_mm_stage2(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -41190,6 +41312,8 @@ func _start_pet_rebirth_mm_guide_from_dialog() -> void:
 		_update_dialog_text()
 		if status_label != null:
 			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("宠物转生教学"):
 		return
 	var result := PlayerProgressModel.start_pet_rebirth_mm_guide(player_profile)
 	player_profile = result.get("profile", player_profile)
@@ -41502,6 +41626,8 @@ func _save_record_point_from_dialog() -> void:
 		_update_dialog_text()
 		if status_label != null:
 			_update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("保存记录点"):
 		return
 	player_profile = PlayerProgressModel.with_record_point(
 		player_profile,

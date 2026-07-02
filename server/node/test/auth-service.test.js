@@ -435,6 +435,8 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
     "defense": 12,
     "quick": 42,
   });
+  profile.player.statPoints = 2;
+  profile.player.baseStats = {"maxHp": 120, "attack": 18, "defense": 6, "quick": 70};
   profile.diamonds = 60;
   profile.stoneCoins = 200;
   profile.backpackSlots = [
@@ -458,6 +460,13 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
     "petRebirthHelper": {"stage": 1, "stonePoints": {"maxHp": 0, "attack": 48, "defense": 0, "quick": 0}},
   });
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const statAllocated = service.profileAction(token, {"action": "player_stat_allocate", "payload": {"statKey": "maxHp"}});
+  assert.equal(statAllocated.ok, true);
+  assert.equal(statAllocated.profile.player.statPoints, 1);
+  assert.equal(statAllocated.profile.player.baseStats.maxHp, 124);
+  assert.equal(statAllocated.profile.player.maxHp, 124);
+  assert.equal(statAllocated.profile.player.hp, 84);
 
   const unlock = service.profileAction(token, {"action": "backpack_unlock_slot", "payload": {"extraSlotIndex": 0}});
   assert.equal(unlock.ok, true);

@@ -13,7 +13,7 @@ static func contract() -> Dictionary:
 		"schemaVersion": SCHEMA_VERSION,
 		"contractVersion": CONTRACT_VERSION,
 		"authority": {
-			"current": "local_godot_files",
+			"current": "node_mysql_server",
 			"future": "node_mysql_server",
 			"productionGmSource": "server_grants_only",
 			"prototypeGmSource": "local_account_plus_plugin",
@@ -35,6 +35,8 @@ static func contract() -> Dictionary:
 				"localPluginIgnoredInProduction": true,
 				"clientMayHideButNeverAuthorizeGm": true,
 				"clientCannotUploadFullProfile": true,
+				"clientGameplayRequiresServerSession": true,
+				"gameplayWritesUseTransactionEndpoints": true,
 		},
 	}
 
@@ -66,6 +68,8 @@ static func validation_errors() -> Array[String]:
 			"localPluginIgnoredInProduction",
 			"clientMayHideButNeverAuthorizeGm",
 			"clientCannotUploadFullProfile",
+			"clientGameplayRequiresServerSession",
+			"gameplayWritesUseTransactionEndpoints",
 		]:
 		if not bool(security.get(key, false)):
 			errors.append("securityRules.%s 必须为 true" % key)
