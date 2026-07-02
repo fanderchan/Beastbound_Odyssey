@@ -420,6 +420,117 @@ test("profiles sync with revision conflict protection", () => {
   assert.equal(conflict.profileSummary.profileRevision, 1);
 });
 
+test("profile action endpoint applies whitelisted gameplay mutations server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "profileaction", "password": "test1234", "displayName": "档案动作"});
+  const token = registered.session.token;
+  const profile = battleProfile("档案动作", {"level": 1, "hp": 80, "maxHp": 120}, {
+    "petId": "pet_action_target",
+    "formId": "bui_normal_red_fire10",
+    "name": "动作布伊",
+    "level": 10,
+    "hp": 12,
+    "maxHp": 90,
+    "attack": 30,
+    "defense": 12,
+    "quick": 42,
+  });
+  profile.diamonds = 60;
+  profile.stoneCoins = 200;
+  profile.backpackSlots = [
+    {"itemId": "item_meat_small", "count": 1},
+    {"itemId": "mm_stone_attack_high", "count": 1},
+    ...Array.from({"length": 13}, () => ({})),
+  ];
+  profile.petInstances.push({
+    "instanceId": "pet_action_mm",
+    "petId": "pet_action_mm",
+    "formId": "pet_rebirth_mm_stage1",
+    "templateId": "pet_rebirth_mm_stage1",
+    "name": "动作小MM",
+    "state": "standby",
+    "level": 10,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 12,
+    "quick": 42,
+    "petRebirthHelper": {"stage": 1, "stonePoints": {"maxHp": 0, "attack": 48, "defense": 0, "quick": 0}},
+  });
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const unlock = service.profileAction(token, {"action": "backpack_unlock_slot", "payload": {"extraSlotIndex": 0}});
+  assert.equal(unlock.ok, true);
+  assert.equal(unlock.profile.backpackExtraSlots, 1);
+  assert.equal(unlock.profile.diamonds, 10);
+
+  const healed = service.profileAction(token, {"action": "world_item_use", "payload": {"itemId": "item_meat_small", "instanceId": "pet_action_target"}});
+  assert.equal(healed.ok, true);
+  assert.equal(profileItemCount(healed.profile, "item_meat_small"), 0);
+  assert.equal(healed.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").hp, 40);
+
+  const fedStone = service.profileAction(token, {"action": "world_item_use", "payload": {"itemId": "mm_stone_attack_high", "instanceId": "pet_action_mm"}});
+  assert.equal(fedStone.ok, true);
+  assert.equal(profileItemCount(fedStone.profile, "mm_stone_attack_high"), 0);
+  assert.equal(fedStone.profile.petInstances.find((pet) => pet.instanceId === "pet_action_mm").petRebirthHelper.stonePoints.attack, 50);
+
+  const learned = service.profileAction(token, {
+    "action": "pet_skill_set_slot",
+    "payload": {"instanceId": "pet_action_target", "slot": 7, "skillId": "pet_focus_bite", "trainerId": "firebud_pet_skill_trainer"},
+  });
+  assert.equal(learned.ok, true);
+  assert.equal(learned.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").petSkillSlots[6], "pet_focus_bite");
+  assert.equal(learned.profile.stoneCoins, 172);
+
+  const renamed = service.profileAction(token, {"action": "pet_rename", "payload": {"instanceId": "pet_action_target", "name": "服务布伊"}});
+  assert.equal(renamed.ok, true);
+  assert.equal(renamed.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
+
+  const recordPoint = service.profileAction(token, {
+    "action": "record_point_save",
+    "payload": {"recordPoint": {"mapId": "firebud_training_yard", "spawnName": "yard", "label": "训练场"}},
+  });
+  assert.equal(recordPoint.ok, true);
+  assert.equal(recordPoint.profile.recordPoint.mapId, "firebud_training_yard");
+
+  const beforeCultivation = service.getProfile(token).profile;
+  beforeCultivation.petInstances = beforeCultivation.petInstances.filter((pet) => pet.instanceId !== "pet_action_mm");
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").level = 80;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").hp = 500;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").maxHp = 500;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").attack = 100;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").defense = 60;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").quick = 80;
+  beforeCultivation.petInstances.find((pet) => pet.instanceId === "pet_action_target").initialStats = {"maxHp": 90, "attack": 12, "defense": 6, "quick": 50};
+  beforeCultivation.petInstances.push({
+    "instanceId": "pet_rebirth_helper",
+    "petId": "pet_rebirth_helper",
+    "formId": "pet_rebirth_mm_stage1",
+    "templateId": "pet_rebirth_mm_stage1",
+    "name": "满石小MM",
+    "state": "standby",
+    "level": 79,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 12,
+    "quick": 42,
+    "petRebirthHelper": {"stage": 1, "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50}},
+  });
+  assert.equal(service.saveProfile(token, {"expectedRevision": recordPoint.profileSummary.profileRevision, "profile": beforeCultivation}).ok, true);
+  const cultivated = service.profileAction(token, {"action": "pet_cultivation_apply", "payload": {"instanceId": "pet_action_target"}});
+  assert.equal(cultivated.ok, true);
+  const cultivatedPet = cultivated.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target");
+  assert.equal(cultivatedPet.level, 1);
+  assert.equal(cultivatedPet.petCultivation.rebirthCount, 1);
+  assert.equal(cultivated.profile.petInstances.some((pet) => pet.instanceId === "pet_rebirth_helper"), false);
+  assert.equal(cultivated.profile.petRebirthMmGuide.status, "completed");
+
+  const loaded = service.getProfile(token);
+  assert.equal(loaded.profileSummary.profileRevision, cultivated.profileSummary.profileRevision);
+  assert.equal(loaded.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
+});
+
 test("server shop transactions validate price, currency, backpack, and buy quests", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "shopuser", "password": "test1234", "displayName": "商店玩家"});
@@ -4050,6 +4161,56 @@ test("HTTP server exposes server-authoritative shop transaction endpoint", async
   });
   assert.equal(denied.ok, false);
   assert.equal(denied.code, "not_enough_currency");
+});
+
+test("HTTP server exposes server-authoritative profile action endpoint", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpprofileaction", "password": "test1234", "displayName": "接口档案"}),
+  });
+  assert.equal(registered.ok, true);
+  const profile = battleProfile("接口档案", {"level": 1, "hp": 80, "maxHp": 120}, {
+    "petId": "http_pet_action",
+    "formId": "bui_normal_red_fire10",
+    "name": "接口布伊",
+    "level": 1,
+    "hp": 10,
+    "maxHp": 90,
+  });
+  profile.backpackSlots = [
+    {"itemId": "item_meat_small", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(registered.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const healed = await fetchJson(`${base}/profile/action`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({
+      "action": "world_item_use",
+      "payload": {"itemId": "item_meat_small", "instanceId": "http_pet_action"},
+    }),
+  });
+  assert.equal(healed.ok, true);
+  assert.equal(healed.profileSummary.serverAuthority, "profile_document");
+  assert.equal(healed.profile.petInstances.find((pet) => pet.instanceId === "http_pet_action").hp, 38);
+  assert.equal(profileItemCount(healed.profile, "item_meat_small"), 0);
+
+  const invalid = await fetchJson(`${base}/profile/action`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"action": "unknown_local_mutation", "payload": {}}),
+  });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.code, "profile_action_invalid");
 });
 
 test("HTTP server exposes server-authoritative quest record and claim endpoints", async (t) => {

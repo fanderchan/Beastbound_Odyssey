@@ -137,6 +137,7 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("session", "GET", "/auth/session", "session", "查询服务端计算后的账号和 effectiveRole。"),
 		_endpoint("profileMe", "GET", "/profiles/me", "session", "读取当前账号绑定的玩家档案。"),
 		_endpoint("profileUploadDisabled", "PUT", "/profiles/me", "disabled", "整档上传已退役，普通玩法必须走服务端专用事务接口。"),
+		_endpoint("profileAction", "POST", "/profile/action", "session", "服务端白名单校验背包、宠物、记录点、村医和世界道具等玩法动作并回写档案。"),
 		_endpoint("shopTransaction", "POST", "/shops/transaction", "session", "服务端校验商店购买/出售并回写档案。"),
 		_endpoint("equipmentEquip", "POST", "/equipment/equip", "session", "服务端校验背包装备并回写档案。"),
 		_endpoint("equipmentEnhance", "POST", "/equipment/enhance", "session", "服务端校验材料、石币和强化上限后强化已装备物品。"),

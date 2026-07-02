@@ -138,6 +138,8 @@ const BATTLE_PARTY_EXP_BONUS_RATES = Object.freeze({
 });
 const BACKPACK_BASE_SLOT_LIMIT = 15;
 const BACKPACK_SLOT_LIMIT = 20;
+const BACKPACK_EXTRA_SLOT_LIMIT = BACKPACK_SLOT_LIMIT - BACKPACK_BASE_SLOT_LIMIT;
+const BACKPACK_UNLOCK_COSTS = [50, 100, 200, 400, 1000];
 const DEFAULT_STONE_COINS = 120;
 const DEFAULT_DIAMONDS = 999999;
 const DEV_DIAMONDS_GRANT_VERSION = 1;
@@ -162,6 +164,69 @@ const DEFAULT_PET_BATTLE_STATS = {
   defense: 6,
   quick: 50,
 };
+const BATTLE_PET_STATE_REST = "rest";
+const PET_NAME_MAX_LENGTH = 8;
+const PET_DROP_TTL_SECONDS = 600;
+const PET_PICKUP_LEVEL_MARGIN = 5;
+const PET_REBIRTH_MM_STAGE2_CLAIMED_KEY = "petRebirthMmStage2Claimed";
+const PET_REBIRTH_MM_GUIDE_KEY = "petRebirthMmGuide";
+const PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE = "available";
+const PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE = "active";
+const PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED = "completed";
+const PET_CULTIVATION_MODE_ENHANCE = "enhance";
+const PET_CULTIVATION_MODE_REBIRTH = "rebirth";
+const PET_CULTIVATION_MAX_ENHANCE_LEVEL = 10;
+const PET_CULTIVATION_MAX_HISTORY_RECORDS = 20;
+const PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL = 79;
+const PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL = 80;
+const PET_REBIRTH_MM_MAX_STAGE = 2;
+const PET_REBIRTH_MM_STONE_CAPACITY = 50;
+const PET_REBIRTH_MM_HP_INTERNAL_SCALE = 4.0;
+const PET_REBIRTH_MM_TARGET_WEIGHT_SCALE = 1.0;
+const PET_REBIRTH_MM_STONE_WEIGHT_SCALE = 8.0;
+const PET_REBIRTH_MM_HELPER_GROWTH_WEIGHT_SCALE = 0.6;
+const PET_REBIRTH_MM_STONE_EFFECTIVE_EXPONENT = 1.35;
+const PET_REBIRTH_MM_STAT_KEYS = ["maxHp", "attack", "defense", "quick"];
+const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
+  1: {
+    0: {min: 0.00, max: 0.10},
+    1: {min: 0.55, max: 0.95},
+    2: {min: 0.80, max: 1.25},
+    3: {min: 1.00, max: 1.45},
+    4: {min: 1.15, max: 1.65},
+  },
+  2: {
+    0: {min: 0.00, max: 0.12},
+    1: {min: 0.65, max: 1.05},
+    2: {min: 0.95, max: 1.40},
+    3: {min: 1.15, max: 1.65},
+    4: {min: 1.35, max: 1.85},
+  },
+};
+const PROFILE_ACTION_IDS = new Set([
+  "backpack_unlock_slot",
+  "village_heal",
+  "record_point_save",
+  "world_item_use",
+  "pet_skill_set_slot",
+  "pet_skill_move_slot",
+  "pet_skill_forget",
+  "pet_state_cycle",
+  "pet_stable_toggle",
+  "pet_party_move",
+  "pet_lock_toggle",
+  "pet_batch_store",
+  "pet_batch_state",
+  "pet_rename",
+  "pet_drop",
+  "pet_clear_storage",
+  "pet_pickup_drop",
+  "pet_expire_drops",
+  "pet_mark_seen",
+  "pet_rebirth_mm_stage2_claim",
+  "pet_rebirth_mm_guide_start",
+  "pet_cultivation_apply",
+]);
 const PLAYER_REBIRTH_COUNT_KEY = "rebirthCount";
 const PLAYER_REBIRTH_HISTORY_KEY = "rebirthHistory";
 const PLAYER_REBIRTH_QUEST_COMPLETIONS_KEY = "rebirthQuestCompletions";
@@ -529,6 +594,51 @@ function createAuthService(options = {}) {
       profile: clone(profile),
       hang: publicHangSession(nextSession),
       message: "挂机已停止。",
+    });
+  }
+
+  function profileAction(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const binding = ensured.binding;
+    const profileDoc = ensured.profileDoc;
+    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
+      return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const action = normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command);
+    if (!PROFILE_ACTION_IDS.has(action)) {
+      return fail("profile_action_invalid", "档案操作不正确。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const profile = clone(profileDoc.profile);
+    const params = objectOrEmpty(payload.payload || payload.params || payload);
+    const actionResult = applyProfileActionToProfile(profile, action, params, now);
+    if (!actionResult.ok) {
+      return fail(actionResult.code || "profile_action_failed", actionResult.message || "档案操作失败。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+        result: publicProfileActionResult(action, actionResult),
+      });
+    }
+    const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
+    save(data);
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: persisted.binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profile: clone(profile),
+      result: publicProfileActionResult(action, actionResult),
+      logLines: profileActionLogLines(actionResult),
+      message: actionResult.message || "角色档案已更新。",
     });
   }
 
@@ -2400,6 +2510,7 @@ function createAuthService(options = {}) {
     getSession,
     getProfile,
     saveProfile,
+    profileAction,
     startHangSession,
     stopHangSession,
     playerRebirth,
@@ -3041,6 +3152,7 @@ let questDocumentCache = null;
 let petTemplateDocumentCache = null;
 let playerGrowthDocumentCache = null;
 let rebirthTrialDocumentCache = null;
+let petSkillTrainingDocumentCache = null;
 
 function equipmentDocument() {
   if (!equipmentDocumentCache) {
@@ -3131,6 +3243,13 @@ function rebirthTrialDocument() {
     rebirthTrialDocumentCache = loadDataDocument("rebirth_trials.json");
   }
   return rebirthTrialDocumentCache;
+}
+
+function petSkillTrainingDocument() {
+  if (!petSkillTrainingDocumentCache) {
+    petSkillTrainingDocumentCache = loadDataDocument("pet_skill_training.json");
+  }
+  return petSkillTrainingDocumentCache;
 }
 
 function executePlayerRebirthToProfile(profile) {
@@ -9920,6 +10039,1564 @@ function profilePartyVisiblePetCount(profile) {
 function profileStoragePetCount(profile) {
   const instances = Array.isArray(profile && profile.petInstances) ? profile.petInstances : [];
   return instances.filter((pet) => pet && String(pet.state || BATTLE_PET_STATE_STANDBY) === BATTLE_PET_STATE_STORAGE).length;
+}
+
+function normalizeProfileActionId(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function applyProfileActionToProfile(profile, action, params, now) {
+  switch (action) {
+    case "backpack_unlock_slot":
+      return applyBackpackUnlockSlotAction(profile, params);
+    case "village_heal":
+      return applyVillageHealAction(profile);
+    case "record_point_save":
+      return applyRecordPointSaveAction(profile, params);
+    case "world_item_use":
+      return applyWorldItemUseAction(profile, params);
+    case "pet_skill_set_slot":
+      return applyPetSkillSetSlotAction(profile, params);
+    case "pet_skill_move_slot":
+      return applyPetSkillMoveSlotAction(profile, params);
+    case "pet_skill_forget":
+      return applyPetSkillForgetAction(profile, params);
+    case "pet_state_cycle":
+      return applyPetStateCycleAction(profile, params);
+    case "pet_stable_toggle":
+      return applyPetStableToggleAction(profile, params);
+    case "pet_party_move":
+      return applyPetPartyMoveAction(profile, params);
+    case "pet_lock_toggle":
+      return applyPetLockToggleAction(profile, params);
+    case "pet_batch_store":
+      return applyPetBatchStoreAction(profile);
+    case "pet_batch_state":
+      return applyPetBatchStateAction(profile, params);
+    case "pet_rename":
+      return applyPetRenameAction(profile, params);
+    case "pet_drop":
+      return applyPetDropAction(profile, params, now);
+    case "pet_clear_storage":
+      return applyPetClearStorageAction(profile, params);
+    case "pet_pickup_drop":
+      return applyPetPickupDropAction(profile, params, now);
+    case "pet_expire_drops":
+      return applyPetExpireDropsAction(profile, params, now);
+    case "pet_mark_seen":
+      return applyPetMarkSeenAction(profile, params);
+    case "pet_rebirth_mm_stage2_claim":
+      return applyPetRebirthMmStage2ClaimAction(profile);
+    case "pet_rebirth_mm_guide_start":
+      return applyPetRebirthMmGuideStartAction(profile, now);
+    case "pet_cultivation_apply":
+      return applyPetCultivationAction(profile, params, now);
+    default:
+      return {ok: false, code: "profile_action_invalid", message: "档案操作不正确。"};
+  }
+}
+
+function publicProfileActionResult(action, result) {
+  const source = objectOrEmpty(result);
+  return {
+    action,
+    ok: Boolean(source.ok),
+    code: String(source.code || ""),
+    message: String(source.message || ""),
+    itemId: String(source.itemId || ""),
+    instanceId: String(source.instanceId || source.petId || ""),
+    dropId: String(source.dropId || ""),
+    slot: Math.max(0, Math.trunc(Number(source.slot || 0))),
+    cost: Math.max(0, Math.trunc(Number(source.cost || 0))),
+    amount: Math.max(0, Math.trunc(Number(source.amount || source.heal || source.exp || 0))),
+    changedCount: Math.max(0, Math.trunc(Number(source.changedCount || 0))),
+    skippedCount: Math.max(0, Math.trunc(Number(source.skippedCount || 0))),
+    schemaVersion: 1,
+  };
+}
+
+function profileActionLogLines(result) {
+  const lines = [];
+  const message = String(result && result.message || "").trim();
+  if (message !== "") {
+    lines.push(message);
+  }
+  return lines;
+}
+
+function profilePetInstances(profile) {
+  if (!Array.isArray(profile.petInstances)) {
+    profile.petInstances = Array.isArray(profile.pets) ? clone(profile.pets) : [];
+  }
+  return profile.petInstances;
+}
+
+function profilePetIndexById(profile, instanceId) {
+  const normalizedId = String(instanceId || "").trim();
+  if (normalizedId === "") {
+    return -1;
+  }
+  const instances = profilePetInstances(profile);
+  return instances.findIndex((pet) => profilePetIdentityValues(pet).includes(normalizedId));
+}
+
+function profilePetByInstanceId(profile, instanceId) {
+  const index = profilePetIndexById(profile, instanceId);
+  return index >= 0 ? profilePetInstances(profile)[index] : null;
+}
+
+function profilePetName(pet) {
+  return String(pet && pet.name || "宠物");
+}
+
+function profilePetState(pet) {
+  return String(pet && pet.state || BATTLE_PET_STATE_STANDBY);
+}
+
+function stateLabel(state) {
+  switch (String(state || "")) {
+    case BATTLE_PET_STATE_BATTLE:
+      return "战斗";
+    case BATTLE_PET_STATE_STANDBY:
+      return "待机";
+    case BATTLE_PET_STATE_REST:
+      return "休息";
+    case BATTLE_PET_STATE_RIDING:
+      return "骑乘";
+    case BATTLE_PET_STATE_STORAGE:
+      return "兽栏";
+    default:
+      return "未知";
+  }
+}
+
+function profileBackpackExtraSlots(profile) {
+  return clampInt(profile && profile.backpackExtraSlots, 0, BACKPACK_EXTRA_SLOT_LIMIT, 0);
+}
+
+function normalizeProfileBackpack(profile) {
+  const limit = BACKPACK_BASE_SLOT_LIMIT + profileBackpackExtraSlots(profile);
+  profile.backpackSlots = normalizeBackpackSlots(profileBackpackSlots(profile), limit);
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return profile.backpackSlots;
+}
+
+function consumeProfileBackpackItem(profile, itemId, count = 1) {
+  const slots = normalizeProfileBackpack(profile);
+  const normalizedItemId = String(itemId || "").trim();
+  const required = Math.max(1, Math.trunc(Number(count || 1)));
+  if (backpackItemCount(slots, normalizedItemId) < required) {
+    return false;
+  }
+  profile.backpackSlots = consumeBackpackItem(slots, normalizedItemId, required);
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return true;
+}
+
+function applyBackpackUnlockSlotAction(profile, params) {
+  const extraSlots = profileBackpackExtraSlots(profile);
+  if (extraSlots >= BACKPACK_EXTRA_SLOT_LIMIT) {
+    return {ok: false, code: "backpack_slots_max", message: "扩展背包位已全部解锁。"};
+  }
+  const requested = Math.trunc(Number(params.extraSlotIndex ?? params.slotIndex ?? -1));
+  if (requested >= 0 && requested !== extraSlots) {
+    return {ok: false, code: "backpack_slot_order", message: "请先解锁前一个扩展背包位。"};
+  }
+  const cost = Math.max(0, Math.trunc(Number(BACKPACK_UNLOCK_COSTS[extraSlots] || 0)));
+  const diamonds = profileCurrencyAmount(profile, SHOP_CURRENCY_DIAMONDS);
+  if (diamonds < cost) {
+    return {ok: false, code: "not_enough_diamonds", message: `钻石不足，还需要 ${cost - diamonds} 钻石。`, cost};
+  }
+  profile.backpackExtraSlots = extraSlots + 1;
+  setProfileCurrencyAmount(profile, SHOP_CURRENCY_DIAMONDS, diamonds - cost);
+  normalizeProfileBackpack(profile);
+  return {ok: true, message: `已消耗 ${cost} 钻石，解锁第 ${extraSlots + 1} 个扩展背包位。`, cost};
+}
+
+function applyVillageHealAction(profile) {
+  const quote = villageHealerQuote(profile);
+  if (quote.missingHp <= 0) {
+    return {ok: false, code: "heal_not_needed", message: "队伍生命已满。", heal: 0, cost: 0};
+  }
+  if (profileStoneCoins(profile) < quote.cost) {
+    return {ok: false, code: "not_enough_stone_coins", message: "石币不足，无法治疗。", heal: 0, cost: quote.cost};
+  }
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const playerMax = Math.max(1, Math.trunc(Number(profile.player.maxHp || DEFAULT_PLAYER_BATTLE_STATS.maxHp)));
+  profile.player.hp = playerMax;
+  let healedUnits = 1;
+  for (const pet of profilePetInstances(profile)) {
+    if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
+      continue;
+    }
+    if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+      continue;
+    }
+    const maxHp = Math.max(1, Math.trunc(Number(pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+    if (Math.max(0, Math.trunc(Number(pet.hp || maxHp))) < maxHp) {
+      healedUnits += 1;
+    }
+    pet.hp = maxHp;
+  }
+  profile.stoneCoins = Math.max(0, profileStoneCoins(profile) - quote.cost);
+  return {ok: true, message: `村医治疗完成，恢复${quote.missingHp}生命，花费${quote.cost}石币。`, heal: quote.missingHp, cost: quote.cost, healedUnits};
+}
+
+function villageHealerQuote(profile) {
+  const player = objectOrEmpty(profile && profile.player);
+  const playerMax = Math.max(1, Math.trunc(Number(player.maxHp || DEFAULT_PLAYER_BATTLE_STATS.maxHp)));
+  const playerHp = clampInt(player.hp, 0, playerMax, playerMax);
+  let missingHp = Math.max(0, playerMax - playerHp);
+  for (const pet of profilePetInstances(profile)) {
+    if (!pet || typeof pet !== "object" || Array.isArray(pet) || profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+      continue;
+    }
+    const maxHp = Math.max(1, Math.trunc(Number(pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+    const hp = clampInt(pet.hp, 0, maxHp, maxHp);
+    missingHp += Math.max(0, maxHp - hp);
+  }
+  return {
+    missingHp,
+    cost: missingHp > 0 ? Math.max(1, Math.ceil(missingHp / villageHealHpPerCoin())) : 0,
+  };
+}
+
+function villageHealHpPerCoin() {
+  const growth = objectOrEmpty(playerGrowthDocument());
+  const economy = objectOrEmpty(growth.economy || growth.villageHealer || growth.healer);
+  return Math.max(1, Math.trunc(Number(economy.villageHealHpPerCoin || economy.hpPerCoin || 20)));
+}
+
+function applyRecordPointSaveAction(profile, params) {
+  const source = objectOrEmpty(params.recordPoint || params);
+  profile.recordPoint = normalizeRecordPoint({
+    mapId: source.mapId,
+    spawnName: source.spawnName,
+    label: source.label,
+  });
+  return {ok: true, message: `记录点已保存：${profile.recordPoint.label}。`};
+}
+
+function applyWorldItemUseAction(profile, params) {
+  const itemId = String(params.itemId || "").trim();
+  const item = bagItemById(itemId);
+  if (!item) {
+    return {ok: false, code: "item_invalid", message: "物品不存在。"};
+  }
+  const useType = String(objectOrEmpty(item.worldUse).type || "").trim();
+  if (useType === "pet_heal") {
+    return applyWorldPetHealItemAction(profile, itemId, params);
+  }
+  if (useType === "player_exp" || useType === "exp") {
+    return applyWorldPlayerExpItemAction(profile, itemId);
+  }
+  if (useType === "pet_exp") {
+    return applyWorldPetExpItemAction(profile, itemId, params);
+  }
+  if (useType === "mm_stone") {
+    return applyWorldMmStoneItemAction(profile, itemId, params);
+  }
+  if (useType === "pet_form_egg" || useType === "pet_rebirth_mm_egg") {
+    return applyWorldPetEggItemAction(profile, itemId);
+  }
+  if (useType === "encounter_stone") {
+    return {ok: false, code: "item_use_hang_endpoint", message: "遇敌石请通过挂机入口使用。"};
+  }
+  return {ok: false, code: "item_use_unsupported", message: `${bagItemLabel(itemId)} 不能这样使用。`};
+}
+
+function worldUseForItem(itemId) {
+  const item = bagItemById(itemId);
+  return objectOrEmpty(item && item.worldUse);
+}
+
+function applyWorldPetHealItemAction(profile, itemId, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  const itemLabel = bagItemLabel(itemId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_in_storage", message: "只能对队伍宠物使用。"};
+  }
+  const worldUse = worldUseForItem(itemId);
+  const healAmount = Math.max(0, Math.trunc(Number(worldUse.amount || 0)));
+  if (healAmount <= 0) {
+    return {ok: false, code: "item_use_unsupported", message: `${itemLabel} 不能这样使用。`};
+  }
+  const maxHp = Math.max(1, Math.trunc(Number(pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+  const hp = clampInt(pet.hp, 0, maxHp, maxHp);
+  const allowFull = Boolean(worldUse.allowFullHpUse);
+  if (hp >= maxHp && !allowFull) {
+    return {ok: false, code: "pet_hp_full", message: `${profilePetName(pet)} 生命已满。`};
+  }
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  const healed = Math.min(healAmount, Math.max(0, maxHp - hp));
+  pet.hp = hp + healed;
+  return {
+    ok: true,
+    message: healed > 0 ? `${profilePetName(pet)} 使用${itemLabel}，恢复${healed}生命。` : `${profilePetName(pet)} 吃下${itemLabel}，生命已满。`,
+    itemId,
+    instanceId: petId,
+    heal: healed,
+  };
+}
+
+function applyWorldPlayerExpItemAction(profile, itemId) {
+  const itemLabel = bagItemLabel(itemId);
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const exp = expGrantForWorldItem(itemId);
+  const award = applyBattleExpToEntry(profile.player, exp, MAX_PLAYER_LEVEL, {
+    name: String(profile.player.name || "见习猎人"),
+    statPointsPerLevel: PLAYER_STAT_POINTS_PER_LEVEL,
+  });
+  const publicExp = award.publicExp || {};
+  return {
+    ok: true,
+    message: Number(publicExp.levelsGained || 0) > 0
+      ? `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，升到 Lv${Number(profile.player.level || 1)}。`
+      : `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，当前 Lv${Number(profile.player.level || 1)}。`,
+    itemId,
+    exp,
+  };
+}
+
+function applyWorldPetExpItemAction(profile, itemId, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  const itemLabel = bagItemLabel(itemId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (Math.trunc(Number(pet.level || 1)) >= MAX_PET_LEVEL) {
+    return {ok: false, code: "pet_level_max", message: `${profilePetName(pet)} 已满级。`};
+  }
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  const exp = expGrantForWorldItem(itemId);
+  const award = applyBattleExpToEntry(pet, exp, MAX_PET_LEVEL, {name: profilePetName(pet)});
+  const publicExp = award.publicExp || {};
+  return {
+    ok: true,
+    message: Number(publicExp.levelsGained || 0) > 0
+      ? `${profilePetName(pet)} 使用${itemLabel}，获得${exp}经验，升到 Lv${Number(pet.level || 1)}。`
+      : `${profilePetName(pet)} 使用${itemLabel}，获得${exp}经验，当前 Lv${Number(pet.level || 1)}。`,
+    itemId,
+    instanceId: petId,
+    exp,
+  };
+}
+
+function expGrantForWorldItem(itemId) {
+  const level = Math.max(1, Math.trunc(Number(worldUseForItem(itemId).level || 1)));
+  let total = 0;
+  for (let current = 1; current < Math.min(level, MAX_PLAYER_LEVEL); current += 1) {
+    total += battleExpToNextLevel(current);
+  }
+  return Math.max(1, total || battleExpToNextLevel(level));
+}
+
+function applyWorldMmStoneItemAction(profile, itemId, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  const itemLabel = bagItemLabel(itemId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只转生MM。"};
+  }
+  if (!petRebirthMmIsHelperPet(pet)) {
+    return {ok: false, code: "pet_not_mm_helper", message: `${profilePetName(pet)} 不是转生MM。`};
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_in_storage", message: `${profilePetName(pet)} 在兽栏中，不能喂石。`};
+  }
+  if (Math.trunc(Number(pet.level || 1)) >= 74) {
+    return {ok: false, code: "mm_stone_level_limit", message: `${profilePetName(pet)} 已到 Lv74，不能继续喂石。`};
+  }
+  const worldUse = worldUseForItem(itemId);
+  const stat = String(worldUse.stat || "").trim();
+  const points = Math.max(0, Math.trunc(Number(worldUse.points || 0)));
+  if (!["maxHp", "attack", "defense", "quick"].includes(stat) || points <= 0) {
+    return {ok: false, code: "mm_stone_invalid", message: `${itemLabel} 没有有效石头点数。`};
+  }
+  const record = normalizedPetRebirthHelperRecord(pet);
+  const before = Math.max(0, Math.trunc(Number(record.stonePoints[stat] || 0)));
+  if (before >= PET_REBIRTH_MM_STONE_CAPACITY) {
+    return {ok: false, code: "mm_stone_full", message: `${profilePetName(pet)} 的${mmStoneStatLabel(stat)}石已满。`};
+  }
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  const after = Math.min(PET_REBIRTH_MM_STONE_CAPACITY, before + points);
+  record.stonePoints[stat] = after;
+  pet.petRebirthHelper = record;
+  return {
+    ok: true,
+    message: `${profilePetName(pet)} 使用${itemLabel}，${mmStoneStatLabel(stat)}石 ${after}/${PET_REBIRTH_MM_STONE_CAPACITY}。`,
+    itemId,
+    instanceId: petId,
+    amount: after - before,
+  };
+}
+
+function petRebirthMmIsHelperPet(pet) {
+  const helper = objectOrEmpty(pet && pet.petRebirthHelper);
+  if (Math.trunc(Number(helper.stage || 0)) > 0) {
+    return true;
+  }
+  return String(pet && (pet.formId || pet.templateId || "")).includes("pet_rebirth_mm");
+}
+
+function normalizedPetRebirthHelperRecord(pet, fallbackStage = 1) {
+  const source = objectOrEmpty(pet && pet.petRebirthHelper);
+  const points = objectOrEmpty(source.stonePoints);
+  return {
+    schemaVersion: 1,
+    stage: Math.max(1, Math.trunc(Number(source.stage || fallbackStage))),
+    stonePoints: {
+      maxHp: clampInt(points.maxHp, 0, PET_REBIRTH_MM_STONE_CAPACITY, 0),
+      attack: clampInt(points.attack, 0, PET_REBIRTH_MM_STONE_CAPACITY, 0),
+      defense: clampInt(points.defense, 0, PET_REBIRTH_MM_STONE_CAPACITY, 0),
+      quick: clampInt(points.quick, 0, PET_REBIRTH_MM_STONE_CAPACITY, 0),
+    },
+  };
+}
+
+function mmStoneStatLabel(stat) {
+  return {maxHp: "生命", attack: "攻击", defense: "防御", quick: "敏捷"}[String(stat || "")] || "能力";
+}
+
+function applyWorldPetEggItemAction(profile, itemId) {
+  const itemLabel = bagItemLabel(itemId);
+  const grant = grantPetFromWorldEgg(profile, itemId);
+  if (!grant.ok) {
+    return grant;
+  }
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  return {
+    ok: true,
+    message: `使用${itemLabel}，${grant.message}`,
+    itemId,
+    instanceId: grant.instanceId,
+  };
+}
+
+function grantPetFromWorldEgg(profile, itemId) {
+  const worldUse = worldUseForItem(itemId);
+  let formId = String(worldUse.formId || "").trim();
+  let name = String(worldUse.petName || "").trim();
+  const useType = String(worldUse.type || "").trim();
+  if (useType === "pet_rebirth_mm_egg") {
+    const stage = Math.max(1, Math.trunc(Number(worldUse.stage || 1)));
+    formId = stage >= 2 ? "pet_rebirth_mm_stage2" : "pet_rebirth_mm_stage1";
+    name = stage >= 2 ? "2转小MM" : "1转小MM";
+  }
+  if (formId === "") {
+    return {ok: false, code: "pet_egg_invalid", message: `${bagItemLabel(itemId)} 没有配置宠物。`};
+  }
+  const instances = profilePetInstances(profile);
+  const state = profilePartyVisiblePetCount(profile) < BATTLE_PET_MAX_PER_PARTICIPANT
+    ? BATTLE_PET_STATE_STANDBY
+    : BATTLE_PET_STATE_STORAGE;
+  if (state === BATTLE_PET_STATE_STORAGE && profileStoragePetCount(profile) >= BATTLE_PET_STORAGE_LIMIT) {
+    return {ok: false, code: "pet_capacity_full", message: `队伍和兽栏都满了，无法孵化${name || "宠物"}。`};
+  }
+  const serial = nextProfilePetInstanceSerial(profile, instances);
+  const instanceId = `pet_egg_${safeIdPart(formId)}_${serial}`;
+  const pet = createDefaultServerPet(instanceId, name || "宠物", formId, state, 1);
+  if (!pet || Object.keys(pet).length <= 0) {
+    return {ok: false, code: "pet_template_missing", message: `${bagItemLabel(itemId)} 对应宠物不存在。`};
+  }
+  pet.capturedSerial = serial;
+  pet.individualSeed = `pet_egg:${formId}:${serial}`;
+  pet.isNew = true;
+  if (useType === "pet_rebirth_mm_egg") {
+    pet.petRebirthHelper = normalizedPetRebirthHelperRecord({petRebirthHelper: {stage: Math.max(1, Math.trunc(Number(worldUse.stage || 1))) }});
+  }
+  instances.push(pet);
+  profile.nextPetInstanceSerial = serial + 1;
+  recordProfilePetCodexForm(profile, formId, true);
+  return {ok: true, message: `获得 Lv1 ${profilePetName(pet)}，已加入${state === BATTLE_PET_STATE_STORAGE ? "兽栏" : "队伍"}。`, instanceId};
+}
+
+function safeIdPart(value) {
+  const text = String(value || "").toLowerCase().trim();
+  const result = text.replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+  return result || "pet";
+}
+
+function petSkillTrainingTrainerSkillIds(trainerId) {
+  const normalizedTrainerId = String(trainerId || "firebud_pet_skill_trainer").trim();
+  const trainers = Array.isArray(petSkillTrainingDocument().trainers) ? petSkillTrainingDocument().trainers : [];
+  const trainer = trainers.find((entry) => entry && String(entry.trainerId || "") === normalizedTrainerId) || null;
+  return uniqueStringArray(trainer && trainer.skillIds);
+}
+
+function petSkillTrainingCost(skillId) {
+  const skills = Array.isArray(petSkillTrainingDocument().skills) ? petSkillTrainingDocument().skills : [];
+  const entry = skills.find((item) => item && String(item.skillId || "") === String(skillId || "")) || null;
+  return Math.max(0, Math.trunc(Number(entry && entry.cost || 30)));
+}
+
+function battleActionLabel(actionId, fallback = "") {
+  const action = battleActionById(actionId);
+  return action ? String(action.label || action.name || action.id || fallback || "技能") : (fallback || String(actionId || "技能"));
+}
+
+function petSkillSlotsForPet(pet) {
+  const source = Array.isArray(pet && pet.petSkillSlots) ? pet.petSkillSlots : [];
+  const active = uniqueStringArray(pet && pet.activeSkillIds);
+  const slots = source.slice(0, 7).map((value) => String(value || "").trim());
+  while (slots.length < 7) {
+    slots.push("");
+  }
+  for (const skillId of active) {
+    if (skillId !== "" && !slots.includes(skillId)) {
+      const index = slots.findIndex((value) => value === "");
+      if (index >= 0) {
+        slots[index] = skillId;
+      }
+    }
+  }
+  return slots.slice(0, 7);
+}
+
+function applyPetSkillSetSlotAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  const slot = clampInt(params.slot, 1, 7, 1);
+  const skillId = String(params.skillId || "").trim();
+  const learningEmpty = skillId === "";
+  if (!learningEmpty) {
+    const trainerId = String(params.trainerId || "firebud_pet_skill_trainer").trim();
+    if (!petSkillTrainingTrainerSkillIds(trainerId).includes(skillId)) {
+      return {ok: false, code: "pet_skill_not_offered", message: "这个训练师不会教该技能。"};
+    }
+    const action = battleActionById(skillId);
+    if (!action || String(action.owner || "") !== "pet_skill") {
+      return {ok: false, code: "pet_skill_invalid", message: "该技能不能作为宠物技能学习。"};
+    }
+  }
+  const slots = petSkillSlotsForPet(pet);
+  const previousSkillId = String(slots[slot - 1] || "");
+  if (previousSkillId === skillId) {
+    return {ok: true, message: `技${slot} 已经是${learningEmpty ? "空技能" : battleActionLabel(skillId, skillId)}。`, slot, instanceId: petId};
+  }
+  const learned = uniqueStringArray(pet.activeSkillIds);
+  const alreadyLearned = !learningEmpty && learned.includes(skillId);
+  const cost = learningEmpty || alreadyLearned ? 0 : petSkillTrainingCost(skillId);
+  if (cost > 0 && profileStoneCoins(profile) < cost) {
+    return {ok: false, code: "not_enough_stone_coins", message: `石币不足，需要${cost}石币。`, cost};
+  }
+  if (previousSkillId !== "") {
+    const previousIndex = learned.indexOf(previousSkillId);
+    if (previousIndex >= 0) {
+      learned.splice(previousIndex, 1);
+    }
+    pet.forgottenSkillIds = uniqueStringArray([...(Array.isArray(pet.forgottenSkillIds) ? pet.forgottenSkillIds : []), previousSkillId]);
+  }
+  for (let index = 0; index < slots.length; index += 1) {
+    if (!learningEmpty && slots[index] === skillId) {
+      slots[index] = "";
+    }
+  }
+  if (!learningEmpty && !learned.includes(skillId)) {
+    learned.push(skillId);
+  }
+  if (!learningEmpty) {
+    pet.forgottenSkillIds = uniqueStringArray(pet.forgottenSkillIds).filter((value) => value !== skillId);
+  }
+  slots[slot - 1] = skillId;
+  pet.activeSkillIds = learned;
+  pet.petSkillSlots = slots;
+  if (cost > 0) {
+    profile.stoneCoins = Math.max(0, profileStoneCoins(profile) - cost);
+  }
+  return {
+    ok: true,
+    message: learningEmpty ? `${profilePetName(pet)} 的技${slot} 已设为空技能。` : `${profilePetName(pet)} 学会了${battleActionLabel(skillId, skillId)}，配置到技${slot}。`,
+    slot,
+    itemId: skillId,
+    instanceId: petId,
+    cost,
+  };
+}
+
+function applyPetSkillMoveSlotAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  const slot = clampInt(params.slot, 1, 7, 1);
+  const targetSlot = clampInt(slot + clampInt(params.direction, -1, 1, 0), 1, 7, slot);
+  if (targetSlot === slot) {
+    return {ok: false, code: "pet_skill_same_slot", message: "已经在这个技能位。"};
+  }
+  const slots = petSkillSlotsForPet(pet);
+  const skillId = String(slots[slot - 1] || "");
+  if (skillId === "") {
+    return {ok: false, code: "pet_skill_slot_empty", message: "这个技能位还没有技能。"};
+  }
+  const temp = slots[targetSlot - 1];
+  slots[targetSlot - 1] = skillId;
+  slots[slot - 1] = temp;
+  pet.petSkillSlots = slots;
+  return {ok: true, message: `${battleActionLabel(skillId, skillId)} 已移动到技${targetSlot}。`, slot: targetSlot, instanceId: petId};
+}
+
+function applyPetSkillForgetAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const skillId = String(params.skillId || "").trim();
+  if (!skillId) {
+    return {ok: false, code: "pet_skill_empty", message: "请选择要遗忘的技能。"};
+  }
+  if (skillId === BATTLE_ACTION_PET_ATTACK || skillId === BATTLE_ACTION_PET_DEFEND) {
+    return {ok: false, code: "pet_skill_base", message: "攻击和防御不能遗忘。"};
+  }
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  pet.activeSkillIds = uniqueStringArray(pet.activeSkillIds).filter((value) => value !== skillId);
+  pet.forgottenSkillIds = uniqueStringArray([...(Array.isArray(pet.forgottenSkillIds) ? pet.forgottenSkillIds : []), skillId]);
+  pet.petSkillSlots = petSkillSlotsForPet(pet).map((value) => value === skillId ? "" : value);
+  return {ok: true, message: `${profilePetName(pet)} 遗忘了${battleActionLabel(skillId, skillId)}。`, itemId: skillId, instanceId: petId};
+}
+
+function applyPetStateCycleAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_in_storage", message: `${profilePetName(pet)} 在兽栏里，暂时不能切换状态。`};
+  }
+  const current = String(profile.ridePetInstanceId || "") === petId ? BATTLE_PET_STATE_RIDING : profilePetState(pet);
+  let target = "";
+  if (current === BATTLE_PET_STATE_REST) {
+    target = BATTLE_PET_STATE_STANDBY;
+  } else if (current === BATTLE_PET_STATE_STANDBY) {
+    target = BATTLE_PET_STATE_BATTLE;
+  } else if (current === BATTLE_PET_STATE_RIDING) {
+    target = BATTLE_PET_STATE_BATTLE;
+  } else if (current === BATTLE_PET_STATE_BATTLE) {
+    target = BATTLE_PET_STATE_REST;
+  }
+  if (target === "") {
+    return {ok: false, code: "pet_state_invalid", message: `${profilePetName(pet)} 当前状态不能切换。`};
+  }
+  if (target === BATTLE_PET_STATE_BATTLE && Math.trunc(Number(pet.hp || 0)) <= 0) {
+    return {ok: false, code: "pet_hp_zero", message: `${profilePetName(pet)} 生命为 0，不能出战。`};
+  }
+  if (target === BATTLE_PET_STATE_BATTLE) {
+    for (const other of profilePetInstances(profile)) {
+      if (other && String(other.state || "") === BATTLE_PET_STATE_BATTLE) {
+        other.state = BATTLE_PET_STATE_STANDBY;
+      }
+    }
+    profile.activePetInstanceId = petId;
+  } else if (String(profile.activePetInstanceId || "") === petId) {
+    profile.activePetInstanceId = "";
+  }
+  if (String(profile.ridePetInstanceId || "") === petId) {
+    profile.ridePetInstanceId = "";
+  }
+  pet.state = target;
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: true, message: `${profilePetName(pet)} 已切换为${stateLabel(target)}。`, instanceId: petId};
+}
+
+function applyPetStableToggleAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  return profilePetState(pet) === BATTLE_PET_STATE_STORAGE
+    ? withdrawPetToProfile(profile, petId)
+    : storePetToProfile(profile, petId);
+}
+
+function storePetToProfile(profile, petId) {
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (String(profile.ridePetInstanceId || "") === petId) {
+    return {ok: false, code: "pet_riding", message: `${profilePetName(pet)} 正在骑乘中，不能存入兽栏。`};
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_already_storage", message: `${profilePetName(pet)} 已在兽栏。`};
+  }
+  if (profileStoragePetCount(profile) >= BATTLE_PET_STORAGE_LIMIT) {
+    return {ok: false, code: "pet_storage_full", message: "兽栏已满。"};
+  }
+  pet.state = BATTLE_PET_STATE_STORAGE;
+  if (String(profile.activePetInstanceId || "") === petId) {
+    profile.activePetInstanceId = "";
+  }
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: true, message: `${profilePetName(pet)} 已存入兽栏。`, instanceId: petId};
+}
+
+function withdrawPetToProfile(profile, petId) {
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (profilePetState(pet) !== BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_not_storage", message: `${profilePetName(pet)} 不在兽栏。`};
+  }
+  if (profilePartyVisiblePetCount(profile) >= BATTLE_PET_MAX_PER_PARTICIPANT) {
+    return {ok: false, code: "pet_party_full", message: "队伍已满。"};
+  }
+  pet.state = BATTLE_PET_STATE_STANDBY;
+  return {ok: true, message: `${profilePetName(pet)} 已取出。`, instanceId: petId};
+}
+
+function applyPetPartyMoveAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const direction = clampInt(params.direction, -1, 1, 0);
+  if (direction === 0) {
+    return {ok: false, code: "pet_move_invalid", message: "移动方向不正确。"};
+  }
+  const instances = profilePetInstances(profile);
+  const visibleIndices = instances
+    .map((pet, index) => ({pet, index}))
+    .filter((entry) => entry.pet && profilePetState(entry.pet) !== BATTLE_PET_STATE_STORAGE);
+  const visibleIndex = visibleIndices.findIndex((entry) => profilePetIdentityValues(entry.pet).includes(petId));
+  const targetVisibleIndex = visibleIndex + direction;
+  if (visibleIndex < 0) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (targetVisibleIndex < 0 || targetVisibleIndex >= visibleIndices.length) {
+    return {ok: false, code: "pet_move_edge", message: "已经在边缘位置。"};
+  }
+  const a = visibleIndices[visibleIndex].index;
+  const b = visibleIndices[targetVisibleIndex].index;
+  const temp = instances[a];
+  instances[a] = instances[b];
+  instances[b] = temp;
+  return {ok: true, message: `${profilePetName(instances[b])} 已调整位置。`, instanceId: petId};
+}
+
+function applyPetLockToggleAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  pet.locked = !Boolean(pet.locked);
+  return {ok: true, message: `${profilePetName(pet)} 已${pet.locked ? "锁定" : "解锁"}。`, instanceId: petId};
+}
+
+function applyPetBatchStoreAction(profile) {
+  const available = Math.max(0, BATTLE_PET_STORAGE_LIMIT - profileStoragePetCount(profile));
+  if (available <= 0) {
+    return {ok: false, code: "pet_storage_full", message: "兽栏已满。", changedCount: 0};
+  }
+  let storedCount = 0;
+  let skippedCount = 0;
+  const rideId = String(profile.ridePetInstanceId || "");
+  for (const pet of profilePetInstances(profile)) {
+    if (storedCount >= available || !pet || typeof pet !== "object" || Array.isArray(pet)) {
+      continue;
+    }
+    const state = profilePetState(pet);
+    if (state === BATTLE_PET_STATE_STORAGE || state === BATTLE_PET_STATE_BATTLE) {
+      continue;
+    }
+    const petId = String(pet.instanceId || pet.petId || "");
+    if (petId === rideId || Boolean(pet.locked)) {
+      skippedCount += 1;
+      continue;
+    }
+    pet.state = BATTLE_PET_STATE_STORAGE;
+    storedCount += 1;
+  }
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: storedCount > 0, code: storedCount > 0 ? "" : "pet_batch_empty", message: storedCount > 0 ? `已批量存入${storedCount}只，跳过${skippedCount}只。` : "没有可批量存入的宠物。", changedCount: storedCount, skippedCount};
+}
+
+function applyPetBatchStateAction(profile, params) {
+  const target = String(params.targetState || params.state || "").trim();
+  if (![BATTLE_PET_STATE_STANDBY, BATTLE_PET_STATE_REST].includes(target)) {
+    return {ok: false, code: "pet_state_invalid", message: "暂不支持这种批量状态。"};
+  }
+  let changedCount = 0;
+  let skippedCount = 0;
+  const rideId = String(profile.ridePetInstanceId || "");
+  for (const pet of profilePetInstances(profile)) {
+    if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
+      continue;
+    }
+    const petId = String(pet.instanceId || pet.petId || "");
+    const state = profilePetState(pet);
+    if (state === BATTLE_PET_STATE_STORAGE || state === target) {
+      continue;
+    }
+    if (petId === rideId || Boolean(pet.locked)) {
+      skippedCount += 1;
+      continue;
+    }
+    if (target === BATTLE_PET_STATE_STANDBY && state !== BATTLE_PET_STATE_REST && state !== BATTLE_PET_STATE_BATTLE) {
+      continue;
+    }
+    if (target === BATTLE_PET_STATE_REST && state !== BATTLE_PET_STATE_STANDBY && state !== BATTLE_PET_STATE_BATTLE) {
+      continue;
+    }
+    pet.state = target;
+    if (String(profile.activePetInstanceId || "") === petId) {
+      profile.activePetInstanceId = "";
+    }
+    changedCount += 1;
+  }
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: changedCount > 0, code: changedCount > 0 ? "" : "pet_batch_empty", message: changedCount > 0 ? `已批量切换${changedCount}只为${stateLabel(target)}，跳过${skippedCount}只。` : "没有可切换状态的宠物。", changedCount, skippedCount};
+}
+
+function applyPetRenameAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  const nextName = cleanPetName(String(params.name || params.rawName || ""));
+  if (nextName === "") {
+    return {ok: false, code: "pet_name_empty", message: "名字不能为空。"};
+  }
+  if ([...nextName].length > PET_NAME_MAX_LENGTH) {
+    return {ok: false, code: "pet_name_too_long", message: `名字最多 ${PET_NAME_MAX_LENGTH} 个字。`};
+  }
+  const oldName = profilePetName(pet);
+  if (oldName === nextName) {
+    return {ok: false, code: "pet_name_unchanged", message: "名字没有变化。"};
+  }
+  pet.name = nextName;
+  return {ok: true, message: `${oldName} 已改名为${nextName}。`, instanceId: petId};
+}
+
+function cleanPetName(value) {
+  return String(value || "").replace(/\r|\n|\t/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function applyPetDropAction(profile, params, now) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const index = profilePetIndexById(profile, petId);
+  const instances = profilePetInstances(profile);
+  const pet = index >= 0 ? instances[index] : null;
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (String(profile.ridePetInstanceId || "") === petId) {
+    return {ok: false, code: "pet_riding", message: `${profilePetName(pet)} 正在骑乘中，不能丢弃。`};
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_in_storage", message: "兽栏里的宠物不能直接丢弃。"};
+  }
+  if (Boolean(pet.locked)) {
+    return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能丢弃。`};
+  }
+  const mapId = String(params.mapId || "").trim();
+  const cell = Array.isArray(params.cell) ? params.cell : [params.cellX, params.cellY];
+  if (mapId === "" || !Array.isArray(cell) || cell.length < 2) {
+    return {ok: false, code: "pet_drop_position_invalid", message: "当前位置不能丢弃宠物。"};
+  }
+  const nowSec = Math.max(0, Math.trunc(Number(params.nowSec || now() / 1000)));
+  const serial = nextPetDropSerial(profile);
+  const dropId = `ground_pet_${serial}`;
+  const droppedPet = clone(pet);
+  droppedPet.state = BATTLE_PET_STATE_STANDBY;
+  profile.groundPetDrops = Array.isArray(profile.groundPetDrops) ? profile.groundPetDrops : [];
+  profile.groundPetDrops.push({
+    dropId,
+    ownerId: "local_player",
+    pickupMode: "public",
+    mapId,
+    cell: [Math.trunc(Number(cell[0] || 0)), Math.trunc(Number(cell[1] || 0))],
+    createdAtSec: nowSec,
+    expiresAtSec: nowSec + PET_DROP_TTL_SECONDS,
+    pet: droppedPet,
+    schemaVersion: 1,
+  });
+  instances.splice(index, 1);
+  profile.nextPetDropSerial = serial + 1;
+  if (String(profile.activePetInstanceId || "") === petId) {
+    profile.activePetInstanceId = "";
+  }
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: true, message: `${profilePetName(droppedPet)} 被丢在地上。`, dropId, instanceId: petId};
+}
+
+function nextPetDropSerial(profile) {
+  let serial = Math.max(1, Math.trunc(Number(profile && profile.nextPetDropSerial || 1)));
+  const drops = Array.isArray(profile && profile.groundPetDrops) ? profile.groundPetDrops : [];
+  for (const drop of drops) {
+    const match = String(drop && drop.dropId || "").match(/^ground_pet_(\d+)$/);
+    if (match) {
+      serial = Math.max(serial, Math.trunc(Number(match[1] || 0)) + 1);
+    }
+  }
+  return serial;
+}
+
+function applyPetClearStorageAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const index = profilePetIndexById(profile, petId);
+  const instances = profilePetInstances(profile);
+  const pet = index >= 0 ? instances[index] : null;
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (profilePetState(pet) !== BATTLE_PET_STATE_STORAGE) {
+    return {ok: false, code: "pet_not_storage", message: "只有兽栏里的宠物可以清理。"};
+  }
+  if (Boolean(pet.locked)) {
+    return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能清理。`};
+  }
+  instances.splice(index, 1);
+  ensureActivePetAfterInstanceRemoval(profile);
+  return {ok: true, message: `${profilePetName(pet)} 已清理。`, instanceId: petId};
+}
+
+function applyPetPickupDropAction(profile, params, now) {
+  const dropId = String(params.dropId || "").trim();
+  const nowSec = Math.max(0, Math.trunc(Number(params.nowSec || now() / 1000)));
+  expireGroundPetDrops(profile, nowSec);
+  const drops = Array.isArray(profile.groundPetDrops) ? profile.groundPetDrops : [];
+  const index = drops.findIndex((drop) => drop && String(drop.dropId || "") === dropId);
+  if (index < 0) {
+    return {ok: false, code: "pet_drop_missing", message: "这只宠物已经离开了。"};
+  }
+  if (profilePartyVisiblePetCount(profile) >= BATTLE_PET_MAX_PER_PARTICIPANT) {
+    return {ok: false, code: "pet_party_full", message: "队伍已满。"};
+  }
+  const pet = clone(objectOrEmpty(drops[index].pet));
+  if (!pet || Object.keys(pet).length <= 0) {
+    return {ok: false, code: "pet_drop_invalid", message: "这只宠物已经离开了。"};
+  }
+  const playerLevel = Math.max(1, Math.trunc(Number(profile && profile.player && profile.player.level || 1)));
+  const petLevel = Math.max(1, Math.trunc(Number(pet.level || 1)));
+  if (petLevel > playerLevel + PET_PICKUP_LEVEL_MARGIN) {
+    return {ok: false, code: "pet_pickup_level_limit", message: "不能拾取超过自己5级以上的宠物。"};
+  }
+  pet.state = BATTLE_PET_STATE_STANDBY;
+  drops.splice(index, 1);
+  profilePetInstances(profile).push(pet);
+  return {ok: true, message: `${profilePetName(pet)} 回到队伍。`, dropId, instanceId: String(pet.instanceId || pet.petId || "")};
+}
+
+function applyPetExpireDropsAction(profile, params, now) {
+  const nowSec = Math.max(0, Math.trunc(Number(params.nowSec || now() / 1000)));
+  const expiredCount = expireGroundPetDrops(profile, nowSec);
+  return {ok: expiredCount > 0, code: expiredCount > 0 ? "" : "pet_drop_no_expired", message: expiredCount > 0 ? "地上的宠物离开了。" : "没有过期的地面宠物。", changedCount: expiredCount};
+}
+
+function expireGroundPetDrops(profile, nowSec) {
+  const drops = Array.isArray(profile.groundPetDrops) ? profile.groundPetDrops : [];
+  const active = drops.filter((drop) => {
+    const expiresAt = Math.max(0, Math.trunc(Number(drop && drop.expiresAtSec || 0)));
+    return expiresAt <= 0 || nowSec < expiresAt;
+  });
+  const expiredCount = Math.max(0, drops.length - active.length);
+  if (expiredCount > 0) {
+    profile.groundPetDrops = active;
+  }
+  return expiredCount;
+}
+
+function applyPetMarkSeenAction(profile, params) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  pet.isNew = false;
+  return {ok: true, message: "", instanceId: petId};
+}
+
+function applyPetCultivationAction(profile, params, now) {
+  const petId = String(params.instanceId || params.petId || "").trim();
+  const mode = String(params.mode || "").trim().toLowerCase();
+  const pet = profilePetByInstanceId(profile, petId);
+  if (!pet) {
+    return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (Boolean(pet.locked)) {
+    return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能转强。`, instanceId: petId};
+  }
+  if (petRequiredByActiveQuest(profile, pet)) {
+    return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能转强。`, instanceId: petId};
+  }
+  if (shouldUsePetRebirthMm(pet, mode)) {
+    return applyPetRebirthMmCultivationAction(profile, pet, now);
+  }
+  return applyBasicPetCultivationAction(profile, pet, mode, now);
+}
+
+function shouldUsePetRebirthMm(pet, mode) {
+  if (mode === PET_CULTIVATION_MODE_REBIRTH) {
+    return true;
+  }
+  if (petRebirthMmIsHelperPet(pet)) {
+    return false;
+  }
+  const record = normalizedPetCultivationRecord(pet.petCultivation);
+  return Math.max(1, Math.trunc(Number(pet.level || 1))) >= PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL ||
+    Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) > 0;
+}
+
+function applyBasicPetCultivationAction(profile, pet, mode, now) {
+  const petId = String(pet.instanceId || pet.petId || "");
+  const resolvedMode = mode === PET_CULTIVATION_MODE_REBIRTH ? PET_CULTIVATION_MODE_REBIRTH : PET_CULTIVATION_MODE_ENHANCE;
+  const record = normalizedPetCultivationRecord(pet.petCultivation);
+  if (resolvedMode === PET_CULTIVATION_MODE_REBIRTH) {
+    return {ok: false, code: "pet_rebirth_requires_mm", message: "宠物转生需要对应阶段的转生MM。", instanceId: petId};
+  }
+  const current = clampInt(record.enhanceLevel, 0, PET_CULTIVATION_MAX_ENHANCE_LEVEL, 0);
+  if (current >= PET_CULTIVATION_MAX_ENHANCE_LEVEL) {
+    return {ok: false, code: "pet_enhance_max", message: "强化等级已到当前原型上限。", instanceId: petId};
+  }
+  const nextRecord = normalizedPetCultivationRecord(record);
+  nextRecord.enhanceLevel = current + 1;
+  const event = petCultivationResultEvent(pet, record, nextRecord, PET_CULTIVATION_MODE_ENHANCE, Math.trunc(now() / 1000));
+  pushPetCultivationEvent(nextRecord, event);
+  pet.petCultivation = nextRecord;
+  pet.lastCultivationResult = clone(event);
+  return {
+    ok: true,
+    message: String(event.message || "宠物培养完成。"),
+    instanceId: petId,
+    result: event,
+  };
+}
+
+function applyPetRebirthMmCultivationAction(profile, pet, now) {
+  const petId = String(pet.instanceId || pet.petId || "");
+  if (petRebirthMmIsHelperPet(pet)) {
+    return {ok: false, code: "pet_rebirth_target_is_helper", message: "转生MM不能作为转生目标。", instanceId: petId};
+  }
+  const record = normalizedPetCultivationRecord(pet.petCultivation);
+  const expectedStage = clampInt(Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) + 1, 1, PET_REBIRTH_MM_MAX_STAGE + 1, 1);
+  if (expectedStage > PET_REBIRTH_MM_MAX_STAGE) {
+    return {ok: false, code: "pet_rebirth_stage_max", message: "当前只开放到2转宠物转生。", instanceId: petId};
+  }
+  if (Math.max(1, Math.trunc(Number(pet.level || 1))) < PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL) {
+    return {ok: false, code: "pet_rebirth_level_low", message: `${profilePetName(pet)} 需要 Lv${PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL} 才能进行宠物转生。`, instanceId: petId};
+  }
+  const helper = petRebirthMmHelperForTarget(profile, pet, expectedStage);
+  if (!helper) {
+    return {ok: false, code: "pet_rebirth_helper_missing", message: `${profilePetName(pet)} 需要 ${petRebirthMmHelperName(expectedStage)}。`, instanceId: petId};
+  }
+  const helperId = String(helper.instanceId || helper.petId || "");
+  if (Boolean(helper.locked)) {
+    return {ok: false, code: "pet_rebirth_helper_locked", message: `${profilePetName(helper)} 已锁定，不能作为转强材料。`, instanceId: petId};
+  }
+  if (petRequiredByActiveQuest(profile, helper)) {
+    return {ok: false, code: "pet_rebirth_helper_required_by_quest", message: `${profilePetName(helper)} 是当前任务需要的宠物，不能作为转强材料。`, instanceId: petId};
+  }
+  if (Math.max(1, Math.trunc(Number(helper.level || 1))) < PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL) {
+    return {ok: false, code: "pet_rebirth_helper_level_low", message: `${profilePetName(helper)} 需要练到 Lv${PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL}。`, instanceId: petId};
+  }
+  const helperRecord = normalizedPetRebirthHelperRecord(helper, expectedStage);
+  const nowSec = Math.trunc(now() / 1000);
+  const rollSeed = petRebirthMmRollSeed(pet, helper, nowSec);
+  const bonusPackage = petRebirthMmBonusPackage(pet, helper, helperRecord, expectedStage, rollSeed);
+  const cumulative = petCultivationGrowthBonus(record.rebirthGrowthBonus);
+  const visibleBonus = petCultivationGrowthBonus(bonusPackage.visibleGrowthBonus);
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    cumulative[key] = snapNumber(Number(cumulative[key] || 0) + Number(visibleBonus[key] || 0), 0.001);
+  }
+  const nextRecord = normalizedPetCultivationRecord(record);
+  nextRecord.rebirthCount = Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) + 1;
+  nextRecord.rebirthGrowthBonus = cumulative;
+  const event = {
+    schemaVersion: 1,
+    mode: PET_CULTIVATION_MODE_REBIRTH,
+    timestamp: nowSec,
+    petInstanceId: petId,
+    petName: profilePetName(pet),
+    helperInstanceId: helperId,
+    helperName: profilePetName(helper),
+    helperStage: expectedStage,
+    helperLevel: Math.max(1, Math.trunc(Number(helper.level || 1))),
+    helperStonePoints: clone(helperRecord.stonePoints),
+    rebirthBonusInternalPower: bonusPackage.rebirthBonusInternalPower,
+    rebirthBonusPercentile: bonusPackage.rebirthBonusPercentile,
+    rebirthBonusGrade: bonusPackage.rebirthBonusGrade,
+    rebirthRollSeed: rollSeed,
+    helperGrowthWeights: clone(bonusPackage.helperGrowthWeights),
+    visibleGrowthBonus: visibleBonus,
+    beforeLevel: Math.max(1, Math.trunc(Number(pet.level || 1))),
+    afterLevel: 1,
+    beforeRebirthCount: Math.max(0, Math.trunc(Number(record.rebirthCount || 0))),
+    afterRebirthCount: nextRecord.rebirthCount,
+    summary: `${Math.max(0, Math.trunc(Number(record.rebirthCount || 0)))}转 -> ${nextRecord.rebirthCount}转，Lv${Math.max(1, Math.trunc(Number(pet.level || 1)))} -> Lv1`,
+  };
+  event.message = `${profilePetName(pet)}：${event.summary}，成长加成 ${petRebirthMmBonusText(visibleBonus)}。`;
+  pushPetCultivationEvent(nextRecord, event);
+  pet.petCultivation = nextRecord;
+  pet.lastCultivationResult = clone(event);
+  const levelOneStats = petLevelOneStats(pet);
+  pet.level = 1;
+  pet.exp = 0;
+  pet.nextExp = battleExpToNextLevel(1);
+  pet.maxHp = Math.max(1, Math.trunc(Number(levelOneStats.maxHp || pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+  pet.hp = pet.maxHp;
+  pet.attack = Math.max(1, Math.trunc(Number(levelOneStats.attack || pet.attack || DEFAULT_PET_BATTLE_STATS.attack)));
+  pet.defense = Math.max(1, Math.trunc(Number(levelOneStats.defense || pet.defense || DEFAULT_PET_BATTLE_STATS.defense)));
+  pet.quick = Math.max(1, Math.trunc(Number(levelOneStats.quick || pet.quick || DEFAULT_PET_BATTLE_STATS.quick)));
+  const instances = profilePetInstances(profile);
+  const helperIndex = instances.findIndex((entry) => profilePetIdentityValues(entry).includes(helperId));
+  if (helperIndex >= 0) {
+    instances.splice(helperIndex, 1);
+  }
+  if (String(profile.activePetInstanceId || "") === helperId) {
+    profile.activePetInstanceId = petId;
+  }
+  ensureActivePetAfterInstanceRemoval(profile);
+  const guideCompletion = completePetRebirthMmGuideIfReady(profile, nowSec);
+  let message = String(event.message || "宠物转生完成。");
+  if (guideCompletion.completed) {
+    message += "\n宠物转生教学完成，之后可找MM1反复领取1转小MM。";
+  }
+  return {
+    ok: true,
+    message,
+    instanceId: petId,
+    changedCount: 1,
+    result: event,
+  };
+}
+
+function normalizedPetCultivationRecord(value) {
+  const source = objectOrEmpty(value);
+  const history = Array.isArray(source.history) ? source.history.filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry)).map(clone) : [];
+  while (history.length > PET_CULTIVATION_MAX_HISTORY_RECORDS) {
+    history.shift();
+  }
+  return {
+    schemaVersion: 1,
+    rebirthCount: Math.max(0, Math.trunc(Number(source.rebirthCount || 0))),
+    enhanceLevel: clampInt(source.enhanceLevel, 0, PET_CULTIVATION_MAX_ENHANCE_LEVEL, 0),
+    rebirthGrowthBonus: petCultivationGrowthBonus(source.rebirthGrowthBonus),
+    history,
+    lastPreview: clone(objectOrEmpty(source.lastPreview)),
+    lastResult: clone(objectOrEmpty(source.lastResult)),
+  };
+}
+
+function petCultivationGrowthBonus(value) {
+  const source = objectOrEmpty(value);
+  return {
+    maxHp: snapNumber(source.maxHp, 0.001),
+    attack: snapNumber(source.attack, 0.001),
+    defense: snapNumber(source.defense, 0.001),
+    quick: snapNumber(source.quick, 0.001),
+  };
+}
+
+function petCultivationResultEvent(pet, beforeRecord, nextRecord, mode, nowSec) {
+  const beforeRebirth = Math.max(0, Math.trunc(Number(beforeRecord.rebirthCount || 0)));
+  const afterRebirth = Math.max(0, Math.trunc(Number(nextRecord.rebirthCount || 0)));
+  const beforeEnhance = Math.max(0, Math.trunc(Number(beforeRecord.enhanceLevel || 0)));
+  const afterEnhance = Math.max(0, Math.trunc(Number(nextRecord.enhanceLevel || 0)));
+  const beforeLevel = Math.max(1, Math.trunc(Number(pet.level || 1)));
+  const summary = mode === PET_CULTIVATION_MODE_REBIRTH
+    ? `${beforeRebirth}转 -> ${afterRebirth}转，Lv${beforeLevel} -> Lv1`
+    : `强化 +${beforeEnhance} -> +${afterEnhance}`;
+  return {
+    schemaVersion: 1,
+    mode,
+    timestamp: nowSec,
+    petInstanceId: String(pet.instanceId || pet.petId || ""),
+    petName: profilePetName(pet),
+    formId: String(pet.formId || pet.templateId || ""),
+    beforeLevel,
+    afterLevel: mode === PET_CULTIVATION_MODE_REBIRTH ? 1 : beforeLevel,
+    beforeRebirthCount: beforeRebirth,
+    afterRebirthCount: afterRebirth,
+    beforeEnhanceLevel: beforeEnhance,
+    afterEnhanceLevel: afterEnhance,
+    individualSeed: String(pet.individualSeed || ""),
+    summary,
+    message: `${profilePetName(pet)}：${summary}。`,
+  };
+}
+
+function pushPetCultivationEvent(record, event) {
+  const history = Array.isArray(record.history) ? record.history : [];
+  history.push(clone(event));
+  while (history.length > PET_CULTIVATION_MAX_HISTORY_RECORDS) {
+    history.shift();
+  }
+  record.history = history;
+  record.lastResult = clone(event);
+}
+
+function petRebirthMmHelperForTarget(profile, targetPet, expectedStage) {
+  const targetId = String(targetPet && (targetPet.instanceId || targetPet.petId) || "");
+  let best = null;
+  let bestScore = -1;
+  for (const pet of profilePetInstances(profile)) {
+    if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
+      continue;
+    }
+    if (profilePetIdentityValues(pet).includes(targetId)) {
+      continue;
+    }
+    if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
+      continue;
+    }
+    if (petRebirthMmHelperStage(pet) !== expectedStage) {
+      continue;
+    }
+    const record = normalizedPetRebirthHelperRecord(pet, expectedStage);
+    const points = objectOrEmpty(record.stonePoints);
+    const totalPoints = PET_REBIRTH_MM_STAT_KEYS.reduce((sum, key) => sum + Math.max(0, Math.trunc(Number(points[key] || 0))), 0);
+    const score = Math.max(1, Math.trunc(Number(pet.level || 1))) * 1000 + totalPoints;
+    if (score > bestScore) {
+      bestScore = score;
+      best = pet;
+    }
+  }
+  return best;
+}
+
+function petRebirthMmHelperStage(pet) {
+  const record = normalizedPetRebirthHelperRecord(pet, 0);
+  const stage = Math.max(0, Math.trunc(Number(record.stage || 0)));
+  if (stage > 0) {
+    return stage;
+  }
+  const formId = String(pet && (pet.formId || pet.templateId || "") || "");
+  if (formId === "pet_rebirth_mm_stage2") {
+    return 2;
+  }
+  if (formId === "pet_rebirth_mm_stage1") {
+    return 1;
+  }
+  return 0;
+}
+
+function petRebirthMmHelperName(stage) {
+  return Math.max(1, Math.trunc(Number(stage || 1))) >= 2 ? "2转小MM" : "1转小MM";
+}
+
+function petRebirthMmBonusPackage(targetPet, helperPet, helperRecord, stage, rollSeed) {
+  const targetGrowth = petObservedVisibleGrowth(targetPet);
+  const targetInternal = {};
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    const value = Number(targetGrowth[key] || 0);
+    targetInternal[key] = key === "maxHp" ? value / PET_REBIRTH_MM_HP_INTERNAL_SCALE : value;
+  }
+  const stonePoints = normalizedPetRebirthHelperRecord({petRebirthHelper: helperRecord}, stage).stonePoints;
+  const helperWeights = petHelperGrowthWeightDistribution(helperPet);
+  const weights = {};
+  let weightTotal = 0;
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    let weight = Math.max(0.05, Number(targetInternal[key] || 0) * PET_REBIRTH_MM_TARGET_WEIGHT_SCALE);
+    weight += Number(stonePoints[key] || 0) / PET_REBIRTH_MM_STONE_CAPACITY * PET_REBIRTH_MM_STONE_WEIGHT_SCALE;
+    weight += Number(helperWeights[key] || 1) * PET_REBIRTH_MM_HELPER_GROWTH_WEIGHT_SCALE;
+    weights[key] = weight;
+    weightTotal += weight;
+  }
+  const poolInfo = petRebirthMmPoolInfo(helperRecord, stage, targetPet, helperPet, rollSeed);
+  const pool = Number(poolInfo.pool || 0);
+  const visibleBonus = {};
+  const internalBonus = {};
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    const internal = weightTotal > 0.0001 ? pool * Number(weights[key] || 0) / weightTotal : 0;
+    internalBonus[key] = snapNumber(internal, 0.001);
+    visibleBonus[key] = snapNumber(key === "maxHp" ? internal * PET_REBIRTH_MM_HP_INTERNAL_SCALE : internal, 0.001);
+  }
+  return {
+    visibleGrowthBonus: petCultivationGrowthBonus(visibleBonus),
+    internalGrowthBonus: internalBonus,
+    rebirthBonusInternalPower: snapNumber(pool, 0.001),
+    rebirthBonusPercentile: snapNumber(poolInfo.percentile, 0.1),
+    rebirthBonusGrade: petRebirthMmGradeForPercentile(poolInfo.percentile),
+    rebirthRollSeed: rollSeed,
+    helperGrowthWeights: helperWeights,
+  };
+}
+
+function petObservedVisibleGrowth(pet) {
+  const result = petCultivationGrowthBonus({});
+  const level = Math.max(1, Math.trunc(Number(pet && pet.level || 1)));
+  if (level <= 1) {
+    const record = objectOrEmpty(pet && pet.growthRecord);
+    const bonus = objectOrEmpty(record.bonus);
+    for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+      result[key] = snapNumber(bonus[key], 0.001);
+    }
+    return result;
+  }
+  const initial = objectOrEmpty(pet && (pet.initialStats || pet.growthSpeciesLevel1Stats));
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    const currentValue = Number(pet && pet[key] || 0);
+    const initialValue = Object.prototype.hasOwnProperty.call(initial, key) ? Number(initial[key]) : currentValue;
+    result[key] = snapNumber((currentValue - initialValue) / (level - 1), 0.001);
+  }
+  return result;
+}
+
+function petHelperGrowthWeightDistribution(helperPet) {
+  const equal = {};
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    equal[key] = 1.0;
+  }
+  if (!helperPet || String(helperPet.growthSpeciesProfileId || "").trim() === "") {
+    return equal;
+  }
+  const growth = petObservedVisibleGrowth(helperPet);
+  const internal = {};
+  let total = 0;
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    let value = Number(growth[key] || 0);
+    if (key === "maxHp") {
+      value /= PET_REBIRTH_MM_HP_INTERNAL_SCALE;
+    }
+    value = Math.max(0.001, value);
+    internal[key] = value;
+    total += value;
+  }
+  if (total <= 0.0001) {
+    return equal;
+  }
+  const result = {};
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    result[key] = snapNumber(Number(internal[key] || 0.001) / total * PET_REBIRTH_MM_STAT_KEYS.length, 0.001);
+  }
+  return result;
+}
+
+function petRebirthMmPoolInfo(helperRecord, stage, targetPet, helperPet, rollSeed) {
+  const effectiveCount = petRebirthMmEffectiveStoneCount(helperRecord);
+  const range = petRebirthMmPoolRangeForEffectiveStoneCount(effectiveCount, stage);
+  const percentile = petRebirthMmPercentile(targetPet, helperPet, stage, rollSeed);
+  const minPool = Number(range.min || 0);
+  const maxPool = Number(range.max || 0);
+  return {
+    pool: snapNumber(minPool + (maxPool - minPool) * percentile / 100.0, 0.001),
+    percentile: snapNumber(percentile, 0.1),
+  };
+}
+
+function petRebirthMmEffectiveStoneCount(helperRecord) {
+  const points = normalizedPetRebirthHelperRecord({petRebirthHelper: helperRecord}).stonePoints;
+  let total = 0;
+  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
+    const ratio = Math.max(0, Math.min(1, Number(points[key] || 0) / PET_REBIRTH_MM_STONE_CAPACITY));
+    total += Math.pow(ratio, PET_REBIRTH_MM_STONE_EFFECTIVE_EXPONENT);
+  }
+  return snapNumber(total, 0.001);
+}
+
+function petRebirthMmPoolRangeForEffectiveStoneCount(effectiveCount, stage) {
+  const safeStage = clampInt(stage, 1, PET_REBIRTH_MM_MAX_STAGE, 1);
+  const table = PET_REBIRTH_MM_POOL_RANGES_BY_STAGE[safeStage] || PET_REBIRTH_MM_POOL_RANGES_BY_STAGE[1];
+  const safeCount = Math.max(0, Math.min(4, Number(effectiveCount || 0)));
+  const lower = clampInt(Math.floor(safeCount), 0, 4, 0);
+  const upper = clampInt(lower + 1, 0, 4, lower);
+  const t = lower >= 4 ? 0 : Math.max(0, Math.min(1, safeCount - lower));
+  const lowerRange = table[lower] || table[0] || {min: 0, max: 0};
+  const upperRange = table[upper] || lowerRange;
+  const upperMin = Object.prototype.hasOwnProperty.call(upperRange, "min") ? Number(upperRange.min) : Number(lowerRange.min || 0);
+  const upperMax = Object.prototype.hasOwnProperty.call(upperRange, "max") ? Number(upperRange.max) : Number(lowerRange.max || 0);
+  return {
+    min: snapNumber(Number(lowerRange.min || 0) + (upperMin - Number(lowerRange.min || 0)) * t, 0.001),
+    max: snapNumber(Number(lowerRange.max || 0) + (upperMax - Number(lowerRange.max || 0)) * t, 0.001),
+  };
+}
+
+function petRebirthMmPercentile(targetPet, helperPet, stage, rollSeed) {
+  const seed = String(rollSeed || "").trim();
+  if (!seed) {
+    return 50.0;
+  }
+  const key = [
+    String(targetPet && (targetPet.growthSpeciesSeed || targetPet.instanceId || targetPet.petId) || ""),
+    String(helperPet && (helperPet.growthSpeciesSeed || helperPet.instanceId || helperPet.petId) || ""),
+    String(targetPet && (targetPet.formId || targetPet.templateId) || ""),
+    String(helperPet && (helperPet.formId || helperPet.templateId) || ""),
+    Math.max(1, Math.trunc(Number(stage || 1))),
+    seed,
+  ].join("|");
+  return (stablePositiveHash(`pet_rebirth_bonus:${key}`) % 10001) / 100.0;
+}
+
+function petRebirthMmGradeForPercentile(percentile) {
+  const value = Math.max(0, Math.min(100, Number(percentile || 0)));
+  if (value >= 95) return "S";
+  if (value >= 85) return "A";
+  if (value >= 55) return "B";
+  if (value >= 25) return "C";
+  return "D";
+}
+
+function petRebirthMmRollSeed(targetPet, helperPet, nowSec) {
+  return [
+    "server",
+    String(targetPet && (targetPet.instanceId || targetPet.petId) || ""),
+    String(helperPet && (helperPet.instanceId || helperPet.petId) || ""),
+    Math.max(0, Math.trunc(Number(nowSec || 0))),
+  ].join(":");
+}
+
+function petRebirthMmBonusText(bonus) {
+  const normalized = petCultivationGrowthBonus(bonus);
+  return `血 ${Number(normalized.maxHp || 0).toFixed(3)}/级，攻 ${Number(normalized.attack || 0).toFixed(3)}/级，防 ${Number(normalized.defense || 0).toFixed(3)}/级，敏 ${Number(normalized.quick || 0).toFixed(3)}/级`;
+}
+
+function completePetRebirthMmGuideIfReady(profile, nowSec) {
+  const guide = normalizePetRebirthMmGuide(profile[PET_REBIRTH_MM_GUIDE_KEY]);
+  const alreadyCompleted = guide.status === PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED;
+  const hasRebirth = profilePetInstances(profile).some((pet) => {
+    const record = normalizedPetCultivationRecord(pet && pet.petCultivation);
+    return Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) >= 1;
+  });
+  if (!hasRebirth) {
+    return {completed: false, alreadyCompleted};
+  }
+  guide.status = PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED;
+  if (guide.startedAtSec <= 0) {
+    guide.startedAtSec = Math.max(0, Math.trunc(Number(nowSec || 0)));
+  }
+  guide.completedAtSec = Math.max(0, Math.trunc(Number(nowSec || 0)));
+  profile[PET_REBIRTH_MM_GUIDE_KEY] = guide;
+  return {completed: !alreadyCompleted, alreadyCompleted};
+}
+
+function petRequiredByActiveQuest(profile, pet) {
+  const questId = currentProfileQuestId(profile);
+  const quest = questById(questId);
+  if (!quest) {
+    return false;
+  }
+  const state = normalizeQuestState(profileQuestStates(profile)[questId], questId);
+  if (String(state.status || "active") !== "active") {
+    return false;
+  }
+  const baseEvent = {
+    instanceId: String(pet && (pet.instanceId || pet.petId) || ""),
+    formId: String(pet && (pet.formId || pet.templateId) || ""),
+    lineId: String(pet && pet.lineId || ""),
+    level: Math.max(1, Math.trunc(Number(pet && pet.level || 1))),
+    amount: 1,
+  };
+  return questProgressAmountForEvent(quest, {...baseEvent, type: "deliver_pet"}) > 0 ||
+    questProgressAmountForEvent(quest, {...baseEvent, type: "capture_pet"}) > 0;
+}
+
+function petLevelOneStats(pet) {
+  const initial = objectOrEmpty(pet && (pet.initialStats || pet.growthSpeciesLevel1Stats));
+  const template = petTemplateForFormId(String(pet && (pet.formId || pet.templateId) || ""));
+  const base = objectOrEmpty(template.baseStats);
+  return {
+    maxHp: Math.max(1, Math.trunc(Number(initial.maxHp || base.maxHp || pet && pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp))),
+    attack: Math.max(1, Math.trunc(Number(initial.attack || base.attack || pet && pet.attack || DEFAULT_PET_BATTLE_STATS.attack))),
+    defense: Math.max(1, Math.trunc(Number(initial.defense || base.defense || pet && pet.defense || DEFAULT_PET_BATTLE_STATS.defense))),
+    quick: Math.max(1, Math.trunc(Number(initial.quick || initial.agility || base.quick || base.agility || pet && pet.quick || DEFAULT_PET_BATTLE_STATS.quick))),
+  };
+}
+
+function snapNumber(value, step) {
+  const safeStep = Number(step || 1);
+  if (!Number.isFinite(safeStep) || safeStep <= 0) {
+    return Number(value || 0);
+  }
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? Math.round(number / safeStep) * safeStep : 0;
+}
+
+function stablePositiveHash(text) {
+  let hash = 2166136261;
+  const source = String(text || "");
+  for (let index = 0; index < source.length; index += 1) {
+    hash = Math.imul(hash ^ source.charCodeAt(index), 16777619) >>> 0;
+  }
+  return hash;
+}
+
+function applyPetRebirthMmStage2ClaimAction(profile) {
+  if (Boolean(profile[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY])) {
+    return {ok: false, code: "mm_stage2_claimed", message: "2转小MM任务奖励每个角色只能领取一次。"};
+  }
+  const grant = grantPetRebirthMm(profile, 2, "stage2_once");
+  if (!grant.ok) {
+    return grant;
+  }
+  profile[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = true;
+  return {ok: true, message: `完成2转小MM任务，${grant.message}`, instanceId: grant.instanceId};
+}
+
+function grantPetRebirthMm(profile, stage, source) {
+  const safeStage = Math.max(1, Math.trunc(Number(stage || 1)));
+  const formId = safeStage >= 2 ? "pet_rebirth_mm_stage2" : "pet_rebirth_mm_stage1";
+  const name = safeStage >= 2 ? "2转小MM" : "1转小MM";
+  const instances = profilePetInstances(profile);
+  const state = profilePartyVisiblePetCount(profile) < BATTLE_PET_MAX_PER_PARTICIPANT
+    ? BATTLE_PET_STATE_STANDBY
+    : BATTLE_PET_STATE_STORAGE;
+  if (state === BATTLE_PET_STATE_STORAGE && profileStoragePetCount(profile) >= BATTLE_PET_STORAGE_LIMIT) {
+    return {ok: false, code: "pet_capacity_full", message: "队伍和兽栏都满了。"};
+  }
+  const serial = nextProfilePetInstanceSerial(profile, instances);
+  const instanceId = `pet_rebirth_mm${safeStage}_${serial}`;
+  const pet = createDefaultServerPet(instanceId, name, formId, state, 1);
+  if (!pet || Object.keys(pet).length <= 0) {
+    return {ok: false, code: "pet_template_missing", message: `${name} 模板不存在。`};
+  }
+  pet.petRebirthHelper = normalizedPetRebirthHelperRecord({petRebirthHelper: {stage: safeStage}});
+  pet.capturedSerial = serial;
+  pet.individualSeed = `pet_rebirth_mm:${source}:${safeStage}:${serial}`;
+  pet.isNew = true;
+  instances.push(pet);
+  profile.nextPetInstanceSerial = serial + 1;
+  recordProfilePetCodexForm(profile, formId, true);
+  return {ok: true, message: `获得 Lv1 ${name}，已加入${state === BATTLE_PET_STATE_STORAGE ? "兽栏" : "队伍"}。`, instanceId};
+}
+
+function applyPetRebirthMmGuideStartAction(profile, now) {
+  const guide = normalizePetRebirthMmGuide(profile[PET_REBIRTH_MM_GUIDE_KEY]);
+  if (guide.status !== PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE) {
+    guide.status = PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE;
+    guide.startedAtSec = guide.startedAtSec > 0 ? guide.startedAtSec : Math.max(0, Math.trunc(now() / 1000));
+  }
+  profile[PET_REBIRTH_MM_GUIDE_KEY] = guide;
+  return {ok: true, message: "开始任务「宠物转生教学」。目标：找 1转MM试炼师阿澄开始教学。"};
+}
+
+function normalizePetRebirthMmGuide(value) {
+  const source = objectOrEmpty(value);
+  let status = String(source.status || PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE);
+  if (![PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE, PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE, PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED].includes(status)) {
+    status = PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE;
+  }
+  return {
+    schemaVersion: 1,
+    status,
+    startedAtSec: Math.max(0, Math.trunc(Number(source.startedAtSec || 0))),
+    completedAtSec: Math.max(0, Math.trunc(Number(source.completedAtSec || 0))),
+  };
 }
 
 function recordProfilePetCodexForm(profile, formId, captured) {

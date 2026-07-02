@@ -307,6 +307,7 @@ var player_rebirth_preview_close_button: Button
 var player_rebirth_confirm_pending: bool = false
 var player_rebirth_request_pending: bool = false
 var quest_action_request_pending: bool = false
+var profile_action_request_pending: bool = false
 var equipment_panel: PanelContainer
 var equipment_grid: Control
 var equipment_stats_label: Label
@@ -30620,6 +30621,42 @@ func _apply_server_quest_action_result(parsed: Dictionary, fallback_message: Str
 	return parsed
 
 
+func _submit_server_profile_action(action: String, payload: Dictionary = {}, fallback_message: String = "档案操作失败。") -> Dictionary:
+	if not _is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
+	if profile_action_request_pending:
+		return {"ok": false, "message": "档案操作同步中，请稍候。", "logLines": ["档案操作同步中，请稍候。"]}
+	profile_action_request_pending = true
+	var response := await _auto_http_request_spec(ServerAuthClientModel.profile_action_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		action,
+		payload
+	))
+	profile_action_request_pending = false
+	var parsed := ServerAuthClientModel.parse_profile_action_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines := _string_array_values(parsed.get("logLines", []))
+	if bool(parsed.get("ok", false)):
+		if _apply_server_profile_payload(parsed):
+			if log_lines.is_empty():
+				var success_message := str(parsed.get("message", "角色档案已更新。")).strip_edges()
+				if success_message != "":
+					log_lines.append(success_message)
+		else:
+			log_lines = ["操作已提交，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+		var error_message := str(parsed.get("message", fallback_message)).strip_edges()
+		log_lines.append(error_message if error_message != "" else fallback_message)
+	if log_lines.is_empty():
+		log_lines.append(fallback_message)
+	parsed["logLines"] = log_lines
+	return parsed
+
+
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
 	var base_value := int(base.get(stat_key, 0))
 	var bonus_value := int(bonus.get(stat_key, 0))
@@ -31576,6 +31613,20 @@ func _unlock_backpack_slot_from_dialog() -> void:
 	if active_dialog_interaction.is_empty():
 		return
 	var extra_index := int(active_dialog_interaction.get("extraSlotIndex", -1))
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("backpack_unlock_slot", {"extraSlotIndex": extra_index}, "解锁背包位失败。")
+		var message := "\n".join(_string_array_values(parsed.get("logLines", [])))
+		_set_world_log_message(message)
+		if bool(parsed.get("ok", false)):
+			_close_dialog()
+			_refresh_backpack_panel()
+			_refresh_quick_bar()
+			if status_label != null:
+				_update_hud_text()
+			return
+		active_dialog_interaction["dialog"] = [message, "当前钻石：%d" % _profile_diamonds_for_ui()]
+		_update_dialog_text()
+		return
 	var result := PlayerProgressModel.unlock_backpack_slot(player_profile, extra_index)
 	player_profile = result.get("profile", player_profile)
 	var message := str(result.get("message", ""))
@@ -31746,7 +31797,7 @@ func _on_quick_slot_pressed(slot_index: int) -> void:
 		_refresh_quick_bar()
 		return
 	if BackpackModel.item_can_world_encounter_stone(item_id):
-		_use_backpack_encounter_stone(item_id)
+		await _use_backpack_encounter_stone(item_id)
 		_clear_empty_quick_slot_item(item_id)
 		_refresh_quick_bar()
 		return
@@ -31755,7 +31806,7 @@ func _on_quick_slot_pressed(slot_index: int) -> void:
 		if target_id == "":
 			_set_world_log_message("队伍宠物生命已满。")
 			return
-		_use_world_pet_heal_item_and_log(item_id, target_id)
+		await _use_world_pet_heal_item_and_log(item_id, target_id)
 		_clear_empty_quick_slot_item(item_id)
 		_refresh_quick_bar()
 
@@ -32287,6 +32338,16 @@ func _submit_server_equipment_equip(item_id: String) -> void:
 
 
 func _use_backpack_player_exp_item(item_id: String) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("world_item_use", {"itemId": item_id}, "使用物品失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		_refresh_equipment_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		return
 	var result := PlayerProgressModel.use_world_player_exp_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -32486,20 +32547,20 @@ func _refresh_backpack_target_buttons(item_id: String) -> void:
 
 func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 	if BackpackModel.item_can_world_pet_exp(item_id):
-		_use_world_pet_exp_item_and_log(item_id, instance_id)
+		await _use_world_pet_exp_item_and_log(item_id, instance_id)
 		backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
 		_refresh_backpack_panel()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 		return
 	if BackpackModel.item_can_world_mm_stone(item_id):
-		_use_world_mm_stone_item_and_log(item_id, instance_id)
+		await _use_world_mm_stone_item_and_log(item_id, instance_id)
 		backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
 		_refresh_backpack_panel()
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
 		return
-	var result := _use_world_pet_heal_item_and_log(item_id, instance_id)
+	var result := await _use_world_pet_heal_item_and_log(item_id, instance_id)
 	var used := bool(result.get("ok", false))
 	var healed := maxi(0, int(result.get("heal", 0)))
 	backpack_pending_use_item_id = item_id if PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0 else ""
@@ -32511,6 +32572,13 @@ func _use_backpack_item_on_pet(item_id: String, instance_id: String) -> void:
 
 
 func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> Dictionary:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("world_item_use", {"itemId": item_id, "instanceId": instance_id}, "使用物品失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_quick_bar()
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		result["ok"] = bool(parsed.get("ok", false))
+		return result
 	var result := PlayerProgressModel.use_world_pet_heal_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
@@ -32529,6 +32597,15 @@ func _use_world_pet_heal_item_and_log(item_id: String, instance_id: String) -> D
 
 
 func _use_world_pet_exp_item_and_log(item_id: String, instance_id: String) -> Dictionary:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("world_item_use", {"itemId": item_id, "instanceId": instance_id}, "使用物品失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		result["ok"] = bool(parsed.get("ok", false))
+		return result
 	var result := PlayerProgressModel.use_world_pet_exp_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -32541,6 +32618,15 @@ func _use_world_pet_exp_item_and_log(item_id: String, instance_id: String) -> Di
 
 
 func _use_world_mm_stone_item_and_log(item_id: String, instance_id: String) -> Dictionary:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("world_item_use", {"itemId": item_id, "instanceId": instance_id}, "使用物品失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		result["ok"] = bool(parsed.get("ok", false))
+		return result
 	var result := PlayerProgressModel.use_world_mm_stone_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -32553,6 +32639,16 @@ func _use_world_mm_stone_item_and_log(item_id: String, instance_id: String) -> D
 
 
 func _use_backpack_pet_egg_item(item_id: String) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("world_item_use", {"itemId": item_id}, "使用宠物蛋失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		_refresh_pet_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			_update_hud_text()
+		return
 	var result := PlayerProgressModel.use_world_pet_egg_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -33520,6 +33616,20 @@ func _select_pet_skill_slot(slot: int) -> void:
 
 
 func _on_pet_skill_move_pressed(direction: int) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_skill_move_slot", {
+			"instanceId": pet_selected_instance_id,
+			"slot": pet_skill_selected_slot,
+			"direction": direction,
+		}, "移动宠物技能失败。")
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		if bool(parsed.get("ok", false)):
+			pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_skill_panel()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.move_pet_skill_slot(player_profile, pet_selected_instance_id, pet_skill_selected_slot, direction)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
@@ -33555,6 +33665,21 @@ func _pet_skill_id_for_selected_slot(instance: Dictionary) -> String:
 
 func _apply_pet_skill_to_selected_slot(skill_id: String) -> void:
 	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_skill_set_slot", {
+			"instanceId": pet_selected_instance_id,
+			"skillId": skill_id,
+			"slot": slot,
+			"trainerId": pet_skill_trainer_id,
+		}, "学习宠物技能失败。")
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		if bool(parsed.get("ok", false)):
+			pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_skill_panel()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.learn_pet_skill_to_slot(player_profile, pet_selected_instance_id, skill_id, slot, pet_skill_trainer_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
@@ -33617,6 +33742,16 @@ func _on_pet_skill_forget_pressed() -> void:
 	var slot := clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
 	var skill_id := str(slots[slot - 1]) if slot - 1 < slots.size() else ""
 	if skill_id == "":
+		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_skill_forget", {
+			"instanceId": pet_selected_instance_id,
+			"skillId": skill_id,
+		}, "遗忘宠物技能失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_skill_panel()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
 		return
 	var result := PlayerProgressModel.forget_pet_skill(player_profile, pet_selected_instance_id, skill_id)
 	player_profile = result.get("profile", player_profile)
@@ -37951,15 +38086,24 @@ func _select_pet_instance(instance_id: String) -> void:
 	pet_selected_instance_id = instance_id
 	pet_clear_confirm_instance_id = ""
 	if bool(selected.get("isNew", false)):
-		player_profile = PlayerProgressModel.mark_pet_seen(player_profile, instance_id)
-		if profile_save_enabled:
-			_save_player_profile_now()
+		if _is_server_account_session():
+			await _submit_server_profile_action("pet_mark_seen", {"instanceId": instance_id}, "")
+			selected = PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+		else:
+			player_profile = PlayerProgressModel.mark_pet_seen(player_profile, instance_id)
+			if profile_save_enabled:
+				_save_player_profile_now()
 	_refresh_pet_panel()
 	if pet_cultivation_panel != null and pet_cultivation_panel.visible:
 		_refresh_pet_cultivation_panel()
 
 
 func _on_pet_state_cycle_pressed() -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_state_cycle", {"instanceId": pet_selected_instance_id}, "切换宠物状态失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -37976,6 +38120,11 @@ func _on_pet_stable_pressed() -> void:
 	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
 	if selected.is_empty():
 		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_stable_toggle", {"instanceId": pet_selected_instance_id}, "兽栏操作失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := {}
 	if str(selected.get("state", "")) == PlayerProgressModel.PET_STATE_STORAGE:
 		result = PlayerProgressModel.withdraw_pet(player_profile, pet_selected_instance_id)
@@ -37989,6 +38138,14 @@ func _on_pet_stable_pressed() -> void:
 
 
 func _on_pet_party_move_pressed(direction: int) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_party_move", {
+			"instanceId": pet_selected_instance_id,
+			"direction": direction,
+		}, "调整宠物位置失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.move_party_pet(player_profile, pet_selected_instance_id, direction)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -37998,6 +38155,11 @@ func _on_pet_party_move_pressed(direction: int) -> void:
 
 
 func _on_pet_lock_pressed() -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_lock_toggle", {"instanceId": pet_selected_instance_id}, "宠物锁定失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.toggle_pet_locked(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -38011,6 +38173,11 @@ func _on_pet_batch_store_pressed() -> void:
 		_set_world_log_message("需要学会远程兽栏，或前往村内兽栏。")
 		_refresh_pet_panel()
 		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_batch_store", {}, "批量存入失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.batch_store_standby_pets(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -38020,6 +38187,11 @@ func _on_pet_batch_store_pressed() -> void:
 
 
 func _on_pet_batch_state_pressed(target_state: String) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_batch_state", {"targetState": target_state}, "批量切换状态失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.batch_set_party_pet_state(player_profile, target_state)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -38072,6 +38244,18 @@ func _on_pet_rename_pressed() -> void:
 func _on_pet_rename_confirmed() -> void:
 	if pet_rename_panel == null or pet_rename_input == null:
 		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_rename", {
+			"instanceId": pet_selected_instance_id,
+			"name": pet_rename_input.text,
+		}, "宠物改名失败。")
+		if bool(parsed.get("ok", false)):
+			_close_pet_rename_panel()
+			_refresh_pet_panel()
+		else:
+			pet_rename_input.grab_focus()
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		return
 	var result := PlayerProgressModel.rename_pet(player_profile, pet_selected_instance_id, pet_rename_input.text)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
@@ -38123,6 +38307,12 @@ func _refresh_pet_cultivation_panel() -> void:
 
 
 func _on_pet_cultivation_confirm_pressed() -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_cultivation_apply", {"instanceId": pet_selected_instance_id}, "宠物培养失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		_refresh_pet_cultivation_panel()
+		return
 	var result := PlayerProgressModel.apply_pet_cultivation(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -38148,6 +38338,19 @@ func _on_pet_drop_pressed() -> void:
 		_set_world_log_message("地面太满了")
 		return
 	var drop_cell := cell_result.get("cell", Vector2i.ZERO) as Vector2i
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_drop", {
+			"instanceId": pet_selected_instance_id,
+			"mapId": current_map_id,
+			"cell": [drop_cell.x, drop_cell.y],
+			"nowSec": int(Time.get_unix_time_from_system()),
+		}, "丢弃宠物失败。")
+		if bool(parsed.get("ok", false)):
+			pet_selected_instance_id = ""
+		_close_pet_rename_panel()
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.drop_pet(
 		player_profile,
 		pet_selected_instance_id,
@@ -38174,6 +38377,14 @@ func _on_pet_clear_storage_pressed() -> void:
 	if pet_clear_confirm_instance_id != pet_selected_instance_id:
 		pet_clear_confirm_instance_id = pet_selected_instance_id
 		_set_world_log_message("再点一次清理 %s。" % str(selected.get("name", "宠物")))
+		_refresh_pet_panel()
+		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_clear_storage", {"instanceId": pet_selected_instance_id}, "清理宠物失败。")
+		if bool(parsed.get("ok", false)):
+			pet_selected_instance_id = ""
+		pet_clear_confirm_instance_id = ""
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
 		_refresh_pet_panel()
 		return
 	var result := PlayerProgressModel.clear_storage_pet(player_profile, pet_selected_instance_id)
@@ -38272,6 +38483,18 @@ func _ground_pet_marker_world_position(drop: Dictionary) -> Vector2:
 
 
 func _pickup_ground_pet_drop(drop_id: String) -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_pickup_drop", {
+			"dropId": drop_id,
+			"nowSec": int(Time.get_unix_time_from_system()),
+		}, "拾取宠物失败。")
+		var result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+		if bool(parsed.get("ok", false)):
+			pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		return
 	var result := PlayerProgressModel.pickup_ground_pet(player_profile, drop_id, int(Time.get_unix_time_from_system()))
 	player_profile = result.get("profile", player_profile)
 	if (bool(result.get("ok", false)) or bool(result.get("changed", false))) and profile_save_enabled:
@@ -38289,6 +38512,9 @@ func _close_pet_rename_panel() -> void:
 
 func _update_pet_rest_recovery(delta: float) -> void:
 	if delta <= 0.0 or player_profile.is_empty():
+		return
+	if _is_server_account_session():
+		pet_rest_recovery_elapsed = 0.0
 		return
 	if not _has_recovering_rest_pet():
 		pet_rest_recovery_elapsed = 0.0
@@ -38350,6 +38576,13 @@ func _update_ground_pet_drop_expiration(delta: float) -> void:
 	pet_drop_expire_elapsed = 0.0
 	var now_sec := int(Time.get_unix_time_from_system())
 	if not _has_expired_ground_pet_drop(now_sec):
+		return
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_expire_drops", {"nowSec": now_sec}, "")
+		if bool(parsed.get("ok", false)):
+			if pet_panel != null and pet_panel.visible:
+				_refresh_pet_panel()
+			_set_world_log_message("地上的宠物离开了。")
 		return
 	var result := PlayerProgressModel.expire_ground_pet_drops(player_profile, now_sec)
 	if not bool(result.get("ok", false)):
@@ -40693,6 +40926,21 @@ func _complete_dialog_optional_talk_quest() -> void:
 
 func _apply_dialog_healer(from_hang_auto: bool = false) -> void:
 	var was_hang_pending_resume := _hang_pending_healer_resume()
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("village_heal", {}, "村医治疗失败。")
+		var heal_result := {"ok": bool(parsed.get("ok", false)), "message": str(parsed.get("message", ""))}
+		var message := "\n".join(_string_array_values(parsed.get("logLines", [])))
+		if was_hang_pending_resume:
+			var hang_message := _handle_hang_healer_result(heal_result, from_hang_auto)
+			if hang_message != "":
+				message = "%s\n%s" % [message, hang_message]
+		_set_world_log_message(message.strip_edges())
+		_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		return
 	var heal_result := PlayerProgressModel.apply_village_healer(player_profile)
 	player_profile = heal_result.get("profile", player_profile)
 	var message := str(heal_result.get("message", ""))
@@ -40834,6 +41082,18 @@ func _clear_hang_heal_resume_route() -> void:
 
 
 func _claim_pet_rebirth_mm_stage2_from_dialog() -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_rebirth_mm_stage2_claim", {}, "领取2转小MM失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		if bool(parsed.get("ok", false)):
+			_close_dialog()
+		else:
+			_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		if pet_panel != null and pet_panel.visible:
+			_refresh_pet_panel()
+		return
 	var result := PlayerProgressModel.claim_pet_rebirth_mm_stage2(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -40850,6 +41110,13 @@ func _claim_pet_rebirth_mm_stage2_from_dialog() -> void:
 
 
 func _start_pet_rebirth_mm_guide_from_dialog() -> void:
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("pet_rebirth_mm_guide_start", {}, "开始宠物转生教学失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		return
 	var result := PlayerProgressModel.start_pet_rebirth_mm_guide(player_profile)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
@@ -41155,6 +41422,13 @@ func _record_point_data_for_dialog(item: Dictionary) -> Dictionary:
 
 func _save_record_point_from_dialog() -> void:
 	var point := _record_point_data_for_dialog(active_dialog_interaction)
+	if _is_server_account_session():
+		var parsed := await _submit_server_profile_action("record_point_save", {"recordPoint": point}, "保存记录点失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_update_dialog_text()
+		if status_label != null:
+			_update_hud_text()
+		return
 	player_profile = PlayerProgressModel.with_record_point(
 		player_profile,
 		str(point.get("mapId", current_map_id)),

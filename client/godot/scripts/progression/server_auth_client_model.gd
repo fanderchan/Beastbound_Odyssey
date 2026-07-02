@@ -56,6 +56,21 @@ static func profile_upload_request(base_url: String, session_token: String, _pro
 	return profile_upload_disabled_probe_request(base_url, session_token)
 
 
+static func profile_action_request(base_url: String, session_token: String, action: String, payload: Dictionary = {}) -> Dictionary:
+	return {
+		"url": "%s/profile/action" % normalized_base_url(base_url),
+		"headers": [
+			"Content-Type: application/json",
+			"Authorization: Bearer %s" % session_token,
+		],
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"action": action,
+			"payload": payload,
+		}),
+	}
+
+
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
 	return {
 		"url": "%s/shops/transaction" % normalized_base_url(base_url),
@@ -757,6 +772,17 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 		"message": str(data.get("message", "角色档案已同步。")),
 		"response": data,
 	}
+
+
+static func parse_profile_action_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "档案操作失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
+	parsed["logLines"] = _string_array(response.get("logLines", []))
+	return parsed
 
 
 static func parse_hang_session_response(response_code: int, body: PackedByteArray) -> Dictionary:

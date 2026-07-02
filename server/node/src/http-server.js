@@ -86,6 +86,9 @@ function createHttpServer(options = {}) {
           message: "角色档案由服务器专用接口写入，禁止客户端整档上传。",
         });
       }
+      if (req.method === "POST" && url.pathname === "/profile/action") {
+        return sendResult(res, service.profileAction(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
       }
