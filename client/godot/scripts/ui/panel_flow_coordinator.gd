@@ -10828,10 +10828,21 @@ func _equipment_profile_without_slot(profile: Dictionary, slot_id: String) -> Di
 	var normalized = PlayerProgressModel.normalize_profile(profile)
 	var slots = PlayerProgressModel.equipment_slots(normalized)
 	var durability = PlayerProgressModel.equipment_durability(normalized)
+	var instances = PlayerProgressModel.equipment_instances(normalized)
+	var slot_instance_ids = PlayerProgressModel.equipment_slot_instance_ids(normalized)
+	var instance_id = str(slot_instance_ids.get(slot_id, ""))
 	slots.erase(slot_id)
 	durability.erase(slot_id)
+	slot_instance_ids.erase(slot_id)
+	if instance_id != "" and instances.has(instance_id):
+		var record = (instances.get(instance_id, {}) as Dictionary).duplicate(true)
+		record["location"] = "backpack"
+		record["slotId"] = ""
+		instances[instance_id] = record
 	normalized[PlayerProgressModel.EQUIPMENT_SLOTS_KEY] = slots
 	normalized[PlayerProgressModel.EQUIPMENT_DURABILITY_KEY] = durability
+	normalized[PlayerProgressModel.EQUIPMENT_INSTANCES_KEY] = instances
+	normalized[PlayerProgressModel.EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = slot_instance_ids
 	return PlayerProgressModel.normalize_profile(normalized)
 
 func _equipment_slot_is_broken(slot_id: String, item_id: String) -> bool:
@@ -17908,4 +17919,3 @@ func _has_expired_ground_pet_drop(now_sec: int) -> bool:
 		if expires_at > 0 and now_sec >= expires_at:
 			return true
 	return false
-

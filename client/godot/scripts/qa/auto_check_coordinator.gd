@@ -213,6 +213,15 @@ var host
 func _init(host_ref) -> void:
 	host = host_ref
 
+
+func _set_host_battle_event_queue(events: Array) -> void:
+	var typed_events: Array[Dictionary] = []
+	for event in events:
+		if event is Dictionary:
+			typed_events.append(event as Dictionary)
+	host.battle_event_queue = typed_events
+
+
 func _run_auto_movement_check() -> void:
 	var start_position = host.player.global_position
 	var target = IsoMapModel.grid_to_world(host.map_data, IsoMapModel.spawn_cell(host.map_data) + Vector2i(2, -2))
@@ -3540,10 +3549,10 @@ func _run_auto_battle_retarget_visual_check() -> void:
 		host.get_tree().quit(1)
 		return
 	var original_target_id = "enemy_front_3"
-	var second_target_id = "enemy_back_1"
+	var second_target_id = "enemy_front_1"
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, original_target_id, 1)
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, second_target_id, 1)
-	host.battle_event_queue = [
+	_set_host_battle_event_queue([
 		{
 			"type": "attack",
 			"attackerId": "ally_attack_high",
@@ -3583,7 +3592,7 @@ func _run_auto_battle_retarget_visual_check() -> void:
 			"forceDodge": false,
 			"forceCritical": false,
 			},
-	]
+	])
 	host.battle_last_round_applied_events = 0
 	host.battle_last_round_event_types.clear()
 	host.battle_last_round_actor_order.clear()
@@ -3630,7 +3639,7 @@ func _run_auto_battle_visual_timing_check() -> void:
 		return
 	var target_id = "enemy_front_3"
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, target_id, 40)
-	host.battle_event_queue = [{
+	_set_host_battle_event_queue([{
 		"type": "attack",
 		"attackerId": "ally_attack_high",
 		"targetId": target_id,
@@ -3643,7 +3652,7 @@ func _run_auto_battle_visual_timing_check() -> void:
 			"canCounter": false,
 			"forceDodge": false,
 			"forceCritical": false,
-		}]
+		}])
 	host.battle_state["phase"] = "round_events"
 	host._play_next_battle_event()
 	var actual_after_hit = BattleModel.actor_by_id(host.battle_state, target_id)
@@ -3673,7 +3682,7 @@ func _run_auto_battle_visual_timing_check() -> void:
 		"canLaunch": true,
 		"launchMode": "straight",
 	}
-	host.battle_event_queue = [combo_event]
+	_set_host_battle_event_queue([combo_event])
 	host.battle_state["phase"] = "round_events"
 	host._play_next_battle_event()
 	var combo_participant = BattleModel.actor_by_id(host.battle_state, "ally_speed_fast")
@@ -3823,10 +3832,10 @@ func _run_auto_battle_event_ledger_check() -> void:
 		host.get_tree().quit(1)
 		return
 	var original_target_id = "enemy_front_3"
-	var second_target_id = "enemy_back_1"
+	var second_target_id = "enemy_front_1"
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, original_target_id, 1)
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, second_target_id, 1)
-	host.battle_event_queue = [
+	_set_host_battle_event_queue([
 		{
 			"type": "attack",
 			"attackerId": "ally_attack_high",
@@ -3866,7 +3875,7 @@ func _run_auto_battle_event_ledger_check() -> void:
 			"forceDodge": false,
 			"forceCritical": false,
 			},
-	]
+	])
 	host.battle_last_round_applied_events = 0
 	host.battle_last_round_event_types.clear()
 	host.battle_last_round_actor_order.clear()
@@ -3899,7 +3908,7 @@ func _run_auto_battle_event_ledger_check() -> void:
 		return
 	var combo_target_id = "enemy_front_3"
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, combo_target_id, 18)
-	host.battle_event_queue = [{
+	_set_host_battle_event_queue([{
 		"type": "combo_attack",
 		"attackerId": "ally_speed_fast",
 		"participantIds": ["ally_speed_fast", "ally_attack_high"],
@@ -3911,7 +3920,7 @@ func _run_auto_battle_event_ledger_check() -> void:
 		"movementStyle": "melee_combo",
 		"canLaunch": true,
 		"launchMode": "bounce",
-	}]
+	}])
 	host.battle_state["phase"] = "round_events"
 	host._play_next_battle_event()
 	var combo_ledger = host.battle_last_event_ledger.duplicate(true)
@@ -6532,7 +6541,7 @@ func _run_auto_mailbox_check() -> void:
 		and host.mailbox_detail_label != null
 		and host.mailbox_detail_label.text.find("经验丹") >= 0
 	)
-	host.mailbox_server_messages = [{
+	var server_messages: Array[Dictionary] = [{
 		"mailId": "mail_server_item_check",
 		"senderUsername": "serverfriend",
 		"senderDisplayName": "远方猎人",
@@ -6542,6 +6551,7 @@ func _run_auto_mailbox_check() -> void:
 		"createdAt": "2099-01-01T00:00:00.000Z",
 		"readAt": null,
 	}]
+	host.mailbox_server_messages = server_messages
 	host.mailbox_selected_mail_id = "server:mail_server_item_check"
 	host.mailbox_selected_source = "server"
 	host._refresh_mailbox_panel()
@@ -13392,7 +13402,7 @@ func _run_auto_auth_server_live_check() -> void:
 		host.account_info_label != null
 		and host.account_info_label.text.find(username) >= 0
 		and host.account_info_label.text.find("通道：服务器") >= 0
-		and host.account_info_label.text.find("本地") < 0
+		and host.account_info_label.text.find("通道：本地") < 0
 	)
 	var status = "ok" if auth_ok and sync_ok and account_panel_ok else "failed"
 	print("auth server live check ready: status=%s username=%s auth=%s sync=%s account_panel=%s state=%s revision=%d message=%s" % [
