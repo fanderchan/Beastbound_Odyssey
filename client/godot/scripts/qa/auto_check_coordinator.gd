@@ -12925,6 +12925,60 @@ func _run_auto_auth_server_client_check() -> void:
 		and int(battle_command_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("body", "")).find("\"actionId\":\"attack\"") >= 0
 	)
+	var retry_delay_first := ServerAuthClientModel.request_retry_delay_seconds(battle_state_spec, 1)
+	var retry_delay_second := ServerAuthClientModel.request_retry_delay_seconds(battle_state_spec, 2)
+	var retry_contract_ok = (
+		ServerAuthClientModel.request_retry_policy(battle_state_spec) == ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
+		and ServerAuthClientModel.request_retry_attempts(battle_state_spec) == ServerAuthClientModel.DEFAULT_RETRY_ATTEMPTS
+		and ServerAuthClientModel.request_should_retry(battle_state_spec, HTTPRequest.RESULT_CANT_CONNECT, 0, 1)
+		and retry_delay_second > retry_delay_first
+		and ServerAuthClientModel.request_retry_policy(battle_command_spec) == ServerAuthClientModel.RETRY_POLICY_NONE
+		and ServerAuthClientModel.request_retry_attempts(battle_command_spec) == 1
+		and not ServerAuthClientModel.request_should_retry(battle_command_spec, HTTPRequest.RESULT_CANT_CONNECT, 0, 1)
+	)
+	var parsed_retry_network = ServerAuthClientModel.parse_battle_state_response(0, ServerAuthClientModel.network_failure_body(
+		battle_state_spec,
+		HTTPRequest.RESULT_CANT_CONNECT,
+		OK,
+		ServerAuthClientModel.DEFAULT_RETRY_ATTEMPTS,
+		true
+	))
+	var parsed_command_network = ServerAuthClientModel.parse_battle_command_response(0, ServerAuthClientModel.network_failure_body(
+		battle_command_spec,
+		HTTPRequest.RESULT_CANT_CONNECT,
+		OK,
+		1,
+		false
+	))
+	var network_failure_parse_ok = (
+		ServerAuthClientModel.is_network_failure_response(parsed_retry_network)
+		and str(parsed_retry_network.get("code", "")) == ServerAuthClientModel.NETWORK_RETRY_FAILED_CODE
+		and str(parsed_retry_network.get("message", "")).find("已重试") >= 0
+		and ServerAuthClientModel.is_network_failure_response(parsed_command_network)
+		and str(parsed_command_network.get("code", "")) == ServerAuthClientModel.NETWORK_FAILED_CODE
+		and str(parsed_command_network.get("message", "")).find("确认状态") >= 0
+	)
+	var previous_battle_active: bool = host.battle_active
+	var previous_battle_state: Dictionary = host.battle_state.duplicate(true)
+	var previous_server_battle_state: Dictionary = host.server_battle_state.duplicate(true)
+	host.battle_active = true
+	host.battle_state = {
+		"serverAuthority": true,
+		"serverRoomId": "battle_room_test",
+		"phase": "command",
+		"message": "",
+	}
+	host.server_battle_state.clear()
+	var reconnect_ui_ok = (
+		host._server_battle().handle_battle_network_failure(parsed_retry_network)
+		and bool(host.server_battle_state.get("reconnecting", false))
+		and str(host.battle_state.get("message", "")).find("重连中") >= 0
+	)
+	host._server_battle().clear_battle_network_reconnect()
+	var reconnect_clear_ok = not bool(host.server_battle_state.get("reconnecting", false))
+	host.battle_active = previous_battle_active
+	host.battle_state = previous_battle_state
+	host.server_battle_state = previous_server_battle_state
 	var parsed_party_state = ServerAuthClientModel.parse_party_state_response(200, JSON.stringify({
 		"ok": true,
 		"party": {
@@ -13358,7 +13412,8 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -13393,6 +13448,9 @@ func _run_auto_auth_server_client_check() -> void:
 			str(local_battle_writeback_block_ok),
 			str(party_pve_mapping_ok),
 			str(chat_request_ok and chat_parse_ok),
+		str(retry_contract_ok),
+		str(network_failure_parse_ok),
+		str(reconnect_ui_ok and reconnect_clear_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),

@@ -6,11 +6,31 @@ const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
 const CLIENT_VERSION := "0.1.0"
 const CLIENT_PROTOCOL_VERSION := 1
+const RETRY_POLICY_NONE := "none"
+const RETRY_POLICY_IDEMPOTENT := "idempotent"
+const DEFAULT_RETRY_ATTEMPTS := 3
+const DEFAULT_RETRY_BASE_DELAY_MS := 250
+const DEFAULT_RETRY_MAX_DELAY_MS := 1000
+const NETWORK_FAILED_CODE := "network_failed"
+const NETWORK_RETRY_FAILED_CODE := "network_retry_failed"
 const SESSION_INVALID_CODES := [
 	"session_expired",
 	"session_refresh_expired",
 	"session_revoked",
 	"session_missing",
+]
+const NETWORK_FAILURE_CODES := [
+	NETWORK_FAILED_CODE,
+	NETWORK_RETRY_FAILED_CODE,
+]
+const RETRYABLE_HTTP_RESPONSE_CODES := [
+	408,
+	425,
+	429,
+	500,
+	502,
+	503,
+	504,
 ]
 
 
@@ -34,6 +54,68 @@ static func request_headers(extra: Array[String] = []) -> Array[String]:
 	]
 	headers.append_array(extra)
 	return headers
+
+
+static func request_retry_policy(spec: Dictionary) -> String:
+	var policy := str(spec.get("retryPolicy", "")).strip_edges()
+	if policy != "":
+		return policy
+	if bool(spec.get("idempotent", false)):
+		return RETRY_POLICY_IDEMPOTENT
+	if int(spec.get("method", HTTPClient.METHOD_GET)) == HTTPClient.METHOD_GET:
+		return RETRY_POLICY_IDEMPOTENT
+	return RETRY_POLICY_NONE
+
+
+static func request_is_idempotent(spec: Dictionary) -> bool:
+	return request_retry_policy(spec) == RETRY_POLICY_IDEMPOTENT
+
+
+static func request_retry_attempts(spec: Dictionary) -> int:
+	if not request_is_idempotent(spec):
+		return 1
+	return maxi(1, int(spec.get("retryAttempts", DEFAULT_RETRY_ATTEMPTS)))
+
+
+static func request_retry_delay_seconds(spec: Dictionary, completed_attempts: int) -> float:
+	var base_ms := maxi(0, int(spec.get("retryBaseDelayMs", DEFAULT_RETRY_BASE_DELAY_MS)))
+	var max_ms := maxi(base_ms, int(spec.get("retryMaxDelayMs", DEFAULT_RETRY_MAX_DELAY_MS)))
+	var multiplier := int(pow(2.0, float(maxi(0, completed_attempts - 1))))
+	var delay_ms := mini(max_ms, base_ms * multiplier)
+	return float(delay_ms) / 1000.0
+
+
+static func request_should_retry(spec: Dictionary, result: int, response_code: int, completed_attempts: int) -> bool:
+	if completed_attempts >= request_retry_attempts(spec):
+		return false
+	if not request_is_idempotent(spec):
+		return false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		return true
+	return RETRYABLE_HTTP_RESPONSE_CODES.has(response_code)
+
+
+static func network_failure_body(spec: Dictionary, _result: int, _error: int, attempts: int, exhausted_retries: bool) -> PackedByteArray:
+	var retry_failed := exhausted_retries and request_is_idempotent(spec) and attempts > 1
+	var code := NETWORK_RETRY_FAILED_CODE if retry_failed else NETWORK_FAILED_CODE
+	return JSON.stringify({
+		"ok": false,
+		"code": code,
+		"message": network_failure_message(spec, code),
+		"attempts": maxi(1, attempts),
+	}).to_utf8_buffer()
+
+
+static func network_failure_message(spec: Dictionary, code: String) -> String:
+	if code == NETWORK_RETRY_FAILED_CODE:
+		return "网络不稳定，已重试，请稍后再试。"
+	if request_is_idempotent(spec):
+		return "网络连接失败，请稍后重试。"
+	return "网络连接失败，请确认状态后重试。"
+
+
+static func is_network_failure_response(parsed: Dictionary) -> bool:
+	return NETWORK_FAILURE_CODES.has(str(parsed.get("code", "")).strip_edges())
 
 
 static func _auth_headers(session_token: String) -> Array[String]:

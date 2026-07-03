@@ -30,6 +30,24 @@ func handle_session_invalid_response(parsed: Dictionary) -> bool:
 	return true
 
 
+func handle_battle_network_failure(parsed: Dictionary) -> bool:
+	if not ServerAuthClientModel.is_network_failure_response(parsed):
+		return false
+	if not host._battle_is_server_authority():
+		return false
+	host.server_battle_state["reconnecting"] = true
+	host.server_battle_waiting_poll_elapsed = SERVER_BATTLE_WAITING_POLL_SECONDS
+	host._set_battle_message("网络不稳定，重连中。")
+	host._sync_battle_buttons()
+	host._layout_hud()
+	return true
+
+
+func clear_battle_network_reconnect() -> void:
+	if bool(host.server_battle_state.get("reconnecting", false)):
+		host.server_battle_state.erase("reconnecting")
+
+
 func should_poll_waiting_state() -> bool:
 	var phase := str(host.battle_state.get("phase", "")).strip_edges()
 	return (
@@ -84,8 +102,11 @@ func request_room_restore_poll() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
-		handle_session_invalid_response(parsed)
+		if handle_session_invalid_response(parsed):
+			return
+		handle_battle_network_failure(parsed)
 		return
+	clear_battle_network_reconnect()
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
 	var room = parsed.get("room", null)
@@ -112,8 +133,11 @@ func request_waiting_state_poll() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
-		handle_session_invalid_response(parsed)
+		if handle_session_invalid_response(parsed):
+			return
+		handle_battle_network_failure(parsed)
 		return
+	clear_battle_network_reconnect()
 	var room = parsed.get("room", null)
 	if room is Dictionary:
 		apply_polled_room(room as Dictionary, expected_room_id)
@@ -130,6 +154,7 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "") -> void:
 		active_room_id = str(host.battle_state.get("serverRoomId", "")).strip_edges()
 	if active_room_id != "" and room_id != "" and room_id != active_room_id:
 		return
+	clear_battle_network_reconnect()
 	host.server_battle_state["room"] = room.duplicate(true)
 	var room_closed := str(room.get("status", "")).strip_edges() == "closed"
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
@@ -172,8 +197,11 @@ func request_state_restore() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
-		handle_session_invalid_response(parsed)
+		if handle_session_invalid_response(parsed):
+			return
+		handle_battle_network_failure(parsed)
 		return
+	clear_battle_network_reconnect()
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
 	var room = parsed.get("room", null)
@@ -287,6 +315,7 @@ func _apply_battle_invite_event(event: Dictionary, event_type: String) -> void:
 func apply_room_state(room: Dictionary, force_start: bool = false) -> bool:
 	if room.is_empty():
 		return false
+	clear_battle_network_reconnect()
 	host.server_battle_state["room"] = room.duplicate(true)
 	return host._sync_server_battle_room_scene(force_start)
 
@@ -307,6 +336,7 @@ func sync_room_scene(force_start: bool = false) -> bool:
 	var room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
 	if not ServerBattleRoomModel.is_restorable_room(room):
 		return false
+	clear_battle_network_reconnect()
 	var next_state := ServerBattleRoomModel.battle_state_from_room(room, host.current_account_session)
 	if next_state.is_empty():
 		return false
