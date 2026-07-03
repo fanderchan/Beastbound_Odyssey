@@ -155,6 +155,96 @@
         {"itemId": "pet_rebirth_mm1_egg", "buyPrice": 1800, "sellable": false},
         {"itemId": "pet_rebirth_mm2_egg", "buyPrice": 2800, "sellable": false}
       ]
+    },
+    {
+      "id": "manor_firebud_shop",
+      "label": "火芽庄园道具场",
+      "access": {"familyManorId": "firebud_manor"},
+      "items": [
+        {"itemId": "item_heal_all_5", "buyPrice": 22, "sellable": false},
+        {"itemId": "item_cleanse_single_5", "buyPrice": 12, "sellable": false},
+        {"itemId": "encounter_stone_mid", "buyPrice": 32, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_earth_shop",
+      "label": "岩脉庄园道具场",
+      "access": {"familyManorId": "earth_vein_manor"},
+      "items": [
+        {"itemId": "mm_stone_defense_mid", "buyPrice": 42, "sellable": false},
+        {"itemId": "mm_stone_hp_mid", "buyPrice": 42, "sellable": false},
+        {"itemId": "equip_frag_hide_basic", "buyPrice": 18, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_tide_shop",
+      "label": "潮声庄园道具场",
+      "access": {"familyManorId": "tide_echo_manor"},
+      "items": [
+        {"itemId": "item_heal_all_5", "buyPrice": 20, "sellable": false},
+        {"itemId": "mm_stone_hp_mid", "buyPrice": 40, "sellable": false},
+        {"itemId": "capture_net_reinforced", "buyPrice": 54, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_ember_shop",
+      "label": "焰心庄园道具场",
+      "access": {"familyManorId": "ember_core_manor"},
+      "items": [
+        {"itemId": "mm_stone_attack_mid", "buyPrice": 42, "sellable": false},
+        {"itemId": "item_poison_all_5", "buyPrice": 28, "sellable": false},
+        {"itemId": "weapon_stone_axe", "buyPrice": 64, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_gale_shop",
+      "label": "岚息庄园道具场",
+      "access": {"familyManorId": "gale_breath_manor"},
+      "items": [
+        {"itemId": "mm_stone_quick_mid", "buyPrice": 42, "sellable": false},
+        {"itemId": "encounter_stone_high", "buyPrice": 58, "sellable": false},
+        {"itemId": "accessory_wind_ring", "buyPrice": 34, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_shadow_shop",
+      "label": "玄影庄园道具场",
+      "access": {"familyManorId": "shadow_oath_manor"},
+      "items": [
+        {"itemId": "item_exp_pill_lv131", "buyPrice": 480, "sellable": false},
+        {"itemId": "item_exp_pill_lv140", "buyPrice": 720, "sellable": false},
+        {"itemId": "thunder_dragon_egg", "buyPrice": 3000, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_beast_shop",
+      "label": "兽栏庄园道具场",
+      "access": {"familyManorId": "beast_pen_manor"},
+      "items": [
+        {"itemId": "capture_net_reinforced", "buyPrice": 48, "sellable": false},
+        {"itemId": "novice_tiger_egg", "buyPrice": 2600, "sellable": false},
+        {"itemId": "pet_rebirth_mm1_egg", "buyPrice": 1450, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_artisan_shop",
+      "label": "工匠庄园道具场",
+      "access": {"familyManorId": "artisan_manor"},
+      "items": [
+        {"itemId": "equip_frag_wood_basic", "buyPrice": 14, "sellable": false},
+        {"itemId": "equip_frag_hide_basic", "buyPrice": 14, "sellable": false},
+        {"itemId": "weapon_bone_blade", "buyPrice": 88, "sellable": false}
+      ]
+    },
+    {
+      "id": "manor_training_shop",
+      "label": "训练庄园道具场",
+      "access": {"familyManorId": "training_manor"},
+      "items": [
+        {"itemId": "item_exp_pill_lv1", "buyPrice": 90, "sellable": false},
+        {"itemId": "encounter_stone_high", "buyPrice": 56, "sellable": false},
+        {"itemId": "item_pet_exp_pill_lv131", "buyPrice": 480, "sellable": false}
+      ]
     }
   ]
 }

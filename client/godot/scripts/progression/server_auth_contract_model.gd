@@ -130,6 +130,9 @@ static func _table_definitions() -> Array[Dictionary]:
 		_table("gmCommandGrants", "gm_command_grants", ["accountId", "commandId"], "local_plugin_commands", "server_admin_only", "GM命令白名单，支持按账号或角色授予。"),
 		_table("gmCommandAudit", "gm_command_audit", ["auditId"], "gm_tool_audit_jsonl", "append_only", "GM命令执行审计，记录账号、命令、结果和原因。"),
 		_table("authEvents", "auth_events", ["eventId"], "runtime_auth_events", "append_only", "注册、登录、登出、失败登录和权限拒绝事件。"),
+		_table("families", "families", ["familyId"], "none", "server_only", "家族名称、族长、成员、声望和占领庄园列表。"),
+		_table("manors", "manors", ["manorId"], "data/manors.json", "server_authority", "九大庄园占领状态、占领家族和庄园道具场权限。"),
+		_table("manorBattles", "manor_battles", ["battleId"], "runtime_manor_battles", "append_only", "庄园战挑战、胜负、双方家族和战力记录。"),
 	]
 
 
@@ -153,6 +156,13 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("questClaim", "POST", "/quests/claim", "session", "服务端领取主线/可选任务奖励并回写档案。"),
 		_endpoint("hangSessionStart", "POST", "/hang/session/start", "session", "服务端开启走动挂机或遇敌石挂机，并在遇敌石模式扣除道具。"),
 		_endpoint("hangSessionStop", "POST", "/hang/session/stop", "session", "服务端停止挂机会话并回写停止原因。"),
+		_endpoint("familyState", "GET", "/families/state", "session", "读取当前账号的家族和庄园视图。"),
+		_endpoint("familyList", "GET", "/families", "session", "读取可加入的家族列表。"),
+		_endpoint("familyCreate", "POST", "/families/create", "session", "成立家族并把当前账号设为族长。"),
+		_endpoint("familyJoin", "POST", "/families/join", "session", "加入开放家族。"),
+		_endpoint("familyLeave", "POST", "/families/leave", "session", "离开家族，最后成员离开时释放庄园。"),
+		_endpoint("manorList", "GET", "/manors", "session", "读取九大庄园占领和道具场信息。"),
+		_endpoint("manorChallenge", "POST", "/manors/challenge", "family_leader", "族长发起庄园战，胜利后占领庄园。"),
 		_endpoint("gmTools", "GET", "/gm/tools", "gm_session", "读取当前账号可见的GM工具入口。"),
 		_endpoint("gmCommand", "POST", "/gm/commands/{commandId}", "gm_command_grant", "执行GM命令，服务端必须重新鉴权并写审计。"),
 	]

@@ -262,6 +262,7 @@ var quest_menu_button: Button
 var map_menu_button: Button
 var chat_menu_button: Button
 var party_menu_button: Button
+var family_menu_button: Button
 var mailbox_menu_button: Button
 var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
@@ -497,6 +498,20 @@ var party_current_state: Dictionary = {}
 var party_online_players: Array[Dictionary] = []
 var party_request_pending: bool = false
 var party_pending_kind: String = ""
+var family_panel: PanelContainer
+var family_status_label: Label
+var family_name_input: LineEdit
+var family_create_button: Button
+var family_refresh_button: Button
+var family_leave_button: Button
+var family_list_container: VBoxContainer
+var manor_list_container: VBoxContainer
+var family_http_request: HTTPRequest
+var family_current_state: Dictionary = {}
+var family_list: Array[Dictionary] = []
+var family_manors: Array[Dictionary] = []
+var family_request_pending: bool = false
+var family_pending_kind: String = ""
 var online_position_http_request: HTTPRequest
 var online_position_timer: Timer
 var online_position_request_pending: bool = false

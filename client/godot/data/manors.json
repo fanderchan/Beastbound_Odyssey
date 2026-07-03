@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "manors": [
+    {
+      "id": "firebud_manor",
+      "name": "火芽庄园",
+      "village": "火芽村",
+      "element": "fire",
+      "shopId": "manor_firebud_shop",
+      "neutralPower": 260,
+      "defenseBonus": 60
+    },
+    {
+      "id": "earth_vein_manor",
+      "name": "岩脉庄园",
+      "village": "岩脉洞穴",
+      "element": "earth",
+      "shopId": "manor_earth_shop",
+      "neutralPower": 340,
+      "defenseBonus": 80
+    },
+    {
+      "id": "tide_echo_manor",
+      "name": "潮声庄园",
+      "village": "潮声洞穴",
+      "element": "water",
+      "shopId": "manor_tide_shop",
+      "neutralPower": 340,
+      "defenseBonus": 80
+    },
+    {
+      "id": "ember_core_manor",
+      "name": "焰心庄园",
+      "village": "焰心洞穴",
+      "element": "fire",
+      "shopId": "manor_ember_shop",
+      "neutralPower": 360,
+      "defenseBonus": 90
+    },
+    {
+      "id": "gale_breath_manor",
+      "name": "岚息庄园",
+      "village": "岚息洞穴",
+      "element": "wind",
+      "shopId": "manor_gale_shop",
+      "neutralPower": 360,
+      "defenseBonus": 90
+    },
+    {
+      "id": "shadow_oath_manor",
+      "name": "玄影庄园",
+      "village": "玄影洞窟",
+      "element": "shadow",
+      "shopId": "manor_shadow_shop",
+      "neutralPower": 460,
+      "defenseBonus": 120
+    },
+    {
+      "id": "beast_pen_manor",
+      "name": "兽栏庄园",
+      "village": "火芽村外",
+      "element": "beast",
+      "shopId": "manor_beast_shop",
+      "neutralPower": 300,
+      "defenseBonus": 70
+    },
+    {
+      "id": "artisan_manor",
+      "name": "工匠庄园",
+      "village": "火芽工坊",
+      "element": "craft",
+      "shopId": "manor_artisan_shop",
+      "neutralPower": 320,
+      "defenseBonus": 70
+    },
+    {
+      "id": "training_manor",
+      "name": "训练庄园",
+      "village": "练级草丛",
+      "element": "training",
+      "shopId": "manor_training_shop",
+      "neutralPower": 320,
+      "defenseBonus": 70
+    }
+  ]
+}

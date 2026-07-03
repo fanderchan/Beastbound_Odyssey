@@ -8,6 +8,10 @@ const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
+const {
+  createFamilyManorDomain,
+  familyOwnsManor,
+} = require("./auth/family-manor");
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
@@ -585,6 +589,11 @@ function createAuthService(options = {}) {
     const itemLabel = bagItemLabel(itemId);
     if (!entry) {
       return fail("shop_item_missing", "商店没有出售这个物品。");
+    }
+    const access = shopAccessFor(shopId);
+    const accessCheck = shopAccessCheck(data, resolved.account, access);
+    if (!accessCheck.ok) {
+      return fail(accessCheck.code, accessCheck.message, accessCheck.extra || {});
     }
     const binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
@@ -1471,6 +1480,7 @@ function createAuthService(options = {}) {
     partyEncounterSnapshotFromPayload,
     partyForAccount,
     partyStatePayload,
+    manorEntries,
     persistProfileForAccount,
     profileActionLogLines,
     profileBackpackSlots,
@@ -1518,6 +1528,7 @@ function createAuthService(options = {}) {
   const mailChat = createMailChatDomain(domainContext);
   const party = createPartyDomain(domainContext);
   const battleRoom = createBattleRoomDomain(domainContext);
+  const familyManor = createFamilyManorDomain(domainContext);
 
   return {
     register,
@@ -1558,6 +1569,13 @@ function createAuthService(options = {}) {
     acceptPartyInvite: party.acceptPartyInvite,
     declinePartyInvite: party.declinePartyInvite,
     leaveParty: party.leaveParty,
+    getFamilyState: familyManor.getFamilyState,
+    listFamilies: familyManor.listFamilies,
+    createFamily: familyManor.createFamily,
+    joinFamily: familyManor.joinFamily,
+    leaveFamily: familyManor.leaveFamily,
+    listManors: familyManor.listManors,
+    challengeManor: familyManor.challengeManor,
     listChatMessages: mailChat.listChatMessages,
     sendChatMessage: mailChat.sendChatMessage,
     getBattleState: battleRoom.getBattleState,
@@ -1681,6 +1699,9 @@ function normalizeData(raw) {
     mailMessages: objectOrEmpty(data.mailMessages),
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
+    families: normalizeFamilies(data.families),
+    manors: objectOrEmpty(data.manors),
+    manorBattles: normalizeManorBattles(data.manorBattles),
     chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
     playerPositions: objectOrEmpty(data.playerPositions),
     battleInvites: objectOrEmpty(data.battleInvites),
@@ -1694,6 +1715,42 @@ function normalizeData(raw) {
     serviceEventSeq,
     serviceEvents,
   };
+}
+
+function normalizeFamilies(value) {
+  const families = objectOrEmpty(value);
+  const result = {};
+  for (const [familyId, rawFamily] of Object.entries(families)) {
+    if (!rawFamily || typeof rawFamily !== "object" || Array.isArray(rawFamily)) {
+      continue;
+    }
+    const normalizedId = String(rawFamily.familyId || familyId || "").trim();
+    const name = String(rawFamily.name || "").trim();
+    if (!normalizedId || !name) {
+      continue;
+    }
+    result[normalizedId] = {
+      ...rawFamily,
+      familyId: normalizedId,
+      name,
+      leaderAccountId: String(rawFamily.leaderAccountId || ""),
+      memberAccountIds: uniqueStringArray(rawFamily.memberAccountIds),
+      notice: String(rawFamily.notice || ""),
+      fame: Math.max(0, Math.trunc(Number(rawFamily.fame || 0))),
+      manorIds: uniqueStringArray(rawFamily.manorIds),
+      schemaVersion: 1,
+    };
+  }
+  return result;
+}
+
+function normalizeManorBattles(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((battle) => battle && typeof battle === "object" && !Array.isArray(battle) && String(battle.battleId || "") !== "")
+    .slice(-200);
 }
 
 function persistentDataForStore(data) {
@@ -2274,6 +2331,7 @@ let equipmentSynthesisDocumentCache = null;
 let battleActionDocumentCache = null;
 let bagItemDocumentCache = null;
 let shopDocumentCache = null;
+let manorDocumentCache = null;
 let rewardEconomyDocumentCache = null;
 let battleRewardDocumentCache = null;
 let captureToolDocumentCache = null;
@@ -2317,6 +2375,13 @@ function shopDocument() {
     shopDocumentCache = loadDataDocument("item_shops.json");
   }
   return shopDocumentCache;
+}
+
+function manorDocument() {
+  if (!manorDocumentCache) {
+    manorDocumentCache = loadDataDocument("manors.json");
+  }
+  return manorDocumentCache;
 }
 
 function rewardEconomyDocument() {
@@ -7964,6 +8029,14 @@ function shopForId(shopId) {
   return shops().find((shop) => String(shop.id || "") === normalizedShopId) || null;
 }
 
+function manorEntries() {
+  const raw = manorDocument().manors;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter((manor) => manor && typeof manor === "object" && !Array.isArray(manor) && String(manor.id || "") !== "");
+}
+
 function shopEntries(shopId) {
   const shop = shopForId(shopId);
   const entries = shop && Array.isArray(shop.items) ? shop.items : [];
@@ -7990,6 +8063,24 @@ function shopCurrencyFor(shopId) {
   return rawCurrency === SHOP_CURRENCY_DIAMONDS || rawCurrency === "diamond"
     ? SHOP_CURRENCY_DIAMONDS
     : SHOP_CURRENCY_STONE_COINS;
+}
+
+function shopAccessFor(shopId) {
+  const shop = shopForId(shopId);
+  return shop && shop.access && typeof shop.access === "object" && !Array.isArray(shop.access) ? shop.access : {};
+}
+
+function shopAccessCheck(data, account, access) {
+  const manorId = String(access && access.familyManorId || "").trim();
+  if (manorId && !familyOwnsManor(data, account.accountId, manorId)) {
+    return {
+      ok: false,
+      code: "shop_family_manor_required",
+      message: "需要家族占领对应庄园后才能购买。",
+      extra: {manorId},
+    };
+  }
+  return {ok: true};
 }
 
 function shopCurrencyLabel(currency) {

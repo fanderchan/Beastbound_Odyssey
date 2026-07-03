@@ -522,6 +522,12 @@ var party_menu_button:
 	set(value):
 		host.party_menu_button = value
 
+var family_menu_button:
+	get:
+		return host.family_menu_button
+	set(value):
+		host.family_menu_button = value
+
 var mailbox_menu_button:
 	get:
 		return host.mailbox_menu_button
@@ -1925,6 +1931,90 @@ var party_pending_kind:
 		return host.party_pending_kind
 	set(value):
 		host.party_pending_kind = value
+
+var family_panel:
+	get:
+		return host.family_panel
+	set(value):
+		host.family_panel = value
+
+var family_status_label:
+	get:
+		return host.family_status_label
+	set(value):
+		host.family_status_label = value
+
+var family_name_input:
+	get:
+		return host.family_name_input
+	set(value):
+		host.family_name_input = value
+
+var family_create_button:
+	get:
+		return host.family_create_button
+	set(value):
+		host.family_create_button = value
+
+var family_refresh_button:
+	get:
+		return host.family_refresh_button
+	set(value):
+		host.family_refresh_button = value
+
+var family_leave_button:
+	get:
+		return host.family_leave_button
+	set(value):
+		host.family_leave_button = value
+
+var family_list_container:
+	get:
+		return host.family_list_container
+	set(value):
+		host.family_list_container = value
+
+var manor_list_container:
+	get:
+		return host.manor_list_container
+	set(value):
+		host.manor_list_container = value
+
+var family_http_request:
+	get:
+		return host.family_http_request
+	set(value):
+		host.family_http_request = value
+
+var family_current_state:
+	get:
+		return host.family_current_state
+	set(value):
+		host.family_current_state = value
+
+var family_list:
+	get:
+		return host.family_list
+	set(value):
+		host.family_list = value
+
+var family_manors:
+	get:
+		return host.family_manors
+	set(value):
+		host.family_manors = value
+
+var family_request_pending:
+	get:
+		return host.family_request_pending
+	set(value):
+		host.family_request_pending = value
+
+var family_pending_kind:
+	get:
+		return host.family_pending_kind
+	set(value):
+		host.family_pending_kind = value
 
 var online_position_http_request:
 	get:
@@ -5198,6 +5288,11 @@ func _build_hud() -> void:
 	party_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	party_menu_button.pressed.connect(_open_party_panel)
 	action_row.add_child(party_menu_button)
+	family_menu_button = Button.new()
+	family_menu_button.text = "家族"
+	family_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	family_menu_button.pressed.connect(_open_family_panel)
+	action_row.add_child(family_menu_button)
 	mailbox_menu_button = Button.new()
 	mailbox_menu_button.text = "邮箱"
 	mailbox_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -6282,6 +6377,94 @@ func _build_hud() -> void:
 	party_http_request.request_completed.connect(_on_party_http_request_completed)
 	party_panel.add_child(party_http_request)
 	hud_root.add_child(party_panel)
+
+	family_panel = _panel_container("FamilyPanel")
+	family_panel.visible = false
+	family_panel.z_index = 24
+	var family_column = VBoxContainer.new()
+	family_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	family_column.add_theme_constant_override("separation", 8)
+	family_panel.add_child(family_column)
+
+	var family_header = HBoxContainer.new()
+	family_header.add_theme_constant_override("separation", 10)
+	family_column.add_child(family_header)
+	var family_title_label = Label.new()
+	family_title_label.text = "家族与庄园"
+	family_title_label.add_theme_font_size_override("font_size", 21)
+	family_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_header.add_child(family_title_label)
+	family_refresh_button = Button.new()
+	family_refresh_button.text = "刷新"
+	family_refresh_button.custom_minimum_size = Vector2(80, 44)
+	family_refresh_button.pressed.connect(_request_family_state)
+	family_header.add_child(family_refresh_button)
+	family_leave_button = Button.new()
+	family_leave_button.text = "离族"
+	family_leave_button.custom_minimum_size = Vector2(80, 44)
+	family_leave_button.pressed.connect(_on_family_leave_pressed)
+	family_header.add_child(family_leave_button)
+	var family_close_button = Button.new()
+	family_close_button.text = "关闭"
+	family_close_button.custom_minimum_size = Vector2(92, 44)
+	family_close_button.pressed.connect(_close_family_panel)
+	family_header.add_child(family_close_button)
+
+	family_status_label = Label.new()
+	family_status_label.text = ""
+	family_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	family_status_label.add_theme_font_size_override("font_size", 15)
+	family_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	family_status_label.custom_minimum_size = Vector2(0, 30)
+	family_column.add_child(family_status_label)
+
+	var family_create_row = HBoxContainer.new()
+	family_create_row.add_theme_constant_override("separation", 8)
+	family_column.add_child(family_create_row)
+	family_name_input = LineEdit.new()
+	family_name_input.placeholder_text = "家族名"
+	family_name_input.max_length = 12
+	family_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_create_row.add_child(family_name_input)
+	family_create_button = Button.new()
+	family_create_button.text = "成立"
+	family_create_button.custom_minimum_size = Vector2(92, 42)
+	family_create_button.pressed.connect(_on_family_create_pressed)
+	family_create_row.add_child(family_create_button)
+
+	var family_scroll = ScrollContainer.new()
+	family_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	family_column.add_child(family_scroll)
+	var family_content = VBoxContainer.new()
+	family_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_content.add_theme_constant_override("separation", 10)
+	family_scroll.add_child(family_content)
+
+	var family_list_title = Label.new()
+	family_list_title.text = "家族列表"
+	family_list_title.add_theme_font_size_override("font_size", 17)
+	family_content.add_child(family_list_title)
+	family_list_container = VBoxContainer.new()
+	family_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_list_container.add_theme_constant_override("separation", 7)
+	family_content.add_child(family_list_container)
+
+	var manor_list_title = Label.new()
+	manor_list_title.text = "九大庄园"
+	manor_list_title.add_theme_font_size_override("font_size", 17)
+	family_content.add_child(manor_list_title)
+	manor_list_container = VBoxContainer.new()
+	manor_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	manor_list_container.add_theme_constant_override("separation", 7)
+	family_content.add_child(manor_list_container)
+
+	family_http_request = HTTPRequest.new()
+	family_http_request.timeout = 8.0
+	family_http_request.request_completed.connect(_on_family_http_request_completed)
+	family_panel.add_child(family_http_request)
+	hud_root.add_child(family_panel)
 
 	player_action_panel = _panel_container("PlayerActionPanel")
 	player_action_panel.visible = false
@@ -8561,6 +8744,7 @@ func _open_account_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -9715,6 +9899,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
+	_close_family_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_encounter()
@@ -12573,6 +12758,8 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_party_panel(false)
+	_close_family_panel(false)
 	shop_active_id = resolved_shop_id
 	shop_mode = "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
@@ -13656,6 +13843,8 @@ func _open_map_panel() -> void:
 	_close_auto_settings_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_party_panel()
+	_close_family_panel()
 	map_panel.visible = true
 	_refresh_map_panel()
 	host._layout_hud()
@@ -13680,6 +13869,7 @@ func _open_chat_panel() -> void:
 	_close_quest_panel()
 	_close_map_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_mailbox_panel()
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
@@ -13899,6 +14089,7 @@ func _open_party_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_family_panel()
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -13911,6 +14102,295 @@ func _open_party_panel() -> void:
 
 func _close_party_panel(update_layout: bool = true) -> void:
 	_hide_control(party_panel, update_layout)
+
+func _open_family_panel() -> void:
+	if battle_active:
+		return
+	host._set_hang_mode(false)
+	host._close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_mailbox_panel()
+	_close_party_panel(false)
+	_close_player_action_panel(false)
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if family_panel != null:
+		family_panel.visible = true
+	_refresh_family_panel()
+	_request_family_state()
+	host._layout_hud()
+
+func _close_family_panel(update_layout: bool = true) -> void:
+	_hide_control(family_panel, update_layout)
+
+func _refresh_family_panel() -> void:
+	if family_panel == null or family_list_container == null or manor_list_container == null:
+		return
+	_clear_container_children(family_list_container)
+	_clear_container_children(manor_list_container)
+	var current_family := _family_current_family()
+	if family_status_label != null and family_status_label.text.strip_edges() == "":
+		family_status_label.text = "家族状态已同步。" if not current_family.is_empty() else "当前没有家族。"
+	for family in family_list:
+		var row = HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+		var label = Label.new()
+		label.text = "%s  族长：%s  成员：%d/%d  庄园：%d" % [
+			str(family.get("name", "家族")),
+			str(family.get("leaderDisplayName", family.get("leaderUsername", ""))),
+			int(family.get("memberCount", 0)),
+			int(family.get("maxMembers", 100)),
+			(family.get("manorIds", []) as Array).size() if family.get("manorIds", []) is Array else 0,
+		]
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 15)
+		row.add_child(label)
+		var join_button = Button.new()
+		join_button.text = "加入"
+		join_button.custom_minimum_size = Vector2(78, 42)
+		var family_id := str(family.get("familyId", ""))
+		join_button.disabled = family_request_pending or not current_family.is_empty() or family_id == ""
+		join_button.pressed.connect(func() -> void:
+			_on_family_join_pressed(family_id)
+		)
+		row.add_child(join_button)
+		family_list_container.add_child(row)
+	if family_list.is_empty():
+		family_list_container.add_child(_party_info_label("暂无家族。输入家族名可以直接成立。"))
+	if family_manors.is_empty():
+		manor_list_container.add_child(_party_info_label("暂无庄园资料。"))
+	else:
+		for manor in family_manors:
+			manor_list_container.add_child(_family_manor_row(manor, current_family))
+	_refresh_family_request_controls()
+
+func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control:
+	var row = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 8)
+	var label = Label.new()
+	var owner_name = str(manor.get("ownerFamilyName", "")).strip_edges()
+	if owner_name == "":
+		owner_name = "未占领"
+	var owned_text = "  已占领" if bool(manor.get("isOwnedByViewerFamily", false)) else ""
+	label.text = "%s  %s  守备:%d  占领：%s%s" % [
+		str(manor.get("name", "庄园")),
+		str(manor.get("village", "")),
+		int(manor.get("neutralPower", 0)),
+		owner_name,
+		owned_text,
+	]
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 15)
+	row.add_child(label)
+	var manor_id := str(manor.get("manorId", ""))
+	var challenge_button = Button.new()
+	challenge_button.text = "挑战"
+	challenge_button.custom_minimum_size = Vector2(78, 42)
+	challenge_button.disabled = family_request_pending or current_family.is_empty() or not _family_current_user_is_leader(current_family) or bool(manor.get("isOwnedByViewerFamily", false))
+	challenge_button.pressed.connect(func() -> void:
+		_on_family_challenge_manor_pressed(manor_id)
+	)
+	row.add_child(challenge_button)
+	var shop_button = Button.new()
+	shop_button.text = "道具场"
+	shop_button.custom_minimum_size = Vector2(92, 42)
+	var shop_id := str(manor.get("shopId", ""))
+	shop_button.disabled = family_request_pending or not bool(manor.get("isOwnedByViewerFamily", false)) or shop_id == ""
+	shop_button.pressed.connect(func() -> void:
+		_on_family_open_manor_shop_pressed(shop_id)
+	)
+	row.add_child(shop_button)
+	return row
+
+func _family_current_family() -> Dictionary:
+	var family_value = family_current_state.get("family", null)
+	return (family_value as Dictionary).duplicate(true) if family_value is Dictionary else {}
+
+func _family_current_user_is_leader(family: Dictionary) -> bool:
+	var account_id = str(current_account_session.get("accountId", "")).strip_edges()
+	if account_id == "":
+		account_id = _current_account_id_for_party()
+	return account_id != "" and str(family.get("leaderAccountId", "")).strip_edges() == account_id
+
+func _refresh_family_request_controls() -> void:
+	var has_server_session = _is_server_account_session()
+	var has_family = not _family_current_family().is_empty()
+	if family_refresh_button != null:
+		family_refresh_button.disabled = family_request_pending or not has_server_session
+	if family_create_button != null:
+		family_create_button.disabled = family_request_pending or not has_server_session or has_family
+	if family_leave_button != null:
+		family_leave_button.disabled = family_request_pending or not has_server_session or not has_family
+	if family_status_label != null:
+		if not has_server_session:
+			family_status_label.text = "需要服务器账号登录。"
+		elif family_request_pending:
+			family_status_label.text = "正在同步家族..."
+
+func _request_family_state() -> void:
+	if not _is_server_account_session():
+		if family_status_label != null:
+			family_status_label.text = "需要服务器账号登录。"
+		_refresh_family_request_controls()
+		return
+	_start_family_request("state", ServerAuthClientModel.family_state_request(_server_profile_base_url(), _server_profile_token()))
+
+func _request_family_list() -> void:
+	if not _is_server_account_session():
+		return
+	_start_family_request("list", ServerAuthClientModel.family_list_request(_server_profile_base_url(), _server_profile_token()))
+
+func _on_family_create_pressed() -> void:
+	var family_name = family_name_input.text.strip_edges() if family_name_input != null else ""
+	if family_name == "":
+		if family_status_label != null:
+			family_status_label.text = "请输入家族名。"
+		return
+	_start_family_request("create", ServerAuthClientModel.family_create_request(_server_profile_base_url(), _server_profile_token(), family_name))
+
+func _on_family_join_pressed(family_id: String) -> void:
+	if family_id.strip_edges() == "":
+		return
+	_start_family_request("join", ServerAuthClientModel.family_join_request(_server_profile_base_url(), _server_profile_token(), family_id))
+
+func _on_family_leave_pressed() -> void:
+	if not _is_server_account_session():
+		return
+	_start_family_request("leave", ServerAuthClientModel.family_leave_request(_server_profile_base_url(), _server_profile_token()))
+
+func _on_family_challenge_manor_pressed(manor_id: String) -> void:
+	if manor_id.strip_edges() == "":
+		return
+	_start_family_request("challenge", ServerAuthClientModel.manor_challenge_request(_server_profile_base_url(), _server_profile_token(), manor_id))
+
+func _on_family_open_manor_shop_pressed(shop_id: String) -> void:
+	if shop_id.strip_edges() == "":
+		return
+	_open_shop_panel(shop_id)
+
+func _start_family_request(kind: String, spec: Dictionary) -> void:
+	if family_http_request == null or family_request_pending:
+		return
+	family_pending_kind = kind
+	family_request_pending = true
+	_refresh_family_request_controls()
+	if family_status_label != null:
+		match kind:
+			"list":
+				family_status_label.text = "正在读取家族列表..."
+			"create":
+				family_status_label.text = "正在成立家族..."
+			"join":
+				family_status_label.text = "正在加入家族..."
+			"leave":
+				family_status_label.text = "正在离开家族..."
+			"challenge":
+				family_status_label.text = "正在发起庄园战..."
+			_:
+				family_status_label.text = "正在同步家族..."
+	var err = family_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		family_request_pending = false
+		family_pending_kind = ""
+		if family_status_label != null:
+			family_status_label.text = "无法发起家族请求。"
+		_refresh_family_request_controls()
+
+func _on_family_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind = family_pending_kind
+	family_pending_kind = ""
+	family_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if family_status_label != null:
+			family_status_label.text = "家族服务器连接失败。"
+		_refresh_family_request_controls()
+		return
+	if kind == "state":
+		var parsed_state = ServerAuthClientModel.parse_family_state_response(response_code, body)
+		if bool(parsed_state.get("ok", false)):
+			family_current_state = {"family": parsed_state.get("family", null)}
+			family_manors.clear()
+			var raw_manors = parsed_state.get("manors", [])
+			if raw_manors is Array:
+				for value in raw_manors:
+					if value is Dictionary:
+						family_manors.append((value as Dictionary).duplicate(true))
+			if family_status_label != null:
+				var family = _family_current_family()
+				family_status_label.text = "我的家族：%s。" % str(family.get("name", "")) if not family.is_empty() else "当前没有家族。"
+			_refresh_family_panel()
+			_request_family_list()
+			return
+		elif _handle_session_invalid_response(parsed_state):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_state.get("message", "家族状态读取失败。"))
+	elif kind == "list":
+		var parsed_list = ServerAuthClientModel.parse_family_list_response(response_code, body)
+		if bool(parsed_list.get("ok", false)):
+			family_list.clear()
+			var raw_families = parsed_list.get("families", [])
+			if raw_families is Array:
+				for value in raw_families:
+					if value is Dictionary:
+						family_list.append((value as Dictionary).duplicate(true))
+			if family_status_label != null and family_status_label.text.strip_edges() == "":
+				family_status_label.text = "家族列表已刷新。"
+		elif _handle_session_invalid_response(parsed_list):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_list.get("message", "家族列表读取失败。"))
+	elif kind == "challenge":
+		var parsed_challenge = ServerAuthClientModel.parse_manor_challenge_response(response_code, body)
+		if bool(parsed_challenge.get("ok", false)):
+			if family_status_label != null:
+				var battle = parsed_challenge.get("battle", {}) as Dictionary if parsed_challenge.get("battle", {}) is Dictionary else {}
+				family_status_label.text = "%s：我方 %d / 守方 %d。" % [
+					str(parsed_challenge.get("message", "庄园战已结算。")),
+					int(battle.get("challengerPower", 0)),
+					int(battle.get("defenderPower", 0)),
+				]
+			_request_family_state()
+			return
+		elif _handle_session_invalid_response(parsed_challenge):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_challenge.get("message", "庄园战失败。"))
+	else:
+		var parsed_action = ServerAuthClientModel.parse_family_action_response(response_code, body)
+		if bool(parsed_action.get("ok", false)):
+			if family_name_input != null and kind == "create":
+				family_name_input.text = ""
+			if family_status_label != null:
+				family_status_label.text = str(parsed_action.get("message", "家族已更新。"))
+			_request_family_state()
+			return
+		elif _handle_session_invalid_response(parsed_action):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_action.get("message", "家族操作失败。"))
+	_refresh_family_panel()
+	_refresh_family_request_controls()
 
 func _refresh_party_panel() -> void:
 	if party_panel == null or party_members_container == null or party_invites_container == null or party_online_container == null:
@@ -14770,6 +15250,7 @@ func _open_mailbox_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
@@ -15165,6 +15646,7 @@ func _open_training_partner_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_auto_settings_panel()
 	training_partner_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
@@ -15281,6 +15763,7 @@ func _open_auto_settings_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_family_panel()
 	auto_settings_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_auto_settings_panel()
@@ -15313,6 +15796,7 @@ func _open_qa_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_numeric_workbench_panel(false)
@@ -15349,6 +15833,7 @@ func _open_numeric_workbench_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_party_panel()
+	_close_family_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)

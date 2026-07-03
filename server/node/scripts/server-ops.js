@@ -131,7 +131,7 @@ function mysqlCounts(env) {
       "--skip-column-names",
       env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey",
       "-e",
-      "SELECT 'accounts', COUNT(*) FROM accounts UNION ALL SELECT 'profiles', COUNT(*) FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'player_positions', COUNT(*) FROM player_positions UNION ALL SELECT 'battle_rooms', COUNT(*) FROM battle_rooms UNION ALL SELECT 'battle_records', COUNT(*) FROM battle_records UNION ALL SELECT 'service_events', COUNT(*) FROM service_events;",
+      "SELECT 'accounts', COUNT(*) FROM accounts UNION ALL SELECT 'profiles', COUNT(*) FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'families', COUNT(*) FROM families UNION ALL SELECT 'manors', COUNT(*) FROM manors UNION ALL SELECT 'manor_battles', COUNT(*) FROM manor_battles UNION ALL SELECT 'player_positions', COUNT(*) FROM player_positions UNION ALL SELECT 'battle_rooms', COUNT(*) FROM battle_rooms UNION ALL SELECT 'battle_records', COUNT(*) FROM battle_records UNION ALL SELECT 'service_events', COUNT(*) FROM service_events;",
     ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "pipe"]});
     const counts = {};
     for (const line of output.trim().split(/\r?\n/)) {

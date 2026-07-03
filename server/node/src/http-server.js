@@ -177,6 +177,27 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/chat/send") {
         return sendResult(res, service.sendChatMessage(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "GET" && url.pathname === "/families/state") {
+        return sendResult(res, service.getFamilyState(bearerToken(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/families") {
+        return sendResult(res, service.listFamilies(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/families/create") {
+        return sendResult(res, service.createFamily(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/families/join") {
+        return sendResult(res, service.joinFamily(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/families/leave") {
+        return sendResult(res, service.leaveFamily(bearerToken(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/manors") {
+        return sendResult(res, service.listManors(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/manors/challenge") {
+        return sendResult(res, service.challengeManor(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/battle/state") {
         return sendResult(res, service.getBattleState(bearerToken(req)));
       }

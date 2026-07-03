@@ -44,13 +44,16 @@ process.stdin.on("data", (chunk) => {
   stdin += chunk;
 });
 process.stdin.on("end", () => {
-  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
-    argv: process.argv.slice(2),
-    stdinLength: stdin.length,
-    hasExecuteArg: process.argv.slice(2).includes("-e"),
-    hasServerState: stdin.includes("INSERT INTO server_state"),
-    hasBattleRecords: stdin.includes("INSERT INTO battle_records"),
-  }) + "\\n");
+    fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
+      argv: process.argv.slice(2),
+      stdinLength: stdin.length,
+      hasExecuteArg: process.argv.slice(2).includes("-e"),
+      hasServerState: stdin.includes("INSERT INTO server_state"),
+      hasBattleRecords: stdin.includes("INSERT INTO battle_records"),
+      hasFamilies: stdin.includes("INSERT INTO families"),
+      hasManors: stdin.includes("INSERT INTO manors"),
+      hasManorBattles: stdin.includes("INSERT INTO manor_battles"),
+    }) + "\\n");
 });
 `, {"mode": 0o755});
   try {
@@ -98,6 +101,41 @@ process.stdin.on("end", () => {
           "schemaVersion": 1,
         },
       ],
+      "families": {
+        "family_mysqlprobe": {
+          "familyId": "family_mysqlprobe",
+          "name": "MySQL家族",
+          "leaderAccountId": "acc_mysqlprobe",
+          "memberAccountIds": ["acc_mysqlprobe"],
+          "fame": 20,
+          "manorIds": ["firebud_manor"],
+          "createdAt": "2026-06-30T00:00:00.000Z",
+          "updatedAt": "2026-06-30T00:00:00.000Z",
+          "schemaVersion": 1,
+        },
+      },
+      "manors": {
+        "firebud_manor": {
+          "manorId": "firebud_manor",
+          "ownerFamilyId": "family_mysqlprobe",
+          "ownerFamilyName": "MySQL家族",
+          "occupiedAt": "2026-06-30T00:00:00.000Z",
+          "updatedAt": "2026-06-30T00:00:00.000Z",
+          "schemaVersion": 1,
+        },
+      },
+      "manorBattles": [
+        {
+          "battleId": "manor_battle_mysqlprobe",
+          "manorId": "firebud_manor",
+          "challengerFamilyId": "family_mysqlprobe",
+          "defenderFamilyId": "",
+          "winnerFamilyId": "family_mysqlprobe",
+          "result": "challenger_win",
+          "createdAt": "2026-06-30T00:00:00.000Z",
+          "schemaVersion": 1,
+        },
+      ],
       "authEvents": [],
       "serviceEvents": [],
     });
@@ -106,6 +144,9 @@ process.stdin.on("end", () => {
     assert.ok(calls.every((call) => call.hasExecuteArg === false));
     assert.ok(calls.some((call) => call.hasServerState));
     assert.ok(calls.some((call) => call.hasBattleRecords));
+    assert.ok(calls.some((call) => call.hasFamilies));
+    assert.ok(calls.some((call) => call.hasManors));
+    assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
   } finally {
     if (previousLogPath === undefined) {

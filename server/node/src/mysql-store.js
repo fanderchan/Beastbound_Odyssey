@@ -88,6 +88,39 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         INDEX idx_party_invites_to_status (to_account_id, status)
       );
+      CREATE TABLE IF NOT EXISTS families (
+        family_id VARCHAR(96) PRIMARY KEY,
+        family_name VARCHAR(80) NOT NULL,
+        leader_account_id VARCHAR(80) NOT NULL,
+        member_count INT NOT NULL DEFAULT 0,
+        fame INT NOT NULL DEFAULT 0,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_families_name (family_name),
+        INDEX idx_families_leader (leader_account_id)
+      );
+      CREATE TABLE IF NOT EXISTS manors (
+        manor_id VARCHAR(96) PRIMARY KEY,
+        owner_family_id VARCHAR(96) NOT NULL DEFAULT '',
+        owner_family_name VARCHAR(80) NOT NULL DEFAULT '',
+        occupied_at VARCHAR(40) NOT NULL DEFAULT '',
+        updated_at VARCHAR(40) NOT NULL DEFAULT '',
+        document_json JSON NOT NULL,
+        INDEX idx_manors_owner (owner_family_id)
+      );
+      CREATE TABLE IF NOT EXISTS manor_battles (
+        battle_id VARCHAR(96) PRIMARY KEY,
+        manor_id VARCHAR(96) NOT NULL,
+        challenger_family_id VARCHAR(96) NOT NULL,
+        defender_family_id VARCHAR(96) NOT NULL DEFAULT '',
+        winner_family_id VARCHAR(96) NOT NULL DEFAULT '',
+        result VARCHAR(40) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_manor_battles_manor_created (manor_id, created_at),
+        INDEX idx_manor_battles_winner_created (winner_family_id, created_at)
+      );
       CREATE TABLE IF NOT EXISTS chat_messages (
         message_id VARCHAR(96) PRIMARY KEY,
         channel VARCHAR(24) NOT NULL,
@@ -231,6 +264,9 @@ function buildSaveStatements(nextData) {
   statements.push("DELETE FROM mail_messages");
   statements.push("DELETE FROM parties");
   statements.push("DELETE FROM party_invites");
+  statements.push("DELETE FROM families");
+  statements.push("DELETE FROM manors");
+  statements.push("DELETE FROM manor_battles");
   statements.push("DELETE FROM chat_messages");
   statements.push("DELETE FROM player_positions");
   statements.push("DELETE FROM battle_invites");
@@ -261,6 +297,17 @@ function buildSaveStatements(nextData) {
   }
   for (const invite of Object.values(objectOrEmpty(data.partyInvites))) {
     statements.push(insertPartyInviteStatement(invite));
+  }
+  for (const family of Object.values(objectOrEmpty(data.families))) {
+    statements.push(insertFamilyStatement(family));
+  }
+  for (const manor of Object.values(objectOrEmpty(data.manors))) {
+    statements.push(insertManorStatement(manor));
+  }
+  if (Array.isArray(data.manorBattles)) {
+    for (const battle of data.manorBattles) {
+      statements.push(insertManorBattleStatement(battle));
+    }
   }
   if (Array.isArray(data.chatMessages)) {
     for (const message of data.chatMessages) {
@@ -488,6 +535,19 @@ function insertPartyStatement(party) {
 
 function insertPartyInviteStatement(invite) {
   return `INSERT INTO party_invites (invite_id, party_id, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.partyId)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
+}
+
+function insertFamilyStatement(family) {
+  const memberCount = Array.isArray(family.memberAccountIds) ? family.memberAccountIds.length : 0;
+  return `INSERT INTO families (family_id, family_name, leader_account_id, member_count, fame, created_at, updated_at, document_json) VALUES (${sqlString(family.familyId)}, ${sqlString(family.name)}, ${sqlString(family.leaderAccountId)}, ${Number(memberCount)}, ${Number(family.fame || 0)}, ${sqlString(family.createdAt)}, ${sqlString(family.updatedAt)}, ${sqlJson(family)})`;
+}
+
+function insertManorStatement(manor) {
+  return `INSERT INTO manors (manor_id, owner_family_id, owner_family_name, occupied_at, updated_at, document_json) VALUES (${sqlString(manor.manorId)}, ${sqlString(manor.ownerFamilyId)}, ${sqlString(manor.ownerFamilyName)}, ${sqlString(manor.occupiedAt)}, ${sqlString(manor.updatedAt)}, ${sqlJson(manor)})`;
+}
+
+function insertManorBattleStatement(battle) {
+  return `INSERT INTO manor_battles (battle_id, manor_id, challenger_family_id, defender_family_id, winner_family_id, result, created_at, document_json) VALUES (${sqlString(battle.battleId)}, ${sqlString(battle.manorId)}, ${sqlString(battle.challengerFamilyId)}, ${sqlString(battle.defenderFamilyId)}, ${sqlString(battle.winnerFamilyId)}, ${sqlString(battle.result)}, ${sqlString(battle.createdAt)}, ${sqlJson(battle)})`;
 }
 
 function insertChatMessageStatement(message) {

@@ -81,10 +81,12 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["equipment_enhance_", "装备强化失败，请检查装备和材料。"],
 	["equipment_repair_", "装备修理失败，请检查耐久和费用。"],
 	["equipment_", "装备操作失败，请检查装备状态。"],
+	["family_", "家族操作失败，请检查家族状态。"],
 	["hang_", "挂机操作失败，请检查队伍和道具状态。"],
 	["item_use_", "这个物品暂时不能这样使用。"],
 	["item_", "物品操作失败，请检查数量和状态。"],
 	["mail_", "邮件操作失败，请稍后重试。"],
+	["manor_", "庄园操作失败，请检查家族和庄园状态。"],
 	["mm_stone_", "转生MM石头条件未满足。"],
 	["mm_", "转生MM任务暂时无法处理。"],
 	["party_encounter_", "队伍遇敌失败，请检查队伍状态。"],
@@ -499,6 +501,69 @@ static func party_leave_request(base_url: String, session_token: String) -> Dict
 	}
 
 
+static func family_state_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/families/state" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func family_list_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/families" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func family_create_request(base_url: String, session_token: String, family_name: String) -> Dictionary:
+	return {
+		"url": "%s/families/create" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"name": family_name}),
+	}
+
+
+static func family_join_request(base_url: String, session_token: String, family_id: String) -> Dictionary:
+	return {
+		"url": "%s/families/join" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"familyId": family_id}),
+	}
+
+
+static func family_leave_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/families/leave" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
+static func manor_list_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/manors" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func manor_challenge_request(base_url: String, session_token: String, manor_id: String) -> Dictionary:
+	return {
+		"url": "%s/manors/challenge" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"manorId": manor_id}),
+	}
+
+
 static func battle_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/battle/state" % normalized_base_url(base_url),
@@ -801,6 +866,57 @@ static func parse_party_action_response(response_code: int, body: PackedByteArra
 	parsed["party"] = response.get("party", null)
 	parsed["invite"] = response.get("invite", {}) if response.get("invite", {}) is Dictionary else {}
 	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
+	return parsed
+
+
+static func parse_family_state_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "家族状态读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["family"] = response.get("family", null)
+	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	return parsed
+
+
+static func parse_family_list_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "家族列表读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["families"] = _dictionary_array(response.get("families", []))
+	return parsed
+
+
+static func parse_family_action_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "家族操作失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["family"] = response.get("family", null)
+	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	return parsed
+
+
+static func parse_manor_list_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "庄园列表读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["family"] = response.get("family", null)
+	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	return parsed
+
+
+static func parse_manor_challenge_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "庄园战失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["battle"] = response.get("battle", {}) if response.get("battle", {}) is Dictionary else {}
+	parsed["family"] = response.get("family", null)
+	parsed["manor"] = response.get("manor", {}) if response.get("manor", {}) is Dictionary else {}
+	parsed["manors"] = _dictionary_array(response.get("manors", []))
 	return parsed
 
 
