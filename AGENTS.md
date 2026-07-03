@@ -5,8 +5,10 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 ## Project Status And Roadmap
 
 - The project has moved past the prototype/bugfix phase: all 32 known bugs in `tasks.md` are fixed and verified. Do not re-investigate them unless a regression is proven by a failing test or check.
-- Release iteration follows `release_plan.md`, executed stage by stage (A → E). At the start of every session, read the "进度追踪" section of `release_plan.md` and `git log` to locate the current position, then continue from the first unchecked item.
-- After completing each item, tick its checkbox in `release_plan.md` and append one line of completion evidence. After completing each stage, run the full validation suite and stop for user confirmation before starting the next stage.
+- Release engineering follows `release_plan.md` (stages A → E). Content and StoneAge-gap iteration follows `stoneage_gap_plan.md` (stages F0 → F8). At the start of every session, read the "进度追踪" section of whichever plan is active, plus `git log`, to locate the current position.
+- `release_plan.md` is largely complete; prefer `stoneage_gap_plan.md` for new feature work unless the user explicitly asks to finish release_plan acceptance (B/C/D/E 用户验收) or export smoke (G9.x).
+- After completing each item, tick its checkbox in the active plan file and append one line of completion evidence. After completing each stage, run `node tools/run_local_ci.mjs` (or the stage-appropriate subset) and stop for user confirmation before starting the next stage.
+- When a StoneAge 8.0 mechanic is uncertain, inspect the local reference at `/Users/fander/projects/_local_references/StoneAge` (see also [fanderchan/StoneAge](https://github.com/fanderchan/StoneAge)) for behavior intent only; do not copy code, data, or assets.
 
 ## Product Direction
 

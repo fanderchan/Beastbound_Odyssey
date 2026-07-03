@@ -1,0 +1,203 @@
+# Beastbound Odyssey — 相对 StoneAge 8.0 的功能差距与内容迭代计划
+
+> **执行者说明（Codex）**
+> - `tasks.md` 32 条联网 bug 已修完；`release_plan.md` A–E 开发项已基本完成，仅剩 B/C/D/E 的「用户验收确认」未勾选。**不要重复做 release_plan 或 tasks 里的工作。**
+> - 本计划对照本地参考源码 `/Users/fander/projects/_local_references/StoneAge`（亦见 AGENTS.md），找出 **Beastbound 仍缺、偏薄、或未联网化** 的玩法，按阶段补齐到「可发行的原创石器风 MMORPG」。
+> - **只参考机制与数据契约，禁止复制 SA 源码、数值、地图、NPC 脚本或美术。**
+> - 每完成一项：在本文件「进度追踪」打勾并附一行证据（测试/自动检查/走查摘要）；每完成一阶段：跑 `node tools/run_local_ci.mjs`，停下等用户确认。
+> - 每次开新会话：读本文件进度追踪 + `git log` + 最新 `docs/phase_*.md`，从第一个未勾选项继续。
+
+## 当前已具备（相对 SA 8.0 的基线，勿重复建设）
+
+以下在 Beastbound 中**已有第一版或可玩闭环**（细节可能仍偏薄，但不算「缺失」）：
+
+| 域 | Beastbound 现状 | SA 8.0 对照 |
+| --- | --- | --- |
+| 世界移动 | 等距地图、寻路、传送点、记录点 | `char_walk` / `map_warppoint` |
+| 遇敌/挂机 | 草丛遇敌、遇敌石、挂机走路、内挂/自动战斗/自动捕捉 | `encount` / 遇敌石 |
+| 战斗核心 | 10v10 阵型、速度序、合击、捕捉、精灵、战斗道具、状态技、换宠、训练伙伴 AI | `battle*.c` / `pet_skill.c` |
+| 骑宠 | 骑乘状态、战斗内骑宠 HP/承伤/经验（Phase141） | 骑宠系统 |
+| 宠物 | 捕捉、兽栏、丢弃/拾取、改名、状态、图鉴、技能学习、培养、MM 转生、成长档位 | `pet.c` / 转生 |
+| 人物 | 升级加点、转生 1–6 转框架、四属性试炼洞窟 + 玄影洞窟 | `transmigration` |
+| 装备 | 穿戴、强化、合成、修理、耐久、转生需求 | `item` / 装备铺 |
+| 任务 | 主线/可选任务、奖励选择、任务追踪/导航 | NPC 任务链 |
+| 商店 | 道具铺/装备铺、庄园占领商店 | `itemshop` / `simpleshop` |
+| 社交 | 组队、切磋（duel room）、聊天频道、邮件（含附件） | `party` / 邮件 |
+| 联网 | 账号、MySQL 档案、服务端权威战斗/商店/任务/转生/挂机/家族 | `saac` + `gmsv` |
+| 家族庄园 | 家族 CRUD、九大庄园配置、宣战/准备/休战、参战名单、庄园战 battle room、占领商店 | `family.c` / `FMPOINT` / `manorsman` |
+
+---
+
+## 相对 SA 8.0 仍缺或明显偏薄（差距清单）
+
+> 参考：SA `gmsv/src/npc/npc_*.c`、`gmsv/src/char/*.c`、`gmsv/src/battle/*.c`、`saac/src/*.c`  
+> Beastbound 证据：`client/godot/data/`、`docs/phase_190`–`196`、`docs/asset_audit.md`、`docs/release_playability_walkthrough.md`
+
+### G1 世界内容与可玩体量（SA 有数百地图/宠/道具，BB 目前偏 Demo）
+
+- [ ] **G1.1 宠物图鉴体量**：当前 `pet_templates.json` 仅 **21 个 form**，且 **全部为 placeholderPalette**（`docs/asset_audit.md`）。SA 有大规模宠物表与捕获分布。
+- [ ] **G1.2 野外分布与等级带**：除火芽村、四洞、玄影、等级试验场、九大庄园外，缺少 SA 式「多大陆、多等级段、多属性区域」的可玩地图网（`map_regions.json` 仅 ~6 个 region）。
+- [ ] **G1.3 道具与装备种类**：`bag_items.json` / `equipment_items.json` 规模远小于 SA `item*.c`；缺少 SA 式丰富消耗品、任务道具、特殊效果道具链。
+- [ ] **G1.4 任务与 NPC 密度**：SA 有 `quiz`、`storyteller`、`scheduleman`、`welfare`、`luckyman` 等大量 NPC 类型；BB 以新手链 + 转生链 + 庄园为主，支线/日常/活动 NPC 偏少。
+- [ ] **G1.5 交通网络**：SA 有 `bus` / `airplane` / 多 warp 网络；BB 仅有 map transfer 点，无大陆级巴士/航班式快捷交通。
+
+### G2 经济与社会（SA 核心长线玩法，BB 基本缺失）
+
+- [ ] **G2.1 玩家交易**：SA `trade.c` / 面对面交易；BB **无** player-to-player trade。
+- [ ] **G2.2 拍卖行**：SA `auctioneer` / `pauctionman` / `saac/auction.c`；BB **无**。
+- [ ] **G2.3 银行/仓库**：SA `bankman` 存取金钱与物品；BB 仅有背包 + 兽栏，**无**银行或超大容量仓库 NPC。
+- [ ] **G2.4 摆摊/寄售**：SA `sellsthman` 等；BB **无**。
+- [ ] **G2.5 黑市/特殊商店**：SA `blackmarket`、`poolitemshop`、`pkpetshop`；BB **无**。
+- [ ] **G2.6 赌博/小游戏**：SA `gamblemaster`、`gambleroulette`、`janken`、`bigsmall`；BB **无**（numeric 实验不算玩家玩法）。
+- [ ] **G2.7 物品兑换/改造**：SA `itemchange`、`exchangeman`；BB 仅有装备合成，**无**通用物品兑换 NPC。
+
+### G3 宠物深度（SA 特色，BB 部分有、部分无）
+
+- [ ] **G3.1 宠物融合**：SA `petfusion` / `npc_petfusion.c`；BB **无** pet fusion（装备合成 ≠ 宠融合）。
+- [ ] **G3.2 宠物赛跑**：SA `petracemaster` / `petracepet`；BB **无**。
+- [ ] **G3.3 宠物邮件/托运**：SA `petmail.c`；BB 邮件仅玩家邮件，**无**宠物寄送。
+- [ ] **G3.4 宠物制造/特殊获取**：SA `petmaker`；BB 主要靠捕捉 + GM，**无**正式 NPC 制造链。
+- [ ] **G3.5 被动技能与战斗深度对齐**：BB 有 `battle_passive_skills.json`，需审计 **服务端权威战斗** 是否完整结算被动/反击/闪避/幸运一击（对照 SA `battle_event.c` 与本地 `battle_model.gd` 差异），补齐遗漏项。
+
+### G4 家族与庄园（BB 已有第一版，SA 仍远未追平）
+
+> 已做：Phase190–196（家族、宣战、名单、manor_war room、休战/准备、庄园商店、管家入口等）  
+> 仍缺（见 `docs/phase_190` / `phase_193` / `phase_191` 明示）：
+
+- [ ] **G4.1 家族银行与家族资金**：SA 家族银行/留言/税收；BB **无** family bank。
+- [ ] **G4.2 家族权限体系**：族长/长老/成员权限、职务代理；BB 仅基础族长操作。
+- [ ] **G4.3 家族留言/公告板**：SA `fmdengon` / `fmletter`；BB **无** 家族专用公告。
+- [ ] **G4.4 中立庄园 NPC 守备战**：Phase193：中立庄园仍走「结算」而非 battle room；需守备队 NPC 房间或等价 PvE。
+- [ ] **G4.5 庄园战观战/锁名单/踢人/入场地图**：Phase193 边界项。
+- [ ] **G4.6 跨时段赛程与运营向战期**：Phase196 已有短准备/休战；缺 SA 式长周期赛程 UI、报名截止、开战窗口提醒。
+- [ ] **G4.7 家族专属设施**：SA `fmhealer`、`fmwarp`；BB **无** 家族治疗/传送点。
+
+### G5 PK、排行与竞技（SA 有，BB 弱或没有）
+
+- [ ] **G5.1 切磋排行榜**：SA `duelranking`；BB 有 duel room + battle record summary，**无** 持久排行榜 UI/赛季。
+- [ ] **G5.2 死亡争夺/特殊 PK 活动**：SA `deathcontend`；BB **无**。
+- [ ] **G5.3 野外 PK 规则**：SA 有 PK 旗/区域规则；BB 以邀请切磋为主，**无** 野外 PK 开关与惩罚。
+- [ ] **G5.4 宠物 PK 店/特殊对战**：SA `pkpetshop`；BB **无**。
+
+### G6 角色与账号（SA 多角色、称号、Charm）
+
+- [ ] **G6.1 单账号多角色**：SA 多角色选择；BB 当前 **一账号一档案**，无选角界面。
+- [ ] **G6.2 称号系统**：SA `title.c`；BB **无** 玩家称号展示与获取。
+- [ ] **G6.3 魅力/幸运玩法**：SA `charm` / `luckyman`；BB **无**。
+- [ ] **G6.4 通讯录/好友**：SA `addressbook`；BB 有 `players/search` 与在线列表，**无** 好友/黑名单/常联系人。
+
+### G7 战斗与职业（SA 魔法/职业/AI 更丰富）
+
+- [ ] **G7.1 人物魔法/职业技能树**：SA `battle_magic.c` / `profession_skill.c`；BB 以「精灵 + 装备附带精灵」为主，**无** 独立职业技能体系。
+- [ ] **G7.2 敌人 AI 与 BOSS 机制**：SA `battle_ai.c` + 复杂 NPC 战；BB 有 guardian 与 wild AI，BOSS 机制偏少（多为一波 wild/group）。
+- [ ] **G7.3 战斗记录/回放**：BB 有 `battle_event_ledger` 与 server trace，**无** 玩家可见的回放/战报分享 UI。
+
+### G8 表现与资产（发行门槛，非 SA 独有但当前最大短板）
+
+- [ ] **G8.1 替换全部 placeholder 宠形态**（21/21）：见 `docs/asset_audit.md`。
+- [ ] **G8.2 人物/宠物/地图/战斗/UI 原创美术**：当前 Polygon2D + 程序绘制。
+- [ ] **G8.3 音效与 BGM**：SA 有完整音频；BB 运行时 **无** 跟踪音频资源。
+- [ ] **G8.4 中文化文案统一润色**：自动走查已通过，但仍需人工验收首玩可读性（见 `release_playability_walkthrough.md`）。
+
+### G9 运营与发布配套（release_plan 工程项收尾）
+
+- [ ] **G9.1 完成 release_plan B/C/D/E 用户验收确认**（开发已完成，勾选待用户）。
+- [ ] **G9.2 导出机构建**：E1 已验证 export-pack；本机缺 macOS/Windows/Android SDK 的 **release 导出** 与安装包 smoke。
+- [ ] **G9.3 干净演示库/种子数据**：走查提到本地 MySQL 历史测试账号噪音；需 demo seed 脚本。
+- [ ] **G9.4 新手 30 分钟体验曲线**：从注册到首次捕捉、首次组队、首次庄园信息可见的 pacing 文档 + 实机验收。
+
+---
+
+## 推荐执行顺序（给 Codex 的阶段）
+
+> **原则**：先「能发行的一服闭环」，再「SA 式长线系统」。每阶段 3–8 个小项，小步提交。
+
+| 阶段 | 目标 | 包含项 | 停止条件 |
+| --- | --- | --- | --- |
+| **F0** | 收尾 release_plan | G9.1–G9.2 | 用户确认可进入内容迭代 |
+| **F1** | 内容体量 MVP | G1.2 扩 2–3 个新 region + G1.1 新增 10 种可捕 wild 宠（含数据+遭遇+图鉴） | 新区域可挂机练级 20 级段，CI 绿 |
+| **F2** | 经济闭环 v1 | G2.1 面对面交易 + G2.3 银行存取（服务端权威） | 两账号可交易/存取，防刷测试通过 |
+| **F3** | 宠物深度 v1 | G3.1 宠物融合（简化公式）+ G3.5 服务端被动/反击审计补齐 | 融合 + 服务端 battle 回归绿 |
+| **F4** | 家族庄园 v2 | G4.1 家族银行 + G4.4 中立守备 battle room + G4.3 家族公告 | 家族战全路径 battle room 化 |
+| **F5** | 竞技与社交 v1 | G5.1 切磋排行榜 + G6.4 好友/黑名单 | 排行榜可查、好友可在线邀请 |
+| **F6** | 世界便利与支线 | G1.5 巴士/快捷传送 + G1.4 2 类支线 NPC（问答/福利） | 跨 region 旅行 <2 分钟 |
+| **F7** | 表现替换 v1 | G8.1–G8.2 先替换主角+3 首发宠+火芽村地面贴图 | asset_audit 占位计数下降 |
+| **F8** | SA 式长线（可选） | G2.2 拍卖、G2.6 赌博、G3.2 宠物赛、G5.2 死亡争夺、G6.1 多角色 | 按用户优先级选取，不做一次性大杂烩 |
+
+---
+
+## 每个功能项的标准交付物（Codex 必须遵守）
+
+1. **设计笔记**：`docs/phase_XXX_<slug>.md`，写清 SA 8.0 参考路径、Beastbound 原创规则、不做项。
+2. **数据契约**：JSON 或 MySQL 迁移（DB 操作用 MCP server）。
+3. **服务端权威**：联网账号不得仅本地改 profile；需 API + 测试。
+4. **客户端 UI**：中文、PC 窗口优先验收；移动兼容烟测非阻塞（见 release_plan E1）。
+5. **自动检查**：新增或扩展 `--auto-*-check`；纳入 `tools/run_godot_auto_checks.mjs`。
+6. **服务端测试**：`server/node/test/auth-*.test.js` 覆盖 happy path + 权限/作弊拒绝。
+7. **性能**：改动后 idle/moving `--perf-probe` 不退化。
+8. **本文件打勾 + 证据一行**。
+
+---
+
+## 进度追踪
+
+> 从第一项未勾选项继续。完成打 `[x]` 并附证据。
+
+### F0 — release_plan 收尾
+- [ ] G9.1 release_plan B/C/D/E 用户验收确认
+- [ ] G9.2 三平台 release 导出 smoke（补齐 SDK 后）
+- [x] G9.3 demo 种子库脚本
+  - 证据：`server/node/scripts/seed-demo-data.js` + `npm run seed:demo --prefix server/node`；`node --check` exit 0；memory/json store 验证 4 accounts / 2 families / 1 manor，第二次 JSON seed 为 `reused` / `already_owned`；`npm test --prefix server/node` 92/92 pass，详见 `docs/phase_197_demo_seed_data.md`。
+- [x] G9.4 新手 30 分钟体验曲线文档
+  - 证据：`docs/phase_198_first_30_minutes_pacing.md` 记录 0-30 分钟注册、任务、遇敌、捕捉、组队、家族/庄园可见验收曲线，并声明 release_plan B/C/D/E 仍等用户确认。
+
+### F1 — 内容体量 MVP
+- [ ] G1.2 新 region ×2~3
+- [ ] G1.1 新可捕宠物 ×10（非 placeholder 或明确 art 计划）
+- [ ] G1.3 扩展消耗品/任务道具一批
+- [ ] G1.4 支线 NPC ×2 类
+
+### F2 — 经济闭环 v1
+- [ ] G2.1 玩家面对面交易
+- [ ] G2.3 银行/仓库 NPC
+- [ ] G2.7 物品兑换 NPC（可选简化版）
+
+### F3 — 宠物深度 v1
+- [ ] G3.1 宠物融合
+- [ ] G3.5 服务端战斗被动/反击/闪避对齐审计
+
+### F4 — 家族庄园 v2
+- [ ] G4.1 家族银行
+- [ ] G4.3 家族公告/留言
+- [ ] G4.4 中立庄园守备 battle room
+- [ ] G4.5 观战/锁名单/踢人（子集）
+
+### F5 — 竞技与社交 v1
+- [ ] G5.1 切磋排行榜
+- [ ] G6.4 好友/黑名单
+
+### F6 — 世界便利
+- [ ] G1.5 巴士/快捷交通
+- [ ] G2.4 摆摊（简化）
+
+### F7 — 表现替换 v1
+- [ ] G8.1 替换 21 占位宠（或分批完成并记录）
+- [ ] G8.2 主角/村/map 贴图首包
+- [ ] G8.3 BGM/SFX 最小集
+
+### F8 — 长线可选
+- [ ] G2.2 拍卖行
+- [ ] G2.6 赌博/小游戏
+- [ ] G3.2 宠物赛
+- [ ] G6.1 多角色
+- [ ] G7.1 职业技能树
+
+---
+
+## 红线（与 AGENTS.md / release_plan 一致）
+
+- 不复制 StoneAge 8.0 / StoneAge9 / SA80 的代码、数值表、地图、NPC 脚本、美术。
+- 不改动 `tasks.md` 已修复行为，除非回归测试证明失败。
+- 不把新域塞回 `main.gd`；用 `scripts/net/`、`scripts/battle/`、`scripts/ui/`、`scripts/progression/`、`scripts/world/`。
+- 产品决策（融合公式、拍卖税、PK 惩罚、多角色上限）先问用户。
+- 每阶段结束跑 `node tools/run_local_ci.mjs`，汇报 CPU/perf 证据。
