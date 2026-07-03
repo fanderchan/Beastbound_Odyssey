@@ -795,6 +795,8 @@ function publicManor(manor, data, viewerFamilyId = "", viewerAccountId = "") {
     village: String(manor.village || ""),
     element: String(manor.element || ""),
     shopId: String(manor.shopId || ""),
+    mapId: String(manor.mapId || ""),
+    spawnName: String(manor.spawnName || "default"),
     neutralPower: neutralManorPower(manor),
     ownerFamilyId: state.ownerFamilyId,
     ownerFamilyName: state.ownerFamilyName,

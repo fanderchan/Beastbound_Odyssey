@@ -85,6 +85,15 @@ const MAP_DATA_PATHS := {
 	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
 	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
 	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
+	"firebud_manor": "res://data/firebud_manor_map.json",
+	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
+	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
+	"ember_core_manor": "res://data/ember_core_manor_map.json",
+	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
+	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
+	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
+	"artisan_manor": "res://data/artisan_manor_map.json",
+	"training_manor": "res://data/training_manor_map.json",
 	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
@@ -9774,6 +9783,105 @@ func _run_auto_map_region_contract_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+
+func _run_auto_manor_map_shop_check() -> void:
+	host.profile_save_enabled = false
+	host.world_log_history.clear()
+	host.world_log_message = ""
+	var manors: Array[Dictionary] = []
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://data/manors.json"))
+	if parsed is Dictionary:
+		for value in (parsed as Dictionary).get("manors", []):
+			if value is Dictionary:
+				manors.append((value as Dictionary).duplicate(true))
+	var village_map = host._map_data_for_id("firebud_village_gate")
+	var errors: Array[String] = []
+	var first_shop_interaction: Dictionary = {}
+	var first_shop_id := ""
+	var first_map_id := ""
+	var first_spawn_name := ""
+	for manor in manors:
+		var manor_id := str(manor.get("id", "")).strip_edges()
+		var map_id := str(manor.get("mapId", "")).strip_edges()
+		var spawn_name := str(manor.get("spawnName", "default")).strip_edges()
+		var shop_id := str(manor.get("shopId", "")).strip_edges()
+		if manor_id == "" or map_id == "" or shop_id == "":
+			errors.append("庄园配置缺少 id/mapId/shopId")
+			continue
+		if not MAP_DATA_PATHS.has(map_id):
+			errors.append("%s.mapId 未注册: %s" % [manor_id, map_id])
+			continue
+		var village_warp = host._warp_to_map("firebud_village_gate", map_id)
+		if village_warp.is_empty():
+			errors.append("%s 缺少村口入口" % manor_id)
+		elif InteractionModel.blocks_movement(village_warp):
+			errors.append("%s 村口入口不应挡路" % manor_id)
+		var loaded_map = host._map_data_for_id(map_id)
+		if loaded_map.is_empty():
+			errors.append("%s 地图加载失败" % map_id)
+			continue
+		var spawn_cell := IsoMapModel.spawn_cell(loaded_map, spawn_name)
+		if not IsoMapModel.is_walkable(loaded_map, spawn_cell):
+			errors.append("%s.%s 出生点不可走" % [map_id, spawn_name])
+		var return_warp = InteractionModel.find_by_id(loaded_map, "%s_return_firebud" % map_id)
+		if return_warp.is_empty():
+			errors.append("%s 缺少回村入口" % map_id)
+		elif str(return_warp.get("toMap", "")) != "firebud_village_gate":
+			errors.append("%s 回村入口目标错误" % map_id)
+		var shop_interaction: Dictionary = {}
+		for interaction_value in InteractionModel.interaction_points(loaded_map):
+			if not (interaction_value is Dictionary):
+				continue
+			var interaction := interaction_value as Dictionary
+			if str(interaction.get("shopId", "")).strip_edges() == shop_id:
+				shop_interaction = interaction
+				break
+		if shop_interaction.is_empty():
+			errors.append("%s 缺少道具场 NPC" % map_id)
+		else:
+			if InteractionModel.facility_type_for(shop_interaction) != InteractionModel.FACILITY_ITEM_SHOP:
+				errors.append("%s 道具场设施类型错误" % map_id)
+			if InteractionModel.facility_label_for(shop_interaction) != "道具场":
+				errors.append("%s 道具场标记错误" % map_id)
+			if first_shop_interaction.is_empty():
+				first_shop_interaction = shop_interaction.duplicate(true)
+				first_shop_id = shop_id
+				first_map_id = map_id
+				first_spawn_name = spawn_name
+		var shop = ShopCatalogModel.shop_for_id(shop_id)
+		var access_value = shop.get("access", {}) if not shop.is_empty() else {}
+		var access := access_value as Dictionary if access_value is Dictionary else {}
+		if shop.is_empty():
+			errors.append("%s 商店不存在: %s" % [manor_id, shop_id])
+		elif str(access.get("familyManorId", "")).strip_edges() != manor_id:
+			errors.append("%s 商店占领权限错误" % manor_id)
+	var count_ok := manors.size() == 9
+	if not count_ok:
+		errors.append("庄园数量不是 9")
+	var first_dialog_ok := false
+	var first_shop_panel_ok := false
+	if not first_shop_interaction.is_empty() and first_map_id != "":
+		host._load_map(first_map_id, first_spawn_name)
+		host._open_interaction_dialog(first_shop_interaction)
+		await host.get_tree().process_frame
+		first_dialog_ok = host._dialog_is_open() and host.dialog_option_button != null and host.dialog_option_button.text == "买卖"
+		host._confirm_dialog_action()
+		await host.get_tree().process_frame
+		first_shop_panel_ok = host.shop_panel != null and host.shop_panel.visible and host.shop_active_id == first_shop_id
+		host._close_shop_panel()
+	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and not village_map.is_empty() else "failed"
+	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_map=%s errors=%s" % [
+		status,
+		manors.size(),
+		str(not village_map.is_empty()),
+		str(first_dialog_ok),
+		str(first_shop_panel_ok),
+		first_map_id,
+		";".join(errors),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_equipment_durability_visual_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
@@ -10582,6 +10690,9 @@ func _run_auto_server_auth_contract_check() -> void:
 			and (endpoint_ids as Array).has("playerRebirth")
 			and (endpoint_ids as Array).has("questRecord")
 			and (endpoint_ids as Array).has("questClaim")
+			and (endpoint_ids as Array).has("manorChallenge")
+			and (endpoint_ids as Array).has("manorBattleRoom")
+			and (endpoint_ids as Array).has("manorResolve")
 			and (endpoint_ids as Array).size() >= 18
 	)
 	var security_ok = (

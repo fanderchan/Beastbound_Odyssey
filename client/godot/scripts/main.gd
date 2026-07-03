@@ -88,6 +88,15 @@ const MAP_DATA_PATHS := {
 	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
 	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
 	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
+	"firebud_manor": "res://data/firebud_manor_map.json",
+	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
+	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
+	"ember_core_manor": "res://data/ember_core_manor_map.json",
+	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
+	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
+	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
+	"artisan_manor": "res://data/artisan_manor_map.json",
+	"training_manor": "res://data/training_manor_map.json",
 	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
@@ -773,6 +782,7 @@ var auto_equipment_growth_check: bool = false
 var auto_equipment_instance_check: bool = false
 var auto_quest_objective_templates_check: bool = false
 var auto_map_region_contract_check: bool = false
+var auto_manor_map_shop_check: bool = false
 var auto_reward_grant_check: bool = false
 var auto_reward_mail_fallback_check: bool = false
 var auto_encounter_loop_check: bool = false
@@ -1366,6 +1376,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_quest_objective_templates_check")
 	elif auto_map_region_contract_check:
 		call_deferred("_run_auto_map_region_contract_check")
+	elif auto_manor_map_shop_check:
+		call_deferred("_run_auto_manor_map_shop_check")
 	elif auto_reward_grant_check:
 		call_deferred("_run_auto_reward_grant_check")
 	elif auto_reward_mail_fallback_check:
@@ -2081,6 +2093,8 @@ func _apply_preview_window_args() -> void:
 			auto_quest_objective_templates_check = true
 		elif arg == "--auto-map-region-contract-check":
 			auto_map_region_contract_check = true
+		elif arg == "--auto-manor-map-shop-check":
+			auto_manor_map_shop_check = true
 		elif arg == "--auto-reward-grant-check":
 			auto_reward_grant_check = true
 		elif arg == "--auto-reward-mail-fallback-check":
@@ -3494,6 +3508,10 @@ func _run_auto_quest_objective_templates_check() -> void:
 
 func _run_auto_map_region_contract_check() -> void:
 	await _auto_checks()._run_auto_map_region_contract_check()
+
+
+func _run_auto_manor_map_shop_check() -> void:
+	await _auto_checks()._run_auto_manor_map_shop_check()
 
 
 func _run_auto_equipment_durability_visual_check() -> void:

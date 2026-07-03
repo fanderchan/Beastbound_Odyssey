@@ -86,6 +86,15 @@ const MAP_DATA_PATHS := {
 	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
 	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
 	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
+	"firebud_manor": "res://data/firebud_manor_map.json",
+	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
+	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
+	"ember_core_manor": "res://data/ember_core_manor_map.json",
+	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
+	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
+	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
+	"artisan_manor": "res://data/artisan_manor_map.json",
+	"training_manor": "res://data/training_manor_map.json",
 	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)

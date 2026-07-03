@@ -14,7 +14,16 @@
     "from_ember_core_cave": [21, 8],
     "from_gale_breath_cave": [21, 9],
     "from_shadow_oath_cavern": [22, 10],
-    "from_level_grass_trial_ground": [25, 5]
+    "from_level_grass_trial_ground": [25, 5],
+    "from_firebud_manor": [21, 13],
+    "from_earth_vein_manor": [22, 14],
+    "from_tide_echo_manor": [23, 15],
+    "from_ember_core_manor": [24, 16],
+    "from_gale_breath_manor": [25, 17],
+    "from_shadow_oath_manor": [20, 14],
+    "from_beast_pen_manor": [21, 15],
+    "from_artisan_manor": [22, 16],
+    "from_training_manor": [23, 17]
   },
   "blockedCells": [
     [8, 4],
@@ -175,6 +184,105 @@
       "trigger": "arrive",
       "toMap": "level_grass_trial_ground",
       "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_firebud_manor",
+      "name": "火芽庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [21, 13],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "firebud_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_earth_vein_manor",
+      "name": "岩脉庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [22, 14],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "earth_vein_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_tide_echo_manor",
+      "name": "潮声庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 15],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "tide_echo_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_ember_core_manor",
+      "name": "焰心庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [24, 16],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "ember_core_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_gale_breath_manor",
+      "name": "岚息庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [25, 17],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "gale_breath_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_shadow_oath_manor",
+      "name": "玄影庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [20, 14],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "shadow_oath_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_beast_pen_manor",
+      "name": "兽栏庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [21, 15],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "beast_pen_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_artisan_manor",
+      "name": "工匠庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [22, 16],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "artisan_manor",
+      "toSpawn": "from_firebud_village_gate"
+    },
+    {
+      "id": "warp_to_training_manor",
+      "name": "训练庄园入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [23, 17],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "training_manor",
+      "toSpawn": "from_firebud_village_gate"
     },
     {
       "id": "village_guard",

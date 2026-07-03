@@ -7,6 +7,8 @@
       "village": "火芽村",
       "element": "fire",
       "shopId": "manor_firebud_shop",
+      "mapId": "firebud_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 260,
       "defenseBonus": 60
     },
@@ -16,6 +18,8 @@
       "village": "岩脉洞穴",
       "element": "earth",
       "shopId": "manor_earth_shop",
+      "mapId": "earth_vein_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 340,
       "defenseBonus": 80
     },
@@ -25,6 +29,8 @@
       "village": "潮声洞穴",
       "element": "water",
       "shopId": "manor_tide_shop",
+      "mapId": "tide_echo_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 340,
       "defenseBonus": 80
     },
@@ -34,6 +40,8 @@
       "village": "焰心洞穴",
       "element": "fire",
       "shopId": "manor_ember_shop",
+      "mapId": "ember_core_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 360,
       "defenseBonus": 90
     },
@@ -43,6 +51,8 @@
       "village": "岚息洞穴",
       "element": "wind",
       "shopId": "manor_gale_shop",
+      "mapId": "gale_breath_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 360,
       "defenseBonus": 90
     },
@@ -52,6 +62,8 @@
       "village": "玄影洞窟",
       "element": "shadow",
       "shopId": "manor_shadow_shop",
+      "mapId": "shadow_oath_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 460,
       "defenseBonus": 120
     },
@@ -61,6 +73,8 @@
       "village": "火芽村外",
       "element": "beast",
       "shopId": "manor_beast_shop",
+      "mapId": "beast_pen_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 300,
       "defenseBonus": 70
     },
@@ -70,6 +84,8 @@
       "village": "火芽工坊",
       "element": "craft",
       "shopId": "manor_artisan_shop",
+      "mapId": "artisan_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 320,
       "defenseBonus": 70
     },
@@ -79,6 +95,8 @@
       "village": "练级草丛",
       "element": "training",
       "shopId": "manor_training_shop",
+      "mapId": "training_manor",
+      "spawnName": "from_firebud_village_gate",
       "neutralPower": 320,
       "defenseBonus": 70
     }

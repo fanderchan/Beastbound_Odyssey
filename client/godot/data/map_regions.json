@@ -180,6 +180,27 @@
       ]
     },
     {
+      "id": "manor_ring",
+      "label": "九大庄园",
+      "type": "field",
+      "mapIds": [
+        "firebud_manor",
+        "earth_vein_manor",
+        "tide_echo_manor",
+        "ember_core_manor",
+        "gale_breath_manor",
+        "shadow_oath_manor",
+        "beast_pen_manor",
+        "artisan_manor",
+        "training_manor"
+      ],
+      "entryMapId": "firebud_manor",
+      "safeReturn": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "from_firebud_manor"
+      }
+    },
+    {
       "id": "gm_training_ground",
       "label": "GM练级测试场",
       "type": "gm",

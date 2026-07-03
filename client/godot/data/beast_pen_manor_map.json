@@ -1,0 +1,62 @@
+{
+  "id": "beast_pen_manor",
+  "name": "兽栏庄园",
+  "gridSize": [20, 18],
+  "tileSize": [80, 40],
+  "origin": [560, 120],
+  "spawnCell": [4, 13],
+  "spawnPoints": {
+    "default": [4, 13],
+    "from_firebud_village_gate": [4, 13]
+  },
+  "blockedCells": [
+    [10, 7],
+    [11, 7],
+    [12, 8],
+    [13, 8],
+    [10, 9],
+    [11, 9]
+  ],
+  "decorCells": [
+    {"cell": [5, 12], "kind": "flower"},
+    {"cell": [7, 11], "kind": "grass"},
+    {"cell": [14, 10], "kind": "flower"},
+    {"cell": [15, 11], "kind": "grass"}
+  ],
+  "interactionPoints": [
+    {
+      "id": "beast_pen_manor_return_firebud",
+      "name": "返回火芽村入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [3, 14],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_beast_pen_manor"
+    },
+    {
+      "id": "beast_pen_manor_shopkeeper",
+      "name": "兽栏庄园道具场管事",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [11, 8],
+      "facilityType": "item_shop",
+      "facilityLabel": "道具场",
+      "action": "买卖",
+      "shopId": "manor_beast_shop",
+      "dialog": ["兽栏庄园道具场管事：这里只有占领兽栏庄园的家族能买到补给。"],
+      "option": "买卖"
+    },
+    {
+      "id": "beast_pen_manor_steward",
+      "name": "兽栏庄园管事",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [13, 8],
+      "action": "对话",
+      "dialog": ["兽栏庄园管事：家族占领庄园后，道具场会开放对应的特别货品。"],
+      "option": "知道了"
+    }
+  ]
+}

@@ -59,6 +59,8 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(created.ok, true);
   assert.equal(created.family.memberCount, 1);
   assert.equal(created.manors.length, 9);
+  assert.equal(created.manors[0].mapId, "firebud_manor");
+  assert.equal(created.manors[0].spawnName, "from_firebud_village_gate");
 
   const joined = service.joinFamily(member.session.token, {"familyId": created.family.familyId});
   assert.equal(joined.ok, true);
