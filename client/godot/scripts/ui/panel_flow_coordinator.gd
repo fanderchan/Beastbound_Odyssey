@@ -200,6 +200,7 @@ const DIALOG_ACTION_BACKPACK_UNLOCK := "backpack_unlock"
 const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
+const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
 const QUEST_MARKER_NONE := ""
 const QUEST_MARKER_AVAILABLE := "available"
 const QUEST_MARKER_BLOCKED := "blocked"
@@ -2024,6 +2025,12 @@ var family_pending_kind:
 		return host.family_pending_kind
 	set(value):
 		host.family_pending_kind = value
+
+var family_focus_manor_id: String:
+	get:
+		return host.family_focus_manor_id
+	set(value):
+		host.family_focus_manor_id = value
 
 var online_position_http_request:
 	get:
@@ -14165,8 +14172,15 @@ func _close_party_panel(update_layout: bool = true) -> void:
 	_hide_control(party_panel, update_layout)
 
 func _open_family_panel() -> void:
+	_open_family_panel_with_focus("")
+
+func _open_family_panel_for_manor(manor_id: String) -> void:
+	_open_family_panel_with_focus(manor_id)
+
+func _open_family_panel_with_focus(manor_id: String) -> void:
 	if battle_active:
 		return
+	family_focus_manor_id = manor_id.strip_edges()
 	host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
@@ -14234,9 +14248,58 @@ func _refresh_family_panel() -> void:
 	if family_manors.is_empty():
 		manor_list_container.add_child(_party_info_label("暂无庄园资料。"))
 	else:
+		var sorted_manors: Array[Dictionary] = []
 		for manor in family_manors:
+			sorted_manors.append(manor.duplicate(true))
+		if family_focus_manor_id.strip_edges() != "":
+			sorted_manors.sort_custom(_family_manor_focus_less)
+		for manor in sorted_manors:
 			manor_list_container.add_child(_family_manor_row(manor, current_family))
 	_refresh_family_request_controls()
+
+func _family_manor_focus_less(a: Dictionary, b: Dictionary) -> bool:
+	var focus_id: String = family_focus_manor_id.strip_edges()
+	var a_id := str(a.get("manorId", "")).strip_edges()
+	var b_id := str(b.get("manorId", "")).strip_edges()
+	if focus_id != "" and a_id != b_id:
+		if a_id == focus_id:
+			return true
+		if b_id == focus_id:
+			return false
+	return str(a.get("name", a_id)) < str(b.get("name", b_id))
+
+func _family_focused_manor() -> Dictionary:
+	var focus_id: String = family_focus_manor_id.strip_edges()
+	if focus_id == "":
+		return {}
+	for manor in family_manors:
+		if str(manor.get("manorId", "")).strip_edges() == focus_id:
+			return manor.duplicate(true)
+	return {}
+
+func _family_state_status_text() -> String:
+	var family = _family_current_family()
+	var focused_manor := _family_focused_manor()
+	if not focused_manor.is_empty():
+		var owner_name := str(focused_manor.get("ownerFamilyName", "")).strip_edges()
+		if owner_name == "":
+			owner_name = "未占领"
+		var suffix := "当前没有家族。" if family.is_empty() else "我的家族：%s。" % str(family.get("name", ""))
+		var active_war = focused_manor.get("activeWar", null) as Dictionary if focused_manor.get("activeWar", null) is Dictionary else {}
+		if not active_war.is_empty():
+			return "%s：占领 %s；战期 %s VS %s。%s" % [
+				str(focused_manor.get("name", "庄园")),
+				owner_name,
+				str(active_war.get("challengerFamilyName", "挑战方")),
+				str(active_war.get("defenderFamilyName", "守方")),
+				suffix,
+			]
+		return "%s：占领 %s。%s" % [
+			str(focused_manor.get("name", "庄园")),
+			owner_name,
+			suffix,
+		]
+	return "我的家族：%s。" % str(family.get("name", "")) if not family.is_empty() else "当前没有家族。"
 
 func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control:
 	var row = HBoxContainer.new()
@@ -14258,7 +14321,9 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 			int(active_war.get("defenderParticipantCount", 0)),
 			int(active_war.get("maxParticipantsPerSide", 5)),
 		]
-	label.text = "%s  %s  守备:%d  占领：%s%s%s" % [
+	var focus_prefix := "当前：" if family_focus_manor_id.strip_edges() != "" and str(manor.get("manorId", "")).strip_edges() == family_focus_manor_id.strip_edges() else ""
+	label.text = "%s%s  %s  守备:%d  占领：%s%s%s" % [
+		focus_prefix,
 		str(manor.get("name", "庄园")),
 		str(manor.get("village", "")),
 		int(manor.get("neutralPower", 0)),
@@ -14472,8 +14537,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 					if value is Dictionary:
 						family_manors.append((value as Dictionary).duplicate(true))
 			if family_status_label != null:
-				var family = _family_current_family()
-				family_status_label.text = "我的家族：%s。" % str(family.get("name", "")) if not family.is_empty() else "当前没有家族。"
+				family_status_label.text = _family_state_status_text()
 			_refresh_family_panel()
 			_request_family_list()
 			return

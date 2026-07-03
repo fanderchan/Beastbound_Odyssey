@@ -22,6 +22,7 @@ const DIALOG_ACTION_BACKPACK_UNLOCK := "backpack_unlock"
 const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
+const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
 
 var host
 
@@ -321,6 +322,10 @@ func _perform_dialog_action(action_id: String) -> void:
 			host._claim_pet_rebirth_mm_stage2_from_dialog()
 		DIALOG_ACTION_START_MM_GUIDE:
 			host._start_pet_rebirth_mm_guide_from_dialog()
+		DIALOG_ACTION_FAMILY_MANOR:
+			var manor_id = str(host.active_dialog_interaction.get("manorId", ""))
+			_close_dialog()
+			host._open_family_panel_for_manor(manor_id)
 		_:
 			_close_dialog()
 
@@ -503,6 +508,8 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_STABLE
 	if _dialog_item_is_rebirth(item):
 		return DIALOG_ACTION_REBIRTH
+	if _dialog_item_is_family_manor(item):
+		return DIALOG_ACTION_FAMILY_MANOR
 	if _dialog_item_is_backpack_unlock(item):
 		return DIALOG_ACTION_BACKPACK_UNLOCK
 	if _dialog_item_is_pet_rebirth_mm_trial(item):
@@ -558,6 +565,8 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return "已领取" if PlayerProgressModel.pet_rebirth_mm_stage2_claimed(host.player_profile) else str(item.get("option", "领取"))
 		DIALOG_ACTION_START_MM_GUIDE:
 			return "开始教学"
+		DIALOG_ACTION_FAMILY_MANOR:
+			return str(item.get("option", "庄园战"))
 	return str(item.get("option", "知道了"))
 
 func _dialog_action_options(item: Dictionary) -> Array[Dictionary]:
@@ -689,6 +698,9 @@ func _dialog_item_is_stable(item: Dictionary) -> bool:
 
 func _dialog_item_is_rebirth(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == InteractionModel.FACILITY_REBIRTH or str(item.get("kind", "")) == InteractionModel.FACILITY_REBIRTH
+
+func _dialog_item_is_family_manor(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == DIALOG_ACTION_FAMILY_MANOR or str(item.get("kind", "")) == DIALOG_ACTION_FAMILY_MANOR
 
 func _dialog_item_is_backpack_unlock(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == DIALOG_ACTION_BACKPACK_UNLOCK

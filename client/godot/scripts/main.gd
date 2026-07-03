@@ -202,6 +202,7 @@ const DIALOG_ACTION_BACKPACK_UNLOCK := "backpack_unlock"
 const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
+const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
 const QUEST_MARKER_NONE := ""
 const QUEST_MARKER_AVAILABLE := "available"
 const QUEST_MARKER_BLOCKED := "blocked"
@@ -521,6 +522,7 @@ var family_list: Array[Dictionary] = []
 var family_manors: Array[Dictionary] = []
 var family_request_pending: bool = false
 var family_pending_kind: String = ""
+var family_focus_manor_id: String = ""
 var online_position_http_request: HTTPRequest
 var online_position_timer: Timer
 var online_position_request_pending: bool = false
@@ -8197,6 +8199,15 @@ func _open_party_panel() -> void:
 
 func _close_party_panel(update_layout: bool = true) -> void:
 	_panel_flow()._close_party_panel(update_layout)
+
+func _open_family_panel() -> void:
+	_panel_flow()._open_family_panel()
+
+func _open_family_panel_for_manor(manor_id: String) -> void:
+	_panel_flow()._open_family_panel_for_manor(manor_id)
+
+func _close_family_panel(update_layout: bool = true) -> void:
+	_panel_flow()._close_family_panel(update_layout)
 
 func _refresh_party_panel() -> void:
 	_panel_flow()._refresh_party_panel()

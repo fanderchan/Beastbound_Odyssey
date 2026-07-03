@@ -9800,6 +9800,8 @@ func _run_auto_manor_map_shop_check() -> void:
 	var first_shop_id := ""
 	var first_map_id := ""
 	var first_spawn_name := ""
+	var first_manor_id := ""
+	var first_steward_interaction: Dictionary = {}
 	for manor in manors:
 		var manor_id := str(manor.get("id", "")).strip_edges()
 		var map_id := str(manor.get("mapId", "")).strip_edges()
@@ -9848,6 +9850,17 @@ func _run_auto_manor_map_shop_check() -> void:
 				first_shop_id = shop_id
 				first_map_id = map_id
 				first_spawn_name = spawn_name
+				first_manor_id = manor_id
+		var steward_interaction = InteractionModel.find_by_id(loaded_map, "%s_steward" % map_id)
+		if steward_interaction.is_empty():
+			errors.append("%s 缺少庄园管事" % map_id)
+		else:
+			if str(steward_interaction.get("actionType", "")) != "family_manor":
+				errors.append("%s 管事未接入庄园战入口" % map_id)
+			if str(steward_interaction.get("manorId", "")) != manor_id:
+				errors.append("%s 管事庄园编号错误" % map_id)
+			if first_steward_interaction.is_empty():
+				first_steward_interaction = steward_interaction.duplicate(true)
 		var shop = ShopCatalogModel.shop_for_id(shop_id)
 		var access_value = shop.get("access", {}) if not shop.is_empty() else {}
 		var access := access_value as Dictionary if access_value is Dictionary else {}
@@ -9860,6 +9873,8 @@ func _run_auto_manor_map_shop_check() -> void:
 		errors.append("庄园数量不是 9")
 	var first_dialog_ok := false
 	var first_shop_panel_ok := false
+	var first_steward_dialog_ok := false
+	var first_steward_panel_ok := false
 	if not first_shop_interaction.is_empty() and first_map_id != "":
 		host._load_map(first_map_id, first_spawn_name)
 		host._open_interaction_dialog(first_shop_interaction)
@@ -9869,13 +9884,24 @@ func _run_auto_manor_map_shop_check() -> void:
 		await host.get_tree().process_frame
 		first_shop_panel_ok = host.shop_panel != null and host.shop_panel.visible and host.shop_active_id == first_shop_id
 		host._close_shop_panel()
-	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and not village_map.is_empty() else "failed"
-	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_map=%s errors=%s" % [
+	if not first_steward_interaction.is_empty() and first_map_id != "":
+		host._load_map(first_map_id, first_spawn_name)
+		host._open_interaction_dialog(first_steward_interaction)
+		await host.get_tree().process_frame
+		first_steward_dialog_ok = host._dialog_is_open() and host.dialog_option_button != null and host.dialog_option_button.text == "庄园战"
+		host._confirm_dialog_action()
+		await host.get_tree().process_frame
+		first_steward_panel_ok = host.family_panel != null and host.family_panel.visible and host.family_focus_manor_id == first_manor_id
+		host._close_family_panel()
+	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and first_steward_dialog_ok and first_steward_panel_ok and not village_map.is_empty() else "failed"
+	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_steward_dialog=%s first_steward_panel=%s first_map=%s errors=%s" % [
 		status,
 		manors.size(),
 		str(not village_map.is_empty()),
 		str(first_dialog_ok),
 		str(first_shop_panel_ok),
+		str(first_steward_dialog_ok),
+		str(first_steward_panel_ok),
 		first_map_id,
 		";".join(errors),
 	])

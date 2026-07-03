@@ -54,9 +54,11 @@
       "kind": "npc",
       "movementCollision": "block",
       "cell": [13, 8],
-      "action": "对话",
-      "dialog": ["玄影庄园管事：家族占领庄园后，道具场会开放对应的特别货品。"],
-      "option": "知道了"
+      "action": "庄园战",
+      "actionType": "family_manor",
+      "manorId": "shadow_oath_manor",
+      "dialog": ["玄影庄园管事：这里登记玄影庄园的占领和庄园战。族长可以宣战，家族成员可以参战。"],
+      "option": "庄园战"
     }
   ]
 }
