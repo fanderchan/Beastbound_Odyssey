@@ -32,6 +32,75 @@ const RETRYABLE_HTTP_RESPONSE_CODES := [
 	503,
 	504,
 ]
+const ERROR_CODE_MESSAGES := {
+	"account_exists": "账号已存在。",
+	"account_missing": "账号不存在。",
+	"auth_backoff": "登录尝试过于频繁，请稍后再试。",
+	"auth_rate_limited": "操作太频繁，请稍后再试。",
+	"bad_event_json": "服务器事件格式不正确。",
+	"bad_json": "服务器返回格式不正确。",
+	"client_version_missing": "客户端版本信息缺失，请更新客户端后重试。",
+	"command_denied": "当前账号没有执行该操作的权限。",
+	"connection_failed": "服务器连接失败，请稍后重试。",
+	"empty_command": "操作命令不能为空。",
+	"gm_denied": "当前账号没有 GM 权限。",
+	"heal_not_needed": "队伍生命已满。",
+	"invalid_body": "内容不能为空。",
+	"invalid_profile": "角色档案格式不正确。",
+	"invalid_shop_action": "商店操作不正确。",
+	"invalid_title": "标题不能为空。",
+	"invalid_username": "账号格式不正确。",
+	"missing_username": "服务器会话缺少账号。",
+	"network_failed": "网络连接失败，请稍后重试。",
+	"network_retry_failed": "网络不稳定，已重试，请稍后再试。",
+	"not_enough_currency": "货币不足。",
+	"not_enough_diamonds": "钻石不足。",
+	"not_enough_stone_coins": "石币不足。",
+	"not_server_session": "请先登录服务器。",
+	"profile_upload_denied": "角色档案由服务器专用接口保存，不能整档上传。",
+	"protocol_version_mismatch": "客户端版本与服务器协议不兼容，请更新客户端后重试。",
+	"recipient_missing": "收件账号不存在。",
+	"recipient_self": "不能给自己发送邮件。",
+	"revision_conflict": "服务器档案已更新，请重新拉取。",
+	"server_error": "服务器暂时异常，请稍后重试。",
+	"session_cancelled": "服务器档案同步已取消。",
+	"session_expired": "登录会话已过期，请重新登录。",
+	"session_missing": "登录会话不存在，请重新登录。",
+	"session_refresh_expired": "登录已过期，请重新登录。",
+	"session_revoked": "登录会话已失效，请重新登录。",
+	"weak_password": "密码强度不够，请换一个更安全的密码。",
+	"wrong_password": "密码不正确。",
+}
+const ERROR_CODE_PREFIX_MESSAGES := [
+	["backpack_", "背包操作失败，请检查空间和解锁顺序。"],
+	["battle_command_", "战斗指令无法提交，请重新选择。"],
+	["battle_record_", "战绩读取失败，请稍后再试。"],
+	["battle_", "切磋操作失败，请检查双方状态。"],
+	["chat_", "聊天操作失败，请稍后重试。"],
+	["equipment_synthesis_", "装备合成失败，请检查配方和材料。"],
+	["equipment_enhance_", "装备强化失败，请检查装备和材料。"],
+	["equipment_repair_", "装备修理失败，请检查耐久和费用。"],
+	["equipment_", "装备操作失败，请检查装备状态。"],
+	["hang_", "挂机操作失败，请检查队伍和道具状态。"],
+	["item_use_", "这个物品暂时不能这样使用。"],
+	["item_", "物品操作失败，请检查数量和状态。"],
+	["mail_", "邮件操作失败，请稍后重试。"],
+	["mm_stone_", "转生MM石头条件未满足。"],
+	["mm_", "转生MM任务暂时无法处理。"],
+	["party_encounter_", "队伍遇敌失败，请检查队伍状态。"],
+	["party_", "队伍操作失败，请检查队伍状态。"],
+	["pet_rebirth_", "宠物转生条件未满足。"],
+	["pet_skill_", "宠物技能操作失败，请检查技能和费用。"],
+	["pet_drop_", "地面宠物状态已变化。"],
+	["pet_", "宠物操作失败，请检查宠物状态。"],
+	["player_rebirth_", "转生条件未满足。"],
+	["player_stat_", "属性点分配失败，请检查剩余点数。"],
+	["position_", "位置同步失败，请重新移动。"],
+	["profile_", "角色档案操作失败，请稍后重试。"],
+	["quest_", "任务状态暂时无法更新。"],
+	["shop_", "商店交易失败，请检查物品和货币。"],
+	["training_partner_", "队伍伙伴设置失败，请检查数量。"],
+]
 
 
 static func normalized_base_url(base_url: String) -> String:
@@ -116,6 +185,27 @@ static func network_failure_message(spec: Dictionary, code: String) -> String:
 
 static func is_network_failure_response(parsed: Dictionary) -> bool:
 	return NETWORK_FAILURE_CODES.has(str(parsed.get("code", "")).strip_edges())
+
+
+static func player_message_for_code(code: String, fallback_message: String = "") -> String:
+	var fallback := fallback_message.strip_edges()
+	if message_has_cjk(fallback):
+		return fallback
+	var normalized_code := code.strip_edges()
+	if ERROR_CODE_MESSAGES.has(normalized_code):
+		return str(ERROR_CODE_MESSAGES[normalized_code])
+	for entry in ERROR_CODE_PREFIX_MESSAGES:
+		if entry is Array and (entry as Array).size() >= 2 and normalized_code.begins_with(str((entry as Array)[0])):
+			return str((entry as Array)[1])
+	return "服务器操作失败，请稍后重试。"
+
+
+static func message_has_cjk(text: String) -> bool:
+	for index in range(text.length()):
+		var codepoint := text.unicode_at(index)
+		if (codepoint >= 0x3400 and codepoint <= 0x9fff) or (codepoint >= 0xf900 and codepoint <= 0xfaff):
+			return true
+	return false
 
 
 static func _auth_headers(session_token: String) -> Array[String]:
@@ -574,16 +664,17 @@ static func chat_send_request(base_url: String, session_token: String, channel: 
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	if text.strip_edges() == "":
-		return {"ok": false, "message": "服务器返回为空。", "code": "bad_json"}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器返回为空。"), "code": "bad_json"}
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		return {"ok": false, "message": "服务器返回格式不正确。", "code": "bad_json"}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器返回格式不正确。"), "code": "bad_json"}
 	var data := parsed as Dictionary
 	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		var code := str(data.get("code", "server_error"))
 		return {
 			"ok": false,
-			"message": str(data.get("message", "服务器登录失败。")),
-			"code": str(data.get("code", "server_error")),
+			"message": player_message_for_code(code, str(data.get("message", "服务器登录失败。"))),
+			"code": code,
 			"response": data,
 		}
 	var account := data.get("account", {}) as Dictionary if data.get("account", {}) is Dictionary else {}
@@ -593,7 +684,7 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 	var role := str(account.get("role", AccountAuthModel.ROLE_PLAYER))
 	var effective_role := str(session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
 	if username == "":
-		return {"ok": false, "message": "服务器会话缺少账号。", "code": "missing_username"}
+		return {"ok": false, "message": player_message_for_code("missing_username", "服务器会话缺少账号。"), "code": "missing_username"}
 	var local_session := {
 		"accountId": str(account.get("accountId", "")),
 		"username": username,
@@ -825,13 +916,14 @@ static func parse_profile_response(response_code: int, body: PackedByteArray) ->
 	var text := body.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		return {"ok": false, "message": "服务器档案返回格式不正确。", "code": "bad_json"}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器档案返回格式不正确。"), "code": "bad_json"}
 	var data := parsed as Dictionary
 	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		var code := str(data.get("code", "server_error"))
 		return {
 			"ok": false,
-			"message": str(data.get("message", "服务器档案读取失败。")),
-			"code": str(data.get("code", "server_error")),
+			"message": player_message_for_code(code, str(data.get("message", "服务器档案读取失败。"))),
+			"code": code,
 			"response": data,
 		}
 	return {
@@ -848,13 +940,14 @@ static func parse_profile_upload_response(response_code: int, body: PackedByteAr
 	var text := body.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		return {"ok": false, "message": "服务器保存返回格式不正确。", "code": "bad_json"}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器保存返回格式不正确。"), "code": "bad_json"}
 	var data := parsed as Dictionary
 	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		var code := str(data.get("code", "server_error"))
 		return {
 			"ok": false,
-			"message": str(data.get("message", "服务器档案保存失败。")),
-			"code": str(data.get("code", "server_error")),
+			"message": player_message_for_code(code, str(data.get("message", "服务器档案保存失败。"))),
+			"code": code,
 			"profileSummary": data.get("profileSummary", {}),
 			"profileBinding": data.get("profileBinding", {}),
 			"response": data,
@@ -969,16 +1062,17 @@ static func parse_quest_action_response(response_code: int, body: PackedByteArra
 static func _parse_server_json(response_code: int, body: PackedByteArray, fallback_message: String) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	if text.strip_edges() == "":
-		return {"ok": false, "message": "服务器返回为空。", "code": "bad_json", "response": {}}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器返回为空。"), "code": "bad_json", "response": {}}
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		return {"ok": false, "message": "服务器返回格式不正确。", "code": "bad_json"}
+		return {"ok": false, "message": player_message_for_code("bad_json", "服务器返回格式不正确。"), "code": "bad_json"}
 	var data := parsed as Dictionary
 	if response_code < 200 or response_code >= 300 or not bool(data.get("ok", false)):
+		var code := str(data.get("code", "server_error"))
 		return {
 			"ok": false,
-			"message": str(data.get("message", fallback_message)),
-			"code": str(data.get("code", "server_error")),
+			"message": player_message_for_code(code, str(data.get("message", fallback_message))),
+			"code": code,
 			"response": data,
 		}
 	return {

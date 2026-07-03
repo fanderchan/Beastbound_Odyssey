@@ -13431,6 +13431,84 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(parsed_protocol_mismatch.get("code", "")) == "protocol_version_mismatch"
 		and str(parsed_protocol_mismatch.get("message", "")).find("更新客户端") >= 0
 	)
+	var known_server_error_codes := [
+		"account_exists", "account_missing", "auth_backoff", "auth_rate_limited",
+		"backpack_full", "backpack_slot_order", "backpack_slots_max",
+		"battle_account_missing", "battle_command_action_invalid", "battle_command_actor_missing",
+		"battle_command_capture_invalid", "battle_command_capture_tool_missing", "battle_command_duplicate",
+		"battle_command_item_missing", "battle_command_item_unsupported", "battle_command_pet_invalid",
+		"battle_command_pet_missing", "battle_command_pet_unavailable", "battle_command_phase_invalid",
+		"battle_command_round_mismatch", "battle_command_spirit_missing", "battle_command_spirit_unsupported",
+		"battle_command_target_invalid", "battle_command_target_missing", "battle_distance_too_far",
+		"battle_invite_missing", "battle_invite_self", "battle_map_mismatch", "battle_player_moving",
+		"battle_position_missing", "battle_record_target_missing", "battle_room_busy", "battle_room_forbidden",
+		"battle_room_missing", "battle_self_busy", "battle_target_busy", "battle_target_missing",
+		"battle_target_offline", "chat_channel_invalid", "chat_empty", "chat_team_missing",
+		"client_version_missing", "command_denied", "empty_command", "equipment_already_equipped",
+		"equipment_enhance_max", "equipment_enhance_not_supported", "equipment_exp_pill_locked",
+		"equipment_item_invalid", "equipment_item_missing", "equipment_repair_not_needed",
+		"equipment_requirement_not_met", "equipment_slot_empty", "equipment_slot_invalid",
+		"equipment_synthesis_material_invalid", "equipment_synthesis_material_missing",
+		"equipment_synthesis_output_invalid", "equipment_synthesis_recipe_missing", "gm_denied",
+		"hang_item_invalid", "hang_mode_invalid", "hang_party_leader_required", "heal_not_needed",
+		"invalid_body", "invalid_profile", "invalid_shop_action", "invalid_title", "invalid_username",
+		"item_invalid", "item_not_enough", "item_use_hang_endpoint", "item_use_unsupported",
+		"mail_attachment_not_enough", "mail_missing", "mail_no_attachments", "mm_stage2_claimed",
+		"mm_stone_full", "mm_stone_invalid", "mm_stone_level_limit", "not_enough_currency",
+		"not_enough_diamonds", "not_enough_stone_coins", "party_already_joined", "party_apply_self",
+		"party_encounter_leader_required", "party_encounter_party_missing", "party_full",
+		"party_invite_missing", "party_invite_self", "party_missing", "party_not_leader",
+		"party_target_busy", "party_target_missing", "party_target_no_party", "pet_already_storage",
+		"pet_capacity_full", "pet_drop_invalid", "pet_drop_missing", "pet_drop_position_invalid",
+		"pet_egg_invalid", "pet_enhance_max", "pet_hp_full", "pet_hp_zero", "pet_in_storage",
+		"pet_level_max", "pet_locked", "pet_missing", "pet_move_edge", "pet_move_invalid",
+		"pet_name_empty", "pet_name_too_long", "pet_name_unchanged", "pet_not_mm_helper",
+		"pet_not_storage", "pet_party_full", "pet_pickup_level_limit", "pet_rebirth_helper_level_low",
+		"pet_rebirth_helper_locked", "pet_rebirth_helper_missing", "pet_rebirth_helper_required_by_quest",
+		"pet_rebirth_level_low", "pet_rebirth_requires_mm", "pet_rebirth_stage_max",
+		"pet_rebirth_target_is_helper", "pet_required_by_quest", "pet_riding", "pet_skill_base",
+		"pet_skill_empty", "pet_skill_invalid", "pet_skill_not_offered", "pet_skill_same_slot",
+		"pet_skill_slot_empty", "pet_state_invalid", "pet_storage_full", "pet_template_missing",
+		"player_rebirth_not_ready", "player_rebirth_trial_not_ready", "player_stat_invalid",
+		"player_stat_points_empty", "position_map_missing", "profile_action_invalid", "profile_missing",
+		"profile_upload_denied", "protocol_version_mismatch", "quest_already_claimed", "quest_event_invalid",
+		"quest_missing", "quest_not_ready", "quest_reward_choice_required", "quest_unavailable",
+		"recipient_missing", "recipient_self", "revision_conflict", "shop_item_missing",
+		"shop_item_not_buyable", "shop_item_not_sellable", "training_partner_count_missing",
+		"weak_password", "wrong_password", "session_missing", "session_revoked", "session_expired",
+		"session_refresh_expired", "server_error", "bad_json", "bad_event_json", "missing_username",
+		"network_failed", "network_retry_failed", "connection_failed", "not_server_session", "session_cancelled",
+	]
+	var code_mapping_ok := true
+	for known_code in known_server_error_codes:
+		var known_code_text := str(known_code)
+		var mapped_message := ServerAuthClientModel.player_message_for_code(known_code_text, known_code_text)
+		if not ServerAuthClientModel.message_has_cjk(mapped_message) or mapped_message.find(known_code_text) >= 0:
+			code_mapping_ok = false
+			break
+	var parsed_server_error = ServerAuthClientModel.parse_profile_response(500, JSON.stringify({
+		"ok": false,
+		"code": "server_error",
+		"message": "Cannot read properties of undefined",
+	}).to_utf8_buffer())
+	var parsed_code_only_battle = ServerAuthClientModel.parse_battle_action_response(404, JSON.stringify({
+		"ok": false,
+		"code": "battle_room_missing",
+		"message": "battle_room_missing",
+	}).to_utf8_buffer())
+	var parsed_chinese_detail = ServerAuthClientModel.parse_shop_transaction_response(400, JSON.stringify({
+		"ok": false,
+		"code": "item_not_enough",
+		"message": "遇敌石不够。",
+	}).to_utf8_buffer())
+	var code_message_parse_ok = (
+		code_mapping_ok
+		and str(parsed_server_error.get("message", "")).find("Cannot") < 0
+		and ServerAuthClientModel.message_has_cjk(str(parsed_server_error.get("message", "")))
+		and str(parsed_code_only_battle.get("message", "")).find("battle_room_missing") < 0
+		and ServerAuthClientModel.message_has_cjk(str(parsed_code_only_battle.get("message", "")))
+		and str(parsed_chinese_detail.get("message", "")) == "遇敌石不够。"
+	)
 	host._set_auth_server_mode(true)
 	var ui_server_ok = (
 		host.auth_server_mode
@@ -13466,7 +13544,8 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -13506,6 +13585,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(reconnect_ui_ok and reconnect_clear_ok),
 		str(weak_position_queue_ok),
 		str(event_cooldown_ok),
+		str(code_message_parse_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
