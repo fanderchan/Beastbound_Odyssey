@@ -68,11 +68,35 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(memberChallenge.ok, false);
   assert.equal(memberChallenge.code, "family_leader_required");
 
-  const battle = service.challengeManor(leader.session.token, {"manorId": "firebud_manor"});
+  const declared = service.challengeManor(leader.session.token, {"manorId": "firebud_manor"});
+  assert.equal(declared.ok, true);
+  assert.equal(declared.war.status, "scheduled");
+  assert.equal(declared.manor.ownerFamilyName, "");
+  assert.equal(declared.manor.activeWar.warId, declared.war.warId);
+
+  const pendingOwnerBuy = service.shopTransaction(leader.session.token, {
+    mode: "buy",
+    shopId: "manor_firebud_shop",
+    itemId: "item_heal_all_5",
+    amount: 1,
+  });
+  assert.equal(pendingOwnerBuy.ok, false);
+  assert.equal(pendingOwnerBuy.code, "shop_family_manor_required");
+
+  const duplicateWar = service.challengeManor(leader.session.token, {"manorId": "earth_vein_manor"});
+  assert.equal(duplicateWar.ok, false);
+  assert.equal(duplicateWar.code, "manor_family_war_active");
+
+  const memberResolve = service.resolveManorWar(member.session.token, {"warId": declared.war.warId});
+  assert.equal(memberResolve.ok, false);
+  assert.equal(memberResolve.code, "family_leader_required");
+
+  const battle = service.resolveManorWar(leader.session.token, {"warId": declared.war.warId});
   assert.equal(battle.ok, true);
   assert.equal(battle.battle.result, "challenger_win");
   assert.equal(battle.manor.ownerFamilyName, "火芽盟");
   assert.equal(battle.manor.isOwnedByViewerFamily, true);
+  assert.equal(battle.war.status, "resolved");
 
   const bought = service.shopTransaction(leader.session.token, {
     mode: "buy",
@@ -121,4 +145,20 @@ test("HTTP exposes family and manor endpoints", async (t) => {
   const manors = await fetchJson(`${base}/manors`, {headers});
   assert.equal(manors.ok, true);
   assert.equal(manors.manors.length, 9);
+
+  const challenged = await fetchJson(`${base}/manors/challenge`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({"manorId": "firebud_manor"}),
+  });
+  assert.equal(challenged.ok, true);
+  assert.equal(challenged.war.status, "scheduled");
+
+  const resolved = await fetchJson(`${base}/manors/resolve`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({"warId": challenged.war.warId}),
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.war.status, "resolved");
 });

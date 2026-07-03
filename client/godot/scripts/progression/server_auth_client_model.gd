@@ -564,6 +564,15 @@ static func manor_challenge_request(base_url: String, session_token: String, man
 	}
 
 
+static func manor_resolve_request(base_url: String, session_token: String, war_id: String) -> Dictionary:
+	return {
+		"url": "%s/manors/resolve" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"warId": war_id}),
+	}
+
+
 static func battle_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/battle/state" % normalized_base_url(base_url),
@@ -876,6 +885,7 @@ static func parse_family_state_response(response_code: int, body: PackedByteArra
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["family"] = response.get("family", null)
 	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	parsed["wars"] = _dictionary_array(response.get("wars", []))
 	return parsed
 
 
@@ -895,6 +905,7 @@ static func parse_family_action_response(response_code: int, body: PackedByteArr
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["family"] = response.get("family", null)
 	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	parsed["wars"] = _dictionary_array(response.get("wars", []))
 	return parsed
 
 
@@ -905,6 +916,7 @@ static func parse_manor_list_response(response_code: int, body: PackedByteArray)
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["family"] = response.get("family", null)
 	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	parsed["wars"] = _dictionary_array(response.get("wars", []))
 	return parsed
 
 
@@ -913,10 +925,26 @@ static func parse_manor_challenge_response(response_code: int, body: PackedByteA
 	if not bool(parsed.get("ok", false)):
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
+	parsed["war"] = response.get("war", {}) if response.get("war", {}) is Dictionary else {}
 	parsed["battle"] = response.get("battle", {}) if response.get("battle", {}) is Dictionary else {}
 	parsed["family"] = response.get("family", null)
 	parsed["manor"] = response.get("manor", {}) if response.get("manor", {}) is Dictionary else {}
 	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	parsed["wars"] = _dictionary_array(response.get("wars", []))
+	return parsed
+
+
+static func parse_manor_resolve_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "庄园战结算失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["war"] = response.get("war", {}) if response.get("war", {}) is Dictionary else {}
+	parsed["battle"] = response.get("battle", {}) if response.get("battle", {}) is Dictionary else {}
+	parsed["family"] = response.get("family", null)
+	parsed["manor"] = response.get("manor", {}) if response.get("manor", {}) is Dictionary else {}
+	parsed["manors"] = _dictionary_array(response.get("manors", []))
+	parsed["wars"] = _dictionary_array(response.get("wars", []))
 	return parsed
 
 

@@ -1576,6 +1576,7 @@ function createAuthService(options = {}) {
     leaveFamily: familyManor.leaveFamily,
     listManors: familyManor.listManors,
     challengeManor: familyManor.challengeManor,
+    resolveManorWar: familyManor.resolveManorWar,
     listChatMessages: mailChat.listChatMessages,
     sendChatMessage: mailChat.sendChatMessage,
     getBattleState: battleRoom.getBattleState,
@@ -1701,6 +1702,7 @@ function normalizeData(raw) {
     partyInvites: objectOrEmpty(data.partyInvites),
     families: normalizeFamilies(data.families),
     manors: objectOrEmpty(data.manors),
+    manorWars: normalizeManorWars(data.manorWars),
     manorBattles: normalizeManorBattles(data.manorBattles),
     chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
     playerPositions: objectOrEmpty(data.playerPositions),
@@ -1751,6 +1753,15 @@ function normalizeManorBattles(value) {
   return value
     .filter((battle) => battle && typeof battle === "object" && !Array.isArray(battle) && String(battle.battleId || "") !== "")
     .slice(-200);
+}
+
+function normalizeManorWars(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((war) => war && typeof war === "object" && !Array.isArray(war) && String(war.warId || "") !== "")
+    .slice(-120);
 }
 
 function persistentDataForStore(data) {

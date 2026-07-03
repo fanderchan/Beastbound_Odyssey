@@ -132,7 +132,8 @@ static func _table_definitions() -> Array[Dictionary]:
 		_table("authEvents", "auth_events", ["eventId"], "runtime_auth_events", "append_only", "注册、登录、登出、失败登录和权限拒绝事件。"),
 		_table("families", "families", ["familyId"], "none", "server_only", "家族名称、族长、成员、声望和占领庄园列表。"),
 		_table("manors", "manors", ["manorId"], "data/manors.json", "server_authority", "九大庄园占领状态、占领家族和庄园道具场权限。"),
-		_table("manorBattles", "manor_battles", ["battleId"], "runtime_manor_battles", "append_only", "庄园战挑战、胜负、双方家族和战力记录。"),
+		_table("manorWars", "manor_wars", ["warId"], "runtime_manor_wars", "append_only", "庄园战宣战、战期、参战家族和当前状态。"),
+		_table("manorBattles", "manor_battles", ["battleId"], "runtime_manor_battles", "append_only", "庄园战结算胜负、双方家族和战力记录。"),
 	]
 
 
@@ -162,7 +163,8 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("familyJoin", "POST", "/families/join", "session", "加入开放家族。"),
 		_endpoint("familyLeave", "POST", "/families/leave", "session", "离开家族，最后成员离开时释放庄园。"),
 		_endpoint("manorList", "GET", "/manors", "session", "读取九大庄园占领和道具场信息。"),
-		_endpoint("manorChallenge", "POST", "/manors/challenge", "family_leader", "族长发起庄园战，胜利后占领庄园。"),
+		_endpoint("manorChallenge", "POST", "/manors/challenge", "family_leader", "族长宣战并登记庄园战期。"),
+		_endpoint("manorResolve", "POST", "/manors/resolve", "family_leader", "参战族长开战结算，胜利后占领庄园。"),
 		_endpoint("gmTools", "GET", "/gm/tools", "gm_session", "读取当前账号可见的GM工具入口。"),
 		_endpoint("gmCommand", "POST", "/gm/commands/{commandId}", "gm_command_grant", "执行GM命令，服务端必须重新鉴权并写审计。"),
 	]

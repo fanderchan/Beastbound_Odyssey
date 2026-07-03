@@ -140,9 +140,31 @@ function mysqlCounts(env) {
         counts[key] = Number(value || 0);
       }
     }
+    counts.manor_wars = mysqlTableCount(env, "manor_wars");
     return counts;
   } catch (error) {
     return {"error": error.message};
+  }
+}
+
+function mysqlTableCount(env, tableName) {
+  try {
+    const output = execFileSync(env.BEASTBOUND_MYSQL_BIN || "mysql", [
+      "--protocol=tcp",
+      "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
+      "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
+      "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
+      `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
+      "--batch",
+      "--raw",
+      "--skip-column-names",
+      env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey",
+      "-e",
+      `SELECT COUNT(*) FROM ${tableName};`,
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "pipe"]});
+    return Number(output.trim() || 0);
+  } catch (_error) {
+    return 0;
   }
 }
 

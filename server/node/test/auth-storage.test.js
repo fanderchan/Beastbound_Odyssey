@@ -52,6 +52,7 @@ process.stdin.on("end", () => {
       hasBattleRecords: stdin.includes("INSERT INTO battle_records"),
       hasFamilies: stdin.includes("INSERT INTO families"),
       hasManors: stdin.includes("INSERT INTO manors"),
+      hasManorWars: stdin.includes("INSERT INTO manor_wars"),
       hasManorBattles: stdin.includes("INSERT INTO manor_battles"),
     }) + "\\n");
 });
@@ -136,6 +137,29 @@ process.stdin.on("end", () => {
           "schemaVersion": 1,
         },
       ],
+      "manorWars": [
+        {
+          "warId": "manor_war_mysqlprobe",
+          "manorId": "firebud_manor",
+          "manorName": "火芽庄园",
+          "challengerFamilyId": "family_mysqlprobe",
+          "challengerFamilyName": "MySQL家族",
+          "defenderFamilyId": "",
+          "defenderFamilyName": "庄园守备队",
+          "challengerPower": 500,
+          "defenderPower": 260,
+          "status": "resolved",
+          "declaredAt": "2026-06-30T00:00:00.000Z",
+          "startsAt": "2026-06-30T00:00:00.000Z",
+          "endsAt": "2026-06-30T00:30:00.000Z",
+          "resolvedAt": "2026-06-30T00:00:00.000Z",
+          "battleId": "manor_battle_mysqlprobe",
+          "winnerFamilyId": "family_mysqlprobe",
+          "winnerFamilyName": "MySQL家族",
+          "result": "challenger_win",
+          "schemaVersion": 1,
+        },
+      ],
       "authEvents": [],
       "serviceEvents": [],
     });
@@ -146,6 +170,7 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => call.hasBattleRecords));
     assert.ok(calls.some((call) => call.hasFamilies));
     assert.ok(calls.some((call) => call.hasManors));
+    assert.ok(calls.some((call) => call.hasManorWars));
     assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
   } finally {

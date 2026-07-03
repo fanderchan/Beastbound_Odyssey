@@ -121,6 +121,18 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_manor_battles_manor_created (manor_id, created_at),
         INDEX idx_manor_battles_winner_created (winner_family_id, created_at)
       );
+      CREATE TABLE IF NOT EXISTS manor_wars (
+        war_id VARCHAR(96) PRIMARY KEY,
+        manor_id VARCHAR(96) NOT NULL,
+        status VARCHAR(32) NOT NULL,
+        challenger_family_id VARCHAR(96) NOT NULL,
+        defender_family_id VARCHAR(96) NOT NULL DEFAULT '',
+        starts_at VARCHAR(40) NOT NULL DEFAULT '',
+        resolved_at VARCHAR(40) NOT NULL DEFAULT '',
+        document_json JSON NOT NULL,
+        INDEX idx_manor_wars_manor_status (manor_id, status),
+        INDEX idx_manor_wars_challenger_status (challenger_family_id, status)
+      );
       CREATE TABLE IF NOT EXISTS chat_messages (
         message_id VARCHAR(96) PRIMARY KEY,
         channel VARCHAR(24) NOT NULL,
@@ -267,6 +279,7 @@ function buildSaveStatements(nextData) {
   statements.push("DELETE FROM families");
   statements.push("DELETE FROM manors");
   statements.push("DELETE FROM manor_battles");
+  statements.push("DELETE FROM manor_wars");
   statements.push("DELETE FROM chat_messages");
   statements.push("DELETE FROM player_positions");
   statements.push("DELETE FROM battle_invites");
@@ -307,6 +320,11 @@ function buildSaveStatements(nextData) {
   if (Array.isArray(data.manorBattles)) {
     for (const battle of data.manorBattles) {
       statements.push(insertManorBattleStatement(battle));
+    }
+  }
+  if (Array.isArray(data.manorWars)) {
+    for (const war of data.manorWars) {
+      statements.push(insertManorWarStatement(war));
     }
   }
   if (Array.isArray(data.chatMessages)) {
@@ -548,6 +566,10 @@ function insertManorStatement(manor) {
 
 function insertManorBattleStatement(battle) {
   return `INSERT INTO manor_battles (battle_id, manor_id, challenger_family_id, defender_family_id, winner_family_id, result, created_at, document_json) VALUES (${sqlString(battle.battleId)}, ${sqlString(battle.manorId)}, ${sqlString(battle.challengerFamilyId)}, ${sqlString(battle.defenderFamilyId)}, ${sqlString(battle.winnerFamilyId)}, ${sqlString(battle.result)}, ${sqlString(battle.createdAt)}, ${sqlJson(battle)})`;
+}
+
+function insertManorWarStatement(war) {
+  return `INSERT INTO manor_wars (war_id, manor_id, status, challenger_family_id, defender_family_id, starts_at, resolved_at, document_json) VALUES (${sqlString(war.warId)}, ${sqlString(war.manorId)}, ${sqlString(war.status)}, ${sqlString(war.challengerFamilyId)}, ${sqlString(war.defenderFamilyId)}, ${sqlString(war.startsAt)}, ${sqlString(war.resolvedAt)}, ${sqlJson(war)})`;
 }
 
 function insertChatMessageStatement(message) {
