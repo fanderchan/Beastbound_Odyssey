@@ -546,6 +546,45 @@ func _run_auto_mobile_touch_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+func _run_auto_client_version_check() -> void:
+	var expected_label: String = host._client_version_label_text()
+	host._layout_hud()
+	host._update_hud_text(true)
+	await host.get_tree().process_frame
+	var hud_label_ok = (
+		host.version_label != null
+		and host.version_label.is_visible_in_tree()
+		and host.version_label.text == expected_label
+		and host.version_label.get_global_rect().size.x >= 80.0
+	)
+	host._open_auth_panel()
+	await host.get_tree().process_frame
+	var auth_label_ok = (
+		host.auth_version_label != null
+		and host.auth_version_label.is_visible_in_tree()
+		and host.auth_version_label.text == expected_label
+	)
+	var headers := ServerAuthClientModel.request_headers()
+	var client_header := "X-Beastbound-Client-Version: %s" % ServerAuthClientModel.CLIENT_VERSION
+	var protocol_header := "X-Beastbound-Protocol-Version: %d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION
+	var headers_ok = headers.has(client_header) and headers.has(protocol_header)
+	var query := ServerAuthClientModel.protocol_query()
+	var query_ok = (
+		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
+		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
+	)
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok else "failed"
+	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
+		status,
+		str(hud_label_ok),
+		str(auth_label_ok),
+		host.version_label.text if host.version_label != null else "",
+		str(headers_ok),
+		str(query_ok),
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
 func _run_auto_pathfinding_check() -> void:
 	var start_cell = IsoMapModel.spawn_cell(host.map_data)
 	var clicked_blocked_cell = Vector2i(8, 4)

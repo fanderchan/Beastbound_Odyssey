@@ -219,6 +219,7 @@ var side_panel: PanelContainer
 var action_bar: PanelContainer
 var dialog_panel: PanelContainer
 var status_label: Label
+var version_label: Label
 var detail_label: Label
 var task_route_button: Button
 var dialog_name_label: Label
@@ -268,6 +269,7 @@ var qa_menu_button: Button
 var auth_panel: PanelContainer
 var auth_title_label: Label
 var auth_message_label: Label
+var auth_version_label: Label
 var auth_username_input: LineEdit
 var auth_password_input: LineEdit
 var auth_display_name_input: LineEdit
@@ -724,6 +726,7 @@ var auto_server_battle_stale_room_check: bool = false
 var auto_server_solo_pve_live_check: bool = false
 var auto_server_party_pve_sync_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
+var auto_client_version_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
@@ -1142,6 +1145,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_auth_server_client_check")
 	elif auto_server_profile_sync_check:
 		call_deferred("_run_auto_server_profile_sync_check")
+	elif auto_client_version_check:
+		call_deferred("_run_auto_client_version_check")
 	elif auth_ux_preview:
 		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
@@ -1964,6 +1969,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_party_pve_sync_live_check = true
 		elif arg == "--auto-server-profile-sync-check":
 			auto_server_profile_sync_check = true
+		elif arg == "--auto-client-version-check":
+			auto_client_version_check = true
 		elif arg == "--auth-ux-preview":
 			auth_ux_preview = true
 			auth_auto_bypass = false
@@ -4266,6 +4273,10 @@ func _run_auto_auth_check() -> void:
 
 func _run_auto_auth_server_client_check() -> void:
 	await _auto_checks()._run_auto_auth_server_client_check()
+
+
+func _run_auto_client_version_check() -> void:
+	await _auto_checks()._run_auto_client_version_check()
 
 
 func _run_auto_auth_server_live_check() -> void:
@@ -11805,6 +11816,10 @@ func _layout_size() -> Vector2:
 
 func _is_phone_shape(size: Vector2) -> bool:
 	return minf(size.x, size.y) < 520.0 or size.x < 760.0 or size.y > size.x
+
+
+func _client_version_label_text() -> String:
+	return "版本 %s" % ServerAuthClientModel.CLIENT_VERSION
 
 
 func _battle_command_panel_height(size: Vector2) -> float:

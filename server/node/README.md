@@ -69,6 +69,8 @@ Every non-health HTTP request must include:
 
 Every JSON response includes `protocolVersion`, `serverVersion`, `minClientProtocolVersion`, `maxClientProtocolVersion`, and a reserved `hotUpdate` object. Incompatible or missing client protocol metadata returns HTTP `426` with `protocol_version_mismatch` or `client_version_missing` plus a Chinese upgrade prompt. WebSocket event streams carry the same fields as query parameters: `clientVersion` and `clientProtocolVersion`.
 
+Compatibility window strategy: client build version and protocol version are separate. UI text, art, balance data, or bug-fix builds may change `CLIENT_VERSION` while keeping protocol `1` if HTTP/WS request and response contracts stay compatible. Any breaking request/response, event-stream, or save-interaction change must bump both Godot `CLIENT_PROTOCOL_VERSION` and server `PROTOCOL_VERSION`, then update `MIN_CLIENT_PROTOCOL_VERSION` / `MAX_CLIENT_PROTOCOL_VERSION` to the supported release window. The current release window is `1..1`; clients outside it receive HTTP `426` and the reserved `hotUpdate` payload remains non-required until a real update manifest exists.
+
 ## Health And Logs
 
 `GET /health` returns protocol metadata plus `storage` and `eventStream` summaries. When the HTTP server is created with a store, `storage.checked=true` means the endpoint ran one lightweight `store.load()` check; failed storage checks return HTTP `503`.

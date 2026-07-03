@@ -270,6 +270,12 @@ var status_label:
 	set(value):
 		host.status_label = value
 
+var version_label:
+	get:
+		return host.version_label
+	set(value):
+		host.version_label = value
+
 var detail_label:
 	get:
 		return host.detail_label
@@ -563,6 +569,12 @@ var auth_message_label:
 		return host.auth_message_label
 	set(value):
 		host.auth_message_label = value
+
+var auth_version_label:
+	get:
+		return host.auth_version_label
+	set(value):
+		host.auth_version_label = value
 
 var auth_username_input:
 	get:
@@ -5036,10 +5048,26 @@ func _build_hud() -> void:
 	canvas_layer.add_child(hud_root)
 
 	top_panel = _panel_container("TopPanel")
+	var top_row = HBoxContainer.new()
+	top_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	top_row.add_theme_constant_override("separation", 8)
+	top_panel.add_child(top_row)
 	status_label = Label.new()
 	status_label.name = "StatusLabel"
 	status_label.add_theme_font_size_override("font_size", 18)
-	top_panel.add_child(status_label)
+	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	top_row.add_child(status_label)
+	version_label = Label.new()
+	version_label.name = "VersionLabel"
+	version_label.text = host._client_version_label_text()
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	version_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	version_label.custom_minimum_size = Vector2(92, 0)
+	version_label.add_theme_font_size_override("font_size", 14)
+	version_label.add_theme_color_override("font_color", Color(0.86, 0.78, 0.62, 0.95))
+	top_row.add_child(version_label)
 	hud_root.add_child(top_panel)
 
 	battle_round_panel = _panel_container("BattleRoundPanel")
@@ -7186,6 +7214,13 @@ func _build_auth_panel() -> void:
 	auth_submit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	auth_submit_button.pressed.connect(_on_auth_submit_pressed)
 	outer.add_child(auth_submit_button)
+
+	auth_version_label = Label.new()
+	auth_version_label.text = host._client_version_label_text()
+	auth_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	auth_version_label.add_theme_font_size_override("font_size", 13)
+	auth_version_label.add_theme_color_override("font_color", Color(0.86, 0.78, 0.62, 0.9))
+	outer.add_child(auth_version_label)
 
 	auth_http_request = HTTPRequest.new()
 	auth_http_request.timeout = 8.0
