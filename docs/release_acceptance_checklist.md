@@ -280,15 +280,11 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check,--auto-client-vers
 
 ## 7. 阶段 E 验收：发布工程
 
-### 7.1 移动端尺寸预览
+### 7.1 移动端横屏预览
 
-竖屏预览：
+移动端主验收按横屏宽画面执行。PC 客户端本质上就是移动端横屏客户端跑在 PC 窗口里，所以这里不要求 390 宽竖屏承载完整 MMORPG 主界面。
 
-```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile-portrait
-```
-
-横屏预览：
+主预览：
 
 ```sh
 godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
@@ -296,10 +292,20 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
 
 期望：
 
+- 窗口尺寸为 1280x720，与 PC 主窗口同宽同模板。
 - 登录、HUD、背包、商店、任务、地图、宠物、战斗目标选择不明显重叠。
 - 按钮尺寸能用鼠标模拟点击。
 - 文字不被裁掉到无法理解。
-- PC 和移动预览使用同一套玩法模板，没有完全不同的战斗布局。
+- PC 和移动横屏使用同一套玩法模板，没有完全不同的战斗布局。
+
+可选压力预览，不作为主可玩性验收：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --preview-phone-landscape
+godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile-portrait
+```
+
+`--preview-phone-landscape` 是 844x390，`--preview-mobile-portrait` 是 390x844。它们只用来发现按钮完全不可点、面板彻底出界、文字完全不可读这类极端问题；如果整体观感很挤或不适合完整游玩，应记录为小屏适配待办，而不是阻止横屏版本验收。
 
 ### 7.2 版本显示和兼容文档
 
@@ -320,7 +326,9 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
 
 ### 7.3 发布入口闸门
 
-普通客户端启动时检查：
+用 `godot --path ...` 从本机直接启动时，窗口标题可能显示 `(DEBUG)`，开发态也可能暴露 `GM` 等调试入口；这不是玩家 release 包。玩家发布入口以 release gate 自动检查和真正导出的 release 构建为准。
+
+玩家 release 构建应满足：
 
 - 不应看到 GM 工具入口。
 - 不应看到 QA 面板。
@@ -437,7 +445,7 @@ godot --path client/godot --user-data-dir .run/manual_acceptance/player2 --scene
 - 新账号首玩链路能从注册走到战斗、捕捉、基础面板、至少一次服务端保存。
 - 弱网/停服/重登不会把客户端卡死。
 - 双客户端至少完成组队或切磋其中一条联机链路；完整验收建议两条都测。
-- PC 正常窗口和移动横/竖预览没有明显布局阻断。
+- PC 正常窗口和移动横屏主预览没有明显布局阻断；竖屏/超窄屏只作为压力检查。
 - 普通玩家看不到 GM/QA/numeric/debug/auto 入口。
 - 你接受 `docs/asset_audit.md` 记录的占位资产状态，或者明确决定发布前还要补美术。
 

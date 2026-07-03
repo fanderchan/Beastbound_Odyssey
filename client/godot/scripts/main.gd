@@ -1695,6 +1695,8 @@ func _apply_preview_window_args() -> void:
 			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check":
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
+			_apply_preview_window_size(Vector2i(1280, 720))
+		elif arg == "--preview-phone-landscape":
 			_apply_preview_window_size(Vector2i(844, 390))
 		elif arg == "--qa-viewport":
 			_apply_preview_window_size(_parse_preview_window_size(_cmdline_user_arg_at(args, index + 1)))

@@ -70,15 +70,22 @@ godot --headless --path client/godot --export-pack Android ../../.run/export_pro
 
 完整 `--export-release` 需要本机安装 Godot 4.7 export templates；Android 还需要 Java SDK、Android SDK platform-tools/build-tools，以及 `adb` / `apksigner`。
 
-手机触控与小屏面板走查：
+移动端主验收使用横屏宽画面，和 PC 主窗口保持同一套模板：
+
+```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
+```
+
+触控与小屏压力走查：
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-mobile-touch-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile-portrait --auto-mobile-touch-check
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile --auto-mobile-touch-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-phone-landscape --auto-mobile-touch-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile-portrait --auto-mobile-touch-check
 ```
 
-`--preview-mobile-portrait` 使用 390x844，`--preview-mobile` 使用 844x390；需要临时尺寸时可用 `--qa-viewport=宽x高`。
+`--preview-mobile` 使用 1280x720，是移动端横屏主验收尺寸；`--preview-phone-landscape` 使用 844x390，`--preview-mobile-portrait` 使用 390x844，只用于极限小屏压力检查；需要临时尺寸时可用 `--qa-viewport=宽x高`。
 
 ## 后端检查
 

@@ -610,6 +610,8 @@ func _run_auto_release_entrypoint_gate_check() -> void:
 		"--movement-perf-check",
 		"--battle-preview",
 		"--battle-preview-10v10",
+		"--preview-mobile",
+		"--preview-phone-landscape",
 		"--preview-mobile-portrait",
 		"--qa-viewport=390x844",
 		"--numeric-experiment-report",
