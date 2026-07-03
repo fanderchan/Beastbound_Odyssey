@@ -56,6 +56,7 @@ const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.
 const ServerAuthContractModel := preload("res://scripts/progression/server_auth_contract_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 const AUTH_SERVER_ONLY := true
+const DEV_ENTRYPOINT_FEATURE := "beastbound_dev_tools"
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
@@ -727,6 +728,7 @@ var auto_server_solo_pve_live_check: bool = false
 var auto_server_party_pve_sync_live_check: bool = false
 var auto_server_profile_sync_check: bool = false
 var auto_client_version_check: bool = false
+var auto_release_entrypoint_gate_check: bool = false
 var auth_ux_preview: bool = false
 var auto_panel_registry_check: bool = false
 var auto_chat_panel_check: bool = false
@@ -781,6 +783,8 @@ var auto_numeric_battle_simulation_check: bool = false
 var auto_economy_ledger_check: bool = false
 var auto_numeric_balance_gate_check: bool = false
 var numeric_experiment_report: bool = false
+var release_entrypoint_gate_test_mode: bool = false
+var release_dev_entrypoint_blocked: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var backpack_filter_preview: bool = false
@@ -1147,6 +1151,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_profile_sync_check")
 	elif auto_client_version_check:
 		call_deferred("_run_auto_client_version_check")
+	elif auto_release_entrypoint_gate_check:
+		call_deferred("_run_auto_release_entrypoint_gate_check")
 	elif auth_ux_preview:
 		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
@@ -1646,19 +1652,45 @@ func _apply_preview_window_size(size: Vector2i) -> void:
 	window.content_scale_size = size
 
 
+func _dev_entrypoints_allowed() -> bool:
+	if release_entrypoint_gate_test_mode:
+		return false
+	return OS.has_feature("editor") or OS.has_feature("debug") or OS.has_feature(DEV_ENTRYPOINT_FEATURE)
+
+
+func _release_entrypoints_locked() -> bool:
+	return release_entrypoint_gate_test_mode or (OS.has_feature("release") and not _dev_entrypoints_allowed())
+
+
+func _dev_entrypoint_arg(arg: String) -> bool:
+	var normalized := arg.strip_edges()
+	if normalized == "":
+		return false
+	return (
+		normalized.begins_with("--auto-")
+		or normalized.ends_with("-check")
+		or normalized.find("-preview") >= 0
+		or normalized.ends_with("-demo")
+		or normalized.ends_with("-test")
+		or normalized == "--perf-probe"
+		or normalized == "--numeric-experiment-report"
+		or normalized == "--gm-10v10-map"
+		or normalized == "--qa-viewport"
+		or normalized.begins_with("--qa-viewport=")
+		or normalized == "--battle-debug-window"
+		or normalized == "--server-step-world-move"
+	)
+
+
 func _apply_preview_window_args() -> void:
 	var args := OS.get_cmdline_user_args()
+	release_dev_entrypoint_blocked = false
 	for index in range(args.size()):
 		var arg := str(args[index])
-		if (
-			arg.begins_with("--auto-")
-			or arg.ends_with("-check")
-			or arg.ends_with("-preview")
-			or arg.ends_with("-demo")
-			or arg.ends_with("-test")
-			or arg == "--perf-probe"
-			or arg == "--numeric-experiment-report"
-		):
+		if _release_entrypoints_locked() and _dev_entrypoint_arg(arg):
+			release_dev_entrypoint_blocked = true
+			continue
+		if _dev_entrypoint_arg(arg):
 			profile_save_enabled = false
 			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check":
 				auth_auto_bypass = true
@@ -1971,6 +2003,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_profile_sync_check = true
 		elif arg == "--auto-client-version-check":
 			auto_client_version_check = true
+		elif arg == "--auto-release-entrypoint-gate-check":
+			auto_release_entrypoint_gate_check = true
 		elif arg == "--auth-ux-preview":
 			auth_ux_preview = true
 			auth_auto_bypass = false
@@ -4277,6 +4311,10 @@ func _run_auto_auth_server_client_check() -> void:
 
 func _run_auto_client_version_check() -> void:
 	await _auto_checks()._run_auto_client_version_check()
+
+
+func _run_auto_release_entrypoint_gate_check() -> void:
+	await _auto_checks()._run_auto_release_entrypoint_gate_check()
 
 
 func _run_auto_auth_server_live_check() -> void:

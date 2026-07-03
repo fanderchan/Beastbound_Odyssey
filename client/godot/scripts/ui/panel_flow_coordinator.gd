@@ -8527,6 +8527,8 @@ func _apply_auth_profile_metadata(display_name: String) -> void:
 		host._request_profile_save()
 
 func _can_use_gm_tools() -> bool:
+	if host._release_entrypoints_locked():
+		return false
 	return auth_auto_bypass or GmToolRuntimeModel.session_can_open_tools(current_account_session)
 
 func _refresh_gm_visibility() -> void:
@@ -15288,6 +15290,9 @@ func _close_auto_settings_panel() -> void:
 	_hide_control(auto_settings_panel)
 
 func _open_qa_panel() -> void:
+	if host._release_entrypoints_locked():
+		_set_world_log_message("当前构建未开放GM工具。")
+		return
 	if not _can_use_gm_tools():
 		_set_world_log_message("当前账号没有GM权限。")
 		return
@@ -15321,6 +15326,9 @@ func _close_qa_panel(update_layout: bool = true) -> void:
 	_hide_control(qa_panel, update_layout)
 
 func _open_numeric_workbench_panel() -> void:
+	if host._release_entrypoints_locked():
+		_set_world_log_message("当前构建未开放数值实验工具。")
+		return
 	if not _can_use_gm_tools():
 		_set_world_log_message("当前账号没有GM权限。")
 		return
@@ -15548,6 +15556,9 @@ func _gm_allowed_command_ids() -> Array[String]:
 	return command_ids
 
 func _authorize_gm_command(command_id: String) -> bool:
+	if host._release_entrypoints_locked():
+		_set_world_log_message("当前构建未开放GM工具。")
+		return false
 	if auth_auto_bypass:
 		return true
 	var result = GmToolRuntimeModel.authorize_command(current_account_session, command_id, _gm_allowed_command_ids())

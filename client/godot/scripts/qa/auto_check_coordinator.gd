@@ -585,6 +585,95 @@ func _run_auto_client_version_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+
+func _run_auto_release_entrypoint_gate_check() -> void:
+	var original_gate_mode: bool = host.release_entrypoint_gate_test_mode
+	var original_auth_bypass: bool = host.auth_auto_bypass
+	var original_profile_save_enabled: bool = host.profile_save_enabled
+	var original_authenticated: bool = host.account_authenticated
+	var original_session: Dictionary = host.current_account_session.duplicate(true)
+	var original_world_log: String = host.world_log_message
+	var original_map_id: String = host.current_map_id
+	host.release_entrypoint_gate_test_mode = true
+	host.auth_auto_bypass = false
+	host.profile_save_enabled = true
+	host.release_dev_entrypoint_blocked = false
+	host._apply_preview_window_args()
+	var parser_blocks_current_auto_arg = (
+		host.release_dev_entrypoint_blocked
+		and not host.auth_auto_bypass
+		and host.profile_save_enabled
+	)
+	var dev_arg_samples: Array[String] = [
+		"--auto-auth-check",
+		"--auto-mobile-touch-check",
+		"--movement-perf-check",
+		"--battle-preview",
+		"--battle-preview-10v10",
+		"--preview-mobile-portrait",
+		"--qa-viewport=390x844",
+		"--numeric-experiment-report",
+		"--gm-10v10-map",
+		"--battle-debug-window",
+		"--server-step-world-move",
+	]
+	var args_recognized := true
+	for sample in dev_arg_samples:
+		args_recognized = args_recognized and host._dev_entrypoint_arg(sample)
+	var normal_args_allowed = (
+		not host._dev_entrypoint_arg("--login")
+		and not host._dev_entrypoint_arg("--server-url=http://127.0.0.1:3000")
+	)
+	host.auth_auto_bypass = true
+	host.account_authenticated = true
+	host.current_account_session = AccountAuthModel.dev_gm_session()
+	host._refresh_gm_visibility()
+	await host.get_tree().process_frame
+	var gate_locked = host._release_entrypoints_locked()
+	var gm_menu_hidden = host.qa_menu_button == null or not host.qa_menu_button.visible
+	host._open_qa_panel()
+	await host.get_tree().process_frame
+	var qa_blocked = host.qa_panel == null or not host.qa_panel.visible
+	host._open_numeric_workbench_panel()
+	await host.get_tree().process_frame
+	var numeric_blocked = host.numeric_workbench_panel == null or not host.numeric_workbench_panel.visible
+	host.world_log_message = ""
+	host._on_qa_entry_pressed("gm_map")
+	await host.get_tree().process_frame
+	var command_blocked = (
+		host.current_map_id == original_map_id
+		and host.world_log_message.find("当前构建未开放GM工具") >= 0
+	)
+	var presets_text = FileAccess.get_file_as_string("res://export_presets.cfg") if FileAccess.file_exists("res://export_presets.cfg") else ""
+	var release_presets_locked = (
+		presets_text.find("custom_features=\"beastbound_dev_tools\"") < 0
+		and presets_text.find("custom_features=\"\"") >= 0
+	)
+	var status = "ok" if gate_locked and parser_blocks_current_auto_arg and args_recognized and normal_args_allowed and gm_menu_hidden and qa_blocked and numeric_blocked and command_blocked and release_presets_locked else "failed"
+	print("release entrypoint gate check ready: status=%s locked=%s parser=%s dev_args=%s normal_args=%s gm_hidden=%s qa_blocked=%s numeric_blocked=%s command_blocked=%s presets_locked=%s blocked_flag=%s map=%s log=%s" % [
+		status,
+		str(gate_locked),
+		str(parser_blocks_current_auto_arg),
+		str(args_recognized),
+		str(normal_args_allowed),
+		str(gm_menu_hidden),
+		str(qa_blocked),
+		str(numeric_blocked),
+		str(command_blocked),
+		str(release_presets_locked),
+		str(host.release_dev_entrypoint_blocked),
+		host.current_map_id,
+		host.world_log_message,
+	])
+	host.release_entrypoint_gate_test_mode = original_gate_mode
+	host.auth_auto_bypass = original_auth_bypass
+	host.profile_save_enabled = original_profile_save_enabled
+	host.account_authenticated = original_authenticated
+	host.current_account_session = original_session
+	host.world_log_message = original_world_log
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
 func _run_auto_pathfinding_check() -> void:
 	var start_cell = IsoMapModel.spawn_cell(host.map_data)
 	var clicked_blocked_cell = Vector2i(8, 4)
