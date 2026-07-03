@@ -198,6 +198,12 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/manors/challenge") {
         return sendResult(res, service.challengeManor(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "POST" && url.pathname === "/manors/enter") {
+        return sendResult(res, service.enterManorWar(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/manors/leave") {
+        return sendResult(res, service.leaveManorWar(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "POST" && url.pathname === "/manors/resolve") {
         return sendResult(res, service.resolveManorWar(bearerToken(req), await readJson(req)));
       }

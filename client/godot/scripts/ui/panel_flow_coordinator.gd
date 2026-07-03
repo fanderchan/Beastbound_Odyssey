@@ -14189,9 +14189,13 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 	var active_war = manor.get("activeWar", null) as Dictionary if manor.get("activeWar", null) is Dictionary else {}
 	var war_text = ""
 	if not active_war.is_empty():
-		war_text = "\n战期：%s VS %s" % [
+		war_text = "\n战期：%s VS %s  参战：%d/%d - %d/%d" % [
 			str(active_war.get("challengerFamilyName", "挑战方")),
 			str(active_war.get("defenderFamilyName", "守方")),
+			int(active_war.get("challengerParticipantCount", 0)),
+			int(active_war.get("maxParticipantsPerSide", 5)),
+			int(active_war.get("defenderParticipantCount", 0)),
+			int(active_war.get("maxParticipantsPerSide", 5)),
 		]
 	label.text = "%s  %s  守备:%d  占领：%s%s%s" % [
 		str(manor.get("name", "庄园")),
@@ -14215,10 +14219,26 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 	)
 	row.add_child(challenge_button)
 	if not active_war.is_empty():
+		var war_id := str(active_war.get("warId", ""))
+		var enter_button = Button.new()
+		enter_button.text = "参战"
+		enter_button.custom_minimum_size = Vector2(78, 42)
+		enter_button.disabled = family_request_pending or war_id == "" or not bool(active_war.get("canEnterByViewerFamily", false))
+		enter_button.pressed.connect(func() -> void:
+			_on_family_enter_manor_war_pressed(war_id)
+		)
+		row.add_child(enter_button)
+		var leave_button = Button.new()
+		leave_button.text = "退出"
+		leave_button.custom_minimum_size = Vector2(78, 42)
+		leave_button.disabled = family_request_pending or war_id == "" or not bool(active_war.get("canLeaveByViewerFamily", false))
+		leave_button.pressed.connect(func() -> void:
+			_on_family_leave_manor_war_pressed(war_id)
+		)
+		row.add_child(leave_button)
 		var resolve_button = Button.new()
 		resolve_button.text = "开战"
 		resolve_button.custom_minimum_size = Vector2(78, 42)
-		var war_id := str(active_war.get("warId", ""))
 		resolve_button.disabled = family_request_pending or war_id == "" or not bool(active_war.get("canResolveByViewerFamily", false)) or not _family_current_user_is_leader(current_family)
 		resolve_button.pressed.connect(func() -> void:
 			_on_family_resolve_manor_war_pressed(war_id)
@@ -14296,6 +14316,16 @@ func _on_family_challenge_manor_pressed(manor_id: String) -> void:
 		return
 	_start_family_request("challenge", ServerAuthClientModel.manor_challenge_request(_server_profile_base_url(), _server_profile_token(), manor_id))
 
+func _on_family_enter_manor_war_pressed(war_id: String) -> void:
+	if war_id.strip_edges() == "":
+		return
+	_start_family_request("war_enter", ServerAuthClientModel.manor_enter_request(_server_profile_base_url(), _server_profile_token(), war_id))
+
+func _on_family_leave_manor_war_pressed(war_id: String) -> void:
+	if war_id.strip_edges() == "":
+		return
+	_start_family_request("war_leave", ServerAuthClientModel.manor_leave_request(_server_profile_base_url(), _server_profile_token(), war_id))
+
 func _on_family_resolve_manor_war_pressed(war_id: String) -> void:
 	if war_id.strip_edges() == "":
 		return
@@ -14324,6 +14354,10 @@ func _start_family_request(kind: String, spec: Dictionary) -> void:
 				family_status_label.text = "正在离开家族..."
 			"challenge":
 				family_status_label.text = "正在登记庄园战..."
+			"war_enter":
+				family_status_label.text = "正在加入庄园战..."
+			"war_leave":
+				family_status_label.text = "正在退出庄园战..."
 			"resolve":
 				family_status_label.text = "正在开战结算..."
 			_:
@@ -14417,6 +14451,22 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 			return
 		elif family_status_label != null:
 			family_status_label.text = str(parsed_resolve.get("message", "庄园战结算失败。"))
+	elif kind == "war_enter" or kind == "war_leave":
+		var parsed_war_action = ServerAuthClientModel.parse_manor_war_action_response(response_code, body)
+		if bool(parsed_war_action.get("ok", false)):
+			if family_status_label != null:
+				var war = parsed_war_action.get("war", {}) as Dictionary if parsed_war_action.get("war", {}) is Dictionary else {}
+				family_status_label.text = "%s：我方 %d / 守方 %d。" % [
+					str(parsed_war_action.get("message", "庄园战参战名单已更新。")),
+					int(war.get("challengerPower", 0)),
+					int(war.get("defenderPower", 0)),
+				]
+			_request_family_state()
+			return
+		elif _handle_session_invalid_response(parsed_war_action):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_war_action.get("message", "庄园战参战失败。"))
 	else:
 		var parsed_action = ServerAuthClientModel.parse_family_action_response(response_code, body)
 		if bool(parsed_action.get("ok", false)):

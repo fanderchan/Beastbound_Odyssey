@@ -71,8 +71,29 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   const declared = service.challengeManor(leader.session.token, {"manorId": "firebud_manor"});
   assert.equal(declared.ok, true);
   assert.equal(declared.war.status, "scheduled");
+  assert.equal(declared.war.challengerParticipantCount, 1);
+  assert.equal(declared.war.viewerParticipantSide, "challenger");
+  assert.equal(declared.war.canLeaveByViewerFamily, false);
   assert.equal(declared.manor.ownerFamilyName, "");
   assert.equal(declared.manor.activeWar.warId, declared.war.warId);
+  const leaderOnlyPower = declared.war.challengerPower;
+
+  const outsiderEnter = service.enterManorWar(outsider.session.token, {"warId": declared.war.warId});
+  assert.equal(outsiderEnter.ok, false);
+  assert.equal(outsiderEnter.code, "family_missing");
+
+  const memberEnter = service.enterManorWar(member.session.token, {"warId": declared.war.warId});
+  assert.equal(memberEnter.ok, true);
+  assert.equal(memberEnter.war.challengerParticipantCount, 2);
+  assert.ok(memberEnter.war.challengerPower > leaderOnlyPower);
+
+  const memberLeave = service.leaveManorWar(member.session.token, {"warId": declared.war.warId});
+  assert.equal(memberLeave.ok, true);
+  assert.equal(memberLeave.war.challengerParticipantCount, 1);
+
+  const memberReenter = service.enterManorWar(member.session.token, {"warId": declared.war.warId});
+  assert.equal(memberReenter.ok, true);
+  assert.equal(memberReenter.war.challengerParticipantCount, 2);
 
   const pendingOwnerBuy = service.shopTransaction(leader.session.token, {
     mode: "buy",
@@ -153,6 +174,15 @@ test("HTTP exposes family and manor endpoints", async (t) => {
   });
   assert.equal(challenged.ok, true);
   assert.equal(challenged.war.status, "scheduled");
+  assert.equal(challenged.war.challengerParticipantCount, 1);
+
+  const entered = await fetchJson(`${base}/manors/enter`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({"warId": challenged.war.warId}),
+  });
+  assert.equal(entered.ok, true);
+  assert.equal(entered.war.viewerParticipantSide, "challenger");
 
   const resolved = await fetchJson(`${base}/manors/resolve`, {
     method: "POST",

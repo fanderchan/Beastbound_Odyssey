@@ -1576,6 +1576,8 @@ function createAuthService(options = {}) {
     leaveFamily: familyManor.leaveFamily,
     listManors: familyManor.listManors,
     challengeManor: familyManor.challengeManor,
+    enterManorWar: familyManor.enterManorWar,
+    leaveManorWar: familyManor.leaveManorWar,
     resolveManorWar: familyManor.resolveManorWar,
     listChatMessages: mailChat.listChatMessages,
     sendChatMessage: mailChat.sendChatMessage,

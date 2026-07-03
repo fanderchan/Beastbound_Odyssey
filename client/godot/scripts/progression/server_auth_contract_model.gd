@@ -164,6 +164,8 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("familyLeave", "POST", "/families/leave", "session", "离开家族，最后成员离开时释放庄园。"),
 		_endpoint("manorList", "GET", "/manors", "session", "读取九大庄园占领和道具场信息。"),
 		_endpoint("manorChallenge", "POST", "/manors/challenge", "family_leader", "族长宣战并登记庄园战期。"),
+		_endpoint("manorEnter", "POST", "/manors/enter", "family_member", "参战家族成员加入庄园战名单。"),
+		_endpoint("manorLeave", "POST", "/manors/leave", "family_member", "参战成员退出庄园战名单。"),
 		_endpoint("manorResolve", "POST", "/manors/resolve", "family_leader", "参战族长开战结算，胜利后占领庄园。"),
 		_endpoint("gmTools", "GET", "/gm/tools", "gm_session", "读取当前账号可见的GM工具入口。"),
 		_endpoint("gmCommand", "POST", "/gm/commands/{commandId}", "gm_command_grant", "执行GM命令，服务端必须重新鉴权并写审计。"),
