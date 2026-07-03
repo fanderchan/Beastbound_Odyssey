@@ -28,6 +28,22 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-previe
 godot --headless --path client/godot --quit
 ```
 
+## 客户端全量自动检查
+
+一键运行当前 `main.gd` 中注册的全部 `--auto-*-check`，并输出 `.run/godot_auto_checks/` 下的 log 与 summary JSON：
+
+```sh
+node tools/run_godot_auto_checks.mjs
+```
+
+常用缩小范围 / 续跑：
+
+```sh
+node tools/run_godot_auto_checks.mjs --list
+node tools/run_godot_auto_checks.mjs --only --auto-auth-check,--auto-server-profile-sync-check
+node tools/run_godot_auto_checks.mjs --from --auto-server-battle-return-check --fail-fast
+```
+
 ## 后端检查
 
 ```sh
