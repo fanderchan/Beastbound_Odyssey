@@ -58,7 +58,7 @@ node tools/run_local_ci.mjs
 node tools/run_local_ci.mjs --quick
 ```
 
-## 发布导出与移动触控
+## 发布导出与 PC 发版检查
 
 三平台数据包导出探针：
 
@@ -70,13 +70,13 @@ godot --headless --path client/godot --export-pack Android ../../.run/export_pro
 
 完整 `--export-release` 需要本机安装 Godot 4.7 export templates；Android 还需要 Java SDK、Android SDK platform-tools/build-tools，以及 `adb` / `apksigner`。
 
-移动端主验收使用横屏宽画面，和 PC 主窗口保持同一套模板：
+当前发布目标是 PC 桌面版。正常 PC 发版体验使用默认窗口：
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
+godot --path client/godot --scene res://scenes/Main.tscn
 ```
 
-触控与小屏压力走查：
+移动端命令只保留为未来兼容性烟测，不作为当前 PC 发版阻塞项：
 
 ```sh
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-mobile-touch-check
@@ -85,7 +85,7 @@ godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after
 godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile-portrait --auto-mobile-touch-check
 ```
 
-`--preview-mobile` 使用 1280x720，是移动端横屏主验收尺寸；`--preview-phone-landscape` 使用 844x390，`--preview-mobile-portrait` 使用 390x844，只用于极限小屏压力检查；需要临时尺寸时可用 `--qa-viewport=宽x高`。
+`--preview-mobile` 使用 1280x720，`--preview-phone-landscape` 使用 844x390，`--preview-mobile-portrait` 使用 390x844。它们只用于记录未来手机/平板适配风险；需要临时尺寸时可用 `--qa-viewport=宽x高`。
 
 ## 后端检查
 

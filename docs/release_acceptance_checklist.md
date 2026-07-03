@@ -1,8 +1,8 @@
 # 阶段 A-E 人工验收清单
 
-适用版本：`c8d38bbb3408f407a6ae22f4754580c2eca064d3`
+适用版本：`67500fdc847d260f8dd1d378b2452b868d637fea` 或更新
 
-这份清单用于你有空时统一验收 `release_plan.md` 的阶段 A-E。自动检查已经覆盖了大量细节，人工验收重点是：正常玩家流程是否顺、中文文案是否干净、PC/移动尺寸是否能用、弱网/重登有没有卡死、剩余占位美术是否能接受。
+这份清单用于你有空时统一验收 `release_plan.md` 的阶段 A-E。自动检查已经覆盖了大量细节，人工验收重点是：PC 正常玩家流程是否顺、中文文案是否干净、弱网/重登有没有卡死、剩余占位美术是否能接受。手机/平板只做未来兼容性记录，不作为当前 PC 发版阻塞项。
 
 ## 验收结论规则
 
@@ -280,32 +280,32 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check,--auto-client-vers
 
 ## 7. 阶段 E 验收：发布工程
 
-### 7.1 移动端横屏预览
+### 7.1 PC 窗口与可选移动兼容烟测
 
-移动端主验收按横屏宽画面执行。PC 客户端本质上就是移动端横屏客户端跑在 PC 窗口里，所以这里不要求 390 宽竖屏承载完整 MMORPG 主界面。
+当前发布目标是 PC 版。这里先验收 PC 主窗口，不要求手机竖屏或超窄横屏达到完整可玩状态。
 
-主预览：
+PC 主验收：
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
+godot --path client/godot --scene res://scenes/Main.tscn
 ```
 
 期望：
 
-- 窗口尺寸为 1280x720，与 PC 主窗口同宽同模板。
-- 登录、HUD、背包、商店、任务、地图、宠物、战斗目标选择不明显重叠。
+- 默认窗口约 1280x720。
+- 登录、HUD、背包、商店、任务、地图、宠物、战斗目标选择在 PC 窗口内不明显重叠。
 - 按钮尺寸能用鼠标模拟点击。
 - 文字不被裁掉到无法理解。
-- PC 和移动横屏使用同一套玩法模板，没有完全不同的战斗布局。
 
-可选压力预览，不作为主可玩性验收：
+可选未来兼容烟测，不作为 PC 发版阻塞项：
 
 ```sh
+godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile
 godot --path client/godot --scene res://scenes/Main.tscn -- --preview-phone-landscape
 godot --path client/godot --scene res://scenes/Main.tscn -- --preview-mobile-portrait
 ```
 
-`--preview-phone-landscape` 是 844x390，`--preview-mobile-portrait` 是 390x844。它们只用来发现按钮完全不可点、面板彻底出界、文字完全不可读这类极端问题；如果整体观感很挤或不适合完整游玩，应记录为小屏适配待办，而不是阻止横屏版本验收。
+`--preview-mobile` 是 1280x720 横屏兼容预览，`--preview-phone-landscape` 是 844x390，`--preview-mobile-portrait` 是 390x844。它们只用来发现未来移动端的大方向问题；如果整体观感很挤或不适合完整游玩，记录为后续手机适配待办，不阻止当前 PC 版验收。
 
 ### 7.2 版本显示和兼容文档
 
@@ -445,7 +445,7 @@ godot --path client/godot --user-data-dir .run/manual_acceptance/player2 --scene
 - 新账号首玩链路能从注册走到战斗、捕捉、基础面板、至少一次服务端保存。
 - 弱网/停服/重登不会把客户端卡死。
 - 双客户端至少完成组队或切磋其中一条联机链路；完整验收建议两条都测。
-- PC 正常窗口和移动横屏主预览没有明显布局阻断；竖屏/超窄屏只作为压力检查。
+- PC 正常窗口没有明显布局阻断；手机/平板预览只作为非阻塞兼容记录。
 - 普通玩家看不到 GM/QA/numeric/debug/auto 入口。
 - 你接受 `docs/asset_audit.md` 记录的占位资产状态，或者明确决定发布前还要补美术。
 

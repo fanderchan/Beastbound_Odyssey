@@ -18,7 +18,7 @@ This walkthrough checks the first playable release path:
 8. Player rebirth trial execution.
 9. Pet MM rebirth guide and execution.
 
-The run used existing headless checks for repeatability. It does not replace final human acceptance for visual feel, touch ergonomics, or release-art polish.
+The run used existing headless checks for repeatability. It does not replace final human acceptance for PC visual feel, first-session readability, or release-art polish. Phone/tablet ergonomics are deferred compatibility work for now.
 
 ## Environment Evidence
 
@@ -61,5 +61,5 @@ No English error codes, raw debug ids, or agent-only validation strings appeared
 ## Follow-Up Watch Items
 
 - The local MySQL database contains many historical test accounts, so online roster counts are noisy in local evidence. Before an external demo, run against a clean seed database or a clearly labeled demo database.
-- The run is headless. Human acceptance should still verify PC and mobile feel, tap targets, first-session readability, and whether the procedural placeholder visuals are acceptable for the intended release bar.
+- The run is headless. Human acceptance should still verify PC feel, first-session readability, and whether the procedural placeholder visuals are acceptable for the intended release bar. Phone/tablet feel and tap targets are non-blocking future compatibility notes unless PC behavior is also affected.
 - E4 identified remaining placeholder art across player, pet, map, battle, and UI presentation. This is not a flow blocker, but it is still a release-positioning decision.

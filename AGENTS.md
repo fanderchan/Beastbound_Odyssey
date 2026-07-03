@@ -11,6 +11,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 ## Product Direction
 
 - Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Current goal: iterate to a releasable networked game per `release_plan.md`.
+- Current release target is PC desktop first. Consider future phone/tablet compatibility while designing shared contracts, but do not build dedicated mobile features, portrait flows, mobile-only UI, touch-only workflows, or mobile release blockers unless the user explicitly asks for that work.
 - Use Godot 4.7 standard edition, GDScript, a 2D isometric or 45-degree map direction, Node.js backend, and MySQL 9.7 for persistence.
 - Use Chinese for player-facing UI by default. Never show English error codes, agent-only validation strings, raw smoke summaries, implementation flags, or debug-only IDs in normal player-facing UI.
 
@@ -25,9 +26,9 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 ## Client Rules
 
 - Keep the Godot client self-contained under `client/godot`.
-- Design every player-facing UI for both PC and mobile from the beginning.
-- Treat the PC client as the same mobile-first client running in a PC window; PC mainly changes input to mouse/keyboard and should not get a denser or more complex separate UI/layout unless the user explicitly approves it.
-- PC and mobile must share the same battle display template and formation coordinate contract; viewport differences should be handled by scaling, translation, and surrounding touch-friendly UI adaptation rather than separate slot layouts.
+- Build and validate player-facing features for the PC desktop client first. The default launch and acceptance path is `godot --path client/godot --scene res://scenes/Main.tscn` in the PC window.
+- Keep PC/mobile gameplay contracts compatible where it is cheap and natural, especially shared battle formation coordinates and reusable panel/data models. Do not add a separate mobile feature set, mobile-only layout, portrait-first flow, or touch-only gameplay unless the user explicitly re-prioritizes mobile.
+- Mobile preview and touch checks are optional smoke/pressure checks for future compatibility. Failures or ugly layouts on phone portrait / ultra-narrow viewports should be recorded as future mobile work, not treated as blockers for the current PC release unless they also affect the PC client.
 - Keep reusable gameplay rules in focused scripts or data files instead of growing one giant scene script. `main.gd` has been reduced to a coordination entrypoint; do not add new domains back into `main.gd` — put new logic in focused scripts under `scripts/net/`, `scripts/battle/`, `scripts/ui/`, `scripts/progression/`, or `scripts/world/`.
 
 ## Validation And Performance Rules
