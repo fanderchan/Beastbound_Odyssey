@@ -1558,6 +1558,63 @@ test("online positions are runtime-only and do not trigger store writes", () => 
   assert.equal(store.snapshot().playerPositions[scout.account.accountId], undefined);
 });
 
+test("server restart recovers sessions without stale online positions", () => {
+  const store = createMemoryAuthStore();
+  let nowMs = Date.parse("2026-01-01T00:00:00.000Z");
+  const service = createAuthService({
+    "store": store,
+    "now": () => nowMs,
+  });
+  const scout = service.register({"username": "recovera", "password": "test1234", "displayName": "恢复甲"});
+  const ranger = service.register({"username": "recoverb", "password": "test1234", "displayName": "恢复乙"});
+  assert.equal(scout.ok, true);
+  assert.equal(ranger.ok, true);
+  assert.equal(service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(ranger.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "west",
+    "moving": false,
+  }).ok, true);
+  const beforeRestart = service.listOnlinePlayers(scout.session.token);
+  assert.equal(beforeRestart.ok, true);
+  assert.equal(beforeRestart.players.length, 2);
+  assert.equal(beforeRestart.players.find((player) => player.accountId === ranger.account.accountId).position.cellX, 11);
+
+  nowMs += 1000;
+  const restarted = createAuthService({
+    "store": store,
+    "now": () => nowMs,
+  });
+  const recoveredScout = restarted.getSession(scout.session.token);
+  assert.equal(recoveredScout.ok, true);
+  assert.equal(recoveredScout.session.recovered, true);
+  assert.equal(recoveredScout.session.requiresPositionResync, true);
+  assert.equal(recoveredScout.recovery.recovered, true);
+  assert.equal(recoveredScout.recovery.hasRuntimePosition, false);
+  const scoutOnline = restarted.listOnlinePlayers(scout.session.token);
+  assert.equal(scoutOnline.ok, true);
+  assert.equal(scoutOnline.players.length, 1);
+  assert.equal(scoutOnline.players[0].accountId, scout.account.accountId);
+  assert.equal(scoutOnline.players[0].position, null);
+
+  const recoveredRanger = restarted.getSession(ranger.session.token);
+  assert.equal(recoveredRanger.ok, true);
+  assert.equal(recoveredRanger.session.recovered, true);
+  const bothOnline = restarted.listOnlinePlayers(scout.session.token);
+  assert.equal(bothOnline.ok, true);
+  assert.equal(bothOnline.players.length, 2);
+  assert.equal(bothOnline.players.find((player) => player.accountId === scout.account.accountId).position, null);
+  assert.equal(bothOnline.players.find((player) => player.accountId === ranger.account.accountId).position, null);
+});
+
 test("duel battle rooms resolve turn commands into event lists", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const events = [];

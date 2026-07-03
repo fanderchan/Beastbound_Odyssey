@@ -25,6 +25,16 @@ func is_server_account_session() -> bool:
 	)
 
 
+func handle_session_invalid_response(parsed: Dictionary) -> bool:
+	if not ServerAuthClientModel.is_session_invalid_response(parsed):
+		return false
+	var message := str(parsed.get("message", "登录已过期，请重新登录。")).strip_edges()
+	if message == "":
+		message = "登录已过期，请重新登录。"
+	host._handle_server_session_expired(message)
+	return true
+
+
 func local_profile_mutation_blocked_for_server_only(action_label: String, emit_message: bool = true) -> bool:
 	if not AUTH_SERVER_ONLY:
 		return false
@@ -123,6 +133,8 @@ func on_profile_sync_http_request_completed(result: int, response_code: int, _he
 
 func apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = true) -> void:
 	if not bool(parsed.get("ok", false)):
+		if handle_session_invalid_response(parsed):
+			return
 		host.server_profile_sync_state = "ready" if is_server_account_session() else "off"
 		host.server_profile_sync_message = str(parsed.get("message", "服务器档案读取失败。"))
 		return
@@ -154,6 +166,8 @@ func apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = tr
 
 func apply_server_profile_upload_result(parsed: Dictionary) -> void:
 	var had_pull_queued: bool = bool(host.server_profile_sync_pull_queued)
+	if handle_session_invalid_response(parsed):
+		return
 	host.server_profile_sync_state = "ready" if is_server_account_session() else "off"
 	host.server_profile_sync_dirty = false
 	var code := str(parsed.get("code", "")).strip_edges()
@@ -331,6 +345,9 @@ func apply_server_quest_action_result(parsed: Dictionary, fallback_message: Stri
 			log_lines.append("任务已提交，但服务器没有返回档案，请重新拉取。")
 			queue_profile_pull()
 	else:
+		if handle_session_invalid_response(parsed):
+			parsed["logLines"] = [str(parsed.get("message", "登录已过期，请重新登录。"))]
+			return parsed
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			apply_server_profile_summary(summary as Dictionary)
@@ -371,6 +388,9 @@ func submit_server_profile_action(action: String, payload: Dictionary = {}, fall
 			log_lines = ["操作已提交，但服务器没有返回档案，请重新拉取。"]
 			queue_profile_pull()
 	else:
+		if handle_session_invalid_response(parsed):
+			parsed["logLines"] = [str(parsed.get("message", "登录已过期，请重新登录。"))]
+			return parsed
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			apply_server_profile_summary(summary as Dictionary)
@@ -410,6 +430,8 @@ func request_server_hang_session_start(mode: String, cell: Vector2i, item_id: St
 		if not apply_server_profile_payload(parsed):
 			queue_profile_pull()
 		return true
+	if handle_session_invalid_response(parsed):
+		return false
 	var summary = parsed.get("profileSummary", {})
 	if summary is Dictionary:
 		apply_server_profile_summary(summary as Dictionary)
@@ -435,6 +457,8 @@ func request_server_hang_session_stop(reason: String = "manual", pending_resume:
 	var parsed := ServerAuthClientModel.parse_hang_session_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if bool(parsed.get("ok", false)):
 		apply_server_profile_payload(parsed)
+		return
+	if handle_session_invalid_response(parsed):
 		return
 	var summary = parsed.get("profileSummary", {})
 	if summary is Dictionary:

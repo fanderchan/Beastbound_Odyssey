@@ -17939,8 +17939,24 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.server_profile_sync_deferred_pull_result.is_empty()
 	)
 	var panel_defer_ok = panel_queue_defer_ok and panel_response_defer_ok and panel_deferred_apply_ok
-	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and panel_defer_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s state=%s rev=%d" % [
+	var session_expired_response = ServerAuthClientModel.parse_profile_response(401, JSON.stringify({
+		"ok": false,
+		"code": "session_expired",
+		"message": "登录会话已过期。",
+	}).to_utf8_buffer())
+	host._apply_server_profile_pull_result(session_expired_response)
+	var session_expired_ok = (
+		not host.account_authenticated
+		and host.auth_panel != null
+		and host.auth_panel.visible
+		and host.auth_message_label != null
+		and host.auth_message_label.text.find("登录会话已过期") >= 0
+		and host.auth_username_input != null
+		and host.auth_username_input.text == "syncuser"
+		and host.world_log_message.find("登录会话已过期") >= 0
+	)
+	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and panel_defer_ok and session_expired_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s session_expired=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
 		str(no_upload_ok),
@@ -17948,6 +17964,7 @@ func _run_auto_server_profile_sync_check() -> void:
 		str(upload_conflict_disabled_ok),
 		str(pull_ok),
 		str(panel_defer_ok),
+		str(session_expired_ok),
 		host.server_profile_sync_state,
 		host.server_profile_sync_expected_revision,
 	])

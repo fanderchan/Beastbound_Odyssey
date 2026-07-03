@@ -4,6 +4,12 @@ const AccountAuthModel := preload("res://scripts/progression/account_auth_model.
 
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
+const SESSION_INVALID_CODES := [
+	"session_expired",
+	"session_refresh_expired",
+	"session_revoked",
+	"session_missing",
+]
 
 
 static func normalized_base_url(base_url: String) -> String:
@@ -37,6 +43,14 @@ static func refresh_session_request(base_url: String, session_token: String) -> 
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
+
+
+static func is_session_invalid_code(code: String) -> bool:
+	return SESSION_INVALID_CODES.has(code.strip_edges())
+
+
+static func is_session_invalid_response(parsed: Dictionary) -> bool:
+	return is_session_invalid_code(str(parsed.get("code", "")))
 
 
 static func profile_request(base_url: String, session_token: String) -> Dictionary:

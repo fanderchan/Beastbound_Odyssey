@@ -7121,6 +7121,9 @@ func _refresh_account_panel() -> void:
 func _switch_account_to_login() -> void:
 	_panel_flow()._switch_account_to_login()
 
+func _handle_server_session_expired(message: String = "") -> void:
+	_panel_flow()._handle_server_session_expired(message)
+
 func _add_battle_buttons(specs: Array) -> void:
 	_panel_flow()._add_battle_buttons(specs)
 

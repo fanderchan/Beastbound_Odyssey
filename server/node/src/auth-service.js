@@ -291,6 +291,8 @@ function createAuthService(options = {}) {
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
+  const runtimeActiveSessionIds = new Set();
+  const serverStartedAtMs = now();
   let cachedData = null;
   let battleMaintenanceTimer = null;
 
@@ -340,6 +342,20 @@ function createAuthService(options = {}) {
     }
     serviceEventListeners.add(listener);
     return () => serviceEventListeners.delete(listener);
+  }
+
+  function markRuntimeSession(session) {
+    if (session && session.sessionId) {
+      runtimeActiveSessionIds.add(session.sessionId);
+    }
+  }
+
+  function resolveServiceSession(data, token, options = {}) {
+    return resolveSession(data, token, now, {
+      ...options,
+      runtimeActiveSessionIds,
+      serverStartedAtMs,
+    });
   }
 
   function register(payload = {}) {
@@ -392,6 +408,7 @@ function createAuthService(options = {}) {
     ensureProfileForAccount(data, account, now);
     recordAuthEvent(data, "register", username, true, "", now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
+    markRuntimeSession(sessionResult.session);
     save(data);
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
@@ -425,6 +442,7 @@ function createAuthService(options = {}) {
     }
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
+    markRuntimeSession(sessionResult.session);
     recordAuthEvent(data, "login", username, true, "", now);
     save(data);
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
@@ -438,7 +456,7 @@ function createAuthService(options = {}) {
 
   function refreshSession(token) {
     const data = load();
-    const resolved = resolveSession(data, token, now, {
+    const resolved = resolveServiceSession(data, token, {
       allowExpired: true,
       refreshGraceMs: SESSION_REFRESH_GRACE_MS,
     });
@@ -447,6 +465,7 @@ function createAuthService(options = {}) {
     }
     resolved.session.revokedAt = isoNow(now);
     const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
+    markRuntimeSession(sessionResult.session);
     const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
     save(data);
@@ -460,7 +479,7 @@ function createAuthService(options = {}) {
 
   function logout(token) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -472,7 +491,7 @@ function createAuthService(options = {}) {
 
   function getSession(token) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -482,15 +501,16 @@ function createAuthService(options = {}) {
     }
     return ok({
       account: publicAccount(resolved.account),
-      session: publicSession(resolved.session, resolved.account, data),
+      session: publicSession(resolved.session, resolved.account, data, "", {"recovered": resolved.recovered}),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
+      recovery: sessionRecoveryPayload(data, resolved.account, resolved.recovered),
     });
   }
 
   function getProfile(token) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -510,7 +530,7 @@ function createAuthService(options = {}) {
 
   function saveProfile(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -550,7 +570,7 @@ function createAuthService(options = {}) {
 
   function shopTransaction(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -672,7 +692,7 @@ function createAuthService(options = {}) {
 
   function equipmentEquip(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -749,7 +769,7 @@ function createAuthService(options = {}) {
 
   function equipmentEnhance(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -825,7 +845,7 @@ function createAuthService(options = {}) {
 
   function equipmentRepairAll(token) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -876,7 +896,7 @@ function createAuthService(options = {}) {
 
   function equipmentSynthesize(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -952,7 +972,7 @@ function createAuthService(options = {}) {
 
   function searchPlayers(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -970,13 +990,13 @@ function createAuthService(options = {}) {
 
   function listOnlinePlayers(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
     const aoi = normalizeOnlineAoiPayload(payload, viewerPosition);
-    const players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now);
+    const players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds);
     return ok({
       players,
       party: publicPartyForAccount(data, resolved.account.accountId),
@@ -986,7 +1006,7 @@ function createAuthService(options = {}) {
 
   function updatePlayerPosition(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1034,7 +1054,7 @@ function createAuthService(options = {}) {
 
   function movePlayerStep(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1128,7 +1148,7 @@ function createAuthService(options = {}) {
       scope: ONLINE_AOI_SCOPE,
       radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
     }, position);
-    const players = publicOnlinePlayersForViewer(data, account, aoi, now);
+    const players = publicOnlinePlayersForViewer(data, account, aoi, now, runtimeActiveSessionIds);
     emitServiceEvent({
       type: "online.position",
       accountId: account.accountId,
@@ -1152,7 +1172,7 @@ function createAuthService(options = {}) {
 
   function eventForSession(token, event = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1161,7 +1181,7 @@ function createAuthService(options = {}) {
 
   function listEventsForSession(token, payload = {}) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1211,7 +1231,7 @@ function createAuthService(options = {}) {
     if (aoi.enabled && !currentVisible && !previousVisible) {
       return ok({visible: false});
     }
-    let players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now);
+    let players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds);
     if (currentVisible) {
       players = withPinnedPublicOnlinePlayer(players, data, event.accountId);
     }
@@ -1245,7 +1265,7 @@ function createAuthService(options = {}) {
 
   function markBattleConnection(token, connected) {
     let data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1320,7 +1340,7 @@ function createAuthService(options = {}) {
 
   function listGmTools(token, commandCatalog = []) {
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1341,7 +1361,7 @@ function createAuthService(options = {}) {
     const token = payload.token;
     const commandId = normalizeCommandId(payload.commandId);
     const data = load();
-    const resolved = resolveSession(data, token, now);
+    const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       const audit = recordGmAudit(data, "", commandId, false, resolved.message, now, randomId);
       save(data);
@@ -1484,7 +1504,11 @@ function createAuthService(options = {}) {
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
     resolveBattleRoomTurn,
-    resolveSession,
+    resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
+      ...options,
+      runtimeActiveSessionIds,
+      serverStartedAtMs,
+    }),
     save,
     submittedBattleCommandAccountIds,
     submittedBattleCommandActorIds,
@@ -1720,7 +1744,15 @@ function resolveSession(data, token, now, options = {}) {
   if (!account) {
     return {"ok": false, "code": "account_missing", "message": "账号不存在。"};
   }
-  return {"ok": true, session, account};
+  const runtimeActiveSessionIds = options.runtimeActiveSessionIds || null;
+  const wasRuntimeActive = runtimeActiveSessionIds ? runtimeActiveSessionIds.has(session.sessionId) : true;
+  if (runtimeActiveSessionIds) {
+    runtimeActiveSessionIds.add(session.sessionId);
+  }
+  const serverStartedAtMs = Number(options.serverStartedAtMs || 0);
+  const createdAtMs = Date.parse(session.createdAt);
+  const recovered = Boolean(runtimeActiveSessionIds && !wasRuntimeActive && Number.isFinite(createdAtMs) && createdAtMs < serverStartedAtMs);
+  return {"ok": true, session, account, recovered};
 }
 
 function publicAccount(account) {
@@ -1733,13 +1765,18 @@ function publicAccount(account) {
   };
 }
 
-function publicSession(session, account, data, token = "") {
+function publicSession(session, account, data, token = "", options = {}) {
   const result = {
     sessionId: session.sessionId,
     username: account.username,
     effectiveRole: effectiveRoleIsGm(data, account, () => Date.now()) ? ROLE_GM : ROLE_PLAYER,
     expiresAt: session.expiresAt,
   };
+  if (options.recovered) {
+    result.recovered = true;
+    result.requiresPositionResync = true;
+    result.recoveryMessage = "已恢复登录，请重新同步当前位置。";
+  }
   const upgrade = passwordUpgradePolicyForAccount(account);
   if (upgrade.required) {
     result.passwordUpgradeRequired = true;
@@ -1749,6 +1786,15 @@ function publicSession(session, account, data, token = "") {
     result.token = token;
   }
   return result;
+}
+
+function sessionRecoveryPayload(data, account, recovered) {
+  return {
+    recovered: Boolean(recovered),
+    requiresPositionResync: Boolean(recovered),
+    hasRuntimePosition: Boolean(data.playerPositions[account.accountId]),
+    message: recovered ? "已恢复登录，请重新同步当前位置。" : "",
+  };
 }
 
 function publicPlayerSearchResult(account, data) {
@@ -12390,9 +12436,14 @@ function accountById(data, accountId) {
   return Object.values(data.accounts).find((account) => account && account.accountId === accountId) || null;
 }
 
-function activeOnlinePlayers(data, now) {
+function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
   const activeSessions = Object.values(data.sessions)
-    .filter((session) => session && !session.revokedAt && Date.parse(session.expiresAt) > now())
+    .filter((session) => (
+      session &&
+      !session.revokedAt &&
+      Date.parse(session.expiresAt) > now() &&
+      (!runtimeActiveSessionIds || runtimeActiveSessionIds.has(session.sessionId))
+    ))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   const seenAccountIds = new Set();
   const players = [];
@@ -12411,15 +12462,15 @@ function activeOnlinePlayers(data, now) {
   return players;
 }
 
-function onlinePlayersForViewer(data, viewerAccount, aoi, now) {
-  return activeOnlinePlayers(data, now).filter((account) => (
+function onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null) {
+  return activeOnlinePlayers(data, now, runtimeActiveSessionIds).filter((account) => (
     onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)
   ));
 }
 
-function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now) {
+function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null) {
   const viewerPosition = viewerAccount ? data.playerPositions[viewerAccount.accountId] || null : null;
-  const players = onlinePlayersForViewer(data, viewerAccount, aoi, now).map((account) => publicOnlinePlayer(account, data));
+  const players = onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds).map((account) => publicOnlinePlayer(account, data));
   players.sort((a, b) => {
     const distanceDelta = onlinePlayerDistanceRank(a, viewerPosition) - onlinePlayerDistanceRank(b, viewerPosition);
     if (distanceDelta !== 0) {

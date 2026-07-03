@@ -20,6 +20,16 @@ func bind(main_host) -> void:
 	host = main_host
 
 
+func handle_session_invalid_response(parsed: Dictionary) -> bool:
+	if not ServerAuthClientModel.is_session_invalid_response(parsed):
+		return false
+	var message := str(parsed.get("message", "登录已过期，请重新登录。")).strip_edges()
+	if message == "":
+		message = "登录已过期，请重新登录。"
+	host._handle_server_session_expired(message)
+	return true
+
+
 func should_poll_waiting_state() -> bool:
 	var phase := str(host.battle_state.get("phase", "")).strip_edges()
 	return (
@@ -74,6 +84,7 @@ func request_room_restore_poll() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		handle_session_invalid_response(parsed)
 		return
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
@@ -101,6 +112,7 @@ func request_waiting_state_poll() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		handle_session_invalid_response(parsed)
 		return
 	var room = parsed.get("room", null)
 	if room is Dictionary:
@@ -160,6 +172,7 @@ func request_state_restore() -> void:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		handle_session_invalid_response(parsed)
 		return
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
@@ -521,6 +534,8 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 	if bool(parsed.get("ok", false)):
 		_apply_command_success(parsed, command_id, true)
 		return
+	if handle_session_invalid_response(parsed):
+		return
 	if apply_command_error_room(parsed):
 		return
 	host.battle_state["phase"] = "command"
@@ -678,6 +693,8 @@ func submit_pet_command(command_id: String, target_id: String = "", skill_id: St
 	if bool(parsed.get("ok", false)):
 		_apply_command_success(parsed, command_id, false)
 		return
+	if handle_session_invalid_response(parsed):
+		return
 	if apply_command_error_room(parsed):
 		return
 	host.battle_state["phase"] = "command"
@@ -753,6 +770,8 @@ func leave_room() -> void:
 			host._apply_server_battle_room_closed(room as Dictionary)
 		else:
 			host._set_battle_message("已%s战斗。" % leave_action)
+		return
+	if handle_session_invalid_response(parsed):
 		return
 	host.battle_state["phase"] = "command"
 	host._reset_battle_command_countdown()

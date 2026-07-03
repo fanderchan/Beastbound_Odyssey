@@ -7380,6 +7380,15 @@ func _is_server_account_session() -> bool:
 		and str(current_account_session.get("serverSessionToken", "")).strip_edges() != ""
 	)
 
+func _handle_session_invalid_response(parsed: Dictionary) -> bool:
+	if not ServerAuthClientModel.is_session_invalid_response(parsed):
+		return false
+	var message := str(parsed.get("message", "登录已过期，请重新登录。")).strip_edges()
+	if message == "":
+		message = "登录已过期，请重新登录。"
+	_handle_server_session_expired(message)
+	return true
+
 func _local_profile_mutation_blocked_for_server_only(action_label: String, emit_message: bool = true) -> bool:
 	if not AUTH_SERVER_ONLY:
 		return false
@@ -8282,6 +8291,7 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 		return
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
+		_handle_session_invalid_response(parsed)
 		return
 	var own_position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
 	if _should_apply_online_self_position(own_position):
@@ -8551,6 +8561,18 @@ func _switch_account_to_login() -> void:
 	host._update_hud_text(true)
 	_open_auth_panel(false)
 	host._layout_hud()
+
+func _handle_server_session_expired(message: String = "") -> void:
+	var username := str(current_account_session.get("username", "")).strip_edges()
+	var text := message.strip_edges()
+	if text == "":
+		text = "登录已过期，请重新登录。"
+	_switch_account_to_login()
+	if auth_username_input != null and username != "":
+		auth_username_input.text = username
+	if auth_message_label != null:
+		auth_message_label.text = text
+	_set_world_log_message(text)
 
 func _add_battle_buttons(specs: Array) -> void:
 	for value in specs:
@@ -9027,6 +9049,9 @@ func _request_next_server_step_move(plan_id: int) -> void:
 	server_step_move_request_pending = false
 	var parsed = ServerAuthClientModel.parse_movement_step_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		if _handle_session_invalid_response(parsed):
+			_cancel_server_step_move()
+			return
 		_handle_server_step_move_failure(parsed)
 		return
 	var position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
@@ -9067,6 +9092,9 @@ func _seed_server_step_move_position(plan_id: int) -> bool:
 		return false
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		if _handle_session_invalid_response(parsed):
+			_cancel_server_step_move()
+			return false
 		server_step_move_last_error_code = str(parsed.get("code", "movement_seed_failed"))
 		_cancel_server_step_move()
 		return false
@@ -9140,6 +9168,8 @@ func _publish_server_step_move_stop(plan_id: int) -> void:
 	if bool(parsed.get("ok", false)):
 		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
 		_apply_online_position_players(parsed.get("players", []))
+	else:
+		_handle_session_invalid_response(parsed)
 
 func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
 	if invalidate_plan:
@@ -9550,6 +9580,8 @@ func _start_server_party_encounter(zone: Dictionary, pending_message: String = "
 			_set_world_log_message("战斗房间缺失，请重试。")
 		return
 	active_encounter_zone.clear()
+	if _handle_session_invalid_response(parsed):
+		return
 	_set_world_log_message(str(parsed.get("message", failure_message)))
 
 func _encounter_enemy_count_fallback() -> int:
@@ -10414,6 +10446,8 @@ func _submit_server_player_rebirth() -> void:
 			_queue_server_profile_pull()
 	else:
 		player_rebirth_confirm_pending = false
+		if _handle_session_invalid_response(parsed):
+			return
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
@@ -10986,6 +11020,8 @@ func _submit_server_equipment_enhance(slot_id: String) -> void:
 			log_lines = ["强化成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
 	else:
+		if _handle_session_invalid_response(parsed):
+			return
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
@@ -11131,6 +11167,8 @@ func _submit_server_equipment_synthesis(recipe_id: String) -> void:
 			log_lines = ["合成成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
 	else:
+		if _handle_session_invalid_response(parsed):
+			return
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
@@ -12053,6 +12091,9 @@ func _apply_server_equipment_equip_result(parsed: Dictionary) -> Dictionary:
 			log_lines = ["装备成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
 	else:
+		if _handle_session_invalid_response(parsed):
+			parsed["logLines"] = log_lines
+			return parsed
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
@@ -12857,6 +12898,9 @@ func _submit_server_shop_action() -> void:
 		shop_action_request_pending = false
 		return
 	var parsed = ServerAuthClientModel.parse_shop_transaction_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if _handle_session_invalid_response(parsed):
+		shop_action_request_pending = false
+		return
 	var log_lines: Array[String] = [str(parsed.get("message", "商店交易失败。"))]
 	var should_equip_after_buy = false
 	if bool(parsed.get("ok", false)):
@@ -12983,6 +13027,8 @@ func _submit_server_equipment_repair_all() -> void:
 			log_lines = ["修理成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
 	else:
+		if _handle_session_invalid_response(parsed):
+			return
 		var summary = parsed.get("profileSummary", {})
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
@@ -13720,6 +13766,8 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 			_replace_chat_channel_messages(channel, parsed_messages.get("messages", []))
 			if chat_status_label != null:
 				chat_status_label.text = "聊天已同步。"
+		elif _handle_session_invalid_response(parsed_messages):
+			return
 		elif chat_status_label != null:
 			chat_status_label.text = str(parsed_messages.get("message", "聊天读取失败。"))
 	elif kind == "send":
@@ -13730,6 +13778,8 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 			if chat_status_label != null:
 				chat_status_label.text = "消息已发送。"
 			_request_chat_messages()
+			return
+		elif _handle_session_invalid_response(parsed_send):
 			return
 		elif chat_status_label != null:
 			chat_status_label.text = str(parsed_send.get("message", "消息发送失败。"))
@@ -14309,6 +14359,8 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 			host._update_hud_text(true)
 			_request_party_online()
 			return
+		elif _handle_session_invalid_response(parsed_state):
+			return
 		elif party_status_label != null:
 			party_status_label.text = str(parsed_state.get("message", "队伍状态读取失败。"))
 	elif kind == "online":
@@ -14322,6 +14374,8 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 						party_online_players.append((value as Dictionary).duplicate(true))
 			if party_status_label != null:
 				party_status_label.text = "在线玩家已刷新。"
+		elif _handle_session_invalid_response(parsed_online):
+			return
 		elif party_status_label != null:
 			party_status_label.text = str(parsed_online.get("message", "在线玩家读取失败。"))
 	else:
@@ -14330,6 +14384,8 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 			if party_status_label != null:
 				party_status_label.text = str(parsed_action.get("message", "队伍已更新。"))
 			_request_party_state()
+			return
+		elif _handle_session_invalid_response(parsed_action):
 			return
 		elif party_status_label != null:
 			party_status_label.text = str(parsed_action.get("message", "队伍操作失败。"))
@@ -14490,6 +14546,8 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 			if player_action_status_label != null:
 				player_action_status_label.text = str(parsed_battle.get("message", "切磋邀请已发送。"))
 			_set_world_log_message(str(parsed_battle.get("message", "切磋邀请已发送。")))
+		elif _handle_session_invalid_response(parsed_battle):
+			return
 		elif player_action_status_label != null:
 			player_action_status_label.text = str(parsed_battle.get("message", "切磋发起失败。"))
 	elif kind == "battle_record":
@@ -14500,6 +14558,8 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 			if player_action_status_label != null:
 				player_action_status_label.text = record_text
 			_set_world_log_message(record_text)
+		elif _handle_session_invalid_response(parsed_record):
+			return
 		elif player_action_status_label != null:
 			player_action_status_label.text = str(parsed_record.get("message", "战绩查询失败。"))
 	else:
@@ -14508,6 +14568,8 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 			if player_action_status_label != null:
 				player_action_status_label.text = str(parsed_party.get("message", "队伍请求已发送。"))
 			_request_party_state()
+		elif _handle_session_invalid_response(parsed_party):
+			return
 		elif player_action_status_label != null:
 			player_action_status_label.text = str(parsed_party.get("message", "队伍请求失败。"))
 	_refresh_player_action_panel()
@@ -14600,6 +14662,8 @@ func _on_battle_invite_http_request_completed(result: int, response_code: int, _
 		else:
 			_close_battle_invite_panel()
 		_set_world_log_message(str(parsed.get("message", "切磋状态已更新。")))
+	elif _handle_session_invalid_response(parsed):
+		return
 	elif battle_invite_status_label != null:
 		battle_invite_status_label.text = str(parsed.get("message", "切磋操作失败。"))
 	_refresh_battle_invite_panel()
@@ -14921,6 +14985,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 						mailbox_server_messages.append((value as Dictionary).duplicate(true))
 			if mailbox_status_label != null:
 				mailbox_status_label.text = "邮箱已刷新。"
+		elif _handle_session_invalid_response(parsed_inbox):
+			return
 		elif mailbox_status_label != null:
 			mailbox_status_label.text = str(parsed_inbox.get("message", "邮箱读取失败。"))
 	elif kind == "send":
@@ -14934,6 +15000,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 				mailbox_status_label.text = "邮件已发送。"
 			_request_server_mailbox_inbox()
 			return
+		elif _handle_session_invalid_response(parsed_send):
+			return
 		elif mailbox_status_label != null:
 			mailbox_status_label.text = str(parsed_send.get("message", "邮件发送失败。"))
 		elif kind == "read":
@@ -14944,6 +15012,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 					if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
 						mailbox_server_messages[index] = read_mail
 						break
+			elif _handle_session_invalid_response(parsed_read):
+				return
 			elif mailbox_status_label != null:
 				mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
 		elif kind == "claim":
@@ -14978,6 +15048,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 				if backpack_panel != null and backpack_panel.visible:
 					_refresh_backpack_panel()
 				host._update_hud_text(true)
+			elif _handle_session_invalid_response(parsed_claim):
+				return
 			elif mailbox_status_label != null:
 				mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件领取失败。"))
 	_refresh_mailbox_panel()
