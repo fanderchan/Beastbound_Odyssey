@@ -594,6 +594,7 @@ var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
 var shop_select_perf_check: bool = false
 var auto_mouse_click_check: bool = false
+var auto_mobile_touch_check: bool = false
 var auto_pathfinding_check: bool = false
 var auto_eight_direction_check: bool = false
 var auto_direct_line_check: bool = false
@@ -1547,6 +1548,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_movement_check")
 	elif auto_mouse_click_check:
 		call_deferred("_run_auto_mouse_click_check")
+	elif auto_mobile_touch_check:
+		call_deferred("_run_auto_mobile_touch_check")
 	elif battle_preview:
 		call_deferred("_open_battle_preview")
 	elif battle_formation_preview:
@@ -1619,6 +1622,25 @@ func _world_needs_active_fps() -> bool:
 	return false
 
 
+func _parse_preview_window_size(raw_value: String) -> Vector2i:
+	var parts := raw_value.to_lower().split("x", false)
+	if parts.size() != 2:
+		return Vector2i.ZERO
+	var width := int(parts[0])
+	var height := int(parts[1])
+	if width < 240 or height < 240:
+		return Vector2i.ZERO
+	return Vector2i(width, height)
+
+
+func _apply_preview_window_size(size: Vector2i) -> void:
+	if size == Vector2i.ZERO:
+		return
+	var window := get_window()
+	window.size = size
+	window.content_scale_size = size
+
+
 func _apply_preview_window_args() -> void:
 	var args := OS.get_cmdline_user_args()
 	for index in range(args.size()):
@@ -1636,7 +1658,11 @@ func _apply_preview_window_args() -> void:
 			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check":
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
-			pass
+			_apply_preview_window_size(Vector2i(844, 390))
+		elif arg == "--qa-viewport":
+			_apply_preview_window_size(_parse_preview_window_size(_cmdline_user_arg_at(args, index + 1)))
+		elif arg.begins_with("--qa-viewport="):
+			_apply_preview_window_size(_parse_preview_window_size(arg.substr("--qa-viewport=".length())))
 		elif arg == "--login" or arg == "--server-login":
 			startup_auth_username = _cmdline_user_arg_at(args, index + 1)
 			startup_auth_password = _cmdline_user_arg_at(args, index + 2)
@@ -1661,7 +1687,7 @@ func _apply_preview_window_args() -> void:
 		elif arg == "--server-step-world-move":
 			server_step_world_move_enabled = true
 		elif arg == "--preview-mobile-portrait":
-			pass
+			_apply_preview_window_size(Vector2i(390, 844))
 		elif arg == "--full-client-preview":
 			pass
 		elif arg == "--gm-10v10-map":
@@ -1677,6 +1703,8 @@ func _apply_preview_window_args() -> void:
 			auto_movement_check = true
 		elif arg == "--auto-mouse-click-check":
 			auto_mouse_click_check = true
+		elif arg == "--auto-mobile-touch-check":
+			auto_mobile_touch_check = true
 		elif arg == "--auto-pathfinding-check":
 			auto_pathfinding_check = true
 		elif arg == "--auto-eight-direction-check":
@@ -2493,6 +2521,10 @@ func _max_int(values: Array[int]) -> int:
 
 func _run_auto_mouse_click_check() -> void:
 	await _auto_checks()._run_auto_mouse_click_check()
+
+
+func _run_auto_mobile_touch_check() -> void:
+	await _auto_checks()._run_auto_mobile_touch_check()
 
 
 func _run_auto_pathfinding_check() -> void:
@@ -11424,25 +11456,39 @@ func _layout_hud() -> void:
 	)
 	encounter_panel.size = Vector2(dialog_width, dialog_height)
 
+	var panel_top_y := top_panel.position.y + top_panel.size.y + 8.0
+	var panel_available_height := maxf(160.0, viewport_size.y - panel_top_y - margin)
+	var compact_panel_content := is_phone_shape and viewport_size.y < 520.0
+	if backpack_detail_label != null:
+		backpack_detail_label.custom_minimum_size = Vector2(0, 64.0 if compact_panel_content else 122.0)
+	if backpack_target_scroll != null:
+		backpack_target_scroll.custom_minimum_size = Vector2(0, 72.0 if compact_panel_content else 112.0)
+	if shop_detail_label != null:
+		shop_detail_label.custom_minimum_size = Vector2(0, 52.0 if compact_panel_content else 126.0)
+	if map_texture_rect != null:
+		map_texture_rect.custom_minimum_size = Vector2(0, 76.0 if compact_panel_content else 210.0)
+	if map_detail_label != null:
+		map_detail_label.custom_minimum_size = Vector2(0, 42.0 if compact_panel_content else 58.0)
 	var pet_width: float = minf(viewport_size.x - margin * 2.0, PET_PANEL_MAX_SIZE.x)
-	var pet_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_PANEL_MAX_SIZE.y)
+	var pet_height: float = minf(panel_available_height, PET_PANEL_MAX_SIZE.y)
 	pet_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_width)
-	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_height)
-	player_status_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), pet_height)
+	var pet_panel_y = minf(maxf(panel_top_y, (viewport_size.y - pet_height) * 0.5), viewport_size.y - pet_height - margin)
+	player_status_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	player_status_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:
 		player_status_panel.visible = false
 	if player_status_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	player_rebirth_preview_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	player_rebirth_preview_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	player_rebirth_preview_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:
 		player_rebirth_preview_panel.visible = false
 	if player_rebirth_preview_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	backpack_panel.size = Vector2(pet_width, pet_height)
 	if backpack_grid != null:
 		backpack_grid.columns = _backpack_grid_columns()
@@ -11451,14 +11497,14 @@ func _layout_hud() -> void:
 	if backpack_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	equipment_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	equipment_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	equipment_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:
 		equipment_panel.visible = false
 	if equipment_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	equipment_synthesis_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	equipment_synthesis_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	equipment_synthesis_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:
 		equipment_synthesis_panel.visible = false
@@ -11466,10 +11512,11 @@ func _layout_hud() -> void:
 		action_bar.visible = false
 
 	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)
-	var shop_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, 620.0)
+	var shop_height: float = minf(panel_available_height, 620.0)
 	shop_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), shop_width)
-	shop_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), shop_height)
-	shop_panel.position = Vector2((viewport_size.x - shop_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - shop_height) * 0.5))
+	shop_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), shop_height)
+	var shop_panel_y = minf(maxf(panel_top_y, (viewport_size.y - shop_height) * 0.5), viewport_size.y - shop_height - margin)
+	shop_panel.position = Vector2((viewport_size.x - shop_width) * 0.5, shop_panel_y)
 	shop_panel.size = Vector2(shop_width, shop_height)
 	if battle_active:
 		shop_panel.visible = false
@@ -11477,17 +11524,18 @@ func _layout_hud() -> void:
 		action_bar.visible = false
 
 	var pet_management_width: float = minf(viewport_size.x - margin * 2.0, PET_MANAGEMENT_PANEL_MAX_SIZE.x)
-	var pet_management_height: float = minf(viewport_size.y - margin * 2.0 - 70.0, PET_MANAGEMENT_PANEL_MAX_SIZE.y)
+	var pet_management_height: float = minf(panel_available_height, PET_MANAGEMENT_PANEL_MAX_SIZE.y)
 	pet_management_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_management_width)
-	pet_management_height = maxf(minf(PET_PANEL_MIN_SIZE.y, viewport_size.y - margin * 2.0), pet_management_height)
-	pet_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_management_height) * 0.5))
+	pet_management_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), pet_management_height)
+	var pet_management_panel_y = minf(maxf(panel_top_y, (viewport_size.y - pet_management_height) * 0.5), viewport_size.y - pet_management_height - margin)
+	pet_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, pet_management_panel_y)
 	pet_panel.size = Vector2(pet_management_width, pet_management_height)
 	if battle_active:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	pet_skill_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - pet_height) * 0.5))
+	pet_skill_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
 	pet_skill_panel.size = Vector2(pet_width, pet_height)
 	if battle_active:
 		pet_skill_panel.visible = false
@@ -11505,35 +11553,35 @@ func _layout_hud() -> void:
 
 	var codex_width := pet_width
 	var codex_height := pet_height
-	codex_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	codex_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	codex_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
 		codex_panel.visible = false
 	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	quest_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
 		quest_panel.visible = false
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	map_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	map_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	map_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
 		map_panel.visible = false
 	if map_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	chat_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	chat_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	chat_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
 		chat_panel.visible = false
 	if chat_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	party_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+	party_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	party_panel.size = Vector2(codex_width, codex_height)
 	if battle_active:
 		party_panel.visible = false

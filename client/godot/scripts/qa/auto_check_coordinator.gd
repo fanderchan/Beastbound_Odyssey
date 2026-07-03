@@ -214,6 +214,67 @@ func _init(host_ref) -> void:
 	host = host_ref
 
 
+func _qa_send_touch_press(screen_point: Vector2) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = 0
+	event.pressed = true
+	event.position = screen_point
+	host._input(event)
+
+
+func _qa_control_inside_viewport(control: Control, viewport_rect: Rect2) -> bool:
+	if control == null or not control.visible:
+		return false
+	var rect := control.get_global_rect()
+	var expanded := viewport_rect.grow(1.0)
+	return (
+		rect.size.x > 0.0
+		and rect.size.y > 0.0
+		and rect.position.x >= expanded.position.x
+		and rect.position.y >= expanded.position.y
+		and rect.end.x <= expanded.end.x
+		and rect.end.y <= expanded.end.y
+	)
+
+
+func _qa_control_rect_text(control: Control) -> String:
+	if control == null:
+		return "null"
+	return "visible=%s rect=%s min=%s" % [
+		str(control.visible),
+		str(control.get_global_rect()),
+		str(control.get_combined_minimum_size()),
+	]
+
+
+func _qa_battle_touch_point_for_target(target_id: String, center: Vector2, viewport_rect: Rect2) -> Vector2:
+	var offsets: Array[Vector2] = [
+		Vector2.ZERO,
+		Vector2(0, -18),
+		Vector2(-12, -18),
+		Vector2(12, -18),
+		Vector2(-24, -18),
+		Vector2(24, -18),
+		Vector2(0, -32),
+		Vector2(-12, -32),
+		Vector2(12, -32),
+		Vector2(-24, -32),
+		Vector2(24, -32),
+		Vector2(0, 12),
+		Vector2(-12, 12),
+		Vector2(12, 12),
+	]
+	for offset in offsets:
+		var candidate := center + offset
+		if not viewport_rect.grow(-6.0).has_point(candidate):
+			continue
+		if host._battle_point_overlaps_panel(candidate):
+			continue
+		if host._battle_actor_id_at_screen_point(candidate, BattleModel.SIDE_ENEMY) == target_id:
+			return candidate
+	return center
+
+
 func _set_host_battle_event_queue(events: Array) -> void:
 	var typed_events: Array[Dictionary] = []
 	for event in events:
@@ -371,6 +432,119 @@ func _run_auto_mouse_click_check() -> void:
 		str(host.has_target_marker),
 	])
 	host.get_tree().quit(0 if moved_right else 1)
+
+func _run_auto_mobile_touch_check() -> void:
+	host.profile_save_enabled = false
+	var viewport_size: Vector2 = host._layout_size()
+	var viewport_rect := Rect2(Vector2.ZERO, viewport_size)
+	var phone_shape: bool = host._is_phone_shape(viewport_size)
+	var training_loaded: bool = host._load_map(START_MAP_ID, "default")
+	var start_cell = IsoMapModel.spawn_cell(host.map_data)
+	var target_cell = IsoMapModel.nearest_walkable_cell(host.map_data, start_cell + Vector2i(2, -2))
+	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, start_cell)
+	host._update_camera_position(true)
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var start_position: Vector2 = host.player.global_position
+	var target_world = IsoMapModel.grid_to_world(host.map_data, target_cell)
+	var target_screen = host._world_to_screen(target_world)
+	var touch_move_screen_inside = viewport_rect.has_point(target_screen)
+	_qa_send_touch_press(target_screen)
+	for _step in range(42):
+		await host.get_tree().physics_frame
+		if host.player != null and not host.player.is_auto_moving():
+			break
+	var end_position: Vector2 = host.player.global_position
+	var touch_move_ok = training_loaded and touch_move_screen_inside and end_position.x > start_position.x
+
+	host._open_backpack_panel()
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var backpack_ok := _qa_control_inside_viewport(host.backpack_panel, viewport_rect)
+	host._close_backpack_panel()
+
+	host._open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var shop_ok := _qa_control_inside_viewport(host.shop_panel, viewport_rect)
+	host._close_shop_panel()
+
+	host._open_quest_panel()
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var quest_ok := _qa_control_inside_viewport(host.quest_panel, viewport_rect)
+	host._close_quest_panel()
+
+	host._open_map_panel()
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var map_ok := _qa_control_inside_viewport(host.map_panel, viewport_rect)
+	var map_rect_at_check := _qa_control_rect_text(host.map_panel)
+	host._close_map_panel()
+
+	var battle_loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
+	var zones = EncounterModel.encounter_zones(host.map_data)
+	var zone_found: bool = battle_loaded and not zones.is_empty()
+	if zone_found:
+		host._start_battle(BattleModel.create_formation_preview_battle(zones[0] as Dictionary))
+	host._layout_hud()
+	await host.get_tree().process_frame
+	var battle_layout_ok = host.battle_active and host._battle_full_formation_screen_layout_ok()
+	var command_panel_ok = _qa_control_inside_viewport(host.battle_command_panel, viewport_rect)
+	var target_id := "enemy_front_5"
+	var target_actor = BattleModel.actor_by_id(host.battle_state, target_id)
+	var battle_touch_inside := false
+	var battle_touch_ok := false
+	var battle_target_screen := Vector2.ZERO
+	if not target_actor.is_empty():
+		battle_target_screen = host._world_to_screen(host._battle_slot_world_position(str(target_actor.get("slotId", ""))))
+		var battle_touch_point = _qa_battle_touch_point_for_target(target_id, battle_target_screen, viewport_rect)
+		battle_touch_inside = viewport_rect.grow(-8.0).has_point(battle_touch_point)
+		host._on_battle_command_pressed("attack")
+		_qa_send_touch_press(battle_touch_point)
+		battle_touch_ok = str(host.battle_pending_player_command.get("targetId", "")) == target_id
+		battle_target_screen = battle_touch_point
+
+	var status = "ok" if (
+		touch_move_ok
+		and backpack_ok
+		and shop_ok
+		and quest_ok
+		and map_ok
+		and zone_found
+		and battle_layout_ok
+		and command_panel_ok
+		and battle_touch_inside
+		and battle_touch_ok
+	) else "failed"
+	print("mobile touch check ready: status=%s phone=%s viewport=%s move=%s move_inside=%s panels=%s/%s/%s/%s battle_layout=%s command_panel=%s battle_touch_inside=%s battle_touch=%s target=%s target_screen=%s target_mode=%s pending=%s map_at_check={%s} rects={backpack:%s shop:%s quest:%s map:%s command:%s} start_x=%.2f end_x=%.2f" % [
+		status,
+		str(phone_shape),
+		str(viewport_size),
+		str(touch_move_ok),
+		str(touch_move_screen_inside),
+		str(backpack_ok),
+		str(shop_ok),
+		str(quest_ok),
+		str(map_ok),
+		str(battle_layout_ok),
+		str(command_panel_ok),
+		str(battle_touch_inside),
+		str(battle_touch_ok),
+		target_id,
+		str(battle_target_screen),
+		str(host.battle_target_mode),
+		str(host.battle_pending_player_command),
+		map_rect_at_check,
+		_qa_control_rect_text(host.backpack_panel),
+		_qa_control_rect_text(host.shop_panel),
+		_qa_control_rect_text(host.quest_panel),
+		_qa_control_rect_text(host.map_panel),
+		_qa_control_rect_text(host.battle_command_panel),
+		start_position.x,
+		end_position.x,
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_pathfinding_check() -> void:
 	var start_cell = IsoMapModel.spawn_cell(host.map_data)

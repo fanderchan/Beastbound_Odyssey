@@ -58,6 +58,28 @@ node tools/run_local_ci.mjs
 node tools/run_local_ci.mjs --quick
 ```
 
+## 发布导出与移动触控
+
+三平台数据包导出探针：
+
+```sh
+godot --headless --path client/godot --export-pack macOS ../../.run/export_probe/macos/BeastboundOdyssey.pck
+godot --headless --path client/godot --export-pack "Windows Desktop" ../../.run/export_probe/windows/BeastboundOdyssey.pck
+godot --headless --path client/godot --export-pack Android ../../.run/export_probe/android/BeastboundOdyssey.pck
+```
+
+完整 `--export-release` 需要本机安装 Godot 4.7 export templates；Android 还需要 Java SDK、Android SDK platform-tools/build-tools，以及 `adb` / `apksigner`。
+
+手机触控与小屏面板走查：
+
+```sh
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-mobile-touch-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile-portrait --auto-mobile-touch-check
+godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile --auto-mobile-touch-check
+```
+
+`--preview-mobile-portrait` 使用 390x844，`--preview-mobile` 使用 844x390；需要临时尺寸时可用 `--qa-viewport=宽x高`。
+
 ## 后端检查
 
 ```sh

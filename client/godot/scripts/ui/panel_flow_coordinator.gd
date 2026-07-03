@@ -6066,6 +6066,7 @@ func _build_hud() -> void:
 	map_header.add_child(map_close_button)
 
 	map_texture_rect = TextureRect.new()
+	map_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_texture_rect.custom_minimum_size = Vector2(0, 210)
 	map_texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -13621,6 +13622,7 @@ func _open_map_panel() -> void:
 	map_panel.visible = true
 	_refresh_map_panel()
 	host._layout_hud()
+	host.call_deferred("_layout_hud")
 
 func _close_map_panel() -> void:
 	_hide_control(map_panel)
@@ -16476,6 +16478,8 @@ func _refresh_map_panel() -> void:
 		var captured_target = target.duplicate(true)
 		var button = Button.new()
 		button.text = _map_target_button_text(captured_target)
+		button.clip_text = true
+		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		button.custom_minimum_size = Vector2(0, 42)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_font_size_override("font_size", 15)
