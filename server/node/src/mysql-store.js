@@ -1,6 +1,6 @@
 "use strict";
 
-const {execFileSync} = require("node:child_process");
+const {execFileSync, spawn} = require("node:child_process");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
@@ -209,96 +209,110 @@ function createMysqlAuthStore(options = {}) {
     },
     save(nextData) {
       ensureSchema();
-      const statements = [];
-      statements.push("START TRANSACTION");
-      statements.push(upsertStateStatement(nextData));
-      statements.push("DELETE FROM accounts");
-      statements.push("DELETE FROM sessions");
-      statements.push("DELETE FROM profile_bindings");
-      statements.push("DELETE FROM profiles");
-      statements.push("DELETE FROM mail_messages");
-      statements.push("DELETE FROM parties");
-      statements.push("DELETE FROM party_invites");
-      statements.push("DELETE FROM chat_messages");
-      statements.push("DELETE FROM player_positions");
-      statements.push("DELETE FROM battle_invites");
-      statements.push("DELETE FROM battle_rooms");
-      statements.push("DELETE FROM battle_records");
-      statements.push("DELETE FROM gm_user_grants");
-      statements.push("DELETE FROM gm_command_grants");
-      statements.push("DELETE FROM gm_command_audit");
-      statements.push("DELETE FROM auth_events");
-      statements.push("DELETE FROM service_events");
-      for (const account of Object.values(objectOrEmpty(nextData.accounts))) {
-        statements.push(insertAccountStatement(account));
-      }
-      for (const session of Object.values(objectOrEmpty(nextData.sessions))) {
-        statements.push(insertSessionStatement(session));
-      }
-      for (const binding of Object.values(objectOrEmpty(nextData.profileBindings))) {
-        statements.push(insertProfileBindingStatement(binding));
-      }
-      for (const profile of Object.values(objectOrEmpty(nextData.profiles))) {
-        statements.push(insertProfileStatement(profile));
-      }
-      for (const mail of Object.values(objectOrEmpty(nextData.mailMessages))) {
-        statements.push(insertMailStatement(mail));
-      }
-      for (const party of Object.values(objectOrEmpty(nextData.parties))) {
-        statements.push(insertPartyStatement(party));
-      }
-      for (const invite of Object.values(objectOrEmpty(nextData.partyInvites))) {
-        statements.push(insertPartyInviteStatement(invite));
-      }
-      if (Array.isArray(nextData.chatMessages)) {
-        for (const message of nextData.chatMessages) {
-          statements.push(insertChatMessageStatement(message));
-        }
-      }
-      for (const position of Object.values(objectOrEmpty(nextData.playerPositions))) {
-        statements.push(insertPlayerPositionStatement(position));
-      }
-      for (const invite of Object.values(objectOrEmpty(nextData.battleInvites))) {
-        statements.push(insertBattleInviteStatement(invite));
-      }
-      for (const room of Object.values(objectOrEmpty(nextData.battleRooms))) {
-        statements.push(insertBattleRoomStatement(room));
-      }
-      if (Array.isArray(nextData.battleRecords)) {
-        for (const record of nextData.battleRecords) {
-          statements.push(insertBattleRecordStatement(record));
-        }
-      }
-      for (const grant of Object.values(objectOrEmpty(nextData.gmUserGrants))) {
-        statements.push(insertGmUserGrantStatement(grant));
-      }
-      for (const grants of Object.values(objectOrEmpty(nextData.gmCommandGrants))) {
-        if (!Array.isArray(grants)) {
-          continue;
-        }
-        for (const grant of grants) {
-          statements.push(insertGmCommandGrantStatement(grant));
-        }
-      }
-      if (Array.isArray(nextData.gmCommandAudit)) {
-        for (const audit of nextData.gmCommandAudit) {
-          statements.push(insertGmCommandAuditStatement(audit));
-        }
-      }
-      if (Array.isArray(nextData.authEvents)) {
-        for (const event of nextData.authEvents) {
-          statements.push(insertAuthEventStatement(event));
-        }
-      }
-      if (Array.isArray(nextData.serviceEvents)) {
-        for (const event of nextData.serviceEvents) {
-          statements.push(insertServiceEventStatement(event));
-        }
-      }
-      statements.push("COMMIT");
-      runMysqlSaveStatements(config, config.database, statements);
+      runMysqlSaveStatements(config, config.database, buildSaveStatements(nextData));
+    },
+    async saveAsync(nextData) {
+      ensureSchema();
+      await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(nextData));
     },
   };
+}
+
+function buildSaveStatements(nextData) {
+  const data = mysqlPersistentData(nextData);
+  const statements = [];
+  statements.push("START TRANSACTION");
+  statements.push(upsertStateStatement(data));
+  statements.push("DELETE FROM accounts");
+  statements.push("DELETE FROM sessions");
+  statements.push("DELETE FROM profile_bindings");
+  statements.push("DELETE FROM profiles");
+  statements.push("DELETE FROM mail_messages");
+  statements.push("DELETE FROM parties");
+  statements.push("DELETE FROM party_invites");
+  statements.push("DELETE FROM chat_messages");
+  statements.push("DELETE FROM player_positions");
+  statements.push("DELETE FROM battle_invites");
+  statements.push("DELETE FROM battle_rooms");
+  statements.push("DELETE FROM battle_records");
+  statements.push("DELETE FROM gm_user_grants");
+  statements.push("DELETE FROM gm_command_grants");
+  statements.push("DELETE FROM gm_command_audit");
+  statements.push("DELETE FROM auth_events");
+  statements.push("DELETE FROM service_events");
+  for (const account of Object.values(objectOrEmpty(data.accounts))) {
+    statements.push(insertAccountStatement(account));
+  }
+  for (const session of Object.values(objectOrEmpty(data.sessions))) {
+    statements.push(insertSessionStatement(session));
+  }
+  for (const binding of Object.values(objectOrEmpty(data.profileBindings))) {
+    statements.push(insertProfileBindingStatement(binding));
+  }
+  for (const profile of Object.values(objectOrEmpty(data.profiles))) {
+    statements.push(insertProfileStatement(profile));
+  }
+  for (const mail of Object.values(objectOrEmpty(data.mailMessages))) {
+    statements.push(insertMailStatement(mail));
+  }
+  for (const party of Object.values(objectOrEmpty(data.parties))) {
+    statements.push(insertPartyStatement(party));
+  }
+  for (const invite of Object.values(objectOrEmpty(data.partyInvites))) {
+    statements.push(insertPartyInviteStatement(invite));
+  }
+  if (Array.isArray(data.chatMessages)) {
+    for (const message of data.chatMessages) {
+      statements.push(insertChatMessageStatement(message));
+    }
+  }
+  if (Array.isArray(data.battleRecords)) {
+    for (const record of data.battleRecords) {
+      statements.push(insertBattleRecordStatement(record));
+    }
+  }
+  for (const grant of Object.values(objectOrEmpty(data.gmUserGrants))) {
+    statements.push(insertGmUserGrantStatement(grant));
+  }
+  for (const grants of Object.values(objectOrEmpty(data.gmCommandGrants))) {
+    if (!Array.isArray(grants)) {
+      continue;
+    }
+    for (const grant of grants) {
+      statements.push(insertGmCommandGrantStatement(grant));
+    }
+  }
+  if (Array.isArray(data.gmCommandAudit)) {
+    for (const audit of data.gmCommandAudit) {
+      statements.push(insertGmCommandAuditStatement(audit));
+    }
+  }
+  if (Array.isArray(data.authEvents)) {
+    for (const event of data.authEvents) {
+      statements.push(insertAuthEventStatement(event));
+    }
+  }
+  if (Array.isArray(data.serviceEvents)) {
+    for (const event of data.serviceEvents) {
+      statements.push(insertServiceEventStatement(event));
+    }
+  }
+  statements.push("COMMIT");
+  return statements;
+}
+
+function mysqlPersistentData(nextData) {
+  const data = cloneJson(nextData || {});
+  data.playerPositions = {};
+  data.battleInvites = {};
+  data.battleRooms = {};
+  if (Array.isArray(data.serviceEvents)) {
+    data.serviceEvents = data.serviceEvents.filter((event) => {
+      const type = String(event && event.type || "");
+      return !type.startsWith("battle.");
+    });
+  }
+  return data;
 }
 
 function mysqlConfig(options) {
@@ -315,6 +329,71 @@ function mysqlConfig(options) {
 }
 
 function runMysql(config, database, sql, options = {}) {
+  try {
+    return execFileSync(config.mysqlPath, mysqlArgs(config, database), {
+      "encoding": "utf8",
+      "input": sql,
+      "maxBuffer": config.outputMaxBufferBytes,
+      "stdio": ["pipe", "pipe", "pipe"],
+    });
+  } catch (error) {
+    if (options.silent) {
+      return "";
+    }
+    const stderr = error && error.stderr ? String(error.stderr).trim() : "";
+    throw new Error(stderr || "MySQL 命令执行失败。");
+  }
+}
+
+function runMysqlAsync(config, database, sql, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(config.mysqlPath, mysqlArgs(config, database), {
+      "stdio": ["pipe", "pipe", "pipe"],
+    });
+    const stdout = [];
+    const stderr = [];
+    let stdoutBytes = 0;
+    let settled = false;
+    child.stdout.on("data", (chunk) => {
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > config.outputMaxBufferBytes) {
+        settled = true;
+        child.kill("SIGTERM");
+        reject(new Error("MySQL 输出超过缓冲上限。"));
+        return;
+      }
+      stdout.push(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr.push(chunk);
+    });
+    child.on("error", (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+    child.on("close", (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (code === 0) {
+        resolve(Buffer.concat(stdout).toString("utf8"));
+        return;
+      }
+      if (options.silent) {
+        resolve("");
+        return;
+      }
+      const errorText = Buffer.concat(stderr).toString("utf8").trim();
+      reject(new Error(errorText || "MySQL 命令执行失败。"));
+    });
+    child.stdin.end(sql);
+  });
+}
+
+function mysqlArgs(config, database) {
   const args = [
     "--protocol=tcp",
     "-h", config.host,
@@ -330,25 +409,24 @@ function runMysql(config, database, sql, options = {}) {
   if (database) {
     args.push(database);
   }
-  try {
-    return execFileSync(config.mysqlPath, args, {
-      "encoding": "utf8",
-      "input": sql,
-      "maxBuffer": config.outputMaxBufferBytes,
-      "stdio": ["pipe", "pipe", "pipe"],
-    });
-  } catch (error) {
-    if (options.silent) {
-      return "";
-    }
-    const stderr = error && error.stderr ? String(error.stderr).trim() : "";
-    throw new Error(stderr || "MySQL 命令执行失败。");
-  }
+  return args;
 }
 
 function runMysqlSaveStatements(config, database, statements) {
   try {
     return runMysql(config, database, `${statements.join(";\n")};`);
+  } catch (error) {
+    const diagnosis = diagnoseMysqlSaveFailure(config, database, statements);
+    if (diagnosis !== "") {
+      throw new Error(`${error.message} (${diagnosis})`);
+    }
+    throw error;
+  }
+}
+
+async function runMysqlSaveStatementsAsync(config, database, statements) {
+  try {
+    return await runMysqlAsync(config, database, `${statements.join(";\n")};`);
   } catch (error) {
     const diagnosis = diagnoseMysqlSaveFailure(config, database, statements);
     if (diagnosis !== "") {
@@ -476,6 +554,10 @@ function checkedIdentifier(value) {
 
 function objectOrEmpty(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function boolConfig(optionValue, envValue) {

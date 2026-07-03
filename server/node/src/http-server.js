@@ -4,6 +4,7 @@ const http = require("node:http");
 const path = require("node:path");
 const {
   createAuthService,
+  createAsyncWriteAuthStore,
   createJsonAuthStore,
 } = require("./auth-service");
 const {
@@ -218,6 +219,9 @@ function createHttpServer(options = {}) {
     }
   });
   server.eventHub = eventHub;
+  if (options.store) {
+    server.authStore = options.store;
+  }
   return server;
 }
 
@@ -293,19 +297,57 @@ if (require.main === module) {
   const store = createDefaultStore();
   store.load();
   const service = createAuthService({store});
-  const server = createHttpServer({service});
+  const server = createHttpServer({service, store});
   server.listen(port, host, () => {
     console.log(`Beastbound auth server listening on http://${host}:${port}`);
   });
+  installShutdownFlush(server, store);
 }
 
 function createDefaultStore() {
-  const storeMode = String(process.env.BEASTBOUND_AUTH_STORE || process.env.BEASTBOUND_STORE || "json").trim().toLowerCase();
-  if (storeMode === "mysql") {
-    return createMysqlAuthStore();
+  const storeMode = String(process.env.BEASTBOUND_AUTH_STORE || process.env.BEASTBOUND_STORE || "mysql").trim().toLowerCase();
+  if (storeMode === "json") {
+    const storePath = process.env.BEASTBOUND_AUTH_STORE_PATH || path.resolve(process.cwd(), ".local/auth-store.json");
+    return createJsonAuthStore(storePath);
   }
-  const storePath = process.env.BEASTBOUND_AUTH_STORE_PATH || path.resolve(process.cwd(), ".local/auth-store.json");
-  return createJsonAuthStore(storePath);
+  if (storeMode !== "mysql") {
+    throw new Error(`未知认证存储模式：${storeMode}`);
+  }
+  return createAsyncWriteAuthStore(createMysqlAuthStore(), {
+    onError(error) {
+      console.error(`Beastbound MySQL auth store save failed: ${error.message}`);
+    },
+  });
+}
+
+function installShutdownFlush(server, store) {
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    server.close(async () => {
+      try {
+        if (store && typeof store.flush === "function") {
+          await store.flush();
+        }
+      } catch (error) {
+        console.error(`Beastbound auth store flush failed during ${signal}: ${error.message}`);
+        process.exitCode = 1;
+      } finally {
+        if (server.eventHub && typeof server.eventHub.close === "function") {
+          server.eventHub.close();
+        }
+        process.exit();
+      }
+    });
+    setTimeout(() => {
+      process.exit(1);
+    }, 5000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 module.exports = {

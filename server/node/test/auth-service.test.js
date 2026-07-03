@@ -13,6 +13,7 @@ const {
 } = require("../src/auth-service");
 const {
   createHttpServer,
+  createDefaultStore,
   DEFAULT_COMMAND_CATALOG,
 } = require("../src/http-server");
 const {
@@ -43,6 +44,30 @@ function createCountingAuthStore(initialData = null) {
 
 function testPasswordHash(password, salt) {
   return crypto.scryptSync(String(password), String(salt), 32).toString("hex");
+}
+
+async function withEnv(overrides, fn) {
+  const previous = {};
+  for (const key of Object.keys(overrides)) {
+    previous[key] = process.env[key];
+    const value = overrides[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = String(value);
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    for (const key of Object.keys(overrides)) {
+      if (previous[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previous[key];
+      }
+    }
+  }
 }
 
 function battleProfile(name, playerStats, petStats = null) {
@@ -315,6 +340,133 @@ process.stdin.on("end", () => {
     const loaded = store.load();
     assert.equal(Object.keys(loaded.accounts || {}).length, 1);
     assert.equal(loaded.accounts.biguser.note.length, 2 * 1024 * 1024);
+  } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("default auth store is asynchronous MySQL and keeps runtime state out of persistence", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-default-mysql-store-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  stdin += chunk;
+});
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
+    argv: process.argv.slice(2),
+    stdin,
+  }) + "\\n");
+});
+`, {"mode": 0o755});
+  try {
+    await withEnv({
+      "BEASTBOUND_AUTH_STORE": undefined,
+      "BEASTBOUND_STORE": undefined,
+      "BEASTBOUND_AUTH_STORE_PATH": undefined,
+      "BEASTBOUND_MYSQL_BIN": fakeMysqlPath,
+      "BEASTBOUND_MYSQL_HOST": "127.0.0.1",
+      "BEASTBOUND_MYSQL_PORT": "3306",
+      "BEASTBOUND_MYSQL_USER": "tester",
+      "BEASTBOUND_MYSQL_PASSWORD": "secret",
+      "BEASTBOUND_MYSQL_DATABASE": "beastbound_test",
+      "BEASTBOUND_MYSQL_CREATE_DATABASE": "0",
+      "FAKE_MYSQL_LOG": logPath,
+    }, async () => {
+      const store = createDefaultStore();
+      assert.equal(typeof store.flush, "function");
+      assert.deepEqual(store.load(), {});
+      const savePromise = store.save({
+        "accounts": {
+          "defaultmysql": {
+            "accountId": "acc_defaultmysql",
+            "username": "defaultmysql",
+            "displayName": "默认MySQL",
+            "role": "player",
+            "createdAt": "2026-07-03T00:00:00.000Z",
+            "updatedAt": "2026-07-03T00:00:00.000Z",
+          },
+        },
+        "sessions": {},
+        "profileBindings": {},
+        "profiles": {},
+        "mailMessages": {
+          "mail_default": {
+            "mailId": "mail_default",
+            "senderAccountId": "acc_defaultmysql",
+            "recipientAccountId": "acc_defaultmysql",
+            "title": "测试",
+            "createdAt": "2026-07-03T00:00:00.000Z",
+            "readAt": null,
+          },
+        },
+        "chatMessages": [{
+          "messageId": "chat_default",
+          "channel": "nearby",
+          "partyId": "",
+          "senderAccountId": "acc_defaultmysql",
+          "createdAt": "2026-07-03T00:00:00.000Z",
+        }],
+        "playerPositions": {
+          "acc_defaultmysql": {"accountId": "acc_defaultmysql", "username": "defaultmysql"},
+        },
+        "battleRooms": {
+          "room_default": {"roomId": "room_default", "mode": "duel", "status": "ready"},
+        },
+        "battleInvites": {
+          "invite_default": {"inviteId": "invite_default", "mode": "duel", "status": "pending"},
+        },
+        "authEvents": [],
+        "serviceEvents": [],
+      });
+      assert.equal(typeof savePromise.then, "function");
+      await store.flush();
+    });
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.ok(calls.some((call) => call.stdin.includes("CREATE TABLE IF NOT EXISTS server_state")));
+    const saveCall = calls.find((call) => call.stdin.includes("INSERT INTO server_state"));
+    assert.ok(saveCall);
+    assert.equal(saveCall.argv.includes("-e"), false);
+    assert.ok(saveCall.stdin.includes("INSERT INTO accounts"));
+    assert.ok(saveCall.stdin.includes("INSERT INTO mail_messages"));
+    assert.ok(saveCall.stdin.includes("INSERT INTO chat_messages"));
+    assert.equal(saveCall.stdin.includes("INSERT INTO player_positions"), false);
+    assert.equal(saveCall.stdin.includes("INSERT INTO battle_rooms"), false);
+    assert.equal(saveCall.stdin.includes("INSERT INTO battle_invites"), false);
+  } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("JSON auth store is available only when explicitly selected", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-json-store-"));
+  const storePath = path.join(tempDir, "auth-store.json");
+  try {
+    await withEnv({
+      "BEASTBOUND_AUTH_STORE": "json",
+      "BEASTBOUND_STORE": undefined,
+      "BEASTBOUND_AUTH_STORE_PATH": storePath,
+    }, async () => {
+      const store = createDefaultStore();
+      store.save({
+        "accounts": {
+          "jsonuser": {
+            "accountId": "acc_jsonuser",
+            "username": "jsonuser",
+            "displayName": "JSON测试",
+            "role": "player",
+            "createdAt": "2026-07-03T00:00:00.000Z",
+            "updatedAt": "2026-07-03T00:00:00.000Z",
+          },
+        },
+      });
+    });
+    const saved = JSON.parse(fs.readFileSync(storePath, "utf8"));
+    assert.equal(saved.accounts.jsonuser.username, "jsonuser");
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

@@ -1,6 +1,6 @@
 # Beastbound Odyssey Node.js Backend
 
-Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. Phase172 adds room turn command submission and a server-produced battle event list. Phase189 adds server-authoritative hang/encounter-stone sessions. The Godot player entry now depends on this service for normal play; full MySQL authority and multiplayer conflict policy are still later work.
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. Phase172 adds room turn command submission and a server-produced battle event list. Phase189 adds server-authoritative hang/encounter-stone sessions. The Godot player entry now depends on this service for normal play; the default runtime store is MySQL, with the JSON store kept for explicit tests only.
 
 ## Run Tests
 
@@ -26,8 +26,8 @@ Optional environment variables:
 
 - `BEASTBOUND_AUTH_PORT`: local port, default `8787`.
 - `BEASTBOUND_AUTH_HOST`: bind host, default `127.0.0.1`. Use `0.0.0.0` for LAN playtests.
-- `BEASTBOUND_AUTH_STORE_PATH`: JSON prototype store path, default `.local/auth-store.json`.
-- `BEASTBOUND_AUTH_STORE` or `BEASTBOUND_STORE`: set to `mysql` to use the optional MySQL-backed store.
+- `BEASTBOUND_AUTH_STORE` or `BEASTBOUND_STORE`: defaults to `mysql`. Set to `json` only for local tests that intentionally use the JSON store.
+- `BEASTBOUND_AUTH_STORE_PATH`: JSON test store path when `BEASTBOUND_AUTH_STORE=json`, default `.local/auth-store.json`.
 - `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
 - `BEASTBOUND_MYSQL_CREATE_DATABASE`: set to `1` only when the configured MySQL user is allowed to create the database. Local live-server setup creates the database once with root, then runs the app account with this set to `0`.
 - `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
@@ -64,6 +64,7 @@ See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN pla
 - `GET /health`
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/session`
 - `GET /players/search?username={username}`
@@ -230,7 +231,9 @@ Nearby chat is currently same-server public chat. It is not yet map-coordinate r
 
 ## MySQL Store Boundary
 
-The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_STORE=mysql`, the server uses `server/node/src/mysql-store.js` to create a MySQL database and mirror the current server document into:
+The default store is MySQL. The server uses `server/node/src/mysql-store.js` to create the schema and persist the production server document through an asynchronous write queue. `BEASTBOUND_AUTH_STORE=json` is retained only for tests that intentionally exercise the JSON file store.
+
+Persisted tables include:
 
 - `accounts`
 - `sessions`
@@ -239,10 +242,12 @@ The default store is still JSON for fast local testing. With `BEASTBOUND_AUTH_ST
 - `parties`
 - `party_invites`
 - `chat_messages`
-- `player_positions`
-- `battle_invites`
-- `battle_rooms`
+- `battle_records`
+- `gm_user_grants`
+- `gm_command_grants`
+- `gm_command_audit`
+- `auth_events`
 - `service_events`
 - `server_state`
 
-This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.
+Player positions, battle invites, and active battle rooms remain runtime memory state and are cleared from the persisted document before writes. This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.

@@ -1581,7 +1581,60 @@ function createJsonAuthStore(filePath) {
       fs.mkdirSync(path.dirname(filePath), {"recursive": true});
       fs.writeFileSync(filePath, JSON.stringify(normalizeData(nextData), null, 2));
     },
+    async saveAsync(nextData) {
+      await fs.promises.mkdir(path.dirname(filePath), {"recursive": true});
+      await fs.promises.writeFile(filePath, JSON.stringify(normalizeData(nextData), null, 2));
+    },
   };
+}
+
+function createAsyncWriteAuthStore(store, options = {}) {
+  let writeQueue = Promise.resolve();
+  let lastSaveError = null;
+  const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
+  return {
+    load() {
+      return store.load();
+    },
+    save(nextData) {
+      const snapshot = clone(nextData);
+      const writeJob = writeQueue.then(() => saveStoreSnapshot(store, snapshot));
+      writeQueue = writeJob.catch((error) => {
+        lastSaveError = error;
+        onError(error);
+      });
+      return writeQueue;
+    },
+    async flush() {
+      await writeQueue;
+      if (lastSaveError) {
+        throw lastSaveError;
+      }
+    },
+    lastSaveError() {
+      return lastSaveError;
+    },
+  };
+}
+
+function saveStoreSnapshot(store, snapshot) {
+  if (typeof store.saveAsync === "function") {
+    return store.saveAsync(snapshot);
+  }
+  return new Promise((resolve, reject) => {
+    setImmediate(() => {
+      try {
+        store.save(snapshot);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+function defaultAsyncStoreErrorHandler(error) {
+  console.error(`Beastbound auth store async save failed: ${error.message}`);
 }
 
 function normalizeData(raw) {
@@ -13302,6 +13355,7 @@ module.exports = {
   createAuthService,
   createMemoryAuthStore,
   createJsonAuthStore,
+  createAsyncWriteAuthStore,
   normalizeUsername,
   isValidUsername,
 };
