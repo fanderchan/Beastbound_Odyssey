@@ -14287,11 +14287,21 @@ func _family_state_status_text() -> String:
 		var suffix := "当前没有家族。" if family.is_empty() else "我的家族：%s。" % str(family.get("name", ""))
 		var active_war = focused_manor.get("activeWar", null) as Dictionary if focused_manor.get("activeWar", null) is Dictionary else {}
 		if not active_war.is_empty():
-			return "%s：占领 %s；战期 %s VS %s。%s" % [
+			var war_phase := "战期" if _family_manor_war_ready(active_war) else _family_manor_war_prepare_line(active_war)
+			return "%s：占领 %s；%s %s VS %s。%s" % [
 				str(focused_manor.get("name", "庄园")),
 				owner_name,
+				war_phase,
 				str(active_war.get("challengerFamilyName", "挑战方")),
 				str(active_war.get("defenderFamilyName", "守方")),
+				suffix,
+			]
+		var peace_text := _family_manor_peace_line(focused_manor)
+		if peace_text != "":
+			return "%s：占领 %s；%s。%s" % [
+				str(focused_manor.get("name", "庄园")),
+				owner_name,
+				peace_text,
 				suffix,
 			]
 		return "%s：占领 %s。%s" % [
@@ -14300,6 +14310,34 @@ func _family_state_status_text() -> String:
 			suffix,
 		]
 	return "我的家族：%s。" % str(family.get("name", "")) if not family.is_empty() else "当前没有家族。"
+
+func _family_manor_peace_active(manor: Dictionary) -> bool:
+	var peace_ends_at := str(manor.get("peaceEndsAt", "")).strip_edges()
+	if peace_ends_at == "":
+		return false
+	return _family_iso_after_now(peace_ends_at)
+
+func _family_manor_peace_line(manor: Dictionary) -> String:
+	if not _family_manor_peace_active(manor):
+		return ""
+	var peace_ends_at := str(manor.get("peaceEndsAt", "")).strip_edges()
+	return "休战至：%s" % _family_display_iso_time(peace_ends_at)
+
+func _family_manor_war_ready(war: Dictionary) -> bool:
+	var starts_at := str(war.get("startsAt", "")).strip_edges()
+	return starts_at == "" or not _family_iso_after_now(starts_at)
+
+func _family_manor_war_prepare_line(war: Dictionary) -> String:
+	var starts_at := str(war.get("startsAt", "")).strip_edges()
+	if starts_at == "":
+		return "准备中"
+	return "准备至：%s" % _family_display_iso_time(starts_at)
+
+func _family_iso_after_now(iso_text: String) -> bool:
+	return iso_text.strip_edges() > ("%sZ" % Time.get_datetime_string_from_system(true))
+
+func _family_display_iso_time(iso_text: String) -> String:
+	return iso_text.strip_edges().replace("T", " ").replace(".000Z", "").replace("Z", "")
 
 func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control:
 	var row = HBoxContainer.new()
@@ -14313,7 +14351,9 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 	var active_war = manor.get("activeWar", null) as Dictionary if manor.get("activeWar", null) is Dictionary else {}
 	var war_text = ""
 	if not active_war.is_empty():
-		war_text = "\n战期：%s VS %s  参战：%d/%d - %d/%d" % [
+		var war_phase := "战期" if _family_manor_war_ready(active_war) else _family_manor_war_prepare_line(active_war)
+		war_text = "\n%s：%s VS %s  参战：%d/%d - %d/%d" % [
+			war_phase,
 			str(active_war.get("challengerFamilyName", "挑战方")),
 			str(active_war.get("defenderFamilyName", "守方")),
 			int(active_war.get("challengerParticipantCount", 0)),
@@ -14321,6 +14361,9 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 			int(active_war.get("defenderParticipantCount", 0)),
 			int(active_war.get("maxParticipantsPerSide", 5)),
 		]
+	var peace_text := "" if not active_war.is_empty() else _family_manor_peace_line(manor)
+	if peace_text != "":
+		war_text = "\n%s" % peace_text
 	var focus_prefix := "当前：" if family_focus_manor_id.strip_edges() != "" and str(manor.get("manorId", "")).strip_edges() == family_focus_manor_id.strip_edges() else ""
 	label.text = "%s%s  %s  守备:%d  占领：%s%s%s" % [
 		focus_prefix,
@@ -14339,12 +14382,16 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 	var challenge_button = Button.new()
 	challenge_button.text = "宣战"
 	challenge_button.custom_minimum_size = Vector2(78, 42)
-	challenge_button.disabled = family_request_pending or current_family.is_empty() or not _family_current_user_is_leader(current_family) or bool(manor.get("isOwnedByViewerFamily", false)) or not active_war.is_empty()
+	var manor_in_peace := _family_manor_peace_active(manor)
+	challenge_button.disabled = family_request_pending or current_family.is_empty() or not _family_current_user_is_leader(current_family) or bool(manor.get("isOwnedByViewerFamily", false)) or not active_war.is_empty() or manor_in_peace
+	if manor_in_peace:
+		challenge_button.tooltip_text = "庄园休战保护中"
 	challenge_button.pressed.connect(func() -> void:
 		_on_family_challenge_manor_pressed(manor_id)
 	)
 	row.add_child(challenge_button)
 	if not active_war.is_empty():
+		var war_ready := _family_manor_war_ready(active_war)
 		var war_id := str(active_war.get("warId", ""))
 		var enter_button = Button.new()
 		enter_button.text = "参战"
@@ -14366,7 +14413,7 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 		room_button.text = "入场"
 		room_button.custom_minimum_size = Vector2(78, 42)
 		var battle_room_id := str(active_war.get("battleRoomId", "")).strip_edges()
-		room_button.disabled = family_request_pending or war_id == "" or not _family_current_user_is_leader(current_family) or (battle_room_id == "" and not bool(active_war.get("canStartBattleRoomByViewerFamily", false)))
+		room_button.disabled = family_request_pending or war_id == "" or not war_ready or not _family_current_user_is_leader(current_family) or (battle_room_id == "" and not bool(active_war.get("canStartBattleRoomByViewerFamily", false)))
 		room_button.pressed.connect(func() -> void:
 			_on_family_start_manor_war_battle_pressed(war_id)
 		)
@@ -14374,7 +14421,7 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 		var resolve_button = Button.new()
 		resolve_button.text = "结算"
 		resolve_button.custom_minimum_size = Vector2(78, 42)
-		resolve_button.disabled = family_request_pending or war_id == "" or battle_room_id != "" or not bool(active_war.get("canResolveByViewerFamily", false)) or not _family_current_user_is_leader(current_family)
+		resolve_button.disabled = family_request_pending or war_id == "" or not war_ready or battle_room_id != "" or not bool(active_war.get("canResolveByViewerFamily", false)) or not _family_current_user_is_leader(current_family)
 		resolve_button.pressed.connect(func() -> void:
 			_on_family_resolve_manor_war_pressed(war_id)
 		)

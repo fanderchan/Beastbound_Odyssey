@@ -8,6 +8,8 @@ const MANOR_BATTLE_RECORD_LIMIT = 200;
 const MANOR_WAR_RECORD_LIMIT = 120;
 const MANOR_WAR_PREPARE_SECONDS = 0;
 const MANOR_WAR_DURATION_SECONDS = 30 * 60;
+const MANOR_WAR_DEFAULT_CHALLENGE_WAIT_SECONDS = MANOR_WAR_PREPARE_SECONDS;
+const MANOR_WAR_DEFAULT_PEACE_WAIT_SECONDS = 0;
 const MANOR_WAR_MAX_PARTICIPANTS_PER_SIDE = 5;
 const MANOR_WAR_STATUS_SCHEDULED = "scheduled";
 const MANOR_WAR_STATUS_RESOLVED = "resolved";
@@ -235,10 +237,19 @@ function createFamilyManorDomain(ctx) {
     if (manorState.ownerFamilyId === family.familyId) {
       return fail("manor_already_owned", "这个庄园已经由你的家族占领。");
     }
+    const peaceProtection = manorPeaceProtection(data, manorId, now());
+    if (peaceProtection.active) {
+      return fail("manor_peace_protected", "庄园休战保护中，暂时不能宣战。", {
+        peaceEndsAt: peaceProtection.peaceEndsAt,
+        manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
+      });
+    }
     const defenderFamily = manorState.ownerFamilyId ? data.families[manorState.ownerFamilyId] || null : null;
     const declaredAt = isoNow(now);
-    const startsAt = isoAfter(now, MANOR_WAR_PREPARE_SECONDS);
-    const endsAt = isoAfter(now, MANOR_WAR_PREPARE_SECONDS + MANOR_WAR_DURATION_SECONDS);
+    const challengeWaitSeconds = manorChallengeWaitSeconds(manor);
+    const peaceWaitSeconds = manorPeaceWaitSeconds(manor);
+    const startsAt = isoAfter(now, challengeWaitSeconds);
+    const endsAt = isoAfter(now, challengeWaitSeconds + MANOR_WAR_DURATION_SECONDS);
     const war = {
       warId: `manor_war_${randomId()}`,
       manorId,
@@ -256,6 +267,9 @@ function createFamilyManorDomain(ctx) {
       startsAt,
       endsAt,
       resolvedAt: "",
+      peaceEndsAt: "",
+      challengeWaitSeconds,
+      peaceWaitSeconds,
       battleId: "",
       winnerFamilyId: "",
       winnerFamilyName: "",
@@ -497,6 +511,7 @@ function createFamilyManorDomain(ctx) {
     const defenderPower = Math.max(1, Math.trunc(Number(war.defenderPower || 0)));
     const victory = challengerPower >= defenderPower;
     const resolvedAt = isoNow(now);
+    const peaceEndsAt = manorPeaceEndsAtFromBase(manor, war, now());
     const battle = {
       battleId: `manor_battle_${randomId()}`,
       warId: war.warId,
@@ -516,6 +531,7 @@ function createFamilyManorDomain(ctx) {
     };
     war.status = MANOR_WAR_STATUS_RESOLVED;
     war.resolvedAt = resolvedAt;
+    war.peaceEndsAt = peaceEndsAt;
     war.battleId = battle.battleId;
     war.challengerPower = challengerPower;
     war.defenderPower = defenderPower;
@@ -523,11 +539,12 @@ function createFamilyManorDomain(ctx) {
     war.winnerFamilyName = battle.winnerFamilyName;
     war.result = battle.result;
     if (victory) {
-      occupyManor(data, manor, challengerFamily, defenderFamily, resolvedAt);
+      occupyManor(data, manor, challengerFamily, defenderFamily, resolvedAt, peaceEndsAt);
       challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 20;
       challengerFamily.updatedAt = resolvedAt;
       data.families[challengerFamily.familyId] = challengerFamily;
     } else {
+      protectManorAfterWar(data, manor, resolvedAt, peaceEndsAt);
       challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 3;
       challengerFamily.updatedAt = resolvedAt;
       data.families[challengerFamily.familyId] = challengerFamily;
@@ -801,6 +818,9 @@ function publicManor(manor, data, viewerFamilyId = "", viewerAccountId = "") {
     ownerFamilyId: state.ownerFamilyId,
     ownerFamilyName: state.ownerFamilyName,
     occupiedAt: state.occupiedAt,
+    peaceEndsAt: state.peaceEndsAt,
+    challengeWaitSeconds: manorChallengeWaitSeconds(manor),
+    peaceWaitSeconds: manorPeaceWaitSeconds(manor),
     isOwnedByViewerFamily: viewerFamilyId !== "" && state.ownerFamilyId === viewerFamilyId,
     activeWar: activeWar ? publicManorWar(activeWar, viewerFamilyId, viewerAccountId) : null,
     schemaVersion: 1,
@@ -855,6 +875,9 @@ function publicManorWar(war, viewerFamilyId = "", viewerAccountId = "") {
     startsAt: String(war.startsAt || ""),
     endsAt: String(war.endsAt || ""),
     resolvedAt: String(war.resolvedAt || ""),
+    peaceEndsAt: String(war.peaceEndsAt || ""),
+    challengeWaitSeconds: Math.max(0, Math.trunc(Number(war.challengeWaitSeconds || 0))),
+    peaceWaitSeconds: Math.max(0, Math.trunc(Number(war.peaceWaitSeconds || 0))),
     battleId: String(war.battleId || ""),
     battleRoomId: String(war.battleRoomId || ""),
     battleStartedAt: String(war.battleStartedAt || ""),
@@ -896,6 +919,7 @@ function manorStateFor(data, manorId) {
     ownerFamilyId: String(state.ownerFamilyId || ""),
     ownerFamilyName: String(state.ownerFamilyName || ""),
     occupiedAt: String(state.occupiedAt || ""),
+    peaceEndsAt: String(state.peaceEndsAt || ""),
     updatedAt: String(state.updatedAt || ""),
     schemaVersion: 1,
   };
@@ -1126,6 +1150,7 @@ function settleManorWarFromBattleRoomResult(data, room, result, ctx = {}) {
   const defenderPower = Math.max(1, Math.trunc(Number(war.defenderPower || 0)));
   const challengerVictory = winnerSide === "challenger";
   const resolvedAt = new Date(nowFn()).toISOString();
+  const peaceEndsAt = manorPeaceEndsAtFromBase(manor, war, nowFn());
   const battle = {
     battleId: `manor_battle_${randomIdFn()}`,
     warId: war.warId,
@@ -1148,6 +1173,7 @@ function settleManorWarFromBattleRoomResult(data, room, result, ctx = {}) {
   war.status = MANOR_WAR_STATUS_RESOLVED;
   war.resolvedAt = resolvedAt;
   war.updatedAt = resolvedAt;
+  war.peaceEndsAt = peaceEndsAt;
   war.battleId = battle.battleId;
   war.challengerPower = challengerPower;
   war.defenderPower = defenderPower;
@@ -1155,11 +1181,12 @@ function settleManorWarFromBattleRoomResult(data, room, result, ctx = {}) {
   war.winnerFamilyName = battle.winnerFamilyName;
   war.result = battle.result;
   if (challengerVictory) {
-    occupyManor(data, manor, challengerFamily, defenderFamily, resolvedAt);
+    occupyManor(data, manor, challengerFamily, defenderFamily, resolvedAt, peaceEndsAt);
     challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 20;
     challengerFamily.updatedAt = resolvedAt;
     data.families[challengerFamily.familyId] = challengerFamily;
   } else {
+    protectManorAfterWar(data, manor, resolvedAt, peaceEndsAt);
     challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 3;
     challengerFamily.updatedAt = resolvedAt;
     data.families[challengerFamily.familyId] = challengerFamily;
@@ -1245,7 +1272,7 @@ function normalizedManorWars(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function occupyManor(data, manor, family, defenderFamily, updatedAt) {
+function occupyManor(data, manor, family, defenderFamily, updatedAt, peaceEndsAt = "") {
   const manorId = normalizeManorId(manor.id);
   if (defenderFamily) {
     defenderFamily.manorIds = uniqueStrings(defenderFamily.manorIds).filter((id) => id !== manorId);
@@ -1259,6 +1286,21 @@ function occupyManor(data, manor, family, defenderFamily, updatedAt) {
     ownerFamilyId: family.familyId,
     ownerFamilyName: family.name,
     occupiedAt: updatedAt,
+    peaceEndsAt: String(peaceEndsAt || ""),
+    updatedAt,
+    schemaVersion: 1,
+  };
+}
+
+function protectManorAfterWar(data, manor, updatedAt, peaceEndsAt = "") {
+  const manorId = normalizeManorId(manor && manor.id || "");
+  if (!manorId) {
+    return;
+  }
+  const state = manorStateFor(data, manorId);
+  data.manors[manorId] = {
+    ...state,
+    peaceEndsAt: String(peaceEndsAt || ""),
     updatedAt,
     schemaVersion: 1,
   };
@@ -1272,6 +1314,7 @@ function releaseFamilyManors(data, familyId) {
         ownerFamilyId: "",
         ownerFamilyName: "",
         occupiedAt: "",
+        peaceEndsAt: "",
         updatedAt: new Date().toISOString(),
         schemaVersion: 1,
       };
@@ -1330,6 +1373,47 @@ function manorDefenseBonus(manor) {
   return Math.max(0, Math.trunc(Number(manor.defenseBonus || 80)));
 }
 
+function manorChallengeWaitSeconds(manor) {
+  return nonNegativeInt(
+    manor && (manor.challengeWaitSeconds || manor.challengewait || manor.challengeWait),
+    MANOR_WAR_DEFAULT_CHALLENGE_WAIT_SECONDS
+  );
+}
+
+function manorPeaceWaitSeconds(manor) {
+  return nonNegativeInt(
+    manor && (manor.peaceWaitSeconds || manor.peacewait || manor.peaceWait),
+    MANOR_WAR_DEFAULT_PEACE_WAIT_SECONDS
+  );
+}
+
+function manorPeaceWaitSecondsFromWar(manor, war) {
+  const warValue = Math.trunc(Number(war && war.peaceWaitSeconds));
+  if (Number.isFinite(warValue) && warValue >= 0) {
+    return warValue;
+  }
+  return manorPeaceWaitSeconds(manor);
+}
+
+function manorPeaceEndsAtFromBase(manor, war, baseMs) {
+  const peaceWaitSeconds = manorPeaceWaitSecondsFromWar(manor, war);
+  if (peaceWaitSeconds <= 0) {
+    return "";
+  }
+  const normalizedBaseMs = Number.isFinite(Number(baseMs)) ? Number(baseMs) : Date.now();
+  return new Date(normalizedBaseMs + peaceWaitSeconds * 1000).toISOString();
+}
+
+function manorPeaceProtection(data, manorId, nowMs) {
+  const state = manorStateFor(data, manorId);
+  const peaceEndsAt = String(state.peaceEndsAt || "");
+  const peaceEndsAtMs = Date.parse(peaceEndsAt);
+  return {
+    active: Number.isFinite(peaceEndsAtMs) && peaceEndsAtMs > nowMs,
+    peaceEndsAt,
+  };
+}
+
 function normalizeFamilyName(value) {
   const name = String(value || "").trim().replace(/\s+/g, "");
   if (name.length < FAMILY_NAME_MIN_LENGTH || name.length > FAMILY_NAME_MAX_LENGTH) {
@@ -1348,6 +1432,14 @@ function normalizeManorId(value) {
 
 function isoAfter(now, seconds) {
   return new Date(now() + Math.max(0, Math.trunc(Number(seconds || 0))) * 1000).toISOString();
+}
+
+function nonNegativeInt(value, fallback = 0) {
+  const parsed = Math.trunc(Number(value));
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return Math.max(0, Math.trunc(Number(fallback || 0)));
+  }
+  return parsed;
 }
 
 function positiveInt(value, fallback) {

@@ -10,7 +10,9 @@
       "mapId": "firebud_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 260,
-      "defenseBonus": 60
+      "defenseBonus": 60,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "earth_vein_manor",
@@ -21,7 +23,9 @@
       "mapId": "earth_vein_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 340,
-      "defenseBonus": 80
+      "defenseBonus": 80,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "tide_echo_manor",
@@ -32,7 +36,9 @@
       "mapId": "tide_echo_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 340,
-      "defenseBonus": 80
+      "defenseBonus": 80,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "ember_core_manor",
@@ -43,7 +49,9 @@
       "mapId": "ember_core_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 360,
-      "defenseBonus": 90
+      "defenseBonus": 90,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "gale_breath_manor",
@@ -54,7 +62,9 @@
       "mapId": "gale_breath_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 360,
-      "defenseBonus": 90
+      "defenseBonus": 90,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "shadow_oath_manor",
@@ -65,7 +75,9 @@
       "mapId": "shadow_oath_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 460,
-      "defenseBonus": 120
+      "defenseBonus": 120,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "beast_pen_manor",
@@ -76,7 +88,9 @@
       "mapId": "beast_pen_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 300,
-      "defenseBonus": 70
+      "defenseBonus": 70,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "artisan_manor",
@@ -87,7 +101,9 @@
       "mapId": "artisan_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 320,
-      "defenseBonus": 70
+      "defenseBonus": 70,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     },
     {
       "id": "training_manor",
@@ -98,7 +114,9 @@
       "mapId": "training_manor",
       "spawnName": "from_firebud_village_gate",
       "neutralPower": 320,
-      "defenseBonus": 70
+      "defenseBonus": 70,
+      "challengeWaitSeconds": 300,
+      "peaceWaitSeconds": 3600
     }
   ]
 }
