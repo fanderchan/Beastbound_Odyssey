@@ -2,12 +2,25 @@
 
 These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 
+## Project Status And Roadmap
+
+- The project has moved past the prototype/bugfix phase: all 32 known bugs in `tasks.md` are fixed and verified. Do not re-investigate them unless a regression is proven by a failing test or check.
+- Release iteration follows `release_plan.md`, executed stage by stage (A → E). At the start of every session, read the "进度追踪" section of `release_plan.md` and `git log` to locate the current position, then continue from the first unchecked item.
+- After completing each item, tick its checkbox in `release_plan.md` and append one line of completion evidence. After completing each stage, run the full validation suite and stop for user confirmation before starting the next stage.
+
 ## Product Direction
 
-- Build an original StoneAge-inspired 2.5D turn-based pet MMORPG prototype, not a one-to-one clone.
-- Use Godot 4.7 standard edition, GDScript, a 2D isometric or 45-degree map direction, Node.js backend support, and MySQL 9.7 when persistence becomes necessary.
-- Use Chinese for player-facing UI by default.
+- Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Current goal: iterate to a releasable networked game per `release_plan.md`.
+- Use Godot 4.7 standard edition, GDScript, a 2D isometric or 45-degree map direction, Node.js backend, and MySQL 9.7 for persistence.
+- Use Chinese for player-facing UI by default. Never show English error codes, agent-only validation strings, raw smoke summaries, implementation flags, or debug-only IDs in normal player-facing UI.
+
+## Workflow Rules
+
 - Develop in small reviewable stages. Stop after each stage and ask the user to confirm before moving to the next stage.
+- Commit in small steps with motivation-explaining messages; never one giant diff.
+- During refactors (especially the main.gd split), behavior must stay identical: no opportunistic logic changes, no renaming player-facing text.
+- When a decision needs product input (password policy for old accounts, export platform priority, etc.), stop and ask the user instead of deciding alone.
+- Use the MCP server for database operations.
 
 ## Client Rules
 
@@ -15,8 +28,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 - Design every player-facing UI for both PC and mobile from the beginning.
 - Treat the PC client as the same mobile-first client running in a PC window; PC mainly changes input to mouse/keyboard and should not get a denser or more complex separate UI/layout unless the user explicitly approves it.
 - PC and mobile must share the same battle display template and formation coordinate contract; viewport differences should be handled by scaling, translation, and surrounding touch-friendly UI adaptation rather than separate slot layouts.
-- Player-facing screens must stay clean: do not show agent-only validation strings, raw smoke summaries, implementation flags, or debug-only IDs in normal UI.
-- Keep reusable gameplay rules in focused scripts or data files instead of growing one giant scene script.
+- Keep reusable gameplay rules in focused scripts or data files instead of growing one giant scene script. `main.gd` has been reduced to a coordination entrypoint; do not add new domains back into `main.gd` — put new logic in focused scripts under `scripts/net/`, `scripts/battle/`, `scripts/ui/`, `scripts/progression/`, or `scripts/world/`.
 
 ## Validation And Performance Rules
 
@@ -31,24 +43,24 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 - For movement/input performance, simulate real `_input` events across frames. A same-frame batch of direct helper calls is not enough to prove mouse-spam, touch-spam, or manual click-drag behavior is smooth.
 - A good post-fix idle baseline is low single-digit `%CPU` in `ps` for `godot --path client/godot --scene res://scenes/Main.tscn`, and sub-millisecond `process_total` after startup in the in-game perf probe. If `ps` and the script probe disagree, keep investigating instead of trusting only one source.
 
+## Backend Rules
+
+- The server is authoritative for accounts, saves, inventory, pets, quests, and battle. Do not add client-side writes that bypass server authority for server-session accounts.
+- Persistence target is MySQL 9.7 (see release_plan.md stage B); the JSON file store is for tests only once the MySQL switch lands.
+- Keep database credentials out of tracked files; use environment variables.
+
 ## Asset And Reuse Rules
 
 - StoneAge9 may be evaluated for structure, data contracts, validation style, and replaceable asset pipeline ideas.
 - Do not directly copy StoneAge9 or SA80 art assets into this project unless the user explicitly approves that specific reuse.
 - Every non-placeholder runtime asset must eventually declare its source, ownership, replacement path, and validation evidence.
-- Temporary placeholders are allowed in early stages when they make the live client playable and remain easy to replace.
+- Temporary placeholders are allowed while they keep the live client playable and remain easy to replace; stage E of release_plan.md audits all remaining placeholders.
 
 ## Original StoneAge Reference Rules
 
 - If an original StoneAge behavior or system rule is uncertain, inspect the user's 8.0 source reference at [fanderchan/StoneAge](https://github.com/fanderchan/StoneAge) before guessing.
 - Use the 8.0 source to confirm mechanics and naming intent only; do not copy source code, data, or assets into Beastbound Odyssey without explicit approval.
 - For movement collision, the 8.0 server uses `CHAR_ISOVERED`: `1` means another character can stand on or pass through that character's cell, and `0` means the character blocks movement. Beastbound maps this concept to the NPC field `movementCollision`.
-
-## Backend Rules
-
-- First playable stages may use local Godot state only.
-- Add Node.js and MySQL 9.7 support only when a client loop needs account, save, inventory, pet, or battle authority.
-- Keep database credentials out of tracked files.
 
 ## Global Git / SSH Rules
 
