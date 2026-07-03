@@ -13,6 +13,11 @@ const {
 const {
   createEventHub,
 } = require("./event-hub");
+const {
+  attachProtocolMetadata,
+  protocolCompatibility,
+  protocolMismatchResult,
+} = require("./protocol");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -31,6 +36,10 @@ function createHttpServer(options = {}) {
       const url = new URL(req.url || "/", "http://127.0.0.1");
       if (req.method === "GET" && url.pathname === "/health") {
         return sendJson(res, 200, {"ok": true, "service": "beastbound-auth"});
+      }
+      const protocol = protocolCompatibility(req, url);
+      if (!protocol.ok) {
+        return sendJson(res, 426, protocolMismatchResult(protocol));
       }
       if (req.method === "POST" && url.pathname === "/auth/register") {
         return sendResult(res, service.register(authPayload(req, await readJson(req))));
@@ -236,12 +245,14 @@ function sendResult(res, result) {
     status = 403;
   } else if (result.code === "revision_conflict") {
     status = 409;
+  } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {
+    status = 426;
   }
   return sendJson(res, status, result);
 }
 
 function sendJson(res, status, body) {
-  const text = JSON.stringify(body);
+  const text = JSON.stringify(attachProtocolMetadata(body));
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(text),

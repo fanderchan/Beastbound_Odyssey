@@ -4,6 +4,8 @@ const AccountAuthModel := preload("res://scripts/progression/account_auth_model.
 
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
+const CLIENT_VERSION := "0.1.0"
+const CLIENT_PROTOCOL_VERSION := 1
 const SESSION_INVALID_CODES := [
 	"session_expired",
 	"session_refresh_expired",
@@ -19,6 +21,34 @@ static func normalized_base_url(base_url: String) -> String:
 	while value.ends_with("/"):
 		value = value.substr(0, value.length() - 1)
 	return value
+
+
+static func protocol_query() -> String:
+	return "clientVersion=%s&clientProtocolVersion=%d" % [CLIENT_VERSION.uri_encode(), CLIENT_PROTOCOL_VERSION]
+
+
+static func request_headers(extra: Array[String] = []) -> Array[String]:
+	var headers: Array[String] = [
+		"X-Beastbound-Client-Version: %s" % CLIENT_VERSION,
+		"X-Beastbound-Protocol-Version: %d" % CLIENT_PROTOCOL_VERSION,
+	]
+	headers.append_array(extra)
+	return headers
+
+
+static func _auth_headers(session_token: String) -> Array[String]:
+	return request_headers(["Authorization: Bearer %s" % session_token])
+
+
+static func _json_headers() -> Array[String]:
+	return request_headers(["Content-Type: application/json"])
+
+
+static func _json_auth_headers(session_token: String) -> Array[String]:
+	return request_headers([
+		"Content-Type: application/json",
+		"Authorization: Bearer %s" % session_token,
+	])
 
 
 static func register_request(base_url: String, username: String, password: String, display_name: String) -> Dictionary:
@@ -39,7 +69,7 @@ static func login_request(base_url: String, username: String, password: String) 
 static func refresh_session_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/auth/refresh" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -56,7 +86,7 @@ static func is_session_invalid_response(parsed: Dictionary) -> bool:
 static func profile_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/profiles/me" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -65,10 +95,7 @@ static func profile_request(base_url: String, session_token: String) -> Dictiona
 static func profile_upload_disabled_probe_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/profiles/me" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_PUT,
 		"body": JSON.stringify({"profile": {}}),
 	}
@@ -82,10 +109,7 @@ static func profile_upload_request(base_url: String, session_token: String, _pro
 static func profile_action_request(base_url: String, session_token: String, action: String, payload: Dictionary = {}) -> Dictionary:
 	return {
 		"url": "%s/profile/action" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"action": action,
@@ -97,10 +121,7 @@ static func profile_action_request(base_url: String, session_token: String, acti
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
 	return {
 		"url": "%s/shops/transaction" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"mode": mode,
@@ -114,10 +135,7 @@ static func shop_transaction_request(base_url: String, session_token: String, mo
 static func equipment_equip_request(base_url: String, session_token: String, item_id: String) -> Dictionary:
 	return {
 		"url": "%s/equipment/equip" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"itemId": item_id,
@@ -128,10 +146,7 @@ static func equipment_equip_request(base_url: String, session_token: String, ite
 static func equipment_enhance_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
 	return {
 		"url": "%s/equipment/enhance" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"slotId": slot_id,
@@ -142,10 +157,7 @@ static func equipment_enhance_request(base_url: String, session_token: String, s
 static func equipment_repair_all_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/equipment/repair-all" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -154,10 +166,7 @@ static func equipment_repair_all_request(base_url: String, session_token: String
 static func equipment_synthesize_request(base_url: String, session_token: String, recipe_id: String) -> Dictionary:
 	return {
 		"url": "%s/equipment/synthesize" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"recipeId": recipe_id,
@@ -168,10 +177,7 @@ static func equipment_synthesize_request(base_url: String, session_token: String
 static func player_rebirth_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/player/rebirth" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -185,10 +191,7 @@ static func quest_record_request(base_url: String, session_token: String, event:
 		payload["questId"] = quest_id.strip_edges()
 	return {
 		"url": "%s/quests/record" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
 	}
@@ -202,10 +205,7 @@ static func quest_claim_request(base_url: String, session_token: String, quest_i
 		payload["rewardChoiceId"] = reward_choice_id.strip_edges()
 	return {
 		"url": "%s/quests/claim" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
 	}
@@ -214,7 +214,7 @@ static func quest_claim_request(base_url: String, session_token: String, quest_i
 static func player_search_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/players/search?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -238,7 +238,7 @@ static func online_players_request(base_url: String, session_token: String, scop
 		url += "?%s" % "&".join(query)
 	return {
 		"url": url,
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -247,10 +247,7 @@ static func online_players_request(base_url: String, session_token: String, scop
 static func player_position_update_request(base_url: String, session_token: String, position: Dictionary) -> Dictionary:
 	return {
 		"url": "%s/players/position" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(position),
 	}
@@ -259,10 +256,7 @@ static func player_position_update_request(base_url: String, session_token: Stri
 static func movement_step_request(base_url: String, session_token: String, step: Dictionary) -> Dictionary:
 	return {
 		"url": "%s/movement/step" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(step),
 	}
@@ -274,7 +268,7 @@ static func event_stream_url(base_url: String, session_token: String, last_event
 		url = "wss://" + url.substr("https://".length())
 	elif url.begins_with("http://"):
 		url = "ws://" + url.substr("http://".length())
-	var query := "token=%s" % session_token.uri_encode()
+	var query := "%s&token=%s" % [protocol_query(), session_token.uri_encode()]
 	if last_event_seq > 0:
 		query += "&lastEventSeq=%d" % last_event_seq
 	return "%s/events?%s" % [url, query]
@@ -283,7 +277,7 @@ static func event_stream_url(base_url: String, session_token: String, last_event
 static func event_latest_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/events/latest" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -292,7 +286,7 @@ static func event_latest_request(base_url: String, session_token: String) -> Dic
 static func party_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/party/state" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -301,10 +295,7 @@ static func party_state_request(base_url: String, session_token: String) -> Dict
 static func party_invite_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/party/invite" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"username": username}),
 	}
@@ -313,10 +304,7 @@ static func party_invite_request(base_url: String, session_token: String, userna
 static func party_apply_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/party/apply" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"username": username}),
 	}
@@ -333,7 +321,7 @@ static func party_invite_decline_request(base_url: String, session_token: String
 static func party_leave_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/party/leave" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -342,7 +330,7 @@ static func party_leave_request(base_url: String, session_token: String) -> Dict
 static func battle_state_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/battle/state" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -351,7 +339,7 @@ static func battle_state_request(base_url: String, session_token: String) -> Dic
 static func battle_record_summary_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/battle/records/summary?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -360,10 +348,7 @@ static func battle_record_summary_request(base_url: String, session_token: Strin
 static func battle_invite_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/battle/invite" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"username": username}),
 	}
@@ -372,10 +357,7 @@ static func battle_invite_request(base_url: String, session_token: String, usern
 static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, enemy_count: int) -> Dictionary:
 	return {
 		"url": "%s/battle/party-encounter" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"encounterZone": encounter_zone,
@@ -398,10 +380,7 @@ static func hang_session_start_request(base_url: String, session_token: String, 
 		body["itemId"] = item_id.strip_edges()
 	return {
 		"url": "%s/hang/session/start" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(body),
 	}
@@ -410,10 +389,7 @@ static func hang_session_start_request(base_url: String, session_token: String, 
 static func hang_session_stop_request(base_url: String, session_token: String, reason: String = "manual", pending_resume: bool = false) -> Dictionary:
 	return {
 		"url": "%s/hang/session/stop" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"reason": reason,
@@ -437,7 +413,7 @@ static func battle_invite_cancel_request(base_url: String, session_token: String
 static func battle_room_leave_request(base_url: String, session_token: String, room_id: String) -> Dictionary:
 	return {
 		"url": "%s/battle/rooms/%s/leave" % [normalized_base_url(base_url), room_id.uri_encode()],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -446,10 +422,7 @@ static func battle_room_leave_request(base_url: String, session_token: String, r
 static func battle_command_submit_request(base_url: String, session_token: String, room_id: String, command: Dictionary) -> Dictionary:
 	return {
 		"url": "%s/battle/rooms/%s/commands" % [normalized_base_url(base_url), room_id.uri_encode()],
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(command),
 	}
@@ -458,7 +431,7 @@ static func battle_command_submit_request(base_url: String, session_token: Strin
 static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/mail/inbox" % normalized_base_url(base_url),
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -467,10 +440,7 @@ static func mail_inbox_request(base_url: String, session_token: String) -> Dicti
 static func mail_send_request(base_url: String, session_token: String, recipient_username: String, title: String, body: String) -> Dictionary:
 	return {
 		"url": "%s/mail/send" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"recipientUsername": recipient_username,
@@ -483,7 +453,7 @@ static func mail_send_request(base_url: String, session_token: String, recipient
 static func mail_read_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
 	return {
 		"url": "%s/mail/%s/read" % [normalized_base_url(base_url), mail_id.uri_encode()],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -492,7 +462,7 @@ static func mail_read_request(base_url: String, session_token: String, mail_id: 
 static func mail_claim_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
 	return {
 		"url": "%s/mail/%s/claim" % [normalized_base_url(base_url), mail_id.uri_encode()],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -501,7 +471,7 @@ static func mail_claim_request(base_url: String, session_token: String, mail_id:
 static func chat_messages_request(base_url: String, session_token: String, channel: String, limit: int = 50) -> Dictionary:
 	return {
 		"url": "%s/chat/messages?channel=%s&limit=%d" % [normalized_base_url(base_url), channel.uri_encode(), clampi(limit, 1, 50)],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
 	}
@@ -510,10 +480,7 @@ static func chat_messages_request(base_url: String, session_token: String, chann
 static func chat_send_request(base_url: String, session_token: String, channel: String, text: String) -> Dictionary:
 	return {
 		"url": "%s/chat/send" % normalized_base_url(base_url),
-		"headers": [
-			"Content-Type: application/json",
-			"Authorization: Bearer %s" % session_token,
-		],
+		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"channel": channel,
@@ -968,7 +935,7 @@ static func profile_save_path_for_username(username: String) -> String:
 static func _auth_request(base_url: String, endpoint: String, payload: Dictionary) -> Dictionary:
 	return {
 		"url": "%s%s" % [normalized_base_url(base_url), endpoint],
-		"headers": ["Content-Type: application/json"],
+		"headers": _json_headers(),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
 	}
@@ -977,7 +944,7 @@ static func _auth_request(base_url: String, endpoint: String, payload: Dictionar
 static func _party_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
 	return {
 		"url": "%s/party/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
@@ -986,7 +953,7 @@ static func _party_invite_action_request(base_url: String, session_token: String
 static func _battle_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
 	return {
 		"url": "%s/battle/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
-		"headers": ["Authorization: Bearer %s" % session_token],
+		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}

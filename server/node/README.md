@@ -59,6 +59,15 @@ npm run ops -- restart
 
 See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN playtest boundary.
 
+## Protocol Compatibility
+
+Every non-health HTTP request must include:
+
+- `X-Beastbound-Client-Version`: current Godot client build version, currently `0.1.0`.
+- `X-Beastbound-Protocol-Version`: client protocol version, currently `1`.
+
+Every JSON response includes `protocolVersion`, `serverVersion`, `minClientProtocolVersion`, `maxClientProtocolVersion`, and a reserved `hotUpdate` object. Incompatible or missing client protocol metadata returns HTTP `426` with `protocol_version_mismatch` or `client_version_missing` plus a Chinese upgrade prompt. WebSocket event streams carry the same fields as query parameters: `clientVersion` and `clientProtocolVersion`.
+
 ## Current Endpoints
 
 - `GET /health`
@@ -72,8 +81,8 @@ See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN pla
 - `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
 - `POST /players/position`
 - `POST /movement/step`
-- `WS /events?token={sessionToken}`
-- `WS /events?token={sessionToken}&lastEventSeq={eventSeq}`
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&token={sessionToken}`
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&token={sessionToken}&lastEventSeq={eventSeq}`
 - `GET /events/latest`
 - `GET /profiles/me`
 - `PUT /profiles/me` (disabled; returns `403 profile_upload_denied`)

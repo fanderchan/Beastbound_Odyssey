@@ -17,6 +17,12 @@ const {
   DEFAULT_COMMAND_CATALOG,
 } = require("../src/http-server");
 const {
+  CLIENT_PROTOCOL_HEADER,
+  CLIENT_VERSION_HEADER,
+  PROTOCOL_VERSION,
+  SERVER_VERSION,
+} = require("../src/protocol");
+const {
   createMysqlAuthStore,
 } = require("../src/mysql-store");
 
@@ -4724,12 +4730,16 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
 
   const health = await fetchJson(`${base}/health`);
   assert.equal(health.ok, true);
+  assert.equal(health.protocolVersion, PROTOCOL_VERSION);
+  assert.equal(health.serverVersion, SERVER_VERSION);
 
   const registered = await fetchJson(`${base}/auth/register`, {
     "method": "POST",
     "body": JSON.stringify({"username": "httpuser", "password": "test1234"}),
   });
   assert.equal(registered.ok, true);
+  assert.equal(registered.protocolVersion, PROTOCOL_VERSION);
+  assert.equal(registered.hotUpdate.required, false);
 
   const backoffUser = await fetchJson(`${base}/auth/register`, {
     "method": "POST",
@@ -4749,6 +4759,8 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
     "method": "POST",
     "headers": {
       "content-type": "application/json",
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
       "x-forwarded-for": "203.0.113.20",
     },
     "body": JSON.stringify({"username": "httpbackoff", "password": "test1234"}),
@@ -4809,6 +4821,45 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   });
   assert.equal(tools.ok, false);
   assert.equal(tools.code, "gm_denied");
+});
+
+test("HTTP server rejects incompatible protocol versions with upgrade guidance", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const missingResponse = await fetch(`${base}/auth/register`, {
+    "method": "POST",
+    "headers": {"content-type": "application/json"},
+    "body": JSON.stringify({"username": "missingversion", "password": "test1234"}),
+  });
+  const missing = await missingResponse.json();
+  assert.equal(missingResponse.status, 426);
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "client_version_missing");
+  assert.equal(missing.protocolVersion, PROTOCOL_VERSION);
+  assert.equal(missing.upgrade.required, true);
+
+  const mismatchResponse = await fetch(`${base}/auth/login`, {
+    "method": "POST",
+    "headers": {
+      "content-type": "application/json",
+      [CLIENT_VERSION_HEADER]: "0.0.1",
+      [CLIENT_PROTOCOL_HEADER]: "999",
+    },
+    "body": JSON.stringify({"username": "future", "password": "test1234"}),
+  });
+  const mismatch = await mismatchResponse.json();
+  assert.equal(mismatchResponse.status, 426);
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.code, "protocol_version_mismatch");
+  assert.equal(mismatch.message.includes("更新客户端"), true);
+  assert.equal(mismatch.protocolVersion, PROTOCOL_VERSION);
+  assert.equal(mismatch.upgrade.required, true);
 });
 
 test("HTTP server exposes server-authoritative shop transaction endpoint", async (t) => {
@@ -5801,7 +5852,7 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
     }),
   });
 
-  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}`);
+  const ws = new WebSocket(eventStreamUrl(wsBase, opponent.session.token));
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");
@@ -5941,7 +5992,7 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
     "body": JSON.stringify({"username": "replayb"}),
   });
   assert.equal(invite.ok, true);
-  const firstWs = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}`);
+  const firstWs = new WebSocket(eventStreamUrl(wsBase, opponent.session.token));
   const firstReader = webSocketJsonReader(firstWs);
   await webSocketOpen(firstWs);
   await firstReader.next("events.ready");
@@ -5956,7 +6007,7 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
     "headers": {"authorization": `Bearer ${opponent.session.token}`},
   });
   assert.equal(accept.ok, true);
-  const secondWs = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(opponent.session.token)}&lastEventSeq=${inviteEvent.eventSeq}`);
+  const secondWs = new WebSocket(eventStreamUrl(wsBase, opponent.session.token, inviteEvent.eventSeq));
   const secondReader = webSocketJsonReader(secondWs);
   await webSocketOpen(secondWs);
   await secondReader.next("events.ready");
@@ -6039,7 +6090,7 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(latest.ok, true);
   assert.equal(Number.isInteger(latest.latestEventSeq), true);
 
-  const ws = new WebSocket(`${wsBase}/events?token=${encodeURIComponent(watcher.session.token)}&lastEventSeq=${latest.latestEventSeq}`);
+  const ws = new WebSocket(eventStreamUrl(wsBase, watcher.session.token, latest.latestEventSeq));
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");
@@ -6112,10 +6163,24 @@ async function fetchJson(url, options = {}) {
     ...options,
     "headers": {
       "content-type": "application/json",
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
       ...(options.headers || {}),
     },
   });
   return response.json();
+}
+
+function eventStreamUrl(base, token, lastEventSeq = 0) {
+  const query = new URLSearchParams({
+    clientVersion: SERVER_VERSION,
+    clientProtocolVersion: String(PROTOCOL_VERSION),
+    token,
+  });
+  if (lastEventSeq > 0) {
+    query.set("lastEventSeq", String(lastEventSeq));
+  }
+  return `${base}/events?${query.toString()}`;
 }
 
 function webSocketOpen(ws) {

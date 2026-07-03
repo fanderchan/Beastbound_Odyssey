@@ -1,6 +1,11 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const {
+  protocolCompatibility,
+  protocolMetadata,
+  protocolMismatchResult,
+} = require("./protocol");
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -15,6 +20,11 @@ function createEventHub(service) {
     if (url.pathname !== "/events") {
       writeHttpError(socket, 404, "not found");
       return false;
+    }
+    const protocol = protocolCompatibility(req, url);
+    if (!protocol.ok) {
+      writeHttpError(socket, 426, "protocol version mismatch", protocolMismatchResult(protocol));
+      return true;
     }
     const token = url.searchParams.get("token") || "";
     const session = service.getSession(token);
@@ -65,6 +75,7 @@ function createEventHub(service) {
       account,
       schemaVersion: 1,
       createdAt: new Date().toISOString(),
+      ...protocolMetadata(),
     });
     const online = service.listOnlinePlayers(token, {"scope": "aoi"});
     if (online.ok) {
@@ -305,13 +316,20 @@ function normalizeEventSeq(value) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number));
 }
 
-function writeHttpError(socket, status, message) {
-  socket.write([
+function writeHttpError(socket, status, message, body = null) {
+  const text = body ? JSON.stringify(body) : "";
+  const headers = [
     `HTTP/1.1 ${status} ${message}`,
     "Connection: close",
-    "Content-Length: 0",
+  ];
+  if (text !== "") {
+    headers.push("Content-Type: application/json; charset=utf-8");
+  }
+  headers.push(`Content-Length: ${Buffer.byteLength(text)}`);
+  socket.write([
+    ...headers,
     "",
-    "",
+    text,
   ].join("\r\n"));
   socket.destroy();
 }

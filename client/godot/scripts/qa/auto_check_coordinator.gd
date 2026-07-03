@@ -12201,6 +12201,9 @@ func _run_auto_auth_server_client_check() -> void:
 		"test1234",
 		"远程猎人"
 	)
+	var protocol_client_header = "X-Beastbound-Client-Version: %s" % ServerAuthClientModel.CLIENT_VERSION
+	var protocol_version_header = "X-Beastbound-Protocol-Version: %d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION
+	var register_headers = host._packed_string_array(register_spec.get("headers", []))
 	var request_ok = (
 		str(register_spec.get("url", "")) == "http://127.0.0.1:8787/auth/register"
 		and int(register_spec.get("method", -1)) == HTTPClient.METHOD_POST
@@ -12210,10 +12213,17 @@ func _run_auto_auth_server_client_check() -> void:
 		"http://127.0.0.1:8787/",
 		"token_test"
 	)
+	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
+	var protocol_header_ok = (
+		register_headers.has(protocol_client_header)
+		and register_headers.has(protocol_version_header)
+		and refresh_headers.has(protocol_client_header)
+		and refresh_headers.has(protocol_version_header)
+	)
 	var refresh_request_ok = (
 		str(refresh_spec.get("url", "")) == "http://127.0.0.1:8787/auth/refresh"
 		and int(refresh_spec.get("method", -1)) == HTTPClient.METHOD_POST
-		and host._packed_string_array(refresh_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and refresh_headers.has("Authorization: Bearer token_test")
 	)
 	var success_body = JSON.stringify({
 		"ok": true,
@@ -12841,6 +12851,7 @@ func _run_auto_auth_server_client_check() -> void:
 	var event_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url = ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
 	var event_replay_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test", 42)
+	var event_protocol_query = ServerAuthClientModel.protocol_query()
 	var event_latest_spec = ServerAuthClientModel.event_latest_request("http://127.0.0.1:8787/", "token_test")
 	var parsed_event = ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
 		"type": "online.position",
@@ -12852,9 +12863,9 @@ func _run_auto_auth_server_client_check() -> void:
 		"latestEventSeq": 43,
 	}).to_utf8_buffer())
 	var event_contract_ok = (
-		event_url == "ws://127.0.0.1:8787/events?token=token_test"
-		and event_wss_url == "wss://example.test/game/events?token=token%20test"
-		and event_replay_url == "ws://127.0.0.1:8787/events?token=token_test&lastEventSeq=42"
+		event_url == "ws://127.0.0.1:8787/events?" + event_protocol_query + "&token=token_test"
+		and event_wss_url == "wss://example.test/game/events?" + event_protocol_query + "&token=token%20test"
+		and event_replay_url == "ws://127.0.0.1:8787/events?" + event_protocol_query + "&token=token_test&lastEventSeq=42"
 		and str(event_latest_spec.get("url", "")) == "http://127.0.0.1:8787/events/latest"
 		and int(event_latest_spec.get("method", -1)) == HTTPClient.METHOD_GET
 		and host._packed_string_array(event_latest_spec.get("headers", [])).has("Authorization: Bearer token_test")
@@ -13302,6 +13313,18 @@ func _run_auto_auth_server_client_check() -> void:
 	}).to_utf8_buffer()
 	var parsed_error = ServerAuthClientModel.parse_auth_response(400, error_body)
 	var error_ok = not bool(parsed_error.get("ok", true)) and str(parsed_error.get("code", "")) == "wrong_password"
+	var parsed_protocol_mismatch = ServerAuthClientModel.parse_profile_response(426, JSON.stringify({
+		"ok": false,
+		"code": "protocol_version_mismatch",
+		"message": "客户端版本与服务器协议不兼容，请更新客户端后重试。",
+		"protocolVersion": 2,
+		"upgrade": {"required": true, "message": "请更新客户端后重试。"},
+	}).to_utf8_buffer())
+	var protocol_mismatch_ok = (
+		not bool(parsed_protocol_mismatch.get("ok", true))
+		and str(parsed_protocol_mismatch.get("code", "")) == "protocol_version_mismatch"
+		and str(parsed_protocol_mismatch.get("message", "")).find("更新客户端") >= 0
+	)
 	host._set_auth_server_mode(true)
 	var ui_server_ok = (
 		host.auth_server_mode
@@ -13322,7 +13345,7 @@ func _run_auto_auth_server_client_check() -> void:
 		and host.auth_server_url_input != null
 		and host.auth_server_url_input.visible
 	)
-	var status = "ok" if request_ok and refresh_request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
+	var status = "ok" if request_ok and refresh_request_ok and protocol_header_ok and parse_ok and error_ok and protocol_mismatch_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
 	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok else "failed"
@@ -13335,10 +13358,11 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
+		str(protocol_header_ok and protocol_mismatch_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
 		str(profile_action_request_ok and profile_action_parse_ok),
