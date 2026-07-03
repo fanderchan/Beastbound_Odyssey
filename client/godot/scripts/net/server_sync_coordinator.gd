@@ -4,6 +4,7 @@ const PlayerProgressModel := preload("res://scripts/progression/player_progress_
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 
 const AUTH_SERVER_ONLY := true
+const PROFILE_PULL_DEFER_TIMEOUT_SECONDS := 8.0
 
 var host
 
@@ -184,6 +185,7 @@ func continue_pending_server_profile_sync() -> void:
 	if not is_server_account_session():
 		host.server_profile_sync_pull_queued = false
 		host.server_profile_sync_deferred_pull_result.clear()
+		host.server_profile_sync_deferred_pull_elapsed = 0.0
 		return
 	if host.server_profile_sync_state == "loading" or host.server_profile_sync_state == "uploading":
 		return
@@ -207,19 +209,45 @@ func server_profile_pull_should_wait_for_profile_panel() -> bool:
 	)
 
 
+func server_profile_pull_has_blocking_action() -> bool:
+	return (
+		host.shop_action_request_pending
+		or host.equipment_action_request_pending
+		or host.profile_action_request_pending
+		or host.quest_action_request_pending
+	)
+
+
 func defer_server_profile_pull_result(parsed: Dictionary) -> void:
 	host.server_profile_sync_deferred_pull_result = parsed.duplicate(true)
+	host.server_profile_sync_deferred_pull_elapsed = 0.0
 	host.server_profile_sync_state = "ready" if is_server_account_session() else "off"
 	host.server_profile_sync_dirty = false
 	host.server_profile_sync_message = "服务器档案已延后同步，关闭面板后刷新。"
 
 
-func apply_deferred_server_profile_pull_if_idle() -> void:
+func update_deferred_server_profile_pull(delta: float) -> void:
+	if host.server_profile_sync_deferred_pull_result.is_empty():
+		host.server_profile_sync_deferred_pull_elapsed = 0.0
+		return
+	if server_profile_pull_has_blocking_action():
+		return
 	if server_profile_pull_should_wait_for_profile_panel():
+		host.server_profile_sync_deferred_pull_elapsed += maxf(0.0, delta)
+		if host.server_profile_sync_deferred_pull_elapsed < PROFILE_PULL_DEFER_TIMEOUT_SECONDS:
+			return
+		apply_deferred_server_profile_pull_if_idle(true)
+		return
+	apply_deferred_server_profile_pull_if_idle()
+
+
+func apply_deferred_server_profile_pull_if_idle(force_apply: bool = false) -> void:
+	if server_profile_pull_should_wait_for_profile_panel() and not force_apply:
 		return
 	if not host.server_profile_sync_deferred_pull_result.is_empty():
 		var parsed: Dictionary = host.server_profile_sync_deferred_pull_result.duplicate(true)
 		host.server_profile_sync_deferred_pull_result.clear()
+		host.server_profile_sync_deferred_pull_elapsed = 0.0
 		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
 		var revision := int(summary.get("profileRevision", 0))
 		if revision <= 0 or revision >= host.server_profile_sync_expected_revision:

@@ -12979,6 +12979,58 @@ func _run_auto_auth_server_client_check() -> void:
 	host.battle_active = previous_battle_active
 	host.battle_state = previous_battle_state
 	host.server_battle_state = previous_server_battle_state
+	var previous_auth_state: bool = host.account_authenticated
+	var previous_session: Dictionary = host.current_account_session.duplicate(true)
+	var previous_online_pending: bool = host.online_position_request_pending
+	var previous_online_queue: Dictionary = host.online_position_queued_payload.duplicate(true)
+	var previous_event_state: String = host.server_event_state
+	var previous_event_remaining: float = host.server_event_reconnect_remaining
+	var previous_event_socket = host.server_event_socket
+	host.account_authenticated = true
+	host.current_account_session = {
+		"username": "remoteuser",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverBaseUrl": "http://127.0.0.1:8787",
+		"serverSessionToken": "token_test",
+	}
+	host.online_position_request_pending = true
+	host.online_position_queued_payload.clear()
+	host._request_online_position_snapshot({
+		"mapId": "firebud_village_gate",
+		"cellX": 1,
+		"cellY": 2,
+		"facing": "east",
+		"moving": true,
+	})
+	host._request_online_position_snapshot({
+		"mapId": "firebud_village_gate",
+		"cellX": 5,
+		"cellY": 6,
+		"facing": "west",
+		"moving": false,
+	})
+	var weak_position_queue_ok = (
+		host.online_position_request_pending
+		and int(host.online_position_queued_payload.get("cellX", 0)) == 5
+		and int(host.online_position_queued_payload.get("cellY", 0)) == 6
+		and str(host.online_position_queued_payload.get("facing", "")) == "west"
+	)
+	host.server_event_socket = null
+	host.server_event_state = "closed"
+	host.server_event_reconnect_remaining = 2.0
+	host._start_server_event_stream_if_needed()
+	var event_cooldown_ok = (
+		host.server_event_socket == null
+		and host.server_event_state == "closed"
+		and host.server_event_reconnect_remaining > 0.0
+	)
+	host.account_authenticated = previous_auth_state
+	host.current_account_session = previous_session
+	host.online_position_request_pending = previous_online_pending
+	host.online_position_queued_payload = previous_online_queue
+	host.server_event_socket = previous_event_socket
+	host.server_event_state = previous_event_state
+	host.server_event_reconnect_remaining = previous_event_remaining
 	var parsed_party_state = ServerAuthClientModel.parse_party_state_response(200, JSON.stringify({
 		"ok": true,
 		"party": {
@@ -13413,7 +13465,8 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -13451,6 +13504,8 @@ func _run_auto_auth_server_client_check() -> void:
 		str(retry_contract_ok),
 		str(network_failure_parse_ok),
 		str(reconnect_ui_ok and reconnect_clear_ok),
+		str(weak_position_queue_ok),
+		str(event_cooldown_ok),
 		str(error_ok),
 		str(ui_server_ok),
 		str(ui_server_only_ok),
@@ -18020,7 +18075,34 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.server_profile_sync_expected_revision == 3
 		and host.server_profile_sync_deferred_pull_result.is_empty()
 	)
-	var panel_defer_ok = panel_queue_defer_ok and panel_response_defer_ok and panel_deferred_apply_ok
+	host._open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
+	var timeout_remote_profile = PlayerProgressModel.default_profile()
+	var timeout_player_profile = timeout_remote_profile.get("player", {}) as Dictionary
+	timeout_player_profile["name"] = "超时猎人"
+	timeout_remote_profile["player"] = timeout_player_profile
+	var timeout_response = ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": timeout_remote_profile,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 4,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	host._apply_server_profile_pull_result(timeout_response)
+	host._update_deferred_server_profile_pull(ServerSyncCoordinator.PROFILE_PULL_DEFER_TIMEOUT_SECONDS + 0.1)
+	var timeout_applied_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
+	var panel_deferred_timeout_ok = (
+		host.shop_panel != null
+		and host.shop_panel.visible
+		and str(timeout_applied_player.get("name", "")) == "超时猎人"
+		and host.server_profile_sync_expected_revision == 4
+		and host.server_profile_sync_deferred_pull_result.is_empty()
+		and host.server_profile_sync_deferred_pull_elapsed == 0.0
+	)
+	host._close_shop_panel()
+	var panel_defer_ok = panel_queue_defer_ok and panel_response_defer_ok and panel_deferred_apply_ok and panel_deferred_timeout_ok
 	var session_expired_response = ServerAuthClientModel.parse_profile_response(401, JSON.stringify({
 		"ok": false,
 		"code": "session_expired",
@@ -18038,7 +18120,7 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.world_log_message.find("登录会话已过期") >= 0
 	)
 	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and panel_defer_ok and session_expired_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s session_expired=%s state=%s rev=%d" % [
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
 		str(no_upload_ok),
@@ -18046,6 +18128,7 @@ func _run_auto_server_profile_sync_check() -> void:
 		str(upload_conflict_disabled_ok),
 		str(pull_ok),
 		str(panel_defer_ok),
+		str(panel_deferred_timeout_ok),
 		str(session_expired_ok),
 		host.server_profile_sync_state,
 		host.server_profile_sync_expected_revision,

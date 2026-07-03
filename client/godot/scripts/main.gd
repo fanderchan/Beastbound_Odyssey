@@ -497,6 +497,7 @@ var party_pending_kind: String = ""
 var online_position_http_request: HTTPRequest
 var online_position_timer: Timer
 var online_position_request_pending: bool = false
+var online_position_queued_payload: Dictionary = {}
 var online_position_remote_players: Array[Dictionary] = []
 var online_position_draw_signature_cache: String = ""
 var server_event_socket: WebSocketPeer
@@ -859,6 +860,7 @@ var server_profile_sync_pending_kind: String = ""
 var server_profile_sync_dirty: bool = false
 var server_profile_sync_pull_queued: bool = false
 var server_profile_sync_deferred_pull_result: Dictionary = {}
+var server_profile_sync_deferred_pull_elapsed: float = 0.0
 var server_profile_sync_expected_revision: int = 0
 var server_profile_sync_message: String = ""
 var profile_save_enabled: bool = true
@@ -6356,6 +6358,7 @@ func _process(delta: float) -> void:
 	section_start = _perf_now()
 	_update_pet_rest_recovery(delta)
 	_update_ground_pet_drop_expiration(delta)
+	_update_deferred_server_profile_pull(delta)
 	_perf_add("timed_profile", section_start)
 	section_start = _perf_now()
 	_poll_server_event_stream(delta)
@@ -7074,8 +7077,8 @@ func _stop_online_position_sync() -> void:
 func _on_online_position_timer_timeout() -> void:
 	_panel_flow()._on_online_position_timer_timeout()
 
-func _request_online_position_snapshot() -> void:
-	_panel_flow()._request_online_position_snapshot()
+func _request_online_position_snapshot(payload: Dictionary = {}) -> void:
+	_panel_flow()._request_online_position_snapshot(payload)
 
 func _current_online_position_payload() -> Dictionary:
 	return _panel_flow()._current_online_position_payload()
@@ -7121,6 +7124,9 @@ func _defer_server_profile_pull_result(parsed: Dictionary) -> void:
 
 func _apply_deferred_server_profile_pull_if_idle() -> void:
 	_panel_flow()._apply_deferred_server_profile_pull_if_idle()
+
+func _update_deferred_server_profile_pull(delta: float) -> void:
+	_panel_flow()._update_deferred_server_profile_pull(delta)
 
 func _apply_server_profile_summary(summary: Dictionary) -> void:
 	_panel_flow()._apply_server_profile_summary(summary)

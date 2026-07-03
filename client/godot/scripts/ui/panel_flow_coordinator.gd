@@ -1932,6 +1932,12 @@ var online_position_request_pending:
 	set(value):
 		host.online_position_request_pending = value
 
+var online_position_queued_payload:
+	get:
+		return host.online_position_queued_payload
+	set(value):
+		host.online_position_queued_payload = value
+
 var online_position_remote_players:
 	get:
 		return host.online_position_remote_players
@@ -4103,6 +4109,12 @@ var server_profile_sync_deferred_pull_result:
 		return host.server_profile_sync_deferred_pull_result
 	set(value):
 		host.server_profile_sync_deferred_pull_result = value
+
+var server_profile_sync_deferred_pull_elapsed:
+	get:
+		return host.server_profile_sync_deferred_pull_elapsed
+	set(value):
+		host.server_profile_sync_deferred_pull_elapsed = value
 
 var server_profile_sync_expected_revision:
 	get:
@@ -7444,6 +7456,8 @@ func _start_server_event_stream_if_needed() -> void:
 		var state = server_event_socket.get_ready_state()
 		if state == WebSocketPeer.STATE_CONNECTING or state == WebSocketPeer.STATE_OPEN:
 			return
+	if server_event_reconnect_remaining > 0.0 and (server_event_state == "closed" or server_event_state == "error"):
+		return
 	server_event_socket = WebSocketPeer.new()
 	var err = server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(_server_profile_base_url(), _server_profile_token(), server_event_last_seq))
 	if err == OK:
@@ -8239,6 +8253,7 @@ func _stop_online_position_sync() -> void:
 	if online_position_http_request != null and online_position_request_pending:
 		online_position_http_request.cancel_request()
 	online_position_request_pending = false
+	online_position_queued_payload.clear()
 	online_position_remote_players.clear()
 	online_position_draw_signature_cache = ""
 	host.queue_redraw()
@@ -8246,17 +8261,26 @@ func _stop_online_position_sync() -> void:
 func _on_online_position_timer_timeout() -> void:
 	_request_online_position_snapshot()
 
-func _request_online_position_snapshot() -> void:
-	if online_position_http_request == null or online_position_request_pending:
+func _request_online_position_snapshot(payload: Dictionary = {}) -> void:
+	if online_position_http_request == null:
 		return
 	if not _is_server_account_session() or player == null or map_data.is_empty():
+		online_position_queued_payload.clear()
 		return
+	var next_payload := payload.duplicate(true) if not payload.is_empty() else _current_online_position_payload()
+	if online_position_request_pending:
+		online_position_queued_payload = next_payload
+		return
+	_send_online_position_snapshot(next_payload)
+
+func _send_online_position_snapshot(payload: Dictionary) -> void:
 	var spec = ServerAuthClientModel.player_position_update_request(
 		_server_profile_base_url(),
 		_server_profile_token(),
-		_current_online_position_payload()
+		payload
 	)
 	online_position_request_pending = true
+	online_position_queued_payload.clear()
 	var err = online_position_http_request.request(
 		str(spec.get("url", "")),
 		_packed_string_array(spec.get("headers", [])),
@@ -8265,6 +8289,7 @@ func _request_online_position_snapshot() -> void:
 	)
 	if err != OK:
 		online_position_request_pending = false
+		online_position_queued_payload = payload.duplicate(true)
 
 func _current_online_position_payload() -> Dictionary:
 	var use_server_step_cell = _server_step_move_should_report_authority_cell()
@@ -8299,6 +8324,10 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 	elif _server_step_move_should_report_authority_cell():
 		_apply_server_step_move_authority_position(own_position)
 	_apply_online_position_players(parsed.get("players", []))
+	if not online_position_queued_payload.is_empty():
+		var queued_payload: Dictionary = online_position_queued_payload.duplicate(true)
+		online_position_queued_payload.clear()
+		call_deferred("_request_online_position_snapshot", queued_payload)
 
 func _apply_online_position_players(players) -> void:
 	var current_username = str(current_account_session.get("username", "")).strip_edges()
@@ -8375,6 +8404,9 @@ func _defer_server_profile_pull_result(parsed: Dictionary) -> void:
 
 func _apply_deferred_server_profile_pull_if_idle() -> void:
 	host._server_sync().apply_deferred_server_profile_pull_if_idle()
+
+func _update_deferred_server_profile_pull(delta: float) -> void:
+	host._server_sync().update_deferred_server_profile_pull(delta)
 
 func _apply_server_profile_summary(summary: Dictionary) -> void:
 	host._server_sync().apply_server_profile_summary(summary)
