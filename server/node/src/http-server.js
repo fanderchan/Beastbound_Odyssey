@@ -32,10 +32,14 @@ function createHttpServer(options = {}) {
         return sendJson(res, 200, {"ok": true, "service": "beastbound-auth"});
       }
       if (req.method === "POST" && url.pathname === "/auth/register") {
-        return sendResult(res, service.register(await readJson(req)));
+        return sendResult(res, service.register(authPayload(req, await readJson(req))));
       }
       if (req.method === "POST" && url.pathname === "/auth/login") {
-        return sendResult(res, service.login(await readJson(req)));
+        return sendResult(res, service.login(authPayload(req, await readJson(req))));
+      }
+      if (req.method === "POST" && url.pathname === "/auth/refresh") {
+        const payload = await readJson(req);
+        return sendResult(res, service.refreshSession(bearerToken(req) || String(payload.token || "")));
       }
       if (req.method === "POST" && url.pathname === "/auth/logout") {
         return sendResult(res, service.logout(bearerToken(req)));
@@ -222,7 +226,9 @@ function sendResult(res, result) {
     return sendJson(res, 200, result);
   }
   let status = 400;
-  if (result.code && result.code.includes("denied")) {
+  if (result.code === "auth_rate_limited" || result.code === "auth_backoff") {
+    status = 429;
+  } else if (result.code && result.code.includes("denied")) {
     status = 403;
   } else if (result.code === "revision_conflict") {
     status = 409;
@@ -263,6 +269,22 @@ function bearerToken(req) {
     return "";
   }
   return header.slice("bearer ".length).trim();
+}
+
+function authPayload(req, payload) {
+  const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  return {
+    ...source,
+    clientIp: requestClientIp(req),
+  };
+}
+
+function requestClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  if (forwarded !== "") {
+    return forwarded;
+  }
+  return String(req.socket && req.socket.remoteAddress || "");
 }
 
 if (require.main === module) {

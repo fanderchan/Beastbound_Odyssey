@@ -30,6 +30,15 @@ static func login_request(base_url: String, username: String, password: String) 
 	})
 
 
+static func refresh_session_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/auth/refresh" % normalized_base_url(base_url),
+		"headers": ["Authorization: Bearer %s" % session_token],
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func profile_request(base_url: String, session_token: String) -> Dictionary:
 	return {
 		"url": "%s/profiles/me" % normalized_base_url(base_url),
@@ -534,6 +543,8 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 		"serverSessionId": str(session.get("sessionId", "")),
 		"serverSessionToken": str(session.get("token", "")),
 		"serverExpiresAt": str(session.get("expiresAt", "")),
+		"passwordUpgradeRequired": bool(session.get("passwordUpgradeRequired", false)),
+		"passwordPolicyMessage": str(session.get("passwordPolicyMessage", "")),
 		"serverProfileBinding": data.get("profileBinding", {}),
 		"serverProfileSummary": data.get("profileSummary", {}),
 	}

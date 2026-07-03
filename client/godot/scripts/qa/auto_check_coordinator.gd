@@ -10266,6 +10266,7 @@ func _run_auto_server_auth_contract_check() -> void:
 	var endpoints_ok = (
 		endpoint_ids is Array
 		and (endpoint_ids as Array).has("login")
+			and (endpoint_ids as Array).has("refresh")
 			and (endpoint_ids as Array).has("session")
 			and (endpoint_ids as Array).has("gmCommand")
 			and (endpoint_ids as Array).has("profileUploadDisabled")
@@ -10275,7 +10276,7 @@ func _run_auto_server_auth_contract_check() -> void:
 			and (endpoint_ids as Array).has("playerRebirth")
 			and (endpoint_ids as Array).has("questRecord")
 			and (endpoint_ids as Array).has("questClaim")
-			and (endpoint_ids as Array).size() >= 17
+			and (endpoint_ids as Array).size() >= 18
 	)
 	var security_ok = (
 		bool(security.get("serverAuthoritativeGm", false))
@@ -12205,6 +12206,15 @@ func _run_auto_auth_server_client_check() -> void:
 		and int(register_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(register_spec.get("body", "")).find("\"RemoteUser\"") >= 0
 	)
+	var refresh_spec = ServerAuthClientModel.refresh_session_request(
+		"http://127.0.0.1:8787/",
+		"token_test"
+	)
+	var refresh_request_ok = (
+		str(refresh_spec.get("url", "")) == "http://127.0.0.1:8787/auth/refresh"
+		and int(refresh_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and host._packed_string_array(refresh_spec.get("headers", [])).has("Authorization: Bearer token_test")
+	)
 	var success_body = JSON.stringify({
 		"ok": true,
 		"account": {
@@ -12219,6 +12229,8 @@ func _run_auto_auth_server_client_check() -> void:
 			"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
 			"token": "token_test",
 			"expiresAt": "2099-01-01T00:00:00.000Z",
+			"passwordUpgradeRequired": true,
+			"passwordPolicyMessage": "当前密码策略已升级，请在账号设置中改为至少8位密码。",
 		},
 		"profileBinding": {"playerId": "player_test"},
 		"profileSummary": {
@@ -12243,6 +12255,8 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(parsed_session.get("username", "")) == "remoteuser"
 		and str(parsed_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/player_profile.json"
 		and str(parsed_session.get("serverSessionToken", "")) == "token_test"
+		and bool(parsed_session.get("passwordUpgradeRequired", false))
+		and str(parsed_session.get("passwordPolicyMessage", "")).find("至少8位") >= 0
 		and str(summary.get("playerId", "")) == "player_test"
 		and int(summary.get("profileRevision", -1)) == 3
 	)
@@ -13308,7 +13322,7 @@ func _run_auto_auth_server_client_check() -> void:
 		and host.auth_server_url_input != null
 		and host.auth_server_url_input.visible
 	)
-	var status = "ok" if request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
+	var status = "ok" if request_ok and refresh_request_ok and parse_ok and error_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
 	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok else "failed"
@@ -13321,9 +13335,10 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
 	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
+		str(refresh_request_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
 		str(profile_action_request_ok and profile_action_parse_ok),

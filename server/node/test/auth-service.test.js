@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -38,6 +39,10 @@ function createCountingAuthStore(initialData = null) {
       return store.load();
     },
   };
+}
+
+function testPasswordHash(password, salt) {
+  return crypto.scryptSync(String(password), String(salt), 32).toString("hex");
 }
 
 function battleProfile(name, playerStats, petStats = null) {
@@ -345,6 +350,120 @@ test("register/login/session keeps players away from GM tools", () => {
   const tools = service.listGmTools(login.session.token, DEFAULT_COMMAND_CATALOG);
   assert.equal(tools.ok, false);
   assert.equal(tools.code, "gm_denied");
+});
+
+test("server auth enforces 8 character passwords for new accounts", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+
+  const weak = service.register({"username": "weakpass", "password": "short"});
+  assert.equal(weak.ok, false);
+  assert.equal(weak.code, "weak_password");
+  assert.match(weak.message, /8/);
+
+  const strong = service.register({"username": "strongpass", "password": "test1234"});
+  assert.equal(strong.ok, true);
+  assert.equal(strong.session.passwordUpgradeRequired, undefined);
+});
+
+test("legacy password policy accounts can login and receive upgrade prompt", () => {
+  const salt = "legacy_salt";
+  const store = createMemoryAuthStore({
+    "accounts": {
+      "legacyuser": {
+        "accountId": "acc_legacyuser",
+        "username": "legacyuser",
+        "displayName": "旧账号",
+        "role": "player",
+        "passwordSalt": salt,
+        "passwordHash": testPasswordHash("old4", salt),
+        "createdAt": "2026-06-01T00:00:00.000Z",
+        "updatedAt": "2026-06-01T00:00:00.000Z",
+        "schemaVersion": 1,
+      },
+    },
+    "sessions": {},
+    "profileBindings": {},
+    "profiles": {},
+  });
+  const service = createAuthService({store});
+
+  const login = service.login({"username": "legacyuser", "password": "old4"});
+  assert.equal(login.ok, true);
+  assert.equal(login.session.passwordUpgradeRequired, true);
+  assert.match(login.session.passwordPolicyMessage, /至少8位/);
+  assert.equal(Boolean(login.session.token), true);
+});
+
+test("server auth backs off repeated login failures by IP and account", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "limituser", "password": "test1234"});
+  assert.equal(registered.ok, true);
+
+  for (let index = 0; index < 5; index += 1) {
+    const failed = service.login({
+      "username": "limituser",
+      "password": "wrong123",
+      "ipAddress": "10.0.0.1",
+    });
+    assert.equal(failed.ok, false);
+    assert.equal(failed.code, "wrong_password");
+  }
+
+  const blocked = service.login({
+    "username": "limituser",
+    "password": "test1234",
+    "ipAddress": "10.0.0.1",
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.code, "auth_backoff");
+  assert.equal(blocked.retryAfterMs > 0, true);
+
+  const otherIp = service.login({
+    "username": "limituser",
+    "password": "test1234",
+    "ipAddress": "10.0.0.2",
+  });
+  assert.equal(otherIp.ok, true);
+});
+
+test("expired sessions can refresh within grace window", () => {
+  let currentMs = Date.parse("2026-07-01T00:00:00.000Z");
+  let randomByteValue = 1;
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => currentMs,
+    "randomBytes": (size) => Buffer.alloc(size, randomByteValue++),
+  });
+  const registered = service.register({"username": "refreshuser", "password": "test1234"});
+  assert.equal(registered.ok, true);
+  const oldToken = registered.session.token;
+  currentMs = Date.parse(registered.session.expiresAt) + 1000;
+
+  const expired = service.getSession(oldToken);
+  assert.equal(expired.ok, false);
+  assert.equal(expired.code, "session_expired");
+
+  const refreshed = service.refreshSession(oldToken);
+  assert.equal(refreshed.ok, true);
+  assert.notEqual(refreshed.session.token, oldToken);
+  assert.equal(Boolean(refreshed.session.token), true);
+  assert.equal(service.getSession(refreshed.session.token).ok, true);
+  assert.equal(service.getSession(oldToken).code, "session_revoked");
+});
+
+test("too old sessions cannot refresh silently", () => {
+  let currentMs = Date.parse("2026-07-01T00:00:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => currentMs,
+  });
+  const registered = service.register({"username": "staleuser", "password": "test1234"});
+  assert.equal(registered.ok, true);
+  currentMs = Date.parse(registered.session.expiresAt) + (8 * 24 * 60 * 60 * 1000);
+
+  const refreshed = service.refreshSession(registered.session.token);
+  assert.equal(refreshed.ok, false);
+  assert.equal(refreshed.code, "session_refresh_expired");
 });
 
 test("GM grants are command-scoped and audited", () => {
@@ -4403,6 +4522,33 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   });
   assert.equal(registered.ok, true);
 
+  const backoffUser = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpbackoff", "password": "test1234"}),
+  });
+  assert.equal(backoffUser.ok, true);
+  for (let index = 0; index < 5; index += 1) {
+    const failed = await fetchJson(`${base}/auth/login`, {
+      "method": "POST",
+      "headers": {"x-forwarded-for": "203.0.113.20"},
+      "body": JSON.stringify({"username": "httpbackoff", "password": "wrong123"}),
+    });
+    assert.equal(failed.ok, false);
+    assert.equal(failed.code, "wrong_password");
+  }
+  const backoffResponse = await fetch(`${base}/auth/login`, {
+    "method": "POST",
+    "headers": {
+      "content-type": "application/json",
+      "x-forwarded-for": "203.0.113.20",
+    },
+    "body": JSON.stringify({"username": "httpbackoff", "password": "test1234"}),
+  });
+  const backoff = await backoffResponse.json();
+  assert.equal(backoffResponse.status, 429);
+  assert.equal(backoff.ok, false);
+  assert.equal(backoff.code, "auth_backoff");
+
   const session = await fetchJson(`${base}/auth/session`, {
     "headers": {"authorization": `Bearer ${registered.session.token}`},
   });
@@ -4410,8 +4556,17 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(session.account.username, "httpuser");
   assert.equal(session.profileSummary.storageMode, "server_document");
 
-  const profile = await fetchJson(`${base}/profiles/me`, {
+  const refreshed = await fetchJson(`${base}/auth/refresh`, {
+    "method": "POST",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(refreshed.ok, true);
+  assert.equal(refreshed.account.username, "httpuser");
+  assert.equal(Boolean(refreshed.session.token), true);
+  assert.notEqual(refreshed.session.token, registered.session.token);
+
+  const profile = await fetchJson(`${base}/profiles/me`, {
+    "headers": {"authorization": `Bearer ${refreshed.session.token}`},
   });
   assert.equal(profile.ok, true);
   assert.equal(profile.profile.player.level, 1);
@@ -4441,7 +4596,7 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(deniedConflictUpload.code, "profile_upload_denied");
 
   const tools = await fetchJson(`${base}/gm/tools`, {
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "headers": {"authorization": `Bearer ${refreshed.session.token}`},
   });
   assert.equal(tools.ok, false);
   assert.equal(tools.code, "gm_denied");

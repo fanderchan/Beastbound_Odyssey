@@ -11,10 +11,18 @@ const {createBattleRoomDomain} = require("./auth/battle-room");
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
-const PASSWORD_MIN_LENGTH = 4;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_POLICY_VERSION = 2;
 const ROLE_PLAYER = "player";
 const ROLE_GM = "gm";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_REFRESH_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+const AUTH_RATE_WINDOW_MS = 60 * 1000;
+const AUTH_RATE_MAX_ATTEMPTS = 12;
+const AUTH_FAILURE_WINDOW_MS = 10 * 60 * 1000;
+const AUTH_FAILURE_BACKOFF_START = 5;
+const AUTH_FAILURE_BACKOFF_BASE_MS = 30 * 1000;
+const AUTH_FAILURE_BACKOFF_MAX_MS = 5 * 60 * 1000;
 const MAX_AUDIT_ROWS = 500;
 const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAX_SERVICE_EVENTS = 500;
@@ -282,6 +290,7 @@ function createAuthService(options = {}) {
   const randomId = options.randomId || (() => crypto.randomUUID());
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
   const serviceEventListeners = new Set();
+  const authAttemptState = new Map();
   let cachedData = null;
   let battleMaintenanceTimer = null;
 
@@ -337,16 +346,23 @@ function createAuthService(options = {}) {
     const username = normalizeUsername(payload.username);
     const password = String(payload.password || "");
     const displayName = String(payload.displayName || "").trim() || username;
+    const authGate = checkAuthAttemptGate(authAttemptState, "register", username, payload, now);
+    if (!authGate.ok) {
+      return authGate;
+    }
     if (!isValidUsername(username)) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("invalid_username", "账号只能使用3-20位小写字母、数字或下划线。");
     }
     if (password.length < PASSWORD_MIN_LENGTH) {
-      return fail("weak_password", "密码至少需要4位。");
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return fail("weak_password", "密码至少需要8位。");
     }
     const data = load();
     if (data.accounts[username]) {
       recordAuthEvent(data, "register_denied", username, false, "账号已存在。", now);
       save(data);
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("account_exists", "账号已存在，请直接登录。");
     }
     const accountId = `acc_${randomId()}`;
@@ -358,6 +374,8 @@ function createAuthService(options = {}) {
       role: ROLE_PLAYER,
       passwordSalt: salt,
       passwordHash: hashPassword(password, salt),
+      passwordPolicyVersion: PASSWORD_POLICY_VERSION,
+      passwordUpdatedAt: isoNow(now),
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
       schemaVersion: 1,
@@ -375,6 +393,7 @@ function createAuthService(options = {}) {
     recordAuthEvent(data, "register", username, true, "", now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     save(data);
+    recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
@@ -386,27 +405,56 @@ function createAuthService(options = {}) {
   function login(payload = {}) {
     const username = normalizeUsername(payload.username);
     const password = String(payload.password || "");
+    const authGate = checkAuthAttemptGate(authAttemptState, "login", username, payload, now);
+    if (!authGate.ok) {
+      return authGate;
+    }
     const data = load();
     const account = data.accounts[username];
     if (!account) {
       recordAuthEvent(data, "login_denied", username, false, "账号不存在。", now);
       save(data);
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("account_missing", "账号不存在。");
     }
     if (hashPassword(password, account.passwordSalt) !== account.passwordHash) {
       recordAuthEvent(data, "login_denied", username, false, "密码不正确。", now);
       save(data);
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("wrong_password", "密码不正确。");
     }
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     recordAuthEvent(data, "login", username, true, "", now);
     save(data);
+    recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(account, data),
+    });
+  }
+
+  function refreshSession(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now, {
+      allowExpired: true,
+      refreshGraceMs: SESSION_REFRESH_GRACE_MS,
+    });
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    resolved.session.revokedAt = isoNow(now);
+    const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
+    save(data);
+    return ok({
+      account: publicAccount(resolved.account),
+      session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token),
+      profileBinding: ensured.binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
     });
   }
 
@@ -1450,6 +1498,7 @@ function createAuthService(options = {}) {
   return {
     register,
     login,
+    refreshSession,
     logout,
     getSession,
     getProfile,
@@ -1594,7 +1643,7 @@ function createSessionForAccount(data, account, now, randomBytes) {
   return {session, token};
 }
 
-function resolveSession(data, token, now) {
+function resolveSession(data, token, now, options = {}) {
   const tokenHash = hashToken(String(token || ""));
   const session = Object.values(data.sessions).find((value) => value && value.tokenHash === tokenHash);
   if (!session) {
@@ -1603,8 +1652,16 @@ function resolveSession(data, token, now) {
   if (session.revokedAt) {
     return {"ok": false, "code": "session_revoked", "message": "登录会话已失效。"};
   }
-  if (Date.parse(session.expiresAt) <= now()) {
-    return {"ok": false, "code": "session_expired", "message": "登录会话已过期。"};
+  const expiresMs = Date.parse(session.expiresAt);
+  const nowMs = now();
+  if (expiresMs <= nowMs) {
+    if (!options.allowExpired) {
+      return {"ok": false, "code": "session_expired", "message": "登录会话已过期。"};
+    }
+    const graceMs = Math.max(0, Number(options.refreshGraceMs || 0));
+    if (expiresMs + graceMs <= nowMs) {
+      return {"ok": false, "code": "session_refresh_expired", "message": "登录已过期，请重新登录。"};
+    }
   }
   const account = Object.values(data.accounts).find((value) => value.accountId === session.accountId);
   if (!account) {
@@ -1630,6 +1687,11 @@ function publicSession(session, account, data, token = "") {
     effectiveRole: effectiveRoleIsGm(data, account, () => Date.now()) ? ROLE_GM : ROLE_PLAYER,
     expiresAt: session.expiresAt,
   };
+  const upgrade = passwordUpgradePolicyForAccount(account);
+  if (upgrade.required) {
+    result.passwordUpgradeRequired = true;
+    result.passwordPolicyMessage = upgrade.message;
+  }
   if (token) {
     result.token = token;
   }
@@ -13112,6 +13174,98 @@ function isValidUsername(username) {
     username.length <= USERNAME_MAX_LENGTH &&
     /^[a-z0-9_]+$/.test(username)
   );
+}
+
+function checkAuthAttemptGate(state, action, username, payload, now) {
+  const nowMs = now();
+  const key = authAttemptKey(action, username, payload);
+  const entry = normalizeAuthAttemptEntry(state.get(key), nowMs);
+  if (entry.backoffUntil > nowMs) {
+    state.set(key, entry);
+    const retryAfterMs = Math.max(1, entry.backoffUntil - nowMs);
+    return fail(
+      "auth_backoff",
+      "认证失败次数过多，请稍后再试。",
+      {"retryAfterMs": retryAfterMs}
+    );
+  }
+  if (entry.attempts.length >= AUTH_RATE_MAX_ATTEMPTS) {
+    state.set(key, entry);
+    const oldest = Math.min(...entry.attempts);
+    const retryAfterMs = Math.max(1, AUTH_RATE_WINDOW_MS - (nowMs - oldest));
+    return fail(
+      "auth_rate_limited",
+      "请求太频繁，请稍后再试。",
+      {"retryAfterMs": retryAfterMs}
+    );
+  }
+  entry.attempts.push(nowMs);
+  state.set(key, entry);
+  return ok({"authAttemptKey": key});
+}
+
+function recordAuthAttemptResult(state, key, success, now) {
+  if (!key) {
+    return;
+  }
+  const nowMs = now();
+  const entry = normalizeAuthAttemptEntry(state.get(key), nowMs);
+  if (success) {
+    entry.failures = [];
+    entry.backoffUntil = 0;
+    state.set(key, entry);
+    return;
+  }
+  entry.failures.push(nowMs);
+  if (entry.failures.length >= AUTH_FAILURE_BACKOFF_START) {
+    const exponent = Math.max(0, entry.failures.length - AUTH_FAILURE_BACKOFF_START);
+    const backoffMs = Math.min(AUTH_FAILURE_BACKOFF_MAX_MS, AUTH_FAILURE_BACKOFF_BASE_MS * (2 ** exponent));
+    entry.backoffUntil = nowMs + backoffMs;
+  }
+  state.set(key, entry);
+}
+
+function normalizeAuthAttemptEntry(value, nowMs) {
+  const entry = value && typeof value === "object" ? value : {};
+  return {
+    attempts: authAttemptTimes(entry.attempts, nowMs, AUTH_RATE_WINDOW_MS),
+    failures: authAttemptTimes(entry.failures, nowMs, AUTH_FAILURE_WINDOW_MS),
+    backoffUntil: Math.max(0, Number(entry.backoffUntil || 0)),
+  };
+}
+
+function authAttemptTimes(values, nowMs, windowMs) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return values
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0 && nowMs - value < windowMs);
+}
+
+function authAttemptKey(action, username, payload) {
+  const ip = normalizeAuthClientIp(payload && typeof payload === "object" ? payload.clientIp || payload.ipAddress || payload.ip || "" : "");
+  const account = normalizeUsername(username || (payload && typeof payload === "object" ? payload.username : ""));
+  return `${String(action || "auth")}:${ip}:${account || "_"}`;
+}
+
+function normalizeAuthClientIp(value) {
+  let ip = String(value || "").trim();
+  if (ip.startsWith("::ffff:")) {
+    ip = ip.slice("::ffff:".length);
+  }
+  return ip || "local";
+}
+
+function passwordUpgradePolicyForAccount(account) {
+  const policyVersion = Math.max(0, Math.trunc(Number(account && account.passwordPolicyVersion || 0)));
+  if (policyVersion >= PASSWORD_POLICY_VERSION) {
+    return {"required": false, "message": ""};
+  }
+  return {
+    "required": true,
+    "message": "当前密码策略已升级，请在账号设置中改为至少8位密码。",
+  };
 }
 
 function hashPassword(password, salt) {

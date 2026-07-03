@@ -137,6 +137,7 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 	return [
 		_endpoint("register", "POST", "/auth/register", "public", "注册普通玩家账号。"),
 		_endpoint("login", "POST", "/auth/login", "public", "登录并换取服务端会话。"),
+		_endpoint("refresh", "POST", "/auth/refresh", "session_refresh", "会话过期宽限期内换取新的服务端 token。"),
 		_endpoint("logout", "POST", "/auth/logout", "session", "注销当前会话。"),
 		_endpoint("session", "GET", "/auth/session", "session", "查询服务端计算后的账号和 effectiveRole。"),
 		_endpoint("profileMe", "GET", "/profiles/me", "session", "读取当前账号绑定的玩家档案。"),
