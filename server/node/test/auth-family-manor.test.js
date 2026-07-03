@@ -138,6 +138,97 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(outsiderBuy.code, "shop_family_manor_required");
 });
 
+test("occupied manor wars can open a battle room and settle ownership", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const defender = service.register({"username": "manordef", "password": "test1234", "displayName": "守方族长"});
+  const challenger = service.register({"username": "manoratt", "password": "test1234", "displayName": "挑战族长"});
+  assert.equal(defender.ok, true);
+  assert.equal(challenger.ok, true);
+  const defenderProfile = battleProfile("守方族长", {
+    level: 32,
+    hp: 340,
+    maxHp: 340,
+    attack: 70,
+    defense: 42,
+    quick: 96,
+  }, {
+    petId: "defender_pet",
+    name: "守宠",
+    level: 28,
+    hp: 250,
+    maxHp: 250,
+    attack: 58,
+    defense: 34,
+    quick: 76,
+  });
+  defenderProfile.stoneCoins = 1000;
+  const challengerProfile = battleProfile("挑战族长", {
+    level: 38,
+    hp: 420,
+    maxHp: 420,
+    attack: 92,
+    defense: 48,
+    quick: 110,
+  }, {
+    petId: "challenger_pet",
+    name: "攻宠",
+    level: 34,
+    hp: 310,
+    maxHp: 310,
+    attack: 78,
+    defense: 38,
+    quick: 86,
+  });
+  challengerProfile.stoneCoins = 1000;
+  assert.equal(service.saveProfile(defender.session.token, {profile: defenderProfile}).ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {profile: challengerProfile}).ok, true);
+
+  const defenderFamily = service.createFamily(defender.session.token, {"name": "守庄盟"});
+  assert.equal(defenderFamily.ok, true);
+  const firstWar = service.challengeManor(defender.session.token, {"manorId": "firebud_manor"});
+  assert.equal(firstWar.ok, true);
+  const firstBattle = service.resolveManorWar(defender.session.token, {"warId": firstWar.war.warId});
+  assert.equal(firstBattle.ok, true);
+  assert.equal(firstBattle.manor.ownerFamilyName, "守庄盟");
+
+  const challengerFamily = service.createFamily(challenger.session.token, {"name": "攻庄盟"});
+  assert.equal(challengerFamily.ok, true);
+  const declared = service.challengeManor(challenger.session.token, {"manorId": "firebud_manor"});
+  assert.equal(declared.ok, true);
+  assert.equal(declared.war.defenderFamilyName, "守庄盟");
+  assert.equal(declared.war.canStartBattleRoomByViewerFamily, false);
+  const defenderEntered = service.enterManorWar(defender.session.token, {"warId": declared.war.warId});
+  assert.equal(defenderEntered.ok, true);
+  assert.equal(defenderEntered.war.defenderParticipantCount, 1);
+
+  const roomReady = service.startManorWarBattleRoom(challenger.session.token, {"warId": declared.war.warId});
+  assert.equal(roomReady.ok, true);
+  assert.equal(roomReady.room.mode, "manor_war");
+  assert.equal(roomReady.room.participantAccountIds.length, 2);
+  assert.equal(roomReady.room.entry.manorWar.warId, declared.war.warId);
+  assert.equal(roomReady.war.battleRoomId, roomReady.room.roomId);
+  assert.equal(new Set(roomReady.room.battle.actors.map((actor) => actor.actorId)).size, roomReady.room.battle.actors.length);
+  assert.equal(roomReady.room.battle.actors.some((actor) => actor.side === "challenger"), true);
+  assert.equal(roomReady.room.battle.actors.some((actor) => actor.side === "opponent"), true);
+
+  const directResolve = service.resolveManorWar(challenger.session.token, {"warId": declared.war.warId});
+  assert.equal(directResolve.ok, false);
+  assert.equal(directResolve.code, "manor_war_room_active");
+
+  const closed = service.leaveBattleRoom(defender.session.token, roomReady.room.roomId);
+  assert.equal(closed.ok, true);
+  assert.equal(closed.room.status, "closed");
+  assert.equal(closed.result.reason, "forfeit");
+  assert.equal(closed.result.winnerFamilyId, challengerFamily.family.familyId);
+  assert.notEqual(closed.result.manorBattleId, "");
+
+  const after = service.listManors(challenger.session.token);
+  assert.equal(after.ok, true);
+  const firebud = after.manors.find((manor) => manor.manorId === "firebud_manor");
+  assert.equal(firebud.ownerFamilyName, "攻庄盟");
+  assert.equal(firebud.isOwnedByViewerFamily, true);
+});
+
 test("HTTP exposes family and manor endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service, logger: false});
@@ -175,6 +266,14 @@ test("HTTP exposes family and manor endpoints", async (t) => {
   assert.equal(challenged.ok, true);
   assert.equal(challenged.war.status, "scheduled");
   assert.equal(challenged.war.challengerParticipantCount, 1);
+
+  const neutralRoom = await fetchJson(`${base}/manors/battle-room`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({"warId": challenged.war.warId}),
+  });
+  assert.equal(neutralRoom.ok, false);
+  assert.equal(neutralRoom.code, "manor_war_defender_missing");
 
   const entered = await fetchJson(`${base}/manors/enter`, {
     method: "POST",

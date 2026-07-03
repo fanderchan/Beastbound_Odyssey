@@ -7890,9 +7890,10 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if closed_room.is_empty():
 		closed_room = _server_battle_closed_room_from_state()
 	var is_party_pve = _server_battle_room_is_party_pve(closed_room)
-	var message = _server_party_pve_result_message(closed_room) if is_party_pve else _server_battle_result_message(closed_room)
+	var is_manor_war = _server_battle_room_is_manor_war(closed_room)
+	var message = _server_party_pve_result_message(closed_room) if is_party_pve else (_server_manor_war_result_message(closed_room) if is_manor_war else _server_battle_result_message(closed_room))
 	if message == "":
-		message = "战斗已结束。" if is_party_pve else "切磋已结束。"
+		message = "战斗已结束。" if is_party_pve else ("庄园战已结束。" if is_manor_war else "切磋已结束。")
 	var log_message = _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
 	var result_key = _server_battle_result_key(closed_room)
 	var hang_result = _apply_server_battle_hang_writeback(closed_room)
@@ -7914,7 +7915,7 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 		message = _append_unique_message_lines(message, writeback_warning_lines)
 	_set_world_log_message(log_message)
 	if not is_party_pve:
-		_open_battle_result_panel(closed_room, result_key, message)
+		_open_battle_result_panel(closed_room, result_key, message, "庄园战" if is_manor_war else "切磋")
 	else:
 		_open_battle_result_panel(closed_room, result_key, log_message, "战斗", false)
 	_queue_server_profile_pull()
@@ -7960,6 +7961,27 @@ func _server_battle_room_mode(room: Dictionary) -> String:
 func _server_battle_room_is_party_pve(room: Dictionary) -> bool:
 	return _server_battle_room_mode(room) == "party_pve"
 
+func _server_battle_room_is_manor_war(room: Dictionary) -> bool:
+	return _server_battle_room_mode(room) == "manor_war"
+
+func _server_battle_room_participant_side(room: Dictionary, account_id: String) -> String:
+	var normalized_account_id = account_id.strip_edges()
+	if normalized_account_id == "":
+		return ""
+	var participants: Array = room.get("participants", []) if room.get("participants", []) is Array else []
+	for value in participants:
+		if not (value is Dictionary):
+			continue
+		var participant = value as Dictionary
+		if str(participant.get("accountId", "")).strip_edges() != normalized_account_id:
+			continue
+		var side = str(participant.get("side", "")).strip_edges()
+		if side == "opponent" or side == "defender":
+			return "defender"
+		if side == "challenger":
+			return "challenger"
+	return ""
+
 func _current_server_battle_is_party_pve() -> bool:
 	var state_room = battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
 	if _server_battle_room_is_party_pve(state_room):
@@ -7970,12 +7992,23 @@ func _current_server_battle_is_party_pve() -> bool:
 	return str(battle_state.get("serverRoomMode", "")).strip_edges() == "party_pve"
 
 func _server_battle_stale_room_message() -> String:
+	var state_room = battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	var server_room = server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	if _server_battle_room_is_manor_war(state_room) or _server_battle_room_is_manor_war(server_room):
+		return "庄园战房间已失效，已回到地图。"
 	return "队伍战斗已结束，已回到地图。" if _current_server_battle_is_party_pve() else "切磋房间已失效，已回到地图。"
 
 func _server_battle_result_key(room: Dictionary) -> String:
 	var result = _server_battle_result_payload(room)
 	var winner_account_id = str(result.get("winnerAccountId", "")).strip_edges()
 	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
+	if _server_battle_room_is_manor_war(room) and self_account_id != "":
+		if _server_battle_result_loser_contains_self(result):
+			return "defeat"
+		var self_side = _server_battle_room_participant_side(room, self_account_id)
+		var winner_side = _server_battle_room_participant_side(room, winner_account_id)
+		if self_side != "" and winner_side != "":
+			return "victory" if self_side == winner_side else "defeat"
 	if winner_account_id != "" and self_account_id != "":
 		return "victory" if winner_account_id == self_account_id else "defeat"
 	var reason = str(result.get("reason", room.get("closeReason", ""))).strip_edges()
@@ -8019,6 +8052,25 @@ func _server_battle_result_message(room: Dictionary) -> String:
 		if winner_account_id != "":
 			return "切磋落败。"
 	return "切磋已结束。"
+
+func _server_manor_war_result_message(room: Dictionary) -> String:
+	var result = _server_battle_result_payload(room)
+	var reason = str(result.get("reason", room.get("closeReason", ""))).strip_edges()
+	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
+	var closed_by_account_id = str(result.get("closedByAccountId", room.get("closedByAccountId", ""))).strip_edges()
+	var result_key = _server_battle_result_key(room)
+	if reason == "forfeit" or reason == "leave":
+		if self_account_id != "" and closed_by_account_id == self_account_id:
+			return "你已离开庄园战，本场落败。"
+		return "对方退出，庄园战获胜。" if result_key == "victory" else "庄园战已结束。"
+	if reason == "timeout":
+		return "庄园战超时获胜。" if result_key == "victory" else "庄园战超时结束。"
+	if result_key == "victory":
+		var winner_family_name = str(result.get("winnerFamilyName", "")).strip_edges()
+		return "庄园战胜利。%s已占领庄园。" % winner_family_name if winner_family_name != "" else "庄园战胜利。"
+	if result_key == "defeat":
+		return "庄园战失败。"
+	return "庄园战已结束。"
 
 func _server_party_pve_result_message(room: Dictionary) -> String:
 	var result = _server_battle_result_payload(room)
@@ -14236,10 +14288,19 @@ func _family_manor_row(manor: Dictionary, current_family: Dictionary) -> Control
 			_on_family_leave_manor_war_pressed(war_id)
 		)
 		row.add_child(leave_button)
+		var room_button = Button.new()
+		room_button.text = "入场"
+		room_button.custom_minimum_size = Vector2(78, 42)
+		var battle_room_id := str(active_war.get("battleRoomId", "")).strip_edges()
+		room_button.disabled = family_request_pending or war_id == "" or not _family_current_user_is_leader(current_family) or (battle_room_id == "" and not bool(active_war.get("canStartBattleRoomByViewerFamily", false)))
+		room_button.pressed.connect(func() -> void:
+			_on_family_start_manor_war_battle_pressed(war_id)
+		)
+		row.add_child(room_button)
 		var resolve_button = Button.new()
-		resolve_button.text = "开战"
+		resolve_button.text = "结算"
 		resolve_button.custom_minimum_size = Vector2(78, 42)
-		resolve_button.disabled = family_request_pending or war_id == "" or not bool(active_war.get("canResolveByViewerFamily", false)) or not _family_current_user_is_leader(current_family)
+		resolve_button.disabled = family_request_pending or war_id == "" or battle_room_id != "" or not bool(active_war.get("canResolveByViewerFamily", false)) or not _family_current_user_is_leader(current_family)
 		resolve_button.pressed.connect(func() -> void:
 			_on_family_resolve_manor_war_pressed(war_id)
 		)
@@ -14326,6 +14387,11 @@ func _on_family_leave_manor_war_pressed(war_id: String) -> void:
 		return
 	_start_family_request("war_leave", ServerAuthClientModel.manor_leave_request(_server_profile_base_url(), _server_profile_token(), war_id))
 
+func _on_family_start_manor_war_battle_pressed(war_id: String) -> void:
+	if war_id.strip_edges() == "":
+		return
+	_start_family_request("battle_room", ServerAuthClientModel.manor_battle_room_request(_server_profile_base_url(), _server_profile_token(), war_id))
+
 func _on_family_resolve_manor_war_pressed(war_id: String) -> void:
 	if war_id.strip_edges() == "":
 		return
@@ -14358,6 +14424,8 @@ func _start_family_request(kind: String, spec: Dictionary) -> void:
 				family_status_label.text = "正在加入庄园战..."
 			"war_leave":
 				family_status_label.text = "正在退出庄园战..."
+			"battle_room":
+				family_status_label.text = "正在开启庄园战房间..."
 			"resolve":
 				family_status_label.text = "正在开战结算..."
 			_:
@@ -14451,6 +14519,27 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 			return
 		elif family_status_label != null:
 			family_status_label.text = str(parsed_resolve.get("message", "庄园战结算失败。"))
+	elif kind == "battle_room":
+		var parsed_room = ServerAuthClientModel.parse_manor_battle_room_response(response_code, body)
+		if bool(parsed_room.get("ok", false)):
+			var room = parsed_room.get("room", {}) as Dictionary if parsed_room.get("room", {}) is Dictionary else {}
+			if family_status_label != null:
+				var war = parsed_room.get("war", {}) as Dictionary if parsed_room.get("war", {}) is Dictionary else {}
+				family_status_label.text = "%s：%d/%d 对 %d/%d。" % [
+					str(parsed_room.get("message", "庄园战房间已开启。")),
+					int(war.get("challengerParticipantCount", 0)),
+					int(war.get("maxParticipantsPerSide", 5)),
+					int(war.get("defenderParticipantCount", 0)),
+					int(war.get("maxParticipantsPerSide", 5)),
+				]
+			if not room.is_empty():
+				_apply_server_battle_room_state(room, true)
+			_request_family_state()
+			return
+		elif _handle_session_invalid_response(parsed_room):
+			return
+		elif family_status_label != null:
+			family_status_label.text = str(parsed_room.get("message", "庄园战入场失败。"))
 	elif kind == "war_enter" or kind == "war_leave":
 		var parsed_war_action = ServerAuthClientModel.parse_manor_war_action_response(response_code, body)
 		if bool(parsed_war_action.get("ok", false)):

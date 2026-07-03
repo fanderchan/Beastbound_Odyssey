@@ -11,6 +11,7 @@ const {createBattleRoomDomain} = require("./auth/battle-room");
 const {
   createFamilyManorDomain,
   familyOwnsManor,
+  settleManorWarFromBattleRoomResult,
 } = require("./auth/family-manor");
 
 const USERNAME_MIN_LENGTH = 3;
@@ -50,6 +51,7 @@ const MOVEMENT_MAX_STEP_CELLS = 1;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
 const BATTLE_MODE_PARTY_PVE = "party_pve";
+const BATTLE_MODE_MANOR_WAR = "manor_war";
 const BATTLE_INVITE_PENDING = "pending";
 const BATTLE_INVITE_ACCEPTED = "accepted";
 const BATTLE_INVITE_DECLINED = "declined";
@@ -1411,6 +1413,7 @@ function createAuthService(options = {}) {
     BATTLE_INVITE_PENDING,
     BATTLE_INVITE_TTL_MS,
     BATTLE_MODE_DUEL,
+    BATTLE_MODE_MANOR_WAR,
     BATTLE_MODE_PARTY_PVE,
     BATTLE_PHASE_COMMAND,
     BATTLE_ROOM_CLOSED,
@@ -1576,6 +1579,7 @@ function createAuthService(options = {}) {
     leaveFamily: familyManor.leaveFamily,
     listManors: familyManor.listManors,
     challengeManor: familyManor.challengeManor,
+    startManorWarBattleRoom: familyManor.startManorWarBattleRoom,
     enterManorWar: familyManor.enterManorWar,
     leaveManorWar: familyManor.leaveManorWar,
     resolveManorWar: familyManor.resolveManorWar,
@@ -2166,6 +2170,11 @@ function publicBattleResult(result) {
     loserAccountIds: Array.isArray(result.loserAccountIds) ? result.loserAccountIds.map((value) => String(value)) : [],
     closedByAccountId: String(result.closedByAccountId || ""),
     battleRecordId: String(result.battleRecordId || ""),
+    manorWarId: String(result.manorWarId || ""),
+    manorBattleId: String(result.manorBattleId || ""),
+    manorId: String(result.manorId || ""),
+    winnerFamilyId: String(result.winnerFamilyId || ""),
+    winnerFamilyName: String(result.winnerFamilyName || ""),
     endedAt: String(result.endedAt || ""),
     battleReturns: Array.isArray(result.battleReturns) ? result.battleReturns.map(publicBattleReturn) : [],
     schemaVersion: 1,
@@ -4716,6 +4725,9 @@ function battleRoomActors(room) {
   if (String(room && room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE) {
     return partyPveBattleRoomActors(room);
   }
+  if (String(room && room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
+    return manorWarBattleRoomActors(room);
+  }
   const participants = Array.isArray(room.participants) ? room.participants : [];
   const actors = [];
   participants.forEach((participant, index) => {
@@ -4724,7 +4736,7 @@ function battleRoomActors(room) {
     if (playerActor.accountId !== "") {
       actors.push(playerActor);
     }
-    const battlePets = participant.teamSnapshot && Array.isArray(participant.teamSnapshot.battlePets)
+    const battlePets = participant && participant.teamSnapshot && Array.isArray(participant.teamSnapshot.battlePets)
       ? participant.teamSnapshot.battlePets
       : [];
     battlePets
@@ -4736,6 +4748,45 @@ function battleRoomActors(room) {
         actors.push(petActor);
       }
     });
+  });
+  return actors;
+}
+
+function manorWarBattleRoomActors(room) {
+  const participants = Array.isArray(room.participants) ? room.participants : [];
+  const sideCounts = {};
+  const actors = [];
+  participants.forEach((participant) => {
+    const rawSide = String(participant && participant.side || "challenger");
+    const side = rawSide === "opponent" || rawSide === "defender" ? "opponent" : "challenger";
+    sideCounts[side] = Math.max(0, Number(sideCounts[side] || 0)) + 1;
+    const slotNumber = BATTLE_PARTY_PVE_PLAYER_SLOTS[Math.min(sideCounts[side] - 1, BATTLE_PARTY_PVE_PLAYER_SLOTS.length - 1)] || sideCounts[side];
+    const accountId = String(participant && participant.accountId || "").replace(/[^A-Za-z0-9_:-]/g, "_");
+    const playerActor = battlePlayerActorFromParticipant(participant, side, {
+      actorId: `manor_${side}_${accountId || sideCounts[side]}_player`,
+      slotId: `${side}.back.${slotNumber}`,
+      slotNumber,
+    });
+    if (playerActor.accountId !== "") {
+      actors.push(playerActor);
+    }
+    const battlePets = participant && participant.teamSnapshot && Array.isArray(participant.teamSnapshot.battlePets)
+      ? participant.teamSnapshot.battlePets
+      : [];
+    battlePets
+      .filter((pet) => pet && (pet.activeInBattle || String(pet.state || "") === BATTLE_PET_STATE_BATTLE))
+      .slice(0, BATTLE_ACTIVE_PET_MAX_PER_PARTICIPANT)
+      .forEach((pet, petIndex) => {
+        const petId = String(pet.petId || pet.instanceId || pet.id || petIndex + 1).replace(/[^A-Za-z0-9_:-]/g, "_");
+        const petActor = battlePetActorFromParticipant(participant, side, pet, petIndex, {
+          actorId: `manor_${side}_${accountId || sideCounts[side]}_pet_${petId || petIndex + 1}`,
+          slotId: `${side}.front.${slotNumber}`,
+          slotNumber,
+        });
+        if (petActor.accountId !== "" && petActor.petId !== "") {
+          actors.push(petActor);
+        }
+      });
   });
   return actors;
 }
@@ -5487,7 +5538,7 @@ function battleCommandTargetActor(payload, data, room, battle, actor, actionId) 
   if (battleSpiritActionById(actionId) && battleSpiritIsAll(actionId) && battleSpiritCanTargetAlly(actionId)) {
     return actor;
   }
-  if (String(room.mode || "") === BATTLE_MODE_PARTY_PVE) {
+  if (String(room.mode || "") === BATTLE_MODE_PARTY_PVE || String(room.mode || "") === BATTLE_MODE_MANOR_WAR) {
     return firstLivingBattleActorBySide(battle, battleOpponentSide(actor));
   }
   const targetAccountId = requiredBattleCommandAccountIds(room).find((accountId) => accountId !== actor.accountId) || "";
@@ -5571,7 +5622,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
       events.push(attackResult.event);
       sequence += 1;
     }
-    if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE) {
+    if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE || String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
       if (battleResultForResolvedActors(room, battle, now)) {
         break;
       }
@@ -6159,7 +6210,17 @@ function firstLivingBattleActorBySide(battle, side) {
 }
 
 function battleOpponentSide(actor) {
-  return String(actor && actor.side || "") === BATTLE_SIDE_ENEMY ? BATTLE_SIDE_ALLY : BATTLE_SIDE_ENEMY;
+  const side = String(actor && actor.side || "");
+  if (side === BATTLE_SIDE_ENEMY) {
+    return BATTLE_SIDE_ALLY;
+  }
+  if (side === BATTLE_SIDE_ALLY) {
+    return BATTLE_SIDE_ENEMY;
+  }
+  if (side === "opponent" || side === "defender") {
+    return "challenger";
+  }
+  return "opponent";
 }
 
 function battleParticipantByAccountId(room, accountId) {
@@ -6167,6 +6228,28 @@ function battleParticipantByAccountId(room, accountId) {
   return (Array.isArray(room.participants) ? room.participants : []).find((participant) => (
     participant && String(participant.accountId || "") === normalizedAccountId
   )) || null;
+}
+
+function battleParticipantSideForAccount(room, accountId) {
+  const participant = battleParticipantByAccountId(room, accountId);
+  const side = String(participant && participant.side || "");
+  if (side === "defender") {
+    return "opponent";
+  }
+  return side;
+}
+
+function battleParticipantAccountIdsForSide(room, side) {
+  const normalizedSide = String(side || "") === "defender" ? "opponent" : String(side || "");
+  return (Array.isArray(room.participants) ? room.participants : [])
+    .filter((participant) => {
+      const participantSide = String(participant && participant.side || "") === "defender"
+        ? "opponent"
+        : String(participant && participant.side || "");
+      return participantSide === normalizedSide;
+    })
+    .map((participant) => String(participant && participant.accountId || ""))
+    .filter(Boolean);
 }
 
 function participantBattlePets(participant) {
@@ -6380,6 +6463,33 @@ function battleResultForResolvedActors(room, battle, now) {
     }
     return null;
   }
+  if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
+    const playerActors = actors.filter((actor) => (
+      actor &&
+      requiredBattleCommandAccountIds(room).includes(String(actor.accountId || "")) &&
+      String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER
+    ));
+    const livingSides = new Set(playerActors
+      .filter((actor) => Number(actor.hp || 0) > 0)
+      .map((actor) => String(actor.side || ""))
+      .filter(Boolean));
+    if (livingSides.has("challenger") && livingSides.has("opponent")) {
+      return null;
+    }
+    const winnerSide = livingSides.has("challenger") ? "challenger" : (livingSides.has("opponent") ? "opponent" : "");
+    const winner = winnerSide
+      ? playerActors.find((actor) => String(actor.side || "") === winnerSide && Number(actor.hp || 0) > 0) || null
+      : null;
+    const loserSide = winnerSide === "challenger" ? "opponent" : (winnerSide === "opponent" ? "challenger" : "");
+    return {
+      reason: "defeat",
+      winnerAccountId: winner ? String(winner.accountId || "") : "",
+      loserAccountIds: loserSide ? battleParticipantAccountIdsForSide(room, loserSide) : requiredBattleCommandAccountIds(room),
+      closedByAccountId: "",
+      endedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+  }
   const defeatedPlayerAccountIds = battleDefeatedPlayerAccountIds(room, battle);
   if (defeatedPlayerAccountIds.length > 0) {
     const winner = actors.find((actor) => (
@@ -6437,6 +6547,19 @@ function battleRoomResultForLeave(room, leavingAccountId, now) {
       reason: "escape",
       winnerAccountId: "",
       loserAccountIds: [],
+      closedByAccountId: leavingAccountId,
+      endedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+  }
+  if (String(room && room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
+    const leavingSide = battleParticipantSideForAccount(room, leavingAccountId);
+    const winnerSide = leavingSide === "challenger" ? "opponent" : "challenger";
+    const winnerAccountId = battleParticipantAccountIdsForSide(room, winnerSide)[0] || "";
+    return {
+      reason: "forfeit",
+      winnerAccountId,
+      loserAccountIds: leavingSide ? battleParticipantAccountIdsForSide(room, leavingSide) : (leavingAccountId ? [leavingAccountId] : []),
       closedByAccountId: leavingAccountId,
       endedAt: isoNow(now),
       schemaVersion: 1,
@@ -6512,6 +6635,23 @@ function closeBattleRoomWithResult(data, room, result, now) {
   battle.result.battleRecordId = recordId;
   result.battleReturns = battleReturns;
   result.battleRecordId = recordId;
+  const manorSettlement = settleManorWarFromBattleRoomResult(data, room, battle.result, {
+    manorEntries,
+    now,
+    randomId: () => crypto.randomUUID().replace(/-/g, "").slice(0, 16),
+  });
+  if (manorSettlement && manorSettlement.settled) {
+    battle.result.manorWarId = String(manorSettlement.warId || "");
+    battle.result.manorBattleId = String(manorSettlement.battleId || "");
+    battle.result.manorId = String(manorSettlement.manorId || "");
+    battle.result.winnerFamilyId = String(manorSettlement.winnerFamilyId || "");
+    battle.result.winnerFamilyName = String(manorSettlement.winnerFamilyName || "");
+    result.manorWarId = battle.result.manorWarId;
+    result.manorBattleId = battle.result.manorBattleId;
+    result.manorId = battle.result.manorId;
+    result.winnerFamilyId = battle.result.winnerFamilyId;
+    result.winnerFamilyName = battle.result.winnerFamilyName;
+  }
   appendBattleRecord(data, battleRecordForClosedRoom(data, room, battle.result, recordId));
   recordBattleTrace(data, room, "battle_room_closed", {
     recordId,
@@ -6586,6 +6726,11 @@ function battleRecordResultSummary(result) {
     closedByAccountId: String(result.closedByAccountId || ""),
     endedAt: String(result.endedAt || ""),
     battleRecordId: String(result.battleRecordId || ""),
+    manorWarId: String(result.manorWarId || ""),
+    manorBattleId: String(result.manorBattleId || ""),
+    manorId: String(result.manorId || ""),
+    winnerFamilyId: String(result.winnerFamilyId || ""),
+    winnerFamilyName: String(result.winnerFamilyName || ""),
     schemaVersion: 1,
   };
 }

@@ -15,7 +15,13 @@ const MANOR_WAR_STATUS_CANCELLED = "cancelled";
 
 function createFamilyManorDomain(ctx) {
   const {
+    BATTLE_MODE_MANOR_WAR,
+    BATTLE_ROOM_READY,
     accountById,
+    activeBattleRoomForAccount,
+    battleParticipantSnapshot,
+    battleRoomConnectionStateForMutation,
+    createBattleRoomBattleState,
     emitServiceEvent,
     fail,
     isoNow,
@@ -23,7 +29,10 @@ function createFamilyManorDomain(ctx) {
     manorEntries,
     now,
     ok,
+    publicBattleRoom,
     randomId,
+    randomBytes,
+    recordBattleTrace,
     resolveSession,
     save,
   } = ctx;
@@ -276,6 +285,157 @@ function createFamilyManorDomain(ctx) {
     });
   }
 
+  function startManorWarBattleRoom(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const family = familyForAccount(data, resolved.account.accountId);
+    if (!family) {
+      return fail("family_missing", "请先加入家族。");
+    }
+    if (family.leaderAccountId !== resolved.account.accountId) {
+      return fail("family_leader_required", "只有族长可以开启庄园战房间。");
+    }
+    const war = manorWarByPayload(data, payload);
+    if (!war) {
+      return fail("manor_war_missing", "没有找到进行中的庄园战。");
+    }
+    if (war.status !== MANOR_WAR_STATUS_SCHEDULED) {
+      return fail("manor_war_closed", "这场庄园战已经结束。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
+    if (family.familyId !== war.challengerFamilyId && family.familyId !== war.defenderFamilyId) {
+      return fail("manor_war_family_mismatch", "只有参战家族族长可以开启庄园战房间。");
+    }
+    const manor = manorById(war.manorId);
+    if (!manor) {
+      return fail("manor_missing", "庄园不存在。");
+    }
+    const startsAtMs = Date.parse(String(war.startsAt || ""));
+    if (Number.isFinite(startsAtMs) && startsAtMs > now()) {
+      return fail("manor_war_not_ready", "庄园战尚未开始。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
+    const challengerFamily = data.families[war.challengerFamilyId] || null;
+    const defenderFamily = war.defenderFamilyId ? data.families[war.defenderFamilyId] || null : null;
+    if (!challengerFamily) {
+      return fail("manor_war_challenger_missing", "挑战家族已经不存在。");
+    }
+    if (!defenderFamily) {
+      return fail("manor_war_defender_missing", "中立庄园守备战当前使用结算开战。");
+    }
+    const existingRoom = activeManorWarBattleRoom(data, war);
+    if (existingRoom) {
+      return ok({
+        room: publicBattleRoom(existingRoom),
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+        manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
+        message: "庄园战房间已开启。",
+      });
+    }
+    syncManorWarPower(data, war, manor);
+    const challengerIds = participantListForSide(war, "challenger")
+      .filter((accountId) => uniqueStrings(challengerFamily.memberAccountIds).includes(accountId) && accountById(data, accountId))
+      .slice(0, MANOR_WAR_MAX_PARTICIPANTS_PER_SIDE);
+    const defenderIds = participantListForSide(war, "defender")
+      .filter((accountId) => uniqueStrings(defenderFamily.memberAccountIds).includes(accountId) && accountById(data, accountId))
+      .slice(0, MANOR_WAR_MAX_PARTICIPANTS_PER_SIDE);
+    setParticipantListForSide(war, "challenger", challengerIds);
+    setParticipantListForSide(war, "defender", defenderIds);
+    if (challengerIds.length <= 0) {
+      return fail("manor_war_no_challenger", "挑战方还没有参战成员。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
+    if (defenderIds.length <= 0) {
+      return fail("manor_war_no_defender", "守方还没有参战成员。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
+    const participantAccountIds = challengerIds.concat(defenderIds);
+    const busyAccountId = participantAccountIds.find((accountId) => activeBattleRoomForAccount(data, accountId));
+    if (busyAccountId) {
+      const busyAccount = accountById(data, busyAccountId);
+      return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "参战成员"} 已在战斗房间中。`);
+    }
+    const participants = challengerIds
+      .map((accountId) => accountById(data, accountId))
+      .filter(Boolean)
+      .map((account) => battleParticipantSnapshot(data, account, "challenger"))
+      .concat(defenderIds
+        .map((accountId) => accountById(data, accountId))
+        .filter(Boolean)
+        .map((account) => battleParticipantSnapshot(data, account, "opponent")));
+    const room = {
+      roomId: `battle_room_${randomId()}`,
+      mode: BATTLE_MODE_MANOR_WAR,
+      status: BATTLE_ROOM_READY,
+      inviteId: "",
+      leaderAccountId: resolved.account.accountId,
+      seed: randomBytes(8).toString("hex"),
+      participantAccountIds,
+      entry: {
+        kind: "manor_war",
+        manorWar: {
+          warId: war.warId,
+          manorId: war.manorId,
+          manorName: String(manor.name || manor.label || war.manorId),
+          challengerFamilyId: challengerFamily.familyId,
+          challengerFamilyName: challengerFamily.name,
+          defenderFamilyId: defenderFamily.familyId,
+          defenderFamilyName: defenderFamily.name,
+          schemaVersion: 1,
+        },
+        schemaVersion: 1,
+      },
+      participants,
+      createdAt: isoNow(now),
+      updatedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+    room.battle = createBattleRoomBattleState(room, now);
+    battleRoomConnectionStateForMutation(room);
+    data.battleRooms[room.roomId] = room;
+    war.battleRoomId = room.roomId;
+    war.battleStartedAt = room.createdAt;
+    war.updatedAt = room.createdAt;
+    syncManorWarPower(data, war, manor);
+    recordBattleTrace(data, room, "manor_war_room_created", {
+      warId: war.warId,
+      manorId: war.manorId,
+      challengerCount: challengerIds.length,
+      defenderCount: defenderIds.length,
+      actorCount: Array.isArray(room.battle.actors) ? room.battle.actors.length : 0,
+    }, now);
+    save(data);
+    const targets = Array.from(new Set(challengerFamily.memberAccountIds.concat(defenderFamily.memberAccountIds)));
+    emitServiceEvent({
+      type: "battle.room_ready",
+      targetAccountIds: room.participantAccountIds.slice(),
+      invite: null,
+      room: publicBattleRoom(room),
+    });
+    emitServiceEvent({
+      type: "manor.war.room_ready",
+      targetAccountIds: targets,
+      war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
+      room: publicBattleRoom(room),
+    });
+    return ok({
+      room: publicBattleRoom(room),
+      war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
+      manors: publicManorsForAccount(data, resolved.account.accountId),
+      wars: publicManorWarsForAccount(data, resolved.account.accountId),
+      message: "庄园战房间已开启。",
+    });
+  }
+
   function resolveManorWar(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
@@ -300,6 +460,11 @@ function createFamilyManorDomain(ctx) {
     }
     if (family.familyId !== war.challengerFamilyId && family.familyId !== war.defenderFamilyId) {
       return fail("manor_war_family_mismatch", "只有参战家族族长可以开战结算。");
+    }
+    if (activeManorWarBattleRoom(data, war)) {
+      return fail("manor_war_room_active", "庄园战房间正在进行，结束后会自动结算。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
     }
     const manor = manorById(war.manorId);
     if (!manor) {
@@ -410,6 +575,11 @@ function createFamilyManorDomain(ctx) {
         war: publicManorWar(war, family.familyId, resolved.account.accountId),
       });
     }
+    if (activeManorWarBattleRoom(data, war)) {
+      return fail("manor_war_room_active", "庄园战房间已经开启，参战名单已锁定。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
     const side = warSideForFamily(war, family.familyId);
     if (side === "") {
       return fail("manor_war_family_mismatch", "只有参战家族成员可以加入这场庄园战。");
@@ -447,6 +617,11 @@ function createFamilyManorDomain(ctx) {
     }
     if (war.status !== MANOR_WAR_STATUS_SCHEDULED) {
       return fail("manor_war_closed", "这场庄园战已经结束。", {
+        war: publicManorWar(war, family.familyId, resolved.account.accountId),
+      });
+    }
+    if (activeManorWarBattleRoom(data, war)) {
+      return fail("manor_war_room_active", "庄园战房间已经开启，参战名单已锁定。", {
         war: publicManorWar(war, family.familyId, resolved.account.accountId),
       });
     }
@@ -529,6 +704,7 @@ function createFamilyManorDomain(ctx) {
     leaveFamily,
     listManors,
     challengeManor,
+    startManorWarBattleRoom,
     enterManorWar,
     leaveManorWar,
     resolveManorWar,
@@ -633,6 +809,8 @@ function publicManorBattle(battle) {
   return {
     battleId: battle.battleId,
     warId: String(battle.warId || ""),
+    battleRoomId: String(battle.battleRoomId || ""),
+    battleRecordId: String(battle.battleRecordId || ""),
     manorId: battle.manorId,
     manorName: battle.manorName,
     challengerFamilyId: battle.challengerFamilyId,
@@ -676,6 +854,8 @@ function publicManorWar(war, viewerFamilyId = "", viewerAccountId = "") {
     endsAt: String(war.endsAt || ""),
     resolvedAt: String(war.resolvedAt || ""),
     battleId: String(war.battleId || ""),
+    battleRoomId: String(war.battleRoomId || ""),
+    battleStartedAt: String(war.battleStartedAt || ""),
     winnerFamilyId: String(war.winnerFamilyId || ""),
     winnerFamilyName: String(war.winnerFamilyName || ""),
     result: String(war.result || ""),
@@ -696,6 +876,12 @@ function publicManorWar(war, viewerFamilyId = "", viewerAccountId = "") {
     canResolveByViewerFamily: status === MANOR_WAR_STATUS_SCHEDULED
       && viewerFamilyId !== ""
       && (String(war.challengerFamilyId || "") === viewerFamilyId || String(war.defenderFamilyId || "") === viewerFamilyId),
+    canStartBattleRoomByViewerFamily: status === MANOR_WAR_STATUS_SCHEDULED
+      && viewerFamilySide !== ""
+      && String(war.battleRoomId || "") === ""
+      && String(war.defenderFamilyId || "") !== ""
+      && challengerParticipants.length > 0
+      && defenderParticipants.length > 0,
     schemaVersion: 1,
   };
 }
@@ -887,6 +1073,172 @@ function activeManorWarForFamily(data, familyId) {
   return null;
 }
 
+function activeManorWarBattleRoom(data, war) {
+  const roomId = String(war && war.battleRoomId || "").trim();
+  if (!roomId) {
+    return null;
+  }
+  const room = objectOrEmpty(data && data.battleRooms)[roomId] || null;
+  return room && String(room.status || "") !== "closed" ? room : null;
+}
+
+function settleManorWarFromBattleRoomResult(data, room, result, ctx = {}) {
+  if (String(room && room.mode || "") !== "manor_war") {
+    return null;
+  }
+  const entry = room.entry && typeof room.entry === "object" && !Array.isArray(room.entry) ? room.entry : {};
+  const manorWarEntry = entry.manorWar && typeof entry.manorWar === "object" && !Array.isArray(entry.manorWar) ? entry.manorWar : {};
+  const warId = String(manorWarEntry.warId || "").trim();
+  if (!warId || !Array.isArray(data && data.manorWars)) {
+    return null;
+  }
+  const war = data.manorWars.find((entryWar) => entryWar && String(entryWar.warId || "") === warId) || null;
+  if (!war || war.status !== MANOR_WAR_STATUS_SCHEDULED) {
+    return null;
+  }
+  if (String(war.battleRoomId || "") && String(war.battleRoomId || "") !== String(room.roomId || "")) {
+    return null;
+  }
+  const manorEntriesFn = typeof ctx.manorEntries === "function" ? ctx.manorEntries : () => [];
+  const manor = manorByIdFromEntries(manorEntriesFn, war.manorId);
+  if (!manor) {
+    return null;
+  }
+  const nowFn = typeof ctx.now === "function" ? ctx.now : Date.now;
+  const randomIdFn = typeof ctx.randomId === "function" ? ctx.randomId : () => `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const challengerFamily = objectOrEmpty(data.families)[war.challengerFamilyId] || null;
+  const defenderFamily = war.defenderFamilyId ? objectOrEmpty(data.families)[war.defenderFamilyId] || null : null;
+  if (!challengerFamily) {
+    war.status = MANOR_WAR_STATUS_CANCELLED;
+    war.resolvedAt = new Date(nowFn()).toISOString();
+    war.updatedAt = war.resolvedAt;
+    war.result = "challenger_missing";
+    return null;
+  }
+  const winnerSide = manorWarWinnerSideFromRoom(room, result);
+  if (winnerSide === "") {
+    return null;
+  }
+  syncManorWarPower(data, war, manor);
+  const challengerPower = Math.max(0, Math.trunc(Number(war.challengerPower || 0)));
+  const defenderPower = Math.max(1, Math.trunc(Number(war.defenderPower || 0)));
+  const challengerVictory = winnerSide === "challenger";
+  const resolvedAt = new Date(nowFn()).toISOString();
+  const battle = {
+    battleId: `manor_battle_${randomIdFn()}`,
+    warId: war.warId,
+    battleRoomId: String(room.roomId || ""),
+    battleRecordId: String(result && result.battleRecordId || ""),
+    manorId: war.manorId,
+    manorName: String(manor.name || manor.label || war.manorId),
+    challengerFamilyId: challengerFamily.familyId,
+    challengerFamilyName: challengerFamily.name,
+    defenderFamilyId: defenderFamily ? defenderFamily.familyId : "",
+    defenderFamilyName: defenderFamily ? defenderFamily.name : "庄园守备队",
+    challengerPower,
+    defenderPower,
+    winnerFamilyId: challengerVictory ? challengerFamily.familyId : (defenderFamily ? defenderFamily.familyId : ""),
+    winnerFamilyName: challengerVictory ? challengerFamily.name : (defenderFamily ? defenderFamily.name : "庄园守备队"),
+    result: challengerVictory ? "challenger_win" : "defender_win",
+    createdAt: resolvedAt,
+    schemaVersion: 1,
+  };
+  war.status = MANOR_WAR_STATUS_RESOLVED;
+  war.resolvedAt = resolvedAt;
+  war.updatedAt = resolvedAt;
+  war.battleId = battle.battleId;
+  war.challengerPower = challengerPower;
+  war.defenderPower = defenderPower;
+  war.winnerFamilyId = battle.winnerFamilyId;
+  war.winnerFamilyName = battle.winnerFamilyName;
+  war.result = battle.result;
+  if (challengerVictory) {
+    occupyManor(data, manor, challengerFamily, defenderFamily, resolvedAt);
+    challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 20;
+    challengerFamily.updatedAt = resolvedAt;
+    data.families[challengerFamily.familyId] = challengerFamily;
+  } else {
+    challengerFamily.fame = Math.max(0, Math.trunc(Number(challengerFamily.fame || 0))) + 3;
+    challengerFamily.updatedAt = resolvedAt;
+    data.families[challengerFamily.familyId] = challengerFamily;
+    if (defenderFamily) {
+      defenderFamily.fame = Math.max(0, Math.trunc(Number(defenderFamily.fame || 0))) + 10;
+      defenderFamily.updatedAt = resolvedAt;
+      data.families[defenderFamily.familyId] = defenderFamily;
+    }
+  }
+  if (!Array.isArray(data.manorBattles)) {
+    data.manorBattles = [];
+  }
+  data.manorBattles.push(battle);
+  while (data.manorBattles.length > MANOR_BATTLE_RECORD_LIMIT) {
+    data.manorBattles.shift();
+  }
+  const targetAccountIds = Array.from(new Set(
+    uniqueStrings(challengerFamily.memberAccountIds).concat(defenderFamily ? uniqueStrings(defenderFamily.memberAccountIds) : [])
+  ));
+  return {
+    settled: true,
+    warId: war.warId,
+    battleId: battle.battleId,
+    manorId: war.manorId,
+    winnerFamilyId: battle.winnerFamilyId,
+    winnerFamilyName: battle.winnerFamilyName,
+    targetAccountIds,
+    battle: publicManorBattle(battle),
+    war: publicManorWar(war),
+    manor: publicManor(manor, data),
+  };
+}
+
+function manorWarWinnerSideFromRoom(room, result) {
+  const winnerAccountId = String(result && result.winnerAccountId || "").trim();
+  const winnerSide = manorWarSideForRoomAccount(room, winnerAccountId);
+  if (winnerSide !== "") {
+    return winnerSide;
+  }
+  const closedBySide = manorWarSideForRoomAccount(room, String(result && result.closedByAccountId || "").trim());
+  if (closedBySide === "challenger") {
+    return "defender";
+  }
+  if (closedBySide === "defender") {
+    return "challenger";
+  }
+  const loserSides = new Set((Array.isArray(result && result.loserAccountIds) ? result.loserAccountIds : [])
+    .map((accountId) => manorWarSideForRoomAccount(room, accountId))
+    .filter(Boolean));
+  if (loserSides.size === 1 && loserSides.has("challenger")) {
+    return "defender";
+  }
+  if (loserSides.size === 1 && loserSides.has("defender")) {
+    return "challenger";
+  }
+  return "";
+}
+
+function manorWarSideForRoomAccount(room, accountId) {
+  const normalizedAccountId = String(accountId || "").trim();
+  if (!normalizedAccountId) {
+    return "";
+  }
+  const participant = (Array.isArray(room && room.participants) ? room.participants : []).find((entry) => (
+    entry && String(entry.accountId || "") === normalizedAccountId
+  )) || null;
+  const side = String(participant && participant.side || "");
+  if (side === "challenger") {
+    return "challenger";
+  }
+  if (side === "opponent" || side === "defender") {
+    return "defender";
+  }
+  return "";
+}
+
+function manorByIdFromEntries(manorEntriesFn, manorId) {
+  const normalizedManorId = normalizeManorId(manorId);
+  return manorEntriesFn().find((manor) => normalizeManorId(manor.id) === normalizedManorId) || null;
+}
+
 function normalizedManorWars(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -1027,4 +1379,5 @@ module.exports = {
   familyForAccount,
   familyOwnsManor,
   publicManorBattle,
+  settleManorWarFromBattleRoomResult,
 };
