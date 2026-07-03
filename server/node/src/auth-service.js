@@ -1580,6 +1580,7 @@ function createAuthService(options = {}) {
 function createMemoryAuthStore(initialData = null) {
   let data = normalizeData(initialData || {});
   return {
+    mode: "memory",
     load() {
       return clone(data);
     },
@@ -1591,6 +1592,7 @@ function createMemoryAuthStore(initialData = null) {
 
 function createJsonAuthStore(filePath) {
   return {
+    mode: "json",
     load() {
       if (!fs.existsSync(filePath)) {
         return {};
@@ -1617,6 +1619,7 @@ function createAsyncWriteAuthStore(store, options = {}) {
   let lastSaveError = null;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
   return {
+    mode: store.mode ? `async:${store.mode}` : "async",
     load() {
       return store.load();
     },

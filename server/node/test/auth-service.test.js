@@ -4524,10 +4524,12 @@ test("battle rooms are runtime-only and are not restored from the auth store", (
 
 test("battle rooms preserve short reconnects and close after disconnect grace", () => {
   let nowMs = Date.parse("2026-01-01T00:00:00.000Z");
+  const structuredLogs = [];
   const service = createAuthService({
     "store": createMemoryAuthStore(),
     "now": () => nowMs,
   });
+  createHttpServer({service, logger: (entry) => structuredLogs.push(entry)});
   const challenger = service.register({"username": "recona", "password": "test1234", "displayName": "重连甲"});
   const opponent = service.register({"username": "reconb", "password": "test1234", "displayName": "重连乙"});
   assert.equal(challenger.ok, true);
@@ -4558,6 +4560,11 @@ test("battle rooms preserve short reconnects and close after disconnect grace", 
   assert.equal(closedRoom.status, "closed");
   assert.equal(closedRoom.battle.result.winnerAccountId, opponent.account.accountId);
   assert.deepEqual(closedRoom.battle.result.loserAccountIds, [challenger.account.accountId]);
+  const settlementLog = structuredLogs.find((entry) => entry.type === "battle.settlement" && entry.roomId === roomId);
+  assert.notEqual(settlementLog, undefined);
+  assert.equal(settlementLog.reason, "disconnect_timeout");
+  assert.equal(settlementLog.profileWritebackCount >= 0, true);
+  assert.equal(Array.isArray(settlementLog.skippedProfiles), true);
 });
 
 test("battle rooms close cleanly when both participants miss reconnect grace", () => {
@@ -4720,8 +4727,9 @@ test("players can chat nearby and inside server parties", () => {
 });
 
 test("HTTP server exposes auth and session endpoints", async (t) => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
-  const server = createHttpServer({service});
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(() => server.close());
@@ -4732,6 +4740,10 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(health.ok, true);
   assert.equal(health.protocolVersion, PROTOCOL_VERSION);
   assert.equal(health.serverVersion, SERVER_VERSION);
+  assert.equal(health.storage.ok, true);
+  assert.equal(health.storage.checked, true);
+  assert.equal(health.storage.mode, "memory");
+  assert.equal(health.eventStream.clients, 0);
 
   const registered = await fetchJson(`${base}/auth/register`, {
     "method": "POST",
@@ -4913,8 +4925,9 @@ test("HTTP server exposes server-authoritative shop transaction endpoint", async
 });
 
 test("HTTP server exposes server-authoritative profile action endpoint", async (t) => {
+  const structuredLogs = [];
   const service = createAuthService({"store": createMemoryAuthStore()});
-  const server = createHttpServer({service});
+  const server = createHttpServer({service, logger: (entry) => structuredLogs.push(entry)});
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(() => server.close());
@@ -4952,6 +4965,15 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
   assert.equal(healed.profileSummary.serverAuthority, "profile_document");
   assert.equal(healed.profile.petInstances.find((pet) => pet.instanceId === "http_pet_action").hp, 38);
   assert.equal(profileItemCount(healed.profile, "item_meat_small"), 0);
+  await new Promise((resolve) => setImmediate(resolve));
+  const profileActionRequestLog = structuredLogs.find((entry) => entry.type === "http.request" && entry.path === "/profile/action");
+  assert.notEqual(profileActionRequestLog, undefined);
+  assert.equal(profileActionRequestLog.statusCode, 200);
+  assert.equal(profileActionRequestLog.durationMs >= 0, true);
+  const profileWriteLog = structuredLogs.find((entry) => entry.type === "profile.writeback" && entry.path === "/profile/action");
+  assert.notEqual(profileWriteLog, undefined);
+  assert.equal(profileWriteLog.playerId, healed.profileSummary.playerId);
+  assert.equal(profileWriteLog.profileRevision, 2);
 
   const partners = await fetchJson(`${base}/profile/action`, {
     "method": "POST",

@@ -31,6 +31,7 @@ Optional environment variables:
 - `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
 - `BEASTBOUND_MYSQL_CREATE_DATABASE`: set to `1` only when the configured MySQL user is allowed to create the database. Local live-server setup creates the database once with root, then runs the app account with this set to `0`.
 - `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
+- `BEASTBOUND_STRUCTURED_LOGS`: set to `1` to write JSON lines for HTTP request duration, profile writebacks, and battle settlements.
 
 ## Local MySQL Live Server
 
@@ -67,6 +68,16 @@ Every non-health HTTP request must include:
 - `X-Beastbound-Protocol-Version`: client protocol version, currently `1`.
 
 Every JSON response includes `protocolVersion`, `serverVersion`, `minClientProtocolVersion`, `maxClientProtocolVersion`, and a reserved `hotUpdate` object. Incompatible or missing client protocol metadata returns HTTP `426` with `protocol_version_mismatch` or `client_version_missing` plus a Chinese upgrade prompt. WebSocket event streams carry the same fields as query parameters: `clientVersion` and `clientProtocolVersion`.
+
+## Health And Logs
+
+`GET /health` returns protocol metadata plus `storage` and `eventStream` summaries. When the HTTP server is created with a store, `storage.checked=true` means the endpoint ran one lightweight `store.load()` check; failed storage checks return HTTP `503`.
+
+Structured logs use one JSON object per event with `schemaVersion` and `createdAt`. Current event types:
+
+- `http.request`: method, path, statusCode, ok, durationMs.
+- `profile.writeback`: method, path, profileRevision, storageMode, serverAuthority.
+- `battle.settlement`: roomId, mode, reason, winnerAccountId, battleRecordId, profileWritebackCount, skippedProfileCount, skippedProfiles.
 
 ## Current Endpoints
 

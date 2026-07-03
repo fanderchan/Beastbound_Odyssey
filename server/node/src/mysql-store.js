@@ -194,6 +194,7 @@ function createMysqlAuthStore(options = {}) {
   }
 
   return {
+    mode: "mysql",
     load() {
       ensureSchema();
       const output = runMysql(config, config.database, "SELECT CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth';");

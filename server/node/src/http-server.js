@@ -30,12 +30,33 @@ function createHttpServer(options = {}) {
   const service = options.service || createAuthService();
   const commandCatalog = options.commandCatalog || DEFAULT_COMMAND_CATALOG;
   const eventHub = options.eventHub || createEventHub(service);
+  const store = options.store || null;
+  const logger = createStructuredLogger(options.logger);
+  const unsubscribeServiceLogger = installServiceEventLogger(service, logger);
 
   const server = http.createServer(async (req, res) => {
+    const startedAt = process.hrtime.bigint();
+    const url = new URL(req.url || "/", "http://127.0.0.1");
+    res.beastboundLogger = logger;
+    res.beastboundRequestContext = {
+      method: String(req.method || ""),
+      path: url.pathname,
+      startedAt,
+    };
+    res.on("finish", () => {
+      logStructured(logger, {
+        type: "http.request",
+        method: String(req.method || ""),
+        path: url.pathname,
+        statusCode: res.statusCode,
+        ok: res.statusCode < 400,
+        durationMs: durationMsSince(startedAt),
+      });
+    });
     try {
-      const url = new URL(req.url || "/", "http://127.0.0.1");
       if (req.method === "GET" && url.pathname === "/health") {
-        return sendJson(res, 200, {"ok": true, "service": "beastbound-auth"});
+        const health = healthPayload(store, eventHub);
+        return sendJson(res, health.ok ? 200 : 503, health);
       }
       const protocol = protocolCompatibility(req, url);
       if (!protocol.ok) {
@@ -221,6 +242,7 @@ function createHttpServer(options = {}) {
       return sendJson(res, 500, {"ok": false, "code": "server_error", "message": error.message});
     }
   });
+  server.on("close", unsubscribeServiceLogger);
   server.on("upgrade", (req, socket, head) => {
     const handled = eventHub.handleUpgrade(req, socket, head);
     if (!handled && !socket.destroyed) {
@@ -235,10 +257,12 @@ function createHttpServer(options = {}) {
 }
 
 function sendResult(res, result) {
+  let status = 200;
   if (result.ok) {
+    logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
     return sendJson(res, 200, result);
   }
-  let status = 400;
+  status = 400;
   if (result.code === "auth_rate_limited" || result.code === "auth_backoff") {
     status = 429;
   } else if (result.code && result.code.includes("denied")) {
@@ -248,6 +272,7 @@ function sendResult(res, result) {
   } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {
     status = 426;
   }
+  logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
   return sendJson(res, status, result);
 }
 
@@ -300,6 +325,138 @@ function requestClientIp(req) {
     return forwarded;
   }
   return String(req.socket && req.socket.remoteAddress || "");
+}
+
+function healthPayload(store, eventHub) {
+  const storage = storageHealth(store);
+  return {
+    ok: storage.ok !== false,
+    service: "beastbound-auth",
+    storage,
+    eventStream: {
+      clients: eventHub && typeof eventHub.clientCount === "function" ? eventHub.clientCount() : 0,
+    },
+  };
+}
+
+function storageHealth(store) {
+  const mode = storeMode(store);
+  if (!store || typeof store.load !== "function") {
+    return {
+      ok: null,
+      checked: false,
+      mode,
+      message: "未提供存储实例，跳过存储连通性检查。",
+    };
+  }
+  const startedAt = process.hrtime.bigint();
+  try {
+    store.load();
+    return {
+      ok: true,
+      checked: true,
+      mode,
+      latencyMs: durationMsSince(startedAt),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      checked: true,
+      mode,
+      latencyMs: durationMsSince(startedAt),
+      message: error.message,
+    };
+  }
+}
+
+function storeMode(store) {
+  if (!store) {
+    return "unknown";
+  }
+  return String(store.mode || store.kind || store.storeMode || "custom");
+}
+
+function createStructuredLogger(logger) {
+  if (logger === false) {
+    return null;
+  }
+  if (typeof logger === "function") {
+    return logger;
+  }
+  if (logger && typeof logger.log === "function") {
+    return (entry) => logger.log(entry);
+  }
+  if (process.env.BEASTBOUND_STRUCTURED_LOGS === "1") {
+    return (entry) => console.log(JSON.stringify(entry));
+  }
+  return null;
+}
+
+function logStructured(logger, entry) {
+  if (typeof logger !== "function") {
+    return;
+  }
+  try {
+    logger({
+      ...entry,
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+    });
+  } catch {
+    // Logging must not affect gameplay or auth responses.
+  }
+}
+
+function logProfileWriteback(logger, context, result, statusCode) {
+  if (!result || !result.ok || !result.profileSummary || !context || context.method === "GET") {
+    return;
+  }
+  const summary = result.profileSummary && typeof result.profileSummary === "object" && !Array.isArray(result.profileSummary)
+    ? result.profileSummary
+    : {};
+  logStructured(logger, {
+    type: "profile.writeback",
+    method: context.method,
+    path: context.path,
+    statusCode,
+    playerId: String(summary.playerId || ""),
+    profileRevision: Number(summary.profileRevision || 0),
+    storageMode: String(summary.storageMode || ""),
+    serverAuthority: String(summary.serverAuthority || ""),
+  });
+}
+
+function installServiceEventLogger(service, logger) {
+  if (!service || typeof service.onEvent !== "function" || typeof logger !== "function") {
+    return () => {};
+  }
+  return service.onEvent((event) => {
+    if (!event || event.type !== "battle.room_closed") {
+      return;
+    }
+    const room = event.room && typeof event.room === "object" && !Array.isArray(event.room) ? event.room : {};
+    const battle = room.battle && typeof room.battle === "object" && !Array.isArray(room.battle) ? room.battle : {};
+    const writeback = battle.profileWriteback && typeof battle.profileWriteback === "object" && !Array.isArray(battle.profileWriteback)
+      ? battle.profileWriteback
+      : {};
+    const result = event.result && typeof event.result === "object" && !Array.isArray(event.result) ? event.result : {};
+    const skippedProfiles = Array.isArray(writeback.skippedProfiles) ? writeback.skippedProfiles : [];
+    logStructured(logger, {
+      type: "battle.settlement",
+      roomId: String(event.roomId || room.roomId || ""),
+      mode: String(room.mode || ""),
+      reason: String(event.reason || result.reason || room.closeReason || ""),
+      winnerAccountId: String(result.winnerAccountId || ""),
+      battleRecordId: String(result.battleRecordId || ""),
+      profileWritebackCount: Array.isArray(writeback.profiles) ? writeback.profiles.length : 0,
+      skippedProfileCount: skippedProfiles.length,
+      skippedProfiles,
+    });
+  });
+}
+
+function durationMsSince(startedAt) {
+  return Number((Number(process.hrtime.bigint() - startedAt) / 1e6).toFixed(3));
 }
 
 if (require.main === module) {
