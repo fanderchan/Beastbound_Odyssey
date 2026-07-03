@@ -44,6 +44,20 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check,--auto-server-prof
 node tools/run_godot_auto_checks.mjs --from --auto-server-battle-return-check --fail-fast
 ```
 
+## 本地 CI
+
+默认运行 diff 检查、服务端测试、客户端全量自动检查，以及 idle / 移动 / 连点 / 商店 / 属性点性能基线：
+
+```sh
+node tools/run_local_ci.mjs
+```
+
+开发脚本本身时可用 quick 模式缩短 Godot 自动检查范围：
+
+```sh
+node tools/run_local_ci.mjs --quick
+```
+
 ## 后端检查
 
 ```sh

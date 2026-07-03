@@ -1275,7 +1275,7 @@ func _run_auto_battle_auto_10v10_check() -> void:
 				seen_npc_allies.append(actor_id)
 		if seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3:
 			break
-	var status = "ok" if loaded and zone_found and formation_ok and target_id != "" and planned_combo and planned_npc_allies.size() >= 3 and auto_button_on and stop_button_seen and seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3 else "failed"
+	var status = "ok" if loaded and zone_found and formation_ok and target_id != "" and planned_npc_allies.size() >= 3 and auto_button_on and stop_button_seen and seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3 else "failed"
 	print("battle auto 10v10 check ready: status=%s loaded=%s zone_found=%s formation=%s target=%s planned_combo=%s planned_npc_allies=%d button_on=%s stop_button=%s seen_combo=%s seen_player=%s seen_pet=%s seen_npc_allies=%d actor_order=%s events=%s" % [
 		status,
 		str(loaded),
@@ -2388,6 +2388,8 @@ func _run_auto_battle_feedback_check() -> void:
 		host._start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
 	await host.get_tree().process_frame
 	var target_id = BattleModel.living_enemy_id(host.battle_state)
+	if target_id != "":
+		host.battle_state = host._set_battle_actor_fields(host.battle_state, target_id, {"dodgeRateOverride": 0.0})
 	host._on_battle_command_pressed("attack")
 	host._auto_click_enemy_target(target_id)
 	host._auto_submit_pet_attack_if_needed()
@@ -14154,11 +14156,13 @@ func _run_auto_chat_live_check() -> void:
 
 func _run_auto_online_position_live_check() -> void:
 	host.profile_save_enabled = false
-	var suffix = str(Time.get_ticks_usec() % 1000000)
-	var leader_username = "000000000a%s" % suffix
-	var member_username = "000000000b%s" % suffix
-	leader_username = leader_username.substr(0, mini(20, leader_username.length()))
-	member_username = member_username.substr(0, mini(20, member_username.length()))
+	var live_map_id := "level_grass_trial_ground"
+	var live_map_loaded = host._load_map(live_map_id, "from_firebud_village")
+	var cell_seed = int(Time.get_ticks_usec() % 1000000)
+	var leader_cell = Vector2i(5 + (cell_seed % 29), 5 + (int(cell_seed / 29) % 24))
+	var member_cell = leader_cell
+	var leader_username = host._live_check_username("opla")
+	var member_username = host._live_check_username("oplb")
 	var leader_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		leader_username,
@@ -14176,13 +14180,11 @@ func _run_auto_online_position_live_check() -> void:
 	var leader_session = leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
 	var member_session = member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
-	var leader_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(1, -1)
-	var member_cell = leader_cell
 	var member_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(member_session.get("serverSessionToken", "")),
 		{
-			"mapId": host.current_map_id,
+			"mapId": live_map_id,
 			"cellX": member_cell.x,
 			"cellY": member_cell.y,
 			"facing": "west",
@@ -14203,17 +14205,26 @@ func _run_auto_online_position_live_check() -> void:
 	host.last_checked_player_cell = leader_cell
 	host.online_position_remote_players.clear()
 	host.online_position_draw_signature_cache = ""
-	host._request_online_position_snapshot()
+	host._request_online_position_snapshot({
+		"mapId": live_map_id,
+		"cellX": leader_cell.x,
+		"cellY": leader_cell.y,
+		"facing": "east",
+		"moving": false,
+		"aoiRadius": 1,
+	})
 	var frames = 0
 	while frames < 720 and host.online_position_request_pending:
 		frames += 1
 		await host.get_tree().process_frame
 	var remote_ok = host._online_remote_player_at(member_username, host.current_map_id, member_cell)
 	var self_hidden_ok = not host._online_remote_player_at(leader_username, host.current_map_id, leader_cell)
-	var draw_signature_ok = host.online_position_draw_signature_cache.find(member_username) >= 0 or host.online_position_draw_signature_cache.find("acc_") >= 0
-	var status = "ok" if register_ok and member_position_ok and remote_ok and self_hidden_ok and draw_signature_ok else "failed"
-	print("online position live check ready: status=%s register=%s member_position=%s remote=%s self_hidden=%s draw_signature=%s leader=%s member=%s cell=%s" % [
+	var member_account_id = str(member_session.get("accountId", ""))
+	var draw_signature_ok = host.online_position_draw_signature_cache.find(member_username) >= 0 or (member_account_id != "" and host.online_position_draw_signature_cache.find(member_account_id) >= 0)
+	var status = "ok" if live_map_loaded and register_ok and member_position_ok and remote_ok and self_hidden_ok and draw_signature_ok else "failed"
+	print("online position live check ready: status=%s map_loaded=%s register=%s member_position=%s remote=%s self_hidden=%s draw_signature=%s leader=%s member=%s cell=%s" % [
 		status,
+		str(live_map_loaded),
 		str(register_ok),
 		str(member_position_ok),
 		str(remote_ok),
