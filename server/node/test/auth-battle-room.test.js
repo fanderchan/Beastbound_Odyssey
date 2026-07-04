@@ -825,7 +825,16 @@ test("party pve waiting battle removes offline non-leader members and resolves r
     "targetActorId": enemy.actorId,
   }).turn, null);
 
-  nowMs += 30 * 1000;
+  const disconnected = service.markBattleConnection(member.session.token, false);
+  assert.equal(disconnected.ok, true);
+  nowMs += 20 * 1000;
+  assert.equal(service.getSession(member.session.token).ok, true);
+  nowMs += 9 * 1000;
+  const beforeGraceState = service.getBattleState(leader.session.token);
+  assert.equal(beforeGraceState.ok, true);
+  assert.deepEqual(beforeGraceState.room.participantAccountIds.sort(), [leader.account.accountId, member.account.accountId].sort());
+  assert.equal(beforeGraceState.room.battle.round, 1);
+  nowMs += 1 * 1000;
   const state = service.getBattleState(leader.session.token);
   assert.equal(state.ok, true);
   assert.deepEqual(state.room.participantAccountIds, [leader.account.accountId]);
@@ -851,6 +860,78 @@ test("party pve waiting battle removes offline non-leader members and resolves r
     Array.isArray(event.removedAccountIds) &&
     event.removedAccountIds.includes(member.account.accountId)
   )), true);
+});
+
+test("party pve battle maintenance removes disconnected members after offline grace", () => {
+  let nowMs = Date.parse("2026-02-03T01:30:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const leader = service.register({"username": "pvemaintdropa", "password": "test1234", "displayName": "维护队长"});
+  const member = service.register({"username": "pvemaintdropb", "password": "test1234", "displayName": "维护队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("维护队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+      "petId": "maint_drop_leader_pet",
+      "name": "队长布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 65,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("维护队员", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 72}, {
+      "petId": "maint_drop_member_pet",
+      "name": "队员布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 64,
+    }),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  assert.equal(service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvemaintdropb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "maint_drop_grass",
+      "name": "维护掉线草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "维护乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const roomId = encounter.room.roomId;
+  assert.equal(service.markBattleConnection(member.session.token, false).ok, true);
+  nowMs += 20 * 1000;
+  assert.equal(service.getSession(member.session.token).ok, true);
+  nowMs += 9 * 1000;
+  const earlyMaintenance = service.runBattleMaintenance();
+  assert.equal(earlyMaintenance.ok, true);
+  assert.equal(earlyMaintenance.events.some((event) => event.type === "battle.room_updated"), false);
+  assert.deepEqual(service.snapshot().battleRooms[roomId].participantAccountIds.sort(), [leader.account.accountId, member.account.accountId].sort());
+  nowMs += 1 * 1000;
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+  const roomUpdate = maintenance.events.find((event) => event.type === "battle.room_updated" && event.reason === "party_member_offline");
+  assert.equal(Boolean(roomUpdate), true);
+  assert.deepEqual(roomUpdate.removedAccountIds, [member.account.accountId]);
+  assert.equal(service.snapshot().battleRooms[roomId].status, "ready");
+  assert.deepEqual(service.snapshot().battleRooms[roomId].participantAccountIds, [leader.account.accountId]);
+  assert.equal(service.getPartyState(member.session.token).party, null);
 });
 
 test("party pve encounters support a solo server account without local battle fallback", () => {
