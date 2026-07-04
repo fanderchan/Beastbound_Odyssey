@@ -8,6 +8,7 @@ const ServerAuthClientModel := preload("res://scripts/progression/server_auth_cl
 
 const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
+const SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS := 0.62
 
 var host
 
@@ -151,7 +152,7 @@ func request_waiting_state_poll() -> void:
 		host._clear_stale_server_battle_room(host._server_battle_stale_room_message())
 
 
-func apply_polled_room(room: Dictionary, expected_room_id: String = "") -> void:
+func apply_polled_room(room: Dictionary, expected_room_id: String = "", allow_escape_preview: bool = true) -> void:
 	if room.is_empty() or not host._battle_is_server_authority():
 		return
 	var room_id := str(room.get("roomId", "")).strip_edges()
@@ -164,6 +165,9 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "") -> void:
 	host.server_battle_state["room"] = room.duplicate(true)
 	var room_closed := str(room.get("status", "")).strip_edges() == "closed"
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	if allow_escape_preview and _start_escape_preview_for_missing_room_actors(battle):
+		_apply_polled_room_after_escape_preview(room, expected_room_id)
+		return
 	var last_event_list := battle.get("lastEventList", {}) as Dictionary if battle.get("lastEventList", {}) is Dictionary else {}
 	if not last_event_list.is_empty():
 		var turn_key: String = host._server_battle_turn_key(last_event_list)
@@ -193,6 +197,20 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "") -> void:
 		host._sync_server_battle_room_scene(false)
 	elif local_phase == "server_waiting" and room_phase == "command":
 		host._sync_server_battle_room_scene(false)
+
+
+func _apply_polled_room_after_escape_preview(room: Dictionary, expected_room_id: String = "") -> void:
+	await host.get_tree().create_timer(SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS).timeout
+	if not host._battle_is_server_authority():
+		host._clear_battle_escape_preview()
+		return
+	var updated_room_id := str(room.get("roomId", "")).strip_edges()
+	var active_room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
+	if updated_room_id != "" and active_room_id != "" and updated_room_id != active_room_id:
+		host._clear_battle_escape_preview()
+		return
+	apply_polled_room(room, expected_room_id, false)
+	host._clear_battle_escape_preview()
 
 
 func request_state_restore() -> void:
@@ -254,7 +272,7 @@ func apply_battle_event(event: Dictionary) -> void:
 
 
 func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dictionary) -> void:
-	await host.get_tree().create_timer(0.62).timeout
+	await host.get_tree().create_timer(SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS).timeout
 	if not host._battle_is_server_authority():
 		host._clear_battle_escape_preview()
 		return
@@ -309,6 +327,51 @@ func _start_escape_preview_for_room_update(event: Dictionary) -> bool:
 	host.battle_escape_preview_started_msec = Time.get_ticks_msec()
 	host.queue_redraw()
 	return true
+
+
+func _start_escape_preview_for_missing_room_actors(battle: Dictionary) -> bool:
+	var local_actor_ids := _missing_local_ally_actor_ids_for_room_battle(battle)
+	if local_actor_ids.is_empty():
+		return false
+	host.battle_escape_preview_actor_ids = local_actor_ids
+	host.battle_escape_preview_started_msec = Time.get_ticks_msec()
+	host.queue_redraw()
+	return true
+
+
+func _missing_local_ally_actor_ids_for_room_battle(battle: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	if not host._battle_is_server_authority() or not host.battle_active:
+		return result
+	var next_server_actor_ids := {}
+	var next_actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	for value in next_actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var server_actor_id := str(actor.get("actorId", "")).strip_edges()
+		if server_actor_id != "":
+			next_server_actor_ids[server_actor_id] = true
+	var self_account_id := str(host.current_account_session.get("accountId", "")).strip_edges()
+	var local_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	for value in local_actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var local_actor_id := str(actor.get("id", "")).strip_edges()
+		var server_actor_id := str(actor.get("serverActorId", "")).strip_edges()
+		var actor_account_id := str(actor.get("serverAccountId", "")).strip_edges()
+		if local_actor_id == "" or server_actor_id == "":
+			continue
+		if str(actor.get("side", "")).strip_edges() != BattleModel.SIDE_ALLY:
+			continue
+		if self_account_id != "" and actor_account_id == self_account_id:
+			continue
+		if next_server_actor_ids.has(server_actor_id):
+			continue
+		if not result.has(local_actor_id):
+			result.append(local_actor_id)
+	return result
 
 
 func _local_actor_id_for_server_actor_id(server_actor_id: String) -> String:

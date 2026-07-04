@@ -17405,6 +17405,55 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		elif str(actor.get("username", "")) == member_username and str(actor.get("kind", "")) == "pet":
 			member_pet_id = actor_id
 	var actor_ids_ok = leader_player_id != "" and leader_pet_id != "" and member_player_id != "" and member_pet_id != "" and enemy_id != ""
+	var polled_escape_preview_started_ok = false
+	var polled_escape_preview_motion_ok = false
+	var polled_escape_sync_ok = false
+	if actor_ids_ok:
+		var saved_session: Dictionary = host.current_account_session.duplicate(true)
+		var leader_client_session: Dictionary = leader_session.duplicate(true)
+		leader_client_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+		leader_client_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
+		host.current_account_session = leader_client_session
+		host._apply_server_battle_room_state(second_room, false)
+		var dropped_room := second_room.duplicate(true)
+		var dropped_battle := (dropped_room.get("battle", {}) as Dictionary).duplicate(true) if dropped_room.get("battle", {}) is Dictionary else {}
+		var dropped_actors: Array = []
+		for value in (dropped_battle.get("actors", []) if dropped_battle.get("actors", []) is Array else []):
+			if value is Dictionary and str((value as Dictionary).get("username", "")) == member_username:
+				continue
+			dropped_actors.append(value)
+		dropped_battle["actors"] = dropped_actors
+		dropped_battle["requiredAccountIds"] = [str(leader_session.get("accountId", ""))]
+		dropped_battle["requiredActorIds"] = [leader_player_id, leader_pet_id]
+		dropped_room["battle"] = dropped_battle
+		dropped_room["participantAccountIds"] = [str(leader_session.get("accountId", ""))]
+		var dropped_participants: Array = []
+		for value in (dropped_room.get("participants", []) if dropped_room.get("participants", []) is Array else []):
+			if value is Dictionary and str((value as Dictionary).get("username", "")) == member_username:
+				continue
+			dropped_participants.append(value)
+		dropped_room["participants"] = dropped_participants
+		host._apply_polled_server_battle_room(dropped_room, second_room_id)
+		polled_escape_preview_started_ok = host.battle_escape_preview_actor_ids.size() >= 2
+		if polled_escape_preview_started_ok:
+			var preview_actor_id = str(host.battle_escape_preview_actor_ids[0])
+			var preview_actor = BattleModel.actor_by_id(host.battle_state, preview_actor_id)
+			for _i in range(8):
+				await host.get_tree().process_frame
+			var preview_offset = host._battle_actor_escape_preview_offset(
+				preview_actor_id,
+				str(preview_actor.get("side", BattleModel.SIDE_ALLY)),
+				host._battle_actor_visual_scale()
+			)
+			polled_escape_preview_motion_ok = preview_offset.length() > 4.0
+		await host.get_tree().create_timer(0.72).timeout
+		await host.get_tree().process_frame
+		var synced_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+		polled_escape_sync_ok = synced_actors.all(func(value) -> bool:
+			return not (value is Dictionary and str((value as Dictionary).get("serverUsername", "")) == member_username)
+		)
+		host.current_account_session = saved_session
+		host._apply_server_battle_room_state(second_room, false)
 	var leader_player_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", "")),
@@ -17553,8 +17602,8 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		))
 	host._end_battle(true)
 	host._stop_server_event_stream()
-	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
-	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s restore_poll=%s restore_parts=%s/%s/%s/%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
+	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and polled_escape_preview_started_ok and polled_escape_preview_motion_ok and polled_escape_sync_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
+	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s restore_poll=%s restore_parts=%s/%s/%s/%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s polled_escape=%s/%s/%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
 		status,
 		str(register_ok),
 		str(profile_ok),
@@ -17572,6 +17621,9 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		str(rejoin_ok),
 		str(second_start_ok),
 		str(actor_ids_ok),
+		str(polled_escape_preview_started_ok),
+		str(polled_escape_preview_motion_ok),
+		str(polled_escape_sync_ok),
 		str(commands_ok),
 		str(member_round2_commands_ok),
 		str(actor_missing_room_ok),
