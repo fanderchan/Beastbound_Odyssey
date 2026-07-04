@@ -173,6 +173,8 @@ const BATTLE_LAUNCH_STRAIGHT_SECONDS := 1.45
 const BATTLE_LAUNCH_BOUNCE_SECONDS := 1.95
 const BATTLE_LAUNCH_FINISH_HOLD_RATIO := 0.86
 const BATTLE_AUTO_ROUND_SETTLE_DELAY := 0.24
+const BATTLE_ESCAPE_PREVIEW_SECONDS := 0.62
+const BATTLE_ESCAPE_PREVIEW_DISTANCE := 108.0
 const GM_BATTLE_SPEED_MIN := 1
 const GM_BATTLE_SPEED_MAX := 10
 const ENCOUNTER_POST_BATTLE_GRACE_SECONDS := 1.0
@@ -997,6 +999,8 @@ var battle_last_event_launch_mode: String = ""
 var battle_last_event_ledger: Dictionary = {}
 var battle_recorded_event_sequence: int = 0
 var battle_float_texts: Array[Dictionary] = []
+var battle_escape_preview_actor_ids: Array[String] = []
+var battle_escape_preview_started_msec: int = 0
 var battle_command_countdown_remaining: float = 99.0
 var battle_command_countdown_last_second: int = -1
 var battle_round_display_last_text: String = ""
@@ -7087,6 +7091,41 @@ func _server_battle_room_is_party_pve(room: Dictionary) -> bool:
 func _current_server_battle_is_party_pve() -> bool:
 	return _panel_flow()._current_server_battle_is_party_pve()
 
+func _start_server_battle_escape_preview_if_needed() -> void:
+	_clear_battle_escape_preview()
+	if not _battle_is_server_authority():
+		return
+	if not _current_server_battle_is_party_pve():
+		return
+	if not _current_player_is_party_member():
+		return
+	var self_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	var actor_ids: Array[String] = []
+	for value in battle_state.get("actors", []):
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var actor_id := str(actor.get("id", "")).strip_edges()
+		var actor_account_id := str(actor.get("serverAccountId", actor.get("accountId", ""))).strip_edges()
+		if actor_id != "" and self_account_id != "" and actor_account_id == self_account_id:
+			actor_ids.append(actor_id)
+	if actor_ids.is_empty():
+		var player_actor_id := BattleModel.player_actor_id(battle_state)
+		if player_actor_id != "":
+			actor_ids.append(player_actor_id)
+		var pet_actor_id := BattleModel.controlled_pet_id(battle_state)
+		if pet_actor_id != "":
+			actor_ids.append(pet_actor_id)
+	if actor_ids.is_empty():
+		return
+	battle_escape_preview_actor_ids = actor_ids
+	battle_escape_preview_started_msec = Time.get_ticks_msec()
+	queue_redraw()
+
+func _clear_battle_escape_preview() -> void:
+	battle_escape_preview_actor_ids.clear()
+	battle_escape_preview_started_msec = 0
+
 func _server_battle_stale_room_message() -> String:
 	return _panel_flow()._server_battle_stale_room_message()
 
@@ -12275,6 +12314,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var large_formation := _battle_uses_10v10_formation_template()
 	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
 	pos += event_offset
+	pos += _battle_actor_escape_preview_offset(actor_id, side, visual_scale)
 	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
 		_draw_battle_actor_home_shadow(actor, home_pos, visual_scale, side, kind)
 	var show_actor_name := _battle_should_show_actor_label(actor)
@@ -12656,6 +12696,16 @@ func _battle_actor_state_offset(state: String, side: String, visual_scale: float
 			return Vector2(0, 16) * visual_scale
 		_:
 			return Vector2.ZERO
+
+func _battle_actor_escape_preview_offset(actor_id: String, side: String, visual_scale: float) -> Vector2:
+	if battle_escape_preview_started_msec <= 0 or not battle_escape_preview_actor_ids.has(actor_id):
+		return Vector2.ZERO
+	var age_seconds := float(Time.get_ticks_msec() - battle_escape_preview_started_msec) / 1000.0
+	if age_seconds < 0.0:
+		return Vector2.ZERO
+	var progress := _smooth_unit(clampf(age_seconds / BATTLE_ESCAPE_PREVIEW_SECONDS, 0.0, 1.0))
+	var direction := Vector2(1.0, 0.36) if side == BattleModel.SIDE_ALLY else Vector2(-1.0, -0.36)
+	return direction.normalized() * BATTLE_ESCAPE_PREVIEW_DISTANCE * visual_scale * progress
 
 
 func _battle_rotated_visual_offset(offset: Vector2, visual_scale: float, rotation_angle: float) -> Vector2:

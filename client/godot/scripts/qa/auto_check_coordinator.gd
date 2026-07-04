@@ -17176,6 +17176,20 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	var first_room = first_encounter.get("room", {}) as Dictionary if first_encounter.get("room", {}) is Dictionary else {}
 	var first_room_id = str(first_room.get("roomId", ""))
 	var first_start_ok = bool(first_encounter.get("ok", false)) and first_room_id != "" and host._apply_server_battle_room_state(first_room, true)
+	host._start_server_battle_escape_preview_if_needed()
+	var escape_preview_started_ok = first_start_ok and host.battle_escape_preview_actor_ids.size() > 0
+	var escape_preview_motion_ok = false
+	if escape_preview_started_ok:
+		var preview_actor_id = str(host.battle_escape_preview_actor_ids[0])
+		var preview_actor = BattleModel.actor_by_id(host.battle_state, preview_actor_id)
+		for _i in range(8):
+			await host.get_tree().process_frame
+		var preview_offset = host._battle_actor_escape_preview_offset(
+			preview_actor_id,
+			str(preview_actor.get("side", BattleModel.SIDE_ALLY)),
+			host._battle_actor_visual_scale()
+		)
+		escape_preview_motion_ok = preview_offset.length() > 4.0
 	var first_leave_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_room_leave_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(member_session.get("serverSessionToken", "")),
@@ -17201,6 +17215,28 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	var first_cleanup_ok = bool(first_leave.get("ok", false)) and not host.battle_active and first_result_panel_ok and first_message_ok
 	if host.battle_result_panel != null:
 		host._close_battle_result_panel(false)
+	var rejoin_invite_response = await host._auto_http_request_spec(ServerAuthClientModel.party_invite_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		member_username
+	))
+	var rejoin_invite_parsed = ServerAuthClientModel.parse_party_action_response(int(rejoin_invite_response.get("responseCode", 0)), rejoin_invite_response.get("body", PackedByteArray()) as PackedByteArray)
+	var rejoin_invite = rejoin_invite_parsed.get("invite", {}) as Dictionary if rejoin_invite_parsed.get("invite", {}) is Dictionary else {}
+	var rejoin_accept_response = await host._auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		str(rejoin_invite.get("inviteId", ""))
+	))
+	var rejoin_accept_parsed = ServerAuthClientModel.parse_party_action_response(int(rejoin_accept_response.get("responseCode", 0)), rejoin_accept_response.get("body", PackedByteArray()) as PackedByteArray)
+	var rejoin_party = rejoin_accept_parsed.get("party", {}) as Dictionary if rejoin_accept_parsed.get("party", {}) is Dictionary else {}
+	var rejoin_members: Array = rejoin_party.get("members", []) if rejoin_party.get("members", []) is Array else []
+	var rejoin_ok = bool(rejoin_invite_parsed.get("ok", false)) and bool(rejoin_accept_parsed.get("ok", false)) and rejoin_members.size() == 2
+	if rejoin_ok:
+		host.party_current_state = {
+			"party": rejoin_party,
+			"incomingInvites": [],
+			"maxMembers": 5,
+		}
 	var second_encounter_response = await host._auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", "")),
@@ -17382,15 +17418,18 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		))
 	host._end_battle(true)
 	host._stop_server_event_stream()
-	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and first_cleanup_ok and second_start_ok and actor_ids_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
-	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s first_start=%s first_cleanup=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
+	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
+	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
 		status,
 		str(register_ok),
 		str(profile_ok),
 		str(positions_ok),
 		str(party_ok),
 		str(first_start_ok),
+		str(escape_preview_started_ok),
+		str(escape_preview_motion_ok),
 		str(first_cleanup_ok),
+		str(rejoin_ok),
 		str(second_start_ok),
 		str(actor_ids_ok),
 		str(commands_ok),

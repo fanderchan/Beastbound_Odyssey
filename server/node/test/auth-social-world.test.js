@@ -196,6 +196,34 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(emptyState.party, null);
 });
 
+test("active logout leaves party and clears runtime online state", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const leader = service.register({"username": "logoutpartya", "password": "test1234", "displayName": "登出队长"});
+  const member = service.register({"username": "logoutpartyb", "password": "test1234", "displayName": "登出队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "logoutpartyb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+  const logout = service.logout(member.session.token);
+  assert.equal(logout.ok, true);
+  const leaderState = service.getPartyState(leader.session.token);
+  assert.equal(leaderState.ok, true);
+  assert.equal(leaderState.party.memberCount, 1);
+  assert.deepEqual(leaderState.party.members.map((player) => player.username), ["logoutpartya"]);
+  const memberSession = service.getSession(member.session.token);
+  assert.equal(memberSession.ok, false);
+  assert.equal(memberSession.code, "session_revoked");
+  const online = service.listOnlinePlayers(leader.session.token);
+  assert.equal(online.ok, true);
+  assert.equal(online.players.some((player) => player.username === "logoutpartyb"), false);
+  assert.equal(events.some((event) => event.type === "party.update" && Array.isArray(event.removedAccountIds) && event.removedAccountIds.includes(member.account.accountId)), true);
+});
+
 test("party presence marks idle members offline and restores them on activity", () => {
   const store = createMemoryAuthStore();
   let nowMs = Date.parse("2026-02-01T00:00:00.000Z");

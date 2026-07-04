@@ -847,6 +847,89 @@ test("party pve escape closes room without win or loss result", () => {
   assert.equal(record.expSummaries.length, 0);
 });
 
+test("party pve escape only removes non-leader members from party", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const leader = service.register({"username": "pveescapelead", "password": "test1234", "displayName": "逃跑队长"});
+  const member = service.register({"username": "pveescapemem", "password": "test1234", "displayName": "逃跑队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "profile": battleProfile("逃跑队长", {"level": 9, "hp": 140, "maxHp": 140, "attack": 24, "defense": 9, "quick": 72}, {
+      "petId": "pve_escape_leader_pet",
+      "name": "队长宠",
+      "level": 9,
+      "hp": 90,
+      "maxHp": 90,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "profile": battleProfile("逃跑队员", {"level": 8, "hp": 132, "maxHp": 132, "attack": 22, "defense": 8, "quick": 70}, {
+      "petId": "pve_escape_member_pet",
+      "name": "队员宠",
+      "level": 8,
+      "hp": 84,
+      "maxHp": 84,
+    }),
+  }).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveescapemem"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const memberEncounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "member_escape_grass",
+      "name": "队员逃跑草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "队员逃跑乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 80, "attack": 10, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(memberEncounter.ok, true);
+  assert.equal(memberEncounter.room.participantAccountIds.includes(member.account.accountId), true);
+  const memberLeave = service.leaveBattleRoom(member.session.token, memberEncounter.room.roomId);
+  assert.equal(memberLeave.ok, true);
+  assert.equal(memberLeave.message, "已逃离战斗并离开队伍。");
+  const afterMemberEscape = service.getPartyState(leader.session.token);
+  assert.equal(afterMemberEscape.ok, true);
+  assert.deepEqual(afterMemberEscape.party.members.map((player) => player.username), ["pveescapelead"]);
+  const memberPartyState = service.getPartyState(member.session.token);
+  assert.equal(memberPartyState.ok, true);
+  assert.equal(memberPartyState.party, null);
+  assert.equal(events.some((event) => event.type === "party.update" && Array.isArray(event.removedAccountIds) && event.removedAccountIds.includes(member.account.accountId)), true);
+
+  const memberAgain = service.inviteToParty(leader.session.token, {"username": "pveescapemem"});
+  assert.equal(memberAgain.ok, true);
+  const acceptAgain = service.acceptPartyInvite(member.session.token, memberAgain.invite.inviteId);
+  assert.equal(acceptAgain.ok, true);
+  const leaderEncounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "leader_escape_grass",
+      "name": "队长逃跑草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "队长逃跑乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 80, "attack": 10, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(leaderEncounter.ok, true);
+  const leaderLeave = service.leaveBattleRoom(leader.session.token, leaderEncounter.room.roomId);
+  assert.equal(leaderLeave.ok, true);
+  assert.equal(leaderLeave.message, "已逃离战斗。");
+  const afterLeaderEscape = service.getPartyState(leader.session.token);
+  assert.equal(afterLeaderEscape.ok, true);
+  assert.equal(afterLeaderEscape.party.memberCount, 2);
+  assert.deepEqual(afterLeaderEscape.party.members.map((player) => player.username), ["pveescapelead", "pveescapemem"]);
+});
+
 test("party pve capture command stores captured wild pet and consumes capture tool", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "pvecaptureone", "password": "test1234", "displayName": "捕捉玩家"});

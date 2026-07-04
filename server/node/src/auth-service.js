@@ -491,9 +491,20 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    const partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
+    clearRuntimeSessionsForAccount(data, resolved.account.accountId, runtimeActiveSessionIds);
     resolved.session.revokedAt = isoNow(now);
     recordAuthEvent(data, "logout", resolved.account.username, true, "", now);
     save(data);
+    if (partyRemoval.changed) {
+      emitServiceEvent({
+        type: "party.update",
+        targetAccountIds: partyRemoval.targetAccountIds,
+        party: partyRemoval.party ? publicParty(partyRemoval.party, data, {now, runtimeActiveSessionIds}) : null,
+        partyId: partyRemoval.partyId,
+        removedAccountIds: partyRemoval.removedAccountIds,
+      });
+    }
     return ok({"message": "已退出登录。"});
   }
 
@@ -1516,6 +1527,7 @@ function createAuthService(options = {}) {
     recordBattleTrace,
     recordQuestEventByIdToProfile,
     recordQuestEventToProfile,
+    removeAccountFromParty,
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
@@ -1810,6 +1822,21 @@ function markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, nowMs) {
   }
   if (typeof runtimeActiveSessionIds.add === "function") {
     runtimeActiveSessionIds.add(sessionId);
+  }
+}
+
+function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds) {
+  if (!runtimeActiveSessionIds) {
+    return;
+  }
+  const normalizedAccountId = String(accountId || "");
+  if (!normalizedAccountId || typeof runtimeActiveSessionIds.delete !== "function") {
+    return;
+  }
+  for (const session of Object.values(data.sessions)) {
+    if (session && String(session.accountId || "") === normalizedAccountId && session.sessionId) {
+      runtimeActiveSessionIds.delete(session.sessionId);
+    }
   }
 }
 
@@ -4306,6 +4333,46 @@ function partyForAccount(data, accountId) {
     Array.isArray(party.memberAccountIds) &&
     party.memberAccountIds.includes(accountId)
   )) || null;
+}
+
+function removeAccountFromParty(data, accountId, now) {
+  const normalizedAccountId = String(accountId || "");
+  const party = partyForAccount(data, normalizedAccountId);
+  const result = {
+    changed: false,
+    party: null,
+    partyDeleted: false,
+    partyId: "",
+    removedAccountIds: [],
+    targetAccountIds: normalizedAccountId ? [normalizedAccountId] : [],
+  };
+  if (!party || !party.partyId || !normalizedAccountId) {
+    return result;
+  }
+  const beforeMemberIds = partyMemberAccountIds(party);
+  const nextMemberIds = beforeMemberIds.filter((memberAccountId) => memberAccountId !== normalizedAccountId);
+  const targetAccountIds = Array.from(new Set(beforeMemberIds.concat([normalizedAccountId]).filter(Boolean)));
+  const partyId = party.partyId;
+  const presence = partyPresenceForMutation(party);
+  delete presence[normalizedAccountId];
+  result.changed = true;
+  result.partyId = partyId;
+  result.removedAccountIds = [normalizedAccountId];
+  result.targetAccountIds = targetAccountIds;
+  if (nextMemberIds.length <= 0) {
+    delete data.parties[partyId];
+    expirePendingPartyInvites(data, partyId, now);
+    result.partyDeleted = true;
+    return result;
+  }
+  party.memberAccountIds = nextMemberIds;
+  if (!nextMemberIds.includes(String(party.leaderAccountId || ""))) {
+    party.leaderAccountId = nextMemberIds[0];
+  }
+  party.updatedAt = isoNow(now);
+  data.parties[partyId] = party;
+  result.party = party;
+  return result;
 }
 
 function partyMemberAccountIds(party) {

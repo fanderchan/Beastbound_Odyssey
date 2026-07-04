@@ -51,6 +51,7 @@ function createBattleRoomDomain(ctx) {
     randomId,
     recordBattleStateTrace,
     recordBattleTrace,
+    removeAccountFromParty,
     refreshPartyPresence,
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
@@ -395,6 +396,15 @@ function createBattleRoomDomain(ctx) {
     if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
       return fail("battle_room_forbidden", "你不在这个战斗房间中。");
     }
+    const isPartyPve = String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE;
+    let partyRemoval = null;
+    if (isPartyPve && typeof removeAccountFromParty === "function") {
+      const party = (room.partyId && data.parties[room.partyId]) ? data.parties[room.partyId] : partyForAccount(data, resolved.account.accountId);
+      const leaderAccountId = party ? String(party.leaderAccountId || "") : String(room.leaderAccountId || "");
+      if (leaderAccountId && leaderAccountId !== resolved.account.accountId) {
+        partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
+      }
+    }
     const result = battleRoomResultForLeave(room, resolved.account.accountId, now);
     closeBattleRoomWithResult(data, room, result, now);
     data.battleRooms[room.roomId] = room;
@@ -407,11 +417,19 @@ function createBattleRoomDomain(ctx) {
       result: publicBattleResult(result),
       room: publicBattleRoom(room),
     });
-    const isPartyPve = String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE;
+    if (partyRemoval && partyRemoval.changed) {
+      emitServiceEvent({
+        type: "party.update",
+        targetAccountIds: partyRemoval.targetAccountIds,
+        party: partyRemoval.party ? publicParty(partyRemoval.party, data) : null,
+        partyId: partyRemoval.partyId,
+        removedAccountIds: partyRemoval.removedAccountIds,
+      });
+    }
     return ok({
       room: publicBattleRoom(room),
       result: publicBattleResult(result),
-      message: isPartyPve ? "已逃离战斗。" : "已离开切磋房间。",
+      message: isPartyPve ? (partyRemoval && partyRemoval.changed ? "已逃离战斗并离开队伍。" : "已逃离战斗。") : "已离开切磋房间。",
     });
   }
 

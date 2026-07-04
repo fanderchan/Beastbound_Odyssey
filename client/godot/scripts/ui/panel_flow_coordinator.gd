@@ -10094,6 +10094,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 	battle_last_event_ledger.clear()
 	battle_recorded_event_sequence = 0
 	battle_float_texts.clear()
+	host._clear_battle_escape_preview()
 	battle_command_countdown_remaining = BATTLE_COMMAND_COUNTDOWN_SECONDS
 	battle_command_countdown_last_second = -1
 	host._sync_battle_round_timer_labels(true)

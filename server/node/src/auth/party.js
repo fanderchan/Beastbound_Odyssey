@@ -19,6 +19,7 @@ function createPartyDomain(ctx) {
     publicPartyForAccount,
     publicPartyInvite,
     randomId,
+    removeAccountFromParty,
     refreshPartyPresence,
     resolveSession,
     save,
@@ -270,44 +271,17 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const party = partyForAccount(data, resolved.account.accountId);
-    if (!party) {
+    const removal = removeAccountFromParty(data, resolved.account.accountId, now);
+    if (!removal.changed) {
       return fail("party_missing", "你还没有队伍。");
     }
-    party.memberAccountIds = party.memberAccountIds.filter((accountId) => accountId !== resolved.account.accountId);
-    if (party.memberAccountIds.length <= 0) {
-      const leavingPartyId = party.partyId;
-      delete data.parties[party.partyId];
-      for (const invite of Object.values(data.partyInvites)) {
-        if (invite && invite.partyId === party.partyId && invite.status === "pending") {
-          invite.status = "expired";
-          invite.updatedAt = isoNow(now);
-          data.partyInvites[invite.inviteId] = invite;
-        }
-      }
-      save(data);
-      emitServiceEvent({
-        type: "party.update",
-        targetAccountIds: [resolved.account.accountId],
-        party: null,
-        partyId: leavingPartyId,
-      });
-      return ok({
-        party: null,
-        incomingInvites: publicIncomingPartyInvites(data, resolved.account.accountId),
-        message: "已离开队伍。",
-      });
-    }
-    if (party.leaderAccountId === resolved.account.accountId) {
-      party.leaderAccountId = party.memberAccountIds[0];
-    }
-    party.updatedAt = isoNow(now);
-    data.parties[party.partyId] = party;
     save(data);
     emitServiceEvent({
       type: "party.update",
-      targetAccountIds: [resolved.account.accountId, ...party.memberAccountIds],
-      party: publicParty(party, data),
+      targetAccountIds: removal.targetAccountIds,
+      party: removal.party ? publicParty(removal.party, data) : null,
+      partyId: removal.partyId,
+      removedAccountIds: removal.removedAccountIds,
     });
     return ok({
       party: null,

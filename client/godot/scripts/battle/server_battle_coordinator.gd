@@ -781,6 +781,7 @@ func leave_room() -> void:
 		host._set_battle_message("战斗房间状态缺失，请重新同步。")
 		return
 	host.server_battle_command_request_active = true
+	host._start_server_battle_escape_preview_if_needed()
 	host.battle_state["phase"] = "server_waiting"
 	host._set_battle_message("正在%s战斗。" % leave_action)
 	host._sync_battle_buttons()
@@ -801,6 +802,7 @@ func leave_room() -> void:
 		else:
 			host._set_battle_message("已%s战斗。" % leave_action)
 		return
+	host._clear_battle_escape_preview()
 	if handle_session_invalid_response(parsed):
 		return
 	host.battle_state["phase"] = "command"
