@@ -2092,6 +2092,12 @@ var family_leave_button:
 	set(value):
 		host.family_leave_button = value
 
+var family_summary_container:
+	get:
+		return host.family_summary_container
+	set(value):
+		host.family_summary_container = value
+
 var family_list_container:
 	get:
 		return host.family_list_container
@@ -6650,8 +6656,9 @@ func _build_hud() -> void:
 	family_create_row.add_theme_constant_override("separation", 8)
 	family_column.add_child(family_create_row)
 	family_name_input = LineEdit.new()
-	family_name_input.placeholder_text = "家族名"
+	family_name_input.placeholder_text = "输入家族名"
 	family_name_input.max_length = 12
+	family_name_input.custom_minimum_size = Vector2(0, 42)
 	family_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	family_create_row.add_child(family_name_input)
 	family_create_button = Button.new()
@@ -6668,6 +6675,15 @@ func _build_hud() -> void:
 	family_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	family_content.add_theme_constant_override("separation", 10)
 	family_scroll.add_child(family_content)
+
+	var family_summary_title = Label.new()
+	family_summary_title.text = "我的家族"
+	family_summary_title.add_theme_font_size_override("font_size", 17)
+	family_content.add_child(family_summary_title)
+	family_summary_container = VBoxContainer.new()
+	family_summary_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	family_summary_container.add_theme_constant_override("separation", 7)
+	family_content.add_child(family_summary_container)
 
 	var family_list_title = Label.new()
 	family_list_title.text = "家族列表"
@@ -9552,12 +9568,13 @@ func _register_hud_panels() -> void:
 		pet_cultivation_panel,
 		codex_panel,
 		quest_panel,
-			map_panel,
-			chat_panel,
-			party_panel,
-			player_action_panel,
-			battle_invite_panel,
-			mailbox_panel,
+		map_panel,
+		chat_panel,
+		party_panel,
+		family_panel,
+		player_action_panel,
+		battle_invite_panel,
+		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -9584,12 +9601,13 @@ func _register_hud_panels() -> void:
 		pet_cultivation_panel,
 		codex_panel,
 		quest_panel,
-			map_panel,
-			chat_panel,
-			party_panel,
-			player_action_panel,
-			battle_invite_panel,
-			mailbox_panel,
+		map_panel,
+		chat_panel,
+		party_panel,
+		family_panel,
+		player_action_panel,
+		battle_invite_panel,
+		mailbox_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -14784,39 +14802,17 @@ func _close_family_panel(update_layout: bool = true) -> void:
 	_hide_control(family_panel, update_layout)
 
 func _refresh_family_panel() -> void:
-	if family_panel == null or family_list_container == null or manor_list_container == null:
+	if family_panel == null or family_summary_container == null or family_list_container == null or manor_list_container == null:
 		return
+	_clear_container_children(family_summary_container)
 	_clear_container_children(family_list_container)
 	_clear_container_children(manor_list_container)
 	var current_family := _family_current_family()
 	if family_status_label != null and family_status_label.text.strip_edges() == "":
 		family_status_label.text = "家族状态已同步。" if not current_family.is_empty() else "当前没有家族。"
+	family_summary_container.add_child(_family_summary_card(current_family))
 	for family in family_list:
-		var row = HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 8)
-		var label = Label.new()
-		label.text = "%s  族长：%s  成员：%d/%d  庄园：%d" % [
-			str(family.get("name", "家族")),
-			str(family.get("leaderDisplayName", family.get("leaderUsername", ""))),
-			int(family.get("memberCount", 0)),
-			int(family.get("maxMembers", 100)),
-			(family.get("manorIds", []) as Array).size() if family.get("manorIds", []) is Array else 0,
-		]
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.add_theme_font_size_override("font_size", 15)
-		row.add_child(label)
-		var join_button = Button.new()
-		join_button.text = "加入"
-		join_button.custom_minimum_size = Vector2(78, 42)
-		var family_id := str(family.get("familyId", ""))
-		join_button.disabled = family_request_pending or not current_family.is_empty() or family_id == ""
-		join_button.pressed.connect(func() -> void:
-			_on_family_join_pressed(family_id)
-		)
-		row.add_child(join_button)
-		family_list_container.add_child(row)
+		family_list_container.add_child(_family_list_row(family, current_family))
 	if family_list.is_empty():
 		family_list_container.add_child(_party_info_label("暂无家族。输入家族名可以直接成立。"))
 	if family_manors.is_empty():
@@ -14830,6 +14826,104 @@ func _refresh_family_panel() -> void:
 		for manor in sorted_manors:
 			manor_list_container.add_child(_family_manor_row(manor, current_family))
 	_refresh_family_request_controls()
+
+func _family_summary_card(current_family: Dictionary) -> Control:
+	var card = PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _family_card_style(not current_family.is_empty()))
+	var column = VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 4)
+	card.add_child(column)
+	var title = Label.new()
+	title.add_theme_font_size_override("font_size", 16)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(title)
+	var detail = Label.new()
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 14)
+	detail.add_theme_color_override("font_color", Color(0.82, 0.86, 0.80, 1.0))
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(detail)
+	if current_family.is_empty():
+		title.text = "尚未加入家族"
+		detail.text = "成立一个新家族，或从下方列表选择已有家族加入。"
+	else:
+		var leader_name := str(current_family.get("leaderDisplayName", "")).strip_edges()
+		if leader_name == "":
+			leader_name = str(current_family.get("leaderUsername", "")).strip_edges()
+		var manor_ids = current_family.get("manorIds", [])
+		var manor_count := (manor_ids as Array).size() if manor_ids is Array else 0
+		title.text = str(current_family.get("name", "我的家族"))
+		detail.text = "族长：%s  成员：%d/%d  声望：%d  庄园：%d" % [
+			leader_name if leader_name != "" else "未知",
+			int(current_family.get("memberCount", 0)),
+			int(current_family.get("maxMembers", 100)),
+			int(current_family.get("fame", 0)),
+			manor_count,
+		]
+	return card
+
+func _family_list_row(family: Dictionary, current_family: Dictionary) -> Control:
+	var family_id := str(family.get("familyId", "")).strip_edges()
+	var is_current := family_id != "" and family_id == str(current_family.get("familyId", "")).strip_edges()
+	var card = PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _family_card_style(is_current))
+	var row = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 8)
+	card.add_child(row)
+	var label_column = VBoxContainer.new()
+	label_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label_column.add_theme_constant_override("separation", 3)
+	row.add_child(label_column)
+	var title = Label.new()
+	title.text = "%s%s" % [str(family.get("name", "家族")), "  当前" if is_current else ""]
+	title.add_theme_font_size_override("font_size", 15)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label_column.add_child(title)
+	var leader_name := str(family.get("leaderDisplayName", "")).strip_edges()
+	if leader_name == "":
+		leader_name = str(family.get("leaderUsername", "")).strip_edges()
+	var manor_ids = family.get("manorIds", [])
+	var manor_count := (manor_ids as Array).size() if manor_ids is Array else 0
+	var detail = Label.new()
+	detail.text = "族长：%s  成员：%d/%d  庄园：%d" % [
+		leader_name if leader_name != "" else "未知",
+		int(family.get("memberCount", 0)),
+		int(family.get("maxMembers", 100)),
+		manor_count,
+	]
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 13)
+	detail.add_theme_color_override("font_color", Color(0.80, 0.84, 0.78, 1.0))
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label_column.add_child(detail)
+	var join_button = Button.new()
+	join_button.text = "已加入" if is_current else "加入"
+	join_button.custom_minimum_size = Vector2(82, 42)
+	join_button.disabled = family_request_pending or not current_family.is_empty() or family_id == "" or is_current
+	join_button.pressed.connect(func() -> void:
+		_on_family_join_pressed(family_id)
+	)
+	row.add_child(join_button)
+	return card
+
+func _family_card_style(highlight: bool = false) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.12, 0.12, 0.68)
+	style.border_color = Color(0.32, 0.42, 0.38, 0.72)
+	if highlight:
+		style.bg_color = Color(0.12, 0.18, 0.18, 0.82)
+		style.border_color = Color(0.78, 0.58, 0.30, 0.86)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
 
 func _family_manor_focus_less(a: Dictionary, b: Dictionary) -> bool:
 	var focus_id: String = family_focus_manor_id.strip_edges()
@@ -15015,6 +15109,32 @@ func _family_current_family() -> Dictionary:
 	var family_value = family_current_state.get("family", null)
 	return (family_value as Dictionary).duplicate(true) if family_value is Dictionary else {}
 
+func _apply_family_state_payload(family_value, raw_manors) -> void:
+	family_current_state = {"family": family_value}
+	family_manors.clear()
+	if raw_manors is Array:
+		for value in raw_manors:
+			if value is Dictionary:
+				family_manors.append((value as Dictionary).duplicate(true))
+
+func _upsert_family_list_from_snapshot(family_value) -> void:
+	if not (family_value is Dictionary):
+		return
+	var family := (family_value as Dictionary).duplicate(true)
+	var family_id := str(family.get("familyId", "")).strip_edges()
+	if family_id == "":
+		return
+	for index in range(family_list.size()):
+		if str(family_list[index].get("familyId", "")).strip_edges() == family_id:
+			family_list[index] = family
+			family_list.sort_custom(_family_list_less)
+			return
+	family_list.append(family)
+	family_list.sort_custom(_family_list_less)
+
+func _family_list_less(a: Dictionary, b: Dictionary) -> bool:
+	return str(a.get("name", a.get("familyId", ""))) < str(b.get("name", b.get("familyId", "")))
+
 func _family_current_user_is_leader(family: Dictionary) -> bool:
 	var account_id = str(current_account_session.get("accountId", "")).strip_edges()
 	if account_id == "":
@@ -15030,6 +15150,9 @@ func _refresh_family_request_controls() -> void:
 		family_create_button.disabled = family_request_pending or not has_server_session or has_family
 	if family_leave_button != null:
 		family_leave_button.disabled = family_request_pending or not has_server_session or not has_family
+	if family_name_input != null:
+		family_name_input.editable = has_server_session and not family_request_pending and not has_family
+		family_name_input.placeholder_text = "已加入家族" if has_family else "输入家族名"
 	if family_status_label != null:
 		if not has_server_session:
 			family_status_label.text = "需要服务器账号登录。"
@@ -15150,13 +15273,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 	if kind == "state":
 		var parsed_state = ServerAuthClientModel.parse_family_state_response(response_code, body)
 		if bool(parsed_state.get("ok", false)):
-			family_current_state = {"family": parsed_state.get("family", null)}
-			family_manors.clear()
-			var raw_manors = parsed_state.get("manors", [])
-			if raw_manors is Array:
-				for value in raw_manors:
-					if value is Dictionary:
-						family_manors.append((value as Dictionary).duplicate(true))
+			_apply_family_state_payload(parsed_state.get("family", null), parsed_state.get("manors", []))
 			if family_status_label != null:
 				family_status_label.text = _family_state_status_text()
 			_refresh_family_panel()
@@ -15175,8 +15292,10 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 				for value in raw_families:
 					if value is Dictionary:
 						family_list.append((value as Dictionary).duplicate(true))
-			if family_status_label != null and family_status_label.text.strip_edges() == "":
-				family_status_label.text = "家族列表已刷新。"
+			if family_status_label != null:
+				var family_prefix := _family_state_status_text()
+				var list_text := "暂无可加入家族。" if family_list.is_empty() else "家族列表已刷新，共%d个。" % family_list.size()
+				family_status_label.text = "%s %s" % [family_prefix, list_text]
 		elif _handle_session_invalid_response(parsed_list):
 			return
 		elif family_status_label != null:
@@ -15255,9 +15374,12 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		if bool(parsed_action.get("ok", false)):
 			if family_name_input != null and kind == "create":
 				family_name_input.text = ""
+			_apply_family_state_payload(parsed_action.get("family", null), parsed_action.get("manors", []))
+			_upsert_family_list_from_snapshot(parsed_action.get("family", null))
 			if family_status_label != null:
 				family_status_label.text = str(parsed_action.get("message", "家族已更新。"))
-			_request_family_state()
+			_refresh_family_panel()
+			_request_family_list()
 			return
 		elif _handle_session_invalid_response(parsed_action):
 			return

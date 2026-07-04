@@ -294,6 +294,10 @@ test("HTTP exposes family and manor endpoints", async (t) => {
   assert.equal(created.ok, true);
   assert.equal(created.family.name, "接口家族");
 
+  const listed = await fetchJson(`${base}/families`, {headers});
+  assert.equal(listed.ok, true);
+  assert.equal(listed.families.some((family) => family.name === "接口家族"), true);
+
   const state = await fetchJson(`${base}/families/state`, {headers});
   assert.equal(state.ok, true);
   assert.equal(state.family.name, "接口家族");

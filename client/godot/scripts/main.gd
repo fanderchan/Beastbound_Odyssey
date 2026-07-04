@@ -539,6 +539,7 @@ var family_name_input: LineEdit
 var family_create_button: Button
 var family_refresh_button: Button
 var family_leave_button: Button
+var family_summary_container: VBoxContainer
 var family_list_container: VBoxContainer
 var manor_list_container: VBoxContainer
 var family_http_request: HTTPRequest
@@ -11857,6 +11858,19 @@ func _layout_hud() -> void:
 		party_panel.visible = false
 	if party_panel.visible and action_bar != null:
 		action_bar.visible = false
+
+	if family_panel != null:
+		var family_width: float = minf(viewport_size.x - margin * 2.0, 860.0)
+		var family_height: float = minf(panel_available_height, 560.0)
+		family_width = maxf(minf(420.0, viewport_size.x - margin * 2.0), family_width)
+		family_height = maxf(minf(330.0, panel_available_height), family_height)
+		var family_panel_y = minf(maxf(panel_top_y, (viewport_size.y - family_height) * 0.5), viewport_size.y - family_height - margin)
+		family_panel.position = Vector2((viewport_size.x - family_width) * 0.5, family_panel_y)
+		family_panel.size = Vector2(family_width, family_height)
+		if battle_active:
+			family_panel.visible = false
+		if family_panel.visible and action_bar != null:
+			action_bar.visible = false
 
 	var player_action_width: float = minf(viewport_size.x - margin * 2.0, 360.0)
 	var player_action_height := minf(viewport_size.y - margin * 2.0, 346.0)

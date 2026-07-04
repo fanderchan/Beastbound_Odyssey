@@ -10040,6 +10040,7 @@ func _run_auto_manor_map_shop_check() -> void:
 	var first_shop_panel_ok := false
 	var first_steward_dialog_ok := false
 	var first_steward_panel_ok := false
+	var first_steward_panel_layout_ok := false
 	if not first_shop_interaction.is_empty() and first_map_id != "":
 		host._load_map(first_map_id, first_spawn_name)
 		host._open_interaction_dialog(first_shop_interaction)
@@ -10057,9 +10058,21 @@ func _run_auto_manor_map_shop_check() -> void:
 		host._confirm_dialog_action()
 		await host.get_tree().process_frame
 		first_steward_panel_ok = host.family_panel != null and host.family_panel.visible and host.family_focus_manor_id == first_manor_id
+		if first_steward_panel_ok:
+			host._layout_hud()
+			var viewport_size: Vector2 = host._layout_size()
+			var margin: float = 18.0
+			var center_delta: float = absf((host.family_panel.position.x + host.family_panel.size.x * 0.5) - viewport_size.x * 0.5)
+			first_steward_panel_layout_ok = (
+				center_delta <= 2.0
+				and host.family_panel.position.x >= margin - 1.0
+				and host.family_panel.position.y >= host.top_panel.position.y + host.top_panel.size.y - 1.0
+				and host.family_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
+				and host.family_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
+			)
 		host._close_family_panel()
-	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and first_steward_dialog_ok and first_steward_panel_ok and not village_map.is_empty() else "failed"
-	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_steward_dialog=%s first_steward_panel=%s first_map=%s errors=%s" % [
+	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and first_steward_dialog_ok and first_steward_panel_ok and first_steward_panel_layout_ok and not village_map.is_empty() else "failed"
+	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_steward_dialog=%s first_steward_panel=%s first_steward_layout=%s first_map=%s errors=%s" % [
 		status,
 		manors.size(),
 		str(not village_map.is_empty()),
@@ -10067,6 +10080,7 @@ func _run_auto_manor_map_shop_check() -> void:
 		str(first_shop_panel_ok),
 		str(first_steward_dialog_ok),
 		str(first_steward_panel_ok),
+		str(first_steward_panel_layout_ok),
 		first_map_id,
 		";".join(errors),
 	])
