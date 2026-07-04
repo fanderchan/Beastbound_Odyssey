@@ -10228,6 +10228,14 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 			return "已经在目标位置。"
 		"movement_origin_mismatch", "movement_step_too_far":
 			return "位置已同步，请重新点击。"
+		"movement_cell_blocked":
+			return "目标格不可通行，请换个位置。"
+		"position_desync", "position_seed_not_spawn":
+			return "位置已按服务器纠正，请重新点击。"
+		"position_transition_invalid":
+			return "只能通过传送点或记录点前往其他地图。"
+		"position_cell_blocked":
+			return "该位置无法站立，请重新点击。"
 	var message = str(parsed.get("message", ""))
 	if message != "":
 		return message

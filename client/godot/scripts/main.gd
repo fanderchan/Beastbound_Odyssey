@@ -971,7 +971,9 @@ var server_step_move_request_count: int = 0
 var server_step_move_ack_count: int = 0
 var server_step_move_last_error_code: String = ""
 var server_step_move_sync_retry_count: int = 0
-var server_step_world_move_enabled: bool = false
+# 服务器账号会话默认走 movement/step 权威移动；本地档案会话不受影响。
+# QA/性能调试可用 --local-world-move 退回纯本地移动。
+var server_step_world_move_enabled: bool = true
 var has_pending_interaction: bool = false
 var pending_interaction: Dictionary = {}
 var pending_interaction_approach_cell: Vector2i = Vector2i.ZERO
@@ -1784,6 +1786,8 @@ func _apply_preview_window_args() -> void:
 			startup_auth_base_url = arg.substr("--auth-server-url=".length())
 		elif arg == "--server-step-world-move":
 			server_step_world_move_enabled = true
+		elif arg == "--local-world-move":
+			server_step_world_move_enabled = false
 		elif arg == "--preview-mobile-portrait":
 			_apply_preview_window_size(Vector2i(390, 844))
 		elif arg == "--full-client-preview":

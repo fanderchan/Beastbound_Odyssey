@@ -798,8 +798,8 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
     "headers": {"authorization": `Bearer ${distant.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 80,
-      "cellY": 80,
+      "cellX": 33,
+      "cellY": 32,
       "facing": "west",
       "moving": false,
     }),
@@ -1399,8 +1399,8 @@ test("HTTP server exposes websocket event stream", async (t) => {
     "headers": {"authorization": `Bearer ${actor.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 12,
-      "cellY": 10,
+      "cellX": 17,
+      "cellY": 9,
       "facing": "west",
       "moving": false,
     }),
@@ -1411,8 +1411,8 @@ test("HTTP server exposes websocket event stream", async (t) => {
     "headers": {"authorization": `Bearer ${distant.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 80,
-      "cellY": 80,
+      "cellX": 30,
+      "cellY": 11,
       "facing": "west",
       "moving": false,
     }),
@@ -1457,8 +1457,8 @@ test("HTTP server exposes websocket event stream", async (t) => {
     "headers": {"authorization": `Bearer ${distant.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 81,
-      "cellY": 80,
+      "cellX": 31,
+      "cellY": 11,
       "facing": "west",
       "moving": true,
     }),
@@ -1466,18 +1466,24 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(distantStillFar.ok, true);
   await assert.rejects(reader.next("online.position"), /websocket message timeout: online.position/);
 
-  const distantMovedNear = await fetchJson(`${base}/players/position`, {
-    "method": "POST",
-    "headers": {"authorization": `Bearer ${distant.session.token}`},
-    "body": JSON.stringify({
-      "mapId": "firebud_training_yard",
-      "cellX": 11,
-      "cellY": 12,
-      "facing": "north",
-      "moving": true,
-    }),
-  });
-  assert.equal(distantMovedNear.ok, true);
+  // 远处玩家通过权威单步移动走进观察者的 AOI 范围。
+  let distantCellX = 31;
+  while (distantCellX > 26) {
+    const distantStep = await fetchJson(`${base}/movement/step`, {
+      "method": "POST",
+      "headers": {"authorization": `Bearer ${distant.session.token}`},
+      "body": JSON.stringify({
+        "mapId": "firebud_training_yard",
+        "fromCellX": distantCellX,
+        "fromCellY": 11,
+        "toCellX": distantCellX - 1,
+        "toCellY": 11,
+        "moving": true,
+      }),
+    });
+    assert.equal(distantStep.ok, true);
+    distantCellX -= 1;
+  }
   const movedNearEvent = await reader.next("online.position");
   assert.equal(movedNearEvent.username, "httpwsc");
   assert.equal(movedNearEvent.players.some((player) => player.username === "httpwsc"), true);

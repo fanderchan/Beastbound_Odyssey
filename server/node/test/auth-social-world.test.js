@@ -430,15 +430,15 @@ test("party members follow the leader and cannot move independently", () => {
 
   const leaderSeed = service.updatePlayerPosition(leader.session.token, {
     "mapId": "firebud_training_yard",
-    "cellX": 10,
-    "cellY": 10,
+    "cellX": 29,
+    "cellY": 27,
     "facing": "east",
     "moving": false,
   });
   const memberSeed = service.updatePlayerPosition(member.session.token, {
     "mapId": "firebud_training_yard",
-    "cellX": 9,
-    "cellY": 10,
+    "cellX": 29,
+    "cellY": 26,
     "facing": "east",
     "moving": false,
   });
@@ -452,50 +452,52 @@ test("party members follow the leader and cannot move independently", () => {
 
   const memberMove = service.movePlayerStep(member.session.token, {
     "mapId": "firebud_training_yard",
-    "fromCellX": 9,
-    "fromCellY": 10,
-    "toCellX": 8,
-    "toCellY": 10,
+    "fromCellX": 29,
+    "fromCellY": 26,
+    "toCellX": 28,
+    "toCellY": 26,
   });
   assert.equal(memberMove.ok, false);
   assert.equal(memberMove.code, "movement_party_member_locked");
-  assert.equal(memberMove.position.cellX, 9);
+  assert.equal(memberMove.position.cellX, 29);
 
   const memberSnapshot = service.updatePlayerPosition(member.session.token, {
     "mapId": "firebud_training_yard",
-    "cellX": 30,
-    "cellY": 30,
+    "cellX": 12,
+    "cellY": 12,
     "facing": "south",
     "moving": false,
   });
   assert.equal(memberSnapshot.ok, true);
-  assert.equal(memberSnapshot.position.cellX, 9);
-  assert.equal(memberSnapshot.position.cellY, 10);
+  assert.equal(memberSnapshot.position.cellX, 29);
+  assert.equal(memberSnapshot.position.cellY, 26);
   assert.equal(memberSnapshot.position.authority, "party_follow");
 
   const leaderStep = service.movePlayerStep(leader.session.token, {
     "mapId": "firebud_training_yard",
-    "fromCellX": 10,
-    "fromCellY": 10,
-    "toCellX": 11,
-    "toCellY": 10,
+    "fromCellX": 29,
+    "fromCellY": 27,
+    "toCellX": 30,
+    "toCellY": 27,
     "moving": false,
   });
   assert.equal(leaderStep.ok, true);
-  assert.equal(leaderStep.position.cellX, 11);
+  assert.equal(leaderStep.position.cellX, 30);
   const snapshot = service.snapshot();
   const followerPosition = snapshot.playerPositions[member.account.accountId];
-  assert.equal(followerPosition.cellX, 10);
-  assert.equal(followerPosition.cellY, 10);
+  assert.equal(followerPosition.cellX, 29);
+  assert.equal(followerPosition.cellY, 27);
   assert.equal(followerPosition.authority, "party_follow");
   const followerOnline = leaderStep.players.find((player) => player.accountId === member.account.accountId);
-  assert.equal(followerOnline.position.cellX, 10);
+  assert.equal(followerOnline.position.cellX, 29);
   assert.equal(followerOnline.position.authority, "party_follow");
 
+  // 队长站在训练场返回村口的传送点旁（warp_to_village_gate 位于 [30, 28]），
+  // 通过合法传送把全队带到火芽村入口出生点。
   const leaderMapSwitch = service.updatePlayerPosition(leader.session.token, {
     "mapId": "firebud_village_gate",
-    "cellX": 15,
-    "cellY": 20,
+    "cellX": 3,
+    "cellY": 15,
     "facing": "south",
     "moving": false,
   });
@@ -504,13 +506,116 @@ test("party members follow the leader and cannot move independently", () => {
   const switchedSnapshot = service.snapshot();
   const switchedFollowerPosition = switchedSnapshot.playerPositions[member.account.accountId];
   assert.equal(switchedFollowerPosition.mapId, "firebud_village_gate");
-  assert.equal(switchedFollowerPosition.cellX, 15);
-  assert.equal(switchedFollowerPosition.cellY, 20);
+  assert.equal(switchedFollowerPosition.cellX, 3);
+  assert.equal(switchedFollowerPosition.cellY, 15);
   assert.equal(switchedFollowerPosition.authority, "party_follow");
   const switchedFollowerOnline = leaderMapSwitch.players.find((player) => player.accountId === member.account.accountId);
   assert.equal(switchedFollowerOnline.position.mapId, "firebud_village_gate");
-  assert.equal(switchedFollowerOnline.position.cellX, 15);
+  assert.equal(switchedFollowerOnline.position.cellX, 3);
   assert.equal(switchedFollowerOnline.position.authority, "party_follow");
+
+  const leaderTeleport = service.updatePlayerPosition(leader.session.token, {
+    "mapId": "earth_vein_cave",
+    "cellX": 8,
+    "cellY": 9,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(leaderTeleport.ok, false);
+  assert.equal(leaderTeleport.code, "position_transition_invalid");
+});
+
+test("position snapshots reject teleports, blocked cells, and illegal map jumps", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const cheater = service.register({"username": "teleporta", "password": "test1234", "displayName": "瞬移甲"});
+  assert.equal(cheater.ok, true);
+
+  const outOfBounds = service.updatePlayerPosition(cheater.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 80,
+    "cellY": 80,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(outOfBounds.ok, false);
+  assert.equal(outOfBounds.code, "position_cell_blocked");
+
+  const seed = service.updatePlayerPosition(cheater.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(seed.ok, true);
+
+  const sameMapTeleport = service.updatePlayerPosition(cheater.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 25,
+    "cellY": 25,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(sameMapTeleport.ok, false);
+  assert.equal(sameMapTeleport.code, "position_desync");
+  assert.equal(sameMapTeleport.position.cellX, 10);
+  assert.equal(sameMapTeleport.movement.requiresSync, true);
+
+  const crossMapTeleport = service.updatePlayerPosition(cheater.session.token, {
+    "mapId": "earth_vein_cave",
+    "cellX": 8,
+    "cellY": 9,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(crossMapTeleport.ok, false);
+  assert.equal(crossMapTeleport.code, "position_transition_invalid");
+  assert.equal(service.snapshot().playerPositions[cheater.account.accountId].mapId, "firebud_training_yard");
+
+  const walker = service.register({"username": "teleportb", "password": "test1234", "displayName": "瞬移乙"});
+  assert.equal(walker.ok, true);
+  assert.equal(service.updatePlayerPosition(walker.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 13,
+    "facing": "south",
+    "moving": false,
+  }).ok, true);
+  const blockedStep = service.movePlayerStep(walker.session.token, {
+    "mapId": "firebud_training_yard",
+    "fromCellX": 11,
+    "fromCellY": 13,
+    "toCellX": 11,
+    "toCellY": 14,
+  });
+  assert.equal(blockedStep.ok, false);
+  assert.equal(blockedStep.code, "movement_cell_blocked");
+
+  // 记录点回城属于合法跨图：默认记录点在火芽村入口。
+  const recordReturn = service.updatePlayerPosition(cheater.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 3,
+    "cellY": 15,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(recordReturn.ok, true);
+  assert.equal(recordReturn.position.mapId, "firebud_village_gate");
+
+  // QA 逃生口：显式允许瞬移的服务不做位置校验。
+  const permissive = createAuthService({"store": createMemoryAuthStore(), "allowPositionTeleport": true});
+  const tester = permissive.register({"username": "teleportqa", "password": "test1234", "displayName": "瞬移QA"});
+  assert.equal(tester.ok, true);
+  assert.equal(permissive.updatePlayerPosition(tester.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 10,
+    "cellY": 10,
+  }).ok, true);
+  assert.equal(permissive.updatePlayerPosition(tester.session.token, {
+    "mapId": "earth_vein_cave",
+    "cellX": 8,
+    "cellY": 9,
+  }).ok, true);
 });
 
 test("online positions are runtime-only and do not trigger store writes", () => {
@@ -660,8 +765,8 @@ test("online roster can be filtered by map area of interest", () => {
   });
   service.updatePlayerPosition(distant.session.token, {
     "mapId": "firebud_training_yard",
-    "cellX": 80,
-    "cellY": 80,
+    "cellX": 33,
+    "cellY": 32,
     "facing": "west",
     "moving": false,
   });
@@ -690,8 +795,8 @@ test("online roster can be filtered by map area of interest", () => {
   const explicit = service.listOnlinePlayers(watcher.session.token, {
     "scope": "aoi",
     "mapId": "firebud_training_yard",
-    "cellX": 80,
-    "cellY": 80,
+    "cellX": 33,
+    "cellY": 32,
     "radius": 1,
   });
   assert.equal(explicit.ok, true);

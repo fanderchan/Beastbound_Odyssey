@@ -3297,7 +3297,7 @@ test("duel battle rooms require nearby settled positions", () => {
   });
   service.updatePlayerPosition(opponent.session.token, {
     "mapId": "firebud_training_yard",
-    "cellX": 30,
+    "cellX": 16,
     "cellY": 10,
     "facing": "west",
     "moving": false,
@@ -3305,6 +3305,19 @@ test("duel battle rooms require nearby settled positions", () => {
   const far = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
   assert.equal(far.ok, false);
   assert.equal(far.code, "battle_distance_too_far");
+
+  // 对手通过权威单步移动走近挑战者，位置快照不允许直接跳格。
+  for (let cellX = 16; cellX > 11; cellX -= 1) {
+    const step = service.movePlayerStep(opponent.session.token, {
+      "mapId": "firebud_training_yard",
+      "fromCellX": cellX,
+      "fromCellY": 10,
+      "toCellX": cellX - 1,
+      "toCellY": 10,
+      "moving": false,
+    });
+    assert.equal(step.ok, true);
+  }
 
   service.updatePlayerPosition(opponent.session.token, {
     "mapId": "firebud_training_yard",
@@ -3327,6 +3340,16 @@ test("duel battle rooms require nearby settled positions", () => {
   const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
   assert.equal(accept.room.entry.distanceCells, 1);
+
+  const teleportNear = service.updatePlayerPosition(opponent.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 20,
+    "cellY": 20,
+    "facing": "west",
+    "moving": false,
+  });
+  assert.equal(teleportNear.ok, false);
+  assert.equal(teleportNear.code, "position_desync");
 });
 
 test("battle rooms are runtime-only and are not restored from the auth store", () => {
@@ -3438,8 +3461,8 @@ test("battle position restore does not override newer client logout position", (
   nowMs += 1000;
   const logoutPosition = service.updatePlayerPosition(challenger.session.token, {
     "mapId": "firebud_village_gate",
-    "cellX": 5,
-    "cellY": 6,
+    "cellX": 3,
+    "cellY": 15,
     "facing": "south",
     "moving": false,
   });
@@ -3455,8 +3478,8 @@ test("battle position restore does not override newer client logout position", (
   const challengerPosition = service.snapshot().playerPositions[challenger.account.accountId];
   const opponentPosition = service.snapshot().playerPositions[opponent.account.accountId];
   assert.equal(challengerPosition.mapId, "firebud_village_gate");
-  assert.equal(challengerPosition.cellX, 5);
-  assert.equal(challengerPosition.cellY, 6);
+  assert.equal(challengerPosition.cellX, 3);
+  assert.equal(challengerPosition.cellY, 15);
   assert.equal(challengerPosition.authority, "client_snapshot");
   assert.equal(opponentPosition.mapId, "village");
   assert.equal(opponentPosition.cellX, 11);

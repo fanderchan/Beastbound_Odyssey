@@ -50,6 +50,9 @@ const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
 const MOVEMENT_MAX_STEP_CELLS = 1;
+const POSITION_SNAPSHOT_MAX_DRIFT_CELLS = 2;
+const POSITION_SPAWN_TOLERANCE_CELLS = 1;
+const POSITION_WARP_PROXIMITY_CELLS = 4;
 const PARTY_OFFLINE_AUTO_KICK_MS = 10 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
@@ -305,6 +308,10 @@ function createAuthService(options = {}) {
   const now = options.now || (() => Date.now());
   const randomId = options.randomId || (() => crypto.randomUUID());
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
+  // QA/联调专用逃生口：只允许在本地测试服务器上放开位置校验，正式运行必须保持严格。
+  const allowPositionTeleport = Boolean(
+    options.allowPositionTeleport ?? (process.env.BEASTBOUND_ALLOW_POSITION_TELEPORT === "1")
+  );
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
   const runtimeActiveSessionIds = new Map();
@@ -1120,6 +1127,17 @@ function createAuthService(options = {}) {
     if (!position.mapId) {
       return fail("position_map_missing", "位置缺少地图。");
     }
+    if (!allowPositionTeleport) {
+      const validation = validateClientPositionSnapshot(data, resolved.account, previousPosition, position);
+      if (!validation.ok) {
+        return rejectMovementStep(validation.code, validation.message, previousPosition, {
+          movement: {
+            retryable: false,
+            requiresSync: Boolean(previousPosition),
+          },
+        });
+      }
+    }
     position.authority = "client_snapshot";
     data.playerPositions[resolved.account.accountId] = position;
     applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
@@ -1180,6 +1198,12 @@ function createAuthService(options = {}) {
       return rejectMovementStep("movement_step_too_far", "移动距离过远，请重新同步。", currentPosition, {
         maxStepCells: MOVEMENT_MAX_STEP_CELLS,
       });
+    }
+    if (!allowPositionTeleport) {
+      const stepMapDoc = mapDocumentById(step.mapId);
+      if (stepMapDoc && !positionCellStandable(stepMapDoc, step.toCellX, step.toCellY)) {
+        return rejectMovementStep("movement_cell_blocked", "目标格不可通行。", currentPosition);
+      }
     }
     const position = normalizePlayerPositionPayload({
       mapId: currentPosition.mapId,
@@ -12314,6 +12338,135 @@ function loadMapDocumentCache() {
     // Map data is a convenience for battle return cells; default record point remains usable without it.
   }
   return cache;
+}
+
+function cellChebyshevDistance(ax, ay, bx, by) {
+  return Math.max(Math.abs(Math.trunc(Number(ax || 0)) - Math.trunc(Number(bx || 0))), Math.abs(Math.trunc(Number(ay || 0)) - Math.trunc(Number(by || 0))));
+}
+
+function interactionPointBlocksMovement(point) {
+  if (point && Object.prototype.hasOwnProperty.call(point, "blocksMovement")) {
+    return Boolean(point.blocksMovement);
+  }
+  return String(point && point.movementCollision || "overlap").trim().toLowerCase() === "block";
+}
+
+function mapInteractionPoints(mapDoc) {
+  return mapDoc && Array.isArray(mapDoc.interactionPoints) ? mapDoc.interactionPoints : [];
+}
+
+function positionCellStandable(mapDoc, cellX, cellY) {
+  const grid = Array.isArray(mapDoc && mapDoc.gridSize) ? mapDoc.gridSize : [];
+  const width = Math.trunc(Number(grid[0] || 0));
+  const height = Math.trunc(Number(grid[1] || 0));
+  if (width > 0 && height > 0 && (cellX < 0 || cellY < 0 || cellX >= width || cellY >= height)) {
+    return false;
+  }
+  const blockedCells = Array.isArray(mapDoc && mapDoc.blockedCells) ? mapDoc.blockedCells : [];
+  for (const cell of blockedCells) {
+    if (Array.isArray(cell) && Math.trunc(Number(cell[0])) === cellX && Math.trunc(Number(cell[1])) === cellY) {
+      return false;
+    }
+  }
+  for (const point of mapInteractionPoints(mapDoc)) {
+    if (!point || !Array.isArray(point.cell)) {
+      continue;
+    }
+    if (Math.trunc(Number(point.cell[0])) === cellX && Math.trunc(Number(point.cell[1])) === cellY && interactionPointBlocksMovement(point)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function mapSpawnCellsForDoc(mapDoc) {
+  const cells = [];
+  const spawnPoints = mapDoc && mapDoc.spawnPoints && typeof mapDoc.spawnPoints === "object" && !Array.isArray(mapDoc.spawnPoints)
+    ? mapDoc.spawnPoints
+    : {};
+  for (const value of Object.values(spawnPoints)) {
+    if (Array.isArray(value) && value.length >= 2) {
+      cells.push([Math.trunc(Number(value[0] || 0)), Math.trunc(Number(value[1] || 0))]);
+    }
+  }
+  if (Array.isArray(mapDoc && mapDoc.spawnCell) && mapDoc.spawnCell.length >= 2) {
+    cells.push([Math.trunc(Number(mapDoc.spawnCell[0] || 0)), Math.trunc(Number(mapDoc.spawnCell[1] || 0))]);
+  }
+  return cells;
+}
+
+function positionNearMapSpawn(mapDoc, cellX, cellY, tolerance = POSITION_SPAWN_TOLERANCE_CELLS) {
+  return mapSpawnCellsForDoc(mapDoc).some((cell) => cellChebyshevDistance(cellX, cellY, cell[0], cell[1]) <= tolerance);
+}
+
+function mapWarpToMapAllowed(previousMapDoc, previousPosition, targetMapId) {
+  for (const point of mapInteractionPoints(previousMapDoc)) {
+    if (!point || String(point.kind || "") !== "warp") {
+      continue;
+    }
+    if (String(point.toMap || "").trim() !== targetMapId) {
+      continue;
+    }
+    if (!playerPositionHasCell(previousPosition)) {
+      return true;
+    }
+    const warpCell = Array.isArray(point.cell) ? point.cell : [0, 0];
+    if (cellChebyshevDistance(previousPosition.cellX, previousPosition.cellY, warpCell[0], warpCell[1]) <= POSITION_WARP_PROXIMITY_CELLS) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validateClientPositionSnapshot(data, account, previousPosition, position) {
+  const okResult = {ok: true};
+  const mapDoc = mapDocumentById(position.mapId);
+  if (position.hasCell && mapDoc && !positionCellStandable(mapDoc, position.cellX, position.cellY)) {
+    return {ok: false, code: "position_cell_blocked", message: "该位置无法站立，请重新同步位置。"};
+  }
+  if (!previousPosition || !previousPosition.mapId) {
+    return okResult;
+  }
+  const sameMap = String(previousPosition.mapId || "") === String(position.mapId || "");
+  if (sameMap) {
+    if (!position.hasCell) {
+      return okResult;
+    }
+    if (!playerPositionHasCell(previousPosition)) {
+      if (!mapDoc || positionNearMapSpawn(mapDoc, position.cellX, position.cellY)) {
+        return okResult;
+      }
+      return {ok: false, code: "position_seed_not_spawn", message: "位置校验失败，请从地图入口重新进入。"};
+    }
+    const drift = cellChebyshevDistance(previousPosition.cellX, previousPosition.cellY, position.cellX, position.cellY);
+    if (drift <= POSITION_SNAPSHOT_MAX_DRIFT_CELLS) {
+      return okResult;
+    }
+    if (mapDoc && positionNearMapSpawn(mapDoc, position.cellX, position.cellY)) {
+      return okResult;
+    }
+    return {ok: false, code: "position_desync", message: "位置与服务器不一致，已按服务器位置纠正。"};
+  }
+  const previousMapDoc = mapDocumentById(previousPosition.mapId);
+  const targetMapId = String(position.mapId || "").trim();
+  let transitionAllowed = false;
+  if (!previousMapDoc) {
+    transitionAllowed = true;
+  } else if (mapWarpToMapAllowed(previousMapDoc, previousPosition, targetMapId)) {
+    transitionAllowed = true;
+  } else {
+    const recordPoint = recordPointForAccount(data, account.accountId);
+    if (String(recordPoint.mapId || "") === targetMapId) {
+      transitionAllowed = true;
+    }
+  }
+  if (!transitionAllowed) {
+    return {ok: false, code: "position_transition_invalid", message: "只能通过传送点或记录点前往其他地图。"};
+  }
+  if (position.hasCell && mapDoc && !positionNearMapSpawn(mapDoc, position.cellX, position.cellY)) {
+    return {ok: false, code: "position_seed_not_spawn", message: "位置校验失败，请从地图入口重新进入。"};
+  }
+  return okResult;
 }
 
 function battleInviteIsExpired(invite, now) {

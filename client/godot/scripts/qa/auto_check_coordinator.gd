@@ -15102,6 +15102,8 @@ func _run_auto_server_movement_live_check() -> void:
 
 func _run_auto_server_click_move_live_check() -> void:
 	host.profile_save_enabled = false
+	# 该检查验证 --local-world-move 回退路径：点击移动纯本地执行，结束后一次性上报位置。
+	host.server_step_world_move_enabled = false
 	var username = host._live_check_username("cma")
 	var register_response = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
