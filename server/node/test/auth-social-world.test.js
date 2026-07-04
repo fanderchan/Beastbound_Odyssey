@@ -566,6 +566,8 @@ test("players can publish map positions into the online roster", () => {
   assert.equal(updated.position.mapId, "firebud_training_yard");
   assert.equal(updated.position.cellX, 12);
   assert.equal(updated.position.facing, "east");
+  assert.equal(updated.position.hasCell, true);
+  assert.equal(updated.position.precision, "cell");
 
   const online = service.listOnlinePlayers(watcher.session.token);
   assert.equal(online.ok, true);
@@ -573,6 +575,60 @@ test("players can publish map positions into the online roster", () => {
   assert.notEqual(scoutRow, undefined);
   assert.equal(scoutRow.position.mapId, "firebud_training_yard");
   assert.equal(scoutRow.position.cellY, 8);
+});
+
+test("map-only presence keeps internal cells private but preserves movement anchor", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const scout = service.register({"username": "mapa", "password": "test1234", "displayName": "地图甲"});
+  const watcher = service.register({"username": "mapb", "password": "test1234", "displayName": "地图乙"});
+  assert.equal(scout.ok, true);
+  assert.equal(watcher.ok, true);
+
+  const precise = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 8,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(precise.ok, true);
+  assert.equal(precise.position.hasCell, true);
+  assert.equal(precise.position.precision, "cell");
+
+  const mapOnly = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "scope": "map",
+  });
+  assert.equal(mapOnly.ok, true);
+  assert.equal(mapOnly.position.mapId, "firebud_training_yard");
+  assert.equal(mapOnly.position.hasCell, false);
+  assert.equal(mapOnly.position.precision, "map");
+  assert.equal(mapOnly.position.cellX, 0);
+
+  const stored = service.snapshot().playerPositions[scout.account.accountId];
+  assert.equal(stored.mapId, "firebud_training_yard");
+  assert.equal(stored.cellX, 12);
+  assert.equal(stored.cellY, 8);
+  assert.equal(stored.hasCell, true);
+  assert.equal(stored.publicPrecision, "map");
+
+  const sameMap = service.listOnlinePlayers(watcher.session.token, {"scope": "map", "mapId": "firebud_training_yard"});
+  assert.equal(sameMap.ok, true);
+  const sameMapScout = sameMap.players.find((player) => player.username === "mapa");
+  assert.notEqual(sameMapScout, undefined);
+  assert.equal(sameMapScout.position.mapId, "firebud_training_yard");
+  assert.equal(sameMapScout.position.hasCell, false);
+  assert.equal(sameMapScout.position.precision, "map");
+
+  const aoi = service.listOnlinePlayers(watcher.session.token, {
+    "scope": "aoi",
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 8,
+    "radius": 1,
+  });
+  assert.equal(aoi.ok, true);
+  assert.equal(aoi.players.some((player) => player.username === "mapa"), false);
 });
 
 test("online roster can be filtered by map area of interest", () => {

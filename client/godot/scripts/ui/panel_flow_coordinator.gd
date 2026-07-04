@@ -113,7 +113,7 @@ const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
-const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
+const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 10.0
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
 const PARTY_STATE_POLL_SECONDS := 10.0
@@ -8959,7 +8959,7 @@ func _request_online_position_snapshot(payload: Dictionary = {}) -> void:
 	if not _is_server_account_session() or player == null or map_data.is_empty():
 		online_position_queued_payload.clear()
 		return
-	var next_payload := payload.duplicate(true) if not payload.is_empty() else _current_online_position_payload()
+	var next_payload := payload.duplicate(true) if not payload.is_empty() else _current_online_map_payload()
 	if online_position_request_pending:
 		online_position_queued_payload = next_payload
 		return
@@ -9002,6 +9002,12 @@ func _current_online_position_payload() -> Dictionary:
 		"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
 	}
 
+func _current_online_map_payload() -> Dictionary:
+	return {
+		"mapId": current_map_id,
+		"scope": "map",
+	}
+
 func _on_online_position_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	online_position_request_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
@@ -9042,6 +9048,8 @@ func _apply_online_position_players(players) -> void:
 			var position = online_player.get("position", null)
 			if not (position is Dictionary):
 				continue
+			if not _online_position_has_cell(position):
+				continue
 			next_remote_players.append(online_player)
 			if next_remote_players.size() >= ONLINE_POSITION_MAX_REMOTE_PLAYERS:
 				break
@@ -9065,6 +9073,14 @@ func _online_position_draw_signature(players: Array[Dictionary]) -> String:
 		])
 	parts.sort()
 	return "|".join(parts)
+
+func _online_position_has_cell(position: Dictionary) -> bool:
+	if position.has("hasCell"):
+		return bool(position.get("hasCell", false))
+	var precision := str(position.get("precision", "")).strip_edges().to_lower()
+	if precision == "map":
+		return false
+	return position.has("cellX") and position.has("cellY")
 
 func _request_server_profile_pull() -> void:
 	host._server_sync().request_profile_pull()
@@ -10135,6 +10151,8 @@ func _server_step_move_should_report_authority_cell() -> bool:
 
 func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false) -> bool:
 	if position.is_empty():
+		return false
+	if not _online_position_has_cell(position):
 		return false
 	var map_id = str(position.get("mapId", current_map_id))
 	var authority = str(position.get("authority", "")).strip_edges()
@@ -14953,15 +14971,14 @@ func _family_member_is_current_player(member: Dictionary) -> bool:
 func _family_member_position_text(member: Dictionary, online: bool) -> String:
 	var position = member.get("position", null) as Dictionary if member.get("position", null) is Dictionary else {}
 	if _family_member_is_current_player(member) and player != null and not map_data.is_empty():
-		position = _current_online_position_payload()
+		position = _current_online_map_payload()
 	if position.is_empty():
-		return "位置：未同步"
+		return "地图：未同步"
 	var map_id := str(position.get("mapId", "")).strip_edges()
 	var map_name := _map_name_for_id(map_id) if map_id != "" else "未知地图"
-	var coord_text := "%d,%d" % [int(position.get("cellX", 0)), int(position.get("cellY", 0))]
 	if online:
-		return "当前位置：%s  %s" % [map_name, coord_text]
-	return "最后位置：%s  %s" % [map_name, coord_text]
+		return "当前位置：%s" % map_name
+	return "最后地图：%s" % map_name
 
 func _family_list_row(family: Dictionary, current_family: Dictionary) -> Control:
 	var family_id := str(family.get("familyId", "")).strip_edges()
@@ -16063,15 +16080,12 @@ func _should_poll_party_state() -> bool:
 func _request_party_online() -> void:
 	if not _is_server_account_session():
 		return
-	var position_payload := _current_online_position_payload()
-	var map_id := str(position_payload.get("mapId", "")).strip_edges()
+	var map_payload := _current_online_map_payload()
+	var map_id := str(map_payload.get("mapId", "")).strip_edges()
 	if map_id != "":
-		_request_online_position_snapshot(position_payload)
+		_request_online_position_snapshot(map_payload)
 		_start_party_request("online", ServerAuthClientModel.online_players_request(_server_profile_base_url(), _server_profile_token(), "map", {
 			"mapId": map_id,
-			"cellX": int(position_payload.get("cellX", 0)),
-			"cellY": int(position_payload.get("cellY", 0)),
-			"radius": ONLINE_POSITION_AOI_RADIUS_CELLS,
 		}))
 		return
 	_start_party_request("online", ServerAuthClientModel.online_players_request(_server_profile_base_url(), _server_profile_token()))
@@ -16246,7 +16260,7 @@ func _refresh_player_action_panel() -> void:
 	var current_party_value = party_current_state.get("party", null)
 	var current_has_party = current_party_value is Dictionary
 	var distance_text = ""
-	if player != null and not map_data.is_empty() and str(position.get("mapId", "")) == current_map_id:
+	if player != null and not map_data.is_empty() and str(position.get("mapId", "")) == current_map_id and _online_position_has_cell(position):
 		var player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
 		var target_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
 		var distance = maxi(abs(player_cell.x - target_cell.x), abs(player_cell.y - target_cell.y))

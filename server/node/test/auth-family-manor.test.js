@@ -97,6 +97,8 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(onlineMember.connectionState, "online");
   assert.equal(onlineMember.position.mapId, "earth_vein_cave");
   assert.equal(onlineMember.position.cellX, 8);
+  assert.equal(onlineMember.position.hasCell, true);
+  assert.equal(onlineMember.position.precision, "cell");
 
   currentMs += 26 * 1000;
   const staleFamilyState = service.getFamilyState(leader.session.token);

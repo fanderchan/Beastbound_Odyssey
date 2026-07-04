@@ -114,7 +114,7 @@ const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
-const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
+const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 10.0
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
 const PARTY_STATE_POLL_SECONDS := 10.0
@@ -7275,6 +7275,9 @@ func _on_online_position_timer_timeout() -> void:
 func _request_online_position_snapshot(payload: Dictionary = {}) -> void:
 	_panel_flow()._request_online_position_snapshot(payload)
 
+func _current_online_map_payload() -> Dictionary:
+	return _panel_flow()._current_online_map_payload()
+
 func _current_online_position_payload() -> Dictionary:
 	return _panel_flow()._current_online_position_payload()
 
@@ -12222,6 +12225,10 @@ func _draw_online_remote_players() -> void:
 	var font := _canvas_text_font()
 	for value in online_position_remote_players:
 		var position := value.get("position", {}) as Dictionary if value.get("position", {}) is Dictionary else {}
+		if position.has("hasCell") and not bool(position.get("hasCell", false)):
+			continue
+		if str(position.get("precision", "")).strip_edges().to_lower() == "map":
+			continue
 		if str(position.get("mapId", "")) != current_map_id:
 			continue
 		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
@@ -12258,6 +12265,10 @@ func _online_remote_player_at_screen_point(screen_point: Vector2) -> Dictionary:
 		if username == "" or username == str(current_account_session.get("username", "")).strip_edges():
 			continue
 		var position := player_info.get("position", {}) as Dictionary if player_info.get("position", {}) is Dictionary else {}
+		if position.has("hasCell") and not bool(position.get("hasCell", false)):
+			continue
+		if str(position.get("precision", "")).strip_edges().to_lower() == "map":
+			continue
 		if str(position.get("mapId", "")) != current_map_id:
 			continue
 		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))

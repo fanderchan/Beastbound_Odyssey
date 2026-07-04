@@ -1083,9 +1083,7 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const party = partyForAccount(data, resolved.account.accountId);
-    const currentPosition = data.playerPositions[resolved.account.accountId]
-      ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
-      : null;
+    const currentPosition = data.playerPositions[resolved.account.accountId] || null;
     if (party && party.leaderAccountId !== resolved.account.accountId) {
       const position = partyMemberFollowSnapshotPosition(data, resolved.account, payload, now);
       if (!position) {
@@ -1117,20 +1115,21 @@ function createAuthService(options = {}) {
         },
       });
     }
-    const position = normalizePlayerPositionPayload(payload, resolved.account, now);
+    const previousPosition = currentPosition ? {...currentPosition} : null;
+    const position = normalizePlayerPositionPayload(payload, resolved.account, now, previousPosition);
     if (!position.mapId) {
       return fail("position_map_missing", "位置缺少地图。");
     }
     position.authority = "client_snapshot";
-    const previousPosition = currentPosition;
     data.playerPositions[resolved.account.accountId] = position;
     applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
+    const previousPublicPosition = previousPosition ? publicPlayerPosition(previousPosition) : null;
     const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
     if (partyPresenceEvent) {
       save(data);
       emitServiceEvent(partyPresenceEvent);
     }
-    return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
+    return publishPositionUpdate(data, resolved.account, position, previousPublicPosition, payload, {
       authority: "client_snapshot",
     });
   }
@@ -1154,7 +1153,7 @@ function createAuthService(options = {}) {
     if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
       return rejectMovementStep("movement_battle_locked", "切磋房间中不能移动。", currentPosition);
     }
-    if (!currentPosition || !currentPosition.mapId) {
+    if (!currentPosition || !currentPosition.mapId || !playerPositionHasCell(currentPosition)) {
       return rejectMovementStep("movement_position_missing", "请先同步当前位置。", null);
     }
     const step = normalizeMovementStepPayload(payload, currentPosition);
@@ -1228,7 +1227,10 @@ function createAuthService(options = {}) {
 
   function publishPositionUpdate(data, account, position, previousPosition, payload = {}, extra = {}) {
     const aoi = normalizeOnlineAoiPayload({
-      scope: ONLINE_AOI_SCOPE,
+      scope: payload.scope || payload.viewScope || ONLINE_AOI_SCOPE,
+      mapId: payload.mapId || payload.map,
+      cellX: payload.cellX ?? payload.x,
+      cellY: payload.cellY ?? payload.y,
       radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
     }, position);
     const players = publicOnlinePlayersForViewer(data, account, aoi, now, runtimeActiveSessionIds);
@@ -2030,17 +2032,43 @@ function publicOnlinePlayer(account, data) {
 }
 
 function publicPlayerPosition(position) {
+  const hasPublicCell = playerPositionPublicPrecision(position) === "cell";
   return {
     mapId: position.mapId,
-    cellX: Number(position.cellX || 0),
-    cellY: Number(position.cellY || 0),
-    facing: position.facing,
-    moving: Boolean(position.moving),
+    cellX: hasPublicCell ? Number(position.cellX || 0) : 0,
+    cellY: hasPublicCell ? Number(position.cellY || 0) : 0,
+    facing: hasPublicCell ? position.facing : "south",
+    moving: hasPublicCell ? Boolean(position.moving) : false,
     movementSeq: Number(position.movementSeq || 0),
     authority: String(position.authority || "client_snapshot"),
+    hasCell: hasPublicCell,
+    precision: hasPublicCell ? "cell" : "map",
     updatedAt: position.updatedAt,
     schemaVersion: 1,
   };
+}
+
+function playerPositionHasCell(position) {
+  if (!position || typeof position !== "object") {
+    return false;
+  }
+  if (position.hasCell === false) {
+    return false;
+  }
+  const cellX = Number(position.cellX);
+  const cellY = Number(position.cellY);
+  return Number.isFinite(cellX) && Number.isFinite(cellY);
+}
+
+function playerPositionPublicPrecision(position) {
+  if (!position || typeof position !== "object") {
+    return "map";
+  }
+  const precision = String(position.publicPrecision || position.precision || "").trim().toLowerCase();
+  if (precision === "map") {
+    return "map";
+  }
+  return playerPositionHasCell(position) ? "cell" : "map";
 }
 
 function publicMail(mail) {
@@ -13673,6 +13701,9 @@ function onlinePlayerDistanceRank(player, viewerPosition) {
   if (String(position.mapId || "") !== String(viewerPosition.mapId || "")) {
     return Number.MAX_SAFE_INTEGER;
   }
+  if (playerPositionPublicPrecision(position) !== "cell" || playerPositionPublicPrecision(viewerPosition) !== "cell") {
+    return Number.MAX_SAFE_INTEGER;
+  }
   const dx = Math.abs(Number(position.cellX || 0) - Number(viewerPosition.cellX || 0));
   const dy = Math.abs(Number(position.cellY || 0) - Number(viewerPosition.cellY || 0));
   return Math.max(dx, dy);
@@ -13720,6 +13751,18 @@ function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
       radius: ONLINE_AOI_DEFAULT_RADIUS,
     };
   }
+  const sourceHasCell = playerPositionPublicPrecision(source) === "cell";
+  if (!sameMapScope && !sourceHasCell) {
+    return {
+      enabled: true,
+      scope: ONLINE_MAP_SCOPE,
+      mapId,
+      cellX: 0,
+      cellY: 0,
+      radius: 0,
+      sameMapOnly: true,
+    };
+  }
   return {
     enabled: true,
     scope: sameMapScope ? ONLINE_MAP_SCOPE : ONLINE_AOI_SCOPE,
@@ -13743,6 +13786,9 @@ function onlinePositionVisibleToAoi(position, aoi) {
   }
   if (aoi.scope === ONLINE_MAP_SCOPE || aoi.sameMapOnly) {
     return true;
+  }
+  if (playerPositionPublicPrecision(position) !== "cell") {
+    return false;
   }
   const dx = Math.abs(Number(position.cellX || 0) - aoi.cellX);
   const dy = Math.abs(Number(position.cellY || 0) - aoi.cellY);
@@ -14378,9 +14424,21 @@ function normalizeChatText(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, CHAT_TEXT_MAX_LENGTH);
 }
 
-function normalizePlayerPositionPayload(payload, account, now) {
+function normalizePlayerPositionPayload(payload, account, now, previousPosition = null) {
   const mapId = String(payload.mapId || payload.map || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH);
+  const hasPayloadCellX = payload.cellX !== undefined || payload.x !== undefined;
+  const hasPayloadCellY = payload.cellY !== undefined || payload.y !== undefined;
+  const hasPayloadCell = hasPayloadCellX && hasPayloadCellY;
+  const canReusePreviousCell = (
+    !hasPayloadCell &&
+    previousPosition &&
+    playerPositionHasCell(previousPosition) &&
+    String(previousPosition.mapId || "") === mapId
+  );
   let facing = String(payload.facing || "south").trim().toLowerCase();
+  if (!hasPayloadCell && canReusePreviousCell) {
+    facing = String(previousPosition.facing || facing).trim().toLowerCase();
+  }
   if (!POSITION_FACING_VALUES.has(facing)) {
     facing = "south";
   }
@@ -14389,10 +14447,17 @@ function normalizePlayerPositionPayload(payload, account, now) {
     username: account.username,
     displayName: account.displayName,
     mapId,
-    cellX: clampInt(payload.cellX ?? payload.x, -9999, 9999, 0),
-    cellY: clampInt(payload.cellY ?? payload.y, -9999, 9999, 0),
+    cellX: hasPayloadCell
+      ? clampInt(payload.cellX ?? payload.x, -9999, 9999, 0)
+      : (canReusePreviousCell ? clampInt(previousPosition.cellX, -9999, 9999, 0) : 0),
+    cellY: hasPayloadCell
+      ? clampInt(payload.cellY ?? payload.y, -9999, 9999, 0)
+      : (canReusePreviousCell ? clampInt(previousPosition.cellY, -9999, 9999, 0) : 0),
     facing,
-    moving: Boolean(payload.moving),
+    moving: hasPayloadCell ? Boolean(payload.moving) : false,
+    movementSeq: canReusePreviousCell ? Math.max(0, Math.trunc(Number(previousPosition.movementSeq || 0))) : 0,
+    hasCell: hasPayloadCell || canReusePreviousCell,
+    publicPrecision: hasPayloadCell ? "cell" : "map",
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
