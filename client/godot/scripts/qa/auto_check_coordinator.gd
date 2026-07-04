@@ -2583,6 +2583,74 @@ func _run_auto_battle_command_timer_check() -> void:
 	host._sync_battle_round_timer_labels(true)
 	host._layout_hud()
 	var round_events_timer_hidden = host.battle_timer_panel != null and not host.battle_timer_panel.visible
+	var saved_session: Dictionary = host.current_account_session.duplicate(true)
+	var saved_server_battle_state: Dictionary = host.server_battle_state.duplicate(true)
+	var timer_account_id := "timer_account"
+	var timer_room := {
+		"roomId": "timer_sync_room",
+		"status": "ready",
+		"mode": "party_pve",
+		"participantAccountIds": [timer_account_id],
+		"participants": [{
+			"accountId": timer_account_id,
+			"username": "timer_player",
+			"displayName": "计时员",
+			"side": "challenger",
+			"teamSnapshot": {
+				"battleItemBag": {},
+				"captureToolBag": {},
+				"battlePets": [],
+			},
+		}],
+		"battle": {
+			"round": 1,
+			"phase": "command",
+			"commandDeadlineAt": deadline_text,
+			"actors": [{
+				"actorId": "timer_player_actor",
+				"accountId": timer_account_id,
+				"username": "timer_player",
+				"displayName": "计时员",
+				"side": "ally",
+				"kind": "player",
+				"slotId": "ally.back.3",
+				"hp": 100,
+				"maxHp": 100,
+				"level": 1,
+				"attack": 10,
+				"defense": 6,
+				"speed": 50,
+			}],
+			"requiredActorIds": ["timer_player_actor"],
+			"submittedActorIds": [],
+		},
+	}
+	host.current_account_session = {
+		"accountId": timer_account_id,
+		"username": "timer_player",
+		"serverSessionToken": "timer_token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+	}
+	host.server_battle_state["room"] = timer_room.duplicate(true)
+	var timer_first_start = host._apply_server_battle_room_state(timer_room, true)
+	host.battle_command_countdown_remaining = 42.0
+	host.battle_command_countdown_last_second = -1
+	var timer_round_two_room := timer_room.duplicate(true)
+	var timer_round_two_battle := (timer_round_two_room.get("battle", {}) as Dictionary).duplicate(true)
+	timer_round_two_battle["round"] = 2
+	timer_round_two_room["battle"] = timer_round_two_battle
+	host.server_battle_state["room"] = timer_round_two_room.duplicate(true)
+	var timer_round_sync_applied = host._sync_server_battle_room_scene(false)
+	var timer_sync_timer_reset_ok = (
+		timer_first_start
+		and timer_round_sync_applied
+		and int(host.battle_state.get("round", 0)) == 2
+		and host.battle_timer_label != null
+		and host.battle_timer_label.text == "99秒"
+	)
+	host.current_account_session = saved_session
+	host.server_battle_state = saved_server_battle_state
 	host.battle_state = saved_battle_state
 	host.battle_command_countdown_remaining = saved_countdown_remaining
 	host.battle_command_countdown_last_second = saved_countdown_last_second
@@ -2603,8 +2671,8 @@ func _run_auto_battle_command_timer_check() -> void:
 	var returned_to_command = host.battle_active and not host._battle_commands_locked()
 	var second_round_ok = int(host.battle_state.get("round", 0)) >= 2 and host.battle_round_label != null and host.battle_round_label.text == "第 2 回合"
 	var timer_reset_ok = host.battle_timer_label != null and host.battle_timer_label.text == "99秒"
-	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and round_events_timer_hidden and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
-	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s round_events_hidden=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d" % [
+	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and round_events_timer_hidden and timer_sync_timer_reset_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
+	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s round_events_hidden=%s sync_timer_reset=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -2613,6 +2681,7 @@ func _run_auto_battle_command_timer_check() -> void:
 		str(initial_timer_ok),
 		str(waiting_timer_moves),
 		str(round_events_timer_hidden),
+		str(timer_sync_timer_reset_ok),
 		str(auto_started_round),
 		str(default_round_events),
 		str(returned_to_command),
@@ -17408,6 +17477,7 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	var polled_escape_preview_started_ok = false
 	var polled_escape_preview_motion_ok = false
 	var polled_escape_sync_ok = false
+	var polled_escape_playback_sync_ok = false
 	if actor_ids_ok:
 		var saved_session: Dictionary = host.current_account_session.duplicate(true)
 		var leader_client_session: Dictionary = leader_session.duplicate(true)
@@ -17415,6 +17485,10 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		leader_client_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
 		host.current_account_session = leader_client_session
 		host._apply_server_battle_room_state(second_room, false)
+		host.battle_state["phase"] = "round_events"
+		host.battle_action_timer = 3.0
+		host.battle_current_event = {"type": "attack"}
+		host.battle_event_queue.clear()
 		var dropped_room := second_room.duplicate(true)
 		var dropped_battle := (dropped_room.get("battle", {}) as Dictionary).duplicate(true) if dropped_room.get("battle", {}) is Dictionary else {}
 		var dropped_actors: Array = []
@@ -17446,12 +17520,13 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 				host._battle_actor_visual_scale()
 			)
 			polled_escape_preview_motion_ok = preview_offset.length() > 4.0
-		await host.get_tree().create_timer(0.72).timeout
-		await host.get_tree().process_frame
-		var synced_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
-		polled_escape_sync_ok = synced_actors.all(func(value) -> bool:
-			return not (value is Dictionary and str((value as Dictionary).get("serverUsername", "")) == member_username)
-		)
+			await host.get_tree().create_timer(0.72).timeout
+			await host.get_tree().process_frame
+			var synced_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+			polled_escape_sync_ok = synced_actors.all(func(value) -> bool:
+				return not (value is Dictionary and str((value as Dictionary).get("serverUsername", "")) == member_username)
+			)
+			polled_escape_playback_sync_ok = polled_escape_sync_ok and str(host.battle_state.get("phase", "")) == "round_events" and host.battle_action_timer > 0.0
 		host.current_account_session = saved_session
 		host._apply_server_battle_room_state(second_room, false)
 	var leader_player_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
@@ -17602,8 +17677,8 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		))
 	host._end_battle(true)
 	host._stop_server_event_stream()
-	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and polled_escape_preview_started_ok and polled_escape_preview_motion_ok and polled_escape_sync_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
-	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s restore_poll=%s restore_parts=%s/%s/%s/%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s polled_escape=%s/%s/%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
+	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and polled_escape_preview_started_ok and polled_escape_preview_motion_ok and polled_escape_sync_ok and polled_escape_playback_sync_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
+	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s restore_poll=%s restore_parts=%s/%s/%s/%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s polled_escape=%s/%s/%s/%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
 		status,
 		str(register_ok),
 		str(profile_ok),
@@ -17624,6 +17699,7 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		str(polled_escape_preview_started_ok),
 		str(polled_escape_preview_motion_ok),
 		str(polled_escape_sync_ok),
+		str(polled_escape_playback_sync_ok),
 		str(commands_ok),
 		str(member_round2_commands_ok),
 		str(actor_missing_room_ok),

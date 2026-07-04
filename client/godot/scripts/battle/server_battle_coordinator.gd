@@ -166,7 +166,7 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "", allow_es
 	var room_closed := str(room.get("status", "")).strip_edges() == "closed"
 	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	if allow_escape_preview and _start_escape_preview_for_missing_room_actors(battle):
-		_apply_polled_room_after_escape_preview(room, expected_room_id)
+		_apply_polled_room_after_escape_preview(room, expected_room_id, _current_escape_preview_actor_ids())
 		return
 	var last_event_list := battle.get("lastEventList", {}) as Dictionary if battle.get("lastEventList", {}) is Dictionary else {}
 	if not last_event_list.is_empty():
@@ -199,7 +199,7 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "", allow_es
 		host._sync_server_battle_room_scene(false)
 
 
-func _apply_polled_room_after_escape_preview(room: Dictionary, expected_room_id: String = "") -> void:
+func _apply_polled_room_after_escape_preview(room: Dictionary, expected_room_id: String = "", escaped_actor_ids: Array[String] = []) -> void:
 	await host.get_tree().create_timer(SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS).timeout
 	if not host._battle_is_server_authority():
 		host._clear_battle_escape_preview()
@@ -209,6 +209,7 @@ func _apply_polled_room_after_escape_preview(room: Dictionary, expected_room_id:
 	if updated_room_id != "" and active_room_id != "" and updated_room_id != active_room_id:
 		host._clear_battle_escape_preview()
 		return
+	_remove_local_battle_actors(escaped_actor_ids)
 	apply_polled_room(room, expected_room_id, false)
 	host._clear_battle_escape_preview()
 
@@ -266,12 +267,12 @@ func apply_battle_event(event: Dictionary) -> void:
 		var updated_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
 		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 		if event_type == "battle.room_updated" and _start_escape_preview_for_room_update(event):
-			_apply_room_update_after_escape_preview(updated_room, turn)
+			_apply_room_update_after_escape_preview(updated_room, turn, _current_escape_preview_actor_ids())
 			return
 		_apply_room_updated_payload(updated_room, turn)
 
 
-func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dictionary) -> void:
+func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dictionary, escaped_actor_ids: Array[String] = []) -> void:
 	await host.get_tree().create_timer(SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS).timeout
 	if not host._battle_is_server_authority():
 		host._clear_battle_escape_preview()
@@ -281,6 +282,7 @@ func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dic
 	if updated_room_id != "" and active_room_id != "" and updated_room_id != active_room_id:
 		host._clear_battle_escape_preview()
 		return
+	_remove_local_battle_actors(escaped_actor_ids)
 	_apply_room_updated_payload(updated_room, turn)
 	host._clear_battle_escape_preview()
 
@@ -337,6 +339,62 @@ func _start_escape_preview_for_missing_room_actors(battle: Dictionary) -> bool:
 	host.battle_escape_preview_started_msec = Time.get_ticks_msec()
 	host.queue_redraw()
 	return true
+
+
+func _current_escape_preview_actor_ids() -> Array[String]:
+	var result: Array[String] = []
+	for value in host.battle_escape_preview_actor_ids:
+		var actor_id := str(value).strip_edges()
+		if actor_id != "" and not result.has(actor_id):
+			result.append(actor_id)
+	return result
+
+
+func _remove_local_battle_actors(actor_ids: Array[String]) -> void:
+	if actor_ids.is_empty() or not host.battle_active:
+		return
+	var remove_lookup := {}
+	for actor_id in actor_ids:
+		var normalized := str(actor_id).strip_edges()
+		if normalized != "":
+			remove_lookup[normalized] = true
+	if remove_lookup.is_empty():
+		return
+	var actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	var next_actors: Array = []
+	var changed := false
+	for value in actors:
+		if not (value is Dictionary):
+			next_actors.append(value)
+			continue
+		var actor := value as Dictionary
+		var actor_id := str(actor.get("id", "")).strip_edges()
+		if actor_id != "" and remove_lookup.has(actor_id):
+			changed = true
+			continue
+		next_actors.append(actor)
+	if not changed:
+		return
+	host.battle_state["actors"] = next_actors
+	var guarding_ids: Array = host.battle_state.get("guardingActorIds", []) if host.battle_state.get("guardingActorIds", []) is Array else []
+	var next_guarding_ids: Array[String] = []
+	for value in guarding_ids:
+		var guarding_id := str(value).strip_edges()
+		if guarding_id != "" and not remove_lookup.has(guarding_id):
+			next_guarding_ids.append(guarding_id)
+	host.battle_state["guardingActorIds"] = next_guarding_ids
+	if remove_lookup.has(str(host.battle_selected_target_id).strip_edges()):
+		host.battle_selected_target_id = ""
+	if remove_lookup.has(str(host.battle_selected_ally_target_id).strip_edges()):
+		host.battle_selected_ally_target_id = ""
+	if remove_lookup.has(str(host.battle_hover_target_id).strip_edges()):
+		host.battle_hover_target_id = ""
+	if remove_lookup.has(str(host.battle_hover_ally_target_id).strip_edges()):
+		host.battle_hover_ally_target_id = ""
+	host._sync_battle_target_selection()
+	host._sync_battle_buttons()
+	host._layout_hud()
+	host.queue_redraw()
 
 
 func _missing_local_ally_actor_ids_for_room_battle(battle: Dictionary) -> Array[String]:
@@ -542,7 +600,8 @@ func sync_room_scene(force_start: bool = false) -> bool:
 			and previous_round == next_round
 			and host._server_battle_needs_self_pet_command()
 		)
-		if previous_phase != "command" and next_phase == "command" and not same_round_self_pet_handoff:
+		var entered_new_command_round := next_phase == "command" and (previous_phase != "command" or previous_round != next_round)
+		if entered_new_command_round and not same_round_self_pet_handoff:
 			host._reset_battle_command_countdown()
 		host._set_battle_message(str(host.battle_state.get("message", "切磋状态已同步。")))
 		host._sync_battle_target_selection()
