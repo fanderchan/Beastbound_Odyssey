@@ -7,7 +7,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 - The project has moved past the prototype/bugfix phase: all 32 known bugs in `tasks.md` are fixed and verified. Do not re-investigate them unless a regression is proven by a failing test or check.
 - Release engineering follows `release_plan.md` (stages A → E). Content and StoneAge-gap iteration follows `stoneage_gap_plan.md` (stages F0 → F8). At the start of every session, read the "进度追踪" section of whichever plan is active, plus `git log`, to locate the current position.
 - `release_plan.md` A-E acceptance is complete; prefer `stoneage_gap_plan.md` for new feature work unless the user explicitly asks for a PC-only export smoke or another release-engineering check.
-- After completing each item, tick its checkbox in the active plan file and append one line of completion evidence. After completing each stage, run `node tools/run_local_ci.mjs` (or the stage-appropriate subset) and stop for user confirmation before starting the next stage.
+- After completing each item, tick its checkbox in the active plan file and append one line of completion evidence. After completing each stage, run the stage-appropriate subset of tests and stop for user confirmation before starting the next stage. Do not run full `node tools/run_local_ci.mjs` unless the user explicitly asks for it or the stage is a true release/export gate that cannot be validated safely with narrower checks.
 - When a StoneAge 8.0 mechanic is uncertain, inspect the local reference at `/Users/fander/projects/_local_references/StoneAge` (see also [fanderchan/StoneAge](https://github.com/fanderchan/StoneAge)) for behavior intent only; do not copy code, data, or assets.
 
 ## Product Direction
@@ -35,6 +35,9 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
 
 ## Validation And Performance Rules
 
+- Default to targeted validation: run only the tests, Godot auto-checks, smoke checks, or perf probes that cover the files and behavior changed. Full local CI is slow and should be avoided unless necessary.
+- Treat `node tools/run_local_ci.mjs` as an expensive exception, not a routine post-change step. It can behave like a performance stress run and can generate large MySQL binlogs, risking local disk exhaustion on this Mac.
+- If full CI seems warranted, state why it is necessary before starting it; otherwise document the targeted commands you ran and any residual risk from not running the full suite.
 - Before and after each gameplay/client feature stage, compare against the previous performance baseline instead of only checking that the new feature works.
 - Use the full client launch path `godot --path client/godot --scene res://scenes/Main.tscn` when a feature may affect normal runtime behavior, UI refresh, movement, shops, battle, or world interaction.
 - Run relevant narrow probes when available, such as movement spam/perf, shop select perf, player stat spam perf, and feature-specific headless checks.
