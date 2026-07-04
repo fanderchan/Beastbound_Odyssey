@@ -10,6 +10,8 @@ const {
   once,
   createAuthService,
   createMemoryAuthStore,
+  createJsonAuthStore,
+  createAsyncWriteAuthStore,
   createHttpServer,
   createDefaultStore,
   DEFAULT_COMMAND_CATALOG,
@@ -360,4 +362,118 @@ test("JSON auth store is available only when explicitly selected", async () => {
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }
+});
+
+test("JSON auth store refuses to load corrupted files instead of silently resetting", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-json-corrupt-"));
+  const storePath = path.join(tempDir, "auth-store.json");
+  try {
+    fs.writeFileSync(storePath, "{ this is not valid json");
+    const store = createJsonAuthStore(storePath);
+    assert.throws(() => store.load(), (error) => error.code === "storage_load_corrupted");
+    // 损坏文件必须原样保留，等待人工修复，而不是被覆盖成空档。
+    assert.equal(fs.readFileSync(storePath, "utf8"), "{ this is not valid json");
+  } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("async store write failures bubble up as storage_write_failed and self-heal", async () => {
+  const base = createMemoryAuthStore();
+  let failing = false;
+  const flaky = {
+    "mode": "memory",
+    load: () => base.load(),
+    async saveAsync(nextData) {
+      if (failing) {
+        throw new Error("disk full");
+      }
+      base.save(nextData);
+    },
+  };
+  const asyncErrors = [];
+  const store = createAsyncWriteAuthStore(flaky, {"onError": (error) => asyncErrors.push(error)});
+  const service = createAuthService({store});
+
+  const healthy = service.register({"username": "storagefaila", "password": "test1234", "displayName": "写失败A"});
+  assert.equal(healthy.ok, true);
+  await store.flush();
+
+  failing = true;
+  const doomed = service.register({"username": "storagefailb", "password": "test1234", "displayName": "写失败B"});
+  assert.equal(doomed.ok, true);
+  await assert.rejects(store.flush(), /disk full/);
+  assert.equal(asyncErrors.length, 1);
+
+  failing = false;
+  assert.throws(
+    () => service.register({"username": "storagefailc", "password": "test1234", "displayName": "写失败C"}),
+    (error) => error.code === "storage_write_failed"
+  );
+  await store.flush();
+
+  const recovered = service.register({"username": "storagefaild", "password": "test1234", "displayName": "写失败D"});
+  assert.equal(recovered.ok, true);
+  await store.flush();
+  const persisted = base.load();
+  assert.equal(Boolean(persisted.accounts.storagefaila), true);
+  assert.equal(Boolean(persisted.accounts.storagefaild), true);
+});
+
+test("HTTP endpoints return 503 with a player-facing message after async write failure", async (t) => {
+  const base = createMemoryAuthStore();
+  let failing = false;
+  const flaky = {
+    "mode": "memory",
+    load: () => base.load(),
+    async saveAsync(nextData) {
+      if (failing) {
+        throw new Error("disk full");
+      }
+      base.save(nextData);
+    },
+  };
+  const store = createAsyncWriteAuthStore(flaky, {"onError": () => {}});
+  const service = createAuthService({store});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base503 = `http://127.0.0.1:${port}`;
+
+  const first = await fetchJson(`${base503}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "http503a", "password": "test1234", "displayName": "接口写失败A"}),
+  });
+  assert.equal(first.ok, true);
+  failing = true;
+  const doomed = await fetchJson(`${base503}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "http503b", "password": "test1234", "displayName": "接口写失败B"}),
+  });
+  assert.equal(doomed.ok, true);
+  await assert.rejects(store.flush(), /disk full/);
+  failing = false;
+
+  const rejectedResponse = await fetch(`${base503}/auth/register`, {
+    "method": "POST",
+    "headers": {
+      "content-type": "application/json",
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+    },
+    "body": JSON.stringify({"username": "http503c", "password": "test1234", "displayName": "接口写失败C"}),
+  });
+  assert.equal(rejectedResponse.status, 503);
+  const rejected = await rejectedResponse.json();
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "storage_write_failed");
+  assert.match(String(rejected.message || ""), /存档暂时不可用/);
+
+  const recovered = await fetchJson(`${base503}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "http503d", "password": "test1234", "displayName": "接口写失败D"}),
+  });
+  assert.equal(recovered.ok, true);
 });

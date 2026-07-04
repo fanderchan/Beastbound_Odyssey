@@ -272,14 +272,25 @@ function createHttpServer(options = {}) {
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});
     } catch (error) {
+      if (error && error.code === "storage_write_failed") {
+        return sendJson(res, 503, {"ok": false, "code": "storage_write_failed", "message": error.message || "服务器存档暂时不可用，请稍后再试。"});
+      }
       return sendJson(res, 500, {"ok": false, "code": "server_error", "message": error.message});
     }
   });
   server.on("close", unsubscribeServiceLogger);
   server.on("upgrade", (req, socket, head) => {
-    const handled = eventHub.handleUpgrade(req, socket, head);
-    if (!handled && !socket.destroyed) {
-      socket.destroy();
+    try {
+      const handled = eventHub.handleUpgrade(req, socket, head);
+      if (!handled && !socket.destroyed) {
+        socket.destroy();
+      }
+    } catch (error) {
+      // 存储写失败等异常不允许击穿升级回调导致进程崩溃；直接断开该连接。
+      console.error(`Beastbound websocket upgrade failed: ${error.message}`);
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
     }
   });
   server.eventHub = eventHub;

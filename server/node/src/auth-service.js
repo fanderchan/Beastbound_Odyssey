@@ -337,6 +337,18 @@ function createAuthService(options = {}) {
 
   function save(data) {
     const normalized = normalizeData(data);
+    const pendingSaveError = typeof store.lastSaveError === "function" ? store.lastSaveError() : null;
+    if (pendingSaveError) {
+      if (typeof store.clearSaveError === "function") {
+        store.clearSaveError();
+      }
+      // 用最新内存快照重试持久化：后端恢复后自动补齐整份状态；本次请求以 503 拒绝，禁止继续静默丢写。
+      store.save(persistentDataForStore(normalized));
+      const error = new Error("服务器存档暂时不可用，请稍后再试。");
+      error.code = "storage_write_failed";
+      error.cause = pendingSaveError;
+      throw error;
+    }
     store.save(persistentDataForStore(normalized));
     cachedData = normalized;
     scheduleBattleMaintenance(cachedData);
@@ -1411,7 +1423,12 @@ function createAuthService(options = {}) {
     }
     battleMaintenanceTimer = setTimeout(() => {
       battleMaintenanceTimer = null;
-      runBattleMaintenance();
+      try {
+        runBattleMaintenance();
+      } catch (error) {
+        // 存储写失败会从 save() 冒泡；定时器路径只记录日志，下一次成功写入会重新排程维护。
+        console.error(`Beastbound battle maintenance save failed: ${error.message}`);
+      }
     }, Math.max(10, nextDelay + 25));
     if (typeof battleMaintenanceTimer.unref === "function") {
       battleMaintenanceTimer.unref();
@@ -1764,10 +1781,14 @@ function createJsonAuthStore(filePath) {
       if (!fs.existsSync(filePath)) {
         return {};
       }
+      // 解析失败必须显式失败：静默返回空档会在下一次写入时把损坏文件覆盖成空库。
       try {
         return JSON.parse(fs.readFileSync(filePath, "utf8"));
-      } catch {
-        return {};
+      } catch (error) {
+        const loadError = new Error(`JSON存档文件损坏，拒绝以空档启动：${filePath}`);
+        loadError.code = "storage_load_corrupted";
+        loadError.cause = error;
+        throw loadError;
       }
     },
     save(nextData) {
@@ -1807,6 +1828,9 @@ function createAsyncWriteAuthStore(store, options = {}) {
     },
     lastSaveError() {
       return lastSaveError;
+    },
+    clearSaveError() {
+      lastSaveError = null;
     },
   };
 }
