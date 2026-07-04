@@ -1,7 +1,7 @@
 # Beastbound Odyssey — 相对 StoneAge 8.0 的功能差距与内容迭代计划
 
 > **执行者说明（Codex）**
-> - `tasks.md` 32 条联网 bug 已修完；`release_plan.md` A–E 开发项已基本完成，仅剩 B/C/D/E 的「用户验收确认」未勾选。**不要重复做 release_plan 或 tasks 里的工作。**
+> - `tasks.md` 32 条联网 bug 已修完；`release_plan.md` A–E 开发项和用户验收确认均已完成。**不要重复做 release_plan 或 tasks 里的工作。**
 > - 本计划对照本地参考源码 `/Users/fander/projects/_local_references/StoneAge`（亦见 AGENTS.md），找出 **Beastbound 仍缺、偏薄、或未联网化** 的玩法，按阶段补齐到「可发行的原创石器风 MMORPG」。
 > - **只参考机制与数据契约，禁止复制 SA 源码、数值、地图、NPC 脚本或美术。**
 > - 每完成一项：在本文件「进度追踪」打勾并附一行证据（测试/自动检查/走查摘要）；每完成一阶段：跑 `node tools/run_local_ci.mjs`，停下等用户确认。
@@ -101,10 +101,9 @@
 
 ### G9 运营与发布配套（release_plan 工程项收尾）
 
-- [ ] **G9.1 完成 release_plan B/C/D/E 用户验收确认**（开发已完成，勾选待用户）。
-- [ ] **G9.2 导出机构建**：E1 已验证 export-pack；本机缺 macOS/Windows/Android SDK 的 **release 导出** 与安装包 smoke。
-- [ ] **G9.3 干净演示库/种子数据**：走查提到本地 MySQL 历史测试账号噪音；需 demo seed 脚本。
-- [ ] **G9.4 新手 30 分钟体验曲线**：从注册到首次捕捉、首次组队、首次庄园信息可见的 pacing 文档 + 实机验收。
+- [x] **G9.1 完成 release_plan B/C/D/E 用户验收确认**。
+- [x] **G9.3 干净演示库/种子数据**：走查提到本地 MySQL 历史测试账号噪音；已补 demo seed 脚本。
+- [x] **G9.4 新手 30 分钟体验曲线**：从注册到首次捕捉、首次组队、首次庄园信息可见的 pacing 文档 + 实机验收路径。
 
 ---
 
@@ -114,7 +113,7 @@
 
 | 阶段 | 目标 | 包含项 | 停止条件 |
 | --- | --- | --- | --- |
-| **F0** | 收尾 release_plan | G9.1–G9.2 | 用户确认可进入内容迭代 |
+| **F0** | 收尾 release_plan | G9.1、G9.3、G9.4 | 用户确认可进入内容迭代 |
 | **F1** | 内容体量 MVP | G1.2 扩 2–3 个新 region + G1.1 新增 10 种可捕 wild 宠（含数据+遭遇+图鉴） | 新区域可挂机练级 20 级段，CI 绿 |
 | **F2** | 经济闭环 v1 | G2.1 面对面交易 + G2.3 银行存取（服务端权威） | 两账号可交易/存取，防刷测试通过 |
 | **F3** | 宠物深度 v1 | G3.1 宠物融合（简化公式）+ G3.5 服务端被动/反击审计补齐 | 融合 + 服务端 battle 回归绿 |
@@ -131,7 +130,7 @@
 1. **设计笔记**：`docs/phase_XXX_<slug>.md`，写清 SA 8.0 参考路径、Beastbound 原创规则、不做项。
 2. **数据契约**：JSON 或 MySQL 迁移（DB 操作用 MCP server）。
 3. **服务端权威**：联网账号不得仅本地改 profile；需 API + 测试。
-4. **客户端 UI**：中文、PC 窗口优先验收；移动兼容烟测非阻塞（见 release_plan E1）。
+4. **客户端 UI**：中文、PC 窗口优先验收；不新增移动端专属功能或移动导出阻塞，除非用户重新指定移动端优先级。
 5. **自动检查**：新增或扩展 `--auto-*-check`；纳入 `tools/run_godot_auto_checks.mjs`。
 6. **服务端测试**：`server/node/test/auth-*.test.js` 覆盖 happy path + 权限/作弊拒绝。
 7. **性能**：改动后 idle/moving `--perf-probe` 不退化。
@@ -144,12 +143,13 @@
 > 从第一项未勾选项继续。完成打 `[x]` 并附证据。
 
 ### F0 — release_plan 收尾
-- [ ] G9.1 release_plan B/C/D/E 用户验收确认
-- [ ] G9.2 三平台 release 导出 smoke（补齐 SDK 后）
+- [x] G9.1 release_plan B/C/D/E 用户验收确认
+  - 证据：2026-07-04 用户明确确认“我认为我测完了”，并要求直接打钩；`release_plan.md` 阶段 B/C/D/E 验收项已同步打勾并保留已有自动验证证据。
 - [x] G9.3 demo 种子库脚本
   - 证据：`server/node/scripts/seed-demo-data.js` + `npm run seed:demo --prefix server/node`；`node --check` exit 0；memory/json store 验证 4 accounts / 2 families / 1 manor，第二次 JSON seed 为 `reused` / `already_owned`；`npm test --prefix server/node` 92/92 pass，详见 `docs/phase_197_demo_seed_data.md`。
 - [x] G9.4 新手 30 分钟体验曲线文档
-  - 证据：`docs/phase_198_first_30_minutes_pacing.md` 记录 0-30 分钟注册、任务、遇敌、捕捉、组队、家族/庄园可见验收曲线，并声明 release_plan B/C/D/E 仍等用户确认。
+  - 证据：`docs/phase_198_first_30_minutes_pacing.md` 记录 0-30 分钟注册、任务、遇敌、捕捉、组队、家族/庄园可见验收曲线；release_plan B/C/D/E 已由用户确认。
+- 阶段 F0 验证（2026-07-04）：`node tools/run_local_ci.mjs` 通过 10/10，summary `.run/local_ci/2026-07-03T23-46-40-505Z_summary.json`，log `.run/local_ci/2026-07-03T23-46-40-505Z.log`；服务端 92/92，Godot 自动检查 188/188；性能基线 `perf-idle` process_total median=0.270ms p95=0.370ms，`perf-moving` median=0.210ms p95=0.240ms，`perf-movement-spam` max_input_us=192 且 coalesced=true/settled=true，`perf-shop-select` 与 `perf-player-stat-spam` 通过。
 
 ### F1 — 内容体量 MVP
 - [ ] G1.2 新 region ×2~3

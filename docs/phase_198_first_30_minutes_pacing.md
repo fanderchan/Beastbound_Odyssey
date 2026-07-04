@@ -94,4 +94,4 @@ godot --path client/godot --scene res://scenes/Main.tscn
 - 不把移动端作为当前 PC 发版阻塞项。
 - 不新增任务、地图、宠物或庄园功能。
 - 不替换占位美术；美术属于 G8。
-- 不把 release_plan B/C/D/E 视为已验收，仍等用户确认。
+- release_plan B/C/D/E 已于 2026-07-04 由用户确认，不再作为 F0 阻塞项。
