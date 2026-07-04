@@ -118,6 +118,7 @@ const BATTLE_TARGET_RULE_WILD_RANDOM = "wild_random";
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 99 * 1000;
 const BATTLE_RECONNECT_GRACE_MS = 300 * 1000;
+const BATTLE_RECONNECT_COMMAND_GRACE_MS = 15 * 1000;
 const BATTLE_CLOSED_ROOM_REPLAY_MS = 10 * 60 * 1000;
 const SHOP_TRANSACTION_BUY = "buy";
 const SHOP_TRANSACTION_SELL = "sell";
@@ -4808,8 +4809,8 @@ function markBattleConnectionForAccount(data, accountId, connected, now = () => 
     };
     if (connected && previous.disconnectedAt) {
       const battle = battleRoomBattleStateForMutation(room, now);
-      if (String(battle.phase || "") === BATTLE_PHASE_COMMAND) {
-        battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
+      if (shouldRefreshExpiredReconnectCommandDeadline(battle, accountId, now)) {
+        battle.commandDeadlineAt = new Date(now() + BATTLE_RECONNECT_COMMAND_GRACE_MS).toISOString();
         battle.updatedAt = timestamp;
       }
     }
@@ -4824,6 +4825,33 @@ function markBattleConnectionForAccount(data, accountId, connected, now = () => 
     }
   }
   return changed;
+}
+
+function shouldRefreshExpiredReconnectCommandDeadline(battle, accountId, now = () => Date.now()) {
+  if (!battle || String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
+    return false;
+  }
+  if (!battleAccountNeedsCommand(battle, accountId)) {
+    return false;
+  }
+  const deadlineMs = Date.parse(String(battle.commandDeadlineAt || ""));
+  return !Number.isFinite(deadlineMs) || deadlineMs <= now();
+}
+
+function battleAccountNeedsCommand(battle, accountId) {
+  const normalizedAccountId = String(accountId || "");
+  if (!normalizedAccountId) {
+    return false;
+  }
+  const commands = battle && battle.commands && typeof battle.commands === "object" && !Array.isArray(battle.commands)
+    ? battle.commands
+    : {};
+  const requiredActorIds = new Set(requiredBattleCommandActorIds(battle || {}));
+  return (Array.isArray(battle && battle.actors) ? battle.actors : [])
+    .filter((actor) => actor && String(actor.accountId || "") === normalizedAccountId)
+    .map((actor) => String(actor.actorId || ""))
+    .filter((actorId) => actorId && requiredActorIds.has(actorId))
+    .some((actorId) => !commands[actorId]);
 }
 
 function battleRoomReconnectExpiredAccountIds(room, now) {

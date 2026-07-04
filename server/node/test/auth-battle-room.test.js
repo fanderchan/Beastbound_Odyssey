@@ -2959,13 +2959,22 @@ test("battle rooms preserve short reconnects and close after disconnect grace", 
   const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
   const roomId = accept.room.roomId;
+  const initialDeadline = service.snapshot().battleRooms[roomId].battle.commandDeadlineAt;
 
   const disconnected = service.markBattleConnection(challenger.session.token, false);
   assert.equal(disconnected.ok, true);
+  nowMs += 4 * 1000;
+  const polledReconnect = service.getBattleState(challenger.session.token);
+  assert.equal(polledReconnect.ok, true);
+  assert.equal(polledReconnect.room.roomId, roomId);
+  assert.equal(polledReconnect.room.battle.commandDeadlineAt, initialDeadline);
+
+  service.markBattleConnection(challenger.session.token, false);
   nowMs += 299 * 1000;
   const reconnected = service.markBattleConnection(challenger.session.token, true);
   assert.equal(reconnected.ok, true);
   assert.equal(reconnected.room.roomId, roomId);
+  assert.equal(Date.parse(reconnected.room.battle.commandDeadlineAt) > nowMs, true);
   assert.equal(service.getBattleState(challenger.session.token).room.roomId, roomId);
 
   service.markBattleConnection(challenger.session.token, false);
