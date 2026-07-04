@@ -121,6 +121,7 @@ const BATTLE_TARGET_RULE_REVERSE_SLOT_ORDER = "reverse_slot_order";
 const BATTLE_TARGET_RULE_WILD_RANDOM = "wild_random";
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 99 * 1000;
+const BATTLE_TURN_PLAYBACK_GRACE_MS = 30 * 1000;
 const BATTLE_RECONNECT_GRACE_MS = 300 * 1000;
 const BATTLE_RECONNECT_COMMAND_GRACE_MS = 15 * 1000;
 const BATTLE_CLOSED_ROOM_REPLAY_MS = 10 * 60 * 1000;
@@ -5055,6 +5056,10 @@ function partyEncounterCharacterCountFromParticipants(participants = []) {
   return activeParticipants.length + Math.min(partnerCandidates.length, availablePartnerSlots.length);
 }
 
+function battleCommandDeadlineAt(now, extraMs = 0) {
+  return new Date(now() + BATTLE_COMMAND_TIMEOUT_MS + Math.max(0, Number(extraMs || 0))).toISOString();
+}
+
 function createBattleRoomBattleState(room, now) {
   const actors = battleRoomActors(room);
   return {
@@ -5070,7 +5075,7 @@ function createBattleRoomBattleState(room, now) {
     lastEventList: null,
     eventLog: [],
     result: null,
-    commandDeadlineAt: new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString(),
+    commandDeadlineAt: battleCommandDeadlineAt(now),
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
@@ -5094,7 +5099,7 @@ function battleRoomBattleStateForMutation(room, now) {
   room.battle.round = Math.max(1, Number(room.battle.round || 1));
   room.battle.turnSeq = Math.max(0, Number(room.battle.turnSeq || 0));
   if (!room.battle.commandDeadlineAt) {
-    room.battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
+    room.battle.commandDeadlineAt = battleCommandDeadlineAt(now);
   }
   return room.battle;
 }
@@ -6040,7 +6045,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
   battle.requiredActorIds = requiredBattleCommandActorIds(battle);
   battle.round = round + 1;
   battle.phase = BATTLE_PHASE_COMMAND;
-  battle.commandDeadlineAt = new Date(now() + BATTLE_COMMAND_TIMEOUT_MS).toISOString();
+  battle.commandDeadlineAt = battleCommandDeadlineAt(now, BATTLE_TURN_PLAYBACK_GRACE_MS);
   battle.updatedAt = eventList.resolvedAt;
   room.updatedAt = eventList.resolvedAt;
   if (result) {

@@ -2579,6 +2579,17 @@ func _run_auto_battle_command_timer_check() -> void:
 	host._update_battle_command_countdown(0.0)
 	var waiting_second_second := int(ceilf(host.battle_command_countdown_remaining))
 	var waiting_timer_moves = waiting_visible_initial and waiting_second_second < waiting_first_second
+	var grace_deadline_text := Time.get_datetime_string_from_unix_time(Time.get_unix_time_from_system() + 130.0, true) + "Z"
+	var grace_waiting_state := saved_battle_state.duplicate(true)
+	grace_waiting_state["serverAuthority"] = true
+	grace_waiting_state["phase"] = "server_waiting"
+	grace_waiting_state["serverRoom"] = {"battle": {"commandDeadlineAt": grace_deadline_text}}
+	host.battle_state = grace_waiting_state
+	host.battle_command_countdown_remaining = 99.0
+	host.battle_command_countdown_last_second = -1
+	host._update_battle_command_countdown(1.15)
+	var waiting_grace_second := int(ceilf(host.battle_command_countdown_remaining))
+	var waiting_grace_timer_moves = waiting_grace_second < 99 and waiting_grace_second >= 97
 	host.battle_state["phase"] = "round_events"
 	host._sync_battle_round_timer_labels(true)
 	host._layout_hud()
@@ -2671,8 +2682,8 @@ func _run_auto_battle_command_timer_check() -> void:
 	var returned_to_command = host.battle_active and not host._battle_commands_locked()
 	var second_round_ok = int(host.battle_state.get("round", 0)) >= 2 and host.battle_round_label != null and host.battle_round_label.text == "第 2 回合"
 	var timer_reset_ok = host.battle_timer_label != null and host.battle_timer_label.text == "99秒"
-	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and round_events_timer_hidden and timer_sync_timer_reset_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
-	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s round_events_hidden=%s sync_timer_reset=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d" % [
+	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and waiting_grace_timer_moves and round_events_timer_hidden and timer_sync_timer_reset_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
+	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s waiting_grace_moves=%s round_events_hidden=%s sync_timer_reset=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d waiting_grace=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -2680,6 +2691,7 @@ func _run_auto_battle_command_timer_check() -> void:
 		str(initial_round_ok),
 		str(initial_timer_ok),
 		str(waiting_timer_moves),
+		str(waiting_grace_timer_moves),
 		str(round_events_timer_hidden),
 		str(timer_sync_timer_reset_ok),
 		str(auto_started_round),
@@ -2691,6 +2703,7 @@ func _run_auto_battle_command_timer_check() -> void:
 		host.battle_timer_label.text if host.battle_timer_label != null else "",
 		waiting_first_second,
 		waiting_second_second,
+		waiting_grace_second,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

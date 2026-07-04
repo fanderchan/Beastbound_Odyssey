@@ -10754,7 +10754,7 @@ func _server_battle_command_deadline_remaining() -> float:
 	var deadline_unix := _unix_time_from_iso_utc(deadline_text)
 	if deadline_unix < 0.0:
 		return -1.0
-	return minf(BATTLE_COMMAND_COUNTDOWN_SECONDS, maxf(0.0, deadline_unix - Time.get_unix_time_from_system()))
+	return maxf(0.0, deadline_unix - Time.get_unix_time_from_system())
 
 
 func _server_battle_command_deadline_text() -> String:
@@ -10800,7 +10800,10 @@ func _update_battle_command_countdown(delta: float) -> void:
 	if phase == "server_waiting":
 		var server_remaining := _server_battle_command_deadline_remaining()
 		if server_remaining >= 0.0:
-			battle_command_countdown_remaining = server_remaining
+			var local_remaining := maxf(0.0, battle_command_countdown_remaining - delta)
+			battle_command_countdown_remaining = minf(local_remaining, server_remaining)
+		else:
+			battle_command_countdown_remaining = maxf(0.0, battle_command_countdown_remaining - delta)
 		_sync_battle_round_timer_labels(false)
 		return
 	if phase != "command" or _battle_commands_locked():

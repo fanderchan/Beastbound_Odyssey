@@ -170,6 +170,58 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   assert.equal(staleRound.code, "battle_command_round_mismatch");
 });
 
+test("resolved battle rounds reserve playback grace before next command timeout", () => {
+  let nowMs = Date.parse("2026-01-01T00:00:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => nowMs,
+  });
+  const challenger = service.register({"username": "gracea", "password": "test1234", "displayName": "缓冲甲"});
+  const opponent = service.register({"username": "graceb", "password": "test1234", "displayName": "缓冲乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("缓冲甲", {"level": 10, "hp": 220, "maxHp": 220, "attack": 20, "defense": 12, "quick": 80}, null),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("缓冲乙", {"level": 10, "hp": 220, "maxHp": 220, "attack": 20, "defense": 12, "quick": 70}, null),
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "firebud_training_yard", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "firebud_training_yard", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "graceb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(Date.parse(accept.room.battle.commandDeadlineAt) - nowMs, 99 * 1000);
+  const roomId = accept.room.roomId;
+  const firstCommand = service.submitBattleCommand(challenger.session.token, roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "targetUsername": "graceb",
+  });
+  assert.equal(firstCommand.ok, true);
+  assert.equal(firstCommand.turn, null);
+  const secondCommand = service.submitBattleCommand(opponent.session.token, roomId, {
+    "round": 1,
+    "actionId": "defend",
+  });
+  assert.equal(secondCommand.ok, true);
+  assert.equal(secondCommand.turn.kind, "battle_event_list");
+  assert.equal(secondCommand.room.battle.round, 2);
+  assert.equal(Date.parse(secondCommand.room.battle.commandDeadlineAt) - nowMs, 129 * 1000);
+  nowMs += 100 * 1000;
+  const earlyMaintenance = service.runBattleMaintenance();
+  assert.equal(earlyMaintenance.ok, true);
+  assert.equal(earlyMaintenance.events.some((event) => event.type === "battle.room_closed"), false);
+  assert.equal(service.snapshot().battleRooms[roomId].status, "ready");
+  nowMs += 30 * 1000;
+  const timeoutMaintenance = service.runBattleMaintenance();
+  assert.equal(timeoutMaintenance.ok, true);
+  assert.equal(timeoutMaintenance.events.some((event) => event.type === "battle.room_closed" && event.reason === "timeout"), true);
+});
+
 test("duel battle rooms resolve near-concurrent round commands once", async () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const events = [];
