@@ -228,6 +228,8 @@ test("party presence marks idle members offline and restores them on activity", 
   const store = createMemoryAuthStore();
   let nowMs = Date.parse("2026-02-01T00:00:00.000Z");
   const service = createAuthService({"store": store, "now": () => nowMs});
+  const events = [];
+  service.onEvent((event) => events.push(event));
   const leader = service.register({"username": "presencea", "password": "test1234", "displayName": "在线队长"});
   const member = service.register({"username": "presenceb", "password": "test1234", "displayName": "离线队员"});
   assert.equal(leader.ok, true);
@@ -254,6 +256,12 @@ test("party presence marks idle members offline and restores them on activity", 
   assert.equal(restoredMember.connectionState, "online");
   assert.equal(restoredMember.offlineSince, null);
   assert.equal(restoredMember.autoKickAt, null);
+  assert.equal(events.some((event) => (
+    event.type === "party.update" &&
+    event.party &&
+    Array.isArray(event.party.members) &&
+    event.party.members.some((player) => player.username === "presenceb" && player.online === true)
+  )), true);
 });
 
 test("party presence removes members after one hour offline", () => {
@@ -549,6 +557,11 @@ test("online roster can be filtered by map area of interest", () => {
   assert.equal(scoped.ok, true);
   assert.equal(scoped.aoi.scope, "aoi");
   assert.deepEqual(scoped.players.map((player) => player.username).sort(), ["aoia", "aoib"]);
+
+  const sameMap = service.listOnlinePlayers(watcher.session.token, {"scope": "map", "mapId": "firebud_training_yard"});
+  assert.equal(sameMap.ok, true);
+  assert.equal(sameMap.aoi.scope, "map");
+  assert.deepEqual(sameMap.players.map((player) => player.username).sort(), ["aoia", "aoib", "aoic"]);
 
   const explicit = service.listOnlinePlayers(watcher.session.token, {
     "scope": "aoi",

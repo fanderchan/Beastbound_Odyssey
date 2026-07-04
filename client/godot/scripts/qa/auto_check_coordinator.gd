@@ -13283,6 +13283,13 @@ func _run_auto_auth_server_client_check() -> void:
 		"radius": ONLINE_POSITION_AOI_RADIUS_CELLS,
 	})
 	online_request_ok = online_request_ok and str(online_aoi_spec.get("url", "")) == "http://127.0.0.1:8787/players/online?scope=aoi&mapId=firebud_training_yard&cellX=8&cellY=12&radius=18"
+	var online_map_spec = ServerAuthClientModel.online_players_request("http://127.0.0.1:8787/", "token_test", "map", {
+		"mapId": "firebud_training_yard",
+		"cellX": 8,
+		"cellY": 12,
+		"radius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+	})
+	online_request_ok = online_request_ok and str(online_map_spec.get("url", "")) == "http://127.0.0.1:8787/players/online?scope=map&mapId=firebud_training_yard&cellX=8&cellY=12&radius=18"
 	var parsed_online = ServerAuthClientModel.parse_online_players_response(200, JSON.stringify({
 		"ok": true,
 		"players": [{"username": "remoteuser", "displayName": "远程猎人", "partyRole": "leader"}],

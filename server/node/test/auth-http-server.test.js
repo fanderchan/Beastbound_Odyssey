@@ -822,6 +822,14 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(scopedOnline.players.some((player) => player.username === "httppartyb"), true);
   assert.equal(scopedOnline.players.some((player) => player.username === "httppartyc"), false);
 
+  const sameMapOnline = await fetchJson(`${base}/players/online?scope=map&mapId=firebud_training_yard`, {
+    "headers": {"authorization": `Bearer ${leader.session.token}`},
+  });
+  assert.equal(sameMapOnline.ok, true);
+  assert.equal(sameMapOnline.aoi.scope, "map");
+  assert.equal(sameMapOnline.players.some((player) => player.username === "httppartyb"), true);
+  assert.equal(sameMapOnline.players.some((player) => player.username === "httppartyc"), true);
+
   const invite = await fetchJson(`${base}/party/invite`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${leader.session.token}`},

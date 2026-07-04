@@ -45,6 +45,7 @@ const ONLINE_SESSION_IDLE_TTL_MS = 3 * 60 * 1000;
 const POSITION_MAP_ID_MAX_LENGTH = 64;
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 const ONLINE_AOI_SCOPE = "aoi";
+const ONLINE_MAP_SCOPE = "map";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
@@ -366,6 +367,25 @@ function createAuthService(options = {}) {
     });
   }
 
+  function partyPresenceUpdateEventForAccount(data, accountId) {
+    const accountParty = partyForAccount(data, accountId);
+    if (!accountParty) {
+      return null;
+    }
+    const partyId = accountParty.partyId;
+    const refreshed = refreshPartyPresence(data, accountParty, now, runtimeActiveSessionIds);
+    if (!refreshed.changed) {
+      return null;
+    }
+    return {
+      type: "party.update",
+      targetAccountIds: refreshed.targetAccountIds,
+      party: refreshed.party ? publicParty(refreshed.party, data, {now, runtimeActiveSessionIds}) : null,
+      partyId,
+      removedAccountIds: refreshed.removedAccountIds,
+    };
+  }
+
   function register(payload = {}) {
     const username = normalizeUsername(payload.username);
     const password = String(payload.password || "");
@@ -452,7 +472,11 @@ function createAuthService(options = {}) {
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     markRuntimeSession(sessionResult.session);
     recordAuthEvent(data, "login", username, true, "", now);
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, account.accountId);
     save(data);
+    if (partyPresenceEvent) {
+      emitServiceEvent(partyPresenceEvent);
+    }
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
       account: publicAccount(account),
@@ -476,7 +500,11 @@ function createAuthService(options = {}) {
     markRuntimeSession(sessionResult.session);
     const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
     save(data);
+    if (partyPresenceEvent) {
+      emitServiceEvent(partyPresenceEvent);
+    }
     return ok({
       account: publicAccount(resolved.account),
       session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token),
@@ -515,8 +543,12 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const ensured = ensureProfileForAccount(data, resolved.account, now);
-    if (ensured.created) {
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+    if (ensured.created || partyPresenceEvent) {
       save(data);
+    }
+    if (partyPresenceEvent) {
+      emitServiceEvent(partyPresenceEvent);
     }
     return ok({
       account: publicAccount(resolved.account),
@@ -1017,6 +1049,11 @@ function createAuthService(options = {}) {
     const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+    if (partyPresenceEvent) {
+      save(data);
+      emitServiceEvent(partyPresenceEvent);
     }
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
     const aoi = normalizeOnlineAoiPayload(payload, viewerPosition);
@@ -13105,6 +13142,7 @@ function onlineAccountVisibleToViewer(data, viewerAccount, account, aoi) {
 
 function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
   const scope = String(payload.scope || payload.viewScope || "").trim().toLowerCase();
+  const sameMapScope = scope === ONLINE_MAP_SCOPE || scope === "same_map" || scope === "same-map";
   const hasExplicitPosition = (
     String(payload.mapId || payload.map || "").trim() !== "" ||
     payload.cellX !== undefined ||
@@ -13112,7 +13150,7 @@ function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
     payload.x !== undefined ||
     payload.y !== undefined
   );
-  if (scope !== ONLINE_AOI_SCOPE && scope !== "nearby" && !hasExplicitPosition) {
+  if (!sameMapScope && scope !== ONLINE_AOI_SCOPE && scope !== "nearby" && !hasExplicitPosition) {
     return {
       enabled: false,
       scope: "all",
@@ -13136,11 +13174,12 @@ function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
   }
   return {
     enabled: true,
-    scope: ONLINE_AOI_SCOPE,
+    scope: sameMapScope ? ONLINE_MAP_SCOPE : ONLINE_AOI_SCOPE,
     mapId,
     cellX: clampInt(source.cellX ?? source.x, -9999, 9999, 0),
     cellY: clampInt(source.cellY ?? source.y, -9999, 9999, 0),
-    radius: clampInt(payload.aoiRadius ?? payload.viewRadius ?? payload.radius, 1, ONLINE_AOI_MAX_RADIUS, ONLINE_AOI_DEFAULT_RADIUS),
+    radius: sameMapScope ? 0 : clampInt(payload.aoiRadius ?? payload.viewRadius ?? payload.radius, 1, ONLINE_AOI_MAX_RADIUS, ONLINE_AOI_DEFAULT_RADIUS),
+    sameMapOnly: sameMapScope,
   };
 }
 
@@ -13154,6 +13193,9 @@ function onlinePositionVisibleToAoi(position, aoi) {
   if (String(position.mapId || "") !== aoi.mapId) {
     return false;
   }
+  if (aoi.scope === ONLINE_MAP_SCOPE || aoi.sameMapOnly) {
+    return true;
+  }
   const dx = Math.abs(Number(position.cellX || 0) - aoi.cellX);
   const dy = Math.abs(Number(position.cellY || 0) - aoi.cellY);
   return dx <= aoi.radius && dy <= aoi.radius;
@@ -13161,7 +13203,7 @@ function onlinePositionVisibleToAoi(position, aoi) {
 
 function publicOnlineAoi(aoi) {
   return {
-    scope: aoi && aoi.enabled ? ONLINE_AOI_SCOPE : "all",
+    scope: aoi && aoi.enabled ? String(aoi.scope || ONLINE_AOI_SCOPE) : "all",
     mapId: aoi && aoi.enabled ? aoi.mapId : "",
     cellX: aoi && aoi.enabled ? aoi.cellX : 0,
     cellY: aoi && aoi.enabled ? aoi.cellY : 0,

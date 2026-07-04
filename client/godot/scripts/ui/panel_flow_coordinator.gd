@@ -6383,7 +6383,7 @@ func _build_hud() -> void:
 	party_content.add_child(party_invites_container)
 
 	var party_online_title = Label.new()
-	party_online_title.text = "在线玩家"
+	party_online_title.text = "同图玩家"
 	party_online_title.add_theme_font_size_override("font_size", 17)
 	party_content.add_child(party_online_title)
 	party_online_container = VBoxContainer.new()
@@ -7817,10 +7817,29 @@ func _latest_incoming_battle_invite() -> Dictionary:
 			return (value as Dictionary).duplicate(true)
 	return {}
 
-func _apply_party_event(event: Dictionary) -> void:
+func _apply_server_party_snapshot(party_value, refresh_ui: bool = true) -> bool:
 	var was_party_member = _current_player_is_party_member()
+	var previous_signature = JSON.stringify(party_current_state.get("party", null))
+	var next_party = party_value as Dictionary if party_value is Dictionary else null
+	party_current_state["party"] = next_party
+	if not party_current_state.has("incomingInvites"):
+		party_current_state["incomingInvites"] = []
+	if not party_current_state.has("maxMembers"):
+		party_current_state["maxMembers"] = 5
+	var changed = previous_signature != JSON.stringify(next_party)
+	if _current_player_is_party_member() and not was_party_member:
+		_stop_party_member_local_movement(false)
+	if changed and refresh_ui:
+		if party_panel != null and party_panel.visible:
+			_refresh_party_panel()
+		if training_partner_panel != null and training_partner_panel.visible:
+			_refresh_training_partner_panel()
+		host._update_hud_text(true)
+	return changed
+
+func _apply_party_event(event: Dictionary) -> void:
 	if event.has("party"):
-		party_current_state["party"] = event.get("party", null)
+		_apply_server_party_snapshot(event.get("party", null), false)
 	if not party_current_state.has("incomingInvites"):
 		party_current_state["incomingInvites"] = []
 	if not party_current_state.has("maxMembers"):
@@ -7843,8 +7862,6 @@ func _apply_party_event(event: Dictionary) -> void:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
 				)
 			party_current_state["incomingInvites"] = invites
-	if _current_player_is_party_member() and not was_party_member:
-		_stop_party_member_local_movement(false)
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
 	if training_partner_panel != null and training_partner_panel.visible:
@@ -8613,6 +8630,8 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 		_apply_server_step_move_authority_position(own_position, true)
 	elif _server_step_move_should_report_authority_cell():
 		_apply_server_step_move_authority_position(own_position)
+	if parsed.has("party"):
+		_apply_server_party_snapshot(parsed.get("party", null))
 	_apply_online_position_players(parsed.get("players", []))
 	if not online_position_queued_payload.is_empty():
 		var queued_payload: Dictionary = online_position_queued_payload.duplicate(true)
@@ -8768,6 +8787,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	if _is_server_account_session():
 		_start_server_event_stream_if_needed()
 		_start_online_position_sync_if_needed()
+		_request_party_state()
 		_request_server_profile_pull()
 		_request_server_battle_state_restore()
 	else:
@@ -14722,39 +14742,39 @@ func _refresh_party_panel() -> void:
 		for value in invites:
 			if not (value is Dictionary):
 				continue
-				var invite = value as Dictionary
-				var invite_id = str(invite.get("inviteId", ""))
-				var invite_kind = str(invite.get("kind", "invite"))
-				var row = HBoxContainer.new()
-				row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				row.add_theme_constant_override("separation", 8)
-				var label = Label.new()
-				var invite_player_text = _party_player_text({
-					"username": str(invite.get("fromUsername", "")),
-					"displayName": str(invite.get("fromDisplayName", "")),
-				})
-				label.text = "%s 申请加入队伍" % invite_player_text if invite_kind == "application" else "%s 邀请你加入队伍" % invite_player_text
-				label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				label.add_theme_font_size_override("font_size", 15)
-				row.add_child(label)
-				var accept_button = Button.new()
-				accept_button.text = "同意" if invite_kind == "application" else "加入"
-				accept_button.custom_minimum_size = Vector2(72, 42)
-				accept_button.disabled = party_request_pending
-				accept_button.pressed.connect(func() -> void:
-					_on_party_accept_pressed(invite_id)
-				)
-				row.add_child(accept_button)
-				var decline_button = Button.new()
-				decline_button.text = "拒绝"
-				decline_button.custom_minimum_size = Vector2(72, 42)
-				decline_button.disabled = party_request_pending
-				decline_button.pressed.connect(func() -> void:
-					_on_party_decline_pressed(invite_id)
-				)
-				row.add_child(decline_button)
-				party_invites_container.add_child(row)
+			var invite = value as Dictionary
+			var invite_id = str(invite.get("inviteId", ""))
+			var invite_kind = str(invite.get("kind", "invite"))
+			var row = HBoxContainer.new()
+			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_theme_constant_override("separation", 8)
+			var label = Label.new()
+			var invite_player_text = _party_player_text({
+				"username": str(invite.get("fromUsername", "")),
+				"displayName": str(invite.get("fromDisplayName", "")),
+			})
+			label.text = "%s 申请加入队伍" % invite_player_text if invite_kind == "application" else "%s 邀请你加入队伍" % invite_player_text
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			label.add_theme_font_size_override("font_size", 15)
+			row.add_child(label)
+			var accept_button = Button.new()
+			accept_button.text = "同意" if invite_kind == "application" else "加入"
+			accept_button.custom_minimum_size = Vector2(72, 42)
+			accept_button.disabled = party_request_pending
+			accept_button.pressed.connect(func() -> void:
+				_on_party_accept_pressed(invite_id)
+			)
+			row.add_child(accept_button)
+			var decline_button = Button.new()
+			decline_button.text = "拒绝"
+			decline_button.custom_minimum_size = Vector2(72, 42)
+			decline_button.disabled = party_request_pending
+			decline_button.pressed.connect(func() -> void:
+				_on_party_decline_pressed(invite_id)
+			)
+			row.add_child(decline_button)
+			party_invites_container.add_child(row)
 	var current_username = str(current_account_session.get("username", "")).strip_edges()
 	var has_online_rows = false
 	for value in party_online_players:
@@ -14793,7 +14813,7 @@ func _refresh_party_panel() -> void:
 		row.add_child(invite_button)
 		party_online_container.add_child(row)
 	if not has_online_rows:
-		party_online_container.add_child(_party_info_label("暂无在线玩家。"))
+		party_online_container.add_child(_party_info_label("暂无同图玩家。"))
 	_refresh_party_request_controls()
 
 func _clear_container_children(container: Container) -> void:
@@ -15135,6 +15155,17 @@ func _request_party_state() -> void:
 func _request_party_online() -> void:
 	if not _is_server_account_session():
 		return
+	var position_payload := _current_online_position_payload()
+	var map_id := str(position_payload.get("mapId", "")).strip_edges()
+	if map_id != "":
+		_request_online_position_snapshot(position_payload)
+		_start_party_request("online", ServerAuthClientModel.online_players_request(_server_profile_base_url(), _server_profile_token(), "map", {
+			"mapId": map_id,
+			"cellX": int(position_payload.get("cellX", 0)),
+			"cellY": int(position_payload.get("cellY", 0)),
+			"radius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+		}))
+		return
 	_start_party_request("online", ServerAuthClientModel.online_players_request(_server_profile_base_url(), _server_profile_token()))
 
 func _on_party_invite_pressed(username: String) -> void:
@@ -15166,7 +15197,7 @@ func _start_party_request(kind: String, spec: Dictionary) -> void:
 	if party_status_label != null:
 		match kind:
 			"online":
-				party_status_label.text = "正在读取在线玩家..."
+				party_status_label.text = "正在读取同图玩家..."
 			"invite":
 				party_status_label.text = "正在发送邀请..."
 			"accept":
@@ -15222,6 +15253,8 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 	elif kind == "online":
 		var parsed_online = ServerAuthClientModel.parse_online_players_response(response_code, body)
 		if bool(parsed_online.get("ok", false)):
+			if parsed_online.has("party"):
+				_apply_server_party_snapshot(parsed_online.get("party", null), false)
 			party_online_players.clear()
 			var raw_players = parsed_online.get("players", [])
 			if raw_players is Array:
@@ -15229,7 +15262,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 					if value is Dictionary:
 						party_online_players.append((value as Dictionary).duplicate(true))
 			if party_status_label != null:
-				party_status_label.text = "在线玩家已刷新。"
+				party_status_label.text = "同图玩家已刷新。"
 		elif _handle_session_invalid_response(parsed_online):
 			return
 		elif party_status_label != null:
