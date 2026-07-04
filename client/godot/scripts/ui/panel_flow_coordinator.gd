@@ -14712,7 +14712,8 @@ func _refresh_party_panel() -> void:
 				continue
 			var member = value as Dictionary
 			var role = "队长" if str(member.get("role", "")) == "leader" else "队员"
-			party_members_container.add_child(_party_info_label("%s  %s" % [role, _party_player_text(member)]))
+			var presence = "（离线）" if str(member.get("connectionState", "")).strip_edges() == "offline" or not bool(member.get("online", true)) else ""
+			party_members_container.add_child(_party_info_label("%s%s  %s" % [role, presence, _party_player_text(member)]))
 	var invites: Array = party_current_state.get("incomingInvites", []) if party_current_state.get("incomingInvites", []) is Array else []
 	if invites.is_empty():
 		party_invites_container.add_child(_party_info_label("暂无邀请。"))

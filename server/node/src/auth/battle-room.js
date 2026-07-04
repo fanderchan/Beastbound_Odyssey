@@ -46,10 +46,12 @@ function createBattleRoomDomain(ctx) {
     publicBattleResult,
     publicBattleRoom,
     publicBattleTraceRows,
+    publicParty,
     randomBytes,
     randomId,
     recordBattleStateTrace,
     recordBattleTrace,
+    refreshPartyPresence,
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
     resolveBattleRoomTurn,
@@ -247,9 +249,17 @@ function createBattleRoomDomain(ctx) {
     if (party && partyLeaderAccountId !== resolved.account.accountId) {
       return fail("party_encounter_leader_required", "队伍遇敌由队长触发。");
     }
-    const memberAccountIds = (party && Array.isArray(party.memberAccountIds) ? party.memberAccountIds : [resolved.account.accountId])
+    let activeParty = party;
+    let partyPresenceRefresh = null;
+    if (activeParty && typeof refreshPartyPresence === "function") {
+      partyPresenceRefresh = refreshPartyPresence(data, activeParty);
+      activeParty = partyPresenceRefresh.party;
+    }
+    const onlineAccountIds = new Set(activeOnlinePlayers(data, now).map((account) => String(account.accountId || "")));
+    const allMemberAccountIds = (activeParty && Array.isArray(activeParty.memberAccountIds) ? activeParty.memberAccountIds : [resolved.account.accountId])
       .map((accountId) => String(accountId || ""))
       .filter((accountId) => accountById(data, accountId));
+    const memberAccountIds = allMemberAccountIds.filter((accountId) => onlineAccountIds.has(accountId));
     if (memberAccountIds.length < 1) {
       return fail("party_encounter_party_missing", "缺少参战账号。");
     }
@@ -268,11 +278,14 @@ function createBattleRoomDomain(ctx) {
       mode: BATTLE_MODE_PARTY_PVE,
       status: BATTLE_ROOM_READY,
       inviteId: "",
-      partyId: party ? party.partyId : "",
+      partyId: activeParty ? activeParty.partyId : "",
       leaderAccountId: partyLeaderAccountId,
       seed: randomBytes(8).toString("hex"),
       participantAccountIds: memberAccountIds,
-      entry: partyEncounterEntry(data, party || {
+      entry: partyEncounterEntry(data, activeParty ? {
+        ...activeParty,
+        memberAccountIds,
+      } : {
         leaderAccountId: resolved.account.accountId,
         memberAccountIds,
       }),
@@ -291,15 +304,25 @@ function createBattleRoomDomain(ctx) {
       actorCount: Array.isArray(room.battle.actors) ? room.battle.actors.length : 0,
     }, now);
     save(data);
+    if (partyPresenceRefresh && partyPresenceRefresh.changed) {
+      emitServiceEvent({
+        type: "party.update",
+        targetAccountIds: partyPresenceRefresh.targetAccountIds,
+        party: activeParty ? publicParty(activeParty, data) : null,
+        partyId: party.partyId,
+        removedAccountIds: partyPresenceRefresh.removedAccountIds,
+      });
+    }
     emitServiceEvent({
       type: "battle.room_ready",
       targetAccountIds: room.participantAccountIds.slice(),
       invite: null,
       room: publicBattleRoom(room),
     });
+    const skippedOfflineCount = Math.max(0, allMemberAccountIds.length - memberAccountIds.length);
     return ok({
       room: publicBattleRoom(room),
-      message: memberAccountIds.length > 1 ? "队伍遭遇了野生宠物。" : "遭遇了野生宠物。",
+      message: skippedOfflineCount > 0 ? "队伍遭遇了野生宠物，离线队员未参战。" : (memberAccountIds.length > 1 ? "队伍遭遇了野生宠物。" : "遭遇了野生宠物。"),
     });
   }
 

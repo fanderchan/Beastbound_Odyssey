@@ -41,6 +41,7 @@ const CHAT_CHANNEL_TEAM = "team";
 const CHAT_TEXT_MAX_LENGTH = 120;
 const CHAT_HISTORY_LIMIT = 50;
 const MAX_CHAT_MESSAGES = 500;
+const ONLINE_SESSION_IDLE_TTL_MS = 3 * 60 * 1000;
 const POSITION_MAP_ID_MAX_LENGTH = 64;
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 const ONLINE_AOI_SCOPE = "aoi";
@@ -48,6 +49,7 @@ const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
 const MOVEMENT_MAX_STEP_CELLS = 1;
+const PARTY_OFFLINE_AUTO_KICK_MS = 60 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
 const BATTLE_MODE_PARTY_PVE = "party_pve";
@@ -297,7 +299,7 @@ function createAuthService(options = {}) {
   const randomBytes = options.randomBytes || ((size) => crypto.randomBytes(size));
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
-  const runtimeActiveSessionIds = new Set();
+  const runtimeActiveSessionIds = new Map();
   const serverStartedAtMs = now();
   let cachedData = null;
   let battleMaintenanceTimer = null;
@@ -352,7 +354,7 @@ function createAuthService(options = {}) {
 
   function markRuntimeSession(session) {
     if (session && session.sessionId) {
-      runtimeActiveSessionIds.add(session.sessionId);
+      markRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId, now());
     }
   }
 
@@ -1010,7 +1012,7 @@ function createAuthService(options = {}) {
     const players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds);
     return ok({
       players,
-      party: publicPartyForAccount(data, resolved.account.accountId),
+      party: publicPartyForAccount(data, resolved.account.accountId, {now, runtimeActiveSessionIds}),
       aoi: publicOnlineAoi(aoi),
     });
   }
@@ -1174,7 +1176,7 @@ function createAuthService(options = {}) {
     return ok({
       position: publicPlayerPosition(position),
       players,
-      party: publicPartyForAccount(data, account.accountId),
+      party: publicPartyForAccount(data, account.accountId, {now, runtimeActiveSessionIds}),
       aoi: publicOnlineAoi(aoi),
       authority: extra.authority || "client_snapshot",
       movement: extra.movement || null,
@@ -1430,7 +1432,7 @@ function createAuthService(options = {}) {
     PROFILE_ACTION_IDS,
     accountById,
     activeBattleRoomForAccount,
-    activeOnlinePlayers,
+    activeOnlinePlayers: (serviceData, nowFn = now) => activeOnlinePlayers(serviceData, nowFn, runtimeActiveSessionIds),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
@@ -1482,7 +1484,7 @@ function createAuthService(options = {}) {
     partyEncounterEntry,
     partyEncounterSnapshotFromPayload,
     partyForAccount,
-    partyStatePayload,
+    partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     manorEntries,
     persistProfileForAccount,
     profileActionLogLines,
@@ -1499,8 +1501,8 @@ function createAuthService(options = {}) {
     publicHangSession,
     publicIncomingPartyInvites,
     publicMail,
-    publicParty,
-    publicPartyForAccount,
+    publicParty: (partyValue, serviceData) => publicParty(partyValue, serviceData, {now, runtimeActiveSessionIds}),
+    publicPartyForAccount: (serviceData, accountId) => publicPartyForAccount(serviceData, accountId, {now, runtimeActiveSessionIds}),
     publicPartyInvite,
     publicProfileActionResult,
     publicQuestClaim,
@@ -1514,6 +1516,7 @@ function createAuthService(options = {}) {
     recordBattleTrace,
     recordQuestEventByIdToProfile,
     recordQuestEventToProfile,
+    refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
     resolveBattleRoomTurn,
@@ -1797,6 +1800,37 @@ function createSessionForAccount(data, account, now, randomBytes) {
   return {session, token};
 }
 
+function markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, nowMs) {
+  if (!runtimeActiveSessionIds || !sessionId) {
+    return;
+  }
+  if (typeof runtimeActiveSessionIds.set === "function") {
+    runtimeActiveSessionIds.set(sessionId, nowMs);
+    return;
+  }
+  if (typeof runtimeActiveSessionIds.add === "function") {
+    runtimeActiveSessionIds.add(sessionId);
+  }
+}
+
+function runtimeSessionWasRecorded(runtimeActiveSessionIds, sessionId) {
+  return Boolean(runtimeActiveSessionIds && sessionId && runtimeActiveSessionIds.has(sessionId));
+}
+
+function runtimeSessionIsActive(runtimeActiveSessionIds, sessionId, nowMs) {
+  if (!runtimeActiveSessionIds) {
+    return true;
+  }
+  if (!sessionId || !runtimeActiveSessionIds.has(sessionId)) {
+    return false;
+  }
+  if (typeof runtimeActiveSessionIds.get !== "function") {
+    return true;
+  }
+  const lastSeenMs = Number(runtimeActiveSessionIds.get(sessionId));
+  return Number.isFinite(lastSeenMs) && nowMs - lastSeenMs <= ONLINE_SESSION_IDLE_TTL_MS;
+}
+
 function resolveSession(data, token, now, options = {}) {
   const tokenHash = hashToken(String(token || ""));
   const session = Object.values(data.sessions).find((value) => value && value.tokenHash === tokenHash);
@@ -1822,13 +1856,13 @@ function resolveSession(data, token, now, options = {}) {
     return {"ok": false, "code": "account_missing", "message": "账号不存在。"};
   }
   const runtimeActiveSessionIds = options.runtimeActiveSessionIds || null;
-  const wasRuntimeActive = runtimeActiveSessionIds ? runtimeActiveSessionIds.has(session.sessionId) : true;
+  const hadRuntimeRecord = runtimeSessionWasRecorded(runtimeActiveSessionIds, session.sessionId);
   if (runtimeActiveSessionIds) {
-    runtimeActiveSessionIds.add(session.sessionId);
+    markRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId, nowMs);
   }
   const serverStartedAtMs = Number(options.serverStartedAtMs || 0);
   const createdAtMs = Date.parse(session.createdAt);
-  const recovered = Boolean(runtimeActiveSessionIds && !wasRuntimeActive && Number.isFinite(createdAtMs) && createdAtMs < serverStartedAtMs);
+  const recovered = Boolean(runtimeActiveSessionIds && !hadRuntimeRecord && Number.isFinite(createdAtMs) && createdAtMs < serverStartedAtMs);
   return {"ok": true, session, account, recovered};
 }
 
@@ -1961,20 +1995,20 @@ function publicChatMessage(message) {
   };
 }
 
-function partyStatePayload(data, accountId) {
+function partyStatePayload(data, accountId, options = {}) {
   return {
-    party: publicPartyForAccount(data, accountId),
+    party: publicPartyForAccount(data, accountId, options),
     incomingInvites: publicIncomingPartyInvites(data, accountId),
     maxMembers: PARTY_MAX_MEMBERS,
   };
 }
 
-function publicPartyForAccount(data, accountId) {
+function publicPartyForAccount(data, accountId, options = {}) {
   const party = partyForAccount(data, accountId);
-  return party ? publicParty(party, data) : null;
+  return party ? publicParty(party, data, options) : null;
 }
 
-function publicParty(party, data) {
+function publicParty(party, data, options = {}) {
   if (!party) {
     return null;
   }
@@ -1992,6 +2026,7 @@ function publicParty(party, data) {
       role: account.accountId === party.leaderAccountId ? "leader" : "member",
       profileSummary: participant.profileSummary,
       teamSnapshot: participant.teamSnapshot,
+      ...publicPartyMemberPresence(data, party, account.accountId, options),
     });
   }
   return {
@@ -4241,12 +4276,24 @@ function nonNegativeOptionalNumber(value) {
 }
 
 function createPartyForLeader(data, leaderAccountId, now, randomId) {
+  const timestamp = isoNow(now);
   const party = {
     partyId: `party_${randomId()}`,
     leaderAccountId,
     memberAccountIds: [leaderAccountId],
-    createdAt: isoNow(now),
-    updatedAt: isoNow(now),
+    memberPresence: {
+      [leaderAccountId]: {
+        accountId: leaderAccountId,
+        online: true,
+        connectionState: "online",
+        offlineSince: null,
+        autoKickAt: null,
+        updatedAt: timestamp,
+        schemaVersion: 1,
+      },
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
     schemaVersion: 1,
   };
   data.parties[party.partyId] = party;
@@ -4259,6 +4306,191 @@ function partyForAccount(data, accountId) {
     Array.isArray(party.memberAccountIds) &&
     party.memberAccountIds.includes(accountId)
   )) || null;
+}
+
+function partyMemberAccountIds(party) {
+  if (!party || !Array.isArray(party.memberAccountIds)) {
+    return [];
+  }
+  const seen = new Set();
+  const result = [];
+  for (const rawAccountId of party.memberAccountIds) {
+    const accountId = String(rawAccountId || "");
+    if (!accountId || seen.has(accountId)) {
+      continue;
+    }
+    seen.add(accountId);
+    result.push(accountId);
+  }
+  return result;
+}
+
+function partyPresenceForMutation(party) {
+  if (!party.memberPresence || typeof party.memberPresence !== "object" || Array.isArray(party.memberPresence)) {
+    party.memberPresence = {};
+  }
+  return party.memberPresence;
+}
+
+function partyPresenceRecord(party, accountId) {
+  const presence = party && party.memberPresence && typeof party.memberPresence === "object" && !Array.isArray(party.memberPresence)
+    ? party.memberPresence[String(accountId || "")]
+    : null;
+  return presence && typeof presence === "object" && !Array.isArray(presence) ? presence : {};
+}
+
+function samePartyPresence(previous, next) {
+  return (
+    previous &&
+    String(previous.accountId || "") === String(next.accountId || "") &&
+    Boolean(previous.online) === Boolean(next.online) &&
+    String(previous.connectionState || "") === String(next.connectionState || "") &&
+    String(previous.offlineSince || "") === String(next.offlineSince || "") &&
+    String(previous.autoKickAt || "") === String(next.autoKickAt || "")
+  );
+}
+
+function refreshPartyPresence(data, party, now, runtimeActiveSessionIds = null, options = {}) {
+  const result = {
+    party: party || null,
+    changed: false,
+    partyDeleted: false,
+    removedAccountIds: [],
+    targetAccountIds: [],
+  };
+  if (!party || !party.partyId) {
+    return result;
+  }
+  const timestamp = isoNow(now);
+  const nowMs = now();
+  const beforeMemberIds = partyMemberAccountIds(party);
+  result.targetAccountIds = beforeMemberIds.slice();
+  const presence = partyPresenceForMutation(party);
+  const nextMemberIds = [];
+  const removedAccountIds = [];
+  for (const accountId of beforeMemberIds) {
+    const account = accountById(data, accountId);
+    if (!account) {
+      removedAccountIds.push(accountId);
+      delete presence[accountId];
+      result.changed = true;
+      continue;
+    }
+    const activity = accountRuntimeActivity(data, accountId, now, runtimeActiveSessionIds);
+    const online = activity.online;
+    const previous = partyPresenceRecord(party, accountId);
+    if (online) {
+      const next = {
+        accountId,
+        online: true,
+        connectionState: "online",
+        offlineSince: null,
+        autoKickAt: null,
+        updatedAt: previous.updatedAt || timestamp,
+        schemaVersion: 1,
+      };
+      if (!samePartyPresence(previous, next)) {
+        next.updatedAt = timestamp;
+        presence[accountId] = next;
+        result.changed = true;
+      }
+      nextMemberIds.push(accountId);
+      continue;
+    }
+    let offlineSinceMs = Date.parse(previous.offlineSince);
+    if (!Number.isFinite(offlineSinceMs)) {
+      offlineSinceMs = Number.isFinite(activity.lastSeenMs)
+        ? Math.min(nowMs, activity.lastSeenMs + ONLINE_SESSION_IDLE_TTL_MS)
+        : nowMs;
+    }
+    const offlineSince = new Date(offlineSinceMs).toISOString();
+    const autoKickAt = new Date(offlineSinceMs + PARTY_OFFLINE_AUTO_KICK_MS).toISOString();
+    if (options.kickExpired !== false && Date.parse(autoKickAt) <= nowMs) {
+      removedAccountIds.push(accountId);
+      delete presence[accountId];
+      result.changed = true;
+      continue;
+    }
+    const next = {
+      accountId,
+      online: false,
+      connectionState: "offline",
+      offlineSince,
+      autoKickAt,
+      updatedAt: previous.updatedAt || timestamp,
+      schemaVersion: 1,
+    };
+    if (!samePartyPresence(previous, next)) {
+      next.updatedAt = timestamp;
+      presence[accountId] = next;
+      result.changed = true;
+    }
+    nextMemberIds.push(accountId);
+  }
+  for (const accountId of Object.keys(presence)) {
+    if (!nextMemberIds.includes(accountId)) {
+      delete presence[accountId];
+      result.changed = true;
+    }
+  }
+  if (removedAccountIds.length > 0 || beforeMemberIds.length !== nextMemberIds.length || beforeMemberIds.some((accountId, index) => accountId !== nextMemberIds[index])) {
+    party.memberAccountIds = nextMemberIds;
+    result.changed = true;
+  }
+  result.removedAccountIds = removedAccountIds;
+  if (nextMemberIds.length <= 0) {
+    delete data.parties[party.partyId];
+    expirePendingPartyInvites(data, party.partyId, now);
+    result.party = null;
+    result.partyDeleted = true;
+    result.changed = true;
+    return result;
+  }
+  if (!nextMemberIds.includes(String(party.leaderAccountId || ""))) {
+    party.leaderAccountId = nextMemberIds[0];
+    result.changed = true;
+  }
+  if (result.changed) {
+    party.updatedAt = timestamp;
+    data.parties[party.partyId] = party;
+  }
+  result.party = party;
+  return result;
+}
+
+function expirePendingPartyInvites(data, partyId, now) {
+  for (const invite of Object.values(data.partyInvites)) {
+    if (invite && invite.partyId === partyId && invite.status === "pending") {
+      invite.status = "expired";
+      invite.updatedAt = isoNow(now);
+      data.partyInvites[invite.inviteId] = invite;
+    }
+  }
+}
+
+function publicPartyMemberPresence(data, party, accountId, options = {}) {
+  const presence = partyPresenceRecord(party, accountId);
+  const canCheckRuntime = typeof options.now === "function";
+  const online = canCheckRuntime
+    ? accountHasActiveRuntimeSession(data, accountId, options.now, options.runtimeActiveSessionIds || null)
+    : presence.online !== false;
+  const offlineSince = online ? null : (presence.offlineSince || null);
+  const autoKickAt = online ? null : (presence.autoKickAt || null);
+  let offlineForMs = 0;
+  if (!online && typeof options.now === "function") {
+    const offlineSinceMs = Date.parse(offlineSince);
+    if (Number.isFinite(offlineSinceMs)) {
+      offlineForMs = Math.max(0, options.now() - offlineSinceMs);
+    }
+  }
+  return {
+    online,
+    connectionState: online ? "online" : "offline",
+    offlineSince,
+    offlineForMs,
+    autoKickAt,
+    schemaVersion: 1,
+  };
 }
 
 function partyMemberFollowSnapshotPosition(data, account, payload, now) {
@@ -12688,13 +12920,49 @@ function accountById(data, accountId) {
   return Object.values(data.accounts).find((account) => account && account.accountId === accountId) || null;
 }
 
+function accountRuntimeActivity(data, accountId, now, runtimeActiveSessionIds = null) {
+  const nowMs = now();
+  let online = false;
+  let lastSeenMs = NaN;
+  for (const session of Object.values(data.sessions)) {
+    if (!session || session.accountId !== accountId || session.revokedAt || Date.parse(session.expiresAt) <= nowMs) {
+      continue;
+    }
+    if (!runtimeActiveSessionIds) {
+      online = true;
+      continue;
+    }
+    if (!runtimeActiveSessionIds.has(session.sessionId)) {
+      continue;
+    }
+    const seenMs = typeof runtimeActiveSessionIds.get === "function"
+      ? Number(runtimeActiveSessionIds.get(session.sessionId))
+      : nowMs;
+    if (Number.isFinite(seenMs)) {
+      lastSeenMs = Math.max(Number.isFinite(lastSeenMs) ? lastSeenMs : 0, seenMs);
+    }
+    if (runtimeSessionIsActive(runtimeActiveSessionIds, session.sessionId, nowMs)) {
+      online = true;
+    }
+  }
+  return {
+    online,
+    lastSeenMs: Number.isFinite(lastSeenMs) ? lastSeenMs : null,
+  };
+}
+
+function accountHasActiveRuntimeSession(data, accountId, now, runtimeActiveSessionIds = null) {
+  return accountRuntimeActivity(data, accountId, now, runtimeActiveSessionIds).online;
+}
+
 function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
+  const nowMs = now();
   const activeSessions = Object.values(data.sessions)
     .filter((session) => (
       session &&
       !session.revokedAt &&
-      Date.parse(session.expiresAt) > now() &&
-      (!runtimeActiveSessionIds || runtimeActiveSessionIds.has(session.sessionId))
+      Date.parse(session.expiresAt) > nowMs &&
+      runtimeSessionIsActive(runtimeActiveSessionIds, session.sessionId, nowMs)
     ))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   const seenAccountIds = new Set();

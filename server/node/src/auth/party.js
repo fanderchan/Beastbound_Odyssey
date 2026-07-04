@@ -19,6 +19,7 @@ function createPartyDomain(ctx) {
     publicPartyForAccount,
     publicPartyInvite,
     randomId,
+    refreshPartyPresence,
     resolveSession,
     save,
   } = ctx;
@@ -28,6 +29,20 @@ function createPartyDomain(ctx) {
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    const party = partyForAccount(data, resolved.account.accountId);
+    if (party && typeof refreshPartyPresence === "function") {
+      const refreshed = refreshPartyPresence(data, party);
+      if (refreshed.changed) {
+        save(data);
+        emitServiceEvent({
+          type: "party.update",
+          targetAccountIds: refreshed.targetAccountIds,
+          party: refreshed.party ? publicParty(refreshed.party, data) : null,
+          partyId: party.partyId,
+          removedAccountIds: refreshed.removedAccountIds,
+        });
+      }
     }
     return ok(partyStatePayload(data, resolved.account.accountId));
   }

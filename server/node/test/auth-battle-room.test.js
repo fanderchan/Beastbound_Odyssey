@@ -477,6 +477,75 @@ test("party pve encounters create one shared server room and wait for all player
   assert.equal(resolved.room.battle.round, 2);
 });
 
+test("party pve encounters skip offline party members", () => {
+  let nowMs = Date.parse("2026-02-03T00:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const leader = service.register({"username": "pveofflinea", "password": "test1234", "displayName": "在线队长"});
+  const member = service.register({"username": "pveofflineb", "password": "test1234", "displayName": "离线队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("在线队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+      "petId": "offline_leader_pet",
+      "name": "队长布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 65,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("离线队员", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+      "petId": "offline_member_pet",
+      "name": "队员布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 65,
+    }),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  assert.equal(service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveofflineb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+  nowMs += 4 * 60 * 1000;
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "offline_skip_grass",
+      "name": "离线过滤草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "过滤乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 80, "attack": 10, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.message, "队伍遭遇了野生宠物，离线队员未参战。");
+  assert.deepEqual(encounter.room.participantAccountIds, [leader.account.accountId]);
+  assert.deepEqual(encounter.room.participants.map((player) => player.username), ["pveofflinea"]);
+  assert.deepEqual(encounter.room.battle.requiredAccountIds, [leader.account.accountId]);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.username === "pveofflineb"), false);
+  const memberBattleState = service.getBattleState(member.session.token);
+  assert.equal(memberBattleState.ok, true);
+  assert.equal(memberBattleState.room, null);
+  const partyState = service.getPartyState(leader.session.token);
+  assert.equal(partyState.ok, true);
+  assert.equal(partyState.party.memberCount, 2);
+  assert.equal(partyState.party.members.find((player) => player.username === "pveofflineb").online, true);
+});
+
 test("party pve encounters support a solo server account without local battle fallback", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "solopve", "password": "test1234", "displayName": "单人练级号"});

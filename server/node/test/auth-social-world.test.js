@@ -196,6 +196,66 @@ test("players can invite, accept, and leave server parties", () => {
   assert.equal(emptyState.party, null);
 });
 
+test("party presence marks idle members offline and restores them on activity", () => {
+  const store = createMemoryAuthStore();
+  let nowMs = Date.parse("2026-02-01T00:00:00.000Z");
+  const service = createAuthService({"store": store, "now": () => nowMs});
+  const leader = service.register({"username": "presencea", "password": "test1234", "displayName": "在线队长"});
+  const member = service.register({"username": "presenceb", "password": "test1234", "displayName": "离线队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "presenceb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+  nowMs += 4 * 60 * 1000;
+  const offlineState = service.getPartyState(leader.session.token);
+  assert.equal(offlineState.ok, true);
+  assert.equal(offlineState.party.memberCount, 2);
+  const offlineMember = offlineState.party.members.find((player) => player.username === "presenceb");
+  assert.equal(offlineMember.online, false);
+  assert.equal(offlineMember.connectionState, "offline");
+  assert.equal(offlineMember.offlineSince, "2026-02-01T00:03:00.000Z");
+  assert.equal(offlineMember.autoKickAt, "2026-02-01T01:03:00.000Z");
+
+  const restoredState = service.getPartyState(member.session.token);
+  assert.equal(restoredState.ok, true);
+  const restoredMember = restoredState.party.members.find((player) => player.username === "presenceb");
+  assert.equal(restoredMember.online, true);
+  assert.equal(restoredMember.connectionState, "online");
+  assert.equal(restoredMember.offlineSince, null);
+  assert.equal(restoredMember.autoKickAt, null);
+});
+
+test("party presence removes members after one hour offline", () => {
+  let nowMs = Date.parse("2026-02-02T00:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const leader = service.register({"username": "kicka", "password": "test1234", "displayName": "踢人队长"});
+  const member = service.register({"username": "kickb", "password": "test1234", "displayName": "超时队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "kickb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+
+  nowMs += 4 * 60 * 1000;
+  const offlineState = service.getPartyState(leader.session.token);
+  assert.equal(offlineState.ok, true);
+  assert.equal(offlineState.party.memberCount, 2);
+  assert.equal(offlineState.party.members.find((player) => player.username === "kickb").online, false);
+
+  nowMs += 60 * 60 * 1000 + 1;
+  const kickedState = service.getPartyState(leader.session.token);
+  assert.equal(kickedState.ok, true);
+  assert.equal(kickedState.party.memberCount, 1);
+  assert.deepEqual(kickedState.party.members.map((player) => player.username), ["kicka"]);
+  const memberState = service.getPartyState(member.session.token);
+  assert.equal(memberState.ok, true);
+  assert.equal(memberState.party, null);
+});
+
 test("server movement steps are authoritative and bounded", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const events = [];
