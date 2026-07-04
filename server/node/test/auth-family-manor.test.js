@@ -75,6 +75,36 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(joined.ok, true);
   assert.equal(joined.family.memberCount, 2);
 
+  assert.equal(service.updatePlayerPosition(leader.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 15,
+    "cellY": 17,
+    "facing": "east",
+    "moving": false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(member.session.token, {
+    "mapId": "earth_vein_cave",
+    "cellX": 8,
+    "cellY": 9,
+    "facing": "south",
+    "moving": false,
+  }).ok, true);
+  const familyState = service.getFamilyState(leader.session.token);
+  assert.equal(familyState.ok, true);
+  assert.equal(familyState.family.members.length, 2);
+  const onlineMember = familyState.family.members.find((familyMember) => familyMember.accountId === member.account.accountId);
+  assert.equal(onlineMember.online, true);
+  assert.equal(onlineMember.connectionState, "online");
+  assert.equal(onlineMember.position.mapId, "earth_vein_cave");
+  assert.equal(onlineMember.position.cellX, 8);
+
+  currentMs += 26 * 1000;
+  const staleFamilyState = service.getFamilyState(leader.session.token);
+  const staleMember = staleFamilyState.family.members.find((familyMember) => familyMember.accountId === member.account.accountId);
+  assert.equal(staleMember.online, false);
+  assert.equal(staleMember.connectionState, "offline");
+  assert.equal(staleMember.position.mapId, "earth_vein_cave");
+
   const memberChallenge = service.challengeManor(member.session.token, {"manorId": "firebud_manor"});
   assert.equal(memberChallenge.ok, false);
   assert.equal(memberChallenge.code, "family_leader_required");

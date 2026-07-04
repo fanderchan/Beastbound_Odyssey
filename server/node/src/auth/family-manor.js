@@ -20,6 +20,7 @@ function createFamilyManorDomain(ctx) {
     BATTLE_MODE_MANOR_WAR,
     BATTLE_ROOM_READY,
     accountById,
+    accountRuntimeActivity = () => ({online: false, lastSeenMs: null}),
     activeBattleRoomForAccount,
     battleParticipantSnapshot,
     battleRoomConnectionStateForMutation,
@@ -32,12 +33,14 @@ function createFamilyManorDomain(ctx) {
     now,
     ok,
     publicBattleRoom,
+    publicPlayerPosition = (position) => position,
     randomId,
     randomBytes,
     recordBattleTrace,
     resolveSession,
     save,
   } = ctx;
+  const publicFamilyOptions = {accountRuntimeActivity, publicPlayerPosition};
 
   function getFamilyState(token) {
     const data = load();
@@ -47,7 +50,7 @@ function createFamilyManorDomain(ctx) {
     }
     const family = familyForAccount(data, resolved.account.accountId);
     return ok({
-      family: family ? publicFamily(family, data, accountById) : null,
+      family: family ? publicFamily(family, data, accountById, publicFamilyOptions) : null,
       manors: publicManorsForAccount(data, resolved.account.accountId),
       wars: publicManorWarsForAccount(data, resolved.account.accountId),
     });
@@ -102,10 +105,10 @@ function createFamilyManorDomain(ctx) {
     emitServiceEvent({
       type: "family.update",
       targetAccountIds: family.memberAccountIds,
-      family: publicFamily(family, data, accountById),
+      family: publicFamily(family, data, accountById, publicFamilyOptions),
     });
     return ok({
-      family: publicFamily(family, data, accountById),
+      family: publicFamily(family, data, accountById, publicFamilyOptions),
       manors: publicManorsForAccount(data, resolved.account.accountId),
       message: "家族已成立。",
     });
@@ -134,10 +137,10 @@ function createFamilyManorDomain(ctx) {
     emitServiceEvent({
       type: "family.update",
       targetAccountIds: family.memberAccountIds,
-      family: publicFamily(family, data, accountById),
+      family: publicFamily(family, data, accountById, publicFamilyOptions),
     });
     return ok({
-      family: publicFamily(family, data, accountById),
+      family: publicFamily(family, data, accountById, publicFamilyOptions),
       manors: publicManorsForAccount(data, resolved.account.accountId),
       message: "已加入家族。",
     });
@@ -176,7 +179,7 @@ function createFamilyManorDomain(ctx) {
     emitServiceEvent({
       type: "family.update",
       targetAccountIds: previousMembers,
-      family: data.families[family.familyId] ? publicFamily(data.families[family.familyId], data, accountById) : null,
+      family: data.families[family.familyId] ? publicFamily(data.families[family.familyId], data, accountById, publicFamilyOptions) : null,
     });
     return ok({
       family: null,
@@ -291,7 +294,7 @@ function createFamilyManorDomain(ctx) {
     });
     return ok({
       war: publicManorWar(war, family.familyId, resolved.account.accountId),
-      family: publicFamily(data.families[family.familyId], data, accountById),
+      family: publicFamily(data.families[family.familyId], data, accountById, publicFamilyOptions),
       manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
       manors: publicManorsForAccount(data, resolved.account.accountId),
       wars: publicManorWarsForAccount(data, resolved.account.accountId),
@@ -565,7 +568,7 @@ function createFamilyManorDomain(ctx) {
     return ok({
       battle: publicManorBattle(battle),
       war: publicManorWar(war, family.familyId, resolved.account.accountId),
-      family: publicFamily(data.families[family.familyId], data, accountById),
+      family: publicFamily(data.families[family.familyId], data, accountById, publicFamilyOptions),
       manor: publicManor(manor, data, family.familyId, resolved.account.accountId),
       manors: publicManorsForAccount(data, resolved.account.accountId),
       wars: publicManorWarsForAccount(data, resolved.account.accountId),
@@ -685,7 +688,7 @@ function createFamilyManorDomain(ctx) {
     const manor = manorById(war.manorId);
     return {
       war: publicManorWar(war, family.familyId, accountId),
-      family: publicFamily(data.families[family.familyId], data, accountById),
+      family: publicFamily(data.families[family.familyId], data, accountById, publicFamilyOptions),
       manor: manor ? publicManor(manor, data, family.familyId, accountId) : {},
       manors: publicManorsForAccount(data, accountId),
       wars: publicManorWarsForAccount(data, accountId),
@@ -761,12 +764,12 @@ function familyByPayload(data, payload = {}) {
   return Object.values(data.families).find((family) => normalizeFamilyName(family.name) === familyName) || null;
 }
 
-function publicFamily(family, data, accountById) {
+function publicFamily(family, data, accountById, options = {}) {
   const summary = publicFamilySummary(family, data, accountById);
   return {
     ...summary,
     notice: String(family.notice || ""),
-    members: family.memberAccountIds.map((accountId) => publicFamilyMember(accountId, family, data, accountById)).filter(Boolean),
+    members: family.memberAccountIds.map((accountId) => publicFamilyMember(accountId, family, data, accountById, options)).filter(Boolean),
   };
 }
 
@@ -788,16 +791,31 @@ function publicFamilySummary(family, data, accountById) {
   };
 }
 
-function publicFamilyMember(accountId, family, data, accountById) {
+function publicFamilyMember(accountId, family, data, accountById, options = {}) {
   const account = accountById(data, accountId);
   if (!account) {
     return null;
   }
+  const runtimeActivity = typeof options.accountRuntimeActivity === "function"
+    ? options.accountRuntimeActivity(data, account.accountId)
+    : {online: false, lastSeenMs: null};
+  const online = Boolean(runtimeActivity && runtimeActivity.online);
+  const rawLastSeenMs = runtimeActivity ? runtimeActivity.lastSeenMs : null;
+  const lastSeenMs = Number(rawLastSeenMs);
+  const position = data.playerPositions && data.playerPositions[account.accountId]
+    ? data.playerPositions[account.accountId]
+    : null;
   return {
     accountId: account.accountId,
     username: account.username,
     displayName: account.displayName,
     role: account.accountId === family.leaderAccountId ? "leader" : "member",
+    online,
+    connectionState: online ? "online" : "offline",
+    lastSeenAt: rawLastSeenMs !== null && rawLastSeenMs !== undefined && Number.isFinite(lastSeenMs) ? new Date(lastSeenMs).toISOString() : "",
+    position: position && typeof options.publicPlayerPosition === "function"
+      ? options.publicPlayerPosition(position)
+      : null,
     schemaVersion: 1,
   };
 }

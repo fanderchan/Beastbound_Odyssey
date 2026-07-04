@@ -2152,6 +2152,12 @@ var family_focus_manor_id: String:
 	set(value):
 		host.family_focus_manor_id = value
 
+var family_detail_expanded:
+	get:
+		return host.family_detail_expanded
+	set(value):
+		host.family_detail_expanded = value
+
 var online_position_http_request:
 	get:
 		return host.online_position_http_request
@@ -14808,6 +14814,8 @@ func _refresh_family_panel() -> void:
 	_clear_container_children(family_list_container)
 	_clear_container_children(manor_list_container)
 	var current_family := _family_current_family()
+	if current_family.is_empty():
+		family_detail_expanded = false
 	if family_status_label != null and family_status_label.text.strip_edges() == "":
 		family_status_label.text = "家族状态已同步。" if not current_family.is_empty() else "当前没有家族。"
 	family_summary_container.add_child(_family_summary_card(current_family))
@@ -14835,10 +14843,20 @@ func _family_summary_card(current_family: Dictionary) -> Control:
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 4)
 	card.add_child(column)
+	var header = HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_theme_constant_override("separation", 8)
+	column.add_child(header)
 	var title = Label.new()
 	title.add_theme_font_size_override("font_size", 16)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_child(title)
+	header.add_child(title)
+	var detail_button = Button.new()
+	detail_button.text = "收起" if family_detail_expanded else "详情"
+	detail_button.custom_minimum_size = Vector2(74, 36)
+	detail_button.disabled = current_family.is_empty()
+	detail_button.pressed.connect(_on_family_detail_toggle_pressed)
+	header.add_child(detail_button)
 	var detail = Label.new()
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_size_override("font_size", 14)
@@ -14862,7 +14880,68 @@ func _family_summary_card(current_family: Dictionary) -> Control:
 			int(current_family.get("fame", 0)),
 			manor_count,
 		]
+		if family_detail_expanded:
+			var members: Array = current_family.get("members", []) if current_family.get("members", []) is Array else []
+			if members.is_empty():
+				column.add_child(_party_info_label("暂无成员资料。"))
+			else:
+				for value in members:
+					if value is Dictionary:
+						column.add_child(_family_member_row(value as Dictionary))
 	return card
+
+func _on_family_detail_toggle_pressed() -> void:
+	family_detail_expanded = not family_detail_expanded
+	_refresh_family_panel()
+
+func _family_member_row(member: Dictionary) -> Control:
+	var row = PanelContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_stylebox_override("panel", _family_member_row_style(member))
+	var column = VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 2)
+	row.add_child(column)
+	var title = Label.new()
+	var role := "族长" if str(member.get("role", "")) == "leader" else "族员"
+	var online := bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline"
+	title.text = "%s  %s  %s" % [role, "在线" if online else "离线", _party_player_text(member)]
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", Color(0.78, 0.96, 0.72, 1.0) if online else Color(0.70, 0.72, 0.68, 1.0))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(title)
+	var detail = Label.new()
+	detail.text = _family_member_position_text(member, online)
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 13)
+	detail.add_theme_color_override("font_color", Color(0.78, 0.82, 0.76, 1.0))
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(detail)
+	return row
+
+func _family_member_row_style(member: Dictionary) -> StyleBoxFlat:
+	var online := bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline"
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.11, 0.11, 0.56) if online else Color(0.06, 0.07, 0.07, 0.46)
+	style.border_color = Color(0.30, 0.54, 0.36, 0.62) if online else Color(0.28, 0.30, 0.28, 0.52)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 9
+	style.content_margin_right = 9
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	return style
+
+func _family_member_position_text(member: Dictionary, online: bool) -> String:
+	var position = member.get("position", null) as Dictionary if member.get("position", null) is Dictionary else {}
+	if position.is_empty():
+		return "位置：未同步"
+	var map_id := str(position.get("mapId", "")).strip_edges()
+	var map_name := _map_name_for_id(map_id) if map_id != "" else "未知地图"
+	var coord_text := "%d,%d" % [int(position.get("cellX", 0)), int(position.get("cellY", 0))]
+	if online:
+		return "当前位置：%s  %s" % [map_name, coord_text]
+	return "最后位置：%s  %s" % [map_name, coord_text]
 
 func _family_list_row(family: Dictionary, current_family: Dictionary) -> Control:
 	var family_id := str(family.get("familyId", "")).strip_edges()

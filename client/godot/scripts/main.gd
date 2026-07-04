@@ -549,6 +549,7 @@ var family_manors: Array[Dictionary] = []
 var family_request_pending: bool = false
 var family_pending_kind: String = ""
 var family_focus_manor_id: String = ""
+var family_detail_expanded: bool = false
 var online_position_http_request: HTTPRequest
 var online_position_timer: Timer
 var online_position_request_pending: bool = false
