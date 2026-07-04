@@ -14400,14 +14400,44 @@ func _run_auto_party_live_check() -> void:
 		and host.party_roster_container != null
 		and host.party_roster_container.get_child_count() >= 2
 	)
+	var offline_marker_ok = false
+	var offline_party = host.party_current_state.get("party", {}) as Dictionary if host.party_current_state.get("party", {}) is Dictionary else {}
+	if not offline_party.is_empty():
+		offline_party = offline_party.duplicate(true)
+		var offline_members: Array = []
+		var raw_offline_members: Array = offline_party.get("members", []) if offline_party.get("members", []) is Array else []
+		for value in raw_offline_members:
+			if not (value is Dictionary):
+				continue
+			var member_entry = (value as Dictionary).duplicate(true)
+			if str(member_entry.get("username", "")) == member_username:
+				member_entry["online"] = false
+				member_entry["connectionState"] = "offline"
+			offline_members.append(member_entry)
+		offline_party["members"] = offline_members
+		host.party_current_state["party"] = offline_party
+		host._refresh_party_roster_hud(false)
+		if host.party_roster_container != null:
+			for index in range(host.party_roster_container.get_child_count()):
+				var offline_row = host.party_roster_container.get_child(index)
+				var avatar_glyph = offline_row.find_child("AvatarGlyph", true, false)
+				var status_text = offline_row.find_child("StatusText", true, false)
+				if (
+					avatar_glyph is Label
+					and status_text is Label
+					and (avatar_glyph as Label).text == "⚡"
+					and (status_text as Label).text.find("离线") >= 0
+				):
+					offline_marker_ok = true
+					break
 	host._on_party_leave_pressed()
 	frames = 0
 	while frames < 720 and (host.party_request_pending or host.party_current_state.get("party", null) is Dictionary):
 		frames += 1
 		await host.get_tree().process_frame
 	var leave_ok = not (host.party_current_state.get("party", null) is Dictionary)
-	var status = "ok" if register_ok and positions_ok and online_ok and invite_ok and invite_seen_ok and popup_ok and accept_ok and ui_ok and leave_ok else "failed"
-	print("party live check ready: status=%s register=%s positions=%s online=%s invite=%s seen=%s popup=%s accept=%s ui=%s leave=%s leader=%s member=%s online_count=%d" % [
+	var status = "ok" if register_ok and positions_ok and online_ok and invite_ok and invite_seen_ok and popup_ok and accept_ok and ui_ok and offline_marker_ok and leave_ok else "failed"
+	print("party live check ready: status=%s register=%s positions=%s online=%s invite=%s seen=%s popup=%s accept=%s ui=%s offline_marker=%s leave=%s leader=%s member=%s online_count=%d" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -14417,6 +14447,7 @@ func _run_auto_party_live_check() -> void:
 		str(popup_ok),
 		str(accept_ok),
 		str(ui_ok),
+		str(offline_marker_ok),
 		str(leave_ok),
 		leader_username,
 		member_username,

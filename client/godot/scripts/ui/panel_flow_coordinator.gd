@@ -15098,12 +15098,13 @@ func _party_roster_member_row(member: Dictionary) -> Control:
 	avatar.custom_minimum_size = Vector2(36, 36)
 	avatar.add_theme_stylebox_override("panel", _party_avatar_style(member))
 	var avatar_label = Label.new()
+	avatar_label.name = "AvatarGlyph"
 	avatar_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	avatar_label.text = _party_avatar_text(member)
 	avatar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	avatar_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	avatar_label.add_theme_font_size_override("font_size", 14)
-	avatar_label.add_theme_color_override("font_color", Color(0.96, 0.95, 0.84, 0.96))
+	avatar_label.add_theme_font_size_override("font_size", 20 if _party_member_is_offline(member) else 14)
+	avatar_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.25, 0.98) if _party_member_is_offline(member) else Color(0.96, 0.95, 0.84, 0.96))
 	avatar.add_child(avatar_label)
 	content.add_child(avatar)
 
@@ -15120,6 +15121,7 @@ func _party_roster_member_row(member: Dictionary) -> Control:
 	name_label.add_theme_color_override("font_color", Color(0.94, 0.96, 0.90, 0.96) if not _party_member_is_offline(member) else Color(0.62, 0.64, 0.60, 0.86))
 	text_column.add_child(name_label)
 	var status_label = Label.new()
+	status_label.name = "StatusText"
 	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	status_label.text = _party_roster_member_status(member)
 	status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -15142,6 +15144,8 @@ func _party_member_is_offline(member: Dictionary) -> bool:
 	return str(member.get("connectionState", "")).strip_edges() == "offline" or not bool(member.get("online", true))
 
 func _party_avatar_text(member: Dictionary) -> String:
+	if _party_member_is_offline(member):
+		return "⚡"
 	var text = str(member.get("displayName", member.get("username", ""))).strip_edges()
 	if text == "":
 		return "?"
