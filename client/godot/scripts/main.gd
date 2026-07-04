@@ -10668,10 +10668,72 @@ func _reset_battle_command_countdown() -> void:
 	_sync_battle_round_timer_labels(true)
 
 
+func _battle_timer_should_be_visible() -> bool:
+	if not battle_active:
+		return false
+	var phase := str(battle_state.get("phase", "command")).strip_edges()
+	return phase == "command" or phase == "server_waiting"
+
+
+func _server_battle_command_deadline_remaining() -> float:
+	if not bool(battle_state.get("serverAuthority", false)):
+		return -1.0
+	var deadline_text := _server_battle_command_deadline_text()
+	if deadline_text == "":
+		return -1.0
+	var deadline_unix := _unix_time_from_iso_utc(deadline_text)
+	if deadline_unix < 0.0:
+		return -1.0
+	return minf(BATTLE_COMMAND_COUNTDOWN_SECONDS, maxf(0.0, deadline_unix - Time.get_unix_time_from_system()))
+
+
+func _server_battle_command_deadline_text() -> String:
+	var room = battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	var battle = room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var deadline_text := str(battle.get("commandDeadlineAt", "")).strip_edges()
+	if deadline_text != "":
+		return deadline_text
+	room = server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	battle = room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	return str(battle.get("commandDeadlineAt", "")).strip_edges()
+
+
+func _unix_time_from_iso_utc(iso_text: String) -> float:
+	var text := iso_text.strip_edges()
+	if text == "":
+		return -1.0
+	text = text.replace("T", " ").replace("Z", "")
+	var dot_index := text.find(".")
+	if dot_index >= 0:
+		text = text.substr(0, dot_index)
+	var parts := text.split(" ")
+	if parts.size() != 2:
+		return -1.0
+	var date_parts := parts[0].split("-")
+	var time_parts := parts[1].split(":")
+	if date_parts.size() != 3 or time_parts.size() < 3:
+		return -1.0
+	return float(Time.get_unix_time_from_datetime_dict({
+		"year": int(date_parts[0]),
+		"month": int(date_parts[1]),
+		"day": int(date_parts[2]),
+		"hour": int(time_parts[0]),
+		"minute": int(time_parts[1]),
+		"second": int(time_parts[2]),
+	}))
+
+
 func _update_battle_command_countdown(delta: float) -> void:
 	if not battle_active:
 		return
-	if str(battle_state.get("phase", "command")) != "command" or _battle_commands_locked():
+	var phase := str(battle_state.get("phase", "command")).strip_edges()
+	if phase == "server_waiting":
+		var server_remaining := _server_battle_command_deadline_remaining()
+		if server_remaining >= 0.0:
+			battle_command_countdown_remaining = server_remaining
+		_sync_battle_round_timer_labels(false)
+		return
+	if phase != "command" or _battle_commands_locked():
 		_sync_battle_round_timer_labels(false)
 		return
 	battle_command_countdown_remaining = maxf(0.0, battle_command_countdown_remaining - delta)
@@ -10684,7 +10746,7 @@ func _sync_battle_round_timer_labels(force: bool = false) -> void:
 	if battle_round_panel != null:
 		battle_round_panel.visible = battle_active
 	if battle_timer_panel != null:
-		battle_timer_panel.visible = battle_active
+		battle_timer_panel.visible = _battle_timer_should_be_visible()
 	if not battle_active:
 		battle_round_display_last_text = ""
 		battle_timer_display_last_text = ""
@@ -11516,7 +11578,7 @@ func _layout_hud() -> void:
 			timer_y = top_panel.position.y + top_panel.size.y + 8.0
 		battle_timer_panel.position = Vector2((viewport_size.x - timer_size.x) * 0.5, timer_y)
 		battle_timer_panel.size = timer_size
-		battle_timer_panel.visible = battle_active
+		battle_timer_panel.visible = _battle_timer_should_be_visible()
 		if battle_timer_label != null:
 			battle_timer_label.size = timer_size - Vector2(20.0, 12.0)
 
