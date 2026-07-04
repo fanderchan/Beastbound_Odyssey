@@ -103,6 +103,74 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
 });
 
+test("claiming battle item mail during a battle updates the active room item bag", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const supplier = service.register({"username": "bmsupply", "password": "test1234", "displayName": "补给员"});
+  const recipient = service.register({"username": "bmrecv", "password": "test1234", "displayName": "收件战士"});
+  const opponent = service.register({"username": "bmopp", "password": "test1234", "displayName": "对练"});
+  assert.equal(supplier.ok, true);
+  assert.equal(recipient.ok, true);
+  assert.equal(opponent.ok, true);
+
+  const supplierProfile = battleProfile("补给员", {"level": 8, "hp": 130, "maxHp": 130}, null);
+  supplierProfile.backpackSlots = [
+    {"itemId": "item_heal_single_5", "count": 2},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  const recipientProfile = battleProfile("收件战士", {"level": 12, "hp": 150, "maxHp": 150, "attack": 20, "defense": 8, "quick": 90}, {
+    "petId": "pet_battle_mail_recipient",
+    "name": "收件布伊",
+    "state": "battle",
+    "hp": 50,
+    "maxHp": 90,
+  });
+  recipientProfile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  const opponentProfile = battleProfile("对练", {"level": 12, "hp": 150, "maxHp": 150, "attack": 18, "defense": 8, "quick": 70}, {
+    "petId": "pet_battle_mail_opponent",
+    "name": "对练布伊",
+    "state": "battle",
+    "hp": 80,
+    "maxHp": 90,
+  });
+  assert.equal(service.saveProfile(supplier.session.token, {"expectedRevision": 0, "profile": supplierProfile}).ok, true);
+  assert.equal(service.saveProfile(recipient.session.token, {"expectedRevision": 0, "profile": recipientProfile}).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {"expectedRevision": 0, "profile": opponentProfile}).ok, true);
+  service.updatePlayerPosition(recipient.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(recipient.session.token, {"username": "bmopp"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  assert.equal(accept.room.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 0);
+
+  const sent = service.sendMail(supplier.session.token, {
+    "recipientUsername": "bmrecv",
+    "title": "战斗补给",
+    "body": "马上收。",
+    "items": [{"itemId": "item_heal_single_5", "count": 2}],
+  });
+  assert.equal(sent.ok, true);
+  const inbox = service.listInbox(recipient.session.token);
+  const claimed = service.claimMailAttachments(recipient.session.token, inbox.messages[0].mailId);
+  assert.equal(claimed.ok, true);
+  assert.equal(claimed.claim.addedItems[0].itemId, "item_heal_single_5");
+  assert.equal(claimed.battleRoom.roomId, accept.room.roomId);
+  assert.equal(claimed.battleRoom.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
+  assert.equal(service.snapshot().battleRooms[accept.room.roomId].participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
+
+  const recipientPlayer = claimed.battleRoom.battle.actors.find((actor) => actor.username === "bmrecv" && actor.kind === "player");
+  const recipientPet = claimed.battleRoom.battle.actors.find((actor) => actor.username === "bmrecv" && actor.kind === "pet");
+  const itemCommand = service.submitBattleCommand(recipient.session.token, claimed.battleRoom.roomId, {
+    "round": 1,
+    "actorId": recipientPlayer.actorId,
+    "actionId": "item_heal_single_5",
+    "itemId": "item_heal_single_5",
+    "targetActorId": recipientPet.actorId,
+  });
+  assert.equal(itemCommand.ok, true);
+  assert.equal(itemCommand.command.actionKind, "item");
+});
+
 test("players can invite, accept, and leave server parties", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "partya", "password": "test1234", "displayName": "队长"});

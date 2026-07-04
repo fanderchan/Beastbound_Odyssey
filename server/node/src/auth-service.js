@@ -1498,6 +1498,7 @@ function createAuthService(options = {}) {
     accountById,
     activeBattleRoomForAccount,
     activeOnlinePlayers: (serviceData, nowFn = now) => activeOnlinePlayers(serviceData, nowFn, runtimeActiveSessionIds),
+    addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
@@ -6935,6 +6936,37 @@ function setParticipantBattleItemCount(participant, itemId, count) {
   }
   const bag = participantBattleItemBag(participant);
   bag[normalizedItemId] = Math.max(0, Math.trunc(Number(count || 0)));
+}
+
+function addClaimedMailItemsToActiveBattleRoom(data, accountId, items, nowFn = Date.now) {
+  const room = activeBattleRoomForAccount(data, String(accountId || ""));
+  if (!room || room.status === BATTLE_ROOM_CLOSED) {
+    return null;
+  }
+  const participant = battleParticipantByAccountId(room, accountId);
+  if (!participant) {
+    return null;
+  }
+  let changed = false;
+  for (const item of Array.isArray(items) ? items : []) {
+    const itemId = normalizeBattleItemId(item && item.itemId);
+    const count = Math.max(0, Math.trunc(Number(item && item.count || 0)));
+    if (itemId === "" || count <= 0) {
+      continue;
+    }
+    setParticipantBattleItemCount(participant, itemId, participantBattleItemCount(participant, itemId) + count);
+    changed = true;
+  }
+  if (!changed) {
+    return null;
+  }
+  const timestamp = isoNow(nowFn);
+  room.updatedAt = timestamp;
+  if (room.battle && typeof room.battle === "object" && !Array.isArray(room.battle)) {
+    room.battle.updatedAt = timestamp;
+  }
+  data.battleRooms[room.roomId] = room;
+  return room;
 }
 
 function participantCaptureToolBag(participant) {

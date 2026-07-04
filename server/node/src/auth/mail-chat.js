@@ -8,6 +8,7 @@ function createMailChatDomain(ctx) {
     MAIL_BODY_MAX_LENGTH,
     MAIL_TITLE_MAX_LENGTH,
     MAX_CHAT_MESSAGES,
+    addClaimedMailItemsToActiveBattleRoom,
     addRewardItemsToBackpack,
     backpackItemCount,
     captureToolBagFromProfile,
@@ -32,6 +33,7 @@ function createMailChatDomain(ctx) {
     profileBindingForAccount,
     profileSummaryForAccount,
     publicAccount,
+    publicBattleRoom,
     publicChatMessage,
     publicMail,
     publicParty,
@@ -223,6 +225,9 @@ function createMailChatDomain(ctx) {
       updatedAt,
       schemaVersion: 1,
     };
+    const battleRoom = addClaimedMailItemsToActiveBattleRoom
+      ? addClaimedMailItemsToActiveBattleRoom(data, resolved.account.accountId, addResult.addedItems)
+      : null;
     save(data);
     const message = "领取邮件附件：%s。".replace("%s", itemAmountText(addResult.addedItems));
     return ok({
@@ -231,6 +236,7 @@ function createMailChatDomain(ctx) {
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
       mail: remaining.length > 0 ? publicMail(mail) : null,
+      battleRoom: battleRoom && publicBattleRoom ? publicBattleRoom(battleRoom) : null,
       claim: {
         mailId: normalizedMailId,
         addedItems: addResult.addedItems,

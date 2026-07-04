@@ -1098,6 +1098,7 @@ static func parse_mail_claim_response(response_code: int, body: PackedByteArray)
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["mail"] = response.get("mail", null)
 	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
+	parsed["battleRoom"] = response.get("battleRoom", null)
 	return parsed
 
 

@@ -10630,7 +10630,9 @@ func _sync_battle_buttons() -> void:
 	if battle_message_panel != null:
 		battle_message_panel.visible = battle_active or world_log_message != ""
 	if action_bar != null:
-		action_bar.visible = not battle_active
+		action_bar.visible = battle_active or not _world_menu_is_open()
+		if _battle_overlay_panel_open():
+			action_bar.visible = false
 	var can_command := battle_active and not _battle_commands_locked()
 	if battle_active:
 		_sync_battle_target_selection()
@@ -10734,7 +10736,15 @@ func _sync_battle_buttons() -> void:
 
 
 func _battle_command_panel_should_be_visible() -> bool:
-	return battle_active and not _battle_commands_locked()
+	return battle_active and not _battle_commands_locked() and not _battle_overlay_panel_open()
+
+
+func _battle_overlay_panel_open() -> bool:
+	return (
+		(mailbox_panel != null and mailbox_panel.visible)
+		or (auto_settings_panel != null and auto_settings_panel.visible)
+		or (account_panel != null and account_panel.visible)
+	)
 
 
 func _battle_commands_locked() -> bool:
@@ -11893,8 +11903,6 @@ func _layout_hud() -> void:
 
 	mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	mailbox_panel.size = Vector2(codex_width, codex_height)
-	if battle_active:
-		mailbox_panel.visible = false
 	if mailbox_panel.visible and action_bar != null:
 		action_bar.visible = false
 
@@ -11907,8 +11915,6 @@ func _layout_hud() -> void:
 
 	auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	auto_settings_panel.size = Vector2(codex_width, codex_height)
-	if battle_active:
-		auto_settings_panel.visible = false
 	if auto_settings_panel.visible and action_bar != null:
 		action_bar.visible = false
 

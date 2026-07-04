@@ -9195,9 +9195,7 @@ func _sync_action_bar_state() -> void:
 		chat_menu_button,
 		party_menu_button,
 		family_menu_button,
-		mailbox_menu_button,
 		training_partner_menu_button,
-		auto_settings_menu_button,
 	]
 	for button in battle_locked_buttons:
 		if button != null:
@@ -16244,9 +16242,8 @@ func _party_panel_layout_is_usable() -> bool:
 	)
 
 func _open_mailbox_panel() -> void:
-	if battle_active:
-		return
-	host._set_hang_mode(false)
+	if not battle_active:
+		host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
 	_close_player_status_panel()
@@ -16566,57 +16563,92 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 			return
 		elif mailbox_status_label != null:
 			mailbox_status_label.text = str(parsed_send.get("message", "邮件发送失败。"))
-		elif kind == "read":
-			var parsed_read = ServerAuthClientModel.parse_mail_read_response(response_code, body)
-			if bool(parsed_read.get("ok", false)):
-				var read_mail = parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
+	elif kind == "read":
+		var parsed_read = ServerAuthClientModel.parse_mail_read_response(response_code, body)
+		if bool(parsed_read.get("ok", false)):
+			var read_mail = parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
+			for index in range(mailbox_server_messages.size()):
+				if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
+					mailbox_server_messages[index] = read_mail
+					break
+		elif _handle_session_invalid_response(parsed_read):
+			return
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
+	elif kind == "claim":
+		var parsed_claim = ServerAuthClientModel.parse_mail_claim_response(response_code, body)
+		if bool(parsed_claim.get("ok", false)):
+			var server_profile = parsed_claim.get("profile", null)
+			if server_profile is Dictionary:
+				player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+				if profile_save_enabled:
+					PlayerProgressModel.save_profile(player_profile)
+			var summary = parsed_claim.get("profileSummary", {})
+			if summary is Dictionary:
+				_apply_server_profile_summary(summary as Dictionary)
+			var claim_mail_id = _mailbox_key_id(mailbox_selected_mail_id, "server:")
+			var claim_mail = parsed_claim.get("mail", null)
+			var replaced = false
+			if claim_mail is Dictionary:
 				for index in range(mailbox_server_messages.size()):
-					if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
-						mailbox_server_messages[index] = read_mail
+					if str(mailbox_server_messages[index].get("mailId", "")) == str((claim_mail as Dictionary).get("mailId", "")):
+						mailbox_server_messages[index] = (claim_mail as Dictionary).duplicate(true)
+						replaced = true
 						break
-			elif _handle_session_invalid_response(parsed_read):
-				return
-			elif mailbox_status_label != null:
-				mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
-		elif kind == "claim":
-			var parsed_claim = ServerAuthClientModel.parse_mail_claim_response(response_code, body)
-			if bool(parsed_claim.get("ok", false)):
-				var server_profile = parsed_claim.get("profile", null)
-				if server_profile is Dictionary:
-					player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-					if profile_save_enabled:
-						PlayerProgressModel.save_profile(player_profile)
-				var summary = parsed_claim.get("profileSummary", {})
-				if summary is Dictionary:
-					_apply_server_profile_summary(summary as Dictionary)
-				var claim_mail_id = _mailbox_key_id(mailbox_selected_mail_id, "server:")
-				var claim_mail = parsed_claim.get("mail", null)
-				var replaced = false
-				if claim_mail is Dictionary:
-					for index in range(mailbox_server_messages.size()):
-						if str(mailbox_server_messages[index].get("mailId", "")) == str((claim_mail as Dictionary).get("mailId", "")):
-							mailbox_server_messages[index] = (claim_mail as Dictionary).duplicate(true)
-							replaced = true
-							break
-					if not replaced:
-						mailbox_server_messages.append((claim_mail as Dictionary).duplicate(true))
-				else:
-					for index in range(mailbox_server_messages.size() - 1, -1, -1):
-						if str(mailbox_server_messages[index].get("mailId", "")) == claim_mail_id:
-							mailbox_server_messages.remove_at(index)
-				if mailbox_status_label != null:
-					mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件已领取。"))
-				_set_world_log_message(str(parsed_claim.get("message", "邮件附件已领取。")))
-				if backpack_panel != null and backpack_panel.visible:
-					_refresh_backpack_panel()
-				host._update_hud_text(true)
-			elif _handle_session_invalid_response(parsed_claim):
-				return
-			elif mailbox_status_label != null:
-				mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件领取失败。"))
+				if not replaced:
+					mailbox_server_messages.append((claim_mail as Dictionary).duplicate(true))
+			else:
+				for index in range(mailbox_server_messages.size() - 1, -1, -1):
+					if str(mailbox_server_messages[index].get("mailId", "")) == claim_mail_id:
+						mailbox_server_messages.remove_at(index)
+			_apply_claimed_mail_items_to_battle_state(parsed_claim)
+			var room = parsed_claim.get("battleRoom", null)
+			if room is Dictionary:
+				_apply_server_battle_room_state(room as Dictionary, false)
+			if mailbox_status_label != null:
+				mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件已领取。"))
+			_set_world_log_message(str(parsed_claim.get("message", "邮件附件已领取。")))
+			if backpack_panel != null and backpack_panel.visible:
+				_refresh_backpack_panel()
+			host._update_hud_text(true)
+			host._sync_battle_buttons()
+		elif _handle_session_invalid_response(parsed_claim):
+			return
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件领取失败。"))
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_request_controls()
+
+func _apply_claimed_mail_items_to_battle_state(parsed_claim: Dictionary) -> void:
+	if not battle_active or battle_state.is_empty():
+		return
+	var claim = parsed_claim.get("claim", {})
+	if not (claim is Dictionary):
+		return
+	var added_items = (claim as Dictionary).get("addedItems", [])
+	if not (added_items is Array):
+		return
+	var changed := false
+	for value in added_items:
+		if not (value is Dictionary):
+			continue
+		var entry := value as Dictionary
+		var item_id := str(entry.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(entry.get("count", 0)))
+		if count <= 0 or not _battle_claim_item_supported_in_combat(item_id):
+			continue
+		battle_state = BattleModel.set_item_count(battle_state, item_id, BattleModel.item_count(battle_state, item_id) + count)
+		changed = true
+	if changed:
+		host._sync_battle_buttons()
+
+func _battle_claim_item_supported_in_combat(item_id: String) -> bool:
+	match item_id.strip_edges():
+		BattleModel.ITEM_MEAT_SMALL, BattleModel.ITEM_HEAL_SINGLE, BattleModel.ITEM_HEAL_ALL, BattleModel.ITEM_POISON_SINGLE, BattleModel.ITEM_POISON_ALL, BattleModel.ITEM_CLEANSE_SINGLE:
+			return true
+		_:
+			return false
 
 func _mailbox_item_entries(message: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -16755,9 +16787,8 @@ func _on_training_partner_clear_pressed() -> void:
 	await _set_training_partner_count(0)
 
 func _open_auto_settings_panel() -> void:
-	if battle_active:
-		return
-	host._set_hang_mode(false)
+	if not battle_active:
+		host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
 	_close_player_status_panel()
