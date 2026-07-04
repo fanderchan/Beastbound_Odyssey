@@ -35,6 +35,8 @@ function main() {
   const service = createAuthService({
     store,
     now: () => currentMs,
+    // seed 脚本属于运维路径，需要整档写入来构造演示账号档案。
+    allowFullProfileSave: true,
   });
   const result = seedDemoData(service, options, {
     advanceTo(isoValue) {

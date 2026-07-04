@@ -314,6 +314,10 @@ function createAuthService(options = {}) {
   const allowPositionTeleport = Boolean(
     options.allowPositionTeleport ?? (process.env.BEASTBOUND_ALLOW_POSITION_TELEPORT === "1")
   );
+  // 整档写入闸门：saveProfile 只留给测试/seed/运维脚本显式开启，生产服务默认拒绝整档覆盖。
+  const allowFullProfileSave = Boolean(
+    options.allowFullProfileSave ?? (process.env.BEASTBOUND_ALLOW_PROFILE_SAVE === "1")
+  );
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
   const runtimeActiveSessionIds = new Map();
@@ -600,6 +604,9 @@ function createAuthService(options = {}) {
   }
 
   function saveProfile(token, payload = {}) {
+    if (!allowFullProfileSave) {
+      return fail("profile_upload_denied", "角色档案由服务器专用接口写入，禁止整档上传。");
+    }
     const data = load();
     const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {

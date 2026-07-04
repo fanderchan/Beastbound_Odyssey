@@ -8,9 +8,14 @@ const path = require("node:path");
 const test = require("node:test");
 const {once} = require("node:events");
 const {
-  createAuthService,
+  createAuthService: createAuthServiceStrict,
   createMemoryAuthStore,
 } = require("../src/auth-service");
+
+// 测试默认放开整档写入闸门，方便用 saveProfile 造档；显式传 allowFullProfileSave: false 可测生产拒绝路径。
+function createAuthService(options = {}) {
+  return createAuthServiceStrict({"allowFullProfileSave": true, ...options});
+}
 const {
   createHttpServer,
   createDefaultStore,

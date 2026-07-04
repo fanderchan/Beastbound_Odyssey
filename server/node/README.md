@@ -33,6 +33,7 @@ Optional environment variables:
 - `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
 - `BEASTBOUND_STRUCTURED_LOGS`: set to `1` to write JSON lines for HTTP request duration, profile writebacks, and battle settlements.
 - `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
+- `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
 
 ## Local MySQL Live Server
 

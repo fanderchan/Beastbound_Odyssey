@@ -63,6 +63,30 @@ test("register/login/session keeps players away from GM tools", () => {
   assert.equal(tools.code, "gm_denied");
 });
 
+test("saveProfile full-document writes are denied unless explicitly enabled", () => {
+  const strictService = createAuthService({"store": createMemoryAuthStore(), "allowFullProfileSave": false});
+  const player = strictService.register({"username": "savegatea", "password": "test1234", "displayName": "整档闸门"});
+  assert.equal(player.ok, true);
+  const denied = strictService.saveProfile(player.session.token, {
+    "expectedRevision": 0,
+    "profile": {"schemaVersion": 1, "stoneCoins": 999999},
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "profile_upload_denied");
+  const untouched = strictService.getProfile(player.session.token);
+  assert.equal(untouched.ok, true);
+  assert.notEqual(Number(untouched.profile && untouched.profile.stoneCoins || 0), 999999);
+
+  const opsService = createAuthService({"store": createMemoryAuthStore(), "allowFullProfileSave": true});
+  const opsPlayer = opsService.register({"username": "savegateb", "password": "test1234", "displayName": "整档运维"});
+  assert.equal(opsPlayer.ok, true);
+  const saved = opsService.saveProfile(opsPlayer.session.token, {
+    "expectedRevision": 0,
+    "profile": {"schemaVersion": 1, "stoneCoins": 5},
+  });
+  assert.equal(saved.ok, true);
+});
+
 test("server auth enforces 8 character passwords for new accounts", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
 
