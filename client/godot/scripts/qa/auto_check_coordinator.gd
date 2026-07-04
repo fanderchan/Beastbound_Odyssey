@@ -14358,6 +14358,7 @@ func _run_auto_party_live_check() -> void:
 
 	host.current_account_session = member_session
 	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_profile_sync_expected_revision = 0
@@ -16769,7 +16770,12 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	}
 	host.server_battle_state.clear()
 	host.server_battle_state_poll_request_active = false
-	var restore_poll_blocked_ok = not host._server_battle_should_poll_room_restore()
+	var restore_poll_enabled_ok = host._server_battle_should_poll_room_restore()
+	host.party_current_state = {
+		"party": null,
+		"incomingInvites": [],
+		"maxMembers": 5,
+	}
 	var explicit_restore_start_ok = host._apply_server_battle_room_state(room, true) and host.battle_active and str(host.battle_state.get("serverRoomId", "")) == "target_mapping_room"
 	host.battle_state["phase"] = "command"
 	var active_poll_gate_ok = host._server_battle_should_poll_waiting_state()
@@ -17025,8 +17031,8 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_blocked_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_blocked=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
+	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
@@ -17037,7 +17043,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		str(playback_target_ok),
 		str(combo_mapping_ok),
 		str(poll_target_ok),
-		str(restore_poll_blocked_ok),
+		str(restore_poll_enabled_ok),
 		str(explicit_restore_start_ok),
 		str(active_poll_gate_ok),
 		str(pve_popup_ok),
@@ -17239,6 +17245,7 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	var party_ok = bool(invite_parsed.get("ok", false)) and bool(accept_parsed.get("ok", false)) and members.size() == 2
 	host.current_account_session = member_session
 	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.party_current_state = {
@@ -17248,6 +17255,12 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	}
 	host.server_battle_state.clear()
 	host.server_battle_pending_closed_room.clear()
+	host.server_battle_state_poll_request_active = false
+	host.server_battle_command_request_active = false
+	host.server_party_encounter_request_pending = false
+	host._end_battle(false)
+	host._close_encounter()
+	host._stop_server_event_stream()
 	var encounter_zone = {
 		"id": "client_sync_grass",
 		"name": "同步草丛",
@@ -17273,7 +17286,31 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	var first_encounter = ServerAuthClientModel.parse_battle_action_response(int(first_encounter_response.get("responseCode", 0)), first_encounter_response.get("body", PackedByteArray()) as PackedByteArray)
 	var first_room = first_encounter.get("room", {}) as Dictionary if first_encounter.get("room", {}) is Dictionary else {}
 	var first_room_id = str(first_room.get("roomId", ""))
-	var first_start_ok = bool(first_encounter.get("ok", false)) and first_room_id != "" and host._apply_server_battle_room_state(first_room, true)
+	host._stop_server_event_stream()
+	host._end_battle(false)
+	host._close_encounter()
+	host.server_battle_state.clear()
+	host.server_battle_state_poll_request_active = false
+	host.server_battle_command_request_active = false
+	host.server_party_encounter_request_pending = false
+	var restore_session_ok = host._is_server_account_session()
+	var restore_member_ok = host._current_player_is_party_member()
+	var restore_idle_ok = not host.battle_active and not host.server_party_encounter_request_pending
+	var restore_not_busy_ok = not host.server_battle_state_poll_request_active and not host.server_battle_command_request_active
+	var restore_poll_gate_ok = host._server_battle_should_poll_room_restore()
+	host.server_battle_room_restore_poll_elapsed = 1.0
+	host._update_server_battle_room_restore_poll(0.1)
+	var restore_poll_frames = 0
+	while restore_poll_frames < 720 and (host.server_battle_state_poll_request_active or not host.battle_active):
+		restore_poll_frames += 1
+		await host.get_tree().process_frame
+	var first_start_ok = (
+		bool(first_encounter.get("ok", false))
+		and first_room_id != ""
+		and restore_poll_gate_ok
+		and host.battle_active
+		and str(host.battle_state.get("serverRoomId", "")) == first_room_id
+	)
 	host._start_server_battle_escape_preview_if_needed()
 	var escape_preview_started_ok = first_start_ok and host.battle_escape_preview_actor_ids.size() > 0
 	var escape_preview_motion_ok = false
@@ -17517,12 +17554,17 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	host._end_battle(true)
 	host._stop_server_event_stream()
 	var status = "ok" if register_ok and profile_ok and positions_ok and party_ok and first_start_ok and escape_preview_started_ok and escape_preview_motion_ok and first_cleanup_ok and rejoin_ok and second_start_ok and actor_ids_ok and commands_ok and idle_round_events_sync_ok and playback_or_sync_ok and member_round2_commands_ok and actor_missing_room_ok and auto_waiting_lock_ok and result_ui_ok else "failed"
-	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
+	print("server party pve sync live check ready: status=%s register=%s profile=%s positions=%s party=%s restore_poll=%s restore_parts=%s/%s/%s/%s first_start=%s escape_preview=%s/%s first_cleanup=%s rejoin=%s second_start=%s actors=%s commands=%s round2_commands=%s actor_missing_room=%s auto_waiting_lock=%s active_poll=%s idle_round_events_sync=%s playback=%s playback_or_sync=%s sync=%s result_ui=%s first_panel=%s second_no_popup=%s first_message=%s first_panel_detail=%s local_before=%d/%s server_round=%d local_after=%d/%s room=%s leader=%s member=%s" % [
 		status,
 		str(register_ok),
 		str(profile_ok),
 		str(positions_ok),
 		str(party_ok),
+		str(restore_poll_gate_ok),
+		str(restore_session_ok),
+		str(restore_member_ok),
+		str(restore_idle_ok),
+		str(restore_not_busy_ok),
 		str(first_start_ok),
 		str(escape_preview_started_ok),
 		str(escape_preview_motion_ok),

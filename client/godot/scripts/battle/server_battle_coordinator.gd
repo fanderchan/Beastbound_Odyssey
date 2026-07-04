@@ -71,8 +71,14 @@ func update_waiting_state_poll(delta: float) -> void:
 
 
 func should_poll_room_restore() -> bool:
-	# Room restore is explicit on login and server events; idle polling can reopen stale party-member rooms.
-	return false
+	return (
+		host._is_server_account_session()
+		and host._current_player_is_party_member()
+		and not host.battle_active
+		and not host.server_party_encounter_request_pending
+		and not host.server_battle_state_poll_request_active
+		and not host.server_battle_command_request_active
+	)
 
 
 func update_room_restore_poll(delta: float) -> void:
@@ -98,7 +104,7 @@ func request_room_restore_poll() -> void:
 	host.server_battle_state_poll_request_active = false
 	if not host._is_server_account_session() or token != host._server_profile_token():
 		return
-	if host.battle_active or host.encounter_active or host.server_party_encounter_request_pending:
+	if host.battle_active or host.server_party_encounter_request_pending:
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
