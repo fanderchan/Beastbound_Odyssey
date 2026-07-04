@@ -114,6 +114,7 @@ const CHAT_CHANNEL_TEAM := "team"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
+const PARTY_STATE_POLL_SECONDS := 10.0
 const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
@@ -2028,6 +2029,12 @@ var party_pending_kind:
 		return host.party_pending_kind
 	set(value):
 		host.party_pending_kind = value
+
+var party_state_poll_elapsed:
+	get:
+		return host.party_state_poll_elapsed
+	set(value):
+		host.party_state_poll_elapsed = value
 
 var family_panel:
 	get:
@@ -15616,6 +15623,25 @@ func _request_party_state() -> void:
 		return
 	_start_party_request("state", ServerAuthClientModel.party_state_request(_server_profile_base_url(), _server_profile_token()))
 
+func _update_party_state_poll(delta: float) -> void:
+	if not _should_poll_party_state():
+		party_state_poll_elapsed = 0.0
+		return
+	party_state_poll_elapsed += maxf(0.0, delta)
+	if party_state_poll_elapsed < PARTY_STATE_POLL_SECONDS:
+		return
+	party_state_poll_elapsed = 0.0
+	_start_party_request("state_poll", ServerAuthClientModel.party_state_request(_server_profile_base_url(), _server_profile_token()))
+
+func _should_poll_party_state() -> bool:
+	return (
+		_is_server_account_session()
+		and not party_request_pending
+		and not server_party_encounter_request_pending
+		and not battle_active
+		and party_current_state.get("party", null) is Dictionary
+	)
+
 func _request_party_online() -> void:
 	if not _is_server_account_session():
 		return
@@ -15694,7 +15720,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 			party_status_label.text = "队伍服务器连接失败。"
 		_refresh_party_request_controls()
 		return
-	if kind == "state":
+	if kind == "state" or kind == "state_poll":
 		var parsed_state = ServerAuthClientModel.parse_party_state_response(response_code, body)
 		if bool(parsed_state.get("ok", false)):
 			party_current_state = {
@@ -15711,7 +15737,8 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 				_refresh_training_partner_panel()
 			host._update_hud_text(true)
 			host._layout_hud()
-			_request_party_online()
+			if kind == "state" or (party_panel != null and party_panel.visible):
+				_request_party_online()
 			return
 		elif _handle_session_invalid_response(parsed_state):
 			return

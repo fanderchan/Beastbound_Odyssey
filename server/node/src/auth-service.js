@@ -41,7 +41,7 @@ const CHAT_CHANNEL_TEAM = "team";
 const CHAT_TEXT_MAX_LENGTH = 120;
 const CHAT_HISTORY_LIMIT = 50;
 const MAX_CHAT_MESSAGES = 500;
-const ONLINE_SESSION_IDLE_TTL_MS = 3 * 60 * 1000;
+const ONLINE_SESSION_IDLE_TTL_MS = 25 * 1000;
 const POSITION_MAP_ID_MAX_LENGTH = 64;
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 const ONLINE_AOI_SCOPE = "aoi";
@@ -50,7 +50,7 @@ const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
 const MOVEMENT_MAX_STEP_CELLS = 1;
-const PARTY_OFFLINE_AUTO_KICK_MS = 60 * 60 * 1000;
+const PARTY_OFFLINE_AUTO_KICK_MS = 10 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
 const BATTLE_MODE_PARTY_PVE = "party_pve";
@@ -1089,6 +1089,11 @@ function createAuthService(options = {}) {
         ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
         : null;
       data.playerPositions[resolved.account.accountId] = position;
+      const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+      if (partyPresenceEvent) {
+        save(data);
+        emitServiceEvent(partyPresenceEvent);
+      }
       return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
         authority: "party_follow",
         movement: {
@@ -1108,6 +1113,11 @@ function createAuthService(options = {}) {
     const previousPosition = currentPosition;
     data.playerPositions[resolved.account.accountId] = position;
     applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+    if (partyPresenceEvent) {
+      save(data);
+      emitServiceEvent(partyPresenceEvent);
+    }
     return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
       authority: "client_snapshot",
     });

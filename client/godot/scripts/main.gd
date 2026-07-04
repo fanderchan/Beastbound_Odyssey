@@ -116,6 +116,7 @@ const CHAT_CHANNEL_TEAM := "team"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 1.2
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
+const PARTY_STATE_POLL_SECONDS := 10.0
 const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
@@ -527,6 +528,7 @@ var party_current_state: Dictionary = {}
 var party_online_players: Array[Dictionary] = []
 var party_request_pending: bool = false
 var party_pending_kind: String = ""
+var party_state_poll_elapsed: float = 0.0
 var family_panel: PanelContainer
 var family_status_label: Label
 var family_name_input: LineEdit
@@ -6503,6 +6505,9 @@ func _process(delta: float) -> void:
 	_poll_server_event_stream(delta)
 	_perf_add("server_event", section_start)
 	section_start = _perf_now()
+	_update_party_state_poll(delta)
+	_perf_add("party_poll", section_start)
+	section_start = _perf_now()
 	_update_server_battle_room_restore_poll(delta)
 	_perf_add("server_battle_restore_poll", section_start)
 	section_start = _perf_now()
@@ -8360,6 +8365,9 @@ func _refresh_party_request_controls() -> void:
 
 func _request_party_state() -> void:
 	_panel_flow()._request_party_state()
+
+func _update_party_state_poll(delta: float) -> void:
+	_panel_flow()._update_party_state_poll(delta)
 
 func _request_party_online() -> void:
 	_panel_flow()._request_party_online()

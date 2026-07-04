@@ -484,9 +484,7 @@ test("party pve encounters skip offline party members", () => {
   const member = service.register({"username": "pveofflineb", "password": "test1234", "displayName": "离线队员"});
   assert.equal(leader.ok, true);
   assert.equal(member.ok, true);
-  assert.equal(service.saveProfile(leader.session.token, {
-    "expectedRevision": 0,
-    "profile": battleProfile("在线队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+  const leaderProfile = battleProfile("在线队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
       "petId": "offline_leader_pet",
       "name": "队长布伊",
       "level": 10,
@@ -495,7 +493,33 @@ test("party pve encounters skip offline party members", () => {
       "attack": 20,
       "defense": 8,
       "quick": 65,
-    }),
+    });
+  leaderProfile.trainingPartners = [{
+    "partnerId": "offline_leader_partner_1",
+    "name": "离线替补伙伴",
+    "level": 9,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 20,
+    "defense": 8,
+    "quick": 60,
+    "pet": {
+      "petId": "offline_leader_partner_pet_1",
+      "name": "替补伙伴布伊",
+      "formId": "bui_normal_yellow_wind10",
+      "level": 9,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 16,
+      "defense": 7,
+      "quick": 58,
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    },
+  }];
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": leaderProfile,
   }).ok, true);
   assert.equal(service.saveProfile(member.session.token, {
     "expectedRevision": 0,
@@ -517,7 +541,7 @@ test("party pve encounters skip offline party members", () => {
   const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
 
-  nowMs += 4 * 60 * 1000;
+  nowMs += 30 * 1000;
   const encounter = service.startPartyEncounter(leader.session.token, {
     "enemyCount": 1,
     "encounterZone": {
@@ -537,13 +561,14 @@ test("party pve encounters skip offline party members", () => {
   assert.deepEqual(encounter.room.participants.map((player) => player.username), ["pveofflinea"]);
   assert.deepEqual(encounter.room.battle.requiredAccountIds, [leader.account.accountId]);
   assert.equal(encounter.room.battle.actors.some((actor) => actor.username === "pveofflineb"), false);
-  const memberBattleState = service.getBattleState(member.session.token);
-  assert.equal(memberBattleState.ok, true);
-  assert.equal(memberBattleState.room, null);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "离线替补伙伴"), true);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "替补伙伴布伊"), true);
   const partyState = service.getPartyState(leader.session.token);
   assert.equal(partyState.ok, true);
   assert.equal(partyState.party.memberCount, 2);
-  assert.equal(partyState.party.members.find((player) => player.username === "pveofflineb").online, true);
+  const offlineMember = partyState.party.members.find((player) => player.username === "pveofflineb");
+  assert.equal(offlineMember.online, false);
+  assert.equal(offlineMember.connectionState, "offline");
 });
 
 test("party pve encounters support a solo server account without local battle fallback", () => {
@@ -2635,6 +2660,8 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(timeoutState.room, null);
   assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "timeout"), true);
 
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
   const lateInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
   const lateAccept = service.acceptBattleInvite(opponent.session.token, lateInvite.invite.inviteId);
   assert.equal(lateAccept.ok, true);
@@ -2649,6 +2676,8 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(lateCommand.code, "battle_room_missing");
   assert.equal(events.filter((event) => event.type === "battle.room_closed" && event.reason === "timeout").length, timeoutEventsBeforeLateCommand + 1);
 
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
   const resultInvite = service.inviteToBattle(challenger.session.token, {"username": "closeb"});
   const resultAccept = service.acceptBattleInvite(opponent.session.token, resultInvite.invite.inviteId);
   assert.equal(resultAccept.ok, true);

@@ -239,15 +239,15 @@ test("party presence marks idle members offline and restores them on activity", 
   const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
 
-  nowMs += 4 * 60 * 1000;
+  nowMs += 30 * 1000;
   const offlineState = service.getPartyState(leader.session.token);
   assert.equal(offlineState.ok, true);
   assert.equal(offlineState.party.memberCount, 2);
   const offlineMember = offlineState.party.members.find((player) => player.username === "presenceb");
   assert.equal(offlineMember.online, false);
   assert.equal(offlineMember.connectionState, "offline");
-  assert.equal(offlineMember.offlineSince, "2026-02-01T00:03:00.000Z");
-  assert.equal(offlineMember.autoKickAt, "2026-02-01T01:03:00.000Z");
+  assert.equal(offlineMember.offlineSince, "2026-02-01T00:00:25.000Z");
+  assert.equal(offlineMember.autoKickAt, "2026-02-01T00:10:25.000Z");
 
   const restoredState = service.getPartyState(member.session.token);
   assert.equal(restoredState.ok, true);
@@ -264,7 +264,7 @@ test("party presence marks idle members offline and restores them on activity", 
   )), true);
 });
 
-test("party presence removes members after one hour offline", () => {
+test("party presence removes members after ten minutes offline", () => {
   let nowMs = Date.parse("2026-02-02T00:00:00.000Z");
   const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
   const leader = service.register({"username": "kicka", "password": "test1234", "displayName": "踢人队长"});
@@ -276,13 +276,13 @@ test("party presence removes members after one hour offline", () => {
   const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
   assert.equal(accept.ok, true);
 
-  nowMs += 4 * 60 * 1000;
+  nowMs += 30 * 1000;
   const offlineState = service.getPartyState(leader.session.token);
   assert.equal(offlineState.ok, true);
   assert.equal(offlineState.party.memberCount, 2);
   assert.equal(offlineState.party.members.find((player) => player.username === "kickb").online, false);
 
-  nowMs += 60 * 60 * 1000 + 1;
+  nowMs += 10 * 60 * 1000 + 1;
   const kickedState = service.getPartyState(leader.session.token);
   assert.equal(kickedState.ok, true);
   assert.equal(kickedState.party.memberCount, 1);
