@@ -1879,6 +1879,18 @@ var party_status_label:
 	set(value):
 		host.party_status_label = value
 
+var party_roster_panel:
+	get:
+		return host.party_roster_panel
+	set(value):
+		host.party_roster_panel = value
+
+var party_roster_container:
+	get:
+		return host.party_roster_container
+	set(value):
+		host.party_roster_container = value
+
 var party_members_container:
 	get:
 		return host.party_members_container
@@ -1920,6 +1932,78 @@ var party_http_request:
 		return host.party_http_request
 	set(value):
 		host.party_http_request = value
+
+var party_invite_panel:
+	get:
+		return host.party_invite_panel
+	set(value):
+		host.party_invite_panel = value
+
+var party_invite_title_label:
+	get:
+		return host.party_invite_title_label
+	set(value):
+		host.party_invite_title_label = value
+
+var party_invite_detail_label:
+	get:
+		return host.party_invite_detail_label
+	set(value):
+		host.party_invite_detail_label = value
+
+var party_invite_status_label:
+	get:
+		return host.party_invite_status_label
+	set(value):
+		host.party_invite_status_label = value
+
+var party_invite_accept_button:
+	get:
+		return host.party_invite_accept_button
+	set(value):
+		host.party_invite_accept_button = value
+
+var party_invite_decline_button:
+	get:
+		return host.party_invite_decline_button
+	set(value):
+		host.party_invite_decline_button = value
+
+var party_invite_later_button:
+	get:
+		return host.party_invite_later_button
+	set(value):
+		host.party_invite_later_button = value
+
+var party_invite_http_request:
+	get:
+		return host.party_invite_http_request
+	set(value):
+		host.party_invite_http_request = value
+
+var party_invite_current:
+	get:
+		return host.party_invite_current
+	set(value):
+		host.party_invite_current = value
+
+var party_invite_request_pending:
+	get:
+		return host.party_invite_request_pending
+	set(value):
+		host.party_invite_request_pending = value
+
+var party_invite_pending_kind:
+	get:
+		return host.party_invite_pending_kind
+	set(value):
+		host.party_invite_pending_kind = value
+
+var party_invite_deferred_ids:
+	get:
+		return host.party_invite_deferred_ids
+	set(value):
+		host.party_invite_deferred_ids = value
 
 var party_current_state:
 	get:
@@ -5179,6 +5263,29 @@ func _build_hud() -> void:
 	top_row.add_child(version_label)
 	hud_root.add_child(top_panel)
 
+	party_roster_panel = _panel_container("PartyRosterPanel")
+	party_roster_panel.visible = false
+	party_roster_panel.z_index = 18
+	party_roster_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	party_roster_panel.add_theme_stylebox_override("panel", _party_roster_panel_style())
+	var party_roster_column = VBoxContainer.new()
+	party_roster_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	party_roster_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_roster_column.add_theme_constant_override("separation", 7)
+	party_roster_panel.add_child(party_roster_column)
+	var party_roster_title = Label.new()
+	party_roster_title.text = "小队"
+	party_roster_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	party_roster_title.add_theme_font_size_override("font_size", 15)
+	party_roster_title.add_theme_color_override("font_color", Color(0.92, 0.82, 0.60, 0.96))
+	party_roster_column.add_child(party_roster_title)
+	party_roster_container = VBoxContainer.new()
+	party_roster_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	party_roster_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_roster_container.add_theme_constant_override("separation", 6)
+	party_roster_column.add_child(party_roster_container)
+	hud_root.add_child(party_roster_panel)
+
 	battle_round_panel = _panel_container("BattleRoundPanel")
 	battle_round_panel.visible = false
 	battle_round_panel.z_index = 28
@@ -6327,7 +6434,7 @@ func _build_hud() -> void:
 	party_header.add_theme_constant_override("separation", 10)
 	party_column.add_child(party_header)
 	var party_title_label = Label.new()
-	party_title_label.text = "队伍"
+	party_title_label.text = "队伍管理"
 	party_title_label.add_theme_font_size_override("font_size", 21)
 	party_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_header.add_child(party_title_label)
@@ -6365,7 +6472,7 @@ func _build_hud() -> void:
 	party_scroll.add_child(party_content)
 
 	var party_members_title = Label.new()
-	party_members_title.text = "成员"
+	party_members_title.text = "小队状态"
 	party_members_title.add_theme_font_size_override("font_size", 17)
 	party_content.add_child(party_members_title)
 	party_members_container = VBoxContainer.new()
@@ -6374,7 +6481,7 @@ func _build_hud() -> void:
 	party_content.add_child(party_members_container)
 
 	var party_invites_title = Label.new()
-	party_invites_title.text = "邀请"
+	party_invites_title.text = "待处理"
 	party_invites_title.add_theme_font_size_override("font_size", 17)
 	party_content.add_child(party_invites_title)
 	party_invites_container = VBoxContainer.new()
@@ -6396,6 +6503,60 @@ func _build_hud() -> void:
 	party_http_request.request_completed.connect(_on_party_http_request_completed)
 	party_panel.add_child(party_http_request)
 	hud_root.add_child(party_panel)
+
+	party_invite_panel = _panel_container("PartyInvitePanel")
+	party_invite_panel.visible = false
+	party_invite_panel.z_index = 27
+	var party_invite_column = VBoxContainer.new()
+	party_invite_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invite_column.add_theme_constant_override("separation", 8)
+	party_invite_panel.add_child(party_invite_column)
+	party_invite_title_label = Label.new()
+	party_invite_title_label.text = "组队邀请"
+	party_invite_title_label.add_theme_font_size_override("font_size", 20)
+	party_invite_column.add_child(party_invite_title_label)
+	party_invite_detail_label = Label.new()
+	party_invite_detail_label.text = ""
+	party_invite_detail_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	party_invite_detail_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	party_invite_detail_label.add_theme_font_size_override("font_size", 15)
+	party_invite_detail_label.custom_minimum_size = Vector2(0, 46)
+	party_invite_column.add_child(party_invite_detail_label)
+	var party_invite_button_row = HBoxContainer.new()
+	party_invite_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invite_button_row.add_theme_constant_override("separation", 8)
+	party_invite_column.add_child(party_invite_button_row)
+	party_invite_accept_button = Button.new()
+	party_invite_accept_button.text = "加入"
+	party_invite_accept_button.custom_minimum_size = Vector2(92, 44)
+	party_invite_accept_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invite_accept_button.pressed.connect(_on_party_invite_popup_accept_pressed)
+	party_invite_button_row.add_child(party_invite_accept_button)
+	party_invite_decline_button = Button.new()
+	party_invite_decline_button.text = "拒绝"
+	party_invite_decline_button.custom_minimum_size = Vector2(92, 44)
+	party_invite_decline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invite_decline_button.pressed.connect(_on_party_invite_popup_decline_pressed)
+	party_invite_button_row.add_child(party_invite_decline_button)
+	party_invite_later_button = Button.new()
+	party_invite_later_button.text = "稍后"
+	party_invite_later_button.custom_minimum_size = Vector2(92, 44)
+	party_invite_later_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_invite_later_button.pressed.connect(_defer_party_invite_panel)
+	party_invite_button_row.add_child(party_invite_later_button)
+	party_invite_status_label = Label.new()
+	party_invite_status_label.text = ""
+	party_invite_status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	party_invite_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	party_invite_status_label.add_theme_font_size_override("font_size", 14)
+	party_invite_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	party_invite_status_label.custom_minimum_size = Vector2(0, 28)
+	party_invite_column.add_child(party_invite_status_label)
+	party_invite_http_request = HTTPRequest.new()
+	party_invite_http_request.timeout = 8.0
+	party_invite_http_request.request_completed.connect(_on_party_invite_popup_http_request_completed)
+	party_invite_panel.add_child(party_invite_http_request)
+	hud_root.add_child(party_invite_panel)
 
 	family_panel = _panel_container("FamilyPanel")
 	family_panel.visible = false
@@ -7829,12 +7990,14 @@ func _apply_server_party_snapshot(party_value, refresh_ui: bool = true) -> bool:
 	var changed = previous_signature != JSON.stringify(next_party)
 	if _current_player_is_party_member() and not was_party_member:
 		_stop_party_member_local_movement(false)
+	_refresh_party_roster_hud(false)
 	if changed and refresh_ui:
 		if party_panel != null and party_panel.visible:
 			_refresh_party_panel()
 		if training_partner_panel != null and training_partner_panel.visible:
 			_refresh_training_partner_panel()
 		host._update_hud_text(true)
+		host._layout_hud()
 	return changed
 
 func _apply_party_event(event: Dictionary) -> void:
@@ -7861,12 +8024,149 @@ func _apply_party_event(event: Dictionary) -> void:
 				invites = invites.filter(func(value) -> bool:
 					return not (value is Dictionary and str((value as Dictionary).get("inviteId", "")) == invite_id)
 				)
+				_forget_deferred_party_invite(invite_id)
+				if str(party_invite_current.get("inviteId", "")) == invite_id:
+					_close_party_invite_panel(false)
 			party_current_state["incomingInvites"] = invites
+			if str(invite.get("status", "")) == "pending" and _party_invite_should_popup(invite):
+				_open_party_invite_panel(invite)
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
+	_refresh_party_roster_hud(false)
 	if training_partner_panel != null and training_partner_panel.visible:
 		_refresh_training_partner_panel()
 	host._update_hud_text(true)
+	host._layout_hud()
+
+func _party_invite_should_popup(invite: Dictionary) -> bool:
+	var invite_id = str(invite.get("inviteId", "")).strip_edges()
+	return (
+		invite_id != ""
+		and str(invite.get("status", "")) == "pending"
+		and _party_invite_is_for_current(invite)
+		and not party_invite_deferred_ids.has(invite_id)
+	)
+
+func _open_latest_party_invite_panel_if_needed() -> void:
+	var invites: Array = party_current_state.get("incomingInvites", []) if party_current_state.get("incomingInvites", []) is Array else []
+	for value in invites:
+		if value is Dictionary and _party_invite_should_popup(value as Dictionary):
+			_open_party_invite_panel(value as Dictionary)
+			return
+
+func _open_party_invite_panel(invite: Dictionary) -> void:
+	if not _party_invite_should_popup(invite):
+		return
+	party_invite_current = invite.duplicate(true)
+	if party_invite_status_label != null:
+		party_invite_status_label.text = ""
+	if party_invite_panel != null:
+		party_invite_panel.visible = true
+	_refresh_party_invite_panel()
+	host._layout_hud()
+
+func _defer_party_invite_panel() -> void:
+	var invite_id = str(party_invite_current.get("inviteId", "")).strip_edges()
+	if invite_id != "" and not party_invite_deferred_ids.has(invite_id):
+		party_invite_deferred_ids.append(invite_id)
+	_close_party_invite_panel()
+
+func _forget_deferred_party_invite(invite_id: String) -> void:
+	var normalized = invite_id.strip_edges()
+	if normalized == "":
+		return
+	party_invite_deferred_ids = party_invite_deferred_ids.filter(func(value) -> bool:
+		return str(value) != normalized
+	)
+
+func _close_party_invite_panel(update_layout: bool = true) -> void:
+	party_invite_current.clear()
+	party_invite_request_pending = false
+	party_invite_pending_kind = ""
+	_hide_control(party_invite_panel, update_layout)
+
+func _refresh_party_invite_panel() -> void:
+	if party_invite_panel == null:
+		return
+	var invite_kind = str(party_invite_current.get("kind", "invite"))
+	var from_player = {
+		"username": str(party_invite_current.get("fromUsername", "")),
+		"displayName": str(party_invite_current.get("fromDisplayName", "")),
+	}
+	if party_invite_title_label != null:
+		party_invite_title_label.text = "入队申请" if invite_kind == "application" else "组队邀请"
+	if party_invite_detail_label != null:
+		var player_text = _party_player_text(from_player)
+		party_invite_detail_label.text = "%s 申请加入你的队伍。" % player_text if invite_kind == "application" else "%s 邀请你加入队伍。" % player_text
+	var disabled = party_invite_request_pending or not _is_server_account_session() or str(party_invite_current.get("inviteId", "")).strip_edges() == ""
+	if party_invite_accept_button != null:
+		party_invite_accept_button.text = "同意" if invite_kind == "application" else "加入"
+		party_invite_accept_button.disabled = disabled
+	if party_invite_decline_button != null:
+		party_invite_decline_button.disabled = disabled
+	if party_invite_later_button != null:
+		party_invite_later_button.disabled = party_invite_request_pending
+	if party_invite_status_label != null and not _is_server_account_session():
+		party_invite_status_label.text = "需要服务器账号登录。"
+
+func _on_party_invite_popup_accept_pressed() -> void:
+	var invite_id = str(party_invite_current.get("inviteId", "")).strip_edges()
+	if invite_id == "" or not _is_server_account_session():
+		return
+	_start_party_invite_popup_request("accept", ServerAuthClientModel.party_invite_accept_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+func _on_party_invite_popup_decline_pressed() -> void:
+	var invite_id = str(party_invite_current.get("inviteId", "")).strip_edges()
+	if invite_id == "" or not _is_server_account_session():
+		return
+	_start_party_invite_popup_request("decline", ServerAuthClientModel.party_invite_decline_request(_server_profile_base_url(), _server_profile_token(), invite_id))
+
+func _start_party_invite_popup_request(kind: String, spec: Dictionary) -> void:
+	if party_invite_http_request == null or party_invite_request_pending:
+		return
+	party_invite_pending_kind = kind
+	party_invite_request_pending = true
+	if party_invite_status_label != null:
+		party_invite_status_label.text = "正在加入队伍..." if kind == "accept" else "正在拒绝邀请..."
+	_refresh_party_invite_panel()
+	var err = party_invite_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		party_invite_request_pending = false
+		party_invite_pending_kind = ""
+		if party_invite_status_label != null:
+			party_invite_status_label.text = "组队请求发送失败。"
+		_refresh_party_invite_panel()
+
+func _on_party_invite_popup_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind = party_invite_pending_kind
+	party_invite_pending_kind = ""
+	party_invite_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if party_invite_status_label != null:
+			party_invite_status_label.text = "队伍服务器连接失败。"
+		_refresh_party_invite_panel()
+		return
+	var parsed = ServerAuthClientModel.parse_party_action_response(response_code, body)
+	if bool(parsed.get("ok", false)):
+		var invite = parsed.get("invite", {}) as Dictionary if parsed.get("invite", {}) is Dictionary else {}
+		_forget_deferred_party_invite(str(invite.get("inviteId", party_invite_current.get("inviteId", ""))))
+		if parsed.has("party"):
+			_apply_server_party_snapshot(parsed.get("party", null))
+		_close_party_invite_panel(false)
+		_set_world_log_message(str(parsed.get("message", "队伍已更新。")))
+		_request_party_state()
+		if kind == "accept":
+			_request_party_online()
+	elif _handle_session_invalid_response(parsed):
+		return
+	elif party_invite_status_label != null:
+		party_invite_status_label.text = str(parsed.get("message", "队伍操作失败。"))
+	_refresh_party_invite_panel()
 
 func _apply_battle_event(event: Dictionary) -> void:
 	host._server_battle().apply_battle_event(event)
@@ -8751,6 +9051,11 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 		server_battle_state_poll_request_active = false
 		server_battle_waiting_poll_elapsed = 0.0
 		server_battle_room_restore_poll_elapsed = 0.0
+		party_current_state.clear()
+		party_online_players.clear()
+		party_invite_deferred_ids.clear()
+		_close_party_invite_panel(false)
+		_refresh_party_roster_hud(false)
 	current_account_session = session
 	account_authenticated = true
 	server_profile_sync_state = "loading" if _is_server_account_session() else "off"
@@ -9120,6 +9425,47 @@ func _pet_rename_panel_style() -> StyleBoxFlat:
 	var style = _panel_style()
 	style.bg_color = Color(0.10, 0.14, 0.14, 0.96)
 	style.border_color = Color(0.84, 0.62, 0.32, 0.96)
+	return style
+
+func _party_roster_panel_style() -> StyleBoxFlat:
+	var style = _panel_style()
+	style.bg_color = Color(0.08, 0.12, 0.12, 0.74)
+	style.border_color = Color(0.62, 0.50, 0.30, 0.72)
+	style.set_border_width_all(1)
+	style.content_margin_left = 9
+	style.content_margin_right = 9
+	style.content_margin_top = 7
+	style.content_margin_bottom = 9
+	return style
+
+func _party_avatar_style(member: Dictionary) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	var offline = _party_member_is_offline(member)
+	var role = str(member.get("role", "")).strip_edges()
+	style.bg_color = Color(0.18, 0.28, 0.30, 0.96) if role == "leader" else Color(0.14, 0.23, 0.28, 0.96)
+	if offline:
+		style.bg_color = Color(0.17, 0.18, 0.18, 0.72)
+	style.border_color = Color(0.86, 0.66, 0.34, 0.95) if role == "leader" else Color(0.42, 0.72, 0.88, 0.86)
+	if offline:
+		style.border_color = Color(0.42, 0.42, 0.40, 0.78)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(18)
+	style.content_margin_left = 2
+	style.content_margin_right = 2
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	return style
+
+func _party_roster_row_style(member: Dictionary) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.09, 0.09, 0.58) if not _party_member_is_offline(member) else Color(0.06, 0.07, 0.07, 0.42)
+	style.border_color = Color(0.26, 0.34, 0.32, 0.66)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 7
+	style.content_margin_right = 7
+	style.content_margin_top = 5
+	style.content_margin_bottom = 5
 	return style
 
 func _battle_command_panel_style() -> StyleBoxFlat:
@@ -14716,6 +15062,120 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 	_refresh_family_panel()
 	_refresh_family_request_controls()
 
+func _refresh_party_roster_hud(update_layout: bool = true) -> void:
+	if party_roster_panel == null or party_roster_container == null:
+		return
+	_clear_container_children(party_roster_container)
+	var members = _current_party_members()
+	party_roster_panel.set_meta("has_party", members.size() > 0)
+	party_roster_panel.visible = members.size() > 0
+	if members.is_empty():
+		if update_layout:
+			host._layout_hud()
+		return
+	for index in range(mini(members.size(), 5)):
+		var value = members[index]
+		if not (value is Dictionary):
+			continue
+		var member = (value as Dictionary).duplicate(true)
+		party_roster_container.add_child(_party_roster_member_row(member))
+	if update_layout:
+		host._layout_hud()
+
+func _party_roster_member_row(member: Dictionary) -> Control:
+	var row = PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.custom_minimum_size = Vector2(0, 56)
+	row.add_theme_stylebox_override("panel", _party_roster_row_style(member))
+	var content = HBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 8)
+	row.add_child(content)
+
+	var avatar = PanelContainer.new()
+	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	avatar.custom_minimum_size = Vector2(36, 36)
+	avatar.add_theme_stylebox_override("panel", _party_avatar_style(member))
+	var avatar_label = Label.new()
+	avatar_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	avatar_label.text = _party_avatar_text(member)
+	avatar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	avatar_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	avatar_label.add_theme_font_size_override("font_size", 14)
+	avatar_label.add_theme_color_override("font_color", Color(0.96, 0.95, 0.84, 0.96))
+	avatar.add_child(avatar_label)
+	content.add_child(avatar)
+
+	var text_column = VBoxContainer.new()
+	text_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 2)
+	content.add_child(text_column)
+	var name_label = Label.new()
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.text = _party_roster_member_name(member)
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.add_theme_font_size_override("font_size", 13)
+	name_label.add_theme_color_override("font_color", Color(0.94, 0.96, 0.90, 0.96) if not _party_member_is_offline(member) else Color(0.62, 0.64, 0.60, 0.86))
+	text_column.add_child(name_label)
+	var status_label = Label.new()
+	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_label.text = _party_roster_member_status(member)
+	status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	status_label.add_theme_font_size_override("font_size", 11)
+	status_label.add_theme_color_override("font_color", Color(0.75, 0.84, 0.78, 0.90) if not _party_member_is_offline(member) else Color(0.56, 0.56, 0.52, 0.84))
+	text_column.add_child(status_label)
+	var hp = _party_member_hp_values(member)
+	var hp_bar = ProgressBar.new()
+	hp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hp_bar.custom_minimum_size = Vector2(0, 8)
+	hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_bar.min_value = 0
+	hp_bar.max_value = 100
+	hp_bar.value = float(hp.get("percent", 100))
+	hp_bar.show_percentage = false
+	text_column.add_child(hp_bar)
+	return row
+
+func _party_member_is_offline(member: Dictionary) -> bool:
+	return str(member.get("connectionState", "")).strip_edges() == "offline" or not bool(member.get("online", true))
+
+func _party_avatar_text(member: Dictionary) -> String:
+	var text = str(member.get("displayName", member.get("username", ""))).strip_edges()
+	if text == "":
+		return "?"
+	var length = 1 if text.unicode_at(0) > 127 else mini(2, text.length())
+	return text.substr(0, length)
+
+func _party_roster_member_name(member: Dictionary) -> String:
+	var name = str(member.get("displayName", "")).strip_edges()
+	var username = str(member.get("username", "")).strip_edges()
+	if name == "":
+		name = username if username != "" else "玩家"
+	if username != "" and username != name:
+		return "%s" % name
+	return name
+
+func _party_roster_member_status(member: Dictionary) -> String:
+	var role = "队长" if str(member.get("role", "")) == "leader" else "队员"
+	if _party_member_is_offline(member):
+		return "%s · 离线" % role
+	var hp = _party_member_hp_values(member)
+	return "%s · HP %d/%d" % [role, int(hp.get("hp", 0)), int(hp.get("maxHp", 0))]
+
+func _party_member_hp_values(member: Dictionary) -> Dictionary:
+	var team = member.get("teamSnapshot", {}) as Dictionary if member.get("teamSnapshot", {}) is Dictionary else {}
+	var player_snapshot = team.get("player", {}) as Dictionary if team.get("player", {}) is Dictionary else {}
+	var hp = max(0, int(player_snapshot.get("hp", 0)))
+	var max_hp = max(1, int(player_snapshot.get("maxHp", hp if hp > 0 else 1)))
+	if hp <= 0 and max_hp <= 1:
+		var summary = member.get("profileSummary", {}) as Dictionary if member.get("profileSummary", {}) is Dictionary else {}
+		hp = max(0, int(summary.get("hp", 0)))
+		max_hp = max(1, int(summary.get("maxHp", hp if hp > 0 else 1)))
+	var percent = clampf(float(hp) / float(max_hp) * 100.0, 0.0, 100.0)
+	return {"hp": hp, "maxHp": max_hp, "percent": percent}
+
 func _refresh_party_panel() -> void:
 	if party_panel == null or party_members_container == null or party_invites_container == null or party_online_container == null:
 		return
@@ -15240,10 +15700,13 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 			}
 			if party_status_label != null:
 				party_status_label.text = "队伍状态已同步。"
+			_refresh_party_roster_hud(false)
+			_open_latest_party_invite_panel_if_needed()
 			_refresh_party_panel()
 			if training_partner_panel != null and training_partner_panel.visible:
 				_refresh_training_partner_panel()
 			host._update_hud_text(true)
+			host._layout_hud()
 			_request_party_online()
 			return
 		elif _handle_session_invalid_response(parsed_state):
@@ -15263,6 +15726,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 						party_online_players.append((value as Dictionary).duplicate(true))
 			if party_status_label != null:
 				party_status_label.text = "同图玩家已刷新。"
+			_refresh_party_roster_hud(false)
 		elif _handle_session_invalid_response(parsed_online):
 			return
 		elif party_status_label != null:
@@ -15279,7 +15743,9 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 		elif party_status_label != null:
 			party_status_label.text = str(parsed_action.get("message", "队伍操作失败。"))
 	_refresh_party_panel()
+	_refresh_party_roster_hud(false)
 	_refresh_party_request_controls()
+	host._layout_hud()
 
 func _open_player_action_panel(target: Dictionary) -> void:
 	if battle_active or target.is_empty():

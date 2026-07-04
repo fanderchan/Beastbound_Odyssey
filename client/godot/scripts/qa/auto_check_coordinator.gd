@@ -14319,6 +14319,20 @@ func _run_auto_party_live_check() -> void:
 	var leader_session = leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
 	var member_session = member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
+	var base_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(2, 0)
+	var leader_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		{"mapId": host.current_map_id, "cellX": base_cell.x, "cellY": base_cell.y, "facing": "east", "moving": false}
+	))
+	var member_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		{"mapId": host.current_map_id, "cellX": base_cell.x + 1, "cellY": base_cell.y, "facing": "west", "moving": false}
+	))
+	var leader_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(leader_position_response.get("responseCode", 0)), leader_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(member_position_response.get("responseCode", 0)), member_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var positions_ok = bool(leader_position_parsed.get("ok", false)) and bool(member_position_parsed.get("ok", false))
 	var online_response = await host._auto_http_request_spec(ServerAuthClientModel.online_players_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", ""))
@@ -14341,24 +14355,33 @@ func _run_auto_party_live_check() -> void:
 	var incoming: Array = member_state_parsed.get("incomingInvites", []) if member_state_parsed.get("incomingInvites", []) is Array else []
 	var invite_id = str((incoming[0] as Dictionary).get("inviteId", "")) if not incoming.is_empty() and incoming[0] is Dictionary else ""
 	var invite_seen_ok = bool(member_state_parsed.get("ok", false)) and invite_id != ""
-	var accept_response = await host._auto_http_request_spec(ServerAuthClientModel.party_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
-		str(member_session.get("serverSessionToken", "")),
-		invite_id
-	))
-	var accept_parsed = ServerAuthClientModel.parse_party_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
-	var accepted_party = accept_parsed.get("party", {}) as Dictionary if accept_parsed.get("party", {}) is Dictionary else {}
-	var accept_ok = bool(accept_parsed.get("ok", false)) and int(accepted_party.get("memberCount", 0)) == 2
 
 	host.current_account_session = member_session
 	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_profile_sync_expected_revision = 0
-	host.party_current_state = {}
+	host.party_current_state = {"party": null, "incomingInvites": [], "maxMembers": 5}
 	host.party_online_players.clear()
-	host._open_party_panel()
+	if not incoming.is_empty() and incoming[0] is Dictionary:
+		host._apply_party_event({"type": "party.invite", "invite": incoming[0]})
+	var popup_ok = (
+		host.party_invite_panel != null
+		and host.party_invite_panel.visible
+		and host.party_invite_accept_button != null
+		and not host.party_invite_accept_button.disabled
+		and host.party_invite_detail_label != null
+		and host.party_invite_detail_label.text.find("邀请你加入队伍") >= 0
+	)
+	host._on_party_invite_popup_accept_pressed()
 	var frames = 0
+	while frames < 720 and (host.party_invite_request_pending or host.party_request_pending or not (host.party_current_state.get("party", null) is Dictionary)):
+		frames += 1
+		await host.get_tree().process_frame
+	var accepted_party = host.party_current_state.get("party", {}) as Dictionary if host.party_current_state.get("party", {}) is Dictionary else {}
+	var accept_ok = popup_ok and int(accepted_party.get("memberCount", 0)) == 2
+	host._open_party_panel()
+	frames = 0
 	while frames < 720 and (host.party_request_pending or not (host.party_current_state.get("party", null) is Dictionary) or host.party_online_players.is_empty()):
 		frames += 1
 		await host.get_tree().process_frame
@@ -14372,6 +14395,10 @@ func _run_auto_party_live_check() -> void:
 		and host.party_online_players.size() >= 2
 		and host.party_members_container != null
 		and host.party_members_container.get_child_count() >= 2
+		and host.party_roster_panel != null
+		and host.party_roster_panel.visible
+		and host.party_roster_container != null
+		and host.party_roster_container.get_child_count() >= 2
 	)
 	host._on_party_leave_pressed()
 	frames = 0
@@ -14379,13 +14406,15 @@ func _run_auto_party_live_check() -> void:
 		frames += 1
 		await host.get_tree().process_frame
 	var leave_ok = not (host.party_current_state.get("party", null) is Dictionary)
-	var status = "ok" if register_ok and online_ok and invite_ok and invite_seen_ok and accept_ok and ui_ok and leave_ok else "failed"
-	print("party live check ready: status=%s register=%s online=%s invite=%s seen=%s accept=%s ui=%s leave=%s leader=%s member=%s online_count=%d" % [
+	var status = "ok" if register_ok and positions_ok and online_ok and invite_ok and invite_seen_ok and popup_ok and accept_ok and ui_ok and leave_ok else "failed"
+	print("party live check ready: status=%s register=%s positions=%s online=%s invite=%s seen=%s popup=%s accept=%s ui=%s leave=%s leader=%s member=%s online_count=%d" % [
 		status,
 		str(register_ok),
+		str(positions_ok),
 		str(online_ok),
 		str(invite_ok),
 		str(invite_seen_ok),
+		str(popup_ok),
 		str(accept_ok),
 		str(ui_ok),
 		str(leave_ok),

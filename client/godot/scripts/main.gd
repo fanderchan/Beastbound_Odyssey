@@ -502,6 +502,8 @@ var mailbox_request_pending: bool = false
 var mailbox_pending_kind: String = ""
 var party_panel: PanelContainer
 var party_status_label: Label
+var party_roster_panel: PanelContainer
+var party_roster_container: VBoxContainer
 var party_members_container: VBoxContainer
 var party_invites_container: VBoxContainer
 var party_online_container: VBoxContainer
@@ -509,6 +511,18 @@ var party_refresh_button: Button
 var party_leave_button: Button
 var party_close_button: Button
 var party_http_request: HTTPRequest
+var party_invite_panel: PanelContainer
+var party_invite_title_label: Label
+var party_invite_detail_label: Label
+var party_invite_status_label: Label
+var party_invite_accept_button: Button
+var party_invite_decline_button: Button
+var party_invite_later_button: Button
+var party_invite_http_request: HTTPRequest
+var party_invite_current: Dictionary = {}
+var party_invite_request_pending: bool = false
+var party_invite_pending_kind: String = ""
+var party_invite_deferred_ids: Array[String] = []
 var party_current_state: Dictionary = {}
 var party_online_players: Array[Dictionary] = []
 var party_request_pending: bool = false
@@ -7055,6 +7069,15 @@ func _latest_incoming_battle_invite() -> Dictionary:
 func _apply_party_event(event: Dictionary) -> void:
 	_panel_flow()._apply_party_event(event)
 
+func _refresh_party_roster_hud(update_layout: bool = true) -> void:
+	_panel_flow()._refresh_party_roster_hud(update_layout)
+
+func _on_party_invite_popup_accept_pressed() -> void:
+	_panel_flow()._on_party_invite_popup_accept_pressed()
+
+func _on_party_invite_popup_decline_pressed() -> void:
+	_panel_flow()._on_party_invite_popup_decline_pressed()
+
 func _apply_battle_event(event: Dictionary) -> void:
 	_panel_flow()._apply_battle_event(event)
 
@@ -11620,6 +11643,16 @@ func _layout_hud() -> void:
 		battle_timer_panel.visible = _battle_timer_should_be_visible()
 		if battle_timer_label != null:
 			battle_timer_label.size = timer_size - Vector2(20.0, 12.0)
+	if party_roster_panel != null:
+		var roster_has_party := bool(party_roster_panel.get_meta("has_party", false))
+		var roster_width: float = 224.0 if viewport_size.x >= 980.0 else 196.0
+		var roster_y := top_panel.position.y + top_panel.size.y + 12.0
+		if battle_active and battle_round_panel != null and battle_round_panel.visible:
+			roster_y = battle_round_panel.position.y + battle_round_panel.size.y + 8.0
+		var roster_height: float = minf(348.0, maxf(0.0, viewport_size.y - roster_y - margin - 104.0))
+		party_roster_panel.position = Vector2(margin, roster_y)
+		party_roster_panel.size = Vector2(roster_width, roster_height)
+		party_roster_panel.visible = roster_has_party and not is_phone_shape and viewport_size.x >= 820.0 and roster_height >= 96.0
 
 	if battle_active:
 		side_panel.visible = false
@@ -11807,6 +11840,17 @@ func _layout_hud() -> void:
 		battle_invite_panel.visible = false
 	if battle_invite_panel.visible and action_bar != null:
 		action_bar.visible = false
+
+	if party_invite_panel != null:
+		var party_invite_width: float = minf(viewport_size.x - margin * 2.0, 402.0)
+		var party_invite_height := 194.0
+		var party_invite_y := maxf(margin + 72.0, (viewport_size.y - party_invite_height) * 0.32)
+		if battle_invite_panel != null and battle_invite_panel.visible:
+			party_invite_y = minf(viewport_size.y - party_invite_height - margin, battle_invite_panel.position.y + battle_invite_panel.size.y + 10.0)
+		party_invite_panel.position = Vector2((viewport_size.x - party_invite_width) * 0.5, party_invite_y)
+		party_invite_panel.size = Vector2(party_invite_width, party_invite_height)
+		if party_invite_panel.visible and action_bar != null:
+			action_bar.visible = false
 
 	if battle_result_panel != null:
 		var battle_result_width: float = minf(viewport_size.x - margin * 2.0, 420.0)
