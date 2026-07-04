@@ -862,6 +862,141 @@ test("party pve waiting battle removes offline non-leader members and resolves r
   )), true);
 });
 
+test("party pve waiting battle removes offline leader with owned partner actors", () => {
+  let nowMs = Date.parse("2026-02-03T01:15:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const leader = service.register({"username": "pveleaderdropa", "password": "test1234", "displayName": "掉线队长"});
+  const member = service.register({"username": "pveleaderdropb", "password": "test1234", "displayName": "在线队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  const leaderProfile = battleProfile("掉线队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+    "petId": "leader_drop_pet",
+    "name": "队长掉线布伊",
+    "level": 10,
+    "hp": 100,
+    "maxHp": 100,
+    "attack": 20,
+    "defense": 8,
+    "quick": 65,
+  });
+  leaderProfile.trainingPartners = [{
+    "partnerId": "leader_drop_partner",
+    "name": "队长掉线伙伴",
+    "level": 9,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 20,
+    "defense": 8,
+    "quick": 60,
+    "pet": {
+      "petId": "leader_drop_partner_pet",
+      "name": "队长伙伴布伊",
+      "formId": "bui_normal_yellow_wind10",
+      "level": 9,
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 16,
+      "defense": 7,
+      "quick": 58,
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    },
+  }];
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": leaderProfile,
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("在线队员", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 72}, {
+      "petId": "member_after_leader_drop_pet",
+      "name": "队员布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 64,
+    }),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  assert.equal(service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "pveleaderdropb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "leader_drop_grass",
+      "name": "队长掉线草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "队长掉线乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pveleaderdropa" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pveleaderdropa" && actor.kind === "pet");
+  const leaderPartner = actors.find((actor) => actor.displayName === "队长掉线伙伴");
+  const leaderPartnerPet = actors.find((actor) => actor.displayName === "队长伙伴布伊");
+  const memberPlayer = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "pet");
+  const enemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && leaderPartner && leaderPartnerPet && memberPlayer && memberPet && enemy), true);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+
+  assert.equal(service.markBattleConnection(leader.session.token, false).ok, true);
+  nowMs += 20 * 1000;
+  assert.equal(service.getSession(leader.session.token).ok, true);
+  nowMs += 9 * 1000;
+  const beforeGraceState = service.getBattleState(member.session.token);
+  assert.equal(beforeGraceState.ok, true);
+  assert.deepEqual(beforeGraceState.room.participantAccountIds.sort(), [leader.account.accountId, member.account.accountId].sort());
+  assert.equal(beforeGraceState.room.battle.round, 1);
+  nowMs += 1 * 1000;
+  const state = service.getBattleState(member.session.token);
+  assert.equal(state.ok, true);
+  assert.deepEqual(state.room.participantAccountIds, [member.account.accountId]);
+  assert.deepEqual(state.room.battle.requiredAccountIds, [member.account.accountId]);
+  assert.equal(state.room.battle.actors.some((actor) => actor.username === "pveleaderdropa"), false);
+  assert.equal(state.room.battle.actors.some((actor) => actor.displayName === "队长掉线伙伴"), false);
+  assert.equal(state.room.battle.actors.some((actor) => actor.displayName === "队长伙伴布伊"), false);
+  assert.equal(state.room.battle.round, 2);
+  assert.equal(state.room.battle.lastEventList.kind, "battle_event_list");
+  assert.deepEqual(state.room.battle.submittedActorIds, []);
+  const partyState = service.getPartyState(member.session.token);
+  assert.equal(partyState.ok, true);
+  assert.equal(partyState.party.leaderAccountId, member.account.accountId);
+  assert.deepEqual(partyState.party.members.map((player) => player.username), ["pveleaderdropb"]);
+  const leaderPartyState = service.getPartyState(leader.session.token);
+  assert.equal(leaderPartyState.ok, true);
+  assert.equal(leaderPartyState.party, null);
+  const roomUpdate = events.find((event) => event.type === "battle.room_updated" && event.reason === "party_member_offline");
+  assert.equal(Boolean(roomUpdate), true);
+  assert.deepEqual(roomUpdate.removedAccountIds, [leader.account.accountId]);
+  for (const actor of [leaderPlayer, leaderPet, leaderPartner, leaderPartnerPet]) {
+    assert.equal(roomUpdate.escapedActorIds.includes(actor.actorId), true);
+  }
+  assert.equal(roomUpdate.turn.kind, "battle_event_list");
+});
+
 test("party pve battle maintenance removes disconnected members after offline grace", () => {
   let nowMs = Date.parse("2026-02-03T01:30:00.000Z");
   const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
@@ -917,6 +1052,7 @@ test("party pve battle maintenance removes disconnected members after offline gr
   const roomId = encounter.room.roomId;
   assert.equal(service.markBattleConnection(member.session.token, false).ok, true);
   nowMs += 20 * 1000;
+  assert.equal(service.getSession(leader.session.token).ok, true);
   assert.equal(service.getSession(member.session.token).ok, true);
   nowMs += 9 * 1000;
   const earlyMaintenance = service.runBattleMaintenance();

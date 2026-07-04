@@ -4810,11 +4810,10 @@ function offlinePartyPveBattleParticipantAccountIds(data, room, options = {}) {
   if (!room || room.status === BATTLE_ROOM_CLOSED || String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
     return [];
   }
-  const leaderAccountId = String(room.leaderAccountId || "");
   return (Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [])
     .map((accountId) => String(accountId || ""))
     .filter((accountId) => {
-      if (!accountId || accountId === leaderAccountId) {
+      if (!accountId) {
         return false;
       }
       if (battleRoomAccountDisconnectedForMs(room, accountId, BATTLE_PARTY_PVE_OFFLINE_ESCAPE_MS, nowFn)) {
@@ -4822,6 +4821,18 @@ function offlinePartyPveBattleParticipantAccountIds(data, room, options = {}) {
       }
       return !accountHasActiveRuntimeSession(data, accountId, nowFn, runtimeActiveSessionIds);
     });
+}
+
+function battleActorBelongsToAnyAccount(actor, accountIdSet) {
+  if (!actor || !accountIdSet || accountIdSet.size <= 0) {
+    return false;
+  }
+  const accountId = String(actor.accountId || "");
+  if (accountId && accountIdSet.has(accountId)) {
+    return true;
+  }
+  const ownerAccountId = String(actor.ownerAccountId || "");
+  return ownerAccountId !== "" && accountIdSet.has(ownerAccountId);
 }
 
 function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, options = {}) {
@@ -4849,7 +4860,7 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
   const battle = battleRoomBattleStateForMutation(room, nowFn);
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
   result.escapedActorIds = actors
-    .filter((actor) => actor && removedSet.has(String(actor.accountId || "")))
+    .filter((actor) => battleActorBelongsToAnyAccount(actor, removedSet))
     .map((actor) => String(actor.actorId || ""))
     .filter(Boolean);
   room.participantAccountIds = beforeParticipantAccountIds.filter((accountId) => !removedSet.has(accountId));
@@ -4859,13 +4870,14 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
   for (const accountId of removedSet) {
     delete connectionState[accountId];
   }
-  battle.actors = actors.filter((actor) => !removedSet.has(String(actor && actor.accountId || "")));
+  battle.actors = actors.filter((actor) => !battleActorBelongsToAnyAccount(actor, removedSet));
   if (!battle.commands || typeof battle.commands !== "object" || Array.isArray(battle.commands)) {
     battle.commands = {};
   }
   for (const actorId of result.escapedActorIds) {
     delete battle.commands[actorId];
   }
+  let replacementLeaderAccountId = "";
   battle.requiredAccountIds = requiredBattleCommandAccountIds(room);
   battle.requiredActorIds = requiredBattleCommandActorIds(battle);
   battle.submittedActorIds = submittedBattleCommandActorIds(battle);
@@ -4882,9 +4894,28 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
         partyId: partyRemoval.partyId,
         removedAccountIds: partyRemoval.removedAccountIds,
       });
+      if (partyRemoval.party && !replacementLeaderAccountId) {
+        replacementLeaderAccountId = String(partyRemoval.party.leaderAccountId || "");
+      }
     }
   }
-  if (
+  const currentLeaderAccountId = String(room.leaderAccountId || "");
+  if (removedSet.has(currentLeaderAccountId)) {
+    if (!replacementLeaderAccountId) {
+      for (const accountId of room.participantAccountIds) {
+        const party = partyForAccount(data, accountId);
+        if (party && party.memberAccountIds && party.memberAccountIds.includes(accountId)) {
+          replacementLeaderAccountId = String(party.leaderAccountId || accountId);
+          break;
+        }
+      }
+    }
+    room.leaderAccountId = replacementLeaderAccountId || String(room.participantAccountIds[0] || "");
+  }
+  if (room.participantAccountIds.length <= 0) {
+    const closeResult = battleRoomResultForLeave(room, result.removedAccountIds[0] || "", nowFn);
+    closeBattleRoomWithResult(data, room, closeResult, nowFn);
+  } else if (
     String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
     battle.requiredActorIds.length > 0 &&
     battle.requiredActorIds.every((actorId) => battle.commands && battle.commands[actorId])
@@ -5035,8 +5066,7 @@ function nextBattleMaintenanceDelayMs(data, now) {
       const disconnectedMs = Date.parse(entry.disconnectedAt);
       if (Number.isFinite(disconnectedMs)) {
         const reconnectGraceMs = (
-          String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE &&
-          String(accountId || "") !== String(room.leaderAccountId || "")
+          String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE
         )
           ? BATTLE_PARTY_PVE_OFFLINE_ESCAPE_MS
           : BATTLE_RECONNECT_GRACE_MS;
