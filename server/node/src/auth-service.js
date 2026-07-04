@@ -73,6 +73,10 @@ const BATTLE_ACTION_SWITCH_PET = "switch_pet";
 const BATTLE_ACTION_ITEM = "item";
 const BATTLE_ACTION_SPIRIT = "spirit";
 const BATTLE_ACTION_CAPTURE = "capture";
+const BATTLE_ACTION_TRAINING_PARTNER_HEAL = "training_partner_heal";
+const TRAINING_PARTNER_HEAL_SPIRIT_ID = "spirit_moist_1";
+const TRAINING_PARTNER_HEAL_LOW_HP_RATIO = 0.40;
+const TRAINING_PARTNER_HEAL_AMOUNT_RATIO = 0.25;
 const BATTLE_ITEM_MEAT_SMALL = "item_meat_small";
 const BATTLE_ITEM_HEAL_SINGLE = "item_heal_single_5";
 const BATTLE_ITEM_HEAL_ALL = "item_heal_all_5";
@@ -5966,6 +5970,15 @@ function resolveBattleRoomTurn(data, room, battle, now) {
       }
       continue;
     }
+    if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_TRAINING_PARTNER_HEAL) {
+      events.push(battleTrainingPartnerHealEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      commandIndex += 1;
+      if (battleResultForResolvedActors(room, battle, now)) {
+        break;
+      }
+      continue;
+    }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_SPIRIT) {
       events.push(battleSpiritEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
@@ -6381,6 +6394,34 @@ function partyPveAiCommands(room, battle, round) {
     if (actorSide !== BATTLE_SIDE_ALLY && actorSide !== BATTLE_SIDE_ENEMY) {
       continue;
     }
+    const healTargetResult = trainingPartnerHealTargetForActor(battle, actor);
+    const healTarget = healTargetResult.target;
+    if (healTarget) {
+      commands.push({
+        commandId: `battle_ai_${round}_${sanitizeBattleActorIdPart(actor.actorId)}_heal`,
+        roomId: room.roomId,
+        round,
+        accountId: "",
+        username: "",
+        actorId: actor.actorId,
+        actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+        actionId: TRAINING_PARTNER_HEAL_SPIRIT_ID,
+        actionKind: BATTLE_ACTION_TRAINING_PARTNER_HEAL,
+        skillId: TRAINING_PARTNER_HEAL_SPIRIT_ID,
+        spiritId: TRAINING_PARTNER_HEAL_SPIRIT_ID,
+        petId: "",
+        itemId: "",
+        targetActorId: healTarget.actorId,
+        targetAccountId: healTarget.accountId,
+        targetUsername: healTarget.username,
+        targetRule: healTargetResult.rule,
+        targetRollIndex: healTargetResult.rollIndex,
+        targetCandidateCount: healTargetResult.candidateCount,
+        submittedAt: "",
+        schemaVersion: 1,
+      });
+      continue;
+    }
     const targetResult = partyPveAiTargetForActor(room, battle, actor, round);
     const target = targetResult.target;
     if (!target) {
@@ -6411,6 +6452,83 @@ function partyPveAiCommands(room, battle, round) {
     });
   }
   return commands;
+}
+
+function trainingPartnerHealTargetForActor(battle, actor) {
+  if (!battleActorIsTrainingPartnerHealer(actor)) {
+    return {target: null, rule: "", rollIndex: -1, candidateCount: 0};
+  }
+  const ownerAccountId = String(actor.ownerAccountId || "").trim();
+  const partnerId = String(actor.partnerId || "").trim();
+  const candidates = (Array.isArray(battle && battle.actors) ? battle.actors : [])
+    .filter((target) => trainingPartnerHealCandidate(target, actor, ownerAccountId, partnerId));
+  candidates.sort((a, b) => {
+    const ratioDiff = trainingPartnerHpRatio(a) - trainingPartnerHpRatio(b);
+    if (Math.abs(ratioDiff) > 0.000001) {
+      return ratioDiff;
+    }
+    const kindDiff = trainingPartnerHealKindOrder(a) - trainingPartnerHealKindOrder(b);
+    if (kindDiff !== 0) {
+      return kindDiff;
+    }
+    const orderDiff = battleActorSlotOrder(a) - battleActorSlotOrder(b);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
+    return String(a.actorId || "").localeCompare(String(b.actorId || ""));
+  });
+  return {
+    target: candidates[0] || null,
+    rule: candidates.length > 0 ? "training_partner_low_hp" : "",
+    rollIndex: candidates.length > 0 ? 0 : -1,
+    candidateCount: candidates.length,
+  };
+}
+
+function battleActorIsTrainingPartnerHealer(actor) {
+  return Boolean(
+    actor &&
+    String(actor.side || "") === BATTLE_SIDE_ALLY &&
+    String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER &&
+    String(actor.accountId || "").trim() === "" &&
+    String(actor.ownerAccountId || "").trim() !== "" &&
+    String(actor.partnerId || "").trim() !== "" &&
+    Number(actor.hp || 0) > 0
+  );
+}
+
+function trainingPartnerHealCandidate(target, actor, ownerAccountId, partnerId) {
+  if (!target || Number(target.hp || 0) <= 0) {
+    return false;
+  }
+  const targetKind = String(target.kind || BATTLE_ACTOR_KIND_PLAYER);
+  if (targetKind !== BATTLE_ACTOR_KIND_PLAYER && targetKind !== BATTLE_ACTOR_KIND_PET) {
+    return false;
+  }
+  if (String(target.side || "") !== String(actor.side || "")) {
+    return false;
+  }
+  if (String(target.accountId || "").trim() !== "") {
+    return false;
+  }
+  if (String(target.ownerAccountId || "").trim() !== ownerAccountId) {
+    return false;
+  }
+  if (String(target.partnerId || "").trim() !== partnerId) {
+    return false;
+  }
+  const maxHp = battleActorWritebackMaxHp(target);
+  const hp = Math.max(0, Math.trunc(Number(target.hp || 0)));
+  return maxHp > 0 && hp < maxHp && (hp / maxHp) < TRAINING_PARTNER_HEAL_LOW_HP_RATIO;
+}
+
+function trainingPartnerHpRatio(actor) {
+  const maxHp = Math.max(1, battleActorWritebackMaxHp(actor));
+  return Math.max(0, Number(actor && actor.hp || 0)) / maxHp;
+}
+
+function trainingPartnerHealKindOrder(actor) {
+  return String(actor && actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER ? 0 : 1;
 }
 
 function partyPveAiTargetForActor(room, battle, actor, round) {
@@ -12574,6 +12692,78 @@ function battleSpiritEvent(room, battle, command, actor, round, sequence) {
     return battleSpiritHealEvent(room, battle, command, actor, spiritId, round, sequence);
   }
   return battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, sequence);
+}
+
+function battleTrainingPartnerHealEvent(room, battle, command, actor, round, sequence) {
+  const target = battleActorByActorId(battle, command.targetActorId);
+  if (
+    !battleActorIsTrainingPartnerHealer(actor) ||
+    !trainingPartnerHealCandidate(
+      target,
+      actor,
+      String(actor.ownerAccountId || "").trim(),
+      String(actor.partnerId || "").trim()
+    )
+  ) {
+    return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
+  }
+  const spiritId = TRAINING_PARTNER_HEAL_SPIRIT_ID;
+  const spiritName = battleSpiritLabel(spiritId);
+  const hpBefore = Math.max(0, Math.trunc(Number(target.hp || 0)));
+  const maxHp = battleActorWritebackMaxHp(target);
+  const heal = Math.max(1, Math.ceil(maxHp * TRAINING_PARTNER_HEAL_AMOUNT_RATIO));
+  const hpAfter = Math.min(maxHp, hpBefore + heal);
+  const healed = Math.max(0, hpAfter - hpBefore);
+  target.hp = hpAfter;
+  target.defeated = hpAfter <= 0;
+  syncParticipantPetSnapshotHp(room, target);
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "spirit_heal",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    actorOwnerAccountId: String(actor.ownerAccountId || ""),
+    partnerId: String(actor.partnerId || ""),
+    targetAccountId: String(target.accountId || ""),
+    targetUsername: String(target.username || ""),
+    targetActorId: String(target.actorId || ""),
+    targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+    targetActorIds: [String(target.actorId || "")],
+    targets: [{
+      targetActorId: String(target.actorId || ""),
+      targetAccountId: String(target.accountId || ""),
+      targetUsername: String(target.username || ""),
+      targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+      hpBefore,
+      hpAfter,
+      healed,
+      schemaVersion: 1,
+    }],
+    actionId: spiritId,
+    actionKind: BATTLE_ACTION_TRAINING_PARTNER_HEAL,
+    skillId: spiritId,
+    spiritId,
+    skillName: spiritName,
+    heal,
+    healRatio: TRAINING_PARTNER_HEAL_AMOUNT_RATIO,
+    lowHpRatio: TRAINING_PARTNER_HEAL_LOW_HP_RATIO,
+    healed,
+    hpBefore,
+    hpAfter,
+    effectPerTarget: {[String(target.actorId || "")]: healed},
+    damage: 0,
+    animation: {
+      actor: "spirit",
+      targetReaction: "heal",
+      observer: "watch_target",
+    },
+    message: `${actor.displayName || "陪练伙伴"} 使用${spiritName}，${target.displayName || "伙伴"} 回复 ${healed} 点生命。`,
+    schemaVersion: 1,
+  };
 }
 
 function battleSpiritHealEvent(room, battle, command, actor, spiritId, round, sequence) {

@@ -477,6 +477,132 @@ test("party pve encounters create one shared server room and wait for all player
   assert.equal(resolved.room.battle.round, 2);
 });
 
+test("party pve training partners heal their low hp partner pair before attacking", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvehealpartner", "password": "test1234", "displayName": "陪练治疗号"});
+  assert.equal(solo.ok, true);
+
+  const profile = battleProfile("陪练治疗号", {"level": 20, "hp": 180, "maxHp": 180, "attack": 22, "defense": 12, "quick": 80}, {
+    "petId": "heal_owner_pet",
+    "name": "治疗号布伊",
+    "level": 16,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 10,
+    "quick": 70,
+  });
+  profile.trainingPartners = [{
+    "partnerId": "heal_partner_1",
+    "name": "低血伙伴",
+    "level": 12,
+    "hp": 39,
+    "maxHp": 100,
+    "attack": 16,
+    "defense": 8,
+    "quick": 130,
+    "pet": {
+      "petId": "heal_partner_pet_1",
+      "name": "满血伙伴宠",
+      "level": 12,
+      "hp": 90,
+      "maxHp": 100,
+      "attack": 16,
+      "defense": 8,
+      "quick": 60,
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    },
+  }, {
+    "partnerId": "heal_partner_2",
+    "name": "护宠伙伴",
+    "level": 12,
+    "hp": 90,
+    "maxHp": 100,
+    "attack": 16,
+    "defense": 8,
+    "quick": 128,
+    "pet": {
+      "petId": "heal_partner_pet_2",
+      "name": "低血伙伴宠",
+      "level": 12,
+      "hp": 47,
+      "maxHp": 120,
+      "attack": 16,
+      "defense": 8,
+      "quick": 58,
+      "activeSkillIds": ["pet_attack", "pet_defend"],
+      "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
+    },
+  }];
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 12,
+    "facing": "east",
+    "moving": false,
+  }).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "partner_heal_grass",
+      "name": "陪练治疗草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "耐打乌力",
+        "level": 12,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 5, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const soloPlayer = actors.find((actor) => actor.username === "pvehealpartner" && actor.kind === "player");
+  const soloPet = actors.find((actor) => actor.username === "pvehealpartner" && actor.kind === "pet");
+  const lowPartner = actors.find((actor) => actor.displayName === "低血伙伴" && actor.kind === "player");
+  const petGuardPartner = actors.find((actor) => actor.displayName === "护宠伙伴" && actor.kind === "player");
+  const lowPartnerPet = actors.find((actor) => actor.displayName === "低血伙伴宠" && actor.kind === "pet");
+  assert.equal(Boolean(soloPlayer && soloPet && lowPartner && petGuardPartner && lowPartnerPet), true);
+
+  assert.equal(service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": soloPlayer.actorId,
+    "actionId": "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": soloPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+
+  const healEvents = resolved.turn.events.filter((event) => event.eventType === "spirit_heal" && event.actionKind === "training_partner_heal");
+  assert.equal(healEvents.length, 2);
+  const selfHeal = healEvents.find((event) => event.actorId === lowPartner.actorId && event.targetActorId === lowPartner.actorId);
+  assert.equal(Boolean(selfHeal), true);
+  assert.equal(selfHeal.spiritId, "spirit_moist_1");
+  assert.equal(selfHeal.hpBefore, 39);
+  assert.equal(selfHeal.heal, 25);
+  assert.equal(selfHeal.healed, 25);
+  assert.equal(selfHeal.hpAfter, 64);
+
+  const petHeal = healEvents.find((event) => event.actorId === petGuardPartner.actorId && event.targetActorId === lowPartnerPet.actorId);
+  assert.equal(Boolean(petHeal), true);
+  assert.equal(petHeal.hpBefore, 47);
+  assert.equal(petHeal.heal, 30);
+  assert.equal(petHeal.healed, 30);
+  assert.equal(petHeal.hpAfter, 77);
+
+  const updatedLowPartner = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartner.actorId);
+  const updatedLowPartnerPet = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartnerPet.actorId);
+  assert.equal(updatedLowPartner.hp, 64);
+  assert.equal(updatedLowPartnerPet.hp, 77);
+  assert.equal(resolved.turn.events.some((event) => event.actorId === lowPartner.actorId && event.eventType === "basic_attack"), false);
+  assert.equal(resolved.turn.events.some((event) => event.actorId === petGuardPartner.actorId && event.eventType === "basic_attack"), false);
+});
+
 test("party pve encounters skip offline party members", () => {
   let nowMs = Date.parse("2026-02-03T00:00:00.000Z");
   const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
