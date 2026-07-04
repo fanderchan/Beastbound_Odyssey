@@ -7274,7 +7274,7 @@ function closeBattleRoomWithResult(data, room, result, now) {
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
   battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now);
-  const battleReturns = applyBattleRoomResultReturns(data, room, battle.result, now);
+  const battleReturns = applyBattleRoomResultReturns(data, room, battle, battle.result, now);
   battle.result.battleReturns = battleReturns;
   battle.result.battleRecordId = recordId;
   result.battleReturns = battleReturns;
@@ -9894,7 +9894,7 @@ function applyBattleActorHpToProfilePlayer(profile, actor) {
   if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
     profile.player = {};
   }
-  const hp = battleActorWritebackHp(actor);
+  const hp = Math.max(1, battleActorWritebackHp(actor));
   const maxHp = battleActorWritebackMaxHp(actor);
   const previousHp = Number(profile.player.hp);
   const changed = !Number.isFinite(previousHp) || previousHp !== hp;
@@ -12022,8 +12022,8 @@ function battleActorWritebackHp(actor) {
   return Math.max(0, Math.min(maxHp, hp));
 }
 
-function applyBattleRoomResultReturns(data, room, result, now) {
-  const returnAccountIds = battleReturnAccountIdsForResult(room, result);
+function applyBattleRoomResultReturns(data, room, battle, result, now) {
+  const returnAccountIds = battleReturnAccountIdsForResult(room, battle, result);
   const entries = [];
   for (const accountId of returnAccountIds) {
     const account = accountById(data, accountId);
@@ -12057,15 +12057,29 @@ function applyBattleRoomResultReturns(data, room, result, now) {
   return entries;
 }
 
-function battleReturnAccountIdsForResult(room, result) {
+function battleReturnAccountIdsForResult(room, battle, result) {
   const reason = String(result && result.reason || room && room.closeReason || "");
-  if (reason !== "defeat" && reason !== "timeout") {
+  if (reason !== "defeat") {
     return [];
   }
-  const loserIds = Array.isArray(result && result.loserAccountIds) ? result.loserAccountIds : [];
-  return loserIds
-    .map((value) => String(value || "").trim())
+  const loserAccountIds = Array.isArray(result && result.loserAccountIds) ? result.loserAccountIds : [];
+  const loserLookup = new Set(loserAccountIds.map((value) => String(value || "").trim()).filter(Boolean));
+  const actors = Array.isArray(battle && battle.actors) ? battle.actors : [];
+  return actors
+    .filter((actor) => (
+      actor &&
+      String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER &&
+      loserLookup.has(String(actor.accountId || "").trim()) &&
+      battleActorKnockedAwayForReturn(actor)
+    ))
+    .map((actor) => String(actor.accountId || "").trim())
     .filter((value, index, array) => value !== "" && array.indexOf(value) === index);
+}
+
+function battleActorKnockedAwayForReturn(actor) {
+  return Boolean(actor && actor.launched) ||
+    String(actor && actor.actionState || "") === "launched" ||
+    Boolean(actor && Object.prototype.hasOwnProperty.call(actor, "revivable") && !actor.revivable);
 }
 
 function recordPointForAccount(data, accountId) {

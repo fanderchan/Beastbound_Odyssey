@@ -3202,18 +3202,17 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(finalCommand.room.status, "closed");
   assert.equal(finalCommand.turn.result.reason, "defeat");
   assert.equal(finalCommand.room.battle.result.winnerAccountId, challenger.account.accountId);
-  assert.equal(finalCommand.room.battle.result.battleReturns.length, 1);
-  assert.equal(finalCommand.room.battle.result.battleReturns[0].accountId, opponent.account.accountId);
-  assert.equal(finalCommand.room.battle.result.battleReturns[0].recordPoint.mapId, "firebud_village_gate");
+  assert.deepEqual(finalCommand.room.battle.result.battleReturns, []);
   assert.equal(finalCommand.room.battle.result.battleRecordId.startsWith("battle_record_"), true);
-  assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellX, 10);
-  assert.equal(finalCommand.room.battle.result.battleReturns[0].position.cellY, 17);
-  assert.equal(finalCommand.turn.result.battleReturns[0].position.authority, "battle_result_return");
+  assert.deepEqual(finalCommand.turn.result.battleReturns, []);
   const returnedOpponentPosition = service.snapshot().playerPositions[opponent.account.accountId];
-  assert.equal(returnedOpponentPosition.mapId, "firebud_village_gate");
-  assert.equal(returnedOpponentPosition.cellX, 10);
-  assert.equal(returnedOpponentPosition.cellY, 17);
-  assert.equal(returnedOpponentPosition.authority, "battle_result_return");
+  assert.equal(returnedOpponentPosition.mapId, "village");
+  assert.equal(returnedOpponentPosition.cellX, 11);
+  assert.equal(returnedOpponentPosition.cellY, 10);
+  assert.notEqual(returnedOpponentPosition.authority, "battle_result_return");
+  const opponentAfterDefeat = service.getProfile(opponent.session.token);
+  assert.equal(opponentAfterDefeat.ok, true);
+  assert.equal(opponentAfterDefeat.profile.player.hp, 1);
   assert.equal(events.some((event) => event.type === "battle.room_closed" && event.reason === "defeat"), true);
 });
 
