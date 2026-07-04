@@ -571,6 +571,110 @@ test("party pve encounters skip offline party members", () => {
   assert.equal(offlineMember.connectionState, "offline");
 });
 
+test("party pve waiting battle removes offline non-leader members and resolves remaining commands", () => {
+  let nowMs = Date.parse("2026-02-03T01:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const leader = service.register({"username": "pvewaitdropa", "password": "test1234", "displayName": "等待队长"});
+  const member = service.register({"username": "pvewaitdropb", "password": "test1234", "displayName": "等待队员"});
+  assert.equal(leader.ok, true);
+  assert.equal(member.ok, true);
+  assert.equal(service.saveProfile(leader.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("等待队长", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 75}, {
+      "petId": "wait_drop_leader_pet",
+      "name": "队长布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 65,
+    }),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("等待队员", {"level": 12, "hp": 150, "maxHp": 150, "attack": 28, "defense": 10, "quick": 72}, {
+      "petId": "wait_drop_member_pet",
+      "name": "队员布伊",
+      "level": 10,
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 20,
+      "defense": 8,
+      "quick": 64,
+    }),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(leader.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  assert.equal(service.updatePlayerPosition(member.session.token, {"mapId": "firebud_training_yard", "cellX": 12, "cellY": 12, "facing": "east", "moving": false}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "pvewaitdropb"});
+  assert.equal(invite.ok, true);
+  const accept = service.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "wait_drop_grass",
+      "name": "等待掉线草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "等待乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 5, "quick": 40},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const actors = encounter.room.battle.actors;
+  const leaderPlayer = actors.find((actor) => actor.username === "pvewaitdropa" && actor.kind === "player");
+  const leaderPet = actors.find((actor) => actor.username === "pvewaitdropa" && actor.kind === "pet");
+  const memberPlayer = actors.find((actor) => actor.username === "pvewaitdropb" && actor.kind === "player");
+  const memberPet = actors.find((actor) => actor.username === "pvewaitdropb" && actor.kind === "pet");
+  const enemy = actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
+  assert.equal(encounter.room.battle.requiredActorIds.length, 4);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderPet.actorId,
+    "actionId": "pet_attack",
+    "targetActorId": enemy.actorId,
+  }).turn, null);
+
+  nowMs += 30 * 1000;
+  const state = service.getBattleState(leader.session.token);
+  assert.equal(state.ok, true);
+  assert.deepEqual(state.room.participantAccountIds, [leader.account.accountId]);
+  assert.deepEqual(state.room.battle.requiredAccountIds, [leader.account.accountId]);
+  assert.equal(state.room.battle.actors.some((actor) => actor.username === "pvewaitdropb"), false);
+  assert.equal(state.room.battle.round, 2);
+  assert.equal(state.room.battle.lastEventList.kind, "battle_event_list");
+  assert.deepEqual(state.room.battle.submittedActorIds, []);
+  const partyState = service.getPartyState(leader.session.token);
+  assert.equal(partyState.ok, true);
+  assert.deepEqual(partyState.party.members.map((player) => player.username), ["pvewaitdropa"]);
+  const memberPartyState = service.getPartyState(member.session.token);
+  assert.equal(memberPartyState.ok, true);
+  assert.equal(memberPartyState.party, null);
+  const roomUpdate = events.find((event) => event.type === "battle.room_updated" && event.reason === "party_member_offline");
+  assert.equal(Boolean(roomUpdate), true);
+  assert.deepEqual(roomUpdate.removedAccountIds, [member.account.accountId]);
+  assert.equal(roomUpdate.escapedActorIds.includes(memberPlayer.actorId), true);
+  assert.equal(roomUpdate.escapedActorIds.includes(memberPet.actorId), true);
+  assert.equal(roomUpdate.turn.kind, "battle_event_list");
+  assert.equal(events.some((event) => (
+    event.type === "party.update" &&
+    Array.isArray(event.removedAccountIds) &&
+    event.removedAccountIds.includes(member.account.accountId)
+  )), true);
+});
+
 test("party pve encounters support a solo server account without local battle fallback", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "solopve", "password": "test1234", "displayName": "单人练级号"});

@@ -7926,7 +7926,7 @@ func _handle_server_event(event: Dictionary) -> void:
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
 			_apply_party_event(event)
-		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.invite_cancelled", "battle.invite_expired", "battle.command_submitted", "battle.turn_resolved", "battle.room_closed":
+		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.invite_cancelled", "battle.invite_expired", "battle.command_submitted", "battle.turn_resolved", "battle.room_updated", "battle.room_closed":
 			_apply_battle_event(event)
 
 func _record_server_event_seen(event: Dictionary) -> void:

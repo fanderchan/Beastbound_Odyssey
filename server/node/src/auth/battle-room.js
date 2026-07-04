@@ -71,9 +71,149 @@ function createBattleRoomDomain(ctx) {
     expireBattleTimeoutsAndEmit(data);
     data = load();
     markBattleConnectionForAccount(data, resolved.account.accountId, true, now);
+    const pruneResult = pruneOfflinePartyPveParticipants(data, resolved.account.accountId);
+    if (pruneResult.changed) {
+      save(data);
+      for (const event of pruneResult.events) {
+        emitServiceEvent(event);
+      }
+      data = load();
+    }
     const payload = battleStatePayload(data, resolved.account.accountId, now);
     recordBattleStateTrace(data, resolved.account.accountId, payload, now);
     return ok(payload);
+  }
+
+  function pruneOfflinePartyPveParticipants(data, viewerAccountId) {
+    const result = {
+      changed: false,
+      events: [],
+    };
+    const normalizedViewerAccountId = String(viewerAccountId || "");
+    if (!normalizedViewerAccountId) {
+      return result;
+    }
+    const onlineAccountIds = new Set(activeOnlinePlayers(data, now)
+      .map((account) => String(account.accountId || ""))
+      .filter(Boolean));
+    for (const room of Object.values(data.battleRooms)) {
+      if (
+        !room ||
+        room.status === BATTLE_ROOM_CLOSED ||
+        String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE
+      ) {
+        continue;
+      }
+      const participantAccountIds = Array.isArray(room.participantAccountIds)
+        ? room.participantAccountIds.map((accountId) => String(accountId || "")).filter(Boolean)
+        : [];
+      if (!participantAccountIds.includes(normalizedViewerAccountId)) {
+        continue;
+      }
+      const leaderAccountId = String(room.leaderAccountId || "");
+      const offlineAccountIds = participantAccountIds.filter((accountId) => (
+        accountId !== leaderAccountId &&
+        !onlineAccountIds.has(accountId)
+      ));
+      if (offlineAccountIds.length <= 0) {
+        continue;
+      }
+      const update = removeOfflinePartyPveParticipantsFromRoom(data, room, offlineAccountIds);
+      if (!update.changed) {
+        continue;
+      }
+      result.changed = true;
+      for (const partyEvent of update.partyEvents) {
+        result.events.push(partyEvent);
+      }
+      result.events.push({
+        type: "battle.room_updated",
+        targetAccountIds: update.targetAccountIds,
+        roomId: room.roomId,
+        reason: "party_member_offline",
+        removedAccountIds: update.removedAccountIds,
+        escapedActorIds: update.escapedActorIds,
+        turn: update.turn,
+        room: publicBattleRoom(room),
+      });
+    }
+    return result;
+  }
+
+  function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds) {
+    const removedAccountIds = Array.from(new Set((Array.isArray(accountIds) ? accountIds : [])
+      .map((accountId) => String(accountId || ""))
+      .filter(Boolean)));
+    const beforeParticipantAccountIds = Array.isArray(room.participantAccountIds)
+      ? room.participantAccountIds.map((accountId) => String(accountId || "")).filter(Boolean)
+      : [];
+    const removedSet = new Set(removedAccountIds.filter((accountId) => beforeParticipantAccountIds.includes(accountId)));
+    const result = {
+      changed: false,
+      targetAccountIds: beforeParticipantAccountIds.slice(),
+      removedAccountIds: Array.from(removedSet),
+      escapedActorIds: [],
+      partyEvents: [],
+      turn: null,
+    };
+    if (removedSet.size <= 0) {
+      return result;
+    }
+    const timestamp = isoNow(now);
+    const battle = battleRoomBattleStateForMutation(room, now);
+    const actors = Array.isArray(battle.actors) ? battle.actors : [];
+    result.escapedActorIds = actors
+      .filter((actor) => actor && removedSet.has(String(actor.accountId || "")))
+      .map((actor) => String(actor.actorId || ""))
+      .filter(Boolean);
+    room.participantAccountIds = beforeParticipantAccountIds.filter((accountId) => !removedSet.has(accountId));
+    room.participants = (Array.isArray(room.participants) ? room.participants : [])
+      .filter((participant) => !removedSet.has(String(participant && participant.accountId || "")));
+    const connectionState = battleRoomConnectionStateForMutation(room);
+    for (const accountId of removedSet) {
+      delete connectionState[accountId];
+    }
+    battle.actors = actors.filter((actor) => !removedSet.has(String(actor && actor.accountId || "")));
+    if (!battle.commands || typeof battle.commands !== "object" || Array.isArray(battle.commands)) {
+      battle.commands = {};
+    }
+    for (const actorId of result.escapedActorIds) {
+      delete battle.commands[actorId];
+    }
+    battle.requiredAccountIds = requiredBattleCommandAccountIds(room);
+    battle.requiredActorIds = requiredBattleCommandActorIds(battle);
+    battle.submittedActorIds = submittedBattleCommandActorIds(battle);
+    battle.submittedAccountIds = submittedBattleCommandAccountIds(battle);
+    battle.updatedAt = timestamp;
+    room.updatedAt = timestamp;
+    for (const accountId of removedSet) {
+      const partyRemoval = removeAccountFromParty(data, accountId, now);
+      if (partyRemoval && partyRemoval.changed) {
+        result.partyEvents.push({
+          type: "party.update",
+          targetAccountIds: partyRemoval.targetAccountIds,
+          party: partyRemoval.party ? publicParty(partyRemoval.party, data) : null,
+          partyId: partyRemoval.partyId,
+          removedAccountIds: partyRemoval.removedAccountIds,
+        });
+      }
+    }
+    if (
+      String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
+      battle.requiredActorIds.length > 0 &&
+      battle.requiredActorIds.every((actorId) => battle.commands && battle.commands[actorId])
+    ) {
+      result.turn = resolveBattleRoomTurn(data, room, battle, now);
+    }
+    data.battleRooms[room.roomId] = room;
+    recordBattleTrace(data, room, "party_pve_offline_participants_removed", {
+      removedAccountIds: result.removedAccountIds,
+      escapedActorIds: result.escapedActorIds,
+      remainingParticipantCount: room.participantAccountIds.length,
+      turnResolved: Boolean(result.turn),
+    }, now);
+    result.changed = true;
+    return result;
   }
 
   function getBattleTrace(token, payload = {}) {

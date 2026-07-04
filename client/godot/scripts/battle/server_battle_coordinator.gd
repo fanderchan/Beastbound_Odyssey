@@ -189,6 +189,8 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "") -> void:
 		host._apply_server_battle_room_closed(room)
 	elif room_round != local_round:
 		host._sync_server_battle_room_scene(false)
+	elif _server_actor_signature_for_room_battle(battle) != _server_actor_signature_for_local_battle():
+		host._sync_server_battle_room_scene(false)
 	elif local_phase == "server_waiting" and room_phase == "command":
 		host._sync_server_battle_room_scene(false)
 
@@ -243,25 +245,123 @@ func apply_battle_event(event: Dictionary) -> void:
 			host._apply_server_battle_room_closed(closed_room)
 		return
 	if room_updated:
-		host._close_battle_invite_panel(false)
 		var updated_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
 		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
-		var turn_key: String = host._server_battle_turn_key(turn)
-		var same_turn_playing: bool = turn_key != "" and turn_key == host.server_battle_last_playback_turn_key and host._server_battle_event_playback_active()
-		if same_turn_playing:
+		if event_type == "battle.room_updated" and _start_escape_preview_for_room_update(event):
+			_apply_room_update_after_escape_preview(updated_room, turn)
+			return
+		_apply_room_updated_payload(updated_room, turn)
+
+
+func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dictionary) -> void:
+	await host.get_tree().create_timer(0.62).timeout
+	if not host._battle_is_server_authority():
+		host._clear_battle_escape_preview()
+		return
+	var updated_room_id := str(updated_room.get("roomId", "")).strip_edges()
+	var active_room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
+	if updated_room_id != "" and active_room_id != "" and updated_room_id != active_room_id:
+		host._clear_battle_escape_preview()
+		return
+	_apply_room_updated_payload(updated_room, turn)
+	host._clear_battle_escape_preview()
+
+
+func _apply_room_updated_payload(updated_room: Dictionary, turn: Dictionary) -> void:
+	host._close_battle_invite_panel(false)
+	var turn_key: String = host._server_battle_turn_key(turn)
+	var same_turn_playing: bool = turn_key != "" and turn_key == host.server_battle_last_playback_turn_key and host._server_battle_event_playback_active()
+	if same_turn_playing:
+		host._sync_server_battle_snapshot_fields_during_playback(updated_room)
+	else:
+		if not turn.is_empty() and host._battle_is_server_authority() and str(host.battle_state.get("serverRoomId", "")).strip_edges() == str(updated_room.get("roomId", "")).strip_edges():
 			host._sync_server_battle_snapshot_fields_during_playback(updated_room)
 		else:
-			if not turn.is_empty() and host._battle_is_server_authority() and str(host.battle_state.get("serverRoomId", "")).strip_edges() == str(updated_room.get("roomId", "")).strip_edges():
-				host._sync_server_battle_snapshot_fields_during_playback(updated_room)
-			else:
-				host._sync_server_battle_room_scene()
-			if not turn.is_empty():
-				var playback_started: bool = host._play_server_battle_event_list(turn)
-				if not playback_started:
-					if str(updated_room.get("status", "")).strip_edges() == "closed":
-						host._apply_server_battle_room_closed(updated_room)
-					else:
-						host._sync_server_battle_room_scene(false)
+			host._sync_server_battle_room_scene()
+		if not turn.is_empty():
+			var playback_started: bool = host._play_server_battle_event_list(turn)
+			if not playback_started:
+				if str(updated_room.get("status", "")).strip_edges() == "closed":
+					host._apply_server_battle_room_closed(updated_room)
+				else:
+					host._sync_server_battle_room_scene(false)
+
+
+func _start_escape_preview_for_room_update(event: Dictionary) -> bool:
+	if not host._battle_is_server_authority() or not host.battle_active:
+		return false
+	var room = event.get("room", {}) as Dictionary if event.get("room", {}) is Dictionary else {}
+	var updated_room_id := str(room.get("roomId", "")).strip_edges()
+	var active_room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
+	if updated_room_id != "" and active_room_id != "" and updated_room_id != active_room_id:
+		return false
+	var escaped_server_actor_ids: Array = event.get("escapedActorIds", []) if event.get("escapedActorIds", []) is Array else []
+	if escaped_server_actor_ids.is_empty():
+		return false
+	var local_actor_ids: Array[String] = []
+	for value in escaped_server_actor_ids:
+		var local_actor_id := _local_actor_id_for_server_actor_id(str(value).strip_edges())
+		if local_actor_id != "" and not local_actor_ids.has(local_actor_id):
+			local_actor_ids.append(local_actor_id)
+	if local_actor_ids.is_empty():
+		return false
+	host.battle_escape_preview_actor_ids = local_actor_ids
+	host.battle_escape_preview_started_msec = Time.get_ticks_msec()
+	host.queue_redraw()
+	return true
+
+
+func _local_actor_id_for_server_actor_id(server_actor_id: String) -> String:
+	if server_actor_id == "":
+		return ""
+	var actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if str(actor.get("serverActorId", "")).strip_edges() == server_actor_id:
+			return str(actor.get("id", "")).strip_edges()
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if str(actor.get("id", "")).strip_edges() == server_actor_id:
+			return server_actor_id
+	return ""
+
+
+func _server_actor_signature_for_room_battle(battle: Dictionary) -> String:
+	var actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	var parts: Array[String] = []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		parts.append("%s:%s:%s:%s" % [
+			str(actor.get("actorId", "")).strip_edges(),
+			str(actor.get("accountId", "")).strip_edges(),
+			str(actor.get("hp", "")).strip_edges(),
+			str(actor.get("maxHp", "")).strip_edges(),
+		])
+	parts.sort()
+	return "|".join(parts)
+
+
+func _server_actor_signature_for_local_battle() -> String:
+	var actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	var parts: Array[String] = []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		parts.append("%s:%s:%s:%s" % [
+			str(actor.get("serverActorId", actor.get("id", ""))).strip_edges(),
+			str(actor.get("serverAccountId", "")).strip_edges(),
+			str(actor.get("hp", "")).strip_edges(),
+			str(actor.get("maxHp", "")).strip_edges(),
+		])
+	parts.sort()
+	return "|".join(parts)
 
 
 func _apply_battle_invite_event(event: Dictionary, event_type: String) -> void:
