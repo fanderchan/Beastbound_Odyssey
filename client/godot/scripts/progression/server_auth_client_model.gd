@@ -795,6 +795,7 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 	var effective_role := str(session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
 	if username == "":
 		return {"ok": false, "message": player_message_for_code("missing_username", "服务器会话缺少账号。"), "code": "missing_username"}
+	var runtime_position := data.get("runtimePosition", {}) as Dictionary if data.get("runtimePosition", {}) is Dictionary else {}
 	var local_session := {
 		"accountId": str(account.get("accountId", "")),
 		"username": username,
@@ -811,6 +812,7 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 		"passwordPolicyMessage": str(session.get("passwordPolicyMessage", "")),
 		"serverProfileBinding": data.get("profileBinding", {}),
 		"serverProfileSummary": data.get("profileSummary", {}),
+		"serverRuntimePosition": runtime_position,
 	}
 	return {
 		"ok": true,

@@ -451,6 +451,7 @@ function createAuthService(options = {}) {
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
       profileBinding: data.profileBindings[accountId],
       profileSummary: profileSummaryForAccount(account, data),
+      runtimePosition: publicRuntimePositionForAccount(data, accountId),
     });
   }
 
@@ -490,6 +491,7 @@ function createAuthService(options = {}) {
       session: publicSession(sessionResult.session, account, data, sessionResult.token),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(account, data),
+      runtimePosition: publicRuntimePositionForAccount(data, account.accountId),
     });
   }
 
@@ -517,6 +519,7 @@ function createAuthService(options = {}) {
       session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
+      runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
     });
   }
 
@@ -563,6 +566,7 @@ function createAuthService(options = {}) {
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       recovery: sessionRecoveryPayload(data, resolved.account, resolved.recovered),
+      runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
     });
   }
 
@@ -1117,6 +1121,7 @@ function createAuthService(options = {}) {
     if (!position.mapId) {
       return fail("position_map_missing", "位置缺少地图。");
     }
+    position.authority = "client_snapshot";
     const previousPosition = currentPosition;
     data.playerPositions[resolved.account.accountId] = position;
     applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
@@ -1992,6 +1997,11 @@ function sessionRecoveryPayload(data, account, recovered) {
   };
 }
 
+function publicRuntimePositionForAccount(data, accountId) {
+  const position = data && data.playerPositions ? data.playerPositions[String(accountId || "")] || null : null;
+  return position ? publicPlayerPosition(position) : null;
+}
+
 function publicPlayerSearchResult(account, data) {
   const summary = profileSummaryForAccount(account, data);
   return {
@@ -2305,7 +2315,7 @@ function publicBattleReturn(entry) {
     return {};
   }
   return {
-    kind: "record_point_return",
+    kind: String(entry.kind || "record_point_return"),
     accountId: String(entry.accountId || ""),
     reason: String(entry.reason || ""),
     recordPoint: entry.recordPoint && typeof entry.recordPoint === "object" ? clone(entry.recordPoint) : null,
@@ -4851,6 +4861,7 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
     targetAccountIds: beforeParticipantAccountIds.slice(),
     removedAccountIds: Array.from(removedSet),
     escapedActorIds: [],
+    battleReturns: [],
     partyEvents: [],
     turn: null,
   };
@@ -4864,6 +4875,11 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
     .filter((actor) => battleActorBelongsToAnyAccount(actor, removedSet))
     .map((actor) => String(actor.actorId || ""))
     .filter(Boolean);
+  result.battleReturns = restoreBattleParticipantPositions(data, room, {
+    accountIds: result.removedAccountIds,
+    reason: "offline_escape",
+    now: nowFn,
+  });
   room.participantAccountIds = beforeParticipantAccountIds.filter((accountId) => !removedSet.has(accountId));
   room.participants = (Array.isArray(room.participants) ? room.participants : [])
     .filter((participant) => !removedSet.has(String(participant && participant.accountId || "")));
@@ -4927,6 +4943,7 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
   recordBattleTrace(data, room, "party_pve_offline_participants_removed", {
     removedAccountIds: result.removedAccountIds,
     escapedActorIds: result.escapedActorIds,
+    battleReturnCount: result.battleReturns.length,
     remainingParticipantCount: room.participantAccountIds.length,
     turnResolved: Boolean(result.turn),
   }, nowFn);
@@ -7306,7 +7323,14 @@ function closeBattleRoomWithResult(data, room, result, now) {
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
   battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now);
-  const battleReturns = applyBattleRoomResultReturns(data, room, battle, battle.result, now);
+  const recordPointReturns = applyBattleRoomResultReturns(data, room, battle, battle.result, now);
+  const recordPointReturnAccountIds = new Set(recordPointReturns.map((entry) => String(entry.accountId || "")).filter(Boolean));
+  const positionRestores = restoreBattleParticipantPositions(data, room, {
+    skipAccountIds: Array.from(recordPointReturnAccountIds),
+    reason: String(result.reason || room.closeReason || "closed"),
+    now,
+  });
+  const battleReturns = recordPointReturns.concat(positionRestores);
   battle.result.battleReturns = battleReturns;
   battle.result.battleRecordId = recordId;
   result.battleReturns = battleReturns;
@@ -12087,6 +12111,81 @@ function applyBattleRoomResultReturns(data, room, battle, result, now) {
     });
   }
   return entries;
+}
+
+function restoreBattleParticipantPositions(data, room, options = {}) {
+  const nowFn = typeof options.now === "function" ? options.now : () => Date.now();
+  const reason = String(options.reason || room && room.closeReason || "");
+  const accountIdFilter = new Set((Array.isArray(options.accountIds) ? options.accountIds : [])
+    .map((accountId) => String(accountId || ""))
+    .filter(Boolean));
+  const skipAccountIds = new Set((Array.isArray(options.skipAccountIds) ? options.skipAccountIds : [])
+    .map((accountId) => String(accountId || ""))
+    .filter(Boolean));
+  const participants = Array.isArray(room && room.participants) ? room.participants : [];
+  const entries = [];
+  for (const participant of participants) {
+    const accountId = String(participant && participant.accountId || "");
+    if (accountId === "" || skipAccountIds.has(accountId)) {
+      continue;
+    }
+    if (accountIdFilter.size > 0 && !accountIdFilter.has(accountId)) {
+      continue;
+    }
+    const snapshotPosition = participant && participant.position && typeof participant.position === "object" && !Array.isArray(participant.position)
+      ? participant.position
+      : null;
+    if (!snapshotPosition || String(snapshotPosition.mapId || "").trim() === "") {
+      continue;
+    }
+    if (!shouldRestoreBattleParticipantPosition(data, accountId, snapshotPosition)) {
+      continue;
+    }
+    const account = accountById(data, accountId);
+    if (!account) {
+      continue;
+    }
+    const previousPosition = data.playerPositions[accountId] || null;
+    const position = normalizePlayerPositionPayload({
+      mapId: snapshotPosition.mapId,
+      cellX: snapshotPosition.cellX,
+      cellY: snapshotPosition.cellY,
+      facing: snapshotPosition.facing || "south",
+      moving: false,
+    }, account, nowFn);
+    position.authority = "battle_position_restore";
+    position.movementSeq = Number(previousPosition && previousPosition.movementSeq || 0) + 1;
+    position.returnReason = reason;
+    data.playerPositions[accountId] = position;
+    entries.push({
+      kind: "battle_position_restore",
+      accountId,
+      reason,
+      recordPoint: null,
+      position,
+      updatedAt: position.updatedAt,
+      schemaVersion: 1,
+    });
+  }
+  return entries;
+}
+
+function shouldRestoreBattleParticipantPosition(data, accountId, snapshotPosition) {
+  const currentPosition = data && data.playerPositions ? data.playerPositions[String(accountId || "")] || null : null;
+  if (!currentPosition) {
+    return true;
+  }
+  const snapshotMs = Date.parse(String(snapshotPosition && snapshotPosition.updatedAt || ""));
+  const currentMs = Date.parse(String(currentPosition.updatedAt || ""));
+  if (
+    Number.isFinite(snapshotMs) &&
+    Number.isFinite(currentMs) &&
+    currentMs > snapshotMs &&
+    String(currentPosition.authority || "") !== "battle_position_restore"
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function battleReturnAccountIdsForResult(room, battle, result) {

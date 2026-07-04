@@ -8792,8 +8792,18 @@ func _apply_server_battle_return(room: Dictionary) -> bool:
 	var battle_return = _server_battle_return_for_self(room)
 	if battle_return.is_empty():
 		return false
+	var kind = str(battle_return.get("kind", "record_point_return")).strip_edges()
 	var record_point = battle_return.get("recordPoint", {}) as Dictionary if battle_return.get("recordPoint", {}) is Dictionary else {}
 	var position = battle_return.get("position", {}) as Dictionary if battle_return.get("position", {}) is Dictionary else {}
+	if kind == "battle_position_restore":
+		var restore_map_id = str(position.get("mapId", "")).strip_edges()
+		if restore_map_id == "":
+			return false
+		if restore_map_id != current_map_id:
+			if not host._load_map(restore_map_id):
+				return false
+		_apply_server_step_move_authority_position(position, true)
+		return false
 	var map_id = str(record_point.get("mapId", position.get("mapId", ""))).strip_edges()
 	var spawn_name = str(record_point.get("spawnName", PlayerProgressModel.DEFAULT_RECORD_POINT_SPAWN_NAME)).strip_edges()
 	if map_id == "":
@@ -9139,6 +9149,8 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	elif world_log_message == "":
 		_set_world_log_message("已进入游戏。")
 	_refresh_mailbox_menu_button()
+	if _is_server_account_session():
+		_apply_session_runtime_position_if_available(current_account_session)
 	host._mark_progress_ui_caches_dirty()
 	host._update_hud_text(true)
 	host._layout_hud()
@@ -9151,6 +9163,18 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	else:
 		_stop_server_event_stream()
 		_stop_online_position_sync()
+
+func _apply_session_runtime_position_if_available(session: Dictionary) -> bool:
+	var position = session.get("serverRuntimePosition", {}) as Dictionary if session.get("serverRuntimePosition", {}) is Dictionary else {}
+	if position.is_empty():
+		return false
+	var map_id = str(position.get("mapId", "")).strip_edges()
+	if map_id == "":
+		return false
+	if map_id != current_map_id:
+		if not host._load_map(map_id):
+			return false
+	return _apply_server_step_move_authority_position(position, true)
 
 func _apply_auth_profile_metadata(display_name: String) -> void:
 	_apply_auth_profile_metadata_fields(display_name)

@@ -12857,6 +12857,15 @@ func _run_auto_auth_server_client_check() -> void:
 			"storageMode": "server_document",
 			"serverAuthority": "profile_document",
 		},
+		"runtimePosition": {
+			"mapId": "firebud_training_yard",
+			"cellX": 16,
+			"cellY": 17,
+			"facing": "east",
+			"moving": false,
+			"movementSeq": 9,
+			"authority": "battle_position_restore",
+		},
 	}).to_utf8_buffer()
 	var profile_spec = ServerAuthClientModel.profile_request("http://127.0.0.1:8787/", "token_test")
 	var profile_request_ok = (
@@ -12867,6 +12876,7 @@ func _run_auto_auth_server_client_check() -> void:
 	var parsed = ServerAuthClientModel.parse_auth_response(200, success_body)
 	var parsed_session = parsed.get("session", {}) as Dictionary
 	var summary = parsed_session.get("serverProfileSummary", {}) as Dictionary
+	var runtime_position = parsed_session.get("serverRuntimePosition", {}) as Dictionary if parsed_session.get("serverRuntimePosition", {}) is Dictionary else {}
 	var parse_ok = (
 		bool(parsed.get("ok", false))
 		and str(parsed_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
@@ -12877,6 +12887,9 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(parsed_session.get("passwordPolicyMessage", "")).find("至少8位") >= 0
 		and str(summary.get("playerId", "")) == "player_test"
 		and int(summary.get("profileRevision", -1)) == 3
+		and str(runtime_position.get("mapId", "")) == "firebud_training_yard"
+		and int(runtime_position.get("cellX", -1)) == 16
+		and str(runtime_position.get("authority", "")) == "battle_position_restore"
 	)
 	var profile_body = JSON.stringify({
 		"ok": true,

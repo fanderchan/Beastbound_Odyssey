@@ -855,6 +855,16 @@ test("party pve waiting battle removes offline non-leader members and resolves r
   assert.equal(roomUpdate.escapedActorIds.includes(memberPlayer.actorId), true);
   assert.equal(roomUpdate.escapedActorIds.includes(memberPet.actorId), true);
   assert.equal(roomUpdate.turn.kind, "battle_event_list");
+  const restoredMemberPosition = service.snapshot().playerPositions[member.account.accountId];
+  assert.equal(restoredMemberPosition.mapId, "firebud_training_yard");
+  assert.equal(restoredMemberPosition.cellX, 12);
+  assert.equal(restoredMemberPosition.cellY, 12);
+  assert.equal(restoredMemberPosition.authority, "battle_position_restore");
+  const reloggedMember = service.login({"username": "pvewaitdropb", "password": "test1234"});
+  assert.equal(reloggedMember.ok, true);
+  assert.equal(reloggedMember.runtimePosition.mapId, "firebud_training_yard");
+  assert.equal(reloggedMember.runtimePosition.cellX, 12);
+  assert.equal(reloggedMember.runtimePosition.cellY, 12);
   assert.equal(events.some((event) => (
     event.type === "party.update" &&
     Array.isArray(event.removedAccountIds) &&
@@ -1067,6 +1077,11 @@ test("party pve battle maintenance removes disconnected members after offline gr
   assert.deepEqual(roomUpdate.removedAccountIds, [member.account.accountId]);
   assert.equal(service.snapshot().battleRooms[roomId].status, "ready");
   assert.deepEqual(service.snapshot().battleRooms[roomId].participantAccountIds, [leader.account.accountId]);
+  const restoredMemberPosition = service.snapshot().playerPositions[member.account.accountId];
+  assert.equal(restoredMemberPosition.mapId, "firebud_training_yard");
+  assert.equal(restoredMemberPosition.cellX, 12);
+  assert.equal(restoredMemberPosition.cellY, 12);
+  assert.equal(restoredMemberPosition.authority, "battle_position_restore");
   assert.equal(service.getPartyState(member.session.token).party, null);
 });
 
@@ -3202,14 +3217,16 @@ test("duel battle rooms can cancel, leave, timeout, and finish with results", ()
   assert.equal(finalCommand.room.status, "closed");
   assert.equal(finalCommand.turn.result.reason, "defeat");
   assert.equal(finalCommand.room.battle.result.winnerAccountId, challenger.account.accountId);
-  assert.deepEqual(finalCommand.room.battle.result.battleReturns, []);
+  assert.equal(finalCommand.room.battle.result.battleReturns.length, 2);
+  assert.equal(finalCommand.room.battle.result.battleReturns.every((entry) => entry.kind === "battle_position_restore"), true);
   assert.equal(finalCommand.room.battle.result.battleRecordId.startsWith("battle_record_"), true);
-  assert.deepEqual(finalCommand.turn.result.battleReturns, []);
+  assert.equal(finalCommand.turn.result.battleReturns.length, 2);
+  assert.equal(finalCommand.turn.result.battleReturns.every((entry) => entry.kind === "battle_position_restore"), true);
   const returnedOpponentPosition = service.snapshot().playerPositions[opponent.account.accountId];
   assert.equal(returnedOpponentPosition.mapId, "village");
   assert.equal(returnedOpponentPosition.cellX, 11);
   assert.equal(returnedOpponentPosition.cellY, 10);
-  assert.notEqual(returnedOpponentPosition.authority, "battle_result_return");
+  assert.equal(returnedOpponentPosition.authority, "battle_position_restore");
   const opponentAfterDefeat = service.getProfile(opponent.session.token);
   assert.equal(opponentAfterDefeat.ok, true);
   assert.equal(opponentAfterDefeat.profile.player.hp, 1);
@@ -3382,11 +3399,71 @@ test("battle rooms preserve short reconnects and close after disconnect grace", 
   assert.equal(closedRoom.status, "closed");
   assert.equal(closedRoom.battle.result.winnerAccountId, opponent.account.accountId);
   assert.deepEqual(closedRoom.battle.result.loserAccountIds, [challenger.account.accountId]);
+  assert.equal(closedRoom.battle.result.battleReturns.length, 2);
+  assert.equal(closedRoom.battle.result.battleReturns.every((entry) => entry.kind === "battle_position_restore"), true);
+  const restoredChallenger = service.snapshot().playerPositions[challenger.account.accountId];
+  const restoredOpponent = service.snapshot().playerPositions[opponent.account.accountId];
+  assert.equal(restoredChallenger.mapId, "village");
+  assert.equal(restoredChallenger.cellX, 10);
+  assert.equal(restoredChallenger.cellY, 10);
+  assert.equal(restoredChallenger.authority, "battle_position_restore");
+  assert.equal(restoredOpponent.mapId, "village");
+  assert.equal(restoredOpponent.cellX, 11);
+  assert.equal(restoredOpponent.cellY, 10);
+  assert.equal(restoredOpponent.authority, "battle_position_restore");
   const settlementLog = structuredLogs.find((entry) => entry.type === "battle.settlement" && entry.roomId === roomId);
   assert.notEqual(settlementLog, undefined);
   assert.equal(settlementLog.reason, "disconnect_timeout");
   assert.equal(settlementLog.profileWritebackCount >= 0, true);
   assert.equal(Array.isArray(settlementLog.skippedProfiles), true);
+});
+
+test("battle position restore does not override newer client logout position", () => {
+  let nowMs = Date.parse("2026-01-01T01:30:00.000Z");
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => nowMs,
+  });
+  const challenger = service.register({"username": "logoutrestorea", "password": "test1234", "displayName": "登出甲"});
+  const opponent = service.register({"username": "logoutrestoreb", "password": "test1234", "displayName": "登出乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "logoutrestoreb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const roomId = accept.room.roomId;
+
+  nowMs += 1000;
+  const logoutPosition = service.updatePlayerPosition(challenger.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 5,
+    "cellY": 6,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(logoutPosition.ok, true);
+  service.markBattleConnection(challenger.session.token, false);
+  nowMs += 301 * 1000;
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+
+  const closedRoom = service.snapshot().battleRooms[roomId];
+  assert.equal(closedRoom.status, "closed");
+  assert.equal(closedRoom.battle.result.reason, "disconnect_timeout");
+  const challengerPosition = service.snapshot().playerPositions[challenger.account.accountId];
+  const opponentPosition = service.snapshot().playerPositions[opponent.account.accountId];
+  assert.equal(challengerPosition.mapId, "firebud_village_gate");
+  assert.equal(challengerPosition.cellX, 5);
+  assert.equal(challengerPosition.cellY, 6);
+  assert.equal(challengerPosition.authority, "client_snapshot");
+  assert.equal(opponentPosition.mapId, "village");
+  assert.equal(opponentPosition.cellX, 11);
+  assert.equal(opponentPosition.cellY, 10);
+  assert.equal(opponentPosition.authority, "battle_position_restore");
+  assert.equal(closedRoom.battle.result.battleReturns.length, 1);
+  assert.equal(closedRoom.battle.result.battleReturns[0].accountId, opponent.account.accountId);
 });
 
 test("battle rooms close cleanly when both participants miss reconnect grace", () => {
