@@ -193,8 +193,7 @@ static func current_account_submitted(room: Dictionary, session: Dictionary) -> 
 		return false
 	var required_actor_ids := _account_required_actor_ids(battle, account_id)
 	if required_actor_ids.is_empty():
-		var submitted_accounts: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
-		return submitted_accounts.has(account_id)
+		return _account_has_any_actor(battle, account_id)
 	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
 	for actor_id in required_actor_ids:
 		if not submitted_actor_ids.has(actor_id):
@@ -415,6 +414,9 @@ static func _message_for_room(room: Dictionary, battle: Dictionary, session: Dic
 	var mode := str(room.get("mode", "")).strip_edges()
 	var phase := _local_phase_for_room(battle, session)
 	if phase == "server_waiting":
+		var waiting_account_id := str(session.get("accountId", "")).strip_edges()
+		if waiting_account_id != "" and _account_has_any_actor(battle, waiting_account_id) and _account_required_actor_ids(battle, waiting_account_id).is_empty():
+			return "已倒下，等待队友。" if mode == "party_pve" else "已倒下，等待战斗结果。"
 		return "指令已提交，等待队友。" if mode == "party_pve" else "指令已提交，等待对方。"
 	if phase == "command":
 		var account_id := str(session.get("accountId", "")).strip_edges()
@@ -448,13 +450,22 @@ static func _account_required_actor_ids(battle: Dictionary, account_id: String) 
 static func _account_submitted_all_required_actors(battle: Dictionary, account_id: String) -> bool:
 	var required_actor_ids := _account_required_actor_ids(battle, account_id)
 	if required_actor_ids.is_empty():
-		var submitted_accounts: Array = battle.get("submittedAccountIds", []) if battle.get("submittedAccountIds", []) is Array else []
-		return submitted_accounts.has(account_id)
+		return _account_has_any_actor(battle, account_id)
 	var submitted_actor_ids: Array = battle.get("submittedActorIds", []) if battle.get("submittedActorIds", []) is Array else []
 	for actor_id in required_actor_ids:
 		if not submitted_actor_ids.has(actor_id):
 			return false
 	return true
+
+
+static func _account_has_any_actor(battle: Dictionary, account_id: String) -> bool:
+	if account_id.strip_edges() == "":
+		return false
+	var actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	for value in actors:
+		if value is Dictionary and str((value as Dictionary).get("accountId", "")).strip_edges() == account_id:
+			return true
+	return false
 
 
 static func _account_submitted_some_required_actors(battle: Dictionary, account_id: String) -> bool:

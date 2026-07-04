@@ -16620,6 +16620,27 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"username": "attacker_owner",
 	}
 	var state = ServerBattleRoomModel.battle_state_from_room(room, session)
+	var downed_room = room.duplicate(true)
+	downed_room["mode"] = "party_pve"
+	var downed_battle = (downed_room.get("battle", {}) as Dictionary).duplicate(true) if downed_room.get("battle", {}) is Dictionary else {}
+	var downed_actors: Array = []
+	for value in server_actors:
+		if value is Dictionary:
+			var downed_actor = (value as Dictionary).duplicate(true)
+			if str(downed_actor.get("accountId", "")) == "acc_b":
+				downed_actor["hp"] = 0
+			downed_actors.append(downed_actor)
+	downed_battle["actors"] = downed_actors
+	downed_battle["requiredActorIds"] = ["actor_a_player", "actor_a_pet"]
+	downed_battle["submittedActorIds"] = []
+	downed_battle["submittedAccountIds"] = []
+	downed_room["battle"] = downed_battle
+	var downed_state = ServerBattleRoomModel.battle_state_from_room(downed_room, session)
+	var downed_skip_ok = (
+		ServerBattleRoomModel.current_account_submitted(downed_room, session)
+		and str(downed_state.get("phase", "")) == "server_waiting"
+		and str(downed_state.get("message", "")).find("已倒下") >= 0
+	)
 	var self_spirit_ok = BattleModel.actor_spirit_ids(state, BattleModel.PLAYER_ACTOR_ID).has("spirit_moist_1")
 	var event_list = {
 		"kind": "battle_event_list",
@@ -17004,11 +17025,12 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if converted_target_ok and converted_attacker_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_blocked_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_blocked=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
+	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_blocked_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_blocked=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
+		str(downed_skip_ok),
 		str(self_spirit_ok),
 		str(hp_target_ok),
 		str(message_target_ok),
