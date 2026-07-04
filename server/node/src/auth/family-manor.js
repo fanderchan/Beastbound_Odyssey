@@ -49,8 +49,13 @@ function createFamilyManorDomain(ctx) {
       return fail(resolved.code, resolved.message);
     }
     const family = familyForAccount(data, resolved.account.accountId);
+    const viewerFamilyOptions = {
+      ...publicFamilyOptions,
+      viewerAccountId: resolved.account.accountId,
+      viewerLastSeenMs: now(),
+    };
     return ok({
-      family: family ? publicFamily(family, data, accountById, publicFamilyOptions) : null,
+      family: family ? publicFamily(family, data, accountById, viewerFamilyOptions) : null,
       manors: publicManorsForAccount(data, resolved.account.accountId),
       wars: publicManorWarsForAccount(data, resolved.account.accountId),
     });
@@ -799,8 +804,11 @@ function publicFamilyMember(accountId, family, data, accountById, options = {}) 
   const runtimeActivity = typeof options.accountRuntimeActivity === "function"
     ? options.accountRuntimeActivity(data, account.accountId)
     : {online: false, lastSeenMs: null};
-  const online = Boolean(runtimeActivity && runtimeActivity.online);
-  const rawLastSeenMs = runtimeActivity ? runtimeActivity.lastSeenMs : null;
+  const isViewer = String(options.viewerAccountId || "") !== "" && String(options.viewerAccountId || "") === account.accountId;
+  const online = isViewer || Boolean(runtimeActivity && runtimeActivity.online);
+  const rawLastSeenMs = isViewer && options.viewerLastSeenMs !== undefined
+    ? options.viewerLastSeenMs
+    : (runtimeActivity ? runtimeActivity.lastSeenMs : null);
   const lastSeenMs = Number(rawLastSeenMs);
   const position = data.playerPositions && data.playerPositions[account.accountId]
     ? data.playerPositions[account.accountId]

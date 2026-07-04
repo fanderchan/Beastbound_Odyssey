@@ -9139,6 +9139,12 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 		party_current_state.clear()
 		party_online_players.clear()
 		party_invite_deferred_ids.clear()
+		family_current_state.clear()
+		family_list.clear()
+		family_manors.clear()
+		family_detail_expanded = false
+		family_request_pending = false
+		family_pending_kind = ""
 		_close_party_invite_panel(false)
 		_refresh_party_roster_hud(false)
 	current_account_session = session
@@ -9393,6 +9399,15 @@ func _switch_account_to_login(save_before_logout: bool = true) -> void:
 	server_battle_waiting_poll_elapsed = 0.0
 	server_battle_room_restore_poll_elapsed = 0.0
 	server_event_last_seq = 0
+	party_current_state.clear()
+	party_online_players.clear()
+	party_invite_deferred_ids.clear()
+	family_current_state.clear()
+	family_list.clear()
+	family_manors.clear()
+	family_detail_expanded = false
+	family_request_pending = false
+	family_pending_kind = ""
 	_stop_server_event_stream()
 	_stop_online_position_sync()
 	PlayerProgressModel.reset_active_save_path()
@@ -14904,7 +14919,7 @@ func _family_member_row(member: Dictionary) -> Control:
 	row.add_child(column)
 	var title = Label.new()
 	var role := "族长" if str(member.get("role", "")) == "leader" else "族员"
-	var online := bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline"
+	var online := _family_member_is_current_player(member) or (bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline")
 	title.text = "%s  %s  %s" % [role, "在线" if online else "离线", _party_player_text(member)]
 	title.add_theme_font_size_override("font_size", 14)
 	title.add_theme_color_override("font_color", Color(0.78, 0.96, 0.72, 1.0) if online else Color(0.70, 0.72, 0.68, 1.0))
@@ -14920,7 +14935,7 @@ func _family_member_row(member: Dictionary) -> Control:
 	return row
 
 func _family_member_row_style(member: Dictionary) -> StyleBoxFlat:
-	var online := bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline"
+	var online := _family_member_is_current_player(member) or (bool(member.get("online", false)) and str(member.get("connectionState", "online")) != "offline")
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.11, 0.11, 0.56) if online else Color(0.06, 0.07, 0.07, 0.46)
 	style.border_color = Color(0.30, 0.54, 0.36, 0.62) if online else Color(0.28, 0.30, 0.28, 0.52)
@@ -14932,8 +14947,13 @@ func _family_member_row_style(member: Dictionary) -> StyleBoxFlat:
 	style.content_margin_bottom = 6
 	return style
 
+func _family_member_is_current_player(member: Dictionary) -> bool:
+	return _party_member_is_current_player(member)
+
 func _family_member_position_text(member: Dictionary, online: bool) -> String:
 	var position = member.get("position", null) as Dictionary if member.get("position", null) is Dictionary else {}
+	if _family_member_is_current_player(member) and player != null and not map_data.is_empty():
+		position = _current_online_position_payload()
 	if position.is_empty():
 		return "位置：未同步"
 	var map_id := str(position.get("mapId", "")).strip_edges()

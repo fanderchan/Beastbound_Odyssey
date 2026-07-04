@@ -104,6 +104,10 @@ test("families can occupy one of nine manors and unlock its manor shop", () => {
   assert.equal(staleMember.online, false);
   assert.equal(staleMember.connectionState, "offline");
   assert.equal(staleMember.position.mapId, "earth_vein_cave");
+  const viewerFamilyState = service.getFamilyState(member.session.token);
+  const viewerMember = viewerFamilyState.family.members.find((familyMember) => familyMember.accountId === member.account.accountId);
+  assert.equal(viewerMember.online, true);
+  assert.equal(viewerMember.connectionState, "online");
 
   const memberChallenge = service.challengeManor(member.session.token, {"manorId": "firebud_manor"});
   assert.equal(memberChallenge.ok, false);
