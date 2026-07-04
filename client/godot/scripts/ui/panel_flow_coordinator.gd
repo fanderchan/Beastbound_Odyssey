@@ -15075,7 +15075,7 @@ func _refresh_party_roster_hud(update_layout: bool = true) -> void:
 	_clear_container_children(party_roster_container)
 	var members = _current_party_members()
 	party_roster_panel.set_meta("has_party", members.size() > 0)
-	party_roster_panel.visible = members.size() > 0
+	party_roster_panel.visible = members.size() > 0 and not battle_active
 	if members.is_empty():
 		if update_layout:
 			host._layout_hud()

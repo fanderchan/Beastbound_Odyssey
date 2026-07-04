@@ -11655,12 +11655,10 @@ func _layout_hud() -> void:
 		var roster_has_party := bool(party_roster_panel.get_meta("has_party", false))
 		var roster_width: float = 224.0 if viewport_size.x >= 980.0 else 196.0
 		var roster_y := top_panel.position.y + top_panel.size.y + 12.0
-		if battle_active and battle_round_panel != null and battle_round_panel.visible:
-			roster_y = battle_round_panel.position.y + battle_round_panel.size.y + 8.0
 		var roster_height: float = minf(348.0, maxf(0.0, viewport_size.y - roster_y - margin - 104.0))
 		party_roster_panel.position = Vector2(margin, roster_y)
 		party_roster_panel.size = Vector2(roster_width, roster_height)
-		party_roster_panel.visible = roster_has_party and not is_phone_shape and viewport_size.x >= 820.0 and roster_height >= 96.0
+		party_roster_panel.visible = roster_has_party and not battle_active and not is_phone_shape and viewport_size.x >= 820.0 and roster_height >= 96.0
 
 	if battle_active:
 		side_panel.visible = false

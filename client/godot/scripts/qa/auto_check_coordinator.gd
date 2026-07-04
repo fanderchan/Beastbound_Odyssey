@@ -14430,14 +14430,22 @@ func _run_auto_party_live_check() -> void:
 				):
 					offline_marker_ok = true
 					break
+	var saved_battle_active = host.battle_active
+	host.battle_active = true
+	host._refresh_party_roster_hud(false)
+	host._layout_hud()
+	var battle_roster_hidden_ok = host.party_roster_panel != null and not host.party_roster_panel.visible
+	host.battle_active = saved_battle_active
+	host._refresh_party_roster_hud(false)
+	host._layout_hud()
 	host._on_party_leave_pressed()
 	frames = 0
 	while frames < 720 and (host.party_request_pending or host.party_current_state.get("party", null) is Dictionary):
 		frames += 1
 		await host.get_tree().process_frame
 	var leave_ok = not (host.party_current_state.get("party", null) is Dictionary)
-	var status = "ok" if register_ok and positions_ok and online_ok and invite_ok and invite_seen_ok and popup_ok and accept_ok and ui_ok and offline_marker_ok and leave_ok else "failed"
-	print("party live check ready: status=%s register=%s positions=%s online=%s invite=%s seen=%s popup=%s accept=%s ui=%s offline_marker=%s leave=%s leader=%s member=%s online_count=%d" % [
+	var status = "ok" if register_ok and positions_ok and online_ok and invite_ok and invite_seen_ok and popup_ok and accept_ok and ui_ok and offline_marker_ok and battle_roster_hidden_ok and leave_ok else "failed"
+	print("party live check ready: status=%s register=%s positions=%s online=%s invite=%s seen=%s popup=%s accept=%s ui=%s offline_marker=%s battle_hidden=%s leave=%s leader=%s member=%s online_count=%d" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -14448,6 +14456,7 @@ func _run_auto_party_live_check() -> void:
 		str(accept_ok),
 		str(ui_ok),
 		str(offline_marker_ok),
+		str(battle_roster_hidden_ok),
 		str(leave_ok),
 		leader_username,
 		member_username,
