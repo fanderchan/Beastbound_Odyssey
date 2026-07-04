@@ -41,6 +41,7 @@ test("quest record endpoint advances and auto-claims talk quests server-side", (
   profile.activeQuestId = "quest_intro_talk";
   profile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
   assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {"mapId": "firebud_training_yard", "cellX": 5, "cellY": 11}).ok, true);
 
   const recorded = service.questRecord(player.session.token, {
     "event": {"type": "talk", "targetId": "trainer"},
@@ -54,6 +55,86 @@ test("quest record endpoint advances and auto-claims talk quests server-side", (
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
   assert.equal(recorded.questMessages.some((message) => String(message).includes("认识训练师")), true);
+});
+
+test("quest record rejects client-reported settlement events and out-of-range talk", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "questguarda", "password": "test1234", "displayName": "任务防线"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("任务防线", {"level": 3, "hp": 120, "maxHp": 120}, null);
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_first_victory";
+  profile.questStates = {"quest_first_victory": {"questId": "quest_first_victory", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  for (const forged of [
+    {"type": "battle_victory", "encounterGroupId": "firebud_grass_01"},
+    {"type": "defeat_npc", "encounterGroupId": "firebud_grass_01", "targetId": "village_guard"},
+    {"type": "capture_pet", "lineId": "wuli", "formId": "wuli_normal_orange_fire10", "amount": 1},
+    {"type": "use_spirit", "spiritId": "spirit_poison_1", "eventType": "spirit_poison"},
+    {"type": "buy_item", "shopId": "firebud_general", "itemId": "item_meat_small", "amount": 1},
+    {"type": "use_world_item", "itemId": "item_meat_small", "targetType": "pet", "amount": 1},
+    {"type": "equip_item", "itemId": "weapon_wood_axe_1", "slot": "weapon", "amount": 1},
+  ]) {
+    const rejected = service.questRecord(player.session.token, {"event": forged});
+    assert.equal(rejected.ok, false, `event ${forged.type} should be rejected`);
+    assert.equal(rejected.code, "quest_event_not_client_reportable");
+  }
+
+  const noPosition = service.questRecord(player.session.token, {"event": {"type": "talk", "targetId": "trainer"}});
+  assert.equal(noPosition.ok, false);
+  assert.equal(noPosition.code, "movement_position_missing");
+
+  const unknownNpc = service.questRecord(player.session.token, {"event": {"type": "talk", "targetId": "npc_never_exists"}});
+  assert.equal(unknownNpc.ok, false);
+  assert.equal(unknownNpc.code, "quest_talk_target_invalid");
+
+  assert.equal(service.updatePlayerPosition(player.session.token, {"mapId": "firebud_training_yard", "cellX": 14, "cellY": 12}).ok, true);
+  const tooFar = service.questRecord(player.session.token, {"event": {"type": "talk", "targetId": "trainer"}});
+  assert.equal(tooFar.ok, false);
+  assert.equal(tooFar.code, "quest_talk_too_far");
+
+  const untouched = service.getProfile(player.session.token);
+  assert.equal(untouched.ok, true);
+  assert.equal(untouched.profile.questStates.quest_first_victory.status, "active");
+  assert.equal(untouched.profile.questStates.quest_first_victory.progress, 0);
+
+  const qaService = createAuthService({"store": createMemoryAuthStore(), "allowPositionTeleport": true});
+  const qaPlayer = qaService.register({"username": "questguardqa", "password": "test1234", "displayName": "任务防线QA"});
+  assert.equal(qaPlayer.ok, true);
+  const qaProfile = battleProfile("任务防线QA", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  qaProfile.backpackSlots = [];
+  qaProfile.activeQuestId = "quest_intro_talk";
+  qaProfile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
+  assert.equal(qaService.saveProfile(qaPlayer.session.token, {"expectedRevision": 0, "profile": qaProfile}).ok, true);
+  const qaTalk = qaService.questRecord(qaPlayer.session.token, {"event": {"type": "talk", "targetId": "trainer"}});
+  assert.equal(qaTalk.ok, true);
+  const qaForged = qaService.questRecord(qaPlayer.session.token, {"event": {"type": "battle_victory", "encounterGroupId": "firebud_grass_01"}});
+  assert.equal(qaForged.ok, false);
+  assert.equal(qaForged.code, "quest_event_not_client_reportable");
+});
+
+test("world item use profile action advances use item quests server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "questusemeat", "password": "test1234", "displayName": "任务用肉"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("任务用肉", {"level": 2, "hp": 120, "maxHp": 120}, {"petId": "pet_meat_quest", "hp": 1, "maxHp": 90});
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [{"itemId": "item_meat_small", "count": 1}];
+  profile.activeQuestId = "quest_use_meat";
+  profile.questStates = {"quest_use_meat": {"questId": "quest_use_meat", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const used = service.profileAction(player.session.token, {
+    "action": "world_item_use",
+    "payload": {"itemId": "item_meat_small", "instanceId": "pet_meat_quest"},
+  });
+  assert.equal(used.ok, true);
+  assert.equal(used.profile.questStates.quest_use_meat.status, "claimed");
+  assert.equal(used.profile.activeQuestId, "quest_buy_weapon");
+  assert.equal(used.profile.stoneCoins, 15);
+  assert.equal(used.questMessages.length > 0, true);
+  assert.equal(used.logLines.some((line) => String(line).includes("给宠物喂肉")), true);
 });
 
 test("quest claim endpoint requires reward choice and grants selected rewards server-side", () => {

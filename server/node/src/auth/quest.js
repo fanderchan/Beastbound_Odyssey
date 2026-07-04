@@ -23,6 +23,7 @@ function createQuestDomain(ctx) {
     recordQuestEventToProfile,
     resolveSession,
     save,
+    validateClientQuestEvent,
   } = ctx;
 
   function questRecord(token, payload = {}) {
@@ -42,6 +43,13 @@ function createQuestDomain(ctx) {
     const event = normalizedQuestEventPayload(payload.event && typeof payload.event === "object" && !Array.isArray(payload.event) ? payload.event : payload);
     if (String(event.type || "") === "") {
       return fail("quest_event_invalid", "任务事件为空。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const clientEventValidation = validateClientQuestEvent(data, resolved.account, event);
+    if (!clientEventValidation.ok) {
+      return fail(clientEventValidation.code, clientEventValidation.message, {
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });

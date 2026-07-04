@@ -4,9 +4,11 @@ function createProfileActionsDomain(ctx) {
   const {
     ENCOUNTER_STONE_ITEM_IDS,
     PROFILE_ACTION_IDS,
+    activeQuestAutoClaim,
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
     backpackItemCount,
+    claimActiveQuestToProfile,
     captureToolBagFromProfile,
     clone,
     consumeBackpackItem,
@@ -34,6 +36,7 @@ function createProfileActionsDomain(ctx) {
     publicAccount,
     publicHangSession,
     publicProfileActionResult,
+    recordQuestEventToProfile,
     resolveSession,
     save,
   } = ctx;
@@ -191,6 +194,25 @@ function createProfileActionsDomain(ctx) {
         result: publicProfileActionResult(action, actionResult),
       });
     }
+    const questMessages = [];
+    if (action === "world_item_use") {
+      const questProgress = recordQuestEventToProfile(profile, {
+        type: "use_world_item",
+        itemId: String(actionResult.itemId || params.itemId || "").trim(),
+        targetType: String(actionResult.instanceId || params.instanceId || params.petId || "").trim() !== "" ? "pet" : "player",
+        amount: 1,
+        schemaVersion: 1,
+      });
+      if (questProgress.changed && questProgress.message) {
+        questMessages.push(questProgress.message);
+      }
+      if (questProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
+    }
     const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
     save(data);
     return ok({
@@ -199,7 +221,8 @@ function createProfileActionsDomain(ctx) {
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
       result: publicProfileActionResult(action, actionResult),
-      logLines: profileActionLogLines(actionResult),
+      questMessages,
+      logLines: [...profileActionLogLines(actionResult), ...questMessages],
       message: actionResult.message || "角色档案已更新。",
     });
   }

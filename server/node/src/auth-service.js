@@ -53,6 +53,8 @@ const MOVEMENT_MAX_STEP_CELLS = 1;
 const POSITION_SNAPSHOT_MAX_DRIFT_CELLS = 2;
 const POSITION_SPAWN_TOLERANCE_CELLS = 1;
 const POSITION_WARP_PROXIMITY_CELLS = 4;
+const QUEST_TALK_PROXIMITY_CELLS = 3;
+const QUEST_EVENT_CLIENT_REPORTABLE_TYPES = new Set(["talk"]);
 const PARTY_OFFLINE_AUTO_KICK_MS = 10 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
@@ -1504,6 +1506,31 @@ function createAuthService(options = {}) {
     return clone(load());
   }
 
+  function validateClientQuestEvent(data, account, event) {
+    const type = String(event && event.type || "");
+    if (!QUEST_EVENT_CLIENT_REPORTABLE_TYPES.has(type)) {
+      return {ok: false, code: "quest_event_not_client_reportable", message: "该任务进度由服务器结算，不能由客户端上报。"};
+    }
+    if (allowPositionTeleport) {
+      return {ok: true};
+    }
+    const locations = questTalkNpcLocations(event.targetId);
+    if (locations.length <= 0) {
+      return {ok: false, code: "quest_talk_target_invalid", message: "没有找到这个NPC。"};
+    }
+    const position = data.playerPositions[account.accountId] || null;
+    if (!position || !position.mapId || !playerPositionHasCell(position)) {
+      return {ok: false, code: "movement_position_missing", message: "请先同步当前位置。"};
+    }
+    const near = locations.some((location) =>
+      location.mapId === String(position.mapId || "") &&
+      cellChebyshevDistance(position.cellX, position.cellY, location.cellX, location.cellY) <= QUEST_TALK_PROXIMITY_CELLS);
+    if (!near) {
+      return {ok: false, code: "quest_talk_too_far", message: "距离NPC太远，请走近后再对话。"};
+    }
+    return {ok: true};
+  }
+
   const domainContext = {
     BATTLE_INVITE_ACCEPTED,
     BATTLE_INVITE_CANCELLED,
@@ -1530,6 +1557,8 @@ function createAuthService(options = {}) {
     accountRuntimeActivity: (serviceData, accountId) => accountRuntimeActivity(serviceData, accountId, now, runtimeActiveSessionIds),
     activeBattleRoomForAccount,
     activeOnlinePlayers: (serviceData, nowFn = now) => activeOnlinePlayers(serviceData, nowFn, runtimeActiveSessionIds),
+    activeQuestAutoClaim,
+    claimActiveQuestToProfile,
     addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
@@ -1630,6 +1659,7 @@ function createAuthService(options = {}) {
     save,
     submittedBattleCommandAccountIds,
     submittedBattleCommandActorIds,
+    validateClientQuestEvent,
   };
   const profileActions = createProfileActionsDomain(domainContext);
   const quest = createQuestDomain(domainContext);
@@ -12377,6 +12407,34 @@ function positionCellStandable(mapDoc, cellX, cellY) {
     }
   }
   return true;
+}
+
+function questTalkNpcLocations(targetId) {
+  const normalized = String(targetId || "").trim();
+  if (normalized === "") {
+    return [];
+  }
+  if (!mapDocumentCache) {
+    mapDocumentCache = loadMapDocumentCache();
+  }
+  const locations = [];
+  for (const [mapId, mapDoc] of Object.entries(mapDocumentCache)) {
+    for (const point of mapInteractionPoints(mapDoc)) {
+      if (!point || String(point.id || "").trim() !== normalized) {
+        continue;
+      }
+      const cell = Array.isArray(point.cell) ? point.cell : null;
+      if (!cell || cell.length < 2) {
+        continue;
+      }
+      locations.push({
+        mapId,
+        cellX: Math.trunc(Number(cell[0] || 0)),
+        cellY: Math.trunc(Number(cell[1] || 0)),
+      });
+    }
+  }
+  return locations;
 }
 
 function mapSpawnCellsForDoc(mapDoc) {

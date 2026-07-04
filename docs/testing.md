@@ -36,7 +36,7 @@ godot --headless --path client/godot --quit
 node tools/run_godot_auto_checks.mjs
 ```
 
-带 `*-live-check` 的检查需要先启动本地 QA 服务端。位置权威校验默认开启（拒绝瞬移/非法跨图），部分 QA 检查会直接向服务器灌任意坐标，所以本地 QA 服务端需要显式放开位置校验（仅限本地测试，正式/LAN 试玩服务不要设置）：
+带 `*-live-check` 的检查需要先启动本地 QA 服务端。位置权威校验默认开启（拒绝瞬移/非法跨图，任务 `talk` 事件还会校验玩家与 NPC 的服务端距离），部分 QA 检查会直接向服务器灌任意坐标，所以本地 QA 服务端需要显式放开位置校验（仅限本地测试，正式/LAN 试玩服务不要设置）：
 
 ```sh
 cd server/node && BEASTBOUND_ALLOW_POSITION_TELEPORT=1 npm start

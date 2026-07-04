@@ -10025,6 +10025,8 @@ func _record_battle_event(event: Dictionary, ledger: Dictionary = {}) -> void:
 func _record_quest_spirit_event_from_battle(event: Dictionary, ledger: Dictionary, event_type: String) -> void:
 	if not event_type.begins_with("spirit_"):
 		return
+	if bool(battle_state.get("serverAuthority", false)):
+		return
 	var attacker_id := str(ledger.get("attackerId", event.get("attackerId", "")))
 	if attacker_id != BattleModel.player_actor_id(battle_state):
 		return

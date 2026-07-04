@@ -323,6 +323,7 @@ test("HTTP server exposes server-authoritative quest record and claim endpoints"
   introProfile.questStates = {"quest_intro_talk": {"questId": "quest_intro_talk", "status": "active", "progress": 0}};
   const savedIntro = service.saveProfile(registered.session.token, {"expectedRevision": 0, "profile": introProfile});
   assert.equal(savedIntro.ok, true);
+  assert.equal(service.updatePlayerPosition(registered.session.token, {"mapId": "firebud_training_yard", "cellX": 5, "cellY": 11}).ok, true);
 
   const recorded = await fetchJson(`${base}/quests/record`, {
     "method": "POST",
