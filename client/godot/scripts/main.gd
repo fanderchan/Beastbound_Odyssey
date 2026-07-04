@@ -104,6 +104,7 @@ const MAP_DATA_PATHS := {
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
+const ACTION_BAR_COLLAPSED_SIZE := Vector2(58, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
@@ -268,6 +269,8 @@ var battle_message_clear_button: Button
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
 var ring_button: Button
+var action_bar_scroll: ScrollContainer
+var action_bar_collapse_button: Button
 var quick_slot_buttons: Array[Button] = []
 var player_status_menu_button: Button
 var bag_menu_button: Button
@@ -304,6 +307,7 @@ var panel_flow_coordinator
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
+var account_logout_here_button: Button
 var account_close_button: Button
 var backpack_panel: PanelContainer
 var backpack_grid: GridContainer
@@ -1042,6 +1046,7 @@ var battle_auto_attack_enabled: bool = false
 var battle_auto_attack_delay: float = 0.0
 var battle_auto_attack_player_submissions: int = 0
 var battle_auto_attack_pet_submissions: int = 0
+var action_bar_collapsed: bool = false
 var encounter_rng := RandomNumberGenerator.new()
 var hud_status_text_cache: String = ""
 var hud_detail_text_cache: String = ""
@@ -6426,7 +6431,7 @@ func _battle_full_formation_screen_layout_ok() -> bool:
 
 
 func _battle_point_overlaps_panel(point: Vector2) -> bool:
-	for control in [battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel, top_panel]:
+	for control in [battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel, action_bar, top_panel]:
 		if control != null and control.visible:
 			if Rect2(control.global_position, control.size).has_point(point):
 				return true
@@ -7348,6 +7353,12 @@ func _refresh_account_panel() -> void:
 
 func _switch_account_to_login() -> void:
 	_panel_flow()._switch_account_to_login()
+
+func _logout_to_record_point() -> void:
+	await _panel_flow()._logout_to_record_point()
+
+func _logout_in_place() -> void:
+	_panel_flow()._logout_in_place()
 
 func _handle_server_session_expired(message: String = "") -> void:
 	_panel_flow()._handle_server_session_expired(message)
@@ -11625,6 +11636,7 @@ func _layout_hud() -> void:
 	var margin := 18.0
 	var action_width: float = minf(viewport_size.x - margin * 2.0, ACTION_BAR_SIZE.x)
 	var action_size := Vector2(action_width, ACTION_BAR_SIZE.y)
+	var action_collapsed_size := ACTION_BAR_COLLAPSED_SIZE
 	var top_max_width := 300.0 if battle_active else 520.0
 	var top_width: float = minf(viewport_size.x - margin * 2.0, top_max_width)
 	var world_menu_open := _world_menu_is_open()
@@ -11665,7 +11677,9 @@ func _layout_hud() -> void:
 
 	if battle_active:
 		side_panel.visible = false
-		action_bar.visible = false
+		action_bar.visible = true
+		action_bar.position = Vector2(viewport_size.x - (action_collapsed_size.x if action_bar_collapsed else action_width) - margin, viewport_size.y - 104.0)
+		action_bar.size = action_collapsed_size if action_bar_collapsed else action_size
 	elif is_phone_shape or world_menu_open:
 		side_panel.visible = false
 		action_bar.visible = not world_menu_open
@@ -11673,14 +11687,19 @@ func _layout_hud() -> void:
 			action_bar.position = Vector2(maxf(margin, (viewport_size.x - action_width) * 0.5), viewport_size.y - 104.0)
 		else:
 			action_bar.position = Vector2(margin, viewport_size.y - 104.0)
-		action_bar.size = action_size
+		if action_bar_collapsed:
+			action_bar.position.x = viewport_size.x - action_collapsed_size.x - margin
+			action_bar.size = action_collapsed_size
+		else:
+			action_bar.size = action_size
 	else:
 		side_panel.visible = true
 		action_bar.visible = true
 		side_panel.position = Vector2(viewport_size.x - 286.0, margin)
 		side_panel.size = Vector2(268, 168)
-		action_bar.position = Vector2(viewport_size.x - action_width - margin, viewport_size.y - 104.0)
-		action_bar.size = action_size
+		action_bar.position = Vector2(viewport_size.x - (action_collapsed_size.x if action_bar_collapsed else action_width) - margin, viewport_size.y - 104.0)
+		action_bar.size = action_collapsed_size if action_bar_collapsed else action_size
+	_panel_flow()._sync_action_bar_state()
 
 	var dialog_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
 	var dialog_height := DIALOG_PANEL_HEIGHT
@@ -11953,6 +11972,8 @@ func _layout_hud() -> void:
 	if battle_message_expanded:
 		message_width = minf(viewport_size.x - margin * 2.0, 520.0 if is_phone_shape else 760.0)
 		message_height = minf(viewport_size.y - margin * 2.0, 260.0 if is_phone_shape else 330.0)
+	if battle_active and action_bar != null and action_bar.visible and not action_bar_collapsed and not is_phone_shape:
+		message_width = minf(message_width, maxf(300.0, action_bar.position.x - margin * 2.0 - 8.0))
 	var message_y := viewport_size.y - message_height - margin
 	if is_phone_shape and action_bar != null and action_bar.visible:
 		message_y = action_bar.position.y - message_height - 8.0
@@ -11965,13 +11986,15 @@ func _layout_hud() -> void:
 		var account_height: float = minf(viewport_size.y - margin * 2.0, 284.0)
 		account_panel.position = Vector2((viewport_size.x - account_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - account_height) * 0.5))
 		account_panel.size = Vector2(account_width, account_height)
-		if battle_active:
-			account_panel.visible = false
 		if account_panel.visible:
 			top_panel.visible = false
 			side_panel.visible = false
 			action_bar.visible = false
 			battle_message_panel.visible = false
+			if battle_command_panel != null:
+				battle_command_panel.visible = false
+			if battle_auto_stop_button != null:
+				battle_auto_stop_button.visible = false
 
 	if auth_panel != null:
 		var auth_width: float = minf(viewport_size.x - margin * 2.0, 460.0)

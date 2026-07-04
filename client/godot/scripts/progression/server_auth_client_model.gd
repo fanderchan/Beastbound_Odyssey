@@ -249,6 +249,15 @@ static func refresh_session_request(base_url: String, session_token: String) -> 
 	}
 
 
+static func logout_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/auth/logout" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	}
+
+
 static func is_session_invalid_code(code: String) -> bool:
 	return SESSION_INVALID_CODES.has(code.strip_edges())
 
@@ -810,6 +819,10 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 		"account": account,
 		"response": data,
 	}
+
+
+static func parse_logout_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	return _parse_server_json(response_code, body, "退出登录失败。")
 
 
 static func parse_player_search_response(response_code: int, body: PackedByteArray) -> Dictionary:

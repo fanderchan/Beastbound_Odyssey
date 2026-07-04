@@ -102,6 +102,8 @@ const MAP_DATA_PATHS := {
 }
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
+const ACTION_BAR_COLLAPSED_SIZE := Vector2(58, 86)
+const UI_PREFERENCES_PATH := "user://beastbound_ui_preferences.json"
 const DIALOG_PANEL_HEIGHT := 214.0
 const PET_PANEL_MIN_SIZE := Vector2(560.0, 360.0)
 const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
@@ -271,6 +273,18 @@ var action_bar:
 		return host.action_bar
 	set(value):
 		host.action_bar = value
+
+var action_bar_scroll:
+	get:
+		return host.action_bar_scroll
+	set(value):
+		host.action_bar_scroll = value
+
+var action_bar_collapse_button:
+	get:
+		return host.action_bar_collapse_button
+	set(value):
+		host.action_bar_collapse_button = value
 
 var dialog_panel:
 	get:
@@ -685,6 +699,12 @@ var account_switch_button:
 		return host.account_switch_button
 	set(value):
 		host.account_switch_button = value
+
+var account_logout_here_button:
+	get:
+		return host.account_logout_here_button
+	set(value):
+		host.account_logout_here_button = value
 
 var account_close_button:
 	get:
@@ -5228,6 +5248,12 @@ var perf_probe_totals:
 	set(value):
 		host.perf_probe_totals = value
 
+var action_bar_collapsed:
+	get:
+		return host.action_bar_collapsed
+	set(value):
+		host.action_bar_collapsed = value
+
 
 func _init(main_host = null) -> void:
 	host = main_host
@@ -5238,6 +5264,7 @@ func bind(main_host) -> void:
 
 
 func _build_hud() -> void:
+	action_bar_collapsed = _load_action_bar_collapsed_preference()
 	var canvas_layer = CanvasLayer.new()
 	host.add_child(canvas_layer)
 
@@ -5344,15 +5371,28 @@ func _build_hud() -> void:
 	hud_root.add_child(side_panel)
 
 	action_bar = _panel_container("ActionBar")
-	var action_scroll = ScrollContainer.new()
-	action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	action_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	action_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	action_bar.add_child(action_scroll)
+	action_bar.z_index = 23
+	var action_shell = HBoxContainer.new()
+	action_shell.name = "ActionShell"
+	action_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	action_shell.add_theme_constant_override("separation", 6)
+	action_bar.add_child(action_shell)
+	action_bar_collapse_button = Button.new()
+	action_bar_collapse_button.name = "ActionBarCollapseButton"
+	action_bar_collapse_button.custom_minimum_size = Vector2(42, MIN_TOUCH_BUTTON_SIZE.y)
+	action_bar_collapse_button.pressed.connect(_toggle_action_bar_collapsed)
+	action_shell.add_child(action_bar_collapse_button)
+	action_bar_scroll = ScrollContainer.new()
+	action_bar_scroll.name = "ActionScroll"
+	action_bar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	action_bar_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	action_bar_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_bar_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	action_shell.add_child(action_bar_scroll)
 	var action_row = HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 6)
-	action_scroll.add_child(action_row)
+	action_bar_scroll.add_child(action_row)
 	stop_button = Button.new()
 	stop_button.text = "挂机"
 	stop_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -7642,11 +7682,17 @@ func _build_account_panel() -> void:
 	outer.add_child(account_info_label)
 
 	account_switch_button = Button.new()
-	account_switch_button.text = "切换账号"
+	account_switch_button.text = "登出"
 	account_switch_button.custom_minimum_size = Vector2(0, 48)
 	account_switch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	account_switch_button.pressed.connect(_switch_account_to_login)
+	account_switch_button.pressed.connect(_logout_to_record_point)
 	outer.add_child(account_switch_button)
+	account_logout_here_button = Button.new()
+	account_logout_here_button.text = "原地登出"
+	account_logout_here_button.custom_minimum_size = Vector2(0, 48)
+	account_logout_here_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	account_logout_here_button.pressed.connect(_logout_in_place)
+	outer.add_child(account_logout_here_button)
 	hud_root.add_child(account_panel)
 
 func _set_auth_mode(register_mode: bool) -> void:
@@ -9126,11 +9172,76 @@ func _refresh_gm_visibility() -> void:
 		_close_qa_panel(false)
 		_close_numeric_workbench_panel(false)
 
+func _sync_action_bar_state() -> void:
+	if action_bar_scroll != null:
+		action_bar_scroll.visible = not action_bar_collapsed
+	if action_bar_collapse_button != null:
+		action_bar_collapse_button.text = "◀" if action_bar_collapsed else "▶"
+		action_bar_collapse_button.tooltip_text = "展开工具栏" if action_bar_collapsed else "收起工具栏"
+	if account_menu_button != null:
+		account_menu_button.disabled = not account_authenticated
+	if qa_menu_button != null:
+		qa_menu_button.disabled = battle_active or not _can_use_gm_tools()
+	var battle_locked_buttons: Array = [
+		stop_button,
+		ring_button,
+		player_status_menu_button,
+		bag_menu_button,
+		equipment_menu_button,
+		pet_menu_button,
+		codex_menu_button,
+		quest_menu_button,
+		map_menu_button,
+		chat_menu_button,
+		party_menu_button,
+		family_menu_button,
+		mailbox_menu_button,
+		training_partner_menu_button,
+		auto_settings_menu_button,
+	]
+	for button in battle_locked_buttons:
+		if button != null:
+			button.disabled = battle_active
+	if not quick_slot_buttons.is_empty():
+		_refresh_quick_bar()
+
+func _toggle_action_bar_collapsed() -> void:
+	_set_action_bar_collapsed(not action_bar_collapsed)
+
+func _set_action_bar_collapsed(collapsed: bool) -> void:
+	action_bar_collapsed = collapsed
+	_save_action_bar_collapsed_preference(collapsed)
+	_sync_action_bar_state()
+	if host != null:
+		host._layout_hud()
+
+func _load_action_bar_collapsed_preference() -> bool:
+	var preferences := _load_ui_preferences()
+	return bool(preferences.get("actionBarCollapsed", false))
+
+func _save_action_bar_collapsed_preference(collapsed: bool) -> void:
+	var preferences := _load_ui_preferences()
+	preferences["actionBarCollapsed"] = collapsed
+	_save_ui_preferences(preferences)
+
+func _load_ui_preferences() -> Dictionary:
+	if not FileAccess.file_exists(UI_PREFERENCES_PATH):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(UI_PREFERENCES_PATH))
+	if parsed is Dictionary:
+		return (parsed as Dictionary).duplicate(true)
+	return {}
+
+func _save_ui_preferences(preferences: Dictionary) -> void:
+	var file := FileAccess.open(UI_PREFERENCES_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify(preferences, "\t"))
+	file.close()
+
 func _open_account_panel() -> void:
 	if not account_authenticated:
 		_open_auth_panel()
-		return
-	if battle_active:
 		return
 	host._set_hang_mode(false)
 	host._close_dialog()
@@ -9164,6 +9275,10 @@ func _close_account_panel(update_layout: bool = true) -> void:
 func _refresh_account_panel() -> void:
 	if account_info_label == null:
 		return
+	if account_switch_button != null:
+		account_switch_button.disabled = false
+	if account_logout_here_button != null:
+		account_logout_here_button.disabled = false
 	var display_name = str(current_account_session.get("displayName", "玩家")).strip_edges()
 	var username = str(current_account_session.get("username", "")).strip_edges()
 	var source = str(current_account_session.get("authSource", ServerAuthClientModel.SOURCE_SERVER))
@@ -9177,17 +9292,48 @@ func _refresh_account_panel() -> void:
 		var revision = int(summary.get("profileRevision", 0))
 		var sync_label = "同步中" if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading" else ("冲突" if server_profile_sync_state == "conflict" else "已连接")
 		profile_line = "档案：%s r%d %s" % [player_id if player_id != "" else "服务器绑定", revision, sync_label]
-	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n切换账号前会保存本地缓存，进度以服务器为准。" % [
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n登出会回到记录点；原地登出会保留当前位置。" % [
 		display_name,
 		username if username != "" else "-",
 		source_label,
 		profile_line,
 	]
 
-func _switch_account_to_login() -> void:
+func _logout_to_record_point() -> void:
+	_set_account_logout_buttons_disabled(true)
+	if profile_save_enabled:
+		host._flush_profile_save_now()
+	var returned := _return_player_to_record_point()
+	if _is_server_account_session():
+		await _publish_current_position_once_to_server()
+		await _publish_logout_to_server()
+	if profile_save_enabled:
+		host._save_player_profile_now()
+	_set_world_log_message("已回到记录点「%s」。" % str(returned.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL)))
+	_switch_account_to_login(false)
+
+func _logout_in_place() -> void:
+	_set_account_logout_buttons_disabled(true)
 	if profile_save_enabled:
 		host._flush_profile_save_now()
 		host._save_player_profile_now()
+	if _is_server_account_session():
+		await _publish_logout_to_server()
+	_switch_account_to_login(false)
+
+func _set_account_logout_buttons_disabled(disabled: bool) -> void:
+	if account_switch_button != null:
+		account_switch_button.disabled = disabled
+	if account_logout_here_button != null:
+		account_logout_here_button.disabled = disabled
+
+func _switch_account_to_login(save_before_logout: bool = true) -> void:
+	if battle_active:
+		host._end_battle(false)
+	if profile_save_enabled:
+		if save_before_logout:
+			host._flush_profile_save_now()
+			host._save_player_profile_now()
 	account_authenticated = false
 	current_account_session = {}
 	server_profile_sync_state = "off"
@@ -9218,6 +9364,35 @@ func _switch_account_to_login() -> void:
 	host._update_hud_text(true)
 	_open_auth_panel(false)
 	host._layout_hud()
+
+func _publish_logout_to_server() -> bool:
+	if not _is_server_account_session():
+		return false
+	var response = await host._auto_http_request_spec(ServerAuthClientModel.logout_request(
+		_server_profile_base_url(),
+		_server_profile_token()
+	))
+	var parsed = ServerAuthClientModel.parse_logout_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	return bool(parsed.get("ok", false))
+
+func _publish_current_position_once_to_server() -> bool:
+	if not _is_server_account_session() or player == null or map_data.is_empty():
+		return false
+	var response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		_current_online_position_payload()
+	))
+	var parsed = ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if not bool(parsed.get("ok", false)):
+		return false
+	var position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	if not position.is_empty():
+		_apply_server_step_move_authority_position(position)
+	if parsed.has("party"):
+		_apply_server_party_snapshot(parsed.get("party", null))
+	_apply_online_position_players(parsed.get("players", []))
+	return true
 
 func _handle_server_session_expired(message: String = "") -> void:
 	var username := str(current_account_session.get("username", "")).strip_edges()
