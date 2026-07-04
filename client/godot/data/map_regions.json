@@ -180,6 +180,54 @@
       ]
     },
     {
+      "id": "mistcap_marsh",
+      "label": "雾帽湿地",
+      "type": "field",
+      "mapIds": ["mistcap_marsh"],
+      "entryMapId": "mistcap_marsh",
+      "levelRange": {"min": 10, "max": 24},
+      "safeReturn": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "from_mistcap_marsh"
+      },
+      "encounterGroups": [
+        "mistcap_reeds_01",
+        "mistcap_pools_02"
+      ]
+    },
+    {
+      "id": "suncrack_badlands",
+      "label": "裂日荒原",
+      "type": "field",
+      "mapIds": ["suncrack_badlands"],
+      "entryMapId": "suncrack_badlands",
+      "levelRange": {"min": 25, "max": 45},
+      "safeReturn": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "from_suncrack_badlands"
+      },
+      "encounterGroups": [
+        "suncrack_scrub_01",
+        "suncrack_ridge_02"
+      ]
+    },
+    {
+      "id": "windglass_highlands",
+      "label": "风镜高地",
+      "type": "field",
+      "mapIds": ["windglass_highlands"],
+      "entryMapId": "windglass_highlands",
+      "levelRange": {"min": 45, "max": 65},
+      "safeReturn": {
+        "mapId": "firebud_village_gate",
+        "spawnName": "from_windglass_highlands"
+      },
+      "encounterGroups": [
+        "windglass_meadow_01",
+        "windglass_cliff_02"
+      ]
+    },
+    {
       "id": "manor_ring",
       "label": "九大庄园",
       "type": "field",

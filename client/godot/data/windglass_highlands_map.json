@@ -1,0 +1,123 @@
+{
+  "id": "windglass_highlands",
+  "name": "风镜高地",
+  "gridSize": [34, 28],
+  "tileSize": [80, 40],
+  "origin": [760, 96],
+  "spawnCell": [4, 22],
+  "spawnPoints": {
+    "default": [4, 22],
+    "from_firebud_village": [4, 22]
+  },
+  "blockedCells": [
+    [7, 8],
+    [8, 8],
+    [9, 9],
+    [14, 6],
+    [15, 6],
+    [16, 7],
+    [21, 10],
+    [22, 10],
+    [23, 11],
+    [18, 18],
+    [19, 18],
+    [20, 19],
+    [27, 17],
+    [28, 17],
+    [29, 18]
+  ],
+  "decorCells": [
+    {"cell": [9, 13], "kind": "grass"},
+    {"cell": [10, 14], "kind": "flower"},
+    {"cell": [12, 16], "kind": "grass"},
+    {"cell": [18, 9], "kind": "flower"},
+    {"cell": [19, 10], "kind": "grass"},
+    {"cell": [23, 15], "kind": "flower"},
+    {"cell": [24, 16], "kind": "grass"},
+    {"cell": [15, 22], "kind": "grass"},
+    {"cell": [26, 21], "kind": "flower"}
+  ],
+  "encounterZones": [
+    {
+      "id": "windglass_meadow_01",
+      "name": "风镜草坡",
+      "rects": [[9, 13, 8, 5]],
+      "encounterRate": 0.13,
+      "encounterGroupId": "windglass_meadow_01",
+      "wildPetPool": [
+        {
+          "formId": "driftfox_highland_wind9_earth1",
+          "name": "野生高地风狐",
+          "weight": 36,
+          "levelMin": 45,
+          "levelMax": 55,
+          "battleStats": {"maxHp": 560, "attack": 120, "defense": 65, "agility": 190}
+        },
+        {
+          "formId": "tidefin_sky_water5_wind5",
+          "name": "野生云潮鳍兽",
+          "weight": 30,
+          "levelMin": 46,
+          "levelMax": 55,
+          "battleStats": {"maxHp": 620, "attack": 112, "defense": 84, "agility": 150}
+        },
+        {
+          "formId": "emberhorn_gale_fire5_wind5",
+          "name": "野生岚角兽",
+          "weight": 24,
+          "levelMin": 48,
+          "levelMax": 56,
+          "battleStats": {"maxHp": 640, "attack": 132, "defense": 72, "agility": 160}
+        }
+      ],
+      "previewText": "高地草坡反射着像玻璃一样的风光。"
+    },
+    {
+      "id": "windglass_cliff_02",
+      "name": "风镜断崖",
+      "rects": [[21, 14, 7, 6]],
+      "encounterRate": 0.15,
+      "encounterGroupId": "windglass_cliff_02",
+      "wildPetPool": [
+        {
+          "formId": "driftfox_highland_wind9_earth1",
+          "name": "野生高地风狐",
+          "weight": 34,
+          "levelMin": 55,
+          "levelMax": 65,
+          "battleStats": {"maxHp": 700, "attack": 150, "defense": 80, "agility": 220}
+        },
+        {
+          "formId": "tidefin_sky_water5_wind5",
+          "name": "野生云潮鳍兽",
+          "weight": 30,
+          "levelMin": 55,
+          "levelMax": 65,
+          "battleStats": {"maxHp": 760, "attack": 140, "defense": 102, "agility": 176}
+        },
+        {
+          "formId": "emberhorn_gale_fire5_wind5",
+          "name": "野生岚角兽",
+          "weight": 26,
+          "levelMin": 56,
+          "levelMax": 65,
+          "battleStats": {"maxHp": 790, "attack": 168, "defense": 88, "agility": 188}
+        }
+      ],
+      "previewText": "断崖边的风声很尖，野兽会从侧面冲出来。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "windglass_highlands_return_firebud",
+      "name": "回到火芽村",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [3, 22],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_windglass_highlands"
+    }
+  ]
+}

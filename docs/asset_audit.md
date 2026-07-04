@@ -1,14 +1,14 @@
 # Beastbound Odyssey Asset Audit
 
-Date: 2026-07-03
+Date: 2026-07-04
 Scope: tracked runtime/client files under `client/godot`; `.run/`, `.godot/`, exported packs, screenshots, movies, and local validation artifacts are excluded.
 
 ## Summary
 
 - Tracked external runtime media: 0 files. No tracked PNG/JPG/WebP/GIF/SVG/audio/font/3D/source-art files are currently shipped.
 - Tracked Godot scenes: 3 files: `Main.tscn`, `Player.tscn`, `Pet.tscn`.
-- Tracked map JSON files: 25 files under `client/godot/data/*_map.json`.
-- Pet template placeholder palettes: 21 `placeholderPalette` declarations in `client/godot/data/pet_templates.json`.
+- Tracked map JSON files: 28 files under `client/godot/data/*_map.json`.
+- Pet template placeholder palettes: 31 `placeholderPalette` declarations in `client/godot/data/pet_templates.json`; 10 F1 field pets also carry explicit `visual.artPlan.replacementPath` entries for later original-art replacement.
 - StoneAge/SA80 art reuse: none in tracked runtime assets. Existing references are design/behavior reference only.
 
 ## Runtime Asset Inventory
@@ -19,7 +19,7 @@ Scope: tracked runtime/client files under `client/godot`; `.run/`, `.godot/`, ex
 | Pet follower scene geometry | `client/godot/scenes/pet/Pet.tscn`, `client/godot/scripts/pet/pet.gd` | Original in-repo Godot Polygon2D shapes and script animation cues | Project-owned code/scene data | Placeholder. Uses simple body, feet, and facing marker | Replace with original pet follower sprite sheets keyed by template/form; keep `idle`/`walk` state contract and add source/license metadata |
 | World terrain rendering | `client/godot/scripts/main.gd`, `client/godot/data/*_map.json` | Original structured map data and code-drawn isometric tiles | Project-owned map data and rendering code | Placeholder. Terrain, decor, zones, markers, and interaction points are drawn procedurally | Introduce original tilesets/props; bind them from map JSON or a map asset manifest while preserving collision, transfer, encounter, and marker contracts |
 | Battle scene rendering | `client/godot/scripts/main.gd`, `client/godot/data/pet_templates.json` | Original code-drawn battle actors, formation slots, effects, labels, and data palettes | Project-owned code/data | Placeholder. Actors, mounts, melee/contact, launch, floor noise, HP bars, and status visuals are procedural | Replace actor and effect drawing with original sprite/effect assets; maintain shared PC/mobile formation coordinates and 10v10 slot contract |
-| Pet forms and palettes | `client/godot/data/pet_templates.json` | Original template data; visual identity currently represented by `placeholderPalette` | Project-owned data | Placeholder. 21 forms still point to palette tags rather than art assets | Add `assetId` or manifest references for each form; keep palette tags only as fallback/dev diagnostics, not final release art |
+| Pet forms and palettes | `client/godot/data/pet_templates.json` | Original template data; visual identity currently represented by `placeholderPalette` | Project-owned data | Placeholder. 31 forms still point to palette tags rather than art assets; F1 field pets include explicit art replacement plans | Add `assetId` or manifest references for each form; keep palette tags only as fallback/dev diagnostics, not final release art |
 | Maps and regions | `client/godot/data/*_map.json`, `client/godot/data/map_regions.json`, `client/godot/data/rebirth_trials.json` | Original structured gameplay/map contracts | Project-owned data | Partially placeholder. Layouts are functional, but visual dressing is procedural and sparse | Attach terrain/prop asset manifests per region; validate walkability, transfers, NPC facilities, encounters, and task-route markers after art replacement |
 | UI and HUD | `client/godot/scripts/ui/*.gd`, `client/godot/scripts/main.gd` | Original Godot Control tree built in code | Project-owned code | Mostly production-functional but visually plain; no external icon/font pack is shipped | Add an original UI icon/font/style pack with documented license/ownership; keep Chinese player-facing text and mobile-first layout rules |
 | Numeric/QA/dev panels | `client/godot/scripts/ui/panel_flow_coordinator.gd`, `client/godot/scripts/ui/qa_panel_*.gd` | Original tool UI code | Project-owned code | Developer-only tools, now gated from release by E3 | Do not ship as player-facing content; any future internal assets must live behind the dev-tools feature gate |
@@ -31,7 +31,7 @@ Scope: tracked runtime/client files under `client/godot`; `.run/`, `.godot/`, ex
 - Pet follower visual: replace Polygon2D pet body/facing/feet placeholders.
 - Battle actors: replace procedural player/pet/wild/mount bodies, shadows, contact, launch, float feedback, and floor/noise drawings.
 - World tiles and decor: replace procedural isometric tile fills, decor cells, encounter-zone tinting, and marker-only facilities.
-- Pet forms: replace all 21 `placeholderPalette` pet form tags with explicit original art asset references.
+- Pet forms: replace all 31 `placeholderPalette` pet form tags with explicit original art asset references. The F1 mossback/driftfox/emberhorn/tidefin forms already declare replacement paths under `client/godot/assets/pets/`.
 - UI visual system: add owned icons/fonts/style resources if the product target requires a finished non-placeholder presentation.
 
 ## Future Import Rules

@@ -14,6 +14,30 @@
       "passiveSkillId": "wuli_hard_shell"
     },
     {
+      "lineId": "mossback",
+      "lineName": "苔背兽系",
+      "description": "湿地与荒地边缘常见的厚甲兽类，偏生命和防御。",
+      "passiveSkillId": "wuli_hard_shell"
+    },
+    {
+      "lineId": "driftfox",
+      "lineName": "风狐系",
+      "description": "行动轻快的野外兽类，适合高速和状态玩法。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
+      "lineId": "emberhorn",
+      "lineName": "炽角兽系",
+      "description": "荒原上活跃的角兽，偏攻击和冲锋。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
+      "lineId": "tidefin",
+      "lineName": "潮鳍兽系",
+      "description": "潮湿地带与高地云湖出现的水属性野兽，偏均衡和耐久。",
+      "passiveSkillId": "bui_resistant_skin"
+    },
+    {
       "lineId": "man_dragon",
       "lineName": "人龙系",
       "description": "高攻高速的长期培养宠物，当前用于成长观察测试。",
@@ -65,6 +89,34 @@
       "lineId": "wuli",
       "battleRole": "wild_pet",
       "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
+      "subtypeId": "mossback_marsh",
+      "subtypeName": "苔背兽",
+      "lineId": "mossback",
+      "battleRole": "field_tank_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_stone_gaze", "pet_focus_bite"]
+    },
+    {
+      "subtypeId": "driftfox_glade",
+      "subtypeName": "风狐",
+      "lineId": "driftfox",
+      "battleRole": "field_speed_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry"]
+    },
+    {
+      "subtypeId": "emberhorn_badlands",
+      "subtypeName": "炽角兽",
+      "lineId": "emberhorn",
+      "battleRole": "field_attack_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_focus_bite"]
+    },
+    {
+      "subtypeId": "tidefin_mist",
+      "subtypeName": "潮鳍兽",
+      "lineId": "tidefin",
+      "battleRole": "field_balanced_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder"]
     },
     {
       "subtypeId": "man_dragon_blue",
@@ -278,6 +330,346 @@
       },
       "visual": {
         "placeholderPalette": "wuli_tough"
+      }
+    },
+    {
+      "formId": "mossback_marsh_earth7_water3",
+      "formName": "湿地苔背兽",
+      "wildName": "野生苔背兽",
+      "lineId": "mossback",
+      "subtypeId": "mossback_marsh",
+      "elements": {
+        "fire": 0,
+        "water": 3,
+        "earth": 7,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "encounterWeight": 1.0,
+      "baseStats": {
+        "maxHp": 190,
+        "attack": 14,
+        "defense": 30,
+        "agility": 42
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 50
+      },
+      "visual": {
+        "placeholderPalette": "f1_mossback_marsh",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "低重心四足厚甲兽，背部有湿地苔藓和短刺",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/mossback/"
+        }
+      }
+    },
+    {
+      "formId": "mossback_sunbaked_earth6_fire4",
+      "formName": "晒甲苔背兽",
+      "wildName": "野生晒甲兽",
+      "lineId": "mossback",
+      "subtypeId": "mossback_marsh",
+      "elements": {
+        "fire": 4,
+        "water": 0,
+        "earth": 6,
+        "wind": 0
+      },
+      "growthProfileId": "hp_high",
+      "encounterWeight": 0.72,
+      "baseStats": {
+        "maxHp": 214,
+        "attack": 16,
+        "defense": 28,
+        "agility": 38
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 62
+      },
+      "visual": {
+        "placeholderPalette": "f1_mossback_sunbaked",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "干裂岩甲四足兽，背甲保留苔纹但颜色偏赭石",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/mossback/"
+        }
+      }
+    },
+    {
+      "formId": "driftfox_mist_wind7_water3",
+      "formName": "雾风狐",
+      "wildName": "野生雾风狐",
+      "lineId": "driftfox",
+      "subtypeId": "driftfox_glade",
+      "elements": {
+        "fire": 0,
+        "water": 3,
+        "earth": 0,
+        "wind": 7
+      },
+      "growthProfileId": "agility_high",
+      "encounterWeight": 0.9,
+      "baseStats": {
+        "maxHp": 132,
+        "attack": 18,
+        "defense": 9,
+        "agility": 128
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 56
+      },
+      "visual": {
+        "placeholderPalette": "f1_driftfox_mist",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "长尾轻型狐兽，毛尖带雾蓝色渐层",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/driftfox/"
+        }
+      }
+    },
+    {
+      "formId": "driftfox_highland_wind9_earth1",
+      "formName": "高地风狐",
+      "wildName": "野生高地风狐",
+      "lineId": "driftfox",
+      "subtypeId": "driftfox_glade",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 1,
+        "wind": 9
+      },
+      "growthProfileId": "agility_high",
+      "encounterWeight": 0.78,
+      "baseStats": {
+        "maxHp": 142,
+        "attack": 20,
+        "defense": 10,
+        "agility": 142
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 68
+      },
+      "visual": {
+        "placeholderPalette": "f1_driftfox_highland",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "耳羽更长的高地狐兽，奔跑时尾部像风带",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/driftfox/"
+        }
+      }
+    },
+    {
+      "formId": "emberhorn_red_fire8_earth2",
+      "formName": "赤角兽",
+      "wildName": "野生赤角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_badlands",
+      "elements": {
+        "fire": 8,
+        "water": 0,
+        "earth": 2,
+        "wind": 0
+      },
+      "growthProfileId": "attack_high",
+      "encounterWeight": 1.0,
+      "baseStats": {
+        "maxHp": 174,
+        "attack": 32,
+        "defense": 12,
+        "agility": 66
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 60
+      },
+      "visual": {
+        "placeholderPalette": "f1_emberhorn_red",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "短角奔袭兽，额角像余烬矿石，四肢有火色鬃毛",
+          "neededAnimations": ["idle", "walk", "charge", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/emberhorn/"
+        }
+      }
+    },
+    {
+      "formId": "emberhorn_ash_fire6_wind4",
+      "formName": "灰烬角兽",
+      "wildName": "野生灰烬角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_badlands",
+      "elements": {
+        "fire": 6,
+        "water": 0,
+        "earth": 0,
+        "wind": 4
+      },
+      "growthProfileId": "attack_high",
+      "encounterWeight": 0.86,
+      "baseStats": {
+        "maxHp": 164,
+        "attack": 30,
+        "defense": 11,
+        "agility": 84
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 64
+      },
+      "visual": {
+        "placeholderPalette": "f1_emberhorn_ash",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "灰黑鬃毛角兽，冲刺时带碎灰尾迹",
+          "neededAnimations": ["idle", "walk", "charge", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/emberhorn/"
+        }
+      }
+    },
+    {
+      "formId": "emberhorn_gale_fire5_wind5",
+      "formName": "岚角兽",
+      "wildName": "野生岚角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_badlands",
+      "elements": {
+        "fire": 5,
+        "water": 0,
+        "earth": 0,
+        "wind": 5
+      },
+      "growthProfileId": "balanced",
+      "encounterWeight": 0.68,
+      "baseStats": {
+        "maxHp": 178,
+        "attack": 27,
+        "defense": 13,
+        "agility": 96
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 72
+      },
+      "visual": {
+        "placeholderPalette": "f1_emberhorn_gale",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "角尖分叉的风火角兽，鬃毛向后形成弧形风纹",
+          "neededAnimations": ["idle", "walk", "charge", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/emberhorn/"
+        }
+      }
+    },
+    {
+      "formId": "tidefin_mist_water8_wind2",
+      "formName": "雾潮鳍兽",
+      "wildName": "野生潮鳍兽",
+      "lineId": "tidefin",
+      "subtypeId": "tidefin_mist",
+      "elements": {
+        "fire": 0,
+        "water": 8,
+        "earth": 0,
+        "wind": 2
+      },
+      "growthProfileId": "balanced",
+      "encounterWeight": 1.0,
+      "baseStats": {
+        "maxHp": 168,
+        "attack": 17,
+        "defense": 18,
+        "agility": 70
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 52
+      },
+      "visual": {
+        "placeholderPalette": "f1_tidefin_mist",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "半水栖四足兽，肩背有软鳍和雾蓝纹路",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/tidefin/"
+        }
+      }
+    },
+    {
+      "formId": "tidefin_sky_water5_wind5",
+      "formName": "云潮鳍兽",
+      "wildName": "野生云潮鳍兽",
+      "lineId": "tidefin",
+      "subtypeId": "tidefin_mist",
+      "elements": {
+        "fire": 0,
+        "water": 5,
+        "earth": 0,
+        "wind": 5
+      },
+      "growthProfileId": "balanced",
+      "encounterWeight": 0.75,
+      "baseStats": {
+        "maxHp": 176,
+        "attack": 18,
+        "defense": 17,
+        "agility": 88
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 70
+      },
+      "visual": {
+        "placeholderPalette": "f1_tidefin_sky",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "更轻盈的潮鳍兽，背鳍像云翼但仍保持四足兽轮廓",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/tidefin/"
+        }
+      }
+    },
+    {
+      "formId": "tidefin_reed_water6_earth4",
+      "formName": "苇潮鳍兽",
+      "wildName": "野生苇潮鳍兽",
+      "lineId": "tidefin",
+      "subtypeId": "tidefin_mist",
+      "elements": {
+        "fire": 0,
+        "water": 6,
+        "earth": 4,
+        "wind": 0
+      },
+      "growthProfileId": "hp_high",
+      "encounterWeight": 0.82,
+      "baseStats": {
+        "maxHp": 188,
+        "attack": 15,
+        "defense": 20,
+        "agility": 58
+      },
+      "capture": {
+        "catchable": true,
+        "difficulty": 58
+      },
+      "visual": {
+        "placeholderPalette": "f1_tidefin_reed",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "背鳍夹着芦苇状硬刺的潮鳍兽，体型更厚",
+          "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
+          "replacementPath": "client/godot/assets/pets/tidefin/"
+        }
       }
     },
     {

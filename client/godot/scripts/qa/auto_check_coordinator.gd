@@ -85,6 +85,9 @@ const MAP_DATA_PATHS := {
 	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
 	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
 	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
+	"mistcap_marsh": "res://data/mistcap_marsh_map.json",
+	"suncrack_badlands": "res://data/suncrack_badlands_map.json",
+	"windglass_highlands": "res://data/windglass_highlands_map.json",
 	"firebud_manor": "res://data/firebud_manor_map.json",
 	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
 	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
@@ -9767,9 +9770,48 @@ func _run_auto_map_region_contract_check() -> void:
 		and MapRegionCatalog.floor_order_for_region("shadow_oath_cavern").size() == 5
 		and str(MapRegionCatalog.safe_return_for_region("shadow_oath_cavern").get("spawnName", "")) == "from_shadow_oath_cavern"
 	)
+	var f1_region_ids := ["mistcap_marsh", "suncrack_badlands", "windglass_highlands"]
+	var f1_regions_ok := true
+	var f1_transfers_ok := true
+	for f1_region_id in f1_region_ids:
+		var f1_region = MapRegionCatalog.region_for_id(f1_region_id)
+		var f1_entry_map_id := str(f1_region.get("entryMapId", "")).strip_edges()
+		var f1_safe_return := MapRegionCatalog.safe_return_for_region(f1_region_id)
+		var f1_level_range := f1_region.get("levelRange", {}) as Dictionary
+		var f1_encounter_groups_value = f1_region.get("encounterGroups", [])
+		var f1_encounter_groups: Array = f1_encounter_groups_value as Array if f1_encounter_groups_value is Array else []
+		f1_regions_ok = (
+			f1_regions_ok
+			and not f1_region.is_empty()
+			and str(f1_region.get("type", "")) == "field"
+			and MapRegionCatalog.map_ids_for_region(f1_region_id).has(f1_entry_map_id)
+			and int(f1_level_range.get("min", 0)) > 0
+			and int(f1_level_range.get("max", 0)) >= int(f1_level_range.get("min", 0))
+			and str(f1_safe_return.get("mapId", "")) == "firebud_village_gate"
+			and str(f1_safe_return.get("spawnName", "")).begins_with("from_")
+			and f1_encounter_groups.size() >= 2
+		)
+		var f1_map = host._map_data_for_id(f1_entry_map_id)
+		var f1_village_warp = host._warp_to_map("firebud_village_gate", f1_entry_map_id)
+		var f1_return_warp = InteractionModel.find_by_id(f1_map, "%s_return_firebud" % f1_entry_map_id)
+		var f1_group_hits := 0
+		for group_value in f1_encounter_groups:
+			var group_id := str(group_value)
+			for zone_value in EncounterModel.encounter_zones(f1_map):
+				if zone_value is Dictionary and str((zone_value as Dictionary).get("encounterGroupId", "")) == group_id:
+					f1_group_hits += 1
+					break
+		f1_transfers_ok = (
+			f1_transfers_ok
+			and not f1_map.is_empty()
+			and not f1_village_warp.is_empty()
+			and not f1_return_warp.is_empty()
+			and str(f1_return_warp.get("toMap", "")) == "firebud_village_gate"
+			and f1_group_hits >= 2
+		)
 	var reverse_lookup_ok = str(MapRegionCatalog.region_for_map_id("gm_10v10_training_ground").get("id", "")) == "gm_training_ground"
-	var status = "ok" if region_errors.is_empty() and rebirth_errors.is_empty() and village_ok and element_ok and element_structure_ok and shadow_ok and shadow_structure_ok and reverse_lookup_ok else "failed"
-	print("map region contract check ready: status=%s regions=%s rebirth=%s village=%s element=%s element_structure=%s shadow=%s shadow_structure=%s reverse=%s errors=%s" % [
+	var status = "ok" if region_errors.is_empty() and rebirth_errors.is_empty() and village_ok and element_ok and element_structure_ok and shadow_ok and shadow_structure_ok and f1_regions_ok and f1_transfers_ok and reverse_lookup_ok else "failed"
+	print("map region contract check ready: status=%s regions=%s rebirth=%s village=%s element=%s element_structure=%s shadow=%s shadow_structure=%s f1_regions=%s f1_transfers=%s reverse=%s errors=%s" % [
 		status,
 		str(region_errors.is_empty()),
 		str(rebirth_errors.is_empty()),
@@ -9778,6 +9820,8 @@ func _run_auto_map_region_contract_check() -> void:
 		str(element_structure_ok),
 		str(shadow_ok),
 		str(shadow_structure_ok),
+		str(f1_regions_ok),
+		str(f1_transfers_ok),
 		str(reverse_lookup_ok),
 		";".join(region_errors + rebirth_errors),
 	])
@@ -19537,6 +19581,47 @@ func _run_auto_pet_template_catalog_check() -> void:
 	catalog_errors.append_array(BattlePassiveCatalog.validation_errors())
 	catalog_errors.append_array(PetSkillTrainingModel.validation_errors())
 	catalog_errors.append_array(PetTemplateCatalog.validation_errors())
+	var f1_form_ids := [
+		"mossback_marsh_earth7_water3",
+		"mossback_sunbaked_earth6_fire4",
+		"driftfox_mist_wind7_water3",
+		"driftfox_highland_wind9_earth1",
+		"emberhorn_red_fire8_earth2",
+		"emberhorn_ash_fire6_wind4",
+		"emberhorn_gale_fire5_wind5",
+		"tidefin_mist_water8_wind2",
+		"tidefin_sky_water5_wind5",
+		"tidefin_reed_water6_earth4",
+	]
+	var f1_forms_ok := true
+	for form_id in f1_form_ids:
+		var form := PetTemplateCatalog.runtime_template_for_form(form_id)
+		var capture = form.get("capture", {})
+		var visual = form.get("visual", {})
+		var capture_dict := capture as Dictionary if capture is Dictionary else {}
+		var visual_dict := visual as Dictionary if visual is Dictionary else {}
+		var art_plan_value = visual_dict.get("artPlan", {})
+		var art_plan_dict := art_plan_value as Dictionary if art_plan_value is Dictionary else {}
+		var actor := PetTemplateCatalog.actor_from_form(
+			form_id,
+			"f1_%s" % form_id,
+			BattleModel.SIDE_ENEMY,
+			"wild_pet",
+			"enemy.back.1"
+		)
+		f1_forms_ok = (
+			f1_forms_ok
+			and not form.is_empty()
+			and not actor.is_empty()
+			and bool(capture_dict.get("catchable", false))
+			and str(art_plan_dict.get("replacementPath", "")).begins_with("client/godot/assets/pets/")
+		)
+	var f1_lines_ok = (
+		not PetTemplateCatalog.line_by_id("mossback").is_empty()
+		and not PetTemplateCatalog.line_by_id("driftfox").is_empty()
+		and not PetTemplateCatalog.line_by_id("emberhorn").is_empty()
+		and not PetTemplateCatalog.line_by_id("tidefin").is_empty()
+	)
 	var bui_actor = BattlePassiveCatalog.apply_actor_passive_effects(PetTemplateCatalog.actor_from_form(
 		"bui_normal_red_fire10",
 		BattleModel.PLAYER_PET_ID,
@@ -19619,10 +19704,12 @@ func _run_auto_pet_template_catalog_check() -> void:
 			and str(standby_tough.get("formId", "")) == "bui_normal_thick_earth10"
 			and int((standby_tough.get("elements", {}) as Dictionary).get("earth", 0)) == 10
 		)
-	var status = "ok" if catalog_errors.is_empty() and bui_skills_ok and wuli_skills_ok and resist_ok and battle_actor_ok and party_ok else "failed"
-	print("pet template catalog check ready: status=%s errors=%d bui_skills=%s wuli_skills=%s resist=%s battle_actor=%s party=%s bui=%s wuli=%s" % [
+	var status = "ok" if catalog_errors.is_empty() and f1_forms_ok and f1_lines_ok and bui_skills_ok and wuli_skills_ok and resist_ok and battle_actor_ok and party_ok else "failed"
+	print("pet template catalog check ready: status=%s errors=%d f1_forms=%s f1_lines=%s bui_skills=%s wuli_skills=%s resist=%s battle_actor=%s party=%s bui=%s wuli=%s" % [
 		status,
 		catalog_errors.size(),
+		str(f1_forms_ok),
+		str(f1_lines_ok),
 		str(bui_skills_ok),
 		str(wuli_skills_ok),
 		str(resist_ok),

@@ -152,8 +152,10 @@
 - 阶段 F0 验证（2026-07-04）：`node tools/run_local_ci.mjs` 通过 10/10，summary `.run/local_ci/2026-07-03T23-46-40-505Z_summary.json`，log `.run/local_ci/2026-07-03T23-46-40-505Z.log`；服务端 92/92，Godot 自动检查 188/188；性能基线 `perf-idle` process_total median=0.270ms p95=0.370ms，`perf-moving` median=0.210ms p95=0.240ms，`perf-movement-spam` max_input_us=192 且 coalesced=true/settled=true，`perf-shop-select` 与 `perf-player-stat-spam` 通过。
 
 ### F1 — 内容体量 MVP
-- [ ] G1.2 新 region ×2~3
-- [ ] G1.1 新可捕宠物 ×10（非 placeholder 或明确 art 计划）
+- [x] G1.2 新 region ×2~3
+  - 证据：新增 `mistcap_marsh`、`suncrack_badlands`、`windglass_highlands` 三个 field region、三张 map JSON、火芽村入口往返传送；`node tools/run_godot_auto_checks.mjs --only --auto-map-region-contract-check,--auto-pet-template-catalog-check,--auto-pet-codex-list-check,--auto-pet-encounter-table-check --fail-fast --timeout-ms 180000` 通过 5/5，log `.run/godot_auto_checks/2026-07-04T01-10-04-355Z.log`，其中 `f1_regions=true f1_transfers=true`。
+- [x] G1.1 新可捕宠物 ×10（非 placeholder 或明确 art 计划）
+  - 证据：`client/godot/data/pet_templates.json` 新增苔背兽/风狐/炽角兽/潮鳍兽 4 个种系与 10 个 `capture.catchable=true` form，每个 form 带 `visual.artPlan.replacementPath`；同一轮 `--auto-pet-template-catalog-check` 输出 `f1_forms=true f1_lines=true`，`--auto-pet-codex-list-check` 通过；`node tools/run_godot_auto_checks.mjs --only --auto-balance-catalog-check --fail-fast --timeout-ms 180000` 通过 2/2，log `.run/godot_auto_checks/2026-07-04T01-10-30-559Z.log`。
 - [ ] G1.3 扩展消耗品/任务道具一批
 - [ ] G1.4 支线 NPC ×2 类
 

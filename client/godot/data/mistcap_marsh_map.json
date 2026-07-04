@@ -1,0 +1,135 @@
+{
+  "id": "mistcap_marsh",
+  "name": "雾帽湿地",
+  "gridSize": [34, 28],
+  "tileSize": [80, 40],
+  "origin": [760, 96],
+  "spawnCell": [4, 22],
+  "spawnPoints": {
+    "default": [4, 22],
+    "from_firebud_village": [4, 22]
+  },
+  "blockedCells": [
+    [8, 7],
+    [9, 7],
+    [10, 8],
+    [11, 8],
+    [23, 6],
+    [24, 6],
+    [25, 7],
+    [18, 13],
+    [19, 13],
+    [20, 14],
+    [13, 20],
+    [14, 20],
+    [15, 21],
+    [28, 20],
+    [29, 21]
+  ],
+  "decorCells": [
+    {"cell": [7, 12], "kind": "grass"},
+    {"cell": [8, 12], "kind": "grass"},
+    {"cell": [9, 13], "kind": "flower"},
+    {"cell": [11, 16], "kind": "grass"},
+    {"cell": [12, 16], "kind": "grass"},
+    {"cell": [14, 17], "kind": "flower"},
+    {"cell": [20, 8], "kind": "grass"},
+    {"cell": [21, 8], "kind": "flower"},
+    {"cell": [24, 10], "kind": "grass"},
+    {"cell": [26, 15], "kind": "grass"},
+    {"cell": [27, 16], "kind": "flower"},
+    {"cell": [18, 22], "kind": "grass"},
+    {"cell": [19, 23], "kind": "grass"}
+  ],
+  "encounterZones": [
+    {
+      "id": "mistcap_reeds_01",
+      "name": "雾帽芦苇滩",
+      "rects": [[9, 14, 8, 5]],
+      "encounterRate": 0.12,
+      "encounterGroupId": "mistcap_reeds_01",
+      "wildPetPool": [
+        {
+          "formId": "mossback_marsh_earth7_water3",
+          "name": "野生苔背兽",
+          "weight": 36,
+          "levelMin": 10,
+          "levelMax": 16,
+          "battleStats": {"maxHp": 260, "attack": 34, "defense": 54, "agility": 50}
+        },
+        {
+          "formId": "tidefin_mist_water8_wind2",
+          "name": "野生潮鳍兽",
+          "weight": 34,
+          "levelMin": 10,
+          "levelMax": 16,
+          "battleStats": {"maxHp": 230, "attack": 31, "defense": 34, "agility": 70}
+        },
+        {
+          "formId": "driftfox_mist_wind7_water3",
+          "name": "野生雾风狐",
+          "weight": 20,
+          "levelMin": 12,
+          "levelMax": 18,
+          "battleStats": {"maxHp": 190, "attack": 36, "defense": 24, "agility": 128}
+        },
+        {
+          "formId": "tidefin_reed_water6_earth4",
+          "name": "野生苇潮鳍兽",
+          "weight": 10,
+          "levelMin": 14,
+          "levelMax": 18,
+          "battleStats": {"maxHp": 250, "attack": 29, "defense": 43, "agility": 58}
+        }
+      ],
+      "previewText": "浓雾里的芦苇轻轻晃动。"
+    },
+    {
+      "id": "mistcap_pools_02",
+      "name": "雾帽镜池",
+      "rects": [[20, 9, 7, 5]],
+      "encounterRate": 0.14,
+      "encounterGroupId": "mistcap_pools_02",
+      "wildPetPool": [
+        {
+          "formId": "tidefin_reed_water6_earth4",
+          "name": "野生苇潮鳍兽",
+          "weight": 34,
+          "levelMin": 18,
+          "levelMax": 24,
+          "battleStats": {"maxHp": 330, "attack": 44, "defense": 60, "agility": 70}
+        },
+        {
+          "formId": "mossback_marsh_earth7_water3",
+          "name": "野生苔背兽",
+          "weight": 32,
+          "levelMin": 18,
+          "levelMax": 24,
+          "battleStats": {"maxHp": 350, "attack": 48, "defense": 74, "agility": 58}
+        },
+        {
+          "formId": "driftfox_mist_wind7_water3",
+          "name": "野生雾风狐",
+          "weight": 24,
+          "levelMin": 18,
+          "levelMax": 24,
+          "battleStats": {"maxHp": 260, "attack": 54, "defense": 32, "agility": 150}
+        }
+      ],
+      "previewText": "水面像镜子一样安静，附近却有脚印。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "mistcap_marsh_return_firebud",
+      "name": "回到火芽村",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [3, 22],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_mistcap_marsh"
+    }
+  ]
+}

@@ -23,7 +23,10 @@
     "from_shadow_oath_manor": [20, 14],
     "from_beast_pen_manor": [21, 15],
     "from_artisan_manor": [22, 16],
-    "from_training_manor": [23, 17]
+    "from_training_manor": [23, 17],
+    "from_mistcap_marsh": [18, 20],
+    "from_suncrack_badlands": [19, 20],
+    "from_windglass_highlands": [20, 21]
   },
   "blockedCells": [
     [8, 4],
@@ -54,7 +57,10 @@
     {"cell": [25, 10], "kind": "grass"},
     {"cell": [25, 5], "kind": "grass"},
     {"cell": [26, 5], "kind": "flower"},
-    {"cell": [24, 17], "kind": "grass"}
+    {"cell": [24, 17], "kind": "grass"},
+    {"cell": [18, 20], "kind": "grass"},
+    {"cell": [19, 20], "kind": "flower"},
+    {"cell": [20, 21], "kind": "grass"}
   ],
   "encounterZones": [
     {
@@ -183,6 +189,39 @@
       "action": "进入",
       "trigger": "arrive",
       "toMap": "level_grass_trial_ground",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_mistcap_marsh",
+      "name": "雾帽湿地入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [18, 20],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "mistcap_marsh",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_suncrack_badlands",
+      "name": "裂日荒原入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [19, 20],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "suncrack_badlands",
+      "toSpawn": "from_firebud_village"
+    },
+    {
+      "id": "warp_to_windglass_highlands",
+      "name": "风镜高地入口",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [20, 21],
+      "action": "进入",
+      "trigger": "arrive",
+      "toMap": "windglass_highlands",
       "toSpawn": "from_firebud_village"
     },
     {

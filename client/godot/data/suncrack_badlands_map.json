@@ -1,0 +1,123 @@
+{
+  "id": "suncrack_badlands",
+  "name": "裂日荒原",
+  "gridSize": [34, 28],
+  "tileSize": [80, 40],
+  "origin": [760, 96],
+  "spawnCell": [4, 22],
+  "spawnPoints": {
+    "default": [4, 22],
+    "from_firebud_village": [4, 22]
+  },
+  "blockedCells": [
+    [8, 6],
+    [9, 6],
+    [10, 7],
+    [14, 10],
+    [15, 10],
+    [16, 11],
+    [23, 8],
+    [24, 8],
+    [25, 9],
+    [20, 17],
+    [21, 17],
+    [22, 18],
+    [28, 20],
+    [29, 20],
+    [30, 21]
+  ],
+  "decorCells": [
+    {"cell": [9, 12], "kind": "flower"},
+    {"cell": [10, 13], "kind": "grass"},
+    {"cell": [12, 15], "kind": "flower"},
+    {"cell": [18, 9], "kind": "grass"},
+    {"cell": [19, 10], "kind": "flower"},
+    {"cell": [23, 14], "kind": "grass"},
+    {"cell": [24, 15], "kind": "flower"},
+    {"cell": [26, 18], "kind": "grass"},
+    {"cell": [15, 22], "kind": "flower"}
+  ],
+  "encounterZones": [
+    {
+      "id": "suncrack_scrub_01",
+      "name": "裂日灌木带",
+      "rects": [[9, 12, 8, 5]],
+      "encounterRate": 0.13,
+      "encounterGroupId": "suncrack_scrub_01",
+      "wildPetPool": [
+        {
+          "formId": "emberhorn_red_fire8_earth2",
+          "name": "野生赤角兽",
+          "weight": 38,
+          "levelMin": 25,
+          "levelMax": 34,
+          "battleStats": {"maxHp": 390, "attack": 80, "defense": 42, "agility": 85}
+        },
+        {
+          "formId": "emberhorn_ash_fire6_wind4",
+          "name": "野生灰烬角兽",
+          "weight": 30,
+          "levelMin": 26,
+          "levelMax": 35,
+          "battleStats": {"maxHp": 360, "attack": 76, "defense": 38, "agility": 105}
+        },
+        {
+          "formId": "mossback_sunbaked_earth6_fire4",
+          "name": "野生晒甲兽",
+          "weight": 24,
+          "levelMin": 28,
+          "levelMax": 36,
+          "battleStats": {"maxHp": 450, "attack": 58, "defense": 68, "agility": 52}
+        }
+      ],
+      "previewText": "热风吹过灌木，远处有角兽的蹄声。"
+    },
+    {
+      "id": "suncrack_ridge_02",
+      "name": "裂日岩脊",
+      "rects": [[20, 11, 7, 6]],
+      "encounterRate": 0.15,
+      "encounterGroupId": "suncrack_ridge_02",
+      "wildPetPool": [
+        {
+          "formId": "emberhorn_red_fire8_earth2",
+          "name": "野生赤角兽",
+          "weight": 34,
+          "levelMin": 35,
+          "levelMax": 44,
+          "battleStats": {"maxHp": 520, "attack": 112, "defense": 58, "agility": 104}
+        },
+        {
+          "formId": "emberhorn_ash_fire6_wind4",
+          "name": "野生灰烬角兽",
+          "weight": 32,
+          "levelMin": 36,
+          "levelMax": 45,
+          "battleStats": {"maxHp": 480, "attack": 106, "defense": 52, "agility": 128}
+        },
+        {
+          "formId": "mossback_sunbaked_earth6_fire4",
+          "name": "野生晒甲兽",
+          "weight": 22,
+          "levelMin": 35,
+          "levelMax": 45,
+          "battleStats": {"maxHp": 590, "attack": 78, "defense": 88, "agility": 62}
+        }
+      ],
+      "previewText": "岩脊裂缝里升起热气。"
+    }
+  ],
+  "interactionPoints": [
+    {
+      "id": "suncrack_badlands_return_firebud",
+      "name": "回到火芽村",
+      "kind": "warp",
+      "movementCollision": "overlap",
+      "cell": [3, 22],
+      "action": "返回",
+      "trigger": "arrive",
+      "toMap": "firebud_village_gate",
+      "toSpawn": "from_suncrack_badlands"
+    }
+  ]
+}
