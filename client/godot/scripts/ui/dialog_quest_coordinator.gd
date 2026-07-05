@@ -23,6 +23,7 @@ const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
 const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
+const DIALOG_ACTION_BANK := "bank"
 
 var host
 
@@ -326,6 +327,9 @@ func _perform_dialog_action(action_id: String) -> void:
 			var manor_id = str(host.active_dialog_interaction.get("manorId", ""))
 			_close_dialog()
 			host._open_family_panel_for_manor(manor_id)
+		DIALOG_ACTION_BANK:
+			_close_dialog()
+			host._open_bank_panel()
 		_:
 			_close_dialog()
 

@@ -10,6 +10,7 @@ const FACILITY_TRAINER := "trainer"
 const FACILITY_STABLE := "stable"
 const FACILITY_REBIRTH := "rebirth"
 const FACILITY_GUARDIAN := "guardian"
+const FACILITY_BANK := "bank"
 
 
 static func interaction_points(map_data: Dictionary) -> Array:
@@ -49,6 +50,8 @@ static func facility_type_for(item: Dictionary) -> String:
 		return FACILITY_HEALER
 	if kind == FACILITY_STABLE or action_type == FACILITY_STABLE:
 		return FACILITY_STABLE
+	if action_type == FACILITY_BANK or kind == FACILITY_BANK:
+		return FACILITY_BANK
 	if action_type == FACILITY_REBIRTH or kind == FACILITY_REBIRTH:
 		return FACILITY_REBIRTH
 	if action_type == "pet_skill_trainer" or str(item.get("trainerId", "")) != "":
@@ -80,6 +83,8 @@ static func facility_label_for(item: Dictionary) -> String:
 			return "训练"
 		FACILITY_STABLE:
 			return "兽栏"
+		FACILITY_BANK:
+			return "仓库"
 		FACILITY_REBIRTH:
 			return "转生"
 		FACILITY_GUARDIAN:
@@ -101,6 +106,8 @@ static func facility_sort_rank_for(item: Dictionary) -> int:
 			return 30
 		FACILITY_STABLE:
 			return 35
+		FACILITY_BANK:
+			return 36
 		FACILITY_RECORD_POINT:
 			return 40
 		FACILITY_TRAINER:

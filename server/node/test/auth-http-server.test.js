@@ -140,6 +140,61 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(tools.code, "gm_denied");
 });
 
+test("HTTP GM market config routes are command-scoped", async (t) => {
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpmarketgm", "password": "test1234"}),
+  });
+  assert.equal(registered.ok, true);
+
+  const denied = await fetchJson(`${base}/gm/market/config`, {
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "gm_denied");
+
+  const grant = service.grantGm({
+    "username": "httpmarketgm",
+    "commandIds": ["gm_market_tax"],
+    "grantedBy": "unit_test",
+  });
+  assert.equal(grant.ok, true);
+
+  const tools = await fetchJson(`${base}/gm/tools`, {
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(tools.ok, true);
+  assert.deepEqual(tools.commandIds, ["gm_market_tax"]);
+
+  const updated = await fetchJson(`${base}/gm/market/config`, {
+    "method": "PUT",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({
+      "defaultTaxBps": 200,
+      "itemTaxBps": {"item_meat_small": 500},
+    }),
+  });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.marketConfig.defaultTaxBps, 200);
+  assert.equal(updated.marketConfig.itemTaxBps.item_meat_small, 500);
+
+  const read = await fetchJson(`${base}/gm/market/config`, {
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(read.ok, true);
+  assert.equal(read.marketConfig.defaultTaxBps, 200);
+  assert.equal(read.marketConfig.itemTaxBps.item_meat_small, 500);
+});
+
 test("HTTP server rejects incompatible protocol versions with upgrade guidance", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});
@@ -1273,6 +1328,57 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   assert.equal(closeEvent.roomId, accept.room.roomId);
   assert.equal(closeEvent.reason, "leave");
   assert.equal(closeEvent.room.status, "closed");
+  ws.close();
+});
+
+test("HTTP login replaces same-account websocket session", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const wsBase = `ws://127.0.0.1:${port}`;
+
+  const first = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpreplace", "password": "test1234", "displayName": "顶号玩家"}),
+  });
+  assert.equal(first.ok, true);
+  const ws = new WebSocket(eventStreamUrl(wsBase, first.session.token));
+  const reader = webSocketJsonReader(ws);
+  await webSocketOpen(ws);
+  const ready = await reader.next("events.ready");
+  assert.equal(ready.account.username, "httpreplace");
+
+  const second = await fetchJson(`${base}/auth/login`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpreplace", "password": "test1234"}),
+  });
+  assert.equal(second.ok, true);
+  assert.notEqual(second.session.token, first.session.token);
+
+  const replaced = await reader.next("session.replaced");
+  assert.equal(replaced.code, "session_replaced");
+  assert.match(replaced.message, /其他地方登录/);
+  assert.deepEqual(replaced.targetSessionIds, [first.session.sessionId]);
+
+  const oldSession = await fetchJson(`${base}/auth/session`, {
+    "headers": {"authorization": `Bearer ${first.session.token}`},
+  });
+  assert.equal(oldSession.ok, false);
+  assert.equal(oldSession.code, "session_replaced");
+  assert.match(oldSession.message, /被踢出游戏/);
+
+  const newSession = await fetchJson(`${base}/auth/session`, {
+    "headers": {"authorization": `Bearer ${second.session.token}`},
+  });
+  assert.equal(newSession.ok, true);
+  assert.equal(newSession.session.username, "httpreplace");
   ws.close();
 });
 

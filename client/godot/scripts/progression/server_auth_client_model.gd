@@ -17,6 +17,7 @@ const SESSION_INVALID_CODES := [
 	"session_expired",
 	"session_refresh_expired",
 	"session_revoked",
+	"session_replaced",
 	"session_missing",
 ]
 const NETWORK_FAILURE_CODES := [
@@ -66,6 +67,7 @@ const ERROR_CODE_MESSAGES := {
 	"session_cancelled": "服务器档案同步已取消。",
 	"session_expired": "登录会话已过期，请重新登录。",
 	"session_missing": "登录会话不存在，请重新登录。",
+	"session_replaced": "你的账号已在其他地方登录，你已被踢出游戏。",
 	"session_refresh_expired": "登录已过期，请重新登录。",
 	"session_revoked": "登录会话已失效，请重新登录。",
 	"weak_password": "密码强度不够，请换一个更安全的密码。",
@@ -73,6 +75,7 @@ const ERROR_CODE_MESSAGES := {
 }
 const ERROR_CODE_PREFIX_MESSAGES := [
 	["backpack_", "背包操作失败，请检查空间和解锁顺序。"],
+	["bank_", "仓库操作失败，请检查空间和数量。"],
 	["battle_command_", "战斗指令无法提交，请重新选择。"],
 	["battle_record_", "战绩读取失败，请稍后再试。"],
 	["battle_", "切磋操作失败，请检查双方状态。"],
@@ -87,6 +90,7 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["item_", "物品操作失败，请检查数量和状态。"],
 	["mail_", "邮件操作失败，请稍后重试。"],
 	["manor_", "庄园操作失败，请检查家族和庄园状态。"],
+	["market_", "交易所操作失败，请检查物品、价格和货币。"],
 	["mm_stone_", "转生MM石头条件未满足。"],
 	["mm_", "转生MM任务暂时无法处理。"],
 	["party_encounter_", "队伍遇敌失败，请检查队伍状态。"],
@@ -101,6 +105,7 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["profile_", "角色档案操作失败，请稍后重试。"],
 	["quest_", "任务状态暂时无法更新。"],
 	["shop_", "商店交易失败，请检查物品和货币。"],
+	["trade_", "交易失败，请检查双方距离、物品和石币。"],
 	["training_partner_", "队伍伙伴设置失败，请检查数量。"],
 ]
 
@@ -200,6 +205,16 @@ static func player_message_for_code(code: String, fallback_message: String = "")
 		if entry is Array and (entry as Array).size() >= 2 and normalized_code.begins_with(str((entry as Array)[0])):
 			return str((entry as Array)[1])
 	return "服务器操作失败，请稍后重试。"
+
+
+static func player_message_from_parsed(parsed: Dictionary, fallback_message: String = "") -> String:
+	var message := str(parsed.get("message", fallback_message)).strip_edges()
+	var code := str(parsed.get("code", "")).strip_edges()
+	if code != "" or not bool(parsed.get("ok", false)):
+		return player_message_for_code("server_error" if code == "" else code, message if message != "" else fallback_message)
+	if message != "":
+		return message
+	return fallback_message
 
 
 static func message_has_cjk(text: String) -> bool:
@@ -312,6 +327,111 @@ static func shop_transaction_request(base_url: String, session_token: String, mo
 			"itemId": item_id,
 			"amount": maxi(1, amount),
 		}),
+	}
+
+
+static func bank_deposit_request(base_url: String, session_token: String, items: Array[Dictionary], stone_coins: int = 0) -> Dictionary:
+	return _bank_transaction_request(base_url, session_token, "/bank/deposit", items, stone_coins)
+
+
+static func bank_withdraw_request(base_url: String, session_token: String, items: Array[Dictionary], stone_coins: int = 0) -> Dictionary:
+	return _bank_transaction_request(base_url, session_token, "/bank/withdraw", items, stone_coins)
+
+
+static func _bank_transaction_request(base_url: String, session_token: String, path: String, items: Array[Dictionary], stone_coins: int) -> Dictionary:
+	return {
+		"url": "%s%s" % [normalized_base_url(base_url), path],
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"items": items,
+			"stoneCoins": maxi(0, stone_coins),
+		}),
+	}
+
+
+static func market_listings_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/market/listings" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func market_create_listing_request(base_url: String, session_token: String, item_id: String, count: int, unit_price: int, currency: String) -> Dictionary:
+	return {
+		"url": "%s/market/list" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"itemId": item_id,
+			"count": maxi(1, count),
+			"unitPrice": maxi(1, unit_price),
+			"currency": currency,
+		}),
+	}
+
+
+static func market_buy_listing_request(base_url: String, session_token: String, listing_id: String) -> Dictionary:
+	return {
+		"url": "%s/market/buy" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"listingId": listing_id}),
+	}
+
+
+static func market_cancel_listing_request(base_url: String, session_token: String, listing_id: String) -> Dictionary:
+	return {
+		"url": "%s/market/cancel" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"listingId": listing_id}),
+	}
+
+
+static func trade_propose_request(base_url: String, session_token: String, target_username: String, items: Array[Dictionary], stone_coins: int = 0) -> Dictionary:
+	return {
+		"url": "%s/trade/propose" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"targetUsername": target_username,
+			"items": items,
+			"stoneCoins": maxi(0, stone_coins),
+		}),
+	}
+
+
+static func trade_accept_request(base_url: String, session_token: String, trade_id: String, items: Array[Dictionary] = [], stone_coins: int = 0) -> Dictionary:
+	return {
+		"url": "%s/trade/accept" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"tradeId": trade_id,
+			"items": items,
+			"stoneCoins": maxi(0, stone_coins),
+		}),
+	}
+
+
+static func trade_state_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/trade/state" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func trade_cancel_request(base_url: String, session_token: String, trade_id: String) -> Dictionary:
+	return {
+		"url": "%s/trade/cancel" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"tradeId": trade_id}),
 	}
 
 
@@ -1203,6 +1323,41 @@ static func parse_shop_transaction_response(response_code: int, body: PackedByte
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["transaction"] = response.get("transaction", {}) if response.get("transaction", {}) is Dictionary else {}
 	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_bank_transaction_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "仓库操作失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["bank"] = response.get("bank", {}) if response.get("bank", {}) is Dictionary else {}
+	parsed["transaction"] = response.get("transaction", {}) if response.get("transaction", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_market_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "交易所操作失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["market"] = response.get("market", {}) if response.get("market", {}) is Dictionary else {}
+	parsed["listing"] = response.get("listing", {}) if response.get("listing", {}) is Dictionary else {}
+	parsed["receipt"] = response.get("receipt", {}) if response.get("receipt", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_trade_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "交易失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["trade"] = response.get("trade", {}) if response.get("trade", {}) is Dictionary else {}
+	parsed["trades"] = response.get("trades", {}) if response.get("trades", {}) is Dictionary else {}
+	parsed["otherProfileSummary"] = response.get("otherProfileSummary", {}) if response.get("otherProfileSummary", {}) is Dictionary else {}
 	return parsed
 
 

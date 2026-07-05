@@ -72,7 +72,11 @@ function createBattleRoomDomain(ctx) {
     }
     expireBattleTimeoutsAndEmit(data);
     data = load();
-    markBattleConnectionForAccount(data, resolved.account.accountId, true, now);
+    if (typeof ctx.applyBattleConnectionState === "function") {
+      ctx.applyBattleConnectionState(data, resolved.account.accountId, true, "http_poll");
+    } else {
+      markBattleConnectionForAccount(data, resolved.account.accountId, true, now);
+    }
     const pruneResult = pruneOfflinePartyPveParticipants(data, resolved.account.accountId);
     if (pruneResult.changed) {
       save(data);

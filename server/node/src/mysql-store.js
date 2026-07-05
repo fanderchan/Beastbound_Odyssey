@@ -8,6 +8,7 @@ const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
   let schemaReady = false;
+  let lastPersistentData = null;
 
   function ensureSchema() {
     if (schemaReady) {
@@ -67,6 +68,18 @@ function createMysqlAuthStore(options = {}) {
         read_at VARCHAR(40) NULL,
         document_json JSON NOT NULL,
         INDEX idx_mail_recipient_created (recipient_account_id, created_at)
+      );
+      CREATE TABLE IF NOT EXISTS market_listings (
+        listing_id VARCHAR(96) PRIMARY KEY,
+        seller_account_id VARCHAR(80) NOT NULL,
+        item_id VARCHAR(96) NOT NULL,
+        currency VARCHAR(24) NOT NULL,
+        unit_price BIGINT NOT NULL DEFAULT 0,
+        item_count INT NOT NULL DEFAULT 0,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_market_item_currency_price (item_id, currency, unit_price),
+        INDEX idx_market_seller_created (seller_account_id, created_at)
       );
       CREATE TABLE IF NOT EXISTS parties (
         party_id VARCHAR(96) PRIMARY KEY,
@@ -191,6 +204,15 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_battle_records_winner_ended (winner_account_id, ended_at),
         INDEX idx_battle_records_reason_ended (reason, ended_at)
       );
+      CREATE TABLE IF NOT EXISTS battle_trace (
+        trace_id VARCHAR(96) PRIMARY KEY,
+        room_id VARCHAR(96) NOT NULL DEFAULT '',
+        trace_type VARCHAR(64) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_battle_trace_room_created (room_id, created_at),
+        INDEX idx_battle_trace_type_created (trace_type, created_at)
+      );
       CREATE TABLE IF NOT EXISTS gm_user_grants (
         account_id VARCHAR(80) PRIMARY KEY,
         username VARCHAR(32) NOT NULL,
@@ -242,129 +264,213 @@ function createMysqlAuthStore(options = {}) {
     mode: "mysql",
     load() {
       ensureSchema();
-      const output = runMysql(config, config.database, "SELECT CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth';");
-      const text = output.trim();
-      if (!text) {
-        return {};
-      }
-      try {
-        return JSON.parse(text);
-      } catch (error) {
-        throw new Error(`MySQL 账号状态 JSON 解析失败：${error.message}`);
-      }
+      const loaded = loadPersistentData(config, config.database);
+      lastPersistentData = mysqlPersistentData(loaded);
+      return loaded;
     },
     save(nextData) {
       ensureSchema();
-      runMysqlSaveStatements(config, config.database, buildSaveStatements(nextData));
+      const data = mysqlPersistentData(nextData);
+      if (lastPersistentData === null) {
+        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database));
+      }
+      runMysqlSaveStatements(config, config.database, buildSaveStatements(data, lastPersistentData));
+      lastPersistentData = data;
     },
     async saveAsync(nextData) {
       ensureSchema();
-      await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(nextData));
+      const data = mysqlPersistentData(nextData);
+      if (lastPersistentData === null) {
+        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database));
+      }
+      await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(data, lastPersistentData));
+      lastPersistentData = data;
     },
   };
 }
 
-function buildSaveStatements(nextData) {
+function buildSaveStatements(nextData, previousData = null) {
   const data = mysqlPersistentData(nextData);
+  const previous = previousData ? mysqlPersistentData(previousData) : emptyPersistentData();
   const statements = [];
   statements.push("START TRANSACTION");
   statements.push(upsertStateStatement(data));
-  statements.push("DELETE FROM accounts");
-  statements.push("DELETE FROM sessions");
-  statements.push("DELETE FROM profile_bindings");
-  statements.push("DELETE FROM profiles");
-  statements.push("DELETE FROM mail_messages");
-  statements.push("DELETE FROM parties");
-  statements.push("DELETE FROM party_invites");
-  statements.push("DELETE FROM families");
-  statements.push("DELETE FROM manors");
-  statements.push("DELETE FROM manor_battles");
-  statements.push("DELETE FROM manor_wars");
-  statements.push("DELETE FROM chat_messages");
-  statements.push("DELETE FROM player_positions");
-  statements.push("DELETE FROM battle_invites");
-  statements.push("DELETE FROM battle_rooms");
-  statements.push("DELETE FROM battle_records");
-  statements.push("DELETE FROM gm_user_grants");
-  statements.push("DELETE FROM gm_command_grants");
-  statements.push("DELETE FROM gm_command_audit");
-  statements.push("DELETE FROM auth_events");
-  statements.push("DELETE FROM service_events");
-  for (const account of Object.values(objectOrEmpty(data.accounts))) {
-    statements.push(insertAccountStatement(account));
-  }
-  for (const session of Object.values(objectOrEmpty(data.sessions))) {
-    statements.push(insertSessionStatement(session));
-  }
-  for (const binding of Object.values(objectOrEmpty(data.profileBindings))) {
-    statements.push(insertProfileBindingStatement(binding));
-  }
-  for (const profile of Object.values(objectOrEmpty(data.profiles))) {
-    statements.push(insertProfileStatement(profile));
-  }
-  for (const mail of Object.values(objectOrEmpty(data.mailMessages))) {
-    statements.push(insertMailStatement(mail));
-  }
-  for (const party of Object.values(objectOrEmpty(data.parties))) {
-    statements.push(insertPartyStatement(party));
-  }
-  for (const invite of Object.values(objectOrEmpty(data.partyInvites))) {
-    statements.push(insertPartyInviteStatement(invite));
-  }
-  for (const family of Object.values(objectOrEmpty(data.families))) {
-    statements.push(insertFamilyStatement(family));
-  }
-  for (const manor of Object.values(objectOrEmpty(data.manors))) {
-    statements.push(insertManorStatement(manor));
-  }
-  if (Array.isArray(data.manorBattles)) {
-    for (const battle of data.manorBattles) {
-      statements.push(insertManorBattleStatement(battle));
-    }
-  }
-  if (Array.isArray(data.manorWars)) {
-    for (const war of data.manorWars) {
-      statements.push(insertManorWarStatement(war));
-    }
-  }
-  if (Array.isArray(data.chatMessages)) {
-    for (const message of data.chatMessages) {
-      statements.push(insertChatMessageStatement(message));
-    }
-  }
-  if (Array.isArray(data.battleRecords)) {
-    for (const record of data.battleRecords) {
-      statements.push(insertBattleRecordStatement(record));
-    }
-  }
-  for (const grant of Object.values(objectOrEmpty(data.gmUserGrants))) {
-    statements.push(insertGmUserGrantStatement(grant));
-  }
-  for (const grants of Object.values(objectOrEmpty(data.gmCommandGrants))) {
-    if (!Array.isArray(grants)) {
-      continue;
-    }
-    for (const grant of grants) {
-      statements.push(insertGmCommandGrantStatement(grant));
-    }
-  }
-  if (Array.isArray(data.gmCommandAudit)) {
-    for (const audit of data.gmCommandAudit) {
-      statements.push(insertGmCommandAuditStatement(audit));
-    }
-  }
-  if (Array.isArray(data.authEvents)) {
-    for (const event of data.authEvents) {
-      statements.push(insertAuthEventStatement(event));
-    }
-  }
-  if (Array.isArray(data.serviceEvents)) {
-    for (const event of data.serviceEvents) {
-      statements.push(insertServiceEventStatement(event));
-    }
-  }
+  appendObjectEntityDiff(statements, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
+  appendObjectEntityDiff(statements, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
+  appendObjectEntityDiff(statements, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
+  appendObjectEntityDiff(statements, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
+  appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
+  appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
+  appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
+  appendObjectEntityDiff(statements, "party_invites", "invite_id", previous.partyInvites, data.partyInvites, partyInviteEntityKey, insertPartyInviteStatement);
+  appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
+  appendObjectEntityDiff(statements, "manors", "manor_id", previous.manors, data.manors, manorEntityKey, insertManorStatement);
+  appendArrayEntityDiff(statements, "manor_battles", "battle_id", previous.manorBattles, data.manorBattles, manorBattleEntityKey, insertManorBattleStatement);
+  appendArrayEntityDiff(statements, "manor_wars", "war_id", previous.manorWars, data.manorWars, manorWarEntityKey, insertManorWarStatement);
+  appendArrayEntityDiff(statements, "chat_messages", "message_id", previous.chatMessages, data.chatMessages, chatMessageEntityKey, insertChatMessageStatement);
+  appendArrayEntityDiff(statements, "battle_records", "record_id", previous.battleRecords, data.battleRecords, battleRecordEntityKey, insertBattleRecordStatement);
+  appendArrayEntityDiff(statements, "battle_trace", "trace_id", previous.battleTrace, data.battleTrace, battleTraceEntityKey, insertBattleTraceStatement);
+  appendObjectEntityDiff(statements, "gm_user_grants", "account_id", previous.gmUserGrants, data.gmUserGrants, gmUserGrantEntityKey, insertGmUserGrantStatement);
+  appendGmCommandGrantDiff(statements, previous.gmCommandGrants, data.gmCommandGrants);
+  appendArrayEntityDiff(statements, "gm_command_audit", "audit_id", previous.gmCommandAudit, data.gmCommandAudit, gmCommandAuditEntityKey, insertGmCommandAuditStatement);
+  appendArrayEntityDiff(statements, "auth_events", "event_id", previous.authEvents, data.authEvents, authEventEntityKey, insertAuthEventStatement);
+  appendArrayEntityDiff(statements, "service_events", "event_seq", previous.serviceEvents, data.serviceEvents, serviceEventEntityKey, insertServiceEventStatement);
   statements.push("COMMIT");
   return statements;
+}
+
+function loadPersistentData(config, database) {
+  const output = runMysql(config, database, loadPersistentDataSql());
+  return parsePersistentDataRows(output);
+}
+
+function loadPersistentDataSql() {
+  return [
+    "SELECT 'server_state', state_key, CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth'",
+    "SELECT 'accounts', account_id, CAST(document_json AS CHAR) FROM accounts ORDER BY account_id",
+    "SELECT 'sessions', session_id, CAST(document_json AS CHAR) FROM sessions ORDER BY session_id",
+    "SELECT 'profile_bindings', account_id, CAST(document_json AS CHAR) FROM profile_bindings ORDER BY account_id",
+    "SELECT 'profiles', player_id, CAST(JSON_OBJECT('playerId', player_id, 'accountId', account_id, 'profileRevision', profile_revision, 'updatedAt', updated_at, 'profile', profile_json) AS CHAR) FROM profiles ORDER BY player_id",
+    "SELECT 'mail_messages', mail_id, CAST(document_json AS CHAR) FROM mail_messages ORDER BY mail_id",
+    "SELECT 'market_listings', listing_id, CAST(document_json AS CHAR) FROM market_listings ORDER BY listing_id",
+    "SELECT 'parties', party_id, CAST(document_json AS CHAR) FROM parties ORDER BY party_id",
+    "SELECT 'party_invites', invite_id, CAST(document_json AS CHAR) FROM party_invites ORDER BY invite_id",
+    "SELECT 'families', family_id, CAST(document_json AS CHAR) FROM families ORDER BY family_id",
+    "SELECT 'manors', manor_id, CAST(document_json AS CHAR) FROM manors ORDER BY manor_id",
+    "SELECT 'manor_battles', battle_id, CAST(document_json AS CHAR) FROM manor_battles ORDER BY battle_id",
+    "SELECT 'manor_wars', war_id, CAST(document_json AS CHAR) FROM manor_wars ORDER BY war_id",
+    "SELECT 'chat_messages', message_id, CAST(document_json AS CHAR) FROM chat_messages ORDER BY message_id",
+    "SELECT 'battle_records', record_id, CAST(document_json AS CHAR) FROM battle_records ORDER BY record_id",
+    "SELECT 'battle_trace', trace_id, CAST(document_json AS CHAR) FROM battle_trace ORDER BY created_at, trace_id",
+    "SELECT 'gm_user_grants', account_id, CAST(document_json AS CHAR) FROM gm_user_grants ORDER BY account_id",
+    "SELECT 'gm_command_grants', CONCAT(account_id, '/', command_id), CAST(document_json AS CHAR) FROM gm_command_grants ORDER BY account_id, command_id",
+    "SELECT 'gm_command_audit', audit_id, CAST(document_json AS CHAR) FROM gm_command_audit ORDER BY audit_id",
+    "SELECT 'auth_events', event_id, CAST(document_json AS CHAR) FROM auth_events ORDER BY event_id",
+    "SELECT 'service_events', CAST(event_seq AS CHAR), CAST(document_json AS CHAR) FROM service_events ORDER BY event_seq",
+  ].join(";\n");
+}
+
+function parsePersistentDataRows(output) {
+  const data = emptyPersistentData();
+  let legacyDocument = null;
+  let stateDocument = null;
+  let entityRows = 0;
+  const lines = String(output || "").split(/\r?\n/).filter((line) => line.trim() !== "");
+  for (const line of lines) {
+    const columns = line.split("\t");
+    if (columns.length < 3) {
+      continue;
+    }
+    const bucket = columns[0];
+    const rowKey = columns[1];
+    const document = parsePersistentRowJson(bucket, rowKey, columns.slice(2).join("\t"));
+    if (bucket === "server_state") {
+      stateDocument = document;
+      if (document && document.storage !== "mysql_entity_tables") {
+        legacyDocument = document;
+      }
+      continue;
+    }
+    entityRows += 1;
+    appendLoadedEntity(data, bucket, rowKey, document);
+  }
+  if (entityRows > 0) {
+    if (stateDocument && stateDocument.marketConfig && typeof stateDocument.marketConfig === "object" && !Array.isArray(stateDocument.marketConfig)) {
+      data.marketConfig = stateDocument.marketConfig;
+    }
+    data.serviceEventSeq = Math.max(
+      Number(data.serviceEventSeq || 0),
+      ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
+    );
+    return data;
+  }
+  return legacyDocument || {};
+}
+
+function parsePersistentRowJson(bucket, rowKey, jsonText) {
+  try {
+    const parsed = JSON.parse(String(jsonText || "null"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    throw new Error(`MySQL持久化行解析失败：${bucket}/${rowKey}`);
+  }
+}
+
+function appendLoadedEntity(data, bucket, rowKey, document) {
+  if (!document || typeof document !== "object" || Array.isArray(document)) {
+    return;
+  }
+  switch (bucket) {
+    case "accounts":
+      data.accounts[String(document.username || rowKey || "")] = document;
+      break;
+    case "sessions":
+      data.sessions[String(document.sessionId || rowKey || "")] = document;
+      break;
+    case "profile_bindings":
+      data.profileBindings[String(document.accountId || rowKey || "")] = document;
+      break;
+    case "profiles":
+      data.profiles[String(document.playerId || rowKey || "")] = document;
+      break;
+    case "mail_messages":
+      data.mailMessages[String(document.mailId || rowKey || "")] = document;
+      break;
+    case "market_listings":
+      data.marketListings[String(document.listingId || rowKey || "")] = document;
+      break;
+    case "parties":
+      data.parties[String(document.partyId || rowKey || "")] = document;
+      break;
+    case "party_invites":
+      data.partyInvites[String(document.inviteId || rowKey || "")] = document;
+      break;
+    case "families":
+      data.families[String(document.familyId || rowKey || "")] = document;
+      break;
+    case "manors":
+      data.manors[String(document.manorId || rowKey || "")] = document;
+      break;
+    case "manor_battles":
+      data.manorBattles.push(document);
+      break;
+    case "manor_wars":
+      data.manorWars.push(document);
+      break;
+    case "chat_messages":
+      data.chatMessages.push(document);
+      break;
+    case "battle_records":
+      data.battleRecords.push(document);
+      break;
+    case "battle_trace":
+      data.battleTrace.push(document);
+      break;
+    case "gm_user_grants":
+      data.gmUserGrants[String(document.accountId || rowKey || "")] = document;
+      break;
+    case "gm_command_grants": {
+      const accountId = String(document.accountId || "").trim();
+      if (accountId !== "") {
+        if (!Array.isArray(data.gmCommandGrants[accountId])) {
+          data.gmCommandGrants[accountId] = [];
+        }
+        data.gmCommandGrants[accountId].push(document);
+      }
+      break;
+    }
+    case "gm_command_audit":
+      data.gmCommandAudit.push(document);
+      break;
+    case "auth_events":
+      data.authEvents.push(document);
+      break;
+    case "service_events":
+      data.serviceEvents.push(document);
+      break;
+    default:
+      break;
+  }
 }
 
 function mysqlPersistentData(nextData) {
@@ -379,6 +485,273 @@ function mysqlPersistentData(nextData) {
     });
   }
   return data;
+}
+
+function emptyPersistentData() {
+  return {
+    schemaVersion: 1,
+    accounts: {},
+    sessions: {},
+    profileBindings: {},
+    profiles: {},
+    mailMessages: {},
+    marketListings: {},
+    marketConfig: {},
+    parties: {},
+    partyInvites: {},
+    families: {},
+    manors: {},
+    manorWars: [],
+    manorBattles: [],
+    chatMessages: [],
+    playerPositions: {},
+    battleInvites: {},
+    battleRooms: {},
+    battleRecords: [],
+    battleTrace: [],
+    gmUserGrants: {},
+    gmCommandGrants: {},
+    gmCommandAudit: [],
+    authEvents: [],
+    serviceEventSeq: 0,
+    serviceEvents: [],
+  };
+}
+
+function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn) {
+  appendEntityDiff(
+    statements,
+    tableName,
+    primaryColumn,
+    entityMapFromObject(previousObject, keyFn),
+    entityMapFromObject(nextObject, keyFn),
+    insertFn
+  );
+}
+
+function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArray, nextArray, keyFn, insertFn) {
+  appendEntityDiff(
+    statements,
+    tableName,
+    primaryColumn,
+    entityMapFromArray(previousArray, keyFn),
+    entityMapFromArray(nextArray, keyFn),
+    insertFn
+  );
+}
+
+function appendEntityDiff(statements, tableName, primaryColumn, previousMap, nextMap, insertFn) {
+  for (const key of Object.keys(previousMap).sort()) {
+    if (!Object.prototype.hasOwnProperty.call(nextMap, key)) {
+      statements.push(deleteEntityStatement(tableName, primaryColumn, key));
+    }
+  }
+  for (const key of Object.keys(nextMap).sort()) {
+    const nextEntity = nextMap[key];
+    if (!Object.prototype.hasOwnProperty.call(previousMap, key) || entityChanged(previousMap[key], nextEntity)) {
+      statements.push(upsertEntityStatement(insertFn(nextEntity), upsertColumnsForTable(tableName)));
+    }
+  }
+}
+
+function appendGmCommandGrantDiff(statements, previousObject, nextObject) {
+  appendEntityDiff(
+    statements,
+    "gm_command_grants",
+    "",
+    entityMapFromGmCommandGrants(previousObject),
+    entityMapFromGmCommandGrants(nextObject),
+    insertGmCommandGrantStatement
+  );
+}
+
+function entityMapFromObject(value, keyFn) {
+  const result = {};
+  for (const entity of Object.values(objectOrEmpty(value))) {
+    const key = entityKey(keyFn, entity);
+    if (key !== "") {
+      result[key] = entity;
+    }
+  }
+  return result;
+}
+
+function entityMapFromArray(value, keyFn) {
+  const result = {};
+  if (!Array.isArray(value)) {
+    return result;
+  }
+  for (const entity of value) {
+    const key = entityKey(keyFn, entity);
+    if (key !== "") {
+      result[key] = entity;
+    }
+  }
+  return result;
+}
+
+function entityMapFromGmCommandGrants(value) {
+  const result = {};
+  for (const grants of Object.values(objectOrEmpty(value))) {
+    if (!Array.isArray(grants)) {
+      continue;
+    }
+    for (const grant of grants) {
+      const accountId = String(grant && grant.accountId || "").trim();
+      const commandId = String(grant && grant.commandId || "").trim();
+      if (accountId !== "" && commandId !== "") {
+        result[`${accountId}\u0000${commandId}`] = grant;
+      }
+    }
+  }
+  return result;
+}
+
+function entityKey(keyFn, entity) {
+  if (!entity || typeof entity !== "object" || Array.isArray(entity)) {
+    return "";
+  }
+  return String(keyFn(entity) || "").trim();
+}
+
+function entityChanged(previousEntity, nextEntity) {
+  return JSON.stringify(previousEntity || {}) !== JSON.stringify(nextEntity || {});
+}
+
+function deleteEntityStatement(tableName, primaryColumn, key) {
+  if (tableName === "gm_command_grants") {
+    const [accountId, commandId] = String(key || "").split("\u0000");
+    return `DELETE FROM gm_command_grants WHERE account_id = ${sqlString(accountId)} AND command_id = ${sqlString(commandId)}`;
+  }
+  return `DELETE FROM ${tableName} WHERE ${primaryColumn} = ${sqlString(key)}`;
+}
+
+function upsertEntityStatement(insertStatement, updateColumns) {
+  const assignments = updateColumns.map((column) => `${column} = VALUES(${column})`).join(", ");
+  return `${insertStatement} ON DUPLICATE KEY UPDATE ${assignments}`;
+}
+
+function upsertColumnsForTable(tableName) {
+  switch (tableName) {
+    case "accounts":
+      return ["username", "display_name", "role", "created_at", "updated_at", "document_json"];
+    case "sessions":
+      return ["account_id", "token_hash", "expires_at", "revoked_at", "document_json"];
+    case "profile_bindings":
+      return ["player_id", "profile_revision", "updated_at", "document_json"];
+    case "profiles":
+      return ["account_id", "profile_revision", "updated_at", "profile_json"];
+    case "mail_messages":
+      return ["sender_account_id", "recipient_account_id", "title", "created_at", "read_at", "document_json"];
+    case "market_listings":
+      return ["seller_account_id", "item_id", "currency", "unit_price", "item_count", "created_at", "document_json"];
+    case "parties":
+      return ["leader_account_id", "member_count", "created_at", "updated_at", "document_json"];
+    case "party_invites":
+      return ["party_id", "from_account_id", "to_account_id", "status", "created_at", "updated_at", "document_json"];
+    case "families":
+      return ["family_name", "leader_account_id", "member_count", "fame", "created_at", "updated_at", "document_json"];
+    case "manors":
+      return ["owner_family_id", "owner_family_name", "occupied_at", "updated_at", "document_json"];
+    case "manor_battles":
+      return ["manor_id", "challenger_family_id", "defender_family_id", "winner_family_id", "result", "created_at", "document_json"];
+    case "manor_wars":
+      return ["manor_id", "status", "challenger_family_id", "defender_family_id", "starts_at", "resolved_at", "document_json"];
+    case "chat_messages":
+      return ["channel", "party_id", "sender_account_id", "created_at", "document_json"];
+    case "battle_records":
+      return ["room_id", "mode", "reason", "winner_account_id", "closed_by_account_id", "ended_at", "participant_account_ids", "loser_account_ids", "document_json"];
+    case "battle_trace":
+      return ["room_id", "trace_type", "created_at", "document_json"];
+    case "gm_user_grants":
+      return ["username", "enabled", "expires_at", "document_json"];
+    case "gm_command_grants":
+      return ["enabled", "document_json"];
+    case "gm_command_audit":
+      return ["username", "command_id", "ok", "created_at", "document_json"];
+    case "auth_events":
+      return ["event_type", "username", "ok", "created_at", "document_json"];
+    case "service_events":
+      return ["event_id", "event_type", "created_at", "document_json"];
+    default:
+      throw new Error(`未知MySQL持久化表：${tableName}`);
+  }
+}
+
+function accountEntityKey(account) {
+  return account.accountId;
+}
+
+function sessionEntityKey(session) {
+  return session.sessionId;
+}
+
+function profileBindingEntityKey(binding) {
+  return binding.accountId;
+}
+
+function profileEntityKey(profile) {
+  return profile.playerId;
+}
+
+function mailEntityKey(mail) {
+  return mail.mailId;
+}
+
+function marketListingEntityKey(listing) {
+  return listing.listingId;
+}
+
+function partyEntityKey(party) {
+  return party.partyId;
+}
+
+function partyInviteEntityKey(invite) {
+  return invite.inviteId;
+}
+
+function familyEntityKey(family) {
+  return family.familyId;
+}
+
+function manorEntityKey(manor) {
+  return manor.manorId;
+}
+
+function manorBattleEntityKey(battle) {
+  return battle.battleId;
+}
+
+function manorWarEntityKey(war) {
+  return war.warId;
+}
+
+function chatMessageEntityKey(message) {
+  return message.messageId;
+}
+
+function battleRecordEntityKey(record) {
+  return record.recordId;
+}
+
+function battleTraceEntityKey(trace) {
+  return trace.traceId;
+}
+
+function gmUserGrantEntityKey(grant) {
+  return grant.accountId;
+}
+
+function gmCommandAuditEntityKey(audit) {
+  return audit.auditId;
+}
+
+function authEventEntityKey(event) {
+  return event.eventId;
+}
+
+function serviceEventEntityKey(event) {
+  return event.eventSeq;
 }
 
 function mysqlConfig(options) {
@@ -523,7 +896,39 @@ function summarizeStatement(statement) {
 }
 
 function upsertStateStatement(data) {
-  return `INSERT INTO server_state (state_key, document_json) VALUES ('auth', ${sqlJson(data)}) ON DUPLICATE KEY UPDATE document_json = VALUES(document_json)`;
+  return `INSERT INTO server_state (state_key, document_json) VALUES ('auth', ${sqlJson(stateMetadata(data))}) ON DUPLICATE KEY UPDATE document_json = VALUES(document_json)`;
+}
+
+function stateMetadata(data) {
+  const persistent = mysqlPersistentData(data);
+  return {
+    schemaVersion: 2,
+    storage: "mysql_entity_tables",
+    counts: {
+      accounts: Object.keys(objectOrEmpty(persistent.accounts)).length,
+      sessions: Object.keys(objectOrEmpty(persistent.sessions)).length,
+      profileBindings: Object.keys(objectOrEmpty(persistent.profileBindings)).length,
+      profiles: Object.keys(objectOrEmpty(persistent.profiles)).length,
+      mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
+      marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
+      parties: Object.keys(objectOrEmpty(persistent.parties)).length,
+      partyInvites: Object.keys(objectOrEmpty(persistent.partyInvites)).length,
+      families: Object.keys(objectOrEmpty(persistent.families)).length,
+      manors: Object.keys(objectOrEmpty(persistent.manors)).length,
+      manorBattles: Array.isArray(persistent.manorBattles) ? persistent.manorBattles.length : 0,
+      manorWars: Array.isArray(persistent.manorWars) ? persistent.manorWars.length : 0,
+      chatMessages: Array.isArray(persistent.chatMessages) ? persistent.chatMessages.length : 0,
+      battleRecords: Array.isArray(persistent.battleRecords) ? persistent.battleRecords.length : 0,
+      battleTrace: Array.isArray(persistent.battleTrace) ? persistent.battleTrace.length : 0,
+      gmUserGrants: Object.keys(objectOrEmpty(persistent.gmUserGrants)).length,
+      gmCommandGrantAccounts: Object.keys(objectOrEmpty(persistent.gmCommandGrants)).length,
+      gmCommandAudit: Array.isArray(persistent.gmCommandAudit) ? persistent.gmCommandAudit.length : 0,
+      authEvents: Array.isArray(persistent.authEvents) ? persistent.authEvents.length : 0,
+      serviceEvents: Array.isArray(persistent.serviceEvents) ? persistent.serviceEvents.length : 0,
+    },
+    serviceEventSeq: Number(persistent.serviceEventSeq || 0),
+    marketConfig: objectOrEmpty(persistent.marketConfig),
+  };
 }
 
 function insertAccountStatement(account) {
@@ -544,6 +949,10 @@ function insertProfileStatement(profile) {
 
 function insertMailStatement(mail) {
   return `INSERT INTO mail_messages (mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json) VALUES (${sqlString(mail.mailId)}, ${sqlString(mail.senderAccountId)}, ${sqlString(mail.recipientAccountId)}, ${sqlString(mail.title)}, ${sqlString(mail.createdAt)}, ${sqlNullable(mail.readAt)}, ${sqlJson(mail)})`;
+}
+
+function insertMarketListingStatement(listing) {
+  return `INSERT INTO market_listings (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json) VALUES (${sqlString(listing.listingId)}, ${sqlString(listing.sellerAccountId)}, ${sqlString(listing.itemId)}, ${sqlString(listing.currency)}, ${Number(listing.unitPrice || 0)}, ${Number(listing.count || 0)}, ${sqlString(listing.createdAt)}, ${sqlJson(listing)})`;
 }
 
 function insertPartyStatement(party) {
@@ -576,20 +985,12 @@ function insertChatMessageStatement(message) {
   return `INSERT INTO chat_messages (message_id, channel, party_id, sender_account_id, created_at, document_json) VALUES (${sqlString(message.messageId)}, ${sqlString(message.channel)}, ${sqlString(message.partyId)}, ${sqlString(message.senderAccountId)}, ${sqlString(message.createdAt)}, ${sqlJson(message)})`;
 }
 
-function insertPlayerPositionStatement(position) {
-  return `INSERT INTO player_positions (account_id, username, map_id, cell_x, cell_y, facing, moving, updated_at, document_json) VALUES (${sqlString(position.accountId)}, ${sqlString(position.username)}, ${sqlString(position.mapId)}, ${Number(position.cellX || 0)}, ${Number(position.cellY || 0)}, ${sqlString(position.facing)}, ${position.moving ? 1 : 0}, ${sqlString(position.updatedAt)}, ${sqlJson(position)})`;
-}
-
-function insertBattleInviteStatement(invite) {
-  return `INSERT INTO battle_invites (invite_id, mode, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.mode)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
-}
-
-function insertBattleRoomStatement(room) {
-  return `INSERT INTO battle_rooms (room_id, mode, status, seed, created_at, updated_at, document_json) VALUES (${sqlString(room.roomId)}, ${sqlString(room.mode)}, ${sqlString(room.status)}, ${sqlString(room.seed)}, ${sqlString(room.createdAt)}, ${sqlString(room.updatedAt)}, ${sqlJson(room)})`;
-}
-
 function insertBattleRecordStatement(record) {
   return `INSERT INTO battle_records (record_id, room_id, mode, reason, winner_account_id, closed_by_account_id, ended_at, participant_account_ids, loser_account_ids, document_json) VALUES (${sqlString(record.recordId)}, ${sqlString(record.roomId)}, ${sqlString(record.mode)}, ${sqlString(record.reason)}, ${sqlString(record.winnerAccountId)}, ${sqlString(record.closedByAccountId)}, ${sqlString(record.endedAt)}, ${sqlJson(record.participantAccountIds || [])}, ${sqlJson(record.loserAccountIds || [])}, ${sqlJson(record)})`;
+}
+
+function insertBattleTraceStatement(trace) {
+  return `INSERT INTO battle_trace (trace_id, room_id, trace_type, created_at, document_json) VALUES (${sqlString(trace.traceId)}, ${sqlString(trace.roomId)}, ${sqlString(trace.type)}, ${sqlString(trace.createdAt)}, ${sqlJson(trace)})`;
 }
 
 function insertGmUserGrantStatement(grant) {

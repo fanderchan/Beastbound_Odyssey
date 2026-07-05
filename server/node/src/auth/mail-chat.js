@@ -10,6 +10,7 @@ function createMailChatDomain(ctx) {
     MAX_CHAT_MESSAGES,
     addClaimedMailItemsToActiveBattleRoom,
     addRewardItemsToBackpack,
+    bagItemLabel,
     backpackItemCount,
     captureToolBagFromProfile,
     clampInt,
@@ -23,6 +24,7 @@ function createMailChatDomain(ctx) {
     normalizeBackpackSlots,
     normalizeChatChannel,
     normalizeChatText,
+    normalizeMailCurrency,
     normalizeMailItems,
     normalizeMailText,
     normalizeUsername,
@@ -31,6 +33,7 @@ function createMailChatDomain(ctx) {
     partyForAccount,
     profileBackpackSlots,
     profileBindingForAccount,
+    profileCurrencyAmount,
     profileSummaryForAccount,
     publicAccount,
     publicBattleRoom,
@@ -40,6 +43,8 @@ function createMailChatDomain(ctx) {
     randomId,
     resolveSession,
     save,
+    setProfileCurrencyAmount,
+    shopCurrencyLabel,
   } = ctx;
 
   function sendMail(token, payload = {}) {
@@ -182,7 +187,8 @@ function createMailChatDomain(ctx) {
       return fail("mail_missing", "邮件不存在。");
     }
     const attachments = normalizeMailItems(mail.items || []);
-    if (attachments.length <= 0) {
+    const currency = normalizeMailCurrency(mail.currency || mail.currencies || {});
+    if (attachments.length <= 0 && mailCurrencyTotal(currency) <= 0) {
       return fail("mail_no_attachments", "邮件没有可领取附件。", {
         mail: publicMail(mail),
       });
@@ -196,18 +202,29 @@ function createMailChatDomain(ctx) {
       });
     }
     const profile = clone(profileDoc.profile);
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), attachments);
-    if (addResult.addedItems.length <= 0) {
+    let addResult = {
+      slots: normalizeBackpackSlots(profileBackpackSlots(profile)),
+      addedItems: [],
+      lostItems: attachments,
+    };
+    if (attachments.length > 0) {
+      addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), attachments);
+    }
+    if (addResult.addedItems.length <= 0 && mailCurrencyTotal(currency) <= 0) {
       return fail("backpack_full", "背包已满，无法领取邮件附件。", {
         mail: publicMail(mail),
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
+    }
+    for (const [currencyId, amount] of Object.entries(currency)) {
+      setProfileCurrencyAmount(profile, currencyId, profileCurrencyAmount(profile, currencyId) + amount);
     }
     profile.backpackSlots = normalizeBackpackSlots(addResult.slots);
     profile.captureTools = captureToolBagFromProfile(profile);
     const remaining = normalizeMailItems(addResult.lostItems);
     if (remaining.length > 0) {
       mail.items = remaining;
+      mail.currency = {};
       data.mailMessages[normalizedMailId] = mail;
     } else {
       delete data.mailMessages[normalizedMailId];
@@ -229,7 +246,7 @@ function createMailChatDomain(ctx) {
       ? addClaimedMailItemsToActiveBattleRoom(data, resolved.account.accountId, addResult.addedItems)
       : null;
     save(data);
-    const message = "领取邮件附件：%s。".replace("%s", itemAmountText(addResult.addedItems));
+    const message = "领取邮件附件：%s。".replace("%s", mailAttachmentText(currency, addResult.addedItems));
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: binding,
@@ -240,11 +257,41 @@ function createMailChatDomain(ctx) {
       claim: {
         mailId: normalizedMailId,
         addedItems: addResult.addedItems,
+        currency,
         remainingItems: remaining,
         schemaVersion: 1,
       },
       message: remaining.length > 0 ? `${message} 背包空间不足，剩余附件留在邮箱。` : message,
     });
+  }
+
+  function mailCurrencyTotal(currency) {
+    return Object.values(currency || {}).reduce((total, value) => total + Math.max(0, Math.trunc(Number(value || 0))), 0);
+  }
+
+  function mailCurrencyText(currency) {
+    const parts = [];
+    for (const currencyId of ["stoneCoins", "diamonds"]) {
+      const amount = Math.max(0, Math.trunc(Number((currency || {})[currencyId] || 0)));
+      if (amount > 0) {
+        const label = typeof shopCurrencyLabel === "function" ? shopCurrencyLabel(currencyId) : currencyId;
+        parts.push(`${amount}${label}`);
+      }
+    }
+    return parts.join("、");
+  }
+
+  function mailAttachmentText(currency, items) {
+    const parts = [];
+    const currencyText = mailCurrencyText(currency);
+    const itemText = itemAmountText(items);
+    if (currencyText) {
+      parts.push(currencyText);
+    }
+    if (itemText) {
+      parts.push(itemText);
+    }
+    return parts.join("、") || "无";
   }
 
   function listChatMessages(token, payload = {}) {

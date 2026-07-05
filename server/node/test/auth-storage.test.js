@@ -48,6 +48,7 @@ process.stdin.on("data", (chunk) => {
 process.stdin.on("end", () => {
     fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
       argv: process.argv.slice(2),
+      stdin,
       stdinLength: stdin.length,
       hasExecuteArg: process.argv.slice(2).includes("-e"),
       hasServerState: stdin.includes("INSERT INTO server_state"),
@@ -175,6 +176,14 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => call.hasManorWars));
     assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
+    const saveCall = calls.find((call) => String(call.stdin || "").includes("START TRANSACTION"));
+    assert.ok(saveCall);
+    assert.equal(/\bDELETE FROM accounts\b/.test(saveCall.stdin), false);
+    assert.equal(/\bDELETE FROM sessions\b/.test(saveCall.stdin), false);
+    assert.equal(saveCall.stdin.includes("INSERT INTO player_positions"), false);
+    assert.equal(saveCall.stdin.includes("INSERT INTO battle_rooms"), false);
+    assert.equal(saveCall.stdin.includes("INSERT INTO battle_invites"), false);
+    assert.ok(saveCall.stdin.includes("mysql_entity_tables"));
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -185,7 +194,7 @@ process.stdin.on("end", () => {
   }
 });
 
-test("mysql store loads state documents larger than the Node default buffer", () => {
+test("mysql store loads legacy state documents larger than the Node default buffer", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-load-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
@@ -195,11 +204,11 @@ process.stdin.on("data", (chunk) => {
   stdin += chunk;
 });
 process.stdin.on("end", () => {
-  if (!stdin.includes("SELECT CAST(document_json AS CHAR) FROM server_state")) {
+  if (!stdin.includes("SELECT 'server_state'")) {
     return;
   }
   const largeNote = "x".repeat(2 * 1024 * 1024);
-  process.stdout.write(JSON.stringify({
+  process.stdout.write(["server_state", "auth", JSON.stringify({
     accounts: {
       biguser: {
         accountId: "acc_biguser",
@@ -216,7 +225,7 @@ process.stdin.on("end", () => {
     profiles: {},
     authEvents: [],
     serviceEvents: [],
-  }) + "\\n");
+  })].join("\\t") + "\\n");
 });
 `, {"mode": 0o755});
   try {
@@ -233,6 +242,201 @@ process.stdin.on("end", () => {
     assert.equal(Object.keys(loaded.accounts || {}).length, 1);
     assert.equal(loaded.accounts.biguser.note.length, 2 * 1024 * 1024);
   } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql store loads entity rows into the auth data shape", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-entity-load-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  stdin += chunk;
+});
+process.stdin.on("end", () => {
+  if (!stdin.includes("SELECT 'accounts'")) {
+    return;
+  }
+  const rows = [
+    ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    ["accounts", "acc_entity", {
+      accountId: "acc_entity",
+      username: "entityuser",
+      displayName: "实体用户",
+      role: "player",
+      createdAt: "2026-07-04T00:00:00.000Z",
+      updatedAt: "2026-07-04T00:00:00.000Z",
+    }],
+    ["profiles", "player_entity", {
+      playerId: "player_entity",
+      accountId: "acc_entity",
+      profileRevision: 3,
+      updatedAt: "2026-07-04T00:01:00.000Z",
+      profile: {name: "实体档案", level: 12},
+    }],
+    ["mail_messages", "mail_entity", {
+      mailId: "mail_entity",
+      senderAccountId: "acc_entity",
+      recipientAccountId: "acc_entity",
+      title: "实体邮件",
+      createdAt: "2026-07-04T00:02:00.000Z",
+      readAt: null,
+    }],
+    ["gm_command_grants", "acc_entity/*", {
+      accountId: "acc_entity",
+      commandId: "*",
+      enabled: true,
+    }],
+    ["battle_trace", "trace_entity", {
+      traceId: "trace_entity",
+      type: "battle_state_query",
+      roomId: "room_entity",
+      createdAt: "2026-07-04T00:03:00.000Z",
+    }],
+    ["service_events", "7", {
+      eventSeq: 7,
+      eventId: "event_entity",
+      type: "system.notice",
+      createdAt: "2026-07-04T00:04:00.000Z",
+    }],
+  ];
+  process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+});
+`, {"mode": 0o755});
+  try {
+    const store = createMysqlAuthStore({
+      "mysqlPath": fakeMysqlPath,
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "tester",
+      "password": "",
+      "database": "beastbound_test",
+      "createDatabase": false,
+    });
+    const loaded = store.load();
+    assert.equal(loaded.accounts.entityuser.accountId, "acc_entity");
+    assert.equal(loaded.profiles.player_entity.profile.name, "实体档案");
+    assert.equal(loaded.mailMessages.mail_entity.title, "实体邮件");
+    assert.equal(loaded.gmCommandGrants.acc_entity[0].commandId, "*");
+    assert.equal(loaded.battleTrace[0].traceId, "trace_entity");
+    assert.equal(loaded.serviceEventSeq, 7);
+  } finally {
+    fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql store incrementally writes changed entities without full table rewrites", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-incremental-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  stdin += chunk;
+});
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({
+    argv: process.argv.slice(2),
+    stdin,
+  }) + "\\n");
+});
+`, {"mode": 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      "mysqlPath": fakeMysqlPath,
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "tester",
+      "password": "secret",
+      "database": "beastbound_test",
+      "createDatabase": false,
+    });
+    const unchangedFamilyMarker = `UNCHANGED_FAMILY_MARKER_${"z".repeat(256)}`;
+    const firstState = {
+      "accounts": {
+        "incuser": {
+          "accountId": "acc_incremental",
+          "username": "incuser",
+          "displayName": "增量用户",
+          "role": "player",
+          "createdAt": "2026-07-04T00:00:00.000Z",
+          "updatedAt": "2026-07-04T00:00:00.000Z",
+        },
+      },
+      "sessions": {},
+      "profileBindings": {},
+      "profiles": {},
+      "mailMessages": {
+        "mail_incremental": {
+          "mailId": "mail_incremental",
+          "senderAccountId": "acc_incremental",
+          "recipientAccountId": "acc_incremental",
+          "title": "会被删除",
+          "createdAt": "2026-07-04T00:00:00.000Z",
+          "readAt": null,
+        },
+      },
+      "families": {
+        "family_incremental": {
+          "familyId": "family_incremental",
+          "name": "增量家族",
+          "leaderAccountId": "acc_incremental",
+          "memberAccountIds": ["acc_incremental"],
+          "notice": unchangedFamilyMarker,
+          "fame": 1,
+          "createdAt": "2026-07-04T00:00:00.000Z",
+          "updatedAt": "2026-07-04T00:00:00.000Z",
+          "schemaVersion": 1,
+        },
+      },
+      "playerPositions": {
+        "acc_incremental": {"accountId": "acc_incremental", "username": "incuser", "mapId": "firebud"},
+      },
+      "battleRooms": {
+        "room_incremental": {"roomId": "room_incremental", "mode": "duel", "status": "ready"},
+      },
+      "battleInvites": {
+        "invite_incremental": {"inviteId": "invite_incremental", "mode": "duel", "status": "pending"},
+      },
+      "authEvents": [],
+      "serviceEvents": [],
+    };
+    const secondState = JSON.parse(JSON.stringify(firstState));
+    secondState.accounts.incuser.displayName = "增量用户改名";
+    secondState.accounts.incuser.updatedAt = "2026-07-04T00:01:00.000Z";
+    secondState.mailMessages = {};
+    store.save(firstState);
+    store.save(secondState);
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const saveCalls = calls.filter((call) => call.stdin.includes("START TRANSACTION"));
+    assert.equal(saveCalls.length, 2);
+    const secondSave = saveCalls[1].stdin;
+    assert.ok(secondSave.includes("INSERT INTO server_state"));
+    assert.ok(secondSave.includes("mysql_entity_tables"));
+    assert.ok(secondSave.includes("INSERT INTO accounts"));
+    assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
+    assert.ok(secondSave.includes("DELETE FROM mail_messages WHERE mail_id = 'mail_incremental'"));
+    assert.equal(/\bDELETE FROM accounts\b/.test(secondSave), false);
+    assert.equal(/\bDELETE FROM sessions\b/.test(secondSave), false);
+    assert.equal(secondSave.includes("INSERT INTO families"), false);
+    assert.equal(secondSave.includes(unchangedFamilyMarker), false);
+    assert.equal(secondSave.includes("INSERT INTO player_positions"), false);
+    assert.equal(secondSave.includes("INSERT INTO battle_rooms"), false);
+    assert.equal(secondSave.includes("INSERT INTO battle_invites"), false);
+    assert.equal(secondSave.includes("room_incremental"), false);
+    assert.equal(secondSave.includes("invite_incremental"), false);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }
 });

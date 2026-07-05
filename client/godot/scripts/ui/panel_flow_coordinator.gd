@@ -6,6 +6,7 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
@@ -29,6 +30,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
+const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -61,45 +63,7 @@ const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
-const MAP_DATA_PATHS := {
-	"firebud_training_yard": "res://data/firebud_training_map.json",
-	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
-	"earth_vein_cave": "res://data/earth_vein_cave_map.json",
-	"earth_vein_cave_f2": "res://data/earth_vein_cave_f2_map.json",
-	"earth_vein_cave_f3": "res://data/earth_vein_cave_f3_map.json",
-	"earth_vein_cave_f4": "res://data/earth_vein_cave_f4_map.json",
-	"tide_echo_cave": "res://data/tide_echo_cave_map.json",
-	"tide_echo_cave_f2": "res://data/tide_echo_cave_f2_map.json",
-	"tide_echo_cave_f3": "res://data/tide_echo_cave_f3_map.json",
-	"tide_echo_cave_f4": "res://data/tide_echo_cave_f4_map.json",
-	"ember_core_cave": "res://data/ember_core_cave_map.json",
-	"ember_core_cave_f2": "res://data/ember_core_cave_f2_map.json",
-	"ember_core_cave_f3": "res://data/ember_core_cave_f3_map.json",
-	"ember_core_cave_f4": "res://data/ember_core_cave_f4_map.json",
-	"gale_breath_cave": "res://data/gale_breath_cave_map.json",
-	"gale_breath_cave_f2": "res://data/gale_breath_cave_f2_map.json",
-	"gale_breath_cave_f3": "res://data/gale_breath_cave_f3_map.json",
-	"gale_breath_cave_f4": "res://data/gale_breath_cave_f4_map.json",
-	"shadow_oath_cavern": "res://data/shadow_oath_cavern_map.json",
-	"shadow_oath_cavern_f2": "res://data/shadow_oath_cavern_f2_map.json",
-	"shadow_oath_cavern_f3": "res://data/shadow_oath_cavern_f3_map.json",
-	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
-	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
-	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
-	"mistcap_marsh": "res://data/mistcap_marsh_map.json",
-	"suncrack_badlands": "res://data/suncrack_badlands_map.json",
-	"windglass_highlands": "res://data/windglass_highlands_map.json",
-	"firebud_manor": "res://data/firebud_manor_map.json",
-	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
-	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
-	"ember_core_manor": "res://data/ember_core_manor_map.json",
-	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
-	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
-	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
-	"artisan_manor": "res://data/artisan_manor_map.json",
-	"training_manor": "res://data/training_manor_map.json",
-	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
-}
+const MAP_DATA_PATHS := MapDataCatalog.MAP_DATA_PATHS
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
 const ACTION_BAR_COLLAPSED_SIZE := Vector2(58, 86)
@@ -155,10 +119,10 @@ const BATTLE_PASSIVE_MAX_LINES := 2
 const BATTLE_PASSIVE_PANEL_HEIGHT := 64.0
 const BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT := 58.0
 const BATTLE_PASSIVE_PANEL_PADDING := Vector2(14.0, 6.0)
-const BATTLE_GRID_TEMPLATE_SIZE := Vector2(1280.0, 720.0)
-const BATTLE_GRID_TEMPLATE_ORIGIN := Vector2(128.0, 338.4)
-const BATTLE_GRID_TEMPLATE_LANE_STEP := Vector2(152.0, 52.0)
-const BATTLE_GRID_TEMPLATE_RANK_STEP := Vector2(76.0, -48.0)
+const BATTLE_GRID_TEMPLATE_SIZE := BattleLayoutConstants.GRID_TEMPLATE_SIZE
+const BATTLE_GRID_TEMPLATE_ORIGIN := BattleLayoutConstants.GRID_TEMPLATE_ORIGIN
+const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE_STEP
+const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
@@ -1888,6 +1852,306 @@ var mailbox_pending_kind:
 	set(value):
 		host.mailbox_pending_kind = value
 
+var mailbox_inbox_tab_button:
+	get:
+		return host.mailbox_inbox_tab_button
+	set(value):
+		host.mailbox_inbox_tab_button = value
+
+var mailbox_compose_tab_button:
+	get:
+		return host.mailbox_compose_tab_button
+	set(value):
+		host.mailbox_compose_tab_button = value
+
+var mailbox_inbox_container:
+	get:
+		return host.mailbox_inbox_container
+	set(value):
+		host.mailbox_inbox_container = value
+
+var mailbox_compose_container:
+	get:
+		return host.mailbox_compose_container
+	set(value):
+		host.mailbox_compose_container = value
+
+var mailbox_active_tab:
+	get:
+		return host.mailbox_active_tab
+	set(value):
+		host.mailbox_active_tab = value
+
+var market_menu_button:
+	get:
+		return host.market_menu_button
+	set(value):
+		host.market_menu_button = value
+
+var market_panel:
+	get:
+		return host.market_panel
+	set(value):
+		host.market_panel = value
+
+var market_list_container:
+	get:
+		return host.market_list_container
+	set(value):
+		host.market_list_container = value
+
+var market_detail_label:
+	get:
+		return host.market_detail_label
+	set(value):
+		host.market_detail_label = value
+
+var market_wallet_label:
+	get:
+		return host.market_wallet_label
+	set(value):
+		host.market_wallet_label = value
+
+var market_status_label:
+	get:
+		return host.market_status_label
+	set(value):
+		host.market_status_label = value
+
+var market_refresh_button:
+	get:
+		return host.market_refresh_button
+	set(value):
+		host.market_refresh_button = value
+
+var market_close_button:
+	get:
+		return host.market_close_button
+	set(value):
+		host.market_close_button = value
+
+var market_buy_tab_button:
+	get:
+		return host.market_buy_tab_button
+	set(value):
+		host.market_buy_tab_button = value
+
+var market_sell_tab_button:
+	get:
+		return host.market_sell_tab_button
+	set(value):
+		host.market_sell_tab_button = value
+
+var market_mine_tab_button:
+	get:
+		return host.market_mine_tab_button
+	set(value):
+		host.market_mine_tab_button = value
+
+var market_buy_button:
+	get:
+		return host.market_buy_button
+	set(value):
+		host.market_buy_button = value
+
+var market_cancel_button:
+	get:
+		return host.market_cancel_button
+	set(value):
+		host.market_cancel_button = value
+
+var market_sell_form_container:
+	get:
+		return host.market_sell_form_container
+	set(value):
+		host.market_sell_form_container = value
+
+var market_sell_item_option:
+	get:
+		return host.market_sell_item_option
+	set(value):
+		host.market_sell_item_option = value
+
+var market_sell_count_spinbox:
+	get:
+		return host.market_sell_count_spinbox
+	set(value):
+		host.market_sell_count_spinbox = value
+
+var market_sell_currency_option:
+	get:
+		return host.market_sell_currency_option
+	set(value):
+		host.market_sell_currency_option = value
+
+var market_sell_unit_price_spinbox:
+	get:
+		return host.market_sell_unit_price_spinbox
+	set(value):
+		host.market_sell_unit_price_spinbox = value
+
+var market_sell_summary_label:
+	get:
+		return host.market_sell_summary_label
+	set(value):
+		host.market_sell_summary_label = value
+
+var market_sell_button:
+	get:
+		return host.market_sell_button
+	set(value):
+		host.market_sell_button = value
+
+var market_http_request:
+	get:
+		return host.market_http_request
+	set(value):
+		host.market_http_request = value
+
+var market_listing_buttons:
+	get:
+		return host.market_listing_buttons
+	set(value):
+		host.market_listing_buttons = value
+
+var market_listings:
+	get:
+		return host.market_listings
+	set(value):
+		host.market_listings = value
+
+var market_my_listings:
+	get:
+		return host.market_my_listings
+	set(value):
+		host.market_my_listings = value
+
+var market_config:
+	get:
+		return host.market_config
+	set(value):
+		host.market_config = value
+
+var market_selected_listing_id:
+	get:
+		return host.market_selected_listing_id
+	set(value):
+		host.market_selected_listing_id = value
+
+var market_mode:
+	get:
+		return host.market_mode
+	set(value):
+		host.market_mode = value
+
+var market_request_pending:
+	get:
+		return host.market_request_pending
+	set(value):
+		host.market_request_pending = value
+
+var market_pending_kind:
+	get:
+		return host.market_pending_kind
+	set(value):
+		host.market_pending_kind = value
+
+var bank_panel:
+	get:
+		return host.bank_panel
+	set(value):
+		host.bank_panel = value
+
+var bank_list_container:
+	get:
+		return host.bank_list_container
+	set(value):
+		host.bank_list_container = value
+
+var bank_detail_label:
+	get:
+		return host.bank_detail_label
+	set(value):
+		host.bank_detail_label = value
+
+var bank_quantity_spinbox:
+	get:
+		return host.bank_quantity_spinbox
+	set(value):
+		host.bank_quantity_spinbox = value
+
+var bank_deposit_button:
+	get:
+		return host.bank_deposit_button
+	set(value):
+		host.bank_deposit_button = value
+
+var bank_withdraw_button:
+	get:
+		return host.bank_withdraw_button
+	set(value):
+		host.bank_withdraw_button = value
+
+var bank_coin_deposit_button:
+	get:
+		return host.bank_coin_deposit_button
+	set(value):
+		host.bank_coin_deposit_button = value
+
+var bank_coin_withdraw_button:
+	get:
+		return host.bank_coin_withdraw_button
+	set(value):
+		host.bank_coin_withdraw_button = value
+
+var bank_status_label:
+	get:
+		return host.bank_status_label
+	set(value):
+		host.bank_status_label = value
+
+var bank_close_button:
+	get:
+		return host.bank_close_button
+	set(value):
+		host.bank_close_button = value
+
+var bank_http_request:
+	get:
+		return host.bank_http_request
+	set(value):
+		host.bank_http_request = value
+
+var bank_item_buttons:
+	get:
+		return host.bank_item_buttons
+	set(value):
+		host.bank_item_buttons = value
+
+var bank_selected_item_id:
+	get:
+		return host.bank_selected_item_id
+	set(value):
+		host.bank_selected_item_id = value
+
+var bank_quantity:
+	get:
+		return host.bank_quantity
+	set(value):
+		host.bank_quantity = value
+
+var bank_request_pending:
+	get:
+		return host.bank_request_pending
+	set(value):
+		host.bank_request_pending = value
+
+var bank_pending_kind:
+	get:
+		return host.bank_pending_kind
+	set(value):
+		host.bank_pending_kind = value
+
 var party_panel:
 	get:
 		return host.party_panel
@@ -2320,6 +2584,42 @@ var player_action_party_invite_button:
 	set(value):
 		host.player_action_party_invite_button = value
 
+var player_action_trade_item_option:
+	get:
+		return host.player_action_trade_item_option
+	set(value):
+		host.player_action_trade_item_option = value
+
+var player_action_trade_count_spinbox:
+	get:
+		return host.player_action_trade_count_spinbox
+	set(value):
+		host.player_action_trade_count_spinbox = value
+
+var player_action_trade_coin_spinbox:
+	get:
+		return host.player_action_trade_coin_spinbox
+	set(value):
+		host.player_action_trade_coin_spinbox = value
+
+var player_action_trade_refresh_button:
+	get:
+		return host.player_action_trade_refresh_button
+	set(value):
+		host.player_action_trade_refresh_button = value
+
+var player_action_trade_propose_button:
+	get:
+		return host.player_action_trade_propose_button
+	set(value):
+		host.player_action_trade_propose_button = value
+
+var player_action_trade_accept_button:
+	get:
+		return host.player_action_trade_accept_button
+	set(value):
+		host.player_action_trade_accept_button = value
+
 var player_action_close_button:
 	get:
 		return host.player_action_close_button
@@ -2337,6 +2637,12 @@ var player_action_target:
 		return host.player_action_target
 	set(value):
 		host.player_action_target = value
+
+var player_action_trade_received:
+	get:
+		return host.player_action_trade_received
+	set(value):
+		host.player_action_trade_received = value
 
 var player_action_request_pending:
 	get:
@@ -4432,6 +4738,9 @@ var battle_message_expanded:
 	set(value):
 		host.battle_message_expanded = value
 
+var world_log_layout_dirty: bool = false
+var world_log_layout_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
+
 var pet_rest_recovery_elapsed:
 	get:
 		return host.pet_rest_recovery_elapsed
@@ -5275,6 +5584,10 @@ func bind(main_host) -> void:
 	host = main_host
 
 
+func _server_player_message(parsed: Dictionary, fallback_message: String = "") -> String:
+	return ServerAuthClientModel.player_message_from_parsed(parsed, fallback_message)
+
+
 func _build_hud() -> void:
 	action_bar_collapsed = _load_action_bar_collapsed_preference()
 	var canvas_layer = CanvasLayer.new()
@@ -5478,6 +5791,11 @@ func _build_hud() -> void:
 	family_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	family_menu_button.pressed.connect(_open_family_panel)
 	action_row.add_child(family_menu_button)
+	market_menu_button = Button.new()
+	market_menu_button.text = "买卖"
+	market_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
+	market_menu_button.pressed.connect(_open_market_panel)
+	action_row.add_child(market_menu_button)
 	mailbox_menu_button = Button.new()
 	mailbox_menu_button.text = "邮箱"
 	mailbox_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -6884,16 +7202,24 @@ func _build_hud() -> void:
 	mailbox_close_button.pressed.connect(_close_mailbox_panel)
 	mailbox_header.add_child(mailbox_close_button)
 
-	var mailbox_body = HBoxContainer.new()
-	mailbox_body.add_theme_constant_override("separation", 10)
-	mailbox_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mailbox_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mailbox_column.add_child(mailbox_body)
+	var mailbox_tabs = HBoxContainer.new()
+	mailbox_tabs.add_theme_constant_override("separation", 8)
+	mailbox_column.add_child(mailbox_tabs)
+	mailbox_inbox_tab_button = _mailbox_tab_button("收信", "inbox")
+	mailbox_compose_tab_button = _mailbox_tab_button("写信", "compose")
+	mailbox_tabs.add_child(mailbox_inbox_tab_button)
+	mailbox_tabs.add_child(mailbox_compose_tab_button)
+
+	mailbox_inbox_container = HBoxContainer.new()
+	mailbox_inbox_container.add_theme_constant_override("separation", 10)
+	mailbox_inbox_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_inbox_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mailbox_column.add_child(mailbox_inbox_container)
 
 	var mailbox_list_scroll = ScrollContainer.new()
 	mailbox_list_scroll.custom_minimum_size = Vector2(230, 0)
 	mailbox_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mailbox_body.add_child(mailbox_list_scroll)
+	mailbox_inbox_container.add_child(mailbox_list_scroll)
 	mailbox_list_container = VBoxContainer.new()
 	mailbox_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_list_container.add_theme_constant_override("separation", 7)
@@ -6903,7 +7229,7 @@ func _build_hud() -> void:
 	mailbox_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mailbox_detail_column.add_theme_constant_override("separation", 8)
-	mailbox_body.add_child(mailbox_detail_column)
+	mailbox_inbox_container.add_child(mailbox_detail_column)
 	var mailbox_detail_scroll = ScrollContainer.new()
 	mailbox_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -6923,46 +7249,168 @@ func _build_hud() -> void:
 	mailbox_claim_button.pressed.connect(_on_mailbox_claim_pressed)
 	mailbox_detail_column.add_child(mailbox_claim_button)
 
-	var mailbox_compose_title = Label.new()
-	mailbox_compose_title.text = "写信"
-	mailbox_compose_title.add_theme_font_size_override("font_size", 17)
-	mailbox_detail_column.add_child(mailbox_compose_title)
+	mailbox_compose_container = VBoxContainer.new()
+	mailbox_compose_container.visible = false
+	mailbox_compose_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_compose_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mailbox_compose_container.add_theme_constant_override("separation", 8)
+	mailbox_column.add_child(mailbox_compose_container)
 	mailbox_recipient_input = LineEdit.new()
 	mailbox_recipient_input.placeholder_text = "收件账号"
 	mailbox_recipient_input.max_length = 20
 	mailbox_recipient_input.custom_minimum_size = Vector2(0, 40)
 	mailbox_recipient_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mailbox_detail_column.add_child(mailbox_recipient_input)
+	mailbox_compose_container.add_child(mailbox_recipient_input)
 	mailbox_title_input = LineEdit.new()
 	mailbox_title_input.placeholder_text = "标题"
 	mailbox_title_input.max_length = 40
 	mailbox_title_input.custom_minimum_size = Vector2(0, 40)
 	mailbox_title_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mailbox_detail_column.add_child(mailbox_title_input)
+	mailbox_compose_container.add_child(mailbox_title_input)
 	mailbox_body_input = TextEdit.new()
 	mailbox_body_input.placeholder_text = "正文"
-	mailbox_body_input.custom_minimum_size = Vector2(0, 88)
+	mailbox_body_input.custom_minimum_size = Vector2(0, 160)
 	mailbox_body_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_body_input.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mailbox_body_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	mailbox_detail_column.add_child(mailbox_body_input)
+	mailbox_compose_container.add_child(mailbox_body_input)
 	mailbox_send_button = Button.new()
 	mailbox_send_button.text = "发送"
 	mailbox_send_button.custom_minimum_size = Vector2(0, 46)
 	mailbox_send_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_send_button.pressed.connect(_on_mailbox_send_pressed)
-	mailbox_detail_column.add_child(mailbox_send_button)
+	mailbox_compose_container.add_child(mailbox_send_button)
 	mailbox_status_label = Label.new()
 	mailbox_status_label.text = ""
 	mailbox_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mailbox_status_label.add_theme_font_size_override("font_size", 14)
 	mailbox_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
 	mailbox_status_label.custom_minimum_size = Vector2(0, 32)
-	mailbox_detail_column.add_child(mailbox_status_label)
+	mailbox_column.add_child(mailbox_status_label)
 	mailbox_http_request = HTTPRequest.new()
 	mailbox_http_request.timeout = 8.0
 	mailbox_http_request.request_completed.connect(_on_mailbox_http_request_completed)
 	mailbox_panel.add_child(mailbox_http_request)
 	hud_root.add_child(mailbox_panel)
+
+	_build_market_panel()
+
+	bank_panel = _panel_container("BankPanel")
+	bank_panel.visible = false
+	bank_panel.z_index = 24
+	var bank_column = VBoxContainer.new()
+	bank_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_column.add_theme_constant_override("separation", 8)
+	bank_panel.add_child(bank_column)
+
+	var bank_header = HBoxContainer.new()
+	bank_header.add_theme_constant_override("separation", 10)
+	bank_column.add_child(bank_header)
+	var bank_title = Label.new()
+	bank_title.text = "仓库"
+	bank_title.add_theme_font_size_override("font_size", 21)
+	bank_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_header.add_child(bank_title)
+	bank_close_button = Button.new()
+	bank_close_button.text = "关闭"
+	bank_close_button.custom_minimum_size = Vector2(92, 44)
+	bank_close_button.pressed.connect(_close_bank_panel)
+	bank_header.add_child(bank_close_button)
+
+	var bank_body = HBoxContainer.new()
+	bank_body.add_theme_constant_override("separation", 10)
+	bank_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_column.add_child(bank_body)
+	var bank_list_scroll = ScrollContainer.new()
+	bank_list_scroll.custom_minimum_size = Vector2(250, 0)
+	bank_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_body.add_child(bank_list_scroll)
+	bank_list_container = VBoxContainer.new()
+	bank_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_list_container.add_theme_constant_override("separation", 7)
+	bank_list_scroll.add_child(bank_list_container)
+
+	var bank_detail_column = VBoxContainer.new()
+	bank_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_detail_column.add_theme_constant_override("separation", 8)
+	bank_body.add_child(bank_detail_column)
+	bank_detail_label = RichTextLabel.new()
+	bank_detail_label.bbcode_enabled = false
+	bank_detail_label.fit_content = false
+	bank_detail_label.scroll_active = true
+	bank_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bank_detail_label.custom_minimum_size = Vector2(0, 150)
+	bank_detail_label.add_theme_font_size_override("font_size", 16)
+	bank_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_detail_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_detail_column.add_child(bank_detail_label)
+
+	bank_quantity_spinbox = SpinBox.new()
+	bank_quantity_spinbox.min_value = 1
+	bank_quantity_spinbox.max_value = 999
+	bank_quantity_spinbox.step = 1
+	bank_quantity_spinbox.value = 1
+	bank_quantity_spinbox.rounded = true
+	bank_quantity_spinbox.custom_minimum_size = Vector2(0, 42)
+	bank_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_quantity_spinbox.value_changed.connect(func(value: float) -> void:
+		_set_bank_quantity(int(value))
+	)
+	bank_detail_column.add_child(bank_quantity_spinbox)
+
+	var bank_item_row = HBoxContainer.new()
+	bank_item_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_item_row.add_theme_constant_override("separation", 8)
+	bank_detail_column.add_child(bank_item_row)
+	bank_deposit_button = Button.new()
+	bank_deposit_button.text = "存入物品"
+	bank_deposit_button.custom_minimum_size = Vector2(0, 46)
+	bank_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_deposit_button.pressed.connect(_on_bank_deposit_pressed)
+	bank_item_row.add_child(bank_deposit_button)
+	bank_withdraw_button = Button.new()
+	bank_withdraw_button.text = "取出物品"
+	bank_withdraw_button.custom_minimum_size = Vector2(0, 46)
+	bank_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_withdraw_button.pressed.connect(_on_bank_withdraw_pressed)
+	bank_item_row.add_child(bank_withdraw_button)
+
+	var bank_coin_row = HBoxContainer.new()
+	bank_coin_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_coin_row.add_theme_constant_override("separation", 8)
+	bank_detail_column.add_child(bank_coin_row)
+	bank_coin_deposit_button = Button.new()
+	bank_coin_deposit_button.text = "存入100石币"
+	bank_coin_deposit_button.custom_minimum_size = Vector2(0, 44)
+	bank_coin_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_coin_deposit_button.pressed.connect(func() -> void:
+		_start_bank_coin_transaction("deposit", 100)
+	)
+	bank_coin_row.add_child(bank_coin_deposit_button)
+	bank_coin_withdraw_button = Button.new()
+	bank_coin_withdraw_button.text = "取出100石币"
+	bank_coin_withdraw_button.custom_minimum_size = Vector2(0, 44)
+	bank_coin_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_coin_withdraw_button.pressed.connect(func() -> void:
+		_start_bank_coin_transaction("withdraw", 100)
+	)
+	bank_coin_row.add_child(bank_coin_withdraw_button)
+
+	bank_status_label = Label.new()
+	bank_status_label.text = ""
+	bank_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bank_status_label.add_theme_font_size_override("font_size", 14)
+	bank_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	bank_status_label.custom_minimum_size = Vector2(0, 34)
+	bank_detail_column.add_child(bank_status_label)
+	bank_http_request = HTTPRequest.new()
+	bank_http_request.timeout = 8.0
+	bank_http_request.request_completed.connect(_on_bank_http_request_completed)
+	bank_panel.add_child(bank_http_request)
+	hud_root.add_child(bank_panel)
 
 	training_partner_panel = _panel_container("TrainingPartnerPanel")
 	training_partner_panel.visible = false
@@ -7544,6 +7992,203 @@ func _build_hud() -> void:
 	hud_root.add_child(battle_message_panel)
 	_register_hud_panels()
 
+func _build_market_panel() -> void:
+	market_panel = _panel_container("MarketPanel")
+	market_panel.visible = false
+	market_panel.z_index = 24
+	var market_column = VBoxContainer.new()
+	market_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	market_column.add_theme_constant_override("separation", 8)
+	market_panel.add_child(market_column)
+
+	var market_header = HBoxContainer.new()
+	market_header.add_theme_constant_override("separation", 10)
+	market_column.add_child(market_header)
+	var market_heading = HBoxContainer.new()
+	market_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_heading.add_theme_constant_override("separation", 16)
+	market_header.add_child(market_heading)
+	var market_title = Label.new()
+	market_title.text = "买卖"
+	market_title.add_theme_font_size_override("font_size", 21)
+	market_title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	market_heading.add_child(market_title)
+	market_wallet_label = Label.new()
+	market_wallet_label.text = ""
+	market_wallet_label.add_theme_font_size_override("font_size", 16)
+	market_wallet_label.add_theme_color_override("font_color", Color(0.88, 0.94, 0.88, 1.0))
+	market_wallet_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_heading.add_child(market_wallet_label)
+	market_refresh_button = Button.new()
+	market_refresh_button.text = "刷新"
+	market_refresh_button.custom_minimum_size = Vector2(80, 44)
+	market_refresh_button.pressed.connect(_request_market_state)
+	market_header.add_child(market_refresh_button)
+	market_close_button = Button.new()
+	market_close_button.text = "关闭"
+	market_close_button.custom_minimum_size = Vector2(92, 44)
+	market_close_button.pressed.connect(_close_market_panel)
+	market_header.add_child(market_close_button)
+
+	var market_tabs = HBoxContainer.new()
+	market_tabs.add_theme_constant_override("separation", 8)
+	market_column.add_child(market_tabs)
+	market_buy_tab_button = _market_tab_button("买入", "buy")
+	market_sell_tab_button = _market_tab_button("出售", "sell")
+	market_mine_tab_button = _market_tab_button("我的挂单", "mine")
+	market_tabs.add_child(market_buy_tab_button)
+	market_tabs.add_child(market_sell_tab_button)
+	market_tabs.add_child(market_mine_tab_button)
+
+	var market_body = HBoxContainer.new()
+	market_body.add_theme_constant_override("separation", 10)
+	market_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	market_column.add_child(market_body)
+	var market_list_scroll = ScrollContainer.new()
+	market_list_scroll.custom_minimum_size = Vector2(290, 0)
+	market_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	market_body.add_child(market_list_scroll)
+	market_list_container = VBoxContainer.new()
+	market_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_list_container.add_theme_constant_override("separation", 7)
+	market_list_scroll.add_child(market_list_container)
+
+	var market_detail_column = VBoxContainer.new()
+	market_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	market_detail_column.add_theme_constant_override("separation", 8)
+	market_body.add_child(market_detail_column)
+	var market_detail_scroll = ScrollContainer.new()
+	market_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	market_detail_column.add_child(market_detail_scroll)
+	market_detail_label = RichTextLabel.new()
+	market_detail_label.bbcode_enabled = false
+	market_detail_label.fit_content = true
+	market_detail_label.scroll_active = false
+	market_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	market_detail_label.add_theme_font_size_override("font_size", 16)
+	market_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_detail_scroll.add_child(market_detail_label)
+
+	market_sell_form_container = VBoxContainer.new()
+	market_sell_form_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_sell_form_container.add_theme_constant_override("separation", 7)
+	market_detail_column.add_child(market_sell_form_container)
+	var sell_item_row = HBoxContainer.new()
+	sell_item_row.add_theme_constant_override("separation", 6)
+	market_sell_form_container.add_child(sell_item_row)
+	market_sell_item_option = OptionButton.new()
+	market_sell_item_option.custom_minimum_size = Vector2(0, 40)
+	market_sell_item_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_sell_item_option.item_selected.connect(func(_index: int) -> void:
+		_refresh_market_sell_form()
+	)
+	sell_item_row.add_child(market_sell_item_option)
+	market_sell_count_spinbox = SpinBox.new()
+	market_sell_count_spinbox.min_value = 1.0
+	market_sell_count_spinbox.max_value = 1.0
+	market_sell_count_spinbox.step = 1.0
+	market_sell_count_spinbox.rounded = true
+	market_sell_count_spinbox.custom_minimum_size = Vector2(86, 40)
+	market_sell_count_spinbox.value_changed.connect(func(_value: float) -> void:
+		_refresh_market_sell_form()
+	)
+	sell_item_row.add_child(market_sell_count_spinbox)
+	var sell_price_row = HBoxContainer.new()
+	sell_price_row.add_theme_constant_override("separation", 6)
+	market_sell_form_container.add_child(sell_price_row)
+	market_sell_currency_option = OptionButton.new()
+	market_sell_currency_option.custom_minimum_size = Vector2(96, 40)
+	market_sell_currency_option.add_item("石币")
+	market_sell_currency_option.set_item_metadata(0, "stoneCoins")
+	market_sell_currency_option.add_item("钻石")
+	market_sell_currency_option.set_item_metadata(1, "diamonds")
+	market_sell_currency_option.item_selected.connect(func(_index: int) -> void:
+		_refresh_market_sell_form()
+	)
+	sell_price_row.add_child(market_sell_currency_option)
+	market_sell_unit_price_spinbox = SpinBox.new()
+	market_sell_unit_price_spinbox.min_value = 1.0
+	market_sell_unit_price_spinbox.max_value = 999999.0
+	market_sell_unit_price_spinbox.step = 1.0
+	market_sell_unit_price_spinbox.rounded = true
+	market_sell_unit_price_spinbox.custom_minimum_size = Vector2(0, 40)
+	market_sell_unit_price_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_sell_unit_price_spinbox.value = 20.0
+	market_sell_unit_price_spinbox.value_changed.connect(func(_value: float) -> void:
+		_refresh_market_sell_form()
+	)
+	sell_price_row.add_child(market_sell_unit_price_spinbox)
+	market_sell_summary_label = Label.new()
+	market_sell_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	market_sell_summary_label.add_theme_font_size_override("font_size", 14)
+	market_sell_summary_label.add_theme_color_override("font_color", Color(0.80, 0.88, 0.80, 1.0))
+	market_sell_summary_label.custom_minimum_size = Vector2(0, 44)
+	market_sell_form_container.add_child(market_sell_summary_label)
+	market_sell_button = Button.new()
+	market_sell_button.text = "上架出售"
+	market_sell_button.custom_minimum_size = Vector2(0, 46)
+	market_sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_sell_button.pressed.connect(_on_market_sell_pressed)
+	market_sell_form_container.add_child(market_sell_button)
+
+	var market_action_row = HBoxContainer.new()
+	market_action_row.add_theme_constant_override("separation", 8)
+	market_detail_column.add_child(market_action_row)
+	market_buy_button = Button.new()
+	market_buy_button.text = "购买"
+	market_buy_button.custom_minimum_size = Vector2(0, 46)
+	market_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_buy_button.pressed.connect(_on_market_buy_pressed)
+	market_action_row.add_child(market_buy_button)
+	market_cancel_button = Button.new()
+	market_cancel_button.text = "下架"
+	market_cancel_button.custom_minimum_size = Vector2(0, 46)
+	market_cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	market_cancel_button.pressed.connect(_on_market_cancel_pressed)
+	market_action_row.add_child(market_cancel_button)
+	market_status_label = Label.new()
+	market_status_label.text = ""
+	market_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	market_status_label.add_theme_font_size_override("font_size", 14)
+	market_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	market_status_label.custom_minimum_size = Vector2(0, 32)
+	market_detail_column.add_child(market_status_label)
+
+	market_http_request = HTTPRequest.new()
+	market_http_request.timeout = 8.0
+	market_http_request.request_completed.connect(_on_market_http_request_completed)
+	market_panel.add_child(market_http_request)
+	hud_root.add_child(market_panel)
+
+
+func _mailbox_tab_button(label: String, tab_id: String) -> Button:
+	var button = Button.new()
+	button.text = label
+	button.toggle_mode = true
+	button.custom_minimum_size = Vector2(0, 40)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(func() -> void:
+		_set_mailbox_tab(tab_id)
+	)
+	return button
+
+
+func _market_tab_button(label: String, mode: String) -> Button:
+	var button = Button.new()
+	button.text = label
+	button.toggle_mode = true
+	button.custom_minimum_size = Vector2(0, 40)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(func() -> void:
+		_set_market_mode(mode)
+	)
+	return button
+
+
 func _build_auth_panel() -> void:
 	auth_panel = _panel_container("AuthPanel")
 	auth_panel.visible = false
@@ -7842,7 +8487,7 @@ func _on_auth_http_request_completed(result: int, response_code: int, _headers: 
 	var parsed = ServerAuthClientModel.parse_auth_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
 		if auth_message_label != null:
-			auth_message_label.text = str(parsed.get("message", "服务器登录失败。"))
+			auth_message_label.text = _server_player_message(parsed, "服务器登录失败。")
 		return
 	var session = parsed.get("session", {}) as Dictionary
 	session["serverBaseUrl"] = ServerAuthClientModel.normalized_base_url(auth_server_url_input.text if auth_server_url_input != null else ServerAuthClientModel.DEFAULT_BASE_URL)
@@ -7869,7 +8514,7 @@ func _is_server_account_session() -> bool:
 func _handle_session_invalid_response(parsed: Dictionary) -> bool:
 	if not ServerAuthClientModel.is_session_invalid_response(parsed):
 		return false
-	var message := str(parsed.get("message", "登录已过期，请重新登录。")).strip_edges()
+	var message := _server_player_message(parsed, "登录已过期，请重新登录。").strip_edges()
 	if message == "":
 		message = "登录已过期，请重新登录。"
 	_handle_server_session_expired(message)
@@ -7988,6 +8633,9 @@ func _handle_server_event(event: Dictionary) -> void:
 	match event_type:
 		"events.ready":
 			server_event_state = "open"
+		"session.replaced":
+			var message := str(event.get("message", "你的账号已在其他地方登录，你已被踢出游戏。")).strip_edges()
+			_handle_server_session_expired(message)
 		"online.snapshot", "online.position":
 			_apply_online_position_players(event.get("players", []))
 		"chat.message":
@@ -8240,7 +8888,7 @@ func _on_party_invite_popup_http_request_completed(result: int, response_code: i
 	elif _handle_session_invalid_response(parsed):
 		return
 	elif party_invite_status_label != null:
-		party_invite_status_label.text = str(parsed.get("message", "队伍操作失败。"))
+		party_invite_status_label.text = _server_player_message(parsed, "队伍操作失败。")
 	_refresh_party_invite_panel()
 
 func _apply_battle_event(event: Dictionary) -> void:
@@ -9003,10 +9651,9 @@ func _current_online_position_payload() -> Dictionary:
 	}
 
 func _current_online_map_payload() -> Dictionary:
-	return {
-		"mapId": current_map_id,
-		"scope": "map",
-	}
+	var payload := _current_online_position_payload()
+	payload["scope"] = "map"
+	return payload
 
 func _on_online_position_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	online_position_request_pending = false
@@ -9323,6 +9970,7 @@ func _open_account_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_bank_panel()
 	_close_party_panel()
 	_close_family_panel()
 	_close_player_action_panel(false)
@@ -9612,6 +10260,8 @@ func _register_hud_panels() -> void:
 		player_action_panel,
 		battle_invite_panel,
 		mailbox_panel,
+		market_panel,
+		bank_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -9645,6 +10295,8 @@ func _register_hud_panels() -> void:
 		player_action_panel,
 		battle_invite_panel,
 		mailbox_panel,
+		market_panel,
+		bank_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -10131,6 +10783,11 @@ func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
 	server_step_move_path_index = 0
 	server_step_move_sync_retry_count = 0
 
+func _reset_server_step_move_authority_after_map_change() -> void:
+	_cancel_server_step_move()
+	server_step_move_authority_cell = Vector2i.ZERO
+	server_step_move_authority_valid = false
+
 func _server_step_move_current_cell() -> Vector2i:
 	if server_step_move_authority_valid and current_map_id != "":
 		return server_step_move_authority_cell
@@ -10236,10 +10893,7 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 			return "只能通过传送点或记录点前往其他地图。"
 		"position_cell_blocked":
 			return "该位置无法站立，请重新点击。"
-	var message = str(parsed.get("message", ""))
-	if message != "":
-		return message
-	return "移动未完成，请重新点击。"
+	return _server_player_message(parsed, "移动未完成，请重新点击。")
 
 func _rebuild_server_step_move_path_from_authority() -> bool:
 	if not server_step_move_active or not server_step_move_authority_valid:
@@ -10376,7 +11030,10 @@ func _transfer_from_warp(item: Dictionary) -> void:
 	if to_map == "":
 		host._open_interaction_dialog(item)
 		return
-	host._load_map(to_map, to_spawn)
+	if not host._load_map(to_map, to_spawn):
+		return
+	_reset_server_step_move_authority_after_map_change()
+	_request_online_position_snapshot(_current_online_map_payload())
 	if hang_heal_resume_active:
 		host.call_deferred("_update_hang_heal_resume_route")
 
@@ -10542,7 +11199,7 @@ func _start_server_party_encounter(zone: Dictionary, pending_message: String = "
 	active_encounter_zone.clear()
 	if _handle_session_invalid_response(parsed):
 		return
-	_set_world_log_message(str(parsed.get("message", failure_message)))
+	_set_world_log_message(_server_player_message(parsed, failure_message))
 
 func _encounter_enemy_count_fallback() -> int:
 	return 10 if _effective_battle_team_character_count() > 1 else 1
@@ -11010,6 +11667,21 @@ func _set_world_log_message(text: String) -> void:
 	if battle_message_panel != null:
 		battle_message_panel.visible = display_text != "" or battle_active
 	_refresh_battle_message_controls()
+	_request_world_log_layout()
+
+func _request_world_log_layout() -> void:
+	world_log_layout_dirty = true
+	if world_log_layout_elapsed >= WORLD_HUD_REFRESH_INTERVAL_SECONDS:
+		_flush_world_log_layout_if_needed(0.0)
+
+func _flush_world_log_layout_if_needed(delta: float) -> void:
+	world_log_layout_elapsed += maxf(0.0, delta)
+	if not world_log_layout_dirty:
+		return
+	if world_log_layout_elapsed < WORLD_HUD_REFRESH_INTERVAL_SECONDS:
+		return
+	world_log_layout_dirty = false
+	world_log_layout_elapsed = 0.0
 	if hud_root != null:
 		host._layout_hud()
 	host.queue_redraw()
@@ -11061,6 +11733,7 @@ func _open_backpack_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_bank_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	backpack_panel.visible = true
@@ -11387,7 +12060,7 @@ func _submit_server_player_rebirth() -> void:
 	if not _is_server_account_session():
 		return
 	var parsed = ServerAuthClientModel.parse_player_rebirth_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	var log_lines: Array[String] = [str(parsed.get("message", "转生失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "转生失败。")]
 	if bool(parsed.get("ok", false)):
 		player_rebirth_confirm_pending = false
 		var server_profile = parsed.get("profile", null)
@@ -11965,7 +12638,7 @@ func _submit_server_equipment_enhance(slot_id: String) -> void:
 	if not _is_server_account_session():
 		return
 	var parsed = ServerAuthClientModel.parse_equipment_enhance_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	var log_lines: Array[String] = [str(parsed.get("message", "强化失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "强化失败。")]
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
 		if server_profile is Dictionary:
@@ -12112,7 +12785,7 @@ func _submit_server_equipment_synthesis(recipe_id: String) -> void:
 	if not _is_server_account_session():
 		return
 	var parsed = ServerAuthClientModel.parse_equipment_synthesize_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	var log_lines: Array[String] = [str(parsed.get("message", "合成失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "合成失败。")]
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
 		if server_profile is Dictionary:
@@ -13036,7 +13709,7 @@ func _request_server_equipment_equip(item_id: String, refresh_backpack_before: b
 	return _apply_server_equipment_equip_result(parsed)
 
 func _apply_server_equipment_equip_result(parsed: Dictionary) -> Dictionary:
-	var log_lines: Array[String] = [str(parsed.get("message", "装备失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "装备失败。")]
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
 		if server_profile is Dictionary:
@@ -13465,6 +14138,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_quest_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_bank_panel(false)
 	_close_party_panel(false)
 	_close_family_panel(false)
 	shop_active_id = resolved_shop_id
@@ -13865,7 +14539,7 @@ func _submit_server_shop_action() -> void:
 	if _handle_session_invalid_response(parsed):
 		shop_action_request_pending = false
 		return
-	var log_lines: Array[String] = [str(parsed.get("message", "商店交易失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "商店交易失败。")]
 	var should_equip_after_buy = false
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
@@ -13978,7 +14652,7 @@ func _submit_server_equipment_repair_all() -> void:
 	if not _is_server_account_session():
 		return
 	var parsed = ServerAuthClientModel.parse_equipment_repair_all_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
-	var log_lines: Array[String] = [str(parsed.get("message", "修理失败。"))]
+	var log_lines: Array[String] = [_server_player_message(parsed, "修理失败。")]
 	if bool(parsed.get("ok", false)):
 		var server_profile = parsed.get("profile", null)
 		if server_profile is Dictionary:
@@ -14579,6 +15253,7 @@ func _open_chat_panel() -> void:
 	_close_family_panel()
 	_close_mailbox_panel()
 	_close_player_action_panel(false)
+	_close_bank_panel(false)
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	chat_panel.visible = true
@@ -14737,7 +15412,7 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 		elif _handle_session_invalid_response(parsed_messages):
 			return
 		elif chat_status_label != null:
-			chat_status_label.text = str(parsed_messages.get("message", "聊天读取失败。"))
+			chat_status_label.text = _server_player_message(parsed_messages, "聊天读取失败。")
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_chat_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
@@ -14750,7 +15425,7 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 		elif _handle_session_invalid_response(parsed_send):
 			return
 		elif chat_status_label != null:
-			chat_status_label.text = str(parsed_send.get("message", "消息发送失败。"))
+			chat_status_label.text = _server_player_message(parsed_send, "消息发送失败。")
 	_refresh_chat_panel()
 
 func _replace_chat_channel_messages(channel: String, server_messages) -> void:
@@ -14796,6 +15471,7 @@ func _open_party_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_bank_panel(false)
 	_close_family_panel()
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
@@ -14834,6 +15510,7 @@ func _open_family_panel_with_focus(manor_id: String) -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
+	_close_bank_panel(false)
 	_close_party_panel(false)
 	_close_player_action_panel(false)
 	_close_training_partner_panel()
@@ -15406,7 +16083,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_state):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_state.get("message", "家族状态读取失败。"))
+			family_status_label.text = _server_player_message(parsed_state, "家族状态读取失败。")
 	elif kind == "list":
 		var parsed_list = ServerAuthClientModel.parse_family_list_response(response_code, body)
 		if bool(parsed_list.get("ok", false)):
@@ -15423,7 +16100,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_list):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_list.get("message", "家族列表读取失败。"))
+			family_status_label.text = _server_player_message(parsed_list, "家族列表读取失败。")
 	elif kind == "challenge":
 		var parsed_challenge = ServerAuthClientModel.parse_manor_challenge_response(response_code, body)
 		if bool(parsed_challenge.get("ok", false)):
@@ -15439,7 +16116,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_challenge):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_challenge.get("message", "庄园战失败。"))
+			family_status_label.text = _server_player_message(parsed_challenge, "庄园战失败。")
 	elif kind == "resolve":
 		var parsed_resolve = ServerAuthClientModel.parse_manor_resolve_response(response_code, body)
 		if bool(parsed_resolve.get("ok", false)):
@@ -15455,7 +16132,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_resolve):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_resolve.get("message", "庄园战结算失败。"))
+			family_status_label.text = _server_player_message(parsed_resolve, "庄园战结算失败。")
 	elif kind == "battle_room":
 		var parsed_room = ServerAuthClientModel.parse_manor_battle_room_response(response_code, body)
 		if bool(parsed_room.get("ok", false)):
@@ -15476,7 +16153,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_room):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_room.get("message", "庄园战入场失败。"))
+			family_status_label.text = _server_player_message(parsed_room, "庄园战入场失败。")
 	elif kind == "war_enter" or kind == "war_leave":
 		var parsed_war_action = ServerAuthClientModel.parse_manor_war_action_response(response_code, body)
 		if bool(parsed_war_action.get("ok", false)):
@@ -15492,7 +16169,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_war_action):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_war_action.get("message", "庄园战参战失败。"))
+			family_status_label.text = _server_player_message(parsed_war_action, "庄园战参战失败。")
 	else:
 		var parsed_action = ServerAuthClientModel.parse_family_action_response(response_code, body)
 		if bool(parsed_action.get("ok", false)):
@@ -15508,7 +16185,7 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 		elif _handle_session_invalid_response(parsed_action):
 			return
 		elif family_status_label != null:
-			family_status_label.text = str(parsed_action.get("message", "家族操作失败。"))
+			family_status_label.text = _server_player_message(parsed_action, "家族操作失败。")
 	_refresh_family_panel()
 	_refresh_family_request_controls()
 
@@ -16183,7 +16860,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 		elif _handle_session_invalid_response(parsed_state):
 			return
 		elif party_status_label != null:
-			party_status_label.text = str(parsed_state.get("message", "队伍状态读取失败。"))
+			party_status_label.text = _server_player_message(parsed_state, "队伍状态读取失败。")
 	elif kind == "online":
 		var parsed_online = ServerAuthClientModel.parse_online_players_response(response_code, body)
 		if bool(parsed_online.get("ok", false)):
@@ -16201,7 +16878,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 		elif _handle_session_invalid_response(parsed_online):
 			return
 		elif party_status_label != null:
-			party_status_label.text = str(parsed_online.get("message", "在线玩家读取失败。"))
+			party_status_label.text = _server_player_message(parsed_online, "在线玩家读取失败。")
 	else:
 		var parsed_action = ServerAuthClientModel.parse_party_action_response(response_code, body)
 		if bool(parsed_action.get("ok", false)):
@@ -16212,7 +16889,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 		elif _handle_session_invalid_response(parsed_action):
 			return
 		elif party_status_label != null:
-			party_status_label.text = str(parsed_action.get("message", "队伍操作失败。"))
+			party_status_label.text = _server_player_message(parsed_action, "队伍操作失败。")
 	_refresh_party_panel()
 	_refresh_party_roster_hud(false)
 	_refresh_party_request_controls()
@@ -16243,6 +16920,7 @@ func _open_player_action_panel(target: Dictionary) -> void:
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	player_action_target = target.duplicate(true)
+	player_action_trade_received.clear()
 	if player_action_status_label != null:
 		player_action_status_label.text = ""
 	if player_action_panel != null:
@@ -16252,6 +16930,7 @@ func _open_player_action_panel(target: Dictionary) -> void:
 
 func _close_player_action_panel(update_layout: bool = true) -> void:
 	player_action_target.clear()
+	player_action_trade_received.clear()
 	player_action_request_pending = false
 	player_action_pending_kind = ""
 	_hide_control(player_action_panel, update_layout)
@@ -16297,10 +16976,95 @@ func _refresh_player_action_panel() -> void:
 	if player_action_party_invite_button != null:
 		player_action_party_invite_button.disabled = disabled or target_party_role != "" or not _party_can_invite()
 		player_action_party_invite_button.text = "邀请入队" if target_party_role == "" else "对方已组队"
+	_refresh_player_action_trade_controls()
 	if player_action_close_button != null:
 		player_action_close_button.disabled = player_action_request_pending
 	if player_action_status_label != null and not has_session:
 		player_action_status_label.text = "需要服务器账号登录。"
+
+func _refresh_player_action_trade_controls() -> void:
+	if player_action_trade_item_option == null:
+		return
+	var has_session = _is_server_account_session()
+	var username = str(player_action_target.get("username", "")).strip_edges()
+	var disabled = player_action_request_pending or not has_session or username == ""
+	var selected_id = _player_action_trade_item_id()
+	player_action_trade_item_option.set_block_signals(true)
+	player_action_trade_item_option.clear()
+	player_action_trade_item_option.add_item("不放物品")
+	player_action_trade_item_option.set_item_metadata(0, "")
+	var selected_index = 0
+	for item_id in _player_action_trade_item_ids():
+		player_action_trade_item_option.add_item("%s x%d" % [BackpackModel.menu_label_for(item_id), _bank_backpack_item_count(item_id)])
+		var index = player_action_trade_item_option.item_count - 1
+		player_action_trade_item_option.set_item_metadata(index, item_id)
+		if item_id == selected_id:
+			selected_index = index
+	player_action_trade_item_option.select(selected_index)
+	player_action_trade_item_option.disabled = disabled
+	player_action_trade_item_option.set_block_signals(false)
+	var trade_item_id = _player_action_trade_item_id()
+	var item_count = _bank_backpack_item_count(trade_item_id)
+	if player_action_trade_count_spinbox != null:
+		player_action_trade_count_spinbox.set_block_signals(true)
+		player_action_trade_count_spinbox.max_value = maxf(1.0, float(item_count))
+		player_action_trade_count_spinbox.value = clampf(player_action_trade_count_spinbox.value, 1.0, player_action_trade_count_spinbox.max_value)
+		player_action_trade_count_spinbox.editable = not disabled and trade_item_id != "" and item_count > 0
+		player_action_trade_count_spinbox.set_block_signals(false)
+	if player_action_trade_coin_spinbox != null:
+		player_action_trade_coin_spinbox.set_block_signals(true)
+		player_action_trade_coin_spinbox.max_value = float(PlayerProgressModel.stone_coins(player_profile))
+		player_action_trade_coin_spinbox.value = clampf(player_action_trade_coin_spinbox.value, 0.0, player_action_trade_coin_spinbox.max_value)
+		player_action_trade_coin_spinbox.editable = not disabled and player_action_trade_coin_spinbox.max_value > 0.0
+		player_action_trade_coin_spinbox.set_block_signals(false)
+	var offer_has_value = (
+		(trade_item_id != "" and item_count > 0)
+		or (player_action_trade_coin_spinbox != null and int(player_action_trade_coin_spinbox.value) > 0)
+	)
+	if player_action_trade_refresh_button != null:
+		player_action_trade_refresh_button.disabled = disabled
+	if player_action_trade_propose_button != null:
+		player_action_trade_propose_button.disabled = disabled or not offer_has_value
+	if player_action_trade_accept_button != null:
+		var received_id = str(player_action_trade_received.get("tradeId", "")).strip_edges()
+		player_action_trade_accept_button.disabled = disabled or received_id == ""
+		player_action_trade_accept_button.text = "接受交易" if received_id != "" else "无待接收"
+
+func _player_action_trade_item_ids() -> Array[String]:
+	var order: Array[String] = []
+	for slot in PlayerProgressModel.backpack_slots(player_profile):
+		var item_id = str(slot.get("itemId", ""))
+		if item_id != "" and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
+			order.append(item_id)
+	return order
+
+func _player_action_trade_item_id() -> String:
+	if player_action_trade_item_option == null:
+		return ""
+	var selected_index = player_action_trade_item_option.selected
+	if selected_index < 0 or selected_index >= player_action_trade_item_option.item_count:
+		return ""
+	return str(player_action_trade_item_option.get_item_metadata(selected_index))
+
+func _player_action_trade_selected_items() -> Array[Dictionary]:
+	var selected_items: Array[Dictionary] = []
+	var item_id = _player_action_trade_item_id()
+	if item_id == "":
+		return selected_items
+	var max_count = _bank_backpack_item_count(item_id)
+	var count = 1
+	if player_action_trade_count_spinbox != null:
+		count = int(player_action_trade_count_spinbox.value)
+	count = clampi(count, 1, maxi(1, max_count))
+	if max_count <= 0:
+		return selected_items
+	selected_items.append({"itemId": item_id, "count": count})
+	return selected_items
+
+func _player_action_trade_selected_coins() -> int:
+	if player_action_trade_coin_spinbox == null:
+		return 0
+	return clampi(int(player_action_trade_coin_spinbox.value), 0, PlayerProgressModel.stone_coins(player_profile))
 
 func _on_player_action_battle_pressed() -> void:
 	var username = str(player_action_target.get("username", "")).strip_edges()
@@ -16326,6 +17090,27 @@ func _on_player_action_party_invite_pressed() -> void:
 		return
 	_start_player_action_request("party_invite", ServerAuthClientModel.party_invite_request(_server_profile_base_url(), _server_profile_token(), username))
 
+func _on_player_action_trade_refresh_pressed() -> void:
+	if not _is_server_account_session():
+		return
+	_start_player_action_request("trade_state", ServerAuthClientModel.trade_state_request(_server_profile_base_url(), _server_profile_token()))
+
+func _on_player_action_trade_propose_pressed() -> void:
+	var username = str(player_action_target.get("username", "")).strip_edges()
+	if username == "" or not _is_server_account_session():
+		return
+	var items = _player_action_trade_selected_items()
+	var stone_coins = _player_action_trade_selected_coins()
+	if items.is_empty() and stone_coins <= 0:
+		return
+	_start_player_action_request("trade_propose", ServerAuthClientModel.trade_propose_request(_server_profile_base_url(), _server_profile_token(), username, items, stone_coins))
+
+func _on_player_action_trade_accept_pressed() -> void:
+	var trade_id = str(player_action_trade_received.get("tradeId", "")).strip_edges()
+	if trade_id == "" or not _is_server_account_session():
+		return
+	_start_player_action_request("trade_accept", ServerAuthClientModel.trade_accept_request(_server_profile_base_url(), _server_profile_token(), trade_id))
+
 func _start_player_action_request(kind: String, spec: Dictionary) -> void:
 	if player_action_http_request == null or player_action_request_pending:
 		return
@@ -16341,6 +17126,12 @@ func _start_player_action_request(kind: String, spec: Dictionary) -> void:
 				player_action_status_label.text = "正在申请入队..."
 			"party_invite":
 				player_action_status_label.text = "正在邀请入队..."
+			"trade_state":
+				player_action_status_label.text = "正在刷新交易..."
+			"trade_propose":
+				player_action_status_label.text = "正在发起交易..."
+			"trade_accept":
+				player_action_status_label.text = "正在接受交易..."
 			_:
 				player_action_status_label.text = "正在请求..."
 	_refresh_player_action_panel()
@@ -16375,7 +17166,7 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 		elif _handle_session_invalid_response(parsed_battle):
 			return
 		elif player_action_status_label != null:
-			player_action_status_label.text = str(parsed_battle.get("message", "切磋发起失败。"))
+			player_action_status_label.text = _server_player_message(parsed_battle, "切磋发起失败。")
 	elif kind == "battle_record":
 		var parsed_record = ServerAuthClientModel.parse_battle_record_summary_response(response_code, body)
 		if bool(parsed_record.get("ok", false)):
@@ -16387,7 +17178,38 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 		elif _handle_session_invalid_response(parsed_record):
 			return
 		elif player_action_status_label != null:
-			player_action_status_label.text = str(parsed_record.get("message", "战绩查询失败。"))
+			player_action_status_label.text = _server_player_message(parsed_record, "战绩查询失败。")
+	elif kind == "trade_state" or kind == "trade_propose" or kind == "trade_accept":
+		var parsed_trade = ServerAuthClientModel.parse_trade_response(response_code, body)
+		if bool(parsed_trade.get("ok", false)):
+			if kind == "trade_state":
+				_apply_player_action_trade_state(parsed_trade)
+				if player_action_status_label != null:
+					player_action_status_label.text = _player_action_trade_received_text()
+			elif kind == "trade_accept":
+				var server_profile = parsed_trade.get("profile", null)
+				if server_profile is Dictionary:
+					player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+					if profile_save_enabled:
+						PlayerProgressModel.save_profile(player_profile)
+				var trade_summary = parsed_trade.get("profileSummary", {})
+				if trade_summary is Dictionary:
+					_apply_server_profile_summary(trade_summary as Dictionary)
+				player_action_trade_received.clear()
+				if player_action_status_label != null:
+					player_action_status_label.text = str(parsed_trade.get("message", "交易已完成。"))
+				_set_world_log_message(str(parsed_trade.get("message", "交易已完成。")))
+				if backpack_panel != null and backpack_panel.visible:
+					_refresh_backpack_panel()
+				host._update_hud_text(true)
+			else:
+				if player_action_status_label != null:
+					player_action_status_label.text = str(parsed_trade.get("message", "交易请求已发出。"))
+				_set_world_log_message(str(parsed_trade.get("message", "交易请求已发出。")))
+		elif _handle_session_invalid_response(parsed_trade):
+			return
+		elif player_action_status_label != null:
+			player_action_status_label.text = _server_player_message(parsed_trade, "交易请求失败。")
 	else:
 		var parsed_party = ServerAuthClientModel.parse_party_action_response(response_code, body)
 		if bool(parsed_party.get("ok", false)):
@@ -16397,8 +17219,45 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 		elif _handle_session_invalid_response(parsed_party):
 			return
 		elif player_action_status_label != null:
-			player_action_status_label.text = str(parsed_party.get("message", "队伍请求失败。"))
+			player_action_status_label.text = _server_player_message(parsed_party, "队伍请求失败。")
 	_refresh_player_action_panel()
+
+func _apply_player_action_trade_state(parsed_trade: Dictionary) -> void:
+	player_action_trade_received.clear()
+	var target_username = str(player_action_target.get("username", "")).strip_edges()
+	var target_account_id = str(player_action_target.get("accountId", "")).strip_edges()
+	var trades = parsed_trade.get("trades", {}) as Dictionary if parsed_trade.get("trades", {}) is Dictionary else {}
+	var received = trades.get("received", [])
+	if not (received is Array):
+		return
+	for value in received:
+		if not (value is Dictionary):
+			continue
+		var offer := value as Dictionary
+		var from_username = str(offer.get("fromUsername", "")).strip_edges()
+		var from_account_id = str(offer.get("fromAccountId", "")).strip_edges()
+		if from_username == target_username or (target_account_id != "" and from_account_id == target_account_id):
+			player_action_trade_received = offer.duplicate(true)
+			return
+
+func _player_action_trade_received_text() -> String:
+	if player_action_trade_received.is_empty():
+		return "没有来自该玩家的交易请求。"
+	var player_name = str(player_action_trade_received.get("fromDisplayName", "")).strip_edges()
+	if player_name == "":
+		player_name = str(player_action_trade_received.get("fromUsername", "对方")).strip_edges()
+	var parts: Array[String] = []
+	var coins = maxi(0, int(player_action_trade_received.get("offerStoneCoins", 0)))
+	if coins > 0:
+		parts.append("%d石币" % coins)
+	var offer_items = player_action_trade_received.get("offerItems", [])
+	if offer_items is Array:
+		var item_text = BackpackModel.item_amounts_text(offer_items as Array)
+		if item_text != "":
+			parts.append(item_text)
+	if parts.is_empty():
+		parts.append("空交易")
+	return "%s 提出交易：%s。" % [player_name, "、".join(parts)]
 
 func _open_battle_invite_panel(invite: Dictionary) -> void:
 	if battle_active or invite.is_empty() or not _battle_invite_is_for_current(invite):
@@ -16491,7 +17350,7 @@ func _on_battle_invite_http_request_completed(result: int, response_code: int, _
 	elif _handle_session_invalid_response(parsed):
 		return
 	elif battle_invite_status_label != null:
-		battle_invite_status_label.text = str(parsed.get("message", "切磋操作失败。"))
+		battle_invite_status_label.text = _server_player_message(parsed, "切磋操作失败。")
 	_refresh_battle_invite_panel()
 
 func _party_panel_layout_is_usable() -> bool:
@@ -16507,6 +17366,424 @@ func _party_panel_layout_is_usable() -> bool:
 		and party_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
 		and bottom <= viewport_size.y - margin + 1.0
 	)
+
+func _open_market_panel() -> void:
+	if not battle_active:
+		host._set_hang_mode(false)
+	host._close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_party_panel()
+	_close_family_panel()
+	_close_player_action_panel(false)
+	_close_mailbox_panel(false)
+	_close_bank_panel(false)
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if market_panel != null:
+		market_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	if market_mode == "":
+		market_mode = "buy"
+	if market_status_label != null and market_status_label.text.strip_edges() == "":
+		market_status_label.text = "交易所已打开。"
+	_refresh_market_panel()
+	if _is_server_account_session():
+		_request_market_state()
+	else:
+		if market_status_label != null:
+			market_status_label.text = "需要服务器账号登录。"
+	host._layout_hud()
+
+func _close_market_panel(update_layout: bool = true) -> void:
+	_hide_control(market_panel, update_layout)
+
+func _set_market_mode(mode: String) -> void:
+	var normalized := mode.strip_edges()
+	if not ["buy", "sell", "mine"].has(normalized):
+		normalized = "buy"
+	if market_mode == normalized:
+		_refresh_market_panel()
+		return
+	market_mode = normalized
+	market_selected_listing_id = ""
+	_refresh_market_panel()
+
+func _refresh_market_panel() -> void:
+	if market_panel == null or market_list_container == null or market_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var has_server = _is_server_account_session()
+	if market_buy_tab_button != null:
+		market_buy_tab_button.button_pressed = market_mode == "buy"
+		market_buy_tab_button.disabled = market_request_pending
+	if market_sell_tab_button != null:
+		market_sell_tab_button.button_pressed = market_mode == "sell"
+		market_sell_tab_button.disabled = market_request_pending
+	if market_mine_tab_button != null:
+		market_mine_tab_button.button_pressed = market_mode == "mine"
+		market_mine_tab_button.disabled = market_request_pending
+	if market_wallet_label != null:
+		market_wallet_label.text = _market_wallet_text()
+	var visible_listings := _market_visible_listings()
+	var selected_exists = false
+	for listing in visible_listings:
+		if str(listing.get("listingId", "")) == market_selected_listing_id:
+			selected_exists = true
+			break
+	if not selected_exists:
+		market_selected_listing_id = str(visible_listings[0].get("listingId", "")) if not visible_listings.is_empty() else ""
+	for child in market_list_container.get_children():
+		child.queue_free()
+	market_listing_buttons.clear()
+	if visible_listings.is_empty():
+		var empty_label = Label.new()
+		empty_label.add_theme_font_size_override("font_size", 16)
+		empty_label.text = _market_empty_list_text()
+		market_list_container.add_child(empty_label)
+	else:
+		for listing in visible_listings:
+			var listing_id = str(listing.get("listingId", ""))
+			var button = Button.new()
+			button.text = _market_listing_button_text(listing)
+			button.toggle_mode = true
+			button.button_pressed = listing_id == market_selected_listing_id
+			button.custom_minimum_size = Vector2(0, 78)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.add_theme_font_size_override("font_size", 14)
+			var captured_id = listing_id
+			button.pressed.connect(func() -> void:
+				_select_market_listing(captured_id)
+			)
+			market_list_container.add_child(button)
+			market_listing_buttons[listing_id] = button
+	var selected := _market_selected_listing()
+	market_detail_label.text = _market_detail_text(selected)
+	if market_sell_form_container != null:
+		market_sell_form_container.visible = market_mode == "sell"
+	if market_buy_button != null:
+		market_buy_button.visible = market_mode == "buy"
+		market_buy_button.disabled = market_request_pending or not has_server or selected.is_empty() or _market_listing_is_mine(selected)
+	if market_cancel_button != null:
+		market_cancel_button.visible = market_mode != "buy"
+		market_cancel_button.disabled = market_request_pending or not has_server or selected.is_empty() or not _market_listing_is_mine(selected)
+	if market_refresh_button != null:
+		market_refresh_button.disabled = market_request_pending or not has_server
+	if market_close_button != null:
+		market_close_button.disabled = market_request_pending
+	if market_status_label != null and not has_server:
+		market_status_label.text = "需要服务器账号登录。"
+	_refresh_market_sell_form()
+
+func _market_empty_list_text() -> String:
+	match market_mode:
+		"buy":
+			return "暂无可购买挂单。"
+		"sell":
+			return "你还没有挂单。"
+		"mine":
+			return "你还没有挂单。"
+	return "暂无挂单。"
+
+func _select_market_listing(listing_id: String) -> void:
+	market_selected_listing_id = listing_id
+	_refresh_market_panel()
+
+func _market_visible_listings() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
+	var source = market_my_listings if market_mode != "buy" else market_listings
+	for value in source:
+		if not (value is Dictionary):
+			continue
+		var listing := (value as Dictionary).duplicate(true)
+		if market_mode == "buy" and self_account_id != "" and str(listing.get("sellerAccountId", "")) == self_account_id:
+			continue
+		rows.append(listing)
+	return rows
+
+func _market_selected_listing() -> Dictionary:
+	if market_selected_listing_id == "":
+		return {}
+	for listing in _market_visible_listings():
+		if str(listing.get("listingId", "")) == market_selected_listing_id:
+			return listing
+	return {}
+
+func _market_listing_by_id(listing_id: String) -> Dictionary:
+	for source in [market_listings, market_my_listings]:
+		for value in source:
+			if value is Dictionary and str((value as Dictionary).get("listingId", "")) == listing_id:
+				return (value as Dictionary).duplicate(true)
+	return {}
+
+func _market_listing_is_mine(listing: Dictionary) -> bool:
+	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
+	return self_account_id != "" and str(listing.get("sellerAccountId", "")) == self_account_id
+
+func _market_listing_button_text(listing: Dictionary) -> String:
+	var label = str(listing.get("itemLabel", BackpackModel.label_for(str(listing.get("itemId", "")))))
+	var count = maxi(1, int(listing.get("count", 1)))
+	var total = maxi(0, int(listing.get("totalPrice", int(listing.get("unitPrice", 0)) * count)))
+	var currency_label = _market_currency_label(str(listing.get("currency", "stoneCoins")))
+	var seller = str(listing.get("sellerDisplayName", "")).strip_edges()
+	if seller == "":
+		seller = str(listing.get("sellerUsername", "")).strip_edges()
+	return "%s x%d\n%d%s  %s" % [label, count, total, currency_label, seller]
+
+func _market_wallet_text() -> String:
+	return "持有：%d石币 / %d钻石" % [PlayerProgressModel.stone_coins(player_profile), PlayerProgressModel.diamonds(player_profile)]
+
+func _market_detail_text(listing: Dictionary) -> String:
+	if market_mode == "sell":
+		var lines: Array[String] = []
+		lines.append("出售物品会立即从背包移到挂单。")
+		if not listing.is_empty():
+			lines.append("")
+			lines.append(_market_listing_summary_text(listing))
+		return "\n".join(lines)
+	if listing.is_empty():
+		return "请选择左侧挂单。"
+	return _market_listing_summary_text(listing)
+
+func _market_listing_summary_text(listing: Dictionary) -> String:
+	var label = str(listing.get("itemLabel", BackpackModel.label_for(str(listing.get("itemId", "")))))
+	var count = maxi(1, int(listing.get("count", 1)))
+	var unit_price = maxi(0, int(listing.get("unitPrice", 0)))
+	var total = maxi(0, int(listing.get("totalPrice", unit_price * count)))
+	var currency = str(listing.get("currency", "stoneCoins"))
+	var currency_label = _market_currency_label(currency)
+	var tax = maxi(0, int(listing.get("estimatedTax", 0)))
+	var receives = maxi(0, int(listing.get("sellerReceives", total - tax)))
+	var tax_rate = _market_tax_rate_text(int(listing.get("taxBps", 100)))
+	var seller = str(listing.get("sellerDisplayName", "")).strip_edges()
+	if seller == "":
+		seller = str(listing.get("sellerUsername", "")).strip_edges()
+	var lines: Array[String] = [
+		"%s x%d" % [label, count],
+		"卖家：%s" % (seller if seller != "" else "未知"),
+		"单价：%d%s" % [unit_price, currency_label],
+		"合计：%d%s" % [total, currency_label],
+		"税率：%s  税：%d%s" % [tax_rate, tax, currency_label],
+		"卖家到手：%d%s" % [receives, currency_label],
+	]
+	return "\n".join(lines)
+
+func _refresh_market_sell_form() -> void:
+	if market_sell_item_option == null or market_sell_count_spinbox == null or market_sell_unit_price_spinbox == null:
+		return
+	var has_server = _is_server_account_session()
+	var selected_id = _market_sell_item_id()
+	market_sell_item_option.set_block_signals(true)
+	market_sell_item_option.clear()
+	var selected_index = -1
+	for item_id in _market_sell_item_ids():
+		var count = _bank_backpack_item_count(item_id)
+		market_sell_item_option.add_item("%s x%d" % [BackpackModel.menu_label_for(item_id), count])
+		var index = market_sell_item_option.item_count - 1
+		market_sell_item_option.set_item_metadata(index, item_id)
+		if item_id == selected_id:
+			selected_index = index
+	if market_sell_item_option.item_count <= 0:
+		market_sell_item_option.add_item("背包没有可出售物品")
+		market_sell_item_option.set_item_metadata(0, "")
+		selected_index = 0
+	elif selected_index < 0:
+		selected_index = 0
+	market_sell_item_option.select(selected_index)
+	market_sell_item_option.disabled = market_request_pending or not has_server or market_sell_item_option.item_count <= 0
+	market_sell_item_option.set_block_signals(false)
+	var item_id = _market_sell_item_id()
+	var max_count = _bank_backpack_item_count(item_id)
+	market_sell_count_spinbox.set_block_signals(true)
+	market_sell_count_spinbox.max_value = maxf(1.0, float(max_count))
+	market_sell_count_spinbox.value = clampf(market_sell_count_spinbox.value, 1.0, market_sell_count_spinbox.max_value)
+	market_sell_count_spinbox.editable = not market_request_pending and has_server and item_id != "" and max_count > 0
+	market_sell_count_spinbox.set_block_signals(false)
+	if market_sell_currency_option != null:
+		market_sell_currency_option.disabled = market_request_pending or not has_server or item_id == ""
+	market_sell_unit_price_spinbox.editable = not market_request_pending and has_server and item_id != ""
+	var count = int(market_sell_count_spinbox.value)
+	var unit_price = int(market_sell_unit_price_spinbox.value)
+	var total = count * unit_price
+	var currency = _market_sell_currency()
+	var currency_label = _market_currency_label(currency)
+	var tax_bps = _market_tax_bps_for_item(item_id)
+	var tax = _market_tax_for_total(total, tax_bps)
+	var receives = maxi(0, total - tax)
+	if market_sell_summary_label != null:
+		market_sell_summary_label.text = "合计 %d%s，税 %d%s，到手 %d%s" % [total, currency_label, tax, currency_label, receives, currency_label]
+	if market_sell_button != null:
+		market_sell_button.disabled = market_request_pending or not has_server or item_id == "" or max_count <= 0 or unit_price <= 0
+
+func _market_sell_item_ids() -> Array[String]:
+	var order: Array[String] = []
+	for slot in PlayerProgressModel.backpack_slots(player_profile):
+		var item_id = str(slot.get("itemId", ""))
+		if item_id != "" and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
+			order.append(item_id)
+	return order
+
+func _market_sell_item_id() -> String:
+	if market_sell_item_option == null:
+		return ""
+	var selected_index = market_sell_item_option.selected
+	if selected_index < 0 or selected_index >= market_sell_item_option.item_count:
+		return ""
+	return str(market_sell_item_option.get_item_metadata(selected_index))
+
+func _market_sell_currency() -> String:
+	if market_sell_currency_option == null:
+		return "stoneCoins"
+	var selected_index = market_sell_currency_option.selected
+	if selected_index < 0 or selected_index >= market_sell_currency_option.item_count:
+		return "stoneCoins"
+	var value = str(market_sell_currency_option.get_item_metadata(selected_index))
+	return "diamonds" if value == "diamonds" else "stoneCoins"
+
+func _market_currency_label(currency: String) -> String:
+	return "钻石" if currency == "diamonds" else "石币"
+
+func _market_tax_bps_for_item(item_id: String) -> int:
+	var default_bps = int(market_config.get("defaultTaxBps", 100))
+	var item_tax = market_config.get("itemTaxBps", {}) as Dictionary if market_config.get("itemTaxBps", {}) is Dictionary else {}
+	if item_id != "" and item_tax.has(item_id):
+		return clampi(int(item_tax.get(item_id, default_bps)), 0, 10000)
+	return clampi(default_bps, 0, 10000)
+
+func _market_tax_for_total(total: int, tax_bps: int) -> int:
+	if total <= 0 or tax_bps <= 0:
+		return 0
+	return mini(total, int(ceil(float(total * tax_bps) / 10000.0)))
+
+func _market_tax_rate_text(tax_bps: int) -> String:
+	if tax_bps % 100 == 0:
+		return "%d%%" % int(tax_bps / 100)
+	return "%.2f%%" % (float(tax_bps) / 100.0)
+
+func _on_market_sell_pressed() -> void:
+	var item_id = _market_sell_item_id()
+	if item_id == "" or not _is_server_account_session():
+		return
+	_start_market_request("list", ServerAuthClientModel.market_create_listing_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		item_id,
+		int(market_sell_count_spinbox.value),
+		int(market_sell_unit_price_spinbox.value),
+		_market_sell_currency()
+	))
+
+func _on_market_buy_pressed() -> void:
+	var listing = _market_selected_listing()
+	var listing_id = str(listing.get("listingId", "")).strip_edges()
+	if listing_id == "" or not _is_server_account_session() or _market_listing_is_mine(listing):
+		return
+	_start_market_request("buy", ServerAuthClientModel.market_buy_listing_request(_server_profile_base_url(), _server_profile_token(), listing_id))
+
+func _on_market_cancel_pressed() -> void:
+	var listing = _market_selected_listing()
+	var listing_id = str(listing.get("listingId", "")).strip_edges()
+	if listing_id == "" or not _is_server_account_session() or not _market_listing_is_mine(listing):
+		return
+	_start_market_request("cancel", ServerAuthClientModel.market_cancel_listing_request(_server_profile_base_url(), _server_profile_token(), listing_id))
+
+func _request_market_state() -> void:
+	if not _is_server_account_session():
+		if market_status_label != null:
+			market_status_label.text = "需要服务器账号登录。"
+		_refresh_market_panel()
+		return
+	_start_market_request("state", ServerAuthClientModel.market_listings_request(_server_profile_base_url(), _server_profile_token()))
+
+func _start_market_request(kind: String, spec: Dictionary) -> void:
+	if market_http_request == null or market_request_pending:
+		return
+	market_pending_kind = kind
+	market_request_pending = true
+	if market_status_label != null:
+		match kind:
+			"list":
+				market_status_label.text = "正在上架..."
+			"buy":
+				market_status_label.text = "正在购买..."
+			"cancel":
+				market_status_label.text = "正在下架..."
+			_:
+				market_status_label.text = "正在刷新..."
+	_refresh_market_panel()
+	var err = market_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		market_request_pending = false
+		market_pending_kind = ""
+		if market_status_label != null:
+			market_status_label.text = "交易所请求发送失败。"
+		_refresh_market_panel()
+
+func _on_market_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var kind = market_pending_kind
+	market_pending_kind = ""
+	market_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if market_status_label != null:
+			market_status_label.text = "交易所服务器连接失败。"
+		_refresh_market_panel()
+		return
+	var parsed = ServerAuthClientModel.parse_market_response(response_code, body)
+	if bool(parsed.get("ok", false)):
+		_apply_market_payload(parsed.get("market", {}) as Dictionary if parsed.get("market", {}) is Dictionary else {})
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+		var message = str(parsed.get("message", "交易所已更新。"))
+		if market_status_label != null:
+			market_status_label.text = message
+		if kind != "state":
+			_set_world_log_message(message)
+		if backpack_panel != null and backpack_panel.visible:
+			_refresh_backpack_panel()
+		host._update_hud_text(true)
+	elif _handle_session_invalid_response(parsed):
+		return
+	elif market_status_label != null:
+		market_status_label.text = _server_player_message(parsed, "交易所操作失败。")
+	_refresh_market_panel()
+
+func _apply_market_payload(market: Dictionary) -> void:
+	market_listings.clear()
+	market_my_listings.clear()
+	var listings = market.get("listings", [])
+	if listings is Array:
+		for value in listings:
+			if value is Dictionary:
+				market_listings.append((value as Dictionary).duplicate(true))
+	var mine = market.get("mine", [])
+	if mine is Array:
+		for value in mine:
+			if value is Dictionary:
+				market_my_listings.append((value as Dictionary).duplicate(true))
+	var config = market.get("config", {})
+	market_config = (config as Dictionary).duplicate(true) if config is Dictionary else {}
 
 func _open_mailbox_panel() -> void:
 	if not battle_active:
@@ -16531,6 +17808,7 @@ func _open_mailbox_panel() -> void:
 	_close_qa_panel(false)
 	if mailbox_panel != null:
 		mailbox_panel.visible = true
+	mailbox_active_tab = "inbox"
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_save_profile_after_exp_pill_starter_update()
 	_refresh_mailbox_menu_button()
@@ -16542,11 +17820,34 @@ func _open_mailbox_panel() -> void:
 func _close_mailbox_panel(update_layout: bool = true) -> void:
 	_hide_control(mailbox_panel, update_layout)
 
+func _set_mailbox_tab(tab_id: String) -> void:
+	var normalized := tab_id.strip_edges()
+	if normalized != "compose":
+		normalized = "inbox"
+	mailbox_active_tab = normalized
+	_refresh_mailbox_tab_state()
+	_refresh_mailbox_request_controls()
+	host._layout_hud()
+
+func _refresh_mailbox_tab_state() -> void:
+	if mailbox_active_tab != "compose":
+		mailbox_active_tab = "inbox"
+	var inbox_visible: bool = mailbox_active_tab == "inbox"
+	if mailbox_inbox_tab_button != null:
+		mailbox_inbox_tab_button.button_pressed = inbox_visible
+	if mailbox_compose_tab_button != null:
+		mailbox_compose_tab_button.button_pressed = not inbox_visible
+	if mailbox_inbox_container != null:
+		mailbox_inbox_container.visible = inbox_visible
+	if mailbox_compose_container != null:
+		mailbox_compose_container.visible = not inbox_visible
+
 func _refresh_mailbox_panel() -> void:
 	if mailbox_panel == null or mailbox_list_container == null or mailbox_detail_label == null or mailbox_claim_button == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_mailbox_menu_button()
+	_refresh_mailbox_tab_state()
 	var messages = _mailbox_combined_entries()
 	var selected_exists = false
 	for entry in messages:
@@ -16594,10 +17895,10 @@ func _refresh_mailbox_panel() -> void:
 	var selected_message = selected.get("message", {}) as Dictionary if selected.get("message", {}) is Dictionary else {}
 	if selected_source == "server":
 		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
-		var server_items = _mailbox_item_entries(selected_message)
-		mailbox_claim_button.disabled = mailbox_request_pending or server_items.is_empty()
+		var server_has_attachments := _mailbox_has_attachments(selected_message)
+		mailbox_claim_button.disabled = mailbox_request_pending or not server_has_attachments
 		mailbox_claim_button.visible = true
-		mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。" if not server_items.is_empty() else ""
+		mailbox_claim_button.tooltip_text = _mailbox_claim_tooltip(selected_message) if server_has_attachments else ""
 		_refresh_mailbox_request_controls()
 		return
 	var items = _mailbox_item_entries(selected_message)
@@ -16610,7 +17911,7 @@ func _refresh_mailbox_panel() -> void:
 		lines.append("")
 		lines.append(body)
 	lines.append("")
-	lines.append("附件：%s" % BackpackModel.item_amounts_text(items))
+	lines.append("附件：%s" % _mailbox_attachment_text(selected_message))
 	mailbox_detail_label.text = "\n".join(lines)
 	mailbox_claim_button.disabled = mailbox_request_pending or items.is_empty()
 	mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。"
@@ -16704,9 +18005,8 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 	if body != "":
 		lines.append("")
 		lines.append(body)
-	var items = _mailbox_item_entries(message)
 	lines.append("")
-	lines.append("附件：无" if items.is_empty() else "附件：%s" % BackpackModel.item_amounts_text(items))
+	lines.append("附件：%s" % _mailbox_attachment_text(message))
 	return "\n".join(lines)
 
 func _server_mailbox_message_by_key(key: String) -> Dictionary:
@@ -16730,7 +18030,14 @@ func _refresh_mailbox_request_controls() -> void:
 	if mailbox_refresh_button != null:
 		mailbox_refresh_button.disabled = mailbox_request_pending or not _is_server_account_session()
 	if mailbox_send_button != null:
-		mailbox_send_button.disabled = mailbox_request_pending or not _is_server_account_session()
+		mailbox_send_button.disabled = mailbox_request_pending or not _is_server_account_session() or mailbox_active_tab != "compose"
+	var inputs_editable: bool = not mailbox_request_pending and _is_server_account_session() and mailbox_active_tab == "compose"
+	if mailbox_recipient_input != null:
+		mailbox_recipient_input.editable = inputs_editable
+	if mailbox_title_input != null:
+		mailbox_title_input.editable = inputs_editable
+	if mailbox_body_input != null:
+		mailbox_body_input.editable = inputs_editable
 	if mailbox_status_label != null and not _is_server_account_session():
 		mailbox_status_label.text = "需要服务器账号登录。"
 
@@ -16814,7 +18121,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		elif _handle_session_invalid_response(parsed_inbox):
 			return
 		elif mailbox_status_label != null:
-			mailbox_status_label.text = str(parsed_inbox.get("message", "邮箱读取失败。"))
+			mailbox_status_label.text = _server_player_message(parsed_inbox, "邮箱读取失败。")
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_mail_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
@@ -16824,12 +18131,14 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 				mailbox_body_input.text = ""
 			if mailbox_status_label != null:
 				mailbox_status_label.text = "邮件已发送。"
+			mailbox_active_tab = "inbox"
+			_refresh_mailbox_tab_state()
 			_request_server_mailbox_inbox()
 			return
 		elif _handle_session_invalid_response(parsed_send):
 			return
 		elif mailbox_status_label != null:
-			mailbox_status_label.text = str(parsed_send.get("message", "邮件发送失败。"))
+			mailbox_status_label.text = _server_player_message(parsed_send, "邮件发送失败。")
 	elif kind == "read":
 		var parsed_read = ServerAuthClientModel.parse_mail_read_response(response_code, body)
 		if bool(parsed_read.get("ok", false)):
@@ -16841,7 +18150,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		elif _handle_session_invalid_response(parsed_read):
 			return
 		elif mailbox_status_label != null:
-			mailbox_status_label.text = str(parsed_read.get("message", "邮件标记失败。"))
+			mailbox_status_label.text = _server_player_message(parsed_read, "邮件标记失败。")
 	elif kind == "claim":
 		var parsed_claim = ServerAuthClientModel.parse_mail_claim_response(response_code, body)
 		if bool(parsed_claim.get("ok", false)):
@@ -16882,10 +18191,254 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		elif _handle_session_invalid_response(parsed_claim):
 			return
 		elif mailbox_status_label != null:
-			mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件领取失败。"))
+			mailbox_status_label.text = _server_player_message(parsed_claim, "邮件附件领取失败。")
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_request_controls()
+
+func _open_bank_panel() -> void:
+	if not battle_active:
+		host._set_hang_mode(false)
+	host._close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_party_panel()
+	_close_family_panel()
+	_close_player_action_panel(false)
+	_close_mailbox_panel(false)
+	_close_training_partner_panel()
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	if bank_panel != null:
+		bank_panel.visible = true
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_bank_panel()
+	host._layout_hud()
+
+func _close_bank_panel(update_layout: bool = true) -> void:
+	_hide_control(bank_panel, update_layout)
+
+func _refresh_bank_panel() -> void:
+	if bank_panel == null or bank_list_container == null or bank_detail_label == null:
+		return
+	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	var item_ids := _bank_item_ids_for_ui()
+	if not item_ids.has(bank_selected_item_id):
+		bank_selected_item_id = item_ids[0] if not item_ids.is_empty() else ""
+	for child in bank_list_container.get_children():
+		child.queue_free()
+	bank_item_buttons.clear()
+	if item_ids.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "背包和仓库都没有可存取物品。"
+		empty_label.add_theme_font_size_override("font_size", 16)
+		bank_list_container.add_child(empty_label)
+	else:
+		for item_id in item_ids:
+			var button = Button.new()
+			button.text = _bank_item_button_text(item_id)
+			button.toggle_mode = true
+			button.button_pressed = item_id == bank_selected_item_id
+			button.custom_minimum_size = Vector2(0, 64)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.add_theme_font_size_override("font_size", 14)
+			var captured_id = item_id
+			button.pressed.connect(func() -> void:
+				_select_bank_item(captured_id)
+			)
+			bank_list_container.add_child(button)
+			bank_item_buttons[item_id] = button
+	var max_quantity = _bank_quantity_max(bank_selected_item_id)
+	if bank_quantity <= 0 or bank_quantity > max_quantity:
+		bank_quantity = maxi(1, max_quantity)
+	if bank_quantity_spinbox != null:
+		bank_quantity_spinbox.set_block_signals(true)
+		bank_quantity_spinbox.max_value = maxf(1.0, float(max_quantity))
+		bank_quantity_spinbox.value = float(bank_quantity)
+		bank_quantity_spinbox.editable = max_quantity > 0 and not bank_request_pending
+		bank_quantity_spinbox.set_block_signals(false)
+	var bank = _bank_profile_data()
+	var backpack_count = _bank_backpack_item_count(bank_selected_item_id)
+	var bank_count = _bank_stored_item_count(bank_selected_item_id)
+	var lines: Array[String] = [
+		"身上石币：%d" % PlayerProgressModel.stone_coins(player_profile),
+		"仓库石币：%d" % int(bank.get("stoneCoins", 0)),
+	]
+	if bank_selected_item_id != "":
+		lines.append("")
+		lines.append("%s" % BackpackModel.label_for(bank_selected_item_id))
+		lines.append("背包：%d" % backpack_count)
+		lines.append("仓库：%d" % bank_count)
+		lines.append("数量：%d" % bank_quantity)
+	bank_detail_label.text = "\n".join(lines)
+	var has_server = _is_server_account_session()
+	if bank_deposit_button != null:
+		bank_deposit_button.disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or backpack_count <= 0
+	if bank_withdraw_button != null:
+		bank_withdraw_button.disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or bank_count <= 0
+	var deposit_coins = mini(100, PlayerProgressModel.stone_coins(player_profile))
+	var withdraw_coins = mini(100, int(bank.get("stoneCoins", 0)))
+	if bank_coin_deposit_button != null:
+		bank_coin_deposit_button.text = "存入%d石币" % deposit_coins if deposit_coins > 0 else "存入石币"
+		bank_coin_deposit_button.disabled = bank_request_pending or not has_server or deposit_coins <= 0
+	if bank_coin_withdraw_button != null:
+		bank_coin_withdraw_button.text = "取出%d石币" % withdraw_coins if withdraw_coins > 0 else "取出石币"
+		bank_coin_withdraw_button.disabled = bank_request_pending or not has_server or withdraw_coins <= 0
+	if bank_status_label != null and not has_server:
+		bank_status_label.text = "需要服务器账号登录。"
+
+func _select_bank_item(item_id: String) -> void:
+	bank_selected_item_id = item_id
+	bank_quantity = 1
+	_refresh_bank_panel()
+
+func _set_bank_quantity(value: int) -> void:
+	bank_quantity = clampi(value, 1, maxi(1, _bank_quantity_max(bank_selected_item_id)))
+	_refresh_bank_panel()
+
+func _on_bank_deposit_pressed() -> void:
+	_start_bank_item_transaction("deposit")
+
+func _on_bank_withdraw_pressed() -> void:
+	_start_bank_item_transaction("withdraw")
+
+func _start_bank_item_transaction(mode: String) -> void:
+	if bank_selected_item_id == "" or bank_request_pending:
+		return
+	var max_quantity = _bank_backpack_item_count(bank_selected_item_id) if mode == "deposit" else _bank_stored_item_count(bank_selected_item_id)
+	var quantity = clampi(bank_quantity, 1, maxi(1, max_quantity))
+	if max_quantity <= 0:
+		return
+	var items: Array[Dictionary] = [{"itemId": bank_selected_item_id, "count": quantity}]
+	_start_bank_request(mode, _bank_request_spec(mode, items, 0))
+
+func _start_bank_coin_transaction(mode: String, amount: int) -> void:
+	if bank_request_pending:
+		return
+	var bank = _bank_profile_data()
+	var max_amount = PlayerProgressModel.stone_coins(player_profile) if mode == "deposit" else int(bank.get("stoneCoins", 0))
+	var request_amount = mini(maxi(0, amount), max_amount)
+	if request_amount <= 0:
+		return
+	_start_bank_request(mode, _bank_request_spec(mode, [], request_amount))
+
+func _bank_request_spec(mode: String, items: Array[Dictionary], stone_coins: int) -> Dictionary:
+	if mode == "withdraw":
+		return ServerAuthClientModel.bank_withdraw_request(_server_profile_base_url(), _server_profile_token(), items, stone_coins)
+	return ServerAuthClientModel.bank_deposit_request(_server_profile_base_url(), _server_profile_token(), items, stone_coins)
+
+func _start_bank_request(kind: String, spec: Dictionary) -> void:
+	if bank_http_request == null or not _is_server_account_session() or bank_request_pending:
+		return
+	bank_pending_kind = kind
+	bank_request_pending = true
+	if bank_status_label != null:
+		bank_status_label.text = "正在处理仓库..."
+	_refresh_bank_panel()
+	var err = bank_http_request.request(
+		str(spec.get("url", "")),
+		_packed_string_array(spec.get("headers", [])),
+		int(spec.get("method", HTTPClient.METHOD_GET)),
+		str(spec.get("body", ""))
+	)
+	if err != OK:
+		bank_request_pending = false
+		bank_pending_kind = ""
+		if bank_status_label != null:
+			bank_status_label.text = "无法发起仓库请求。"
+		_refresh_bank_panel()
+
+func _on_bank_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	bank_pending_kind = ""
+	bank_request_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		if bank_status_label != null:
+			bank_status_label.text = "仓库服务器连接失败。"
+		_refresh_bank_panel()
+		return
+	var parsed = ServerAuthClientModel.parse_bank_transaction_response(response_code, body)
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+		if bank_status_label != null:
+			bank_status_label.text = str(parsed.get("message", "仓库已更新。"))
+		_set_world_log_message(str(parsed.get("message", "仓库已更新。")))
+		if backpack_panel != null and backpack_panel.visible:
+			_refresh_backpack_panel()
+		host._update_hud_text(true)
+	elif _handle_session_invalid_response(parsed):
+		return
+	elif bank_status_label != null:
+		bank_status_label.text = _server_player_message(parsed, "仓库操作失败。")
+	_refresh_bank_panel()
+
+func _bank_profile_data() -> Dictionary:
+	var raw = player_profile.get("bank", {})
+	var bank := raw as Dictionary if raw is Dictionary else {}
+	var items: Array[Dictionary] = []
+	var raw_items = bank.get("items", [])
+	if raw_items is Array:
+		for value in raw_items:
+			if value is Dictionary:
+				var item := value as Dictionary
+				var item_id = str(item.get("itemId", ""))
+				var count = maxi(0, int(item.get("count", 0)))
+				if item_id != "" and count > 0 and not BackpackModel.item_for_id(item_id).is_empty():
+					items.append({"itemId": item_id, "count": count})
+	return {
+		"stoneCoins": maxi(0, int(bank.get("stoneCoins", 0))),
+		"items": BackpackModel.merge_item_amounts(items),
+	}
+
+func _bank_item_ids_for_ui() -> Array[String]:
+	var order: Array[String] = []
+	for slot in PlayerProgressModel.backpack_slots(player_profile):
+		var item_id = str(slot.get("itemId", ""))
+		if item_id != "" and not order.has(item_id):
+			order.append(item_id)
+	for item in _bank_profile_data().get("items", []):
+		var item_id = str((item as Dictionary).get("itemId", "")) if item is Dictionary else ""
+		if item_id != "" and not order.has(item_id):
+			order.append(item_id)
+	return order
+
+func _bank_item_button_text(item_id: String) -> String:
+	return "%s\n背包%d / 仓库%d" % [
+		BackpackModel.menu_label_for(item_id),
+		_bank_backpack_item_count(item_id),
+		_bank_stored_item_count(item_id),
+	]
+
+func _bank_backpack_item_count(item_id: String) -> int:
+	if item_id == "":
+		return 0
+	return PlayerProgressModel.backpack_item_count(player_profile, item_id)
+
+func _bank_stored_item_count(item_id: String) -> int:
+	for item in _bank_profile_data().get("items", []):
+		if item is Dictionary and str((item as Dictionary).get("itemId", "")) == item_id:
+			return maxi(0, int((item as Dictionary).get("count", 0)))
+	return 0
+
+func _bank_quantity_max(item_id: String) -> int:
+	if item_id == "":
+		return 0
+	return maxi(_bank_backpack_item_count(item_id), _bank_stored_item_count(item_id))
 
 func _apply_claimed_mail_items_to_battle_state(parsed_claim: Dictionary) -> void:
 	if not battle_active or battle_state.is_empty():
@@ -16930,6 +18483,49 @@ func _mailbox_item_entries(message: Dictionary) -> Array[Dictionary]:
 			if item_id != "" and count > 0:
 				result.append({"itemId": item_id, "count": count})
 	return BackpackModel.merge_item_amounts(result)
+
+func _mailbox_currency_entries(message: Dictionary) -> Dictionary:
+	var result := {}
+	var raw_currency = message.get("currency", {})
+	var currency = raw_currency as Dictionary if raw_currency is Dictionary else {}
+	var stone_coins := maxi(0, int(currency.get("stoneCoins", message.get("stoneCoins", 0))))
+	var diamonds := maxi(0, int(currency.get("diamonds", message.get("diamonds", 0))))
+	if stone_coins > 0:
+		result["stoneCoins"] = stone_coins
+	if diamonds > 0:
+		result["diamonds"] = diamonds
+	return result
+
+func _mailbox_currency_text(message: Dictionary) -> String:
+	var currency := _mailbox_currency_entries(message)
+	var parts: Array[String] = []
+	var stone_coins := int(currency.get("stoneCoins", 0))
+	var diamonds := int(currency.get("diamonds", 0))
+	if stone_coins > 0:
+		parts.append("%d石币" % stone_coins)
+	if diamonds > 0:
+		parts.append("%d钻石" % diamonds)
+	return "、".join(parts)
+
+func _mailbox_attachment_text(message: Dictionary) -> String:
+	var parts: Array[String] = []
+	var currency_text := _mailbox_currency_text(message)
+	var item_text := BackpackModel.item_amounts_text(_mailbox_item_entries(message))
+	if currency_text != "":
+		parts.append(currency_text)
+	if item_text != "":
+		parts.append(item_text)
+	return "、".join(parts) if not parts.is_empty() else "无"
+
+func _mailbox_has_attachments(message: Dictionary) -> bool:
+	return _mailbox_currency_entries(message).size() > 0 or not _mailbox_item_entries(message).is_empty()
+
+func _mailbox_claim_tooltip(message: Dictionary) -> String:
+	if _mailbox_currency_entries(message).size() > 0 and not _mailbox_item_entries(message).is_empty():
+		return "货币会直接入账，物品会放入背包。背包空间不足时，剩余物品会保留在邮箱。"
+	if _mailbox_currency_entries(message).size() > 0:
+		return "货币会直接入账。"
+	return "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。"
 
 func _local_player_name() -> String:
 	var player_value = player_profile.get("player", {})
@@ -18091,18 +19687,7 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 
 func _first_available_unfinished_quest_for_tracker() -> Dictionary:
 	var normalized = PlayerProgressModel.normalize_profile(player_profile)
-	for quest in QuestModel.quests():
-		if QuestModel.is_optional(quest):
-			continue
-		var quest_id = str(quest.get("id", ""))
-		if quest_id == "":
-			continue
-		var state = PlayerProgressModel.quest_state_for_id(normalized, quest_id)
-		if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
-			continue
-		if PlayerProgressModel.quest_available_for_profile(normalized, quest):
-			return quest
-	return {}
+	return PlayerProgressModel.first_available_unfinished_quest(normalized, true)
 
 func _pet_rebirth_mm_guide_task_info(include_target: bool = false) -> Dictionary:
 	var info = PlayerProgressModel.pet_rebirth_mm_guide_info(player_profile)

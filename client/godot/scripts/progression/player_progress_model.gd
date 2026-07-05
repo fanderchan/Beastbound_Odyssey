@@ -3109,16 +3109,17 @@ static func apply_village_healer(profile: Dictionary) -> Dictionary:
 	}
 
 
-static func active_quest_id(profile: Dictionary) -> String:
-	return str(normalize_profile(profile).get(ACTIVE_QUEST_ID_KEY, ""))
+static func active_quest_id(profile: Dictionary, profile_is_normalized: bool = false) -> String:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	return str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
 
 
-static func active_quest(profile: Dictionary) -> Dictionary:
-	return QuestModel.quest_for_id(active_quest_id(profile))
+static func active_quest(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	return QuestModel.quest_for_id(active_quest_id(profile, profile_is_normalized))
 
 
-static func active_quest_state(profile: Dictionary) -> Dictionary:
-	var normalized := normalize_profile(profile)
+static func active_quest_state(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	var quest_id := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
 	var states := _quest_states(normalized)
 	return QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
@@ -3160,12 +3161,38 @@ static func quest_reward_text(profile: Dictionary) -> String:
 	return QuestModel.reward_text(quest)
 
 
-static func quest_available_for_profile(profile: Dictionary, quest: Dictionary) -> bool:
-	return _quest_available_for_profile(quest, normalize_profile(profile))
+static func quest_available_for_profile(profile: Dictionary, quest: Dictionary, profile_is_normalized: bool = false) -> bool:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	return _quest_available_for_profile(quest, normalized)
 
 
-static func optional_quest_for_interaction(profile: Dictionary, interaction_id: String) -> Dictionary:
-	var normalized := normalize_profile(profile)
+static func first_available_unfinished_quest(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	var quest_id := _first_available_unfinished_quest_id(_quest_states(normalized), normalized)
+	return QuestModel.quest_for_id(quest_id) if quest_id != "" else {}
+
+
+static func first_blocked_unfinished_quest(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	var states := _quest_states(normalized)
+	for quest in QuestModel.quests():
+		if QuestModel.is_optional(quest):
+			continue
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+		if states.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if _quest_available_for_profile(quest, normalized):
+			return {}
+		if _quest_should_show_blocked_marker(quest, normalized):
+			return quest
+	return {}
+
+
+static func optional_quest_for_interaction(profile: Dictionary, interaction_id: String, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	var item_id := str(interaction_id).strip_edges()
 	if item_id == "":
 		return {}
@@ -3186,8 +3213,8 @@ static func optional_quest_for_interaction(profile: Dictionary, interaction_id: 
 	return {}
 
 
-static func blocked_optional_quest_for_interaction(profile: Dictionary, interaction_id: String) -> Dictionary:
-	var normalized := normalize_profile(profile)
+static func blocked_optional_quest_for_interaction(profile: Dictionary, interaction_id: String, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	var item_id := str(interaction_id).strip_edges()
 	if item_id == "":
 		return {}
@@ -3282,8 +3309,8 @@ static func claim_optional_quest(profile: Dictionary, quest_id: String, reward_c
 	return _claim_quest_by_id(profile, quest_id, reward_choice_id, false)
 
 
-static func quest_state_for_id(profile: Dictionary, quest_id: String) -> Dictionary:
-	var normalized := normalize_profile(profile)
+static func quest_state_for_id(profile: Dictionary, quest_id: String, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	return QuestModel.normalize_state(_quest_states(normalized).get(quest_id, {}), quest_id)
 
 
@@ -3639,6 +3666,22 @@ static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary)
 		var abilities := _valid_unique_ability_ids(profile.get(UNLOCKED_ABILITIES_KEY, []))
 		if abilities.has(required_missing_ability):
 			return false
+	return true
+
+
+static func _quest_should_show_blocked_marker(quest: Dictionary, profile: Dictionary) -> bool:
+	var required_missing_ability := str(quest.get("requiredMissingAbility", quest.get("requiresMissingAbility", ""))).strip_edges()
+	if required_missing_ability != "":
+		var abilities := _valid_unique_ability_ids(profile.get(UNLOCKED_ABILITIES_KEY, []))
+		if abilities.has(required_missing_ability):
+			return false
+	var current_rebirth := maxi(0, int(profile.get(REBIRTH_COUNT_KEY, 0)))
+	var rebirth_target := QuestModel.rebirth_completion_target(quest)
+	if rebirth_target > 0:
+		return rebirth_target > current_rebirth + 1
+	var required_rebirth := maxi(0, int(quest.get("requiredRebirthCount", quest.get("requiresRebirthCount", 0))))
+	if required_rebirth > 0:
+		return current_rebirth < required_rebirth
 	return true
 
 
@@ -5799,8 +5842,8 @@ static func claim_pet_rebirth_mm_stage2(profile: Dictionary) -> Dictionary:
 	}
 
 
-static func pet_rebirth_mm_guide_completed(profile: Dictionary) -> bool:
-	var normalized := normalize_profile(profile)
+static func pet_rebirth_mm_guide_completed(profile: Dictionary, profile_is_normalized: bool = false) -> bool:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
 	return str(guide.get("status", "")) == PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED or _has_pet_rebirth_count_at_least(normalized, 1)
 
@@ -5851,9 +5894,9 @@ static func complete_pet_rebirth_mm_guide_if_ready(profile: Dictionary, now_sec:
 	}
 
 
-static func pet_rebirth_mm_guide_info(profile: Dictionary) -> Dictionary:
-	var normalized := normalize_profile(profile)
-	if pet_rebirth_mm_guide_completed(normalized):
+static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	if pet_rebirth_mm_guide_completed(normalized, true):
 		return _pet_rebirth_mm_guide_info_for_step(
 			PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED,
 			"completed",

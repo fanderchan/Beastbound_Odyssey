@@ -8,6 +8,7 @@ const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
+const {createEconomyDomain} = require("./auth/economy");
 const {
   createFamilyManorDomain,
   familyOwnsManor,
@@ -22,6 +23,8 @@ const ROLE_PLAYER = "player";
 const ROLE_GM = "gm";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_REPLACED_CODE = "session_replaced";
+const SESSION_REPLACED_MESSAGE = "你的账号已在其他地方登录，你已被踢出游戏。";
 const AUTH_RATE_WINDOW_MS = 60 * 1000;
 const AUTH_RATE_MAX_ATTEMPTS = 12;
 const AUTH_FAILURE_WINDOW_MS = 10 * 60 * 1000;
@@ -331,6 +334,7 @@ function createAuthService(options = {}) {
       cachedData.playerPositions = {};
       cachedData.battleInvites = {};
       cachedData.battleRooms = {};
+      cachedData.tradeOffers = {};
     }
     return cachedData;
   }
@@ -503,10 +507,18 @@ function createAuthService(options = {}) {
     }
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
+    const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
     markRuntimeSession(sessionResult.session);
     recordAuthEvent(data, "login", username, true, "", now);
+    if (replacement.revokedSessions.length > 0) {
+      recordAuthEvent(data, "session_replaced", username, true, `${replacement.revokedSessions.length} old session(s) revoked.`, now);
+    }
     const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, account.accountId);
+    const replacementEvent = sessionReplacementEvent(account, sessionResult.session, replacement.revokedSessions);
     save(data);
+    if (replacementEvent) {
+      emitServiceEvent(replacementEvent);
+    }
     if (partyPresenceEvent) {
       emitServiceEvent(partyPresenceEvent);
     }
@@ -529,13 +541,21 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    resolved.session.revokedAt = isoNow(now);
     const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
+    resolved.session.revokedAt = isoNow(now);
+    const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
     markRuntimeSession(sessionResult.session);
     const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
+    if (replacement.revokedSessions.length > 0) {
+      recordAuthEvent(data, "session_replaced", resolved.account.username, true, `${replacement.revokedSessions.length} old session(s) revoked.`, now);
+    }
     const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+    const replacementEvent = sessionReplacementEvent(resolved.account, sessionResult.session, replacement.revokedSessions);
     save(data);
+    if (replacementEvent) {
+      emitServiceEvent(replacementEvent);
+    }
     if (partyPresenceEvent) {
       emitServiceEvent(partyPresenceEvent);
     }
@@ -1302,6 +1322,10 @@ function createAuthService(options = {}) {
 
   function eventForSession(token, event = {}) {
     const data = load();
+    const replacementEvent = sessionReplacementEventForToken(data, token, event);
+    if (replacementEvent.handled) {
+      return replacementEvent.result;
+    }
     const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
@@ -1343,6 +1367,13 @@ function createAuthService(options = {}) {
   }
 
   function eventForResolvedSession(data, resolved, event = {}) {
+    if (event && event.type === "session.replaced") {
+      const targetSessionIds = Array.isArray(event.targetSessionIds) ? event.targetSessionIds.map((value) => String(value || "")) : [];
+      return ok({
+        visible: targetSessionIds.includes(String(resolved.session.sessionId || "")),
+        event,
+      });
+    }
     if (event && event.type === "online.position") {
       return onlinePositionEventForResolvedSession(data, resolved, event);
     }
@@ -1401,15 +1432,22 @@ function createAuthService(options = {}) {
     }
     expireBattleTimeoutsAndEmit(data);
     data = load();
-    const changed = markBattleConnectionForAccount(data, resolved.account.accountId, connected, now);
+    return ok(applyBattleConnectionState(data, resolved.account.accountId, connected, connected ? "ws_open" : "ws_close"));
+  }
+
+  function applyBattleConnectionState(data, accountId, connected, source = "") {
+    const normalizedAccountId = String(accountId || "");
+    const changed = markBattleConnectionForAccount(data, normalizedAccountId, connected, now);
     if (changed) {
       scheduleBattleMaintenance(data);
     }
-    return ok({
-      accountId: resolved.account.accountId,
+    return {
+      accountId: normalizedAccountId,
       connected: Boolean(connected),
-      room: publicBattleRoom(activeBattleRoomForAccount(data, resolved.account.accountId)),
-    });
+      changed,
+      source,
+      room: publicBattleRoom(activeBattleRoomForAccount(data, normalizedAccountId)),
+    };
   }
 
   function scheduleBattleMaintenance(data = null) {
@@ -1582,11 +1620,13 @@ function createAuthService(options = {}) {
     activeBattleRoomForAccount,
     activeOnlinePlayers: (serviceData, nowFn = now) => activeOnlinePlayers(serviceData, nowFn, runtimeActiveSessionIds),
     activeQuestAutoClaim,
+    authorizeGmCommand,
     claimActiveQuestToProfile,
     addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
+    bagItemLabel,
     backpackItemCount,
     battleInviteIsExpired,
     battleParticipantSnapshot,
@@ -1614,6 +1654,7 @@ function createAuthService(options = {}) {
     isoNow,
     itemAmountText,
     load,
+    applyBattleConnectionState,
     markBattleConnectionForAccount,
     normalizeBackpackSlots,
     normalizeBattleCommandPayload,
@@ -1624,6 +1665,7 @@ function createAuthService(options = {}) {
     normalizeHangSession,
     normalizeHangSettings,
     normalizeHangStopReason,
+    normalizeMailCurrency,
     normalizeMailItems,
     normalizeMailText,
     normalizeProfileActionId,
@@ -1639,9 +1681,12 @@ function createAuthService(options = {}) {
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     manorEntries,
     persistProfileForAccount,
+    playerPositionHasCell,
     profileActionLogLines,
     profileBackpackSlots,
     profileBindingForAccount,
+    profileCurrencyAmount,
+    profileStoneCoins,
     profileSummaryForAccount,
     publicAccount,
     publicBattleCommand,
@@ -1681,6 +1726,8 @@ function createAuthService(options = {}) {
       serverStartedAtMs,
     }),
     save,
+    setProfileCurrencyAmount,
+    shopCurrencyLabel,
     submittedBattleCommandAccountIds,
     submittedBattleCommandActorIds,
     validateClientQuestEvent,
@@ -1690,6 +1737,7 @@ function createAuthService(options = {}) {
   const mailChat = createMailChatDomain(domainContext);
   const party = createPartyDomain(domainContext);
   const battleRoom = createBattleRoomDomain(domainContext);
+  const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
 
   return {
@@ -1711,6 +1759,18 @@ function createAuthService(options = {}) {
     equipmentEnhance,
     equipmentRepairAll,
     equipmentSynthesize,
+    bankDeposit: economy.bankDeposit,
+    bankWithdraw: economy.bankWithdraw,
+    marketListings: economy.marketListings,
+    getMarketConfig: economy.getMarketConfig,
+    updateMarketConfig: economy.updateMarketConfig,
+    createMarketListing: economy.createMarketListing,
+    buyMarketListing: economy.buyMarketListing,
+    cancelMarketListing: economy.cancelMarketListing,
+    proposeTrade: economy.proposeTrade,
+    acceptTrade: economy.acceptTrade,
+    tradeState: economy.tradeState,
+    cancelTrade: economy.cancelTrade,
     searchPlayers,
     sendMail: mailChat.sendMail,
     listInbox: mailChat.listInbox,
@@ -1870,6 +1930,9 @@ function normalizeData(raw) {
     profileBindings: objectOrEmpty(data.profileBindings),
     profiles: objectOrEmpty(data.profiles),
     mailMessages: objectOrEmpty(data.mailMessages),
+    tradeOffers: objectOrEmpty(data.tradeOffers),
+    marketListings: objectOrEmpty(data.marketListings),
+    marketConfig: objectOrEmpty(data.marketConfig),
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
     families: normalizeFamilies(data.families),
@@ -1941,6 +2004,7 @@ function persistentDataForStore(data) {
   persistent.playerPositions = {};
   persistent.battleInvites = {};
   persistent.battleRooms = {};
+  persistent.tradeOffers = {};
   persistent.serviceEvents = persistent.serviceEvents.filter((event) => {
     const type = String(event && event.type || "");
     return !type.startsWith("battle.");
@@ -1991,6 +2055,86 @@ function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds
   }
 }
 
+function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runtimeActiveSessionIds) {
+  const normalizedAccountId = String(accountId || "");
+  const normalizedKeepSessionId = String(keepSessionId || "");
+  const revokedSessions = [];
+  if (!normalizedAccountId) {
+    return {revokedSessions};
+  }
+  const timestamp = isoNow(now);
+  for (const session of Object.values(data.sessions)) {
+    if (
+      !session ||
+      String(session.accountId || "") !== normalizedAccountId ||
+      String(session.sessionId || "") === normalizedKeepSessionId ||
+      session.revokedAt
+    ) {
+      continue;
+    }
+    session.revokedAt = timestamp;
+    session.revokedCode = SESSION_REPLACED_CODE;
+    session.revokedReason = "replaced_by_login";
+    session.revokedMessage = SESSION_REPLACED_MESSAGE;
+    if (runtimeActiveSessionIds && typeof runtimeActiveSessionIds.delete === "function" && session.sessionId) {
+      runtimeActiveSessionIds.delete(session.sessionId);
+    }
+    revokedSessions.push({
+      sessionId: String(session.sessionId || ""),
+      accountId: normalizedAccountId,
+      createdAt: String(session.createdAt || ""),
+      expiresAt: String(session.expiresAt || ""),
+      revokedAt: timestamp,
+      schemaVersion: 1,
+    });
+  }
+  return {revokedSessions};
+}
+
+function sessionReplacementEvent(account, replacementSession, revokedSessions) {
+  const sessions = Array.isArray(revokedSessions) ? revokedSessions.filter((session) => session && session.sessionId) : [];
+  if (sessions.length <= 0) {
+    return null;
+  }
+  return {
+    type: "session.replaced",
+    code: SESSION_REPLACED_CODE,
+    reason: "replaced_by_login",
+    message: SESSION_REPLACED_MESSAGE,
+    accountId: String(account && account.accountId || ""),
+    username: String(account && account.username || ""),
+    displayName: String(account && (account.displayName || account.username) || ""),
+    targetAccountIds: [String(account && account.accountId || "")].filter(Boolean),
+    targetSessionIds: sessions.map((session) => session.sessionId),
+    replacementSessionId: String(replacementSession && replacementSession.sessionId || ""),
+  };
+}
+
+function sessionReplacementEventForToken(data, token, event = {}) {
+  if (!event || event.type !== "session.replaced") {
+    return {handled: false, result: null};
+  }
+  const session = sessionByToken(data, token);
+  if (!session) {
+    return {handled: true, result: fail("session_missing", "登录会话不存在。")};
+  }
+  const targetSessionIds = Array.isArray(event.targetSessionIds)
+    ? event.targetSessionIds.map((value) => String(value || ""))
+    : [];
+  return {
+    handled: true,
+    result: ok({
+      visible: targetSessionIds.includes(String(session.sessionId || "")),
+      event,
+    }),
+  };
+}
+
+function sessionByToken(data, token) {
+  const tokenHash = hashToken(String(token || ""));
+  return Object.values(data.sessions).find((value) => value && value.tokenHash === tokenHash) || null;
+}
+
 function runtimeSessionWasRecorded(runtimeActiveSessionIds, sessionId) {
   return Boolean(runtimeActiveSessionIds && sessionId && runtimeActiveSessionIds.has(sessionId));
 }
@@ -2010,13 +2154,14 @@ function runtimeSessionIsActive(runtimeActiveSessionIds, sessionId, nowMs) {
 }
 
 function resolveSession(data, token, now, options = {}) {
-  const tokenHash = hashToken(String(token || ""));
-  const session = Object.values(data.sessions).find((value) => value && value.tokenHash === tokenHash);
+  const session = sessionByToken(data, token);
   if (!session) {
     return {"ok": false, "code": "session_missing", "message": "登录会话不存在。"};
   }
   if (session.revokedAt) {
-    return {"ok": false, "code": "session_revoked", "message": "登录会话已失效。"};
+    const revokedCode = String(session.revokedCode || "").trim() || "session_revoked";
+    const revokedMessage = String(session.revokedMessage || "").trim() || "登录会话已失效。";
+    return {"ok": false, "code": revokedCode, "message": revokedMessage};
   }
   const expiresMs = Date.parse(session.expiresAt);
   const nowMs = now();
@@ -2166,6 +2311,7 @@ function publicMail(mail) {
     title: mail.title,
     body: mail.body,
     items: normalizeMailItems(mail.items || []),
+    currency: normalizeMailCurrency(mail.currency || mail.currencies || {}),
     createdAt: mail.createdAt,
     readAt: mail.readAt || null,
     schemaVersion: 1,
@@ -2189,6 +2335,20 @@ function normalizeMailItems(value) {
     entries.push({itemId, count});
   }
   return mergeItemAmounts(entries);
+}
+
+function normalizeMailCurrency(value) {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const result = {};
+  const stoneCoins = Math.max(0, Math.trunc(Number(raw.stoneCoins || raw.coins || 0)));
+  const diamonds = Math.max(0, Math.trunc(Number(raw.diamonds || raw.diamond || 0)));
+  if (stoneCoins > 0) {
+    result[SHOP_CURRENCY_STONE_COINS] = stoneCoins;
+  }
+  if (diamonds > 0) {
+    result[SHOP_CURRENCY_DIAMONDS] = diamonds;
+  }
+  return result;
 }
 
 function publicChatMessage(message) {
@@ -14628,7 +14788,7 @@ function serviceEventVisibleToAccount(event, accountId) {
 
 function serviceEventIsReplayable(event) {
   const type = String(event && event.type || "");
-  return type === "chat.message" || type.startsWith("party.") || type.startsWith("battle.");
+  return type === "chat.message" || type === "session.replaced" || type.startsWith("party.") || type.startsWith("battle.");
 }
 
 function normalizeUsername(username) {

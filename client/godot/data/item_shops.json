@@ -52,6 +52,22 @@
         {
           "itemId": "encounter_stone_high",
           "buyPrice": 72
+        },
+        {
+          "itemId": "trail_ration_pack",
+          "buyPrice": 26
+        },
+        {
+          "itemId": "item_pet_salve_mid",
+          "buyPrice": 34
+        },
+        {
+          "itemId": "item_pet_salve_large",
+          "buyPrice": 58
+        },
+        {
+          "itemId": "encounter_stone_patrol",
+          "buyPrice": 66
         }
       ]
     },

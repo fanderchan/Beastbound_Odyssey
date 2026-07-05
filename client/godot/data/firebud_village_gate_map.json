@@ -496,6 +496,43 @@
       "shopId": "firebud_equipment_shop",
       "dialog": ["装备商阿石：木棒、石斧和背心都在这里。先挑一件顺手的。"],
       "option": "买卖"
+    },
+    {
+      "id": "firebud_welfare_clerk",
+      "name": "福利员阿檀",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [5, 15],
+      "facilityType": "welfare",
+      "facilityLabel": "福利",
+      "action": "领取",
+      "dialog": ["福利员阿檀：新来的猎人先登记一下，带好补给再出村。"],
+      "option": "登记"
+    },
+    {
+      "id": "firebud_storyteller",
+      "name": "说书人阿舟",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [13, 15],
+      "facilityType": "storyteller",
+      "facilityLabel": "说书",
+      "action": "听闻",
+      "dialog": ["说书人阿舟：我把旅人见闻记在札记里。听完一段，路上就知道该看什么。"],
+      "option": "听闻"
+    },
+    {
+      "id": "firebud_bank_keeper",
+      "name": "仓库员阿衡",
+      "kind": "npc",
+      "movementCollision": "block",
+      "cell": [13, 16],
+      "facilityType": "bank",
+      "facilityLabel": "仓库",
+      "action": "仓库",
+      "actionType": "bank",
+      "dialog": ["仓库员阿衡：背包太满就把石币和物品先存起来，外出前再取。"],
+      "option": "仓库"
     }
   ]
 }

@@ -37,15 +37,15 @@
 
 - [ ] **G1.1 宠物图鉴体量**：当前 `pet_templates.json` 仅 **21 个 form**，且 **全部为 placeholderPalette**（`docs/asset_audit.md`）。SA 有大规模宠物表与捕获分布。
 - [ ] **G1.2 野外分布与等级带**：除火芽村、四洞、玄影、等级试验场、九大庄园外，缺少 SA 式「多大陆、多等级段、多属性区域」的可玩地图网（`map_regions.json` 仅 ~6 个 region）。
-- [ ] **G1.3 道具与装备种类**：`bag_items.json` / `equipment_items.json` 规模远小于 SA `item*.c`；缺少 SA 式丰富消耗品、任务道具、特殊效果道具链。
-- [ ] **G1.4 任务与 NPC 密度**：SA 有 `quiz`、`storyteller`、`scheduleman`、`welfare`、`luckyman` 等大量 NPC 类型；BB 以新手链 + 转生链 + 庄园为主，支线/日常/活动 NPC 偏少。
+- [x] **G1.3 道具与装备种类**：已补一批原创消耗品、宠物治疗道具、遇敌石和任务道具；后续仍可继续扩装备与特殊效果道具链。
+- [x] **G1.4 任务与 NPC 密度**：已补福利/说书两类支线 NPC 与可选 talk 任务；后续仍可扩问答、日常、活动 NPC。
 - [ ] **G1.5 交通网络**：SA 有 `bus` / `airplane` / 多 warp 网络；BB 仅有 map transfer 点，无大陆级巴士/航班式快捷交通。
 
 ### G2 经济与社会（SA 核心长线玩法，BB 基本缺失）
 
-- [ ] **G2.1 玩家交易**：SA `trade.c` / 面对面交易；BB **无** player-to-player trade。
+- [x] **G2.1 玩家交易**：已按用户验收反馈改为交易所买卖入口，默认 1% 税，支持 GM 配置默认税率与单物品税率；旧面对面交易接口仅保留兼容，不在普通 UI 展示。
 - [ ] **G2.2 拍卖行**：SA `auctioneer` / `pauctionman` / `saac/auction.c`；BB **无**。
-- [ ] **G2.3 银行/仓库**：SA `bankman` 存取金钱与物品；BB 仅有背包 + 兽栏，**无**银行或超大容量仓库 NPC。
+- [x] **G2.3 银行/仓库**：已补仓库 NPC 与服务端权威石币/物品存取 v1；后续可扩大容量、分类和家族银行。
 - [ ] **G2.4 摆摊/寄售**：SA `sellsthman` 等；BB **无**。
 - [ ] **G2.5 黑市/特殊商店**：SA `blackmarket`、`poolitemshop`、`pkpetshop`；BB **无**。
 - [ ] **G2.6 赌博/小游戏**：SA `gamblemaster`、`gambleroulette`、`janken`、`bigsmall`；BB **无**（numeric 实验不算玩家玩法）。
@@ -115,7 +115,7 @@
 | --- | --- | --- | --- |
 | **F0** | 收尾 release_plan | G9.1、G9.3、G9.4 | 用户确认可进入内容迭代 |
 | **F1** | 内容体量 MVP | G1.2 扩 2–3 个新 region + G1.1 新增 10 种可捕 wild 宠（含数据+遭遇+图鉴） | 新区域可挂机练级 20 级段，CI 绿 |
-| **F2** | 经济闭环 v1 | G2.1 面对面交易 + G2.3 银行存取（服务端权威） | 两账号可交易/存取，防刷测试通过 |
+| **F2** | 经济闭环 v1 | G2.1 交易所买卖 + G2.3 银行存取（服务端权威） | 两账号可买卖/存取，防刷测试通过 |
 | **F3** | 宠物深度 v1 | G3.1 宠物融合（简化公式）+ G3.5 服务端被动/反击审计补齐 | 融合 + 服务端 battle 回归绿 |
 | **F4** | 家族庄园 v2 | G4.1 家族银行 + G4.4 中立守备 battle room + G4.3 家族公告 | 家族战全路径 battle room 化 |
 | **F5** | 竞技与社交 v1 | G5.1 切磋排行榜 + G6.4 好友/黑名单 | 排行榜可查、好友可在线邀请 |
@@ -156,12 +156,17 @@
   - 证据：新增 `mistcap_marsh`、`suncrack_badlands`、`windglass_highlands` 三个 field region、三张 map JSON、火芽村入口往返传送；`node tools/run_godot_auto_checks.mjs --only --auto-map-region-contract-check,--auto-pet-template-catalog-check,--auto-pet-codex-list-check,--auto-pet-encounter-table-check --fail-fast --timeout-ms 180000` 通过 5/5，log `.run/godot_auto_checks/2026-07-04T01-10-04-355Z.log`，其中 `f1_regions=true f1_transfers=true`。
 - [x] G1.1 新可捕宠物 ×10（非 placeholder 或明确 art 计划）
   - 证据：`client/godot/data/pet_templates.json` 新增苔背兽/风狐/炽角兽/潮鳍兽 4 个种系与 10 个 `capture.catchable=true` form，每个 form 带 `visual.artPlan.replacementPath`；同一轮 `--auto-pet-template-catalog-check` 输出 `f1_forms=true f1_lines=true`，`--auto-pet-codex-list-check` 通过；`node tools/run_godot_auto_checks.mjs --only --auto-balance-catalog-check --fail-fast --timeout-ms 180000` 通过 2/2，log `.run/godot_auto_checks/2026-07-04T01-10-30-559Z.log`。
-- [ ] G1.3 扩展消耗品/任务道具一批
-- [ ] G1.4 支线 NPC ×2 类
+- [x] G1.3 扩展消耗品/任务道具一批
+  - 证据：新增 `trail_ration_pack`、`item_pet_salve_mid`、`item_pet_salve_large`、`encounter_stone_patrol`、`quest_welfare_token`、`quest_field_note`，并接入火芽村道具铺；JSON 解析通过，`--auto-stage6-content-check` 输出 `items=true shop=true`。
+- [x] G1.4 支线 NPC ×2 类
+  - 证据：火芽村入口新增福利员阿檀、说书人阿舟及两条 optional talk 支线；`node tools/run_godot_auto_checks.mjs --only --auto-quest-objective-templates-check,--auto-npc-quest-marker-check,--auto-task-tracker-route-check,--auto-stage6-content-check --fail-fast --timeout-ms 180000` 覆盖任务模板、NPC 标记、追踪路线与阶段 6 内容。
 
 ### F2 — 经济闭环 v1
-- [ ] G2.1 玩家面对面交易
-- [ ] G2.3 银行/仓库 NPC
+- [x] G2.1 玩家交易/交易所
+  - 历史证据（兼容接口）：新增 `/trade/propose`、`/trade/accept`、`/trade/cancel`、`/trade/state`；`node --test server/node/test/auth-economy.test.js` 覆盖距离拒绝、状态读取和双账号原子交换。
+  - 证据（2026-07-05）：按用户验收反馈改为交易所入口，底部新增“买卖”，普通 UI 不再展示面对面交易控件；新增 `/market/listings`、`/market/list`、`/market/buy`、`/market/cancel` 与 GM 税率配置 `/gm/market/config`，默认交易税 1%，支持单物品税率覆盖；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js server/node/test/auth-http-server.test.js`、`node tools/run_godot_auto_checks.mjs --only --auto-market-panel-check,--auto-stage6-content-check --fail-fast --timeout-ms 180000` 通过。
+- [x] G2.3 银行/仓库 NPC
+  - 证据：新增仓库员阿衡、`/bank/deposit`、`/bank/withdraw` 与仓库面板；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js` 通过 12/12，`--auto-stage6-content-check` 覆盖仓库 NPC、地图标记与仓库面板。
 - [ ] G2.7 物品兑换 NPC（可选简化版）
 
 ### F3 — 宠物深度 v1

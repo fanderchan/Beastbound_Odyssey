@@ -6,6 +6,7 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
@@ -29,6 +30,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
+const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -60,45 +62,7 @@ const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
-const MAP_DATA_PATHS := {
-	"firebud_training_yard": "res://data/firebud_training_map.json",
-	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
-	"earth_vein_cave": "res://data/earth_vein_cave_map.json",
-	"earth_vein_cave_f2": "res://data/earth_vein_cave_f2_map.json",
-	"earth_vein_cave_f3": "res://data/earth_vein_cave_f3_map.json",
-	"earth_vein_cave_f4": "res://data/earth_vein_cave_f4_map.json",
-	"tide_echo_cave": "res://data/tide_echo_cave_map.json",
-	"tide_echo_cave_f2": "res://data/tide_echo_cave_f2_map.json",
-	"tide_echo_cave_f3": "res://data/tide_echo_cave_f3_map.json",
-	"tide_echo_cave_f4": "res://data/tide_echo_cave_f4_map.json",
-	"ember_core_cave": "res://data/ember_core_cave_map.json",
-	"ember_core_cave_f2": "res://data/ember_core_cave_f2_map.json",
-	"ember_core_cave_f3": "res://data/ember_core_cave_f3_map.json",
-	"ember_core_cave_f4": "res://data/ember_core_cave_f4_map.json",
-	"gale_breath_cave": "res://data/gale_breath_cave_map.json",
-	"gale_breath_cave_f2": "res://data/gale_breath_cave_f2_map.json",
-	"gale_breath_cave_f3": "res://data/gale_breath_cave_f3_map.json",
-	"gale_breath_cave_f4": "res://data/gale_breath_cave_f4_map.json",
-	"shadow_oath_cavern": "res://data/shadow_oath_cavern_map.json",
-	"shadow_oath_cavern_f2": "res://data/shadow_oath_cavern_f2_map.json",
-	"shadow_oath_cavern_f3": "res://data/shadow_oath_cavern_f3_map.json",
-	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
-	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
-	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
-	"mistcap_marsh": "res://data/mistcap_marsh_map.json",
-	"suncrack_badlands": "res://data/suncrack_badlands_map.json",
-	"windglass_highlands": "res://data/windglass_highlands_map.json",
-	"firebud_manor": "res://data/firebud_manor_map.json",
-	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
-	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
-	"ember_core_manor": "res://data/ember_core_manor_map.json",
-	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
-	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
-	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
-	"artisan_manor": "res://data/artisan_manor_map.json",
-	"training_manor": "res://data/training_manor_map.json",
-	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
-}
+const MAP_DATA_PATHS := MapDataCatalog.MAP_DATA_PATHS
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
 const DIALOG_PANEL_HEIGHT := 214.0
@@ -151,10 +115,10 @@ const BATTLE_PASSIVE_MAX_LINES := 2
 const BATTLE_PASSIVE_PANEL_HEIGHT := 64.0
 const BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT := 58.0
 const BATTLE_PASSIVE_PANEL_PADDING := Vector2(14.0, 6.0)
-const BATTLE_GRID_TEMPLATE_SIZE := Vector2(1280.0, 720.0)
-const BATTLE_GRID_TEMPLATE_ORIGIN := Vector2(128.0, 338.4)
-const BATTLE_GRID_TEMPLATE_LANE_STEP := Vector2(152.0, 52.0)
-const BATTLE_GRID_TEMPLATE_RANK_STEP := Vector2(76.0, -48.0)
+const BATTLE_GRID_TEMPLATE_SIZE := BattleLayoutConstants.GRID_TEMPLATE_SIZE
+const BATTLE_GRID_TEMPLATE_ORIGIN := BattleLayoutConstants.GRID_TEMPLATE_ORIGIN
+const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE_STEP
+const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
@@ -1136,8 +1100,17 @@ func _run_auto_map_transfer_check() -> void:
 		await host.get_tree().physics_frame
 	var arrived_village = host.current_map_id == "firebud_village_gate"
 	var village_spawn_ok = false
+	var village_map_payload_ok = false
 	if arrived_village:
-		village_spawn_ok = IsoMapModel.world_to_grid(host.map_data, host.player.global_position) == IsoMapModel.spawn_cell(host.map_data, "from_training_yard")
+		var village_spawn_cell := IsoMapModel.spawn_cell(host.map_data, "from_training_yard")
+		village_spawn_ok = IsoMapModel.world_to_grid(host.map_data, host.player.global_position) == village_spawn_cell
+		var village_map_payload: Dictionary = host._current_online_map_payload()
+		var village_payload_cell := Vector2i(int(village_map_payload.get("cellX", -999)), int(village_map_payload.get("cellY", -999)))
+		village_map_payload_ok = (
+			str(village_map_payload.get("mapId", "")) == "firebud_village_gate"
+			and str(village_map_payload.get("scope", "")) == "map"
+			and village_payload_cell == village_spawn_cell
+		)
 
 	var return_warp = InteractionModel.find_by_id(host.map_data, "warp_to_training_yard")
 	var return_found = arrived_village and not return_warp.is_empty()
@@ -1150,12 +1123,21 @@ func _run_auto_map_transfer_check() -> void:
 		await host.get_tree().physics_frame
 	var returned_training = host.current_map_id == "firebud_training_yard"
 	var return_spawn_ok = false
+	var return_map_payload_ok = false
 	if returned_training:
-		return_spawn_ok = IsoMapModel.world_to_grid(host.map_data, host.player.global_position) == IsoMapModel.spawn_cell(host.map_data, "from_village_gate")
+		var return_spawn_cell := IsoMapModel.spawn_cell(host.map_data, "from_village_gate")
+		return_spawn_ok = IsoMapModel.world_to_grid(host.map_data, host.player.global_position) == return_spawn_cell
+		var return_map_payload: Dictionary = host._current_online_map_payload()
+		var return_payload_cell := Vector2i(int(return_map_payload.get("cellX", -999)), int(return_map_payload.get("cellY", -999)))
+		return_map_payload_ok = (
+			str(return_map_payload.get("mapId", "")) == "firebud_training_yard"
+			and str(return_map_payload.get("scope", "")) == "map"
+			and return_payload_cell == return_spawn_cell
+		)
 	host._set_gm_speed_multiplier(previous_multiplier)
 	var speed_restored = host._gm_battle_speed_multiplier() == clampi(previous_multiplier, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
-	var status = "ok" if start_ok and outbound_found and outbound_overlap and arrived_village and village_spawn_ok and return_found and return_overlap and returned_training and return_spawn_ok else "failed"
-	print("map transfer check ready: status=%s speed_x10=true speed_restored=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s final_map=%s final_cell=%s" % [
+	var status = "ok" if start_ok and outbound_found and outbound_overlap and arrived_village and village_spawn_ok and village_map_payload_ok and return_found and return_overlap and returned_training and return_spawn_ok and return_map_payload_ok else "failed"
+	print("map transfer check ready: status=%s speed_x10=true speed_restored=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s village_map_payload_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s return_map_payload_ok=%s final_map=%s final_cell=%s" % [
 		status,
 		str(speed_restored),
 		str(start_ok),
@@ -1163,10 +1145,12 @@ func _run_auto_map_transfer_check() -> void:
 		str(outbound_overlap),
 		str(arrived_village),
 		str(village_spawn_ok),
+		str(village_map_payload_ok),
 		str(return_found),
 		str(return_overlap),
 		str(returned_training),
 		str(return_spawn_ok),
+		str(return_map_payload_ok),
 		host.current_map_id,
 		str(IsoMapModel.world_to_grid(host.map_data, host.player.global_position)),
 	])
@@ -6972,25 +6956,59 @@ func _run_auto_mailbox_check() -> void:
 	host._open_mailbox_panel()
 	await host.get_tree().process_frame
 	await host.get_tree().create_timer(0.25).timeout
+	var default_tab_ok = (
+		host.mailbox_active_tab == "inbox"
+		and host.mailbox_inbox_tab_button != null
+		and host.mailbox_inbox_tab_button.button_pressed
+		and host.mailbox_compose_tab_button != null
+		and not host.mailbox_compose_tab_button.button_pressed
+		and host.mailbox_inbox_container != null
+		and host.mailbox_inbox_container.visible
+		and host.mailbox_compose_container != null
+		and not host.mailbox_compose_container.visible
+		and host.mailbox_recipient_input != null
+		and not host.mailbox_recipient_input.is_visible_in_tree()
+	)
 	var ui_ok = (
 		host.mailbox_panel != null
 		and host.mailbox_panel.visible
+		and default_tab_ok
 		and host.mailbox_message_buttons.size() >= 1
 		and host.mailbox_claim_button != null
 		and not host.mailbox_claim_button.disabled
 		and host.mailbox_detail_label != null
 		and host.mailbox_detail_label.text.find("经验丹") >= 0
 	)
+	host._set_mailbox_tab("compose")
+	await host.get_tree().process_frame
+	var compose_tab_ok = (
+		host.mailbox_active_tab == "compose"
+		and host.mailbox_compose_tab_button != null
+		and host.mailbox_compose_tab_button.button_pressed
+		and host.mailbox_inbox_tab_button != null
+		and not host.mailbox_inbox_tab_button.button_pressed
+		and host.mailbox_compose_container != null
+		and host.mailbox_compose_container.visible
+		and host.mailbox_inbox_container != null
+		and not host.mailbox_inbox_container.visible
+		and host.mailbox_recipient_input != null
+		and host.mailbox_recipient_input.is_visible_in_tree()
+		and host.mailbox_body_input != null
+		and host.mailbox_body_input.is_visible_in_tree()
+	)
+	host._set_mailbox_tab("inbox")
+	await host.get_tree().process_frame
 	var server_messages: Array[Dictionary] = [{
 		"mailId": "mail_server_item_check",
 		"senderUsername": "serverfriend",
 		"senderDisplayName": "远方猎人",
-		"title": "补给",
-		"body": "带上肉。",
-		"items": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2}],
-		"createdAt": "2099-01-01T00:00:00.000Z",
-		"readAt": null,
-	}]
+			"title": "补给",
+			"body": "带上肉。",
+			"items": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2}],
+			"currency": {"stoneCoins": 39},
+			"createdAt": "2099-01-01T00:00:00.000Z",
+			"readAt": null,
+		}]
 	host.mailbox_server_messages = server_messages
 	host.mailbox_selected_mail_id = "server:mail_server_item_check"
 	host.mailbox_selected_source = "server"
@@ -6998,18 +7016,20 @@ func _run_auto_mailbox_check() -> void:
 	var server_ui_ok = (
 		host.mailbox_claim_button != null
 			and not host.mailbox_claim_button.disabled
-			and host.mailbox_detail_label != null
-			and host.mailbox_detail_label.text.find("附件") >= 0
-			and host.mailbox_detail_label.text.find("肉 x2") >= 0
-		)
+				and host.mailbox_detail_label != null
+				and host.mailbox_detail_label.text.find("附件") >= 0
+				and host.mailbox_detail_label.text.find("39石币") >= 0
+				and host.mailbox_detail_label.text.find("肉 x2") >= 0
+			)
 	host._close_mailbox_panel()
-	var status = "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and server_ui_ok else "failed"
-	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s server_ui=%s messages=%d" % [
+	var status = "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok else "failed"
+	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s messages=%d" % [
 		status,
 		str(mailbox_ok),
 		str(claim_full_ok),
 		str(claim_ok),
 		str(ui_ok),
+		str(compose_tab_ok),
 		str(server_ui_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
 	])
@@ -9855,6 +9875,207 @@ func _run_auto_quest_objective_templates_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+func _run_auto_stage6_content_check() -> void:
+	host.profile_save_enabled = false
+	host.world_log_history.clear()
+	host.world_log_message = ""
+	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
+	var welfare = InteractionModel.find_by_id(host.map_data, "firebud_welfare_clerk")
+	var storyteller = InteractionModel.find_by_id(host.map_data, "firebud_storyteller")
+	var bank = InteractionModel.find_by_id(host.map_data, "firebud_bank_keeper")
+	var items_ok = (
+		not BackpackModel.item_for_id("trail_ration_pack").is_empty()
+		and BackpackModel.item_can_world_pet_heal("trail_ration_pack")
+		and BackpackModel.world_heal_amount_for("item_pet_salve_mid") == 70
+		and BackpackModel.world_heal_amount_for("item_pet_salve_large") == 110
+		and BackpackModel.item_can_world_encounter_stone("encounter_stone_patrol")
+		and not BackpackModel.item_for_id("quest_welfare_token").is_empty()
+		and not BackpackModel.item_for_id("quest_field_note").is_empty()
+	)
+	var shop = ShopCatalogModel.shop_for_id(ShopCatalogModel.DEFAULT_SHOP_ID)
+	var shop_item_ids: Array[String] = []
+	for entry_value in ShopCatalogModel.entries_for(str(shop.get("id", ""))):
+		var entry := entry_value as Dictionary
+		shop_item_ids.append(str(entry.get("itemId", "")))
+	var shop_ok = (
+		shop_item_ids.has("trail_ration_pack")
+		and shop_item_ids.has("item_pet_salve_mid")
+		and shop_item_ids.has("item_pet_salve_large")
+		and shop_item_ids.has("encounter_stone_patrol")
+	)
+	var welfare_quest = QuestModel.quest_for_id("side_firebud_welfare_chat")
+	var story_quest = QuestModel.quest_for_id("side_firebud_story_note")
+	var quest_catalog_ok = QuestModel.validation_errors().is_empty()
+	var quest_ok = (
+		QuestModel.is_optional(welfare_quest)
+		and QuestModel.is_optional(story_quest)
+		and QuestModel.progress_amount_for_event(welfare_quest, {"type": "talk", "targetId": "firebud_welfare_clerk"}) == 1
+		and QuestModel.progress_amount_for_event(story_quest, {"type": "talk", "targetId": "firebud_storyteller"}) == 1
+		and QuestModel.reward_text(welfare_quest).find("口粮包") >= 0
+		and QuestModel.reward_text(story_quest).find("札记") >= 0
+		and quest_catalog_ok
+	)
+	host.player_profile = PlayerProgressModel.default_profile()
+	var optional_welfare_ok = str(PlayerProgressModel.optional_quest_for_interaction(host.player_profile, "firebud_welfare_clerk").get("id", "")) == "side_firebud_welfare_chat"
+	var optional_story_ok = str(PlayerProgressModel.optional_quest_for_interaction(host.player_profile, "firebud_storyteller").get("id", "")) == "side_firebud_story_note"
+	var facility_ok = (
+		loaded
+		and not welfare.is_empty()
+		and not storyteller.is_empty()
+		and not bank.is_empty()
+		and InteractionModel.facility_label_for(bank) == "仓库"
+		and InteractionModel.facility_type_for(bank) == InteractionModel.FACILITY_BANK
+	)
+	host._open_map_panel()
+	await host.get_tree().process_frame
+	var map_marker_ok = (
+		host.map_marker_buttons.has("interaction:firebud_welfare_clerk")
+		and host.map_marker_buttons.has("interaction:firebud_storyteller")
+		and host.map_marker_buttons.has("interaction:firebud_bank_keeper")
+	)
+	host._hide_control(host.map_panel)
+	host._open_bank_panel()
+	await host.get_tree().process_frame
+	var bank_panel_ok = (
+		host.bank_panel != null
+		and host.bank_panel.visible
+		and host.bank_status_label != null
+		and host.bank_status_label.text.find("需要服务器账号登录") >= 0
+	)
+	host._close_bank_panel()
+	var market_button_ok = (
+		host.market_menu_button != null
+		and host.market_menu_button.text == "买卖"
+	)
+	host._open_market_panel()
+	await host.get_tree().process_frame
+	var market_panel_ok = (
+		host.market_panel != null
+		and host.market_panel.visible
+		and host.market_buy_tab_button != null
+		and host.market_sell_tab_button != null
+		and host.market_mine_tab_button != null
+		and host.market_sell_item_option != null
+		and host.market_sell_count_spinbox != null
+		and host.market_sell_currency_option != null
+		and host.market_sell_unit_price_spinbox != null
+		and host.market_sell_button != null
+		and host.market_buy_button != null
+		and host.market_cancel_button != null
+		and host.market_status_label != null
+		and host.market_status_label.text.find("需要服务器账号登录") >= 0
+	)
+	host._close_market_panel()
+	host._open_player_action_panel({"username": "stage6_trade_peer", "displayName": "交易测试员"})
+	await host.get_tree().process_frame
+	var trade_controls_removed_ok = (
+		host.player_action_panel != null
+		and host.player_action_panel.visible
+		and host.player_action_trade_refresh_button == null
+		and host.player_action_trade_propose_button == null
+		and host.player_action_trade_accept_button == null
+		and host.player_action_trade_item_option == null
+		and host.player_action_trade_count_spinbox == null
+		and host.player_action_trade_coin_spinbox == null
+	)
+	host._close_player_action_panel()
+	var status = "ok" if items_ok and shop_ok and quest_ok and optional_welfare_ok and optional_story_ok and facility_ok and map_marker_ok and bank_panel_ok and market_button_ok and market_panel_ok and trade_controls_removed_ok else "failed"
+	print("stage6 content check ready: status=%s items=%s shop=%s quests=%s optional=%s/%s facility=%s markers=%s bank_panel=%s market_button=%s market_panel=%s old_trade_removed=%s errors=%s" % [
+		status,
+		str(items_ok),
+		str(shop_ok),
+		str(quest_ok),
+		str(optional_welfare_ok),
+		str(optional_story_ok),
+		str(facility_ok),
+		str(map_marker_ok),
+		str(bank_panel_ok),
+		str(market_button_ok),
+		str(market_panel_ok),
+		str(trade_controls_removed_ok),
+		"; ".join(QuestModel.validation_errors()),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+func _run_auto_market_panel_check() -> void:
+	host.profile_save_enabled = false
+	host.world_log_history.clear()
+	host.world_log_message = ""
+	host.player_profile = PlayerProgressModel.normalize_profile(PlayerProgressModel.default_profile())
+	host.account_authenticated = true
+	host._close_auth_panel(false)
+	host._close_market_panel(false)
+	host._layout_hud()
+	host._open_market_panel()
+	await host.get_tree().process_frame
+	var status_label_ok = (
+		host.market_status_label != null
+		and host.market_status_label.text.find("需要服务器账号登录") >= 0
+	)
+	var wallet_label_ok = (
+		host.market_wallet_label != null
+		and host.market_wallet_label.text.find("持有：") >= 0
+		and host.market_buy_tab_button != null
+		and host.market_wallet_label.global_position.y < host.market_buy_tab_button.global_position.y
+	)
+	var detail_wallet_removed_ok = (
+		host.market_detail_label != null
+		and host.market_detail_label.text.find("持有：") < 0
+	)
+	var sell_form_ok = (
+		host.market_sell_form_container != null
+		and host.market_sell_item_option != null
+		and host.market_sell_count_spinbox != null
+		and host.market_sell_currency_option != null
+		and host.market_sell_unit_price_spinbox != null
+		and host.market_sell_summary_label != null
+		and host.market_sell_button != null
+	)
+	var panel_ok = (
+		host.market_panel != null
+		and host.market_panel.visible
+		and host.market_buy_tab_button != null
+		and host.market_sell_tab_button != null
+		and host.market_mine_tab_button != null
+			and host.market_buy_button != null
+			and host.market_cancel_button != null
+			and sell_form_ok
+			and status_label_ok
+			and wallet_label_ok
+			and detail_wallet_removed_ok
+	)
+	var market_point = host.market_panel.global_position + host.market_panel.size * 0.5 if host.market_panel != null else Vector2.ZERO
+	var ui_blocks_ok = host._is_ui_point(market_point)
+	var before_pending_screen = host.has_pending_click_screen_point
+	var before_pending_target = host.has_pending_click_move_target
+	var before_resolve_count = host.click_move_screen_resolve_count
+	var before_apply_count = host.click_move_repath_apply_count
+	var click_event := InputEventMouseButton.new()
+	click_event.button_index = MOUSE_BUTTON_LEFT
+	click_event.pressed = true
+	click_event.position = market_point
+	host._input(click_event)
+	await host.get_tree().process_frame
+	var click_blocked_ok = (
+		host.has_pending_click_screen_point == before_pending_screen
+		and host.has_pending_click_move_target == before_pending_target
+		and host.click_move_screen_resolve_count == before_resolve_count
+		and host.click_move_repath_apply_count == before_apply_count
+	)
+	var status = "ok" if panel_ok and ui_blocks_ok and click_blocked_ok else "failed"
+	print("market panel check ready: status=%s panel=%s sell_form=%s status_label=%s wallet_label=%s detail_wallet_removed=%s ui_blocks=%s click_blocked=%s" % [
+		status,
+		str(panel_ok),
+		str(sell_form_ok),
+		str(status_label_ok),
+		str(wallet_label_ok),
+		str(detail_wallet_removed_ok),
+		str(ui_blocks_ok),
+		str(click_blocked_ok),
+	])
+	await host.get_tree().create_timer(0.6).timeout
+	host.get_tree().quit(0 if status == "ok" else 1)
+
 func _run_auto_map_region_contract_check() -> void:
 	host.profile_save_enabled = false
 	var known_map_ids: Array[String] = []
@@ -12663,6 +12884,32 @@ func _run_auto_panel_registry_check() -> void:
 	var top_point = host.top_panel.global_position + host.top_panel.size * 0.5 if host.top_panel != null else Vector2.ZERO
 	var top_blocks_ok = host._is_ui_point(top_point)
 	var no_menu_before_ok = not host._world_menu_is_open()
+	var action_bar_point = host.action_bar.global_position + host.action_bar.size * 0.5 if host.action_bar != null else Vector2.ZERO
+	var action_bar_blocks_ok = host.action_bar != null and host.action_bar.visible and host._is_ui_point(action_bar_point)
+	var before_pending_screen = host.has_pending_click_screen_point
+	var before_pending_target = host.has_pending_click_move_target
+	var before_resolve_count = host.click_move_screen_resolve_count
+	var before_apply_count = host.click_move_repath_apply_count
+	var action_bar_click_event := InputEventMouseButton.new()
+	action_bar_click_event.button_index = MOUSE_BUTTON_LEFT
+	action_bar_click_event.pressed = true
+	action_bar_click_event.position = action_bar_point
+	host._input(action_bar_click_event)
+	await host.get_tree().process_frame
+	var action_bar_click_blocked_ok = (
+		host.has_pending_click_screen_point == before_pending_screen
+		and host.has_pending_click_move_target == before_pending_target
+		and host.click_move_screen_resolve_count == before_resolve_count
+		and host.click_move_repath_apply_count == before_apply_count
+	)
+	var market_button_opens_ok = false
+	if host.market_menu_button != null:
+		host.market_menu_button.emit_signal("pressed")
+		await host.get_tree().process_frame
+		market_button_opens_ok = host.market_panel != null and host.market_panel.visible
+		host._close_market_panel(false)
+		host._layout_hud()
+		await host.get_tree().process_frame
 	if host.equipment_synthesis_panel != null:
 		host.equipment_synthesis_panel.visible = true
 	host._layout_hud()
@@ -12677,13 +12924,16 @@ func _run_auto_panel_registry_check() -> void:
 	await host.get_tree().process_frame
 	var no_menu_after_ok = not host._world_menu_is_open()
 	var synthesis_clear_ok = not host._is_ui_point(synthesis_point)
-	var status = "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
-	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s after=%s clear=%s" % [
+	var status = "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and action_bar_blocks_ok and action_bar_click_blocked_ok and market_button_opens_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
+	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s action_blocks=%s action_click_blocked=%s market_button_opens=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s after=%s clear=%s" % [
 		status,
 		str(loaded),
 		str(registry_ok),
 		str(top_blocks_ok),
 		str(no_menu_before_ok),
+		str(action_bar_blocks_ok),
+		str(action_bar_click_blocked_ok),
+		str(market_button_opens_ok),
 		str(synthesis_visible_ok),
 		str(synthesis_menu_ok),
 		str(synthesis_blocks_ok),
@@ -14117,8 +14367,8 @@ func _run_auto_auth_server_client_check() -> void:
 		"quest_missing", "quest_not_ready", "quest_reward_choice_required", "quest_unavailable",
 		"recipient_missing", "recipient_self", "revision_conflict", "shop_item_missing",
 		"shop_item_not_buyable", "shop_item_not_sellable", "training_partner_count_missing",
-		"weak_password", "wrong_password", "session_missing", "session_revoked", "session_expired",
-		"session_refresh_expired", "server_error", "bad_json", "bad_event_json", "missing_username",
+			"weak_password", "wrong_password", "session_missing", "session_revoked", "session_replaced", "session_expired",
+			"session_refresh_expired", "server_error", "bad_json", "bad_event_json", "missing_username",
 		"network_failed", "network_retry_failed", "connection_failed", "not_server_session", "session_cancelled",
 	]
 	var code_mapping_ok := true
@@ -14171,6 +14421,36 @@ func _run_auto_auth_server_client_check() -> void:
 		and host.auth_server_url_input != null
 		and host.auth_server_url_input.visible
 	)
+	host.account_authenticated = true
+	host.current_account_session = {
+		"accountId": "acc_test",
+		"username": "remoteuser",
+		"displayName": "远程猎人",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	host.server_event_state = "open"
+	host.server_event_last_seq = 11
+	if host.auth_message_label != null:
+		host.auth_message_label.text = ""
+	host._handle_server_event({
+		"type": "session.replaced",
+		"eventSeq": 12,
+		"code": "session_replaced",
+		"message": "你的账号已在其他地方登录，你已被踢出游戏。",
+	})
+	await host.get_tree().process_frame
+	var session_replaced_event_ok = (
+		not host.account_authenticated
+		and host.auth_panel != null
+		and host.auth_panel.visible
+		and host.auth_message_label != null
+		and host.auth_message_label.text.find("其他地方登录") >= 0
+		and host.auth_username_input != null
+		and host.auth_username_input.text == "remoteuser"
+		and host.server_event_state == "off"
+	)
 	var status = "ok" if request_ok and refresh_request_ok and protocol_header_ok and parse_ok and error_ok and protocol_mismatch_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
@@ -14187,7 +14467,8 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s error=%s ui_server=%s ui_server_only=%s" % [
+	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -14226,13 +14507,90 @@ func _run_auto_auth_server_client_check() -> void:
 		str(network_failure_parse_ok),
 		str(reconnect_ui_ok and reconnect_clear_ok),
 		str(weak_position_queue_ok),
-		str(event_cooldown_ok),
-		str(code_message_parse_ok),
-		str(error_ok),
-		str(ui_server_ok),
+			str(event_cooldown_ok),
+			str(code_message_parse_ok),
+			str(session_replaced_event_ok),
+			str(error_ok),
+			str(ui_server_ok),
 		str(ui_server_only_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+func _run_auto_player_message_safety_check() -> void:
+	var raw_error_message := ServerAuthClientModel.player_message_from_parsed({
+		"ok": false,
+		"code": "server_error",
+		"message": "Cannot read properties of undefined",
+	}, "操作失败。")
+	var code_only_message := ServerAuthClientModel.player_message_from_parsed({
+		"ok": false,
+		"code": "battle_room_missing",
+		"message": "battle_room_missing",
+	}, "切磋操作失败。")
+	var cjk_detail_message := ServerAuthClientModel.player_message_from_parsed({
+		"ok": false,
+		"code": "item_not_enough",
+		"message": "遇敌石不够。",
+	}, "商店交易失败。")
+	var success_message := ServerAuthClientModel.player_message_from_parsed({
+		"ok": true,
+		"message": "队伍已更新。",
+	}, "队伍操作失败。")
+	var no_code_error_message := ServerAuthClientModel.player_message_from_parsed({
+		"ok": false,
+		"message": "server exploded",
+	}, "操作失败。")
+	var helper_ok = (
+		raw_error_message.find("Cannot") < 0
+		and ServerAuthClientModel.message_has_cjk(raw_error_message)
+		and code_only_message.find("battle_room_missing") < 0
+		and ServerAuthClientModel.message_has_cjk(code_only_message)
+		and cjk_detail_message == "遇敌石不够。"
+		and success_message == "队伍已更新。"
+		and no_code_error_message.find("server exploded") < 0
+		and ServerAuthClientModel.message_has_cjk(no_code_error_message)
+	)
+	var bad_lines: Array[String] = []
+	var missing_files: Array[String] = []
+	for path in [
+		"res://scripts/battle/server_battle_coordinator.gd",
+		"res://scripts/ui/panel_flow_coordinator.gd",
+	]:
+		if not FileAccess.file_exists(path):
+			missing_files.append(path)
+			continue
+		var file := FileAccess.open(path, FileAccess.READ)
+		if file == null:
+			missing_files.append(path)
+			continue
+		var lines := file.get_as_text().split("\n")
+		for index in range(lines.size()):
+			var line := str(lines[index]).strip_edges()
+			if _line_has_raw_server_error_message(line):
+				bad_lines.append("%s:%d:%s" % [path, index + 1, line.substr(0, 96)])
+	var scan_ok = bad_lines.is_empty() and missing_files.is_empty()
+	var status = "ok" if helper_ok and scan_ok else "failed"
+	print("player message safety check ready: status=%s helper=%s scan=%s raw=%d missing=%d lines=%s" % [
+		status,
+		str(helper_ok),
+		str(scan_ok),
+		bad_lines.size(),
+		missing_files.size(),
+		"; ".join(bad_lines.slice(0, 5)),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _line_has_raw_server_error_message(line: String) -> bool:
+	if line.find("_server_player_message") >= 0 or line.find("player_message_from_parsed") >= 0:
+		return false
+	if line.find(".get(\"message\"") < 0 or line.find("str(parsed") < 0:
+		return false
+	for keyword in ["失败", "过期", "不正确", "缺少", "拒绝", "禁用", "不可", "不能", "未完成"]:
+		if line.find(str(keyword)) >= 0:
+			return true
+	return false
+
 
 func _run_auto_auth_server_live_check() -> void:
 	host.profile_save_enabled = false

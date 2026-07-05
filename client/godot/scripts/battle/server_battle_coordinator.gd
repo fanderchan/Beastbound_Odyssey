@@ -24,7 +24,7 @@ func bind(main_host) -> void:
 func handle_session_invalid_response(parsed: Dictionary) -> bool:
 	if not ServerAuthClientModel.is_session_invalid_response(parsed):
 		return false
-	var message := str(parsed.get("message", "登录已过期，请重新登录。")).strip_edges()
+	var message := ServerAuthClientModel.player_message_from_parsed(parsed, "登录已过期，请重新登录。").strip_edges()
 	if message == "":
 		message = "登录已过期，请重新登录。"
 	host._handle_server_session_expired(message)
@@ -801,7 +801,7 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 	if host._server_battle_room_missing_error(parsed):
 		host._clear_stale_server_battle_room(host._server_battle_stale_room_message())
 		return
-	host._set_battle_message(str(parsed.get("message", "指令提交失败，请重试。")))
+	host._set_battle_message(ServerAuthClientModel.player_message_from_parsed(parsed, "指令提交失败，请重试。"))
 	host._sync_battle_buttons()
 	host._layout_hud()
 
@@ -961,7 +961,7 @@ func submit_pet_command(command_id: String, target_id: String = "", skill_id: St
 		host._clear_stale_server_battle_room(host._server_battle_stale_room_message())
 		return
 	host._open_server_battle_pet_command()
-	host._set_battle_message(str(parsed.get("message", "宠物指令提交失败，请重试。")))
+	host._set_battle_message(ServerAuthClientModel.player_message_from_parsed(parsed, "宠物指令提交失败，请重试。"))
 	host._sync_battle_buttons()
 	host._layout_hud()
 
@@ -1038,6 +1038,6 @@ func leave_room() -> void:
 	if host._server_battle_room_missing_error(parsed):
 		host._clear_stale_server_battle_room(host._server_battle_stale_room_message())
 		return
-	host._set_battle_message(str(parsed.get("message", "%s战斗失败，请重试。" % leave_action)))
+	host._set_battle_message(ServerAuthClientModel.player_message_from_parsed(parsed, "%s战斗失败，请重试。" % leave_action))
 	host._sync_battle_buttons()
 	host._layout_hud()

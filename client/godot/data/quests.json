@@ -27,6 +27,64 @@
       "nextQuestId": "quest_buy_supply"
     },
     {
+      "id": "side_firebud_welfare_chat",
+      "title": "福利登记",
+      "questType": "side",
+      "optional": true,
+      "giverId": "firebud_welfare_clerk",
+      "turnInId": "firebud_welfare_clerk",
+      "autoClaimOnReady": true,
+      "summary": "在火芽村登记新手福利，领取远行补给。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_welfare_clerk",
+        "count": 1,
+        "text": "和福利员阿檀登记"
+      },
+      "rewards": {
+        "stoneCoins": 20,
+        "items": [
+          {
+            "itemId": "trail_ration_pack",
+            "count": 1
+          },
+          {
+            "itemId": "quest_welfare_token",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "side_firebud_story_note",
+      "title": "旅人见闻",
+      "questType": "side",
+      "optional": true,
+      "giverId": "firebud_storyteller",
+      "turnInId": "firebud_storyteller",
+      "autoClaimOnReady": true,
+      "summary": "听说书人讲一段村外见闻，带上记录札记。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_storyteller",
+        "count": 1,
+        "text": "听说书人阿舟讲村外见闻"
+      },
+      "rewards": {
+        "stoneCoins": 15,
+        "items": [
+          {
+            "itemId": "quest_field_note",
+            "count": 1
+          },
+          {
+            "itemId": "item_pet_salve_mid",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
       "id": "quest_buy_supply",
       "title": "补给准备",
       "giverId": "trainer",

@@ -132,6 +132,78 @@
       }
     },
     {
+      "id": "trail_ration_pack",
+      "label": "行路口粮包",
+      "menuLabel": "口粮包",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_heal"],
+      "worldUse": {
+        "type": "pet_heal",
+        "amount": 55,
+        "allowFullHpUse": true
+      },
+      "description": "适合长途探索的补给包，可在世界界面对队伍宠物使用。"
+    },
+    {
+      "id": "item_pet_salve_mid",
+      "label": "中瓶宠物药膏",
+      "menuLabel": "中宠药",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_heal"],
+      "worldUse": {
+        "type": "pet_heal",
+        "amount": 70
+      },
+      "description": "给队伍宠物恢复较多生命，不能在战斗中使用。"
+    },
+    {
+      "id": "item_pet_salve_large",
+      "label": "大瓶宠物药膏",
+      "menuLabel": "大宠药",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_pet_heal"],
+      "worldUse": {
+        "type": "pet_heal",
+        "amount": 110
+      },
+      "description": "给队伍宠物恢复大量生命，适合远行前准备。"
+    },
+    {
+      "id": "encounter_stone_patrol",
+      "label": "巡路遇敌石",
+      "menuLabel": "巡路石",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["world_encounter_stone"],
+      "worldUse": {
+        "type": "encounter_stone",
+        "intervalSeconds": 2.5,
+        "durationSeconds": 900
+      },
+      "description": "延长型遇敌石，适合野外巡路和材料收集。"
+    },
+    {
+      "id": "quest_welfare_token",
+      "label": "福利木牌",
+      "menuLabel": "福利牌",
+      "stackLimit": 99,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "火芽村福利员发放的登记木牌。"
+    },
+    {
+      "id": "quest_field_note",
+      "label": "见闻札记",
+      "menuLabel": "札记",
+      "stackLimit": 99,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "记录村外地形、宠物和旅人故事的札记。"
+    },
+    {
       "id": "item_player_exp_pill_lv131",
       "label": "人物经验丹(LV131)",
       "menuLabel": "人物丹131",

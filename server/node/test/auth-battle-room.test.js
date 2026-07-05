@@ -3402,6 +3402,9 @@ test("battle rooms preserve short reconnects and close after disconnect grace", 
   assert.equal(polledReconnect.ok, true);
   assert.equal(polledReconnect.room.roomId, roomId);
   assert.equal(polledReconnect.room.battle.commandDeadlineAt, initialDeadline);
+  const polledConnection = service.snapshot().battleRooms[roomId].connectionState[challenger.account.accountId];
+  assert.equal(polledConnection.connected, true);
+  assert.equal(polledConnection.disconnectedAt, "");
 
   service.markBattleConnection(challenger.session.token, false);
   nowMs += 299 * 1000;
@@ -3507,10 +3510,14 @@ test("battle rooms close cleanly when both participants miss reconnect grace", (
   const roomId = accept.room.roomId;
   service.markBattleConnection(challenger.session.token, false);
   service.markBattleConnection(opponent.session.token, false);
+  const disconnectedState = service.snapshot().battleRooms[roomId].connectionState;
+  assert.equal(disconnectedState[challenger.account.accountId].connected, false);
+  assert.equal(disconnectedState[opponent.account.accountId].connected, false);
   nowMs += 301 * 1000;
 
   const maintenance = service.runBattleMaintenance();
   assert.equal(maintenance.ok, true);
+  assert.equal(maintenance.events.filter((event) => event.type === "battle.room_closed" && event.roomId === roomId).length, 1);
   assert.equal(service.getBattleState(challenger.session.token).room, null);
   assert.equal(service.getBattleState(opponent.session.token).room, null);
   const closedRoom = service.snapshot().battleRooms[roomId];

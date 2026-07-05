@@ -186,6 +186,40 @@ test("expired sessions can refresh within grace window", () => {
   assert.equal(service.getSession(oldToken).code, "session_revoked");
 });
 
+test("new login replaces older sessions for the same account", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const registered = service.register({"username": "replaceuser", "password": "test1234", "displayName": "顶号测试"});
+  assert.equal(registered.ok, true);
+  const oldToken = registered.session.token;
+  const oldSessionId = registered.session.sessionId;
+
+  const login = service.login({"username": "replaceuser", "password": "test1234"});
+  assert.equal(login.ok, true);
+  assert.notEqual(login.session.token, oldToken);
+  assert.equal(service.getSession(login.session.token).ok, true);
+
+  const oldSession = service.getSession(oldToken);
+  assert.equal(oldSession.ok, false);
+  assert.equal(oldSession.code, "session_replaced");
+  assert.match(oldSession.message, /其他地方登录/);
+
+  const replacementEvent = events.find((event) => event.type === "session.replaced");
+  assert.equal(Boolean(replacementEvent), true);
+  assert.deepEqual(replacementEvent.targetSessionIds, [oldSessionId]);
+  assert.deepEqual(replacementEvent.targetAccountIds, [registered.account.accountId]);
+  assert.equal(replacementEvent.code, "session_replaced");
+  assert.match(replacementEvent.message, /被踢出游戏/);
+
+  const oldVisible = service.eventForSession(oldToken, replacementEvent);
+  assert.equal(oldVisible.ok, true);
+  assert.equal(oldVisible.visible, true);
+  const newVisible = service.eventForSession(login.session.token, replacementEvent);
+  assert.equal(newVisible.ok, true);
+  assert.equal(newVisible.visible, false);
+});
+
 test("too old sessions cannot refresh silently", () => {
   let currentMs = Date.parse("2026-07-01T00:00:00.000Z");
   const service = createAuthService({

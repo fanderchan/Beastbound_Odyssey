@@ -6,6 +6,7 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
@@ -29,6 +30,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
+const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -63,45 +65,7 @@ const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
-const MAP_DATA_PATHS := {
-	"firebud_training_yard": "res://data/firebud_training_map.json",
-	"firebud_village_gate": "res://data/firebud_village_gate_map.json",
-	"earth_vein_cave": "res://data/earth_vein_cave_map.json",
-	"earth_vein_cave_f2": "res://data/earth_vein_cave_f2_map.json",
-	"earth_vein_cave_f3": "res://data/earth_vein_cave_f3_map.json",
-	"earth_vein_cave_f4": "res://data/earth_vein_cave_f4_map.json",
-	"tide_echo_cave": "res://data/tide_echo_cave_map.json",
-	"tide_echo_cave_f2": "res://data/tide_echo_cave_f2_map.json",
-	"tide_echo_cave_f3": "res://data/tide_echo_cave_f3_map.json",
-	"tide_echo_cave_f4": "res://data/tide_echo_cave_f4_map.json",
-	"ember_core_cave": "res://data/ember_core_cave_map.json",
-	"ember_core_cave_f2": "res://data/ember_core_cave_f2_map.json",
-	"ember_core_cave_f3": "res://data/ember_core_cave_f3_map.json",
-	"ember_core_cave_f4": "res://data/ember_core_cave_f4_map.json",
-	"gale_breath_cave": "res://data/gale_breath_cave_map.json",
-	"gale_breath_cave_f2": "res://data/gale_breath_cave_f2_map.json",
-	"gale_breath_cave_f3": "res://data/gale_breath_cave_f3_map.json",
-	"gale_breath_cave_f4": "res://data/gale_breath_cave_f4_map.json",
-	"shadow_oath_cavern": "res://data/shadow_oath_cavern_map.json",
-	"shadow_oath_cavern_f2": "res://data/shadow_oath_cavern_f2_map.json",
-	"shadow_oath_cavern_f3": "res://data/shadow_oath_cavern_f3_map.json",
-	"shadow_oath_cavern_f4": "res://data/shadow_oath_cavern_f4_map.json",
-	"shadow_oath_cavern_f5": "res://data/shadow_oath_cavern_f5_map.json",
-	"level_grass_trial_ground": "res://data/level_grass_trial_ground_map.json",
-	"mistcap_marsh": "res://data/mistcap_marsh_map.json",
-	"suncrack_badlands": "res://data/suncrack_badlands_map.json",
-	"windglass_highlands": "res://data/windglass_highlands_map.json",
-	"firebud_manor": "res://data/firebud_manor_map.json",
-	"earth_vein_manor": "res://data/earth_vein_manor_map.json",
-	"tide_echo_manor": "res://data/tide_echo_manor_map.json",
-	"ember_core_manor": "res://data/ember_core_manor_map.json",
-	"gale_breath_manor": "res://data/gale_breath_manor_map.json",
-	"shadow_oath_manor": "res://data/shadow_oath_manor_map.json",
-	"beast_pen_manor": "res://data/beast_pen_manor_map.json",
-	"artisan_manor": "res://data/artisan_manor_map.json",
-	"training_manor": "res://data/training_manor_map.json",
-	"gm_10v10_training_ground": "res://data/gm_10v10_training_ground_map.json",
-}
+const MAP_DATA_PATHS := MapDataCatalog.MAP_DATA_PATHS
 const MIN_TOUCH_BUTTON_SIZE := Vector2(64, 64)
 const ACTION_BAR_SIZE := Vector2(566, 86)
 const ACTION_BAR_COLLAPSED_SIZE := Vector2(58, 86)
@@ -114,6 +78,8 @@ const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
+const STARTUP_LOGIN_ISOLATION_ARG := "--manual-acceptance-isolated"
+const STARTUP_LOGIN_ISOLATION_ROOT := "res://../../.run/manual_acceptance"
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 10.0
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
@@ -156,10 +122,10 @@ const BATTLE_PASSIVE_MAX_LINES := 2
 const BATTLE_PASSIVE_PANEL_HEIGHT := 64.0
 const BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT := 58.0
 const BATTLE_PASSIVE_PANEL_PADDING := Vector2(14.0, 6.0)
-const BATTLE_GRID_TEMPLATE_SIZE := Vector2(1280.0, 720.0)
-const BATTLE_GRID_TEMPLATE_ORIGIN := Vector2(128.0, 338.4)
-const BATTLE_GRID_TEMPLATE_LANE_STEP := Vector2(152.0, 52.0)
-const BATTLE_GRID_TEMPLATE_RANK_STEP := Vector2(76.0, -48.0)
+const BATTLE_GRID_TEMPLATE_SIZE := BattleLayoutConstants.GRID_TEMPLATE_SIZE
+const BATTLE_GRID_TEMPLATE_ORIGIN := BattleLayoutConstants.GRID_TEMPLATE_ORIGIN
+const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE_STEP
+const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
@@ -210,6 +176,7 @@ const DIALOG_ACTION_GUARDIAN_BATTLE := "guardian_battle"
 const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
 const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
+const DIALOG_ACTION_BANK := "bank"
 const QUEST_MARKER_NONE := ""
 const QUEST_MARKER_AVAILABLE := "available"
 const QUEST_MARKER_BLOCKED := "blocked"
@@ -505,6 +472,56 @@ var mailbox_selected_source: String = "server"
 var mailbox_server_messages: Array[Dictionary] = []
 var mailbox_request_pending: bool = false
 var mailbox_pending_kind: String = ""
+var mailbox_inbox_tab_button: Button
+var mailbox_compose_tab_button: Button
+var mailbox_inbox_container: Control
+var mailbox_compose_container: Control
+var mailbox_active_tab: String = "inbox"
+var market_menu_button: Button
+var market_panel: PanelContainer
+var market_list_container: VBoxContainer
+var market_detail_label: RichTextLabel
+var market_wallet_label: Label
+var market_status_label: Label
+var market_refresh_button: Button
+var market_close_button: Button
+var market_buy_tab_button: Button
+var market_sell_tab_button: Button
+var market_mine_tab_button: Button
+var market_buy_button: Button
+var market_cancel_button: Button
+var market_sell_form_container: VBoxContainer
+var market_sell_item_option: OptionButton
+var market_sell_count_spinbox: SpinBox
+var market_sell_currency_option: OptionButton
+var market_sell_unit_price_spinbox: SpinBox
+var market_sell_summary_label: Label
+var market_sell_button: Button
+var market_http_request: HTTPRequest
+var market_listing_buttons: Dictionary = {}
+var market_listings: Array[Dictionary] = []
+var market_my_listings: Array[Dictionary] = []
+var market_config: Dictionary = {}
+var market_selected_listing_id: String = ""
+var market_mode: String = "buy"
+var market_request_pending: bool = false
+var market_pending_kind: String = ""
+var bank_panel: PanelContainer
+var bank_list_container: VBoxContainer
+var bank_detail_label: RichTextLabel
+var bank_quantity_spinbox: SpinBox
+var bank_deposit_button: Button
+var bank_withdraw_button: Button
+var bank_coin_deposit_button: Button
+var bank_coin_withdraw_button: Button
+var bank_status_label: Label
+var bank_close_button: Button
+var bank_http_request: HTTPRequest
+var bank_item_buttons: Dictionary = {}
+var bank_selected_item_id: String = ""
+var bank_quantity: int = 1
+var bank_request_pending: bool = false
+var bank_pending_kind: String = ""
 var party_panel: PanelContainer
 var party_status_label: Label
 var party_roster_panel: PanelContainer
@@ -577,9 +594,16 @@ var player_action_battle_button: Button
 var player_action_record_button: Button
 var player_action_party_apply_button: Button
 var player_action_party_invite_button: Button
+var player_action_trade_item_option: OptionButton
+var player_action_trade_count_spinbox: SpinBox
+var player_action_trade_coin_spinbox: SpinBox
+var player_action_trade_refresh_button: Button
+var player_action_trade_propose_button: Button
+var player_action_trade_accept_button: Button
 var player_action_close_button: Button
 var player_action_http_request: HTTPRequest
 var player_action_target: Dictionary = {}
+var player_action_trade_received: Dictionary = {}
 var player_action_request_pending: bool = false
 var player_action_pending_kind: String = ""
 var battle_result_panel: PanelContainer
@@ -751,6 +775,7 @@ var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
+var auto_player_message_safety_check: bool = false
 var auto_auth_server_live_check: bool = false
 var auto_startup_login_check: bool = false
 var auto_server_mail_live_check: bool = false
@@ -810,6 +835,8 @@ var auto_equipment_synthesis_check: bool = false
 var auto_equipment_growth_check: bool = false
 var auto_equipment_instance_check: bool = false
 var auto_quest_objective_templates_check: bool = false
+var auto_stage6_content_check: bool = false
+var auto_market_panel_check: bool = false
 var auto_map_region_contract_check: bool = false
 var auto_manor_map_shop_check: bool = false
 var auto_reward_grant_check: bool = false
@@ -916,6 +943,7 @@ var auth_request_pending: bool = false
 var startup_auth_username: String = ""
 var startup_auth_password: String = ""
 var startup_auth_base_url: String = ""
+var startup_login_isolation_applied: bool = false
 var current_account_session: Dictionary = {}
 var server_profile_sync_state: String = "off"
 var server_profile_sync_pending_kind: String = ""
@@ -1124,6 +1152,8 @@ func _panel_flow():
 func _ready() -> void:
 	_configure_runtime_performance()
 	_apply_preview_window_args()
+	if _restart_with_startup_login_user_data_dir_if_needed():
+		return
 	_bootstrap_auth_state()
 	player_profile = PlayerProgressModel.load_profile() if account_authenticated else PlayerProgressModel.default_profile()
 	_load_map(startup_map_id, startup_spawn_name)
@@ -1206,6 +1236,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_party_pve_sync_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
+	elif auto_player_message_safety_check:
+		call_deferred("_run_auto_player_message_safety_check")
 	elif auto_server_profile_sync_check:
 		call_deferred("_run_auto_server_profile_sync_check")
 	elif auto_client_version_check:
@@ -1408,6 +1440,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_instance_check")
 	elif auto_quest_objective_templates_check:
 		call_deferred("_run_auto_quest_objective_templates_check")
+	elif auto_stage6_content_check:
+		call_deferred("_run_auto_stage6_content_check")
+	elif auto_market_panel_check:
+		call_deferred("_run_auto_market_panel_check")
 	elif auto_map_region_contract_check:
 		call_deferred("_run_auto_map_region_contract_check")
 	elif auto_manor_map_shop_check:
@@ -1784,6 +1820,8 @@ func _apply_preview_window_args() -> void:
 			startup_auth_base_url = arg.substr("--server-url=".length())
 		elif arg.begins_with("--auth-server-url="):
 			startup_auth_base_url = arg.substr("--auth-server-url=".length())
+		elif arg == STARTUP_LOGIN_ISOLATION_ARG:
+			startup_login_isolation_applied = true
 		elif arg == "--server-step-world-move":
 			server_step_world_move_enabled = true
 		elif arg == "--local-world-move":
@@ -2008,6 +2046,8 @@ func _apply_preview_window_args() -> void:
 			auth_auto_bypass = false
 		elif arg == "--auto-auth-server-client-check":
 			auto_auth_server_client_check = true
+		elif arg == "--auto-player-message-safety-check":
+			auto_player_message_safety_check = true
 		elif arg == "--auto-auth-server-live-check":
 			auto_auth_server_live_check = true
 		elif arg == "--auto-startup-login-check":
@@ -2127,6 +2167,10 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_instance_check = true
 		elif arg == "--auto-quest-objective-templates-check":
 			auto_quest_objective_templates_check = true
+		elif arg == "--auto-stage6-content-check":
+			auto_stage6_content_check = true
+		elif arg == "--auto-market-panel-check":
+			auto_market_panel_check = true
 		elif arg == "--auto-map-region-contract-check":
 			auto_map_region_contract_check = true
 		elif arg == "--auto-manor-map-shop-check":
@@ -2315,6 +2359,82 @@ func _apply_preview_window_args() -> void:
 			perf_probe_enabled = true
 
 
+func _restart_with_startup_login_user_data_dir_if_needed() -> bool:
+	if startup_login_isolation_applied or not _startup_auth_login_requested():
+		return false
+	var username := AccountAuthModel.normalized_username(startup_auth_username)
+	if username == "":
+		return false
+	if _cmdline_engine_arg_present("--user-data-dir"):
+		return false
+	var target_dir := _startup_login_user_data_dir(username)
+	var current_dir := ProjectSettings.globalize_path("user://").simplify_path()
+	if current_dir.begins_with(target_dir):
+		return false
+	var err := DirAccess.make_dir_recursive_absolute(target_dir)
+	if err != OK:
+		push_warning("无法创建启动登录隔离目录：%s" % target_dir)
+		return false
+	var launch_args := _startup_login_relaunch_engine_args()
+	launch_args.append("--path")
+	launch_args.append(ProjectSettings.globalize_path("res://").simplify_path())
+	launch_args.append("--user-data-dir")
+	launch_args.append(target_dir)
+	launch_args.append("--scene")
+	launch_args.append("res://scenes/Main.tscn")
+	launch_args.append("--")
+	for value in OS.get_cmdline_user_args():
+		launch_args.append(str(value))
+	launch_args.append(STARTUP_LOGIN_ISOLATION_ARG)
+	var pid := OS.create_process(OS.get_executable_path(), launch_args)
+	if pid <= 0:
+		push_warning("启动登录隔离进程创建失败：%s" % target_dir)
+		return false
+	print("startup login user data isolated: username=%s dir=%s pid=%d" % [username, target_dir, pid])
+	get_tree().quit(0)
+	return true
+
+
+func _startup_login_user_data_dir(username: String) -> String:
+	return ProjectSettings.globalize_path("%s/%s" % [STARTUP_LOGIN_ISOLATION_ROOT, username]).simplify_path()
+
+
+func _startup_login_relaunch_engine_args() -> PackedStringArray:
+	var launch_args := PackedStringArray()
+	var engine_args := OS.get_cmdline_args()
+	for index in range(engine_args.size()):
+		var arg := str(engine_args[index])
+		if arg == "--":
+			break
+		if arg == "--headless":
+			launch_args.append(arg)
+		elif arg == "--quit-after" and index + 1 < engine_args.size():
+			launch_args.append(arg)
+			launch_args.append(str(engine_args[index + 1]))
+		elif arg.begins_with("--quit-after="):
+			launch_args.append(arg)
+	return launch_args
+
+
+func _cmdline_engine_arg_present(flag: String) -> bool:
+	var engine_args := OS.get_cmdline_args()
+	for arg_value in engine_args:
+		var arg := str(arg_value)
+		if arg == "--":
+			break
+		if arg == flag or arg.begins_with("%s=" % flag):
+			return true
+	return false
+
+
+func _normalize_cmdline_url(value: String) -> String:
+	var text := value.strip_edges()
+	var markdown_separator := text.find("](")
+	if text.begins_with("[") and markdown_separator > 0 and text.ends_with(")"):
+		return text.substr(markdown_separator + 2, text.length() - markdown_separator - 3).strip_edges()
+	return text
+
+
 func _cmdline_user_arg_at(args: PackedStringArray, index: int) -> String:
 	if index < 0 or index >= args.size():
 		return ""
@@ -2337,8 +2457,9 @@ func _apply_startup_auth_login() -> void:
 		return
 	_set_auth_server_mode(true, false)
 	_set_auth_mode(false)
-	if startup_auth_base_url.strip_edges() != "" and auth_server_url_input != null:
-		auth_server_url_input.text = startup_auth_base_url.strip_edges()
+	var base_url := _normalize_cmdline_url(startup_auth_base_url)
+	if base_url != "" and auth_server_url_input != null:
+		auth_server_url_input.text = base_url
 	auth_username_input.text = username
 	auth_password_input.text = startup_auth_password
 	if auth_remember_check != null:
@@ -3542,6 +3663,14 @@ func _run_auto_quest_objective_templates_check() -> void:
 	await _auto_checks()._run_auto_quest_objective_templates_check()
 
 
+func _run_auto_stage6_content_check() -> void:
+	await _auto_checks()._run_auto_stage6_content_check()
+
+
+func _run_auto_market_panel_check() -> void:
+	await _auto_checks()._run_auto_market_panel_check()
+
+
 func _run_auto_map_region_contract_check() -> void:
 	await _auto_checks()._run_auto_map_region_contract_check()
 
@@ -4378,6 +4507,10 @@ func _run_auto_auth_check() -> void:
 
 func _run_auto_auth_server_client_check() -> void:
 	await _auto_checks()._run_auto_auth_server_client_check()
+
+
+func _run_auto_player_message_safety_check() -> void:
+	await _auto_checks()._run_auto_player_message_safety_check()
 
 
 func _run_auto_client_version_check() -> void:
@@ -6483,8 +6616,12 @@ func _process(delta: float) -> void:
 		var server_battle_poll_start := _perf_now()
 		_update_server_battle_waiting_state_poll(delta)
 		_perf_add("server_battle_poll", server_battle_poll_start)
-		_update_hud_text()
-		_update_battle_debug_window()
+		var hud_start := _perf_now()
+		_update_world_hud_if_needed(delta)
+		_perf_add("hud_update", hud_start)
+		var world_log_layout_start := _perf_now()
+		_panel_flow()._flush_world_log_layout_if_needed(delta)
+		_perf_add("world_log_layout", world_log_layout_start)
 		queue_redraw()
 		_perf_add("battle_process", battle_start)
 		_perf_add("process_total", frame_start)
@@ -6538,8 +6675,8 @@ func _process(delta: float) -> void:
 	_update_world_hud_if_needed(delta)
 	_perf_add("hud_update", section_start)
 	section_start = _perf_now()
-	_update_battle_debug_window()
-	_perf_add("hud_debug", section_start)
+	_panel_flow()._flush_world_log_layout_if_needed(delta)
+	_perf_add("world_log_layout", section_start)
 	section_start = _perf_now()
 	_queue_world_redraw_if_needed()
 	_perf_add("redraw_check", section_start)
@@ -6639,6 +6776,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
+		if _is_ui_point(mouse_event.position):
+			return
 		if (mouse_event.button_index == MOUSE_BUTTON_LEFT or mouse_event.button_index == MOUSE_BUTTON_RIGHT) and mouse_event.pressed:
 			if battle_active:
 				_select_battle_target_at_screen_point(mouse_event.position)
@@ -6652,10 +6791,14 @@ func _input(event: InputEvent) -> void:
 			_set_click_move_target(mouse_event.position)
 	elif event is InputEventMouseMotion:
 		var motion_event := event as InputEventMouseMotion
+		if _is_ui_point(motion_event.position):
+			return
 		if battle_active:
 			_update_battle_hover_at_screen_point(motion_event.position)
 	elif event is InputEventScreenTouch:
 		var touch_event := event as InputEventScreenTouch
+		if _is_ui_point(touch_event.position):
+			return
 		if touch_event.pressed:
 			if battle_active:
 				_select_battle_target_at_screen_point(touch_event.position)
@@ -6841,8 +6984,9 @@ func _refresh_quest_marker_cache_if_needed(force: bool = false) -> void:
 		return
 	quest_marker_source_signature_cache = source_signature
 	quest_marker_state_cache.clear()
-	var available_quest := _first_available_unfinished_quest_for_marker()
-	var blocked_quest := _first_blocked_unfinished_quest_for_marker()
+	var normalized_profile := PlayerProgressModel.normalize_profile(player_profile)
+	var available_quest := _first_available_unfinished_quest_for_marker(normalized_profile)
+	var blocked_quest := _first_blocked_unfinished_quest_for_marker(normalized_profile)
 	quest_marker_signature_cache = "%s|blocked:%s" % [
 		source_signature,
 		str(blocked_quest.get("id", "")),
@@ -6855,7 +6999,7 @@ func _refresh_quest_marker_cache_if_needed(force: bool = false) -> void:
 		var item_id := str(item.get("id", ""))
 		if item_id == "":
 			continue
-		quest_marker_state_cache[item_id] = _compute_quest_marker_state_for_item(item, available_quest, blocked_quest)
+		quest_marker_state_cache[item_id] = _compute_quest_marker_state_for_item(item, available_quest, blocked_quest, normalized_profile)
 	quest_marker_cache_dirty = false
 
 
@@ -8464,11 +8608,38 @@ func _party_panel_layout_is_usable() -> bool:
 func _open_mailbox_panel() -> void:
 	_panel_flow()._open_mailbox_panel()
 
+func _open_market_panel() -> void:
+	_panel_flow()._open_market_panel()
+
+func _close_market_panel(update_layout: bool = true) -> void:
+	_panel_flow()._close_market_panel(update_layout)
+
+func _refresh_market_panel() -> void:
+	_panel_flow()._refresh_market_panel()
+
+func _on_market_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_panel_flow()._on_market_http_request_completed(result, response_code, _headers, body)
+
+func _open_bank_panel() -> void:
+	_panel_flow()._open_bank_panel()
+
+func _close_bank_panel(update_layout: bool = true) -> void:
+	_panel_flow()._close_bank_panel(update_layout)
+
+func _refresh_bank_panel() -> void:
+	_panel_flow()._refresh_bank_panel()
+
+func _on_bank_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_panel_flow()._on_bank_http_request_completed(result, response_code, _headers, body)
+
 func _close_mailbox_panel(update_layout: bool = true) -> void:
 	_panel_flow()._close_mailbox_panel(update_layout)
 
 func _refresh_mailbox_panel() -> void:
 	_panel_flow()._refresh_mailbox_panel()
+
+func _set_mailbox_tab(tab_id: String) -> void:
+	_panel_flow()._set_mailbox_tab(tab_id)
 
 func _select_mailbox_message(mail_id: String, source: String = "local") -> void:
 	_panel_flow()._select_mailbox_message(mail_id, source)
@@ -10753,6 +10924,8 @@ func _battle_command_panel_should_be_visible() -> bool:
 func _battle_overlay_panel_open() -> bool:
 	return (
 		(mailbox_panel != null and mailbox_panel.visible)
+		or (market_panel != null and market_panel.visible)
+		or (bank_panel != null and bank_panel.visible)
 		or (auto_settings_panel != null and auto_settings_panel.visible)
 		or (account_panel != null and account_panel.visible)
 	)
@@ -11882,7 +12055,7 @@ func _layout_hud() -> void:
 		if family_panel.visible and action_bar != null:
 			action_bar.visible = false
 
-	var player_action_width: float = minf(viewport_size.x - margin * 2.0, 360.0)
+	var player_action_width: float = minf(viewport_size.x - margin * 2.0, 430.0)
 	var player_action_height := minf(viewport_size.y - margin * 2.0, 346.0)
 	player_action_panel.position = Vector2(
 		(viewport_size.x - player_action_width) * 0.5,
@@ -11925,17 +12098,51 @@ func _layout_hud() -> void:
 		if battle_result_panel.visible and action_bar != null:
 			action_bar.visible = false
 
-	mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-	mailbox_panel.size = Vector2(codex_width, codex_height)
-	if mailbox_panel.visible and action_bar != null:
-		action_bar.visible = false
+	if mailbox_panel != null:
+		mailbox_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+		mailbox_panel.size = Vector2(codex_width, codex_height)
+		if battle_active:
+			mailbox_panel.visible = false
+		if mailbox_panel.visible and action_bar != null:
+			action_bar.visible = false
 
-	training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-	training_partner_panel.size = Vector2(codex_width, codex_height)
-	if battle_active:
-		training_partner_panel.visible = false
-	if training_partner_panel.visible and action_bar != null:
-		action_bar.visible = false
+	if market_panel != null:
+		var market_width: float = minf(viewport_size.x - margin * 2.0, 760.0)
+		var market_height: float = minf(panel_available_height, 520.0)
+		market_width = maxf(minf(520.0, viewport_size.x - margin * 2.0), market_width)
+		market_height = maxf(minf(380.0, panel_available_height), market_height)
+		var market_panel_y = minf(maxf(panel_top_y, (viewport_size.y - market_height) * 0.5), viewport_size.y - market_height - margin)
+		market_panel.position = Vector2((viewport_size.x - market_width) * 0.5, market_panel_y)
+		market_panel.size = Vector2(market_width, market_height)
+		if battle_active:
+			market_panel.visible = false
+		if market_panel.visible and action_bar != null:
+			action_bar.visible = false
+		if market_panel.visible and not battle_active:
+			if top_panel != null:
+				top_panel.visible = false
+			if side_panel != null:
+				side_panel.visible = false
+			if party_roster_panel != null:
+				party_roster_panel.visible = false
+			if battle_message_panel != null:
+				battle_message_panel.visible = false
+
+	if bank_panel != null:
+		bank_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+		bank_panel.size = Vector2(codex_width, codex_height)
+		if battle_active:
+			bank_panel.visible = false
+		if bank_panel.visible and action_bar != null:
+			action_bar.visible = false
+
+	if training_partner_panel != null:
+		training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+		training_partner_panel.size = Vector2(codex_width, codex_height)
+		if battle_active:
+			training_partner_panel.visible = false
+		if training_partner_panel.visible and action_bar != null:
+			action_bar.visible = false
 
 	auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	auto_settings_panel.size = Vector2(codex_width, codex_height)
@@ -12138,6 +12345,8 @@ func _movement_status_name() -> String:
 		return "对话中"
 	if has_pending_interaction:
 		return "前往%s" % str(pending_interaction.get("name", "目标"))
+	if player == null:
+		return "准备中"
 	if not player.is_auto_moving():
 		return "点击地图移动"
 	if current_path_is_direct:
@@ -13304,21 +13513,22 @@ func _quest_marker_state_for_item(item: Dictionary, force_refresh: bool = true) 
 	return str(quest_marker_state_cache.get(item_id, QUEST_MARKER_NONE))
 
 
-func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dictionary = {}, blocked_quest: Dictionary = {}) -> String:
+func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dictionary = {}, blocked_quest: Dictionary = {}, normalized_profile: Dictionary = {}) -> String:
 	var item_id := str(item.get("id", ""))
 	if item_id == "":
 		return QUEST_MARKER_NONE
-	var mm_guide_marker := _pet_rebirth_mm_guide_marker_state_for_item(item_id)
+	var marker_profile := normalized_profile if not normalized_profile.is_empty() else PlayerProgressModel.normalize_profile(player_profile)
+	var mm_guide_marker := _pet_rebirth_mm_guide_marker_state_for_item(item_id, marker_profile)
 	if mm_guide_marker != QUEST_MARKER_NONE:
 		return mm_guide_marker
 	if item_id == "firebud_pet_mm_stage2_keeper":
-		return QUEST_MARKER_NONE if PlayerProgressModel.pet_rebirth_mm_stage2_claimed(player_profile) else QUEST_MARKER_AVAILABLE
+		return QUEST_MARKER_NONE if bool(marker_profile.get(PlayerProgressModel.PET_REBIRTH_MM_STAGE2_CLAIMED_KEY, false)) else QUEST_MARKER_AVAILABLE
 	var rebirth_marker_state := _rebirth_mentor_marker_state(item_id)
 	if rebirth_marker_state != QUEST_MARKER_NONE:
 		return rebirth_marker_state
-	var quest := PlayerProgressModel.active_quest(player_profile)
+	var quest := PlayerProgressModel.active_quest(marker_profile, true)
 	if not quest.is_empty():
-		var state := PlayerProgressModel.active_quest_state(player_profile)
+		var state := PlayerProgressModel.active_quest_state(marker_profile, true)
 		var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
 		if status == QuestModel.STATUS_READY and QuestModel.turn_in_id_for(quest) == item_id:
 			return QUEST_MARKER_READY
@@ -13328,7 +13538,7 @@ func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dic
 				return QUEST_MARKER_IN_PROGRESS
 			if QuestModel.turn_in_id_for(quest) == item_id:
 				return QUEST_MARKER_IN_PROGRESS
-	var optional_state := _optional_quest_marker_state_for_item(item)
+	var optional_state := _optional_quest_marker_state_for_item(item, marker_profile)
 	if optional_state != QUEST_MARKER_NONE:
 		return optional_state
 	if not quest.is_empty():
@@ -13340,8 +13550,9 @@ func _compute_quest_marker_state_for_item(item: Dictionary, available_quest: Dic
 	return QUEST_MARKER_NONE
 
 
-func _pet_rebirth_mm_guide_marker_state_for_item(item_id: String) -> String:
-	var info := PlayerProgressModel.pet_rebirth_mm_guide_info(player_profile)
+func _pet_rebirth_mm_guide_marker_state_for_item(item_id: String, normalized_profile: Dictionary = {}) -> String:
+	var marker_profile := normalized_profile if not normalized_profile.is_empty() else PlayerProgressModel.normalize_profile(player_profile)
+	var info := PlayerProgressModel.pet_rebirth_mm_guide_info(marker_profile, true)
 	var status := str(info.get("status", ""))
 	var step := str(info.get("step", ""))
 	if item_id == "firebud_pet_mm_trial_mentor":
@@ -13401,18 +13612,19 @@ func _rebirth_trial_ready_for_target_raw(target_count: int) -> bool:
 	return proof_count > 0
 
 
-func _optional_quest_marker_state_for_item(item: Dictionary) -> String:
+func _optional_quest_marker_state_for_item(item: Dictionary, normalized_profile: Dictionary = {}) -> String:
 	var item_id := str(item.get("id", ""))
 	if item_id == "":
 		return QUEST_MARKER_NONE
-	var optional_quest := PlayerProgressModel.optional_quest_for_interaction(player_profile, item_id)
+	var marker_profile := normalized_profile if not normalized_profile.is_empty() else PlayerProgressModel.normalize_profile(player_profile)
+	var optional_quest := PlayerProgressModel.optional_quest_for_interaction(marker_profile, item_id, true)
 	if not optional_quest.is_empty():
 		var quest_id := str(optional_quest.get("id", ""))
-		var raw_states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+		var raw_states = marker_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
 		var has_quest_state := raw_states is Dictionary and (raw_states as Dictionary).has(quest_id)
 		if not has_quest_state:
 			return QUEST_MARKER_AVAILABLE
-		var state := PlayerProgressModel.quest_state_for_id(player_profile, quest_id)
+		var state := PlayerProgressModel.quest_state_for_id(marker_profile, quest_id, true)
 		var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
 		if status == QuestModel.STATUS_READY and QuestModel.turn_in_id_for(optional_quest) == item_id:
 			return QUEST_MARKER_READY
@@ -13422,63 +13634,20 @@ func _optional_quest_marker_state_for_item(item: Dictionary) -> String:
 				return QUEST_MARKER_IN_PROGRESS
 			if QuestModel.turn_in_id_for(optional_quest) == item_id:
 				return QUEST_MARKER_IN_PROGRESS
-	var blocked_quest := PlayerProgressModel.blocked_optional_quest_for_interaction(player_profile, item_id)
+	var blocked_quest := PlayerProgressModel.blocked_optional_quest_for_interaction(marker_profile, item_id, true)
 	if not blocked_quest.is_empty():
 		return QUEST_MARKER_BLOCKED
 	return QUEST_MARKER_NONE
 
 
-func _first_available_unfinished_quest_for_marker() -> Dictionary:
-	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
-	var state_map := states as Dictionary if states is Dictionary else {}
-	for quest in QuestModel.quests():
-		if QuestModel.is_optional(quest):
-			continue
-		var quest_id := str(quest.get("id", ""))
-		if quest_id == "":
-			continue
-		var state := QuestModel.normalize_state(state_map.get(quest_id, {}), quest_id)
-		if state_map.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
-			continue
-		if PlayerProgressModel.quest_available_for_profile(player_profile, quest):
-			return quest
-	return {}
+func _first_available_unfinished_quest_for_marker(normalized_profile: Dictionary = {}) -> Dictionary:
+	var marker_profile := normalized_profile if not normalized_profile.is_empty() else PlayerProgressModel.normalize_profile(player_profile)
+	return PlayerProgressModel.first_available_unfinished_quest(marker_profile, true)
 
 
-func _first_blocked_unfinished_quest_for_marker() -> Dictionary:
-	var states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
-	var state_map := states as Dictionary if states is Dictionary else {}
-	for quest in QuestModel.quests():
-		if QuestModel.is_optional(quest):
-			continue
-		var quest_id := str(quest.get("id", ""))
-		if quest_id == "":
-			continue
-		var state := QuestModel.normalize_state(state_map.get(quest_id, {}), quest_id)
-		if state_map.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
-			continue
-		if not PlayerProgressModel.quest_available_for_profile(player_profile, quest):
-			if _quest_should_show_blocked_marker(quest):
-				return quest
-			continue
-		return {}
-	return {}
-
-
-func _quest_should_show_blocked_marker(quest: Dictionary) -> bool:
-	var required_missing_ability := str(quest.get("requiredMissingAbility", quest.get("requiresMissingAbility", ""))).strip_edges()
-	if required_missing_ability != "":
-		var abilities := PlayerProgressModel.unlocked_abilities(player_profile)
-		if abilities.has(required_missing_ability):
-			return false
-	var current_rebirth := PlayerProgressModel.rebirth_count(player_profile)
-	var rebirth_target := QuestModel.rebirth_completion_target(quest)
-	if rebirth_target > 0:
-		return rebirth_target > current_rebirth + 1
-	var required_rebirth := maxi(0, int(quest.get("requiredRebirthCount", quest.get("requiresRebirthCount", 0))))
-	if required_rebirth > 0:
-		return current_rebirth < required_rebirth
-	return true
+func _first_blocked_unfinished_quest_for_marker(normalized_profile: Dictionary = {}) -> Dictionary:
+	var marker_profile := normalized_profile if not normalized_profile.is_empty() else PlayerProgressModel.normalize_profile(player_profile)
+	return PlayerProgressModel.first_blocked_unfinished_quest(marker_profile, true)
 
 
 func _draw_facility_marker_label(item: Dictionary, marker: Vector2, selected: bool) -> void:

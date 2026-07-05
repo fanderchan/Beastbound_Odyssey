@@ -24,6 +24,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_grant_pet", "label": "获取测试宠物"},
   {"id": "gm_level_pet", "label": "宠物升1级"},
   {"id": "gm_battle_speed_gear", "label": "变速齿轮"},
+  {"id": "gm_market_tax", "label": "交易所税率配置"},
 ];
 
 function createHttpServer(options = {}) {
@@ -110,6 +111,12 @@ function createHttpServer(options = {}) {
         const commandId = decodeURIComponent(url.pathname.slice("/gm/commands/".length));
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }
+      if (req.method === "GET" && url.pathname === "/gm/market/config") {
+        return sendResult(res, service.getMarketConfig(bearerToken(req)));
+      }
+      if (req.method === "PUT" && url.pathname === "/gm/market/config") {
+        return sendResult(res, service.updateMarketConfig(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/profiles/me") {
         return sendResult(res, service.getProfile(bearerToken(req)));
       }
@@ -126,6 +133,36 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/bank/deposit") {
+        return sendResult(res, service.bankDeposit(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/bank/withdraw") {
+        return sendResult(res, service.bankWithdraw(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/market/listings") {
+        return sendResult(res, service.marketListings(bearerToken(req), Object.fromEntries(url.searchParams.entries())));
+      }
+      if (req.method === "POST" && url.pathname === "/market/list") {
+        return sendResult(res, service.createMarketListing(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/market/buy") {
+        return sendResult(res, service.buyMarketListing(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/market/cancel") {
+        return sendResult(res, service.cancelMarketListing(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/trade/propose") {
+        return sendResult(res, service.proposeTrade(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/trade/accept") {
+        return sendResult(res, service.acceptTrade(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/trade/state") {
+        return sendResult(res, service.tradeState(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/trade/cancel") {
+        return sendResult(res, service.cancelTrade(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/equipment/equip") {
         return sendResult(res, service.equipmentEquip(bearerToken(req), await readJson(req)));
