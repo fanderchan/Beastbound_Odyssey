@@ -15784,15 +15784,42 @@ func _run_auto_auth_server_live_check() -> void:
 		and host.account_info_label.text.find("通道：服务器") >= 0
 		and host.account_info_label.text.find("通道：本地") < 0
 	)
-	var status = "ok" if auth_ok and sync_ok and account_panel_ok else "failed"
-	print("auth server live check ready: status=%s username=%s auth=%s sync=%s account_panel=%s state=%s revision=%d message=%s" % [
+	var filled_slots: Array[String] = []
+	for slot in PlayerProgressModel.backpack_slots(host.player_profile):
+		if not (slot is Dictionary):
+			continue
+		var item_id := str((slot as Dictionary).get("itemId", "")).strip_edges()
+		if item_id != "":
+			filled_slots.append("%sx%d" % [item_id, maxi(1, int((slot as Dictionary).get("count", 1)))])
+	var capture_tools := CaptureToolCatalog.normalize_inventory(host.player_profile.get("captureTools", {}))
+	var capture_tools_empty := true
+	for tool_id in capture_tools.keys():
+		if int(capture_tools.get(tool_id, 0)) > 0:
+			capture_tools_empty = false
+			break
+	var empty_backpack_ok = filled_slots.is_empty() and capture_tools_empty
+	host._close_account_panel(false)
+	host._open_backpack_panel()
+	for _frame in range(12):
+		await host.get_tree().process_frame
+	var backpack_panel_ok = (
+		host.backpack_panel != null
+		and host.backpack_panel.visible
+		and host.backpack_slot_buttons.size() > 0
+	)
+	var status = "ok" if auth_ok and sync_ok and account_panel_ok and empty_backpack_ok and backpack_panel_ok else "failed"
+	print("auth server live check ready: status=%s username=%s auth=%s sync=%s account_panel=%s empty_backpack=%s backpack_panel=%s state=%s revision=%d filled=%s capture_tools=%s message=%s" % [
 		status,
 		username,
 		str(auth_ok),
 		str(sync_ok),
 		str(account_panel_ok),
+		str(empty_backpack_ok),
+		str(backpack_panel_ok),
 		host.server_profile_sync_state,
 		host.server_profile_sync_expected_revision,
+		",".join(filled_slots),
+		JSON.stringify(capture_tools),
 		host.server_profile_sync_message,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
