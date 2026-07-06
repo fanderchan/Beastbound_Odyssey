@@ -8,9 +8,22 @@ const {
   profileItemCount,
 } = require("../test-support/auth-service-test-context");
 
+function seedBackpack(service, token, slots) {
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.backpackSlots = slots;
+  const saved = service.saveProfile(token, {
+    "expectedRevision": current.profileSummary.profileRevision,
+    profile,
+  });
+  assert.equal(saved.ok, true);
+}
+
 test("bank deposit and withdraw move server-owned coins and items", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const account = service.register({"username": "bankuser", "password": "test1234", "displayName": "银行号"});
+  seedBackpack(service, account.session.token, [{"itemId": "item_meat_small", "count": 6}]);
 
   const deposit = service.bankDeposit(account.session.token, {
     "stoneCoins": 40,
@@ -121,6 +134,7 @@ test("market listings sell through with default tax", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const seller = service.register({"username": "market_seller", "password": "test1234", "displayName": "卖家"});
   const buyer = service.register({"username": "market_buyer", "password": "test1234", "displayName": "买家"});
+  seedBackpack(service, seller.session.token, [{"itemId": "item_meat_small", "count": 6}]);
 
   const listing = service.createMarketListing(seller.session.token, {
     "itemId": "item_meat_small",
@@ -143,7 +157,7 @@ test("market listings sell through with default tax", () => {
   assert.equal(bought.ok, true);
   assert.equal(bought.receipt.tax, 1);
   assert.equal(bought.profile.stoneCoins, 80);
-  assert.equal(profileItemCount(bought.profile, "item_meat_small"), 8);
+  assert.equal(profileItemCount(bought.profile, "item_meat_small"), 2);
 
   const sellerAfter = service.getProfile(seller.session.token);
   assert.equal(sellerAfter.ok, true);
@@ -175,6 +189,7 @@ test("market listings support item tax overrides and cancellation", () => {
   const seedService = createAuthService({"store": createMemoryAuthStore()});
   const seller = seedService.register({"username": "market_tax_seller", "password": "test1234", "displayName": "税率卖家"});
   const buyer = seedService.register({"username": "market_tax_buyer", "password": "test1234", "displayName": "税率买家"});
+  seedBackpack(seedService, seller.session.token, [{"itemId": "capture_rope_basic", "count": 5}]);
   const seed = seedService.snapshot();
   seed.marketConfig = {
     "defaultTaxBps": 100,
@@ -250,6 +265,7 @@ test("trade requires nearby settled server positions", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const alpha = service.register({"username": "tradefar_a", "password": "test1234", "displayName": "远甲"});
   const beta = service.register({"username": "tradefar_b", "password": "test1234", "displayName": "远乙"});
+  seedBackpack(service, alpha.session.token, [{"itemId": "item_meat_small", "count": 1}]);
 
   assert.equal(service.updatePlayerPosition(alpha.session.token, {"mapId": "firebud_training_yard", "cellX": 2, "cellY": 2, "facing": "east", "moving": false}).ok, true);
   assert.equal(service.updatePlayerPosition(beta.session.token, {"mapId": "firebud_training_yard", "cellX": 8, "cellY": 8, "facing": "west", "moving": false}).ok, true);
@@ -266,6 +282,14 @@ test("trade accept atomically exchanges both player offers", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const alpha = service.register({"username": "tradeok_a", "password": "test1234", "displayName": "交易甲"});
   const beta = service.register({"username": "tradeok_b", "password": "test1234", "displayName": "交易乙"});
+  seedBackpack(service, alpha.session.token, [
+    {"itemId": "item_meat_small", "count": 6},
+    {"itemId": "capture_rope_basic", "count": 5},
+  ]);
+  seedBackpack(service, beta.session.token, [
+    {"itemId": "item_meat_small", "count": 6},
+    {"itemId": "capture_rope_basic", "count": 5},
+  ]);
 
   assert.equal(service.updatePlayerPosition(alpha.session.token, {"mapId": "firebud_training_yard", "cellX": 10, "cellY": 10, "facing": "east", "moving": false}).ok, true);
   assert.equal(service.updatePlayerPosition(beta.session.token, {"mapId": "firebud_training_yard", "cellX": 11, "cellY": 10, "facing": "west", "moving": false}).ok, true);

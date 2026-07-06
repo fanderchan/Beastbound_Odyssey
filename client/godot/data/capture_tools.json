@@ -17,7 +17,7 @@
       "fullName": "初级捕捉绳",
       "menuLabel": "初级绳",
       "consumable": true,
-      "startingCount": 5,
+      "startingCount": 0,
       "capturePower": 3,
       "chanceBonus": 0.12
     },
@@ -27,7 +27,7 @@
       "fullName": "捕捉网",
       "menuLabel": "捕捉网",
       "consumable": true,
-      "startingCount": 3,
+      "startingCount": 0,
       "capturePower": 6,
       "chanceBonus": 0.22
     },
@@ -37,7 +37,7 @@
       "fullName": "强化捕捉网",
       "menuLabel": "强化网",
       "consumable": true,
-      "startingCount": 1,
+      "startingCount": 0,
       "capturePower": 10,
       "chanceBonus": 0.34
     },

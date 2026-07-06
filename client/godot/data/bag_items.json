@@ -7,7 +7,7 @@
       "label": "肉",
       "menuLabel": "肉",
       "stackLimit": 99,
-      "startingCount": 6,
+      "startingCount": 0,
       "useContexts": ["battle_item", "world_pet_heal"],
       "battleActionId": "item_meat_small",
       "worldUse": {
@@ -21,7 +21,7 @@
       "label": "群体草药5",
       "menuLabel": "群体草药5",
       "stackLimit": 20,
-      "startingCount": 2,
+      "startingCount": 0,
       "useContexts": ["battle_item"],
       "battleActionId": "item_heal_all_5"
     },
@@ -30,7 +30,7 @@
       "label": "回复药5",
       "menuLabel": "回复药5",
       "stackLimit": 20,
-      "startingCount": 2,
+      "startingCount": 0,
       "useContexts": ["battle_item", "world_pet_heal"],
       "battleActionId": "item_heal_single_5",
       "worldUse": {
@@ -43,7 +43,7 @@
       "label": "毒粉5",
       "menuLabel": "毒粉5",
       "stackLimit": 20,
-      "startingCount": 2,
+      "startingCount": 0,
       "useContexts": ["battle_item"],
       "battleActionId": "item_poison_single_5"
     },
@@ -52,7 +52,7 @@
       "label": "毒雾粉5",
       "menuLabel": "毒雾粉5",
       "stackLimit": 20,
-      "startingCount": 2,
+      "startingCount": 0,
       "useContexts": ["battle_item"],
       "battleActionId": "item_poison_all_5"
     },
@@ -61,7 +61,7 @@
       "label": "净化草5",
       "menuLabel": "净化草5",
       "stackLimit": 20,
-      "startingCount": 2,
+      "startingCount": 0,
       "useContexts": ["battle_item"],
       "battleActionId": "item_cleanse_single_5"
     },
@@ -70,7 +70,7 @@
       "label": "初级捕捉绳",
       "menuLabel": "初级绳",
       "stackLimit": 20,
-      "startingCount": 5,
+      "startingCount": 0,
       "useContexts": ["capture"],
       "captureToolId": "capture_rope_basic"
     },
@@ -79,7 +79,7 @@
       "label": "捕捉网",
       "menuLabel": "捕捉网",
       "stackLimit": 20,
-      "startingCount": 3,
+      "startingCount": 0,
       "useContexts": ["capture"],
       "captureToolId": "capture_net"
     },
@@ -133,7 +133,7 @@
       "label": "高级遇敌石",
       "menuLabel": "高级遇敌石",
       "stackLimit": 20,
-      "startingCount": 1,
+      "startingCount": 0,
       "useContexts": ["world_encounter_stone"],
       "worldUse": {
         "type": "encounter_stone",
@@ -257,7 +257,7 @@
       "label": "经验丹(LV131)",
       "menuLabel": "经验丹131",
       "stackLimit": 20,
-      "startingCount": 10,
+      "startingCount": 0,
       "useContexts": ["world_exp", "equipment"],
       "worldUse": {
         "type": "exp",

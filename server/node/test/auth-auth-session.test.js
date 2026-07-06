@@ -47,6 +47,18 @@ test("register/login/session keeps players away from GM tools", () => {
   assert.equal(registered.profileSummary.storageMode, "server_document");
   assert.equal(registered.profileSummary.profileRevision, 0);
   assert.match(registered.profileSummary.playerId, /^player_/);
+  const initialProfile = service.getProfile(registered.session.token);
+  assert.equal(initialProfile.ok, true);
+  assert.deepEqual(
+    (initialProfile.profile.backpackSlots || []).filter((slot) => slot && slot.itemId),
+    [],
+  );
+  assert.deepEqual(initialProfile.profile.captureTools, {
+    capture_rope_basic: 0,
+    capture_net: 0,
+    capture_net_reinforced: 0,
+    capture_poison_wuli_net: 0,
+  });
 
   const duplicate = service.register({"username": "fander", "password": "test1234"});
   assert.equal(duplicate.ok, false);

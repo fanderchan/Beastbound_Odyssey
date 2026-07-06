@@ -6487,24 +6487,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 				CaptureToolCatalog.normalize_inventory(legacy_capture_tools as Dictionary)
 			)
 	var mailbox_messages_value := _normalize_mailbox_messages(normalized.get(MAILBOX_MESSAGES_KEY, []))
-	var exp_pill_starter_version := int(normalized.get(EXP_PILL_STARTER_VERSION_KEY, 0))
-	if exp_pill_starter_version < EXP_PILL_STARTER_VERSION:
-		var missing_exp_pills := maxi(0, 10 - BackpackModel.item_count(backpack_slots_value, ITEM_EXP_PILL_LV131) - _mailbox_item_count(mailbox_messages_value, ITEM_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID))
-		var exp_pill_rewards: Array[Dictionary] = []
-		if missing_exp_pills > 0:
-			exp_pill_rewards.append({"itemId": ITEM_EXP_PILL_LV131, "count": missing_exp_pills})
-		if not exp_pill_rewards.is_empty():
-			var exp_pill_result := BackpackModel.add_items(backpack_slots_value, exp_pill_rewards)
-			backpack_slots_value = exp_pill_result.get("slots", backpack_slots_value)
-			var lost_exp_pills: Array = exp_pill_result.get("lost", [])
-			if not lost_exp_pills.is_empty():
-				mailbox_messages_value = _upsert_mailbox_message(mailbox_messages_value, MAIL_EXP_PILL_STARTER_ID, "系统补发：经验丹", "背包已满，经验丹已转入邮箱。请在30天内领取附件。", lost_exp_pills)
-		if (
-			BackpackModel.item_count(backpack_slots_value, ITEM_EXP_PILL_LV131)
-			+ _mailbox_item_count(mailbox_messages_value, ITEM_EXP_PILL_LV131, MAIL_EXP_PILL_STARTER_ID) >= 10
-		):
-			exp_pill_starter_version = EXP_PILL_STARTER_VERSION
-	normalized[EXP_PILL_STARTER_VERSION_KEY] = exp_pill_starter_version
+	normalized[EXP_PILL_STARTER_VERSION_KEY] = EXP_PILL_STARTER_VERSION
 	normalized[BACKPACK_SLOTS_KEY] = backpack_slots_value
 	normalized[MAILBOX_MESSAGES_KEY] = mailbox_messages_value
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(backpack_slots_value)

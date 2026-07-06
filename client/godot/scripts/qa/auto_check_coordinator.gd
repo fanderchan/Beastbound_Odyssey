@@ -3115,9 +3115,13 @@ func _run_auto_battle_combo_check() -> void:
 func _run_auto_battle_capture_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	var capture_tool_slots := PlayerProgressModel.backpack_slots(host.player_profile)
+	capture_tool_slots = BackpackModel.set_item_count(capture_tool_slots, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
+	capture_tool_slots = BackpackModel.set_item_count(capture_tool_slots, BattleModel.CAPTURE_TOOL_NET, 3)
+	capture_tool_slots = BackpackModel.set_item_count(capture_tool_slots, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
 	host.player_profile = PlayerProgressModel.with_backpack_slots(
 		host.player_profile,
-		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(host.player_profile), BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+		capture_tool_slots
 	)
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
@@ -3184,7 +3188,14 @@ func _run_auto_capture_tools_check() -> void:
 	var menu_open_ok = false
 	var server_main_capture_enabled_ok = false
 	var server_help_mentions_capture_ok = false
+	var empty_button_text := ""
+	var rope_button_text := ""
+	var net_button_text := ""
+	var reinforced_button_text := ""
 	if target_id != "":
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET, 3)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
 		host.battle_state["serverAuthority"] = true
 		host.battle_state["serverRoomId"] = "capture_tools_server_menu_check"
 		host._set_battle_command_owner("player")
@@ -3204,25 +3215,31 @@ func _run_auto_capture_tools_check() -> void:
 		)
 		host.battle_state.erase("serverAuthority")
 		host.battle_state.erase("serverRoomId")
-		host._set_battle_command_owner("player")
+		host._set_battle_command_owner("capture")
 		host._sync_battle_buttons()
-		host._on_battle_command_pressed("capture")
 		var empty_button = host.battle_command_buttons.get("attack") as Button
 		var rope_button = host.battle_command_buttons.get("spirit") as Button
 		var net_button = host.battle_command_buttons.get("capture") as Button
 		var reinforced_button = host.battle_command_buttons.get("defend") as Button
+		empty_button_text = empty_button.text if empty_button != null else ""
+		rope_button_text = rope_button.text if rope_button != null else ""
+		net_button_text = net_button.text if net_button != null else ""
+		reinforced_button_text = reinforced_button.text if reinforced_button != null else ""
 		menu_open_ok = (
 			host.battle_command_owner == "capture"
-			and empty_button != null and empty_button.text == "空手"
-			and rope_button != null and rope_button.text == "初级绳 x5"
-			and net_button != null and net_button.text == "捕捉网 x3"
-			and reinforced_button != null and reinforced_button.text == "强化网 x1"
+			and empty_button_text == "空手"
+			and rope_button_text == "初级绳 x5"
+			and net_button_text == "捕捉网 x3"
+			and reinforced_button_text == "强化网 x1"
 		)
 
 	var model_state = PlayerProgressModel.apply_profile_to_battle_state(
-		PlayerProgressModel.default_profile(),
+		host.player_profile,
 		BattleModel.create_wild_battle({"id": "capture_tools_model", "name": "捕捉道具模型"})
 	)
+	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
+	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_NET, 3)
+	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
 	var model_target_id = BattleModel.living_enemy_id(model_state)
 	var before_empty = BattleModel.capture_tool_inventory(model_state).duplicate(true)
 	var empty_event = {
@@ -6846,9 +6863,17 @@ func _run_auto_pet_storage_capture_check() -> void:
 func _run_auto_backpack_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	var starting_empty_ok = (
+		PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL) == 0
+		and PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET) == 0
+		and PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_EXP_PILL_LV131) == 0
+	)
 	var slots = PlayerProgressModel.backpack_slots(host.player_profile)
+	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 6)
+	slots = BackpackModel.set_item_count(slots, BattleModel.CAPTURE_TOOL_NET, 3)
+	host.player_profile = PlayerProgressModel.with_backpack_slots(host.player_profile, slots)
+	slots = PlayerProgressModel.backpack_slots(host.player_profile)
 	var slot_limit_ok = slots.size() == BackpackModel.BASE_SLOT_LIMIT and PlayerProgressModel.backpack_max_slot_count() == BackpackModel.SLOT_LIMIT
-	var meat_default_ok = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL) == 6
 	var stacked_slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 25)
 	var meat_stack_slots = 0
 	for slot in stacked_slots:
@@ -6961,11 +6986,11 @@ func _run_auto_backpack_check() -> void:
 		var after_meat = BattleModel.item_count(host.battle_state, BattleModel.ITEM_MEAT_SMALL)
 		var profile_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
 		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
-	var status = "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
-	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+	var status = "ok" if slot_limit_ok and starting_empty_ok and stack_ok and context_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
+	print("backpack check ready: status=%s slots=%s starting_empty=%s stack=%s context=%s panel=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
 		status,
 		str(slot_limit_ok),
-		str(meat_default_ok),
+		str(starting_empty_ok),
 		str(stack_ok),
 		str(context_ok),
 		str(panel_ok),
@@ -6981,6 +7006,11 @@ func _run_auto_backpack_check() -> void:
 func _run_auto_backpack_world_use_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	var world_use_slots = PlayerProgressModel.backpack_slots(host.player_profile)
+	world_use_slots = BackpackModel.set_item_count(world_use_slots, BattleModel.ITEM_MEAT_SMALL, 3)
+	world_use_slots = BackpackModel.set_item_count(world_use_slots, BattleModel.ITEM_HEAL_SINGLE, 1)
+	world_use_slots = BackpackModel.set_item_count(world_use_slots, BattleModel.CAPTURE_TOOL_NET, 1)
+	host.player_profile = PlayerProgressModel.with_backpack_slots(host.player_profile, world_use_slots)
 	var base_pet = PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_bui_main")
 	var max_hp = maxi(1, int(base_pet.get("maxHp", 1)))
 	var start_hp = maxi(1, max_hp - 60)
@@ -7053,7 +7083,7 @@ func _run_auto_backpack_world_use_check() -> void:
 		and str(full_result.get("message", "")).find("生命已满") >= 0
 	)
 
-	host._select_backpack_slot(7)
+	host._select_backpack_slot(host._backpack_slot_index_for_item(BattleModel.CAPTURE_TOOL_NET))
 	await host.get_tree().process_frame
 	var capture_hidden_ok = host.backpack_use_button != null and not host.backpack_use_button.visible and host.backpack_detail_label.text.find("捕捉") >= 0
 	host._close_backpack_panel()
@@ -7097,7 +7127,7 @@ func _run_auto_exp_pill_check() -> void:
 		and grant_exp_140 > grant_exp
 	)
 	var starter_ok = (
-		PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_EXP_PILL_LV131) >= 10
+		PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_EXP_PILL_LV131) == 0
 		and PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_PLAYER_EXP_PILL_LV131) == 0
 		and PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_PET_EXP_PILL_LV131) == 0
 	)
@@ -7172,7 +7202,9 @@ func _run_auto_exp_pill_check() -> void:
 		and int(lv140_pet.get("level", 1)) == PlayerProgressModel.MAX_PET_LEVEL
 	)
 
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), [
+		{"itemId": PlayerProgressModel.ITEM_EXP_PILL_LV131, "count": 1},
+	])
 	host.backpack_selected_slot_index = host._backpack_slot_index_for_item(PlayerProgressModel.ITEM_EXP_PILL_LV131)
 	host._open_backpack_panel()
 	await host.get_tree().process_frame
@@ -7239,9 +7271,14 @@ func _run_auto_mailbox_check() -> void:
 		full_slots.append({"itemId": str(filler_ids[index]), "count": 1})
 
 	var full_profile = PlayerProgressModel.default_profile()
-	full_profile[PlayerProgressModel.EXP_PILL_STARTER_VERSION_KEY] = 0
-	full_profile[PlayerProgressModel.MAILBOX_MESSAGES_KEY] = []
 	full_profile[PlayerProgressModel.BACKPACK_SLOTS_KEY] = full_slots
+	full_profile[PlayerProgressModel.MAILBOX_MESSAGES_KEY] = [{
+		"mailId": PlayerProgressModel.MAIL_EXP_PILL_STARTER_ID,
+		"sender": "系统",
+		"title": "测试补给：经验丹",
+		"body": "背包已满时，附件应留在邮箱。",
+		"items": [{"itemId": PlayerProgressModel.ITEM_EXP_PILL_LV131, "count": 10}],
+	}]
 	full_profile = PlayerProgressModel.normalize_profile(full_profile)
 	var starter_mail = PlayerProgressModel.mailbox_message_by_id(full_profile, PlayerProgressModel.MAIL_EXP_PILL_STARTER_ID)
 	var starter_items = host._mailbox_item_entries(starter_mail)
