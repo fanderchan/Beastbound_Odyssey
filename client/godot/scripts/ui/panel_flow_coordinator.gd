@@ -11972,6 +11972,8 @@ func _complete_interaction(item: Dictionary) -> void:
 func _transfer_from_warp(item: Dictionary) -> void:
 	var to_map = str(item.get("toMap", ""))
 	var to_spawn = str(item.get("toSpawn", "default"))
+	var continuation_value = item.get("routeContinuationTarget", {})
+	var continuation_target = continuation_value.duplicate(true) if continuation_value is Dictionary else {}
 	if to_map == "":
 		host._open_interaction_dialog(item)
 		return
@@ -11979,8 +11981,15 @@ func _transfer_from_warp(item: Dictionary) -> void:
 		return
 	_reset_server_step_move_authority_after_map_change()
 	_request_online_position_snapshot(_current_online_map_payload())
+	if not continuation_target.is_empty():
+		call_deferred("_continue_route_after_map_transfer", continuation_target)
 	if hang_heal_resume_active:
 		host.call_deferred("_update_hang_heal_resume_route")
+
+func _continue_route_after_map_transfer(target: Dictionary) -> void:
+	if target.is_empty() or battle_active or encounter_active or player == null or map_data.is_empty():
+		return
+	_route_to_quest_target(target)
 
 func _start_guardian_battle_from_dialog() -> void:
 	if active_dialog_interaction.is_empty():
@@ -21618,7 +21627,9 @@ func _route_to_quest_target(target: Dictionary) -> void:
 		if warp.is_empty():
 			_set_world_log_message("目标在%s，当前地图暂时找不到通路。" % _map_name_for_id(target_map_id))
 			return
-		_set_interaction_target(warp)
+		var routed_warp = warp.duplicate(true)
+		routed_warp["routeContinuationTarget"] = target.duplicate(true)
+		_set_interaction_target(routed_warp)
 		_set_world_log_message("正在前往%s。" % str(warp.get("name", label)))
 		return
 	match str(target.get("kind", "")):

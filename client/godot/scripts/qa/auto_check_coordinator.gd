@@ -13457,14 +13457,43 @@ func _run_auto_task_tracker_route_check() -> void:
 	host._clear_pending_interaction()
 	await host.get_tree().process_frame
 	var reenabled_after_clear = host.task_route_button != null and not host.task_route_button.disabled
-	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear else "failed"
-	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s pending=%s log=%s" % [
+	var intro_event = PlayerProgressModel.record_quest_event(PlayerProgressModel.default_profile(), {
+		"type": "talk",
+		"targetId": "trainer",
+	})
+	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = bank_profile
+	host._clear_navigation_state()
+	var bank_loaded = host._load_map("firebud_training_yard")
+	await host.get_tree().process_frame
+	host._on_task_tracker_route_pressed()
+	await host.get_tree().process_frame
+	var bank_cross_map_started = (
+		host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "warp_to_village_gate"
+		and host.pending_interaction.get("routeContinuationTarget", {}) is Dictionary
+	)
+	if bank_cross_map_started:
+		host._complete_interaction(host.pending_interaction.duplicate(true))
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+	var bank_continued_route = (
+		host.current_map_id == "firebud_village_gate"
+		and host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "firebud_bank_keeper"
+		and host.world_log_message.find("银行管理员阿衡") >= 0
+	)
+	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear and bank_loaded and bank_cross_map_started and bank_continued_route else "failed"
+	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s bank_loaded=%s bank_cross_map=%s bank_continue=%s pending=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ready),
 		str(route_ok),
 		str(disabled_after_route),
 		str(reenabled_after_clear),
+		str(bank_loaded),
+		str(bank_cross_map_started),
+		str(bank_continued_route),
 		str(host.pending_interaction.get("id", "")),
 		host.world_log_message,
 	])
