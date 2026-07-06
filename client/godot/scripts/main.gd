@@ -261,6 +261,10 @@ var auth_message_label: Label
 var auth_version_label: Label
 var auth_username_input: LineEdit
 var auth_password_input: LineEdit
+var auth_password_confirm_input: LineEdit
+var auth_password_visibility_button: Button
+var auth_password_confirm_visibility_button: Button
+var auth_password_confirm_row: HBoxContainer
 var auth_display_name_input: LineEdit
 var auth_source_option: OptionButton
 var auth_server_url_input: LineEdit

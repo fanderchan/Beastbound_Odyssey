@@ -14053,6 +14053,46 @@ func _run_auto_auth_check() -> void:
 		and host.qa_menu_button != null
 		and not host.qa_menu_button.visible
 	)
+	host._set_auth_server_mode(true, false)
+	host._set_auth_mode(true)
+	if host.auth_username_input != null:
+		host.auth_username_input.text = "mismatch_%s" % username
+	if host.auth_password_input != null:
+		host.auth_password_input.text = "test1234"
+	if host.auth_password_confirm_input != null:
+		host.auth_password_confirm_input.text = "test12345"
+	if host.auth_display_name_input != null:
+		host.auth_display_name_input.text = "密码确认"
+	host._on_auth_submit_pressed()
+	await host.get_tree().process_frame
+	var mismatch_blocks_register_ok = (
+		not host.auth_request_pending
+		and not host.account_authenticated
+		and host.auth_message_label != null
+		and host.auth_message_label.text.find("不一致") >= 0
+	)
+	var confirm_visible_ok = (
+		host.auth_password_confirm_row != null
+		and host.auth_password_confirm_row.visible
+		and host.auth_password_confirm_input != null
+		and host.auth_password_confirm_input.visible
+	)
+	var password_eye_ok = false
+	if host.auth_password_input != null and host.auth_password_visibility_button != null:
+		var password_initial_secret = host.auth_password_input.secret
+		host.auth_password_visibility_button.pressed.emit()
+		var password_visible = not host.auth_password_input.secret
+		host.auth_password_visibility_button.pressed.emit()
+		password_eye_ok = password_initial_secret and password_visible and host.auth_password_input.secret
+	var confirm_eye_ok = false
+	if host.auth_password_confirm_input != null and host.auth_password_confirm_visibility_button != null:
+		var confirm_initial_secret = host.auth_password_confirm_input.secret
+		host.auth_password_confirm_visibility_button.pressed.emit()
+		var confirm_visible = not host.auth_password_confirm_input.secret
+		host.auth_password_confirm_visibility_button.pressed.emit()
+		confirm_eye_ok = confirm_initial_secret and confirm_visible and host.auth_password_confirm_input.secret
+	host._set_auth_mode(false)
+	var confirm_hides_on_login_ok = host.auth_password_confirm_row != null and not host.auth_password_confirm_row.visible
 	var plugin_install_ok = AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
 	host.current_account_session = {
 		"username": "codex_auth_gm",
@@ -14096,8 +14136,9 @@ func _run_auto_auth_check() -> void:
 	host._restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
 	host._restore_auth_check_account_store(original_store_exists, original_store_text)
 	host._restore_auth_check_audit_log(original_audit_exists, original_audit_text)
-	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
-	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
+	var auth_password_ui_ok = mismatch_blocks_register_ok and confirm_visible_ok and password_eye_ok and confirm_eye_ok and confirm_hides_on_login_ok
+	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
+	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
 		status,
 		str(player_session_ok),
 		str(remember_ok),
@@ -14107,6 +14148,7 @@ func _run_auto_auth_check() -> void:
 		str(player_blocks_qa),
 		str(account_panel_opens),
 		str(switch_to_login_ok),
+		str(auth_password_ui_ok),
 		str(gm_plugin_unlocks),
 		str(restricted_denies_command),
 		str(restricted_allows_command),
@@ -15684,6 +15726,8 @@ func _run_auto_auth_server_live_check() -> void:
 		host.auth_username_input.text = username
 	if host.auth_password_input != null:
 		host.auth_password_input.text = "test1234"
+	if host.auth_password_confirm_input != null:
+		host.auth_password_confirm_input.text = "test1234"
 	if host.auth_display_name_input != null:
 		host.auth_display_name_input.text = "联网验证%s" % username.substr(maxi(0, username.length() - 4))
 	if host.auth_remember_check != null:

@@ -619,6 +619,30 @@ var auth_password_input:
 	set(value):
 		host.auth_password_input = value
 
+var auth_password_confirm_input:
+	get:
+		return host.auth_password_confirm_input
+	set(value):
+		host.auth_password_confirm_input = value
+
+var auth_password_visibility_button:
+	get:
+		return host.auth_password_visibility_button
+	set(value):
+		host.auth_password_visibility_button = value
+
+var auth_password_confirm_visibility_button:
+	get:
+		return host.auth_password_confirm_visibility_button
+	set(value):
+		host.auth_password_confirm_visibility_button = value
+
+var auth_password_confirm_row:
+	get:
+		return host.auth_password_confirm_row
+	set(value):
+		host.auth_password_confirm_row = value
+
 var auth_display_name_input:
 	get:
 		return host.auth_display_name_input
@@ -8355,15 +8379,56 @@ func _build_auth_panel() -> void:
 	auth_username_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_child(auth_username_input)
 
+	var password_row = HBoxContainer.new()
+	password_row.add_theme_constant_override("separation", 8)
+	password_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(password_row)
+
 	auth_password_input = LineEdit.new()
 	auth_password_input.placeholder_text = "密码"
 	auth_password_input.secret = true
 	auth_password_input.custom_minimum_size = Vector2(0, 44)
 	auth_password_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	auth_password_input.text_submitted.connect(func(_text: String) -> void:
+		if auth_mode_register and auth_password_confirm_input != null and auth_password_confirm_input.text == "":
+			auth_password_confirm_input.grab_focus()
+		else:
+			_on_auth_submit_pressed()
+	)
+	password_row.add_child(auth_password_input)
+
+	auth_password_visibility_button = Button.new()
+	auth_password_visibility_button.text = "眼"
+	auth_password_visibility_button.tooltip_text = "显示密码"
+	auth_password_visibility_button.custom_minimum_size = Vector2(52, 44)
+	auth_password_visibility_button.pressed.connect(func() -> void:
+		_toggle_auth_password_visibility(false)
+	)
+	password_row.add_child(auth_password_visibility_button)
+
+	auth_password_confirm_row = HBoxContainer.new()
+	auth_password_confirm_row.add_theme_constant_override("separation", 8)
+	auth_password_confirm_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(auth_password_confirm_row)
+
+	auth_password_confirm_input = LineEdit.new()
+	auth_password_confirm_input.placeholder_text = "确认密码"
+	auth_password_confirm_input.secret = true
+	auth_password_confirm_input.custom_minimum_size = Vector2(0, 44)
+	auth_password_confirm_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auth_password_confirm_input.text_submitted.connect(func(_text: String) -> void:
 		_on_auth_submit_pressed()
 	)
-	outer.add_child(auth_password_input)
+	auth_password_confirm_row.add_child(auth_password_confirm_input)
+
+	auth_password_confirm_visibility_button = Button.new()
+	auth_password_confirm_visibility_button.text = "眼"
+	auth_password_confirm_visibility_button.tooltip_text = "显示确认密码"
+	auth_password_confirm_visibility_button.custom_minimum_size = Vector2(52, 44)
+	auth_password_confirm_visibility_button.pressed.connect(func() -> void:
+		_toggle_auth_password_visibility(true)
+	)
+	auth_password_confirm_row.add_child(auth_password_confirm_visibility_button)
 
 	auth_display_name_input = LineEdit.new()
 	auth_display_name_input.placeholder_text = "昵称"
@@ -8413,6 +8478,17 @@ func _build_auth_panel() -> void:
 	_set_auth_server_mode(true, false)
 	_set_auth_mode(false)
 	_prefill_auth_last_username()
+
+func _toggle_auth_password_visibility(confirm_field: bool = false) -> void:
+	var input = auth_password_confirm_input if confirm_field else auth_password_input
+	var button = auth_password_confirm_visibility_button if confirm_field else auth_password_visibility_button
+	if input == null:
+		return
+	input.secret = not input.secret
+	if button != null:
+		button.text = "藏" if not input.secret else "眼"
+		button.tooltip_text = "隐藏密码" if not input.secret else ("显示确认密码" if confirm_field else "显示密码")
+	input.grab_focus()
 
 func _build_account_panel() -> void:
 	account_panel = _panel_container("AccountPanel")
@@ -8468,6 +8544,10 @@ func _set_auth_mode(register_mode: bool) -> void:
 		auth_login_tab_button.disabled = not auth_mode_register
 	if auth_register_tab_button != null:
 		auth_register_tab_button.disabled = auth_mode_register
+	if auth_password_confirm_row != null:
+		auth_password_confirm_row.visible = auth_mode_register
+	if not auth_mode_register and auth_password_confirm_input != null:
+		auth_password_confirm_input.text = ""
 	if auth_display_name_input != null:
 		auth_display_name_input.visible = auth_mode_register
 	if auth_submit_button != null:
@@ -8528,6 +8608,8 @@ func _on_auth_submit_pressed() -> void:
 		return
 	var username = auth_username_input.text
 	var password = auth_password_input.text
+	if auth_mode_register and not _auth_registration_passwords_match(password):
+		return
 	if AUTH_SERVER_ONLY or auth_server_mode:
 		_submit_server_auth_request(username, password)
 		return
@@ -8547,6 +8629,16 @@ func _on_auth_submit_pressed() -> void:
 	_apply_authenticated_session(session, migrate_legacy)
 	if auth_message_label != null:
 		auth_message_label.text = str(result.get("message", "已进入游戏。"))
+
+func _auth_registration_passwords_match(password: String) -> bool:
+	var confirm_password = auth_password_confirm_input.text if auth_password_confirm_input != null else ""
+	if password == confirm_password:
+		return true
+	if auth_message_label != null:
+		auth_message_label.text = "两次输入的密码不一致。"
+	if auth_password_confirm_input != null:
+		auth_password_confirm_input.grab_focus()
+	return false
 
 func _submit_server_auth_request(username: String, password: String) -> void:
 	if auth_http_request == null:
@@ -10186,6 +10278,8 @@ func _switch_account_to_login(save_before_logout: bool = true) -> void:
 	player_profile = PlayerProgressModel.default_profile()
 	if auth_password_input != null:
 		auth_password_input.text = ""
+	if auth_password_confirm_input != null:
+		auth_password_confirm_input.text = ""
 	if auth_display_name_input != null:
 		auth_display_name_input.text = ""
 	_set_auth_mode(false)
