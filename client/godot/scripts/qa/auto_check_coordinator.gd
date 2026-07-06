@@ -16806,6 +16806,14 @@ func _run_auto_server_click_move_reject_live_check() -> void:
 		await host.get_tree().process_frame
 	var final_cell = IsoMapModel.world_to_grid(host.map_data, host.player.global_position) if host.player != null else Vector2i.ZERO
 	var authority_cell = host.server_step_move_authority_cell
+	var log_text = "\n".join(host.world_log_history)
+	var sync_log_clean = (
+		log_text.find("位置已同步") < 0
+		and log_text.find("位置待同步") < 0
+		and log_text.find("地图已同步") < 0
+		and log_text.find("位置已按服务器纠正") < 0
+		and log_text.find("请重新点击") < 0
+	)
 	var reject_recovered = (
 		expected_acks > 0
 		and host.server_step_move_sync_retry_count >= 1
@@ -16817,14 +16825,16 @@ func _run_auto_server_click_move_reject_live_check() -> void:
 		and not host.server_step_move_active
 		and not host.server_step_move_request_pending
 		and not host.server_step_move_waiting_for_visual
+		and sync_log_clean
 	)
 	var status = "ok" if bool(register_parsed.get("ok", false)) and seed_ok and reject_recovered else "failed"
 	var register_body = register_response.get("body", PackedByteArray()) as PackedByteArray
-	print("server click move reject live check ready: status=%s register=%s seed=%s recovered=%s expected_acks=%d requests=%d acks=%d retries=%d stale=%s server=%s final=%s authority=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
+	print("server click move reject live check ready: status=%s register=%s seed=%s recovered=%s sync_log_clean=%s expected_acks=%d requests=%d acks=%d retries=%d stale=%s server=%s final=%s authority=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
 		status,
 		str(bool(register_parsed.get("ok", false))),
 		str(seed_ok),
 		str(reject_recovered),
+		str(sync_log_clean),
 		expected_acks,
 		host.server_step_move_request_count,
 		host.server_step_move_ack_count,

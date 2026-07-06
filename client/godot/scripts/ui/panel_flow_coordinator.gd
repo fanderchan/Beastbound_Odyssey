@@ -11642,7 +11642,9 @@ func _handle_server_step_move_failure(parsed: Dictionary) -> void:
 	has_target_marker = false
 	has_target_cell = false
 	current_path_is_direct = false
-	_set_world_log_message(_server_step_move_failure_message(server_step_move_last_error_code, parsed))
+	var message = _server_step_move_failure_message(server_step_move_last_error_code, parsed)
+	if message != "":
+		_set_world_log_message(message)
 	host.queue_redraw()
 
 func _finish_server_step_move() -> void:
@@ -11807,22 +11809,22 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 		"movement_party_member_locked":
 			return "队伍中由队长带队移动。"
 		"movement_position_missing", "movement_map_missing":
-			return "位置待同步，请重新点击。"
+			return ""
 		"movement_map_mismatch":
-			return "地图已同步，请重新点击。"
+			return ""
 		"movement_noop":
 			return "已经在目标位置。"
 		"movement_origin_mismatch", "movement_step_too_far":
-			return "位置已同步，请重新点击。"
+			return ""
 		"movement_cell_blocked":
 			return "目标格不可通行，请换个位置。"
 		"position_desync", "position_seed_not_spawn":
-			return "位置已按服务器纠正，请重新点击。"
+			return ""
 		"position_transition_invalid":
 			return "只能通过传送点或记录点前往其他地图。"
 		"position_cell_blocked":
-			return "该位置无法站立，请重新点击。"
-	return _server_player_message(parsed, "移动未完成，请重新点击。")
+			return "该位置无法站立，请换个位置。"
+	return _server_player_message(parsed, "移动未完成，请稍后再试。")
 
 func _rebuild_server_step_move_path_from_authority() -> bool:
 	if not server_step_move_active or not server_step_move_authority_valid:
@@ -12685,7 +12687,9 @@ func _set_world_log_message(text: String) -> void:
 		for raw_line in stripped.split("\n", false):
 			var line = str(raw_line).strip_edges()
 			if line != "":
-				world_log_history.append(line)
+				var is_duplicate = not world_log_history.is_empty() and world_log_history[world_log_history.size() - 1] == line
+				if not is_duplicate:
+					world_log_history.append(line)
 	while world_log_history.size() > WORLD_LOG_MAX_LINES:
 		world_log_history.pop_front()
 	var display_text = "\n".join(world_log_history)
