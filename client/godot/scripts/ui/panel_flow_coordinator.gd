@@ -22141,9 +22141,6 @@ func _refresh_pet_panel() -> void:
 			for instance in storage:
 				if _pet_panel_instance_passes_filter(instance):
 					_add_pet_list_button(instance)
-		else:
-			for instance in visible_instances:
-				_add_pet_list_button(instance)
 		_sync_pet_growth_stage_tabs(selected)
 		if pet_growth_radar != null:
 			pet_growth_radar.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""

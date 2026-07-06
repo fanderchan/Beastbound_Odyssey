@@ -53,6 +53,9 @@ test("register/login/session keeps players away from GM tools", () => {
     (initialProfile.profile.backpackSlots || []).filter((slot) => slot && slot.itemId),
     [],
   );
+  assert.deepEqual(initialProfile.profile.petInstances, []);
+  assert.equal(initialProfile.profile.activePetInstanceId, "");
+  assert.equal(initialProfile.profile.nextPetInstanceSerial, 1);
   assert.deepEqual(initialProfile.profile.captureTools, {
     capture_rope_basic: 0,
     capture_net: 0,

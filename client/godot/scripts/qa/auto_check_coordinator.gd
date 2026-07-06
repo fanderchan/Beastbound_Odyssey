@@ -191,6 +191,19 @@ func _init(host_ref) -> void:
 	host = host_ref
 
 
+func _qa_bui_pet_profile() -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	profile["petInstances"] = [
+		PlayerProgressModel.create_pet_instance_from_form("pet_bui_main", "我的布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_BATTLE, 1),
+		PlayerProgressModel.create_pet_instance_from_form("pet_bui_speed", "黄色普通布伊", "bui_normal_yellow_wind10", PlayerProgressModel.PET_STATE_STANDBY, 1),
+		PlayerProgressModel.create_pet_instance_from_form("pet_bui_tough", "厚皮布伊", "bui_normal_thick_earth10", PlayerProgressModel.PET_STATE_STANDBY, 1),
+		PlayerProgressModel.create_pet_instance_from_form("pet_bui_rest", "休息布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_REST, 1),
+	]
+	profile["activePetInstanceId"] = "pet_bui_main"
+	profile["nextPetInstanceSerial"] = 5
+	return PlayerProgressModel.normalize_profile(profile)
+
+
 func _qa_send_touch_press(screen_point: Vector2) -> void:
 	var event := InputEventScreenTouch.new()
 	event.index = 0
@@ -5043,7 +5056,71 @@ func _run_auto_battle_knockaway_result_check() -> void:
 
 func _run_auto_pet_management_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	var fresh_profile := PlayerProgressModel.default_profile()
+	var default_pet_empty_ok = (
+		(fresh_profile.get("petInstances", []) as Array).is_empty()
+		and str(fresh_profile.get("activePetInstanceId", "")) == ""
+		and int(fresh_profile.get("nextPetInstanceSerial", 0)) == 1
+	)
+	host.player_profile = fresh_profile
+	host.pet_selected_instance_id = ""
+	host.pet_filter_mode = PET_FILTER_ALL
+	host.pet_sort_mode = PET_SORT_DEFAULT
+	host._open_pet_panel()
+	await host.get_tree().process_frame
+	var empty_pet_button_count := 0
+	for child in host.pet_list_container.get_children():
+		if child is Button:
+			empty_pet_button_count += 1
+	var empty_panel_ok = (
+		host.pet_panel != null
+		and host.pet_panel.visible
+		and host._pet_panel_visible_instances().is_empty()
+		and empty_pet_button_count == 0
+		and host.pet_selected_instance_id == ""
+	)
+	host._close_pet_panel()
+
+	var egg_profile := PlayerProgressModel.with_backpack_slots(fresh_profile, [
+		{"itemId": PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG, "count": 1},
+		{"itemId": PlayerProgressModel.ITEM_NOVICE_TIGER_EGG, "count": 1},
+	])
+	var battle_egg_result = PlayerProgressModel.use_world_pet_egg_item(egg_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+	egg_profile = battle_egg_result.get("profile", egg_profile) as Dictionary
+	var tiger_egg_result = PlayerProgressModel.use_world_pet_egg_item(egg_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
+	egg_profile = tiger_egg_result.get("profile", egg_profile) as Dictionary
+	var egg_forms: Array[String] = []
+	for egg_pet in PlayerProgressModel.party_pet_instances(egg_profile):
+		egg_forms.append(str(egg_pet.get("formId", "")))
+	var novice_egg_grant_ok = (
+		bool(battle_egg_result.get("ok", false))
+		and bool(tiger_egg_result.get("ok", false))
+		and PlayerProgressModel.party_pet_instances(egg_profile).size() == 2
+		and egg_forms.has("rebirth_starter_four_spirit_cub")
+		and egg_forms.has("novice_tiger_mount")
+		and PlayerProgressModel.backpack_item_count(egg_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG) == 0
+		and PlayerProgressModel.backpack_item_count(egg_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG) == 0
+	)
+	host.player_profile = egg_profile
+	host.pet_selected_instance_id = ""
+	host.pet_filter_mode = PET_FILTER_ALL
+	host.pet_sort_mode = PET_SORT_DEFAULT
+	host._open_pet_panel()
+	await host.get_tree().process_frame
+	var egg_visible = host._pet_panel_visible_instances()
+	var egg_pet_button_count := 0
+	for child in host.pet_list_container.get_children():
+		if child is Button:
+			egg_pet_button_count += 1
+	var novice_pet_panel_ok = (
+		host.pet_panel != null
+		and host.pet_panel.visible
+		and egg_visible.size() == 2
+		and egg_pet_button_count == 2
+	)
+	host._close_pet_panel()
+
+	host.player_profile = _qa_bui_pet_profile()
 	host.pet_selected_instance_id = ""
 	host._open_pet_panel()
 	await host.get_tree().process_frame
@@ -5101,7 +5178,7 @@ func _run_auto_pet_management_check() -> void:
 	var battle_reads_active = str(battle_pet.get("name", "")) == "黄色普通布伊" and str(battle_pet.get("instanceId", "")) == "pet_bui_speed"
 	host._end_battle(true)
 
-	var enhancement_profile = PlayerProgressModel.default_profile()
+	var enhancement_profile = _qa_bui_pet_profile()
 	var enhancement_instances: Array = enhancement_profile.get("petInstances", [])
 	var new_storage_pet = PlayerProgressModel.create_pet_instance_from_form("pet_manage_new", "新乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STORAGE, 1, {
 		"hp": 20,
@@ -5172,9 +5249,13 @@ func _run_auto_pet_management_check() -> void:
 	var storage_clear_ok = PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_manage_new").is_empty()
 	var management_enhanced_ok = power_sort_ok and sort_direction_ok and list_power_new_ok and detail_power_ok and storage_filter_ok and new_seen_ok and storage_clear_confirm_ok and storage_clear_ok
 
-	var status = "ok" if opened and selected_default and rest_to_standby_ready and rest_standby and standby_to_battle_ready and rest_battle and battle_to_rest_ready and rest_rest and no_pet_battle_ok and detail_ok and speed_standby_to_battle_ready and speed_battle and button_text_clean and button_y_stable and switched and battle_reads_active and management_enhanced_ok else "failed"
-	print("pet management check ready: status=%s opened=%s selected=%s rest_to_standby=%s rest_standby=%s standby_to_battle=%s rest_battle=%s battle_to_rest=%s rest_rest=%s no_pet_battle=%s detail=%s speed_standby_to_battle=%s speed_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s enhanced=%s sort=%s sort_direction=%s list_power_new=%s detail_power=%s storage_filter=%s new_seen=%s clear_confirm=%s clear=%s active=%s" % [
+	var status = "ok" if default_pet_empty_ok and empty_panel_ok and novice_egg_grant_ok and novice_pet_panel_ok and opened and selected_default and rest_to_standby_ready and rest_standby and standby_to_battle_ready and rest_battle and battle_to_rest_ready and rest_rest and no_pet_battle_ok and detail_ok and speed_standby_to_battle_ready and speed_battle and button_text_clean and button_y_stable and switched and battle_reads_active and management_enhanced_ok else "failed"
+	print("pet management check ready: status=%s default_empty=%s empty_panel=%s novice_eggs=%s novice_panel=%s opened=%s selected=%s rest_to_standby=%s rest_standby=%s standby_to_battle=%s rest_battle=%s battle_to_rest=%s rest_rest=%s no_pet_battle=%s detail=%s speed_standby_to_battle=%s speed_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s enhanced=%s sort=%s sort_direction=%s list_power_new=%s detail_power=%s storage_filter=%s new_seen=%s clear_confirm=%s clear=%s active=%s" % [
 		status,
+		str(default_pet_empty_ok),
+		str(empty_panel_ok),
+		str(novice_egg_grant_ok),
+		str(novice_pet_panel_ok),
 		str(opened),
 		str(selected_default),
 		str(rest_to_standby_ready),
@@ -12260,6 +12341,16 @@ func _run_auto_quest_chain_check() -> void:
 		and PlayerProgressModel.has_riding(profile)
 	)
 
+	var battle_pet_hatch_result = PlayerProgressModel.use_world_pet_egg_item(profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+	profile = battle_pet_hatch_result.get("profile", profile)
+	var battle_pet_instance_id := str(battle_pet_hatch_result.get("instanceId", ""))
+	var battle_pet_instance = PlayerProgressModel.pet_instance_by_id(profile, battle_pet_instance_id)
+	var battle_pet_hatch_ok = (
+		bool(battle_pet_hatch_result.get("ok", false))
+		and str(battle_pet_instance.get("formId", "")) == "rebirth_starter_four_spirit_cub"
+		and str(battle_pet_instance.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE
+	)
+
 	var tiger_hatch_result = PlayerProgressModel.use_world_pet_egg_item(profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
 	profile = tiger_hatch_result.get("profile", profile)
 	var tiger_instance_id := str(tiger_hatch_result.get("instanceId", ""))
@@ -12310,7 +12401,7 @@ func _run_auto_quest_chain_check() -> void:
 
 	var before_use_coins = PlayerProgressModel.stone_coins(profile)
 	var before_use_meat = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
-	var use_result = PlayerProgressModel.use_world_pet_heal_item(profile, BattleModel.ITEM_MEAT_SMALL, "pet_bui_main")
+	var use_result = PlayerProgressModel.use_world_pet_heal_item(profile, BattleModel.ITEM_MEAT_SMALL, battle_pet_instance_id)
 	profile = use_result.get("profile", profile)
 	var use_event = PlayerProgressModel.record_quest_event(profile, {
 		"type": "use_world_item",
@@ -12714,9 +12805,9 @@ func _run_auto_quest_chain_check() -> void:
 			and ui_world_log.find("完成任务「认识训练师」") >= 0
 			and ui_task_text.find("认识银行管理员") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and victory_ok and training_partner_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and victory_ok and training_partner_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s victory=%s partner=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s victory=%s partner=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -12725,6 +12816,7 @@ func _run_auto_quest_chain_check() -> void:
 		str(bank_ok),
 		str(stable_ok),
 		str(riding_ok),
+		str(battle_pet_hatch_ok),
 		str(try_riding_ok),
 		str(buy_ok),
 		str(use_ok),
