@@ -59,6 +59,7 @@ test("register/login/session keeps players away from GM tools", () => {
     capture_net_reinforced: 0,
     capture_poison_wuli_net: 0,
   });
+  assert.equal(initialProfile.profile.diamonds, 0);
 
   const duplicate = service.register({"username": "fander", "password": "test1234"});
   assert.equal(duplicate.ok, false);

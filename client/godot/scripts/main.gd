@@ -282,6 +282,7 @@ var account_switch_button: Button
 var account_logout_here_button: Button
 var account_close_button: Button
 var backpack_panel: PanelContainer
+var backpack_currency_label: Label
 var backpack_grid: GridContainer
 var backpack_detail_label: RichTextLabel
 var backpack_use_button: Button

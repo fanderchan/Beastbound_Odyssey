@@ -740,6 +740,12 @@ var backpack_panel:
 	set(value):
 		host.backpack_panel = value
 
+var backpack_currency_label:
+	get:
+		return host.backpack_currency_label
+	set(value):
+		host.backpack_currency_label = value
+
 var backpack_grid:
 	get:
 		return host.backpack_grid
@@ -6035,6 +6041,14 @@ func _build_hud() -> void:
 	backpack_title.add_theme_font_size_override("font_size", 21)
 	backpack_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_header.add_child(backpack_title)
+	backpack_currency_label = Label.new()
+	backpack_currency_label.text = "石币 0    钻石 0"
+	backpack_currency_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	backpack_currency_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	backpack_currency_label.custom_minimum_size = Vector2(260, 44)
+	backpack_currency_label.add_theme_font_size_override("font_size", 17)
+	backpack_currency_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.45, 1.0))
+	backpack_header.add_child(backpack_currency_label)
 	backpack_close_button = Button.new()
 	backpack_close_button.text = "关闭"
 	backpack_close_button.custom_minimum_size = Vector2(92, 44)
@@ -13860,6 +13874,7 @@ func _refresh_backpack_panel() -> void:
 	if backpack_panel == null or backpack_grid == null or backpack_detail_label == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	_refresh_backpack_currency_label()
 	var slots = _backpack_slots_for_ui()
 	var visible_indices = _backpack_visible_slot_indices(slots)
 	if visible_indices.is_empty():
@@ -13974,6 +13989,14 @@ func _refresh_backpack_panel() -> void:
 				backpack_target_scroll.visible = false
 		else:
 			_refresh_backpack_target_buttons(selected_item_id)
+
+func _refresh_backpack_currency_label() -> void:
+	if backpack_currency_label == null:
+		return
+	backpack_currency_label.text = "石币 %d    钻石 %d" % [
+		_profile_stone_coins_for_ui(),
+		_profile_diamonds_for_ui(),
+	]
 
 func _backpack_filter_options() -> Array[Dictionary]:
 	return BackpackPanelPresenter.filter_options()

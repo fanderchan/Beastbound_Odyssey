@@ -6894,11 +6894,17 @@ func _run_auto_backpack_check() -> void:
 
 	host._open_backpack_panel()
 	await host.get_tree().process_frame
+	var currency_text = host.backpack_currency_label.text if host.backpack_currency_label != null else ""
+	var currency_ok = (
+		currency_text.find("石币 %d" % PlayerProgressModel.stone_coins(host.player_profile)) >= 0
+		and currency_text.find("钻石 %d" % PlayerProgressModel.diamonds(host.player_profile)) >= 0
+	)
 	var first_backpack_button = host.backpack_slot_buttons[0] if not host.backpack_slot_buttons.is_empty() else null
 	var first_backpack_slot_data := (first_backpack_button as Button).get("slot_data") as Dictionary if first_backpack_button is Button else {}
 	var panel_ok = (
 		host.backpack_panel != null
 		and host.backpack_panel.visible
+			and currency_ok
 			and host.backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
 			and not host.backpack_slot_buttons.is_empty()
 			and host.backpack_slot_buttons[0].text.find("肉") >= 0
@@ -6923,6 +6929,9 @@ func _run_auto_backpack_check() -> void:
 		and host.backpack_target_scroll != null
 		and host.backpack_target_scroll.visible
 	)
+	host.player_profile = PlayerProgressModel.with_diamonds(host.player_profile, 1000)
+	host._refresh_backpack_panel()
+	await host.get_tree().process_frame
 	var before_unlock_diamonds = PlayerProgressModel.diamonds(host.player_profile)
 	host._select_backpack_slot(BackpackModel.BASE_SLOT_LIMIT)
 	await host.get_tree().process_frame
@@ -6940,6 +6949,8 @@ func _run_auto_backpack_check() -> void:
 		unlock_dialog_ok
 		and PlayerProgressModel.backpack_slots(host.player_profile).size() == BackpackModel.BASE_SLOT_LIMIT + 1
 		and PlayerProgressModel.diamonds(host.player_profile) == before_unlock_diamonds - 50
+		and host.backpack_currency_label != null
+		and host.backpack_currency_label.text.find("钻石 %d" % PlayerProgressModel.diamonds(host.player_profile)) >= 0
 		and host.backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
 		and host.backpack_slot_buttons[BackpackModel.BASE_SLOT_LIMIT + 1].text.find("100钻石") >= 0
 	)
@@ -6987,13 +6998,14 @@ func _run_auto_backpack_check() -> void:
 		var profile_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
 		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
 	var status = "ok" if slot_limit_ok and starting_empty_ok and stack_ok and context_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
-	print("backpack check ready: status=%s slots=%s starting_empty=%s stack=%s context=%s panel=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+	print("backpack check ready: status=%s slots=%s starting_empty=%s stack=%s context=%s panel=%s currency=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
 		status,
 		str(slot_limit_ok),
 		str(starting_empty_ok),
 		str(stack_ok),
 		str(context_ok),
 		str(panel_ok),
+		str(currency_ok),
 		str(shared_slot_ok),
 		str(backpack_quick_use_ok),
 		str(unlock_ok),

@@ -20,6 +20,18 @@ function seedBackpack(service, token, slots) {
   assert.equal(saved.ok, true);
 }
 
+function seedDiamonds(service, token, diamonds) {
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.diamonds = Math.max(0, Math.trunc(Number(diamonds || 0)));
+  const saved = service.saveProfile(token, {
+    "expectedRevision": current.profileSummary.profileRevision,
+    profile,
+  });
+  assert.equal(saved.ok, true);
+}
+
 test("bank deposit and withdraw move server-owned coins and items", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const account = service.register({"username": "bankuser", "password": "test1234", "displayName": "银行号"});
@@ -190,6 +202,7 @@ test("market listings support item tax overrides and cancellation", () => {
   const seller = seedService.register({"username": "market_tax_seller", "password": "test1234", "displayName": "税率卖家"});
   const buyer = seedService.register({"username": "market_tax_buyer", "password": "test1234", "displayName": "税率买家"});
   seedBackpack(seedService, seller.session.token, [{"itemId": "capture_rope_basic", "count": 5}]);
+  seedDiamonds(seedService, buyer.session.token, 100);
   const seed = seedService.snapshot();
   seed.marketConfig = {
     "defaultTaxBps": 100,

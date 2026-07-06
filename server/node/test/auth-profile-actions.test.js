@@ -292,7 +292,14 @@ test("server bank tab unlock consumes diamonds and opens next bank page", () => 
   const token = registered.session.token;
   const current = service.getProfile(token);
   assert.equal(current.ok, true);
-  const beforeDiamonds = current.profile.diamonds;
+  current.profile.diamonds = 200;
+  assert.equal(service.saveProfile(token, {
+    "expectedRevision": current.profileSummary.profileRevision,
+    "profile": current.profile,
+  }).ok, true);
+  const funded = service.getProfile(token);
+  assert.equal(funded.ok, true);
+  const beforeDiamonds = funded.profile.diamonds;
 
   const unlock = service.profileAction(token, {"action": "bank_unlock_tab", "payload": {"tabIndex": 1}});
   assert.equal(unlock.ok, true);
