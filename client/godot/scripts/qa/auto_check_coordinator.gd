@@ -13122,16 +13122,6 @@ func _run_auto_quest_ui_check() -> void:
 		"amount": 1,
 	})
 	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
-		"encounterGroupId": "firebud_grass_01",
-	})
-	var training_partner_profile: Dictionary = PlayerProgressModel.claim_active_quest(victory_event.get("profile", first_victory_profile) as Dictionary).get("profile", {})
-	training_partner_profile = PlayerProgressModel.with_training_partner_count(training_partner_profile, 1)
-	var training_partner_event = PlayerProgressModel.record_quest_event(training_partner_profile, {
-		"type": "training_partner_set_count",
-		"count": PlayerProgressModel.training_partner_count(training_partner_profile),
-		"amount": 1,
-	})
-	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
 	host.player_profile = spirit_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
