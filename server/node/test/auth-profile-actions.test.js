@@ -286,6 +286,31 @@ test("server backpack actions merge split and discard item stacks", () => {
   assert.equal(discarded.message, "已丢弃肉 x7。");
 });
 
+test("server world pet eggs hatch pets with default attack and defend skills", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "peteggbasics", "password": "test1234", "displayName": "蛋宠玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("蛋宠玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.backpackSlots = [
+    {"itemId": "novice_battle_pet_egg", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const hatched = service.profileAction(token, {
+    "action": "world_item_use",
+    "payload": {"itemId": "novice_battle_pet_egg"},
+  });
+  assert.equal(hatched.ok, true);
+  assert.equal(profileItemCount(hatched.profile, "novice_battle_pet_egg"), 0);
+  const pet = hatched.profile.petInstances.find((entry) => String(entry.instanceId || "") === hatched.result.instanceId);
+  assert.equal(Boolean(pet), true);
+  assert.equal(pet.formId, "rebirth_starter_four_spirit_cub");
+  assert.equal(pet.activeSkillIds.includes("pet_attack"), true);
+  assert.equal(pet.activeSkillIds.includes("pet_defend"), true);
+  assert.deepEqual(pet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
+});
+
 test("server bank tab unlock consumes diamonds and opens next bank page", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "bankunlock", "password": "test1234", "displayName": "银行开页"});
@@ -345,9 +370,10 @@ test("training partner action advances the partner tutorial quest server-side", 
   assert.equal(trained.result.count, 1);
   assert.equal(trained.profile.trainingPartners.length, 1);
   assert.equal(trained.profile.stoneCoins, 50);
-  assert.equal(trained.profile.activeQuestId, "quest_use_poison_spirit");
+  assert.equal(trained.profile.activeQuestId, "quest_group_brawl");
   assert.equal(trained.profile.questStates.quest_training_partner_intro.status, "claimed");
   assert.equal(trained.profile.questStates.quest_training_partner_intro.progress, 1);
+  assert.equal(trained.profile.questStates.quest_group_brawl.status, "active");
   assert.ok(trained.questMessages.some((message) => String(message).includes("完成任务「陪练伙伴」")));
   assert.ok(trained.logLines.some((message) => String(message).includes("完成任务「陪练伙伴」")));
 });

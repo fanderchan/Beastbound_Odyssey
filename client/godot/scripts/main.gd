@@ -4047,6 +4047,7 @@ func _quest_equipment_tutorial_profile() -> Dictionary:
 		"quest_buy_poison_spirit_armor",
 		"quest_equip_poison_spirit_armor",
 		"quest_training_partner_intro",
+		"quest_group_brawl",
 	]:
 		var quest := QuestModel.quest_for_id(quest_id)
 		states[quest_id] = {
@@ -6128,6 +6129,8 @@ func _submit_battle_auto_player_action() -> bool:
 func _submit_battle_auto_pet_action() -> bool:
 	if not battle_active or battle_command_owner != "pet" or _battle_commands_locked():
 		return false
+	if not _controlled_pet_has_usable_skill():
+		return _skip_controlled_pet_battle_command()
 	if _battle_auto_capture_enabled() and (str(battle_pending_player_command.get("command", "")) == "capture" or bool(battle_pending_player_command.get("captureHold", false))):
 		var capture_settings := PlayerProgressModel.auto_capture_settings(player_profile)
 		if not _battle_auto_submit_capture_pet_action(capture_settings):
@@ -6143,7 +6146,7 @@ func _submit_battle_auto_pet_action() -> bool:
 		skill_action = _controlled_pet_skill_action_for_slot(1)
 	var skill_id := str(skill_action.get("id", ""))
 	if skill_id == "":
-		skill_id = BattleModel.PET_SKILL_ATTACK
+		return _skip_controlled_pet_battle_command()
 	var command_id := str(skill_action.get("command", "attack"))
 	match command_id:
 		"defend":
@@ -6308,8 +6311,7 @@ func _battle_auto_submit_capture_pet_action(settings: Dictionary) -> bool:
 	if skill_action.is_empty():
 		skill_action = _controlled_pet_skill_action_for_slot(AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT)
 	if skill_action.is_empty():
-		_submit_pet_battle_command("defend", "", BattleModel.PET_SKILL_DEFEND)
-		return true
+		return _skip_controlled_pet_battle_command()
 	var skill_id := str(skill_action.get("id", ""))
 	if skill_id == "":
 		skill_id = BattleModel.PET_SKILL_DEFEND
@@ -6505,6 +6507,26 @@ func _controlled_pet_actor() -> Dictionary:
 
 func _controlled_pet_skill_action_for_slot(slot: int) -> Dictionary:
 	return PetTemplateCatalog.pet_skill_action_for_actor_slot(_controlled_pet_actor(), slot)
+
+
+func _controlled_pet_has_usable_skill() -> bool:
+	for slot in range(1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1):
+		if not _controlled_pet_skill_action_for_slot(slot).is_empty():
+			return true
+	return false
+
+
+func _skip_controlled_pet_battle_command() -> bool:
+	var pet_actor := _controlled_pet_actor()
+	var pet_name := str(pet_actor.get("name", "宠物")) if not pet_actor.is_empty() else "宠物"
+	battle_pending_pet_command.clear()
+	battle_pending_pet_skill_id = ""
+	_set_battle_message("%s没有可用技能，本回合跳过。" % pet_name)
+	if _battle_is_server_authority():
+		_sync_server_battle_command_owner_from_room()
+	else:
+		_battle_start_pending_round()
+	return true
 
 
 func _pet_skill_button_label(slot: int) -> String:
@@ -10168,6 +10190,9 @@ func _submit_pet_battle_command(command_id: String, target_id: String = "", skil
 
 func _open_pet_command_or_start_round() -> void:
 	if BattleModel.controlled_pet_id(battle_state) != "" and str(battle_pending_player_command.get("command", "")) != "run":
+		if not _controlled_pet_has_usable_skill():
+			_skip_controlled_pet_battle_command()
+			return
 		_set_battle_command_owner("pet")
 		var pet_actor := BattleModel.actor_by_id(battle_state, BattleModel.controlled_pet_id(battle_state))
 		_set_battle_message("%s 要做什么？" % str(pet_actor.get("name", "宠物")))
@@ -10184,7 +10209,9 @@ func _battle_start_pending_round() -> void:
 		return
 	var player_command_id := str(battle_pending_player_command.get("command", ""))
 	if not (["switch_pet", "run"].has(player_command_id)) and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
-		if bool(battle_pending_player_command.get("captureHold", false)):
+		if not _controlled_pet_has_usable_skill():
+			battle_pending_pet_command.clear()
+		elif bool(battle_pending_player_command.get("captureHold", false)):
 			battle_pending_pet_command = {
 			"command": "defend",
 			"targetId": "",

@@ -596,6 +596,8 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 				return 0
 			if not _matches_string_filter(objective, event, "encounterGroupId"):
 				return 0
+			if not _matches_minimum_number_filter(objective, event, "partyMemberCount", "minPartyMemberCount"):
+				return 0
 			return 1
 		"defeat_npc":
 			if event_type != "defeat_npc" and event_type != "battle_victory":
@@ -756,6 +758,13 @@ static func _reward_ability_validation_errors(raw_abilities, path: String) -> Ar
 static func _matches_string_filter(filter_source: Dictionary, event: Dictionary, key: String) -> bool:
 	var required := str(filter_source.get(key, ""))
 	return required == "" or str(event.get(key, "")) == required
+
+
+static func _matches_minimum_number_filter(filter_source: Dictionary, event: Dictionary, event_key: String, filter_key: String) -> bool:
+	var required := maxi(0, int(filter_source.get(filter_key, filter_source.get(event_key, 0))))
+	if required <= 0:
+		return true
+	return int(event.get(event_key, 0)) >= required
 
 
 static func _matches_item_filter(filter_source: Dictionary, event: Dictionary) -> bool:

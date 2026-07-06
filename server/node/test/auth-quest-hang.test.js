@@ -272,6 +272,11 @@ test("party pve capture advances capture quest and stops hang capture target", (
   assert.equal(after.profile.hangSession.battleCount, 2);
   assert.equal(after.profile.hangSession.captureSuccessCount, 1);
   assert.equal(after.profile.hangSession.lastStopReason, "capture_target");
+  const capturedPet = after.profile.petInstances.find((pet) => String(pet && pet.formId || "") === "wuli_normal_orange_fire10");
+  assert.equal(Boolean(capturedPet), true);
+  assert.equal(capturedPet.activeSkillIds.includes("pet_attack"), true);
+  assert.equal(capturedPet.activeSkillIds.includes("pet_defend"), true);
+  assert.deepEqual(capturedPet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
 });
 
 test("party pve victory stops hang when player remains below low hp threshold", () => {
@@ -355,6 +360,7 @@ test("party pve spirit event advances battle quest chain from server event log",
     "quest_buy_poison_spirit_armor": {"questId": "quest_buy_poison_spirit_armor", "status": "claimed", "progress": 1},
     "quest_equip_poison_spirit_armor": {"questId": "quest_equip_poison_spirit_armor", "status": "claimed", "progress": 1},
     "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
+    "quest_group_brawl": {"questId": "quest_group_brawl", "status": "claimed", "progress": 1},
     "quest_use_poison_spirit": {"questId": "quest_use_poison_spirit", "status": "active", "progress": 0},
   };
   assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
@@ -401,6 +407,7 @@ test("party pve spirit event advances battle quest chain from server event log",
   assert.equal(after.profile.questStates.quest_buy_poison_spirit_armor.status, "claimed");
   assert.equal(after.profile.questStates.quest_equip_poison_spirit_armor.status, "claimed");
   assert.equal(after.profile.questStates.quest_training_partner_intro.status, "claimed");
+  assert.equal(after.profile.questStates.quest_group_brawl.status, "claimed");
   assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
   assert.equal(after.profile.stoneCoins, 13 + writeback.rewards.stoneCoins + 20);
   const blessedClubCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
@@ -409,4 +416,108 @@ test("party pve spirit event advances battle quest chain from server event log",
   assert.equal(blessedClubCount, 1);
   assert.equal(profileItemCount(after.profile, "capture_poison_wuli_net"), 1);
   assert.equal(after.profile.captureTools.capture_poison_wuli_net, 1);
+});
+
+test("group brawl quest requires an ally and a dangerous grass victory", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "groupbrawlsolo", "password": "test1234", "displayName": "单人群殴"});
+  assert.equal(solo.ok, true);
+  const soloProfile = battleProfile("单人群殴", {
+    "level": 8,
+    "hp": 140,
+    "maxHp": 140,
+    "attack": 80,
+    "defense": 20,
+    "quick": 200,
+    "comboRateOverride": 0,
+  });
+  soloProfile.activeQuestId = "quest_group_brawl";
+  soloProfile.questStates = {
+    "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
+    "quest_group_brawl": {"questId": "quest_group_brawl", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": soloProfile}).ok, true);
+  const soloEncounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "danger_grass",
+      "name": "危险草丛",
+      "encounterGroupId": "firebud_grass_danger",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "危险乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(soloEncounter.ok, true);
+  const soloPlayer = soloEncounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const soloEnemy = soloEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const soloResolved = service.submitBattleCommand(solo.session.token, soloEncounter.room.roomId, {
+    "round": 1,
+    "actorId": soloPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": soloEnemy.actorId,
+  });
+  assert.equal(soloResolved.ok, true);
+  const soloAfter = service.getProfile(solo.session.token);
+  assert.equal(soloAfter.ok, true);
+  assert.equal(soloAfter.profile.activeQuestId, "quest_group_brawl");
+  assert.equal(soloAfter.profile.questStates.quest_group_brawl.status, "active");
+  assert.equal(soloAfter.profile.questStates.quest_group_brawl.progress, 0);
+
+  const grouped = service.register({"username": "groupbrawlally", "password": "test1234", "displayName": "群殴队伍"});
+  assert.equal(grouped.ok, true);
+  const groupedProfile = battleProfile("群殴队伍", {
+    "level": 8,
+    "hp": 140,
+    "maxHp": 140,
+    "attack": 80,
+    "defense": 20,
+    "quick": 200,
+    "comboRateOverride": 0,
+  });
+  groupedProfile.stoneCoins = 5;
+  groupedProfile.activeQuestId = "quest_group_brawl";
+  groupedProfile.questStates = {
+    "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
+    "quest_group_brawl": {"questId": "quest_group_brawl", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(grouped.session.token, {"expectedRevision": 0, "profile": groupedProfile}).ok, true);
+  const partnerSet = service.profileAction(grouped.session.token, {"action": "training_partner_set_count", "payload": {"count": 1}});
+  assert.equal(partnerSet.ok, true);
+  const groupedEncounter = service.startPartyEncounter(grouped.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "danger_grass",
+      "name": "危险草丛",
+      "encounterGroupId": "firebud_grass_danger",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "危险乌力",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(groupedEncounter.ok, true);
+  const groupedPlayer = groupedEncounter.room.battle.actors.find((actor) => actor.accountId === grouped.account.accountId && actor.kind === "player");
+  const groupedEnemy = groupedEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const groupedResolved = service.submitBattleCommand(grouped.session.token, groupedEncounter.room.roomId, {
+    "round": 1,
+    "actorId": groupedPlayer.actorId,
+    "actionId": "attack",
+    "targetActorId": groupedEnemy.actorId,
+  });
+  assert.equal(groupedResolved.ok, true);
+  const writeback = groupedResolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === grouped.account.accountId);
+  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_group_brawl"), true);
+  assert.equal(writeback.quests.activeQuestId, "quest_use_poison_spirit");
+  const groupedAfter = service.getProfile(grouped.session.token);
+  assert.equal(groupedAfter.ok, true);
+  assert.equal(groupedAfter.profile.questStates.quest_group_brawl.status, "claimed");
+  assert.equal(groupedAfter.profile.activeQuestId, "quest_use_poison_spirit");
+  assert.equal(groupedAfter.profile.stoneCoins >= 25, true);
+  assert.equal(profileItemCount(groupedAfter.profile, "item_heal_single_5"), 1);
 });

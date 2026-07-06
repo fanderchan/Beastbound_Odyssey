@@ -411,6 +411,31 @@
         "stoneCoins": 10,
         "items": []
       },
+      "nextQuestId": "quest_group_brawl"
+    },
+    {
+      "id": "quest_group_brawl",
+      "title": "群殴",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "组上至少一名玩家或陪练伙伴，去写着“怪多，危险”的草丛赢下一场战斗。",
+      "objective": {
+        "type": "battle_victory",
+        "encounterGroupId": "firebud_grass_danger",
+        "minPartyMemberCount": 1,
+        "count": 1,
+        "text": "组上至少1名伙伴，在危险草丛赢一场"
+      },
+      "rewards": {
+        "stoneCoins": 20,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
+            "count": 1
+          }
+        ]
+      },
       "nextQuestId": "quest_use_poison_spirit"
     },
     {

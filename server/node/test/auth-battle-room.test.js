@@ -384,6 +384,76 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(storedRoom.battle.profileWriteback.profiles[0].petHps[0].hp, updatedOpponentPet.hp);
 });
 
+test("duel battle rooms skip command turns for pets with no usable skills", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "emptypeta", "password": "test1234", "displayName": "空技宠甲"});
+  const opponent = service.register({"username": "emptypetb", "password": "test1234", "displayName": "空技宠乙"});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  const challengerProfile = battleProfile("空技宠甲", {"level": 8, "hp": 140, "maxHp": 140, "attack": 28, "defense": 10, "quick": 80}, {
+    "petId": "empty_skill_pet",
+    "name": "空技能布伊",
+    "level": 8,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 20,
+    "defense": 9,
+    "quick": 64,
+  });
+  challengerProfile.petInstances[0].activeSkillIds = [];
+  challengerProfile.petInstances[0].petSkillSlots = ["", "", "", "", "", "", ""];
+  challengerProfile.petInstances[0].forgottenSkillIds = [
+    "pet_attack",
+    "pet_defend",
+    "pet_bui_charge",
+    "pet_sleep_powder",
+    "pet_confuse_cry",
+    "pet_stone_gaze",
+  ];
+  assert.equal(service.saveProfile(challenger.session.token, {"expectedRevision": 0, "profile": challengerProfile}).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("空技宠乙", {"level": 8, "hp": 140, "maxHp": 140, "attack": 22, "defense": 10, "quick": 70}, null),
+  }).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "emptypetb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "emptypeta" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "emptypeta" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "emptypetb" && actor.kind === "player");
+  assert.equal(Boolean(challengerPlayer && challengerPet && opponentPlayer), true);
+  assert.deepEqual(challengerPet.activeSkillIds, []);
+  assert.equal(accept.room.battle.requiredActorIds.includes(challengerPet.actorId), false);
+
+  const first = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "attack",
+    "actorId": challengerPlayer.actorId,
+    "targetActorId": opponentPlayer.actorId,
+  });
+  assert.equal(first.ok, true);
+  assert.equal(first.turn, null);
+  const blockedPet = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "pet_attack",
+    "actorId": challengerPet.actorId,
+    "targetActorId": opponentPlayer.actorId,
+  });
+  assert.equal(blockedPet.ok, false);
+  assert.equal(blockedPet.code, "battle_command_actor_missing");
+  const second = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actionId": "defend",
+    "actorId": opponentPlayer.actorId,
+  });
+  assert.equal(second.ok, true);
+  assert.equal(second.turn.kind, "battle_event_list");
+  assert.equal(second.turn.events.some((event) => event.actorId === challengerPet.actorId), false);
+});
+
 test("party pve encounters create one shared server room and wait for all players", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "pveleader", "password": "test1234", "displayName": "队长号"});
@@ -1249,7 +1319,7 @@ test("party pve guardian encounters preserve fixed enemies and source metadata",
   assert.equal(enemies[2].formId, "bui_normal_thick_earth10");
   assert.equal(storedRoom.encounter.selectedWildPets[2].battleStats.maxHp, 1680);
   assert.equal(enemies[2].maxHp, 1688);
-  assert.deepEqual(enemies[2].activeSkillIds, ["pet_attack", "pet_stone_gaze"]);
+  assert.deepEqual(enemies[2].activeSkillIds, ["pet_attack", "pet_defend", "pet_stone_gaze"]);
 });
 
 test("party pve guardian victories write server-side trial rewards", () => {

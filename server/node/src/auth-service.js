@@ -2664,6 +2664,7 @@ function publicBattleActor(actor) {
     launchHpBefore: Math.max(0, Math.trunc(Number(actor.launchHpBefore || 0))),
     activeSkillIds: Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((value) => String(value)) : [],
     petSkillSlots: Array.isArray(actor.petSkillSlots) ? actor.petSkillSlots.map((value) => String(value)) : [],
+    forgottenSkillIds: Array.isArray(actor.forgottenSkillIds) ? actor.forgottenSkillIds.map((value) => String(value)) : [],
     passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
     spiritIds: Array.isArray(actor.spiritIds) ? actor.spiritIds.map((value) => String(value)).filter(Boolean) : [],
     statuses: actor.statuses && typeof actor.statuses === "object" && !Array.isArray(actor.statuses) ? clone(actor.statuses) : {},
@@ -4524,6 +4525,7 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
   const petId = String(pet.instanceId || pet.petId || pet.id || "").trim();
   const activeInBattle = petIsActiveBattlePet(pet, activePetInstanceId);
+  const activeSkillIds = petActiveSkillIdsForSource(pet);
   return {
     kind: BATTLE_ACTOR_KIND_PET,
     petId,
@@ -4539,9 +4541,10 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
-    activeSkillIds: stringArray(pet.activeSkillIds),
-    petSkillSlots: stringArray(pet.petSkillSlots),
-    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
+    forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
+    passiveSkillIds: petPassiveSkillIdsForSource(pet),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
   };
@@ -4579,6 +4582,7 @@ function trainingPartnerSnapshotFromProfilePartner(partner, index = 0) {
 
 function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
+  const activeSkillIds = petActiveSkillIdsForSource(pet);
   return {
     kind: BATTLE_ACTOR_KIND_PET,
     petId: String(pet.petId || pet.instanceId || pet.id || `training_partner_pet_${index + 1}`),
@@ -4591,9 +4595,10 @@ function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
-    activeSkillIds: stringArray(pet.activeSkillIds),
-    petSkillSlots: stringArray(pet.petSkillSlots),
-    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
+    forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
+    passiveSkillIds: petPassiveSkillIdsForSource(pet),
     schemaVersion: 1,
   };
 }
@@ -5683,6 +5688,7 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
   const hp = clampNumber(pet.hp, 1, maxHp, maxHp);
   const petId = String(pet.petId || pet.instanceId || pet.id || "").trim();
+  const activeSkillIds = petActiveSkillIdsForSource(pet);
   return {
     actorId: String(options.actorId || `duel_${side}_pet_${petId || petIndex + 1}`),
     accountId: String(participant.accountId || ""),
@@ -5708,9 +5714,10 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
     actionState: hp <= 0 ? "down" : "idle",
     launched: false,
     revivable: true,
-    activeSkillIds: stringArray(pet.activeSkillIds),
-    petSkillSlots: stringArray(pet.petSkillSlots),
-    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
+    forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
+    passiveSkillIds: petPassiveSkillIdsForSource(pet),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
   };
@@ -5830,6 +5837,7 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
   const hp = clampNumber(pet.hp, 1, maxHp, maxHp);
   const petId = String(pet.petId || pet.instanceId || pet.id || `training_partner_pet_${index + 1}`).trim();
   const partnerId = String(partner && (partner.partnerId || partner.id) || `training_partner_${index + 1}`).trim();
+  const activeSkillIds = petActiveSkillIdsForSource(pet);
   return {
     actorId: `party_pve_partner_pet_${index + 1}_${sanitizeBattleActorIdPart(petId)}`,
     accountId: "",
@@ -5857,9 +5865,10 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     actionState: hp <= 0 ? "down" : "idle",
     launched: false,
     revivable: true,
-    activeSkillIds: stringArray(pet.activeSkillIds),
-    petSkillSlots: stringArray(pet.petSkillSlots),
-    passiveSkillIds: stringArray(pet.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
+    forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
+    passiveSkillIds: petPassiveSkillIdsForSource(pet),
     schemaVersion: 1,
   };
 }
@@ -5953,6 +5962,7 @@ function normalizedServerWildPetEntry(value) {
   const maxHp = positiveNumber(stats.maxHp || value.maxHp || value.hp, 80);
   const explicitExpReward = nonNegativeOptionalNumber(value && (value.expReward || value.experience || value.exp));
   const capture = value && value.capture && typeof value.capture === "object" && !Array.isArray(value.capture) ? value.capture : {};
+  const activeSkillIds = petActiveSkillIdsForSource({...value, formId});
   return {
     formId,
     speciesId: String(value && (value.speciesId || value.templateId || value.formId) || formId),
@@ -5965,9 +5975,9 @@ function normalizedServerWildPetEntry(value) {
     defense: positiveNumber(stats.defense || value.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(stats.quick || stats.agility || value.quick || value.agility, DEFAULT_PET_BATTLE_STATS.quick),
     ...(explicitExpReward > 0 ? {expReward: explicitExpReward} : {}),
-    activeSkillIds: stringArray(value && value.activeSkillIds),
-    petSkillSlots: stringArray(value && value.petSkillSlots),
-    passiveSkillIds: stringArray(value && value.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, value && value.petSkillSlots),
+    passiveSkillIds: petPassiveSkillIdsForSource({...value, formId}),
     comboRateOverride: battleComboRateOverrideValue(value && value.comboRateOverride),
     catchable: value && value.catchable === false ? false : capture.catchable !== false,
     captureDifficulty: Math.max(1, Math.trunc(Number(value && (value.captureDifficulty || value.difficulty) || capture.difficulty || 42))),
@@ -6020,6 +6030,9 @@ function requiredBattleCommandActorIdsFromActors(actors, commands = {}) {
     .filter((actor) => {
       if (String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
         return true;
+      }
+      if (!battleActorHasUsablePetSkill(actor)) {
+        return false;
       }
       const accountId = String(actor.accountId || "");
       return !switchPetAccountIds.has(accountId) && !runAccountIds.has(accountId);
@@ -6248,13 +6261,17 @@ function normalizeBattleActionForActor(value, actor, itemValue = "") {
   const actionId = String(value || "").trim().toLowerCase();
   const actorKind = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER);
   if (actorKind === BATTLE_ACTOR_KIND_PET) {
+    const activeSkillIds = battleActorPetSkillIds(actor);
     if (actionId === BATTLE_ACTION_ATTACK || actionId === "basic_attack" || actionId === BATTLE_ACTION_PET_ATTACK) {
-      return ok({actionId: BATTLE_ACTION_PET_ATTACK, actionKind: "attack", skillId: BATTLE_ACTION_PET_ATTACK});
+      return activeSkillIds.includes(BATTLE_ACTION_PET_ATTACK)
+        ? ok({actionId: BATTLE_ACTION_PET_ATTACK, actionKind: "attack", skillId: BATTLE_ACTION_PET_ATTACK})
+        : fail("battle_command_action_invalid", "宠物没有可用的攻击技能。");
     }
     if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard" || actionId === BATTLE_ACTION_PET_DEFEND) {
-      return ok({actionId: BATTLE_ACTION_PET_DEFEND, actionKind: "defend", skillId: BATTLE_ACTION_PET_DEFEND});
+      return activeSkillIds.includes(BATTLE_ACTION_PET_DEFEND)
+        ? ok({actionId: BATTLE_ACTION_PET_DEFEND, actionKind: "defend", skillId: BATTLE_ACTION_PET_DEFEND})
+        : fail("battle_command_action_invalid", "宠物没有可用的防御技能。");
     }
-    const activeSkillIds = Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((item) => String(item || "").trim()) : [];
     if (activeSkillIds.includes(actionId)) {
       return ok({actionId, actionKind: "pet_skill", skillId: actionId});
     }
@@ -8326,6 +8343,7 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
   const encounter = room && room.encounter && typeof room.encounter === "object" && !Array.isArray(room.encounter) ? room.encounter : {};
   const encounterGroupId = String(encounter.groupId || "");
   const interactionId = String(encounter.interactionId || encounter.sourceInteractionId || "");
+  const partyMemberCount = battleQuestPartyMemberCountForAccount(room, accountId);
   for (const event of battleSpiritQuestEventsForProfile(room, battle, accountId, encounterGroupId, interactionId)) {
     events.push(event);
   }
@@ -8334,6 +8352,7 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
       type: "battle_victory",
       encounterGroupId,
       interactionId,
+      partyMemberCount,
       schemaVersion: 1,
     });
     if (interactionId !== "") {
@@ -8342,6 +8361,7 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
         encounterGroupId,
         interactionId,
         targetId: interactionId,
+        partyMemberCount,
         schemaVersion: 1,
       });
     }
@@ -8355,10 +8375,30 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
       targetStatusIds: uniqueStringArray(pet && pet.captureStatusIds),
       amount: 1,
       encounterGroupId,
+      partyMemberCount,
       schemaVersion: 1,
     });
   }
   return events;
+}
+
+function battleQuestPartyMemberCountForAccount(room, accountId) {
+  if (String(room && room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
+    return 0;
+  }
+  const participants = Array.isArray(room.participants) ? room.participants : [];
+  const humanMemberCount = participants
+    .filter((participant) => participant && String(participant.accountId || "") !== "")
+    .filter((participant) => String(participant.accountId || "") !== String(accountId || ""))
+    .length;
+  const selfParticipant = participants.find((participant) => participant && String(participant.accountId || "") === String(accountId || "")) || null;
+  const snapshot = selfParticipant && selfParticipant.teamSnapshot && typeof selfParticipant.teamSnapshot === "object" && !Array.isArray(selfParticipant.teamSnapshot)
+    ? selfParticipant.teamSnapshot
+    : {};
+  const trainingPartners = Array.isArray(snapshot.trainingPartners)
+    ? snapshot.trainingPartners.filter((partner) => partner && typeof partner === "object" && !Array.isArray(partner))
+    : [];
+  return Math.max(0, humanMemberCount + trainingPartners.length);
 }
 
 function battleSpiritQuestEventsForProfile(room, battle, accountId, encounterGroupId, interactionId) {
@@ -8719,6 +8759,9 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     if (eventType !== "battle_victory" || !questMatchesStringFilter(objective, event, "encounterGroupId")) {
       return 0;
     }
+    if (!questMatchesMinimumNumberFilter(objective, event, "partyMemberCount", "minPartyMemberCount")) {
+      return 0;
+    }
     return 1;
   }
   if (type === "defeat_npc") {
@@ -8928,6 +8971,14 @@ function questObjectiveProgressAmountForEvent(objective, event) {
 function questMatchesStringFilter(objective, event, key) {
   const expected = String(objective && objective[key] || "").trim();
   return expected === "" || String(event && event[key] || "").trim() === expected;
+}
+
+function questMatchesMinimumNumberFilter(objective, event, eventKey, objectiveKey) {
+  const minimum = Math.max(0, Math.trunc(Number(objective && (objective[objectiveKey] ?? objective[eventKey]) || 0)));
+  if (minimum <= 0) {
+    return true;
+  }
+  return Math.trunc(Number(event && event[eventKey] || 0)) >= minimum;
 }
 
 function questMatchesItemFilter(objective, event) {
@@ -9869,8 +9920,121 @@ function petTemplateForFormId(formId) {
   if (normalizedFormId === "") {
     return {};
   }
+  const form = petTemplateFormById(normalizedFormId);
+  if (!form || Object.keys(form).length <= 0) {
+    return {};
+  }
+  const line = petTemplateLineById(form.lineId);
+  const subtype = petTemplateSubtypeById(form.subtypeId);
+  if (!line || Object.keys(line).length <= 0 || !subtype || Object.keys(subtype).length <= 0) {
+    return {};
+  }
+  const activeSkillIds = petTemplateActiveSkillIdsForSubtype(subtype);
+  return {
+    ...clone(form),
+    lineName: String(line.lineName || ""),
+    subtypeName: String(subtype.subtypeName || ""),
+    activeSkillIds,
+    passiveSkillIds: petTemplatePassiveSkillIdsForLine(line),
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, []),
+  };
+}
+
+function petTemplateFormById(formId) {
+  const normalizedFormId = String(formId || "").trim();
   const forms = Array.isArray(petTemplateDocument().forms) ? petTemplateDocument().forms : [];
   return forms.find((form) => form && typeof form === "object" && !Array.isArray(form) && String(form.formId || "") === normalizedFormId) || {};
+}
+
+function petTemplateLineById(lineId) {
+  const normalizedLineId = String(lineId || "").trim();
+  const lines = Array.isArray(petTemplateDocument().lines) ? petTemplateDocument().lines : [];
+  return lines.find((line) => line && typeof line === "object" && !Array.isArray(line) && String(line.lineId || "") === normalizedLineId) || {};
+}
+
+function petTemplateSubtypeById(subtypeId) {
+  const normalizedSubtypeId = String(subtypeId || "").trim();
+  const subtypes = Array.isArray(petTemplateDocument().subtypes) ? petTemplateDocument().subtypes : [];
+  return subtypes.find((subtype) => subtype && typeof subtype === "object" && !Array.isArray(subtype) && String(subtype.subtypeId || "") === normalizedSubtypeId) || {};
+}
+
+function petTemplateActiveSkillIdsForSubtype(subtype) {
+  return uniqueStringArray(subtype && subtype.activeSkillIds).filter((skillId) => battlePetSkillActionById(skillId));
+}
+
+function petTemplatePassiveSkillIdsForLine(line) {
+  const passiveIds = uniqueStringArray(line && line.passiveSkillIds);
+  const passiveId = String(line && line.passiveSkillId || "").trim();
+  if (passiveId !== "" && !passiveIds.includes(passiveId)) {
+    passiveIds.push(passiveId);
+  }
+  return passiveIds;
+}
+
+function petActiveSkillIdsForSource(source) {
+  const formId = String(source && (source.formId || source.templateId || source.speciesId) || "").trim();
+  const template = petTemplateForFormId(formId);
+  const forgotten = uniqueStringArray(source && source.forgottenSkillIds);
+  const explicitSkillIds = uniqueStringArray(source && source.activeSkillIds).filter((skillId) => battlePetSkillActionById(skillId));
+  const templateSkillIds = uniqueStringArray(template.activeSkillIds).filter((skillId) => battlePetSkillActionById(skillId));
+  const configuredSkillIds = explicitSkillIds.length > 0 ? explicitSkillIds : templateSkillIds;
+  const result = [];
+  for (const skillId of [BATTLE_ACTION_PET_ATTACK, BATTLE_ACTION_PET_DEFEND, ...configuredSkillIds]) {
+    if (!forgotten.includes(skillId) && battlePetSkillActionById(skillId) && !result.includes(skillId)) {
+      result.push(skillId);
+    }
+  }
+  return result;
+}
+
+function petPassiveSkillIdsForSource(source) {
+  const formId = String(source && (source.formId || source.templateId || source.speciesId) || "").trim();
+  const template = petTemplateForFormId(formId);
+  return uniqueStringArray([
+    ...uniqueStringArray(template.passiveSkillIds),
+    ...uniqueStringArray(source && source.passiveSkillIds),
+  ]);
+}
+
+function petSkillSlotsForSkillIds(skillIds, rawSlots) {
+  const learned = uniqueStringArray(skillIds).filter((skillId) => battlePetSkillActionById(skillId));
+  const slots = Array.from({length: 7}, () => "");
+  const used = new Set();
+  const sourceSlots = Array.isArray(rawSlots) ? rawSlots : [];
+  for (let index = 0; index < Math.min(7, sourceSlots.length); index += 1) {
+    const skillId = String(sourceSlots[index] || "").trim();
+    if (skillId === "" || used.has(skillId) || !learned.includes(skillId) || !battlePetSkillActionById(skillId)) {
+      continue;
+    }
+    slots[index] = skillId;
+    used.add(skillId);
+  }
+  for (const skillId of learned) {
+    if (used.has(skillId)) {
+      continue;
+    }
+    const action = battlePetSkillActionById(skillId);
+    const preferredSlot = Math.trunc(Number(action && action.slot || 0));
+    if (preferredSlot >= 1 && preferredSlot <= 7 && slots[preferredSlot - 1] === "") {
+      slots[preferredSlot - 1] = skillId;
+      used.add(skillId);
+      continue;
+    }
+    const emptyIndex = slots.findIndex((value) => value === "");
+    if (emptyIndex >= 0) {
+      slots[emptyIndex] = skillId;
+      used.add(skillId);
+    }
+  }
+  return slots;
+}
+
+function battleActorPetSkillIds(actor) {
+  return petActiveSkillIdsForSource(actor || {});
+}
+
+function battleActorHasUsablePetSkill(actor) {
+  return battleActorPetSkillIds(actor).length > 0;
 }
 
 function mergeItemAmounts(entries) {
@@ -10875,6 +11039,7 @@ function capturedPetInstanceFromBattleActor(actor, instanceId, state, serial, ro
   const formId = String(actor.formId || actor.speciesId || "").trim();
   const template = petTemplateForFormId(formId);
   const lineId = String(actor.lineId || template.lineId || "").trim();
+  const activeSkillIds = petActiveSkillIdsForSource(actor);
   return {
     instanceId,
     petId: instanceId,
@@ -10892,9 +11057,9 @@ function capturedPetInstanceFromBattleActor(actor, instanceId, state, serial, ro
     attack: Math.max(1, Math.trunc(Number(actor.attack || DEFAULT_PET_BATTLE_STATS.attack))),
     defense: Math.max(1, Math.trunc(Number(actor.defense || DEFAULT_PET_BATTLE_STATS.defense))),
     quick: Math.max(1, Math.trunc(Number(actor.speed || actor.quick || DEFAULT_PET_BATTLE_STATS.quick))),
-    activeSkillIds: stringArray(actor.activeSkillIds),
-    petSkillSlots: stringArray(actor.petSkillSlots),
-    passiveSkillIds: stringArray(actor.passiveSkillIds),
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, actor.petSkillSlots),
+    passiveSkillIds: petPassiveSkillIdsForSource(actor),
     capturedSerial: serial,
     capturedBattleRoomId: String(room && room.roomId || ""),
     capturedBattleActorId: String(actor.actorId || ""),
@@ -11803,21 +11968,7 @@ function battleActionLabel(actionId, fallback = "") {
 }
 
 function petSkillSlotsForPet(pet) {
-  const source = Array.isArray(pet && pet.petSkillSlots) ? pet.petSkillSlots : [];
-  const active = uniqueStringArray(pet && pet.activeSkillIds);
-  const slots = source.slice(0, 7).map((value) => String(value || "").trim());
-  while (slots.length < 7) {
-    slots.push("");
-  }
-  for (const skillId of active) {
-    if (skillId !== "" && !slots.includes(skillId)) {
-      const index = slots.findIndex((value) => value === "");
-      if (index >= 0) {
-        slots[index] = skillId;
-      }
-    }
-  }
-  return slots.slice(0, 7);
+  return petSkillSlotsForSkillIds(petActiveSkillIdsForSource(pet), pet && pet.petSkillSlots);
 }
 
 function applyPetSkillSetSlotAction(profile, params) {

@@ -2403,6 +2403,17 @@ func _run_auto_capture_settings_check() -> void:
 func _run_auto_training_partner_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	var test_pet := PlayerProgressModel.create_pet_instance_from_form(
+		"auto_training_pet",
+		"陪练测试布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_BATTLE,
+		8
+	)
+	if not test_pet.is_empty():
+		host.player_profile["petInstances"] = [test_pet]
+		host.player_profile["activePetInstanceId"] = "auto_training_pet"
+		host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	host.player_profile = PlayerProgressModel.with_training_partner_count(host.player_profile, 4)
 	var partner_count_ok = PlayerProgressModel.training_partner_count(host.player_profile) == 4
 	var initial_partners = PlayerProgressModel.training_partners(host.player_profile)
@@ -2432,10 +2443,12 @@ func _run_auto_training_partner_check() -> void:
 	)
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
-	var zone_found = not zones.is_empty()
+	var danger_zone = host._encounter_zone_by_id("danger_grass") if loaded else {}
+	var zone_found = not danger_zone.is_empty()
 	if loaded and zone_found:
-		host.active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zones[0] as Dictionary, host.encounter_rng, host._encounter_enemy_count_fallback())
-		host._start_battle(host._battle_state_for_encounter_zone(host.active_encounter_zone))
+		host.active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(danger_zone as Dictionary, host.encounter_rng, 10)
+		host.active_encounter_zone["selectedEnemyCount"] = 10
+		host._start_battle(BattleModel.create_training_partner_battle(host.active_encounter_zone, 10))
 		host.battle_state["comboBonusRateBySide"] = {BattleModel.SIDE_ALLY: 1.0}
 		var actors: Array = host.battle_state.get("actors", [])
 		for actor_index in range(actors.size()):
@@ -2540,7 +2553,19 @@ func _run_auto_training_partner_check() -> void:
 			"username": "self_party_mix",
 			"serverProfileSummary": {"accountId": "acc_self_party_mix"},
 		}
-		var mixed_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+		var mixed_profile = PlayerProgressModel.default_profile()
+		var mixed_pet := PlayerProgressModel.create_pet_instance_from_form(
+			"auto_training_mixed_pet",
+			"混队测试布伊",
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_BATTLE,
+			8
+		)
+		if not mixed_pet.is_empty():
+			mixed_profile["petInstances"] = [mixed_pet]
+			mixed_profile["activePetInstanceId"] = "auto_training_mixed_pet"
+			mixed_profile = PlayerProgressModel.normalize_profile(mixed_profile)
+		mixed_profile = PlayerProgressModel.with_training_partner_count(mixed_profile, 4)
 		host.player_profile = mixed_profile
 		host.party_current_state = {
 			"party": {
@@ -2574,7 +2599,7 @@ func _run_auto_training_partner_check() -> void:
 			"incomingInvites": [],
 			"maxMembers": 5,
 		}
-		var mixed_state = host._local_battle_state_with_current_team(BattleModel.create_training_partner_battle(zones[0] as Dictionary, 10))
+		var mixed_state = host._local_battle_state_with_current_team(BattleModel.create_training_partner_battle(danger_zone as Dictionary, 10))
 		var mixed_partner3 = BattleModel.actor_by_id(mixed_state, "ally_training_partner_3")
 		var mixed_active_ids: Array = mixed_state.get("activeTrainingPartnerIds", []) if mixed_state.get("activeTrainingPartnerIds", []) is Array else []
 		mixed_party_team_ok = (
@@ -5217,12 +5242,12 @@ func _run_auto_pet_management_check() -> void:
 	await host.get_tree().process_frame
 	var sorted_visible = host._pet_panel_visible_instances()
 	var power_sort_ok = sorted_visible.size() >= 2 and PetPowerModel.combat_power_for_pet(sorted_visible[0]) >= PetPowerModel.combat_power_for_pet(sorted_visible[sorted_visible.size() - 1])
-	var direction_initial_ok = host.pet_sort_direction_button != null and host.pet_sort_direction_button.text == "降"
+	var direction_initial_ok = host.pet_sort_direction_button != null and host.pet_sort_direction_button.text == "▼"
 	host._on_pet_sort_direction_pressed()
 	await host.get_tree().process_frame
 	var sorted_visible_asc = host._pet_panel_visible_instances()
 	var power_sort_asc_ok = sorted_visible_asc.size() >= 2 and PetPowerModel.combat_power_for_pet(sorted_visible_asc[0]) <= PetPowerModel.combat_power_for_pet(sorted_visible_asc[sorted_visible_asc.size() - 1])
-	var direction_toggle_ok = host.pet_sort_direction_button != null and host.pet_sort_direction_button.text == "升"
+	var direction_toggle_ok = host.pet_sort_direction_button != null and host.pet_sort_direction_button.text == "▲"
 	var sort_direction_ok = direction_initial_ok and power_sort_asc_ok and direction_toggle_ok
 	var new_visible = false
 	var power_visible = false
@@ -12465,12 +12490,16 @@ func _run_auto_quest_chain_check() -> void:
 
 	var tutorial_grass_loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	var tutorial_grass_zone = host._encounter_zone_by_id("village_grass")
+	var danger_grass_zone = host._encounter_zone_by_id("danger_grass")
 	var grass_random_ok = (
 		tutorial_grass_loaded
 		and not tutorial_grass_zone.is_empty()
-		and int(tutorial_grass_zone.get("enemyCountMin", 0)) == 1
-		and int(tutorial_grass_zone.get("enemyCountMax", 0)) == 10
-		and bool(tutorial_grass_zone.get("individualWildPets", false))
+		and int(tutorial_grass_zone.get("enemyCount", 0)) == 1
+		and not bool(tutorial_grass_zone.get("individualWildPets", true))
+		and not danger_grass_zone.is_empty()
+		and int(danger_grass_zone.get("enemyCountMin", 0)) == 1
+		and int(danger_grass_zone.get("enemyCountMax", 0)) == 10
+		and bool(danger_grass_zone.get("individualWildPets", false))
 	)
 	var tutorial_grass_ok = false
 	if grass_random_ok:
@@ -12485,6 +12514,14 @@ func _run_auto_quest_chain_check() -> void:
 
 	var before_victory_coins = PlayerProgressModel.stone_coins(profile)
 	var before_medicine = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var defeat_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_defeat",
+		"encounterGroupId": "firebud_grass_01",
+	})
+	var defeat_guard_ok = (
+		not bool(defeat_event.get("ready", false))
+		and PlayerProgressModel.active_quest_id(defeat_event.get("profile", profile) as Dictionary) == "quest_first_victory"
+	)
 	var victory_event = PlayerProgressModel.record_quest_event(profile, {
 		"type": "battle_victory",
 		"encounterGroupId": "firebud_grass_01",
@@ -12617,9 +12654,33 @@ func _run_auto_quest_chain_check() -> void:
 	var training_partner_ok = (
 		bool(training_partner_event.get("ready", false))
 		and bool(training_partner_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_use_poison_spirit"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_group_brawl"
 		and PlayerProgressModel.training_partner_count(profile) == 1
 		and PlayerProgressModel.stone_coins(profile) == before_partner_coins + 10
+	)
+
+	var before_group_brawl_coins = PlayerProgressModel.stone_coins(profile)
+	var before_group_brawl_medicine = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var group_brawl_solo_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_danger",
+		"partyMemberCount": 0,
+	})
+	var group_brawl_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_danger",
+		"partyMemberCount": PlayerProgressModel.training_partner_count(profile),
+	})
+	profile = group_brawl_event.get("profile", profile)
+	var group_brawl_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = group_brawl_claim.get("profile", profile)
+	var group_brawl_ok = (
+		not bool(group_brawl_solo_event.get("ready", false))
+		and bool(group_brawl_event.get("ready", false))
+		and bool(group_brawl_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_use_poison_spirit"
+		and PlayerProgressModel.stone_coins(profile) == before_group_brawl_coins + 20
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_group_brawl_medicine + 1
 	)
 
 	var before_spirit_coins = PlayerProgressModel.stone_coins(profile)
@@ -12805,9 +12866,9 @@ func _run_auto_quest_chain_check() -> void:
 			and ui_world_log.find("完成任务「认识训练师」") >= 0
 			and ui_task_text.find("认识银行管理员") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and victory_ok and training_partner_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s victory=%s partner=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -12829,8 +12890,10 @@ func _run_auto_quest_chain_check() -> void:
 		str(poison_gear_equip_ok),
 		str(tutorial_grass_ok),
 		str(grass_random_ok),
+		str(defeat_guard_ok),
 		str(victory_ok),
 		str(training_partner_ok),
+		str(group_brawl_ok),
 		str(spirit_ok),
 		str(spirit_hook_ok),
 		str(capture_tutorial_ok),
@@ -13262,7 +13325,27 @@ func _run_auto_quest_ui_check() -> void:
 		"count": PlayerProgressModel.training_partner_count(training_partner_profile),
 		"amount": 1,
 	})
-	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
+	var group_brawl_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
+	host.player_profile = group_brawl_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var group_brawl_zone = EncounterModel.zone_for_cell(host.map_data, host.target_cell) if host.has_target_cell else {}
+	var group_brawl_route_ok = (
+		host.has_target_cell
+		and not group_brawl_zone.is_empty()
+		and str(group_brawl_zone.get("id", "")) == "danger_grass"
+		and host._current_task_text().find("群殴") >= 0
+	)
+	var group_brawl_event = PlayerProgressModel.record_quest_event(group_brawl_profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_danger",
+		"partyMemberCount": PlayerProgressModel.training_partner_count(group_brawl_profile),
+	})
+	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(group_brawl_event.get("profile", group_brawl_profile) as Dictionary).get("profile", {})
 	host.player_profile = spirit_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -13302,8 +13385,8 @@ func _run_auto_quest_ui_check() -> void:
 		and host.world_log_message == "历史记录13"
 	)
 
-	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(server_route_uses_step_ok),
@@ -13327,6 +13410,7 @@ func _run_auto_quest_ui_check() -> void:
 		str(moist_battle_route_ok),
 		str(poison_shop_route_ok),
 		str(poison_equip_route_ok),
+		str(group_brawl_route_ok),
 		str(spirit_reward_detail_ok),
 		str(battle_route_ok),
 		str(log_scroll_ok),
@@ -21787,7 +21871,7 @@ func _run_auto_pet_template_catalog_check() -> void:
 
 func _run_auto_pet_skill_training_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.player_profile[PlayerProgressModel.STONE_COINS_KEY] = 200
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	host.pet_selected_instance_id = "pet_bui_main"

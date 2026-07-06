@@ -48,6 +48,9 @@
     {"cell": [6, 13], "kind": "flower"},
     {"cell": [10, 10], "kind": "grass"},
     {"cell": [13, 13], "kind": "flower"},
+    {"cell": [12, 16], "kind": "grass"},
+    {"cell": [16, 16], "kind": "grass"},
+    {"cell": [18, 17], "kind": "flower"},
     {"cell": [17, 16], "kind": "grass"},
     {"cell": [21, 10], "kind": "flower"},
     {"cell": [23, 6], "kind": "grass"},
@@ -66,9 +69,60 @@
     {
       "id": "village_grass",
       "name": "村外草丛",
-      "rects": [[11, 15, 6, 4]],
+      "rects": [[11, 15, 3, 3]],
       "encounterRate": 0.09,
       "encounterGroupId": "firebud_grass_01",
+      "enemyCount": 1,
+      "individualWildPets": false,
+      "wildPetPool": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "野生乌力",
+          "weight": 70,
+          "levelMin": 1,
+          "levelMax": 1,
+          "battleStats": {
+            "maxHp": 80,
+            "attack": 10,
+            "defense": 6,
+            "agility": 48
+          }
+        },
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "高速乌力",
+          "weight": 20,
+          "levelMin": 1,
+          "levelMax": 1,
+          "battleStats": {
+            "maxHp": 92,
+            "attack": 11,
+            "defense": 6,
+            "agility": 88
+          }
+        },
+        {
+          "formId": "wuli_normal_tough_earth10",
+          "name": "高防乌力",
+          "weight": 10,
+          "levelMin": 1,
+          "levelMax": 1,
+          "battleStats": {
+            "maxHp": 110,
+            "attack": 9,
+            "defense": 18,
+            "agility": 36
+          }
+        }
+      ],
+      "previewText": "近村草丛里传来细碎的脚步声。"
+    },
+    {
+      "id": "danger_grass",
+      "name": "危险草丛",
+      "rects": [[16, 15, 4, 4]],
+      "encounterRate": 0.12,
+      "encounterGroupId": "firebud_grass_danger",
       "enemyCountMin": 1,
       "enemyCountMax": 10,
       "individualWildPets": true,
@@ -113,10 +167,20 @@
           }
         }
       ],
-      "previewText": "草丛里传来细碎的脚步声。"
+      "previewText": "木牌后的草丛晃动得很厉害。"
     }
   ],
   "interactionPoints": [
+    {
+      "id": "danger_grass_sign",
+      "name": "怪多，危险",
+      "kind": "sign",
+      "movementCollision": "block",
+      "cell": [15, 15],
+      "action": "查看",
+      "dialog": ["木牌：怪多，危险。"],
+      "option": "知道了"
+    },
     {
       "id": "warp_to_training_yard",
       "name": "返回训练场",

@@ -5498,9 +5498,8 @@ static func pet_skill_slot_labels_for_instance(instance: Dictionary) -> Array[St
 	var labels: Array[String] = []
 	for option in pet_skill_slot_options_for_instance(instance):
 		var skill_id := str(option.get("skillId", ""))
-		if skill_id == "":
-			continue
-		labels.append("技%d %s" % [int(option.get("slot", 1)), str(option.get("label", skill_id))])
+		var label := "未配置" if skill_id == "" else str(option.get("label", skill_id))
+		labels.append("技%d %s" % [int(option.get("slot", 1)), label])
 	return labels
 
 

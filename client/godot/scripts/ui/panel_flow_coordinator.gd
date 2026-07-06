@@ -12646,6 +12646,7 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 			"type": "battle_victory",
 			"encounterGroupId": group_id,
 			"interactionId": interaction_id,
+			"partyMemberCount": _battle_quest_party_member_count(),
 		}))
 		if interaction_id != "":
 			messages.append_array(_record_quest_event_and_maybe_claim({
@@ -12653,6 +12654,7 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 				"encounterGroupId": group_id,
 				"interactionId": interaction_id,
 				"targetId": interaction_id,
+				"partyMemberCount": _battle_quest_party_member_count(),
 			}))
 	var captured_values = result.get("capturedPets", [])
 	if captured_values is Array:
@@ -12667,6 +12669,7 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 				"captureToolId": str(captured.get("captureToolId", "")),
 				"targetStatusIds": captured.get("captureStatusIds", []),
 				"amount": 1,
+				"partyMemberCount": _battle_quest_party_member_count(),
 			}))
 	return messages
 
@@ -17652,6 +17655,9 @@ func _effective_training_partner_count() -> int:
 func _effective_battle_team_character_count() -> int:
 	return 1 + _current_party_other_members_for_battle().size() + _effective_training_partner_count()
 
+func _battle_quest_party_member_count() -> int:
+	return _current_party_other_members_for_battle().size() + _effective_training_partner_count()
+
 func _profile_with_effective_training_partners(limit: int) -> Dictionary:
 	var normalized = PlayerProgressModel.normalize_profile(player_profile)
 	var partners = PlayerProgressModel.training_partners(normalized)
@@ -22301,7 +22307,7 @@ func _sync_pet_sort_direction_button() -> void:
 	if pet_sort_direction_button == null:
 		return
 	pet_sort_direction_button.disabled = pet_sort_mode == PET_SORT_DEFAULT
-	pet_sort_direction_button.text = "降" if pet_sort_descending else "升"
+	pet_sort_direction_button.text = "▼" if pet_sort_descending else "▲"
 	pet_sort_direction_button.tooltip_text = "降序" if pet_sort_descending else "升序"
 
 func _pet_default_sort_descending(sort_mode: String) -> bool:
