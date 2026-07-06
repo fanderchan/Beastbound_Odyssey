@@ -4,6 +4,7 @@ const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 
 const DIALOG_ACTION_ACK := "ack"
 const DIALOG_ACTION_CLAIM_QUEST := "claim_quest"
@@ -344,16 +345,88 @@ func _run_server_dialog_quest_claim(quest_id: String = "") -> void:
 		host._update_hud_text()
 
 func _run_server_dialog_quest_record(event: Dictionary, quest_id: String = "") -> void:
+	var position_sync := await _sync_server_position_for_dialog_quest()
+	if not bool(position_sync.get("ok", false)):
+		host._set_world_log_message(str(position_sync.get("message", "位置同步失败，请稍后再试。")))
+		_update_dialog_text()
+		if host.status_label != null:
+			host._update_hud_text()
+		return
 	var parsed = await host._submit_server_quest_record(event, quest_id)
 	var log_lines = host._string_array_values(parsed.get("logLines", []))
-	var progress := parsed.get("progress", {}) as Dictionary if parsed.get("progress", {}) is Dictionary else {}
-	if bool(parsed.get("ok", false)) and bool(progress.get("changed", false)) and not log_lines.is_empty():
+	if not log_lines.is_empty():
 		host._set_world_log_message("\n".join(log_lines))
+	if bool(parsed.get("ok", false)) and server_quest_record_should_close_dialog(parsed):
 		_close_dialog()
 		if host.status_label != null:
 			host._update_hud_text()
 		return
 	_update_dialog_text()
+
+func _sync_server_position_for_dialog_quest() -> Dictionary:
+	if not host._is_server_account_session():
+		return {"ok": true}
+	var payload: Dictionary = host._current_online_map_payload()
+	var spec = ServerAuthClientModel.player_position_update_request(
+		host._server_profile_base_url(),
+		host._server_profile_token(),
+		payload
+	)
+	var response = await host._auto_http_request_spec(spec)
+	var parsed = ServerAuthClientModel.parse_player_position_update_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if not bool(parsed.get("ok", false)):
+		if ServerAuthClientModel.is_session_invalid_response(parsed):
+			var session_message := str(parsed.get("message", "登录已过期，请重新登录。"))
+			host._handle_server_session_expired(session_message)
+			return {"ok": false, "message": session_message}
+		if host._apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}, true, true):
+			return await _sync_server_position_for_dialog_quest_after_correction()
+		return {"ok": false, "message": str(parsed.get("message", "位置同步失败，请稍后再试。"))}
+	var own_position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	if host._should_apply_online_self_position(own_position):
+		host._apply_server_step_move_authority_position(own_position, true)
+	elif host._server_step_move_should_report_authority_cell():
+		host._apply_server_step_move_authority_position(own_position)
+	if parsed.has("players"):
+		host._apply_online_position_players(parsed.get("players", []))
+	return {"ok": true}
+
+func _sync_server_position_for_dialog_quest_after_correction() -> Dictionary:
+	var payload: Dictionary = host._current_online_map_payload()
+	var spec = ServerAuthClientModel.player_position_update_request(
+		host._server_profile_base_url(),
+		host._server_profile_token(),
+		payload
+	)
+	var response = await host._auto_http_request_spec(spec)
+	var parsed = ServerAuthClientModel.parse_player_position_update_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if bool(parsed.get("ok", false)):
+		var own_position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+		if host._should_apply_online_self_position(own_position):
+			host._apply_server_step_move_authority_position(own_position, true)
+		elif host._server_step_move_should_report_authority_cell():
+			host._apply_server_step_move_authority_position(own_position)
+		if parsed.has("players"):
+			host._apply_online_position_players(parsed.get("players", []))
+		return {"ok": true}
+	return {"ok": false, "message": str(parsed.get("message", "位置已按服务器纠正，请走近后再试。"))}
+
+static func server_quest_record_should_close_dialog(parsed: Dictionary) -> bool:
+	if not bool(parsed.get("ok", false)):
+		return false
+	if parsed.get("profile", null) is Dictionary:
+		return true
+	var progress = parsed.get("progress", {}) as Dictionary if parsed.get("progress", {}) is Dictionary else {}
+	if bool(progress.get("changed", false)) or bool(progress.get("ready", false)):
+		return true
+	var quest_messages = parsed.get("questMessages", [])
+	return quest_messages is Array and not (quest_messages as Array).is_empty()
 
 func _claim_dialog_quest_reward() -> void:
 	if host.active_dialog_interaction.is_empty():
@@ -510,6 +583,8 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		return DIALOG_ACTION_PET_SKILL_OVERWRITE
 	if _dialog_item_is_stable(item):
 		return DIALOG_ACTION_STABLE
+	if _dialog_item_is_bank(item):
+		return DIALOG_ACTION_BANK
 	if _dialog_item_is_rebirth(item):
 		return DIALOG_ACTION_REBIRTH
 	if _dialog_item_is_family_manor(item):
@@ -555,6 +630,8 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return str(item.get("option", "覆盖"))
 		DIALOG_ACTION_STABLE:
 			return str(item.get("option", "兽栏"))
+		DIALOG_ACTION_BANK:
+			return str(item.get("option", "银行"))
 		DIALOG_ACTION_SHOP:
 			return str(item.get("option", "买卖"))
 		DIALOG_ACTION_OPEN_QUEST:
@@ -579,6 +656,11 @@ func _dialog_action_options(item: Dictionary) -> Array[Dictionary]:
 		"id": primary_action,
 		"label": _dialog_action_label(item, primary_action),
 	}]
+	if _dialog_item_is_bank(item) and primary_action != DIALOG_ACTION_BANK:
+		options.append({
+			"id": DIALOG_ACTION_BANK,
+			"label": _dialog_action_label(item, DIALOG_ACTION_BANK),
+		})
 	if _dialog_should_offer_quest_button(item):
 		options.append({
 			"id": DIALOG_ACTION_OPEN_QUEST,
@@ -699,6 +781,10 @@ func _active_dialog_is_stable() -> bool:
 
 func _dialog_item_is_stable(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == InteractionModel.FACILITY_STABLE or str(item.get("kind", "")) == InteractionModel.FACILITY_STABLE
+
+func _dialog_item_is_bank(item: Dictionary) -> bool:
+	return str(item.get("actionType", "")) == DIALOG_ACTION_BANK or str(item.get("kind", "")) == InteractionModel.FACILITY_BANK or str(item.get("facilityType", "")) == InteractionModel.FACILITY_BANK
+
 
 func _dialog_item_is_rebirth(item: Dictionary) -> bool:
 	return str(item.get("actionType", "")) == InteractionModel.FACILITY_REBIRTH or str(item.get("kind", "")) == InteractionModel.FACILITY_REBIRTH

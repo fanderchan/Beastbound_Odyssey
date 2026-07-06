@@ -974,13 +974,12 @@ static func parse_online_players_response(response_code: int, body: PackedByteAr
 
 static func parse_player_position_update_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "位置同步失败。")
-	if not bool(parsed.get("ok", false)):
-		return parsed
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
 	parsed["players"] = _dictionary_array(response.get("players", []))
 	parsed["party"] = response.get("party", null)
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
+	parsed["movement"] = response.get("movement", {}) if response.get("movement", {}) is Dictionary else {}
 	return parsed
 
 
@@ -1302,6 +1301,7 @@ static func parse_profile_action_response(response_code: int, body: PackedByteAr
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
 	parsed["logLines"] = _string_array(response.get("logLines", []))
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 
 

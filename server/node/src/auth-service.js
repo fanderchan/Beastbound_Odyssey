@@ -38,6 +38,13 @@ const MAX_BATTLE_RECORDS = 10000;
 const MAX_BATTLE_TRACE_ROWS = 1200;
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
+const PROFILE_STONE_COIN_LIMIT = 10000000;
+const BANK_STONE_COIN_LIMIT = 100000000;
+const BANK_TAB_COUNT = 6;
+const BANK_SLOTS_PER_TAB = 15;
+const BANK_SLOT_LIMIT = BANK_TAB_COUNT * BANK_SLOTS_PER_TAB;
+const BANK_DEFAULT_UNLOCKED_TABS = 1;
+const BANK_UNLOCK_COSTS = [100, 200, 400, 800, 1600];
 const PARTY_MAX_MEMBERS = 5;
 const CHAT_CHANNEL_NEARBY = "nearby";
 const CHAT_CHANNEL_TEAM = "team";
@@ -81,6 +88,7 @@ const BATTLE_ACTION_SWITCH_PET = "switch_pet";
 const BATTLE_ACTION_ITEM = "item";
 const BATTLE_ACTION_SPIRIT = "spirit";
 const BATTLE_ACTION_CAPTURE = "capture";
+const BATTLE_ACTION_RUN = "run";
 const BATTLE_ACTION_TRAINING_PARTNER_HEAL = "training_partner_heal";
 const TRAINING_PARTNER_HEAL_SPIRIT_ID = "spirit_moist_1";
 const TRAINING_PARTNER_HEAL_LOW_HP_RATIO = 0.40;
@@ -155,6 +163,8 @@ const BATTLE_PET_STATE_BATTLE = "battle";
 const BATTLE_PET_STATE_STANDBY = "standby";
 const BATTLE_PET_STATE_RIDING = "riding";
 const BATTLE_PET_STATE_STORAGE = "storage";
+const ABILITY_RIDING = "riding";
+const RIDE_SKILL_LEVEL_CAP = 200;
 const BATTLE_PET_STORAGE_LIMIT = 20;
 const BATTLE_CAPTURE_TOOL_EMPTY_HAND = "empty_hand";
 const ENCOUNTER_STONE_ITEM_IDS = new Set([
@@ -252,6 +262,10 @@ const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
 const PROFILE_ACTION_IDS = new Set([
   "player_stat_allocate",
   "backpack_unlock_slot",
+  "bank_unlock_tab",
+  "backpack_move_stack",
+  "backpack_split_stack",
+  "backpack_discard_item",
   "village_heal",
   "record_point_save",
   "world_item_use",
@@ -765,6 +779,9 @@ function createAuthService(options = {}) {
         return fail("item_not_enough", `${itemLabel} 数量不够。`);
       }
       const totalPrice = shopSellPrice(shopId, entry) * amount;
+      if (currency === SHOP_CURRENCY_STONE_COINS && profileCurrencyAmount(profile, currency) + totalPrice > PROFILE_STONE_COIN_LIMIT) {
+        return fail("wallet_stone_coin_limit", "身上石币已达上限，请先存入银行。");
+      }
       profile.backpackSlots = consumeBackpackItem(backpackSlots, itemId, amount);
       profile.captureTools = captureToolBagFromProfile(profile);
       setProfileCurrencyAmount(profile, currency, profileCurrencyAmount(profile, currency) + totalPrice);
@@ -1626,7 +1643,9 @@ function createAuthService(options = {}) {
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
+    bagItemById,
     bagItemLabel,
+    bagItemStackLimit,
     backpackItemCount,
     battleInviteIsExpired,
     battleParticipantSnapshot,
@@ -1679,6 +1698,7 @@ function createAuthService(options = {}) {
     partyEncounterSnapshotFromPayload,
     partyForAccount,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
+    bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
     manorEntries,
     persistProfileForAccount,
     playerPositionHasCell,
@@ -1686,6 +1706,7 @@ function createAuthService(options = {}) {
     profileBackpackSlots,
     profileBindingForAccount,
     profileCurrencyAmount,
+    profileStoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
     profileStoneCoins,
     profileSummaryForAccount,
     publicAccount,
@@ -2631,10 +2652,15 @@ function publicBattleActor(actor) {
     defense: Number(actor.defense || 0),
     guarding: Boolean(actor.guarding),
     defeated: Boolean(actor.defeated),
+    escaped: Boolean(actor.escaped),
     catchable: Boolean(actor.catchable),
     captureDifficulty: Math.max(0, Math.trunc(Number(actor.captureDifficulty || 0))),
     captured: Boolean(actor.captured),
     capturedByAccountId: String(actor.capturedByAccountId || ""),
+    actionState: String(actor.actionState || (Number(actor.hp || 0) <= 0 ? "down" : "idle")),
+    launched: Boolean(actor.launched),
+    revivable: Object.prototype.hasOwnProperty.call(actor, "revivable") ? Boolean(actor.revivable) : true,
+    launchHpBefore: Math.max(0, Math.trunc(Number(actor.launchHpBefore || 0))),
     activeSkillIds: Array.isArray(actor.activeSkillIds) ? actor.activeSkillIds.map((value) => String(value)) : [],
     petSkillSlots: Array.isArray(actor.petSkillSlots) ? actor.petSkillSlots.map((value) => String(value)) : [],
     passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
@@ -5640,6 +5666,9 @@ function battlePlayerActorFromParticipant(participant, side, options = {}) {
     defense: positiveNumber(player.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
     guarding: false,
     defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
     ...battleActorRideFieldsFromPlayerSnapshot(player),
     spiritIds: stringArray(player.spiritIds),
     comboRateOverride: battleComboRateOverrideValue(player.comboRateOverride),
@@ -5675,6 +5704,9 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     guarding: false,
     defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
     activeSkillIds: stringArray(pet.activeSkillIds),
     petSkillSlots: stringArray(pet.petSkillSlots),
     passiveSkillIds: stringArray(pet.passiveSkillIds),
@@ -5785,6 +5817,9 @@ function battleTrainingPartnerActorFromSnapshot(participant, partner, index, slo
     defense: positiveNumber(partner.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
     guarding: false,
     defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
     schemaVersion: 1,
   };
 }
@@ -5818,6 +5853,9 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     guarding: false,
     defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
     activeSkillIds: stringArray(pet.activeSkillIds),
     petSkillSlots: stringArray(pet.petSkillSlots),
     passiveSkillIds: stringArray(pet.passiveSkillIds),
@@ -5861,6 +5899,9 @@ function partyPveEnemyActors(room) {
       expReward: battleEnemyBaseExpFromEntry(wildPet),
       guarding: false,
       defeated: false,
+      actionState: "idle",
+      launched: false,
+      revivable: true,
       activeSkillIds: stringArray(wildPet.activeSkillIds),
       petSkillSlots: stringArray(wildPet.petSkillSlots),
       passiveSkillIds: stringArray(wildPet.passiveSkillIds),
@@ -5971,13 +6012,16 @@ function requiredBattleCommandActorIds(battle) {
 
 function requiredBattleCommandActorIdsFromActors(actors, commands = {}) {
   const switchPetAccountIds = battleSwitchPetCommandAccountIds(commands);
+  const runAccountIds = battleRunCommandAccountIds(commands);
   return actors
     .filter((actor) => actor && Number(actor.hp || 0) > 0 && String(actor.accountId || "") !== "")
+    .filter((actor) => !Boolean(actor.escaped))
     .filter((actor) => {
       if (String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
         return true;
       }
-      return !switchPetAccountIds.has(String(actor.accountId || ""));
+      const accountId = String(actor.accountId || "");
+      return !switchPetAccountIds.has(accountId) && !runAccountIds.has(accountId);
     })
     .map((actor) => String(actor.actorId || ""))
     .filter(Boolean)
@@ -5991,6 +6035,23 @@ function battleSwitchPetCommandAccountIds(commands = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") !== BATTLE_ACTION_SWITCH_PET) {
+      continue;
+    }
+    const accountId = String(command.accountId || "");
+    if (accountId) {
+      accountIds.add(accountId);
+    }
+  }
+  return accountIds;
+}
+
+function battleRunCommandAccountIds(commands = {}) {
+  const accountIds = new Set();
+  for (const command of Object.values(commands || {})) {
+    if (!command || typeof command !== "object") {
+      continue;
+    }
+    if (String(command.actionKind || command.actionId || "") !== BATTLE_ACTION_RUN) {
       continue;
     }
     const accountId = String(command.accountId || "");
@@ -6204,6 +6265,9 @@ function normalizeBattleActionForActor(value, actor, itemValue = "") {
   if (actionId === BATTLE_ACTION_DEFEND || actionId === "guard") {
     return ok({actionId: BATTLE_ACTION_DEFEND, actionKind: "defend", skillId: ""});
   }
+  if (actionId === BATTLE_ACTION_RUN || actionId === "escape" || actionId === "flee") {
+    return ok({actionId: BATTLE_ACTION_RUN, actionKind: BATTLE_ACTION_RUN, skillId: ""});
+  }
   if (actionId === BATTLE_ACTION_SWITCH_PET || actionId === "change_pet") {
     return ok({actionId: BATTLE_ACTION_SWITCH_PET, actionKind: BATTLE_ACTION_SWITCH_PET, skillId: ""});
   }
@@ -6335,7 +6399,7 @@ function validateBattleCaptureTarget(actor, targetActor) {
 }
 
 function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
-  if (actionId === BATTLE_ACTION_DEFEND || actionId === BATTLE_ACTION_SWITCH_PET) {
+  if (actionId === BATTLE_ACTION_DEFEND || actionId === BATTLE_ACTION_SWITCH_PET || actionId === BATTLE_ACTION_RUN) {
     return actor;
   }
   const explicitActorId = String(payload.targetActorId || "").trim();
@@ -6382,7 +6446,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
   while (commandIndex < orderedCommands.length) {
     const command = orderedCommands[commandIndex];
     const actor = battleActorByActorId(battle, command.actorId);
-    if (!actor || Number(actor.hp || 0) <= 0) {
+    if (!actor || Number(actor.hp || 0) <= 0 || Boolean(actor.escaped)) {
       commandIndex += 1;
       continue;
     }
@@ -6398,6 +6462,15 @@ function resolveBattleRoomTurn(data, room, battle, now) {
       events.push(battleDefendEvent(room, battle, command, actor, round, sequence));
       sequence += 1;
       commandIndex += 1;
+      continue;
+    }
+    if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_RUN) {
+      events.push(battleEscapeEvent(room, battle, command, actor, round, sequence));
+      sequence += 1;
+      commandIndex += 1;
+      if (battleResultForResolvedActors(room, battle, now)) {
+        break;
+      }
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_SWITCH_PET) {
@@ -6591,14 +6664,15 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
 
   const hpBefore = Number(resolved.target.hp || 0);
   const hpAfter = Math.max(0, hpBefore - resolved.damage);
-  resolved.target.hp = hpAfter;
-  resolved.target.defeated = hpAfter <= 0;
+  const launched = applyBattleActorDamageResult(room, resolved.target, hpBefore, hpAfter, resolved.damage, {
+    canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+  });
   syncParticipantPetSnapshotHp(room, resolved.target);
   const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   return {
     consumed: 1,
-    event: battleAttackEvent(room, battle, resolved.command, resolved.actor, resolved.target, round, sequence, hpBefore, hpAfter, resolved.damage, expCredits),
+    event: battleAttackEvent(room, battle, resolved.command, resolved.actor, resolved.target, round, sequence, hpBefore, hpAfter, resolved.damage, expCredits, launched),
   };
 }
 
@@ -6715,8 +6789,9 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
   const comboBonus = Math.max(0, group.length - 1) * BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR;
   const damage = Math.max(1, baseDamage + comboBonus);
   const hpAfter = Math.max(0, hpBefore - damage);
-  target.hp = hpAfter;
-  target.defeated = hpAfter <= 0;
+  const launched = applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, {
+    canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+  });
   syncParticipantPetSnapshotHp(room, target);
   const actors = group.map((entry) => entry.actor);
   const expCredits = battleExpCreditsForComboDefeat(room, battle, actors, target, hpBefore, hpAfter);
@@ -6764,12 +6839,13 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     hpBefore,
     hpAfter,
     defeated: hpAfter <= 0,
+    launched,
     animation: {
       actor: "combo_attack",
-      targetReaction: hpAfter <= 0 ? "knockdown" : "hurt",
+      targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
       observer: "watch_target",
     },
-    message: `${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害。`,
+    message: battleDamageMessage(`${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害。`, target, hpAfter, launched),
     schemaVersion: 1,
   };
   if (expCredits.length > 0) {
@@ -7397,6 +7473,10 @@ function battleItemHealAmount(itemId) {
 
 function battleResultForResolvedActors(room, battle, now) {
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  const escapedAccountIds = battleEscapedPlayerAccountIds(room, battle);
+  if (escapedAccountIds.length > 0) {
+    return battleResultForEscapedAccount(room, escapedAccountIds[0], now);
+  }
   if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE) {
     const enemyAlive = actors.some((actor) => (
       actor &&
@@ -7409,21 +7489,21 @@ function battleResultForResolvedActors(room, battle, now) {
       String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER &&
       Number(actor.hp || 0) > 0
     )) || null;
-    if (!enemyAlive) {
-      return {
-        reason: "defeat",
-        winnerAccountId: livingParticipantPlayer ? String(livingParticipantPlayer.accountId || "") : String(room.leaderAccountId || ""),
-        loserAccountIds: [],
-        closedByAccountId: "",
-        endedAt: isoNow(now),
-        schemaVersion: 1,
-      };
-    }
     if (!livingParticipantPlayer) {
       return {
         reason: "defeat",
         winnerAccountId: "",
         loserAccountIds: requiredBattleCommandAccountIds(room),
+        closedByAccountId: "",
+        endedAt: isoNow(now),
+        schemaVersion: 1,
+      };
+    }
+    if (!enemyAlive) {
+      return {
+        reason: "defeat",
+        winnerAccountId: String(livingParticipantPlayer.accountId || ""),
+        loserAccountIds: [],
         closedByAccountId: "",
         endedAt: isoNow(now),
         schemaVersion: 1,
@@ -7491,6 +7571,51 @@ function battleResultForResolvedActors(room, battle, now) {
     winnerAccountId,
     loserAccountIds,
     closedByAccountId: "",
+    endedAt: isoNow(now),
+    schemaVersion: 1,
+  };
+}
+
+function battleEscapedPlayerAccountIds(room, battle) {
+  const participantAccountIds = requiredBattleCommandAccountIds(room);
+  const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  return participantAccountIds.filter((accountId) => actors.some((actor) => (
+    actor &&
+    String(actor.accountId || "") === String(accountId || "") &&
+    String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER &&
+    Boolean(actor.escaped)
+  )));
+}
+
+function battleResultForEscapedAccount(room, escapingAccountId, now) {
+  const accountId = String(escapingAccountId || "");
+  if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE) {
+    return {
+      reason: "escape",
+      winnerAccountId: "",
+      loserAccountIds: [],
+      closedByAccountId: accountId,
+      endedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+  }
+  if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
+    const leavingSide = battleParticipantSideForAccount(room, accountId);
+    const winnerSide = leavingSide === "challenger" ? "opponent" : "challenger";
+    return {
+      reason: "forfeit",
+      winnerAccountId: battleParticipantAccountIdsForSide(room, winnerSide)[0] || "",
+      loserAccountIds: leavingSide ? battleParticipantAccountIdsForSide(room, leavingSide) : (accountId ? [accountId] : []),
+      closedByAccountId: accountId,
+      endedAt: isoNow(now),
+      schemaVersion: 1,
+    };
+  }
+  return {
+    reason: "forfeit",
+    winnerAccountId: requiredBattleCommandAccountIds(room).find((entry) => entry !== accountId) || "",
+    loserAccountIds: accountId ? [accountId] : [],
+    closedByAccountId: accountId,
     endedAt: isoNow(now),
     schemaVersion: 1,
   };
@@ -8284,7 +8409,7 @@ function battleEventListsForQuestScan(battle) {
 }
 
 function recordQuestEventToProfile(profile, event) {
-  const questId = currentProfileQuestId(profile);
+  const questId = ensureActiveQuestForProfile(profile);
   return recordQuestEventByIdToProfile(profile, questId, event);
 }
 
@@ -8327,16 +8452,17 @@ function recordQuestEventByIdToProfile(profile, questId, event) {
 }
 
 function activeQuestAutoClaim(profile) {
-  const quest = questById(currentProfileQuestId(profile));
+  const quest = questById(ensureActiveQuestForProfile(profile));
   return Boolean(quest && quest.autoClaimOnReady) && questRewardChoices(quest).length <= 0;
 }
 
 function claimActiveQuestToProfile(profile) {
-  const questId = currentProfileQuestId(profile);
+  const questId = ensureActiveQuestForProfile(profile);
   return claimQuestByIdToProfile(profile, questId, "", true);
 }
 
 function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceActive = true) {
+  const activeQuestIdBeforeClaim = advanceActive ? ensureActiveQuestForProfile(profile) : currentProfileQuestId(profile);
   const quest = questById(questId);
   if (!quest) {
     return {ok: false, code: "quest_missing", message: "当前没有可领取的任务奖励。"};
@@ -8358,7 +8484,7 @@ function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceA
   state.progress = questRequiredCount(quest);
   states[questId] = state;
   const nextQuestId = questNextId(quest);
-  if (advanceActive && String(profile.activeQuestId || "") === questId) {
+  if (advanceActive && activeQuestIdBeforeClaim === questId) {
     if (nextQuestId !== "" && questById(nextQuestId)) {
       if (!states[nextQuestId]) {
         states[nextQuestId] = normalizeQuestState({}, nextQuestId);
@@ -8395,7 +8521,7 @@ function grantQuestRewardsToProfile(profile, quest, rewardChoice = {}) {
   const choice = rewardChoice && typeof rewardChoice === "object" && !Array.isArray(rewardChoice) ? rewardChoice : {};
   const stoneCoins = questRewardStoneCoins(quest) + Math.max(0, Math.trunc(Number(choice.stoneCoins || 0)));
   if (stoneCoins > 0) {
-    profile.stoneCoins = profileStoneCoins(profile) + stoneCoins;
+    setProfileCurrencyAmount(profile, SHOP_CURRENCY_STONE_COINS, profileStoneCoins(profile) + stoneCoins);
   }
   const itemResult = addRewardItemsToBackpack(profileBackpackSlots(profile), mergeItemAmounts([
     ...questRewardItems(quest),
@@ -8424,7 +8550,15 @@ function grantQuestRewardsToProfile(profile, quest, rewardChoice = {}) {
 
 function currentProfileQuestId(profile) {
   const explicit = String(profile && profile.activeQuestId || "").trim();
-  return explicit !== "" ? explicit : firstQuestId();
+  if (explicit !== "") {
+    const quest = questById(explicit);
+    const states = profileQuestStates(profile || {});
+    const state = normalizeQuestState(states[explicit], explicit);
+    if (quest && !questIsOptional(quest) && String(state.status || "active") !== "claimed" && questAvailableForProfile(profile, quest)) {
+      return explicit;
+    }
+  }
+  return firstAvailableUnfinishedQuestIdForProfile(profile) || firstQuestId();
 }
 
 function questAvailableForProfile(profile, quest) {
@@ -8442,6 +8576,50 @@ function questAvailableForProfile(profile, quest) {
     return false;
   }
   return true;
+}
+
+function ensureActiveQuestForProfile(profile) {
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    return "";
+  }
+  const states = profileQuestStates(profile);
+  let questId = currentProfileQuestId(profile);
+  const quest = questById(questId);
+  if (!quest || questIsOptional(quest) || !questAvailableForProfile(profile, quest)) {
+    questId = firstAvailableUnfinishedQuestIdForProfile(profile);
+  }
+  if (questId !== "") {
+    states[questId] = normalizeQuestState(states[questId], questId);
+    profile.activeQuestId = questId;
+  } else {
+    profile.activeQuestId = "";
+  }
+  profile.questStates = states;
+  return questId;
+}
+
+function firstAvailableUnfinishedQuestIdForProfile(profile) {
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    return "";
+  }
+  const states = profileQuestStates(profile);
+  for (const quest of quests()) {
+    if (questIsOptional(quest)) {
+      continue;
+    }
+    const questId = String(quest.id || "").trim();
+    if (questId === "") {
+      continue;
+    }
+    const state = normalizeQuestState(states[questId], questId);
+    if (states[questId] && String(state.status || "active") === "claimed") {
+      continue;
+    }
+    if (questAvailableForProfile(profile, quest)) {
+      return questId;
+    }
+  }
+  return "";
 }
 
 function profileQuestStates(profile) {
@@ -8689,6 +8867,26 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     }
     return 1;
   }
+  if (type === "training_partner_count") {
+    if (eventType !== "training_partner_set_count") {
+      return 0;
+    }
+    const requiredCount = Math.max(1, Math.trunc(Number(objective.count || 1)));
+    const currentCount = Math.max(0, Math.trunc(Number(event.count || event.amount || 0)));
+    return currentCount >= requiredCount ? requiredCount : 0;
+  }
+  if (type === "ride_pet") {
+    if (eventType !== "ride_pet") {
+      return 0;
+    }
+    if (
+      !questMatchesStringFilter(objective, event, "lineId") ||
+      !questMatchesStringFilter(objective, event, "formId")
+    ) {
+      return 0;
+    }
+    return Math.max(1, Math.trunc(Number(event.amount || 1)));
+  }
   if (type === "reach_map") {
     if (!["reach_map", "enter_map"].includes(eventType)) {
       return 0;
@@ -8934,7 +9132,7 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result) {
   let changed = false;
   const previousCoins = profileStoneCoins(profile);
   if (reward.stoneCoins > 0) {
-    profile.stoneCoins = previousCoins + reward.stoneCoins;
+    setProfileCurrencyAmount(profile, SHOP_CURRENCY_STONE_COINS, previousCoins + reward.stoneCoins);
     changed = true;
   }
   const beforeSlots = normalizeBackpackSlots(profileBackpackSlots(profile));
@@ -9132,7 +9330,7 @@ function stableTextIndex(seedText, count) {
 }
 
 function profileStoneCoins(profile) {
-  return Math.max(0, Math.trunc(Number(profile && profile.stoneCoins || 0)));
+  return Math.max(0, Math.min(PROFILE_STONE_COIN_LIMIT, Math.trunc(Number(profile && profile.stoneCoins || 0))));
 }
 
 function normalizeShopTransactionMode(value) {
@@ -9269,7 +9467,7 @@ function setProfileCurrencyAmount(profile, currency, amount) {
     profile.diamonds = safeAmount;
     return;
   }
-  profile.stoneCoins = safeAmount;
+  profile.stoneCoins = Math.min(PROFILE_STONE_COIN_LIMIT, safeAmount);
 }
 
 function addRewardItemsToBackpack(slots, rewards) {
@@ -9354,22 +9552,129 @@ function consumeBackpackItem(slots, itemId, count) {
 }
 
 function normalizeBackpackSlots(value, explicitSlotLimit = -1) {
-  const counts = {};
+  const limit = backpackSlotLimitFromValue(value, explicitSlotLimit);
+  const result = [];
   if (Array.isArray(value)) {
     for (const rawSlot of value) {
+      if (result.length >= limit) {
+        break;
+      }
       const slot = rawSlot && typeof rawSlot === "object" && !Array.isArray(rawSlot) ? rawSlot : {};
       const itemId = String(slot.itemId || "").trim();
       if (!bagItemById(itemId)) {
+        result.push({});
         continue;
       }
       const count = Math.max(0, Math.trunc(Number(slot.count || 0)));
       if (count <= 0) {
+        result.push({});
         continue;
       }
-      counts[itemId] = Math.max(0, Math.trunc(Number(counts[itemId] || 0))) + count;
+      let remaining = count;
+      const stackLimit = bagItemStackLimit(itemId);
+      while (remaining > 0 && result.length < limit) {
+        const stackCount = Math.min(remaining, stackLimit);
+        result.push({itemId, count: stackCount});
+        remaining -= stackCount;
+      }
     }
   }
-  return backpackSlotsFromCounts(counts, backpackSlotLimitFromValue(value, explicitSlotLimit));
+  while (result.length < limit) {
+    result.push({});
+  }
+  return result;
+}
+
+function moveBackpackStack(slots, sourceIndex, targetIndex, amount = -1) {
+  const nextSlots = normalizeBackpackSlots(slots);
+  const sourceSlotIndex = Math.trunc(Number(sourceIndex));
+  const targetSlotIndex = Math.trunc(Number(targetIndex));
+  if (sourceSlotIndex < 0 || targetSlotIndex < 0 || sourceSlotIndex >= nextSlots.length || targetSlotIndex >= nextSlots.length) {
+    return {ok: false, code: "backpack_slot_invalid", message: "背包格子无效。"};
+  }
+  if (sourceSlotIndex === targetSlotIndex) {
+    return {ok: false, code: "backpack_slot_same", message: "物品已在这个格子。"};
+  }
+  const source = objectOrEmpty(nextSlots[sourceSlotIndex]);
+  const itemId = String(source.itemId || "").trim();
+  const sourceCount = Math.max(0, Math.trunc(Number(source.count || 0)));
+  if (!bagItemById(itemId) || sourceCount <= 0) {
+    return {ok: false, code: "backpack_source_empty", message: "这个格子没有物品。"};
+  }
+  const target = objectOrEmpty(nextSlots[targetSlotIndex]);
+  const targetItemId = String(target.itemId || "").trim();
+  const targetCount = Math.max(0, Math.trunc(Number(target.count || 0)));
+  const moveCount = Math.trunc(Number(amount || 0)) <= 0 ? sourceCount : Math.max(1, Math.min(sourceCount, Math.trunc(Number(amount || 0))));
+  const itemLabel = bagItemLabel(itemId);
+  if (targetItemId === "") {
+    nextSlots[targetSlotIndex] = {itemId, count: moveCount};
+    const remaining = sourceCount - moveCount;
+    nextSlots[sourceSlotIndex] = remaining > 0 ? {itemId, count: remaining} : {};
+    return {ok: true, slots: normalizeBackpackSlots(nextSlots), itemId, count: moveCount, sourceSlotIndex, targetSlotIndex, message: `已移动${itemLabel} x${moveCount}。`};
+  }
+  if (targetItemId === itemId) {
+    const room = Math.max(0, bagItemStackLimit(itemId) - targetCount);
+    if (room <= 0) {
+      return {ok: false, code: "backpack_stack_full", message: `${itemLabel} 已达到堆叠上限。`};
+    }
+    const mergedCount = Math.min(moveCount, room);
+    nextSlots[targetSlotIndex] = {itemId, count: targetCount + mergedCount};
+    const remaining = sourceCount - mergedCount;
+    nextSlots[sourceSlotIndex] = remaining > 0 ? {itemId, count: remaining} : {};
+    return {ok: true, slots: normalizeBackpackSlots(nextSlots), itemId, count: mergedCount, sourceSlotIndex, targetSlotIndex, message: `已合并${itemLabel} x${mergedCount}。`};
+  }
+  if (moveCount < sourceCount) {
+    return {ok: false, code: "backpack_partial_swap_blocked", message: "拆分到空格，或整组交换。"};
+  }
+  nextSlots[sourceSlotIndex] = clone(target);
+  nextSlots[targetSlotIndex] = clone(source);
+  return {ok: true, slots: normalizeBackpackSlots(nextSlots), itemId, count: moveCount, sourceSlotIndex, targetSlotIndex, message: "已交换物品。"};
+}
+
+function splitBackpackStack(slots, sourceIndex, quantity, targetIndex = -1) {
+  const nextSlots = normalizeBackpackSlots(slots);
+  const sourceSlotIndex = Math.trunc(Number(sourceIndex));
+  if (sourceSlotIndex < 0 || sourceSlotIndex >= nextSlots.length) {
+    return {ok: false, code: "backpack_slot_invalid", message: "背包格子无效。"};
+  }
+  const source = objectOrEmpty(nextSlots[sourceSlotIndex]);
+  const itemId = String(source.itemId || "").trim();
+  const sourceCount = Math.max(0, Math.trunc(Number(source.count || 0)));
+  if (!bagItemById(itemId) || sourceCount <= 1) {
+    return {ok: false, code: "backpack_split_unavailable", message: "这个物品不能拆分。"};
+  }
+  const splitCount = Math.max(1, Math.min(sourceCount - 1, Math.trunc(Number(quantity || 1))));
+  let targetSlotIndex = Math.trunc(Number(targetIndex || -1));
+  if (targetSlotIndex < 0) {
+    targetSlotIndex = nextSlots.findIndex((slot, index) => index !== sourceSlotIndex && String(slot && slot.itemId || "") === "");
+  }
+  if (targetSlotIndex < 0 || targetSlotIndex >= nextSlots.length || targetSlotIndex === sourceSlotIndex) {
+    return {ok: false, code: "backpack_no_empty_slot", message: "没有空格可以拆分。"};
+  }
+  if (String(objectOrEmpty(nextSlots[targetSlotIndex]).itemId || "") !== "") {
+    return {ok: false, code: "backpack_target_not_empty", message: "请选择一个空格拆分。"};
+  }
+  nextSlots[sourceSlotIndex] = {itemId, count: sourceCount - splitCount};
+  nextSlots[targetSlotIndex] = {itemId, count: splitCount};
+  return {ok: true, slots: normalizeBackpackSlots(nextSlots), itemId, count: splitCount, sourceSlotIndex, targetSlotIndex, message: `已拆分${bagItemLabel(itemId)} x${splitCount}。`};
+}
+
+function discardBackpackStack(slots, sourceIndex, quantity = -1) {
+  const nextSlots = normalizeBackpackSlots(slots);
+  const sourceSlotIndex = Math.trunc(Number(sourceIndex));
+  if (sourceSlotIndex < 0 || sourceSlotIndex >= nextSlots.length) {
+    return {ok: false, code: "backpack_slot_invalid", message: "背包格子无效。"};
+  }
+  const source = objectOrEmpty(nextSlots[sourceSlotIndex]);
+  const itemId = String(source.itemId || "").trim();
+  const sourceCount = Math.max(0, Math.trunc(Number(source.count || 0)));
+  if (!bagItemById(itemId) || sourceCount <= 0) {
+    return {ok: false, code: "backpack_source_empty", message: "这个格子没有物品。"};
+  }
+  const discardCount = Math.trunc(Number(quantity || 0)) <= 0 ? sourceCount : Math.max(1, Math.min(sourceCount, Math.trunc(Number(quantity || 0))));
+  const remaining = sourceCount - discardCount;
+  nextSlots[sourceSlotIndex] = remaining > 0 ? {itemId, count: remaining} : {};
+  return {ok: true, slots: normalizeBackpackSlots(nextSlots), itemId, count: discardCount, sourceSlotIndex, message: `已丢弃${bagItemLabel(itemId)} x${discardCount}。`};
 }
 
 function backpackSlotsFromCounts(counts, slotLimit) {
@@ -9392,6 +9697,103 @@ function backpackSlotsFromCounts(counts, slotLimit) {
     result.push({});
   }
   return result;
+}
+
+function emptyItemSlots(slotCount) {
+  return Array.from({length: Math.max(0, Math.trunc(Number(slotCount || 0)))}, () => ({}));
+}
+
+function normalizeProfileBankData(value) {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const sourceItems = normalizeMailItems(raw.items || raw.itemAmounts || []);
+  const hasSlots = Array.isArray(raw.slots) && raw.slots.length > 0;
+  const slots = hasSlots ? normalizeBankItemSlots(raw.slots) : bankItemSlotsFromAmounts(sourceItems);
+  const requiredTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.ceil((lastFilledBankSlotIndex(slots) + 1) / BANK_SLOTS_PER_TAB));
+  const rawUnlockedTabs = Math.trunc(Number(raw.unlockedTabs || raw.tabs || BANK_DEFAULT_UNLOCKED_TABS));
+  return {
+    stoneCoins: Math.min(BANK_STONE_COIN_LIMIT, Math.max(0, Math.trunc(Number(raw.stoneCoins || raw.coins || 0)))),
+    items: mergeItemAmounts(bankItemAmountsFromSlots(slots)),
+    slots,
+    unlockedTabs: Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.min(BANK_TAB_COUNT, Math.max(rawUnlockedTabs, requiredTabs))),
+    schemaVersion: 1,
+  };
+}
+
+function normalizeBankItemSlots(value) {
+  const result = [];
+  if (Array.isArray(value)) {
+    for (const rawSlot of value) {
+      if (result.length >= BANK_SLOT_LIMIT) {
+        break;
+      }
+      const slot = rawSlot && typeof rawSlot === "object" && !Array.isArray(rawSlot) ? rawSlot : {};
+      const itemId = String(slot.itemId || "").trim();
+      if (!bagItemById(itemId)) {
+        result.push({});
+        continue;
+      }
+      let remaining = Math.max(0, Math.trunc(Number(slot.count || 0)));
+      if (remaining <= 0) {
+        result.push({});
+        continue;
+      }
+      const stackLimit = bagItemStackLimit(itemId);
+      while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
+        const stackCount = Math.min(remaining, stackLimit);
+        result.push({itemId, count: stackCount});
+        remaining -= stackCount;
+      }
+    }
+  }
+  while (result.length < BANK_SLOT_LIMIT) {
+    result.push({});
+  }
+  return result;
+}
+
+function bankItemSlotsFromAmounts(items) {
+  const result = [];
+  for (const item of mergeItemAmounts(items)) {
+    const itemId = String(item.itemId || "").trim();
+    if (!bagItemById(itemId)) {
+      continue;
+    }
+    let remaining = Math.max(0, Math.trunc(Number(item.count || 0)));
+    const stackLimit = bagItemStackLimit(itemId);
+    while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
+      const stackCount = Math.min(remaining, stackLimit);
+      result.push({itemId, count: stackCount});
+      remaining -= stackCount;
+    }
+  }
+  while (result.length < BANK_SLOT_LIMIT) {
+    result.push({});
+  }
+  return result;
+}
+
+function bankItemAmountsFromSlots(slots) {
+  const counts = {};
+  for (const slot of normalizeBankItemSlots(slots)) {
+    const itemId = String(slot.itemId || "").trim();
+    const count = Math.max(0, Math.trunc(Number(slot.count || 0)));
+    if (itemId === "" || count <= 0) {
+      continue;
+    }
+    counts[itemId] = Math.max(0, Math.trunc(Number(counts[itemId] || 0))) + count;
+  }
+  return Object.entries(counts).map(([itemId, count]) => ({itemId, count}));
+}
+
+function lastFilledBankSlotIndex(slots) {
+  const normalized = normalizeBankItemSlots(slots);
+  for (let index = normalized.length - 1; index >= 0; index -= 1) {
+    const slot = normalized[index] || {};
+    if (String(slot.itemId || "").trim() !== "" && Math.max(0, Math.trunc(Number(slot.count || 0))) > 0) {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function backpackSlotLimitFromValue(value, explicitSlotLimit = -1) {
@@ -10340,7 +10742,7 @@ function backpackSlotsWithCaptureToolCounts(slots, counts) {
 }
 
 function setBackpackSlotItemCount(slots, itemId, count) {
-  const stackLimit = 20;
+  const stackLimit = bagItemStackLimit(itemId);
   let remaining = Math.max(0, Math.trunc(Number(count || 0)));
   for (let index = 0; index < slots.length; index += 1) {
     const slot = slots[index] && typeof slots[index] === "object" && !Array.isArray(slots[index]) ? slots[index] : {};
@@ -10704,6 +11106,14 @@ function applyProfileActionToProfile(profile, action, params, now) {
       return applyPlayerStatAllocateAction(profile, params);
     case "backpack_unlock_slot":
       return applyBackpackUnlockSlotAction(profile, params);
+    case "bank_unlock_tab":
+      return applyBankUnlockTabAction(profile, params);
+    case "backpack_move_stack":
+      return applyBackpackMoveStackAction(profile, params);
+    case "backpack_split_stack":
+      return applyBackpackSplitStackAction(profile, params);
+    case "backpack_discard_item":
+      return applyBackpackDiscardItemAction(profile, params);
     case "village_heal":
       return applyVillageHealAction(profile);
     case "record_point_save":
@@ -10762,10 +11172,15 @@ function publicProfileActionResult(action, result) {
     message: String(source.message || ""),
     itemId: String(source.itemId || ""),
     instanceId: String(source.instanceId || source.petId || ""),
+    formId: String(source.formId || ""),
+    lineId: String(source.lineId || ""),
+    state: String(source.state || ""),
     statKey: String(source.statKey || ""),
     gain: Math.max(0, Math.trunc(Number(source.gain || 0))),
     dropId: String(source.dropId || ""),
     slot: Math.max(0, Math.trunc(Number(source.slot || 0))),
+    sourceSlotIndex: Math.max(0, Math.trunc(Number(source.sourceSlotIndex || 0))),
+    targetSlotIndex: Math.max(0, Math.trunc(Number(source.targetSlotIndex || 0))),
     cost: Math.max(0, Math.trunc(Number(source.cost || 0))),
     count: Math.max(0, Math.trunc(Number(source.count || 0))),
     previousCount: Math.max(0, Math.trunc(Number(source.previousCount || 0))),
@@ -10832,12 +11247,41 @@ function stateLabel(state) {
   }
 }
 
+function profileHasUnlockedAbility(profile, abilityId) {
+  const normalizedAbilityId = String(abilityId || "").trim();
+  return normalizedAbilityId !== "" && uniqueStringArray(profile && profile.unlockedAbilities).includes(normalizedAbilityId);
+}
+
+function profilePetFormId(pet) {
+  return String(pet && (pet.formId || pet.templateId || pet.speciesId) || "").trim();
+}
+
+function canRideProfilePet(profile, pet) {
+  if (!profileHasUnlockedAbility(profile, ABILITY_RIDING)) {
+    return false;
+  }
+  const template = petTemplateForFormId(profilePetFormId(pet));
+  const riding = objectOrEmpty(template.riding);
+  if (!Boolean(riding.rideable)) {
+    return false;
+  }
+  if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE || Math.trunc(Number(pet.hp || 0)) <= 0) {
+    return false;
+  }
+  const level = Math.max(1, Math.trunc(Number(pet.level || 1)));
+  return level <= RIDE_SKILL_LEVEL_CAP;
+}
+
 function profileBackpackExtraSlots(profile) {
   return clampInt(profile && profile.backpackExtraSlots, 0, BACKPACK_EXTRA_SLOT_LIMIT, 0);
 }
 
+function profileBackpackSlotLimit(profile) {
+  return resolvedBackpackSlotLimit(BACKPACK_BASE_SLOT_LIMIT + profileBackpackExtraSlots(profile));
+}
+
 function normalizeProfileBackpack(profile) {
-  const limit = BACKPACK_BASE_SLOT_LIMIT + profileBackpackExtraSlots(profile);
+  const limit = profileBackpackSlotLimit(profile);
   profile.backpackSlots = normalizeBackpackSlots(profileBackpackSlots(profile), limit);
   profile.captureTools = captureToolBagFromProfile(profile);
   return profile.backpackSlots;
@@ -10918,6 +11362,75 @@ function applyBackpackUnlockSlotAction(profile, params) {
   setProfileCurrencyAmount(profile, SHOP_CURRENCY_DIAMONDS, diamonds - cost);
   normalizeProfileBackpack(profile);
   return {ok: true, message: `已消耗 ${cost} 钻石，解锁第 ${extraSlots + 1} 个扩展背包位。`, cost};
+}
+
+function applyBankUnlockTabAction(profile, params) {
+  const bank = normalizeProfileBankData(profile && profile.bank);
+  const unlockedTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.min(BANK_TAB_COUNT, Math.trunc(Number(bank.unlockedTabs || BANK_DEFAULT_UNLOCKED_TABS))));
+  if (unlockedTabs >= BANK_TAB_COUNT) {
+    return {ok: false, code: "bank_tabs_max", message: "银行页已全部解锁。"};
+  }
+  const requested = Math.trunc(Number(params.tabIndex ?? params.tab ?? -1));
+  if (requested >= 0 && requested !== unlockedTabs) {
+    return {ok: false, code: "bank_tab_order", message: "请先解锁前一个银行页。"};
+  }
+  const costIndex = Math.max(0, Math.min(BANK_UNLOCK_COSTS.length - 1, unlockedTabs - BANK_DEFAULT_UNLOCKED_TABS));
+  const cost = Math.max(0, Math.trunc(Number(BANK_UNLOCK_COSTS[costIndex] || 0)));
+  const diamonds = profileCurrencyAmount(profile, SHOP_CURRENCY_DIAMONDS);
+  if (diamonds < cost) {
+    return {ok: false, code: "not_enough_diamonds", message: `钻石不足，还需要 ${cost - diamonds} 钻石。`, cost};
+  }
+  bank.unlockedTabs = unlockedTabs + 1;
+  profile.bank = bank;
+  setProfileCurrencyAmount(profile, SHOP_CURRENCY_DIAMONDS, diamonds - cost);
+  return {ok: true, message: `已消耗 ${cost} 钻石，解锁银行第 ${unlockedTabs + 1} 页。`, cost, availableSlots: bank.unlockedTabs * BANK_SLOTS_PER_TAB};
+}
+
+function applyBackpackMoveStackAction(profile, params) {
+  const slotLimit = profileBackpackSlotLimit(profile);
+  const sourceSlotIndex = Math.trunc(Number(params.sourceSlotIndex ?? params.sourceIndex ?? -1));
+  const targetSlotIndex = Math.trunc(Number(params.targetSlotIndex ?? params.targetIndex ?? -1));
+  if (sourceSlotIndex < 0 || targetSlotIndex < 0 || sourceSlotIndex >= slotLimit || targetSlotIndex >= slotLimit) {
+    return {ok: false, code: "backpack_slot_locked", message: "这个背包格子还不能使用。"};
+  }
+  const result = moveBackpackStack(normalizeBackpackSlots(profileBackpackSlots(profile), slotLimit), sourceSlotIndex, targetSlotIndex, params.amount ?? -1);
+  if (!result.ok) {
+    return result;
+  }
+  profile.backpackSlots = result.slots;
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return result;
+}
+
+function applyBackpackSplitStackAction(profile, params) {
+  const slotLimit = profileBackpackSlotLimit(profile);
+  const sourceSlotIndex = Math.trunc(Number(params.sourceSlotIndex ?? params.sourceIndex ?? -1));
+  const targetSlotIndex = Math.trunc(Number(params.targetSlotIndex ?? params.targetIndex ?? -1));
+  if (sourceSlotIndex < 0 || sourceSlotIndex >= slotLimit || targetSlotIndex >= slotLimit) {
+    return {ok: false, code: "backpack_slot_locked", message: "这个背包格子还不能使用。"};
+  }
+  const result = splitBackpackStack(normalizeBackpackSlots(profileBackpackSlots(profile), slotLimit), sourceSlotIndex, params.quantity ?? params.count ?? 1, targetSlotIndex);
+  if (!result.ok) {
+    return result;
+  }
+  profile.backpackSlots = result.slots;
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return result;
+}
+
+function applyBackpackDiscardItemAction(profile, params) {
+  const slotLimit = profileBackpackSlotLimit(profile);
+  const sourceSlotIndex = Math.trunc(Number(params.sourceSlotIndex ?? params.sourceIndex ?? -1));
+  if (sourceSlotIndex < 0 || sourceSlotIndex >= slotLimit) {
+    return {ok: false, code: "backpack_slot_locked", message: "这个背包格子还不能使用。"};
+  }
+  const result = discardBackpackStack(normalizeBackpackSlots(profileBackpackSlots(profile), slotLimit), sourceSlotIndex, params.quantity ?? params.count ?? -1);
+  if (!result.ok) {
+    return result;
+  }
+  profile.backpackSlots = result.slots;
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return result;
 }
 
 function applyVillageHealAction(profile) {
@@ -11400,7 +11913,7 @@ function applyPetStateCycleAction(profile, params) {
   if (current === BATTLE_PET_STATE_REST) {
     target = BATTLE_PET_STATE_STANDBY;
   } else if (current === BATTLE_PET_STATE_STANDBY) {
-    target = BATTLE_PET_STATE_BATTLE;
+    target = canRideProfilePet(profile, pet) ? BATTLE_PET_STATE_RIDING : BATTLE_PET_STATE_BATTLE;
   } else if (current === BATTLE_PET_STATE_RIDING) {
     target = BATTLE_PET_STATE_BATTLE;
   } else if (current === BATTLE_PET_STATE_BATTLE) {
@@ -11419,15 +11932,32 @@ function applyPetStateCycleAction(profile, params) {
       }
     }
     profile.activePetInstanceId = petId;
+  } else if (target === BATTLE_PET_STATE_RIDING) {
+    for (const other of profilePetInstances(profile)) {
+      if (other && String(other.state || "") === BATTLE_PET_STATE_RIDING) {
+        other.state = BATTLE_PET_STATE_STANDBY;
+      }
+    }
+    if (String(profile.activePetInstanceId || "") === petId) {
+      profile.activePetInstanceId = "";
+    }
+    profile.ridePetInstanceId = petId;
   } else if (String(profile.activePetInstanceId || "") === petId) {
     profile.activePetInstanceId = "";
   }
-  if (String(profile.ridePetInstanceId || "") === petId) {
+  if (target !== BATTLE_PET_STATE_RIDING && String(profile.ridePetInstanceId || "") === petId) {
     profile.ridePetInstanceId = "";
   }
   pet.state = target;
   ensureActivePetAfterInstanceRemoval(profile);
-  return {ok: true, message: `${profilePetName(pet)} 已切换为${stateLabel(target)}。`, instanceId: petId};
+  return {
+    ok: true,
+    message: target === BATTLE_PET_STATE_RIDING ? `${profilePetName(pet)} 已设为骑宠。` : `${profilePetName(pet)} 已切换为${stateLabel(target)}。`,
+    instanceId: petId,
+    formId: profilePetFormId(pet),
+    lineId: String(pet.lineId || ""),
+    state: target,
+  };
 }
 
 function applyPetStableToggleAction(profile, params) {
@@ -12826,6 +13356,34 @@ function battleDefendEvent(room, battle, command, actor, round, sequence) {
   };
 }
 
+function battleEscapeEvent(room, battle, command, actor, round, sequence) {
+  actor.escaped = true;
+  actor.guarding = false;
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "escape",
+    round,
+    sequence,
+    actorAccountId: actor.accountId,
+    actorUsername: actor.username,
+    actorId: actor.actorId,
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    actionId: BATTLE_ACTION_RUN,
+    skillId: String(command.skillId || ""),
+    targetActorId: actor.actorId,
+    targetAccountId: actor.accountId,
+    targetUsername: actor.username,
+    damage: 0,
+    animation: {
+      actor: "escape",
+      targetReaction: "none",
+      observer: "watch_actor",
+    },
+    message: `${actor.displayName || actor.username} 成功逃跑。`,
+    schemaVersion: 1,
+  };
+}
+
 function battleTargetMissingEvent(room, battle, command, actor, round, sequence) {
   return {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
@@ -13941,7 +14499,44 @@ function syncParticipantPetSnapshotHp(room, actor) {
   }
 }
 
-function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = []) {
+function applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, options = {}) {
+  const canLaunch = Boolean(options.canLaunch);
+  const maxHp = Math.max(1, Math.trunc(Number(target && target.maxHp || hpBefore || 1)));
+  const overkill = Math.max(0, Math.trunc(Number(damage || 0)) - Math.max(0, Math.trunc(Number(hpBefore || 0))));
+  const launchThreshold = Math.max(12, Math.round(maxHp * 0.18));
+  const launched = Boolean(target) && canLaunch && Number(hpBefore || 0) > 0 && Number(hpAfter || 0) <= 0 && overkill >= launchThreshold;
+  target.hp = Math.max(0, Math.trunc(Number(hpAfter || 0)));
+  target.defeated = target.hp <= 0;
+  target.actionState = launched ? "launched" : (target.hp <= 0 ? "down" : "hit");
+  target.launched = launched;
+  target.revivable = !launched;
+  if (launched) {
+    target.launchHpBefore = Math.max(0, Math.trunc(Number(hpBefore || 0)));
+    if (String(target.kind || "") === BATTLE_ACTOR_KIND_PET || String(target.kind || "") === BATTLE_ACTOR_KIND_WILD_PET) {
+      target.petState = "rest";
+    }
+  } else {
+    delete target.launchHpBefore;
+  }
+  syncParticipantPetSnapshotHp(room, target);
+  return launched;
+}
+
+function battleDamageMessage(baseMessage, target, hpAfter, launched) {
+  const targetName = String(target && (target.displayName || target.username) || "目标");
+  if (launched) {
+    if (String(target && target.kind || "") === BATTLE_ACTOR_KIND_PET || String(target && target.kind || "") === BATTLE_ACTOR_KIND_WILD_PET) {
+      return `${baseMessage} ${targetName} 被击飞，进入休息状态。`;
+    }
+    return `${baseMessage} ${targetName} 被击飞。`;
+  }
+  if (Number(hpAfter || 0) <= 0) {
+    return `${baseMessage} ${targetName} 倒下了。`;
+  }
+  return baseMessage;
+}
+
+function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false) {
   const actionKind = String(command.actionKind || "attack");
   const actionId = String(command.actionId || BATTLE_ACTION_ATTACK);
   const skillId = String(command.skillId || "");
@@ -13970,12 +14565,13 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     hpBefore,
     hpAfter,
     defeated: hpAfter <= 0,
+    launched,
     animation: {
       actor: "attack",
-      targetReaction: hpAfter <= 0 ? "knockdown" : "hurt",
+      targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
       observer: "watch_target",
     },
-    message: `${actor.displayName || actor.username} ${actionLabel} ${target.displayName || target.username}，造成 ${damage} 点伤害。`,
+    message: battleDamageMessage(`${actor.displayName || actor.username} ${actionLabel} ${target.displayName || target.username}，造成 ${damage} 点伤害。`, target, hpAfter, launched),
     schemaVersion: 1,
   };
   if (Array.isArray(expCredits) && expCredits.length > 0) {
@@ -14249,6 +14845,13 @@ function createDefaultServerProfile(account) {
     nextPetInstanceSerial: 5,
     nextPetDropSerial: 1,
     stoneCoins: DEFAULT_STONE_COINS,
+    bank: {
+      stoneCoins: 0,
+      items: [],
+      slots: emptyItemSlots(BANK_SLOT_LIMIT),
+      unlockedTabs: BANK_DEFAULT_UNLOCKED_TABS,
+      schemaVersion: 1,
+    },
     diamonds: DEFAULT_DIAMONDS,
     devDiamondsGrantVersion: DEV_DIAMONDS_GRANT_VERSION,
     petInstances: [

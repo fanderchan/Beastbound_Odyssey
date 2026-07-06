@@ -140,6 +140,9 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		enemy_actor["catchable"] = bool(wild_pet.get("catchable", true))
 	if wild_pet.has("captureDifficulty"):
 		enemy_actor["captureDifficulty"] = maxi(1, int(wild_pet.get("captureDifficulty", enemy_actor.get("captureDifficulty", 42))))
+	var capture_chance_override = wild_pet.get("captureChanceOverride", wild_pet.get("captureRateOverride", null))
+	if capture_chance_override != null:
+		enemy_actor["captureChanceOverride"] = clampf(_rate_value(capture_chance_override, 0.0), 0.0, 1.0)
 	var state := {
 		"id": "local_wild_battle",
 		"round": 1,
@@ -322,6 +325,9 @@ static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, ene
 			actor["catchable"] = bool(wild_pet.get("catchable", true))
 		if wild_pet.has("captureDifficulty"):
 			actor["captureDifficulty"] = maxi(1, int(wild_pet.get("captureDifficulty", actor.get("captureDifficulty", 42))))
+		var capture_chance_override = wild_pet.get("captureChanceOverride", wild_pet.get("captureRateOverride", null))
+		if capture_chance_override != null:
+			actor["captureChanceOverride"] = clampf(_rate_value(capture_chance_override, 0.0), 0.0, 1.0)
 		for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 			if wild_pet.has(key):
 				actor[key] = _string_array(wild_pet.get(key))
@@ -459,7 +465,7 @@ static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
 	var stats = value.get("battleStats", {})
 	if stats is Dictionary:
 		entry["battleStats"] = (stats as Dictionary).duplicate(true)
-	for key in ["catchable", "captureDifficulty"]:
+	for key in ["catchable", "captureDifficulty", "captureChanceOverride", "captureRateOverride"]:
 		if value.has(key):
 			entry[key] = value.get(key)
 	for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
@@ -1076,6 +1082,8 @@ static func _make_player_command_event(state: Dictionary, player_id: String, com
 			return _make_switch_pet_event(state, player_id, str(command.get("petId", "")), sequence)
 		"defend":
 			return _make_defend_event(state, player_id, sequence)
+		"run":
+			return _make_escape_event(state, player_id, sequence)
 		_:
 			if enemy_target_id != "":
 				return _make_attack_event(state, player_id, enemy_target_id, SIDE_ENEMY, sequence)
@@ -1456,6 +1464,17 @@ static func _make_defend_event(state: Dictionary, actor_id: String, sequence: in
 	}
 
 
+static func _make_escape_event(state: Dictionary, actor_id: String, sequence: int) -> Dictionary:
+	return {
+		"type": "escape",
+		"attackerId": actor_id,
+		"targetId": actor_id,
+		"targetSide": str(actor_by_id(state, actor_id).get("side", "")),
+		"speed": _effective_action_speed(state, actor_id, "run"),
+		"sequence": sequence,
+	}
+
+
 static func _make_switch_pet_event(state: Dictionary, actor_id: String, pet_id: String, sequence: int) -> Dictionary:
 	if not is_pet_switchable(state, pet_id):
 		return {}
@@ -1706,6 +1725,9 @@ static func capture_chance(state: Dictionary, attacker_id: String, target_id: St
 	var target := actor_by_id(state, target_id)
 	if target.is_empty() or not bool(target.get("catchable", false)):
 		return 0.0
+	var capture_chance_override = target.get("captureChanceOverride", target.get("captureRateOverride", null))
+	if capture_chance_override != null:
+		return clampf(_rate_value(capture_chance_override, 0.0), 0.0, 1.0)
 	var max_hp := maxf(1.0, float(target.get("maxHp", 1)))
 	var hp_ratio := clampf(float(target.get("hp", 0)) / max_hp, 0.0, 1.0)
 	var difficulty := clampf(float(target.get("captureDifficulty", 42)) / 100.0, 0.0, 0.9)
@@ -1824,6 +1846,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_switch_pet_event(state, event)
 	if event_type == "defend":
 		return _apply_defend_event(state, event)
+	if event_type == "escape":
+		return _apply_escape_event(state, event)
 	if event_type == "target_missing":
 		return _apply_target_missing_event(state, event)
 	return state
@@ -3303,6 +3327,30 @@ static func _apply_defend_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetId"] = actor_id
 	state["lastParticipants"] = [actor_id]
 	state["message"] = "%s 进入防御姿态。" % str(actor.get("name", "我方"))
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_escape_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var actor_id := str(event.get("attackerId", ""))
+	var actor := actor_by_id(state, actor_id)
+	if actor.is_empty() or int(actor.get("hp", 0)) <= 0:
+		return state
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	actor = actors[actor_index_value] as Dictionary
+	actor["actionState"] = "escape"
+	actors[actor_index_value] = actor
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["escaped"] = true
+	state["escapeActorId"] = actor_id
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = actor_id
+	state["lastTargetId"] = actor_id
+	state["lastParticipants"] = [actor_id]
+	state["message"] = "%s 成功逃跑。" % str(actor.get("name", "我方"))
 	return _apply_server_message_override(state, event)
 
 

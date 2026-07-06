@@ -44,6 +44,17 @@ const OBJECTIVE_TEMPLATES := {
 		"requiredFields": ["spiritId"],
 		"summary": "在战斗中释放指定精灵，可用 eventType 限定效果。",
 	},
+	"training_partner_count": {
+		"label": "陪练伙伴",
+		"eventTypes": ["training_partner_set_count"],
+		"summary": "队伍中加入指定数量的陪练伙伴。",
+	},
+	"ride_pet": {
+		"label": "骑乘宠物",
+		"eventTypes": ["ride_pet"],
+		"requiredAnyFields": ["formId", "lineId"],
+		"summary": "把指定形态或系别的宠物切换为骑乘。",
+	},
 	"battle_victory": {
 		"label": "战斗胜利",
 		"eventTypes": ["battle_victory"],
@@ -563,6 +574,21 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 			if not _matches_string_filter(objective, event, "spiritId"):
 				return 0
 			if not _matches_string_filter(objective, event, "eventType"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"training_partner_count":
+			if event_type != "training_partner_set_count":
+				return 0
+			var required_partner_count := maxi(1, int(objective.get("count", 1)))
+			if int(event.get("count", event.get("amount", 0))) < required_partner_count:
+				return 0
+			return required_partner_count
+		"ride_pet":
+			if event_type != "ride_pet":
+				return 0
+			if not _matches_string_filter(objective, event, "lineId"):
+				return 0
+			if not _matches_string_filter(objective, event, "formId"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"battle_victory":

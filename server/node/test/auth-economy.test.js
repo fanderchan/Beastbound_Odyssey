@@ -10,7 +10,7 @@ const {
 
 test("bank deposit and withdraw move server-owned coins and items", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
-  const account = service.register({"username": "bankuser", "password": "test1234", "displayName": "仓库号"});
+  const account = service.register({"username": "bankuser", "password": "test1234", "displayName": "银行号"});
 
   const deposit = service.bankDeposit(account.session.token, {
     "stoneCoins": 40,
@@ -35,6 +35,86 @@ test("bank deposit and withdraw move server-owned coins and items", () => {
   const overdraft = service.bankWithdraw(account.session.token, {"stoneCoins": 99});
   assert.equal(overdraft.ok, false);
   assert.equal(overdraft.code, "bank_stone_coins_not_enough");
+});
+
+test("bank item slots preserve stacks and enforce unlocked pages", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const account = service.register({"username": "bankslotuser", "password": "test1234", "displayName": "银行格子号"});
+  const token = account.session.token;
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.backpackSlots = [
+    {"itemId": "item_meat_small", "count": 20},
+    {"itemId": "item_meat_small", "count": 7},
+    ...Array.from({"length": 13}, () => ({})),
+  ];
+  profile.bank = {
+    "stoneCoins": 0,
+    "items": [],
+    "slots": Array.from({"length": 90}, () => ({})),
+    "unlockedTabs": 1,
+    "schemaVersion": 1,
+  };
+  assert.equal(service.saveProfile(token, {"expectedRevision": current.profileSummary.profileRevision, profile}).ok, true);
+
+  const firstDeposit = service.bankDeposit(token, {
+    "items": [{"itemId": "item_meat_small", "count": 7, "sourceSlotIndex": 1, "bankSlotIndex": 0}],
+  });
+  assert.equal(firstDeposit.ok, true);
+  assert.deepEqual(firstDeposit.profile.backpackSlots[1], {});
+  assert.deepEqual(firstDeposit.bank.slots[0], {"itemId": "item_meat_small", "count": 7});
+
+  const mergeDeposit = service.bankDeposit(token, {
+    "items": [{"itemId": "item_meat_small", "count": 20, "sourceSlotIndex": 0, "bankSlotIndex": 0}],
+  });
+  assert.equal(mergeDeposit.ok, true);
+  assert.deepEqual(mergeDeposit.profile.backpackSlots[0], {});
+  assert.deepEqual(mergeDeposit.bank.slots[0], {"itemId": "item_meat_small", "count": 27});
+
+  const withdraw = service.bankWithdraw(token, {
+    "items": [{"itemId": "item_meat_small", "count": 5, "bankSlotIndex": 0}],
+  });
+  assert.equal(withdraw.ok, true);
+  assert.deepEqual(withdraw.bank.slots[0], {"itemId": "item_meat_small", "count": 22});
+  assert.equal(profileItemCount(withdraw.profile, "item_meat_small"), 5);
+
+  const refill = service.bankDeposit(token, {
+    "items": [{"itemId": "item_meat_small", "count": 1, "sourceSlotIndex": 0, "bankSlotIndex": 20}],
+  });
+  assert.equal(refill.ok, false);
+  assert.equal(refill.code, "bank_storage_full");
+});
+
+test("bank enforces wallet and bank stone coin caps", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const account = service.register({"username": "bankcapuser", "password": "test1234", "displayName": "银行上限号"});
+  const token = account.session.token;
+
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.stoneCoins = 10000000;
+  profile.bank = {"stoneCoins": 100000000, "items": [], "schemaVersion": 1};
+  const saved = service.saveProfile(token, {"expectedRevision": current.profileSummary.profileRevision, profile});
+  assert.equal(saved.ok, true);
+
+  const bankFull = service.bankDeposit(token, {"stoneCoins": 1});
+  assert.equal(bankFull.ok, false);
+  assert.equal(bankFull.code, "bank_stone_coin_limit");
+
+  const afterFull = service.getProfile(token);
+  afterFull.profile.stoneCoins = 9999999;
+  afterFull.profile.bank = {"stoneCoins": 10, "items": [], "schemaVersion": 1};
+  const savedWithdrawCase = service.saveProfile(token, {
+    "expectedRevision": afterFull.profileSummary.profileRevision,
+    "profile": afterFull.profile,
+  });
+  assert.equal(savedWithdrawCase.ok, true);
+
+  const walletFull = service.bankWithdraw(token, {"stoneCoins": 2});
+  assert.equal(walletFull.ok, false);
+  assert.equal(walletFull.code, "wallet_stone_coin_limit");
 });
 
 test("market listings sell through with default tax", () => {

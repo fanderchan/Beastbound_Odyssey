@@ -34,6 +34,7 @@ function createMailChatDomain(ctx) {
     profileBackpackSlots,
     profileBindingForAccount,
     profileCurrencyAmount,
+    profileStoneCoinLimit = 10000000,
     profileSummaryForAccount,
     publicAccount,
     publicBattleRoom,
@@ -202,6 +203,13 @@ function createMailChatDomain(ctx) {
       });
     }
     const profile = clone(profileDoc.profile);
+    const stoneCoinAmount = Math.max(0, Math.trunc(Number(currency.stoneCoins || 0)));
+    if (stoneCoinAmount > 0 && profileCurrencyAmount(profile, "stoneCoins") + stoneCoinAmount > profileStoneCoinLimit) {
+      return fail("wallet_stone_coin_limit", `身上石币上限为${profileStoneCoinLimit}，请先存入银行后再领取。`, {
+        mail: publicMail(mail),
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
     let addResult = {
       slots: normalizeBackpackSlots(profileBackpackSlots(profile)),
       addedItems: [],

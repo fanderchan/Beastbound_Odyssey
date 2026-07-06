@@ -51,10 +51,34 @@ test("quest record endpoint advances and auto-claims talk quests server-side", (
   assert.equal(recorded.progress.questId, "quest_intro_talk");
   assert.equal(recorded.progress.ready, true);
   assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
-  assert.equal(recorded.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(recorded.profile.activeQuestId, "quest_bank_intro");
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
   assert.equal(recorded.questMessages.some((message) => String(message).includes("认识训练师")), true);
+});
+
+test("quest record recovers missing active main quest before auto-claiming", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "questmissingactive", "password": "test1234", "displayName": "空任务记录"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("空任务记录", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "";
+  profile.questStates = {};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {"mapId": "firebud_training_yard", "cellX": 5, "cellY": 11}).ok, true);
+
+  const recorded = service.questRecord(player.session.token, {
+    "event": {"type": "talk", "targetId": "trainer"},
+  });
+  assert.equal(recorded.ok, true);
+  assert.equal(recorded.progress.questId, "quest_intro_talk");
+  assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
+  assert.equal(recorded.profile.questStates.quest_bank_intro.status, "active");
+  assert.equal(recorded.profile.activeQuestId, "quest_bank_intro");
+  assert.equal(recorded.profile.stoneCoins, 20);
+  assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
 });
 
 test("quest record rejects client-reported settlement events and out-of-range talk", () => {
@@ -311,7 +335,11 @@ test("party pve spirit event advances battle quest chain from server event log",
   profile.equipmentSlots = {"body": "armor_toxin_wrap"};
   profile.equipmentDurability = {"body": 30};
   profile.activeQuestId = "quest_use_poison_spirit";
-  profile.questStates = {"quest_use_poison_spirit": {"questId": "quest_use_poison_spirit", "status": "active", "progress": 0}};
+  profile.questStates = {
+    "quest_first_victory": {"questId": "quest_first_victory", "status": "claimed", "progress": 1},
+    "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
+    "quest_use_poison_spirit": {"questId": "quest_use_poison_spirit", "status": "active", "progress": 0},
+  };
   assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
 
   const encounter = service.startPartyEncounter(solo.session.token, {
@@ -343,15 +371,16 @@ test("party pve spirit event advances battle quest chain from server event log",
   assert.equal(resolved.room.status, "closed");
   const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
   assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_use_poison_spirit"), true);
-  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_first_victory"), true);
+  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_first_victory"), false);
   assert.equal(writeback.quests.activeQuestId, "quest_capture_wuli");
 
   const after = service.getProfile(solo.session.token);
   assert.equal(after.ok, true);
   assert.equal(after.profile.questStates.quest_use_poison_spirit.status, "claimed");
   assert.equal(after.profile.questStates.quest_first_victory.status, "claimed");
+  assert.equal(after.profile.questStates.quest_training_partner_intro.status, "claimed");
   assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
-  assert.equal(after.profile.stoneCoins, 13 + writeback.rewards.stoneCoins + 50);
+  assert.equal(after.profile.stoneCoins, 13 + writeback.rewards.stoneCoins + 20);
   const blessedClubCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
     sum + (slot && slot.itemId === "weapon_blessed_club" ? Number(slot.count || 0) : 0)
   ), 0);

@@ -42,6 +42,7 @@ const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_present
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
+const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
@@ -510,16 +511,19 @@ var bank_panel: PanelContainer
 var bank_list_container: VBoxContainer
 var bank_detail_label: RichTextLabel
 var bank_quantity_spinbox: SpinBox
+var bank_coin_quantity_spinbox: SpinBox
 var bank_deposit_button: Button
 var bank_withdraw_button: Button
 var bank_coin_deposit_button: Button
 var bank_coin_withdraw_button: Button
+var bank_unlock_tab_button: Button
 var bank_status_label: Label
 var bank_close_button: Button
 var bank_http_request: HTTPRequest
 var bank_item_buttons: Dictionary = {}
 var bank_selected_item_id: String = ""
 var bank_quantity: int = 1
+var bank_coin_quantity: int = 1000
 var bank_request_pending: bool = false
 var bank_pending_kind: String = ""
 var party_panel: PanelContainer
@@ -679,6 +683,7 @@ var auto_pathfinding_check: bool = false
 var auto_eight_direction_check: bool = false
 var auto_direct_line_check: bool = false
 var auto_facing_check: bool = false
+var auto_right_click_facing_check: bool = false
 var auto_camera_check: bool = false
 var auto_camera_click_check: bool = false
 var auto_animation_state_check: bool = false
@@ -884,6 +889,7 @@ var equipment_durability_preview: bool = false
 var equipment_durability_visual_preview: bool = false
 var equipment_slot_detail_preview: bool = false
 var equipment_synthesis_preview: bool = false
+var bank_drag_preview: bool = false
 var shop_preview: bool = false
 var battle_reward_preview: bool = false
 var equipment_drop_preview: bool = false
@@ -977,6 +983,9 @@ var has_target_cell: bool = false
 var click_move_repath_cooldown: float = 0.0
 var click_move_repath_apply_count: int = 0
 var click_move_screen_resolve_count: int = 0
+var click_move_input_accept_count: int = 0
+var click_move_input_ui_reject_count: int = 0
+var click_move_input_remote_hit_count: int = 0
 var has_pending_click_screen_point: bool = false
 var pending_click_screen_point := Vector2.ZERO
 var has_pending_click_move_target: bool = false
@@ -1070,6 +1079,7 @@ var hang_heal_resume_mode: String = ""
 var hang_heal_resume_map_id: String = ""
 var hang_heal_resume_cell: Vector2i = Vector2i.ZERO
 var hang_session_request_active: bool = false
+var hang_stop_after_battle_requested: bool = false
 var encounter_stone_item_id: String = ""
 var encounter_stone_interval: float = 0.0
 var encounter_stone_remaining: float = 0.0
@@ -1173,6 +1183,8 @@ func _ready() -> void:
 		_open_auth_panel(false)
 	_refresh_gm_visibility()
 	_layout_hud()
+	_update_hud_text(true)
+	_reset_perf_probe_counters()
 	set_process(true)
 	if _startup_auth_login_requested() and not account_authenticated:
 		call_deferred("_apply_startup_auth_login")
@@ -1534,6 +1546,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_slot_detail_preview")
 	elif equipment_synthesis_preview:
 		call_deferred("_run_equipment_synthesis_preview")
+	elif bank_drag_preview:
+		call_deferred("_run_bank_drag_preview")
 	elif shop_preview:
 		call_deferred("_run_shop_preview")
 	elif battle_reward_preview:
@@ -1638,6 +1652,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_camera_click_check")
 	elif auto_camera_check:
 		call_deferred("_run_auto_camera_check")
+	elif auto_right_click_facing_check:
+		call_deferred("_run_auto_right_click_facing_check")
 	elif auto_facing_check:
 		call_deferred("_run_auto_facing_check")
 	elif auto_direct_line_check:
@@ -1853,6 +1869,8 @@ func _apply_preview_window_args() -> void:
 			auto_direct_line_check = true
 		elif arg == "--auto-facing-check":
 			auto_facing_check = true
+		elif arg == "--auto-right-click-facing-check":
+			auto_right_click_facing_check = true
 		elif arg == "--auto-camera-check":
 			auto_camera_check = true
 		elif arg == "--auto-camera-click-check":
@@ -2261,6 +2279,8 @@ func _apply_preview_window_args() -> void:
 			equipment_slot_detail_preview = true
 		elif arg == "--equipment-synthesis-preview":
 			equipment_synthesis_preview = true
+		elif arg == "--bank-drag-preview":
+			bank_drag_preview = true
 		elif arg == "--shop-preview":
 			shop_preview = true
 		elif arg == "--battle-reward-preview":
@@ -2605,10 +2625,16 @@ func _run_movement_spam_click_check() -> void:
 	var start_position := player.global_position
 	var before_apply_count := click_move_repath_apply_count
 	var before_resolve_count := click_move_screen_resolve_count
+	var before_input_accept_count := click_move_input_accept_count
+	var before_input_ui_reject_count := click_move_input_ui_reject_count
+	var before_input_remote_hit_count := click_move_input_remote_hit_count
 	var last_cell := start_cell
 	var click_count := 0
 	var input_elapsed_usec := 0
 	var max_input_usec := 0
+	var ui_skipped_count := 0
+	var mouse_event_count := 0
+	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
 	for frame_index in range(120):
 		for burst_index in range(3):
 			var index := frame_index * 3 + burst_index
@@ -2616,13 +2642,19 @@ func _run_movement_spam_click_check() -> void:
 			var candidate := IsoMapModel.nearest_walkable_cell(map_data, start_cell + offset)
 			if not IsoMapModel.is_inside(map_data, candidate):
 				continue
+			var screen_point := _world_to_screen(IsoMapModel.grid_to_world(map_data, candidate))
+			if not viewport_rect.has_point(screen_point) or _is_ui_point(screen_point):
+				ui_skipped_count += 1
+				continue
 			last_cell = candidate
 			var event := InputEventMouseButton.new()
+			if event is InputEventMouseButton:
+				mouse_event_count += 1
 			event.button_index = MOUSE_BUTTON_LEFT
 			event.pressed = true
-			event.position = _world_to_screen(IsoMapModel.grid_to_world(map_data, candidate))
+			event.position = screen_point
 			var started_usec := Time.get_ticks_usec()
-			_input(event)
+			_handle_world_pointer_pressed(event.position, false, true)
 			var elapsed_usec := Time.get_ticks_usec() - started_usec
 			input_elapsed_usec += elapsed_usec
 			max_input_usec = maxi(max_input_usec, elapsed_usec)
@@ -2632,16 +2664,24 @@ func _run_movement_spam_click_check() -> void:
 		await get_tree().physics_frame
 	var applied_count := click_move_repath_apply_count - before_apply_count
 	var resolved_count := click_move_screen_resolve_count - before_resolve_count
+	var input_accept_count := click_move_input_accept_count - before_input_accept_count
+	var input_ui_reject_count := click_move_input_ui_reject_count - before_input_ui_reject_count
+	var input_remote_hit_count := click_move_input_remote_hit_count - before_input_remote_hit_count
 	var moved := player.global_position.distance_to(start_position) > 16.0
 	var avg_input_usec := int(round(float(input_elapsed_usec) / maxf(1.0, float(click_count))))
 	var input_fast := avg_input_usec <= 250 and max_input_usec <= 12000
 	var coalesced := resolved_count <= 70 and applied_count <= 70
 	var settled := not has_pending_click_screen_point and not has_pending_click_move_target
 	var final_target_matches := has_target_cell and target_cell == last_cell
-	var status := "ok" if moved and coalesced and input_fast and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d resolved=%d applied=%d avg_input_us=%d max_input_us=%d moved=%s coalesced=%s settled=%s final_match=%s final_target=%s expected=%s" % [
+	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and settled and final_target_matches else "failed"
+	print("movement spam click check ready: status=%s clicks=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d avg_input_us=%d max_input_us=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
 		click_count,
+		ui_skipped_count,
+		mouse_event_count,
+		input_ui_reject_count,
+		input_remote_hit_count,
+		input_accept_count,
 		resolved_count,
 		applied_count,
 		avg_input_usec,
@@ -2650,6 +2690,11 @@ func _run_movement_spam_click_check() -> void:
 		str(coalesced),
 		str(settled),
 		str(final_target_matches),
+		str(account_authenticated),
+		str(auth_auto_bypass),
+		str(battle_active),
+		str(encounter_active),
+		str(auth_panel != null and auth_panel.visible),
 		str(target_cell),
 		str(last_cell),
 	])
@@ -3419,6 +3464,123 @@ func _run_auto_backpack_filter_check() -> void:
 	await _auto_checks()._run_auto_backpack_filter_check()
 
 
+func _run_bank_drag_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	account_authenticated = true
+	current_account_session = {
+		"accountId": "bank_drag_preview_account",
+		"username": "bank_preview",
+		"displayName": "银行预览",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "bank_drag_preview_token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	server_profile_sync_state = "ready"
+	var preview_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 1780)
+	var slots := PlayerProgressModel.backpack_slots(preview_profile)
+	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 18)
+	slots = BackpackModel.set_item_count(slots, "trail_ration_pack", 4)
+	slots = BackpackModel.set_item_count(slots, BattleModel.CAPTURE_TOOL_NET, 5)
+	preview_profile = PlayerProgressModel.with_backpack_slots(preview_profile, slots)
+	preview_profile["bank"] = {
+		"stoneCoins": 2400,
+		"items": [
+			{"itemId": "quest_field_note", "count": 2},
+			{"itemId": "item_pet_salve_mid", "count": 6},
+			{"itemId": BattleModel.ITEM_HEAL_SINGLE, "count": 3},
+		],
+		"schemaVersion": 1,
+	}
+	player_profile = PlayerProgressModel.normalize_profile(preview_profile)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("银行：左边是背包，右边是银行；拖动物品后选择数量。")
+	_open_bank_panel()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var source_button = bank_item_buttons.get("bank_backpack:%s" % BattleModel.ITEM_MEAT_SMALL, null)
+	var target_button = bank_item_buttons.get("bank_storage:quest_field_note", null)
+	if source_button is Control:
+		var source_slot := source_button as Control
+		var source_center := source_slot.get_global_rect().get_center()
+		var target_center := source_center + Vector2(330.0, 0.0)
+		if target_button is Control:
+			target_center = (target_button as Control).get_global_rect().get_center()
+		var press := InputEventMouseButton.new()
+		press.button_index = MOUSE_BUTTON_LEFT
+		press.pressed = true
+		press.position = source_center
+		press.global_position = source_center
+		Input.parse_input_event(press)
+		await get_tree().process_frame
+		var previous_pos := source_center
+		for target_pos in [source_center + Vector2(-260.0, 0.0), target_center]:
+			for step in range(30):
+				var progress := float(step + 1) / 30.0
+				var eased := 1.0 - pow(1.0 - progress, 2.0)
+				var next_pos := previous_pos.lerp(target_pos, eased)
+				var motion := InputEventMouseMotion.new()
+				motion.position = next_pos
+				motion.global_position = next_pos
+				motion.relative = next_pos - previous_pos
+				motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+				Input.parse_input_event(motion)
+				previous_pos = next_pos
+				await get_tree().process_frame
+		var release := InputEventMouseButton.new()
+		release.button_index = MOUSE_BUTTON_LEFT
+		release.pressed = false
+		release.position = target_center
+		release.global_position = target_center
+		Input.parse_input_event(release)
+		await get_tree().process_frame
+	if _panel_flow().item_stack_split_panel == null or not _panel_flow().item_stack_split_panel.visible:
+		_panel_flow()._on_item_slot_dropped({
+			"context": "bank_backpack",
+			"itemId": BattleModel.ITEM_MEAT_SMALL,
+			"count": 18,
+			"dragKind": "item_slot",
+		}, {
+			"context": "bank_storage",
+			"accepts": ["bank_backpack", "backpack"],
+		})
+	var preview_flow = _panel_flow()
+	if preview_flow.item_stack_split_panel != null and preview_flow.item_stack_split_panel.visible:
+		for _frame in range(24):
+			await get_tree().process_frame
+		if preview_flow.item_stack_split_quantity_spinbox != null:
+			preview_flow.item_stack_split_quantity_spinbox.value = float(int(preview_flow.item_stack_split_request.get("maxQuantity", 18)))
+		for _frame in range(18):
+			await get_tree().process_frame
+		preview_flow._close_item_stack_split_panel(false)
+		var preview_slots_after := PlayerProgressModel.backpack_slots(player_profile)
+		preview_slots_after = BackpackModel.set_item_count(preview_slots_after, BattleModel.ITEM_MEAT_SMALL, 0)
+		player_profile = PlayerProgressModel.with_backpack_slots(player_profile, preview_slots_after)
+		var preview_bank := PlayerProgressModel.bank_data(player_profile)
+		var preview_bank_items: Array = preview_bank.get("items", []) if preview_bank.get("items", []) is Array else []
+		var merged_item := false
+		for index in range(preview_bank_items.size()):
+			if not (preview_bank_items[index] is Dictionary):
+				continue
+			var stored_item := (preview_bank_items[index] as Dictionary).duplicate(true)
+			if str(stored_item.get("itemId", "")) != BattleModel.ITEM_MEAT_SMALL:
+				continue
+			stored_item["count"] = maxi(0, int(stored_item.get("count", 0))) + 18
+			preview_bank_items[index] = stored_item
+			merged_item = true
+			break
+		if not merged_item:
+			preview_bank_items.append({"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 18})
+		preview_bank["items"] = preview_bank_items
+		player_profile["bank"] = preview_bank
+		player_profile = PlayerProgressModel.normalize_profile(player_profile)
+		preview_flow.bank_selected_item_id = BattleModel.ITEM_MEAT_SMALL
+		if preview_flow.bank_status_label != null:
+			preview_flow.bank_status_label.text = "预览：存入银行：肉 x18。"
+		preview_flow._refresh_bank_panel()
+
+
 func _run_shop_preview() -> void:
 	profile_save_enabled = false
 	player_profile = PlayerProgressModel.default_profile()
@@ -3874,6 +4036,8 @@ func _quest_equipment_tutorial_profile() -> Dictionary:
 		"quest_equip_weapon",
 		"quest_buy_spirit_armor",
 		"quest_equip_spirit_armor",
+		"quest_first_victory",
+		"quest_training_partner_intro",
 	]:
 		var quest := QuestModel.quest_for_id(quest_id)
 		states[quest_id] = {
@@ -6174,7 +6338,7 @@ func _battle_auto_capture_escape_without_target() -> void:
 			_set_battle_auto_attack_enabled(false, false)
 			_set_battle_message("自动捉宠：切磋中不会自动离开，已停止自动战斗。")
 			return
-		_leave_server_battle_room()
+		_submit_server_battle_player_command("run")
 		return
 	_battle_escape()
 	if world_log_message != "":
@@ -6585,6 +6749,10 @@ func _run_auto_facing_check() -> void:
 	await _auto_checks()._run_auto_facing_check()
 
 
+func _run_auto_right_click_facing_check() -> void:
+	await _auto_checks()._run_auto_right_click_facing_check()
+
+
 func _run_auto_eight_direction_check() -> void:
 	await _auto_checks()._run_auto_eight_direction_check()
 
@@ -6717,6 +6885,14 @@ func _perf_report(delta: float) -> void:
 	perf_probe_totals.clear()
 
 
+func _reset_perf_probe_counters() -> void:
+	if not perf_probe_enabled:
+		return
+	perf_probe_elapsed = 0.0
+	perf_probe_frames = 0
+	perf_probe_totals.clear()
+
+
 func _request_profile_save(delay_seconds: float = 0.3) -> void:
 	_mark_progress_ui_caches_dirty()
 	if not profile_save_enabled:
@@ -6776,19 +6952,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
-		if _is_ui_point(mouse_event.position):
-			return
 		if (mouse_event.button_index == MOUSE_BUTTON_LEFT or mouse_event.button_index == MOUSE_BUTTON_RIGHT) and mouse_event.pressed:
-			if battle_active:
-				_select_battle_target_at_screen_point(mouse_event.position)
-				return
-			var remote_player := _online_remote_player_at_screen_point(mouse_event.position)
-			if not remote_player.is_empty():
-				_open_player_action_panel(remote_player)
-				return
-			if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
-				return
-			_set_click_move_target(mouse_event.position)
+			_handle_world_pointer_pressed(mouse_event.position, mouse_event.button_index == MOUSE_BUTTON_RIGHT)
 	elif event is InputEventMouseMotion:
 		var motion_event := event as InputEventMouseMotion
 		if _is_ui_point(motion_event.position):
@@ -6797,17 +6962,54 @@ func _input(event: InputEvent) -> void:
 			_update_battle_hover_at_screen_point(motion_event.position)
 	elif event is InputEventScreenTouch:
 		var touch_event := event as InputEventScreenTouch
-		if _is_ui_point(touch_event.position):
-			return
 		if touch_event.pressed:
-			if battle_active:
-				_select_battle_target_at_screen_point(touch_event.position)
-				return
-			var remote_player := _online_remote_player_at_screen_point(touch_event.position)
-			if not remote_player.is_empty():
-				_open_player_action_panel(remote_player)
-				return
-			_set_click_move_target(touch_event.position)
+			_handle_world_pointer_pressed(touch_event.position, false)
+
+
+func _handle_world_pointer_pressed(screen_point: Vector2, context_only: bool = false, ui_checked: bool = false) -> void:
+	if not ui_checked and _is_ui_point(screen_point):
+		click_move_input_ui_reject_count += 1
+		return
+	if battle_active:
+		if context_only:
+			_inspect_battle_actor_at_screen_point(screen_point)
+		else:
+			_select_battle_target_at_screen_point(screen_point)
+		return
+	if context_only:
+		_face_player_toward_screen_point(screen_point)
+		return
+	var remote_player := _online_remote_player_at_screen_point(screen_point, true)
+	if not remote_player.is_empty():
+		click_move_input_remote_hit_count += 1
+		_open_player_action_panel(remote_player)
+		return
+	click_move_input_accept_count += 1
+	_set_click_move_target(screen_point, true)
+
+
+func _face_player_toward_screen_point(screen_point: Vector2) -> bool:
+	if player == null:
+		return false
+	var target_world := _screen_to_world(screen_point)
+	var remote_player := _online_remote_player_at_screen_point(screen_point, true)
+	if not remote_player.is_empty() and not map_data.is_empty():
+		var position := remote_player.get("position", {}) as Dictionary if remote_player.get("position", {}) is Dictionary else {}
+		if str(position.get("mapId", "")) == current_map_id:
+			var target_cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+			if IsoMapModel.is_inside(map_data, target_cell):
+				target_world = IsoMapModel.grid_to_world(map_data, target_cell)
+	var direction := target_world - player.global_position
+	if direction.length() <= 0.001:
+		return false
+	var previous_facing: String = player.get_facing_key() if player.has_method("get_facing_key") else ""
+	player.face_direction(direction)
+	var next_facing: String = player.get_facing_key() if player.has_method("get_facing_key") else ""
+	if next_facing == "" or next_facing == previous_facing:
+		return false
+	_request_online_position_snapshot(_current_online_position_payload())
+	queue_redraw()
+	return true
 
 
 func _queue_world_redraw_if_needed() -> void:
@@ -7197,6 +7399,8 @@ func _stop_server_event_stream() -> void:
 	_panel_flow()._stop_server_event_stream()
 
 func _poll_server_event_stream(delta: float) -> void:
+	if bank_drag_preview:
+		return
 	_panel_flow()._poll_server_event_stream(delta)
 
 func _handle_server_event(event: Dictionary) -> void:
@@ -7576,8 +7780,8 @@ func _battle_command_button_style(color: Color) -> StyleBoxFlat:
 func _button_style(color: Color) -> StyleBoxFlat:
 	return _panel_flow()._button_style(color)
 
-func _set_click_move_target(screen_point: Vector2) -> void:
-	_panel_flow()._set_click_move_target(screen_point)
+func _set_click_move_target(screen_point: Vector2, ui_checked: bool = false) -> void:
+	_panel_flow()._set_click_move_target(screen_point, ui_checked)
 
 func _should_defer_click_screen_point() -> bool:
 	return _panel_flow()._should_defer_click_screen_point()
@@ -7642,8 +7846,8 @@ func _server_step_move_current_cell() -> Vector2i:
 func _server_step_move_should_report_authority_cell() -> bool:
 	return _panel_flow()._server_step_move_should_report_authority_cell()
 
-func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false) -> bool:
-	return _panel_flow()._apply_server_step_move_authority_position(position, snap_player_to_authority)
+func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false, allow_map_change: bool = false) -> bool:
+	return _panel_flow()._apply_server_step_move_authority_position(position, snap_player_to_authority, allow_map_change)
 
 func _snap_player_to_server_step_authority() -> void:
 	_panel_flow()._snap_player_to_server_step_authority()
@@ -9306,7 +9510,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 			_set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉、换宠、宠物指令和%s。" % leave_label)
 			return
 		if command_id == "run":
-			_leave_server_battle_room()
+			_submit_player_battle_command("run")
 			return
 		if command_id == "switch_pet":
 			_open_switch_pet_command_menu()
@@ -9344,7 +9548,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		"defend":
 			_submit_player_battle_command("defend")
 		"run":
-			_battle_escape()
+			_submit_player_battle_command("run")
 		"spirit":
 			_open_spirit_command_menu()
 		"capture":
@@ -9928,7 +10132,7 @@ func _submit_pet_battle_command(command_id: String, target_id: String = "", skil
 
 
 func _open_pet_command_or_start_round() -> void:
-	if BattleModel.controlled_pet_id(battle_state) != "":
+	if BattleModel.controlled_pet_id(battle_state) != "" and str(battle_pending_player_command.get("command", "")) != "run":
 		_set_battle_command_owner("pet")
 		var pet_actor := BattleModel.actor_by_id(battle_state, BattleModel.controlled_pet_id(battle_state))
 		_set_battle_message("%s 要做什么？" % str(pet_actor.get("name", "宠物")))
@@ -9944,7 +10148,7 @@ func _battle_start_pending_round() -> void:
 		_set_battle_command_owner("player")
 		return
 	var player_command_id := str(battle_pending_player_command.get("command", ""))
-	if player_command_id != "switch_pet" and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
+	if not (["switch_pet", "run"].has(player_command_id)) and battle_pending_pet_command.is_empty() and BattleModel.controlled_pet_id(battle_state) != "":
 		if bool(battle_pending_player_command.get("captureHold", false)):
 			battle_pending_pet_command = {
 			"command": "defend",
@@ -10087,6 +10291,8 @@ func _play_next_battle_event() -> void:
 
 func _battle_state_should_end(state: Dictionary) -> bool:
 	return (
+		bool(state.get("escaped", false))
+		or
 		PlayerProgressModel.battle_actor_knocked_away(state, BattleModel.PLAYER_ACTOR_ID)
 		or BattleModel.living_enemy_id(state) == ""
 		or BattleModel.living_ally_id(state) == ""
@@ -10452,6 +10658,8 @@ func _battle_event_duration(event: Dictionary) -> float:
 			return 0.74
 		"switch_pet":
 			return 0.42
+		"escape":
+			return 0.42
 		"defend":
 			return 0.40
 		"status_tick":
@@ -10669,6 +10877,30 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 	var actor := BattleModel.actor_by_id(battle_state, actor_id)
 	_set_battle_message("目标：%s" % str(actor.get("name", "敌人")))
 	_sync_battle_buttons()
+	queue_redraw()
+	return true
+
+
+func _inspect_battle_actor_at_screen_point(screen_point: Vector2) -> bool:
+	if not battle_active or _battle_point_overlaps_panel(screen_point):
+		return false
+	var actor_id := _battle_actor_id_at_screen_point(screen_point, "")
+	if actor_id == "":
+		return false
+	battle_hover_info_actor_id = actor_id
+	_update_battle_passive_panel()
+	var actor := BattleModel.actor_by_id(battle_state, actor_id)
+	if actor.is_empty():
+		return false
+	var hp := maxi(0, int(actor.get("hp", 0)))
+	var max_hp := maxi(1, int(actor.get("maxHp", 1)))
+	var side_text := "敌方" if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY else "我方"
+	_set_battle_message("查看%s：%s HP %d/%d。" % [
+		side_text,
+		str(actor.get("name", "目标")),
+		hp,
+		max_hp,
+	])
 	queue_redraw()
 	return true
 
@@ -11678,7 +11910,10 @@ func _request_server_hang_session_stop(reason: String = "manual", pending_resume
 func _on_hang_button_pressed() -> void:
 	if player == null:
 		return
-	if hang_mode_active or player.is_auto_moving() or _encounter_stone_active():
+	if battle_active:
+		_request_hang_stop_after_battle()
+		return
+	if hang_mode_active or _encounter_stone_active():
 		_stop_hang_activity("挂机已停止。")
 		return
 	_start_hang_walk()
@@ -11732,7 +11967,7 @@ func _sync_hang_button_text() -> void:
 	var next_text := "挂机"
 	if battle_active:
 		next_text = "停"
-	elif hang_mode_active or _encounter_stone_active() or (player != null and player.is_auto_moving()):
+	elif hang_mode_active or _encounter_stone_active():
 		next_text = "停"
 	if stop_button.text != next_text:
 		stop_button.text = next_text
@@ -11794,6 +12029,25 @@ func _stop_hang_activity(message: String = "", clear_stone: bool = true, sync_se
 		_request_server_hang_session_stop("manual" if message == "" else message)
 	if message != "":
 		_set_world_log_message(message)
+
+
+func _request_hang_stop_after_battle() -> void:
+	var has_hang_activity := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	if not has_hang_activity and not hang_stop_after_battle_requested:
+		_set_battle_message("当前没有挂机。")
+		return
+	hang_stop_after_battle_requested = true
+	if player != null:
+		player.clear_move_target()
+	_set_battle_message("本场战斗结束后停止挂机。")
+	_sync_hang_button_text()
+
+
+func _consume_hang_stop_after_battle_request() -> bool:
+	if not hang_stop_after_battle_requested:
+		return false
+	hang_stop_after_battle_requested = false
+	return true
 
 
 func _clear_navigation_state() -> void:
@@ -11914,7 +12168,7 @@ func _layout_hud() -> void:
 	var panel_available_height := maxf(160.0, viewport_size.y - panel_top_y - margin)
 	var compact_panel_content := is_phone_shape and viewport_size.y < 520.0
 	if backpack_detail_label != null:
-		backpack_detail_label.custom_minimum_size = Vector2(0, 64.0 if compact_panel_content else 122.0)
+		backpack_detail_label.custom_minimum_size = Vector2.ZERO if not backpack_detail_label.visible else Vector2(0, 64.0 if compact_panel_content else 122.0)
 	if backpack_target_scroll != null:
 		backpack_target_scroll.custom_minimum_size = Vector2(0, 72.0 if compact_panel_content else 112.0)
 	if shop_detail_label != null:
@@ -12128,13 +12382,18 @@ func _layout_hud() -> void:
 			if battle_message_panel != null:
 				battle_message_panel.visible = false
 
-	if bank_panel != null:
-		bank_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-		bank_panel.size = Vector2(codex_width, codex_height)
-		if battle_active:
-			bank_panel.visible = false
-		if bank_panel.visible and action_bar != null:
-			action_bar.visible = false
+		if bank_panel != null:
+			var bank_width: float = minf(viewport_size.x - margin * 2.0, 1120.0)
+			var bank_height: float = minf(panel_available_height, 620.0)
+			bank_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), bank_width)
+			bank_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), bank_height)
+			var bank_panel_y = minf(maxf(panel_top_y, (viewport_size.y - bank_height) * 0.5), viewport_size.y - bank_height - margin)
+			bank_panel.position = Vector2((viewport_size.x - bank_width) * 0.5, bank_panel_y)
+			bank_panel.size = Vector2(bank_width, bank_height)
+			if battle_active:
+				bank_panel.visible = false
+			if bank_panel.visible and action_bar != null:
+				action_bar.visible = false
 
 	if training_partner_panel != null:
 		training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
@@ -12309,6 +12568,14 @@ func _update_hud_text(force: bool = false) -> void:
 		hud_task_route_signature_cache = route_signature
 		_refresh_task_route_button()
 	_perf_add("hud_route", route_start)
+	_sync_world_hud_signature_after_text_update()
+
+
+func _sync_world_hud_signature_after_text_update() -> void:
+	if status_label == null or player == null or map_data.is_empty():
+		return
+	world_hud_signature_cache = _world_hud_signature()
+	world_hud_refresh_elapsed = 0.0
 
 
 func _layout_size() -> Vector2:
@@ -12467,8 +12734,8 @@ func _draw_online_remote_players() -> void:
 				draw_string(font, rect.position + Vector2(0.0, 16.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, Color(0.94, 0.98, 0.90, 0.96))
 
 
-func _online_remote_player_at_screen_point(screen_point: Vector2) -> Dictionary:
-	if not _is_server_account_session() or online_position_remote_players.is_empty() or map_data.is_empty() or _is_ui_point(screen_point):
+func _online_remote_player_at_screen_point(screen_point: Vector2, ui_checked: bool = false) -> Dictionary:
+	if not _is_server_account_session() or online_position_remote_players.is_empty() or map_data.is_empty() or (not ui_checked and _is_ui_point(screen_point)):
 		return {}
 	var world_point := _screen_to_world(screen_point)
 	for index in range(online_position_remote_players.size() - 1, -1, -1):

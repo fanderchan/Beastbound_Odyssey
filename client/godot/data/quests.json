@@ -24,6 +24,97 @@
           }
         ]
       },
+      "nextQuestId": "quest_bank_intro"
+    },
+    {
+      "id": "quest_bank_intro",
+      "title": "认识银行管理员",
+      "giverId": "firebud_bank_keeper",
+      "turnInId": "firebud_bank_keeper",
+      "autoClaimOnReady": true,
+      "summary": "认识银行管理员阿衡，学会把多余石币存进银行。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_bank_keeper",
+        "count": 1,
+        "text": "和银行管理员阿衡对话"
+      },
+      "rewards": {
+        "stoneCoins": 1000,
+        "items": []
+      },
+      "nextQuestId": "quest_stable_intro"
+    },
+    {
+      "id": "quest_stable_intro",
+      "title": "认识兽栏管理员",
+      "giverId": "firebud_stable_keeper",
+      "turnInId": "firebud_stable_keeper",
+      "autoClaimOnReady": true,
+      "summary": "认识兽栏管理员阿牧，领取对战宠物蛋和新手老虎蛋。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_stable_keeper",
+        "count": 1,
+        "text": "和兽栏管理员阿牧对话"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "novice_battle_pet_egg",
+            "count": 1
+          },
+          {
+            "itemId": "novice_tiger_egg",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_riding_certificate"
+    },
+    {
+      "id": "quest_riding_certificate",
+      "title": "学习骑虎证",
+      "giverId": "firebud_riding_trainer",
+      "turnInId": "firebud_riding_trainer",
+      "autoClaimOnReady": true,
+      "summary": "向骑宠导师阿越学习骑虎证。",
+      "objective": {
+        "type": "talk",
+        "targetId": "firebud_riding_trainer",
+        "count": 1,
+        "text": "向骑宠导师阿越学习骑虎证"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [],
+        "abilities": [
+          {
+            "abilityId": "riding",
+            "label": "骑虎证"
+          }
+        ]
+      },
+      "nextQuestId": "quest_try_riding_tiger"
+    },
+    {
+      "id": "quest_try_riding_tiger",
+      "title": "试骑新手老虎",
+      "giverId": "firebud_riding_trainer",
+      "turnInId": "firebud_riding_trainer",
+      "autoClaimOnReady": true,
+      "summary": "打开宠物界面，把新手老虎切换为骑乘。",
+      "objective": {
+        "type": "ride_pet",
+        "formId": "novice_tiger_mount",
+        "count": 1,
+        "text": "使用新手老虎蛋后，在宠物界面骑上新手老虎"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
       "nextQuestId": "quest_buy_supply"
     },
     {
@@ -217,6 +308,48 @@
           }
         ]
       },
+      "nextQuestId": "quest_first_victory"
+    },
+    {
+      "id": "quest_first_victory",
+      "title": "村外试炼",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "去村外草丛赢下一场战斗。",
+      "objective": {
+        "type": "battle_victory",
+        "encounterGroupId": "firebud_grass_01",
+        "count": 1,
+        "text": "在村外草丛赢得一场战斗"
+      },
+      "rewards": {
+        "stoneCoins": 30,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_training_partner_intro"
+    },
+    {
+      "id": "quest_training_partner_intro",
+      "title": "陪练伙伴",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "加入一名陪练伙伴，再去村外草丛挑战更多野生宠物。",
+      "objective": {
+        "type": "training_partner_count",
+        "count": 1,
+        "text": "在伙伴面板加入1名陪练伙伴"
+      },
+      "rewards": {
+        "stoneCoins": 10,
+        "items": []
+      },
       "nextQuestId": "quest_use_poison_spirit"
     },
     {
@@ -239,30 +372,6 @@
         "items": [
           {
             "itemId": "weapon_blessed_club",
-            "count": 1
-          }
-        ]
-      },
-      "nextQuestId": "quest_first_victory"
-    },
-    {
-      "id": "quest_first_victory",
-      "title": "村外试炼",
-      "giverId": "village_guard",
-      "turnInId": "village_guard",
-      "autoClaimOnReady": true,
-      "summary": "去村外草丛赢下一场战斗。",
-      "objective": {
-        "type": "battle_victory",
-        "encounterGroupId": "firebud_grass_01",
-        "count": 1,
-        "text": "在村外草丛赢得一场战斗"
-      },
-      "rewards": {
-        "stoneCoins": 30,
-        "items": [
-          {
-            "itemId": "item_heal_single_5",
             "count": 1
           }
         ]

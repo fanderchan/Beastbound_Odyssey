@@ -159,6 +159,7 @@ const DIALOG_ACTION_RECORD_POINT := "record_point"
 const DIALOG_ACTION_PET_SKILL_TRAIN := "pet_skill_train"
 const DIALOG_ACTION_PET_SKILL_OVERWRITE := "pet_skill_overwrite"
 const DIALOG_ACTION_STABLE := "stable"
+const DIALOG_ACTION_BANK := "bank"
 const DIALOG_ACTION_SHOP := "shop"
 const DIALOG_ACTION_OPEN_QUEST := "open_quest"
 const DIALOG_ACTION_REBIRTH := "rebirth"
@@ -408,6 +409,171 @@ func _run_auto_mouse_click_check() -> void:
 		str(host.has_target_marker),
 	])
 	host.get_tree().quit(0 if moved_right else 1)
+
+func _run_auto_right_click_facing_check() -> void:
+	host.profile_save_enabled = false
+	var previous_auth: bool = host.account_authenticated
+	var previous_session: Dictionary = host.current_account_session.duplicate(true)
+	var previous_remote_players: Array = host.online_position_remote_players.duplicate(true)
+	var previous_online_request = host.online_position_http_request
+	var previous_player_action_visible: bool = host.player_action_panel != null and host.player_action_panel.visible
+	host.account_authenticated = true
+	var loaded: bool = not host.map_data.is_empty()
+	var start_cell := IsoMapModel.spawn_cell(host.map_data) if loaded else Vector2i.ZERO
+	var ground_target_cell := start_cell + Vector2i(2, -2)
+	if loaded and host.player != null:
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, start_cell)
+		host.player.clear_move_target()
+		host.current_path_cells.clear()
+		host.current_path_is_direct = false
+		host.has_target_marker = false
+		host.has_target_cell = false
+		host.player.face_direction(Vector2.DOWN)
+	var start_position: Vector2 = host.player.global_position if host.player != null else Vector2.ZERO
+	var right_event := InputEventMouseButton.new()
+	right_event.button_index = MOUSE_BUTTON_RIGHT
+	right_event.pressed = true
+	right_event.position = host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, ground_target_cell)) if loaded else Vector2.ZERO
+	host._input(right_event)
+	await host.get_tree().physics_frame
+	var ground_facing_ok: bool = host.player != null and host.player.get_facing_key() == "east"
+	var ground_not_moved_ok: bool = host.player != null and host.player.global_position.distance_to(start_position) < 0.5
+	var ground_no_path_ok: bool = host.current_path_cells.is_empty() and not host.has_target_marker and not host.has_target_cell and (host.player == null or not host.player.is_auto_moving())
+	if host.player != null:
+		host.player.face_direction(Vector2.DOWN)
+	var has_ui_point: bool = host.action_bar != null and host.action_bar.visible
+	if has_ui_point:
+		var ui_event := InputEventMouseButton.new()
+		ui_event.button_index = MOUSE_BUTTON_RIGHT
+		ui_event.pressed = true
+		ui_event.position = host.action_bar.get_global_rect().get_center()
+		host._input(ui_event)
+	var ui_block_ok := true
+	if has_ui_point and host.player != null:
+		ui_block_ok = host.player.get_facing_key() == "south"
+	host.current_account_session = {
+		"accountId": "local_account",
+		"username": "local",
+		"displayName": "本地",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		"serverSessionToken": "token_test",
+	}
+	host.online_position_http_request = null
+	var remote_cell := start_cell + Vector2i(-2, 2)
+	host.online_position_remote_players.clear()
+	host.online_position_remote_players.append({
+		"accountId": "remote_account",
+		"username": "remote",
+		"displayName": "远端",
+		"position": {
+			"mapId": host.current_map_id,
+			"cellX": remote_cell.x,
+			"cellY": remote_cell.y,
+			"facing": "east",
+			"moving": false,
+		},
+	})
+	if host.player != null and loaded:
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, start_cell)
+		host.player.face_direction(Vector2.DOWN)
+	if host.player_action_panel != null:
+		host.player_action_panel.visible = false
+	var remote_event := InputEventMouseButton.new()
+	remote_event.button_index = MOUSE_BUTTON_RIGHT
+	remote_event.pressed = true
+	remote_event.position = host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, remote_cell) + Vector2(0.0, -14.0)) if loaded else Vector2.ZERO
+	var remote_hit_ok: bool = not host._online_remote_player_at_screen_point(remote_event.position, true).is_empty()
+	host._input(remote_event)
+	await host.get_tree().physics_frame
+	var remote_facing_ok: bool = host.player != null and host.player.get_facing_key() == "west"
+	var remote_panel_closed_ok: bool = host.player_action_panel == null or not host.player_action_panel.visible
+	var flow = host._panel_flow()
+	var item_context_ok := false
+	var item_context_top_ok := false
+	var item_detail_popup_ok := false
+	var backpack_detail_hidden_ok := false
+	var backpack_merge_ok := false
+	var backpack_split_ok := false
+	var backpack_discard_confirm_ok := false
+	var backpack_discard_model_ok := false
+	if flow != null and flow.item_slot_context_panel != null:
+		flow._on_item_slot_context_requested({
+			"context": "bank_backpack",
+			"itemId": BattleModel.ITEM_MEAT_SMALL,
+			"count": 3,
+			"label": "肉 x3",
+		}, Vector2(220.0, 180.0))
+		await host.get_tree().process_frame
+		var button_count: int = flow.item_slot_context_button_container.get_child_count() if flow.item_slot_context_button_container != null else 0
+		item_context_ok = flow.item_slot_context_panel.visible and button_count >= 4 and flow.item_slot_context_title_label != null and str(flow.item_slot_context_title_label.text).find("肉") >= 0
+		item_context_top_ok = flow.item_slot_context_panel.visible and flow.item_slot_context_panel.z_index >= 60
+		flow._close_item_slot_context_panel(false)
+		var backpack_slot_data := {
+			"context": "backpack",
+			"slotIndex": 0,
+			"itemId": BattleModel.ITEM_MEAT_SMALL,
+			"count": 27,
+			"label": "肉 x27",
+		}
+		flow._open_item_slot_detail_panel(backpack_slot_data, Vector2(260.0, 180.0))
+		await host.get_tree().process_frame
+		item_detail_popup_ok = flow.item_slot_detail_panel != null and flow.item_slot_detail_panel.visible and flow.item_slot_detail_body_label != null and str(flow.item_slot_detail_body_label.text).find("肉") >= 0
+		backpack_detail_hidden_ok = host.backpack_detail_label != null and not host.backpack_detail_label.visible
+		flow._close_item_slot_detail_panel(false)
+		var merge_slots: Array[Dictionary] = [
+			{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 20},
+			{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 7},
+		]
+		var merge_result := BackpackModel.move_stack(merge_slots, 1, 0)
+		var merged_slots: Array[Dictionary] = merge_result.get("slots", [])
+		backpack_merge_ok = bool(merge_result.get("ok", false)) and merged_slots.size() >= 2 and int(merged_slots[0].get("count", 0)) == 27 and str(merged_slots[1].get("itemId", "")) == ""
+		var split_result := BackpackModel.split_stack(merged_slots, 0, 7)
+		var split_slots: Array[Dictionary] = split_result.get("slots", [])
+		backpack_split_ok = bool(split_result.get("ok", false)) and split_slots.size() >= 2 and int(split_slots[0].get("count", 0)) == 20 and int(split_slots[1].get("count", 0)) == 7
+		flow._open_backpack_discard_confirm({
+			"context": "backpack",
+			"slotIndex": 1,
+			"itemId": BattleModel.ITEM_MEAT_SMALL,
+			"count": 7,
+		}, 7, Vector2(280.0, 210.0))
+		await host.get_tree().process_frame
+		backpack_discard_confirm_ok = flow.backpack_discard_confirm_panel != null and flow.backpack_discard_confirm_panel.visible and flow.backpack_discard_confirm_body_label != null and str(flow.backpack_discard_confirm_body_label.text).find("肉 x7") >= 0
+		flow._close_backpack_discard_confirm_panel(false)
+		var discard_result := BackpackModel.discard_stack(split_slots, 1, 7)
+		var discarded_slots: Array[Dictionary] = discard_result.get("slots", [])
+		backpack_discard_model_ok = bool(discard_result.get("ok", false)) and discarded_slots.size() >= 2 and str(discarded_slots[1].get("itemId", "")) == ""
+	host.account_authenticated = previous_auth
+	host.current_account_session = previous_session
+	host.online_position_http_request = previous_online_request
+	host.online_position_remote_players.clear()
+	for value in previous_remote_players:
+		if value is Dictionary:
+			host.online_position_remote_players.append((value as Dictionary).duplicate(true))
+	if host.player_action_panel != null:
+		host.player_action_panel.visible = previous_player_action_visible
+	var status := "ok" if loaded and ground_facing_ok and ground_not_moved_ok and ground_no_path_ok and ui_block_ok and remote_hit_ok and remote_facing_ok and remote_panel_closed_ok and item_context_ok and item_context_top_ok and item_detail_popup_ok and backpack_detail_hidden_ok and backpack_merge_ok and backpack_split_ok and backpack_discard_confirm_ok and backpack_discard_model_ok else "failed"
+	print("right click facing check ready: status=%s loaded=%s ground_facing=%s ground_no_move=%s ground_no_path=%s ui_block=%s remote_hit=%s remote_facing=%s remote_panel_closed=%s item_context=%s item_context_top=%s item_detail=%s detail_hidden=%s backpack_merge=%s backpack_split=%s discard_confirm=%s discard_model=%s" % [
+		status,
+		str(loaded),
+		str(ground_facing_ok),
+		str(ground_not_moved_ok),
+		str(ground_no_path_ok),
+		str(ui_block_ok),
+		str(remote_hit_ok),
+		str(remote_facing_ok),
+		str(remote_panel_closed_ok),
+		str(item_context_ok),
+		str(item_context_top_ok),
+		str(item_detail_popup_ok),
+		str(backpack_detail_hidden_ok),
+		str(backpack_merge_ok),
+		str(backpack_split_ok),
+		str(backpack_discard_confirm_ok),
+		str(backpack_discard_model_ok),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
 
 func _run_auto_mobile_touch_check() -> void:
 	host.profile_save_enabled = false
@@ -815,7 +981,7 @@ func _run_auto_npc_interaction_check() -> void:
 	var quest_was_intro = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_intro_talk"
 	host._confirm_dialog_action()
 	await host.get_tree().process_frame
-	var quest_advanced = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_buy_supply"
+	var quest_advanced = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_bank_intro"
 	var quest_log_ok = host.world_log_message.find("完成任务「认识训练师」") >= 0
 	var player_close = false
 	if trainer_found:
@@ -852,8 +1018,9 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var record_point = InteractionModel.find_by_id(host.map_data, "firebud_record_pillar")
 	var pet_trainer = InteractionModel.find_by_id(host.map_data, "firebud_pet_skill_trainer")
 	var stable_keeper = InteractionModel.find_by_id(host.map_data, "firebud_stable_keeper")
+	var bank_keeper = InteractionModel.find_by_id(host.map_data, "firebud_bank_keeper")
 	var rebirth_mentor = InteractionModel.find_by_id(host.map_data, "firebud_rebirth_mentor")
-	var facility_found = not shopkeeper.is_empty() and not doctor.is_empty() and not record_point.is_empty() and not pet_trainer.is_empty() and not stable_keeper.is_empty() and not rebirth_mentor.is_empty()
+	var facility_found = not shopkeeper.is_empty() and not doctor.is_empty() and not record_point.is_empty() and not pet_trainer.is_empty() and not stable_keeper.is_empty() and not bank_keeper.is_empty() and not rebirth_mentor.is_empty()
 
 	host._open_interaction_dialog(shopkeeper)
 	await host.get_tree().process_frame
@@ -917,6 +1084,33 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var stable_primary_ok = host.pet_panel != null and host.pet_panel.visible and not host._dialog_is_open() and host.pet_panel_stable_access_override
 	host._close_pet_panel()
 
+	host._open_interaction_dialog(bank_keeper)
+	await host.get_tree().process_frame
+	var bank_options_ok = host._dialog_is_open() and host.dialog_option_button != null and host.dialog_option_button.text == "银行"
+	host._confirm_dialog_action()
+	await host.get_tree().process_frame
+	var bank_primary_ok = host.bank_panel != null and host.bank_panel.visible and not host._dialog_is_open()
+	host._close_bank_panel()
+
+	var intro_event = PlayerProgressModel.record_quest_event(PlayerProgressModel.default_profile(), {
+		"type": "talk",
+		"targetId": "trainer",
+	})
+	host.player_profile = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	host._open_interaction_dialog(bank_keeper)
+	await host.get_tree().process_frame
+	var bank_task_options_ok = (
+		host._dialog_is_open()
+		and host.dialog_option_button != null
+		and host.dialog_option_button.text == "完成"
+		and host._dialog_secondary_button_texts().has("银行")
+	)
+	host._perform_dialog_action(DIALOG_ACTION_BANK)
+	await host.get_tree().process_frame
+	var bank_task_secondary_ok = host.bank_panel != null and host.bank_panel.visible and not host._dialog_is_open()
+	host._close_bank_panel()
+	host.player_profile = host._profile_with_active_quest("quest_buy_supply")
+
 	host._open_interaction_dialog(rebirth_mentor)
 	await host.get_tree().process_frame
 	var rebirth_options_ok = host._dialog_is_open() and host.dialog_option_button != null and host.dialog_option_button.text == "转生"
@@ -925,8 +1119,8 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var rebirth_primary_ok = host.player_rebirth_preview_panel != null and host.player_rebirth_preview_panel.visible and not host._dialog_is_open()
 	host._close_player_rebirth_preview_panel()
 
-	var status = "ok" if facility_found and shop_task_button_ok and quest_panel_opened and shop_primary_ok and doctor_options_ok and record_options_ok and trainer_options_ok and trainer_primary_ok and stable_options_ok and stable_primary_ok and rebirth_options_ok and rebirth_primary_ok else "failed"
-	print("facility dialog options check ready: status=%s found=%s shop_task=%s quest_open=%s shop_primary=%s doctor=%s record=%s trainer=%s trainer_primary=%s stable=%s stable_primary=%s rebirth=%s rebirth_primary=%s secondary=%s" % [
+	var status = "ok" if facility_found and shop_task_button_ok and quest_panel_opened and shop_primary_ok and doctor_options_ok and record_options_ok and trainer_options_ok and trainer_primary_ok and stable_options_ok and stable_primary_ok and bank_options_ok and bank_primary_ok and bank_task_options_ok and bank_task_secondary_ok and rebirth_options_ok and rebirth_primary_ok else "failed"
+	print("facility dialog options check ready: status=%s found=%s shop_task=%s quest_open=%s shop_primary=%s doctor=%s record=%s trainer=%s trainer_primary=%s stable=%s stable_primary=%s bank=%s bank_primary=%s bank_task=%s bank_task_secondary=%s rebirth=%s rebirth_primary=%s secondary=%s" % [
 		status,
 		str(facility_found),
 		str(shop_task_button_ok),
@@ -938,6 +1132,10 @@ func _run_auto_facility_dialog_options_check() -> void:
 		str(trainer_primary_ok),
 		str(stable_options_ok),
 		str(stable_primary_ok),
+		str(bank_options_ok),
+		str(bank_primary_ok),
+		str(bank_task_options_ok),
+		str(bank_task_secondary_ok),
 		str(rebirth_options_ok),
 		str(rebirth_primary_ok),
 		str(host._dialog_secondary_button_texts()),
@@ -1412,15 +1610,36 @@ func _run_auto_battle_check() -> void:
 			break
 	var round_resolved = (host.battle_active and not host._battle_commands_locked()) or not host.battle_active
 	var enemy_countered = ally_hp_after < ally_hp_before
+	if host.battle_active:
+		var actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+		var player_index := BattleModel.actor_index(host.battle_state, BattleModel.PLAYER_ACTOR_ID)
+		if player_index >= 0:
+			var player_actor := (actors[player_index] as Dictionary).duplicate(true)
+			player_actor["quick"] = 1
+			actors[player_index] = player_actor
+		var escape_enemy_id := BattleModel.living_enemy_id(host.battle_state)
+		var escape_enemy_index := BattleModel.actor_index(host.battle_state, escape_enemy_id)
+		if escape_enemy_index >= 0:
+			var escape_enemy_actor := (actors[escape_enemy_index] as Dictionary).duplicate(true)
+			escape_enemy_actor["quick"] = 999
+			escape_enemy_actor["attack"] = 1
+			actors[escape_enemy_index] = escape_enemy_actor
+		host.battle_state["actors"] = actors
 	host._on_battle_command_pressed("run")
 	await host.get_tree().process_frame
+	var escape_deferred = host.battle_active and (host.battle_action_timer > 0.0 or not host.battle_event_queue.is_empty())
+	for _frame in range(480):
+		await host.get_tree().process_frame
+		if not host.battle_active:
+			break
 	var escaped = not host.battle_active and host.player.visible and not host.battle_command_panel.visible
 	if zone_found:
 		host._trigger_encounter(zone)
 	await host.get_tree().process_frame
 	var victory_target_id = BattleModel.living_enemy_id(host.battle_state)
 	if victory_target_id != "":
-		host.battle_state = BattleModel.set_actor_hp(host.battle_state, victory_target_id, 1)
+		for enemy_actor_id in BattleModel.living_actor_ids(host.battle_state, BattleModel.SIDE_ENEMY):
+			host.battle_state = BattleModel.set_actor_hp(host.battle_state, enemy_actor_id, 1 if enemy_actor_id == victory_target_id else 0)
 	host._on_battle_command_pressed("attack")
 	host._auto_click_enemy_target(victory_target_id)
 	host._auto_submit_pet_attack_if_needed()
@@ -1429,8 +1648,8 @@ func _run_auto_battle_check() -> void:
 		if not host.battle_active:
 			break
 	var victory_exited = not host.battle_active and host.player.visible and not host.battle_command_panel.visible
-	var status = "ok" if loaded and zone_found and no_prompt and battle_started and buttons_ok and command_top_right and formation_ok and attack_reduced_hp and attack_state_seen and player_attacked and round_resolved and escaped and victory_exited else "failed"
-	print("battle check ready: status=%s loaded=%s zone_found=%s no_prompt=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s round_resolved=%s enemy_countered=%s escaped=%s victory_exited=%s" % [
+	var status = "ok" if loaded and zone_found and no_prompt and battle_started and buttons_ok and command_top_right and formation_ok and attack_reduced_hp and attack_state_seen and player_attacked and round_resolved and escape_deferred and escaped and victory_exited else "failed"
+	print("battle check ready: status=%s loaded=%s zone_found=%s no_prompt=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s round_resolved=%s enemy_countered=%s escape_deferred=%s escaped=%s victory_exited=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -1447,6 +1666,7 @@ func _run_auto_battle_check() -> void:
 		str(player_attacked),
 		str(round_resolved),
 		str(enemy_countered),
+		str(escape_deferred),
 		str(escaped),
 		str(victory_exited),
 	])
@@ -2214,10 +2434,11 @@ func _run_auto_training_partner_check() -> void:
 				actors[actor_index] = actor
 		host.battle_state["actors"] = actors
 	var ally_count_ok = host.battle_active and BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ALLY) == 10
-	var enemy_count_ok = host.battle_active and BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ENEMY) == 10
+	var enemy_count = BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ENEMY) if host.battle_active else 0
+	var enemy_count_ok = enemy_count >= 1 and enemy_count <= 10
 	var slots_ok = host.battle_active and BattleModel.occupied_slots_are_unique(host.battle_state)
 	var enemy_order = BattleModel.living_actor_ids(host.battle_state, BattleModel.SIDE_ENEMY)
-	var expected_enemy_order: Array[String] = [
+	var full_expected_enemy_order: Array[String] = [
 		"enemy_front_1",
 		"enemy_front_2",
 		"enemy_front_3",
@@ -2229,6 +2450,9 @@ func _run_auto_training_partner_check() -> void:
 		"enemy_back_4",
 		"enemy_back_5",
 	]
+	var expected_enemy_order: Array[String] = []
+	for index in range(enemy_count):
+		expected_enemy_order.append(full_expected_enemy_order[index])
 	var target_order_ok = enemy_order == expected_enemy_order and BattleModel.living_enemy_id(host.battle_state) == "enemy_front_1"
 	var expected_actor_ids: Array[String] = []
 	for index in range(4):
@@ -2375,7 +2599,7 @@ func _run_auto_training_partner_check() -> void:
 	host.player_profile = saved_profile
 	var panel_layout_ok = panel_map_loaded and first_panel_layout_ok and second_panel_layout_ok
 	var status = "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and server_action_contract_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok and mixed_party_team_ok and mixed_reward_ok else "failed"
-	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s server_action=%s loaded=%s zone=%s ally10=%s enemy10=%s slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
+	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s server_action=%s loaded=%s zone=%s ally10=%s enemy_range=%s enemy_count=%d slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
 		status,
 		str(partner_count_ok),
 		str(panel_layout_ok),
@@ -2387,6 +2611,7 @@ func _run_auto_training_partner_check() -> void:
 		str(zone_found),
 		str(ally_count_ok),
 		str(enemy_count_ok),
+		enemy_count,
 		str(slots_ok),
 		str(target_order_ok),
 		str(actors_present),
@@ -2440,6 +2665,15 @@ func _run_auto_battle_target_check() -> void:
 	host._on_battle_command_pressed("attack")
 	host._update_battle_hover_at_screen_point(target_screen)
 	var hover_ok = host.battle_hover_target_id == target_id
+	var right_click_hp_before = int(BattleModel.actor_by_id(host.battle_state, target_id).get("hp", 0))
+	host._handle_world_pointer_pressed(target_screen, true, true)
+	var right_click_hp_after = int(BattleModel.actor_by_id(host.battle_state, target_id).get("hp", 0))
+	var right_click_inspect_ok = (
+		host.battle_hover_info_actor_id == target_id
+		and str(host.battle_pending_player_command.get("targetId", "")) == ""
+		and right_click_hp_after == right_click_hp_before
+		and str(host.battle_state.get("message", "")).find("查看敌方") >= 0
+	)
 	var selected_by_tap = host._select_battle_target_at_screen_point(target_screen)
 	var selection_ok = str(host.battle_pending_player_command.get("targetId", "")) == target_id
 	var target_before = int(BattleModel.actor_by_id(host.battle_state, target_id).get("hp", 0))
@@ -2457,13 +2691,14 @@ func _run_auto_battle_target_check() -> void:
 	var first_after = int(BattleModel.actor_by_id(host.battle_state, first_id).get("hp", 0))
 	var selected_damaged = target_before > 0 and target_after < target_before
 	var first_unchanged = first_after == first_before
-	var status = "ok" if loaded and zone_found and initially_unselected and hover_ok and selected_by_tap and selection_ok and selected_damaged and first_unchanged else "failed"
-	print("battle target check ready: status=%s loaded=%s zone_found=%s initially_unselected=%s hover_ok=%s selected_by_tap=%s selection_ok=%s selected=%s target_before=%d target_after=%d first_before=%d first_after=%d" % [
+	var status = "ok" if loaded and zone_found and initially_unselected and hover_ok and right_click_inspect_ok and selected_by_tap and selection_ok and selected_damaged and first_unchanged else "failed"
+	print("battle target check ready: status=%s loaded=%s zone_found=%s initially_unselected=%s hover_ok=%s right_click_inspect=%s selected_by_tap=%s selection_ok=%s selected=%s target_before=%d target_after=%d first_before=%d first_after=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
 		str(initially_unselected),
 		str(hover_ok),
+		str(right_click_inspect_ok),
 		str(selected_by_tap),
 		str(selection_ok),
 		str(host.battle_pending_player_command.get("targetId", "")),
@@ -2615,6 +2850,7 @@ func _run_auto_battle_command_timer_check() -> void:
 				"attack": 10,
 				"defense": 6,
 				"speed": 50,
+				"spiritIds": [BattleModel.SPIRIT_MOIST_1],
 			}],
 			"requiredActorIds": ["timer_player_actor"],
 			"submittedActorIds": [],
@@ -2629,6 +2865,18 @@ func _run_auto_battle_command_timer_check() -> void:
 	}
 	host.server_battle_state["room"] = timer_room.duplicate(true)
 	var timer_first_start = host._apply_server_battle_room_state(timer_room, true)
+	host._on_battle_command_pressed("spirit")
+	await host.get_tree().process_frame
+	var command_menu_open_before_sync = host.battle_command_owner == "spirit"
+	host.server_battle_state["room"] = timer_room.duplicate(true)
+	var timer_same_turn_sync_applied = host._sync_server_battle_room_scene(false)
+	var command_menu_preserved_on_sync = (
+		command_menu_open_before_sync
+		and timer_same_turn_sync_applied
+		and host.battle_command_owner == "spirit"
+		and host.battle_command_title_label != null
+		and host.battle_command_title_label.text == "精灵"
+	)
 	host.battle_command_countdown_remaining = 42.0
 	host.battle_command_countdown_last_second = -1
 	var timer_round_two_room := timer_room.duplicate(true)
@@ -2666,8 +2914,8 @@ func _run_auto_battle_command_timer_check() -> void:
 	var returned_to_command = host.battle_active and not host._battle_commands_locked()
 	var second_round_ok = int(host.battle_state.get("round", 0)) >= 2 and host.battle_round_label != null and host.battle_round_label.text == "第 2 回合"
 	var timer_reset_ok = host.battle_timer_label != null and host.battle_timer_label.text == "99秒"
-	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and waiting_grace_timer_moves and round_events_timer_hidden and timer_sync_timer_reset_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
-	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s waiting_grace_moves=%s round_events_hidden=%s sync_timer_reset=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d waiting_grace=%d" % [
+	var status = "ok" if loaded and zone_found and initial_round_ok and initial_timer_ok and timer_visible_ok and waiting_timer_moves and waiting_grace_timer_moves and round_events_timer_hidden and command_menu_preserved_on_sync and timer_sync_timer_reset_ok and auto_started_round and default_round_events and returned_to_command and second_round_ok and timer_reset_ok else "failed"
+	print("battle command timer check ready: status=%s loaded=%s zone_found=%s visible=%s initial_round=%s initial_timer=%s waiting_moves=%s waiting_grace_moves=%s round_events_hidden=%s command_menu_sync=%s sync_timer_reset=%s auto_started=%s default_events=%s returned=%s second_round=%s timer_reset=%s label_round=%s label_timer=%s waiting_first=%d waiting_second=%d waiting_grace=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -2677,6 +2925,7 @@ func _run_auto_battle_command_timer_check() -> void:
 		str(waiting_timer_moves),
 		str(waiting_grace_timer_moves),
 		str(round_events_timer_hidden),
+		str(command_menu_preserved_on_sync),
 		str(timer_sync_timer_reset_ok),
 		str(auto_started_round),
 		str(default_round_events),
@@ -4712,14 +4961,60 @@ func _run_auto_battle_knockaway_result_check() -> void:
 		and not bool(escape_result.get("returnToRecordPoint", true))
 	)
 
-	var status = "ok" if player_return_ok and pet_rest_ok and enemy_launch_ok and capture_ok and escape_ok else "failed"
-	print("battle knockaway result check ready: status=%s player=%s pet=%s enemy=%s capture=%s escape=%s cell=%s player_result=%s pet_state=%s log=%s" % [
+	var mutual_state = BattleModel.create_wild_battle({
+		"id": "phase112_mutual_wipe",
+		"name": "Phase112同归于尽",
+	})
+	var mutual_enemy_ids := BattleModel.living_actor_ids(mutual_state, BattleModel.SIDE_ENEMY)
+	mutual_state = BattleModel.set_actor_hp(mutual_state, BattleModel.PLAYER_ACTOR_ID, 0)
+	mutual_state = BattleModel.set_actor_hp(mutual_state, BattleModel.PLAYER_PET_ID, 0)
+	for mutual_enemy_actor_id in mutual_enemy_ids:
+		mutual_state = BattleModel.set_actor_hp(mutual_state, mutual_enemy_actor_id, 0)
+	var mutual_result = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), mutual_state)
+	var mutual_defeat_ok = (
+		str(mutual_result.get("result", "")) == "defeat"
+		and not bool(mutual_result.get("returnToRecordPoint", true))
+	)
+
+	var mutual_launch_state = BattleModel.create_wild_battle({
+		"id": "phase112_mutual_player_launch",
+		"name": "Phase112击飞同归",
+	})
+	mutual_launch_state = BattleModel.apply_battle_event(mutual_launch_state, {
+		"type": "attack",
+		"attackerId": "enemy_0",
+		"targetId": BattleModel.PLAYER_ACTOR_ID,
+		"targetSide": BattleModel.SIDE_ALLY,
+		"damage": 10000,
+		"speed": 90,
+		"sequence": 5,
+		"movementStyle": "melee",
+		"canLaunch": true,
+		"launchMode": "straight",
+		"forceDodge": false,
+		"forceCritical": false,
+	})
+	var mutual_launch_enemy_ids := BattleModel.living_actor_ids(mutual_launch_state, BattleModel.SIDE_ENEMY)
+	mutual_launch_state = BattleModel.set_actor_hp(mutual_launch_state, BattleModel.PLAYER_PET_ID, 0)
+	for mutual_launch_enemy_actor_id in mutual_launch_enemy_ids:
+		mutual_launch_state = BattleModel.set_actor_hp(mutual_launch_state, mutual_launch_enemy_actor_id, 0)
+	var mutual_launch_result = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), mutual_launch_state)
+	var mutual_launch_return_ok = (
+		str(mutual_launch_result.get("result", "")) == "defeat"
+		and bool(mutual_launch_result.get("playerKnockedAway", false))
+		and bool(mutual_launch_result.get("returnToRecordPoint", false))
+	)
+
+	var status = "ok" if player_return_ok and pet_rest_ok and enemy_launch_ok and capture_ok and escape_ok and mutual_defeat_ok and mutual_launch_return_ok else "failed"
+	print("battle knockaway result check ready: status=%s player=%s pet=%s enemy=%s capture=%s escape=%s mutual=%s mutual_launch=%s cell=%s player_result=%s pet_state=%s log=%s" % [
 		status,
 		str(player_return_ok),
 		str(pet_rest_ok),
 		str(enemy_launch_ok),
 		str(capture_ok),
 		str(escape_ok),
+		str(mutual_defeat_ok),
+		str(mutual_launch_return_ok),
 		str(player_cell),
 		str(player_result.get("result", "")),
 		str(pet_after.get("state", "")),
@@ -6557,7 +6852,9 @@ func _run_auto_backpack_check() -> void:
 	for slot in stacked_slots:
 		if str(slot.get("itemId", "")) == BattleModel.ITEM_MEAT_SMALL:
 			meat_stack_slots += 1
-	var stack_ok = meat_stack_slots == 2 and BackpackModel.item_count(stacked_slots, BattleModel.ITEM_MEAT_SMALL) == 25
+	var meat_stack_limit := BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)
+	var expected_meat_stack_slots = int(ceil(25.0 / float(maxi(1, meat_stack_limit))))
+	var stack_ok = meat_stack_slots == expected_meat_stack_slots and BackpackModel.item_count(stacked_slots, BattleModel.ITEM_MEAT_SMALL) == 25
 	var battle_counts = PlayerProgressModel.backpack_counts_for_context(host.player_profile, BackpackModel.CONTEXT_BATTLE_ITEM)
 	var capture_counts = PlayerProgressModel.backpack_counts_for_context(host.player_profile, BackpackModel.CONTEXT_CAPTURE)
 	var context_ok = (
@@ -6570,6 +6867,8 @@ func _run_auto_backpack_check() -> void:
 
 	host._open_backpack_panel()
 	await host.get_tree().process_frame
+	var first_backpack_button = host.backpack_slot_buttons[0] if not host.backpack_slot_buttons.is_empty() else null
+	var first_backpack_slot_data := (first_backpack_button as Button).get("slot_data") as Dictionary if first_backpack_button is Button else {}
 	var panel_ok = (
 		host.backpack_panel != null
 		and host.backpack_panel.visible
@@ -6578,6 +6877,25 @@ func _run_auto_backpack_check() -> void:
 			and host.backpack_slot_buttons[0].text.find("肉") >= 0
 			and host.backpack_slot_buttons[BackpackModel.BASE_SLOT_LIMIT].text.find("50钻石") >= 0
 		)
+	var shared_slot_ok = (
+		first_backpack_button is Button
+		and (first_backpack_button as Button).has_signal("slot_double_clicked")
+		and (first_backpack_button as Button).has_signal("slot_dropped")
+		and str(first_backpack_slot_data.get("context", "")) == "backpack"
+		and str(first_backpack_slot_data.get("itemId", "")) == BattleModel.ITEM_MEAT_SMALL
+		and int(first_backpack_slot_data.get("count", 0)) > 0
+	)
+	var backpack_double_click_event := InputEventMouseButton.new()
+	backpack_double_click_event.button_index = MOUSE_BUTTON_LEFT
+	backpack_double_click_event.pressed = true
+	backpack_double_click_event.double_click = true
+	host._panel_flow()._on_backpack_slot_gui_input(backpack_double_click_event, 0)
+	await host.get_tree().process_frame
+	var backpack_quick_use_ok = (
+		host.backpack_pending_use_item_id == BattleModel.ITEM_MEAT_SMALL
+		and host.backpack_target_scroll != null
+		and host.backpack_target_scroll.visible
+	)
 	var before_unlock_diamonds = PlayerProgressModel.diamonds(host.player_profile)
 	host._select_backpack_slot(BackpackModel.BASE_SLOT_LIMIT)
 	await host.get_tree().process_frame
@@ -6641,14 +6959,16 @@ func _run_auto_backpack_check() -> void:
 		var after_meat = BattleModel.item_count(host.battle_state, BattleModel.ITEM_MEAT_SMALL)
 		var profile_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
 		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
-	var status = "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
-	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+	var status = "ok" if slot_limit_ok and meat_default_ok and stack_ok and context_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
+	print("backpack check ready: status=%s slots=%s meat_default=%s stack=%s context=%s panel=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
 		status,
 		str(slot_limit_ok),
 		str(meat_default_ok),
 		str(stack_ok),
 		str(context_ok),
 		str(panel_ok),
+		str(shared_slot_ok),
+		str(backpack_quick_use_ok),
 		str(unlock_ok),
 		str(item_menu_ok),
 		str(capture_menu_ok),
@@ -7363,7 +7683,9 @@ func _run_auto_shop_check() -> void:
 		await host.get_tree().process_frame
 		host._confirm_dialog_action()
 		await host.get_tree().process_frame
-	var meat_button_text = str((host.shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) as Button).text) if host.shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null) is Button else ""
+	var shop_meat_button = host.shop_item_buttons.get(BattleModel.ITEM_MEAT_SMALL, null)
+	var shop_meat_slot_data := (shop_meat_button as Button).get("slot_data") as Dictionary if shop_meat_button is Button else {}
+	var meat_button_text = str((shop_meat_button as Button).text) if shop_meat_button is Button else ""
 	var shop_panel_ok = (
 		npc_found
 		and host.shop_panel != null
@@ -7376,6 +7698,44 @@ func _run_auto_shop_check() -> void:
 		and host.shop_coin_label.text.find("石币") >= 0
 		and meat_button_text.find("8石币") >= 0
 		and meat_button_text.find("买 ") < 0
+	)
+	var shared_shop_slot_ok = (
+		shop_meat_button is Button
+		and (shop_meat_button as Button).has_signal("slot_double_clicked")
+		and (shop_meat_button as Button).has_signal("slot_dropped")
+		and str(shop_meat_slot_data.get("context", "")) == "shop_buy"
+		and str(shop_meat_slot_data.get("itemId", "")) == BattleModel.ITEM_MEAT_SMALL
+	)
+	host._panel_flow()._on_item_slot_dropped({
+		"context": "shop_buy",
+		"itemId": BattleModel.ITEM_MEAT_SMALL,
+		"count": 1,
+		"dragKind": "item_slot",
+	}, {
+		"context": "shop_action",
+		"accepts": ["shop_buy"],
+	})
+	await host.get_tree().process_frame
+	var shop_drag_split_ok = (
+		host._panel_flow().item_stack_split_panel != null
+		and host._panel_flow().item_stack_split_panel.visible
+		and host._panel_flow().item_stack_split_quantity_spinbox != null
+		and int(host._panel_flow().item_stack_split_quantity_spinbox.max_value) >= 2
+		and host._panel_flow().item_stack_split_summary_label != null
+		and host._panel_flow().item_stack_split_summary_label.text.find("购买") >= 0
+	)
+	host._panel_flow()._close_item_stack_split_panel(false)
+	var before_quick_buy_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
+	var before_quick_buy_coins = PlayerProgressModel.stone_coins(host.player_profile)
+	var shop_double_click_event := InputEventMouseButton.new()
+	shop_double_click_event.button_index = MOUSE_BUTTON_LEFT
+	shop_double_click_event.pressed = true
+	shop_double_click_event.double_click = true
+	host._panel_flow()._on_shop_item_gui_input(shop_double_click_event, BattleModel.ITEM_MEAT_SMALL)
+	await host.get_tree().process_frame
+	var shop_quick_buy_ok = (
+		PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL) == before_quick_buy_meat + 1
+		and PlayerProgressModel.stone_coins(host.player_profile) == before_quick_buy_coins - ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL)
 	)
 	host._set_shop_quantity(3)
 	await host.get_tree().process_frame
@@ -7471,8 +7831,8 @@ func _run_auto_shop_check() -> void:
 		and reward_log.find("石币") >= 0
 	)
 
-	var status = "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and quantity_ui_ok and sell_tab_ok and missing_profile_recovery_ok and reward_coin_ok else "failed"
-	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s quantity_ui=%s sell_tab=%s profile_recovery=%s pending_ui=%s pending_action=%s pending_quantity=%s pending_plus=%s pending_item=%s recovery_count=%s recovery_coin=%s recovery_detail=%s recovery_coin_label=%s recovery_action=%s reward_coin=%s coins=%d reward=%d" % [
+	var status = "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and shared_shop_slot_ok and shop_drag_split_ok and shop_quick_buy_ok and quantity_ui_ok and sell_tab_ok and missing_profile_recovery_ok and reward_coin_ok else "failed"
+	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s shared_slot=%s drag_split=%s quick_buy=%s quantity_ui=%s sell_tab=%s profile_recovery=%s pending_ui=%s pending_action=%s pending_quantity=%s pending_plus=%s pending_item=%s recovery_count=%s recovery_coin=%s recovery_detail=%s recovery_coin_label=%s recovery_action=%s reward_coin=%s coins=%d reward=%d" % [
 		status,
 		str(catalog_ok),
 		str(default_coin_ok),
@@ -7484,6 +7844,9 @@ func _run_auto_shop_check() -> void:
 		str(bulk_sell_ok),
 		str(empty_sell_ok),
 		str(shop_panel_ok),
+		str(shared_shop_slot_ok),
+		str(shop_drag_split_ok),
+		str(shop_quick_buy_ok),
 		str(quantity_ui_ok),
 		str(sell_tab_ok),
 		str(missing_profile_recovery_ok),
@@ -9923,7 +10286,7 @@ func _run_auto_stage6_content_check() -> void:
 		and not welfare.is_empty()
 		and not storyteller.is_empty()
 		and not bank.is_empty()
-		and InteractionModel.facility_label_for(bank) == "仓库"
+		and InteractionModel.facility_label_for(bank) == "银行"
 		and InteractionModel.facility_type_for(bank) == InteractionModel.FACILITY_BANK
 	)
 	host._open_map_panel()
@@ -9943,6 +10306,106 @@ func _run_auto_stage6_content_check() -> void:
 		and host.bank_status_label.text.find("需要服务器账号登录") >= 0
 	)
 	host._close_bank_panel()
+	var saved_bank_profile: Dictionary = host.player_profile.duplicate(true)
+	var saved_bank_session: Dictionary = host.current_account_session.duplicate(true)
+	var saved_bank_authenticated: bool = host.account_authenticated
+	var saved_bank_request_pending: bool = host.bank_request_pending
+	var saved_bank_event_socket = host.server_event_socket
+	var saved_bank_event_state: String = host.server_event_state
+	var saved_bank_event_reconnect_remaining: float = host.server_event_reconnect_remaining
+	var quick_bank_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 5000)
+	quick_bank_profile = PlayerProgressModel.normalize_profile(quick_bank_profile)
+	quick_bank_profile["bank"] = {
+		"stoneCoins": 2000,
+		"items": [{"itemId": "quest_field_note", "count": 2}],
+		"schemaVersion": 1,
+	}
+	host.player_profile = quick_bank_profile
+	host.account_authenticated = true
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "stage6-bank-token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	host.bank_request_pending = false
+	host.server_event_socket = null
+	host.server_event_state = "closed"
+	host.server_event_reconnect_remaining = 9999.0
+	var bank_quick_transfer_ok = (
+		host._panel_flow()._bank_quick_transfer_mode_for_item("item_meat_small") == "deposit"
+		and host._panel_flow()._bank_quick_transfer_mode_for_item("quest_field_note") == "withdraw"
+		and host._panel_flow()._bank_quick_transfer_mode_for_item("not_a_bank_item") == ""
+	)
+	host._open_bank_panel()
+	await host.get_tree().process_frame
+	var bank_backpack_slot_button = host.bank_item_buttons.get("bank_backpack:item_meat_small", null)
+	var bank_storage_slot_button = host.bank_item_buttons.get("bank_storage:quest_field_note", null)
+	var bank_backpack_slot_data := (bank_backpack_slot_button as Button).get("slot_data") as Dictionary if bank_backpack_slot_button is Button else {}
+	var bank_storage_slot_data := (bank_storage_slot_button as Button).get("slot_data") as Dictionary if bank_storage_slot_button is Button else {}
+	var bank_shared_slot_ok = (
+		bank_backpack_slot_button is Button
+		and bank_storage_slot_button is Button
+		and (bank_backpack_slot_button as Button).has_signal("slot_dropped")
+		and (bank_storage_slot_button as Button).has_signal("slot_dropped")
+		and str(bank_backpack_slot_data.get("context", "")) == "bank_backpack"
+		and str(bank_storage_slot_data.get("context", "")) == "bank_storage"
+	)
+	var bank_tabs_ok = (
+		PlayerProgressModel.bank_slots(host.player_profile).size() == PlayerProgressModel.BANK_SLOT_LIMIT
+		and PlayerProgressModel.bank_unlocked_tabs(host.player_profile) == 1
+		and host._panel_flow().bank_tab_buttons.size() == PlayerProgressModel.BANK_TAB_COUNT
+		and int(bank_storage_slot_data.get("bankSlotIndex", -1)) == 0
+		and int(bank_storage_slot_data.get("count", 0)) == 2
+	)
+	host._panel_flow()._set_bank_active_tab(1)
+	await host.get_tree().process_frame
+	var bank_unlock_tab_ok = (
+		host.bank_unlock_tab_button != null
+		and host.bank_unlock_tab_button.text.find("解锁第 2 页") >= 0
+		and not host.bank_unlock_tab_button.disabled
+	)
+	host._panel_flow()._set_bank_active_tab(0)
+	await host.get_tree().process_frame
+	host._panel_flow()._set_bank_coin_quantity(1500)
+	await host.get_tree().process_frame
+	if host.bank_coin_quantity_spinbox != null and host.bank_coin_quantity_spinbox.get_line_edit() != null:
+		host.bank_coin_quantity_spinbox.get_line_edit().text = "10"
+	var bank_coin_input_ok = (
+		host.bank_coin_quantity_spinbox != null
+		and int(host.bank_coin_quantity_spinbox.value) == 1500
+		and host._panel_flow()._bank_coin_quantity_from_input() == 10
+		and host.bank_coin_deposit_button != null
+		and host.bank_coin_deposit_button.text == "存石币"
+		and host.bank_coin_withdraw_button != null
+		and host.bank_coin_withdraw_button.text == "取石币"
+	)
+	host._panel_flow()._on_item_slot_dropped({
+		"context": "bank_backpack",
+		"itemId": "item_meat_small",
+		"count": 6,
+		"dragKind": "item_slot",
+	}, {
+		"context": "bank_storage",
+		"accepts": ["bank_backpack", "backpack"],
+	})
+	await host.get_tree().process_frame
+	var bank_drag_split_ok = (
+		host._panel_flow().item_stack_split_panel != null
+		and host._panel_flow().item_stack_split_panel.visible
+		and host._panel_flow().item_stack_split_quantity_spinbox != null
+		and int(host._panel_flow().item_stack_split_quantity_spinbox.max_value) == 6
+		and host._panel_flow().item_stack_split_summary_label != null
+		and host._panel_flow().item_stack_split_summary_label.text.find("存入") >= 0
+	)
+	host._panel_flow()._close_item_stack_split_panel(false)
+	host._close_bank_panel()
+	host.player_profile = saved_bank_profile
+	host.account_authenticated = saved_bank_authenticated
+	host.current_account_session = saved_bank_session
+	host.bank_request_pending = saved_bank_request_pending
+	host.server_event_socket = saved_bank_event_socket
+	host.server_event_state = saved_bank_event_state
+	host.server_event_reconnect_remaining = saved_bank_event_reconnect_remaining
 	var market_button_ok = (
 		host.market_menu_button != null
 		and host.market_menu_button.text == "买卖"
@@ -9979,8 +10442,8 @@ func _run_auto_stage6_content_check() -> void:
 		and host.player_action_trade_coin_spinbox == null
 	)
 	host._close_player_action_panel()
-	var status = "ok" if items_ok and shop_ok and quest_ok and optional_welfare_ok and optional_story_ok and facility_ok and map_marker_ok and bank_panel_ok and market_button_ok and market_panel_ok and trade_controls_removed_ok else "failed"
-	print("stage6 content check ready: status=%s items=%s shop=%s quests=%s optional=%s/%s facility=%s markers=%s bank_panel=%s market_button=%s market_panel=%s old_trade_removed=%s errors=%s" % [
+	var status = "ok" if items_ok and shop_ok and quest_ok and optional_welfare_ok and optional_story_ok and facility_ok and map_marker_ok and bank_panel_ok and bank_quick_transfer_ok and bank_shared_slot_ok and bank_tabs_ok and bank_unlock_tab_ok and bank_coin_input_ok and bank_drag_split_ok and market_button_ok and market_panel_ok and trade_controls_removed_ok else "failed"
+	print("stage6 content check ready: status=%s items=%s shop=%s quests=%s optional=%s/%s facility=%s markers=%s bank_panel=%s bank_quick=%s bank_shared=%s bank_tabs=%s bank_unlock_tab=%s bank_coin_input=%s bank_drag_split=%s market_button=%s market_panel=%s old_trade_removed=%s errors=%s" % [
 		status,
 		str(items_ok),
 		str(shop_ok),
@@ -9990,6 +10453,12 @@ func _run_auto_stage6_content_check() -> void:
 		str(facility_ok),
 		str(map_marker_ok),
 		str(bank_panel_ok),
+		str(bank_quick_transfer_ok),
+		str(bank_shared_slot_ok),
+		str(bank_tabs_ok),
+		str(bank_unlock_tab_ok),
+		str(bank_coin_input_ok),
+		str(bank_drag_split_ok),
 		str(market_button_ok),
 		str(market_panel_ok),
 		str(trade_controls_removed_ok),
@@ -10421,6 +10890,7 @@ func _run_auto_encounter_loop_check() -> void:
 
 	var hang_started = false
 	var hang_stopped = false
+	var normal_walk_button_ok = false
 	if cells_ok:
 		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, cells[0] as Vector2i)
 		host.last_checked_player_cell = cells[0] as Vector2i
@@ -10430,6 +10900,14 @@ func _run_auto_encounter_loop_check() -> void:
 		hang_started = host.hang_mode_active and host.player.is_auto_moving() and host.stop_button != null and host.stop_button.text == "停"
 		host._stop_auto_move()
 		hang_stopped = not host.hang_mode_active and not host.player.is_auto_moving() and host.stop_button != null and host.stop_button.text == "挂机"
+		host._set_hang_mode(false)
+		host._clear_encounter_stone_effect(false, false)
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, cells[0] as Vector2i)
+		host.last_checked_player_cell = cells[0] as Vector2i
+		host._set_move_target_cell(cells[1] as Vector2i, IsoMapModel.grid_to_world(host.map_data, cells[1] as Vector2i), cells[1] as Vector2i)
+		host._sync_hang_button_text()
+		normal_walk_button_ok = host.player.is_auto_moving() and not host.hang_mode_active and not host._encounter_stone_active() and host.stop_button != null and host.stop_button.text == "挂机"
+		host.player.clear_move_target()
 
 	var natural_direct = false
 	var natural_no_prompt = false
@@ -10592,8 +11070,8 @@ func _run_auto_encounter_loop_check() -> void:
 		await host.get_tree().process_frame
 		stone_triggered = host.battle_active and host.encounter_panel != null and not host.encounter_panel.visible
 
-	var status = "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and natural_direct and natural_no_prompt and party_member_grass_block and party_member_stone_block and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
-	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s natural=%s no_prompt=%s member_grass=%s member_stone=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
+	var status = "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and normal_walk_button_ok and natural_direct and natural_no_prompt and party_member_grass_block and party_member_stone_block and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
+	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s normal_walk_button=%s natural=%s no_prompt=%s member_grass=%s member_stone=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -10603,6 +11081,7 @@ func _run_auto_encounter_loop_check() -> void:
 		str(shop_ok),
 		str(hang_started),
 		str(hang_stopped),
+		str(normal_walk_button_ok),
 		str(natural_direct),
 		str(natural_no_prompt),
 		str(party_member_grass_block),
@@ -11568,6 +12047,32 @@ func _run_auto_hang_settings_check() -> void:
 	host._on_hang_button_pressed()
 	var manual_stop_ok = not host._encounter_stone_active() and not host.hang_mode_active and host.stop_button != null and host.stop_button.text == "挂机"
 
+	var battle_manual_stop_ok = false
+	if zone_found:
+		host.player_profile = PlayerProgressModel.default_profile()
+		host._set_hang_mode(true)
+		host.encounter_stone_item_id = ENCOUNTER_STONE_LOW_ID
+		host.encounter_stone_interval = 3.0
+		host.encounter_stone_remaining = 100.0
+		host.encounter_stone_elapsed = 1.0
+		host._start_battle(BattleModel.create_wild_battle(zone))
+		var battle_stop_button_enabled = host.stop_button != null and not host.stop_button.disabled
+		host._on_hang_button_pressed()
+		var battle_stop_requested = (
+			host.hang_stop_after_battle_requested
+			and host.battle_log_label != null
+			and host.battle_log_label.text.find("本场战斗结束后停止挂机。") >= 0
+		)
+		host._finish_battle_and_return_to_world("victory")
+		battle_manual_stop_ok = (
+			battle_stop_button_enabled
+			and battle_stop_requested
+			and not host.hang_stop_after_battle_requested
+			and not host.hang_mode_active
+			and not host._encounter_stone_active()
+			and host.world_log_message.find("挂机已停止。") >= 0
+		)
+
 	var party_member_hang_block = false
 	if zone_found and not cells.is_empty() and host.player != null:
 		var saved_session = host.current_account_session.duplicate(true)
@@ -11610,8 +12115,8 @@ func _run_auto_hang_settings_check() -> void:
 		host.auth_auto_bypass = saved_auth_auto_bypass
 		host.world_log_message = saved_world_log_message
 
-	var status = "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok and party_member_hang_block else "failed"
-	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s member_hang=%s hp=%d" % [
+	var status = "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok and battle_manual_stop_ok and party_member_hang_block else "failed"
+	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s battle_manual_stop=%s member_hang=%s hp=%d" % [
 		status,
 		str(default_ok),
 		str(custom_ok),
@@ -11622,6 +12127,7 @@ func _run_auto_hang_settings_check() -> void:
 		str(low_stop_ok),
 		str(never_ok),
 		str(manual_stop_ok),
+		str(battle_manual_stop_ok),
 		str(party_member_hang_block),
 		PlayerProgressModel.player_hp(host.player_profile),
 	])
@@ -11650,9 +12156,79 @@ func _run_auto_quest_chain_check() -> void:
 	profile = talk_claim.get("profile", profile)
 	var talk_claim_ok = (
 		bool(talk_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_bank_intro"
 		and PlayerProgressModel.stone_coins(profile) == before_intro_coins + 20
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_intro_meat + 2
+	)
+
+	var before_bank_coins = PlayerProgressModel.stone_coins(profile)
+	var bank_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "firebud_bank_keeper",
+	})
+	profile = bank_event.get("profile", profile)
+	var bank_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = bank_claim.get("profile", profile)
+	var bank_ok = (
+		bool(bank_event.get("ready", false))
+		and bool(bank_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_stable_intro"
+		and PlayerProgressModel.stone_coins(profile) == before_bank_coins + 1000
+	)
+
+	var before_battle_egg = PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+	var before_tiger_egg = PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
+	var stable_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "firebud_stable_keeper",
+	})
+	profile = stable_event.get("profile", profile)
+	var stable_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = stable_claim.get("profile", profile)
+	var stable_ok = (
+		bool(stable_event.get("ready", false))
+		and bool(stable_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_riding_certificate"
+		and PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG) == before_battle_egg + 1
+		and PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG) == before_tiger_egg + 1
+	)
+
+	var riding_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "talk",
+		"targetId": "firebud_riding_trainer",
+	})
+	profile = riding_event.get("profile", profile)
+	var riding_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = riding_claim.get("profile", profile)
+	var riding_ok = (
+		bool(riding_event.get("ready", false))
+		and bool(riding_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_try_riding_tiger"
+		and PlayerProgressModel.has_riding(profile)
+	)
+
+	var tiger_hatch_result = PlayerProgressModel.use_world_pet_egg_item(profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
+	profile = tiger_hatch_result.get("profile", profile)
+	var tiger_instance_id := str(tiger_hatch_result.get("instanceId", ""))
+	var tiger_ride_result = PlayerProgressModel.cycle_pet_state(profile, tiger_instance_id)
+	profile = tiger_ride_result.get("profile", profile)
+	var try_riding_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "ride_pet",
+		"instanceId": str(tiger_ride_result.get("instanceId", tiger_instance_id)),
+		"formId": str(tiger_ride_result.get("formId", "")),
+		"lineId": str(tiger_ride_result.get("lineId", "")),
+		"amount": 1,
+	})
+	profile = try_riding_event.get("profile", profile)
+	var try_riding_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = try_riding_claim.get("profile", profile)
+	var try_riding_ok = (
+		bool(tiger_hatch_result.get("ok", false))
+		and bool(tiger_ride_result.get("ok", false))
+		and str(tiger_ride_result.get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
+		and bool(try_riding_event.get("ready", false))
+		and bool(try_riding_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
 	)
 
 	var before_rope = PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
@@ -11781,11 +12357,66 @@ func _run_auto_quest_chain_check() -> void:
 		bool(equip_armor_result.get("ok", false))
 		and bool(equip_armor_event.get("ready", false))
 		and bool(equip_armor_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_use_poison_spirit"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
 		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_BODY) == "armor_toxin_wrap"
 		and equipped_spirits.has(BattleModel.SPIRIT_POISON_1)
 		and not equipped_spirits.has(BattleModel.SPIRIT_MOIST_1)
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_armor_equip_medicine + 1
+	)
+
+	var tutorial_grass_loaded = host._load_map("firebud_village_gate", "from_training_yard")
+	var tutorial_grass_zone = host._encounter_zone_by_id("village_grass")
+	var grass_random_ok = (
+		tutorial_grass_loaded
+		and not tutorial_grass_zone.is_empty()
+		and int(tutorial_grass_zone.get("enemyCountMin", 0)) == 1
+		and int(tutorial_grass_zone.get("enemyCountMax", 0)) == 10
+		and bool(tutorial_grass_zone.get("individualWildPets", false))
+	)
+	var tutorial_grass_ok = false
+	if grass_random_ok:
+		host.player_profile = profile.duplicate(true)
+		host._trigger_encounter(tutorial_grass_zone)
+		await host.get_tree().process_frame
+		tutorial_grass_ok = host.battle_active and BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ENEMY) == 1
+		if host.battle_active:
+			host._end_battle(false)
+			await host.get_tree().process_frame
+		host.player_profile = profile
+
+	var before_victory_coins = PlayerProgressModel.stone_coins(profile)
+	var before_medicine = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
+	var victory_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_01",
+	})
+	profile = victory_event.get("profile", profile)
+	var victory_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = victory_claim.get("profile", profile)
+	var victory_ok = (
+		bool(victory_event.get("ready", false))
+		and bool(victory_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_training_partner_intro"
+		and PlayerProgressModel.stone_coins(profile) == before_victory_coins + 30
+		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_medicine + 1
+	)
+
+	var before_partner_coins = PlayerProgressModel.stone_coins(profile)
+	profile = PlayerProgressModel.with_training_partner_count(profile, 1)
+	var training_partner_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "training_partner_set_count",
+		"count": PlayerProgressModel.training_partner_count(profile),
+		"amount": 1,
+	})
+	profile = training_partner_event.get("profile", profile)
+	var training_partner_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = training_partner_claim.get("profile", profile)
+	var training_partner_ok = (
+		bool(training_partner_event.get("ready", false))
+		and bool(training_partner_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_use_poison_spirit"
+		and PlayerProgressModel.training_partner_count(profile) == 1
+		and PlayerProgressModel.stone_coins(profile) == before_partner_coins + 10
 	)
 
 	var before_spirit_coins = PlayerProgressModel.stone_coins(profile)
@@ -11802,7 +12433,7 @@ func _run_auto_quest_chain_check() -> void:
 	var spirit_ok = (
 		bool(spirit_event.get("ready", false))
 		and bool(spirit_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_capture_wuli"
 		and PlayerProgressModel.stone_coins(profile) == before_spirit_coins + 20
 		and PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club") == before_blessed_club + 1
 		and str(spirit_claim.get("message", "")).find("祝木棒") >= 0
@@ -11820,47 +12451,79 @@ func _run_auto_quest_chain_check() -> void:
 		var target_id = str(enemy_ids[0]) if not enemy_ids.is_empty() else ""
 		if target_id != "":
 			var poison_event = {
-			"type": "spirit_poison",
-			"attackerId": BattleModel.PLAYER_ACTOR_ID,
-			"targetId": target_id,
-			"targetSide": BattleModel.SIDE_ENEMY,
-			"damage": 6,
-			"speed": 70,
-			"sequence": 1,
-			"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
-			"spiritId": BattleModel.SPIRIT_POISON_1,
-			"statusId": BattleModel.STATUS_POISON,
-			"statusTurns": 3,
-			"statusPotency": 3,
-			"statusHitRate": 1.0,
+				"type": "spirit_poison",
+				"attackerId": BattleModel.PLAYER_ACTOR_ID,
+				"targetId": target_id,
+				"targetSide": BattleModel.SIDE_ENEMY,
+				"damage": 6,
+				"speed": 70,
+				"sequence": 1,
+				"skillName": BattleActionCatalog.label_for(BattleModel.SPIRIT_POISON_1, "毒精灵1"),
+				"spiritId": BattleModel.SPIRIT_POISON_1,
+				"statusId": BattleModel.STATUS_POISON,
+				"statusTurns": 3,
+				"statusPotency": 3,
+				"statusHitRate": 1.0,
 			}
 			var snapshots = host._battle_actor_snapshots_by_id()
 			host.battle_state = BattleModel.apply_battle_event(host.battle_state, poison_event)
 			var ledger = BattleEventLedger.build_from_applied_state(host.battle_state, poison_event, snapshots, host._battle_event_timeline_for_applied_event(poison_event))
 			host._record_battle_event(poison_event, ledger)
 			spirit_hook_ok = (
-			PlayerProgressModel.active_quest_id(host.player_profile) == "quest_first_victory"
-			and host.world_log_message.find("完成任务「释放毒精灵」") >= 0
+				PlayerProgressModel.active_quest_id(host.player_profile) == "quest_capture_wuli"
+				and host.world_log_message.find("完成任务「释放毒精灵」") >= 0
 			)
 	host.battle_active = false
 	host.battle_state = {}
 
-	var before_victory_coins = PlayerProgressModel.stone_coins(profile)
-	var before_medicine = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE)
-	var victory_event = PlayerProgressModel.record_quest_event(profile, {
-		"type": "battle_victory",
-		"encounterGroupId": "firebud_grass_01",
-	})
-	profile = victory_event.get("profile", profile)
-	var victory_claim = PlayerProgressModel.claim_active_quest(profile)
-	profile = victory_claim.get("profile", profile)
-	var victory_ok = (
-		bool(victory_event.get("ready", false))
-		and bool(victory_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_capture_wuli"
-		and PlayerProgressModel.stone_coins(profile) == before_victory_coins + 30
-		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_medicine + 1
-	)
+	var capture_tutorial_ok = false
+	if spirit_ok and tutorial_grass_loaded and not tutorial_grass_zone.is_empty():
+		host.player_profile = profile.duplicate(true)
+		var forced_capture_zone = host._panel_flow()._progression_encounter_zone(tutorial_grass_zone)
+		var selected_capture_zone = EncounterModel.zone_with_selected_wild_pet(forced_capture_zone, host.encounter_rng, 10)
+		var tutorial_capture_state = BattleModel.create_wild_battle(selected_capture_zone)
+		var capture_target_id = BattleModel.living_enemy_id(tutorial_capture_state)
+		var capture_target = BattleModel.actor_by_id(tutorial_capture_state, capture_target_id)
+		var capture_chance = BattleModel.capture_chance(tutorial_capture_state, BattleModel.PLAYER_ACTOR_ID, capture_target_id, BattleModel.CAPTURE_TOOL_EMPTY_HAND)
+		var capture_success = BattleModel.capture_would_succeed(tutorial_capture_state, BattleModel.PLAYER_ACTOR_ID, capture_target_id, BattleModel.CAPTURE_TOOL_EMPTY_HAND, 99)
+		var tutorial_enemy_ok = (
+			bool(forced_capture_zone.get("tutorialCaptureWuli", false))
+			and BattleModel.side_actor_count(tutorial_capture_state, BattleModel.SIDE_ENEMY) == 1
+			and str(capture_target.get("formId", "")).begins_with("wuli_")
+			and bool(capture_target.get("catchable", false))
+			and is_equal_approx(capture_chance, 1.0)
+			and capture_success
+		)
+		host._start_battle(tutorial_capture_state)
+		var captured_count := 0
+		if host.battle_active and capture_target_id != "":
+			host.battle_state = BattleModel.apply_battle_event(host.battle_state, {
+				"type": "capture",
+				"attackerId": BattleModel.PLAYER_ACTOR_ID,
+				"targetId": capture_target_id,
+				"targetSide": BattleModel.SIDE_ENEMY,
+				"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
+				"captureChance": capture_chance,
+				"success": capture_success,
+				"speed": 100,
+				"sequence": 99,
+			})
+			var tutorial_result = host._finish_battle_and_return_to_world("victory")
+			var captured_values = tutorial_result.get("capturedPets", [])
+			captured_count = (captured_values as Array).size() if captured_values is Array else 0
+			await host.get_tree().process_frame
+		var capture_tutorial_state = PlayerProgressModel.quest_state_for_id(host.player_profile, "quest_capture_wuli")
+		var post_ready_zone = host._panel_flow()._progression_encounter_zone(tutorial_grass_zone)
+		capture_tutorial_ok = (
+			tutorial_enemy_ok
+			and captured_count == 1
+			and str(capture_tutorial_state.get("status", "")) == QuestModel.STATUS_READY
+			and int(capture_tutorial_state.get("progress", 0)) == 1
+			and not bool(post_ready_zone.get("tutorialCaptureWuli", false))
+		)
+		if host.battle_active:
+			host._end_battle(false)
+		host.player_profile = profile
 
 	var before_capture_coins = PlayerProgressModel.stone_coins(profile)
 	var before_net = PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET)
@@ -11918,27 +12581,35 @@ func _run_auto_quest_chain_check() -> void:
 		var ui_task_text = host._current_task_text()
 		var ui_world_log = host.world_log_message
 		ui_advance_ok = (
-			ui_active_quest_id == "quest_buy_supply"
+			ui_active_quest_id == "quest_bank_intro"
 			and ui_world_log.find("完成任务「认识训练师」") >= 0
-			and ui_task_text.find("补给准备") >= 0
+			and ui_task_text.find("认识银行管理员") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and victory_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and victory_ok and training_partner_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s spirit=%s spirit_hook=%s victory=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d weapon=%d armor=%d blessed=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s tutorial_grass=%s grass_random=%s victory=%s partner=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
 		str(talk_ready_ok),
 		str(talk_claim_ok),
+		str(bank_ok),
+		str(stable_ok),
+		str(riding_ok),
+		str(try_riding_ok),
 		str(buy_ok),
 		str(use_ok),
 		str(buy_weapon_ok),
 		str(equip_ok),
 		str(buy_armor_ok),
 		str(equip_armor_ok),
+		str(tutorial_grass_ok),
+		str(grass_random_ok),
+		str(victory_ok),
+		str(training_partner_ok),
 		str(spirit_ok),
 		str(spirit_hook_ok),
-		str(victory_ok),
+		str(capture_tutorial_ok),
 		str(capture_ok),
 		str(rebirth_quest_ok),
 		str(ui_open_ok),
@@ -11951,9 +12622,12 @@ func _run_auto_quest_chain_check() -> void:
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC),
 		PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET),
+		PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG),
+		PlayerProgressModel.backpack_item_count(profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG),
 		PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club"),
 		PlayerProgressModel.backpack_item_count(profile, "armor_toxin_wrap"),
 		PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club"),
+		PlayerProgressModel.training_partner_count(profile),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -11979,6 +12653,32 @@ func _run_auto_quest_ui_check() -> void:
 		and host.quest_route_button != null
 		and not host.quest_route_button.disabled
 	)
+	var previous_session: Dictionary = host.current_account_session.duplicate(true)
+	var previous_step_enabled: bool = bool(host.server_step_world_move_enabled)
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_test",
+		"serverBaseUrl": "http://127.0.0.1:9",
+	}
+	host.server_step_world_move_enabled = true
+	host.server_step_move_authority_cell = IsoMapModel.spawn_cell(host.map_data)
+	host.server_step_move_authority_valid = true
+	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, host.server_step_move_authority_cell)
+	host._on_quest_route_pressed()
+	var server_route_uses_step_ok = (
+		host.server_step_move_active
+		and host.server_step_move_path_cells.size() >= 2
+		and host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "trainer"
+	)
+	host._cancel_server_step_move()
+	host.server_step_move_authority_valid = false
+	host._clear_pending_interaction()
+	host.current_account_session = previous_session
+	host.server_step_world_move_enabled = previous_step_enabled
+	host._load_map("firebud_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
 	host._on_quest_route_pressed()
 	await host.get_tree().process_frame
 	var trainer_route_ok = (
@@ -11993,7 +12693,119 @@ func _run_auto_quest_ui_check() -> void:
 		"type": "talk",
 		"targetId": "trainer",
 	})
-	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = bank_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	var bank_detail_ok = (
+		host.quest_title_label != null
+		and host.quest_title_label.text == "认识银行管理员"
+		and host.quest_detail_label != null
+		and host.quest_detail_label.text.find("银行管理员阿衡") >= 0
+	)
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var bank_cross_map_route_ok = (
+		host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "warp_to_village_gate"
+		and host.world_log_message.find("村口木门") >= 0
+	)
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var bank_route_ok = host.has_pending_interaction and str(host.pending_interaction.get("id", "")) == "firebud_bank_keeper"
+
+	var bank_event = PlayerProgressModel.record_quest_event(bank_profile, {
+		"type": "talk",
+		"targetId": "firebud_bank_keeper",
+	})
+	var stable_profile: Dictionary = PlayerProgressModel.claim_active_quest(bank_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = stable_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var stable_route_ok = (
+		host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "firebud_stable_keeper"
+		and host._current_task_text().find("认识兽栏管理员") >= 0
+	)
+
+	var stable_event = PlayerProgressModel.record_quest_event(stable_profile, {
+		"type": "talk",
+		"targetId": "firebud_stable_keeper",
+	})
+	var riding_profile: Dictionary = PlayerProgressModel.claim_active_quest(stable_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = riding_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var riding_route_ok = (
+		(
+			host.has_pending_interaction
+			and str(host.pending_interaction.get("id", "")) == "firebud_riding_trainer"
+		)
+		or (
+			host._dialog_is_open()
+			and str(host.active_dialog_interaction.get("id", "")) == "firebud_riding_trainer"
+		)
+	) and (
+		host._current_task_text().find("学习骑虎证") >= 0
+	)
+
+	var riding_event = PlayerProgressModel.record_quest_event(riding_profile, {
+		"type": "talk",
+		"targetId": "firebud_riding_trainer",
+	})
+	var try_ride_profile: Dictionary = PlayerProgressModel.claim_active_quest(riding_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = try_ride_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var try_ride_backpack_route_ok = (
+		host.backpack_panel != null
+		and host.backpack_panel.visible
+		and host.world_log_message.find("新手老虎蛋") >= 0
+		and host._current_task_text().find("试骑新手老虎") >= 0
+	)
+	var tiger_hatch_result = PlayerProgressModel.use_world_pet_egg_item(try_ride_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
+	var tiger_profile: Dictionary = tiger_hatch_result.get("profile", try_ride_profile) as Dictionary
+	var tiger_instance_id := str(tiger_hatch_result.get("instanceId", ""))
+	host.player_profile = tiger_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var try_ride_pet_route_ok = (
+		host.pet_panel != null
+		and host.pet_panel.visible
+		and host.world_log_message.find("新手老虎") >= 0
+		and host._current_task_text().find("试骑新手老虎") >= 0
+	)
+	var tiger_ride_result = PlayerProgressModel.cycle_pet_state(tiger_profile, tiger_instance_id)
+	tiger_profile = tiger_ride_result.get("profile", tiger_profile) as Dictionary
+	var try_ride_event = PlayerProgressModel.record_quest_event(tiger_profile, {
+		"type": "ride_pet",
+		"instanceId": str(tiger_ride_result.get("instanceId", tiger_instance_id)),
+		"formId": str(tiger_ride_result.get("formId", "")),
+		"lineId": str(tiger_ride_result.get("lineId", "")),
+		"amount": 1,
+	})
+	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(try_ride_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = buy_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_training_yard")
@@ -12135,7 +12947,19 @@ func _run_auto_quest_ui_check() -> void:
 		"slot": EquipmentModel.SLOT_BODY,
 		"amount": 1,
 	})
-	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_armor_event.get("profile", {}) as Dictionary).get("profile", {})
+	var first_victory_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_armor_event.get("profile", {}) as Dictionary).get("profile", {})
+	var victory_event = PlayerProgressModel.record_quest_event(first_victory_profile, {
+		"type": "battle_victory",
+		"encounterGroupId": "firebud_grass_01",
+	})
+	var training_partner_profile: Dictionary = PlayerProgressModel.claim_active_quest(victory_event.get("profile", first_victory_profile) as Dictionary).get("profile", {})
+	training_partner_profile = PlayerProgressModel.with_training_partner_count(training_partner_profile, 1)
+	var training_partner_event = PlayerProgressModel.record_quest_event(training_partner_profile, {
+		"type": "training_partner_set_count",
+		"count": PlayerProgressModel.training_partner_count(training_partner_profile),
+		"amount": 1,
+	})
+	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
 	host.player_profile = spirit_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -12174,11 +12998,19 @@ func _run_auto_quest_ui_check() -> void:
 		and host.world_log_message == "历史记录13"
 	)
 
-	var status = "ok" if panel_ok and trainer_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and armor_shop_route_ok and armor_equip_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s trainer_route=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s armor_shop=%s armor_equip=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and armor_shop_route_ok and armor_equip_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s armor_shop=%s armor_equip=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
+		str(server_route_uses_step_ok),
 		str(trainer_route_ok),
+		str(bank_detail_ok),
+		str(bank_cross_map_route_ok),
+		str(bank_route_ok),
+		str(stable_route_ok),
+		str(riding_route_ok),
+		str(try_ride_backpack_route_ok),
+		str(try_ride_pet_route_ok),
 		str(buy_detail_ok),
 		str(cross_map_route_ok),
 		str(shop_route_ok),
@@ -12342,7 +13174,7 @@ func _run_auto_quest_equipment_reward_check() -> void:
 	var model_ok = (
 		bool(spirit_event.get("ready", false))
 		and bool(claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(claimed_profile) == "quest_first_victory"
+		and PlayerProgressModel.active_quest_id(claimed_profile) == "quest_capture_wuli"
 		and PlayerProgressModel.backpack_item_count(claimed_profile, "weapon_blessed_club") == before_count + 1
 		and str(claim.get("message", "")).find("祝木棒") >= 0
 	)
@@ -12678,6 +13510,7 @@ func _run_auto_facility_marker_check() -> void:
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	var doctor = InteractionModel.find_by_id(host.map_data, "firebud_doctor")
 	var item_shop = InteractionModel.find_by_id(host.map_data, "firebud_shopkeeper")
+	var bank_keeper = InteractionModel.find_by_id(host.map_data, "firebud_bank_keeper")
 	var stable_keeper = InteractionModel.find_by_id(host.map_data, "firebud_stable_keeper")
 	var equipment_shop = InteractionModel.find_by_id(host.map_data, "firebud_equipment_keeper")
 	var record_point = InteractionModel.find_by_id(host.map_data, "firebud_record_pillar")
@@ -12688,6 +13521,7 @@ func _run_auto_facility_marker_check() -> void:
 	var facility_data_ok = (
 		InteractionModel.facility_label_for(doctor) == "村医"
 		and InteractionModel.facility_label_for(item_shop) == "杂货"
+		and InteractionModel.facility_label_for(bank_keeper) == "银行"
 		and InteractionModel.facility_label_for(stable_keeper) == "兽栏"
 		and InteractionModel.facility_label_for(equipment_shop) == "装备"
 		and InteractionModel.facility_label_for(record_point) == "记录"
@@ -12700,6 +13534,7 @@ func _run_auto_facility_marker_check() -> void:
 	var map_button_ok = (
 		host.map_marker_buttons.has("interaction:firebud_doctor")
 		and host.map_marker_buttons.has("interaction:firebud_shopkeeper")
+		and host.map_marker_buttons.has("interaction:firebud_bank_keeper")
 		and host.map_marker_buttons.has("interaction:firebud_stable_keeper")
 		and host.map_marker_buttons.has("interaction:firebud_equipment_keeper")
 		and host.map_marker_buttons.has("interaction:firebud_record_pillar")
@@ -12707,6 +13542,7 @@ func _run_auto_facility_marker_check() -> void:
 		and host.map_marker_buttons.has("interaction:firebud_rebirth_mentor")
 		and str((host.map_marker_buttons["interaction:firebud_doctor"] as Button).text).find("【村医】") >= 0
 		and str((host.map_marker_buttons["interaction:firebud_shopkeeper"] as Button).text).find("【杂货】") >= 0
+		and str((host.map_marker_buttons["interaction:firebud_bank_keeper"] as Button).text).find("【银行】") >= 0
 		and str((host.map_marker_buttons["interaction:firebud_stable_keeper"] as Button).text).find("【兽栏】") >= 0
 		and str((host.map_marker_buttons["interaction:firebud_equipment_keeper"] as Button).text).find("【装备】") >= 0
 		and str((host.map_marker_buttons["interaction:firebud_record_pillar"] as Button).text).find("【记录】") >= 0
@@ -12715,6 +13551,7 @@ func _run_auto_facility_marker_check() -> void:
 	)
 	var item_shop_target = host._navigation_target_for_shop("firebud_item_shop")
 	var equipment_shop_target = host._navigation_target_for_shop("firebud_equipment_shop")
+	var bank_target = host._navigation_target_for_interaction_id("firebud_bank_keeper")
 	var stable_target = host._navigation_target_for_interaction_id("firebud_stable_keeper")
 	var record_target = host._navigation_target_for_interaction_id("firebud_record_pillar")
 	var rebirth_target = host._navigation_target_for_interaction_id("firebud_rebirth_mentor")
@@ -12724,6 +13561,8 @@ func _run_auto_facility_marker_check() -> void:
 		and str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_shopkeeper"
 		and str(equipment_shop_target.get("facilityLabel", "")) == "装备"
 		and str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_equipment_keeper"
+		and str(bank_target.get("facilityLabel", "")) == "银行"
+		and str((bank_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_bank_keeper"
 		and str(stable_target.get("facilityLabel", "")) == "兽栏"
 		and str((stable_target.get("interaction", {}) as Dictionary).get("id", "")) == "firebud_stable_keeper"
 		and str(record_target.get("facilityLabel", "")) == "记录"
@@ -12755,7 +13594,7 @@ func _run_auto_facility_marker_check() -> void:
 		and host.world_log_message.find("装备商阿石") >= 0
 	)
 	var status = "ok" if loaded and facility_data_ok and map_button_ok and target_pick_ok and quest_target_ok and route_ok else "failed"
-	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s stable=%s trainer_map=%s log=%s" % [
+	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s bank=%s stable=%s trainer_map=%s log=%s" % [
 		status,
 		str(loaded),
 		str(facility_data_ok),
@@ -12765,6 +13604,7 @@ func _run_auto_facility_marker_check() -> void:
 		str(route_ok),
 		str((item_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str((equipment_shop_target.get("interaction", {}) as Dictionary).get("id", "")),
+		str((bank_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str((stable_target.get("interaction", {}) as Dictionary).get("id", "")),
 		str(trainer_target.get("mapId", "")),
 		host.world_log_message,
@@ -13492,7 +14332,7 @@ func _run_auto_auth_server_client_check() -> void:
 		"ok": true,
 		"profile": {
 			"schemaVersion": 1,
-			"activeQuestId": "quest_buy_supply",
+			"activeQuestId": "quest_bank_intro",
 		},
 		"profileSummary": {
 			"playerId": "player_test",
@@ -13510,6 +14350,7 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_quest_record.get("progress", {}) as Dictionary).get("questId", "")) == "quest_intro_talk"
 		and (parsed_quest_record.get("questMessages", []) as Array).size() == 1
 	)
+	var quest_record_dialog_close_ok = DialogQuestCoordinator.server_quest_record_should_close_dialog(parsed_quest_record)
 	var quest_claim_spec = ServerAuthClientModel.quest_claim_request(
 		"http://127.0.0.1:8787/",
 		"token_test",
@@ -13715,6 +14556,27 @@ func _run_auto_auth_server_client_check() -> void:
 		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
 		and (parsed_position.get("players", []) as Array).size() == 1
 		and str((parsed_position.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
+	)
+	var parsed_position_desync = ServerAuthClientModel.parse_player_position_update_response(409, JSON.stringify({
+		"ok": false,
+		"code": "position_desync",
+		"message": "位置与服务器不一致，已按服务器位置纠正。",
+		"position": {
+			"mapId": "firebud_training_yard",
+			"cellX": 5,
+			"cellY": 10,
+			"authority": "server_step",
+		},
+		"movement": {
+			"reason": "position_desync",
+			"requiresSync": true,
+		},
+	}).to_utf8_buffer())
+	position_parse_ok = position_parse_ok and (
+		not bool(parsed_position_desync.get("ok", true))
+		and str(parsed_position_desync.get("code", "")) == "position_desync"
+		and int((parsed_position_desync.get("position", {}) as Dictionary).get("cellX", -1)) == 5
+		and str((parsed_position_desync.get("movement", {}) as Dictionary).get("reason", "")) == "position_desync"
 	)
 	var parsed_movement = ServerAuthClientModel.parse_movement_step_response(200, JSON.stringify({
 		"ok": true,
@@ -14266,6 +15128,18 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(party_enemy_actor.get("slotId", "")) == "enemy.back.2"
 		and int(party_enemy_actor.get("hp", 0)) == int(party_enemy_actor.get("maxHp", -1))
 	)
+	var saved_battle_state_for_party_pve_run = host.battle_state.duplicate(true)
+	host.battle_state = party_pve_state.duplicate(true)
+	var party_pve_run_payload = host._server_battle()._player_command_payload("run", "", "", "")
+	var party_pve_run_payload_ok = (
+		str(host.battle_state.get("serverRoomMode", "")) == "party_pve"
+		and host._current_server_battle_is_party_pve()
+		and str(host._battle_player_run_label()) == "逃跑"
+		and str(party_pve_run_payload.get("actionId", "")) == "run"
+		and str(party_pve_run_payload.get("actorId", "")) == "srv_self_player"
+		and not party_pve_run_payload.has("targetActorId")
+	)
+	host.battle_state = saved_battle_state_for_party_pve_run
 	var chat_messages_spec = ServerAuthClientModel.chat_messages_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_NEARBY, 25)
 	var chat_send_spec = ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787/", "token_test", CHAT_CHANNEL_TEAM, "队伍消息")
 	var chat_request_ok = (
@@ -14460,15 +15334,15 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and equipment_repair_request_ok and equipment_repair_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_synthesis_request_ok and equipment_synthesis_parse_ok else "failed"
 	status = "ok" if status == "ok" and player_rebirth_request_ok and player_rebirth_parse_ok else "failed"
-	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok else "failed"
+	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_record_dialog_close_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok and party_pve_run_payload_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
 	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -14482,7 +15356,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(equipment_repair_request_ok and equipment_repair_parse_ok),
 		str(equipment_synthesis_request_ok and equipment_synthesis_parse_ok),
 		str(player_rebirth_request_ok and player_rebirth_parse_ok),
-		str(quest_record_request_ok and quest_record_parse_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok),
+		str(quest_record_request_ok and quest_record_parse_ok and quest_record_dialog_close_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok),
 		str(parse_ok),
 		str(profile_parse_ok),
 		str(upload_parse_ok),
@@ -14499,10 +15373,11 @@ func _run_auto_auth_server_client_check() -> void:
 				str(battle_request_ok and battle_parse_ok),
 				str(server_battle_locked_leave_guard_ok),
 				str(server_encounter_route_ok),
-			str(guardian_route_ok),
-			str(local_battle_writeback_block_ok),
-			str(party_pve_mapping_ok),
-			str(chat_request_ok and chat_parse_ok),
+				str(guardian_route_ok),
+				str(local_battle_writeback_block_ok),
+				str(party_pve_mapping_ok),
+				str(party_pve_run_payload_ok),
+				str(chat_request_ok and chat_parse_ok),
 		str(retry_contract_ok),
 		str(network_failure_parse_ok),
 		str(reconnect_ui_ok and reconnect_clear_ok),

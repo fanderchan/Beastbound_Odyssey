@@ -10,30 +10,40 @@ const MARKET_DEFAULT_TAX_BPS = 100;
 const MARKET_CURRENCY_STONE_COINS = "stoneCoins";
 const MARKET_CURRENCY_DIAMONDS = "diamonds";
 const MARKET_GM_COMMAND_ID = "gm_market_tax";
+const BANK_TAB_COUNT = 6;
+const BANK_SLOTS_PER_TAB = 15;
+const BANK_SLOT_LIMIT = BANK_TAB_COUNT * BANK_SLOTS_PER_TAB;
+const BANK_DEFAULT_UNLOCKED_TABS = 1;
 
 function createEconomyDomain(ctx) {
   const {
     accountById,
     addRewardItemsToBackpack,
     authorizeGmCommand,
+    bagItemById,
     bagItemLabel,
+    bagItemStackLimit,
     backpackItemCount,
     captureToolBagFromProfile,
+    clampInt,
     clone,
     consumeBackpackItem,
     fail,
     isoNow,
     itemAmountText,
     load,
+    normalizeBackpackSlots,
     normalizeMailItems,
     normalizeUsername,
     now,
     ok,
     persistProfileForAccount,
     playerPositionHasCell,
+    bankStoneCoinLimit = 100000000,
     profileBackpackSlots,
     profileBindingForAccount,
     profileCurrencyAmount,
+    profileStoneCoinLimit = 10000000,
     profileStoneCoins,
     profileSummaryForAccount,
     publicMail,
@@ -52,7 +62,7 @@ function createEconomyDomain(ctx) {
       return prepared;
     }
     const profile = clone(prepared.profile);
-    const items = normalizeLimitedItems(payload.items || payload.itemAmounts || []);
+    const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
     const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_deposit_empty", "请选择要存入的石币或物品。", profilePayload(prepared, profile));
@@ -60,21 +70,31 @@ function createEconomyDomain(ctx) {
     if (stoneCoins > profileStoneCoins(profile)) {
       return fail("bank_stone_coins_not_enough", "石币不足，无法存入。", profilePayload(prepared, profile));
     }
-    const slots = profileBackpackSlots(profile);
-    const missing = firstMissingBackpackItem(slots, items);
-    if (missing) {
-      return fail("bank_item_not_enough", `${missing.label} 数量不够，无法存入。`, profilePayload(prepared, profile));
+    const bank = normalizeBank(profile.bank);
+    if (bank.stoneCoins + stoneCoins > bankStoneCoinLimit) {
+      return fail("bank_stone_coin_limit", `银行石币最多存放${bankStoneCoinLimit}。`, profilePayload(prepared, profile, bank));
     }
-    let nextSlots = slots;
+    let nextSlots = profileBackpackSlots(profile);
+    let nextBankSlots = normalizeBankSlots(bank.slots);
+    const unlockedBankSlots = bankUnlockedSlotCount(bank);
     for (const item of items) {
-      nextSlots = consumeBackpackItem(nextSlots, item.itemId, item.count);
+      const missing = bankTransferMissingBackpackItem(nextSlots, item);
+      if (missing) {
+        return fail("bank_item_not_enough", `${missing.label} 数量不够，无法存入。`, profilePayload(prepared, profile, bank));
+      }
+      const addResult = addItemToBankSlots(nextBankSlots, item.itemId, item.count, unlockedBankSlots, item.bankSlotIndex);
+      if (addResult.lostCount > 0) {
+        return fail("bank_storage_full", "银行格子不足，请先整理或解锁更多银行页。", profilePayload(prepared, profile, bank));
+      }
+      nextSlots = consumeBankTransferBackpackItem(nextSlots, item);
+      nextBankSlots = addResult.slots;
     }
     profile.backpackSlots = nextSlots;
     profile.captureTools = captureToolBagFromProfile(profile);
     profile.stoneCoins = profileStoneCoins(profile) - stoneCoins;
-    const bank = normalizeBank(profile.bank);
     bank.stoneCoins += stoneCoins;
-    bank.items = normalizeMailItems([...bank.items, ...items]);
+    bank.slots = nextBankSlots;
+    bank.items = bankItemsFromSlots(nextBankSlots);
     profile.bank = bank;
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
     save(prepared.data);
@@ -95,20 +115,30 @@ function createEconomyDomain(ctx) {
       return prepared;
     }
     const profile = clone(prepared.profile);
-    const items = normalizeLimitedItems(payload.items || payload.itemAmounts || []);
+    const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
     const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_withdraw_empty", "请选择要取出的石币或物品。", profilePayload(prepared, profile));
     }
     const bank = normalizeBank(profile.bank);
     if (stoneCoins > bank.stoneCoins) {
-      return fail("bank_stone_coins_not_enough", "仓库石币不足，无法取出。", profilePayload(prepared, profile, bank));
+      return fail("bank_stone_coins_not_enough", "银行石币不足，无法取出。", profilePayload(prepared, profile, bank));
     }
-    const missing = firstMissingBankItem(bank, items);
-    if (missing) {
-      return fail("bank_item_not_enough", `${missing.label} 数量不够，无法取出。`, profilePayload(prepared, profile, bank));
+    if (profileStoneCoins(profile) + stoneCoins > profileStoneCoinLimit) {
+      return fail("wallet_stone_coin_limit", `身上石币上限为${profileStoneCoinLimit}，请先存入银行。`, profilePayload(prepared, profile, bank));
     }
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), items);
+    let nextBankSlots = normalizeBankSlots(bank.slots);
+    const withdrawItems = [];
+    for (const item of items) {
+      const missing = bankTransferMissingBankItem(nextBankSlots, item);
+      if (missing) {
+        return fail("bank_item_not_enough", `${missing.label} 数量不够，无法取出。`, profilePayload(prepared, profile, bank));
+      }
+      const consumeResult = consumeBankTransferBankItem(nextBankSlots, item);
+      nextBankSlots = consumeResult.slots;
+      withdrawItems.push({itemId: item.itemId, count: item.count});
+    }
+    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), withdrawItems);
     if (normalizeMailItems(addResult.lostItems || []).length > 0) {
       return fail("bank_backpack_full", "背包空间不足，无法取出这些物品。", profilePayload(prepared, profile, bank));
     }
@@ -116,7 +146,8 @@ function createEconomyDomain(ctx) {
     profile.captureTools = captureToolBagFromProfile(profile);
     profile.stoneCoins = profileStoneCoins(profile) + stoneCoins;
     bank.stoneCoins -= stoneCoins;
-    bank.items = subtractItemAmounts(bank.items, items);
+    bank.slots = nextBankSlots;
+    bank.items = bankItemsFromSlots(nextBankSlots);
     profile.bank = bank;
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
     save(prepared.data);
@@ -448,6 +479,14 @@ function createEconomyDomain(ctx) {
     if (!accepterCheck.ok) {
       return accepterCheck;
     }
+    const initiatorReceiveCheck = canReceiveStoneCoins(initiatorProfile, counterStoneCoins, "trade_initiator");
+    if (!initiatorReceiveCheck.ok) {
+      return initiatorReceiveCheck;
+    }
+    const accepterReceiveCheck = canReceiveStoneCoins(accepterProfile, offerStoneCoins, "trade_acceptor");
+    if (!accepterReceiveCheck.ok) {
+      return accepterReceiveCheck;
+    }
     const nextInitiator = applyTradePayment(initiatorProfile, offerItems, offerStoneCoins, counterItems, counterStoneCoins);
     if (!nextInitiator.ok) {
       return fail("trade_initiator_backpack_full", "对方背包空间不足，交易无法完成。");
@@ -561,15 +600,272 @@ function createEconomyDomain(ctx) {
 
   function normalizeBank(value) {
     const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const rawItems = normalizeMailItems(raw.items || raw.itemAmounts || []);
+    const hasRawSlots = Array.isArray(raw.slots) && raw.slots.length > 0;
+    const slots = hasRawSlots ? normalizeBankSlots(raw.slots) : bankSlotsFromItems(rawItems);
+    const requiredTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.ceil((lastFilledBankSlotIndex(slots) + 1) / BANK_SLOTS_PER_TAB));
+    const rawUnlockedTabs = Math.trunc(Number(raw.unlockedTabs || raw.tabs || BANK_DEFAULT_UNLOCKED_TABS));
     return {
-      stoneCoins: normalizeCoinAmount(raw.stoneCoins || raw.coins || 0),
-      items: normalizeMailItems(raw.items || raw.itemAmounts || []),
+      stoneCoins: Math.min(bankStoneCoinLimit, normalizeCoinAmount(raw.stoneCoins || raw.coins || 0)),
+      items: bankItemsFromSlots(slots),
+      slots,
+      unlockedTabs: clampInt(Math.max(rawUnlockedTabs, requiredTabs), BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT),
       schemaVersion: 1,
     };
   }
 
   function normalizeLimitedItems(value) {
     return normalizeMailItems(value).slice(0, TRADE_MAX_ITEM_LINES);
+  }
+
+  function normalizeBankTransferItems(value) {
+    const result = [];
+    for (const rawItem of Array.isArray(value) ? value : []) {
+      if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) {
+        continue;
+      }
+      const itemId = String(rawItem.itemId || rawItem.id || "").trim();
+      const count = normalizeCoinAmount(rawItem.count || rawItem.amount || 0);
+      if (itemId === "" || count <= 0 || !bagItemById(itemId)) {
+        continue;
+      }
+      result.push({
+        itemId,
+        count,
+        sourceSlotIndex: normalizeOptionalIndex(rawItem.sourceSlotIndex ?? rawItem.slotIndex ?? rawItem.sourceIndex),
+        targetSlotIndex: normalizeOptionalIndex(rawItem.targetSlotIndex ?? rawItem.targetIndex),
+        bankSlotIndex: normalizeOptionalIndex(rawItem.bankSlotIndex ?? rawItem.targetBankSlotIndex ?? rawItem.sourceBankSlotIndex),
+      });
+      if (result.length >= TRADE_MAX_ITEM_LINES) {
+        break;
+      }
+    }
+    return result;
+  }
+
+  function normalizeOptionalIndex(value) {
+    if (value === undefined || value === null || value === "") {
+      return -1;
+    }
+    const numeric = Math.trunc(Number(value));
+    return Number.isFinite(numeric) ? numeric : -1;
+  }
+
+  function normalizeBankSlots(value) {
+    const result = [];
+    if (Array.isArray(value)) {
+      for (const rawSlot of value) {
+        if (result.length >= BANK_SLOT_LIMIT) {
+          break;
+        }
+        const slot = rawSlot && typeof rawSlot === "object" && !Array.isArray(rawSlot) ? rawSlot : {};
+        const itemId = String(slot.itemId || "").trim();
+        if (!bagItemById(itemId)) {
+          result.push({});
+          continue;
+        }
+        let remaining = normalizeCoinAmount(slot.count || 0);
+        if (remaining <= 0) {
+          result.push({});
+          continue;
+        }
+        const stackLimit = bankItemStackLimit(itemId);
+        while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
+          const stackCount = Math.min(remaining, stackLimit);
+          result.push({itemId, count: stackCount});
+          remaining -= stackCount;
+        }
+      }
+    }
+    while (result.length < BANK_SLOT_LIMIT) {
+      result.push({});
+    }
+    return result;
+  }
+
+  function bankSlotsFromItems(items) {
+    const result = [];
+    for (const item of normalizeMailItems(items)) {
+      const itemId = String(item.itemId || "").trim();
+      if (!bagItemById(itemId)) {
+        continue;
+      }
+      let remaining = normalizeCoinAmount(item.count || 0);
+      const stackLimit = bankItemStackLimit(itemId);
+      while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
+        const stackCount = Math.min(remaining, stackLimit);
+        result.push({itemId, count: stackCount});
+        remaining -= stackCount;
+      }
+    }
+    while (result.length < BANK_SLOT_LIMIT) {
+      result.push({});
+    }
+    return result;
+  }
+
+  function bankItemsFromSlots(slots) {
+    const counts = {};
+    for (const slot of normalizeBankSlots(slots)) {
+      const itemId = String(slot.itemId || "").trim();
+      const count = normalizeCoinAmount(slot.count || 0);
+      if (itemId === "" || count <= 0) {
+        continue;
+      }
+      counts[itemId] = normalizeCoinAmount(counts[itemId]) + count;
+    }
+    return normalizeMailItems(Object.entries(counts).map(([itemId, count]) => ({itemId, count})));
+  }
+
+  function bankItemStackLimit(itemId) {
+    return Math.max(1, Math.trunc(Number(bagItemStackLimit ? bagItemStackLimit(itemId) : 1)));
+  }
+
+  function lastFilledBankSlotIndex(slots) {
+    const normalized = normalizeBankSlots(slots);
+    for (let index = normalized.length - 1; index >= 0; index -= 1) {
+      const slot = normalized[index] || {};
+      if (String(slot.itemId || "").trim() !== "" && normalizeCoinAmount(slot.count || 0) > 0) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function bankUnlockedSlotCount(bank) {
+    const unlockedTabs = clampInt(Math.trunc(Number(bank && bank.unlockedTabs || BANK_DEFAULT_UNLOCKED_TABS)), BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT);
+    return unlockedTabs * BANK_SLOTS_PER_TAB;
+  }
+
+  function addItemToBankSlots(slots, itemId, count, unlockedSlotCount, preferredIndex = -1) {
+    const nextSlots = normalizeBankSlots(slots);
+    let remaining = normalizeCoinAmount(count || 0);
+    const limit = clampInt(unlockedSlotCount, BANK_SLOTS_PER_TAB, BANK_SLOT_LIMIT);
+    const stackLimit = bankItemStackLimit(itemId);
+    const targetIndex = Math.trunc(Number(preferredIndex));
+    if (targetIndex >= 0) {
+      if (targetIndex >= limit) {
+        return {slots: nextSlots, addedCount: 0, lostCount: remaining};
+      }
+      const target = nextSlots[targetIndex] && typeof nextSlots[targetIndex] === "object" && !Array.isArray(nextSlots[targetIndex]) ? nextSlots[targetIndex] : {};
+      const targetItemId = String(target.itemId || "").trim();
+      const targetCount = normalizeCoinAmount(target.count || 0);
+      if (targetItemId !== "" && targetItemId !== itemId) {
+        return {slots: nextSlots, addedCount: 0, lostCount: remaining};
+      }
+      const room = targetItemId === itemId ? Math.max(0, stackLimit - targetCount) : stackLimit;
+      const moveCount = Math.min(room, remaining);
+      if (moveCount > 0) {
+        nextSlots[targetIndex] = {itemId, count: targetCount + moveCount};
+        remaining -= moveCount;
+      }
+    }
+    for (let index = 0; index < limit && remaining > 0; index += 1) {
+      const slot = nextSlots[index] && typeof nextSlots[index] === "object" && !Array.isArray(nextSlots[index]) ? nextSlots[index] : {};
+      if (String(slot.itemId || "").trim() !== itemId) {
+        continue;
+      }
+      const currentCount = normalizeCoinAmount(slot.count || 0);
+      const room = Math.max(0, stackLimit - currentCount);
+      const moveCount = Math.min(room, remaining);
+      if (moveCount > 0) {
+        nextSlots[index] = {itemId, count: currentCount + moveCount};
+        remaining -= moveCount;
+      }
+    }
+    for (let index = 0; index < limit && remaining > 0; index += 1) {
+      const slot = nextSlots[index] && typeof nextSlots[index] === "object" && !Array.isArray(nextSlots[index]) ? nextSlots[index] : {};
+      if (String(slot.itemId || "").trim() !== "") {
+        continue;
+      }
+      const moveCount = Math.min(stackLimit, remaining);
+      nextSlots[index] = {itemId, count: moveCount};
+      remaining -= moveCount;
+    }
+    return {
+      slots: normalizeBankSlots(nextSlots),
+      addedCount: normalizeCoinAmount(count || 0) - remaining,
+      lostCount: remaining,
+    };
+  }
+
+  function bankTransferMissingBackpackItem(slots, item) {
+    const sourceSlotIndex = Math.trunc(Number(item.sourceSlotIndex ?? -1));
+    if (sourceSlotIndex >= 0) {
+      const normalized = normalizeBackpackSlots(slots);
+      if (sourceSlotIndex >= normalized.length) {
+        return {itemId: item.itemId, count: item.count, label: itemAmountText([item])};
+      }
+      const slot = normalized[sourceSlotIndex] || {};
+      if (String(slot.itemId || "") !== item.itemId || normalizeCoinAmount(slot.count || 0) < item.count) {
+        return {itemId: item.itemId, count: item.count, label: itemAmountText([item])};
+      }
+      return null;
+    }
+    return backpackItemCount(slots, item.itemId) < item.count
+      ? {itemId: item.itemId, count: item.count, label: itemAmountText([item])}
+      : null;
+  }
+
+  function consumeBankTransferBackpackItem(slots, item) {
+    const sourceSlotIndex = Math.trunc(Number(item.sourceSlotIndex ?? -1));
+    if (sourceSlotIndex < 0) {
+      return consumeBackpackItem(slots, item.itemId, item.count);
+    }
+    const nextSlots = normalizeBackpackSlots(slots);
+    const slot = nextSlots[sourceSlotIndex] || {};
+    const remaining = normalizeCoinAmount(slot.count || 0) - item.count;
+    nextSlots[sourceSlotIndex] = remaining > 0 ? {itemId: item.itemId, count: remaining} : {};
+    return nextSlots;
+  }
+
+  function bankTransferMissingBankItem(slots, item) {
+    const bankSlotIndex = Math.trunc(Number(item.bankSlotIndex ?? -1));
+    if (bankSlotIndex >= 0) {
+      const normalized = normalizeBankSlots(slots);
+      if (bankSlotIndex >= normalized.length) {
+        return {itemId: item.itemId, count: item.count, label: itemAmountText([item])};
+      }
+      const slot = normalized[bankSlotIndex] || {};
+      if (String(slot.itemId || "") !== item.itemId || normalizeCoinAmount(slot.count || 0) < item.count) {
+        return {itemId: item.itemId, count: item.count, label: itemAmountText([item])};
+      }
+      return null;
+    }
+    return itemAmountCount(bankItemsFromSlots(slots), item.itemId) < item.count
+      ? {itemId: item.itemId, count: item.count, label: itemAmountText([item])}
+      : null;
+  }
+
+  function consumeBankTransferBankItem(slots, item) {
+    const bankSlotIndex = Math.trunc(Number(item.bankSlotIndex ?? -1));
+    if (bankSlotIndex < 0) {
+      return {slots: subtractItemAmountsFromBankSlots(slots, [item])};
+    }
+    const nextSlots = normalizeBankSlots(slots);
+    const slot = nextSlots[bankSlotIndex] || {};
+    const remaining = normalizeCoinAmount(slot.count || 0) - item.count;
+    nextSlots[bankSlotIndex] = remaining > 0 ? {itemId: item.itemId, count: remaining} : {};
+    return {slots: normalizeBankSlots(nextSlots)};
+  }
+
+  function subtractItemAmountsFromBankSlots(slots, removeItems) {
+    let nextSlots = normalizeBankSlots(slots);
+    for (const item of normalizeMailItems(removeItems)) {
+      let remaining = normalizeCoinAmount(item.count || 0);
+      for (let index = 0; index < nextSlots.length && remaining > 0; index += 1) {
+        const slot = nextSlots[index] || {};
+        if (String(slot.itemId || "") !== item.itemId) {
+          continue;
+        }
+        const currentCount = normalizeCoinAmount(slot.count || 0);
+        const consumeCount = Math.min(currentCount, remaining);
+        remaining -= consumeCount;
+        const nextCount = currentCount - consumeCount;
+        nextSlots[index] = nextCount > 0 ? {itemId: item.itemId, count: nextCount} : {};
+      }
+    }
+    return normalizeBankSlots(nextSlots);
   }
 
   function normalizeListingCount(value) {
@@ -649,6 +945,13 @@ function createEconomyDomain(ctx) {
     return ok();
   }
 
+  function canReceiveStoneCoins(profile, stoneCoins, prefix) {
+    if (stoneCoins > 0 && profileStoneCoins(profile) + stoneCoins > profileStoneCoinLimit) {
+      return fail(`${prefix}_wallet_stone_coin_limit`, "身上石币已达上限，请先存入银行。");
+    }
+    return ok();
+  }
+
   function applyTradePayment(profile, payItems, payStoneCoins, receiveItems, receiveStoneCoins) {
     const nextProfile = clone(profile);
     let slots = profileBackpackSlots(nextProfile);
@@ -661,7 +964,10 @@ function createEconomyDomain(ctx) {
     }
     nextProfile.backpackSlots = addResult.slots;
     nextProfile.captureTools = captureToolBagFromProfile(nextProfile);
-    nextProfile.stoneCoins = Math.max(0, profileStoneCoins(nextProfile) - payStoneCoins) + receiveStoneCoins;
+    nextProfile.stoneCoins = Math.min(
+      profileStoneCoinLimit,
+      Math.max(0, profileStoneCoins(nextProfile) - payStoneCoins) + receiveStoneCoins
+    );
     return {ok: true, profile: nextProfile};
   }
 
@@ -949,7 +1255,7 @@ function createEconomyDomain(ctx) {
     if (itemText) {
       parts.push(itemText);
     }
-    return `${verb}仓库：${parts.join("、")}。`;
+    return `${verb}银行：${parts.join("、")}。`;
   }
 
   function profilePayload(prepared, profile, bank = null) {

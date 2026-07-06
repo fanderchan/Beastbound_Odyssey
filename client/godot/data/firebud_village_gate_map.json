@@ -69,6 +69,9 @@
       "rects": [[11, 15, 6, 4]],
       "encounterRate": 0.09,
       "encounterGroupId": "firebud_grass_01",
+      "enemyCountMin": 1,
+      "enemyCountMax": 10,
+      "individualWildPets": true,
       "wildPetPool": [
         {
           "formId": "wuli_normal_orange_fire10",
@@ -455,7 +458,7 @@
       "facilityLabel": "兽栏",
       "action": "兽栏",
       "actionType": "stable",
-      "dialog": ["兽栏管理员阿牧：队伍满了就把伙伴暂时寄放在这里。远程兽栏是后面才能学会的本事。"],
+      "dialog": ["兽栏管理员阿牧：先领取一枚对战宠物蛋和一枚新手老虎蛋。队伍满了就把伙伴暂时寄放在这里。"],
       "option": "兽栏"
     },
     {
@@ -467,7 +470,7 @@
       "facilityType": "riding_trainer",
       "facilityLabel": "骑宠",
       "action": "骑宠",
-      "dialog": ["骑宠导师阿越：骑宠不是坐上去就完事，先学会和伙伴同步出手。"],
+      "dialog": ["骑宠导师阿越：先学骑虎证，再挑一只老虎伙伴试骑。骑宠不是坐上去就完事，要和伙伴同步行动。"],
       "option": "学习"
     },
     {
@@ -523,16 +526,16 @@
     },
     {
       "id": "firebud_bank_keeper",
-      "name": "仓库员阿衡",
+      "name": "银行管理员阿衡",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [13, 16],
       "facilityType": "bank",
-      "facilityLabel": "仓库",
-      "action": "仓库",
+      "facilityLabel": "银行",
+      "action": "银行",
       "actionType": "bank",
-      "dialog": ["仓库员阿衡：背包太满就把石币和物品先存起来，外出前再取。"],
-      "option": "仓库"
+      "dialog": ["银行管理员阿衡：身上最多带1000万石币，多余石币要存进银行；银行最多存1亿石币。"],
+      "option": "银行"
     }
   ]
 }

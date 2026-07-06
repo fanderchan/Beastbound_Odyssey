@@ -240,20 +240,36 @@ static func unlock_cost_for_extra_slot(extra_slots_unlocked: int) -> int:
 
 
 static func normalize_slots(value, slot_limit: int = -1) -> Array[Dictionary]:
-	var counts := {}
+	var resolved_slot_limit := _slot_limit_from_value(value, slot_limit)
+	var result: Array[Dictionary] = []
 	if value is Array:
 		for raw_slot in value:
+			if result.size() >= resolved_slot_limit:
+				break
 			if not (raw_slot is Dictionary):
+				result.append({})
 				continue
 			var slot := raw_slot as Dictionary
 			var item_id := str(slot.get("itemId", ""))
 			if item_id == "" or item_for_id(item_id).is_empty():
+				result.append({})
 				continue
 			var count := maxi(0, int(slot.get("count", 0)))
 			if count <= 0:
+				result.append({})
 				continue
-			counts[item_id] = int(counts.get(item_id, 0)) + count
-	return slots_from_counts(counts, _slot_limit_from_value(value, slot_limit))
+			var remaining := count
+			var stack_limit := stack_limit_for(item_id)
+			while remaining > 0 and result.size() < resolved_slot_limit:
+				var stack_count := mini(remaining, stack_limit)
+				result.append({
+					"itemId": item_id,
+					"count": stack_count,
+				})
+				remaining -= stack_count
+	while result.size() < resolved_slot_limit:
+		result.append({})
+	return result
 
 
 static func slots_from_counts(counts: Dictionary, slot_limit: int = BASE_SLOT_LIMIT) -> Array[Dictionary]:
@@ -334,6 +350,115 @@ static func set_counts_for_context(slots: Array[Dictionary], context: String, co
 
 static func consume(slots: Array[Dictionary], item_id: String, amount: int = 1) -> Array[Dictionary]:
 	return set_item_count(slots, item_id, item_count(slots, item_id) - maxi(1, amount))
+
+
+static func move_stack(slots: Array[Dictionary], source_index: int, target_index: int, amount: int = -1) -> Dictionary:
+	var next_slots := normalize_slots(slots)
+	if source_index < 0 or target_index < 0 or source_index >= next_slots.size() or target_index >= next_slots.size():
+		return {"ok": false, "message": "背包格子无效。", "slots": next_slots}
+	if source_index == target_index:
+		return {"ok": false, "message": "物品已在这个格子。", "slots": next_slots}
+	var source := next_slots[source_index]
+	var source_item_id := str(source.get("itemId", ""))
+	var source_count := maxi(0, int(source.get("count", 0)))
+	if source_item_id == "" or source_count <= 0:
+		return {"ok": false, "message": "这个格子没有物品。", "slots": next_slots}
+	var target := next_slots[target_index]
+	var target_item_id := str(target.get("itemId", ""))
+	var target_count := maxi(0, int(target.get("count", 0)))
+	var move_count := source_count if amount <= 0 else clampi(amount, 1, source_count)
+	var item_label := label_for(source_item_id)
+	if target_item_id == "":
+		next_slots[target_index] = {"itemId": source_item_id, "count": move_count}
+		var remaining_source := source_count - move_count
+		next_slots[source_index] = {"itemId": source_item_id, "count": remaining_source} if remaining_source > 0 else {}
+		return {
+			"ok": true,
+			"message": "已移动%s x%d。" % [item_label, move_count],
+			"slots": normalize_slots(next_slots),
+			"itemId": source_item_id,
+			"count": move_count,
+		}
+	if target_item_id == source_item_id:
+		var stack_limit := stack_limit_for(source_item_id)
+		var room := maxi(0, stack_limit - target_count)
+		if room <= 0:
+			return {"ok": false, "message": "%s 已达到堆叠上限。" % item_label, "slots": next_slots}
+		var merged_count := mini(move_count, room)
+		next_slots[target_index] = {"itemId": source_item_id, "count": target_count + merged_count}
+		var remaining_count := source_count - merged_count
+		next_slots[source_index] = {"itemId": source_item_id, "count": remaining_count} if remaining_count > 0 else {}
+		return {
+			"ok": true,
+			"message": "已合并%s x%d。" % [item_label, merged_count],
+			"slots": normalize_slots(next_slots),
+			"itemId": source_item_id,
+			"count": merged_count,
+		}
+	if move_count < source_count:
+		return {"ok": false, "message": "拆分到空格，或整组交换。", "slots": next_slots}
+	next_slots[source_index] = target.duplicate(true)
+	next_slots[target_index] = source.duplicate(true)
+	return {
+		"ok": true,
+		"message": "已交换物品。",
+		"slots": normalize_slots(next_slots),
+		"itemId": source_item_id,
+		"count": move_count,
+	}
+
+
+static func split_stack(slots: Array[Dictionary], source_index: int, quantity: int, target_index: int = -1) -> Dictionary:
+	var next_slots := normalize_slots(slots)
+	if source_index < 0 or source_index >= next_slots.size():
+		return {"ok": false, "message": "背包格子无效。", "slots": next_slots}
+	var source := next_slots[source_index]
+	var item_id := str(source.get("itemId", ""))
+	var source_count := maxi(0, int(source.get("count", 0)))
+	if item_id == "" or source_count <= 1:
+		return {"ok": false, "message": "这个物品不能拆分。", "slots": next_slots}
+	var split_count := clampi(quantity, 1, source_count - 1)
+	var resolved_target := target_index
+	if resolved_target < 0:
+		for index in range(next_slots.size()):
+			if index != source_index and str(next_slots[index].get("itemId", "")) == "":
+				resolved_target = index
+				break
+	if resolved_target < 0 or resolved_target >= next_slots.size() or resolved_target == source_index:
+		return {"ok": false, "message": "没有空格可以拆分。", "slots": next_slots}
+	if str(next_slots[resolved_target].get("itemId", "")) != "":
+		return {"ok": false, "message": "请选择一个空格拆分。", "slots": next_slots}
+	next_slots[source_index] = {"itemId": item_id, "count": source_count - split_count}
+	next_slots[resolved_target] = {"itemId": item_id, "count": split_count}
+	return {
+		"ok": true,
+		"message": "已拆分%s x%d。" % [label_for(item_id), split_count],
+		"slots": normalize_slots(next_slots),
+		"itemId": item_id,
+		"count": split_count,
+		"targetSlotIndex": resolved_target,
+	}
+
+
+static func discard_stack(slots: Array[Dictionary], source_index: int, quantity: int = -1) -> Dictionary:
+	var next_slots := normalize_slots(slots)
+	if source_index < 0 or source_index >= next_slots.size():
+		return {"ok": false, "message": "背包格子无效。", "slots": next_slots}
+	var source := next_slots[source_index]
+	var item_id := str(source.get("itemId", ""))
+	var source_count := maxi(0, int(source.get("count", 0)))
+	if item_id == "" or source_count <= 0:
+		return {"ok": false, "message": "这个格子没有物品。", "slots": next_slots}
+	var discard_count := source_count if quantity <= 0 else clampi(quantity, 1, source_count)
+	var remaining_count := source_count - discard_count
+	next_slots[source_index] = {"itemId": item_id, "count": remaining_count} if remaining_count > 0 else {}
+	return {
+		"ok": true,
+		"message": "已丢弃%s x%d。" % [label_for(item_id), discard_count],
+		"slots": normalize_slots(next_slots),
+		"itemId": item_id,
+		"count": discard_count,
+	}
 
 
 static func add_items(slots: Array[Dictionary], rewards: Array[Dictionary]) -> Dictionary:

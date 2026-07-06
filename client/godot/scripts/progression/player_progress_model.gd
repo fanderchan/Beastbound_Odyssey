@@ -74,6 +74,7 @@ const ITEM_PET_EXP_PILL_LV131 := "item_pet_exp_pill_lv131"
 const ITEM_PET_REBIRTH_MM1_EGG := "pet_rebirth_mm1_egg"
 const ITEM_PET_REBIRTH_MM2_EGG := "pet_rebirth_mm2_egg"
 const ITEM_REBIRTH_STARTER_FOUR_SPIRIT_CUB_EGG := "rebirth_starter_four_spirit_cub_egg"
+const ITEM_NOVICE_BATTLE_PET_EGG := "novice_battle_pet_egg"
 const ITEM_NOVICE_TIGER_EGG := "novice_tiger_egg"
 const PET_REBIRTH_MM_TRIAL_GROUP_ID := "pet_rebirth_mm_trial_1"
 const PET_REBIRTH_MM_GUIDE_KEY := "petRebirthMmGuide"
@@ -102,6 +103,13 @@ const PET_GROWTH_PROFILES := {
 }
 const LOCAL_PLAYER_ID := "local_player"
 const DEFAULT_STONE_COINS := 120
+const STONE_COIN_LIMIT := 10000000
+const BANK_STONE_COIN_LIMIT := 100000000
+const BANK_TAB_COUNT := 6
+const BANK_SLOTS_PER_TAB := 15
+const BANK_SLOT_LIMIT := BANK_TAB_COUNT * BANK_SLOTS_PER_TAB
+const BANK_DEFAULT_UNLOCKED_TABS := 1
+const BANK_UNLOCK_COSTS: Array[int] = [100, 200, 400, 800, 1600]
 const DEFAULT_DIAMONDS := 999999
 const DEV_DIAMONDS_MIN := 999999
 const DEV_DIAMONDS_GRANT_VERSION := 1
@@ -122,6 +130,7 @@ const PLAYER_STAT_POINT_GAINS := {
 }
 const STONE_COINS_KEY := "stoneCoins"
 const DIAMONDS_KEY := "diamonds"
+const BANK_KEY := "bank"
 const DEV_DIAMONDS_GRANT_VERSION_KEY := "devDiamondsGrantVersion"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
 const BACKPACK_EXTRA_SLOTS_KEY := "backpackExtraSlots"
@@ -267,6 +276,13 @@ static func default_profile() -> Dictionary:
 		"nextPetInstanceSerial": 5,
 		"nextPetDropSerial": 1,
 		"stoneCoins": DEFAULT_STONE_COINS,
+		"bank": {
+			"stoneCoins": 0,
+			"items": [],
+			"slots": _empty_item_slots(BANK_SLOT_LIMIT),
+			"unlockedTabs": BANK_DEFAULT_UNLOCKED_TABS,
+			"schemaVersion": 1,
+		},
 		"diamonds": DEFAULT_DIAMONDS,
 		"devDiamondsGrantVersion": DEV_DIAMONDS_GRANT_VERSION,
 		"petInstances": [
@@ -497,6 +513,10 @@ static func set_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary
 		"ok": true,
 		"profile": normalized,
 		"message": "%s 已设为骑宠。" % str(mounted.get("name", "宠物")),
+		"instanceId": selected_id,
+		"formId": str(mounted.get("formId", mounted.get("templateId", ""))),
+		"lineId": str(mounted.get("lineId", "")),
+		"state": PET_STATE_RIDING,
 	}
 
 
@@ -2907,13 +2927,153 @@ static func _create_training_partner_from_profile(profile: Dictionary, index: in
 
 
 static func stone_coins(profile: Dictionary) -> int:
-	return maxi(0, int(normalize_profile(profile).get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+	return clampi(int(normalize_profile(profile).get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
 
 
 static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	normalized[STONE_COINS_KEY] = maxi(0, amount)
+	normalized[STONE_COINS_KEY] = clampi(amount, 0, STONE_COIN_LIMIT)
 	return normalized
+
+
+static func bank_data(profile: Dictionary) -> Dictionary:
+	return _normalize_bank_data(normalize_profile(profile).get(BANK_KEY, {}))
+
+
+static func bank_stone_coins(profile: Dictionary) -> int:
+	return int(bank_data(profile).get(STONE_COINS_KEY, 0))
+
+
+static func bank_slots(profile: Dictionary) -> Array[Dictionary]:
+	var bank := bank_data(profile)
+	var slots: Array[Dictionary] = []
+	var raw_slots = bank.get("slots", [])
+	if raw_slots is Array:
+		for value in raw_slots:
+			slots.append((value as Dictionary).duplicate(true) if value is Dictionary else {})
+	return _normalize_item_slots(slots, BANK_SLOT_LIMIT)
+
+
+static func bank_unlocked_tabs(profile: Dictionary) -> int:
+	return int(bank_data(profile).get("unlockedTabs", BANK_DEFAULT_UNLOCKED_TABS))
+
+
+static func bank_unlocked_slot_count(profile: Dictionary) -> int:
+	return bank_unlocked_tabs(profile) * BANK_SLOTS_PER_TAB
+
+
+static func bank_unlock_cost_for_next_tab(profile: Dictionary) -> int:
+	var unlocked := bank_unlocked_tabs(profile)
+	if unlocked >= BANK_TAB_COUNT:
+		return 0
+	var cost_index := clampi(unlocked - BANK_DEFAULT_UNLOCKED_TABS, 0, BANK_UNLOCK_COSTS.size() - 1)
+	return BANK_UNLOCK_COSTS[cost_index]
+
+
+static func _normalize_bank_data(value) -> Dictionary:
+	var raw := value as Dictionary if value is Dictionary else {}
+	var items: Array[Dictionary] = []
+	var raw_items = raw.get("items", raw.get("itemAmounts", []))
+	if raw_items is Array:
+		for item_value in raw_items:
+			if item_value is Dictionary:
+				var item := item_value as Dictionary
+				var item_id := str(item.get("itemId", "")).strip_edges()
+				var count := maxi(0, int(item.get("count", 0)))
+				if item_id != "" and count > 0 and not BackpackModel.item_for_id(item_id).is_empty():
+					items.append({"itemId": item_id, "count": count})
+	var raw_slots = raw.get("slots", [])
+	var has_raw_slots := raw_slots is Array and (raw_slots as Array).size() > 0
+	var slots := _normalize_item_slots(raw_slots, BANK_SLOT_LIMIT) if has_raw_slots else _item_slots_from_amounts(items, BANK_SLOT_LIMIT)
+	var merged_items := _item_amounts_from_slots(slots)
+	var required_tabs := maxi(BANK_DEFAULT_UNLOCKED_TABS, int(ceil(float(_last_filled_slot_index(slots) + 1) / float(BANK_SLOTS_PER_TAB))))
+	var raw_unlocked := int(raw.get("unlockedTabs", raw.get("tabs", BANK_DEFAULT_UNLOCKED_TABS)))
+	var unlocked_tabs := clampi(maxi(raw_unlocked, required_tabs), BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT)
+	return {
+		"stoneCoins": clampi(int(raw.get("stoneCoins", raw.get("coins", 0))), 0, BANK_STONE_COIN_LIMIT),
+		"items": merged_items,
+		"slots": slots,
+		"unlockedTabs": unlocked_tabs,
+		"schemaVersion": 1,
+	}
+
+
+static func _empty_item_slots(slot_count: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for _index in range(maxi(0, slot_count)):
+		result.append({})
+	return result
+
+
+static func _normalize_item_slots(value, slot_count: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if value is Array:
+		for raw_slot in value:
+			if result.size() >= slot_count:
+				break
+			if not (raw_slot is Dictionary):
+				result.append({})
+				continue
+			var slot := raw_slot as Dictionary
+			var item_id := str(slot.get("itemId", "")).strip_edges()
+			if item_id == "" or BackpackModel.item_for_id(item_id).is_empty():
+				result.append({})
+				continue
+			var count := maxi(0, int(slot.get("count", 0)))
+			if count <= 0:
+				result.append({})
+				continue
+			var remaining := count
+			var stack_limit := BackpackModel.stack_limit_for(item_id)
+			while remaining > 0 and result.size() < slot_count:
+				var stack_count := mini(remaining, stack_limit)
+				result.append({"itemId": item_id, "count": stack_count})
+				remaining -= stack_count
+	while result.size() < slot_count:
+		result.append({})
+	return result
+
+
+static func _item_slots_from_amounts(items: Array[Dictionary], slot_count: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for item in BackpackModel.merge_item_amounts(items):
+		var item_id := str(item.get("itemId", "")).strip_edges()
+		var remaining := maxi(0, int(item.get("count", 0)))
+		if item_id == "" or BackpackModel.item_for_id(item_id).is_empty():
+			continue
+		var stack_limit := BackpackModel.stack_limit_for(item_id)
+		while remaining > 0 and result.size() < slot_count:
+			var stack_count := mini(remaining, stack_limit)
+			result.append({"itemId": item_id, "count": stack_count})
+			remaining -= stack_count
+	while result.size() < slot_count:
+		result.append({})
+	return result
+
+
+static func _item_amounts_from_slots(slots: Array[Dictionary]) -> Array[Dictionary]:
+	var counts := {}
+	for slot in slots:
+		var item_id := str(slot.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(slot.get("count", 0)))
+		if item_id == "" or count <= 0:
+			continue
+		counts[item_id] = int(counts.get(item_id, 0)) + count
+	var amounts: Array[Dictionary] = []
+	for item in BackpackModel.items():
+		var item_id := str(item.get("id", ""))
+		var count := int(counts.get(item_id, 0))
+		if item_id != "" and count > 0:
+			amounts.append({"itemId": item_id, "count": count})
+	return amounts
+
+
+static func _last_filled_slot_index(slots: Array[Dictionary]) -> int:
+	for index in range(slots.size() - 1, -1, -1):
+		var slot := slots[index]
+		if str(slot.get("itemId", "")).strip_edges() != "" and maxi(0, int(slot.get("count", 0))) > 0:
+			return index
+	return -1
 
 
 static func diamonds(profile: Dictionary) -> int:
@@ -2931,7 +3091,7 @@ static func currency_amount(profile: Dictionary, currency: String) -> int:
 	match currency:
 		ShopCatalogModel.CURRENCY_DIAMONDS:
 			return maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
-	return maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+	return clampi(int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
 
 
 static func _set_currency_amount(profile: Dictionary, currency: String, amount: int) -> Dictionary:
@@ -2940,7 +3100,7 @@ static func _set_currency_amount(profile: Dictionary, currency: String, amount: 
 		ShopCatalogModel.CURRENCY_DIAMONDS:
 			next[DIAMONDS_KEY] = maxi(0, amount)
 		_:
-			next[STONE_COINS_KEY] = maxi(0, amount)
+			next[STONE_COINS_KEY] = clampi(amount, 0, STONE_COIN_LIMIT)
 	return next
 
 
@@ -2950,7 +3110,7 @@ static func grant_reward_bundle(profile: Dictionary, reward_bundle: Dictionary, 
 	var coins := maxi(0, int(reward_bundle.get("stoneCoins", 0)))
 	var diamond_reward := maxi(0, int(reward_bundle.get("diamonds", 0)))
 	if coins > 0:
-		normalized[STONE_COINS_KEY] = stone_coins(normalized) + coins
+		normalized[STONE_COINS_KEY] = clampi(stone_coins(normalized) + coins, 0, STONE_COIN_LIMIT)
 	if diamond_reward > 0:
 		normalized[DIAMONDS_KEY] = diamonds(normalized) + diamond_reward
 	var reward_result := BackpackModel.add_items(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), items)
@@ -3586,6 +3746,12 @@ static func sell_shop_item(profile: Dictionary, shop_id: String, item_id: String
 	var total_price := price * sell_amount
 	var currency := ShopCatalogModel.currency_for(shop_id)
 	var currency_label := ShopCatalogModel.currency_label(currency)
+	if currency != ShopCatalogModel.CURRENCY_DIAMONDS and currency_amount(normalized, currency) + total_price > STONE_COIN_LIMIT:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "身上石币已达上限，请先存入银行。",
+		}
 	var next_slots := BackpackModel.consume(BackpackModel.normalize_slots(normalized.get(BACKPACK_SLOTS_KEY, [])), item_id, sell_amount)
 	normalized[BACKPACK_SLOTS_KEY] = next_slots
 	normalized[CAPTURE_TOOLS_KEY] = _capture_tool_inventory_from_slots(next_slots)
@@ -4783,6 +4949,10 @@ static func cycle_pet_state(profile: Dictionary, instance_id: String) -> Diction
 		"ok": true,
 		"profile": normalized,
 		"message": "%s 已切换为%s。" % [str(changed.get("name", "宠物")), state_label(str(changed.get("state", target_state)))],
+		"instanceId": instance_id,
+		"formId": str(changed.get("formId", changed.get("templateId", ""))),
+		"lineId": str(changed.get("lineId", "")),
+		"state": target_state,
 	}
 
 
@@ -6383,7 +6553,8 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = equipment_exp_pill_charge_value
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
-	normalized[STONE_COINS_KEY] = maxi(0, int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)))
+	normalized[STONE_COINS_KEY] = clampi(int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
+	normalized[BANK_KEY] = _normalize_bank_data(normalized.get(BANK_KEY, {}))
 	var dev_diamonds_grant_version := int(normalized.get(DEV_DIAMONDS_GRANT_VERSION_KEY, 0))
 	var diamonds_value := maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
 	if dev_diamonds_grant_version < DEV_DIAMONDS_GRANT_VERSION:
@@ -6728,10 +6899,10 @@ static func battle_result_for_state(state: Dictionary) -> String:
 				living_enemies += 1
 			"ally":
 				living_allies += 1
-	if living_enemies <= 0:
-		return "victory"
 	if living_allies <= 0:
 		return "defeat"
+	if living_enemies <= 0:
+		return "victory"
 	return "running"
 
 

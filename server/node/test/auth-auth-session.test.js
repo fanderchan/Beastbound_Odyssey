@@ -420,13 +420,13 @@ test("party pve victory advances auto-claim battle quest and hang session", () =
   const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
   assert.equal(Boolean(writeback && writeback.quests), true);
   assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_first_victory"), true);
-  assert.equal(writeback.quests.activeQuestId, "quest_capture_wuli");
+  assert.equal(writeback.quests.activeQuestId, "quest_training_partner_intro");
   assert.equal(writeback.hang.battleCount, 3);
 
   const after = service.getProfile(solo.session.token);
   assert.equal(after.ok, true);
   assert.equal(after.profile.questStates.quest_first_victory.status, "claimed");
-  assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
+  assert.equal(after.profile.activeQuestId, "quest_training_partner_intro");
   assert.equal(after.profile.hangSession.battleCount, 3);
   assert.equal(after.profile.stoneCoins, 11 + writeback.rewards.stoneCoins + 30);
   const healCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (

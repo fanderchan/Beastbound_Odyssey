@@ -579,21 +579,35 @@ func sync_room_scene(force_start: bool = false) -> bool:
 			return true
 		var previous_phase := str(host.battle_state.get("phase", ""))
 		var previous_round := maxi(1, int(host.battle_state.get("round", 1)))
+		var previous_command_owner := str(host.battle_command_owner)
+		var previous_target_mode := str(host.battle_target_mode)
+		var previous_command_state := _local_command_state_snapshot()
 		host.battle_state = next_state.duplicate(true)
-		host._set_battle_command_owner("player")
-		host.battle_target_mode = "enemy"
-		host.battle_pending_player_command.clear()
-		host.battle_pending_pet_command.clear()
-		host.battle_pending_spirit_id = ""
-		host.battle_pending_item_id = ""
-		host.battle_pending_capture_tool_id = ""
-		host.battle_pending_pet_skill_id = ""
-		host.battle_selected_target_id = ""
-		host.battle_selected_ally_target_id = ""
-		host.battle_hover_target_id = ""
-		host.battle_hover_ally_target_id = ""
 		var next_phase := str(host.battle_state.get("phase", ""))
 		var next_round := maxi(1, int(host.battle_state.get("round", 1)))
+		var preserve_local_command_state := _should_preserve_local_command_state(
+			previous_phase,
+			next_phase,
+			previous_round,
+			next_round,
+			previous_command_owner,
+			previous_target_mode
+		)
+		if preserve_local_command_state:
+			_restore_local_command_state(previous_command_state)
+		else:
+			host._set_battle_command_owner("player")
+			host.battle_target_mode = "enemy"
+			host.battle_pending_player_command.clear()
+			host.battle_pending_pet_command.clear()
+			host.battle_pending_spirit_id = ""
+			host.battle_pending_item_id = ""
+			host.battle_pending_capture_tool_id = ""
+			host.battle_pending_pet_skill_id = ""
+			host.battle_selected_target_id = ""
+			host.battle_selected_ally_target_id = ""
+			host.battle_hover_target_id = ""
+			host.battle_hover_ally_target_id = ""
 		var same_round_self_pet_handoff: bool = (
 			previous_phase == "server_waiting"
 			and next_phase == "command"
@@ -611,6 +625,64 @@ func sync_room_scene(force_start: bool = false) -> bool:
 		return true
 	host._start_battle(next_state)
 	return true
+
+
+func _local_command_state_snapshot() -> Dictionary:
+	return {
+		"owner": str(host.battle_command_owner),
+		"targetMode": str(host.battle_target_mode),
+		"pendingPlayerCommand": host.battle_pending_player_command.duplicate(true),
+		"pendingPetCommand": host.battle_pending_pet_command.duplicate(true),
+		"pendingSpiritId": str(host.battle_pending_spirit_id),
+		"pendingItemId": str(host.battle_pending_item_id),
+		"pendingCaptureToolId": str(host.battle_pending_capture_tool_id),
+		"pendingPetSkillId": str(host.battle_pending_pet_skill_id),
+		"selectedTargetId": str(host.battle_selected_target_id),
+		"selectedAllyTargetId": str(host.battle_selected_ally_target_id),
+		"hoverTargetId": str(host.battle_hover_target_id),
+		"hoverAllyTargetId": str(host.battle_hover_ally_target_id),
+	}
+
+
+func _should_preserve_local_command_state(
+	previous_phase: String,
+	next_phase: String,
+	previous_round: int,
+	next_round: int,
+	previous_command_owner: String,
+	previous_target_mode: String
+) -> bool:
+	if previous_phase != "command" or next_phase != "command" or previous_round != next_round:
+		return false
+	if host.server_battle_command_request_active:
+		return false
+	if previous_command_owner in ["pet", "spirit", "item", "capture", "switch_pet"]:
+		return true
+	return previous_target_mode in [
+		"player_attack_target",
+		"player_capture_target",
+		"ally_spirit_single",
+		"enemy_spirit_single",
+		"ally_item_single",
+		"enemy_item_single",
+		"pet_enemy_attack",
+		"pet_enemy_skill",
+	]
+
+
+func _restore_local_command_state(command_state: Dictionary) -> void:
+	host.battle_target_mode = str(command_state.get("targetMode", "enemy"))
+	host.battle_pending_player_command = (command_state.get("pendingPlayerCommand", {}) as Dictionary).duplicate(true)
+	host.battle_pending_pet_command = (command_state.get("pendingPetCommand", {}) as Dictionary).duplicate(true)
+	host.battle_pending_spirit_id = str(command_state.get("pendingSpiritId", ""))
+	host.battle_pending_item_id = str(command_state.get("pendingItemId", ""))
+	host.battle_pending_capture_tool_id = str(command_state.get("pendingCaptureToolId", ""))
+	host.battle_pending_pet_skill_id = str(command_state.get("pendingPetSkillId", ""))
+	host.battle_selected_target_id = str(command_state.get("selectedTargetId", ""))
+	host.battle_selected_ally_target_id = str(command_state.get("selectedAllyTargetId", ""))
+	host.battle_hover_target_id = str(command_state.get("hoverTargetId", ""))
+	host.battle_hover_ally_target_id = str(command_state.get("hoverAllyTargetId", ""))
+	host._set_battle_command_owner(str(command_state.get("owner", "player")))
 
 
 func play_event_list(event_list: Dictionary) -> bool:
@@ -761,7 +833,7 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 	if host.server_battle_command_request_active:
 		host._set_battle_message("正在提交指令。")
 		return
-	if command_id == "run":
+	if command_id == "run" and not host._current_server_battle_is_party_pve():
 		host._leave_server_battle_room()
 		return
 	if sync_command_owner_from_room():
@@ -776,7 +848,7 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 	host.server_battle_command_request_active = true
 	host.battle_state["phase"] = "server_waiting"
 	var action_id := str(payload.get("actionId", ""))
-	host._set_battle_message("换宠指令已提交，等待服务器确认。" if action_id == "switch_pet" else "物品指令已提交，等待服务器确认。" if command_id == "item" else "精灵指令已提交，等待服务器确认。" if command_id == "spirit" else "捕捉指令已提交，等待服务器确认。" if command_id == "capture" else "指令已提交，等待服务器确认。")
+	host._set_battle_message("换宠指令已提交，等待服务器确认。" if action_id == "switch_pet" else "物品指令已提交，等待服务器确认。" if command_id == "item" else "精灵指令已提交，等待服务器确认。" if command_id == "spirit" else "捕捉指令已提交，等待服务器确认。" if command_id == "capture" else "逃跑指令已提交，等待服务器确认。" if command_id == "run" else "指令已提交，等待服务器确认。")
 	host._sync_battle_buttons()
 	host._layout_hud()
 	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
@@ -819,10 +891,12 @@ func _player_command_payload(command_id: String, target_id: String, pet_id: Stri
 			action_id = "switch_pet"
 		"capture":
 			action_id = "capture"
+		"run":
+			action_id = "run"
 		"item", "spirit":
 			action_id = item_action_id
 	if action_id == "":
-		host._set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉和换宠。")
+		host._set_battle_message("联网战斗暂只支持攻击、防御、物品、精灵、捕捉、换宠和逃跑。")
 		return {}
 	var switch_pet_id := pet_id.strip_edges()
 	if action_id == "switch_pet" and switch_pet_id == "":

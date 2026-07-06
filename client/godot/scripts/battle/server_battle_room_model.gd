@@ -215,6 +215,8 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 	var slot_id := _slot_id_for_server_actor(side, server_actor, side_index, kind_index)
 	var max_hp := maxi(1, int(server_actor.get("maxHp", server_actor.get("hp", 120))))
 	var hp := clampi(int(server_actor.get("hp", max_hp)), 0, max_hp)
+	var launched := bool(server_actor.get("launched", false)) or str(server_actor.get("actionState", "")).strip_edges() == "launched" or (server_actor.has("revivable") and not bool(server_actor.get("revivable", true)))
+	var action_state := "launched" if launched else ("captured" if bool(server_actor.get("captured", false)) else ("down" if hp <= 0 else "idle"))
 	var actor := {
 		"id": actor_id,
 		"name": str(server_actor.get("displayName", server_actor.get("username", "猎人"))),
@@ -224,13 +226,15 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"level": maxi(1, int(server_actor.get("level", 1))),
 		"hp": hp,
 		"maxHp": max_hp,
-			"quick": maxi(1, int(server_actor.get("speed", server_actor.get("quick", 60)))),
-			"attack": maxi(1, int(server_actor.get("attack", 18))),
-			"defense": maxi(1, int(server_actor.get("defense", 8))),
-			"catchable": bool(server_actor.get("catchable", kind == "wild_pet")),
-			"captureDifficulty": maxi(0, int(server_actor.get("captureDifficulty", 0))),
-			"captured": bool(server_actor.get("captured", false)),
-			"actionState": "captured" if bool(server_actor.get("captured", false)) else ("down" if hp <= 0 else "idle"),
+		"quick": maxi(1, int(server_actor.get("speed", server_actor.get("quick", 60)))),
+		"attack": maxi(1, int(server_actor.get("attack", 18))),
+		"defense": maxi(1, int(server_actor.get("defense", 8))),
+		"catchable": bool(server_actor.get("catchable", kind == "wild_pet")),
+		"captureDifficulty": maxi(0, int(server_actor.get("captureDifficulty", 0))),
+		"captured": bool(server_actor.get("captured", false)),
+		"actionState": action_state,
+		"launched": launched,
+		"revivable": bool(server_actor.get("revivable", true)) and not launched,
 		"petBattleState": BattleModel.PET_STATE_BATTLE if kind == "pet" or kind == "wild_pet" else "",
 		"statuses": _dictionary_value(server_actor.get("statuses", {})),
 		"statusResist": _dictionary_value(server_actor.get("statusResist", {})),
@@ -243,14 +247,17 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"serverAccountId": str(server_actor.get("accountId", "")),
 		"serverUsername": str(server_actor.get("username", "")),
 		"serverSide": str(server_actor.get("side", "")),
-			"serverKind": kind,
-			"serverPetId": str(server_actor.get("petId", "")),
-			"formId": str(server_actor.get("formId", "")),
-			"petId": str(server_actor.get("petId", "")),
-			"serverGuarding": bool(server_actor.get("guarding", false)),
-			"serverDefeated": bool(server_actor.get("defeated", false)),
-			"serverCaptured": bool(server_actor.get("captured", false)),
-		}
+		"serverKind": kind,
+		"serverPetId": str(server_actor.get("petId", "")),
+		"formId": str(server_actor.get("formId", "")),
+		"petId": str(server_actor.get("petId", "")),
+		"serverGuarding": bool(server_actor.get("guarding", false)),
+		"serverDefeated": bool(server_actor.get("defeated", false)),
+		"serverCaptured": bool(server_actor.get("captured", false)),
+		"serverLaunched": launched,
+	}
+	if launched and (kind == "pet" or kind == "wild_pet"):
+		actor["petBattleState"] = BattleModel.PET_STATE_REST
 	_apply_server_ride_fields(actor, server_actor)
 	return actor
 
@@ -381,8 +388,17 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["catchable"] = bool(server_actor.get("catchable", actor.get("catchable", false)))
 		actor["captureDifficulty"] = maxi(0, int(server_actor.get("captureDifficulty", actor.get("captureDifficulty", 0))))
 		actor["captured"] = bool(server_actor.get("captured", actor.get("captured", false)))
-		if bool(actor.get("captured", false)):
+		var launched := bool(server_actor.get("launched", actor.get("launched", false))) or str(server_actor.get("actionState", "")).strip_edges() == "launched" or (server_actor.has("revivable") and not bool(server_actor.get("revivable", true)))
+		actor["launched"] = launched
+		actor["revivable"] = bool(server_actor.get("revivable", actor.get("revivable", true))) and not launched
+		if launched:
+			actor["actionState"] = "launched"
+			if str(actor.get("kind", "")) == "pet" or str(actor.get("kind", "")) == "wild_pet":
+				actor["petBattleState"] = BattleModel.PET_STATE_REST
+		elif bool(actor.get("captured", false)):
 			actor["actionState"] = "captured"
+		elif int(actor.get("hp", 0)) <= 0:
+			actor["actionState"] = "down"
 		_apply_server_ride_fields(actor, server_actor)
 		actor["activeSkillIds"] = _string_array(server_actor.get("activeSkillIds", actor.get("activeSkillIds", [])))
 		actor["petSkillSlots"] = _string_array(server_actor.get("petSkillSlots", actor.get("petSkillSlots", [])))
@@ -394,6 +410,7 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["serverGuarding"] = bool(server_actor.get("guarding", false))
 		actor["serverDefeated"] = bool(server_actor.get("defeated", false))
 		actor["serverCaptured"] = bool(server_actor.get("captured", false))
+		actor["serverLaunched"] = launched
 		actors[index] = actor
 		next_state["actors"] = actors
 		return next_state
@@ -615,6 +632,19 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"actionId": str(server_event.get("actionId", "attack")),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type == "escape":
+		return {
+			"type": "escape",
+			"attackerId": actor_id,
+			"targetId": actor_id,
+			"targetSide": str(actor.get("side", "")),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": str(server_event.get("actionId", "run")),
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
@@ -986,7 +1016,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"canDodge": false,
 			"canCritical": false,
 			"canCounter": false,
-			"canLaunch": true,
+			"canLaunch": bool(server_event.get("launched", false)),
 			"actionId": str(server_event.get("actionId", "attack")),
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
@@ -995,6 +1025,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverHpAfter": int(server_event.get("hpAfter", 0)),
 			"serverBlocked": bool(server_event.get("blocked", false)),
 			"serverDefeated": bool(server_event.get("defeated", false)),
+			"serverLaunched": bool(server_event.get("launched", false)),
 			"serverParticipants": server_event.get("participants", []),
 		}
 	if event_type != "basic_attack" and event_type != "pet_skill":
@@ -1023,7 +1054,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"canDodge": false,
 			"canCritical": false,
 			"canCounter": false,
-			"canLaunch": false,
+			"canLaunch": bool(server_event.get("launched", false)),
 			"skillId": skill_id,
 			"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
 			"actionId": str(server_event.get("actionId", skill_id)),
@@ -1034,6 +1065,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverHpAfter": int(server_event.get("hpAfter", 0)),
 			"serverBlocked": bool(server_event.get("blocked", false)),
 			"serverDefeated": bool(server_event.get("defeated", false)),
+			"serverLaunched": bool(server_event.get("launched", false)),
 		}
 	return {
 		"type": "attack",
@@ -1047,7 +1079,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		"canDodge": false,
 		"canCritical": false,
 		"canCounter": false,
-		"canLaunch": false,
+		"canLaunch": bool(server_event.get("launched", false)),
 		"actionId": str(server_event.get("actionId", "attack")),
 		"serverEventId": str(server_event.get("eventId", "")),
 		"serverEventType": event_type,
@@ -1056,6 +1088,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		"serverHpAfter": int(server_event.get("hpAfter", 0)),
 		"serverBlocked": bool(server_event.get("blocked", false)),
 		"serverDefeated": bool(server_event.get("defeated", false)),
+		"serverLaunched": bool(server_event.get("launched", false)),
 	}
 
 

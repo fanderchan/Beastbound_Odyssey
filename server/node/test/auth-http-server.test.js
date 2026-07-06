@@ -388,7 +388,7 @@ test("HTTP server exposes server-authoritative quest record and claim endpoints"
   assert.equal(recorded.ok, true);
   assert.equal(recorded.profileSummary.profileRevision, 2);
   assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
-  assert.equal(recorded.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(recorded.profile.activeQuestId, "quest_bank_intro");
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
 

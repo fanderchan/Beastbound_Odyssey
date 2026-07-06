@@ -244,6 +244,102 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   assert.equal(loaded.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
 });
 
+test("server backpack actions merge split and discard item stacks", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "bagstacks", "password": "test1234", "displayName": "背包整理"});
+  const token = registered.session.token;
+  const profile = battleProfile("背包整理", {"level": 1, "hp": 120, "maxHp": 120});
+  profile.backpackSlots = [
+    {"itemId": "item_meat_small", "count": 20},
+    {"itemId": "item_meat_small", "count": 7},
+    ...Array.from({"length": 13}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const merged = service.profileAction(token, {
+    "action": "backpack_move_stack",
+    "payload": {"sourceSlotIndex": 1, "targetSlotIndex": 0},
+  });
+  assert.equal(merged.ok, true);
+  assert.equal(merged.profile.backpackSlots[0].itemId, "item_meat_small");
+  assert.equal(merged.profile.backpackSlots[0].count, 27);
+  assert.deepEqual(merged.profile.backpackSlots[1], {});
+  assert.equal(profileItemCount(merged.profile, "item_meat_small"), 27);
+
+  const split = service.profileAction(token, {
+    "action": "backpack_split_stack",
+    "payload": {"sourceSlotIndex": 0, "quantity": 7},
+  });
+  assert.equal(split.ok, true);
+  assert.equal(split.profile.backpackSlots[0].count, 20);
+  assert.equal(split.profile.backpackSlots[1].count, 7);
+  assert.equal(profileItemCount(split.profile, "item_meat_small"), 27);
+
+  const discarded = service.profileAction(token, {
+    "action": "backpack_discard_item",
+    "payload": {"sourceSlotIndex": 1, "quantity": 7},
+  });
+  assert.equal(discarded.ok, true);
+  assert.equal(discarded.profile.backpackSlots[0].count, 20);
+  assert.deepEqual(discarded.profile.backpackSlots[1], {});
+  assert.equal(profileItemCount(discarded.profile, "item_meat_small"), 20);
+  assert.equal(discarded.message, "已丢弃肉 x7。");
+});
+
+test("server bank tab unlock consumes diamonds and opens next bank page", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "bankunlock", "password": "test1234", "displayName": "银行开页"});
+  const token = registered.session.token;
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const beforeDiamonds = current.profile.diamonds;
+
+  const unlock = service.profileAction(token, {"action": "bank_unlock_tab", "payload": {"tabIndex": 1}});
+  assert.equal(unlock.ok, true);
+  assert.equal(unlock.profile.bank.unlockedTabs, 2);
+  assert.equal(unlock.profile.bank.slots.length, 90);
+  assert.equal(unlock.profile.diamonds, beforeDiamonds - 100);
+
+  const skipped = service.profileAction(token, {"action": "bank_unlock_tab", "payload": {"tabIndex": 3}});
+  assert.equal(skipped.ok, false);
+  assert.equal(skipped.code, "bank_tab_order");
+});
+
+test("training partner action advances the partner tutorial quest server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "partnerquest", "password": "test1234", "displayName": "陪练任务"});
+  const token = registered.session.token;
+  const profile = battleProfile("陪练任务", {"level": 1, "hp": 120, "maxHp": 120}, {
+    "petId": "pet_partner_quest",
+    "formId": "bui_normal_red_fire10",
+    "name": "任务布伊",
+    "level": 1,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 22,
+    "defense": 10,
+    "quick": 42,
+  });
+  profile.stoneCoins = 40;
+  profile.activeQuestId = "quest_training_partner_intro";
+  profile.questStates = {
+    "quest_first_victory": {"id": "quest_first_victory", "status": "claimed", "progress": 1},
+    "quest_training_partner_intro": {"id": "quest_training_partner_intro", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const trained = service.profileAction(token, {"action": "training_partner_set_count", "payload": {"count": 1}});
+  assert.equal(trained.ok, true);
+  assert.equal(trained.result.count, 1);
+  assert.equal(trained.profile.trainingPartners.length, 1);
+  assert.equal(trained.profile.stoneCoins, 50);
+  assert.equal(trained.profile.activeQuestId, "quest_use_poison_spirit");
+  assert.equal(trained.profile.questStates.quest_training_partner_intro.status, "claimed");
+  assert.equal(trained.profile.questStates.quest_training_partner_intro.progress, 1);
+  assert.ok(trained.questMessages.some((message) => String(message).includes("完成任务「陪练伙伴」")));
+  assert.ok(trained.logLines.some((message) => String(message).includes("完成任务「陪练伙伴」")));
+});
+
 test("server shop transactions validate price, currency, backpack, and buy quests", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "shopuser", "password": "test1234", "displayName": "商店玩家"});
@@ -291,6 +387,84 @@ test("server shop transactions validate price, currency, backpack, and buy quest
   assert.equal(expensive.ok, false);
   assert.equal(expensive.code, "not_enough_currency");
   assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
+});
+
+test("server shop transactions recover missing active main quest before buy progress", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "shopmissingactive", "password": "test1234", "displayName": "补给玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("补给玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 100;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  profile.activeQuestId = "";
+  profile.unlockedAbilities = ["riding"];
+  profile.questStates = {
+    "quest_intro_talk": {"questId": "quest_intro_talk", "status": "claimed", "progress": 1},
+    "quest_bank_intro": {"questId": "quest_bank_intro", "status": "claimed", "progress": 1},
+    "quest_stable_intro": {"questId": "quest_stable_intro", "status": "claimed", "progress": 1},
+    "quest_riding_certificate": {"questId": "quest_riding_certificate", "status": "claimed", "progress": 1},
+    "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "claimed", "progress": 1},
+  };
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const buy = service.shopTransaction(token, {
+    "mode": "buy",
+    "shopId": "firebud_item_shop",
+    "itemId": "item_meat_small",
+    "amount": 1,
+  });
+  assert.equal(buy.ok, true);
+  assert.equal(buy.transaction.price, 8);
+  assert.equal(buy.profile.stoneCoins, 92);
+  assert.equal(profileItemCount(buy.profile, "item_meat_small"), 1);
+  assert.equal(profileItemCount(buy.profile, "capture_rope_basic"), 1);
+  assert.equal(buy.profile.questStates.quest_buy_supply.status, "claimed");
+  assert.equal(buy.profile.activeQuestId, "quest_use_meat");
+  assert.equal(buy.questMessages.some((message) => String(message).includes("补给准备")), true);
+});
+
+test("server pet riding advances novice tiger tutorial quest", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "ridingquest", "password": "test1234", "displayName": "骑虎玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("骑虎玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.unlockedAbilities = ["riding"];
+  profile.activeQuestId = "quest_try_riding_tiger";
+  profile.questStates = {
+    "quest_intro_talk": {"questId": "quest_intro_talk", "status": "claimed", "progress": 1},
+    "quest_bank_intro": {"questId": "quest_bank_intro", "status": "claimed", "progress": 1},
+    "quest_stable_intro": {"questId": "quest_stable_intro", "status": "claimed", "progress": 1},
+    "quest_riding_certificate": {"questId": "quest_riding_certificate", "status": "claimed", "progress": 1},
+    "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "active", "progress": 0},
+  };
+  profile.petInstances.push({
+    "instanceId": "pet_tiger_quest",
+    "petId": "pet_tiger_quest",
+    "formId": "novice_tiger_mount",
+    "templateId": "novice_tiger_mount",
+    "speciesId": "novice_tiger_mount",
+    "lineId": "tiger",
+    "name": "新手老虎",
+    "state": "standby",
+    "level": 1,
+    "hp": 80,
+    "maxHp": 80,
+    "attack": 20,
+    "defense": 16,
+    "quick": 28,
+  });
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const riding = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": "pet_tiger_quest"},
+  });
+  assert.equal(riding.ok, true);
+  assert.equal(riding.result.state, "riding");
+  assert.equal(riding.profile.ridePetInstanceId, "pet_tiger_quest");
+  assert.equal(riding.profile.questStates.quest_try_riding_tiger.status, "claimed");
+  assert.equal(riding.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(riding.questMessages.some((message) => String(message).includes("试骑新手老虎")), true);
 });
 
 test("server shop equipment purchase can be equipped immediately", () => {

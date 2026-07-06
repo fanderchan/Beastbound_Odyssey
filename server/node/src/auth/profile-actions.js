@@ -213,6 +213,42 @@ function createProfileActionsDomain(ctx) {
         }
       }
     }
+    if (action === "training_partner_set_count") {
+      const questProgress = recordQuestEventToProfile(profile, {
+        type: "training_partner_set_count",
+        count: Math.max(0, Math.trunc(Number(actionResult.count || 0))),
+        amount: 1,
+        schemaVersion: 1,
+      });
+      if (questProgress.changed && questProgress.message) {
+        questMessages.push(questProgress.message);
+      }
+      if (questProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
+    }
+    if (action === "pet_state_cycle" && String(actionResult.state || "") === "riding") {
+      const questProgress = recordQuestEventToProfile(profile, {
+        type: "ride_pet",
+        instanceId: String(actionResult.instanceId || params.instanceId || params.petId || "").trim(),
+        formId: String(actionResult.formId || "").trim(),
+        lineId: String(actionResult.lineId || "").trim(),
+        amount: 1,
+        schemaVersion: 1,
+      });
+      if (questProgress.changed && questProgress.message) {
+        questMessages.push(questProgress.message);
+      }
+      if (questProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
+    }
     const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
     save(data);
     return ok({

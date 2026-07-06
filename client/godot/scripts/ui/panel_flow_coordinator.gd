@@ -38,6 +38,8 @@ const NumericExperimentModel := preload("res://scripts/progression/numeric_exper
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
+const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
+const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
@@ -61,6 +63,10 @@ const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
 const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
+const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
+const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
+const QUEST_CAPTURE_WULI_ID := "quest_capture_wuli"
+const TUTORIAL_WULI_FORM_ID := "wuli_normal_orange_fire10"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
 const MAP_DATA_PATHS := MapDataCatalog.MAP_DATA_PATHS
@@ -74,6 +80,33 @@ const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const PET_MANAGEMENT_PANEL_MAX_SIZE := Vector2(980.0, 560.0)
 const WORLD_LOG_MAX_LINES := 80
 const CHAT_MAX_MESSAGES := 120
+
+var item_stack_split_panel: PanelContainer
+var item_stack_split_title_label: Label
+var item_stack_split_summary_label: Label
+var item_stack_split_quantity_spinbox: SpinBox
+var item_stack_split_confirm_button: Button
+var item_stack_split_request: Dictionary = {}
+var item_slot_context_panel: PanelContainer
+var item_slot_context_title_label: Label
+var item_slot_context_button_container: VBoxContainer
+var item_slot_context_data: Dictionary = {}
+var item_slot_detail_panel: PanelContainer
+var item_slot_detail_title_label: Label
+var item_slot_detail_body_label: RichTextLabel
+var backpack_discard_confirm_panel: PanelContainer
+var backpack_discard_confirm_title_label: Label
+var backpack_discard_confirm_body_label: Label
+var backpack_discard_request: Dictionary = {}
+var backpack_discard_drop_zone: ItemDropZone
+var bank_active_tab_index: int = 0
+var bank_selected_slot_data: Dictionary = {}
+var bank_tab_buttons: Array[Button] = []
+const ITEM_SLOT_CONTEXT_VIEW := "view"
+const ITEM_SLOT_CONTEXT_DEFAULT := "default"
+const ITEM_SLOT_CONTEXT_QUANTITY := "quantity"
+const ITEM_SLOT_CONTEXT_DISCARD := "discard"
+const ITEM_SLOT_CONTEXT_CLOSE := "close"
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
@@ -2080,6 +2113,12 @@ var bank_quantity_spinbox:
 	set(value):
 		host.bank_quantity_spinbox = value
 
+var bank_coin_quantity_spinbox:
+	get:
+		return host.bank_coin_quantity_spinbox
+	set(value):
+		host.bank_coin_quantity_spinbox = value
+
 var bank_deposit_button:
 	get:
 		return host.bank_deposit_button
@@ -2103,6 +2142,12 @@ var bank_coin_withdraw_button:
 		return host.bank_coin_withdraw_button
 	set(value):
 		host.bank_coin_withdraw_button = value
+
+var bank_unlock_tab_button:
+	get:
+		return host.bank_unlock_tab_button
+	set(value):
+		host.bank_unlock_tab_button = value
 
 var bank_status_label:
 	get:
@@ -2139,6 +2184,12 @@ var bank_quantity:
 		return host.bank_quantity
 	set(value):
 		host.bank_quantity = value
+
+var bank_coin_quantity:
+	get:
+		return host.bank_coin_quantity
+	set(value):
+		host.bank_coin_quantity = value
 
 var bank_request_pending:
 	get:
@@ -5995,13 +6046,15 @@ func _build_hud() -> void:
 	backpack_grid.add_theme_constant_override("v_separation", 7)
 	backpack_scroll.add_child(backpack_grid)
 	backpack_detail_label = RichTextLabel.new()
+	backpack_detail_label.visible = false
 	backpack_detail_label.bbcode_enabled = true
 	backpack_detail_label.fit_content = false
 	backpack_detail_label.scroll_active = true
 	backpack_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	backpack_detail_label.add_theme_font_size_override("font_size", 16)
-	backpack_detail_label.custom_minimum_size = Vector2(0, 122)
+	backpack_detail_label.custom_minimum_size = Vector2.ZERO
 	backpack_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backpack_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	backpack_column.add_child(backpack_detail_label)
 	backpack_use_button = Button.new()
 	backpack_use_button.text = "使用"
@@ -6045,6 +6098,14 @@ func _build_hud() -> void:
 	backpack_target_container.add_theme_constant_override("separation", 6)
 	backpack_target_scroll.add_child(backpack_target_container)
 	hud_root.add_child(backpack_panel)
+	backpack_discard_drop_zone = ItemDropZone.new()
+	backpack_discard_drop_zone.name = "BackpackDiscardDropZone"
+	backpack_discard_drop_zone.visible = false
+	backpack_discard_drop_zone.z_index = 23
+	backpack_discard_drop_zone.mouse_filter = Control.MOUSE_FILTER_STOP
+	backpack_discard_drop_zone.configure(["backpack"], backpack_panel)
+	backpack_discard_drop_zone.item_dropped_outside.connect(_on_backpack_item_dropped_outside)
+	hud_root.add_child(backpack_discard_drop_zone)
 
 	equipment_panel = _panel_container("EquipmentPanel")
 	equipment_panel.visible = false
@@ -6306,11 +6367,12 @@ func _build_hud() -> void:
 		_set_shop_quantity(_shop_quantity_max(shop_selected_item_id))
 	)
 	shop_quantity_row.add_child(shop_quantity_max_button)
-	shop_action_button = Button.new()
+	shop_action_button = ItemSlotButton.new()
 	shop_action_button.text = "购买"
 	shop_action_button.custom_minimum_size = Vector2(0, 46)
 	shop_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_action_button.pressed.connect(_on_shop_action_pressed)
+	(shop_action_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
 	shop_column.add_child(shop_action_button)
 	hud_root.add_child(shop_panel)
 
@@ -7308,7 +7370,7 @@ func _build_hud() -> void:
 	bank_header.add_theme_constant_override("separation", 10)
 	bank_column.add_child(bank_header)
 	var bank_title = Label.new()
-	bank_title.text = "仓库"
+	bank_title.text = "银行"
 	bank_title.add_theme_font_size_override("font_size", 21)
 	bank_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_header.add_child(bank_title)
@@ -7324,7 +7386,8 @@ func _build_hud() -> void:
 	bank_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bank_column.add_child(bank_body)
 	var bank_list_scroll = ScrollContainer.new()
-	bank_list_scroll.custom_minimum_size = Vector2(250, 0)
+	bank_list_scroll.custom_minimum_size = Vector2(600, 0)
+	bank_list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bank_body.add_child(bank_list_scroll)
 	bank_list_container = VBoxContainer.new()
@@ -7333,7 +7396,8 @@ func _build_hud() -> void:
 	bank_list_scroll.add_child(bank_list_container)
 
 	var bank_detail_column = VBoxContainer.new()
-	bank_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_detail_column.custom_minimum_size = Vector2(280, 0)
+	bank_detail_column.size_flags_horizontal = Control.SIZE_FILL
 	bank_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bank_detail_column.add_theme_constant_override("separation", 8)
 	bank_body.add_child(bank_detail_column)
@@ -7347,7 +7411,18 @@ func _build_hud() -> void:
 	bank_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_detail_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bank_detail_column.add_child(bank_detail_label)
+	bank_unlock_tab_button = Button.new()
+	bank_unlock_tab_button.text = "解锁银行页"
+	bank_unlock_tab_button.custom_minimum_size = Vector2(0, 44)
+	bank_unlock_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_unlock_tab_button.pressed.connect(_on_bank_unlock_tab_pressed)
+	bank_detail_column.add_child(bank_unlock_tab_button)
 
+	var bank_item_quantity_label := Label.new()
+	bank_item_quantity_label.text = "物品数量"
+	bank_item_quantity_label.add_theme_font_size_override("font_size", 14)
+	bank_item_quantity_label.add_theme_color_override("font_color", Color(0.82, 0.80, 0.70, 0.92))
+	bank_detail_column.add_child(bank_item_quantity_label)
 	bank_quantity_spinbox = SpinBox.new()
 	bank_quantity_spinbox.min_value = 1
 	bank_quantity_spinbox.max_value = 999
@@ -7365,37 +7440,57 @@ func _build_hud() -> void:
 	bank_item_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_item_row.add_theme_constant_override("separation", 8)
 	bank_detail_column.add_child(bank_item_row)
-	bank_deposit_button = Button.new()
+	bank_deposit_button = ItemSlotButton.new()
 	bank_deposit_button.text = "存入物品"
 	bank_deposit_button.custom_minimum_size = Vector2(0, 46)
 	bank_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_deposit_button.pressed.connect(_on_bank_deposit_pressed)
+	(bank_deposit_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
 	bank_item_row.add_child(bank_deposit_button)
-	bank_withdraw_button = Button.new()
+	bank_withdraw_button = ItemSlotButton.new()
 	bank_withdraw_button.text = "取出物品"
 	bank_withdraw_button.custom_minimum_size = Vector2(0, 46)
 	bank_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_withdraw_button.pressed.connect(_on_bank_withdraw_pressed)
+	(bank_withdraw_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
 	bank_item_row.add_child(bank_withdraw_button)
+
+	var bank_coin_quantity_label := Label.new()
+	bank_coin_quantity_label.text = "石币数量"
+	bank_coin_quantity_label.add_theme_font_size_override("font_size", 14)
+	bank_coin_quantity_label.add_theme_color_override("font_color", Color(0.82, 0.80, 0.70, 0.92))
+	bank_detail_column.add_child(bank_coin_quantity_label)
+	bank_coin_quantity_spinbox = SpinBox.new()
+	bank_coin_quantity_spinbox.min_value = 1
+	bank_coin_quantity_spinbox.max_value = 100000000
+	bank_coin_quantity_spinbox.step = 1
+	bank_coin_quantity_spinbox.value = 1000
+	bank_coin_quantity_spinbox.rounded = true
+	bank_coin_quantity_spinbox.custom_minimum_size = Vector2(0, 42)
+	bank_coin_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_coin_quantity_spinbox.value_changed.connect(func(value: float) -> void:
+		_set_bank_coin_quantity(int(value))
+	)
+	bank_detail_column.add_child(bank_coin_quantity_spinbox)
 
 	var bank_coin_row = HBoxContainer.new()
 	bank_coin_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_coin_row.add_theme_constant_override("separation", 8)
 	bank_detail_column.add_child(bank_coin_row)
 	bank_coin_deposit_button = Button.new()
-	bank_coin_deposit_button.text = "存入100石币"
+	bank_coin_deposit_button.text = "存石币"
 	bank_coin_deposit_button.custom_minimum_size = Vector2(0, 44)
 	bank_coin_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_coin_deposit_button.pressed.connect(func() -> void:
-		_start_bank_coin_transaction("deposit", 100)
+		_start_bank_coin_transaction("deposit")
 	)
 	bank_coin_row.add_child(bank_coin_deposit_button)
 	bank_coin_withdraw_button = Button.new()
-	bank_coin_withdraw_button.text = "取出100石币"
+	bank_coin_withdraw_button.text = "取石币"
 	bank_coin_withdraw_button.custom_minimum_size = Vector2(0, 44)
 	bank_coin_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bank_coin_withdraw_button.pressed.connect(func() -> void:
-		_start_bank_coin_transaction("withdraw", 100)
+		_start_bank_coin_transaction("withdraw")
 	)
 	bank_coin_row.add_child(bank_coin_withdraw_button)
 
@@ -7411,6 +7506,11 @@ func _build_hud() -> void:
 	bank_http_request.request_completed.connect(_on_bank_http_request_completed)
 	bank_panel.add_child(bank_http_request)
 	hud_root.add_child(bank_panel)
+
+	_build_item_stack_split_panel(hud_root)
+	_build_item_slot_context_panel(hud_root)
+	_build_item_slot_detail_panel(hud_root)
+	_build_backpack_discard_confirm_panel(hud_root)
 
 	training_partner_panel = _panel_container("TrainingPartnerPanel")
 	training_partner_panel.visible = false
@@ -8956,6 +9056,9 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	var log_message = _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
 	var result_key = _server_battle_result_key(closed_room)
 	var hang_result = _apply_server_battle_hang_writeback(closed_room)
+	var manual_hang_stop_after_battle = host._consume_hang_stop_after_battle_request()
+	if manual_hang_stop_after_battle:
+		host._stop_hang_activity("", true)
 	server_battle_pending_closed_room.clear()
 	server_battle_command_request_active = false
 	server_battle_state_poll_request_active = false
@@ -8972,6 +9075,9 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if not writeback_warning_lines.is_empty():
 		log_message = _append_unique_message_lines(log_message, writeback_warning_lines)
 		message = _append_unique_message_lines(message, writeback_warning_lines)
+	if manual_hang_stop_after_battle:
+		log_message = _append_unique_message_lines(log_message, ["挂机已停止。"])
+		message = _append_unique_message_lines(message, ["挂机已停止。"])
 	_set_world_log_message(log_message)
 	if not is_party_pve:
 		_open_battle_result_panel(closed_room, result_key, message, "庄园战" if is_manor_war else "切磋")
@@ -9661,6 +9767,7 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 		return
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
+		_apply_server_position_correction_from_response(parsed)
 		_handle_session_invalid_response(parsed)
 		return
 	var own_position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
@@ -9897,8 +10004,9 @@ func _sync_action_bar_state() -> void:
 		account_menu_button.disabled = not account_authenticated
 	if qa_menu_button != null:
 		qa_menu_button.disabled = battle_active or not _can_use_gm_tools()
+	if stop_button != null:
+		stop_button.disabled = false
 	var battle_locked_buttons: Array = [
-		stop_button,
 		ring_button,
 		player_status_menu_button,
 		bag_menu_button,
@@ -10108,6 +10216,7 @@ func _publish_current_position_once_to_server() -> bool:
 	))
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
+		_apply_server_position_correction_from_response(parsed)
 		return false
 	var position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
 	if not position.is_empty():
@@ -10262,6 +10371,10 @@ func _register_hud_panels() -> void:
 		mailbox_panel,
 		market_panel,
 		bank_panel,
+		item_stack_split_panel,
+		item_slot_context_panel,
+		item_slot_detail_panel,
+		backpack_discard_confirm_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -10297,6 +10410,9 @@ func _register_hud_panels() -> void:
 		mailbox_panel,
 		market_panel,
 		bank_panel,
+		item_slot_context_panel,
+		item_slot_detail_panel,
+		backpack_discard_confirm_panel,
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
@@ -10312,6 +10428,345 @@ func _panel_container(node_name: String) -> PanelContainer:
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	return panel
 
+func _build_item_stack_split_panel(parent: Control) -> void:
+	item_stack_split_panel = _panel_container("ItemStackSplitPanel")
+	item_stack_split_panel.visible = false
+	item_stack_split_panel.z_index = 49
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 8)
+	item_stack_split_panel.add_child(column)
+	item_stack_split_title_label = Label.new()
+	item_stack_split_title_label.text = "选择数量"
+	item_stack_split_title_label.add_theme_font_size_override("font_size", 20)
+	column.add_child(item_stack_split_title_label)
+	item_stack_split_summary_label = Label.new()
+	item_stack_split_summary_label.text = ""
+	item_stack_split_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	item_stack_split_summary_label.add_theme_font_size_override("font_size", 15)
+	item_stack_split_summary_label.custom_minimum_size = Vector2(0, 42)
+	column.add_child(item_stack_split_summary_label)
+	var quick_row := HBoxContainer.new()
+	quick_row.add_theme_constant_override("separation", 8)
+	quick_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(quick_row)
+	for option in [
+		{"label": "1", "mode": "one"},
+		{"label": "一半", "mode": "half"},
+		{"label": "全部", "mode": "all"},
+	]:
+		var button := Button.new()
+		button.text = str(option.get("label", ""))
+		button.custom_minimum_size = Vector2(0, 38)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var mode := str(option.get("mode", "one"))
+		button.pressed.connect(func() -> void:
+			_set_item_stack_split_quick_quantity(mode)
+		)
+		quick_row.add_child(button)
+	item_stack_split_quantity_spinbox = SpinBox.new()
+	item_stack_split_quantity_spinbox.min_value = 1
+	item_stack_split_quantity_spinbox.max_value = 999
+	item_stack_split_quantity_spinbox.step = 1
+	item_stack_split_quantity_spinbox.value = 1
+	item_stack_split_quantity_spinbox.rounded = true
+	item_stack_split_quantity_spinbox.custom_minimum_size = Vector2(0, 44)
+	item_stack_split_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(item_stack_split_quantity_spinbox)
+	var action_row := HBoxContainer.new()
+	action_row.add_theme_constant_override("separation", 8)
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(action_row)
+	item_stack_split_confirm_button = Button.new()
+	item_stack_split_confirm_button.text = "确定"
+	item_stack_split_confirm_button.custom_minimum_size = Vector2(0, 44)
+	item_stack_split_confirm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item_stack_split_confirm_button.pressed.connect(_confirm_item_stack_split_request)
+	action_row.add_child(item_stack_split_confirm_button)
+	var cancel_button := Button.new()
+	cancel_button.text = "取消"
+	cancel_button.custom_minimum_size = Vector2(0, 44)
+	cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_button.pressed.connect(_close_item_stack_split_panel)
+	action_row.add_child(cancel_button)
+	parent.add_child(item_stack_split_panel)
+
+func _build_item_slot_context_panel(parent: Control) -> void:
+	item_slot_context_panel = _panel_container("ItemSlotContextPanel")
+	item_slot_context_panel.visible = false
+	item_slot_context_panel.z_index = 62
+	item_slot_context_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	item_slot_context_panel.custom_minimum_size = Vector2(210, 0)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 7)
+	item_slot_context_panel.add_child(column)
+	item_slot_context_title_label = Label.new()
+	item_slot_context_title_label.text = ""
+	item_slot_context_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	item_slot_context_title_label.add_theme_font_size_override("font_size", 16)
+	item_slot_context_title_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.72, 1.0))
+	column.add_child(item_slot_context_title_label)
+	item_slot_context_button_container = VBoxContainer.new()
+	item_slot_context_button_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item_slot_context_button_container.add_theme_constant_override("separation", 6)
+	column.add_child(item_slot_context_button_container)
+	parent.add_child(item_slot_context_panel)
+
+func _build_item_slot_detail_panel(parent: Control) -> void:
+	item_slot_detail_panel = _panel_container("ItemSlotDetailPanel")
+	item_slot_detail_panel.visible = false
+	item_slot_detail_panel.z_index = 63
+	item_slot_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 8)
+	item_slot_detail_panel.add_child(column)
+	var header := HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_theme_constant_override("separation", 8)
+	column.add_child(header)
+	item_slot_detail_title_label = Label.new()
+	item_slot_detail_title_label.text = "查看详情"
+	item_slot_detail_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	item_slot_detail_title_label.add_theme_font_size_override("font_size", 18)
+	item_slot_detail_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(item_slot_detail_title_label)
+	var close_button := Button.new()
+	close_button.text = "关闭"
+	close_button.custom_minimum_size = Vector2(76, 36)
+	close_button.pressed.connect(_close_item_slot_detail_panel)
+	header.add_child(close_button)
+	item_slot_detail_body_label = RichTextLabel.new()
+	item_slot_detail_body_label.bbcode_enabled = true
+	item_slot_detail_body_label.fit_content = false
+	item_slot_detail_body_label.scroll_active = true
+	item_slot_detail_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	item_slot_detail_body_label.custom_minimum_size = Vector2(0, 190)
+	item_slot_detail_body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item_slot_detail_body_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(item_slot_detail_body_label)
+	parent.add_child(item_slot_detail_panel)
+
+func _build_backpack_discard_confirm_panel(parent: Control) -> void:
+	backpack_discard_confirm_panel = _panel_container("BackpackDiscardConfirmPanel")
+	backpack_discard_confirm_panel.visible = false
+	backpack_discard_confirm_panel.z_index = 64
+	backpack_discard_confirm_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 10)
+	backpack_discard_confirm_panel.add_child(column)
+	backpack_discard_confirm_title_label = Label.new()
+	backpack_discard_confirm_title_label.text = "丢弃物品"
+	backpack_discard_confirm_title_label.add_theme_font_size_override("font_size", 20)
+	column.add_child(backpack_discard_confirm_title_label)
+	backpack_discard_confirm_body_label = Label.new()
+	backpack_discard_confirm_body_label.text = ""
+	backpack_discard_confirm_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	backpack_discard_confirm_body_label.custom_minimum_size = Vector2(0, 72)
+	column.add_child(backpack_discard_confirm_body_label)
+	var action_row := HBoxContainer.new()
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_theme_constant_override("separation", 8)
+	column.add_child(action_row)
+	var confirm_button := Button.new()
+	confirm_button.text = "是"
+	confirm_button.custom_minimum_size = Vector2(0, 44)
+	confirm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	confirm_button.pressed.connect(_confirm_backpack_discard_request)
+	action_row.add_child(confirm_button)
+	var cancel_button := Button.new()
+	cancel_button.text = "否"
+	cancel_button.custom_minimum_size = Vector2(0, 44)
+	cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_button.pressed.connect(_close_backpack_discard_confirm_panel)
+	action_row.add_child(cancel_button)
+	parent.add_child(backpack_discard_confirm_panel)
+
+func _clear_item_slot_context_buttons() -> void:
+	if item_slot_context_button_container == null:
+		return
+	for child in item_slot_context_button_container.get_children():
+		child.queue_free()
+
+func _add_item_slot_context_button(label_text: String, action: String) -> void:
+	if item_slot_context_button_container == null:
+		return
+	var button := Button.new()
+	button.text = label_text
+	button.custom_minimum_size = Vector2(0, 36)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var captured_action := action
+	button.pressed.connect(func() -> void:
+		_on_item_slot_context_action_pressed(captured_action)
+	)
+	item_slot_context_button_container.add_child(button)
+
+func _item_slot_context_default_label(slot_data: Dictionary) -> String:
+	var context := str(slot_data.get("context", ""))
+	var item_id := str(slot_data.get("itemId", ""))
+	match context:
+		"backpack":
+			if EquipmentModel.is_equipment(item_id):
+				return "装备"
+			return "使用"
+		"shop_buy":
+			return "购买 1 个"
+		"shop_sell":
+			return "出售 1 个"
+		"bank_backpack":
+			return "存入 1 个"
+		"bank_storage":
+			return "取出 1 个"
+	return "执行"
+
+func _item_slot_context_quantity_label(slot_data: Dictionary) -> String:
+	match str(slot_data.get("context", "")):
+		"backpack":
+			return "拆分堆叠"
+		"shop_buy":
+			return "选择购买数量"
+		"shop_sell":
+			return "选择出售数量"
+		"bank_backpack":
+			return "选择存入数量"
+		"bank_storage":
+			return "选择取出数量"
+	return ""
+
+func _item_slot_context_supports_quantity(slot_data: Dictionary) -> bool:
+	if str(slot_data.get("context", "")) == "backpack":
+		return int(slot_data.get("count", 0)) > 1
+	return ["shop_buy", "shop_sell", "bank_backpack", "bank_storage"].has(str(slot_data.get("context", "")))
+
+func _on_item_slot_context_requested(slot_data: Dictionary, screen_position: Vector2) -> void:
+	if item_slot_context_panel == null:
+		return
+	var item_id := str(slot_data.get("itemId", ""))
+	if item_id == "":
+		return
+	item_slot_context_data = slot_data.duplicate(true)
+	item_slot_context_data["screenPosition"] = screen_position
+	_close_item_stack_split_panel(false)
+	_close_item_slot_detail_panel(false)
+	_clear_item_slot_context_buttons()
+	var count := maxi(0, int(slot_data.get("count", 0)))
+	var count_label := " x%d" % count if count > 1 else ""
+	if item_slot_context_title_label != null:
+		item_slot_context_title_label.text = "%s%s" % [BackpackModel.menu_label_for(item_id), count_label]
+	_add_item_slot_context_button("查看详情", ITEM_SLOT_CONTEXT_VIEW)
+	_add_item_slot_context_button(_item_slot_context_default_label(slot_data), ITEM_SLOT_CONTEXT_DEFAULT)
+	if _item_slot_context_supports_quantity(slot_data):
+		_add_item_slot_context_button(_item_slot_context_quantity_label(slot_data), ITEM_SLOT_CONTEXT_QUANTITY)
+	if str(slot_data.get("context", "")) == "backpack":
+		_add_item_slot_context_button("丢弃", ITEM_SLOT_CONTEXT_DISCARD)
+	_add_item_slot_context_button("关闭", ITEM_SLOT_CONTEXT_CLOSE)
+	var button_count := item_slot_context_button_container.get_child_count() if item_slot_context_button_container != null else 0
+	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
+	var panel_size := Vector2(210.0, 48.0 + float(button_count) * 42.0)
+	item_slot_context_panel.size = panel_size
+	var next_position := screen_position + Vector2(8.0, 8.0)
+	next_position.x = clampf(next_position.x, 8.0, maxf(8.0, viewport_size.x - panel_size.x - 8.0))
+	next_position.y = clampf(next_position.y, 8.0, maxf(8.0, viewport_size.y - panel_size.y - 8.0))
+	item_slot_context_panel.position = next_position
+	item_slot_context_panel.visible = true
+	item_slot_context_panel.move_to_front()
+
+func _select_item_slot_context_item(slot_data: Dictionary) -> void:
+	var context := str(slot_data.get("context", ""))
+	var item_id := str(slot_data.get("itemId", ""))
+	match context:
+		"backpack":
+			_select_backpack_slot(int(slot_data.get("slotIndex", -1)))
+		"shop_buy", "shop_sell":
+			var mode := str(slot_data.get("shopMode", "buy"))
+			if mode != shop_mode:
+				_set_shop_mode(mode)
+			_select_shop_item(item_id, true)
+		"bank_backpack", "bank_storage":
+			_select_bank_slot(slot_data)
+
+func _item_slot_detail_lines(slot_data: Dictionary) -> Array[String]:
+	var context := str(slot_data.get("context", ""))
+	var item_id := str(slot_data.get("itemId", ""))
+	var count := maxi(0, int(slot_data.get("count", 0)))
+	var slot := {"itemId": item_id, "count": count}
+	if context == "backpack":
+		var slot_index := int(slot_data.get("slotIndex", -1))
+		var slots := _backpack_slots_for_ui()
+		if slot_index >= 0 and slot_index < slots.size():
+			slot = (slots[slot_index] as Dictionary).duplicate(true) if slots[slot_index] is Dictionary else slot
+	var is_equipment := EquipmentModel.is_equipment(item_id)
+	var equipment_requirement_lines: Array[String] = []
+	var equipment_compare_lines: Array[String] = []
+	if is_equipment:
+		equipment_requirement_lines = _equipment_detail_lines_with_requirement_status(item_id, true)
+		equipment_compare_lines = _equipment_compare_detail_lines(item_id)
+	return BackpackPanelPresenter.detail_lines_for_slot(slot, equipment_requirement_lines, equipment_compare_lines)
+
+func _open_item_slot_detail_panel(slot_data: Dictionary, screen_position: Vector2 = Vector2.INF) -> void:
+	if item_slot_detail_panel == null or item_slot_detail_body_label == null:
+		return
+	var item_id := str(slot_data.get("itemId", ""))
+	if item_id == "":
+		return
+	if item_slot_detail_title_label != null:
+		item_slot_detail_title_label.text = BackpackModel.menu_label_for(item_id)
+	item_slot_detail_body_label.text = "\n".join(_item_slot_detail_lines(slot_data))
+	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
+	var panel_size := Vector2(minf(380.0, viewport_size.x - 32.0), minf(300.0, viewport_size.y - 32.0))
+	item_slot_detail_panel.size = panel_size
+	var next_position := screen_position + Vector2(10.0, 10.0)
+	if screen_position == Vector2.INF:
+		next_position = Vector2((viewport_size.x - panel_size.x) * 0.5, (viewport_size.y - panel_size.y) * 0.5)
+	next_position.x = clampf(next_position.x, 8.0, maxf(8.0, viewport_size.x - panel_size.x - 8.0))
+	next_position.y = clampf(next_position.y, 8.0, maxf(8.0, viewport_size.y - panel_size.y - 8.0))
+	item_slot_detail_panel.position = next_position
+	item_slot_detail_panel.visible = true
+	item_slot_detail_panel.move_to_front()
+
+func _begin_item_slot_context_quantity_action(slot_data: Dictionary) -> void:
+	var context := str(slot_data.get("context", ""))
+	var item_id := str(slot_data.get("itemId", ""))
+	if item_id == "":
+		return
+	match context:
+		"backpack":
+			_begin_backpack_split_stack(slot_data)
+		"shop_buy":
+			_begin_shop_drag_transaction("buy", item_id)
+		"shop_sell":
+			_begin_shop_drag_transaction("sell", item_id)
+		"bank_backpack":
+			_begin_bank_drag_transfer_from_slots("deposit", slot_data, {})
+		"bank_storage":
+			_begin_bank_drag_transfer_from_slots("withdraw", slot_data, {})
+
+func _on_item_slot_context_action_pressed(action: String) -> void:
+	var slot_data := item_slot_context_data.duplicate(true)
+	var screen_position := Vector2.INF
+	var screen_position_value = slot_data.get("screenPosition", Vector2.INF)
+	if screen_position_value is Vector2:
+		screen_position = screen_position_value
+	_close_item_slot_context_panel(false)
+	match action:
+		ITEM_SLOT_CONTEXT_VIEW:
+			_select_item_slot_context_item(slot_data)
+			_open_item_slot_detail_panel(slot_data, screen_position)
+		ITEM_SLOT_CONTEXT_DEFAULT:
+			_on_item_slot_double_clicked(slot_data)
+		ITEM_SLOT_CONTEXT_QUANTITY:
+			_begin_item_slot_context_quantity_action(slot_data)
+		ITEM_SLOT_CONTEXT_DISCARD:
+			_open_backpack_discard_confirm(slot_data, int(slot_data.get("count", 0)), screen_position)
+		ITEM_SLOT_CONTEXT_CLOSE:
+			pass
+
 func _hide_control(control: Control, update_layout: bool = true) -> bool:
 	if control == null or not control.visible:
 		return false
@@ -10319,6 +10774,350 @@ func _hide_control(control: Control, update_layout: bool = true) -> bool:
 	if update_layout and hud_root != null:
 		host._layout_hud()
 	return true
+
+func _new_item_slot_button(data: Dictionary, slot_text: String, pressed_value: bool = false, disabled_value: bool = false, toggle_value: bool = true) -> ItemSlotButton:
+	var button := ItemSlotButton.new()
+	button.configure(data, slot_text, pressed_value, disabled_value, toggle_value)
+	button.slot_double_clicked.connect(_on_item_slot_double_clicked)
+	button.slot_dropped.connect(_on_item_slot_dropped)
+	button.slot_context_requested.connect(_on_item_slot_context_requested)
+	button.slot_drag_started.connect(_on_item_slot_drag_started)
+	button.slot_drag_ended.connect(_on_item_slot_drag_ended)
+	return button
+
+func _item_drag_label(item_id: String, count: int) -> String:
+	var label := BackpackModel.menu_label_for(item_id)
+	if count > 1:
+		return "%s x%d" % [label, count]
+	return label
+
+func _on_item_slot_double_clicked(slot_data: Dictionary) -> void:
+	var context := str(slot_data.get("context", ""))
+	var item_id := str(slot_data.get("itemId", ""))
+	match context:
+		"backpack":
+			_on_backpack_slot_double_clicked(int(slot_data.get("slotIndex", -1)))
+		"shop_buy", "shop_sell":
+			_on_shop_item_double_clicked(slot_data)
+		"bank_backpack":
+			_select_bank_slot(slot_data)
+			_start_bank_item_transaction("deposit")
+		"bank_storage":
+			_select_bank_slot(slot_data)
+			_start_bank_item_transaction("withdraw")
+
+func _on_item_slot_dropped(source_data: Dictionary, target_data: Dictionary) -> void:
+	var source_context := str(source_data.get("context", ""))
+	var target_context := str(target_data.get("context", ""))
+	var item_id := str(source_data.get("itemId", ""))
+	if item_id == "":
+		return
+	match target_context:
+		"backpack":
+			if source_context == "backpack":
+				_move_backpack_stack(int(source_data.get("slotIndex", -1)), int(target_data.get("slotIndex", -1)), int(source_data.get("count", -1)))
+			elif source_context == "shop_buy":
+				_begin_shop_drag_transaction("buy", item_id)
+			elif source_context == "bank_storage":
+				_begin_bank_drag_transfer_from_slots("withdraw", source_data, target_data)
+		"shop_action":
+			if source_context == "shop_buy":
+				_begin_shop_drag_transaction("buy", item_id)
+			elif source_context == "shop_sell":
+				_begin_shop_drag_transaction("sell", item_id)
+		"bank_deposit_action", "bank_storage":
+			if source_context == "bank_backpack" or source_context == "backpack":
+				_begin_bank_drag_transfer_from_slots("deposit", source_data, target_data)
+		"bank_withdraw_action", "bank_backpack":
+			if source_context == "bank_storage":
+				_begin_bank_drag_transfer_from_slots("withdraw", source_data, target_data)
+
+func _on_item_slot_drag_started(source_data: Dictionary) -> void:
+	if str(source_data.get("context", "")) != "backpack":
+		return
+	if backpack_discard_drop_zone == null:
+		return
+	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
+	backpack_discard_drop_zone.position = Vector2.ZERO
+	backpack_discard_drop_zone.size = viewport_size
+	backpack_discard_drop_zone.visible = true
+	backpack_discard_drop_zone.move_to_front()
+	if backpack_panel != null:
+		backpack_panel.move_to_front()
+
+func _on_item_slot_drag_ended(source_data: Dictionary, successful: bool, screen_position: Vector2) -> void:
+	if backpack_discard_drop_zone != null:
+		backpack_discard_drop_zone.visible = false
+	if successful or str(source_data.get("context", "")) != "backpack":
+		return
+	if backpack_panel != null and backpack_panel.visible and backpack_panel.get_global_rect().has_point(screen_position):
+		return
+	_open_backpack_discard_confirm(source_data, int(source_data.get("count", 0)), screen_position)
+
+func _on_backpack_item_dropped_outside(source_data: Dictionary, screen_position: Vector2) -> void:
+	if backpack_discard_drop_zone != null:
+		backpack_discard_drop_zone.visible = false
+	if str(source_data.get("context", "")) != "backpack":
+		return
+	_open_backpack_discard_confirm(source_data, int(source_data.get("count", 0)), screen_position)
+
+func _backpack_mutation_slots() -> Array[Dictionary]:
+	return BackpackModel.normalize_slots(player_profile.get("backpackSlots", []), _backpack_unlocked_slot_count_for_ui())
+
+func _finish_backpack_mutation(result: Dictionary, fallback_message: String) -> void:
+	var message := str(result.get("message", fallback_message)).strip_edges()
+	if message == "":
+		message = fallback_message
+	_set_world_log_message(message)
+	if bool(result.get("ok", false)):
+		player_profile["backpackSlots"] = result.get("slots", _backpack_mutation_slots())
+		player_profile = PlayerProgressModel.normalize_profile(player_profile)
+		if profile_save_enabled:
+			host._save_player_profile_now()
+	_refresh_backpack_panel()
+	_refresh_quick_bar()
+	if shop_panel != null and shop_panel.visible:
+		_refresh_shop_panel()
+	if bank_panel != null and bank_panel.visible:
+		_refresh_bank_panel()
+	if status_label != null:
+		host._update_hud_text()
+
+func _finish_server_backpack_action(parsed: Dictionary, fallback_message: String) -> void:
+	var log_lines := _string_array_values(parsed.get("logLines", []))
+	if log_lines.is_empty():
+		log_lines.append(str(parsed.get("message", fallback_message)))
+	_set_world_log_message("\n".join(log_lines))
+	_refresh_backpack_panel()
+	_refresh_quick_bar()
+	if shop_panel != null and shop_panel.visible:
+		_refresh_shop_panel()
+	if bank_panel != null and bank_panel.visible:
+		_refresh_bank_panel()
+	if status_label != null:
+		host._update_hud_text()
+
+func _move_backpack_stack(source_slot_index: int, target_slot_index: int, amount: int = -1) -> void:
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action("backpack_move_stack", {
+			"sourceSlotIndex": source_slot_index,
+			"targetSlotIndex": target_slot_index,
+			"amount": amount,
+		}, "移动物品失败。")
+		_finish_server_backpack_action(parsed, "移动物品失败。")
+		return
+	if _local_profile_mutation_blocked_for_server_only("背包整理"):
+		return
+	var result := BackpackModel.move_stack(_backpack_mutation_slots(), source_slot_index, target_slot_index, amount)
+	_finish_backpack_mutation(result, "移动物品失败。")
+
+func _begin_backpack_split_stack(slot_data: Dictionary) -> void:
+	var source_slot_index := int(slot_data.get("slotIndex", -1))
+	var item_id := str(slot_data.get("itemId", ""))
+	var count := maxi(0, int(slot_data.get("count", 0)))
+	if source_slot_index < 0 or item_id == "" or count <= 1:
+		return
+	_select_backpack_slot(source_slot_index)
+	_begin_item_stack_split_request({
+		"kind": "backpack_split",
+		"sourceSlotIndex": source_slot_index,
+		"itemId": item_id,
+	}, count - 1, "拆分：%s" % BackpackModel.label_for(item_id))
+
+func _split_backpack_stack(source_slot_index: int, quantity: int) -> void:
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action("backpack_split_stack", {
+			"sourceSlotIndex": source_slot_index,
+			"quantity": quantity,
+		}, "拆分物品失败。")
+		_finish_server_backpack_action(parsed, "拆分物品失败。")
+		return
+	if _local_profile_mutation_blocked_for_server_only("拆分物品"):
+		return
+	var result := BackpackModel.split_stack(_backpack_mutation_slots(), source_slot_index, quantity)
+	_finish_backpack_mutation(result, "拆分物品失败。")
+
+func _discard_backpack_stack(source_slot_index: int, quantity: int) -> void:
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action("backpack_discard_item", {
+			"sourceSlotIndex": source_slot_index,
+			"quantity": quantity,
+		}, "丢弃物品失败。")
+		_finish_server_backpack_action(parsed, "丢弃物品失败。")
+		return
+	if _local_profile_mutation_blocked_for_server_only("丢弃物品"):
+		return
+	var result := BackpackModel.discard_stack(_backpack_mutation_slots(), source_slot_index, quantity)
+	_finish_backpack_mutation(result, "丢弃物品失败。")
+
+func _open_backpack_discard_confirm(slot_data: Dictionary, quantity: int, screen_position: Vector2 = Vector2.INF) -> void:
+	if backpack_discard_confirm_panel == null:
+		return
+	var item_id := str(slot_data.get("itemId", ""))
+	var source_slot_index := int(slot_data.get("slotIndex", -1))
+	var count := maxi(0, quantity)
+	if item_id == "" or source_slot_index < 0 or count <= 0:
+		return
+	backpack_discard_request = {
+		"sourceSlotIndex": source_slot_index,
+		"itemId": item_id,
+		"quantity": count,
+	}
+	_close_item_slot_context_panel(false)
+	_close_item_slot_detail_panel(false)
+	_close_item_stack_split_panel(false)
+	if backpack_discard_confirm_title_label != null:
+		backpack_discard_confirm_title_label.text = "丢弃物品"
+	if backpack_discard_confirm_body_label != null:
+		backpack_discard_confirm_body_label.text = "确定丢弃 %s x%d 吗？\n丢弃后无法找回。" % [BackpackModel.label_for(item_id), count]
+	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
+	var panel_size := Vector2(minf(360.0, viewport_size.x - 32.0), 188.0)
+	backpack_discard_confirm_panel.size = panel_size
+	var next_position := screen_position + Vector2(12.0, 12.0)
+	if screen_position == Vector2.INF:
+		next_position = Vector2((viewport_size.x - panel_size.x) * 0.5, (viewport_size.y - panel_size.y) * 0.5)
+	next_position.x = clampf(next_position.x, 8.0, maxf(8.0, viewport_size.x - panel_size.x - 8.0))
+	next_position.y = clampf(next_position.y, 8.0, maxf(8.0, viewport_size.y - panel_size.y - 8.0))
+	backpack_discard_confirm_panel.position = next_position
+	backpack_discard_confirm_panel.visible = true
+	backpack_discard_confirm_panel.move_to_front()
+
+func _confirm_backpack_discard_request() -> void:
+	if backpack_discard_request.is_empty():
+		_close_backpack_discard_confirm_panel()
+		return
+	var request := backpack_discard_request.duplicate(true)
+	_close_backpack_discard_confirm_panel(false)
+	_discard_backpack_stack(int(request.get("sourceSlotIndex", -1)), int(request.get("quantity", 0)))
+
+func _begin_bank_drag_transfer_from_slots(mode: String, source_data: Dictionary, target_data: Dictionary = {}) -> void:
+	if bank_request_pending:
+		return
+	if not _is_server_account_session():
+		if bank_status_label != null:
+			bank_status_label.text = "需要服务器账号登录。"
+		return
+	var item_id := str(source_data.get("itemId", ""))
+	var source_count := maxi(0, int(source_data.get("count", 0)))
+	if item_id == "" or source_count <= 0:
+		return
+	_select_bank_slot(source_data)
+	var max_quantity := source_count
+	var action_label := "存入银行" if mode == "deposit" else "取回背包"
+	var request := {
+		"kind": "bank",
+		"mode": mode,
+		"itemId": item_id,
+	}
+	if mode == "deposit":
+		request["sourceSlotIndex"] = int(source_data.get("slotIndex", -1))
+		request["bankSlotIndex"] = int(target_data.get("bankSlotIndex", -1))
+	else:
+		request["bankSlotIndex"] = int(source_data.get("bankSlotIndex", -1))
+		request["targetSlotIndex"] = int(target_data.get("slotIndex", -1))
+	_begin_item_stack_split_request({
+		"kind": "bank",
+		"mode": mode,
+		"itemId": item_id,
+		"sourceSlotIndex": int(request.get("sourceSlotIndex", -1)),
+		"targetSlotIndex": int(request.get("targetSlotIndex", -1)),
+		"bankSlotIndex": int(request.get("bankSlotIndex", -1)),
+	}, max_quantity, "%s：%s" % [action_label, BackpackModel.label_for(item_id)])
+
+func _begin_shop_drag_transaction(mode: String, item_id: String) -> void:
+	if shop_action_request_pending:
+		return
+	if shop_mode != mode:
+		_set_shop_mode(mode)
+	_select_shop_item(item_id, false)
+	var max_quantity := _shop_quantity_max(item_id)
+	var action_label := "购买" if mode == "buy" else "出售"
+	_begin_item_stack_split_request({
+		"kind": "shop",
+		"mode": mode,
+		"itemId": item_id,
+	}, max_quantity, "%s：%s" % [action_label, BackpackModel.label_for(item_id)])
+
+func _begin_item_stack_split_request(request: Dictionary, max_quantity: int, summary: String) -> void:
+	var clamped_max := maxi(0, max_quantity)
+	if clamped_max <= 0:
+		return
+	if clamped_max == 1:
+		_run_item_stack_split_request(request, 1)
+		return
+	item_stack_split_request = request.duplicate(true)
+	item_stack_split_request["maxQuantity"] = clamped_max
+	if item_stack_split_title_label != null:
+		item_stack_split_title_label.text = "选择数量"
+	if item_stack_split_summary_label != null:
+		item_stack_split_summary_label.text = "%s，可操作 %d 个。" % [summary, clamped_max]
+	if item_stack_split_quantity_spinbox != null:
+		item_stack_split_quantity_spinbox.set_block_signals(true)
+		item_stack_split_quantity_spinbox.max_value = float(clamped_max)
+		item_stack_split_quantity_spinbox.value = 1.0
+		item_stack_split_quantity_spinbox.set_block_signals(false)
+	if item_stack_split_panel != null:
+		var viewport_size: Vector2 = host.get_viewport_rect().size
+		var panel_size := Vector2(minf(420.0, viewport_size.x - 32.0), 238.0)
+		item_stack_split_panel.size = panel_size
+		item_stack_split_panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, (viewport_size.y - panel_size.y) * 0.5)
+		item_stack_split_panel.visible = true
+		item_stack_split_panel.move_to_front()
+
+func _set_item_stack_split_quick_quantity(mode: String) -> void:
+	if item_stack_split_quantity_spinbox == null:
+		return
+	var max_quantity := maxi(1, int(item_stack_split_request.get("maxQuantity", 1)))
+	var next_quantity := 1
+	match mode:
+		"half":
+			next_quantity = maxi(1, int(ceil(float(max_quantity) * 0.5)))
+		"all":
+			next_quantity = max_quantity
+	item_stack_split_quantity_spinbox.value = float(next_quantity)
+
+func _confirm_item_stack_split_request() -> void:
+	if item_stack_split_request.is_empty() or item_stack_split_quantity_spinbox == null:
+		_close_item_stack_split_panel()
+		return
+	var request := item_stack_split_request.duplicate(true)
+	var max_quantity := maxi(1, int(request.get("maxQuantity", 1)))
+	var quantity := clampi(int(item_stack_split_quantity_spinbox.value), 1, max_quantity)
+	_close_item_stack_split_panel()
+	_run_item_stack_split_request(request, quantity)
+
+func _run_item_stack_split_request(request: Dictionary, quantity: int) -> void:
+	var item_id := str(request.get("itemId", ""))
+	if item_id == "":
+		return
+	match str(request.get("kind", "")):
+		"backpack_split":
+			_split_backpack_stack(int(request.get("sourceSlotIndex", -1)), quantity)
+		"bank":
+			_start_bank_item_transaction_from_request(request, quantity)
+		"shop":
+			var mode := str(request.get("mode", "buy"))
+			if shop_mode != mode:
+				_set_shop_mode(mode)
+			_select_shop_item(item_id, false)
+			shop_quantity = _clamped_shop_quantity(quantity, item_id)
+			_refresh_shop_panel(false)
+			_on_shop_action_pressed()
+
+func _close_item_stack_split_panel(update_layout: bool = true) -> void:
+	item_stack_split_request.clear()
+	_hide_control(item_stack_split_panel, update_layout)
+
+func _close_item_slot_context_panel(update_layout: bool = true) -> void:
+	item_slot_context_data.clear()
+	_hide_control(item_slot_context_panel, update_layout)
+
+func _close_item_slot_detail_panel(update_layout: bool = true) -> void:
+	_hide_control(item_slot_detail_panel, update_layout)
+
+func _close_backpack_discard_confirm_panel(update_layout: bool = true) -> void:
+	backpack_discard_request.clear()
+	_hide_control(backpack_discard_confirm_panel, update_layout)
 
 func _panel_style() -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -10404,6 +11203,18 @@ func _battle_indicator_panel_style() -> StyleBoxFlat:
 	style.content_margin_bottom = 6
 	return style
 
+func _bank_section_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.08, 0.08, 0.54)
+	style.border_color = Color(0.52, 0.44, 0.28, 0.82)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
 func _battle_command_button_style(color: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
 	style.bg_color = color
@@ -10424,8 +11235,8 @@ func _button_style(color: Color) -> StyleBoxFlat:
 	style.set_corner_radius_all(8)
 	return style
 
-func _set_click_move_target(screen_point: Vector2) -> void:
-	if host._is_ui_point(screen_point):
+func _set_click_move_target(screen_point: Vector2, ui_checked: bool = false) -> void:
+	if not ui_checked and host._is_ui_point(screen_point):
 		return
 	if encounter_active or battle_active:
 		return
@@ -10596,7 +11407,7 @@ func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector
 	has_target_cell = true
 	target_marker = marker_point
 	has_target_marker = true
-	_request_next_server_step_move(server_step_move_plan_id)
+	call_deferred("_request_next_server_step_move", server_step_move_plan_id)
 	return true
 
 func _update_server_step_move() -> void:
@@ -10697,6 +11508,8 @@ func _seed_server_step_move_position(plan_id: int) -> bool:
 		if _handle_session_invalid_response(parsed):
 			_cancel_server_step_move()
 			return false
+		if _apply_server_position_correction_from_response(parsed, false):
+			return _rebuild_server_step_move_path_from_authority()
 		server_step_move_last_error_code = str(parsed.get("code", "movement_seed_failed"))
 		_cancel_server_step_move()
 		return false
@@ -10771,6 +11584,7 @@ func _publish_server_step_move_stop(plan_id: int) -> void:
 		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
 		_apply_online_position_players(parsed.get("players", []))
 	else:
+		_apply_server_position_correction_from_response(parsed)
 		_handle_session_invalid_response(parsed)
 
 func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
@@ -10806,7 +11620,7 @@ func _server_step_move_should_report_authority_cell() -> bool:
 		)
 	)
 
-func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false) -> bool:
+func _apply_server_step_move_authority_position(position: Dictionary, snap_player_to_authority: bool = false, allow_map_change: bool = false) -> bool:
 	if position.is_empty():
 		return false
 	if not _online_position_has_cell(position):
@@ -10815,11 +11629,12 @@ func _apply_server_step_move_authority_position(position: Dictionary, snap_playe
 	var authority = str(position.get("authority", "")).strip_edges()
 	var changed_map = map_id != current_map_id
 	if changed_map:
-		if authority != "party_follow" or not snap_player_to_authority:
+		if not allow_map_change and (authority != "party_follow" or not snap_player_to_authority):
 			return false
 		if not host._load_map(map_id):
 			return false
-		_set_world_log_message("已跟随队长切换地图。")
+		if authority == "party_follow":
+			_set_world_log_message("已跟随队长切换地图。")
 	server_step_move_authority_cell = Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
 	server_step_move_authority_valid = true
 	if snap_player_to_authority:
@@ -10828,6 +11643,26 @@ func _apply_server_step_move_authority_position(position: Dictionary, snap_playe
 		else:
 			_snap_player_to_server_step_authority()
 	return true
+
+func _apply_server_position_correction_from_response(parsed: Dictionary, cancel_current_move: bool = true) -> bool:
+	var position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
+	var response = parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	if position.is_empty():
+		position = response.get("position", {}) as Dictionary if response.get("position", {}) is Dictionary else {}
+	if position.is_empty():
+		return false
+	var applied := _apply_server_step_move_authority_position(position, true, true)
+	if applied:
+		if cancel_current_move:
+			_cancel_server_step_move(false)
+			current_path_cells.clear()
+			has_target_marker = false
+			has_target_cell = false
+			current_path_is_direct = false
+			if player != null:
+				player.clear_move_target()
+		host.queue_redraw()
+	return applied
 
 func _snap_player_to_server_step_authority() -> void:
 	if player == null or map_data.is_empty() or not server_step_move_authority_valid:
@@ -10994,7 +11829,7 @@ func _set_interaction_target(item: Dictionary) -> void:
 	var player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
 	pending_interaction_approach_cell = InteractionModel.interaction_goal_cell_for(map_data, player_cell, item)
 	var marker_point = InteractionModel.marker_world_position(map_data, item)
-	var moved = _set_move_target_cell(pending_interaction_approach_cell, marker_point, InteractionModel.cell_for(item))
+	var moved = _set_click_move_target_cell(pending_interaction_approach_cell, marker_point, InteractionModel.cell_for(item))
 	if not moved:
 		_complete_interaction(item)
 
@@ -11130,8 +11965,9 @@ func _trigger_encounter(zone: Dictionary) -> void:
 		return
 	player.clear_move_target()
 	host._clear_navigation_state()
+	var encounter_zone := _progression_encounter_zone(zone)
 	if _should_start_server_party_encounter():
-		_start_server_party_encounter(zone)
+		_start_server_party_encounter(encounter_zone)
 		return
 	if _is_server_account_session():
 		_set_world_log_message(_server_encounter_block_message())
@@ -11139,9 +11975,94 @@ func _trigger_encounter(zone: Dictionary) -> void:
 	if not _can_start_local_encounter_model():
 		_set_world_log_message("请先登录服务器账号。")
 		return
-	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
+	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(encounter_zone, encounter_rng, _encounter_enemy_count_fallback())
 	encounter_active = true
 	_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
+
+func _progression_encounter_zone(zone: Dictionary) -> Dictionary:
+	if _should_force_capture_wuli_tutorial(zone):
+		return _capture_wuli_tutorial_zone(zone)
+	if not _should_force_first_victory_single_enemy(zone):
+		return zone
+	var next_zone := zone.duplicate(true)
+	next_zone["enemyCount"] = 1
+	next_zone["selectedEnemyCount"] = 1
+	next_zone.erase("enemyCountMin")
+	next_zone.erase("enemyCountMax")
+	next_zone.erase("formationTemplate")
+	next_zone["individualWildPets"] = false
+	next_zone["tutorialSingleEnemy"] = true
+	return next_zone
+
+func _capture_wuli_tutorial_zone(zone: Dictionary) -> Dictionary:
+	var tutorial_pet := _capture_wuli_tutorial_pet(zone)
+	var next_zone := zone.duplicate(true)
+	next_zone["enemyCount"] = 1
+	next_zone["selectedEnemyCount"] = 1
+	next_zone.erase("enemyCountMin")
+	next_zone.erase("enemyCountMax")
+	next_zone.erase("formationTemplate")
+	next_zone["individualWildPets"] = false
+	next_zone["fixedWildPets"] = [tutorial_pet]
+	next_zone["selectedWildPet"] = tutorial_pet
+	next_zone["selectedWildPets"] = [tutorial_pet]
+	next_zone["tutorialCaptureWuli"] = true
+	return next_zone
+
+func _capture_wuli_tutorial_pet(zone: Dictionary) -> Dictionary:
+	var pool := EncounterModel.wild_pet_pool(zone)
+	for pet in pool:
+		var form_id := str(pet.get("formId", "")).strip_edges()
+		if form_id.begins_with("wuli_"):
+			return _with_capture_wuli_tutorial_fields(pet)
+	return _with_capture_wuli_tutorial_fields({
+		"formId": TUTORIAL_WULI_FORM_ID,
+		"name": "野生乌力",
+		"level": 1,
+		"levelMin": 1,
+		"levelMax": 1,
+		"battleStats": {
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 6,
+			"agility": 48,
+		},
+	})
+
+func _with_capture_wuli_tutorial_fields(pet: Dictionary) -> Dictionary:
+	var next_pet := pet.duplicate(true)
+	next_pet["formId"] = str(next_pet.get("formId", TUTORIAL_WULI_FORM_ID))
+	next_pet["name"] = str(next_pet.get("name", "野生乌力"))
+	next_pet["level"] = maxi(1, int(next_pet.get("level", next_pet.get("levelMin", 1))))
+	next_pet["levelMin"] = int(next_pet.get("level", next_pet.get("levelMin", 1)))
+	next_pet["levelMax"] = int(next_pet.get("level", next_pet.get("levelMax", next_pet.get("levelMin", 1))))
+	next_pet["catchable"] = true
+	next_pet["captureDifficulty"] = 1
+	next_pet["captureChanceOverride"] = 1.0
+	return next_pet
+
+func _should_force_capture_wuli_tutorial(zone: Dictionary) -> bool:
+	if str(zone.get("encounterGroupId", "")) != FIREBUD_FIRST_GRASS_GROUP_ID:
+		return false
+	if str(player_profile.get(PlayerProgressModel.ACTIVE_QUEST_ID_KEY, "")) != QUEST_CAPTURE_WULI_ID:
+		return false
+	var state := PlayerProgressModel.quest_state_for_id(player_profile, QUEST_CAPTURE_WULI_ID)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return false
+	var required := QuestModel.objective_required_count(QuestModel.quest_for_id(QUEST_CAPTURE_WULI_ID))
+	return int(state.get("progress", 0)) < required
+
+func _should_force_first_victory_single_enemy(zone: Dictionary) -> bool:
+	if str(zone.get("encounterGroupId", "")) != FIREBUD_FIRST_GRASS_GROUP_ID:
+		return false
+	if str(player_profile.get(PlayerProgressModel.ACTIVE_QUEST_ID_KEY, "")) != QUEST_FIRST_VICTORY_ID:
+		return false
+	var raw_states = player_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {})
+	if raw_states is Dictionary:
+		var state := QuestModel.normalize_state((raw_states as Dictionary).get(QUEST_FIRST_VICTORY_ID, {}), QUEST_FIRST_VICTORY_ID)
+		if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			return false
+	return true
 
 func _should_start_server_party_encounter() -> bool:
 	if not _is_server_account_session():
@@ -11169,7 +12090,8 @@ func _server_encounter_block_message() -> String:
 func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。") -> void:
 	if server_party_encounter_request_pending or battle_active or zone.is_empty():
 		return
-	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(zone, encounter_rng, _encounter_enemy_count_fallback())
+	var encounter_zone := _progression_encounter_zone(zone)
+	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(encounter_zone, encounter_rng, _encounter_enemy_count_fallback())
 	var enemy_count = EncounterModel.enemy_count(active_encounter_zone, _encounter_enemy_count_fallback())
 	server_party_encounter_request_pending = true
 	_set_world_log_message(pending_message)
@@ -11418,6 +12340,8 @@ func _end_battle(_restore_world: bool = true) -> void:
 		host._update_hud_text()
 	if _restore_world and was_battle_active:
 		_begin_post_battle_encounter_grace()
+	if was_battle_active and host._consume_hang_stop_after_battle_request():
+		host._stop_hang_activity("挂机已停止。", true)
 	_update_battle_debug_window(true)
 	host.queue_redraw()
 
@@ -11443,16 +12367,21 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 		log_lines.append(str(line))
 	var captured_count = _captured_pet_count_from_battle_result(result)
 	var route_to_healer_after_battle = false
-	if _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false)):
+	var manual_hang_stop_after_battle = host._consume_hang_stop_after_battle_request()
+	var has_hang_session_for_result = _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	if has_hang_session_for_result:
 		player_profile = PlayerProgressModel.record_hang_battle_finished(player_profile, captured_count)
-		if PlayerProgressModel.hang_capture_target_reached(player_profile):
+		if manual_hang_stop_after_battle:
+			host._stop_hang_activity("", true)
+			log_lines.append("挂机已停止。")
+		elif PlayerProgressModel.hang_capture_target_reached(player_profile):
 			host._stop_hang_activity("", true)
 			player_profile = PlayerProgressModel.stop_hang_session(player_profile, "capture_target")
 			log_lines.append("捕宠目标已完成，挂机停止。")
 	var quest_lines = _quest_messages_for_battle_result(ended_state, result)
 	for line in quest_lines:
 		log_lines.append(line)
-	if hang_stop_message != "":
+	if hang_stop_message != "" and not manual_hang_stop_after_battle:
 		var hang_settings = PlayerProgressModel.hang_settings(player_profile)
 		var low_hp_action = str(hang_settings.get(HangSettingsModel.LOW_HP_ACTION_KEY, HangSettingsModel.LOW_HP_ACTION_STOP))
 		var resume_after_heal = bool(hang_settings.get(HangSettingsModel.RESUME_AFTER_HEAL_KEY, true))
@@ -11479,6 +12408,9 @@ func _server_account_local_battle_writeback_blocked() -> bool:
 
 func _finish_local_battle_without_profile_writeback_for_server_account() -> Dictionary:
 	var message = "服务器账号战斗需由服务器结算，本地战斗结果未写入档案。"
+	if host._consume_hang_stop_after_battle_request():
+		host._stop_hang_activity("", true)
+		message = _append_unique_message_lines(message, ["挂机已停止。"])
 	_end_battle(true)
 	_set_world_log_message(message)
 	_queue_server_profile_pull()
@@ -11736,6 +12668,9 @@ func _open_backpack_panel() -> void:
 	_close_bank_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_item_slot_context_panel(false)
+	_close_item_slot_detail_panel(false)
+	_close_backpack_discard_confirm_panel(false)
 	backpack_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_save_profile_after_exp_pill_starter_update()
@@ -11745,6 +12680,11 @@ func _open_backpack_panel() -> void:
 
 func _close_backpack_panel() -> void:
 	backpack_pending_use_item_id = ""
+	if backpack_discard_drop_zone != null:
+		backpack_discard_drop_zone.visible = false
+	_close_item_slot_context_panel(false)
+	_close_item_slot_detail_panel(false)
+	_close_backpack_discard_confirm_panel(false)
 	var changed = _hide_control(backpack_panel)
 	if changed:
 		_apply_deferred_server_profile_pull_if_idle()
@@ -12843,11 +13783,26 @@ func _refresh_backpack_panel() -> void:
 	else:
 		for index in visible_indices:
 			var slot = slots[index] if index < slots.size() else {}
-			var button = Button.new()
 			var locked = bool(slot.get("locked", false))
-			button.text = _backpack_locked_slot_label(index) if locked else BackpackModel.slot_label(slot)
-			button.toggle_mode = not locked
-			button.button_pressed = (not locked) and index == backpack_selected_slot_index
+			var item_id := str(slot.get("itemId", ""))
+			var item_count := maxi(0, int(slot.get("count", 0)))
+			var slot_data := {
+				"context": "backpack",
+				"slotIndex": index,
+				"itemId": item_id,
+				"count": item_count,
+				"label": _item_drag_label(item_id, item_count),
+				"dragEnabled": not locked and item_id != "",
+				"dropEnabled": not locked,
+				"accepts": ["backpack", "shop_buy", "bank_storage"],
+			}
+			var button := _new_item_slot_button(
+				slot_data,
+				_backpack_locked_slot_label(index) if locked else BackpackModel.slot_label(slot),
+				(not locked) and index == backpack_selected_slot_index,
+				false,
+				not locked
+			)
 			button.custom_minimum_size = Vector2(0, 62)
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			if locked:
@@ -13003,6 +13958,24 @@ func _select_backpack_slot(slot_index: int) -> void:
 		_open_backpack_unlock_dialog(backpack_selected_slot_index)
 		return
 	_refresh_backpack_panel()
+
+func _on_backpack_slot_gui_input(event: InputEvent, slot_index: int) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed or not mouse_event.double_click:
+		return
+	_on_backpack_slot_double_clicked(slot_index)
+	if host != null and host.get_viewport() != null:
+		host.get_viewport().set_input_as_handled()
+
+func _on_backpack_slot_double_clicked(slot_index: int) -> void:
+	_select_backpack_slot(slot_index)
+	var action := _backpack_quick_action_for_slot(slot_index)
+	if action == "equip":
+		_on_backpack_equip_pressed()
+	elif action == "use":
+		_on_backpack_use_pressed()
 
 func _open_backpack_unlock_dialog(slot_index: int) -> void:
 	var unlocked_count = _backpack_unlocked_slot_count_for_ui()
@@ -13621,6 +14594,24 @@ func _backpack_slot_index_for_item(item_id: String) -> int:
 			return index
 	return -1
 
+func _backpack_quick_action_for_slot(slot_index: int) -> String:
+	if slot_index < 0 or _backpack_slot_is_locked_index(slot_index):
+		return ""
+	var slots = PlayerProgressModel.backpack_slots(player_profile)
+	if slot_index >= slots.size():
+		return ""
+	var slot := slots[slot_index] as Dictionary
+	var item_id := str(slot.get("itemId", ""))
+	if item_id == "":
+		return ""
+	var equip_check = _can_equip_item_for_ui(item_id) if EquipmentModel.is_equipment(item_id) else {}
+	var item_actions = BackpackPanelPresenter.selected_item_actions(slot, slots, equip_check)
+	if bool(item_actions.get("canEquip", false)):
+		return "equip"
+	if bool(item_actions.get("useButtonVisible", false)) and not bool(item_actions.get("useButtonDisabled", true)):
+		return "use"
+	return ""
+
 func _on_backpack_use_pressed() -> void:
 	var item_id = _selected_backpack_item_id()
 	if BackpackModel.item_can_world_player_exp(item_id):
@@ -14228,6 +15219,31 @@ func _select_shop_item(item_id: String, defer_detail_update: bool = false) -> vo
 	shop_equip_after_buy = false
 	_refresh_shop_panel(false, previous_selected_item_id, defer_detail_update)
 
+func _on_shop_item_gui_input(event: InputEvent, item_id: String) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed or not mouse_event.double_click:
+		return
+	_on_shop_item_double_clicked({
+		"context": "shop_sell" if shop_mode == "sell" else "shop_buy",
+		"shopMode": shop_mode,
+		"itemId": item_id,
+	})
+	if host != null and host.get_viewport() != null:
+		host.get_viewport().set_input_as_handled()
+
+func _on_shop_item_double_clicked(slot_data: Dictionary) -> void:
+	var item_id := str(slot_data.get("itemId", ""))
+	if item_id == "":
+		return
+	var mode := str(slot_data.get("shopMode", shop_mode))
+	if mode != shop_mode:
+		_set_shop_mode(mode)
+	_select_shop_item(item_id, true)
+	if _shop_quick_action_available_for_item(item_id):
+		_on_shop_action_pressed()
+
 func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: String = "", defer_detail_update: bool = false) -> void:
 	if shop_panel == null or shop_list_container == null or shop_detail_label == null:
 		return
@@ -14268,18 +15284,26 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 			shop_list_container.add_child(empty_label)
 		else:
 			for item_id in valid_ids:
-				var button = Button.new()
-				button.toggle_mode = true
-				button.button_pressed = item_id == shop_selected_item_id
-				button.text = _shop_item_button_text(item_id, int(backpack_counts_cache.get(item_id, 0)))
-				button.disabled = shop_action_request_pending
+				var captured_id = item_id
+				var item_count := int(backpack_counts_cache.get(captured_id, 0))
+				var shop_context := "shop_sell" if shop_mode == "sell" else "shop_buy"
+				var button := _new_item_slot_button({
+					"context": shop_context,
+					"shopMode": shop_mode,
+					"itemId": captured_id,
+					"count": item_count,
+					"label": _item_drag_label(captured_id, item_count),
+					"dragEnabled": not shop_action_request_pending,
+					"dropEnabled": false,
+					"accepts": [],
+				}, _shop_item_button_text(captured_id, item_count), captured_id == shop_selected_item_id, shop_action_request_pending, true)
 				button.custom_minimum_size = Vector2(0, 58)
 				button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				button.pressed.connect(func() -> void:
-					_select_shop_item(item_id, true)
+					_select_shop_item(captured_id, true)
 				)
 				shop_list_container.add_child(button)
-				shop_item_buttons[item_id] = button
+				shop_item_buttons[captured_id] = button
 	else:
 		if previous_selected_item_id != "":
 			var previous_button = shop_item_buttons.get(previous_selected_item_id)
@@ -14309,11 +15333,22 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 		_refresh_shop_equip_after_buy_button(quantity_max)
 	if shop_action_button != null:
 		var next_action_text = _shop_action_text()
-		if shop_action_button.text != next_action_text:
-			shop_action_button.text = next_action_text
 		var next_disabled = shop_action_request_pending or shop_selected_item_id == "" or quantity_max <= 0
-		if shop_action_button.disabled != next_disabled:
-			shop_action_button.disabled = next_disabled
+		if shop_action_button is ItemSlotButton:
+			(shop_action_button as ItemSlotButton).configure({
+				"context": "shop_action",
+				"itemId": shop_selected_item_id,
+				"count": quantity_max,
+				"label": next_action_text,
+				"dragEnabled": false,
+				"dropEnabled": not next_disabled,
+				"accepts": ["shop_buy"] if shop_mode == "buy" else ["shop_sell"],
+			}, next_action_text, false, next_disabled, false)
+		else:
+			if shop_action_button.text != next_action_text:
+				shop_action_button.text = next_action_text
+			if shop_action_button.disabled != next_disabled:
+				shop_action_button.disabled = next_disabled
 	if rebuild_list and shop_repair_button != null:
 		shop_repair_button.visible = shop_active_id == FIREBUD_EQUIPMENT_SHOP_ID
 	if shop_repair_button != null:
@@ -14472,6 +15507,9 @@ func _shop_action_text() -> String:
 	if shop_equip_after_buy and EquipmentModel.is_equipment(shop_selected_item_id):
 		return "购买并装备 x%d（%d%s）" % [shop_quantity, total_price, currency_label]
 	return "购买 x%d（%d%s）" % [shop_quantity, total_price, currency_label]
+
+func _shop_quick_action_available_for_item(item_id: String) -> bool:
+	return item_id != "" and not shop_action_request_pending and _shop_quantity_max(item_id) > 0
 
 func _on_shop_action_pressed() -> void:
 	if shop_selected_item_id == "" or shop_action_request_pending:
@@ -18231,33 +19269,24 @@ func _refresh_bank_panel() -> void:
 	if bank_panel == null or bank_list_container == null or bank_detail_label == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	var item_ids := _bank_item_ids_for_ui()
-	if not item_ids.has(bank_selected_item_id):
-		bank_selected_item_id = item_ids[0] if not item_ids.is_empty() else ""
+	bank_active_tab_index = clampi(bank_active_tab_index, 0, PlayerProgressModel.BANK_TAB_COUNT - 1)
+	var selectable_slots := _bank_selectable_slot_data_for_ui()
+	if not _bank_slot_selection_still_valid(selectable_slots):
+		bank_selected_slot_data = selectable_slots[0].duplicate(true) if not selectable_slots.is_empty() else {}
+		bank_selected_item_id = str(bank_selected_slot_data.get("itemId", ""))
 	for child in bank_list_container.get_children():
 		child.queue_free()
 	bank_item_buttons.clear()
-	if item_ids.is_empty():
-		var empty_label = Label.new()
-		empty_label.text = "背包和仓库都没有可存取物品。"
-		empty_label.add_theme_font_size_override("font_size", 16)
-		bank_list_container.add_child(empty_label)
-	else:
-		for item_id in item_ids:
-			var button = Button.new()
-			button.text = _bank_item_button_text(item_id)
-			button.toggle_mode = true
-			button.button_pressed = item_id == bank_selected_item_id
-			button.custom_minimum_size = Vector2(0, 64)
-			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			button.add_theme_font_size_override("font_size", 14)
-			var captured_id = item_id
-			button.pressed.connect(func() -> void:
-				_select_bank_item(captured_id)
-			)
-			bank_list_container.add_child(button)
-			bank_item_buttons[item_id] = button
-	var max_quantity = _bank_quantity_max(bank_selected_item_id)
+	bank_tab_buttons.clear()
+	var bank_columns := HBoxContainer.new()
+	bank_columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bank_columns.add_theme_constant_override("separation", 10)
+	bank_list_container.add_child(bank_columns)
+	_add_bank_side_slots(bank_columns, "背包", "bank_backpack", _bank_backpack_slots_for_ui(), ["bank_storage"])
+	_add_bank_side_slots(bank_columns, "银行", "bank_storage", _bank_storage_slots_for_active_tab(), ["bank_backpack", "backpack"])
+	var selected_count := maxi(0, int(bank_selected_slot_data.get("count", 0)))
+	var max_quantity = selected_count if selected_count > 0 else _bank_quantity_max(bank_selected_item_id)
 	if bank_quantity <= 0 or bank_quantity > max_quantity:
 		bank_quantity = maxi(1, max_quantity)
 	if bank_quantity_spinbox != null:
@@ -18269,40 +19298,148 @@ func _refresh_bank_panel() -> void:
 	var bank = _bank_profile_data()
 	var backpack_count = _bank_backpack_item_count(bank_selected_item_id)
 	var bank_count = _bank_stored_item_count(bank_selected_item_id)
+	var wallet_coins := PlayerProgressModel.stone_coins(player_profile)
+	var bank_coins := int(bank.get("stoneCoins", 0))
+	var wallet_diamonds := PlayerProgressModel.diamonds(player_profile)
+	var unlocked_tabs := PlayerProgressModel.bank_unlocked_tabs(player_profile)
+	var active_page_unlocked := bank_active_tab_index < unlocked_tabs
+	var next_unlock_cost := PlayerProgressModel.bank_unlock_cost_for_next_tab(player_profile)
+	var bank_coin_space := maxi(0, PlayerProgressModel.BANK_STONE_COIN_LIMIT - bank_coins)
+	var wallet_coin_space := maxi(0, PlayerProgressModel.STONE_COIN_LIMIT - wallet_coins)
+	var deposit_coin_max := mini(wallet_coins, bank_coin_space)
+	var withdraw_coin_max := mini(bank_coins, wallet_coin_space)
+	var coin_quantity_max := maxi(deposit_coin_max, withdraw_coin_max)
+	if bank_coin_quantity <= 0 or bank_coin_quantity > coin_quantity_max:
+		bank_coin_quantity = maxi(1, coin_quantity_max)
+	if bank_coin_quantity_spinbox != null:
+		bank_coin_quantity_spinbox.set_block_signals(true)
+		bank_coin_quantity_spinbox.max_value = maxf(1.0, float(coin_quantity_max))
+		bank_coin_quantity_spinbox.value = float(bank_coin_quantity)
+		bank_coin_quantity_spinbox.editable = coin_quantity_max > 0 and not bank_request_pending
+		bank_coin_quantity_spinbox.set_block_signals(false)
 	var lines: Array[String] = [
-		"身上石币：%d" % PlayerProgressModel.stone_coins(player_profile),
-		"仓库石币：%d" % int(bank.get("stoneCoins", 0)),
+		"身上石币：%d / %d" % [wallet_coins, PlayerProgressModel.STONE_COIN_LIMIT],
+		"银行石币：%d / %d" % [bank_coins, PlayerProgressModel.BANK_STONE_COIN_LIMIT],
+		"钻石：%d" % wallet_diamonds,
+		"银行页：%d / %d（已开 %d 页）" % [bank_active_tab_index + 1, PlayerProgressModel.BANK_TAB_COUNT, unlocked_tabs],
 	]
+	if not active_page_unlocked:
+		lines.append("当前银行页未解锁。")
 	if bank_selected_item_id != "":
 		lines.append("")
 		lines.append("%s" % BackpackModel.label_for(bank_selected_item_id))
-		lines.append("背包：%d" % backpack_count)
-		lines.append("仓库：%d" % bank_count)
+		var selected_context := str(bank_selected_slot_data.get("context", ""))
+		if selected_context == "bank_backpack":
+			lines.append("当前背包格：%d" % selected_count)
+		elif selected_context == "bank_storage":
+			lines.append("当前银行格：%d" % selected_count)
+		lines.append("背包合计：%d" % backpack_count)
+		lines.append("银行合计：%d" % bank_count)
 		lines.append("数量：%d" % bank_quantity)
 	bank_detail_label.text = "\n".join(lines)
 	var has_server = _is_server_account_session()
+	if bank_unlock_tab_button != null:
+		bank_unlock_tab_button.visible = true
+		if unlocked_tabs >= PlayerProgressModel.BANK_TAB_COUNT:
+			bank_unlock_tab_button.text = "银行页已全开"
+			bank_unlock_tab_button.disabled = true
+		elif bank_active_tab_index == unlocked_tabs:
+			bank_unlock_tab_button.text = "解锁第 %d 页（%d钻石）" % [bank_active_tab_index + 1, next_unlock_cost]
+			bank_unlock_tab_button.disabled = bank_request_pending or profile_action_request_pending or not has_server or wallet_diamonds < next_unlock_cost
+		elif bank_active_tab_index > unlocked_tabs:
+			bank_unlock_tab_button.text = "请先解锁第 %d 页" % [unlocked_tabs + 1]
+			bank_unlock_tab_button.disabled = true
+		else:
+			bank_unlock_tab_button.text = "已解锁当前页"
+			bank_unlock_tab_button.disabled = true
 	if bank_deposit_button != null:
-		bank_deposit_button.disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or backpack_count <= 0
+		var deposit_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or backpack_count <= 0 or not active_page_unlocked
+		if bank_deposit_button is ItemSlotButton:
+			(bank_deposit_button as ItemSlotButton).configure({
+				"context": "bank_deposit_action",
+				"itemId": bank_selected_item_id,
+				"count": backpack_count,
+				"label": "存入物品",
+				"dragEnabled": false,
+				"dropEnabled": not bank_request_pending and has_server,
+				"accepts": ["bank_backpack", "backpack"],
+			}, "存入物品", false, deposit_disabled, false)
+		else:
+			bank_deposit_button.disabled = deposit_disabled
 	if bank_withdraw_button != null:
-		bank_withdraw_button.disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or bank_count <= 0
-	var deposit_coins = mini(100, PlayerProgressModel.stone_coins(player_profile))
-	var withdraw_coins = mini(100, int(bank.get("stoneCoins", 0)))
+		var withdraw_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or bank_count <= 0
+		if bank_withdraw_button is ItemSlotButton:
+			(bank_withdraw_button as ItemSlotButton).configure({
+				"context": "bank_withdraw_action",
+				"itemId": bank_selected_item_id,
+				"count": bank_count,
+				"label": "取出物品",
+				"dragEnabled": false,
+				"dropEnabled": not bank_request_pending and has_server,
+				"accepts": ["bank_storage"],
+			}, "取出物品", false, withdraw_disabled, false)
+		else:
+			bank_withdraw_button.disabled = withdraw_disabled
+	var deposit_coins = mini(bank_coin_quantity, deposit_coin_max)
+	var withdraw_coins = mini(bank_coin_quantity, withdraw_coin_max)
 	if bank_coin_deposit_button != null:
-		bank_coin_deposit_button.text = "存入%d石币" % deposit_coins if deposit_coins > 0 else "存入石币"
+		bank_coin_deposit_button.text = "存石币"
 		bank_coin_deposit_button.disabled = bank_request_pending or not has_server or deposit_coins <= 0
 	if bank_coin_withdraw_button != null:
-		bank_coin_withdraw_button.text = "取出%d石币" % withdraw_coins if withdraw_coins > 0 else "取出石币"
+		bank_coin_withdraw_button.text = "取石币"
 		bank_coin_withdraw_button.disabled = bank_request_pending or not has_server or withdraw_coins <= 0
 	if bank_status_label != null and not has_server:
 		bank_status_label.text = "需要服务器账号登录。"
 
 func _select_bank_item(item_id: String) -> void:
+	var next_data := _first_bank_slot_data_for_item(item_id)
+	var changed: bool = bank_selected_item_id != item_id
 	bank_selected_item_id = item_id
-	bank_quantity = 1
+	bank_selected_slot_data = next_data
+	if changed:
+		bank_quantity = 1
 	_refresh_bank_panel()
+
+
+func _select_bank_slot(slot_data: Dictionary) -> void:
+	var item_id := str(slot_data.get("itemId", ""))
+	if item_id == "":
+		return
+	var previous_key := _bank_slot_selection_key(bank_selected_slot_data)
+	var next_data := slot_data.duplicate(true)
+	bank_selected_slot_data = next_data
+	bank_selected_item_id = item_id
+	if previous_key != _bank_slot_selection_key(next_data):
+		bank_quantity = 1
+	_refresh_bank_panel()
+
+func _on_bank_item_gui_input(event: InputEvent, item_id: String) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed or not mouse_event.double_click:
+		return
+	_select_bank_item(item_id)
+	var mode := _bank_quick_transfer_mode_for_item(item_id)
+	if mode != "":
+		_start_bank_item_transaction(mode)
+	if host != null and host.get_viewport() != null:
+		host.get_viewport().set_input_as_handled()
 
 func _set_bank_quantity(value: int) -> void:
 	bank_quantity = clampi(value, 1, maxi(1, _bank_quantity_max(bank_selected_item_id)))
+	_refresh_bank_panel()
+
+func _set_bank_coin_quantity(value: int) -> void:
+	bank_coin_quantity = clampi(value, 1, maxi(1, _bank_coin_quantity_max()))
+	_refresh_bank_panel()
+
+
+func _set_bank_active_tab(tab_index: int) -> void:
+	bank_active_tab_index = clampi(tab_index, 0, PlayerProgressModel.BANK_TAB_COUNT - 1)
+	bank_selected_slot_data.clear()
+	bank_selected_item_id = ""
+	bank_quantity = 1
 	_refresh_bank_panel()
 
 func _on_bank_deposit_pressed() -> void:
@@ -18311,24 +19448,79 @@ func _on_bank_deposit_pressed() -> void:
 func _on_bank_withdraw_pressed() -> void:
 	_start_bank_item_transaction("withdraw")
 
-func _start_bank_item_transaction(mode: String) -> void:
-	if bank_selected_item_id == "" or bank_request_pending:
+func _on_bank_unlock_tab_pressed() -> void:
+	if profile_action_request_pending or bank_request_pending:
 		return
-	var max_quantity = _bank_backpack_item_count(bank_selected_item_id) if mode == "deposit" else _bank_stored_item_count(bank_selected_item_id)
+	if not _is_server_account_session():
+		if bank_status_label != null:
+			bank_status_label.text = "需要服务器账号登录。"
+		return
+	var unlocked_tabs := PlayerProgressModel.bank_unlocked_tabs(player_profile)
+	if bank_active_tab_index != unlocked_tabs or unlocked_tabs >= PlayerProgressModel.BANK_TAB_COUNT:
+		return
+	var parsed = await _submit_server_profile_action("bank_unlock_tab", {
+		"tabIndex": bank_active_tab_index,
+	}, "解锁银行页失败。")
+	if bool(parsed.get("ok", false)):
+		if bank_status_label != null:
+			bank_status_label.text = str(parsed.get("message", "银行页已解锁。"))
+	else:
+		if bank_status_label != null:
+			bank_status_label.text = _server_player_message(parsed, "解锁银行页失败。")
+	_finish_server_backpack_action(parsed, "解锁银行页失败。")
+
+func _start_bank_item_transaction(mode: String) -> void:
+	if not ["deposit", "withdraw"].has(mode) or bank_selected_item_id == "" or bank_request_pending:
+		return
+	var selected_context := str(bank_selected_slot_data.get("context", ""))
+	var selected_count := maxi(0, int(bank_selected_slot_data.get("count", 0)))
+	var max_quantity = selected_count if selected_count > 0 else (_bank_backpack_item_count(bank_selected_item_id) if mode == "deposit" else _bank_stored_item_count(bank_selected_item_id))
 	var quantity = clampi(bank_quantity, 1, maxi(1, max_quantity))
 	if max_quantity <= 0:
 		return
-	var items: Array[Dictionary] = [{"itemId": bank_selected_item_id, "count": quantity}]
+	var item := {
+		"itemId": bank_selected_item_id,
+		"count": quantity,
+	}
+	if mode == "deposit" and selected_context == "bank_backpack":
+		item["sourceSlotIndex"] = int(bank_selected_slot_data.get("slotIndex", -1))
+	elif mode == "withdraw" and selected_context == "bank_storage":
+		item["bankSlotIndex"] = int(bank_selected_slot_data.get("bankSlotIndex", -1))
+	var items: Array[Dictionary] = [item]
 	_start_bank_request(mode, _bank_request_spec(mode, items, 0))
 
-func _start_bank_coin_transaction(mode: String, amount: int) -> void:
+
+func _start_bank_item_transaction_from_request(request: Dictionary, quantity: int) -> void:
+	var mode := str(request.get("mode", ""))
+	var item_id := str(request.get("itemId", ""))
+	if not ["deposit", "withdraw"].has(mode) or item_id == "" or quantity <= 0:
+		return
+	var item := {
+		"itemId": item_id,
+		"count": quantity,
+	}
+	var source_slot_index := int(request.get("sourceSlotIndex", -1))
+	var target_slot_index := int(request.get("targetSlotIndex", -1))
+	var bank_slot_index := int(request.get("bankSlotIndex", -1))
+	if source_slot_index >= 0:
+		item["sourceSlotIndex"] = source_slot_index
+	if target_slot_index >= 0:
+		item["targetSlotIndex"] = target_slot_index
+	if bank_slot_index >= 0:
+		item["bankSlotIndex"] = bank_slot_index
+	var items: Array[Dictionary] = [item]
+	bank_selected_item_id = item_id
+	bank_quantity = quantity
+	_start_bank_request(mode, _bank_request_spec(mode, items, 0))
+
+func _start_bank_coin_transaction(mode: String) -> void:
 	if bank_request_pending:
 		return
-	var bank = _bank_profile_data()
-	var max_amount = PlayerProgressModel.stone_coins(player_profile) if mode == "deposit" else int(bank.get("stoneCoins", 0))
-	var request_amount = mini(maxi(0, amount), max_amount)
+	var max_amount := _bank_coin_transaction_max(mode)
+	var request_amount = mini(_bank_coin_quantity_from_input(), max_amount)
 	if request_amount <= 0:
 		return
+	bank_coin_quantity = request_amount
 	_start_bank_request(mode, _bank_request_spec(mode, [], request_amount))
 
 func _bank_request_spec(mode: String, items: Array[Dictionary], stone_coins: int) -> Dictionary:
@@ -18342,7 +19534,7 @@ func _start_bank_request(kind: String, spec: Dictionary) -> void:
 	bank_pending_kind = kind
 	bank_request_pending = true
 	if bank_status_label != null:
-		bank_status_label.text = "正在处理仓库..."
+		bank_status_label.text = "正在处理银行..."
 	_refresh_bank_panel()
 	var err = bank_http_request.request(
 		str(spec.get("url", "")),
@@ -18354,7 +19546,7 @@ func _start_bank_request(kind: String, spec: Dictionary) -> void:
 		bank_request_pending = false
 		bank_pending_kind = ""
 		if bank_status_label != null:
-			bank_status_label.text = "无法发起仓库请求。"
+			bank_status_label.text = "无法发起银行请求。"
 		_refresh_bank_panel()
 
 func _on_bank_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -18362,7 +19554,7 @@ func _on_bank_http_request_completed(result: int, response_code: int, _headers: 
 	bank_request_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if bank_status_label != null:
-			bank_status_label.text = "仓库服务器连接失败。"
+			bank_status_label.text = "银行服务器连接失败。"
 		_refresh_bank_panel()
 		return
 	var parsed = ServerAuthClientModel.parse_bank_transaction_response(response_code, body)
@@ -18376,53 +19568,202 @@ func _on_bank_http_request_completed(result: int, response_code: int, _headers: 
 		if summary is Dictionary:
 			_apply_server_profile_summary(summary as Dictionary)
 		if bank_status_label != null:
-			bank_status_label.text = str(parsed.get("message", "仓库已更新。"))
-		_set_world_log_message(str(parsed.get("message", "仓库已更新。")))
+			bank_status_label.text = str(parsed.get("message", "银行已更新。"))
+		_set_world_log_message(str(parsed.get("message", "银行已更新。")))
 		if backpack_panel != null and backpack_panel.visible:
 			_refresh_backpack_panel()
 		host._update_hud_text(true)
 	elif _handle_session_invalid_response(parsed):
 		return
 	elif bank_status_label != null:
-		bank_status_label.text = _server_player_message(parsed, "仓库操作失败。")
+		bank_status_label.text = _server_player_message(parsed, "银行操作失败。")
 	_refresh_bank_panel()
 
 func _bank_profile_data() -> Dictionary:
-	var raw = player_profile.get("bank", {})
-	var bank := raw as Dictionary if raw is Dictionary else {}
-	var items: Array[Dictionary] = []
-	var raw_items = bank.get("items", [])
-	if raw_items is Array:
-		for value in raw_items:
-			if value is Dictionary:
-				var item := value as Dictionary
-				var item_id = str(item.get("itemId", ""))
-				var count = maxi(0, int(item.get("count", 0)))
-				if item_id != "" and count > 0 and not BackpackModel.item_for_id(item_id).is_empty():
-					items.append({"itemId": item_id, "count": count})
-	return {
-		"stoneCoins": maxi(0, int(bank.get("stoneCoins", 0))),
-		"items": BackpackModel.merge_item_amounts(items),
-	}
+	return PlayerProgressModel.bank_data(player_profile)
 
-func _bank_item_ids_for_ui() -> Array[String]:
-	var order: Array[String] = []
-	for slot in PlayerProgressModel.backpack_slots(player_profile):
-		var item_id = str(slot.get("itemId", ""))
-		if item_id != "" and not order.has(item_id):
-			order.append(item_id)
-	for item in _bank_profile_data().get("items", []):
-		var item_id = str((item as Dictionary).get("itemId", "")) if item is Dictionary else ""
-		if item_id != "" and not order.has(item_id):
-			order.append(item_id)
-	return order
+func _bank_backpack_slots_for_ui() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var slots := PlayerProgressModel.backpack_slots(player_profile)
+	for index in range(slots.size()):
+		var slot := (slots[index] as Dictionary).duplicate(true) if slots[index] is Dictionary else {}
+		var item_id := str(slot.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(slot.get("count", 0)))
+		result.append({
+			"context": "bank_backpack",
+			"itemId": item_id,
+			"count": count,
+			"slotIndex": index,
+			"locked": false,
+		})
+	return result
 
-func _bank_item_button_text(item_id: String) -> String:
-	return "%s\n背包%d / 仓库%d" % [
-		BackpackModel.menu_label_for(item_id),
-		_bank_backpack_item_count(item_id),
-		_bank_stored_item_count(item_id),
-	]
+
+func _bank_storage_slots_for_active_tab() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var slots := PlayerProgressModel.bank_slots(player_profile)
+	var unlocked_slot_count := PlayerProgressModel.bank_unlocked_slot_count(player_profile)
+	var start_index := bank_active_tab_index * PlayerProgressModel.BANK_SLOTS_PER_TAB
+	for offset in range(PlayerProgressModel.BANK_SLOTS_PER_TAB):
+		var slot_index := start_index + offset
+		var slot := (slots[slot_index] as Dictionary).duplicate(true) if slot_index >= 0 and slot_index < slots.size() and slots[slot_index] is Dictionary else {}
+		var item_id := str(slot.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(slot.get("count", 0)))
+		result.append({
+			"context": "bank_storage",
+			"itemId": item_id,
+			"count": count,
+			"bankSlotIndex": slot_index,
+			"bankTabIndex": bank_active_tab_index,
+			"locked": slot_index >= unlocked_slot_count,
+		})
+	return result
+
+
+func _bank_selectable_slot_data_for_ui() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for slot_data in _bank_backpack_slots_for_ui():
+		if str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
+			result.append(slot_data)
+	for slot_data in _bank_storage_slots_for_active_tab():
+		if str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
+			result.append(slot_data)
+	return result
+
+
+func _first_bank_slot_data_for_item(item_id: String) -> Dictionary:
+	for slot_data in _bank_selectable_slot_data_for_ui():
+		if str(slot_data.get("itemId", "")) == item_id:
+			return (slot_data as Dictionary).duplicate(true)
+	return {}
+
+
+func _bank_slot_selection_still_valid(selectable_slots: Array[Dictionary]) -> bool:
+	if bank_selected_slot_data.is_empty():
+		return false
+	var selected_key := _bank_slot_selection_key(bank_selected_slot_data)
+	for slot_data in selectable_slots:
+		if _bank_slot_selection_key(slot_data) == selected_key:
+			return true
+	return false
+
+
+func _bank_slot_selection_key(slot_data: Dictionary) -> String:
+	var context := str(slot_data.get("context", ""))
+	if context == "bank_storage":
+		return "%s:%d" % [context, int(slot_data.get("bankSlotIndex", -1))]
+	return "%s:%d" % [context, int(slot_data.get("slotIndex", -1))]
+
+
+func _add_bank_side_slots(parent: Container, title: String, context: String, slots: Array[Dictionary], accepts: Array[String]) -> void:
+	var section := PanelContainer.new()
+	section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	section.add_theme_stylebox_override("panel", _bank_section_style())
+	parent.add_child(section)
+	var container := VBoxContainer.new()
+	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	container.add_theme_constant_override("separation", 7)
+	section.add_child(container)
+	var title_label := Label.new()
+	title_label.text = title
+	title_label.add_theme_font_size_override("font_size", 16)
+	container.add_child(title_label)
+	var hint_label := Label.new()
+	hint_label.text = "拖到这里%s" % ("存入" if context == "bank_storage" else "取出")
+	hint_label.add_theme_font_size_override("font_size", 12)
+	hint_label.add_theme_color_override("font_color", Color(0.76, 0.74, 0.64, 0.88))
+	container.add_child(hint_label)
+	var content_row := HBoxContainer.new()
+	content_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_row.add_theme_constant_override("separation", 8)
+	container.add_child(content_row)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	content_row.add_child(grid)
+	if context == "bank_storage":
+		_add_bank_tab_buttons(content_row)
+	var visible_slots := slots.size()
+	for slot_index in range(visible_slots):
+		var slot_data := (slots[slot_index] as Dictionary).duplicate(true) if slots[slot_index] is Dictionary else {}
+		var captured_id := str(slot_data.get("itemId", "")).strip_edges()
+		var count := maxi(0, int(slot_data.get("count", 0)))
+		var locked := bool(slot_data.get("locked", false))
+		var has_item := captured_id != "" and count > 0
+		var slot_text := "%s\nx%d" % [BackpackModel.menu_label_for(captured_id), count] if has_item else ("未解锁" if locked else "空")
+		slot_data["label"] = _item_drag_label(captured_id, count) if has_item else title
+		slot_data["dragEnabled"] = has_item and count > 0 and not locked
+		slot_data["dropEnabled"] = not locked
+		slot_data["highlightDropTarget"] = not has_item and not locked
+		slot_data["accepts"] = accepts
+		slot_data["tooltip"] = "%s x%d" % [BackpackModel.label_for(captured_id), count] if has_item else ("先解锁这个银行页" if locked else "可拖放到这里")
+		var button := _new_item_slot_button({
+			"context": context,
+			"itemId": captured_id,
+			"count": count,
+			"label": slot_data.get("label", title),
+			"dragEnabled": slot_data.get("dragEnabled", false),
+			"dropEnabled": slot_data.get("dropEnabled", false),
+			"highlightDropTarget": slot_data.get("highlightDropTarget", false),
+			"accepts": accepts,
+			"tooltip": slot_data.get("tooltip", ""),
+			"slotIndex": int(slot_data.get("slotIndex", -1)),
+			"bankSlotIndex": int(slot_data.get("bankSlotIndex", -1)),
+			"bankTabIndex": int(slot_data.get("bankTabIndex", -1)),
+			"locked": locked,
+		}, slot_text, has_item and _bank_slot_selection_key(slot_data) == _bank_slot_selection_key(bank_selected_slot_data), bank_request_pending, has_item)
+		button.custom_minimum_size = Vector2(86, 74)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 13)
+		if has_item:
+			var captured_slot_data := slot_data.duplicate(true)
+			button.pressed.connect(func() -> void:
+				_select_bank_slot(captured_slot_data)
+			)
+			var item_key := "%s:%s" % [context, captured_id]
+			if not bank_item_buttons.has(item_key):
+				bank_item_buttons[item_key] = button
+		var slot_key := "%s:slot:%d" % [context, int(slot_data.get("bankSlotIndex", slot_data.get("slotIndex", slot_index)))]
+		bank_item_buttons[slot_key] = button
+		grid.add_child(button)
+
+func _add_bank_tab_buttons(parent: Container) -> void:
+	var tab_column := VBoxContainer.new()
+	tab_column.custom_minimum_size = Vector2(66, 0)
+	tab_column.size_flags_horizontal = Control.SIZE_FILL
+	tab_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab_column.add_theme_constant_override("separation", 6)
+	parent.add_child(tab_column)
+	var unlocked_tabs := PlayerProgressModel.bank_unlocked_tabs(player_profile)
+	for index in range(PlayerProgressModel.BANK_TAB_COUNT):
+		var button := Button.new()
+		button.text = "%d" % (index + 1) if index < unlocked_tabs else "%d\n未开" % (index + 1)
+		button.toggle_mode = true
+		button.button_pressed = index == bank_active_tab_index
+		button.custom_minimum_size = Vector2(58, 42)
+		button.disabled = bank_request_pending
+		var captured_index := index
+		button.pressed.connect(func() -> void:
+			_set_bank_active_tab(captured_index)
+		)
+		tab_column.add_child(button)
+		bank_tab_buttons.append(button)
+
+func _bank_quick_transfer_mode_for_item(item_id: String) -> String:
+	if bank_request_pending or item_id == "" or not _is_server_account_session():
+		return ""
+	if _bank_backpack_item_count(item_id) > 0:
+		return "deposit"
+	if _bank_stored_item_count(item_id) > 0:
+		return "withdraw"
+	return ""
 
 func _bank_backpack_item_count(item_id: String) -> int:
 	if item_id == "":
@@ -18439,6 +19780,30 @@ func _bank_quantity_max(item_id: String) -> int:
 	if item_id == "":
 		return 0
 	return maxi(_bank_backpack_item_count(item_id), _bank_stored_item_count(item_id))
+
+func _bank_coin_quantity_max() -> int:
+	return maxi(_bank_coin_transaction_max("deposit"), _bank_coin_transaction_max("withdraw"))
+
+func _bank_coin_quantity_from_input() -> int:
+	var value: int = bank_coin_quantity
+	if bank_coin_quantity_spinbox != null:
+		value = int(bank_coin_quantity_spinbox.value)
+		var line_edit: LineEdit = bank_coin_quantity_spinbox.get_line_edit()
+		if line_edit != null:
+			var input_text := str(line_edit.text).strip_edges().replace(",", "").replace("，", "")
+			if input_text.is_valid_int():
+				value = int(input_text)
+			elif input_text.is_valid_float():
+				value = int(float(input_text))
+	return clampi(value, 1, maxi(1, _bank_coin_quantity_max()))
+
+func _bank_coin_transaction_max(mode: String) -> int:
+	var bank = _bank_profile_data()
+	var wallet_coins := PlayerProgressModel.stone_coins(player_profile)
+	var bank_coins := int(bank.get("stoneCoins", 0))
+	if mode == "withdraw":
+		return mini(bank_coins, maxi(0, PlayerProgressModel.STONE_COIN_LIMIT - wallet_coins))
+	return mini(wallet_coins, maxi(0, PlayerProgressModel.BANK_STONE_COIN_LIMIT - bank_coins))
 
 func _apply_claimed_mail_items_to_battle_state(parsed_claim: Dictionary) -> void:
 	if not battle_active or battle_state.is_empty():
@@ -18626,10 +19991,16 @@ func _set_training_partner_count(count: int) -> void:
 		_refresh_training_partner_panel()
 		return
 	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, target_count)
+	var next_count = PlayerProgressModel.training_partner_count(player_profile)
+	var log_lines: Array[String] = ["队伍伙伴 %d/%d。" % [next_count, available_slots]]
+	log_lines.append_array(_record_quest_event_and_maybe_claim({
+		"type": "training_partner_set_count",
+		"count": next_count,
+		"amount": 1,
+	}))
 	if profile_save_enabled:
 		host._save_player_profile_now()
-	var next_count = PlayerProgressModel.training_partner_count(player_profile)
-	_set_world_log_message("队伍伙伴 %d/%d。" % [next_count, available_slots])
+	_set_world_log_message("\n".join(log_lines))
 	_refresh_training_partner_panel()
 	host._update_hud_text()
 
@@ -19677,6 +21048,10 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
 		"equip_item":
 			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
+		"ride_pet":
+			if _quest_ride_objective_should_open_backpack(objective):
+				return _navigation_target_for_backpack("先使用新手老虎蛋")
+			return _navigation_target_for_pet_panel(QuestModel.objective_text_for(quest))
 		"use_spirit":
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"battle_victory":
@@ -19684,6 +21059,17 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 		"capture_pet":
 			return _navigation_target_for_capture_objective(objective)
 	return {}
+
+func _quest_ride_objective_should_open_backpack(objective: Dictionary) -> bool:
+	var form_id := str(objective.get("formId", "")).strip_edges()
+	if form_id != "novice_tiger_mount":
+		return false
+	if PlayerProgressModel.backpack_item_count(player_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG) <= 0:
+		return false
+	for instance in PlayerProgressModel.all_pet_instances(player_profile):
+		if str(instance.get("formId", instance.get("templateId", ""))).strip_edges() == form_id:
+			return false
+	return true
 
 func _first_available_unfinished_quest_for_tracker() -> Dictionary:
 	var normalized = PlayerProgressModel.normalize_profile(player_profile)
@@ -20128,7 +21514,7 @@ func _route_to_quest_target(target: Dictionary) -> void:
 			_close_pet_panel()
 			_close_codex_panel()
 			_close_quest_panel()
-			if _set_move_target_cell(cell, IsoMapModel.grid_to_world(map_data, cell), cell):
+			if _set_click_move_target_cell(cell, IsoMapModel.grid_to_world(map_data, cell), cell):
 				_set_world_log_message("正在前往%s。" % label)
 			else:
 				_set_world_log_message("暂时无法前往%s。" % label)
@@ -20973,9 +22359,29 @@ func _on_pet_state_cycle_pressed() -> void:
 		return
 	var result = PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
+	var log_lines: Array[String] = []
+	var state_message := str(result.get("message", ""))
+	if state_message != "":
+		log_lines.append(state_message)
+	if bool(result.get("ok", false)) and str(result.get("state", "")) == PlayerProgressModel.PET_STATE_RIDING:
+		var quest_event = PlayerProgressModel.record_quest_event(player_profile, {
+			"type": "ride_pet",
+			"instanceId": str(result.get("instanceId", pet_selected_instance_id)),
+			"formId": str(result.get("formId", "")),
+			"lineId": str(result.get("lineId", "")),
+			"amount": 1,
+		})
+		player_profile = quest_event.get("profile", player_profile)
+		if bool(quest_event.get("changed", false)) and str(quest_event.get("message", "")) != "":
+			log_lines.append(str(quest_event.get("message", "")))
+		if bool(quest_event.get("ready", false)) and PlayerProgressModel.active_quest_auto_claim(player_profile):
+			var quest_claim = PlayerProgressModel.claim_active_quest(player_profile)
+			player_profile = quest_claim.get("profile", player_profile)
+			if bool(quest_claim.get("ok", false)) and str(quest_claim.get("message", "")) != "":
+				log_lines.append(str(quest_claim.get("message", "")))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		host._save_player_profile_now()
-	_set_world_log_message(str(result.get("message", "")))
+	_set_world_log_message("\n".join(log_lines))
 	_refresh_pet_panel()
 
 func _on_pet_stable_pressed() -> void:

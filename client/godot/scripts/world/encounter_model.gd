@@ -202,9 +202,9 @@ static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
 	var stats = value.get("battleStats", {})
 	if stats is Dictionary:
 		entry["battleStats"] = (stats as Dictionary).duplicate(true)
-		for key in ["catchable", "captureDifficulty", "expReward", "experience", "exp"]:
-			if value.has(key):
-				entry[key] = value.get(key)
+	for key in ["catchable", "captureDifficulty", "captureChanceOverride", "captureRateOverride", "expReward", "experience", "exp"]:
+		if value.has(key):
+			entry[key] = value.get(key)
 	for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if value.has(key):
 			entry[key] = _string_array(value.get(key))

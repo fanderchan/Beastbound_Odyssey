@@ -649,8 +649,16 @@ test("party pve training partners heal their low hp partner pair before attackin
 
   const updatedLowPartner = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartner.actorId);
   const updatedLowPartnerPet = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartnerPet.actorId);
-  assert.equal(updatedLowPartner.hp, 64);
-  assert.equal(updatedLowPartnerPet.hp, 77);
+  const damageAfterSelfHeal = resolved.turn.events
+    .filter((event) => Number(event.sequence || 0) > Number(selfHeal.sequence || 0))
+    .filter((event) => event.targetActorId === lowPartner.actorId)
+    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
+  const damageAfterPetHeal = resolved.turn.events
+    .filter((event) => Number(event.sequence || 0) > Number(petHeal.sequence || 0))
+    .filter((event) => event.targetActorId === lowPartnerPet.actorId)
+    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
+  assert.equal(updatedLowPartner.hp, Math.max(0, selfHeal.hpAfter - damageAfterSelfHeal));
+  assert.equal(updatedLowPartnerPet.hp, Math.max(0, petHeal.hpAfter - damageAfterPetHeal));
   assert.equal(resolved.turn.events.some((event) => event.actorId === lowPartner.actorId && event.eventType === "basic_attack"), false);
   assert.equal(resolved.turn.events.some((event) => event.actorId === petGuardPartner.actorId && event.eventType === "basic_attack"), false);
 });
@@ -1384,6 +1392,165 @@ test("party pve escape closes room without win or loss result", () => {
   assert.equal(record.winnerAccountId, "");
   assert.deepEqual(record.loserAccountIds, []);
   assert.equal(record.expSummaries.length, 0);
+});
+
+test("party pve run command resolves by speed before escaping", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pverunfastenemy", "password": "test1234", "displayName": "慢速逃跑玩家"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("慢速逃跑玩家", {
+    "level": 5,
+    "hp": 120,
+    "maxHp": 120,
+    "attack": 18,
+    "defense": 8,
+    "quick": 10,
+  });
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "run_speed_grass",
+      "name": "逃跑速度草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "高速乌力",
+        "level": 3,
+        "battleStats": {"maxHp": 80, "attack": 6, "defense": 5, "quick": 220},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && enemy), true);
+
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "run",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  assert.equal(resolved.turn.result.reason, "escape");
+  assert.equal(resolved.turn.result.closedByAccountId, solo.account.accountId);
+  const eventTypes = resolved.turn.events.map((event) => event.eventType);
+  const enemyAttackIndex = resolved.turn.events.findIndex((event) => event.actorId === enemy.actorId && event.eventType === "basic_attack");
+  const escapeIndex = resolved.turn.events.findIndex((event) => event.actorId === player.actorId && event.eventType === "escape");
+  assert.notEqual(enemyAttackIndex, -1);
+  assert.notEqual(escapeIndex, -1);
+  assert.equal(enemyAttackIndex < escapeIndex, true, eventTypes.join(","));
+});
+
+test("party pve knock-away defeats return players to record point", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const launchedPlayer = service.register({"username": "pveknockaway", "password": "test1234", "displayName": "击飞玩家"});
+  assert.equal(launchedPlayer.ok, true);
+  const launchedProfile = battleProfile("击飞玩家", {
+    "level": 8,
+    "hp": 30,
+    "maxHp": 30,
+    "attack": 10,
+    "defense": 0,
+    "quick": 10,
+  });
+  launchedProfile.recordPoint = {"mapId": "firebud_village_gate", "spawnName": "doctor_record", "label": "火芽村医旁记录点"};
+  assert.equal(service.saveProfile(launchedPlayer.session.token, {"expectedRevision": 0, "profile": launchedProfile}).ok, true);
+  assert.equal(service.updatePlayerPosition(launchedPlayer.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 6,
+    "cellY": 10,
+    "facing": "south",
+    "moving": false,
+  }).ok, true);
+  const launchedEncounter = service.startPartyEncounter(launchedPlayer.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "knockaway_grass",
+      "name": "击飞草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "击飞乌力",
+        "level": 30,
+        "battleStats": {"maxHp": 80, "attack": 500, "defense": 5, "quick": 220},
+      },
+    },
+  });
+  assert.equal(launchedEncounter.ok, true);
+  const launchedActor = launchedEncounter.room.battle.actors.find((actor) => actor.accountId === launchedPlayer.account.accountId && actor.kind === "player");
+  const launchedEnemy = launchedEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const launchedResolved = service.submitBattleCommand(launchedPlayer.session.token, launchedEncounter.room.roomId, {
+    "round": 1,
+    "actorId": launchedActor.actorId,
+    "actionId": "attack",
+    "targetActorId": launchedEnemy.actorId,
+  });
+  assert.equal(launchedResolved.ok, true);
+  assert.equal(launchedResolved.room.status, "closed");
+  assert.equal(launchedResolved.turn.result.reason, "defeat");
+  assert.deepEqual(launchedResolved.turn.result.loserAccountIds, [launchedPlayer.account.accountId]);
+  const launchedEvent = launchedResolved.turn.events.find((event) => event.targetActorId === launchedActor.actorId);
+  assert.equal(Boolean(launchedEvent), true);
+  assert.equal(launchedEvent.launched, true);
+  assert.equal(launchedEvent.animation.targetReaction, "launched");
+  const launchedReturn = launchedResolved.turn.result.battleReturns.find((entry) => entry.accountId === launchedPlayer.account.accountId);
+  assert.equal(launchedReturn.kind, "record_point_return");
+  assert.equal(launchedReturn.position.mapId, "firebud_village_gate");
+  assert.equal(launchedReturn.position.cellX, 10);
+  assert.equal(launchedReturn.position.cellY, 17);
+  assert.equal(service.snapshot().playerPositions[launchedPlayer.account.accountId].authority, "battle_result_return");
+
+  const downedPlayer = service.register({"username": "pvenormalko", "password": "test1234", "displayName": "普通倒下玩家"});
+  assert.equal(downedPlayer.ok, true);
+  const downedProfile = battleProfile("普通倒下玩家", {
+    "level": 8,
+    "hp": 110,
+    "maxHp": 110,
+    "attack": 10,
+    "defense": 0,
+    "quick": 10,
+  });
+  downedProfile.recordPoint = {"mapId": "firebud_village_gate", "spawnName": "doctor_record", "label": "火芽村医旁记录点"};
+  assert.equal(service.saveProfile(downedPlayer.session.token, {"expectedRevision": 0, "profile": downedProfile}).ok, true);
+  assert.equal(service.updatePlayerPosition(downedPlayer.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 7,
+    "cellY": 10,
+    "facing": "south",
+    "moving": false,
+  }).ok, true);
+  const downedEncounter = service.startPartyEncounter(downedPlayer.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "normal_ko_grass",
+      "name": "普通倒下草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "普通乌力",
+        "level": 30,
+        "battleStats": {"maxHp": 80, "attack": 150, "defense": 5, "quick": 220},
+      },
+    },
+  });
+  assert.equal(downedEncounter.ok, true);
+  const downedActor = downedEncounter.room.battle.actors.find((actor) => actor.accountId === downedPlayer.account.accountId && actor.kind === "player");
+  const downedEnemy = downedEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const downedResolved = service.submitBattleCommand(downedPlayer.session.token, downedEncounter.room.roomId, {
+    "round": 1,
+    "actorId": downedActor.actorId,
+    "actionId": "attack",
+    "targetActorId": downedEnemy.actorId,
+  });
+  assert.equal(downedResolved.ok, true);
+  assert.equal(downedResolved.room.status, "closed");
+  const downedEvent = downedResolved.turn.events.find((event) => event.targetActorId === downedActor.actorId);
+  assert.equal(downedEvent.launched, false);
+  const downedReturn = downedResolved.turn.result.battleReturns.find((entry) => entry.accountId === downedPlayer.account.accountId);
+  assert.equal(downedReturn.kind, "battle_position_restore");
+  assert.equal(downedReturn.position.mapId, "firebud_training_yard");
+  assert.equal(downedReturn.position.cellX, 7);
+  assert.equal(downedReturn.position.cellY, 10);
 });
 
 test("party pve escape only removes non-leader members from party", () => {
