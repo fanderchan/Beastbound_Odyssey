@@ -46,6 +46,7 @@ const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
+const PasswordVisibilityButton := preload("res://scripts/ui/password_visibility_button.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -8397,10 +8398,9 @@ func _build_auth_panel() -> void:
 	)
 	password_row.add_child(auth_password_input)
 
-	auth_password_visibility_button = Button.new()
-	auth_password_visibility_button.text = "眼"
+	auth_password_visibility_button = PasswordVisibilityButton.new()
 	auth_password_visibility_button.tooltip_text = "显示密码"
-	auth_password_visibility_button.custom_minimum_size = Vector2(52, 44)
+	auth_password_visibility_button.custom_minimum_size = Vector2(48, 44)
 	auth_password_visibility_button.pressed.connect(func() -> void:
 		_toggle_auth_password_visibility(false)
 	)
@@ -8421,10 +8421,9 @@ func _build_auth_panel() -> void:
 	)
 	auth_password_confirm_row.add_child(auth_password_confirm_input)
 
-	auth_password_confirm_visibility_button = Button.new()
-	auth_password_confirm_visibility_button.text = "眼"
+	auth_password_confirm_visibility_button = PasswordVisibilityButton.new()
 	auth_password_confirm_visibility_button.tooltip_text = "显示确认密码"
-	auth_password_confirm_visibility_button.custom_minimum_size = Vector2(52, 44)
+	auth_password_confirm_visibility_button.custom_minimum_size = Vector2(48, 44)
 	auth_password_confirm_visibility_button.pressed.connect(func() -> void:
 		_toggle_auth_password_visibility(true)
 	)
@@ -8486,7 +8485,8 @@ func _toggle_auth_password_visibility(confirm_field: bool = false) -> void:
 		return
 	input.secret = not input.secret
 	if button != null:
-		button.text = "藏" if not input.secret else "眼"
+		button.text = ""
+		button.set("password_visible", not input.secret)
 		button.tooltip_text = "隐藏密码" if not input.secret else ("显示确认密码" if confirm_field else "显示密码")
 	input.grab_focus()
 

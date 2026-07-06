@@ -34,6 +34,7 @@ var animation_state: String = "idle"
 var animation_time: float = 0.0
 var animation_visual_elapsed: float = IDLE_ANIMATION_STEP_SECONDS
 var controls_enabled: bool = true
+var keyboard_movement_enabled: bool = true
 var last_body_color: Color = Color.TRANSPARENT
 var last_body_position := Vector2(INF, INF)
 var last_body_scale := Vector2(INF, INF)
@@ -98,12 +99,18 @@ func set_controls_enabled(enabled: bool) -> void:
 		_set_animation_state("idle")
 
 
+func set_keyboard_movement_enabled(enabled: bool) -> void:
+	keyboard_movement_enabled = enabled
+
+
 func _physics_process(delta: float) -> void:
 	if not controls_enabled:
 		velocity = Vector2.ZERO
 		_set_animation_state("idle")
 		return
-	var keyboard_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var keyboard_direction := Vector2.ZERO
+	if _can_read_keyboard_movement():
+		keyboard_direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	# Keyboard movement is a developer fallback; the player-facing control is click/tap auto-move.
 	if keyboard_direction.length() > 0.0:
 		has_move_target = false
@@ -131,6 +138,15 @@ func _physics_process(delta: float) -> void:
 	velocity = Vector2.ZERO
 	_set_animation_state("idle")
 	_clamp_to_bounds()
+
+
+func _can_read_keyboard_movement() -> bool:
+	if not keyboard_movement_enabled:
+		return false
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner is Control and not (focus_owner as Control).is_visible_in_tree():
+		return true
+	return not (focus_owner is LineEdit or focus_owner is TextEdit)
 
 
 func _advance_auto_path(distance_budget: float) -> Vector2:

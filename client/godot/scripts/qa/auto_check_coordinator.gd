@@ -14093,6 +14093,24 @@ func _run_auto_auth_check() -> void:
 		confirm_eye_ok = confirm_initial_secret and confirm_visible and host.auth_password_confirm_input.secret
 	host._set_auth_mode(false)
 	var confirm_hides_on_login_ok = host.auth_password_confirm_row != null and not host.auth_password_confirm_row.visible
+	var password_icon_only_ok = (
+		host.auth_password_visibility_button != null
+		and host.auth_password_confirm_visibility_button != null
+		and host.auth_password_visibility_button.text == ""
+		and host.auth_password_confirm_visibility_button.text == ""
+	)
+	var text_input_blocks_movement_ok = false
+	if host.player != null and host.auth_password_input != null:
+		var before_text_input_move: Vector2 = host.player.global_position
+		host.auth_password_input.grab_focus()
+		await host.get_tree().process_frame
+		host._sync_keyboard_movement_input_gate()
+		Input.action_press("move_right")
+		await host.get_tree().physics_frame
+		Input.action_release("move_right")
+		await host.get_tree().physics_frame
+		host.auth_password_input.release_focus()
+		text_input_blocks_movement_ok = host.player.global_position.distance_to(before_text_input_move) < 1.0
 	var plugin_install_ok = AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
 	host.current_account_session = {
 		"username": "codex_auth_gm",
@@ -14136,9 +14154,9 @@ func _run_auto_auth_check() -> void:
 	host._restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
 	host._restore_auth_check_account_store(original_store_exists, original_store_text)
 	host._restore_auth_check_audit_log(original_audit_exists, original_audit_text)
-	var auth_password_ui_ok = mismatch_blocks_register_ok and confirm_visible_ok and password_eye_ok and confirm_eye_ok and confirm_hides_on_login_ok
+	var auth_password_ui_ok = mismatch_blocks_register_ok and confirm_visible_ok and password_eye_ok and confirm_eye_ok and confirm_hides_on_login_ok and password_icon_only_ok and text_input_blocks_movement_ok
 	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and gm_plugin_unlocks and restricted_denies_command and restricted_allows_command else "fail"
-	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
+	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s icon_only=%s text_focus_blocks_move=%s gm_unlocked=%s restricted_denies=%s restricted_allows=%s" % [
 		status,
 		str(player_session_ok),
 		str(remember_ok),
@@ -14149,6 +14167,8 @@ func _run_auto_auth_check() -> void:
 		str(account_panel_opens),
 		str(switch_to_login_ok),
 		str(auth_password_ui_ok),
+		str(password_icon_only_ok),
+		str(text_input_blocks_movement_ok),
 		str(gm_plugin_unlocks),
 		str(restricted_denies_command),
 		str(restricted_allows_command),

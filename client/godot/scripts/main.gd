@@ -1189,6 +1189,7 @@ func _ready() -> void:
 	_layout_hud()
 	_update_hud_text(true)
 	_reset_perf_probe_counters()
+	_sync_keyboard_movement_input_gate()
 	set_process(true)
 	if _startup_auth_login_requested() and not account_authenticated:
 		call_deferred("_apply_startup_auth_login")
@@ -6780,6 +6781,7 @@ func _path_has_same_screen_y(path_cells: Array[Vector2i]) -> bool:
 
 func _process(delta: float) -> void:
 	var frame_start := _perf_now()
+	_sync_keyboard_movement_input_gate()
 	_update_runtime_frame_budget()
 	_flush_profile_save_if_due(delta)
 	if battle_active:
@@ -6975,6 +6977,27 @@ func _input(event: InputEvent) -> void:
 		var touch_event := event as InputEventScreenTouch
 		if touch_event.pressed:
 			_handle_world_pointer_pressed(touch_event.position, false)
+
+
+func _sync_keyboard_movement_input_gate() -> void:
+	if player == null or not player.has_method("set_keyboard_movement_enabled"):
+		return
+	player.set_keyboard_movement_enabled(_game_keyboard_movement_allowed())
+
+
+func _game_keyboard_movement_allowed() -> bool:
+	if not account_authenticated and not auth_auto_bypass:
+		return false
+	if auth_panel != null and auth_panel.visible:
+		return false
+	return not _text_input_has_focus()
+
+
+func _text_input_has_focus() -> bool:
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner is Control and not (focus_owner as Control).is_visible_in_tree():
+		return false
+	return focus_owner is LineEdit or focus_owner is TextEdit
 
 
 func _handle_world_pointer_pressed(screen_point: Vector2, context_only: bool = false, ui_checked: bool = false) -> void:
