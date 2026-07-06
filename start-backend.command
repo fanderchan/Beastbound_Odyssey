@@ -80,8 +80,8 @@ wait_for_health() {
   return 1
 }
 
-printf "\nStarting Beastbound Odyssey backend...\n\n"
-npm run ops -- start
+printf "\nRestarting Beastbound Odyssey backend...\n\n"
+npm run ops -- restart
 start_status=$?
 
 if (( start_status == 0 )); then
@@ -95,9 +95,9 @@ printf "\nLocal URL: http://127.0.0.1:%s\n" "$AUTH_PORT"
 printf "Log file: %s\n" "$SERVER_DIR/.local/dev-server.log"
 
 if (( start_status == 0 )); then
-  printf "\nBackend is started or already running.\n"
+  printf "\nBackend has been restarted.\n"
 else
-  printf "\nBackend startup failed. Check the status output and log file above.\n"
+  printf "\nBackend restart failed. Check the status output and log file above.\n"
 fi
 
 pause_before_close

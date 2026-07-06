@@ -22,8 +22,7 @@ async function main() {
   } else if (command === "stop") {
     stopServer();
   } else if (command === "restart") {
-    stopServer({"quiet": true});
-    await startServer(env);
+    await restartServer(env);
   } else if (command === "backup") {
     backupMysql(env);
   } else if (command === "status") {
@@ -31,6 +30,51 @@ async function main() {
   } else {
     throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup");
   }
+}
+
+async function restartServer(env) {
+  const stopped = stopServer({"quiet": true, "killPort": true, env});
+  await waitForStopped(env, stopped.pids);
+  killPortListeners(env);
+  if (!(await waitForHealthDown(env))) {
+    throw new Error("Unable to stop the existing backend before restart.");
+  }
+  fs.rmSync(pidPath, {"force": true});
+  console.log(JSON.stringify({"ok": true, "restarting": true, "stoppedPids": stopped.pids}, null, 2));
+  await startServer(env);
+}
+
+async function waitForStopped(env, pids = []) {
+  const uniquePids = Array.from(new Set(pids.map((pid) => Number(pid || 0)).filter((pid) => pid > 0)));
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const alivePids = uniquePids.filter((pid) => processAlive(pid));
+    const health = await requestHealth(env).catch(() => null);
+    if (alivePids.length <= 0 && !(health && health.ok)) {
+      return true;
+    }
+    if (attempt === 10) {
+      for (const pid of alivePids) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch (_error) {
+          // The process may have exited between the liveness check and kill.
+        }
+      }
+    }
+    await sleep(250);
+  }
+  return false;
+}
+
+async function waitForHealthDown(env) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const health = await requestHealth(env).catch(() => null);
+    if (!(health && health.ok)) {
+      return true;
+    }
+    await sleep(250);
+  }
+  return false;
 }
 
 async function startServer(env) {
@@ -59,19 +103,73 @@ async function startServer(env) {
 
 function stopServer(options = {}) {
   const pid = readPid();
-  if (!pid) {
+  const pids = [];
+  if (pid) {
+    pids.push(pid);
+  }
+  if (options.killPort) {
+    for (const portPid of portListenerPids(options.env || loadRuntimeEnv())) {
+      if (!pids.includes(portPid)) {
+        pids.push(portPid);
+      }
+    }
+  }
+  if (pids.length <= 0) {
     if (!options.quiet) {
       console.log(JSON.stringify({"ok": true, "stopped": false, "message": "No pid file."}, null, 2));
     }
-    return;
+    return {"ok": true, "stopped": false, pids};
   }
-  if (processAlive(pid)) {
-    process.kill(pid, "SIGTERM");
+  for (const targetPid of pids) {
+    if (processAlive(targetPid)) {
+      process.kill(targetPid, "SIGTERM");
+    }
   }
   fs.rmSync(pidPath, {"force": true});
   if (!options.quiet) {
-    console.log(JSON.stringify({"ok": true, "stopped": true, "pid": pid}, null, 2));
+    console.log(JSON.stringify({"ok": true, "stopped": true, pids}, null, 2));
   }
+  return {"ok": true, "stopped": true, pids};
+}
+
+function killPortListeners(env, signal = "SIGTERM") {
+  const pids = portListenerPids(env);
+  for (const pid of pids) {
+    if (!processAlive(pid)) {
+      continue;
+    }
+    try {
+      process.kill(pid, signal);
+    } catch (_error) {
+      // The process may have exited between lsof and kill.
+    }
+  }
+  return pids;
+}
+
+function portListenerPids(env) {
+  const port = String(env.BEASTBOUND_AUTH_PORT || "8787").trim();
+  if (!/^\d+$/.test(port)) {
+    return [];
+  }
+  try {
+    const output = execFileSync("lsof", [
+      "-nP",
+      `-iTCP:${port}`,
+      "-sTCP:LISTEN",
+      "-t",
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "ignore"]});
+    return Array.from(new Set(output
+      .split(/\s+/)
+      .map((value) => Number(value || 0))
+      .filter((value) => value > 0)));
+  } catch (_error) {
+    return [];
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function printStatus(env) {
