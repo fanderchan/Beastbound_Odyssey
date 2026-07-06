@@ -205,8 +205,9 @@ test("party pve capture advances capture quest and stops hang capture target", (
     "defense": 8,
     "quick": 90,
   });
-  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
-  profile.captureTools = {"capture_net": 1};
+  profile.backpackSlots = [{"itemId": "capture_poison_wuli_net", "count": 1}];
+  profile.captureTools = {"capture_poison_wuli_net": 1};
+  profile.equipmentSlots = {"body": "armor_toxin_wrap"};
   profile.activeQuestId = "quest_capture_wuli";
   profile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "active", "progress": 0}};
   profile.hangSettings = {"captureTargetCount": 1};
@@ -226,7 +227,6 @@ test("party pve capture advances capture quest and stops hang capture target", (
         "level": 3,
         "catchable": true,
         "captureDifficulty": 1,
-        "captureChanceOverride": 1,
         "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
       },
     },
@@ -235,16 +235,28 @@ test("party pve capture advances capture quest and stops hang capture target", (
   const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
   assert.equal(Boolean(player && enemy), true);
-  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+  assert.equal(player.spiritIds.includes("spirit_poison_1"), true);
+  const poisoned = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
+    "actorId": player.actorId,
+    "actionId": "spirit_poison_1",
+    "targetActorId": enemy.actorId,
+  });
+  assert.equal(poisoned.ok, true);
+  assert.equal(poisoned.room.status, "ready");
+  assert.equal(poisoned.turn.events.some((event) => event.eventType === "spirit_poison" && event.statusId === "poison"), true);
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 2,
     "actorId": player.actorId,
     "actionId": "capture",
     "targetActorId": enemy.actorId,
-    "captureToolId": "capture_net",
+    "captureToolId": "capture_poison_wuli_net",
   });
   assert.equal(resolved.ok, true);
   const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
   assert.equal(writeback.capturedPets[0].lineId, "wuli");
+  assert.equal(writeback.capturedPets[0].captureToolId, "capture_poison_wuli_net");
+  assert.equal(writeback.capturedPets[0].captureStatusIds.includes("poison"), true);
   assert.equal(writeback.quests.events.some((entry) => entry.questId === "quest_capture_wuli" && entry.ready === true), true);
   assert.equal(writeback.quests.claimed.length, 0);
   assert.equal(writeback.hang.captureSuccessCount, 1);
@@ -337,6 +349,11 @@ test("party pve spirit event advances battle quest chain from server event log",
   profile.activeQuestId = "quest_use_poison_spirit";
   profile.questStates = {
     "quest_first_victory": {"questId": "quest_first_victory", "status": "claimed", "progress": 1},
+    "quest_buy_spirit_armor": {"questId": "quest_buy_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_spirit_armor": {"questId": "quest_equip_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_use_moist_spirit": {"questId": "quest_use_moist_spirit", "status": "claimed", "progress": 1},
+    "quest_buy_poison_spirit_armor": {"questId": "quest_buy_poison_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_poison_spirit_armor": {"questId": "quest_equip_poison_spirit_armor", "status": "claimed", "progress": 1},
     "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
     "quest_use_poison_spirit": {"questId": "quest_use_poison_spirit", "status": "active", "progress": 0},
   };
@@ -378,6 +395,11 @@ test("party pve spirit event advances battle quest chain from server event log",
   assert.equal(after.ok, true);
   assert.equal(after.profile.questStates.quest_use_poison_spirit.status, "claimed");
   assert.equal(after.profile.questStates.quest_first_victory.status, "claimed");
+  assert.equal(after.profile.questStates.quest_buy_spirit_armor.status, "claimed");
+  assert.equal(after.profile.questStates.quest_equip_spirit_armor.status, "claimed");
+  assert.equal(after.profile.questStates.quest_use_moist_spirit.status, "claimed");
+  assert.equal(after.profile.questStates.quest_buy_poison_spirit_armor.status, "claimed");
+  assert.equal(after.profile.questStates.quest_equip_poison_spirit_armor.status, "claimed");
   assert.equal(after.profile.questStates.quest_training_partner_intro.status, "claimed");
   assert.equal(after.profile.activeQuestId, "quest_capture_wuli");
   assert.equal(after.profile.stoneCoins, 13 + writeback.rewards.stoneCoins + 20);
@@ -385,4 +407,6 @@ test("party pve spirit event advances battle quest chain from server event log",
     sum + (slot && slot.itemId === "weapon_blessed_club" ? Number(slot.count || 0) : 0)
   ), 0);
   assert.equal(blessedClubCount, 1);
+  assert.equal(profileItemCount(after.profile, "capture_poison_wuli_net"), 1);
+  assert.equal(after.profile.captureTools.capture_poison_wuli_net, 1);
 });

@@ -12038,7 +12038,8 @@ func _with_capture_wuli_tutorial_fields(pet: Dictionary) -> Dictionary:
 	next_pet["levelMax"] = int(next_pet.get("level", next_pet.get("levelMax", next_pet.get("levelMin", 1))))
 	next_pet["catchable"] = true
 	next_pet["captureDifficulty"] = 1
-	next_pet["captureChanceOverride"] = 1.0
+	next_pet.erase("captureChanceOverride")
+	next_pet.erase("captureRateOverride")
 	return next_pet
 
 func _should_force_capture_wuli_tutorial(zone: Dictionary) -> bool:
@@ -12544,6 +12545,8 @@ func _quest_messages_for_battle_result(ended_state: Dictionary, result: Dictiona
 				"type": "capture_pet",
 				"formId": str(captured.get("formId", "")),
 				"lineId": str(captured.get("lineId", "")),
+				"captureToolId": str(captured.get("captureToolId", "")),
+				"targetStatusIds": captured.get("captureStatusIds", []),
 				"amount": 1,
 			}))
 	return messages

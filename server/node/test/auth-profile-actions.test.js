@@ -324,6 +324,11 @@ test("training partner action advances the partner tutorial quest server-side", 
   profile.activeQuestId = "quest_training_partner_intro";
   profile.questStates = {
     "quest_first_victory": {"id": "quest_first_victory", "status": "claimed", "progress": 1},
+    "quest_buy_spirit_armor": {"id": "quest_buy_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_spirit_armor": {"id": "quest_equip_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_use_moist_spirit": {"id": "quest_use_moist_spirit", "status": "claimed", "progress": 1},
+    "quest_buy_poison_spirit_armor": {"id": "quest_buy_poison_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_poison_spirit_armor": {"id": "quest_equip_poison_spirit_armor", "status": "claimed", "progress": 1},
     "quest_training_partner_intro": {"id": "quest_training_partner_intro", "status": "active", "progress": 0},
   };
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
@@ -551,7 +556,7 @@ test("server equipment equip validates ownership, swaps equipment, and advances 
   assert.equal(equipped.profile.equipmentInstances.equip_000002.location, "backpack");
   assert.equal(profileItemCount(equipped.profile, "weapon_wooden_club"), 0);
   assert.equal(profileItemCount(equipped.profile, "weapon_stone_dagger"), 1);
-  assert.equal(equipped.profile.activeQuestId, "quest_buy_spirit_armor");
+  assert.equal(equipped.profile.activeQuestId, "quest_first_victory");
   assert.equal(equipped.questMessages.some((message) => String(message).includes("装备木棒")), true);
 
   const missing = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});

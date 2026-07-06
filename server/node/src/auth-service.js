@@ -167,6 +167,7 @@ const ABILITY_RIDING = "riding";
 const RIDE_SKILL_LEVEL_CAP = 200;
 const BATTLE_PET_STORAGE_LIMIT = 20;
 const BATTLE_CAPTURE_TOOL_EMPTY_HAND = "empty_hand";
+const BATTLE_CAPTURE_TOOL_POISON_WULI_NET = "capture_poison_wuli_net";
 const ENCOUNTER_STONE_ITEM_IDS = new Set([
   "encounter_stone_low",
   "encounter_stone_mid",
@@ -8350,6 +8351,8 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
       type: "capture_pet",
       formId: String(pet && pet.formId || ""),
       lineId: String(pet && pet.lineId || ""),
+      captureToolId: String(pet && pet.captureToolId || ""),
+      targetStatusIds: uniqueStringArray(pet && pet.captureStatusIds),
       amount: 1,
       encounterGroupId,
       schemaVersion: 1,
@@ -8749,6 +8752,13 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     if (objectiveFormPrefix !== "" && !eventFormId.startsWith(objectiveFormPrefix)) {
       return 0;
     }
+    if (!questMatchesStringFilter(objective, event, "captureToolId")) {
+      return 0;
+    }
+    const requiredStatusId = String(objective.requiredStatusId || objective.statusId || "").trim();
+    if (requiredStatusId !== "" && !questEventStatusIds(event).includes(requiredStatusId)) {
+      return 0;
+    }
     return Math.max(1, Math.trunc(Number(event.amount || 1)));
   }
   if (type === "deliver_pet") {
@@ -8922,6 +8932,22 @@ function questMatchesStringFilter(objective, event, key) {
 
 function questMatchesItemFilter(objective, event) {
   return questMatchesStringFilter(objective, event, "itemId");
+}
+
+function questEventStatusIds(event) {
+  const result = uniqueStringArray([
+    ...stringArray(event && event.targetStatusIds),
+    ...stringArray(event && event.statusIds),
+  ]);
+  const targetStatusId = String(event && event.targetStatusId || "").trim();
+  const statusId = String(event && event.statusId || "").trim();
+  if (targetStatusId !== "" && !result.includes(targetStatusId)) {
+    result.push(targetStatusId);
+  }
+  if (statusId !== "" && !result.includes(statusId)) {
+    result.push(statusId);
+  }
+  return result;
 }
 
 function questRewardBundle(quest) {
@@ -10873,6 +10899,7 @@ function capturedPetInstanceFromBattleActor(actor, instanceId, state, serial, ro
     capturedBattleRoomId: String(room && room.roomId || ""),
     capturedBattleActorId: String(actor.actorId || ""),
     captureToolId: String(actor.captureToolId || ""),
+    captureStatusIds: uniqueStringArray(actor.captureStatusIds || battleActorActiveStatusIds(actor)),
     individualSeed: `capture:${String(room && (room.seed || room.roomId) || "")}:${formId}:${level}:${serial}`,
     isNew: true,
     schemaVersion: 1,
@@ -12865,6 +12892,8 @@ function publicCapturedPetSummary(pet) {
     defense: Math.max(0, Math.trunc(Number(pet.defense || 0))),
     quick: Math.max(0, Math.trunc(Number(pet.quick || 0))),
     capturedSerial: Math.max(0, Math.trunc(Number(pet.capturedSerial || 0))),
+    captureToolId: String(pet.captureToolId || ""),
+    captureStatusIds: uniqueStringArray(pet.captureStatusIds),
     schemaVersion: 1,
   };
 }
@@ -13426,6 +13455,23 @@ function battleActorHasStatus(actor, statusId) {
   }
   const status = battleActorStatuses(actor)[normalizedStatusId];
   return status && typeof status === "object" && !Array.isArray(status) && Number(status.turns || 0) > 0;
+}
+
+function battleActorActiveStatusIds(actor) {
+  const statuses = battleActorStatuses(actor);
+  return Object.keys(statuses).filter((statusId) => battleActorHasStatus(actor, statusId)).sort();
+}
+
+function battleActorIsWuli(actor) {
+  const lineId = String(actor && actor.lineId || "").trim();
+  if (lineId === "wuli") {
+    return true;
+  }
+  return String(actor && (actor.formId || actor.templateId || actor.speciesId) || "").trim().startsWith("wuli_");
+}
+
+function battlePoisonWuliCaptureConditionMet(target) {
+  return battleActorIsWuli(target) && battleActorHasStatus(target, BATTLE_STATUS_POISON);
 }
 
 function battleStatusLabel(statusId) {
@@ -14294,6 +14340,7 @@ function battleCaptureEvent(room, battle, command, actor, round, sequence) {
     return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
   }
   const hpBefore = Number(target.hp || 0);
+  const targetStatusIds = battleActorActiveStatusIds(target);
   const chance = battleCaptureChance(room, battle, actor, target, toolId);
   const roll = battleCaptureRoll(room, battle, actor, target, toolId, round, sequence);
   const success = chance > 0 && roll < chance;
@@ -14307,6 +14354,7 @@ function battleCaptureEvent(room, battle, command, actor, round, sequence) {
     target.capturedByAccountId = String(actor.accountId || "");
     target.capturedByActorId = String(actor.actorId || "");
     target.captureToolId = toolId;
+    target.captureStatusIds = targetStatusIds;
     target.capturedAtRound = round;
   }
   const hpAfter = Number(target.hp || 0);
@@ -14326,6 +14374,9 @@ function battleCaptureEvent(room, battle, command, actor, round, sequence) {
     targetUsername: target.username,
     targetActorId: target.actorId,
     targetKind: String(target.kind || BATTLE_ACTOR_KIND_WILD_PET),
+    targetFormId: String(target.formId || target.speciesId || ""),
+    targetLineId: String(target.lineId || ""),
+    targetStatusIds,
     actionId: BATTLE_ACTION_CAPTURE,
     captureToolId: toolId,
     captureToolLabel: toolName,
@@ -14359,6 +14410,10 @@ function battleCaptureChance(room, battle, actor, target, toolId) {
   if (String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) !== BATTLE_ACTOR_KIND_PLAYER) {
     return 0;
   }
+  const normalizedToolId = normalizeBattleCaptureToolId(toolId);
+  if (normalizedToolId === BATTLE_CAPTURE_TOOL_POISON_WULI_NET) {
+    return battlePoisonWuliCaptureConditionMet(target) ? 1 : 0;
+  }
   const override = battleOptionalChanceValue(target.captureChanceOverride);
   if (override !== undefined) {
     return override;
@@ -14370,7 +14425,7 @@ function battleCaptureChance(room, battle, actor, target, toolId) {
   let chance = Number(formula.baseChance || 0.42);
   chance -= hpRatio * Number(formula.hpRatioPenalty || 0.22);
   chance -= difficulty * Number(formula.difficultyRatioPenalty || 0.12);
-  chance += battleCaptureToolChanceBonus(toolId);
+  chance += battleCaptureToolChanceBonus(normalizedToolId);
   chance += battleCaptureStatusBonusForActor(target);
   const minChance = Number(formula.minChance || 0.05);
   const maxChance = Number(formula.maxChance || 0.95);

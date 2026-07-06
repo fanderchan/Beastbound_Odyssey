@@ -7644,6 +7644,8 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 		var combat_power := PetPowerModel.combat_power_for_pet(captured)
 		captured["combatPower"] = combat_power
 		captured["capturedSerial"] = serial - 1
+		captured["captureToolId"] = str(actor.get("captureToolId", ""))
+		captured["captureStatusIds"] = _string_array(actor.get("captureStatusIds", BattleStatusModel.active_status_ids(actor)))
 		captured["isNew"] = true
 		if auto_discard_enabled and combat_power < auto_discard_threshold:
 			captured["discardThreshold"] = auto_discard_threshold

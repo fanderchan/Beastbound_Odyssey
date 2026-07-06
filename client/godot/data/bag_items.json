@@ -93,6 +93,16 @@
       "captureToolId": "capture_net_reinforced"
     },
     {
+      "id": "capture_poison_wuli_net",
+      "label": "缚毒捕捉网",
+      "menuLabel": "缚毒网",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": ["capture"],
+      "captureToolId": "capture_poison_wuli_net",
+      "description": "只能捕捉中毒的乌力，满足条件时必定成功。"
+    },
+    {
       "id": "encounter_stone_low",
       "label": "初级遇敌石",
       "menuLabel": "初级遇敌石",

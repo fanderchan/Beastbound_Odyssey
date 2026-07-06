@@ -4034,9 +4034,12 @@ func _quest_equipment_tutorial_profile() -> Dictionary:
 		"quest_use_meat",
 		"quest_buy_weapon",
 		"quest_equip_weapon",
+		"quest_first_victory",
 		"quest_buy_spirit_armor",
 		"quest_equip_spirit_armor",
-		"quest_first_victory",
+		"quest_use_moist_spirit",
+		"quest_buy_poison_spirit_armor",
+		"quest_equip_poison_spirit_armor",
 		"quest_training_partner_intro",
 	]:
 		var quest := QuestModel.quest_for_id(quest_id)
@@ -4050,6 +4053,10 @@ func _quest_equipment_tutorial_profile() -> Dictionary:
 	}
 	profile[PlayerProgressModel.QUEST_STATES_KEY] = states
 	profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = "quest_use_poison_spirit"
+	var equipment_slots := profile.get(PlayerProgressModel.EQUIPMENT_SLOTS_KEY, {}) as Dictionary
+	equipment_slots["head"] = "helm_dew_band"
+	equipment_slots["body"] = "armor_toxin_wrap"
+	profile[PlayerProgressModel.EQUIPMENT_SLOTS_KEY] = equipment_slots
 	return PlayerProgressModel.normalize_profile(profile)
 
 

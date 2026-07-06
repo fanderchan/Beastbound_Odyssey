@@ -118,6 +118,8 @@ static func fallback_tool_ids_for(preferred_tool_id: String, inventory: Dictiona
 	var max_power := capture_power_for(preferred)
 	var result: Array[String] = []
 	for tool_id in tool_ids_by_power(true):
+		if tool_id != preferred and not bool(tool_for_id(tool_id).get("generalFallback", true)):
+			continue
 		if capture_power_for(tool_id) > max_power:
 			continue
 		if not include_unusable and not can_use(inventory, tool_id):

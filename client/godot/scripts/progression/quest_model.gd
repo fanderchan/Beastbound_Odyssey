@@ -71,7 +71,7 @@ const OBJECTIVE_TEMPLATES := {
 		"label": "捕捉宠物",
 		"eventTypes": ["capture_pet"],
 		"requiredAnyFields": ["lineId", "formId", "formIdPrefix"],
-		"summary": "捕捉指定系别、形态或形态前缀的宠物。",
+		"summary": "捕捉指定系别、形态或形态前缀的宠物，可用 captureToolId 和 requiredStatusId 限定捕捉条件。",
 	},
 	"deliver_pet": {
 		"label": "交付宠物",
@@ -614,8 +614,13 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 				return 0
 			if not _matches_string_filter(objective, event, "formId"):
 				return 0
+			if not _matches_string_filter(objective, event, "captureToolId"):
+				return 0
 			var prefix := str(objective.get("formIdPrefix", ""))
 			if prefix != "" and not str(event.get("formId", "")).begins_with(prefix):
+				return 0
+			var required_status_id := str(objective.get("requiredStatusId", objective.get("statusId", ""))).strip_edges()
+			if required_status_id != "" and not _event_status_ids(event).has(required_status_id):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
 		"deliver_pet":
@@ -762,6 +767,14 @@ static func _matches_item_filter(filter_source: Dictionary, event: Dictionary) -
 	if not item_ids.is_empty() and not item_ids.has(item_id):
 		return false
 	return true
+
+
+static func _event_status_ids(event: Dictionary) -> Array[String]:
+	var result := _string_array(event.get("targetStatusIds", event.get("statusIds", [])))
+	var single_status_id := str(event.get("targetStatusId", event.get("statusId", ""))).strip_edges()
+	if single_status_id != "" and not result.has(single_status_id):
+		result.append(single_status_id)
+	return result
 
 
 static func _string_array(value) -> Array[String]:

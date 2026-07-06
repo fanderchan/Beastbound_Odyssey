@@ -40,6 +40,17 @@
       "startingCount": 1,
       "capturePower": 10,
       "chanceBonus": 0.34
+    },
+    {
+      "id": "capture_poison_wuli_net",
+      "label": "缚毒网",
+      "fullName": "缚毒捕捉网",
+      "menuLabel": "缚毒网",
+      "consumable": true,
+      "startingCount": 0,
+      "capturePower": 8,
+      "chanceBonus": 0.0,
+      "generalFallback": false
     }
   ]
 }

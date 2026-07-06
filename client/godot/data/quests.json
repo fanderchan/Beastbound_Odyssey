@@ -263,51 +263,6 @@
           }
         ]
       },
-      "nextQuestId": "quest_buy_spirit_armor"
-    },
-    {
-      "id": "quest_buy_spirit_armor",
-      "title": "认识装备精灵",
-      "giverId": "firebud_equipment_keeper",
-      "turnInId": "firebud_equipment_keeper",
-      "autoClaimOnReady": true,
-      "summary": "购买一件会改变人物可用精灵的装备。",
-      "objective": {
-        "type": "buy_item",
-        "shopId": "firebud_equipment_shop",
-        "itemId": "armor_toxin_wrap",
-        "count": 1,
-        "text": "在火芽装备铺购买毒藤布衣"
-      },
-      "rewards": {
-        "stoneCoins": 0,
-        "items": []
-      },
-      "nextQuestId": "quest_equip_spirit_armor"
-    },
-    {
-      "id": "quest_equip_spirit_armor",
-      "title": "换装改变精灵",
-      "giverId": "firebud_equipment_keeper",
-      "turnInId": "firebud_equipment_keeper",
-      "autoClaimOnReady": true,
-      "summary": "把水纹衣换成毒藤布衣，观察人物精灵变化。",
-      "objective": {
-        "type": "equip_item",
-        "itemId": "armor_toxin_wrap",
-        "slot": "body",
-        "count": 1,
-        "text": "在随身包里装备毒藤布衣"
-      },
-      "rewards": {
-        "stoneCoins": 0,
-        "items": [
-          {
-            "itemId": "item_heal_single_5",
-            "count": 1
-          }
-        ]
-      },
       "nextQuestId": "quest_first_victory"
     },
     {
@@ -331,6 +286,112 @@
             "count": 1
           }
         ]
+      },
+      "nextQuestId": "quest_buy_spirit_armor"
+    },
+    {
+      "id": "quest_buy_spirit_armor",
+      "title": "认识装备精灵1",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "购买一件附带滋润精灵1的装备。",
+      "objective": {
+        "type": "buy_item",
+        "shopId": "firebud_equipment_shop",
+        "itemId": "helm_dew_band",
+        "count": 1,
+        "text": "在火芽装备铺购买露草头带"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
+      "nextQuestId": "quest_equip_spirit_armor"
+    },
+    {
+      "id": "quest_equip_spirit_armor",
+      "title": "装备滋润精灵",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "装备露草头带，让人物获得滋润精灵1。",
+      "objective": {
+        "type": "equip_item",
+        "itemId": "helm_dew_band",
+        "slot": "head",
+        "count": 1,
+        "text": "在随身包里装备露草头带"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [
+          {
+            "itemId": "item_heal_single_5",
+            "count": 1
+          }
+        ]
+      },
+      "nextQuestId": "quest_use_moist_spirit"
+    },
+    {
+      "id": "quest_use_moist_spirit",
+      "title": "战斗中加血",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "进入战斗，使用露草头带提供的滋润精灵1。",
+      "objective": {
+        "type": "use_spirit",
+        "spiritId": "spirit_moist_1",
+        "eventType": "spirit_heal",
+        "encounterGroupId": "firebud_grass_01",
+        "count": 1,
+        "text": "在战斗中使用滋润精灵1为我方加血"
+      },
+      "rewards": {
+        "stoneCoins": 10,
+        "items": []
+      },
+      "nextQuestId": "quest_buy_poison_spirit_armor"
+    },
+    {
+      "id": "quest_buy_poison_spirit_armor",
+      "title": "认识装备精灵2",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "购买毒藤布衣，准备学习毒精灵1。",
+      "objective": {
+        "type": "buy_item",
+        "shopId": "firebud_equipment_shop",
+        "itemId": "armor_toxin_wrap",
+        "count": 1,
+        "text": "在火芽装备铺购买毒藤布衣"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
+      "nextQuestId": "quest_equip_poison_spirit_armor"
+    },
+    {
+      "id": "quest_equip_poison_spirit_armor",
+      "title": "使用毒藤布衣",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "装备毒藤布衣，让人物获得毒精灵1。",
+      "objective": {
+        "type": "equip_item",
+        "itemId": "armor_toxin_wrap",
+        "slot": "body",
+        "count": 1,
+        "text": "在随身包里装备毒藤布衣"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
       },
       "nextQuestId": "quest_training_partner_intro"
     },
@@ -373,6 +434,10 @@
           {
             "itemId": "weapon_blessed_club",
             "count": 1
+          },
+          {
+            "itemId": "capture_poison_wuli_net",
+            "count": 1
           }
         ]
       },
@@ -384,12 +449,14 @@
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": false,
-      "summary": "捕捉一只乌力系宠物。",
+      "summary": "让乌力中毒后，用缚毒捕捉网捕捉它。",
       "objective": {
         "type": "capture_pet",
         "lineId": "wuli",
+        "captureToolId": "capture_poison_wuli_net",
+        "requiredStatusId": "poison",
         "count": 1,
-        "text": "捕捉任意乌力系宠物"
+        "text": "让乌力中毒后，用缚毒捕捉网捕捉乌力"
       },
       "rewards": {
         "stoneCoins": 60,

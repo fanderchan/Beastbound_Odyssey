@@ -43,6 +43,7 @@ const CAPTURE_TOOL_EMPTY_HAND := "empty_hand"
 const CAPTURE_TOOL_ROPE_BASIC := "capture_rope_basic"
 const CAPTURE_TOOL_NET := "capture_net"
 const CAPTURE_TOOL_NET_REINFORCED := "capture_net_reinforced"
+const CAPTURE_TOOL_POISON_WULI_NET := "capture_poison_wuli_net"
 const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
@@ -1493,11 +1494,15 @@ static func _make_capture_event(state: Dictionary, attacker_id: String, target_i
 	var capture_tool_id := CaptureToolCatalog.normalized_tool_id(tool_id)
 	if not has_capture_tool(state, capture_tool_id):
 		return {}
+	var target := actor_by_id(state, target_id)
 	return {
 		"type": "capture",
 		"attackerId": attacker_id,
 		"targetId": target_id,
 		"targetSide": SIDE_ENEMY,
+		"targetFormId": str(target.get("formId", target.get("templateId", ""))),
+		"targetLineId": str(target.get("lineId", "")),
+		"targetStatusIds": BattleStatusModel.active_status_ids(target),
 		"speed": _effective_action_speed(state, attacker_id, "capture"),
 		"sequence": sequence,
 		"captureToolId": capture_tool_id,
@@ -1725,6 +1730,9 @@ static func capture_chance(state: Dictionary, attacker_id: String, target_id: St
 	var target := actor_by_id(state, target_id)
 	if target.is_empty() or not bool(target.get("catchable", false)):
 		return 0.0
+	var normalized_tool_id := CaptureToolCatalog.normalized_tool_id(capture_tool_id)
+	if normalized_tool_id == CAPTURE_TOOL_POISON_WULI_NET:
+		return 1.0 if _poison_wuli_capture_condition_met(target) else 0.0
 	var capture_chance_override = target.get("captureChanceOverride", target.get("captureRateOverride", null))
 	if capture_chance_override != null:
 		return clampf(_rate_value(capture_chance_override, 0.0), 0.0, 1.0)
@@ -1735,7 +1743,7 @@ static func capture_chance(state: Dictionary, attacker_id: String, target_id: St
 	var chance := float(formula.get("baseChance", 0.42))
 	chance -= hp_ratio * float(formula.get("hpRatioPenalty", 0.22))
 	chance -= difficulty * float(formula.get("difficultyRatioPenalty", 0.12))
-	chance += CaptureToolCatalog.chance_bonus_for(capture_tool_id)
+	chance += CaptureToolCatalog.chance_bonus_for(normalized_tool_id)
 	chance += _capture_status_bonus_for_actor(target)
 	return clampf(chance, float(formula.get("minChance", 0.05)), float(formula.get("maxChance", 0.95)))
 
@@ -1771,6 +1779,19 @@ static func _capture_status_bonus_for_actor(actor: Dictionary) -> float:
 	if BattleStatusModel.has_status(actor, STATUS_POISON):
 		bonus += float(status_bonus_dict.get("poison", 0.05))
 	return bonus
+
+
+static func _poison_wuli_capture_condition_met(target: Dictionary) -> bool:
+	if not _actor_is_wuli(target):
+		return false
+	return BattleStatusModel.has_status(target, STATUS_POISON)
+
+
+static func _actor_is_wuli(actor: Dictionary) -> bool:
+	if str(actor.get("lineId", "")).strip_edges() == "wuli":
+		return true
+	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+	return form_id.begins_with("wuli_")
 
 
 static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -2775,12 +2796,15 @@ static func _apply_capture_event(state: Dictionary, event: Dictionary) -> Dictio
 	var target := actors[target_index] as Dictionary
 	var capture_tool_id := CaptureToolCatalog.normalized_tool_id(str(event.get("captureToolId", CAPTURE_TOOL_EMPTY_HAND)))
 	var capture_tool_name := CaptureToolCatalog.full_name_for(capture_tool_id)
+	var target_status_ids := BattleStatusModel.active_status_ids(target)
 	attacker["actionState"] = "capture"
 	var success := bool(event.get("success", false))
 	if success:
 		target["hp"] = 0
 		target["actionState"] = "captured"
 		target["captured"] = true
+		target["captureToolId"] = capture_tool_id
+		target["captureStatusIds"] = target_status_ids
 		if capture_tool_id == CAPTURE_TOOL_EMPTY_HAND:
 			state["message"] = "%s 空手捕捉了 %s。" % [str(attacker.get("name", "我方")), str(target.get("name", "目标"))]
 		else:
