@@ -177,6 +177,7 @@ const RIDE_PET_INSTANCE_ID_KEY := "ridePetInstanceId"
 const PET_REBIRTH_MM_STAGE2_CLAIMED_KEY := "petRebirthMmStage2Claimed"
 const ABILITY_REMOTE_STABLE := "remoteStable"
 const ABILITY_RIDING := "riding"
+const ABILITY_TAMING := "taming"
 const RIDE_SKILL_LEVEL_CAP := 200
 const REBIRTH_COUNT_KEY := RebirthModel.REBIRTH_COUNT_KEY
 const REBIRTH_HISTORY_KEY := RebirthModel.REBIRTH_HISTORY_KEY
@@ -291,13 +292,13 @@ static func default_profile() -> Dictionary:
 		"backpackSlots": BackpackModel.starting_slots(),
 		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
-		"equipmentSlots": starter_equipment_slots(),
+		"equipmentSlots": {},
 		"equipmentInstances": {},
 		"equipmentSlotInstanceIds": {},
 		"nextEquipmentInstanceSerial": 1,
-		"equipmentDurability": _full_equipment_durability_for_slots(starter_equipment_slots()),
-		"equipmentEnhancement": _fresh_equipment_enhancement_for_slots(starter_equipment_slots()),
-		"equipmentWearCounters": _fresh_equipment_wear_counters_for_slots(starter_equipment_slots()),
+		"equipmentDurability": {},
+		"equipmentEnhancement": {},
+		"equipmentWearCounters": {},
 		"equipmentExpPillCharge": {},
 		"equipmentSlotsVersion": EQUIPMENT_SLOTS_VERSION,
 		"equipmentStarterSetVersion": EQUIPMENT_STARTER_SET_VERSION,
@@ -426,6 +427,10 @@ static func has_riding(profile: Dictionary) -> bool:
 	return has_unlocked_ability(profile, ABILITY_RIDING)
 
 
+static func has_taming(profile: Dictionary) -> bool:
+	return has_unlocked_ability(profile, ABILITY_TAMING)
+
+
 static func riding_pet_instance_id(profile: Dictionary) -> String:
 	return str(normalize_profile(profile).get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
 
@@ -448,6 +453,30 @@ static func with_unlocked_ability(profile: Dictionary, ability_id: String) -> Di
 		abilities.append(normalized_id)
 	normalized[UNLOCKED_ABILITIES_KEY] = abilities
 	return normalize_profile(normalized)
+
+
+static func can_tame_pet(profile: Dictionary, instance_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var selected_id := instance_id.strip_edges()
+	if selected_id == "":
+		return {"ok": false, "message": "请选择要驯宠的宠物。"}
+	if not has_unlocked_ability(normalized, ABILITY_TAMING):
+		return {"ok": false, "message": "尚未学会驯宠证。"}
+	var instance := pet_instance_by_id(normalized, selected_id)
+	if instance.is_empty():
+		return {"ok": false, "message": "没有找到这只宠物。"}
+	if not bool(instance.get("tameEligible", false)):
+		return {"ok": false, "message": "%s 还不能驯宠。" % str(instance.get("name", "宠物"))}
+	var state := str(instance.get("state", PET_STATE_STANDBY))
+	if state == PET_STATE_STORAGE:
+		return {"ok": false, "message": "%s 在兽栏里，不能驯宠。" % str(instance.get("name", "宠物"))}
+	if state == PET_STATE_RIDING:
+		return {"ok": false, "message": "%s 正在骑乘，不能驯宠。" % str(instance.get("name", "宠物"))}
+	if state == PET_STATE_REST:
+		return {"ok": false, "message": "%s 正在休息，不能驯宠。" % str(instance.get("name", "宠物"))}
+	if int(instance.get("hp", 0)) <= 0:
+		return {"ok": false, "message": "%s 生命为 0，不能驯宠。" % str(instance.get("name", "宠物"))}
+	return {"ok": true, "message": "%s 可以驯宠。" % str(instance.get("name", "宠物"))}
 
 
 static func can_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary:
@@ -1508,6 +1537,20 @@ static func without_equipment(profile: Dictionary) -> Dictionary:
 		if str(record.get("location", "")) == "equipped":
 			instances.erase(instance_id)
 	normalized[EQUIPMENT_INSTANCES_KEY] = instances
+	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = EQUIPMENT_STARTER_SET_VERSION
+	return normalize_profile(normalized)
+
+
+static func with_starter_equipment(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var slots := starter_equipment_slots()
+	normalized[EQUIPMENT_SLOTS_KEY] = slots
+	normalized[EQUIPMENT_SLOT_INSTANCE_IDS_KEY] = {}
+	normalized[EQUIPMENT_DURABILITY_KEY] = _full_equipment_durability_for_slots(slots)
+	normalized[EQUIPMENT_ENHANCEMENT_KEY] = _fresh_equipment_enhancement_for_slots(slots)
+	normalized[EQUIPMENT_WEAR_COUNTERS_KEY] = _fresh_equipment_wear_counters_for_slots(slots)
+	normalized[EQUIPMENT_EXP_PILL_CHARGE_KEY] = {}
+	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = EQUIPMENT_STARTER_SET_VERSION
 	return normalize_profile(normalized)
 
@@ -5536,6 +5579,8 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 	])
 	if bool(instance.get("locked", false)):
 		lines.append("保护：已锁定")
+	if bool(instance.get("tameEligible", false)):
+		lines.append("驯宠：可放出游街")
 	lines.append_array(PetCultivationModel.detail_lines_for_pet(instance))
 	var initial_stats = instance.get("initialStats", {})
 	if initial_stats is Dictionary:
@@ -6397,6 +6442,8 @@ static func _grant_pet_from_form_egg(profile: Dictionary, item_id: String) -> Di
 	if instance.is_empty():
 		return {"ok": false, "profile": normalized, "message": "%s 模板不存在。" % pet_name}
 	instance["isNew"] = true
+	if item_id == ITEM_NOVICE_BATTLE_PET_EGG or item_id == ITEM_NOVICE_TIGER_EGG:
+		instance["tameEligible"] = true
 	var instances: Array = normalized.get("petInstances", [])
 	instances.append(instance)
 	normalized["petInstances"] = instances
@@ -6489,8 +6536,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	var equipment_slots_version := int(normalized.get(EQUIPMENT_SLOTS_VERSION_KEY, 1))
 	var equipment_slots_value := _normalize_equipment_slots(normalized.get(EQUIPMENT_SLOTS_KEY, {}))
 	var equipment_starter_set_version := int(normalized.get(EQUIPMENT_STARTER_SET_VERSION_KEY, 0))
-	if equipment_starter_set_version < EQUIPMENT_STARTER_SET_VERSION and equipment_slots_value.is_empty():
-		equipment_slots_value = starter_equipment_slots()
+	if equipment_starter_set_version < EQUIPMENT_STARTER_SET_VERSION:
 		equipment_starter_set_version = EQUIPMENT_STARTER_SET_VERSION
 	if equipment_slots_version < 3:
 		for slot_id in EquipmentModel.slot_ids():
@@ -7773,6 +7819,7 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	instance["locked"] = bool(instance.get("locked", false))
+	instance["tameEligible"] = bool(instance.get("tameEligible", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):
 			instance[key] = template.get(key)

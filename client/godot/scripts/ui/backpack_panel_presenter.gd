@@ -99,11 +99,6 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		and item_count > 0
 		and BackpackModel.item_can_world_encounter_stone(item_id)
 	)
-	var can_quick_bind := (
-		item_id != ""
-		and item_count > 0
-		and PlayerProgressModel.item_can_quick_use(item_id)
-	)
 	var can_equip := (
 		item_id != ""
 		and item_count > 0
@@ -120,7 +115,6 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		"canWorldPetEgg": can_world_pet_egg,
 		"canWorldUse": can_world_use,
 		"canWorldEncounterStone": can_world_encounter_stone,
-		"canQuickBind": can_quick_bind,
 		"canEquip": can_equip,
 		"useAsEquipmentOnly": use_as_equipment_only,
 		"useButtonVisible": can_world_use or can_world_encounter_stone or is_equipment,
@@ -128,6 +122,5 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		"useButtonText": "装备" if use_as_equipment_only else "使用",
 		"equipButtonVisible": is_equipment and can_world_player_use,
 		"equipButtonDisabled": not can_equip,
-		"quickBindVisible": can_quick_bind,
 		"targetSelectionAllowed": can_world_pet_use or can_world_player_use,
 	}

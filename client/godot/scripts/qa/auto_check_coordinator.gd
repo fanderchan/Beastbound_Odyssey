@@ -950,9 +950,45 @@ func _run_auto_animation_state_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_pet_follow_check() -> void:
+	host.profile_save_enabled = false
+	host._set_pet_follow_enabled(false)
+	var egg_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), [
+		{"itemId": PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG, "count": 1},
+	])
+	var hatch_result = PlayerProgressModel.use_world_pet_egg_item(egg_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+	egg_profile = hatch_result.get("profile", egg_profile) as Dictionary
+	var pet_instance_id := str(hatch_result.get("instanceId", ""))
 	var hidden_by_default: bool = not host.pet_follow_enabled and not host.pet.visible
-	host._set_pet_follow_enabled(true)
-	var visible_after_ring: bool = host.pet_follow_enabled and host.pet.visible
+	host.player_profile = egg_profile
+	host.pet_selected_instance_id = pet_instance_id
+	host._open_pet_panel()
+	await host.get_tree().process_frame
+	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(24, 24))
+	await host.get_tree().process_frame
+	var no_cert_context_disabled = (
+		host.pet_context_menu != null
+		and host.pet_context_menu.get_item_count() == 1
+		and host.pet_context_menu.get_item_text(0) == "驯宠"
+		and host.pet_context_menu.is_item_disabled(0)
+	)
+	if host.pet_context_menu != null:
+		host.pet_context_menu.hide()
+	host.player_profile = PlayerProgressModel.with_unlocked_ability(egg_profile, PlayerProgressModel.ABILITY_TAMING)
+	host._refresh_pet_panel()
+	await host.get_tree().process_frame
+	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(24, 24))
+	await host.get_tree().process_frame
+	var cert_context_enabled = (
+		host.pet_context_menu != null
+		and host.pet_context_menu.get_item_count() == 1
+		and host.pet_context_menu.get_item_text(0) == "驯宠"
+		and not host.pet_context_menu.is_item_disabled(0)
+	)
+	host._panel_flow()._on_pet_context_menu_id_pressed(1)
+	await host.get_tree().process_frame
+	var visible_after_tame: bool = host.pet_follow_enabled and host.pet.visible and host.pet_follow_instance_id == pet_instance_id
+	host._close_pet_panel()
+	await host.get_tree().process_frame
 	var start_pet_position: Vector2 = host.pet.global_position
 	var target = IsoMapModel.grid_to_world(host.map_data, IsoMapModel.spawn_cell(host.map_data) + Vector2i(5, -5))
 	host._set_click_move_target(host._world_to_screen(target))
@@ -963,11 +999,13 @@ func _run_auto_pet_follow_check() -> void:
 	var pet_clip: String = host.pet.get_animation_clip_key()
 	var follows_player: bool = host.pet.global_position.distance_to(host.player.global_position) < 260.0
 	var pet_clip_ok = pet_clip.begins_with("walk_")
-	var status = "ok" if hidden_by_default and visible_after_ring and pet_moved and pet_walking and pet_clip_ok and follows_player else "failed"
-	print("pet follow check ready: status=%s hidden_by_default=%s visible_after_ring=%s pet_moved=%s pet_walking=%s pet_clip=%s follows_player=%s" % [
+	var status = "ok" if hidden_by_default and no_cert_context_disabled and cert_context_enabled and visible_after_tame and pet_moved and pet_walking and pet_clip_ok and follows_player else "failed"
+	print("pet follow check ready: status=%s hidden_by_default=%s no_cert_disabled=%s cert_enabled=%s visible_after_tame=%s pet_moved=%s pet_walking=%s pet_clip=%s follows_player=%s" % [
 		status,
 		str(hidden_by_default),
-		str(visible_after_ring),
+		str(no_cert_context_disabled),
+		str(cert_context_enabled),
+		str(visible_after_tame),
 		str(pet_moved),
 		str(pet_walking),
 		pet_clip,
@@ -3230,10 +3268,14 @@ func _run_auto_capture_tools_check() -> void:
 	var rope_button_text := ""
 	var net_button_text := ""
 	var reinforced_button_text := ""
+	var poison_wuli_button_text := ""
+	var owned_filter_ok := false
+	var owned_filter_texts: Array[String] = []
 	if target_id != "":
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET, 3)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
 		host.battle_state["serverAuthority"] = true
 		host.battle_state["serverRoomId"] = "capture_tools_server_menu_check"
 		host._set_battle_command_owner("player")
@@ -3259,17 +3301,50 @@ func _run_auto_capture_tools_check() -> void:
 		var rope_button = host.battle_command_buttons.get("spirit") as Button
 		var net_button = host.battle_command_buttons.get("capture") as Button
 		var reinforced_button = host.battle_command_buttons.get("defend") as Button
+		var poison_wuli_button = host.battle_command_buttons.get("item") as Button
 		empty_button_text = empty_button.text if empty_button != null else ""
 		rope_button_text = rope_button.text if rope_button != null else ""
 		net_button_text = net_button.text if net_button != null else ""
 		reinforced_button_text = reinforced_button.text if reinforced_button != null else ""
+		poison_wuli_button_text = poison_wuli_button.text if poison_wuli_button != null else ""
 		menu_open_ok = (
 			host.battle_command_owner == "capture"
 			and empty_button_text == "空手"
 			and rope_button_text == "初级绳 x5"
 			and net_button_text == "捕捉网 x3"
 			and reinforced_button_text == "强化网 x1"
+			and poison_wuli_button_text == "缚毒网 x1"
+			and poison_wuli_button != null
+			and not poison_wuli_button.disabled
 		)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 0)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET, 0)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 0)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
+		host._set_battle_command_owner("capture")
+		host._sync_battle_buttons()
+		owned_filter_texts = host._battle_visible_button_texts()
+		var poison_only_button = host.battle_command_buttons.get("spirit") as Button
+		var hidden_net_button = host.battle_command_buttons.get("capture") as Button
+		var hidden_reinforced_button = host.battle_command_buttons.get("defend") as Button
+		var hidden_old_poison_slot = host.battle_command_buttons.get("item") as Button
+		owned_filter_ok = (
+			owned_filter_texts == ["空手", "缚毒网 x1", "返回"]
+			and poison_only_button != null
+			and not poison_only_button.disabled
+			and hidden_net_button != null
+			and not hidden_net_button.visible
+			and hidden_reinforced_button != null
+			and not hidden_reinforced_button.visible
+			and hidden_old_poison_slot != null
+			and not hidden_old_poison_slot.visible
+		)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET, 3)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
+		host._set_battle_command_owner("capture")
+		host._sync_battle_buttons()
 
 	var model_state = PlayerProgressModel.apply_profile_to_battle_state(
 		host.player_profile,
@@ -3278,6 +3353,7 @@ func _run_auto_capture_tools_check() -> void:
 	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
 	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_NET, 3)
 	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
+	model_state = BattleModel.set_capture_tool_count(model_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
 	var model_target_id = BattleModel.living_enemy_id(model_state)
 	var before_empty = BattleModel.capture_tool_inventory(model_state).duplicate(true)
 	var empty_event = {
@@ -3320,12 +3396,13 @@ func _run_auto_capture_tools_check() -> void:
 	var saw_capture: bool = await host._auto_wait_for_event_type("capture", 1200)
 	var ui_success_ok = saw_capture and bool(host.battle_state.get("lastCaptureSuccess", false)) and str(host.battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 	var reinforced_consumed_ok = PlayerProgressModel.capture_tool_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
-	var status = "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_help_mentions_capture_ok and menu_open_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
-	print("capture tools check ready: status=%s server_main_capture=%s server_help_capture=%s menu=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f log=%s" % [
+	var status = "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s server_main_capture=%s server_help_capture=%s menu=%s owned_filter=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
 		status,
 		str(server_main_capture_enabled_ok),
 		str(server_help_mentions_capture_ok),
 		str(menu_open_ok),
+		str(owned_filter_ok),
 		str(empty_no_consume_ok),
 		str(rope_fail_consumes_ok),
 		str(chance_order_ok),
@@ -3337,6 +3414,8 @@ func _run_auto_capture_tools_check() -> void:
 		reinforced_chance,
 		sleep_chance,
 		float(host.battle_state.get("lastCaptureRoll", -1.0)),
+		poison_wuli_button_text,
+		str(owned_filter_texts),
 		str(host.battle_state.get("message", "")).replace("\n", " / "),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -4472,7 +4551,20 @@ func _run_auto_battle_visual_timing_check() -> void:
 
 func _run_auto_battle_label_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	var label_profile := PlayerProgressModel.default_profile()
+	var label_pet_id := "pet_label_test_bui"
+	var label_pet := PlayerProgressModel.create_pet_instance_from_form(
+		label_pet_id,
+		"我的布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_BATTLE,
+		1
+	)
+	if not label_pet.is_empty():
+		label_profile["petInstances"] = [label_pet]
+		label_profile["activePetInstanceId"] = label_pet_id
+	label_profile = PlayerProgressModel.normalize_profile(label_profile)
+	host.player_profile = label_profile
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found = loaded and not zones.is_empty()
@@ -4511,9 +4603,9 @@ func _run_auto_battle_label_check() -> void:
 		and int(enemy_actor.get("level", 0)) == 3
 		and host._battle_actor_label(enemy_actor) == "高速乌力 Lv3"
 	)
-	host.player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
+	host.player_profile = PlayerProgressModel.with_training_partner_count(label_profile, 4)
 	if zone_found:
-		host._start_battle(host._battle_state_for_encounter_zone(zone))
+		host._start_battle(BattleModel.create_training_partner_battle(zone, 10))
 	await host.get_tree().process_frame
 	var large_actors: Array = host.battle_state.get("actors", []) if host.battle_active else []
 	var large_count_ok = large_actors.size() == 20
@@ -4528,6 +4620,45 @@ func _run_auto_battle_label_check() -> void:
 		and bool(large_long_label_plan.get("fits", false))
 		and bool(large_long_label_plan.get("fullLabel", false))
 	)
+	var battle_menu_buttons_enabled_ok = (
+		host.action_bar != null
+		and host.action_bar.visible
+		and host.codex_menu_button != null
+		and not host.codex_menu_button.disabled
+		and host.quest_menu_button != null
+		and not host.quest_menu_button.disabled
+	)
+	host._open_codex_panel()
+	await host.get_tree().process_frame
+	var codex_in_battle_ok = (
+		host.battle_active
+		and host.codex_panel != null
+		and host.codex_panel.visible
+		and (host.battle_command_panel == null or not host.battle_command_panel.visible)
+	)
+	host._close_codex_panel()
+	await host.get_tree().process_frame
+	var command_after_codex_ok = host.battle_command_panel != null and host.battle_command_panel.visible
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	var quest_actions_read_only_ok = (
+		host.quest_route_button == null
+		or host.quest_route_button.disabled
+	) and (
+		host.quest_claim_button == null
+		or not host.quest_claim_button.visible
+		or host.quest_claim_button.disabled
+	)
+	var quest_in_battle_ok = (
+		host.battle_active
+		and host.quest_panel != null
+		and host.quest_panel.visible
+		and (host.battle_command_panel == null or not host.battle_command_panel.visible)
+		and quest_actions_read_only_ok
+	)
+	host._close_quest_panel()
+	await host.get_tree().process_frame
+	var command_after_quest_ok = host.battle_command_panel != null and host.battle_command_panel.visible
 	for value in large_actors:
 		if not (value is Dictionary):
 			large_labels_ok = false
@@ -4537,8 +4668,9 @@ func _run_auto_battle_label_check() -> void:
 		var label = host._battle_actor_label(large_actor)
 		large_labels_ok = large_labels_ok and label != "" and label.find(" Lv") >= 0
 		large_visible_ok = large_visible_ok and host._battle_should_show_actor_label(large_actor)
-	var status = "ok" if loaded and zone_found and host.battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok and large_long_label_ok else "failed"
-	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s long_label=%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
+	var battle_menu_ok = battle_menu_buttons_enabled_ok and codex_in_battle_ok and command_after_codex_ok and quest_in_battle_ok and command_after_quest_ok
+	var status = "ok" if loaded and zone_found and host.battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok and large_long_label_ok and battle_menu_ok else "failed"
+	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s long_label=%s battle_menu=%s buttons=%s codex=%s quest=%s quest_readonly=%s command_after=%s/%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
 		status,
 		str(player_ok),
 		str(pet_ok),
@@ -4547,6 +4679,13 @@ func _run_auto_battle_label_check() -> void:
 		str(large_labels_ok),
 		str(large_visible_ok),
 		str(large_long_label_ok),
+		str(battle_menu_ok),
+		str(battle_menu_buttons_enabled_ok),
+		str(codex_in_battle_ok),
+		str(quest_in_battle_ok),
+		str(quest_actions_read_only_ok),
+		str(command_after_codex_ok),
+		str(command_after_quest_ok),
 		str(large_long_label_plan),
 		host._battle_actor_label(player_actor),
 		host._battle_actor_label(pet_actor),
@@ -4655,6 +4794,18 @@ func _run_auto_battle_event_ledger_check() -> void:
 	host._play_next_battle_event()
 	var combo_ledger = host.battle_last_event_ledger.duplicate(true)
 	var combo_timeline = combo_ledger.get("timeline", {}) as Dictionary
+	var combo_feedback_text := ""
+	for float_value in host.battle_float_texts:
+		var float_item := float_value as Dictionary
+		var float_text := str(float_item.get("text", ""))
+		if float_text.find("合击") >= 0 and float_text.find("击飞") >= 0:
+			combo_feedback_text = float_text
+			break
+	var combo_feedback_damage_ok = combo_feedback_text.find("-96") >= 0
+	var combo_feedback_width_ok = false
+	if combo_feedback_text != "":
+		var combo_font = host._canvas_text_font()
+		combo_feedback_width_ok = host._battle_float_text_draw_width(combo_font, combo_feedback_text) + 0.5 >= host._font_text_width(combo_font, combo_feedback_text, 21)
 	var trace_has_ledger = false
 	if host.battle_trace_path != "":
 		var trace_file = FileAccess.open(host.battle_trace_path, FileAccess.READ)
@@ -4667,20 +4818,24 @@ func _run_auto_battle_event_ledger_check() -> void:
 	var second_ok = bool(second_ledger.get("retargeted", false)) and str(second_ledger.get("declaredTargetId", "")) == original_target_id and str(second_ledger.get("resolvedTargetId", "")) == second_target_id and second_display_target == second_target_id and int(second_ledger.get("damage", 0)) == expected_second_damage
 	var third_ok = bool(third_ledger.get("retargeted", false)) and str(third_ledger.get("resolvedTargetId", "")) == expected_third_target and third_display_target == expected_third_target and expected_third_target != "" and expected_third_target != original_target_id and expected_third_target != second_target_id
 	var combo_ok = bool(combo_ledger.get("launch", false)) and str(combo_ledger.get("launchMode", "")) == "bounce" and float(combo_timeline.get("damageRevealProgress", 0.0)) > BATTLE_LAUNCH_TARGET_START_RATIO and float(combo_timeline.get("launchStartProgress", 0.0)) >= float(combo_timeline.get("damageRevealProgress", 0.0))
-	var status = "ok" if first_ok and second_ok and third_ok and combo_ok and trace_has_ledger else "failed"
-	print("battle event ledger check ready: status=%s first=%s second=%s third=%s combo=%s trace=%s second_damage=%d expected_second=%d third_target=%s reveal=%.2f launch_start=%.2f" % [
+	var combo_feedback_ok = combo_feedback_damage_ok and combo_feedback_width_ok
+	var status = "ok" if first_ok and second_ok and third_ok and combo_ok and combo_feedback_ok and trace_has_ledger else "failed"
+	print("battle event ledger check ready: status=%s first=%s second=%s third=%s combo=%s combo_feedback=%s combo_feedback_width=%s trace=%s second_damage=%d expected_second=%d third_target=%s reveal=%.2f launch_start=%.2f text=%s" % [
 		status,
 		str(first_ok),
 		str(second_ok),
 		str(third_ok),
 		str(combo_ok),
+		str(combo_feedback_damage_ok),
+		str(combo_feedback_width_ok),
 		str(trace_has_ledger),
 		int(second_ledger.get("damage", 0)),
 		expected_second_damage,
 		expected_third_target,
 		float(combo_timeline.get("damageRevealProgress", 0.0)),
 		float(combo_timeline.get("launchStartProgress", 0.0)),
-		])
+		combo_feedback_text,
+	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_battle_reaction_check() -> void:
@@ -5115,14 +5270,17 @@ func _run_auto_pet_management_check() -> void:
 	var tiger_egg_result = PlayerProgressModel.use_world_pet_egg_item(egg_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG)
 	egg_profile = tiger_egg_result.get("profile", egg_profile) as Dictionary
 	var egg_forms: Array[String] = []
+	var egg_tame_ready := true
 	for egg_pet in PlayerProgressModel.party_pet_instances(egg_profile):
 		egg_forms.append(str(egg_pet.get("formId", "")))
+		egg_tame_ready = egg_tame_ready and bool(egg_pet.get("tameEligible", false))
 	var novice_egg_grant_ok = (
 		bool(battle_egg_result.get("ok", false))
 		and bool(tiger_egg_result.get("ok", false))
 		and PlayerProgressModel.party_pet_instances(egg_profile).size() == 2
 		and egg_forms.has("rebirth_starter_four_spirit_cub")
 		and egg_forms.has("novice_tiger_mount")
+		and egg_tame_ready
 		and PlayerProgressModel.backpack_item_count(egg_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG) == 0
 		and PlayerProgressModel.backpack_item_count(egg_profile, PlayerProgressModel.ITEM_NOVICE_TIGER_EGG) == 0
 	)
@@ -6974,6 +7132,7 @@ func _run_auto_backpack_check() -> void:
 		and PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET) == 0
 		and PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_EXP_PILL_LV131) == 0
 	)
+	host.player_profile = _qa_bui_pet_profile()
 	var slots = PlayerProgressModel.backpack_slots(host.player_profile)
 	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 6)
 	slots = BackpackModel.set_item_count(slots, BattleModel.CAPTURE_TOOL_NET, 3)
@@ -7081,13 +7240,10 @@ func _run_auto_backpack_check() -> void:
 		host._on_battle_command_pressed("help")
 		host._on_battle_command_pressed("capture")
 		var capture_texts = host._battle_visible_button_texts()
-		var reinforced_button = host.battle_command_buttons.get("defend", null)
-		var reinforced_disabled = reinforced_button is Button and (reinforced_button as Button).disabled
 		capture_menu_ok = (
 			host.battle_command_owner == "capture"
 			and host._texts_contain(capture_texts, "捕捉网 x3")
-			and host._button_text_for_battle_command("defend").find("强化网 x0") >= 0
-			and reinforced_disabled
+			and not host._texts_contain(capture_texts, "强化网")
 			and not host._texts_contain(capture_texts, "肉")
 		)
 		host._on_battle_command_pressed("help")
@@ -7123,7 +7279,7 @@ func _run_auto_backpack_check() -> void:
 
 func _run_auto_backpack_world_use_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	var world_use_slots = PlayerProgressModel.backpack_slots(host.player_profile)
 	world_use_slots = BackpackModel.set_item_count(world_use_slots, BattleModel.ITEM_MEAT_SMALL, 3)
 	world_use_slots = BackpackModel.set_item_count(world_use_slots, BattleModel.ITEM_HEAL_SINGLE, 1)
@@ -8103,7 +8259,12 @@ func _run_auto_equipment_shop_preview_check() -> void:
 func _run_auto_equipment_check() -> void:
 	host.profile_save_enabled = false
 	var validation_ok = EquipmentModel.validation_errors().is_empty()
-	var starter_profile = PlayerProgressModel.default_profile()
+	var default_profile = PlayerProgressModel.default_profile()
+	var default_equipment_empty_ok = (
+		PlayerProgressModel.equipment_slots(default_profile).is_empty()
+		and PlayerProgressModel.equipment_spirit_ids(default_profile).is_empty()
+	)
+	var starter_profile = PlayerProgressModel.with_starter_equipment(default_profile)
 	var starter_slots = PlayerProgressModel.equipment_slots(starter_profile)
 	var starter_spirits = PlayerProgressModel.equipment_spirit_ids(starter_profile)
 	var starter_equipment_ok = (
@@ -8265,17 +8426,44 @@ func _run_auto_equipment_check() -> void:
 	host.player_profile = equip_profile
 	host._open_equipment_panel()
 	await host.get_tree().process_frame
-	var equipment_panel_ok = (
-		host.equipment_panel != null
-		and host.equipment_panel.visible
-		and host.equipment_slot_buttons.has(EquipmentModel.SLOT_RIGHT_HAND_WEAPON)
-		and (host.equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON) as Button).text.find("木棒") >= 0
-		and host.equipment_stats_label != null
-		and host.equipment_stats_label.text.find("攻击 18+6=24") >= 0
+	host._panel_flow()._open_equipment_slot_context_menu(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, Vector2(24, 24))
+	await host.get_tree().process_frame
+	var equipment_context_ok = (
+		host.equipment_slot_context_menu != null
+		and host.equipment_slot_context_menu.get_item_count() == 2
+		and host.equipment_slot_context_menu.get_item_text(0) == "装备详情"
+		and host.equipment_slot_context_menu.get_item_text(1) == "卸下"
+		and not host.equipment_slot_context_menu.is_item_disabled(1)
+	)
+	if host.equipment_slot_context_menu != null:
+		host.equipment_slot_context_menu.hide()
+	host._panel_flow()._on_equipment_slot_context_menu_id_pressed(1)
+	await host.get_tree().process_frame
+	var equipment_detail_popup_ok = (
+		host.equipment_detail_popup_panel != null
+		and host.equipment_detail_popup_panel.visible
 		and host.equipment_detail_label != null
 		and host.equipment_detail_label.text.find("攻击 +6") >= 0
-		and host.equipment_unequip_button != null
-		and host.equipment_unequip_button.visible
+		and host.equipment_detail_popup_title_label != null
+		and host.equipment_detail_popup_title_label.text.find("木棒") >= 0
+	)
+	host._panel_flow()._close_equipment_detail_popup(false)
+	var equipment_right_hand_button = host.equipment_slot_buttons.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, null) as Button
+	var equipment_panel_size: Vector2 = host.equipment_panel.size if host.equipment_panel != null else Vector2.ZERO
+	var equipment_panel_visible_ok = host.equipment_panel != null and host.equipment_panel.visible
+	var equipment_panel_size_ok = equipment_panel_size.x <= 700.0 and equipment_panel_size.y <= 470.0
+	var equipment_panel_slot_ok = equipment_right_hand_button != null and equipment_right_hand_button.text.find("木棒") >= 0
+	var equipment_panel_stats_ok = host.equipment_stats_label != null and host.equipment_stats_label.text.find("攻击 18+6=24") >= 0
+	var equipment_panel_popup_closed_ok = host.equipment_detail_popup_panel != null and not host.equipment_detail_popup_panel.visible
+	var equipment_panel_unequip_hidden_ok = host.equipment_unequip_button != null and not host.equipment_unequip_button.visible
+	var equipment_panel_ok = (
+		equipment_panel_visible_ok
+		and equipment_panel_size_ok
+		and equipment_panel_slot_ok
+		and equipment_panel_stats_ok
+		and equipment_panel_popup_closed_ok
+		and equipment_panel_unequip_hidden_ok
+		and host.equipment_slot_context_menu != null
 	)
 	host._on_equipment_unequip_pressed()
 	await host.get_tree().process_frame
@@ -8315,10 +8503,11 @@ func _run_auto_equipment_check() -> void:
 		and PlayerProgressModel.backpack_item_count(extra_sell_profile, "weapon_wooden_club") == 0
 	)
 
-	var status = "ok" if validation_ok and starter_equipment_ok and starter_battle_spirit_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and compare_gain_ok and compare_loss_ok and equipment_panel_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
-	print("equipment check ready: status=%s validation=%s starter=%s starter_spirits=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s compare_gain=%s compare_loss=%s panel=%s panel_unequip=%s swap_panel=%s extra_sell=%s attack=%d coins=%d" % [
+	var status = "ok" if validation_ok and default_equipment_empty_ok and starter_equipment_ok and starter_battle_spirit_ok and catalog_ok and buy_ok and equip_ok and battle_bonus_ok and swap_ok and sell_after_ok and ui_detail_ok and ui_equip_ok and compare_gain_ok and compare_loss_ok and equipment_panel_ok and equipment_context_ok and equipment_detail_popup_ok and equipment_unequip_ui_ok and equipment_swap_panel_ok and extra_sell_ok else "failed"
+	print("equipment check ready: status=%s validation=%s default_empty=%s starter=%s starter_spirits=%s catalog=%s buy=%s equip=%s battle_bonus=%s swap=%s sell_after=%s ui_detail=%s ui_equip=%s compare_gain=%s compare_loss=%s panel=%s context=%s popup=%s panel_visible=%s panel_size_ok=%s panel_slot=%s panel_stats=%s panel_popup_closed=%s panel_unequip_hidden=%s panel_unequip=%s swap_panel=%s extra_sell=%s panel_size=%s popup_visible=%s attack=%d coins=%d" % [
 		status,
 		str(validation_ok),
+		str(default_equipment_empty_ok),
 		str(starter_equipment_ok),
 		str(starter_battle_spirit_ok),
 		str(catalog_ok),
@@ -8332,9 +8521,19 @@ func _run_auto_equipment_check() -> void:
 		str(compare_gain_ok),
 		str(compare_loss_ok),
 		str(equipment_panel_ok),
+		str(equipment_context_ok),
+		str(equipment_detail_popup_ok),
+		str(equipment_panel_visible_ok),
+		str(equipment_panel_size_ok),
+		str(equipment_panel_slot_ok),
+		str(equipment_panel_stats_ok),
+		str(equipment_panel_popup_closed_ok),
+		str(equipment_panel_unequip_hidden_ok),
 		str(equipment_unequip_ui_ok),
 		str(equipment_swap_panel_ok),
 		str(extra_sell_ok),
+		str(equipment_panel_size),
+		str(host.equipment_detail_popup_panel != null and host.equipment_detail_popup_panel.visible),
 		int(player_actor.get("attack", 0)),
 		PlayerProgressModel.stone_coins(sell_after_profile),
 	])
@@ -8417,7 +8616,7 @@ func _run_auto_equipment_synthesis_check() -> void:
 		and not host.equipment_synthesis_action_button.disabled
 		and ui_detail_text.find("硬木棒") >= 0
 		and ui_detail_text.find("初级木质碎片 3/3") >= 0
-		and ui_detail_text.find("攻击 +4") >= 0
+		and ui_detail_text.find("攻击 +9") >= 0
 	)
 	host._on_equipment_synthesis_pressed()
 	await host.get_tree().process_frame
@@ -8462,27 +8661,19 @@ func _run_auto_player_status_check() -> void:
 	var stats_ok = (
 		text.find("见习猎人") >= 0
 		and text.find("Lv1") >= 0
-		and text.find("生命: 120/128") >= 0
-		and text.find("生命 120+8=128") >= 0
-		and text.find("攻击 18+14=32") >= 0
-		and text.find("防御 6+6=12") >= 0
-		and text.find("敏捷 70+7=77") >= 0
+		and text.find("生命: 120/120") >= 0
+		and text.find("生命 120") >= 0
+		and text.find("攻击 18") >= 0
+		and text.find("防御 6") >= 0
+		and text.find("敏捷 70") >= 0
 	)
 	var bonus_ok = (
-		text.find("生命 +8") >= 0
-		and text.find("攻击 +14") >= 0
-		and text.find("防御 +6") >= 0
-		and text.find("敏捷 +7") >= 0
+		text.find("装备加成") >= 0
+		and text.find("装备: 0件生效 / 0件未生效") >= 0
 	)
 	var spirits_ok = (
-		text.find("恩惠精灵1") >= 0
-		and text.find("练习长枪") >= 0
-		and text.find("滋润精灵1") >= 0
-		and text.find("水纹衣") >= 0
-		and text.find("毒精灵1") >= 0
-		and text.find("火芽护符") >= 0
-		and text.find("毒雾精灵1") >= 0
-		and text.find("风纹戒指") >= 0
+		text.find("可用精灵") >= 0
+		and text.find("可用精灵[/color]\n无") >= 0
 	)
 	var record_ok = text.find("火芽村出生点") >= 0
 	var rebirth_ok = text.find("转生: 0转") >= 0 and host.player_status_rebirth_button != null and host.player_status_rebirth_button.text == "转生预览"
@@ -8494,7 +8685,7 @@ func _run_auto_player_status_check() -> void:
 		and host.equipment_panel != null
 		and host.equipment_panel.visible
 		and host.equipment_stats_label != null
-		and host.equipment_stats_label.text.find("攻击 18+14=32") >= 0
+		and host.equipment_stats_label.text.find("攻击 18") >= 0
 	)
 	var status = "ok" if menu_ok and panel_ok and stats_ok and bonus_ok and spirits_ok and record_ok and rebirth_ok and equipment_route_ok else "failed"
 	print("player status check ready: status=%s menu=%s panel=%s stats=%s bonus=%s spirits=%s record=%s rebirth=%s equipment_route=%s" % [
@@ -8543,19 +8734,19 @@ func _run_auto_player_stat_points_check() -> void:
 		and bool(defense_result.get("ok", false))
 		and PlayerProgressModel.player_stat_points(allocated_profile) == 0
 		and int(allocated_base.get("attack", 0)) == 19
-		and int(allocated_current.get("attack", 0)) == 33
+		and int(allocated_current.get("attack", 0)) == 19
 		and int(allocated_base.get("maxHp", 0)) == 124
-		and int(allocated_current.get("maxHp", 0)) == 132
+		and int(allocated_current.get("maxHp", 0)) == 124
 		and int(allocated_player.get("hp", 0)) == 124
 		and int(allocated_base.get("defense", 0)) == 7
-		and int(allocated_current.get("defense", 0)) == 13
+		and int(allocated_current.get("defense", 0)) == 7
 	)
 	var battle_state = host._battle_reward_test_state("player_stat_points_battle", allocated_profile)
 	var player_actor = BattleModel.actor_by_id(battle_state, BattleModel.PLAYER_ACTOR_ID)
 	var battle_ok = (
-		int(player_actor.get("attack", 0)) == 33
-		and int(player_actor.get("maxHp", 0)) == 132
-		and int(player_actor.get("defense", 0)) == 13
+		int(player_actor.get("attack", 0)) == 19
+		and int(player_actor.get("maxHp", 0)) == 124
+		and int(player_actor.get("defense", 0)) == 7
 	)
 	host.player_profile = after_hp
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -8567,9 +8758,9 @@ func _run_auto_player_stat_points_check() -> void:
 	var points_label_ok = host.player_status_points_label != null and host.player_status_points_label.text == "可分配属性点：1"
 	var before_ui_ok = (
 		points_label_ok
-		and status_text.find("生命: 124/132") >= 0
-		and status_text.find("生命 124+8=132") >= 0
-		and status_text.find("攻击 19+14=33") >= 0
+		and status_text.find("生命: 124/124") >= 0
+		and status_text.find("生命 124") >= 0
+		and status_text.find("攻击 19") >= 0
 		and attack_button != null
 		and attack_button.text == "攻击 +1"
 		and not attack_button.disabled
@@ -8583,7 +8774,7 @@ func _run_auto_player_stat_points_check() -> void:
 	var final_points_label_ok = host.player_status_points_label != null and host.player_status_points_label.text == "可分配属性点：0"
 	var final_ui_ok = (
 		final_points_label_ok
-		and final_text.find("防御 7+6=13") >= 0
+		and final_text.find("防御 7") >= 0
 		and defense_button != null
 		and defense_button.disabled
 	)
@@ -10026,7 +10217,7 @@ func _run_auto_equipment_growth_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	var base_profile = PlayerProgressModel.default_profile()
+	var base_profile = PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile())
 	var material_slots = BackpackModel.slots_from_counts({
 		EQUIP_FRAG_WOOD_BASIC_ID: 3,
 		EQUIP_FRAG_HIDE_BASIC_ID: 3,
@@ -10092,7 +10283,7 @@ func _run_auto_equipment_instance_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	var starter_profile = PlayerProgressModel.default_profile()
+	var starter_profile = PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile())
 	var starter_instances = PlayerProgressModel.equipment_instances(starter_profile)
 	var starter_slot_instance_ids = PlayerProgressModel.equipment_slot_instance_ids(starter_profile)
 	var starter_instance_ok = true
@@ -10938,7 +11129,7 @@ func _run_auto_equipment_durability_visual_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	var profile = PlayerProgressModel.default_profile()
+	var profile = PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile())
 	var durability = PlayerProgressModel.equipment_durability(profile)
 	durability[EquipmentModel.SLOT_RIGHT_HAND_WEAPON] = 0
 	durability[EquipmentModel.SLOT_BODY] = 12
@@ -10976,7 +11167,7 @@ func _run_auto_equipment_slot_detail_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile())
 	host._load_map("firebud_village_gate", "from_training_yard")
 	host.equipment_selected_slot_id = EquipmentModel.SLOT_BODY
 	host._open_equipment_panel()
@@ -12364,6 +12555,7 @@ func _run_auto_quest_chain_check() -> void:
 		and bool(riding_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == "quest_try_riding_tiger"
 		and PlayerProgressModel.has_riding(profile)
+		and PlayerProgressModel.has_taming(profile)
 	)
 
 	var battle_pet_hatch_result = PlayerProgressModel.use_world_pet_egg_item(profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
@@ -12744,6 +12936,8 @@ func _run_auto_quest_chain_check() -> void:
 	host.battle_state = {}
 
 	var capture_tutorial_ok = false
+	var poison_capture_menu_ok = false
+	var poison_capture_select_ok = false
 	if spirit_ok and tutorial_grass_loaded and not tutorial_grass_zone.is_empty():
 		host.player_profile = profile.duplicate(true)
 		var forced_capture_zone = host._panel_flow()._progression_encounter_zone(tutorial_grass_zone)
@@ -12776,6 +12970,29 @@ func _run_auto_quest_chain_check() -> void:
 		host._start_battle(tutorial_capture_state)
 		var captured_count := 0
 		if host.battle_active and capture_target_id != "":
+			host._on_battle_command_pressed("capture")
+			await host.get_tree().process_frame
+			var poison_capture_command_id := ""
+			for command_id in host.battle_capture_button_tool_ids.keys():
+				if str(host.battle_capture_button_tool_ids.get(command_id, "")) == BattleModel.CAPTURE_TOOL_POISON_WULI_NET:
+					poison_capture_command_id = str(command_id)
+					break
+			var poison_capture_button = host.battle_command_buttons.get(poison_capture_command_id) as Button
+			poison_capture_menu_ok = (
+				host.battle_command_owner == "capture"
+				and BattleModel.capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET) == 1
+				and poison_capture_command_id != ""
+				and poison_capture_button != null
+				and poison_capture_button.text == "缚毒网 x1"
+				and not poison_capture_button.disabled
+			)
+			if poison_capture_menu_ok:
+				host._on_battle_command_pressed(poison_capture_command_id)
+				await host.get_tree().process_frame
+				poison_capture_select_ok = (
+					host.battle_target_mode == "player_capture_target"
+					and host.battle_pending_capture_tool_id == BattleModel.CAPTURE_TOOL_POISON_WULI_NET
+				)
 			host.battle_state = BattleModel.apply_battle_event(host.battle_state, {
 				"type": "capture",
 				"attackerId": BattleModel.PLAYER_ACTOR_ID,
@@ -12795,6 +13012,8 @@ func _run_auto_quest_chain_check() -> void:
 		var post_ready_zone = host._panel_flow()._progression_encounter_zone(tutorial_grass_zone)
 		capture_tutorial_ok = (
 			tutorial_enemy_ok
+			and poison_capture_menu_ok
+			and poison_capture_select_ok
 			and captured_count == 1
 			and str(capture_tutorial_state.get("status", "")) == QuestModel.STATUS_READY
 			and int(capture_tutorial_state.get("progress", 0)) == 1
@@ -12868,7 +13087,7 @@ func _run_auto_quest_chain_check() -> void:
 		)
 	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -12897,6 +13116,8 @@ func _run_auto_quest_chain_check() -> void:
 		str(spirit_ok),
 		str(spirit_hook_ok),
 		str(capture_tutorial_ok),
+		str(poison_capture_menu_ok),
+		str(poison_capture_select_ok),
 		str(capture_ok),
 		str(rebirth_quest_ok),
 		str(ui_open_ok),
@@ -14627,6 +14848,38 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_equipment_equip.get("equipment", {}) as Dictionary).get("slot", "")) == "right_hand_weapon"
 		and (parsed_equipment_equip.get("questMessages", []) as Array).size() == 1
 	)
+	var equipment_unequip_spec = ServerAuthClientModel.equipment_unequip_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"right_hand_weapon"
+	)
+	var equipment_unequip_request_ok = (
+		str(equipment_unequip_spec.get("url", "")) == "http://127.0.0.1:8787/equipment/unequip"
+		and int(equipment_unequip_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and host._packed_string_array(equipment_unequip_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(equipment_unequip_spec.get("body", "")).find("\"slotId\":\"right_hand_weapon\"") >= 0
+	)
+	var parsed_equipment_unequip = ServerAuthClientModel.parse_equipment_unequip_response(200, JSON.stringify({
+		"ok": true,
+		"profile": {
+			"schemaVersion": 1,
+			"equipmentSlots": {},
+			"backpackSlots": [{"itemId": "weapon_wooden_club", "count": 1}],
+		},
+		"profileSummary": {
+			"playerId": "player_test",
+			"profileRevision": 8,
+		},
+		"equipment": {
+			"itemId": "weapon_wooden_club",
+			"slot": "right_hand_weapon",
+		},
+	}).to_utf8_buffer())
+	var equipment_unequip_parse_ok = (
+		bool(parsed_equipment_unequip.get("ok", false))
+		and int((parsed_equipment_unequip.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 8
+		and str((parsed_equipment_unequip.get("equipment", {}) as Dictionary).get("slot", "")) == "right_hand_weapon"
+	)
 	var saved_shop_equip_profile = host.player_profile.duplicate(true)
 	var saved_shop_equip_session = host.current_account_session.duplicate(true)
 	host.player_profile = PlayerProgressModel.normalize_profile({
@@ -15816,7 +16069,7 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
 	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok else "failed"
-	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok else "failed"
+	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok and equipment_unequip_request_ok and equipment_unequip_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_enhance_request_ok and equipment_enhance_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_repair_request_ok and equipment_repair_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_synthesis_request_ok and equipment_synthesis_parse_ok else "failed"
@@ -15829,7 +16082,7 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
 	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -15839,6 +16092,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(profile_action_request_ok and profile_action_parse_ok),
 		str(shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok),
 		str(equipment_equip_request_ok and equipment_equip_parse_ok),
+		str(equipment_unequip_request_ok and equipment_unequip_parse_ok),
 		str(equipment_enhance_request_ok and equipment_enhance_parse_ok),
 		str(equipment_repair_request_ok and equipment_repair_parse_ok),
 		str(equipment_synthesis_request_ok and equipment_synthesis_parse_ok),
@@ -16177,7 +16431,7 @@ func _run_auto_party_live_check() -> void:
 	var leader_session = leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
 	var member_session = member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
-	var base_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(2, 0)
+	var base_cell = IsoMapModel.spawn_cell(host.map_data)
 	var leader_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", "")),
@@ -16239,7 +16493,7 @@ func _run_auto_party_live_check() -> void:
 		await host.get_tree().process_frame
 	var accepted_party = host.party_current_state.get("party", {}) as Dictionary if host.party_current_state.get("party", {}) is Dictionary else {}
 	var accept_ok = popup_ok and int(accepted_party.get("memberCount", 0)) == 2
-	host._open_party_panel()
+	host._open_party_panel("players")
 	frames = 0
 	while frames < 720 and (host.party_request_pending or not (host.party_current_state.get("party", null) is Dictionary) or host.party_online_players.is_empty()):
 		frames += 1
@@ -21287,79 +21541,57 @@ func _run_auto_quick_slot_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	host.player_profile = host._quick_slot_test_profile(false)
+	var profile := PlayerProgressModel.default_profile()
+	var slots := PlayerProgressModel.backpack_slots(profile)
+	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 2)
+	slots = BackpackModel.set_item_count(slots, "encounter_stone_high", 1)
+	profile = PlayerProgressModel.with_backpack_slots(profile, slots)
+	profile = PlayerProgressModel.with_quick_slot_item(profile, 0, BattleModel.ITEM_MEAT_SMALL)
+	profile = PlayerProgressModel.with_quick_slot_item(profile, 1, "encounter_stone_high")
+	host.player_profile = profile
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
+	host._refresh_quick_bar(true)
+	await host.get_tree().process_frame
+	var quick_bar_removed_ok = host.quick_slot_buttons.is_empty()
 	host._open_backpack_panel()
 	await host.get_tree().process_frame
 	var meat_index = host._backpack_slot_index_for_item(BattleModel.ITEM_MEAT_SMALL)
 	if meat_index >= 0:
 		host._select_backpack_slot(meat_index)
 	await host.get_tree().process_frame
-	var bind_row_ok = (
-		host.backpack_quick_bind_row != null
-		and host.backpack_quick_bind_row.visible
-		and host.backpack_quick_bind_buttons.size() == PlayerProgressModel.QUICK_SLOT_COUNT
-		and not host.backpack_quick_bind_buttons[0].disabled
+	var backpack_bind_removed_ok = (
+		(host.backpack_quick_bind_row == null or not host.backpack_quick_bind_row.visible)
+		and host.backpack_quick_bind_buttons.is_empty()
 	)
-	host._on_backpack_quick_bind_pressed(0)
-	await host.get_tree().process_frame
-	var meat_bound_ok = PlayerProgressModel.quick_slots(host.player_profile)[0] == BattleModel.ITEM_MEAT_SMALL
+	var meat_use_still_ok = (
+		host.backpack_use_button != null
+		and host.backpack_use_button.visible
+		and not host.backpack_use_button.disabled
+	)
 	var stone_index = host._backpack_slot_index_for_item("encounter_stone_high")
 	if stone_index >= 0:
 		host._select_backpack_slot(stone_index)
 	await host.get_tree().process_frame
-	host._on_backpack_quick_bind_pressed(1)
-	await host.get_tree().process_frame
-	var stone_bound_ok = PlayerProgressModel.quick_slots(host.player_profile)[1] == "encounter_stone_high"
-	host._close_backpack_panel()
-	await host.get_tree().process_frame
-	var before_hp = int(PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_bui_main").get("hp", 0))
-	var before_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
-	host._on_quick_slot_pressed(0)
-	await host.get_tree().process_frame
-	var after_hp = int(PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_bui_main").get("hp", 0))
-	var after_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
-	var heal_ok = (
-		after_hp > before_hp
-		and after_meat == before_meat - 1
+	var stone_use_still_ok = (
+		host.backpack_use_button != null
+		and host.backpack_use_button.visible
+		and not host.backpack_use_button.disabled
+	)
+	var legacy_profile_ok = (
+		PlayerProgressModel.quick_slots(host.player_profile).size() == PlayerProgressModel.QUICK_SLOT_COUNT
 		and PlayerProgressModel.quick_slots(host.player_profile)[0] == BattleModel.ITEM_MEAT_SMALL
-		and host.quick_slot_buttons.size() >= 1
-		and host.quick_slot_buttons[0].text.find("肉") >= 0
+		and PlayerProgressModel.quick_slots(host.player_profile)[1] == "encounter_stone_high"
 	)
-	host._move_player_to_encounter_cell(Vector2i(11, 15))
-	var before_stone = PlayerProgressModel.backpack_item_count(host.player_profile, "encounter_stone_high")
-	host._on_quick_slot_pressed(1)
-	await host.get_tree().process_frame
-	var after_stone = PlayerProgressModel.backpack_item_count(host.player_profile, "encounter_stone_high")
-	var stone_ok = (
-		before_stone == 1
-		and after_stone == 0
-		and host._encounter_stone_active()
-		and PlayerProgressModel.quick_slots(host.player_profile)[1] == ""
-		and host.quick_slot_buttons.size() >= 2
-		and host.quick_slot_buttons[1].disabled
-	)
-	var invalid_profile = PlayerProgressModel.with_quick_slot_item(host.player_profile, 2, "weapon_wooden_club")
-	var invalid_ok = PlayerProgressModel.quick_slots(invalid_profile)[2] == ""
-	var status = "ok" if loaded and bind_row_ok and meat_bound_ok and stone_bound_ok and heal_ok and stone_ok and invalid_ok else "failed"
-	print("quick slot check ready: status=%s loaded=%s bind_row=%s meat_bound=%s stone_bound=%s heal=%s stone=%s invalid=%s hp=%d->%d meat=%d->%d stone=%d->%d active=%s quick=%s log=%s" % [
+	var status = "ok" if loaded and quick_bar_removed_ok and backpack_bind_removed_ok and meat_use_still_ok and stone_use_still_ok and legacy_profile_ok else "failed"
+	print("quick slot removal check ready: status=%s loaded=%s quick_bar_removed=%s backpack_bind_removed=%s meat_use=%s stone_use=%s legacy_profile=%s quick=%s" % [
 		status,
 		str(loaded),
-		str(bind_row_ok),
-		str(meat_bound_ok),
-		str(stone_bound_ok),
-		str(heal_ok),
-		str(stone_ok),
-		str(invalid_ok),
-		before_hp,
-		after_hp,
-		before_meat,
-		after_meat,
-		before_stone,
-		after_stone,
-		str(host._encounter_stone_active()),
+		str(quick_bar_removed_ok),
+		str(backpack_bind_removed_ok),
+		str(meat_use_still_ok),
+		str(stone_use_still_ok),
+		str(legacy_profile_ok),
 		str(PlayerProgressModel.quick_slots(host.player_profile)),
-		host.world_log_message,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

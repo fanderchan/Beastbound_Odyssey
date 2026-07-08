@@ -40,6 +40,10 @@ test("profiles sync with revision conflict protection", () => {
   assert.equal(emptyProfile.ok, true);
   assert.equal(emptyProfile.profile.player.name, "同步猎人");
   assert.equal(emptyProfile.profile.player.level, 1);
+  assert.deepEqual(emptyProfile.profile.equipmentSlots, {});
+  assert.deepEqual(emptyProfile.profile.equipmentDurability, {});
+  assert.deepEqual(emptyProfile.profile.equipmentEnhancement, {});
+  assert.deepEqual(emptyProfile.profile.equipmentWearCounters, {});
   assert.equal(emptyProfile.profileSummary.profileRevision, 0);
   assert.equal(emptyProfile.profileSummary.storageMode, "server_document");
 
@@ -306,6 +310,7 @@ test("server world pet eggs hatch pets with default attack and defend skills", (
   const pet = hatched.profile.petInstances.find((entry) => String(entry.instanceId || "") === hatched.result.instanceId);
   assert.equal(Boolean(pet), true);
   assert.equal(pet.formId, "rebirth_starter_four_spirit_cub");
+  assert.equal(pet.tameEligible, true);
   assert.equal(pet.activeSkillIds.includes("pet_attack"), true);
   assert.equal(pet.activeSkillIds.includes("pet_defend"), true);
   assert.deepEqual(pet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
@@ -596,6 +601,17 @@ test("server equipment equip validates ownership, swaps equipment, and advances 
   assert.equal(missing.ok, false);
   assert.equal(missing.code, "equipment_item_missing");
   assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+
+  const unequipped = service.equipmentUnequip(token, {"slotId": "right_hand_weapon"});
+  assert.equal(unequipped.ok, true);
+  assert.equal(unequipped.profileSummary.profileRevision, 3);
+  assert.equal(unequipped.equipment.slot, "right_hand_weapon");
+  assert.equal(unequipped.equipment.itemId, "weapon_wooden_club");
+  assert.equal(unequipped.profile.equipmentSlots.right_hand_weapon, undefined);
+  assert.equal(unequipped.profile.equipmentSlotInstanceIds.right_hand_weapon, undefined);
+  assert.equal(unequipped.profile.equipmentInstances.equip_000001.location, "backpack");
+  assert.equal(profileItemCount(unequipped.profile, "weapon_wooden_club"), 1);
+  assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
 });
 
 test("server equipment enhance validates equipped slot, consumes cost, and updates instance", () => {

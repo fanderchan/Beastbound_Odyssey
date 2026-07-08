@@ -81,6 +81,22 @@ const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const PET_MANAGEMENT_PANEL_MAX_SIZE := Vector2(980.0, 560.0)
 const WORLD_LOG_MAX_LINES := 80
 const CHAT_MAX_MESSAGES := 120
+const PARTY_PANEL_MODE_PARTNERS := "partners"
+const PARTY_PANEL_MODE_PLAYERS := "players"
+
+var party_panel_mode := PARTY_PANEL_MODE_PARTNERS
+var party_partner_tab_button: Button
+var party_player_tab_button: Button
+var party_partner_scroll: ScrollContainer
+var party_partner_section: VBoxContainer
+var party_player_section: Control
+var party_partner_status_label: Label
+var party_partner_slots_container: VBoxContainer
+var party_partner_real_party_label: Label
+var party_partner_add_button: Button
+var party_partner_remove_button: Button
+var party_partner_fill_button: Button
+var party_partner_clear_button: Button
 
 var item_stack_split_panel: PanelContainer
 var item_stack_split_title_label: Label
@@ -108,6 +124,9 @@ const ITEM_SLOT_CONTEXT_DEFAULT := "default"
 const ITEM_SLOT_CONTEXT_QUANTITY := "quantity"
 const ITEM_SLOT_CONTEXT_DISCARD := "discard"
 const ITEM_SLOT_CONTEXT_CLOSE := "close"
+const EQUIPMENT_SLOT_CONTEXT_DETAIL := 1
+const EQUIPMENT_SLOT_CONTEXT_UNEQUIP := 2
+const PET_CONTEXT_TAME := 1
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
@@ -481,12 +500,6 @@ var stop_button:
 		return host.stop_button
 	set(value):
 		host.stop_button = value
-
-var ring_button:
-	get:
-		return host.ring_button
-	set(value):
-		host.ring_button = value
 
 var quick_slot_buttons:
 	get:
@@ -962,6 +975,42 @@ var equipment_unequip_button:
 	set(value):
 		host.equipment_unequip_button = value
 
+var equipment_slot_context_menu:
+	get:
+		return host.equipment_slot_context_menu
+	set(value):
+		host.equipment_slot_context_menu = value
+
+var equipment_context_slot_id:
+	get:
+		return host.equipment_context_slot_id
+	set(value):
+		host.equipment_context_slot_id = value
+
+var equipment_context_screen_position:
+	get:
+		return host.equipment_context_screen_position
+	set(value):
+		host.equipment_context_screen_position = value
+
+var equipment_detail_popup_panel:
+	get:
+		return host.equipment_detail_popup_panel
+	set(value):
+		host.equipment_detail_popup_panel = value
+
+var equipment_detail_popup_title_label:
+	get:
+		return host.equipment_detail_popup_title_label
+	set(value):
+		host.equipment_detail_popup_title_label = value
+
+var equipment_detail_popup_slot_id:
+	get:
+		return host.equipment_detail_popup_slot_id
+	set(value):
+		host.equipment_detail_popup_slot_id = value
+
 var equipment_enhance_button:
 	get:
 		return host.equipment_enhance_button
@@ -1387,6 +1436,24 @@ var pet_drop_button:
 		return host.pet_drop_button
 	set(value):
 		host.pet_drop_button = value
+
+var pet_context_menu:
+	get:
+		return host.pet_context_menu
+	set(value):
+		host.pet_context_menu = value
+
+var pet_context_instance_id:
+	get:
+		return host.pet_context_instance_id
+	set(value):
+		host.pet_context_instance_id = value
+
+var pet_context_screen_position:
+	get:
+		return host.pet_context_screen_position
+	set(value):
+		host.pet_context_screen_position = value
 
 var pet_rename_panel:
 	get:
@@ -4262,12 +4329,6 @@ var backpack_filter_preview:
 	set(value):
 		host.backpack_filter_preview = value
 
-var quick_slot_preview:
-	get:
-		return host.quick_slot_preview
-	set(value):
-		host.quick_slot_preview = value
-
 var player_status_preview:
 	get:
 		return host.player_status_preview
@@ -5805,22 +5866,7 @@ func _build_hud() -> void:
 	stop_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	stop_button.pressed.connect(host._on_hang_button_pressed)
 	action_row.add_child(stop_button)
-	ring_button = Button.new()
-	ring_button.text = "驯宠戒"
-	ring_button.custom_minimum_size = Vector2(76, MIN_TOUCH_BUTTON_SIZE.y)
-	ring_button.pressed.connect(host._toggle_pet_ring)
-	action_row.add_child(ring_button)
 	quick_slot_buttons.clear()
-	for index in range(PlayerProgressModel.QUICK_SLOT_COUNT):
-		var quick_button = Button.new()
-		quick_button.custom_minimum_size = Vector2(72, MIN_TOUCH_BUTTON_SIZE.y)
-		quick_button.add_theme_font_size_override("font_size", 13)
-		var quick_index = index
-		quick_button.pressed.connect(func() -> void:
-			_on_quick_slot_pressed(quick_index)
-		)
-		action_row.add_child(quick_button)
-		quick_slot_buttons.append(quick_button)
 	player_status_menu_button = Button.new()
 	player_status_menu_button.text = "状态"
 	player_status_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -5883,11 +5929,6 @@ func _build_hud() -> void:
 	mailbox_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	mailbox_menu_button.pressed.connect(_open_mailbox_panel)
 	action_row.add_child(mailbox_menu_button)
-	training_partner_menu_button = Button.new()
-	training_partner_menu_button.text = "伙伴"
-	training_partner_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
-	training_partner_menu_button.pressed.connect(_open_training_partner_panel)
-	action_row.add_child(training_partner_menu_button)
 	auto_settings_menu_button = Button.new()
 	auto_settings_menu_button.text = "内挂"
 	auto_settings_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
@@ -6109,24 +6150,8 @@ func _build_hud() -> void:
 	backpack_equip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	backpack_equip_button.pressed.connect(_on_backpack_equip_pressed)
 	backpack_column.add_child(backpack_equip_button)
-	backpack_quick_bind_row = HBoxContainer.new()
-	backpack_quick_bind_row.visible = false
-	backpack_quick_bind_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	backpack_quick_bind_row.add_theme_constant_override("separation", 8)
-	backpack_column.add_child(backpack_quick_bind_row)
+	backpack_quick_bind_row = null
 	backpack_quick_bind_buttons.clear()
-	for index in range(PlayerProgressModel.QUICK_SLOT_COUNT):
-		var quick_bind_button = Button.new()
-		quick_bind_button.text = "快捷%d" % [index + 1]
-		quick_bind_button.custom_minimum_size = Vector2(0, 40)
-		quick_bind_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		quick_bind_button.add_theme_font_size_override("font_size", 15)
-		var quick_bind_index = index
-		quick_bind_button.pressed.connect(func() -> void:
-			_on_backpack_quick_bind_pressed(quick_bind_index)
-		)
-		backpack_quick_bind_row.add_child(quick_bind_button)
-		backpack_quick_bind_buttons.append(quick_bind_button)
 	backpack_target_scroll = ScrollContainer.new()
 	backpack_target_scroll.visible = false
 	backpack_target_scroll.custom_minimum_size = Vector2(0, 112)
@@ -6179,12 +6204,6 @@ func _build_hud() -> void:
 	equipment_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_grid.custom_minimum_size = Vector2(0, 196)
 	equipment_column.add_child(equipment_grid)
-	equipment_detail_label = Label.new()
-	equipment_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	equipment_detail_label.add_theme_font_size_override("font_size", 16)
-	equipment_detail_label.custom_minimum_size = Vector2(0, 88)
-	equipment_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_column.add_child(equipment_detail_label)
 	var equipment_action_row = HBoxContainer.new()
 	equipment_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_action_row.add_theme_constant_override("separation", 8)
@@ -6210,6 +6229,48 @@ func _build_hud() -> void:
 	equipment_synthesis_open_button.pressed.connect(_open_equipment_synthesis_panel)
 	equipment_action_row.add_child(equipment_synthesis_open_button)
 	hud_root.add_child(equipment_panel)
+	equipment_slot_context_menu = PopupMenu.new()
+	equipment_slot_context_menu.name = "EquipmentSlotContextMenu"
+	equipment_slot_context_menu.id_pressed.connect(_on_equipment_slot_context_menu_id_pressed)
+	hud_root.add_child(equipment_slot_context_menu)
+
+	equipment_detail_popup_panel = _panel_container("EquipmentDetailPopupPanel")
+	equipment_detail_popup_panel.visible = false
+	equipment_detail_popup_panel.z_index = 64
+	equipment_detail_popup_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var equipment_detail_popup_column := VBoxContainer.new()
+	equipment_detail_popup_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_detail_popup_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	equipment_detail_popup_column.add_theme_constant_override("separation", 8)
+	equipment_detail_popup_panel.add_child(equipment_detail_popup_column)
+	var equipment_detail_popup_header := HBoxContainer.new()
+	equipment_detail_popup_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_detail_popup_header.add_theme_constant_override("separation", 8)
+	equipment_detail_popup_column.add_child(equipment_detail_popup_header)
+	equipment_detail_popup_title_label = Label.new()
+	equipment_detail_popup_title_label.text = "装备详情"
+	equipment_detail_popup_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	equipment_detail_popup_title_label.add_theme_font_size_override("font_size", 18)
+	equipment_detail_popup_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_detail_popup_header.add_child(equipment_detail_popup_title_label)
+	var equipment_detail_popup_close_button := Button.new()
+	equipment_detail_popup_close_button.text = "关闭"
+	equipment_detail_popup_close_button.custom_minimum_size = Vector2(76, 36)
+	equipment_detail_popup_close_button.pressed.connect(_close_equipment_detail_popup)
+	equipment_detail_popup_header.add_child(equipment_detail_popup_close_button)
+	var equipment_detail_scroll = ScrollContainer.new()
+	equipment_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	equipment_detail_scroll.custom_minimum_size = Vector2(0, 220)
+	equipment_detail_popup_column.add_child(equipment_detail_scroll)
+	equipment_detail_label = Label.new()
+	equipment_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	equipment_detail_label.add_theme_font_size_override("font_size", 16)
+	equipment_detail_label.custom_minimum_size = Vector2.ZERO
+	equipment_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	equipment_detail_scroll.add_child(equipment_detail_label)
+	hud_root.add_child(equipment_detail_popup_panel)
 
 	equipment_synthesis_panel = _panel_container("EquipmentSynthesisPanel")
 	equipment_synthesis_panel.visible = false
@@ -6659,6 +6720,10 @@ func _build_hud() -> void:
 	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
 	pet_button_row.add_child(pet_drop_button)
 	hud_root.add_child(pet_panel)
+	pet_context_menu = PopupMenu.new()
+	pet_context_menu.name = "PetContextMenu"
+	pet_context_menu.id_pressed.connect(_on_pet_context_menu_id_pressed)
+	hud_root.add_child(pet_context_menu)
 	_create_pet_skill_panel()
 	_create_pet_cultivation_panel()
 
@@ -6902,6 +6967,7 @@ func _build_hud() -> void:
 	party_panel = _panel_container("PartyPanel")
 	party_panel.visible = false
 	party_panel.z_index = 24
+	party_panel.clip_contents = true
 	var party_column = VBoxContainer.new()
 	party_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -6912,7 +6978,7 @@ func _build_hud() -> void:
 	party_header.add_theme_constant_override("separation", 10)
 	party_column.add_child(party_header)
 	var party_title_label = Label.new()
-	party_title_label.text = "队伍管理"
+	party_title_label.text = "队伍"
 	party_title_label.add_theme_font_size_override("font_size", 21)
 	party_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_header.add_child(party_title_label)
@@ -6932,18 +6998,122 @@ func _build_hud() -> void:
 	party_close_button.pressed.connect(_close_party_panel)
 	party_header.add_child(party_close_button)
 
+	var party_tab_row = HBoxContainer.new()
+	party_tab_row.add_theme_constant_override("separation", 8)
+	party_column.add_child(party_tab_row)
+	party_partner_tab_button = Button.new()
+	party_partner_tab_button.text = "陪练伙伴"
+	party_partner_tab_button.toggle_mode = true
+	party_partner_tab_button.custom_minimum_size = Vector2(140, 42)
+	party_partner_tab_button.pressed.connect(func() -> void:
+		_set_party_panel_mode(PARTY_PANEL_MODE_PARTNERS)
+	)
+	party_tab_row.add_child(party_partner_tab_button)
+	party_player_tab_button = Button.new()
+	party_player_tab_button.text = "真人组队"
+	party_player_tab_button.toggle_mode = true
+	party_player_tab_button.custom_minimum_size = Vector2(140, 42)
+	party_player_tab_button.pressed.connect(func() -> void:
+		_set_party_panel_mode(PARTY_PANEL_MODE_PLAYERS)
+		_request_party_state()
+	)
+	party_tab_row.add_child(party_player_tab_button)
+
+	party_partner_scroll = ScrollContainer.new()
+	party_partner_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	party_partner_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	party_partner_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	party_column.add_child(party_partner_scroll)
+	party_partner_section = VBoxContainer.new()
+	party_partner_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_section.size_flags_vertical = Control.SIZE_FILL
+	party_partner_section.add_theme_constant_override("separation", 7)
+	party_partner_scroll.add_child(party_partner_section)
+	party_partner_status_label = Label.new()
+	party_partner_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	party_partner_status_label.add_theme_font_size_override("font_size", 15)
+	party_partner_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
+	party_partner_section.add_child(party_partner_status_label)
+	var party_partner_rule_label = Label.new()
+	party_partner_rule_label.text = "真人队友优先占位，陪练伙伴补满剩余位置。"
+	party_partner_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	party_partner_rule_label.add_theme_font_size_override("font_size", 14)
+	party_partner_section.add_child(party_partner_rule_label)
+	var party_partner_slots_title = Label.new()
+	party_partner_slots_title.text = "当前队伍"
+	party_partner_slots_title.add_theme_font_size_override("font_size", 17)
+	party_partner_section.add_child(party_partner_slots_title)
+	party_partner_slots_container = VBoxContainer.new()
+	party_partner_slots_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_slots_container.size_flags_vertical = Control.SIZE_FILL
+	party_partner_slots_container.add_theme_constant_override("separation", 4)
+	party_partner_section.add_child(party_partner_slots_container)
+	var party_partner_button_row = HBoxContainer.new()
+	party_partner_button_row.add_theme_constant_override("separation", 8)
+	party_partner_section.add_child(party_partner_button_row)
+	party_partner_add_button = Button.new()
+	party_partner_add_button.text = "加入"
+	party_partner_add_button.custom_minimum_size = Vector2(0, 40)
+	party_partner_add_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_add_button.pressed.connect(_on_training_partner_add_pressed)
+	party_partner_button_row.add_child(party_partner_add_button)
+	party_partner_remove_button = Button.new()
+	party_partner_remove_button.text = "移除"
+	party_partner_remove_button.custom_minimum_size = Vector2(0, 40)
+	party_partner_remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_remove_button.pressed.connect(_on_training_partner_remove_pressed)
+	party_partner_button_row.add_child(party_partner_remove_button)
+	party_partner_fill_button = Button.new()
+	party_partner_fill_button.text = "加满"
+	party_partner_fill_button.custom_minimum_size = Vector2(0, 40)
+	party_partner_fill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_fill_button.pressed.connect(_on_training_partner_fill_pressed)
+	party_partner_button_row.add_child(party_partner_fill_button)
+	party_partner_clear_button = Button.new()
+	party_partner_clear_button.text = "清空"
+	party_partner_clear_button.custom_minimum_size = Vector2(0, 40)
+	party_partner_clear_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_clear_button.pressed.connect(_on_training_partner_clear_pressed)
+	party_partner_button_row.add_child(party_partner_clear_button)
+	var party_partner_real_party_title = Label.new()
+	party_partner_real_party_title.text = "真人组队"
+	party_partner_real_party_title.add_theme_font_size_override("font_size", 17)
+	party_partner_section.add_child(party_partner_real_party_title)
+	var party_partner_real_party_row = HBoxContainer.new()
+	party_partner_real_party_row.add_theme_constant_override("separation", 8)
+	party_partner_section.add_child(party_partner_real_party_row)
+	party_partner_real_party_label = Label.new()
+	party_partner_real_party_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	party_partner_real_party_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_partner_real_party_label.add_theme_font_size_override("font_size", 14)
+	party_partner_real_party_row.add_child(party_partner_real_party_label)
+	var party_partner_view_players_button = Button.new()
+	party_partner_view_players_button.text = "查看"
+	party_partner_view_players_button.custom_minimum_size = Vector2(82, 36)
+	party_partner_view_players_button.pressed.connect(func() -> void:
+		_set_party_panel_mode(PARTY_PANEL_MODE_PLAYERS)
+		_request_party_state()
+	)
+	party_partner_real_party_row.add_child(party_partner_view_players_button)
+
+	party_player_section = VBoxContainer.new()
+	party_player_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_player_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	party_player_section.add_theme_constant_override("separation", 8)
+	party_column.add_child(party_player_section)
 	party_status_label = Label.new()
 	party_status_label.text = ""
 	party_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	party_status_label.add_theme_font_size_override("font_size", 15)
 	party_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
 	party_status_label.custom_minimum_size = Vector2(0, 30)
-	party_column.add_child(party_status_label)
+	party_player_section.add_child(party_status_label)
 
 	var party_scroll = ScrollContainer.new()
 	party_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	party_column.add_child(party_scroll)
+	party_player_section.add_child(party_scroll)
 	var party_content = VBoxContainer.new()
 	party_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_content.add_theme_constant_override("separation", 10)
@@ -10113,13 +10283,10 @@ func _sync_action_bar_state() -> void:
 	if stop_button != null:
 		stop_button.disabled = false
 	var battle_locked_buttons: Array = [
-		ring_button,
 		player_status_menu_button,
 		bag_menu_button,
 		equipment_menu_button,
 		pet_menu_button,
-		codex_menu_button,
-		quest_menu_button,
 		map_menu_button,
 		chat_menu_button,
 		party_menu_button,
@@ -12835,12 +13002,19 @@ func _open_equipment_panel() -> void:
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_equipment_synthesis_panel(false)
+	_close_equipment_detail_popup(false)
 	equipment_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_equipment_panel()
 	host._layout_hud()
+	host.call_deferred("_layout_hud")
 
 func _close_equipment_panel() -> void:
+	if equipment_slot_context_menu != null:
+		equipment_slot_context_menu.hide()
+	equipment_context_slot_id = ""
+	equipment_context_screen_position = Vector2.ZERO
+	_close_equipment_detail_popup(false)
 	var changed = _hide_control(equipment_panel, false)
 	changed = _hide_control(equipment_synthesis_panel, false) or changed
 	if changed and hud_root != null:
@@ -12866,14 +13040,20 @@ func _open_equipment_synthesis_panel() -> void:
 	_close_mailbox_panel()
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
+	_close_equipment_detail_popup(false)
 	if equipment_synthesis_panel != null:
 		equipment_synthesis_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_equipment_synthesis_panel()
 	host._layout_hud()
+	host.call_deferred("_layout_hud")
 
 func _close_equipment_synthesis_panel(update_layout: bool = true) -> void:
 	_hide_control(equipment_synthesis_panel, update_layout)
+
+func _close_equipment_detail_popup(update_layout: bool = true) -> void:
+	equipment_detail_popup_slot_id = ""
+	_hide_control(equipment_detail_popup_panel, update_layout)
 
 func _open_player_status_panel() -> void:
 	if battle_active:
@@ -13241,6 +13421,9 @@ func _refresh_equipment_panel() -> void:
 		var button = Button.new()
 		button.toggle_mode = true
 		button.button_pressed = slot_id == equipment_selected_slot_id
+		button.clip_text = true
+		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		button.custom_minimum_size = Vector2.ZERO
 		button.add_theme_font_size_override("font_size", 14)
 		var slot_rect = _equipment_slot_anchor_rect(slot_id)
 		button.anchor_left = slot_rect.position.x
@@ -13259,6 +13442,9 @@ func _refresh_equipment_panel() -> void:
 		var selected_slot_id = slot_id
 		button.pressed.connect(func() -> void:
 			_select_equipment_slot(selected_slot_id)
+		)
+		button.gui_input.connect(func(event: InputEvent) -> void:
+			_on_equipment_slot_button_gui_input(event, selected_slot_id)
 		)
 		equipment_grid.add_child(button)
 		equipment_slot_buttons[slot_id] = button
@@ -13358,35 +13544,54 @@ func _equipment_slot_anchor_rect(slot_id: String) -> Rect2:
 			return Rect2(0.05, 0.72, 0.24, 0.24)
 	return Rect2(0.0, 0.0, 0.24, 0.24)
 
-func _refresh_equipment_detail() -> void:
-	if equipment_detail_label == null:
-		return
+func _equipment_detail_lines_for_slot(slot_id: String) -> Array[String]:
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return ["装备详情", "请选择装备槽位。"]
 	var equipped = PlayerProgressModel.equipment_slots(player_profile)
-	var item_id = str(equipped.get(equipment_selected_slot_id, ""))
+	var item_id = str(equipped.get(slot_id, ""))
 	var lines: Array[String] = [
-		"%s" % EquipmentModel.slot_label_for(equipment_selected_slot_id),
+		"%s" % EquipmentModel.slot_label_for(slot_id),
 	]
 	if item_id == "":
 		lines.append("未装备")
-		lines.append_array(_equipment_slot_recommendation_lines(equipment_selected_slot_id))
+		lines.append_array(_equipment_slot_recommendation_lines(slot_id))
 	else:
 		lines.append(EquipmentModel.label_for(item_id))
-		var enhance_text = PlayerProgressModel.equipment_enhance_text(player_profile, equipment_selected_slot_id)
+		var enhance_text = PlayerProgressModel.equipment_enhance_text(player_profile, slot_id)
 		if enhance_text != "":
 			lines.append(enhance_text)
-		var durability_text = PlayerProgressModel.equipment_slot_durability_text(player_profile, equipment_selected_slot_id)
+		var durability_text = PlayerProgressModel.equipment_slot_durability_text(player_profile, slot_id)
 		if durability_text != "":
 			lines.append(durability_text)
-		if not _equipment_slot_meets_requirements_for_ui(equipment_selected_slot_id, item_id):
+		if not _equipment_slot_meets_requirements_for_ui(slot_id, item_id):
 			lines.append("需求未满足，装备暂不生效。")
 		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, false))
-		if equipment_selected_slot_id == EquipmentModel.SLOT_EXP_PILL:
+		if slot_id == EquipmentModel.SLOT_EXP_PILL:
 			lines.append_array(_equipment_exp_pill_charge_lines())
-		lines.append_array(_equipment_current_spirit_source_lines(equipment_selected_slot_id, item_id))
-		lines.append_array(_equipment_unequip_impact_lines(equipment_selected_slot_id))
-	equipment_detail_label.text = "\n".join(lines)
+		lines.append_array(_equipment_current_spirit_source_lines(slot_id, item_id))
+		lines.append_array(_equipment_unequip_impact_lines(slot_id))
+	return lines
+
+func _equipment_detail_popup_title_for_slot(slot_id: String) -> String:
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return "装备详情"
+	var item_id = str(PlayerProgressModel.equipment_slots(player_profile).get(slot_id, ""))
+	if item_id == "":
+		return "%s详情" % EquipmentModel.slot_label_for(slot_id)
+	return EquipmentModel.label_for(item_id)
+
+func _refresh_equipment_detail() -> void:
+	var equipped = PlayerProgressModel.equipment_slots(player_profile)
+	var item_id = str(equipped.get(equipment_selected_slot_id, ""))
+	var popup_slot_id: String = equipment_selected_slot_id
+	if equipment_detail_popup_panel != null and equipment_detail_popup_panel.visible and EquipmentModel.slot_ids().has(equipment_detail_popup_slot_id):
+		popup_slot_id = equipment_detail_popup_slot_id
+	if equipment_detail_label != null:
+		equipment_detail_label.text = "\n".join(_equipment_detail_lines_for_slot(popup_slot_id))
+	if equipment_detail_popup_title_label != null:
+		equipment_detail_popup_title_label.text = _equipment_detail_popup_title_for_slot(popup_slot_id) if equipment_detail_popup_panel != null and equipment_detail_popup_panel.visible else "装备详情"
 	if equipment_unequip_button != null:
-		equipment_unequip_button.visible = item_id != ""
+		equipment_unequip_button.visible = false
 		equipment_unequip_button.disabled = item_id == "" or _equipment_slot_unequip_locked(equipment_selected_slot_id)
 	if equipment_enhance_button != null:
 		var quote = PlayerProgressModel.equipment_enhance_quote(player_profile, equipment_selected_slot_id)
@@ -13403,6 +13608,31 @@ func _refresh_equipment_detail() -> void:
 		else:
 			equipment_enhance_button.text = "强化"
 			equipment_enhance_button.tooltip_text = str(quote.get("message", ""))
+
+func _show_equipment_detail_popup(slot_id: String, screen_position: Vector2 = Vector2.INF) -> void:
+	if equipment_detail_popup_panel == null or equipment_detail_label == null:
+		return
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return
+	equipment_selected_slot_id = slot_id
+	equipment_detail_popup_slot_id = slot_id
+	_refresh_equipment_panel()
+	if equipment_detail_popup_title_label != null:
+		equipment_detail_popup_title_label.text = _equipment_detail_popup_title_for_slot(slot_id)
+	equipment_detail_label.text = "\n".join(_equipment_detail_lines_for_slot(slot_id))
+	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
+	var panel_size := Vector2(minf(380.0, viewport_size.x - 32.0), minf(330.0, viewport_size.y - 32.0))
+	equipment_detail_popup_panel.size = panel_size
+	var next_position := screen_position + Vector2(10.0, 10.0)
+	if screen_position == Vector2.INF:
+		next_position = Vector2((viewport_size.x - panel_size.x) * 0.5, (viewport_size.y - panel_size.y) * 0.5)
+	next_position.x = clampf(next_position.x, 8.0, maxf(8.0, viewport_size.x - panel_size.x - 8.0))
+	next_position.y = clampf(next_position.y, 8.0, maxf(8.0, viewport_size.y - panel_size.y - 8.0))
+	equipment_detail_popup_panel.position = next_position
+	equipment_detail_popup_panel.visible = true
+	equipment_detail_popup_panel.move_to_front()
+	if hud_root != null:
+		host._layout_hud()
 
 func _equipment_slot_recommendation_lines(slot_id: String) -> Array[String]:
 	var lines: Array[String] = [
@@ -13658,10 +13888,63 @@ func _rebirth_equipment_warning_lines_for_ui() -> Array[String]:
 	]
 
 func _select_equipment_slot(slot_id: String) -> void:
+	_close_equipment_detail_popup(false)
 	equipment_selected_slot_id = slot_id
 	_refresh_equipment_panel()
 
+func _on_equipment_slot_button_gui_input(event: InputEvent, slot_id: String) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_RIGHT or not mouse_event.pressed:
+		return
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return
+	equipment_selected_slot_id = slot_id
+	for button_slot_id in equipment_slot_buttons.keys():
+		var button = equipment_slot_buttons.get(button_slot_id, null) as Button
+		if button != null:
+			button.button_pressed = str(button_slot_id) == slot_id
+	_refresh_equipment_detail()
+	_close_equipment_detail_popup(false)
+	_open_equipment_slot_context_menu(slot_id, mouse_event.global_position)
+	if host != null and host.get_viewport() != null:
+		host.get_viewport().set_input_as_handled()
+
+func _open_equipment_slot_context_menu(slot_id: String, screen_position: Vector2) -> void:
+	if equipment_slot_context_menu == null:
+		return
+	equipment_context_slot_id = slot_id
+	equipment_context_screen_position = screen_position
+	var equipped = PlayerProgressModel.equipment_slots(player_profile)
+	var item_id = str(equipped.get(slot_id, ""))
+	equipment_slot_context_menu.clear()
+	equipment_slot_context_menu.add_item("装备详情", EQUIPMENT_SLOT_CONTEXT_DETAIL)
+	equipment_slot_context_menu.add_item("卸下", EQUIPMENT_SLOT_CONTEXT_UNEQUIP)
+	equipment_slot_context_menu.set_item_disabled(1, item_id == "" or _equipment_slot_unequip_locked(slot_id) or equipment_action_request_pending)
+	equipment_slot_context_menu.position = Vector2i(roundi(screen_position.x), roundi(screen_position.y))
+	equipment_slot_context_menu.popup()
+
+func _on_equipment_slot_context_menu_id_pressed(id: int) -> void:
+	var slot_id: String = str(equipment_context_slot_id)
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return
+	equipment_selected_slot_id = slot_id
+	_refresh_equipment_panel()
+	match id:
+		EQUIPMENT_SLOT_CONTEXT_DETAIL:
+			_show_equipment_detail_popup(slot_id, equipment_context_screen_position)
+			return
+		EQUIPMENT_SLOT_CONTEXT_UNEQUIP:
+			await _on_equipment_unequip_pressed()
+
 func _on_equipment_unequip_pressed() -> void:
+	if equipment_action_request_pending:
+		return
+	_close_equipment_detail_popup(false)
+	if _is_server_account_session():
+		await _submit_server_equipment_unequip(equipment_selected_slot_id)
+		return
 	if _local_profile_mutation_blocked_for_server_only("卸下装备"):
 		return
 	var result = PlayerProgressModel.unequip_slot(player_profile, equipment_selected_slot_id)
@@ -13670,6 +13953,44 @@ func _on_equipment_unequip_pressed() -> void:
 		host._save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_equipment_panel()
+	if status_label != null:
+		host._update_hud_text()
+
+func _submit_server_equipment_unequip(slot_id: String) -> void:
+	if slot_id == "" or not _is_server_account_session():
+		return
+	equipment_action_request_pending = true
+	_refresh_equipment_panel()
+	var response = await host._auto_http_request_spec(ServerAuthClientModel.equipment_unequip_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		slot_id
+	))
+	equipment_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed = ServerAuthClientModel.parse_equipment_unequip_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines: Array[String] = [_server_player_message(parsed, "卸下失败。")]
+	if bool(parsed.get("ok", false)):
+		var server_profile = parsed.get("profile", null)
+		if server_profile is Dictionary:
+			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
+			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+			if profile_save_enabled:
+				PlayerProgressModel.save_profile(player_profile)
+			host._mark_progress_ui_caches_dirty()
+		else:
+			log_lines = ["卸下成功，但服务器没有返回档案，请重新拉取。"]
+			_queue_server_profile_pull()
+	else:
+		if _handle_session_invalid_response(parsed):
+			return
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			_apply_server_profile_summary(summary as Dictionary)
+	_set_world_log_message("\n".join(log_lines))
+	_refresh_equipment_panel()
+	_refresh_backpack_panel()
 	if status_label != null:
 		host._update_hud_text()
 
@@ -13951,8 +14272,6 @@ func _refresh_backpack_panel() -> void:
 				backpack_use_button.visible = false
 			if backpack_equip_button != null:
 				backpack_equip_button.visible = false
-			if backpack_quick_bind_row != null:
-				backpack_quick_bind_row.visible = false
 			backpack_pending_use_item_id = ""
 			_clear_backpack_target_buttons()
 			if backpack_target_scroll != null:
@@ -13964,8 +14283,6 @@ func _refresh_backpack_panel() -> void:
 				backpack_use_button.visible = false
 			if backpack_equip_button != null:
 				backpack_equip_button.visible = false
-			if backpack_quick_bind_row != null:
-				backpack_quick_bind_row.visible = false
 			backpack_pending_use_item_id = ""
 			_clear_backpack_target_buttons()
 			if backpack_target_scroll != null:
@@ -13988,12 +14305,6 @@ func _refresh_backpack_panel() -> void:
 		if backpack_equip_button != null:
 			backpack_equip_button.visible = bool(item_actions.get("equipButtonVisible", false))
 			backpack_equip_button.disabled = equipment_action_request_pending or bool(item_actions.get("equipButtonDisabled", true))
-		if backpack_quick_bind_row != null:
-			backpack_quick_bind_row.visible = bool(item_actions.get("quickBindVisible", false))
-		for index in range(backpack_quick_bind_buttons.size()):
-			var quick_bind_button = backpack_quick_bind_buttons[index]
-			quick_bind_button.disabled = not bool(item_actions.get("canQuickBind", false))
-			quick_bind_button.text = "快捷%d" % [index + 1]
 		if not bool(item_actions.get("targetSelectionAllowed", false)) or backpack_pending_use_item_id != selected_item_id:
 			backpack_pending_use_item_id = ""
 			_clear_backpack_target_buttons()
@@ -14175,56 +14486,8 @@ func _unlock_backpack_slot_from_dialog() -> void:
 	host._update_dialog_text()
 
 func _refresh_quick_bar(force: bool = false) -> void:
-	if quick_slot_buttons.is_empty():
-		return
-	var slots = _quick_slots_for_hud()
-	var states: Array[Dictionary] = []
-	var signature_parts: Array[String] = [str(battle_active), str(encounter_active)]
-	for index in range(quick_slot_buttons.size()):
-		var item_id = slots[index] if index < slots.size() else ""
-		var text = "快%d\n-" % [index + 1]
-		var disabled = true
-		if item_id == "":
-			signature_parts.append("%d:-:0:1" % index)
-		else:
-			var count = _backpack_item_count_for_hud(item_id)
-			text = "%s\nx%d" % [BackpackModel.menu_label_for(item_id), count]
-			disabled = battle_active or encounter_active or count <= 0
-			signature_parts.append("%d:%s:%d:%d" % [index, item_id, count, 1 if disabled else 0])
-		states.append({
-			"text": text,
-			"disabled": disabled,
-		})
-	var signature = "|".join(signature_parts)
-	if not force and signature == quick_bar_signature_cache:
-		return
-	quick_bar_signature_cache = signature
-	for index in range(quick_slot_buttons.size()):
-		var button = quick_slot_buttons[index]
-		var state = states[index]
-		var next_text = str(state.get("text", ""))
-		var next_disabled = bool(state.get("disabled", true))
-		if button.text != next_text:
-			button.text = next_text
-		if button.disabled != next_disabled:
-			button.disabled = next_disabled
-
-func _quick_slots_for_hud() -> Array[String]:
-	var result: Array[String] = []
-	var raw_slots = player_profile.get("quickSlots", [])
-	if raw_slots is Array:
-		var quick_values = raw_slots as Array
-		for raw_item_id in quick_values:
-			var item_id = str(raw_item_id).strip_edges()
-			result.append(item_id if PlayerProgressModel.item_can_quick_use(item_id) else "")
-			if result.size() >= quick_slot_buttons.size():
-				break
-	while result.size() < quick_slot_buttons.size():
-		result.append("")
-	return result
-
-func _backpack_item_count_for_hud(item_id: String) -> int:
-	return _backpack_item_count_for_ui(item_id)
+	quick_slot_buttons.clear()
+	quick_bar_signature_cache = ""
 
 func _profile_stone_coins_for_ui() -> int:
 	return maxi(0, int(player_profile.get(PlayerProgressModel.STONE_COINS_KEY, PlayerProgressModel.DEFAULT_STONE_COINS)))
@@ -14283,87 +14546,6 @@ func _backpack_available_capacity_for_ui(item_id: String, slots: Array[Dictionar
 		elif slot_item_id == "":
 			total += stack_limit
 	return total
-
-func _on_backpack_quick_bind_pressed(slot_index: int) -> void:
-	var item_id = _selected_backpack_item_id()
-	if item_id == "" or not PlayerProgressModel.item_can_quick_use(item_id):
-		return
-	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
-		_set_world_log_message("%s 不够了。" % BackpackModel.label_for(item_id))
-		return
-	player_profile = PlayerProgressModel.with_quick_slot_item(player_profile, slot_index, item_id)
-	if profile_save_enabled:
-		host._save_player_profile_now()
-	_set_world_log_message("%s 已绑定到快捷%d。" % [BackpackModel.label_for(item_id), slot_index + 1])
-	_refresh_backpack_panel()
-	_refresh_quick_bar()
-
-func _on_quick_slot_pressed(slot_index: int) -> void:
-	if battle_active or encounter_active:
-		return
-	var slots = PlayerProgressModel.quick_slots(player_profile)
-	if slot_index < 0 or slot_index >= slots.size():
-		return
-	var item_id = str(slots[slot_index])
-	if item_id == "":
-		return
-	if PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0:
-		player_profile = PlayerProgressModel.clear_quick_slot(player_profile, slot_index)
-		if profile_save_enabled:
-			host._save_player_profile_now()
-		_set_world_log_message("快捷%d没有可用道具。" % [slot_index + 1])
-		_refresh_quick_bar()
-		return
-	if BackpackModel.item_can_world_encounter_stone(item_id):
-		await _use_backpack_encounter_stone(item_id)
-		_clear_empty_quick_slot_item(item_id)
-		_refresh_quick_bar()
-		return
-	if BackpackModel.item_can_world_pet_heal(item_id):
-		var target_id = _quick_pet_heal_target_id(item_id)
-		if target_id == "":
-			_set_world_log_message("队伍宠物生命已满。")
-			return
-		await _use_world_pet_heal_item_and_log(item_id, target_id)
-		_clear_empty_quick_slot_item(item_id)
-		_refresh_quick_bar()
-
-func _quick_pet_heal_target_id(item_id: String) -> String:
-	if not BackpackModel.item_can_world_pet_heal(item_id):
-		return ""
-	var allow_full_hp_use = BackpackModel.world_pet_heal_allows_full_hp_use(item_id)
-	var party = PlayerProgressModel.party_pet_instances(player_profile)
-	var active_id = str(player_profile.get("activePetInstanceId", ""))
-	for pet in party:
-		if str(pet.get("instanceId", "")) != active_id:
-			continue
-		var active_max_hp = maxi(1, int(pet.get("maxHp", 1)))
-		var active_hp = clampi(int(pet.get("hp", active_max_hp)), 0, active_max_hp)
-		if active_hp < active_max_hp or allow_full_hp_use:
-			return active_id
-	for pet in party:
-		var max_hp = maxi(1, int(pet.get("maxHp", 1)))
-		var hp = clampi(int(pet.get("hp", max_hp)), 0, max_hp)
-		if hp < max_hp or allow_full_hp_use:
-			return str(pet.get("instanceId", ""))
-	return ""
-
-func _clear_empty_quick_slot_item(item_id: String) -> void:
-	if item_id == "" or PlayerProgressModel.backpack_item_count(player_profile, item_id) > 0:
-		return
-	var slots = PlayerProgressModel.quick_slots(player_profile)
-	var changed = false
-	for index in range(slots.size()):
-		if slots[index] == item_id:
-			slots[index] = ""
-			changed = true
-	if not changed:
-		return
-	var normalized = PlayerProgressModel.normalize_profile(player_profile)
-	normalized[PlayerProgressModel.QUICK_SLOTS_KEY] = slots
-	player_profile = PlayerProgressModel.normalize_profile(normalized)
-	if profile_save_enabled:
-		host._save_player_profile_now()
 
 func _player_level_for_ui() -> int:
 	var player_value = player_profile.get("player", {})
@@ -16014,6 +16196,10 @@ func _open_pet_panel(stable_access_override: bool = false) -> void:
 	host._layout_hud()
 
 func _close_pet_panel() -> void:
+	if pet_context_menu != null:
+		pet_context_menu.hide()
+	pet_context_instance_id = ""
+	pet_context_screen_position = Vector2.ZERO
 	var changed = _hide_control(pet_panel, false)
 	pet_panel_stable_access_override = false
 	_close_pet_rename_panel()
@@ -16350,9 +16536,8 @@ func _on_pet_skill_forget_pressed() -> void:
 		_refresh_pet_panel()
 
 func _open_codex_panel() -> void:
-	if battle_active:
-		return
-	host._set_hang_mode(false)
+	if not battle_active:
+		host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
 	_close_player_status_panel()
@@ -16369,6 +16554,7 @@ func _open_codex_panel() -> void:
 	_close_auto_settings_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
+	host._sync_battle_buttons()
 	host._layout_hud()
 
 func _close_codex_panel() -> void:
@@ -16628,7 +16814,7 @@ func _chat_message_from_server(message: Dictionary, channel: String) -> Dictiona
 		"messageId": str(message.get("messageId", "")),
 	}
 
-func _open_party_panel() -> void:
+func _open_party_panel(mode: String = PARTY_PANEL_MODE_PARTNERS) -> void:
 	if battle_active:
 		return
 	host._set_hang_mode(false)
@@ -16653,12 +16839,37 @@ func _open_party_panel() -> void:
 	_close_qa_panel(false)
 	if party_panel != null:
 		party_panel.visible = true
+	party_panel_mode = PARTY_PANEL_MODE_PLAYERS if mode == PARTY_PANEL_MODE_PLAYERS else PARTY_PANEL_MODE_PARTNERS
+	_sync_party_panel_mode_tabs()
+	_refresh_training_partner_panel()
 	_refresh_party_panel()
 	_request_party_state()
 	host._layout_hud()
+	host.call_deferred("_layout_hud")
 
 func _close_party_panel(update_layout: bool = true) -> void:
 	_hide_control(party_panel, update_layout)
+
+func _set_party_panel_mode(mode: String) -> void:
+	party_panel_mode = PARTY_PANEL_MODE_PLAYERS if mode == PARTY_PANEL_MODE_PLAYERS else PARTY_PANEL_MODE_PARTNERS
+	_sync_party_panel_mode_tabs()
+	if party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
+		_refresh_training_partner_panel()
+	else:
+		_refresh_party_panel()
+
+func _sync_party_panel_mode_tabs() -> void:
+	var partner_visible := party_panel_mode != PARTY_PANEL_MODE_PLAYERS
+	if party_partner_scroll != null:
+		party_partner_scroll.visible = partner_visible
+	if party_partner_section != null:
+		party_partner_section.visible = partner_visible
+	if party_player_section != null:
+		party_player_section.visible = not partner_visible
+	if party_partner_tab_button != null:
+		party_partner_tab_button.button_pressed = partner_visible
+	if party_player_tab_button != null:
+		party_player_tab_button.button_pressed = not partner_visible
 
 func _open_family_panel() -> void:
 	_open_family_panel_with_focus("")
@@ -17580,6 +17791,8 @@ func _refresh_party_panel() -> void:
 	if not has_online_rows:
 		party_online_container.add_child(_party_info_label("暂无同图玩家。"))
 	_refresh_party_request_controls()
+	_refresh_training_partner_panel()
+	_sync_party_panel_mode_tabs()
 
 func _clear_container_children(container: Container) -> void:
 	for child in container.get_children():
@@ -20038,53 +20251,33 @@ func _local_player_name() -> String:
 	return "见习猎人"
 
 func _open_training_partner_panel() -> void:
-	if battle_active:
-		return
-	host._set_hang_mode(false)
-	host._close_dialog()
-	_close_encounter()
-	_close_player_status_panel()
-	_close_backpack_panel()
-	_close_equipment_panel()
-	_close_shop_panel()
-	_close_pet_panel()
-	_close_pet_skill_panel()
-	_close_codex_panel()
-	_close_quest_panel()
-	_close_map_panel()
-	_close_chat_panel()
-	_close_mailbox_panel()
-	_close_party_panel()
-	_close_family_panel()
-	_close_auto_settings_panel()
-	training_partner_panel.visible = true
-	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	host._layout_hud()
-	_refresh_training_partner_panel()
-	host._layout_hud()
-	host.call_deferred("_layout_hud")
+	_open_party_panel(PARTY_PANEL_MODE_PARTNERS)
 
 func _close_training_partner_panel() -> void:
 	_hide_control(training_partner_panel)
+	if party_panel != null and party_panel.visible and party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
+		_hide_control(party_panel)
 
 func _refresh_training_partner_panel() -> void:
-	if training_partner_panel == null or training_partner_label == null:
+	if training_partner_panel == null and party_partner_section == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	var count = PlayerProgressModel.training_partner_count(player_profile)
 	var real_member_count = _current_party_other_members_for_battle().size()
 	var available_slots = _training_partner_available_slots()
 	var active_count = mini(count, available_slots)
-	var lines: Array[String] = []
-	lines.append("队伍：自己 1 / 真人队友 %d / 伙伴 %d，最多 5 人。" % [real_member_count, active_count])
-	lines.append("伙伴槽位：%d/%d" % [count, available_slots])
-	lines.append("草丛遇敌时，真人队友优先占位，伙伴补满剩余位置。")
-	lines.append("陪练会复制加入时的人物和出战宠属性，之后独立获得经验。")
+	var lines := _training_partner_detail_lines(count, real_member_count, available_slots, active_count)
+	if training_partner_label != null:
+		training_partner_label.text = "\n".join(lines)
+	if party_partner_status_label != null:
+		party_partner_status_label.text = "伙伴 %d/%d｜真人队友 %d｜本场上阵 %d" % [count, available_slots, real_member_count, active_count]
+	if party_partner_slots_container != null:
+		_refresh_party_partner_slots(active_count)
+	if party_partner_real_party_label != null:
+		party_partner_real_party_label.text = _party_partner_real_party_summary(real_member_count)
 	if count > available_slots:
-		lines.append("当前真人队友已占位，本场只会上阵前 %d 个伙伴。" % active_count)
-	lines.append("")
-	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
-	training_partner_label.text = "\n".join(lines)
+		if party_partner_status_label != null:
+			party_partner_status_label.text = "%s｜真人队友占位" % party_partner_status_label.text
 	if training_partner_scroll != null:
 		training_partner_scroll.scroll_vertical = 0
 	var server_request_pending = _is_server_account_session() and profile_action_request_pending
@@ -20096,8 +20289,109 @@ func _refresh_training_partner_panel() -> void:
 		training_partner_fill_button.disabled = server_request_pending or count >= available_slots
 	if training_partner_clear_button != null:
 		training_partner_clear_button.disabled = server_request_pending or count <= 0
+	if party_partner_add_button != null:
+		party_partner_add_button.disabled = server_request_pending or count >= available_slots
+	if party_partner_remove_button != null:
+		party_partner_remove_button.disabled = server_request_pending or count <= 0
+	if party_partner_fill_button != null:
+		party_partner_fill_button.disabled = server_request_pending or count >= available_slots
+	if party_partner_clear_button != null:
+		party_partner_clear_button.disabled = server_request_pending or count <= 0
+
+func _training_partner_detail_lines(count: int, real_member_count: int, available_slots: int, active_count: int) -> Array[String]:
+	var lines: Array[String] = []
+	lines.append("队伍：自己 1 / 真人队友 %d / 陪练伙伴 %d，最多 5 人。" % [real_member_count, active_count])
+	lines.append("伙伴槽位：%d/%d" % [count, available_slots])
+	lines.append("草丛遇敌时，真人队友优先占位，陪练伙伴补满剩余位置。")
+	lines.append("陪练会复制加入时的人物和出战宠属性，之后独立获得经验。")
+	if count > available_slots:
+		lines.append("当前真人队友已占位，本场只会上阵前 %d 个陪练伙伴。" % active_count)
+	lines.append("")
+	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
+	return lines
+
+func _refresh_party_partner_slots(active_count: int) -> void:
+	_clear_container_children(party_partner_slots_container)
+	party_partner_slots_container.add_child(_party_partner_slot_row("自己", _local_player_name(), false))
+	var used_slots := 0
+	for member in _current_party_other_members_for_battle():
+		if used_slots >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size():
+			break
+		party_partner_slots_container.add_child(_party_partner_slot_row("真人队友", _party_player_text(member), false))
+		used_slots += 1
+	var partners := PlayerProgressModel.training_partners(player_profile)
+	for index in range(active_count):
+		if used_slots >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size() or index >= partners.size():
+			break
+		var partner := partners[index] as Dictionary
+		var pet_value = partner.get("pet", {})
+		var pet := pet_value as Dictionary if pet_value is Dictionary else {}
+		var detail := "%s Lv%d / %s Lv%d" % [
+			str(partner.get("name", "陪练伙伴%d" % [index + 1])),
+			int(partner.get("level", 1)),
+			str(pet.get("name", "陪练宠物")),
+			int(pet.get("level", 1)),
+		]
+		party_partner_slots_container.add_child(_party_partner_slot_row("陪练伙伴%d" % [index + 1], detail, false))
+		used_slots += 1
+	for index in range(used_slots, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size()):
+		party_partner_slots_container.add_child(_party_partner_slot_row("空位", "可加入陪练伙伴", true))
+
+func _party_partner_slot_row(title: String, detail: String, muted: bool) -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
+	var title_label := Label.new()
+	title_label.text = title
+	title_label.custom_minimum_size = Vector2(112, 24)
+	title_label.add_theme_font_size_override("font_size", 15)
+	if muted:
+		title_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.68, 0.72))
+	row.add_child(title_label)
+	var detail_label := Label.new()
+	detail_label.text = detail
+	detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	detail_label.add_theme_font_size_override("font_size", 15)
+	if muted:
+		detail_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.68, 0.72))
+	row.add_child(detail_label)
+	return row
+
+func _party_partner_real_party_summary(real_member_count: int) -> String:
+	if real_member_count > 0:
+		return "已有真人队友 %d 人。需要邀请或查看同图玩家时切到真人组队。" % real_member_count
+	var online_count := 0
+	for value in party_online_players:
+		if value is Dictionary and str((value as Dictionary).get("username", "")).strip_edges() != "":
+			online_count += 1
+	if online_count > 0:
+		return "当前没有真人队伍；同图玩家 %d 人。" % online_count
+	return "当前没有真人队伍。"
 
 func _training_partner_panel_layout_is_usable() -> bool:
+	if party_panel != null and party_panel.visible and party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
+		var merged_viewport_size = host._layout_size()
+		var merged_margin = 18.0
+		var merged_bottom = party_panel.position.y + party_panel.size.y
+		return (
+			party_panel.position.x >= -1.0
+			and party_panel.position.y >= merged_margin
+			and party_panel.size.x <= merged_viewport_size.x - merged_margin * 2.0 + 1.0
+			and party_panel.size.y <= merged_viewport_size.y - merged_margin * 2.0 + 1.0
+			and merged_bottom <= merged_viewport_size.y + 1.0
+			and party_partner_scroll != null
+			and party_partner_scroll.visible
+			and party_partner_scroll.global_position.y + party_partner_scroll.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
+			and party_partner_section != null
+			and party_partner_section.visible
+			and party_partner_slots_container != null
+			and party_partner_slots_container.get_child_count() >= 1
+			and party_partner_clear_button != null
+			and party_partner_clear_button.global_position.y + party_partner_clear_button.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
+			and party_partner_real_party_label != null
+			and party_partner_real_party_label.global_position.y + party_partner_real_party_label.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
+		)
 	if training_partner_panel == null or training_partner_scroll == null or not training_partner_panel.visible:
 		return false
 	var viewport_size = host._layout_size()
@@ -22114,6 +22408,10 @@ func _refresh_pet_panel() -> void:
 	if pet_panel == null or pet_list_container == null or pet_detail_label == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
+	if host.pet_follow_enabled and host.pet_follow_instance_id != "":
+		var follow_check := PlayerProgressModel.can_tame_pet(player_profile, host.pet_follow_instance_id)
+		if not bool(follow_check.get("ok", false)):
+			host._set_pet_follow_enabled(false)
 	for child in pet_list_container.get_children():
 		child.queue_free()
 	pet_list_buttons.clear()
@@ -22450,11 +22748,13 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 		return
 	var button = Button.new()
 	var marker = "▶ " if instance_id == pet_selected_instance_id else ""
+	var tame_marker = "游 " if host.pet_follow_enabled and host.pet_follow_instance_id == instance_id else ""
 	var active_marker = "主 " if str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE else ""
 	var new_marker = "新 " if bool(instance.get("isNew", false)) else ""
 	var lock_marker = "锁 " if bool(instance.get("locked", false)) else ""
-	button.text = "%s%s%s%s%s\nLv%d  %s  战力%d" % [
+	button.text = "%s%s%s%s%s%s\nLv%d  %s  战力%d" % [
 		marker,
+		tame_marker,
 		active_marker,
 		new_marker,
 		lock_marker,
@@ -22468,8 +22768,65 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 	button.pressed.connect(func() -> void:
 		_select_pet_instance(instance_id)
 	)
+	button.gui_input.connect(func(event: InputEvent) -> void:
+		_on_pet_list_button_gui_input(event, instance_id)
+	)
 	pet_list_container.add_child(button)
 	pet_list_buttons[instance_id] = button
+
+func _on_pet_list_button_gui_input(event: InputEvent, instance_id: String) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_RIGHT or not mouse_event.pressed:
+		return
+	if PlayerProgressModel.pet_instance_by_id(player_profile, instance_id).is_empty():
+		return
+	pet_selected_instance_id = instance_id
+	pet_clear_confirm_instance_id = ""
+	_refresh_pet_panel()
+	_open_pet_context_menu(instance_id, mouse_event.global_position)
+	if host != null and host.get_viewport() != null:
+		host.get_viewport().set_input_as_handled()
+
+func _open_pet_context_menu(instance_id: String, screen_position: Vector2) -> void:
+	if pet_context_menu == null:
+		return
+	pet_context_instance_id = instance_id.strip_edges()
+	pet_context_screen_position = screen_position
+	var selected = PlayerProgressModel.pet_instance_by_id(player_profile, pet_context_instance_id)
+	var already_following = host.pet_follow_enabled and host.pet_follow_instance_id == pet_context_instance_id
+	var tame_check := PlayerProgressModel.can_tame_pet(player_profile, pet_context_instance_id)
+	pet_context_menu.clear()
+	pet_context_menu.add_item("收回" if already_following else "驯宠", PET_CONTEXT_TAME)
+	pet_context_menu.set_item_disabled(0, selected.is_empty() or (not already_following and not bool(tame_check.get("ok", false))))
+	pet_context_menu.position = Vector2i(roundi(screen_position.x), roundi(screen_position.y))
+	pet_context_menu.popup()
+
+func _on_pet_context_menu_id_pressed(id: int) -> void:
+	match id:
+		PET_CONTEXT_TAME:
+			_on_pet_context_tame_pressed()
+
+func _on_pet_context_tame_pressed() -> void:
+	var instance_id: String = pet_context_instance_id.strip_edges()
+	if instance_id == "":
+		return
+	var selected = PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+	if selected.is_empty():
+		_set_world_log_message("没有找到这只宠物。")
+		return
+	if host.pet_follow_enabled and host.pet_follow_instance_id == instance_id:
+		host._set_pet_follow_enabled(false)
+		_set_world_log_message("%s 已收回。" % str(selected.get("name", "宠物")))
+	else:
+		var tame_check := PlayerProgressModel.can_tame_pet(player_profile, instance_id)
+		if not bool(tame_check.get("ok", false)):
+			_set_world_log_message(str(tame_check.get("message", "不能驯宠。")))
+			return
+		host._set_pet_follow_enabled(true, instance_id)
+		_set_world_log_message("%s 已放出来游街。" % str(selected.get("name", "宠物")))
+	_refresh_pet_panel()
 
 func _select_pet_instance(instance_id: String) -> void:
 	var selected = PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)

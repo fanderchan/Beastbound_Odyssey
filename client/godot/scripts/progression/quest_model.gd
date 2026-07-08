@@ -402,6 +402,10 @@ static func ability_label_for(ability_id: String) -> String:
 	match ability_id:
 		"remoteStable":
 			return "远程兽栏能力"
+		"riding":
+			return "骑虎证"
+		"taming":
+			return "驯宠证"
 	return ability_id
 
 

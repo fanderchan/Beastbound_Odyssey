@@ -13,7 +13,7 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	entries.append({"id": "gm_battle_speed_gear", "label": "变速齿轮 x%d" % speed_multiplier, "description": "战斗和走路 x2-x10，x1关闭"})
 	entries.append({"id": "open_numeric_workbench", "label": "数值实验", "description": "成长、MM转宠、战斗批量模拟"})
 	entries.append({"section": "功能面板"})
-	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、快捷栏、世界使用"})
+	entries.append({"id": "open_backpack", "label": "背包", "description": "道具、装备、世界使用"})
 	entries.append({"id": "open_item_shop", "label": "杂货铺", "description": "购买、出售、数量输入"})
 	entries.append({"id": "open_equipment_shop", "label": "装备铺", "description": "装备购买预览、购买后装备"})
 	entries.append({"id": "open_equipment", "label": "装备栏", "description": "槽位详情、卸下、强化、合成"})

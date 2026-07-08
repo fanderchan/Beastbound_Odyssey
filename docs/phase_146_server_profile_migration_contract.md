@@ -42,7 +42,7 @@
 - `petCodex`：图鉴已见、已捕获记录。
 - `backpack`：随身包格子、物品堆叠和数量。
 - `backpackExpansion`：钻石解锁背包格数。
-- `quickSlots`：快捷栏绑定。
+- `quickSlots`：历史快捷栏绑定兼容字段；当前玩家 UI 不再展示快捷栏。
 - `captureTools`：捕捉道具库存和消耗。
 - `equipment`：装备实例、槽位、耐久、强化、经验丹充能和来源。
 - `equipmentCompatibility`：旧装备字段派生快照，未来可从装备实例重建。

@@ -93,6 +93,10 @@
           {
             "abilityId": "riding",
             "label": "骑虎证"
+          },
+          {
+            "abilityId": "taming",
+            "label": "驯宠证"
           }
         ]
       },

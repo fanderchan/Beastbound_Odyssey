@@ -170,7 +170,7 @@ static func _module_definitions() -> Array[Dictionary]:
 		_module("petCodex", ["petCodexSeenFormIds", "petCodexCapturedFormIds"], "player_pet_codex", ["playerId", "formId"], "set_rows", "append_only", "merge_sets", "图鉴已见、已捕获记录。"),
 		_module("backpack", ["backpackSlots"], "player_backpack_slots", ["playerId", "slotIndex"], "slot_rows", "transactional", "server_wins_after_cutover", "随身包格子、物品堆叠和数量。"),
 		_module("backpackExpansion", ["backpackExtraSlots"], "player_backpack_expansions", ["playerId"], "document", "diamond_transaction", "server_wins_after_cutover", "钻石解锁背包格数。"),
-		_module("quickSlots", ["quickSlots"], "player_quick_slots", ["playerId", "slotIndex"], "slot_rows", "client_preference", "latest_revision_wins", "快捷栏绑定。"),
+	_module("quickSlots", ["quickSlots"], "player_quick_slots", ["playerId", "slotIndex"], "slot_rows", "client_preference", "latest_revision_wins", "历史快捷栏兼容字段，当前玩家界面不展示。"),
 		_module("captureTools", ["captureTools"], "player_capture_tools", ["playerId", "toolId"], "kv_rows", "transactional", "server_wins_after_cutover", "捕捉道具库存和消耗。"),
 		_module("equipment", ["equipmentInstances", "equipmentSlotInstanceIds", "nextEquipmentInstanceSerial"], "player_equipment_instances", ["playerId", "instanceId"], "instance_rows", "equipment_transaction", "server_wins_after_cutover", "装备实例、槽位、耐久、强化、经验丹充能和来源。"),
 		_module("equipmentCompatibility", ["equipmentSlots", "equipmentDurability", "equipmentEnhancement", "equipmentWearCounters", "equipmentExpPillCharge", "equipmentSlotsVersion", "equipmentStarterSetVersion", "expPillStarterVersion"], "player_equipment_compat_snapshots", ["playerId"], "derived_document", "derived_snapshot", "rebuild_from_equipment_instances", "旧装备字段派生快照，服务端迁移后可逐步淘汰。", true),

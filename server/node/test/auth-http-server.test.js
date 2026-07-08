@@ -463,6 +463,17 @@ test("HTTP server exposes server-authoritative equipment equip endpoint", async 
   });
   assert.equal(denied.ok, false);
   assert.equal(denied.code, "equipment_item_missing");
+
+  const unequipped = await fetchJson(`${base}/equipment/unequip`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "body": JSON.stringify({"slotId": "right_hand_weapon"}),
+  });
+  assert.equal(unequipped.ok, true);
+  assert.equal(unequipped.profileSummary.profileRevision, 3);
+  assert.equal(unequipped.equipment.slot, "right_hand_weapon");
+  assert.equal(unequipped.profile.equipmentSlots.right_hand_weapon, undefined);
+  assert.equal(profileItemCount(unequipped.profile, "weapon_wooden_club"), 1);
 });
 
 test("HTTP server exposes server-authoritative equipment enhance endpoint", async (t) => {

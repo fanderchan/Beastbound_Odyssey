@@ -33,9 +33,8 @@ func _init(host_ref) -> void:
 	host = host_ref
 
 func _open_quest_panel() -> void:
-	if host.battle_active:
-		return
-	host._set_hang_mode(false)
+	if not host.battle_active:
+		host._set_hang_mode(false)
 	_close_dialog()
 	host._close_encounter()
 	host._close_player_status_panel()
@@ -53,6 +52,7 @@ func _open_quest_panel() -> void:
 	host.quest_panel.visible = true
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	_refresh_quest_panel()
+	host._sync_battle_buttons()
 	host._layout_hud()
 
 func _close_quest_panel() -> void:
@@ -83,7 +83,7 @@ func _refresh_quest_panel() -> void:
 			_set_quest_reward_controls({}, "")
 			if host.quest_route_button != null:
 				host.quest_route_button.text = "前往接取"
-				host.quest_route_button.disabled = host._current_task_navigation_target().is_empty()
+				host.quest_route_button.disabled = host.battle_active or host._current_task_navigation_target().is_empty()
 			return
 		var mm_guide = host._pet_rebirth_mm_guide_task_info(true)
 		if not mm_guide.is_empty():
@@ -102,7 +102,7 @@ func _refresh_quest_panel() -> void:
 			_set_quest_reward_controls({}, "")
 			if host.quest_route_button != null:
 				host.quest_route_button.text = "自动寻路"
-				host.quest_route_button.disabled = mm_target.is_empty()
+				host.quest_route_button.disabled = host.battle_active or mm_target.is_empty()
 			return
 		var trial = host._rebirth_trial_task_info(true)
 		if not trial.is_empty():
@@ -121,7 +121,7 @@ func _refresh_quest_panel() -> void:
 			_set_quest_reward_controls({}, "")
 			if host.quest_route_button != null:
 				host.quest_route_button.text = "自动寻路"
-				host.quest_route_button.disabled = target.is_empty()
+				host.quest_route_button.disabled = host.battle_active or target.is_empty()
 			return
 		host.quest_title_label.text = "任务"
 		host.quest_detail_label.text = "当前没有任务。\n可以继续探索、捕捉宠物，或等待新的任务链开放。"
@@ -162,7 +162,7 @@ func _refresh_quest_panel() -> void:
 	_set_quest_reward_controls(quest, status)
 	if host.quest_route_button != null:
 		host.quest_route_button.text = "自动寻路"
-		host.quest_route_button.disabled = host._navigation_target_for_quest(quest).is_empty()
+		host.quest_route_button.disabled = host.battle_active or host._navigation_target_for_quest(quest).is_empty()
 
 func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 	var can_claim = status == QuestModel.STATUS_READY and PlayerProgressModel.can_claim_active_quest(host.player_profile)
@@ -193,7 +193,7 @@ func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 			host.quest_selected_reward_choice_id = ""
 	if host.quest_claim_button != null:
 		host.quest_claim_button.visible = can_claim
-		host.quest_claim_button.disabled = host.quest_action_request_pending or not can_claim or (not choices.is_empty() and host.quest_selected_reward_choice_id == "")
+		host.quest_claim_button.disabled = host.battle_active or host.quest_action_request_pending or not can_claim or (not choices.is_empty() and host.quest_selected_reward_choice_id == "")
 		host.quest_claim_button.text = "领取中" if host.quest_action_request_pending else "领取奖励"
 
 func _on_quest_reward_choice_selected(index: int) -> void:
@@ -201,9 +201,12 @@ func _on_quest_reward_choice_selected(index: int) -> void:
 		return
 	host.quest_selected_reward_choice_id = str(host.quest_reward_choice_option.get_item_metadata(index))
 	if host.quest_claim_button != null:
-		host.quest_claim_button.disabled = host.quest_selected_reward_choice_id == ""
+		host.quest_claim_button.disabled = host.battle_active or host.quest_selected_reward_choice_id == ""
 
 func _on_quest_claim_pressed() -> void:
+	if host.battle_active:
+		_refresh_quest_panel()
+		return
 	if host.quest_action_request_pending:
 		return
 	var quest = PlayerProgressModel.active_quest(host.player_profile)
@@ -233,6 +236,9 @@ func _on_quest_claim_pressed() -> void:
 		host._update_hud_text()
 
 func _on_quest_route_pressed() -> void:
+	if host.battle_active:
+		_refresh_quest_panel()
+		return
 	var target = host._current_task_navigation_target()
 	if target.is_empty():
 		host._set_world_log_message("当前任务没有可寻路目标。")

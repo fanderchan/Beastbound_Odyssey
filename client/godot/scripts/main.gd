@@ -115,6 +115,7 @@ const PET_LOW_POWER_FILTER_THRESHOLD := 31
 const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
+const BATTLE_CAPTURE_COMMAND_SLOTS: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run"]
 const BATTLE_COMMAND_COUNTDOWN_SECONDS := 99.0
 const BATTLE_TEAM_COMPANION_SLOT_NUMBERS: Array[int] = [1, 2, 4, 5]
 const BATTLE_AUTO_ATTACK_STEP_DELAY := 0.16
@@ -141,6 +142,9 @@ const BATTLE_BOUNCE_ROLL_RATIO := 0.76
 const BATTLE_LAUNCH_STRAIGHT_SECONDS := 1.45
 const BATTLE_LAUNCH_BOUNCE_SECONDS := 1.95
 const BATTLE_LAUNCH_FINISH_HOLD_RATIO := 0.86
+const BATTLE_FLOAT_TEXT_FONT_SIZE := 21
+const BATTLE_FLOAT_TEXT_MIN_WIDTH := 90.0
+const BATTLE_FLOAT_TEXT_HORIZONTAL_PADDING := 10.0
 const BATTLE_AUTO_ROUND_SETTLE_DELAY := 0.24
 const BATTLE_ESCAPE_PREVIEW_SECONDS := 0.62
 const BATTLE_ESCAPE_PREVIEW_DISTANCE := 108.0
@@ -236,7 +240,6 @@ var battle_message_expand_button: Button
 var battle_message_clear_button: Button
 var battle_command_buttons: Dictionary = {}
 var stop_button: Button
-var ring_button: Button
 var action_bar_scroll: ScrollContainer
 var action_bar_collapse_button: Button
 var quick_slot_buttons: Array[Button] = []
@@ -325,6 +328,12 @@ var equipment_close_button: Button
 var equipment_slot_buttons: Dictionary = {}
 var equipment_selected_slot_id: String = EquipmentModel.SLOT_RIGHT_HAND_WEAPON
 var equipment_action_request_pending: bool = false
+var equipment_slot_context_menu: PopupMenu
+var equipment_context_slot_id: String = ""
+var equipment_context_screen_position: Vector2 = Vector2.ZERO
+var equipment_detail_popup_panel: PanelContainer
+var equipment_detail_popup_title_label: Label
+var equipment_detail_popup_slot_id: String = ""
 var equipment_synthesis_panel: PanelContainer
 var equipment_synthesis_list_container: VBoxContainer
 var equipment_synthesis_detail_label: RichTextLabel
@@ -390,6 +399,9 @@ var pet_batch_rest_button: Button
 var pet_rename_button: Button
 var pet_cultivation_button: Button
 var pet_drop_button: Button
+var pet_context_menu: PopupMenu
+var pet_context_instance_id: String = ""
+var pet_context_screen_position: Vector2 = Vector2.ZERO
 var pet_rename_panel: PanelContainer
 var pet_rename_title_label: Label
 var pet_rename_input: LineEdit
@@ -879,7 +891,6 @@ var release_dev_entrypoint_blocked: bool = false
 var backpack_preview: bool = false
 var backpack_world_use_preview: bool = false
 var backpack_filter_preview: bool = false
-var quick_slot_preview: bool = false
 var player_status_preview: bool = false
 var player_stat_points_preview: bool = false
 var player_rebirth_preview: bool = false
@@ -979,6 +990,7 @@ var pet_drop_expire_elapsed: float = 0.0
 var current_path_cells: Array[Vector2i] = []
 var current_path_is_direct: bool = false
 var pet_follow_enabled: bool = false
+var pet_follow_instance_id: String = ""
 var pet_follow_points: Array[Vector2] = []
 var pet_follow_index: int = 0
 var target_marker: Vector2 = Vector2.ZERO
@@ -1040,6 +1052,7 @@ var battle_pending_capture_tool_id: String = ""
 var battle_pending_pet_skill_id: String = ""
 var battle_switch_pet_button_pet_ids: Dictionary = {}
 var battle_spirit_button_spirit_ids: Dictionary = {}
+var battle_capture_button_tool_ids: Dictionary = {}
 var battle_pending_player_command: Dictionary = {}
 var battle_pending_pet_command: Dictionary = {}
 var battle_event_queue: Array[Dictionary] = []
@@ -1522,8 +1535,6 @@ func _ready() -> void:
 		call_deferred("_run_backpack_world_use_preview")
 	elif backpack_filter_preview:
 		call_deferred("_run_backpack_filter_preview")
-	elif quick_slot_preview:
-		call_deferred("_run_quick_slot_preview")
 	elif player_status_preview:
 		call_deferred("_run_player_status_preview")
 	elif player_stat_points_preview:
@@ -2255,8 +2266,6 @@ func _apply_preview_window_args() -> void:
 			backpack_world_use_preview = true
 		elif arg == "--backpack-filter-preview":
 			backpack_filter_preview = true
-		elif arg == "--quick-slot-preview":
-			quick_slot_preview = true
 		elif arg == "--player-status-preview":
 			player_status_preview = true
 		elif arg == "--player-stat-points-preview":
@@ -3459,6 +3468,9 @@ func _run_auto_riding_system_check() -> void:
 func _backpack_filter_test_profile() -> Dictionary:
 	var profile := PlayerProgressModel.default_profile()
 	var add_result := BackpackModel.add_items(PlayerProgressModel.backpack_slots(profile), [
+		{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2},
+		{"itemId": BattleModel.ITEM_HEAL_ALL, "count": 1},
+		{"itemId": BattleModel.CAPTURE_TOOL_ROPE_BASIC, "count": 1},
 		{"itemId": "weapon_wooden_club", "count": 1},
 		{"itemId": ENCOUNTER_STONE_LOW_ID, "count": 1},
 		{"itemId": BattleModel.CAPTURE_TOOL_NET_REINFORCED, "count": 1},
@@ -4158,19 +4170,6 @@ func _run_world_log_panel_preview() -> void:
 	battle_message_expanded = true
 	_refresh_battle_message_controls()
 	_layout_hud()
-	if status_label != null:
-		_update_hud_text()
-
-
-func _run_quick_slot_preview() -> void:
-	profile_save_enabled = false
-	world_log_history.clear()
-	world_log_message = ""
-	player_profile = _quick_slot_test_profile(true)
-	_load_map("firebud_village_gate", "from_training_yard")
-	_move_player_to_encounter_cell(Vector2i(11, 15))
-	_set_world_log_message("Phase78：底部快捷槽可直接使用世界道具。")
-	_refresh_quick_bar()
 	if status_label != null:
 		_update_hud_text()
 
@@ -5035,29 +5034,6 @@ func _run_auto_chat_panel_check() -> void:
 
 func _run_auto_world_log_panel_check() -> void:
 	await _auto_checks()._run_auto_world_log_panel_check()
-
-
-func _quick_slot_test_profile(with_quick_slots: bool = true) -> Dictionary:
-	var profile := PlayerProgressModel.default_profile()
-	var slots := PlayerProgressModel.backpack_slots(profile)
-	slots = BackpackModel.set_item_count(slots, BattleModel.ITEM_MEAT_SMALL, 2)
-	slots = BackpackModel.set_item_count(slots, "encounter_stone_high", 1)
-	profile = PlayerProgressModel.with_backpack_slots(profile, slots)
-	var instances: Array = profile.get("petInstances", [])
-	for index in range(instances.size()):
-		if not (instances[index] is Dictionary):
-			continue
-		var instance := (instances[index] as Dictionary).duplicate(true)
-		if str(instance.get("instanceId", "")) == "pet_bui_main":
-			var max_hp := maxi(1, int(instance.get("maxHp", 100)))
-			instance["hp"] = maxi(1, max_hp - 35)
-			instances[index] = instance
-			break
-	profile["petInstances"] = instances
-	if with_quick_slots:
-		profile = PlayerProgressModel.with_quick_slot_item(profile, 0, BattleModel.ITEM_MEAT_SMALL)
-		profile = PlayerProgressModel.with_quick_slot_item(profile, 1, "encounter_stone_high")
-	return PlayerProgressModel.normalize_profile(profile)
 
 
 func _move_player_to_encounter_cell(cell: Vector2i) -> void:
@@ -5988,6 +5964,7 @@ func _set_battle_command_owner(owner: String) -> void:
 	battle_command_owner = owner
 	battle_switch_pet_button_pet_ids.clear()
 	battle_spirit_button_spirit_ids.clear()
+	battle_capture_button_tool_ids.clear()
 	if battle_command_title_label == null:
 		return
 	if owner == "pet":
@@ -6019,16 +5996,7 @@ func _set_battle_command_owner(owner: String) -> void:
 		})
 	elif owner == "capture":
 		battle_command_title_label.text = "捕捉"
-		_apply_battle_button_labels({
-			"attack": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_EMPTY_HAND),
-			"spirit": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_ROPE_BASIC),
-			"capture": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_NET),
-			"help": "返回",
-			"defend": _capture_tool_button_label(BattleModel.CAPTURE_TOOL_NET_REINFORCED),
-			"item": "",
-			"switch_pet": "",
-			"run": "",
-		})
+		_apply_capture_tool_button_labels()
 	elif owner == "switch_pet":
 		battle_command_title_label.text = "换宠"
 		_apply_switch_pet_button_labels()
@@ -6629,6 +6597,45 @@ func _capture_tool_button_label(tool_id: String) -> String:
 	return "%s x%d" % [label, BattleModel.capture_tool_count(battle_state, tool_id)]
 
 
+func _available_capture_tool_ids_for_menu() -> Array[String]:
+	var result: Array[String] = [BattleModel.CAPTURE_TOOL_EMPTY_HAND]
+	for tool_id in CaptureToolCatalog.ordered_tool_ids():
+		var normalized_tool_id := CaptureToolCatalog.normalized_tool_id(tool_id)
+		if normalized_tool_id == BattleModel.CAPTURE_TOOL_EMPTY_HAND:
+			continue
+		if BattleModel.capture_tool_count(battle_state, normalized_tool_id) <= 0:
+			continue
+		if not result.has(normalized_tool_id):
+			result.append(normalized_tool_id)
+	return result
+
+
+func _apply_capture_tool_button_labels() -> void:
+	battle_capture_button_tool_ids.clear()
+	var labels := {"help": "返回"}
+	var tool_ids := _available_capture_tool_ids_for_menu()
+	var slot_count := mini(BATTLE_CAPTURE_COMMAND_SLOTS.size(), tool_ids.size())
+	for index in range(slot_count):
+		var command_id := BATTLE_CAPTURE_COMMAND_SLOTS[index]
+		var tool_id := tool_ids[index]
+		battle_capture_button_tool_ids[command_id] = tool_id
+		labels[command_id] = _capture_tool_button_label(tool_id)
+	for command_id in BATTLE_CAPTURE_COMMAND_SLOTS:
+		if not labels.has(command_id):
+			labels[command_id] = ""
+	_apply_battle_button_labels(labels)
+
+
+func _battle_capture_command_ids() -> Array[String]:
+	var result: Array[String] = []
+	for command_id in BATTLE_CAPTURE_COMMAND_SLOTS:
+		if battle_capture_button_tool_ids.has(command_id):
+			result.append(command_id)
+	if result.is_empty():
+		result.append("attack")
+	return result
+
+
 func _button_text_for_battle_command(command_id: String) -> String:
 	var button = battle_command_buttons.get(command_id, null)
 	if button is Button:
@@ -6701,7 +6708,9 @@ func _battle_command_order_for_owner() -> Array[String]:
 		"item":
 			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "help", "run"]
 		"capture":
-			return ["attack", "spirit", "capture", "defend", "help", "item", "switch_pet", "run"]
+			var ordered := _battle_capture_command_ids()
+			ordered.append("help")
+			return ordered
 		"switch_pet":
 			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
 		_:
@@ -6724,7 +6733,9 @@ func _battle_command_visible_ids() -> Array[String]:
 		"item":
 			return ["attack", "spirit", "capture", "defend", "item", "switch_pet", "help"]
 		"capture":
-			return ["attack", "spirit", "capture", "defend", "help"]
+			var visible := _battle_capture_command_ids()
+			visible.append("help")
+			return visible
 		"switch_pet":
 			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
 		_:
@@ -8216,7 +8227,7 @@ func _select_equipment_slot(slot_id: String) -> void:
 	_panel_flow()._select_equipment_slot(slot_id)
 
 func _on_equipment_unequip_pressed() -> void:
-	_panel_flow()._on_equipment_unequip_pressed()
+	await _panel_flow()._on_equipment_unequip_pressed()
 
 func _on_equipment_enhance_pressed() -> void:
 	await _panel_flow()._on_equipment_enhance_pressed()
@@ -8296,12 +8307,6 @@ func _unlock_backpack_slot_from_dialog() -> void:
 func _refresh_quick_bar(force: bool = false) -> void:
 	_panel_flow()._refresh_quick_bar(force)
 
-func _quick_slots_for_hud() -> Array[String]:
-	return _panel_flow()._quick_slots_for_hud()
-
-func _backpack_item_count_for_hud(item_id: String) -> int:
-	return _panel_flow()._backpack_item_count_for_hud(item_id)
-
 func _profile_stone_coins_for_ui() -> int:
 	return _panel_flow()._profile_stone_coins_for_ui()
 
@@ -8325,18 +8330,6 @@ func _backpack_counts_for_ui() -> Dictionary:
 
 func _backpack_available_capacity_for_ui(item_id: String, slots: Array[Dictionary] = []) -> int:
 	return _panel_flow()._backpack_available_capacity_for_ui(item_id, slots)
-
-func _on_backpack_quick_bind_pressed(slot_index: int) -> void:
-	_panel_flow()._on_backpack_quick_bind_pressed(slot_index)
-
-func _on_quick_slot_pressed(slot_index: int) -> void:
-	await _panel_flow()._on_quick_slot_pressed(slot_index)
-
-func _quick_pet_heal_target_id(item_id: String) -> String:
-	return _panel_flow()._quick_pet_heal_target_id(item_id)
-
-func _clear_empty_quick_slot_item(item_id: String) -> void:
-	_panel_flow()._clear_empty_quick_slot_item(item_id)
 
 func _player_level_for_ui() -> int:
 	return _panel_flow()._player_level_for_ui()
@@ -8689,8 +8682,8 @@ func _replace_chat_channel_messages(channel: String, server_messages) -> void:
 func _chat_message_from_server(message: Dictionary, channel: String) -> Dictionary:
 	return _panel_flow()._chat_message_from_server(message, channel)
 
-func _open_party_panel() -> void:
-	_panel_flow()._open_party_panel()
+func _open_party_panel(mode: String = "partners") -> void:
+	_panel_flow()._open_party_panel(mode)
 
 func _close_party_panel(update_layout: bool = true) -> void:
 	_panel_flow()._close_party_panel(update_layout)
@@ -9647,6 +9640,14 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 		if battle_selected_target_id == "":
 			_set_battle_message("没有可选择的目标。")
 			return
+		if command_id == "capture":
+			var target_requirement_message := _capture_tool_target_requirement_message(battle_pending_capture_tool_id, battle_selected_target_id)
+			if target_requirement_message != "":
+				battle_target_mode = "player_capture_target"
+				battle_selected_target_id = ""
+				_set_battle_message(target_requirement_message)
+				_sync_battle_buttons()
+				return
 	if _battle_is_server_authority():
 		_submit_server_battle_player_command(command_id, battle_selected_target_id)
 		return
@@ -9863,17 +9864,26 @@ func _open_switch_pet_command_menu() -> void:
 
 
 func _capture_tool_id_for_command(command_id: String) -> String:
-	match command_id:
-		"attack":
-			return BattleModel.CAPTURE_TOOL_EMPTY_HAND
-		"spirit":
-			return BattleModel.CAPTURE_TOOL_ROPE_BASIC
-		"capture":
-			return BattleModel.CAPTURE_TOOL_NET
-		"defend":
-			return BattleModel.CAPTURE_TOOL_NET_REINFORCED
-		_:
-			return ""
+	return str(battle_capture_button_tool_ids.get(command_id, ""))
+
+
+func _capture_tool_target_requirement_message(tool_id: String, target_id: String) -> String:
+	var normalized_tool_id := CaptureToolCatalog.normalized_tool_id(tool_id)
+	if normalized_tool_id != BattleModel.CAPTURE_TOOL_POISON_WULI_NET:
+		return ""
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	if target.is_empty():
+		return ""
+	if not _battle_actor_is_poisoned_wuli(target):
+		return "缚毒捕捉网只能捕捉中毒的乌力。"
+	return ""
+
+
+func _battle_actor_is_poisoned_wuli(actor: Dictionary) -> bool:
+	var line_id := str(actor.get("lineId", "")).strip_edges()
+	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+	var is_wuli := line_id == "wuli" or form_id.begins_with("wuli_")
+	return is_wuli and BattleStatusModel.has_status(actor, BattleModel.STATUS_POISON)
 
 
 func _on_capture_battle_command_pressed(command_id: String) -> void:
@@ -9909,10 +9919,13 @@ func _begin_capture_target_selection(tool_id: String) -> void:
 	battle_target_mode = "player_capture_target"
 	var target_id := BattleModel.living_enemy_id(battle_state)
 	var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), target_id, battle_pending_capture_tool_id)
-	_set_battle_message("%s：请选择目标。机会：%s。" % [
-		CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
-		CaptureToolCatalog.chance_tier(chance),
-	])
+	if battle_pending_capture_tool_id == BattleModel.CAPTURE_TOOL_POISON_WULI_NET:
+		_set_battle_message("%s：请选择中毒乌力。" % CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id))
+	else:
+		_set_battle_message("%s：请选择目标。机会：%s。" % [
+			CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id),
+			CaptureToolCatalog.chance_tier(chance),
+		])
 	_sync_battle_buttons()
 	queue_redraw()
 
@@ -11156,18 +11169,11 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not _battle_item_can_use_now(_battle_item_id_for_command(str(command_id)), can_command, has_ally, has_enemy)
 			elif battle_command_owner == "capture":
 				match str(command_id):
-					"attack":
-						button.disabled = not has_enemy
-					"spirit":
-						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
-					"capture":
-						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_NET)
-					"defend":
-						button.disabled = not has_enemy or not BattleModel.has_capture_tool(battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED)
 					"help":
 						button.disabled = not can_command
 					_:
-						button.disabled = true
+						var capture_tool_id := str(battle_capture_button_tool_ids.get(str(command_id), ""))
+						button.disabled = capture_tool_id == "" or not has_enemy or not BattleModel.has_capture_tool(battle_state, capture_tool_id)
 			elif battle_command_owner == "switch_pet":
 				if str(command_id) == "run":
 					button.disabled = not can_command
@@ -11217,7 +11223,9 @@ func _battle_command_panel_should_be_visible() -> bool:
 
 func _battle_overlay_panel_open() -> bool:
 	return (
-		(mailbox_panel != null and mailbox_panel.visible)
+		(codex_panel != null and codex_panel.visible)
+		or (quest_panel != null and quest_panel.visible)
+		or (mailbox_panel != null and mailbox_panel.visible)
 		or (market_panel != null and market_panel.visible)
 		or (bank_panel != null and bank_panel.visible)
 		or (auto_settings_panel != null and auto_settings_panel.visible)
@@ -11892,11 +11900,18 @@ func _training_partner_count() -> int:
 
 
 func _toggle_pet_ring() -> void:
-	_set_pet_follow_enabled(not pet_follow_enabled)
+	if pet_follow_enabled:
+		_set_pet_follow_enabled(false)
 
 
-func _set_pet_follow_enabled(enabled: bool) -> void:
+func _set_pet_follow_enabled(enabled: bool, instance_id: String = "") -> void:
 	pet_follow_enabled = enabled
+	if enabled:
+		var selected_id := instance_id.strip_edges()
+		if selected_id != "":
+			pet_follow_instance_id = selected_id
+	else:
+		pet_follow_instance_id = ""
 	if pet == null:
 		return
 	pet.visible = enabled
@@ -11907,14 +11922,10 @@ func _set_pet_follow_enabled(enabled: bool) -> void:
 		pet_follow_points.append(player.global_position)
 		pet_follow_index = 0
 		pet.set_follow_target(pet.global_position)
-		if ring_button != null:
-			ring_button.text = "收宠"
 	else:
 		pet.clear_follow_target()
 		pet_follow_points.clear()
 		pet_follow_index = 0
-		if ring_button != null:
-			ring_button.text = "驯宠戒"
 
 
 func _update_pet_follow() -> void:
@@ -12267,19 +12278,38 @@ func _layout_hud() -> void:
 	if backpack_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	equipment_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
-	equipment_panel.size = Vector2(pet_width, pet_height)
+	var equipment_width: float = minf(viewport_size.x - margin * 2.0, 660.0)
+	var equipment_height: float = minf(panel_available_height, 430.0)
+	equipment_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), equipment_width)
+	equipment_height = maxf(minf(340.0, panel_available_height), equipment_height)
+	var equipment_panel_y = minf(maxf(panel_top_y, (viewport_size.y - equipment_height) * 0.5), viewport_size.y - equipment_height - margin)
+	equipment_panel.position = Vector2((viewport_size.x - equipment_width) * 0.5, equipment_panel_y)
+	equipment_panel.size = Vector2(equipment_width, equipment_height)
 	if battle_active:
 		equipment_panel.visible = false
 	if equipment_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	equipment_synthesis_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
-	equipment_synthesis_panel.size = Vector2(pet_width, pet_height)
+	var synthesis_width: float = minf(viewport_size.x - margin * 2.0, 820.0)
+	var synthesis_height: float = minf(panel_available_height, 540.0)
+	synthesis_width = maxf(minf(620.0, viewport_size.x - margin * 2.0), synthesis_width)
+	synthesis_height = maxf(minf(420.0, panel_available_height), synthesis_height)
+	var synthesis_panel_y = minf(maxf(panel_top_y, (viewport_size.y - synthesis_height) * 0.5), viewport_size.y - synthesis_height - margin)
+	equipment_synthesis_panel.position = Vector2((viewport_size.x - synthesis_width) * 0.5, synthesis_panel_y)
+	equipment_synthesis_panel.size = Vector2(synthesis_width, synthesis_height)
 	if battle_active:
 		equipment_synthesis_panel.visible = false
 	if equipment_synthesis_panel.visible and action_bar != null:
 		action_bar.visible = false
+
+	if equipment_detail_popup_panel != null:
+		var detail_popup_size := Vector2(minf(380.0, viewport_size.x - margin * 2.0), minf(330.0, viewport_size.y - margin * 2.0))
+		equipment_detail_popup_panel.size = detail_popup_size
+		if equipment_detail_popup_panel.visible:
+			equipment_detail_popup_panel.position = Vector2(
+				clampf(equipment_detail_popup_panel.position.x, margin, maxf(margin, viewport_size.x - detail_popup_size.x - margin)),
+				clampf(equipment_detail_popup_panel.position.y, margin, maxf(margin, viewport_size.y - detail_popup_size.y - margin))
+			)
 
 	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)
 	var shop_height: float = minf(panel_available_height, 620.0)
@@ -12325,15 +12355,11 @@ func _layout_hud() -> void:
 	var codex_height := pet_height
 	codex_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	codex_panel.size = Vector2(codex_width, codex_height)
-	if battle_active:
-		codex_panel.visible = false
 	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
 	quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 	quest_panel.size = Vector2(codex_width, codex_height)
-	if battle_active:
-		quest_panel.visible = false
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
@@ -13223,6 +13249,12 @@ func _font_text_width(font: Font, text: String, font_size: int) -> float:
 	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 
 
+func _battle_float_text_draw_width(font: Font, text: String, font_size: int = BATTLE_FLOAT_TEXT_FONT_SIZE) -> float:
+	var text_width := _font_text_width(font, text, font_size)
+	var max_width := maxf(BATTLE_FLOAT_TEXT_MIN_WIDTH, _layout_size().x - BATTLE_FLOAT_TEXT_HORIZONTAL_PADDING * 2.0)
+	return clampf(float(ceil(text_width + BATTLE_FLOAT_TEXT_HORIZONTAL_PADDING * 2.0)), BATTLE_FLOAT_TEXT_MIN_WIDTH, max_width)
+
+
 func _battle_actor_label(actor: Dictionary) -> String:
 	var actor_name := str(actor.get("name", "")).strip_edges()
 	if actor_name == "":
@@ -13310,8 +13342,11 @@ func _draw_battle_float_texts() -> void:
 		var position := item.get("position", Vector2.ZERO) as Vector2
 		position += Vector2(0, -38.0 * progress)
 		var text := str(item.get("text", ""))
-		draw_string(font, position + Vector2(-44, 0), text, HORIZONTAL_ALIGNMENT_CENTER, 88.0, 21, Color(0.08, 0.08, 0.06, color.a * 0.85))
-		draw_string(font, position + Vector2(-45, -1), text, HORIZONTAL_ALIGNMENT_CENTER, 90.0, 21, color)
+		var font_size := BATTLE_FLOAT_TEXT_FONT_SIZE
+		var text_width := _battle_float_text_draw_width(font, text, font_size)
+		var origin := position + Vector2(-text_width * 0.5, -1.0)
+		draw_string(font, origin + Vector2(1.0, 1.0), text, HORIZONTAL_ALIGNMENT_CENTER, text_width, font_size, Color(0.08, 0.08, 0.06, color.a * 0.85))
+		draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_CENTER, text_width, font_size, color)
 
 
 func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = Color(1.0, 0.78, 0.20, 0.96)) -> void:

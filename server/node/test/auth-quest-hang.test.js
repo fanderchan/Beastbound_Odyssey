@@ -236,6 +236,17 @@ test("party pve capture advances capture quest and stops hang capture target", (
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
   assert.equal(Boolean(player && enemy), true);
   assert.equal(player.spiritIds.includes("spirit_poison_1"), true);
+  const invalidUnpoisonedCapture = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_poison_wuli_net",
+  });
+  assert.equal(invalidUnpoisonedCapture.ok, false);
+  assert.equal(invalidUnpoisonedCapture.code, "battle_command_capture_invalid");
+  assert.match(invalidUnpoisonedCapture.message, /中毒的乌力/);
+  assert.equal(encounter.room.participants[0].teamSnapshot.captureToolBag.capture_poison_wuli_net, 1);
   const poisoned = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
     "actorId": player.actorId,

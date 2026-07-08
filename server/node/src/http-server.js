@@ -167,6 +167,9 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/equipment/equip") {
         return sendResult(res, service.equipmentEquip(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "POST" && url.pathname === "/equipment/unequip") {
+        return sendResult(res, service.equipmentUnequip(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "POST" && url.pathname === "/equipment/enhance") {
         return sendResult(res, service.equipmentEnhance(bearerToken(req), await readJson(req)));
       }

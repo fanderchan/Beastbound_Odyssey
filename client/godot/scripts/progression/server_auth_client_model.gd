@@ -446,6 +446,17 @@ static func equipment_equip_request(base_url: String, session_token: String, ite
 	}
 
 
+static func equipment_unequip_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
+	return {
+		"url": "%s/equipment/unequip" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"slotId": slot_id,
+		}),
+	}
+
+
 static func equipment_enhance_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
 	return {
 		"url": "%s/equipment/enhance" % normalized_base_url(base_url),
@@ -1369,6 +1380,16 @@ static func parse_equipment_equip_response(response_code: int, body: PackedByteA
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["equipment"] = response.get("equipment", {}) if response.get("equipment", {}) is Dictionary else {}
 	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_equipment_unequip_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "卸下失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["equipment"] = response.get("equipment", {}) if response.get("equipment", {}) is Dictionary else {}
 	return parsed
 
 
