@@ -24,6 +24,44 @@
           }
         ]
       },
+      "nextQuestId": "quest_open_task_panel"
+    },
+    {
+      "id": "quest_open_task_panel",
+      "title": "查看当前任务",
+      "giverId": "trainer",
+      "turnInId": "trainer",
+      "autoClaimOnReady": true,
+      "summary": "底部功能栏会陪你完成冒险，先打开任务面板看看完整目标。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "quest",
+        "count": 1,
+        "text": "点击底部“任务”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_open_map_panel"
+    },
+    {
+      "id": "quest_open_map_panel",
+      "title": "学会看地图",
+      "giverId": "trainer",
+      "turnInId": "trainer",
+      "autoClaimOnReady": true,
+      "summary": "地图会列出附近设施、NPC和草丛，也可以直接选择目标寻路。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "map",
+        "count": 1,
+        "text": "点击底部“地图”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
       "nextQuestId": "quest_bank_intro"
     },
     {
@@ -117,6 +155,25 @@
       },
       "rewards": {
         "stoneCoins": 0,
+        "items": []
+      },
+      "nextQuestId": "quest_open_status_panel"
+    },
+    {
+      "id": "quest_open_status_panel",
+      "title": "认识人物状态",
+      "giverId": "firebud_riding_trainer",
+      "turnInId": "firebud_riding_trainer",
+      "autoClaimOnReady": true,
+      "summary": "状态面板会显示人物属性和可分配点数。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "status",
+        "count": 1,
+        "text": "点击底部“状态”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
         "items": []
       },
       "nextQuestId": "quest_buy_supply"
@@ -220,6 +277,31 @@
       },
       "rewards": {
         "stoneCoins": 15,
+        "items": [
+          {
+            "itemId": "tutorial_worn_hide",
+            "count": 2
+          }
+        ]
+      },
+      "nextQuestId": "quest_sell_to_shop"
+    },
+    {
+      "id": "quest_sell_to_shop",
+      "title": "清理旧兽皮",
+      "giverId": "firebud_shopkeeper",
+      "turnInId": "firebud_shopkeeper",
+      "autoClaimOnReady": true,
+      "summary": "不需要的物品可以卖给商店。留下一张旧兽皮，稍后还要学习卖给其他玩家。",
+      "objective": {
+        "type": "sell_item",
+        "shopId": "firebud_item_shop",
+        "itemId": "tutorial_worn_hide",
+        "count": 1,
+        "text": "在火芽杂货铺切到出售，卖出1张旧兽皮"
+      },
+      "rewards": {
+        "stoneCoins": 5,
         "items": []
       },
       "nextQuestId": "quest_buy_weapon"
@@ -267,6 +349,25 @@
           }
         ]
       },
+      "nextQuestId": "quest_open_equipment_panel"
+    },
+    {
+      "id": "quest_open_equipment_panel",
+      "title": "检查身上装备",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "装备面板能查看人物当前穿戴、精灵效果与装备状态。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "equipment",
+        "count": 1,
+        "text": "点击底部“装备”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
       "nextQuestId": "quest_first_victory"
     },
     {
@@ -290,6 +391,106 @@
             "count": 1
           }
         ]
+      },
+      "nextQuestId": "quest_open_auto_settings"
+    },
+    {
+      "id": "quest_open_auto_settings",
+      "title": "设置自动战斗",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "内挂可以设置自动战斗、自动捕捉和低血量停止条件。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "auto_settings",
+        "count": 1,
+        "text": "点击底部“内挂”查看挂机设置"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_start_hang"
+    },
+    {
+      "id": "quest_start_hang",
+      "title": "第一次挂机",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "站进村外草丛后点击挂机，人物会在遇敌区自动走动并进入战斗。",
+      "objective": {
+        "type": "start_hang",
+        "mode": "walk",
+        "routeEncounterGroupId": "firebud_grass_01",
+        "count": 1,
+        "text": "到村外草丛，点击底部“挂机”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_market_sell_player"
+    },
+    {
+      "id": "quest_market_sell_player",
+      "title": "卖给其他玩家",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "打开买卖，把剩下的旧兽皮上架。教学买家会立即购买，单价最多20石币。",
+      "objective": {
+        "type": "market_list",
+        "itemId": "tutorial_worn_hide",
+        "currency": "stoneCoins",
+        "maxUnitPrice": 20,
+        "maxCount": 1,
+        "count": 1,
+        "text": "在“买卖”上架1张旧兽皮，单价不高于20石币"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_claim_market_mail"
+    },
+    {
+      "id": "quest_claim_market_mail",
+      "title": "邮箱领取货款",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "玩家交易所得会通过邮箱发送。打开邮箱，领取刚才卖出旧兽皮的货款。",
+      "objective": {
+        "type": "claim_mail",
+        "mailKind": "tutorial_market_sale",
+        "count": 1,
+        "text": "点击底部“邮箱”，领取教学成交邮件附件"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_market_buy_player"
+    },
+    {
+      "id": "quest_market_buy_player",
+      "title": "向玩家购买",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "教学卖家已经用1石币上架一份肉。打开买卖，在“购买”页买下它。",
+      "objective": {
+        "type": "market_buy",
+        "itemId": "item_meat_small",
+        "sellerKind": "tutorial_bot",
+        "count": 1,
+        "text": "在“买卖”的购买页，用1石币买下教学卖家的肉"
+      },
+      "rewards": {
+        "stoneCoins": 10,
+        "items": []
       },
       "nextQuestId": "quest_buy_spirit_armor"
     },
@@ -397,6 +598,25 @@
         "stoneCoins": 0,
         "items": []
       },
+      "nextQuestId": "quest_chat_greeting"
+    },
+    {
+      "id": "quest_chat_greeting",
+      "title": "和附近的人打招呼",
+      "giverId": "firebud_equipment_keeper",
+      "turnInId": "firebud_equipment_keeper",
+      "autoClaimOnReady": true,
+      "summary": "打开聊天，切到附近频道并发送一条消息。",
+      "objective": {
+        "type": "send_chat",
+        "channel": "nearby",
+        "count": 1,
+        "text": "在“聊天”的附近频道发送一条消息"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
       "nextQuestId": "quest_training_partner_intro"
     },
     {
@@ -405,11 +625,11 @@
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
-      "summary": "加入一名陪练伙伴，再去村外草丛挑战更多野生宠物。",
+      "summary": "打开底部队伍，在伙伴页加入一名陪练伙伴，再去村外草丛挑战更多野生宠物。",
       "objective": {
         "type": "training_partner_count",
         "count": 1,
-        "text": "在伙伴面板加入1名陪练伙伴"
+        "text": "在底部“队伍”的伙伴页加入1名陪练伙伴"
       },
       "rewards": {
         "stoneCoins": 10,
@@ -522,6 +742,63 @@
             ]
           }
         ]
+      },
+      "nextQuestId": "quest_open_codex_panel"
+    },
+    {
+      "id": "quest_open_codex_panel",
+      "title": "查看宠物图鉴",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "图鉴会记录见过和捕捉过的宠物，也能查看种系与成长信息。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "codex",
+        "count": 1,
+        "text": "点击底部“图鉴”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_open_family_panel"
+    },
+    {
+      "id": "quest_open_family_panel",
+      "title": "认识家族",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "家族面板可以查看、创建或申请加入家族，并了解庄园归属。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "family",
+        "count": 1,
+        "text": "点击底部“家族”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
+      },
+      "nextQuestId": "quest_open_account_panel"
+    },
+    {
+      "id": "quest_open_account_panel",
+      "title": "保护账号",
+      "giverId": "village_guard",
+      "turnInId": "village_guard",
+      "autoClaimOnReady": true,
+      "summary": "账号面板可以查看登录状态、切换账号和安全退出。",
+      "objective": {
+        "type": "open_feature",
+        "featureId": "account",
+        "count": 1,
+        "text": "点击底部“账号”"
+      },
+      "rewards": {
+        "stoneCoins": 5,
+        "items": []
       },
       "nextQuestId": "quest_rebirth_1_guidance"
     },

@@ -64,7 +64,8 @@ const POSITION_SNAPSHOT_MAX_DRIFT_CELLS = 2;
 const POSITION_SPAWN_TOLERANCE_CELLS = 1;
 const POSITION_WARP_PROXIMITY_CELLS = 4;
 const QUEST_TALK_PROXIMITY_CELLS = 3;
-const QUEST_EVENT_CLIENT_REPORTABLE_TYPES = new Set(["talk"]);
+const QUEST_EVENT_CLIENT_REPORTABLE_TYPES = new Set(["talk", "open_feature"]);
+const QUEST_TUTORIAL_FEATURE_IDS = new Set(["status", "equipment", "codex", "quest", "map", "family", "auto_settings", "account"]);
 const PARTY_OFFLINE_AUTO_KICK_MS = 10 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
@@ -796,6 +797,22 @@ function createAuthService(options = {}) {
         currency,
         schemaVersion: 1,
       };
+      const questProgress = recordQuestEventToProfile(profile, {
+        type: "sell_item",
+        shopId,
+        itemId,
+        amount,
+        schemaVersion: 1,
+      });
+      if (questProgress.changed && questProgress.message) {
+        questMessages.push(questProgress.message);
+      }
+      if (questProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
@@ -1644,6 +1661,18 @@ function createAuthService(options = {}) {
     if (!QUEST_EVENT_CLIENT_REPORTABLE_TYPES.has(type)) {
       return {ok: false, code: "quest_event_not_client_reportable", message: "该任务进度由服务器结算，不能由客户端上报。"};
     }
+    if (type === "open_feature") {
+      if (!QUEST_TUTORIAL_FEATURE_IDS.has(String(event && event.featureId || "").trim())) {
+        return {ok: false, code: "quest_feature_invalid", message: "这个功能入口不存在。"};
+      }
+      const binding = data.profileBindings && data.profileBindings[account.accountId];
+      const profileDoc = binding && data.profiles && data.profiles[binding.playerId];
+      const profile = profileDoc && profileDoc.profile;
+      const quest = profile && questById(currentProfileQuestId(profile));
+      return quest && questProgressAmountForEvent(quest, event) > 0
+        ? {ok: true}
+        : {ok: false, code: "quest_feature_not_expected", message: "当前任务不需要打开这个功能。"};
+    }
     if (allowPositionTeleport) {
       return {ok: true};
     }
@@ -2380,6 +2409,7 @@ function playerPositionPublicPrecision(position) {
 function publicMail(mail) {
   return {
     mailId: mail.mailId,
+    mailKind: String(mail.mailKind || ""),
     senderUsername: mail.senderUsername,
     senderDisplayName: mail.senderDisplayName,
     recipientUsername: mail.recipientUsername,
@@ -8971,6 +9001,58 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     }
     return Math.max(1, Math.trunc(Number(event.amount || 1)));
   }
+  if (type === "sell_item") {
+    if (eventType !== "sell_item") {
+      return 0;
+    }
+    if (
+      !questMatchesStringFilter(objective, event, "shopId") ||
+      !questMatchesStringFilter(objective, event, "itemId")
+    ) {
+      return 0;
+    }
+    return Math.max(1, Math.trunc(Number(event.amount || 1)));
+  }
+  if (type === "open_feature") {
+    return eventType === "open_feature" && questMatchesStringFilter(objective, event, "featureId") ? 1 : 0;
+  }
+  if (type === "start_hang") {
+    if (
+      eventType !== "start_hang" ||
+      !questMatchesStringFilter(objective, event, "mode")
+    ) {
+      return 0;
+    }
+    return 1;
+  }
+  if (type === "market_list") {
+    if (
+      eventType !== "market_list" ||
+      !questMatchesStringFilter(objective, event, "itemId") ||
+      !questMatchesStringFilter(objective, event, "currency") ||
+      !questMatchesMaximumNumberFilter(objective, event, "unitPrice", "maxUnitPrice") ||
+      !questMatchesMaximumNumberFilter(objective, event, "amount", "maxCount")
+    ) {
+      return 0;
+    }
+    return Math.max(1, Math.trunc(Number(event.amount || 1)));
+  }
+  if (type === "market_buy") {
+    if (
+      eventType !== "market_buy" ||
+      !questMatchesStringFilter(objective, event, "itemId") ||
+      !questMatchesStringFilter(objective, event, "sellerKind")
+    ) {
+      return 0;
+    }
+    return Math.max(1, Math.trunc(Number(event.amount || 1)));
+  }
+  if (type === "claim_mail") {
+    return eventType === "claim_mail" && questMatchesStringFilter(objective, event, "mailKind") ? 1 : 0;
+  }
+  if (type === "send_chat") {
+    return eventType === "send_chat" && questMatchesStringFilter(objective, event, "channel") ? 1 : 0;
+  }
   if (type === "use_world_item") {
     if (eventType !== "use_world_item") {
       return 0;
@@ -9110,6 +9192,14 @@ function questMatchesMinimumNumberFilter(objective, event, eventKey, objectiveKe
     return true;
   }
   return Math.trunc(Number(event && event[eventKey] || 0)) >= minimum;
+}
+
+function questMatchesMaximumNumberFilter(objective, event, eventKey, objectiveKey) {
+  const maximum = Math.max(0, Math.trunc(Number(objective && (objective[objectiveKey] ?? objective[eventKey]) || 0)));
+  if (maximum <= 0) {
+    return true;
+  }
+  return Math.trunc(Number(event && event[eventKey] || 0)) <= maximum;
 }
 
 function questMatchesItemFilter(objective, event) {
@@ -9266,6 +9356,14 @@ function normalizedQuestEventPayload(event) {
   result.interactionId = String(result.interactionId || "").trim();
   result.itemId = String(result.itemId || "").trim();
   result.shopId = String(result.shopId || "").trim();
+  result.featureId = String(result.featureId || "").trim();
+  result.mode = String(result.mode || "").trim();
+  result.encounterGroupId = String(result.encounterGroupId || "").trim();
+  result.currency = String(result.currency || "").trim();
+  result.mailKind = String(result.mailKind || "").trim();
+  result.sellerKind = String(result.sellerKind || "").trim();
+  result.channel = String(result.channel || "").trim();
+  result.unitPrice = Math.max(0, Math.trunc(Number(result.unitPrice || 0)));
   result.slot = String(result.slot || result.slotId || "").trim();
   result.slotId = String(result.slotId || result.slot || "").trim();
   result.amount = Math.max(1, Math.trunc(Number(result.amount || 1)));

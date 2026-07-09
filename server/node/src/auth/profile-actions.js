@@ -105,6 +105,22 @@ function createProfileActionsDomain(ctx) {
       profile.captureTools = captureToolBagFromProfile(profile);
     }
     profile.hangSession = session;
+    const questMessages = [];
+    const questProgress = recordQuestEventToProfile(profile, {
+      type: "start_hang",
+      mode,
+      amount: 1,
+      schemaVersion: 1,
+    });
+    if (questProgress.changed && questProgress.message) {
+      questMessages.push(questProgress.message);
+    }
+    if (questProgress.ready && activeQuestAutoClaim(profile)) {
+      const claim = claimActiveQuestToProfile(profile);
+      if (claim.ok && claim.message) {
+        questMessages.push(claim.message);
+      }
+    }
     const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
     save(data);
     return ok({
@@ -113,6 +129,7 @@ function createProfileActionsDomain(ctx) {
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
       hang: publicHangSession(session),
+      questMessages,
       message: mode === "encounter_stone" ? "遇敌石已生效。" : "开始挂机。",
     });
   }

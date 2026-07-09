@@ -912,6 +912,7 @@ var battle_reward_preview: bool = false
 var equipment_drop_preview: bool = false
 var quest_preview: bool = false
 var quest_ui_preview: bool = false
+var tutorial_task_preview: bool = false
 var quest_reward_choice_preview: bool = false
 var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
@@ -1577,6 +1578,8 @@ func _ready() -> void:
 		call_deferred("_run_quest_preview")
 	elif quest_ui_preview:
 		call_deferred("_run_quest_ui_preview")
+	elif tutorial_task_preview:
+		call_deferred("_run_tutorial_task_preview")
 	elif quest_reward_choice_preview:
 		call_deferred("_run_quest_reward_choice_preview")
 	elif quest_equipment_tutorial_preview:
@@ -2308,6 +2311,8 @@ func _apply_preview_window_args() -> void:
 			quest_preview = true
 		elif arg == "--quest-ui-preview":
 			quest_ui_preview = true
+		elif arg == "--tutorial-task-preview":
+			tutorial_task_preview = true
 		elif arg == "--quest-reward-choice-preview":
 			quest_reward_choice_preview = true
 		elif arg == "--quest-equipment-tutorial-preview":
@@ -3999,6 +4004,28 @@ func _run_quest_ui_preview() -> void:
 		_update_hud_text()
 
 
+func _run_tutorial_task_preview() -> void:
+	profile_save_enabled = false
+	world_log_history.clear()
+	world_log_message = ""
+	player_profile = _profile_with_active_quest("quest_market_sell_player")
+	var slots := BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(player_profile), "tutorial_worn_hide", 1)
+	player_profile = PlayerProgressModel.with_backpack_slots(player_profile, slots)
+	_load_map("firebud_village_gate", "from_training_yard")
+	_set_world_log_message("村口守卫：把旧兽皮挂到买卖里，教学买家会马上买下它。")
+	_open_quest_panel()
+	if status_label != null:
+		_update_hud_text()
+	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if screenshot_path != "":
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var screenshot := get_viewport().get_texture().get_image()
+		var screenshot_error := screenshot.save_png(screenshot_path)
+		print("tutorial task screenshot: status=%s path=%s" % ["ok" if screenshot_error == OK else "failed", screenshot_path])
+		get_tree().quit(0 if screenshot_error == OK else 1)
+
+
 func _run_quest_reward_choice_preview() -> void:
 	profile_save_enabled = false
 	world_log_history.clear()
@@ -4614,7 +4641,13 @@ func _quest_reward_choice_ready_profile() -> Dictionary:
 	var states := {}
 	for quest in QuestModel.quests():
 		var quest_id := str(quest.get("id", ""))
-		if quest_id == "" or quest_id == "quest_capture_wuli" or quest_id == "quest_rebirth_1_guidance":
+		if quest_id == "" or [
+			"quest_capture_wuli",
+			"quest_open_codex_panel",
+			"quest_open_family_panel",
+			"quest_open_account_panel",
+			"quest_rebirth_1_guidance",
+		].has(quest_id):
 			continue
 		states[quest_id] = {
 			"status": QuestModel.STATUS_CLAIMED,
@@ -12052,8 +12085,16 @@ func _start_hang_walk() -> void:
 		_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
 		return
 	player_profile = PlayerProgressModel.start_hang_session(player_profile, "walk", current_map_id, player_cell)
+	var quest_messages := _record_quest_event_and_maybe_claim({
+		"type": "start_hang",
+		"mode": "walk",
+		"encounterGroupId": str(zone.get("encounterGroupId", "")),
+		"amount": 1,
+	})
 	_set_hang_mode(true)
-	_set_world_log_message("开始挂机，会在遇敌区域内来回走动。")
+	var messages: Array[String] = ["开始挂机，会在遇敌区域内来回走动。"]
+	messages.append_array(quest_messages)
+	_set_world_log_message("\n".join(messages))
 
 
 func _set_hang_mode(enabled: bool) -> void:
@@ -12068,9 +12109,7 @@ func _sync_hang_button_text() -> void:
 	if stop_button == null:
 		return
 	var next_text := "挂机"
-	if battle_active:
-		next_text = "停"
-	elif hang_mode_active or _encounter_stone_active():
+	if (hang_mode_active or _encounter_stone_active()) and not hang_stop_after_battle_requested:
 		next_text = "停"
 	if stop_button.text != next_text:
 		stop_button.text = next_text

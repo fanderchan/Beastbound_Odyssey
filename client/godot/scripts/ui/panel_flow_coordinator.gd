@@ -54,6 +54,7 @@ const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_trai
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const TutorialFeatureModel := preload("res://scripts/progression/tutorial_feature_model.gd")
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
@@ -10366,6 +10367,7 @@ func _open_account_panel() -> void:
 		account_panel.visible = true
 	_refresh_account_panel()
 	host._layout_hud()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_ACCOUNT)
 
 func _close_account_panel(update_layout: bool = true) -> void:
 	_hide_control(account_panel, update_layout)
@@ -12870,6 +12872,14 @@ func _record_quest_event_and_maybe_claim(event: Dictionary) -> Array[String]:
 			filtered.append(text)
 	return filtered
 
+func _record_tutorial_feature_opened(feature_id: String) -> void:
+	var event := TutorialFeatureModel.open_event(feature_id)
+	if event.is_empty():
+		return
+	var messages := _record_quest_event_and_maybe_claim(event)
+	if not messages.is_empty():
+		_set_world_log_message("\n".join(messages))
+
 func _queue_server_quest_record_event(event: Dictionary, quest_id: String = "") -> void:
 	host._server_sync().queue_server_quest_record_event(event, quest_id)
 
@@ -13011,6 +13021,7 @@ func _open_equipment_panel() -> void:
 	_refresh_equipment_panel()
 	host._layout_hud()
 	host.call_deferred("_layout_hud")
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_EQUIPMENT)
 
 func _close_equipment_panel() -> void:
 	if equipment_slot_context_menu != null:
@@ -13082,6 +13093,7 @@ func _open_player_status_panel() -> void:
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_player_status_panel()
 	host._layout_hud()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_STATUS)
 
 func _close_player_status_panel() -> void:
 	host._flush_profile_save_now()
@@ -16559,12 +16571,14 @@ func _open_codex_panel() -> void:
 	_refresh_codex_panel()
 	host._sync_battle_buttons()
 	host._layout_hud()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_CODEX)
 
 func _close_codex_panel() -> void:
 	_hide_control(codex_panel)
 
 func _open_quest_panel() -> void:
 	host._dialog_quest()._open_quest_panel()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_QUEST)
 
 func _close_quest_panel() -> void:
 	host._dialog_quest()._close_quest_panel()
@@ -16593,6 +16607,7 @@ func _open_map_panel() -> void:
 	_refresh_map_panel()
 	host._layout_hud()
 	host.call_deferred("_layout_hud")
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_MAP)
 
 func _close_map_panel() -> void:
 	_hide_control(map_panel)
@@ -16779,10 +16794,22 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_chat_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
+			var chat_profile = parsed_send.get("profile", null)
+			if chat_profile is Dictionary:
+				player_profile = PlayerProgressModel.normalize_profile((chat_profile as Dictionary).duplicate(true))
+				var chat_summary = parsed_send.get("profileSummary", {})
+				if chat_summary is Dictionary:
+					_apply_server_profile_summary(chat_summary as Dictionary)
+				host._mark_progress_ui_caches_dirty()
+				if profile_save_enabled:
+					PlayerProgressModel.save_profile(player_profile)
 			if chat_input != null:
 				chat_input.text = ""
 			if chat_status_label != null:
 				chat_status_label.text = "消息已发送。"
+			var chat_quest_messages := _string_array_values(parsed_send.get("questMessages", []))
+			if not chat_quest_messages.is_empty():
+				_set_world_log_message("\n".join(chat_quest_messages))
 			_request_chat_messages()
 			return
 		elif _handle_session_invalid_response(parsed_send):
@@ -16909,6 +16936,7 @@ func _open_family_panel_with_focus(manor_id: String) -> void:
 	_refresh_family_panel()
 	_request_family_state()
 	host._layout_hud()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_FAMILY)
 
 func _close_family_panel(update_layout: bool = true) -> void:
 	_hide_control(family_panel, update_layout)
@@ -19156,7 +19184,8 @@ func _on_market_http_request_completed(result: int, response_code: int, _headers
 		if market_status_label != null:
 			market_status_label.text = message
 		if kind != "state":
-			_set_world_log_message(message)
+			var market_messages := _string_array_values(parsed.get("questMessages", []))
+			_set_world_log_message("\n".join([message] + market_messages))
 		if backpack_panel != null and backpack_panel.visible:
 			_refresh_backpack_panel()
 		host._update_hud_text(true)
@@ -19580,7 +19609,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 				_apply_server_battle_room_state(room as Dictionary, false)
 			if mailbox_status_label != null:
 				mailbox_status_label.text = str(parsed_claim.get("message", "邮件附件已领取。"))
-			_set_world_log_message(str(parsed_claim.get("message", "邮件附件已领取。")))
+			var claim_messages := _string_array_values(parsed_claim.get("questMessages", []))
+			_set_world_log_message("\n".join([str(parsed_claim.get("message", "邮件附件已领取。"))] + claim_messages))
 			if backpack_panel != null and backpack_panel.visible:
 				_refresh_backpack_panel()
 			host._update_hud_text(true)
@@ -20483,6 +20513,7 @@ func _open_auto_settings_panel() -> void:
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_auto_settings_panel()
 	host._layout_hud()
+	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_AUTO_SETTINGS)
 
 func _close_auto_settings_panel() -> void:
 	_hide_control(auto_settings_panel)
@@ -21484,6 +21515,10 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 			return _navigation_target_for_interaction_id(str(objective.get("targetId", QuestModel.turn_in_id_for(quest))))
 		"buy_item":
 			return _navigation_target_for_shop(str(objective.get("shopId", "")))
+		"sell_item":
+			return _navigation_target_for_shop(str(objective.get("shopId", "")))
+		"open_feature":
+			return TutorialFeatureModel.navigation_target(str(objective.get("featureId", "")), QuestModel.objective_text_for(quest))
 		"use_world_item":
 			return _navigation_target_for_backpack(QuestModel.objective_text_for(quest))
 		"equip_item":
@@ -21496,6 +21531,21 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"battle_victory":
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
+		"start_hang":
+			return _navigation_target_for_encounter_group(str(objective.get("routeEncounterGroupId", objective.get("encounterGroupId", ""))))
+		"market_list", "market_buy":
+			return {
+				"kind": "market_panel",
+				"marketMode": "sell" if str(objective.get("type", "")) == "market_list" else "buy",
+				"mapId": "",
+				"label": QuestModel.objective_text_for(quest),
+			}
+		"claim_mail":
+			return {"kind": "mailbox_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
+		"send_chat":
+			return {"kind": "chat_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
+		"training_partner_count":
+			return {"kind": "party_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
 		"capture_pet":
 			return _navigation_target_for_capture_objective(objective)
 	return {}
@@ -21966,6 +22016,41 @@ func _route_to_quest_target(target: Dictionary) -> void:
 		"pet_panel":
 			_open_pet_panel()
 			_set_world_log_message("请在宠物界面完成：%s。" % label)
+		"tutorial_feature":
+			_open_tutorial_feature_panel(str(target.get("featureId", "")))
+		"market_panel":
+			_open_market_panel()
+			_set_market_mode(str(target.get("marketMode", "buy")))
+			_set_world_log_message("请在买卖界面完成：%s。" % label)
+		"mailbox_panel":
+			_open_mailbox_panel()
+			_set_world_log_message("请在邮箱完成：%s。" % label)
+		"chat_panel":
+			_open_chat_panel()
+			_set_chat_channel(CHAT_CHANNEL_NEARBY)
+			_set_world_log_message("请在附近频道完成：%s。" % label)
+		"party_panel":
+			_open_party_panel(PARTY_PANEL_MODE_PARTNERS)
+			_set_world_log_message("请在队伍的伙伴页完成：%s。" % label)
+
+func _open_tutorial_feature_panel(feature_id: String) -> void:
+	match feature_id:
+		TutorialFeatureModel.FEATURE_STATUS:
+			_open_player_status_panel()
+		TutorialFeatureModel.FEATURE_EQUIPMENT:
+			_open_equipment_panel()
+		TutorialFeatureModel.FEATURE_CODEX:
+			_open_codex_panel()
+		TutorialFeatureModel.FEATURE_QUEST:
+			_open_quest_panel()
+		TutorialFeatureModel.FEATURE_MAP:
+			_open_map_panel()
+		TutorialFeatureModel.FEATURE_FAMILY:
+			_open_family_panel()
+		TutorialFeatureModel.FEATURE_AUTO_SETTINGS:
+			_open_auto_settings_panel()
+		TutorialFeatureModel.FEATURE_ACCOUNT:
+			_open_account_panel()
 
 func _navigation_target_display_label(target: Dictionary) -> String:
 	var label = str(target.get("label", "目标"))

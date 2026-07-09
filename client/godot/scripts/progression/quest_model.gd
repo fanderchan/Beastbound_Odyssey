@@ -20,6 +20,48 @@ const OBJECTIVE_TEMPLATES := {
 		"requiredFields": ["shopId", "itemId"],
 		"summary": "在指定商店购买指定物品。",
 	},
+	"sell_item": {
+		"label": "出售道具",
+		"eventTypes": ["sell_item"],
+		"requiredFields": ["shopId", "itemId"],
+		"summary": "在指定商店出售指定物品。",
+	},
+	"open_feature": {
+		"label": "打开功能",
+		"eventTypes": ["open_feature"],
+		"requiredFields": ["featureId"],
+		"summary": "从底部功能栏打开指定面板。",
+	},
+	"start_hang": {
+		"label": "开始挂机",
+		"eventTypes": ["start_hang"],
+		"requiredFields": ["mode"],
+		"summary": "在遇敌区域开始指定模式的挂机。",
+	},
+	"market_list": {
+		"label": "交易所上架",
+		"eventTypes": ["market_list"],
+		"requiredFields": ["itemId"],
+		"summary": "把指定物品上架到玩家交易所。",
+	},
+	"market_buy": {
+		"label": "交易所购买",
+		"eventTypes": ["market_buy"],
+		"requiredFields": ["itemId"],
+		"summary": "从玩家交易所购买指定物品。",
+	},
+	"claim_mail": {
+		"label": "领取邮件",
+		"eventTypes": ["claim_mail"],
+		"requiredFields": ["mailKind"],
+		"summary": "从邮箱领取指定来源的附件。",
+	},
+	"send_chat": {
+		"label": "发送聊天",
+		"eventTypes": ["send_chat"],
+		"requiredFields": ["channel"],
+		"summary": "在指定聊天频道发送一条消息。",
+	},
 	"use_world_item": {
 		"label": "世界使用道具",
 		"eventTypes": ["use_world_item"],
@@ -548,6 +590,52 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 			if not _matches_item_filter(objective, event):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
+		"sell_item":
+			if event_type != "sell_item":
+				return 0
+			if not _matches_string_filter(objective, event, "shopId"):
+				return 0
+			if not _matches_item_filter(objective, event):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"open_feature":
+			if event_type != "open_feature" or not _matches_string_filter(objective, event, "featureId"):
+				return 0
+			return 1
+		"start_hang":
+			if event_type != "start_hang":
+				return 0
+			if not _matches_string_filter(objective, event, "mode"):
+				return 0
+			return 1
+		"market_list":
+			if event_type != "market_list":
+				return 0
+			if not _matches_item_filter(objective, event):
+				return 0
+			if not _matches_string_filter(objective, event, "currency"):
+				return 0
+			if not _matches_maximum_number_filter(objective, event, "unitPrice", "maxUnitPrice"):
+				return 0
+			if not _matches_maximum_number_filter(objective, event, "amount", "maxCount"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"market_buy":
+			if event_type != "market_buy":
+				return 0
+			if not _matches_item_filter(objective, event):
+				return 0
+			if not _matches_string_filter(objective, event, "sellerKind"):
+				return 0
+			return maxi(1, int(event.get("amount", 1)))
+		"claim_mail":
+			if event_type != "claim_mail" or not _matches_string_filter(objective, event, "mailKind"):
+				return 0
+			return 1
+		"send_chat":
+			if event_type != "send_chat" or not _matches_string_filter(objective, event, "channel"):
+				return 0
+			return 1
 		"use_world_item":
 			if event_type != "use_world_item":
 				return 0
@@ -769,6 +857,13 @@ static func _matches_minimum_number_filter(filter_source: Dictionary, event: Dic
 	if required <= 0:
 		return true
 	return int(event.get(event_key, 0)) >= required
+
+
+static func _matches_maximum_number_filter(filter_source: Dictionary, event: Dictionary, event_key: String, filter_key: String) -> bool:
+	var maximum := maxi(0, int(filter_source.get(filter_key, filter_source.get(event_key, 0))))
+	if maximum <= 0:
+		return true
+	return int(event.get(event_key, 0)) <= maximum
 
 
 static func _matches_item_filter(filter_source: Dictionary, event: Dictionary) -> bool:

@@ -8,6 +8,7 @@ function createMailChatDomain(ctx) {
     MAIL_BODY_MAX_LENGTH,
     MAIL_TITLE_MAX_LENGTH,
     MAX_CHAT_MESSAGES,
+    activeQuestAutoClaim,
     addClaimedMailItemsToActiveBattleRoom,
     addRewardItemsToBackpack,
     bagItemLabel,
@@ -15,6 +16,7 @@ function createMailChatDomain(ctx) {
     captureToolBagFromProfile,
     clampInt,
     clone,
+    claimActiveQuestToProfile,
     consumeBackpackItem,
     emitServiceEvent,
     fail,
@@ -31,6 +33,7 @@ function createMailChatDomain(ctx) {
     now,
     ok,
     partyForAccount,
+    persistProfileForAccount,
     profileBackpackSlots,
     profileBindingForAccount,
     profileCurrencyAmount,
@@ -42,6 +45,7 @@ function createMailChatDomain(ctx) {
     publicMail,
     publicParty,
     randomId,
+    recordQuestEventToProfile,
     resolveSession,
     save,
     setProfileCurrencyAmount,
@@ -237,19 +241,13 @@ function createMailChatDomain(ctx) {
     } else {
       delete data.mailMessages[normalizedMailId];
     }
-    const updatedAt = isoNow(now);
-    const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
-      playerId: binding.playerId,
-      accountId: resolved.account.accountId,
-      profileRevision: nextRevision,
-      profile,
-      updatedAt,
+    const questMessages = recordAndClaimQuest(profile, {
+      type: "claim_mail",
+      mailKind: String(mail.mailKind || ""),
+      amount: 1,
       schemaVersion: 1,
-    };
+    });
+    const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
     const battleRoom = addClaimedMailItemsToActiveBattleRoom
       ? addClaimedMailItemsToActiveBattleRoom(data, resolved.account.accountId, addResult.addedItems)
       : null;
@@ -257,7 +255,7 @@ function createMailChatDomain(ctx) {
     const message = "领取邮件附件：%s。".replace("%s", mailAttachmentText(currency, addResult.addedItems));
     return ok({
       account: publicAccount(resolved.account),
-      profileBinding: binding,
+      profileBinding: persisted.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
       mail: remaining.length > 0 ? publicMail(mail) : null,
@@ -269,6 +267,7 @@ function createMailChatDomain(ctx) {
         remainingItems: remaining,
         schemaVersion: 1,
       },
+      questMessages,
       message: remaining.length > 0 ? `${message} 背包空间不足，剩余附件留在邮箱。` : message,
     });
   }
@@ -367,6 +366,23 @@ function createMailChatDomain(ctx) {
     while (data.chatMessages.length > MAX_CHAT_MESSAGES) {
       data.chatMessages.shift();
     }
+    let profile = null;
+    let persisted = null;
+    let questMessages = [];
+    const binding = profileBindingForAccount(data, resolved.account, now);
+    const profileDoc = data.profiles[binding.playerId] || null;
+    if (profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)) {
+      profile = clone(profileDoc.profile);
+      questMessages = recordAndClaimQuest(profile, {
+        type: "send_chat",
+        channel,
+        amount: 1,
+        schemaVersion: 1,
+      });
+      if (questMessages.length > 0) {
+        persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
+      }
+    }
     save(data);
     emitServiceEvent({
       type: "chat.message",
@@ -378,7 +394,26 @@ function createMailChatDomain(ctx) {
     return ok({
       message: publicChatMessage(message),
       party: party ? publicParty(party, data) : null,
+      profile: persisted ? clone(profile) : undefined,
+      profileBinding: persisted ? persisted.binding : undefined,
+      profileSummary: persisted ? profileSummaryForAccount(resolved.account, data) : undefined,
+      questMessages,
     });
+  }
+
+  function recordAndClaimQuest(profile, event) {
+    const messages = [];
+    const progress = recordQuestEventToProfile(profile, event);
+    if (progress.changed && progress.message) {
+      messages.push(progress.message);
+    }
+    if (progress.ready && activeQuestAutoClaim(profile)) {
+      const claim = claimActiveQuestToProfile(profile);
+      if (claim.ok && claim.message) {
+        messages.push(claim.message);
+      }
+    }
+    return messages;
   }
 
   return {

@@ -17,6 +17,14 @@
       }
     },
     {
+      "id": "tutorial_worn_hide",
+      "label": "旧兽皮",
+      "menuLabel": "旧兽皮",
+      "stackLimit": 20,
+      "startingCount": 0,
+      "useContexts": []
+    },
+    {
       "id": "item_heal_all_5",
       "label": "群体草药5",
       "menuLabel": "群体草药5",

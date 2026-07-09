@@ -1,5 +1,14 @@
 "use strict";
 
+const {
+  TUTORIAL_BUY_QUEST_ID,
+  TUTORIAL_SELLER_ACCOUNT_ID,
+  TUTORIAL_SELLER_KIND,
+  isTutorialBuyListingForAccount,
+  tutorialBuyListing,
+  tutorialSaleIsEligible,
+} = require("./tutorial-market");
+
 const TRADE_OFFER_TTL_MS = 2 * 60 * 1000;
 const TRADE_MAX_DISTANCE_CELLS = 2;
 const TRADE_MAX_ITEM_LINES = 8;
@@ -18,6 +27,7 @@ const BANK_DEFAULT_UNLOCKED_TABS = 1;
 function createEconomyDomain(ctx) {
   const {
     accountById,
+    activeQuestAutoClaim,
     addRewardItemsToBackpack,
     authorizeGmCommand,
     bagItemById,
@@ -27,7 +37,9 @@ function createEconomyDomain(ctx) {
     captureToolBagFromProfile,
     clampInt,
     clone,
+    claimActiveQuestToProfile,
     consumeBackpackItem,
+    currentProfileQuestId,
     fail,
     isoNow,
     itemAmountText,
@@ -50,6 +62,7 @@ function createEconomyDomain(ctx) {
     publicAccount,
     publicPlayerPosition,
     randomId,
+    recordQuestEventToProfile,
     resolveSession,
     save,
     setProfileCurrencyAmount,
@@ -258,6 +271,20 @@ function createEconomyDomain(ctx) {
     };
     prepared.data.marketListings = objectMap(prepared.data.marketListings);
     prepared.data.marketListings[listingId] = listing;
+    const tutorialSale = tutorialSaleIsEligible(currentProfileQuestId(profile), listing);
+    const questMessages = recordAndClaimQuest(profile, {
+      type: "market_list",
+      itemId,
+      amount: count,
+      unitPrice,
+      currency,
+      schemaVersion: 1,
+    });
+    let saleMail = null;
+    if (tutorialSale && questMessages.length > 0) {
+      saleMail = createTutorialMarketSaleMail(prepared.data, prepared.account, listing);
+      delete prepared.data.marketListings[listingId];
+    }
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
     save(prepared.data);
     return ok({
@@ -266,8 +293,10 @@ function createEconomyDomain(ctx) {
       profileSummary: profileSummaryForAccount(prepared.account, prepared.data),
       profile: clone(profile),
       listing: publicMarketListing(listing, prepared.data),
+      saleMail: saleMail && publicMail ? publicMail(saleMail) : (saleMail ? clone(saleMail) : null),
+      questMessages,
       ...marketStatePayload(prepared.data, prepared.account),
-      message: `已上架${itemAmountText(items)}。`,
+      message: saleMail ? `教学买家已买下${itemAmountText(items)}，请到邮箱领取货款。` : `已上架${itemAmountText(items)}。`,
     });
   }
 
@@ -278,6 +307,9 @@ function createEconomyDomain(ctx) {
       return fail(resolved.code, resolved.message);
     }
     const listingId = String(payload.listingId || payload.id || "").trim();
+    if (isTutorialBuyListingForAccount(listingId, resolved.account.accountId)) {
+      return buyTutorialMarketListing(data, resolved.account, listingId);
+    }
     const listing = normalizeMarketListing(data.marketListings && data.marketListings[listingId]);
     if (!listing || !listing.listingId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
@@ -319,6 +351,15 @@ function createEconomyDomain(ctx) {
     buyerProfile.backpackSlots = addResult.slots;
     buyerProfile.captureTools = captureToolBagFromProfile(buyerProfile);
     setProfileCurrencyAmount(buyerProfile, listing.currency, profileCurrencyAmount(buyerProfile, listing.currency) - totalPrice);
+    const questMessages = recordAndClaimQuest(buyerProfile, {
+      type: "market_buy",
+      itemId: listing.itemId,
+      amount: listing.count,
+      unitPrice: listing.unitPrice,
+      currency: listing.currency,
+      sellerKind: "player",
+      schemaVersion: 1,
+    });
     const config = normalizeMarketConfig(data.marketConfig);
     config.taxCollected[listing.currency] = normalizeCoinAmount(config.taxCollected[listing.currency]) + tax;
     data.marketConfig = config;
@@ -336,6 +377,7 @@ function createEconomyDomain(ctx) {
       listing: publicMarketListing(listing, data),
       receipt: publicMarketReceipt("buy", listing, tax, sellerReceives, data),
       saleMail: publicMail ? publicMail(saleMail) : clone(saleMail),
+      questMessages,
       ...marketStatePayload(data, resolved.account),
       message: `已购买${itemAmountText([{itemId: listing.itemId, count: listing.count}])}。`,
     });
@@ -378,6 +420,75 @@ function createEconomyDomain(ctx) {
       ...marketStatePayload(data, resolved.account),
       message: "挂单已下架，物品已回到背包。",
     });
+  }
+
+  function buyTutorialMarketListing(data, account, listingId) {
+    const prepared = profileForAccount(data, account);
+    if (!prepared.ok) {
+      return prepared;
+    }
+    if (currentProfileQuestId(prepared.profile) !== TUTORIAL_BUY_QUEST_ID) {
+      return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    const listing = tutorialBuyListing(account, isoNow(now));
+    if (!listing || listing.listingId !== listingId) {
+      return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    const profile = clone(prepared.profile);
+    const totalPrice = marketListingTotalPrice(listing);
+    if (profileCurrencyAmount(profile, listing.currency) < totalPrice) {
+      return fail("market_not_enough_currency", `${shopCurrencyLabel(listing.currency)}不足，无法购买。`, {
+        listing: publicMarketListing(listing, data),
+        ...marketStatePayload(data, account),
+      });
+    }
+    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), [{itemId: listing.itemId, count: listing.count}]);
+    if (normalizeMailItems(addResult.lostItems || []).length > 0) {
+      return fail("market_backpack_full", "背包空间不足，无法购买。", {
+        listing: publicMarketListing(listing, data),
+        ...marketStatePayload(data, account),
+      });
+    }
+    profile.backpackSlots = addResult.slots;
+    profile.captureTools = captureToolBagFromProfile(profile);
+    setProfileCurrencyAmount(profile, listing.currency, profileCurrencyAmount(profile, listing.currency) - totalPrice);
+    const questMessages = recordAndClaimQuest(profile, {
+      type: "market_buy",
+      itemId: listing.itemId,
+      amount: listing.count,
+      unitPrice: listing.unitPrice,
+      currency: listing.currency,
+      sellerKind: TUTORIAL_SELLER_KIND,
+      schemaVersion: 1,
+    });
+    const persisted = persistProfileForAccount(data, account, prepared.binding, profile, now);
+    save(data);
+    return ok({
+      account: publicAccount(account),
+      profileBinding: persisted.binding,
+      profileSummary: profileSummaryForAccount(account, data),
+      profile: clone(profile),
+      listing: publicMarketListing(listing, data),
+      receipt: publicMarketReceipt("buy", listing, 0, 0, data),
+      questMessages,
+      ...marketStatePayload(data, account),
+      message: `已用${totalPrice}${shopCurrencyLabel(listing.currency)}买下教学卖家的${bagItemLabel(listing.itemId)}。`,
+    });
+  }
+
+  function recordAndClaimQuest(profile, event) {
+    const messages = [];
+    const progress = recordQuestEventToProfile(profile, event);
+    if (progress.changed && progress.message) {
+      messages.push(progress.message);
+    }
+    if (progress.ready && activeQuestAutoClaim(profile)) {
+      const claim = claimActiveQuestToProfile(profile);
+      if (claim.ok && claim.message) {
+        messages.push(claim.message);
+      }
+    }
+    return messages;
   }
 
   function proposeTrade(token, payload = {}) {
@@ -1081,6 +1192,9 @@ function createEconomyDomain(ctx) {
   }
 
   function marketTaxBpsForListing(data, listing) {
+    if (String(listing && listing.sellerKind || "") === TUTORIAL_SELLER_KIND) {
+      return 0;
+    }
     const config = normalizeMarketConfig(data.marketConfig);
     if (Object.prototype.hasOwnProperty.call(config.itemTaxBps, listing.itemId)) {
       return normalizeTaxBps(config.itemTaxBps[listing.itemId], config.defaultTaxBps);
@@ -1107,6 +1221,17 @@ function createEconomyDomain(ctx) {
     const currencyFilter = String(filters.currency || "").trim();
     const accountId = account ? account.accountId : "";
     let listings = activeMarketListings(data);
+    const binding = accountId ? data.profileBindings && data.profileBindings[accountId] : null;
+    const profileDoc = binding ? data.profiles && data.profiles[binding.playerId] : null;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? profileDoc.profile
+      : null;
+    if (profile && currentProfileQuestId(profile) === TUTORIAL_BUY_QUEST_ID) {
+      const tutorialListing = tutorialBuyListing(account, isoNow(now));
+      if (tutorialListing) {
+        listings.unshift(tutorialListing);
+      }
+    }
     if (itemFilter) {
       listings = listings.filter((listing) => listing.itemId === itemFilter);
     }
@@ -1138,14 +1263,16 @@ function createEconomyDomain(ctx) {
 
   function publicMarketListing(listing, data) {
     const seller = accountById(data, listing.sellerAccountId);
+    const tutorialSeller = String(listing.sellerKind || "") === TUTORIAL_SELLER_KIND || listing.sellerAccountId === TUTORIAL_SELLER_ACCOUNT_ID;
     const totalPrice = marketListingTotalPrice(listing);
     const taxBps = marketTaxBpsForListing(data, listing);
     const tax = marketTaxForListing(data, listing);
     return {
       listingId: listing.listingId,
       sellerAccountId: listing.sellerAccountId,
-      sellerUsername: seller ? seller.username : "",
-      sellerDisplayName: seller ? seller.displayName : "",
+      sellerUsername: seller ? seller.username : (tutorialSeller ? "tutorial_seller" : ""),
+      sellerDisplayName: seller ? seller.displayName : (tutorialSeller ? "新手交易指导员" : ""),
+      sellerKind: tutorialSeller ? TUTORIAL_SELLER_KIND : "player",
       itemId: listing.itemId,
       itemLabel: bagItemLabel(listing.itemId),
       count: listing.count,
@@ -1199,6 +1326,34 @@ function createEconomyDomain(ctx) {
         `交易税：${tax}${currencyLabel}`,
         `实收：${sellerReceives}${currencyLabel}`,
         "收益已放入本邮件附件，请领取。",
+      ].join("\n"),
+      currency: marketCurrencyAttachment(listing.currency, sellerReceives),
+      items: [],
+      createdAt: isoNow(now),
+      readAt: null,
+      schemaVersion: 1,
+    };
+    data.mailMessages[mail.mailId] = mail;
+    return mail;
+  }
+
+  function createTutorialMarketSaleMail(data, seller, listing) {
+    data.mailMessages = objectMap(data.mailMessages);
+    const sellerReceives = marketListingTotalPrice(listing);
+    const mail = {
+      mailId: `mail_tutorial_market_${randomId()}`,
+      mailKind: "tutorial_market_sale",
+      senderAccountId: TUTORIAL_SELLER_ACCOUNT_ID,
+      senderUsername: "tutorial_buyer",
+      senderDisplayName: "新手交易指导员",
+      recipientAccountId: seller.accountId,
+      recipientUsername: seller.username,
+      recipientDisplayName: seller.displayName,
+      title: "教学交易成交通知",
+      body: [
+        `${itemAmountText([{itemId: listing.itemId, count: listing.count}])} 已被教学买家买下。`,
+        `成交金额：${sellerReceives}${shopCurrencyLabel(listing.currency)}`,
+        "货款已放入附件，请领取。以后真实玩家购买你的挂单时，收益也会通过邮箱送达。",
       ].join("\n"),
       currency: marketCurrencyAttachment(listing.currency, sellerReceives),
       items: [],

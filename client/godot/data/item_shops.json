@@ -10,6 +10,11 @@
           "buyPrice": 8
         },
         {
+          "itemId": "tutorial_worn_hide",
+          "buyable": false,
+          "sellPrice": 3
+        },
+        {
           "itemId": "item_heal_single_5",
           "buyPrice": 18
         },

@@ -1231,6 +1231,7 @@ static func parse_mail_claim_response(response_code: int, body: PackedByteArray)
 	parsed["mail"] = response.get("mail", null)
 	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
 	parsed["battleRoom"] = response.get("battleRoom", null)
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 
 
@@ -1252,6 +1253,10 @@ static func parse_chat_send_response(response_code: int, body: PackedByteArray) 
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["message"] = response.get("message", {}) if response.get("message", {}) is Dictionary else {}
 	parsed["party"] = response.get("party", null)
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 
 
@@ -1323,6 +1328,7 @@ static func parse_hang_session_response(response_code: int, body: PackedByteArra
 	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["hang"] = response.get("hang", {}) if response.get("hang", {}) is Dictionary else {}
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 
 
@@ -1357,6 +1363,8 @@ static func parse_market_response(response_code: int, body: PackedByteArray) -> 
 	parsed["market"] = response.get("market", {}) if response.get("market", {}) is Dictionary else {}
 	parsed["listing"] = response.get("listing", {}) if response.get("listing", {}) is Dictionary else {}
 	parsed["receipt"] = response.get("receipt", {}) if response.get("receipt", {}) is Dictionary else {}
+	parsed["saleMail"] = response.get("saleMail", null)
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 
 
