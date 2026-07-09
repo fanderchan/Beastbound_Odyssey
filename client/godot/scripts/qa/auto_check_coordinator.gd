@@ -4628,6 +4628,10 @@ func _run_auto_battle_label_check() -> void:
 		and host.quest_menu_button != null
 		and not host.quest_menu_button.disabled
 	)
+	var player_help_label_ok = (
+		host.battle_command_buttons.has("help")
+		and (host.battle_command_buttons["help"] as Button).text == "帮助"
+	)
 	host._open_codex_panel()
 	await host.get_tree().process_frame
 	var codex_in_battle_ok = (
@@ -4668,7 +4672,7 @@ func _run_auto_battle_label_check() -> void:
 		var label = host._battle_actor_label(large_actor)
 		large_labels_ok = large_labels_ok and label != "" and label.find(" Lv") >= 0
 		large_visible_ok = large_visible_ok and host._battle_should_show_actor_label(large_actor)
-	var battle_menu_ok = battle_menu_buttons_enabled_ok and codex_in_battle_ok and command_after_codex_ok and quest_in_battle_ok and command_after_quest_ok
+	var battle_menu_ok = player_help_label_ok and battle_menu_buttons_enabled_ok and codex_in_battle_ok and command_after_codex_ok and quest_in_battle_ok and command_after_quest_ok
 	var status = "ok" if loaded and zone_found and host.battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok and large_long_label_ok and battle_menu_ok else "failed"
 	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s long_label=%s battle_menu=%s buttons=%s codex=%s quest=%s quest_readonly=%s command_after=%s/%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
 		status,
@@ -7131,6 +7135,7 @@ func _run_auto_backpack_check() -> void:
 		PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL) == 0
 		and PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET) == 0
 		and PlayerProgressModel.backpack_item_count(host.player_profile, PlayerProgressModel.ITEM_EXP_PILL_LV131) == 0
+		and BackpackModel.slot_label({}) == "空"
 	)
 	host.player_profile = _qa_bui_pet_profile()
 	var slots = PlayerProgressModel.backpack_slots(host.player_profile)
@@ -7173,6 +7178,7 @@ func _run_auto_backpack_check() -> void:
 			and host.backpack_slot_buttons.size() == BackpackModel.SLOT_LIMIT
 			and not host.backpack_slot_buttons.is_empty()
 			and host.backpack_slot_buttons[0].text.find("肉") >= 0
+			and host.backpack_slot_buttons[2].text == "空"
 			and host.backpack_slot_buttons[BackpackModel.BASE_SLOT_LIMIT].text.find("50钻石") >= 0
 		)
 	var shared_slot_ok = (
@@ -10839,6 +10845,12 @@ func _run_auto_market_panel_check() -> void:
 		host.market_detail_label != null
 		and host.market_detail_label.text.find("持有：") < 0
 	)
+	var empty_guidance_ok = (
+		host.market_detail_label != null
+		and host.market_detail_label.text.find("暂无可购买商品") >= 0
+		and host.market_detail_label.text.find("登录服务器账号") >= 0
+		and host.market_detail_label.text.find("请选择左侧挂单") < 0
+	)
 	var sell_form_ok = (
 		host.market_sell_form_container != null
 		and host.market_sell_item_option != null
@@ -10860,6 +10872,7 @@ func _run_auto_market_panel_check() -> void:
 			and status_label_ok
 			and wallet_label_ok
 			and detail_wallet_removed_ok
+			and empty_guidance_ok
 	)
 	var market_point = host.market_panel.global_position + host.market_panel.size * 0.5 if host.market_panel != null else Vector2.ZERO
 	var ui_blocks_ok = host._is_ui_point(market_point)
@@ -10880,13 +10893,14 @@ func _run_auto_market_panel_check() -> void:
 		and host.click_move_repath_apply_count == before_apply_count
 	)
 	var status = "ok" if panel_ok and ui_blocks_ok and click_blocked_ok else "failed"
-	print("market panel check ready: status=%s panel=%s sell_form=%s status_label=%s wallet_label=%s detail_wallet_removed=%s ui_blocks=%s click_blocked=%s" % [
+	print("market panel check ready: status=%s panel=%s sell_form=%s status_label=%s wallet_label=%s detail_wallet_removed=%s empty_guidance=%s ui_blocks=%s click_blocked=%s" % [
 		status,
 		str(panel_ok),
 		str(sell_form_ok),
 		str(status_label_ok),
 		str(wallet_label_ok),
 		str(detail_wallet_removed_ok),
+		str(empty_guidance_ok),
 		str(ui_blocks_ok),
 		str(click_blocked_ok),
 	])
@@ -13840,8 +13854,13 @@ func _run_auto_task_tracker_route_check() -> void:
 		and host.side_panel.visible
 		and host.task_route_button.visible
 		and not host.task_route_button.disabled
+		and host.task_route_button.text == "自动寻路"
 		and host.detail_label != null
 		and host.detail_label.text.find("认识训练师") >= 0
+		and host.detail_label.text.find("目标  ") >= 0
+		and host.detail_label.text.find("行动  和训练师阿土对话") >= 0
+		and host.detail_label.text.find("奖励  20石币、肉 x2") >= 0
+		and host.detail_label.text.find("位置  ") >= 0
 	)
 	host._on_task_tracker_route_pressed()
 	await host.get_tree().process_frame

@@ -534,7 +534,7 @@ static func counts_by_item(slots: Array[Dictionary]) -> Dictionary:
 static func slot_label(slot: Dictionary) -> String:
 	var item_id := str(slot.get("itemId", ""))
 	if item_id == "":
-		return "-"
+		return "空"
 	return "%s\nx%d" % [menu_label_for(item_id), maxi(0, int(slot.get("count", 0)))]
 
 

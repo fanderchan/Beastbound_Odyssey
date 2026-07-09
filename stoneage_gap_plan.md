@@ -167,6 +167,7 @@
   - 证据（2026-07-05）：按用户验收反馈改为交易所入口，底部新增“买卖”，普通 UI 不再展示面对面交易控件；新增 `/market/listings`、`/market/list`、`/market/buy`、`/market/cancel` 与 GM 税率配置 `/gm/market/config`，默认交易税 1%，支持单物品税率覆盖；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js server/node/test/auth-http-server.test.js`、`node tools/run_godot_auto_checks.mjs --only --auto-market-panel-check,--auto-stage6-content-check --fail-fast --timeout-ms 180000` 通过。
 - [x] G2.3 银行/仓库 NPC
   - 证据：新增仓库员阿衡、`/bank/deposit`、`/bank/withdraw` 与仓库面板；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js` 通过 12/12，`--auto-stage6-content-check` 覆盖仓库 NPC、地图标记与仓库面板。
+- 体验加固（Phase202，不改变 G2.7 状态）：完成 PC 玩家流程审计，强化世界任务目标/行动/奖励层级，修正背包与交易所空状态，并将战斗 `help` 显示统一为“帮助”；Godot 针对性检查 6/6，idle/moving/移动连点性能门禁通过，详见 `docs/phase_202_player_guidance_polish.md`。
 - [ ] G2.7 物品兑换 NPC（可选简化版）
 
 ### F3 — 宠物深度 v1

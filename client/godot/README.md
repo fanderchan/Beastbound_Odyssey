@@ -60,7 +60,7 @@ Phase 62 contains a minimal isometric exploration, encounter loop, GM 10v10 test
 - The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
 - Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
 - The action-bar `挂机` button changes to `停` during hang-up walking or active encounter-stone effects, and stopping clears both auto movement and encounter-stone effects.
-- Battle commands arranged as `攻击` / `精灵` / `捕捉` / `help` and `防御` / `物品` / `换宠` / `逃跑`.
+- Battle commands arranged as `攻击` / `精灵` / `捕捉` / `帮助` and `防御` / `物品` / `换宠` / `逃跑`.
 - The battle panel has a short `自动` toggle that auto-submits player and controlled-pet commands from `内挂设置`.
 - The world action bar has a `内挂` settings panel.
 - Player auto actions distinguish `首回合` and `一般回合`.

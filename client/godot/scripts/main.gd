@@ -39,6 +39,7 @@ const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbe
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
+const AdventureGoalPresenter := preload("res://scripts/ui/adventure_goal_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -1123,6 +1124,7 @@ var current_task_text_cache: String = ""
 var task_tracker_cache_dirty: bool = true
 var task_tracker_source_signature_cache: String = ""
 var task_tracker_text_cache: String = "当前没有任务"
+var task_tracker_hud_prefix_cache: String = "目标  当前没有任务\n行动  探索营地，寻找新的委托"
 var task_tracker_target_cache: Dictionary = {}
 var task_tracker_has_target_cache: bool = false
 var world_hud_refresh_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
@@ -5939,7 +5941,7 @@ func _battle_buttons_match_request() -> bool:
 		"attack": "攻击",
 		"spirit": "精灵",
 		"capture": "捕捉",
-		"help": "help",
+		"help": "帮助",
 		"defend": "防御",
 		"item": "物品",
 		"switch_pet": "换宠",
@@ -6006,7 +6008,7 @@ func _set_battle_command_owner(owner: String) -> void:
 			"attack": "攻击",
 			"spirit": "精灵",
 			"capture": "捕捉",
-			"help": "help",
+			"help": "帮助",
 			"defend": "防御",
 			"item": "物品",
 			"switch_pet": "换宠",
@@ -11858,6 +11860,12 @@ func _refresh_task_tracker_cache_if_needed(force: bool = false) -> void:
 	current_task_text_signature_cache = signature
 	current_task_text_cache = _current_task_text_uncached()
 	task_tracker_text_cache = current_task_text_cache
+	var guidance := _current_task_guidance_uncached()
+	task_tracker_hud_prefix_cache = AdventureGoalPresenter.task_prefix(
+		task_tracker_text_cache,
+		str(guidance.get("actionText", "探索营地，寻找新的委托")),
+		str(guidance.get("rewardText", "")),
+	)
 	task_tracker_target_cache = _current_task_navigation_target_uncached()
 	task_tracker_has_target_cache = not task_tracker_target_cache.is_empty()
 	task_tracker_cache_dirty = false
@@ -11890,6 +11898,28 @@ func _current_task_text_uncached() -> String:
 		if state_value is Dictionary:
 			quest_state = state_value
 	return QuestModel.progress_text_for_state(quest, quest_state)
+
+
+func _current_task_guidance_uncached() -> Dictionary:
+	var quest := PlayerProgressModel.active_quest(player_profile)
+	var available := false
+	if quest.is_empty():
+		quest = _first_available_unfinished_quest_for_tracker()
+		available = not quest.is_empty()
+	if quest.is_empty():
+		return {
+			"actionText": "点击任务面板查看下一步",
+			"rewardText": "",
+		}
+	var action_text := QuestModel.objective_text_for(quest)
+	if available:
+		action_text = "找到任务发布者并接取任务"
+	elif PlayerProgressModel.can_claim_active_quest(player_profile):
+		action_text = "返回任务发布者领取奖励"
+	return {
+		"actionText": action_text,
+		"rewardText": QuestModel.reward_text(quest),
+	}
 
 
 func _training_partner_count() -> int:
@@ -12612,9 +12642,6 @@ func _update_hud_text(force: bool = false) -> void:
 	var layout_name := "手机" if is_phone_shape else "PC"
 	var move_name := _movement_status_name()
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
-	var target_text := "无"
-	if has_target_cell:
-		target_text = "%d,%d" % [target_cell.x, target_cell.y]
 	var status_text := ""
 	var detail_text := ""
 	if battle_active:
@@ -12623,16 +12650,12 @@ func _update_hud_text(force: bool = false) -> void:
 		status_text = "万兽纪元  |  %s" % [move_name]
 	else:
 		status_text = "万兽纪元  |  %s  |  %s  |  %s" % [str(map_data.get("name", "未知地图")), layout_name, move_name]
-		if has_pending_interaction:
-			target_text = str(pending_interaction.get("name", "交互点"))
-		detail_text = "坐标  %d,%d\n目标  %s\n伙伴  %d/%d\n任务  -  %s" % [
-			player_cell.x,
-			player_cell.y,
-			target_text,
+		detail_text = AdventureGoalPresenter.world_hud_text(
+			task_tracker_hud_prefix_cache,
+			player_cell,
 			_effective_training_partner_count(),
 			_training_partner_available_slots(),
-			_current_task_text(),
-			]
+		)
 	_perf_add("hud_text_build", build_start)
 	var label_start := _perf_now()
 	if force or status_text != hud_status_text_cache:

@@ -261,7 +261,7 @@ func _refresh_task_route_button() -> void:
 	var has_target = host._task_tracker_has_navigation_target_cached()
 	host.task_route_button.disabled = host.battle_active or host.encounter_active or host.has_pending_interaction or _dialog_is_open() or host._world_menu_is_open() or not has_target
 	host.task_route_button.visible = not host.battle_active
-	host.task_route_button.text = "寻路"
+	host.task_route_button.text = "自动寻路"
 
 func _open_interaction_dialog(item: Dictionary) -> void:
 	host.active_dialog_interaction = item.duplicate(true)

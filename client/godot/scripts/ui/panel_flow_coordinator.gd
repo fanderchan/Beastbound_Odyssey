@@ -5826,12 +5826,15 @@ func _build_hud() -> void:
 	side_panel.add_child(side_column)
 	detail_label = Label.new()
 	detail_label.name = "DetailLabel"
-	detail_label.add_theme_font_size_override("font_size", 17)
+	detail_label.add_theme_font_size_override("font_size", 16)
+	detail_label.clip_text = true
+	detail_label.max_lines_visible = 4
+	detail_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	detail_label.text = "伙伴  -  待加入\n任务  -  火芽营地\n阶段  -  初次移动"
 	detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side_column.add_child(detail_label)
 	task_route_button = Button.new()
-	task_route_button.text = "寻路"
+	task_route_button.text = "自动寻路"
 	task_route_button.custom_minimum_size = Vector2(0, 38)
 	task_route_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	task_route_button.pressed.connect(_on_task_tracker_route_pressed)
@@ -8215,7 +8218,7 @@ func _build_hud() -> void:
 		{"id": "item", "label": "物品"},
 		{"id": "switch_pet", "label": "换宠"},
 		{"id": "run", "label": "逃跑"},
-		{"id": "help", "label": "help"},
+		{"id": "help", "label": "帮助"},
 	])
 	hud_root.add_child(battle_command_panel)
 	battle_auto_stop_button = Button.new()
@@ -18878,11 +18881,11 @@ func _refresh_market_panel() -> void:
 func _market_empty_list_text() -> String:
 	match market_mode:
 		"buy":
-			return "暂无可购买挂单。"
+			return "暂无可购买商品。"
 		"sell":
-			return "你还没有挂单。"
+			return "暂无自己的在售商品。"
 		"mine":
-			return "你还没有挂单。"
+			return "暂无自己的在售商品。"
 	return "暂无挂单。"
 
 func _select_market_listing(listing_id: String) -> void:
@@ -18943,7 +18946,11 @@ func _market_detail_text(listing: Dictionary) -> String:
 			lines.append(_market_listing_summary_text(listing))
 		return "\n".join(lines)
 	if listing.is_empty():
-		return "请选择左侧挂单。"
+		if market_mode == "buy":
+			if not _is_server_account_session():
+				return "暂无可购买商品。\n登录服务器账号后可刷新交易所。"
+			return "暂无可购买商品。\n切换到「出售」可上架背包物品。"
+		return "暂无自己的在售商品。\n切换到「出售」可上架背包物品。"
 	return _market_listing_summary_text(listing)
 
 func _market_listing_summary_text(listing: Dictionary) -> String:
