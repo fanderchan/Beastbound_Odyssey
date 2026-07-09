@@ -51,7 +51,7 @@ test("quest record endpoint advances and auto-claims talk quests server-side", (
   assert.equal(recorded.progress.questId, "quest_intro_talk");
   assert.equal(recorded.progress.ready, true);
   assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
-  assert.equal(recorded.profile.activeQuestId, "quest_bank_intro");
+  assert.equal(recorded.profile.activeQuestId, "quest_open_task_panel");
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
   assert.equal(recorded.questMessages.some((message) => String(message).includes("认识训练师")), true);
@@ -75,8 +75,8 @@ test("quest record recovers missing active main quest before auto-claiming", () 
   assert.equal(recorded.ok, true);
   assert.equal(recorded.progress.questId, "quest_intro_talk");
   assert.equal(recorded.profile.questStates.quest_intro_talk.status, "claimed");
-  assert.equal(recorded.profile.questStates.quest_bank_intro.status, "active");
-  assert.equal(recorded.profile.activeQuestId, "quest_bank_intro");
+  assert.equal(recorded.profile.questStates.quest_open_task_panel.status, "active");
+  assert.equal(recorded.profile.activeQuestId, "quest_open_task_panel");
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
 });
@@ -138,6 +138,47 @@ test("quest record rejects client-reported settlement events and out-of-range ta
   assert.equal(qaForged.code, "quest_event_not_client_reportable");
 });
 
+test("bottom-bar tutorial feature intent is allowlisted and advances only the matching quest", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "featuretutorial", "password": "test1234", "displayName": "功能教学"});
+  const profile = battleProfile("功能教学", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 0;
+  profile.activeQuestId = "quest_open_task_panel";
+  profile.questStates = {"quest_open_task_panel": {"questId": "quest_open_task_panel", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const unrelated = service.questRecord(player.session.token, {"event": {"type": "open_feature", "featureId": "map"}});
+  assert.equal(unrelated.ok, false);
+  assert.equal(unrelated.code, "quest_feature_not_expected");
+
+  const invalid = service.questRecord(player.session.token, {"event": {"type": "open_feature", "featureId": "gm_tools"}});
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.code, "quest_feature_invalid");
+
+  const opened = service.questRecord(player.session.token, {"event": {"type": "open_feature", "featureId": "quest"}});
+  assert.equal(opened.ok, true);
+  assert.equal(opened.profile.questStates.quest_open_task_panel.status, "claimed");
+  assert.equal(opened.profile.activeQuestId, "quest_open_map_panel");
+  assert.equal(opened.profile.stoneCoins, 5);
+});
+
+test("starting a real hang session completes the hang tutorial server-side", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "hangtutorial", "password": "test1234", "displayName": "挂机教学"});
+  const profile = battleProfile("挂机教学", {"level": 2, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 0;
+  profile.activeQuestId = "quest_start_hang";
+  profile.questStates = {"quest_start_hang": {"questId": "quest_start_hang", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const started = service.startHangSession(player.session.token, {"mode": "walk", "mapId": "firebud_training_yard", "cellX": 5, "cellY": 11});
+  assert.equal(started.ok, true);
+  assert.equal(started.hang.enabled, true);
+  assert.equal(started.profile.questStates.quest_start_hang.status, "claimed");
+  assert.equal(started.profile.activeQuestId, "quest_market_sell_player");
+  assert.equal(started.questMessages.length > 0, true);
+});
+
 test("world item use profile action advances use item quests server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const player = service.register({"username": "questusemeat", "password": "test1234", "displayName": "任务用肉"});
@@ -155,8 +196,9 @@ test("world item use profile action advances use item quests server-side", () =>
   });
   assert.equal(used.ok, true);
   assert.equal(used.profile.questStates.quest_use_meat.status, "claimed");
-  assert.equal(used.profile.activeQuestId, "quest_buy_weapon");
+  assert.equal(used.profile.activeQuestId, "quest_sell_to_shop");
   assert.equal(used.profile.stoneCoins, 15);
+  assert.equal(profileItemCount(used.profile, "tutorial_worn_hide"), 2);
   assert.equal(used.questMessages.length > 0, true);
   assert.equal(used.logLines.some((line) => String(line).includes("给宠物喂肉")), true);
 });
@@ -190,7 +232,7 @@ test("quest claim endpoint requires reward choice and grants selected rewards se
   assert.equal(profileItemCount(claimed.profile, "capture_rope_basic"), 4);
   assert.equal(claimed.profile.captureTools.capture_rope_basic, 4);
   assert.equal(claimed.profile.questStates.quest_capture_wuli.status, "claimed");
-  assert.equal(claimed.profile.activeQuestId, "quest_rebirth_1_guidance");
+  assert.equal(claimed.profile.activeQuestId, "quest_open_codex_panel");
 });
 
 test("party pve capture advances capture quest and stops hang capture target", () => {
@@ -227,6 +269,7 @@ test("party pve capture advances capture quest and stops hang capture target", (
         "level": 3,
         "catchable": true,
         "captureDifficulty": 1,
+        "captureChanceOverride": 1.0,
         "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
       },
     },

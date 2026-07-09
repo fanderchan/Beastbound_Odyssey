@@ -7907,6 +7907,10 @@ func _run_auto_shop_check() -> void:
 	host.profile_save_enabled = false
 	var shop_id = ShopCatalogModel.DEFAULT_SHOP_ID
 	var base_profile = PlayerProgressModel.default_profile()
+	base_profile = PlayerProgressModel.with_backpack_slots(
+		base_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(base_profile), BattleModel.ITEM_MEAT_SMALL, 4)
+	)
 	var catalog_ok = (
 		not ShopCatalogModel.shop_for_id(shop_id).is_empty()
 		and ShopCatalogModel.buy_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 8
@@ -12427,10 +12431,12 @@ func _run_auto_hang_settings_check() -> void:
 			and host.battle_log_label != null
 			and host.battle_log_label.text.find("本场战斗结束后停止挂机。") >= 0
 		)
+		var battle_button_rearmed = host.stop_button != null and host.stop_button.text == "挂机"
 		host._finish_battle_and_return_to_world("victory")
 		battle_manual_stop_ok = (
 			battle_stop_button_enabled
 			and battle_stop_requested
+			and battle_button_rearmed
 			and not host.hang_stop_after_battle_requested
 			and not host.hang_mode_active
 			and not host._encounter_stone_active()
@@ -12520,9 +12526,24 @@ func _run_auto_quest_chain_check() -> void:
 	profile = talk_claim.get("profile", profile)
 	var talk_claim_ok = (
 		bool(talk_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_bank_intro"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_open_task_panel"
 		and PlayerProgressModel.stone_coins(profile) == before_intro_coins + 20
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_intro_meat + 2
+	)
+	var task_panel_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "quest"})
+	profile = task_panel_event.get("profile", profile)
+	var task_panel_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = task_panel_claim.get("profile", profile)
+	var map_panel_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "map"})
+	profile = map_panel_event.get("profile", profile)
+	var map_panel_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = map_panel_claim.get("profile", profile)
+	var entry_features_ok = (
+		bool(task_panel_event.get("ready", false))
+		and bool(task_panel_claim.get("ok", false))
+		and bool(map_panel_event.get("ready", false))
+		and bool(map_panel_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_bank_intro"
 	)
 
 	var before_bank_coins = PlayerProgressModel.stone_coins(profile)
@@ -12603,8 +12624,13 @@ func _run_auto_quest_chain_check() -> void:
 		and str(tiger_ride_result.get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
 		and bool(try_riding_event.get("ready", false))
 		and bool(try_riding_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_open_status_panel"
 	)
+	var status_panel_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "status"})
+	profile = status_panel_event.get("profile", profile)
+	var status_panel_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = status_panel_claim.get("profile", profile)
+	var status_feature_ok = bool(status_panel_event.get("ready", false)) and bool(status_panel_claim.get("ok", false)) and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
 
 	var before_rope = PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
 	var before_buy_meat = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
@@ -12647,9 +12673,23 @@ func _run_auto_quest_chain_check() -> void:
 		bool(use_result.get("ok", false))
 		and bool(use_event.get("ready", false))
 		and bool(use_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_weapon"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_sell_to_shop"
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL) == before_use_meat - 1
 		and PlayerProgressModel.stone_coins(profile) == before_use_coins + 15
+		and PlayerProgressModel.backpack_item_count(profile, "tutorial_worn_hide") == 2
+	)
+	var sell_result = PlayerProgressModel.sell_shop_item(profile, ShopCatalogModel.DEFAULT_SHOP_ID, "tutorial_worn_hide", 1)
+	profile = sell_result.get("profile", profile)
+	var sell_event = PlayerProgressModel.record_quest_event(profile, {"type": "sell_item", "shopId": ShopCatalogModel.DEFAULT_SHOP_ID, "itemId": "tutorial_worn_hide", "amount": 1})
+	profile = sell_event.get("profile", profile)
+	var sell_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = sell_claim.get("profile", profile)
+	var shop_sell_ok = (
+		bool(sell_result.get("ok", false))
+		and bool(sell_event.get("ready", false))
+		and bool(sell_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_weapon"
+		and PlayerProgressModel.backpack_item_count(profile, "tutorial_worn_hide") == 1
 	)
 
 	var before_weapon_coins = PlayerProgressModel.stone_coins(profile)
@@ -12689,10 +12729,15 @@ func _run_auto_quest_chain_check() -> void:
 		bool(equip_result.get("ok", false))
 		and bool(equip_event.get("ready", false))
 		and bool(equip_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_open_equipment_panel"
 		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_RIGHT_HAND_WEAPON) == "weapon_wooden_club"
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_equip_medicine + 1
 	)
+	var equipment_panel_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "equipment"})
+	profile = equipment_panel_event.get("profile", profile)
+	var equipment_panel_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = equipment_panel_claim.get("profile", profile)
+	var equipment_feature_ok = bool(equipment_panel_event.get("ready", false)) and bool(equipment_panel_claim.get("ok", false)) and PlayerProgressModel.active_quest_id(profile) == "quest_first_victory"
 
 	var tutorial_grass_loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	var tutorial_grass_zone = host._encounter_zone_by_id("village_grass")
@@ -12738,9 +12783,44 @@ func _run_auto_quest_chain_check() -> void:
 	var victory_ok = (
 		bool(victory_event.get("ready", false))
 		and bool(victory_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_spirit_armor"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_open_auto_settings"
 		and PlayerProgressModel.stone_coins(profile) == before_victory_coins + 30
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_HEAL_SINGLE) == before_medicine + 1
+	)
+	var auto_settings_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "auto_settings"})
+	profile = auto_settings_event.get("profile", profile)
+	var auto_settings_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = auto_settings_claim.get("profile", profile)
+	var hang_event = PlayerProgressModel.record_quest_event(profile, {"type": "start_hang", "mode": "walk"})
+	profile = hang_event.get("profile", profile)
+	var hang_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = hang_claim.get("profile", profile)
+	var market_high_price_event = PlayerProgressModel.record_quest_event(profile, {"type": "market_list", "itemId": "tutorial_worn_hide", "amount": 1, "unitPrice": 21, "currency": "stoneCoins"})
+	var market_list_event = PlayerProgressModel.record_quest_event(profile, {"type": "market_list", "itemId": "tutorial_worn_hide", "amount": 1, "unitPrice": 7, "currency": "stoneCoins"})
+	profile = market_list_event.get("profile", profile)
+	var market_list_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = market_list_claim.get("profile", profile)
+	var mail_claim_event = PlayerProgressModel.record_quest_event(profile, {"type": "claim_mail", "mailKind": "tutorial_market_sale"})
+	profile = mail_claim_event.get("profile", profile)
+	var mail_task_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = mail_task_claim.get("profile", profile)
+	var market_buy_event = PlayerProgressModel.record_quest_event(profile, {"type": "market_buy", "itemId": "item_meat_small", "sellerKind": "tutorial_bot", "amount": 1})
+	profile = market_buy_event.get("profile", profile)
+	var market_buy_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = market_buy_claim.get("profile", profile)
+	var hang_market_mail_ok = (
+		bool(auto_settings_event.get("ready", false))
+		and bool(auto_settings_claim.get("ok", false))
+		and bool(hang_event.get("ready", false))
+		and bool(hang_claim.get("ok", false))
+		and not bool(market_high_price_event.get("changed", false))
+		and bool(market_list_event.get("ready", false))
+		and bool(market_list_claim.get("ok", false))
+		and bool(mail_claim_event.get("ready", false))
+		and bool(mail_task_claim.get("ok", false))
+		and bool(market_buy_event.get("ready", false))
+		and bool(market_buy_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_buy_spirit_armor"
 	)
 
 	var before_moist_gear_coins = PlayerProgressModel.stone_coins(profile)
@@ -12841,11 +12921,16 @@ func _run_auto_quest_chain_check() -> void:
 		bool(equip_poison_gear_result.get("ok", false))
 		and bool(equip_poison_gear_event.get("ready", false))
 		and bool(equip_poison_gear_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_training_partner_intro"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_chat_greeting"
 		and PlayerProgressModel.equipped_item_id(profile, EquipmentModel.SLOT_BODY) == "armor_toxin_wrap"
 		and equipped_poison_spirits.has(BattleModel.SPIRIT_POISON_1)
 		and equipped_poison_spirits.has(BattleModel.SPIRIT_MOIST_1)
 	)
+	var chat_event = PlayerProgressModel.record_quest_event(profile, {"type": "send_chat", "channel": "nearby"})
+	profile = chat_event.get("profile", profile)
+	var chat_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = chat_claim.get("profile", profile)
+	var chat_tutorial_ok = bool(chat_event.get("ready", false)) and bool(chat_claim.get("ok", false)) and PlayerProgressModel.active_quest_id(profile) == "quest_training_partner_intro"
 
 	var before_partner_coins = PlayerProgressModel.stone_coins(profile)
 	profile = PlayerProgressModel.with_training_partner_count(profile, 1)
@@ -13053,9 +13138,27 @@ func _run_auto_quest_chain_check() -> void:
 	var capture_ok = (
 		bool(capture_event.get("ready", false))
 		and bool(capture_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
+		and PlayerProgressModel.active_quest_id(profile) == "quest_open_codex_panel"
 		and PlayerProgressModel.stone_coins(profile) == before_capture_coins + 60
 		and PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_NET) == before_net + 2
+	)
+	var codex_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "codex"})
+	profile = codex_event.get("profile", profile)
+	var codex_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = codex_claim.get("profile", profile)
+	var family_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "family"})
+	profile = family_event.get("profile", profile)
+	var family_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = family_claim.get("profile", profile)
+	var account_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "account"})
+	profile = account_event.get("profile", profile)
+	var account_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = account_claim.get("profile", profile)
+	var closing_features_ok = (
+		bool(codex_event.get("ready", false)) and bool(codex_claim.get("ok", false))
+		and bool(family_event.get("ready", false)) and bool(family_claim.get("ok", false))
+		and bool(account_event.get("ready", false)) and bool(account_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
 	)
 
 	var rebirth_event = PlayerProgressModel.record_quest_event(profile, {
@@ -13095,12 +13198,12 @@ func _run_auto_quest_chain_check() -> void:
 		var ui_task_text = host._current_task_text()
 		var ui_world_log = host.world_log_message
 		ui_advance_ok = (
-			ui_active_quest_id == "quest_bank_intro"
+			ui_active_quest_id == "quest_open_task_panel"
 			and ui_world_log.find("完成任务「认识训练师」") >= 0
-			and ui_task_text.find("认识银行管理员") >= 0
+			and ui_task_text.find("查看当前任务") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and buy_ok and use_ok and buy_weapon_ok and equip_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
-	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and spirit_ok and spirit_hook_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and entry_features_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and status_feature_ok and buy_ok and use_ok and shop_sell_ok and buy_weapon_ok and equip_ok and equipment_feature_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and hang_market_mail_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and closing_features_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and chat_tutorial_ok and spirit_ok and spirit_hook_ok else "failed"
 	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
@@ -13216,7 +13319,11 @@ func _run_auto_quest_ui_check() -> void:
 		"type": "talk",
 		"targetId": "trainer",
 	})
-	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	var tutorial_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	var task_event = PlayerProgressModel.record_quest_event(tutorial_profile, {"type": "open_feature", "featureId": "quest"})
+	tutorial_profile = PlayerProgressModel.claim_active_quest(task_event.get("profile", {}) as Dictionary).get("profile", {})
+	var map_event = PlayerProgressModel.record_quest_event(tutorial_profile, {"type": "open_feature", "featureId": "map"})
+	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(map_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = bank_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_training_yard")
@@ -13328,7 +13435,9 @@ func _run_auto_quest_ui_check() -> void:
 		"lineId": str(tiger_ride_result.get("lineId", "")),
 		"amount": 1,
 	})
-	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(try_ride_event.get("profile", {}) as Dictionary).get("profile", {})
+	var status_profile: Dictionary = PlayerProgressModel.claim_active_quest(try_ride_event.get("profile", {}) as Dictionary).get("profile", {})
+	var status_event = PlayerProgressModel.record_quest_event(status_profile, {"type": "open_feature", "featureId": "status"})
+	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(status_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = buy_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_training_yard")
@@ -13380,7 +13489,10 @@ func _run_auto_quest_ui_check() -> void:
 		"targetType": "pet",
 		"amount": 1,
 	})
-	var weapon_profile: Dictionary = PlayerProgressModel.claim_active_quest(use_event.get("profile", {}) as Dictionary).get("profile", {})
+	var sell_profile: Dictionary = PlayerProgressModel.claim_active_quest(use_event.get("profile", {}) as Dictionary).get("profile", {})
+	var sell_action = PlayerProgressModel.sell_shop_item(sell_profile, ShopCatalogModel.DEFAULT_SHOP_ID, "tutorial_worn_hide", 1)
+	var sell_event = PlayerProgressModel.record_quest_event(sell_action.get("profile", sell_profile) as Dictionary, {"type": "sell_item", "shopId": ShopCatalogModel.DEFAULT_SHOP_ID, "itemId": "tutorial_worn_hide", "amount": 1})
+	var weapon_profile: Dictionary = PlayerProgressModel.claim_active_quest(sell_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = weapon_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -13425,7 +13537,9 @@ func _run_auto_quest_ui_check() -> void:
 		"slot": EquipmentModel.SLOT_RIGHT_HAND_WEAPON,
 		"amount": 1,
 	})
-	var first_victory_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
+	var equipment_panel_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_event.get("profile", {}) as Dictionary).get("profile", {})
+	var equipment_panel_event = PlayerProgressModel.record_quest_event(equipment_panel_profile, {"type": "open_feature", "featureId": "equipment"})
+	var first_victory_profile: Dictionary = PlayerProgressModel.claim_active_quest(equipment_panel_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = first_victory_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -13443,7 +13557,17 @@ func _run_auto_quest_ui_check() -> void:
 		"type": "battle_victory",
 		"encounterGroupId": "firebud_grass_01",
 	})
-	var armor_buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(victory_event.get("profile", first_victory_profile) as Dictionary).get("profile", {})
+	var tutorial_economy_profile: Dictionary = PlayerProgressModel.claim_active_quest(victory_event.get("profile", first_victory_profile) as Dictionary).get("profile", {})
+	var auto_settings_event = PlayerProgressModel.record_quest_event(tutorial_economy_profile, {"type": "open_feature", "featureId": "auto_settings"})
+	tutorial_economy_profile = PlayerProgressModel.claim_active_quest(auto_settings_event.get("profile", {}) as Dictionary).get("profile", {})
+	var hang_event = PlayerProgressModel.record_quest_event(tutorial_economy_profile, {"type": "start_hang", "mode": "walk"})
+	tutorial_economy_profile = PlayerProgressModel.claim_active_quest(hang_event.get("profile", {}) as Dictionary).get("profile", {})
+	var market_list_event = PlayerProgressModel.record_quest_event(tutorial_economy_profile, {"type": "market_list", "itemId": "tutorial_worn_hide", "currency": "stoneCoins", "unitPrice": 7, "amount": 1})
+	tutorial_economy_profile = PlayerProgressModel.claim_active_quest(market_list_event.get("profile", {}) as Dictionary).get("profile", {})
+	var mail_event = PlayerProgressModel.record_quest_event(tutorial_economy_profile, {"type": "claim_mail", "mailKind": "tutorial_market_sale"})
+	tutorial_economy_profile = PlayerProgressModel.claim_active_quest(mail_event.get("profile", {}) as Dictionary).get("profile", {})
+	var market_buy_event = PlayerProgressModel.record_quest_event(tutorial_economy_profile, {"type": "market_buy", "itemId": "item_meat_small", "sellerKind": "tutorial_bot", "amount": 1})
+	var armor_buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(market_buy_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = armor_buy_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -13553,7 +13677,9 @@ func _run_auto_quest_ui_check() -> void:
 		"slot": EquipmentModel.SLOT_BODY,
 		"amount": 1,
 	})
-	var training_partner_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_poison_event.get("profile", poison_equip_profile) as Dictionary).get("profile", {})
+	var chat_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_poison_event.get("profile", poison_equip_profile) as Dictionary).get("profile", {})
+	var chat_event = PlayerProgressModel.record_quest_event(chat_profile, {"type": "send_chat", "channel": "nearby"})
+	var training_partner_profile: Dictionary = PlayerProgressModel.claim_active_quest(chat_event.get("profile", {}) as Dictionary).get("profile", {})
 	training_partner_profile = PlayerProgressModel.with_training_partner_count(training_partner_profile, 1)
 	var training_partner_event = PlayerProgressModel.record_quest_event(training_partner_profile, {
 		"type": "training_partner_set_count",
@@ -13679,7 +13805,7 @@ func _run_auto_quest_reward_choice_check() -> void:
 		and not bool(no_choice.get("ok", false))
 		and bool(no_choice.get("requiresChoice", false))
 		and bool(rope_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(rope_profile) == "quest_rebirth_1_guidance"
+		and PlayerProgressModel.active_quest_id(rope_profile) == "quest_open_codex_panel"
 		and PlayerProgressModel.backpack_item_count(rope_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == model_before_rope + 4
 		and PlayerProgressModel.stone_coins(rope_profile) == model_before_coins + 60
 		and str(rope_claim.get("message", "")).find("初级捕捉绳") >= 0
@@ -13715,7 +13841,7 @@ func _run_auto_quest_reward_choice_check() -> void:
 	var ui_profile = host.player_profile
 	var ui_log_after_claim = host.world_log_message
 	var ui_claim_ok: bool = (
-		PlayerProgressModel.active_quest_id(ui_profile) == "quest_rebirth_1_guidance"
+		PlayerProgressModel.active_quest_id(ui_profile) == "quest_open_codex_panel"
 		and PlayerProgressModel.backpack_item_count(ui_profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC) == ui_before_rope + 4
 		and PlayerProgressModel.stone_coins(ui_profile) == ui_before_coins + 60
 		and ui_log_after_claim.find("初级捕捉绳") >= 0
@@ -13877,7 +14003,11 @@ func _run_auto_task_tracker_route_check() -> void:
 		"type": "talk",
 		"targetId": "trainer",
 	})
-	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	var tutorial_profile: Dictionary = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	var task_event = PlayerProgressModel.record_quest_event(tutorial_profile, {"type": "open_feature", "featureId": "quest"})
+	tutorial_profile = PlayerProgressModel.claim_active_quest(task_event.get("profile", {}) as Dictionary).get("profile", {})
+	var map_event = PlayerProgressModel.record_quest_event(tutorial_profile, {"type": "open_feature", "featureId": "map"})
+	var bank_profile: Dictionary = PlayerProgressModel.claim_active_quest(map_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = bank_profile
 	host._clear_navigation_state()
 	var bank_loaded = host._load_map("firebud_training_yard")
@@ -13899,8 +14029,30 @@ func _run_auto_task_tracker_route_check() -> void:
 		and str(host.pending_interaction.get("id", "")) == "firebud_bank_keeper"
 		and host.world_log_message.find("银行管理员阿衡") >= 0
 	)
-	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear and bank_loaded and bank_cross_map_started and bank_continued_route else "failed"
-	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s bank_loaded=%s bank_cross_map=%s bank_continue=%s pending=%s log=%s" % [
+	var tutorial_route_contract_ok = true
+	for route_case in [
+		["quest_open_task_panel", "tutorial_feature", "quest"],
+		["quest_open_map_panel", "tutorial_feature", "map"],
+		["quest_open_status_panel", "tutorial_feature", "status"],
+		["quest_open_equipment_panel", "tutorial_feature", "equipment"],
+		["quest_open_auto_settings", "tutorial_feature", "auto_settings"],
+		["quest_market_sell_player", "market_panel", ""],
+		["quest_claim_market_mail", "mailbox_panel", ""],
+		["quest_market_buy_player", "market_panel", ""],
+		["quest_chat_greeting", "chat_panel", ""],
+		["quest_training_partner_intro", "party_panel", ""],
+		["quest_open_codex_panel", "tutorial_feature", "codex"],
+		["quest_open_family_panel", "tutorial_feature", "family"],
+		["quest_open_account_panel", "tutorial_feature", "account"],
+	]:
+		var tutorial_target = host._navigation_target_for_quest(QuestModel.quest_for_id(str(route_case[0])))
+		tutorial_route_contract_ok = tutorial_route_contract_ok and str(tutorial_target.get("kind", "")) == str(route_case[1])
+		if str(route_case[2]) != "":
+			tutorial_route_contract_ok = tutorial_route_contract_ok and str(tutorial_target.get("featureId", "")) == str(route_case[2])
+	var hang_target = host._navigation_target_for_quest(QuestModel.quest_for_id("quest_start_hang"))
+	tutorial_route_contract_ok = tutorial_route_contract_ok and str(hang_target.get("kind", "")) == "encounter_zone" and str((hang_target.get("zone", {}) as Dictionary).get("encounterGroupId", "")) == "firebud_grass_01"
+	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear and bank_loaded and bank_cross_map_started and bank_continued_route and tutorial_route_contract_ok else "failed"
+	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s bank_loaded=%s bank_cross_map=%s bank_continue=%s tutorial_routes=%s pending=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ready),
@@ -13910,6 +14062,7 @@ func _run_auto_task_tracker_route_check() -> void:
 		str(bank_loaded),
 		str(bank_cross_map_started),
 		str(bank_continued_route),
+		str(tutorial_route_contract_ok),
 		str(host.pending_interaction.get("id", "")),
 		host.world_log_message,
 	])

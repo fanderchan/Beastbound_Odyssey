@@ -443,10 +443,13 @@ test("server shop transactions recover missing active main quest before buy prog
   profile.unlockedAbilities = ["riding"];
   profile.questStates = {
     "quest_intro_talk": {"questId": "quest_intro_talk", "status": "claimed", "progress": 1},
+    "quest_open_task_panel": {"questId": "quest_open_task_panel", "status": "claimed", "progress": 1},
+    "quest_open_map_panel": {"questId": "quest_open_map_panel", "status": "claimed", "progress": 1},
     "quest_bank_intro": {"questId": "quest_bank_intro", "status": "claimed", "progress": 1},
     "quest_stable_intro": {"questId": "quest_stable_intro", "status": "claimed", "progress": 1},
     "quest_riding_certificate": {"questId": "quest_riding_certificate", "status": "claimed", "progress": 1},
     "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "claimed", "progress": 1},
+    "quest_open_status_panel": {"questId": "quest_open_status_panel", "status": "claimed", "progress": 1},
   };
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
 
@@ -506,7 +509,7 @@ test("server pet riding advances novice tiger tutorial quest", () => {
   assert.equal(riding.result.state, "riding");
   assert.equal(riding.profile.ridePetInstanceId, "pet_tiger_quest");
   assert.equal(riding.profile.questStates.quest_try_riding_tiger.status, "claimed");
-  assert.equal(riding.profile.activeQuestId, "quest_buy_supply");
+  assert.equal(riding.profile.activeQuestId, "quest_open_status_panel");
   assert.equal(riding.questMessages.some((message) => String(message).includes("试骑新手老虎")), true);
 });
 
@@ -594,7 +597,7 @@ test("server equipment equip validates ownership, swaps equipment, and advances 
   assert.equal(equipped.profile.equipmentInstances.equip_000002.location, "backpack");
   assert.equal(profileItemCount(equipped.profile, "weapon_wooden_club"), 0);
   assert.equal(profileItemCount(equipped.profile, "weapon_stone_dagger"), 1);
-  assert.equal(equipped.profile.activeQuestId, "quest_first_victory");
+  assert.equal(equipped.profile.activeQuestId, "quest_open_equipment_panel");
   assert.equal(equipped.questMessages.some((message) => String(message).includes("装备木棒")), true);
 
   const missing = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});

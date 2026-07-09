@@ -841,3 +841,19 @@ test("players can chat nearby and inside server parties", () => {
   assert.equal(outsiderTeam.ok, true);
   assert.equal(outsiderTeam.messages.length, 0);
 });
+
+test("sending a nearby message completes the chat tutorial with an authoritative profile", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "chat_tutorial", "password": "test1234", "displayName": "聊天学员"});
+  const profile = battleProfile("聊天学员", {"level": 3, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 0;
+  profile.activeQuestId = "quest_chat_greeting";
+  profile.questStates = {"quest_chat_greeting": {"questId": "quest_chat_greeting", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const sent = service.sendChatMessage(player.session.token, {"channel": "nearby", "text": "大家好"});
+  assert.equal(sent.ok, true);
+  assert.equal(sent.profile.activeQuestId, "quest_training_partner_intro");
+  assert.equal(sent.profile.stoneCoins, 5);
+  assert.equal(sent.questMessages.length > 0, true);
+});

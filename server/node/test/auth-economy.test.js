@@ -239,6 +239,102 @@ test("market listings support item tax overrides and cancellation", () => {
   assert.equal(service.snapshot().marketConfig.taxCollected.diamonds, 1);
 });
 
+test("tutorial sell, mailbox claim, and private bot purchase form one safe market lesson", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "market_tutorial", "password": "test1234", "displayName": "交易学员"});
+  const current = service.getProfile(player.session.token);
+  const profile = current.profile;
+  profile.stoneCoins = 10;
+  profile.backpackSlots = [{"itemId": "tutorial_worn_hide", "count": 1}];
+  profile.activeQuestId = "quest_market_sell_player";
+  profile.questStates = {"quest_market_sell_player": {"questId": "quest_market_sell_player", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": current.profileSummary.profileRevision, profile}).ok, true);
+
+  const sold = service.createMarketListing(player.session.token, {
+    "itemId": "tutorial_worn_hide",
+    "count": 1,
+    "unitPrice": 7,
+    "currency": "stoneCoins",
+  });
+  assert.equal(sold.ok, true);
+  assert.equal(sold.saleMail.mailKind, "tutorial_market_sale");
+  assert.equal(sold.profile.activeQuestId, "quest_claim_market_mail");
+  assert.equal(sold.market.listings.length, 0);
+  assert.equal(service.snapshot().marketListings[sold.listing.listingId], undefined);
+
+  const inbox = service.listInbox(player.session.token);
+  assert.equal(inbox.messages.length, 1);
+  assert.equal(inbox.messages[0].mailKind, "tutorial_market_sale");
+  assert.equal(inbox.messages[0].currency.stoneCoins, 7);
+  const claimed = service.claimMailAttachments(player.session.token, inbox.messages[0].mailId);
+  assert.equal(claimed.ok, true);
+  assert.equal(claimed.profile.activeQuestId, "quest_market_buy_player");
+  assert.equal(claimed.profile.stoneCoins, 27);
+
+  const state = service.marketListings(player.session.token);
+  assert.equal(state.market.listings.length, 1);
+  const botListing = state.market.listings[0];
+  assert.equal(botListing.sellerKind, "tutorial_bot");
+  assert.equal(botListing.sellerDisplayName, "新手交易指导员");
+  assert.equal(botListing.totalPrice, 1);
+  const bought = service.buyMarketListing(player.session.token, {"listingId": botListing.listingId});
+  assert.equal(bought.ok, true);
+  assert.equal(bought.profile.activeQuestId, "quest_buy_spirit_armor");
+  assert.equal(bought.profile.stoneCoins, 36);
+  assert.equal(profileItemCount(bought.profile, "item_meat_small"), 1);
+  assert.equal(service.marketListings(player.session.token).market.listings.length, 0);
+  const replay = service.buyMarketListing(player.session.token, {"listingId": botListing.listingId});
+  assert.equal(replay.ok, false);
+  assert.equal(replay.code, "market_listing_missing");
+});
+
+test("tutorial buyer ignores oversized or overpriced listings", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "markettutorialguard", "password": "test1234", "displayName": "交易防线"});
+  const current = service.getProfile(player.session.token);
+  const profile = current.profile;
+  profile.backpackSlots = [{"itemId": "tutorial_worn_hide", "count": 2}];
+  profile.activeQuestId = "quest_market_sell_player";
+  profile.questStates = {"quest_market_sell_player": {"questId": "quest_market_sell_player", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": current.profileSummary.profileRevision, profile}).ok, true);
+
+  const oversized = service.createMarketListing(player.session.token, {
+    "itemId": "tutorial_worn_hide",
+    "count": 2,
+    "unitPrice": 20,
+    "currency": "stoneCoins",
+  });
+  assert.equal(oversized.ok, true);
+  assert.equal(oversized.saleMail, null);
+  assert.equal(oversized.profile.activeQuestId, "quest_market_sell_player");
+  assert.equal(oversized.market.mine.length, 1);
+  assert.equal(service.listInbox(player.session.token).messages.length, 0);
+});
+
+test("selling tutorial junk to the shop teaches the direct-sale path", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "shop_sell_tutorial", "password": "test1234", "displayName": "商店学员"});
+  const current = service.getProfile(player.session.token);
+  const profile = current.profile;
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [{"itemId": "tutorial_worn_hide", "count": 2}];
+  profile.activeQuestId = "quest_sell_to_shop";
+  profile.questStates = {"quest_sell_to_shop": {"questId": "quest_sell_to_shop", "status": "active", "progress": 0}};
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": current.profileSummary.profileRevision, profile}).ok, true);
+
+  const sold = service.shopTransaction(player.session.token, {
+    "mode": "sell",
+    "shopId": "firebud_item_shop",
+    "itemId": "tutorial_worn_hide",
+    "amount": 1,
+  });
+  assert.equal(sold.ok, true);
+  assert.equal(sold.profile.activeQuestId, "quest_buy_weapon");
+  assert.equal(profileItemCount(sold.profile, "tutorial_worn_hide"), 1);
+  assert.equal(sold.profile.stoneCoins, 8);
+  assert.equal(sold.questMessages.length > 0, true);
+});
+
 test("market tax config requires GM command grant", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const gm = service.register({"username": "market_gm", "password": "test1234", "displayName": "税务员"});
