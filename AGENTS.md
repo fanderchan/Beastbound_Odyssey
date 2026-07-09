@@ -1,81 +1,87 @@
 # Beastbound Odyssey Agent Instructions
 
-These rules apply to `/Users/fander/projects/Beastbound_Odyssey`.
+These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific rules live in `client/godot/AGENTS.md` and `server/node/AGENTS.md` and apply together with this file.
 
-## Project Status And Roadmap
+## Start Every Task From Repository Truth
 
-- The project has moved past the prototype/bugfix phase: all 32 known bugs in `tasks.md` are fixed and verified. Do not re-investigate them unless a regression is proven by a failing test or check.
-- Release engineering follows `release_plan.md` (stages A → E). Content and StoneAge-gap iteration follows `stoneage_gap_plan.md` (stages F0 → F8). At the start of every session, read the "进度追踪" section of whichever plan is active, plus `git log`, to locate the current position.
-- `release_plan.md` A-E acceptance is complete; prefer `stoneage_gap_plan.md` for new feature work unless the user explicitly asks for a PC-only export smoke or another release-engineering check.
-- After completing each item, tick its checkbox in the active plan file and append one line of completion evidence. After completing each stage, run the stage-appropriate subset of tests and stop for user confirmation before starting the next stage. Do not run full `node tools/run_local_ci.mjs` unless the user explicitly asks for it or the stage is a true release/export gate that cannot be validated safely with narrower checks.
-- When a StoneAge 8.0 mechanic is uncertain, inspect the local reference at `/Users/fander/projects/_local_references/StoneAge` (see also [fanderchan/StoneAge](https://github.com/fanderchan/StoneAge)) for behavior intent only; do not copy code, data, or assets.
+- Run `git status --short --branch` and inspect recent `git log` before editing. Preserve unrelated user changes and never assume a dirty file belongs to the current task.
+- Read the active plan's `进度追踪` section and the newest relevant `docs/phase_*.md` files before planning work. An explicit user request takes priority over the next unchecked plan item; a generic “继续” means continue from the first unchecked item.
+- `tasks.md` has 32 completed bug items, `release_plan.md` stages A-E are accepted, and `quality_cleanup_plan.md` stages 1-6 are complete. Do not reopen them without a reproduced regression.
+- The active content roadmap is `stoneage_gap_plan.md`: execution stages are F0-F8 and work items are grouped as G1-G9. Do not describe this as a separate F-only or G-only roadmap.
+- Before editing a subsystem, read its scoped `AGENTS.md`, nearby tests, and the most recent phase note that established the behavior. Line numbers in old phase notes are historical evidence, not current locations.
+
+## Repository Architecture
+
+- `client/godot/` is the Godot 4.7 PC-first client. `scenes/Main.tscn` is intentionally only a bootstrap node; most runtime scene construction and coordination is currently scripted.
+- `client/godot/data/` contains gameplay and balance JSON used by the client. The Node server also reads several of these documents directly, so IDs and schema changes can be cross-runtime contracts.
+- `server/node/` is a Node.js 22+ CommonJS service. `src/http-server.js` is transport/routing, `src/auth-service.js` composes shared state and domain dependencies, and `src/auth/*.js` contains extracted gameplay domains.
+- `server/node/src/mysql-store.js` is the runtime MySQL schema and persistence implementation. `database/mysql/001_auth_schema.sql` and its README are an early Phase158 artifact, not the current live-schema source of truth.
+- `tools/run_godot_auto_checks.mjs` discovers client checks from literal `--auto-*-check` arguments in `main.gd`. `tools/run_local_ci.mjs` is the expensive combined server/client/performance gate.
+- `.run/`, `client/godot/.godot/`, `server/node/.local/`, Godot `user://` data, logs, PIDs, screenshots, reports, and local credentials are generated state. Do not commit or treat them as product source.
 
 ## Product Direction
 
-- Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Current goal: iterate to a releasable networked game per `release_plan.md`.
-- Current release target is PC desktop first. Consider future phone/tablet compatibility while designing shared contracts, but do not build dedicated mobile features, portrait flows, mobile-only UI, touch-only workflows, or mobile release blockers unless the user explicitly asks for that work.
-- Use Godot 4.7 standard edition, GDScript, a 2D isometric or 45-degree map direction, Node.js backend, and MySQL 9.7 for persistence.
-- Use Chinese for player-facing UI by default. Never show English error codes, agent-only validation strings, raw smoke summaries, implementation flags, or debug-only IDs in normal player-facing UI.
+- Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Use StoneAge references for behavior intent only.
+- The release target is PC desktop first at the normal 1280x720 client path. Keep shared contracts reusable where cheap, but do not add mobile-only layouts, portrait flows, touch-only features, or mobile release blockers unless the user explicitly reprioritizes mobile.
+- Player-facing UI is Chinese by default. Never expose raw error codes, server/debug fields, smoke summaries, test flags, audit IDs, or agent/QA instructions in normal player UI.
+- Preserve the established input contract from `docs/phase_201_pc_mouse_interaction.md`: all main flows work with left click/buttons; right click is auxiliary and must never become required for gameplay.
+- The server is authoritative for accounts, profiles, inventory, currency, pets, quests, movement acceptance, social state, and network battles. Client-side state may present or cache authoritative data but must not bypass server writes for server sessions.
 
-## Workflow Rules
+## Change Routing And Boundaries
 
-- Develop in small reviewable stages. Stop after each stage and ask the user to confirm before moving to the next stage.
-- Commit in small steps with motivation-explaining messages; never one giant diff.
-- During refactors (especially the main.gd split), behavior must stay identical: no opportunistic logic changes, no renaming player-facing text.
-- When a decision needs product input (password policy for old accounts, export platform priority, etc.), stop and ask the user instead of deciding alone.
-- Use the MCP server for database operations.
+- Do not put a new feature domain into `client/godot/scripts/main.gd`, `ui/panel_flow_coordinator.gd`, `qa/auto_check_coordinator.gd`, `server/node/src/auth-service.js`, or `server/node/src/http-server.js` merely because those files already touch everything. Add a focused model/controller/domain first and keep entrypoint changes to wiring, dispatch, and compatibility shims.
+- Treat `main.gd` and the large coordinators as host-coupled facades, not reusable domain layers. When touching an existing large block, prefer extracting a coherent slice if it can be done without changing behavior; do not mix a broad refactor with a feature fix.
+- Reuse shared sources instead of duplicating constants: map registrations belong in `MapDataCatalog`, battle positions in `BattleLayoutConstants`, request/response construction in `ServerAuthClientModel`, and task availability in `PlayerProgressModel`.
+- A new map, item, quest, pet, battle action, economy rule, or profile field usually crosses JSON data, a client catalog/model, server validation/settlement, UI wiring, and tests. Trace all consumers before changing an ID or field.
+- HTTP/WS breaking changes require coordinated client and server updates. Bump `ServerAuthClientModel.CLIENT_PROTOCOL_VERSION` and `server/node/src/protocol.js` versions/window only for an actual incompatible contract change; build/UI/data-only changes normally keep the protocol number.
+- `PUT /profiles/me` is intentionally disabled for players. Add a dedicated authoritative endpoint or a narrowly whitelisted `/profile/action`; return the updated profile and revision from successful mutations.
+- Runtime positions, pending battle invites/rooms, and face-to-face trade offers are intentionally excluded from persisted service snapshots. Do not make ephemeral state durable accidentally.
+- If an uncertain product rule materially changes formulas, taxes, limits, compatibility, account policy, or player-visible behavior, stop for user input. Do not hide product decisions inside implementation defaults.
 
-## Client Rules
+## Roadmap And Documentation Workflow
 
-- Keep the Godot client self-contained under `client/godot`.
-- Build and validate player-facing features for the PC desktop client first. The default launch and acceptance path is `godot --path client/godot --scene res://scenes/Main.tscn` in the PC window.
-- Keep PC/mobile gameplay contracts compatible where it is cheap and natural, especially shared battle formation coordinates and reusable panel/data models. Do not add a separate mobile feature set, mobile-only layout, portrait-first flow, or touch-only gameplay unless the user explicitly re-prioritizes mobile.
-- Mobile preview and touch checks are optional smoke/pressure checks for future compatibility. Failures or ugly layouts on phone portrait / ultra-narrow viewports should be recorded as future mobile work, not treated as blockers for the current PC release unless they also affect the PC client.
-- Keep reusable gameplay rules in focused scripts or data files instead of growing one giant scene script. `main.gd` has been reduced to a coordination entrypoint; do not add new domains back into `main.gd` — put new logic in focused scripts under `scripts/net/`, `scripts/battle/`, `scripts/ui/`, `scripts/progression/`, or `scripts/world/`.
+- Implement in small reviewable slices. A planned gameplay feature normally gets `docs/phase_XXX_<slug>.md` covering reference intent, original Beastbound rule, contracts, non-goals, validation, and performance evidence.
+- After completing a roadmap item, tick it in the active plan and append one concise evidence line. Do not mark it complete before code, targeted tests, and required manual/visual acceptance are actually complete.
+- After a stage, run the stage-appropriate targeted suite and stop for user confirmation before entering the next stage.
+- The repository-level targeted-validation rule overrides old plan text that says to run full local CI unconditionally. Run `node tools/run_local_ci.mjs` only when the user asks or the work is a true release/export gate that cannot be validated safely with narrower checks.
+- Refactors must preserve behavior and player-facing wording unless the current task explicitly changes them. Do not opportunistically rename IDs, UI text, or compatibility fields.
 
-## Validation And Performance Rules
+## Validation Rules
 
-- Default to targeted validation: run only the tests, Godot auto-checks, smoke checks, or perf probes that cover the files and behavior changed. Full local CI is slow and should be avoided unless necessary.
-- Treat `node tools/run_local_ci.mjs` as an expensive exception, not a routine post-change step. It can behave like a performance stress run and can generate large MySQL binlogs, risking local disk exhaustion on this Mac.
-- If full CI seems warranted, state why it is necessary before starting it; otherwise document the targeted commands you ran and any residual risk from not running the full suite.
-- Before and after each gameplay/client feature stage, compare against the previous performance baseline instead of only checking that the new feature works.
-- Use the full client launch path `godot --path client/godot --scene res://scenes/Main.tscn` when a feature may affect normal runtime behavior, UI refresh, movement, shops, battle, or world interaction.
-- Run relevant narrow probes when available, such as movement spam/perf, shop select perf, player stat spam perf, and feature-specific headless checks.
-- Report CPU/runtime evidence in the final summary, especially when the user has recently reported high CPU, movement stutter, UI stalls, or macOS beachball behavior.
-- If a feature changes HUD refresh, map scanning, pathfinding, panels, inventory, battle loops, or save/profile writes, explicitly check that it did not reintroduce a CPU spike or frame-time regression.
-- Treat `_process`, `_world_hud_signature`, `_world_draw_signature`, `_current_task_text`, task-route button refresh, and map/quest marker signatures as hot paths. Do not call `PlayerProgressModel.normalize_profile`, `PlayerProgressModel.backpack_slots`, full quest scans, pet-list normalization, map scans, or navigation-target builders from these paths.
-- For hot-path UI state, use raw-field lightweight signatures and cached display text. Recompute full task details, map routes, quest panels, or navigation targets only when opening a panel, clicking a button, changing profile data, or forcing a refresh.
-- When fixing or adding HUD/task/route behavior, test both idle and moving cases with `--perf-probe`; movement can expose regressions that idle checks miss because coordinates refresh the HUD.
-- For movement/input performance, simulate real `_input` events across frames. A same-frame batch of direct helper calls is not enough to prove mouse-spam, touch-spam, or manual click-drag behavior is smooth.
-- A good post-fix idle baseline is low single-digit `%CPU` in `ps` for `godot --path client/godot --scene res://scenes/Main.tscn`, and sub-millisecond `process_total` after startup in the in-game perf probe. If `ps` and the script probe disagree, keep investigating instead of trusting only one source.
+- Start with `git diff --check`, syntax/parse checks, and the narrowest tests that cover changed behavior. Report exact commands and results, plus residual risk from checks not run.
+- Server tests can be selected with `node --test server/node/test/<domain>.test.js`; the complete server suite is `npm --prefix server/node test`.
+- The minimum Godot parse check is `godot --headless --path client/godot --quit`. Use `node tools/run_godot_auto_checks.mjs --only <comma-separated flags> --fail-fast` for relevant client checks.
+- Live Godot checks may create accounts or mutate server state. Run them only against the local QA backend, never against a shared/LAN/production server. Set `BEASTBOUND_ALLOW_POSITION_TELEPORT=1` only for explicit local QA checks that need arbitrary coordinates.
+- For gameplay/client changes, launch the real client path `godot --path client/godot --scene res://scenes/Main.tscn` when practical; headless checks alone do not prove normal PC UI behavior.
+- Changes to movement, input, HUD, draw, pathfinding, map/quest markers, panels, inventory, battle loops, or profile synchronization require before/after idle and moving performance evidence. Use `--perf-probe` plus the relevant movement/panel stress probe.
+- Movement/input performance checks must send real input events across frames. Same-frame helper calls do not validate mouse spam, drag, or movement smoothness.
+- Confirm test processes and local servers do not remain orphaned. Do not delete or rewrite real user profile/MySQL state as test cleanup.
 
-## Backend Rules
+## Performance Red Lines
 
-- The server is authoritative for accounts, saves, inventory, pets, quests, and battle. Do not add client-side writes that bypass server authority for server-session accounts.
-- Persistence target is MySQL 9.7 (see release_plan.md stage B); the JSON file store is for tests only once the MySQL switch lands.
-- Keep database credentials out of tracked files; use environment variables.
+- Treat `_process`, `_input`, `_draw`, `_world_hud_signature`, `_world_draw_signature`, `_current_task_text`, route-button state, quest/map marker signatures, and online-event polling as hot paths.
+- Never call full `PlayerProgressModel.normalize_profile`, `backpack_slots`, full quest/pet/map scans, navigation-target builders, blocking I/O, or network requests from per-frame signatures or drawing loops.
+- Use raw-field signatures, dirty flags, caches, timers, bounded packet processing, and event-driven refresh. Recompute full text, routes, panels, or normalized profiles only on authoritative state change or explicit user action.
+- A healthy post-startup PC baseline is low single-digit `%CPU` and sub-millisecond in-game `process_total`. If `ps` and the in-game probe disagree, investigate rather than choosing the better number.
 
-## Asset And Reuse Rules
+## Backend And Database Operations
 
-- StoneAge9 may be evaluated for structure, data contracts, validation style, and replaceable asset pipeline ideas.
-- Do not directly copy StoneAge9 or SA80 art assets into this project unless the user explicitly approves that specific reuse.
-- Every non-placeholder runtime asset must eventually declare its source, ownership, replacement path, and validation evidence.
-- Temporary placeholders are allowed while they keep the live client playable and remain easy to replace; stage E of release_plan.md audits all remaining placeholders.
+- From the repository root, normal local operations use `npm --prefix server/node run ops -- <start|status|backup|stop|restart>`; the root `start-backend.command` is the double-click restart launcher. `npm --prefix server/node start` is the foreground server.
+- The target/default runtime store is MySQL 9.7. JSON and memory stores are for isolated tests and tooling, not the normal player server.
+- Use the configured MCP database server for database inspection or mutation. Do not edit MySQL files directly, do not hand-delete binlogs, and do not place credentials in commands, logs, tracked files, or final responses.
+- Local app credentials stay in ignored `server/node/.local/mysql.env`; local DBA credentials stay in `~/.mybugvault-db-credentials`. Read only what is needed and never print secret values.
+- Preserve incremental MySQL writes. A new persistent entity must update normalization, snapshot persistence, MySQL load/save/diff behavior, schema creation, and storage tests without reintroducing whole-table delete/reinsert amplification.
 
-## Original StoneAge Reference Rules
+## Assets And External References
 
-- If an original StoneAge behavior or system rule is uncertain, inspect the user's 8.0 source reference at [fanderchan/StoneAge](https://github.com/fanderchan/StoneAge) before guessing.
-- Use the 8.0 source to confirm mechanics and naming intent only; do not copy source code, data, or assets into Beastbound Odyssey without explicit approval.
-- For movement collision, the 8.0 server uses `CHAR_ISOVERED`: `1` means another character can stand on or pass through that character's cell, and `0` means the character blocks movement. Beastbound maps this concept to the NPC field `movementCollision`.
+- For uncertain StoneAge 8.0 behavior, inspect `/Users/fander/projects/_local_references/StoneAge` first. Do not re-clone it unless missing or explicitly asked to refresh.
+- Use StoneAge 8.0, StoneAge9, or SA80 only for mechanics, data-contract ideas, validation patterns, and replaceable pipeline structure. Never copy their source, numbers, maps, NPC scripts, audio, or art without explicit approval.
+- Every non-placeholder runtime asset must document source, ownership, replacement path, and validation evidence. Keep placeholders easy to replace.
+- For movement collision reference, StoneAge `CHAR_ISOVERED=1` means passable/overlappable and `0` blocks; Beastbound expresses this as NPC `movementCollision`.
 
-## Global Git / SSH Rules
+## Git And Delivery
 
-- Default GitHub remotes should use SSH, not HTTPS.
-- Two GitHub identities are configured on this machine:
-  - `energyjyasashi-hash` -> SSH host alias `github-energyjyasashi-hash` -> key `~/.ssh/id_ed25519_github_energyjyasashi_hash`
-  - `fanderchan` -> SSH host alias `github-fanderchan` -> key `~/.ssh/id_ed25519_github_fanderchan`
-- When a GitHub remote belongs to `energyjyasashi-hash/<repo>`, prefer `git@github-energyjyasashi-hash:energyjyasashi-hash/<repo>.git`.
-- When a GitHub remote belongs to `fanderchan/<repo>`, prefer `git@github-fanderchan:fanderchan/<repo>.git`.
-- Do not switch GitHub remotes to HTTPS unless the user explicitly asks for HTTPS.
-- Before pushing, verify `git config user.name` and `git config user.email` match the intended GitHub identity.
-- If a repo belongs to another owner or organization and the correct GitHub identity is unclear, ask the user which GitHub account should be used before editing the remote or pushing.
+- Do not create commits, push, or open a PR unless the current request includes publishing. When asked, stage only the requested scope and keep commits small with motivation-explaining messages.
+- Before pushing, verify `git config user.name`, `git config user.email`, the remote owner, the branch, and staged diff. Confirm local HEAD, upstream, and remote SHA after push.
+- GitHub remotes use SSH. For this repository, keep `origin` as `git@github-fanderchan:fanderchan/Beastbound_Odyssey.git` unless the user explicitly changes ownership or transport.
+- Identity mapping: `energyjyasashi-hash` uses `github-energyjyasashi-hash`; `fanderchan` uses `github-fanderchan`. Never silently switch a GitHub remote to HTTPS.
