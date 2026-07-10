@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 2,
+  "contractId": "server_pet_profile_public_v2",
+  "cases": [
+    {
+      "caseId": "mixed_authority_legacy_containers",
+      "privateCanaries": [
+        "bps1_CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+        "PRIVATE_CANARY_AUTHORITY_UNKNOWN",
+        "PRIVATE_CANARY_LEGACY_SEED",
+        "PRIVATE_CANARY_LEGACY_ROLL",
+        "PRIVATE_CANARY_LEGACY_UNKNOWN",
+        "PRIVATE_CANARY_DROP_SEED",
+        "PRIVATE_CANARY_PARTNER_SEED"
+      ],
+      "internalProfile": {
+        "schemaVersion": 1,
+        "player": {
+          "name": "公开向量玩家",
+          "level": 20
+        },
+        "stoneCoins": 321,
+        "petInstances": [
+          {
+            "instanceId": "pet_vector_authority",
+            "petId": "pet_vector_authority",
+            "templateId": "blue_man_dragon_water10",
+            "formId": "blue_man_dragon_water10",
+            "name": "向量蓝人龙",
+            "state": "battle",
+            "level": 1,
+            "hp": 55,
+            "maxHp": 55,
+            "attack": 14,
+            "defense": 7,
+            "quick": 6,
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "growthModelVersion": "pet_growth_authority_v1",
+            "initialStats": {
+              "maxHp": 55,
+              "attack": 14,
+              "defense": 7,
+              "quick": 6
+            },
+            "growthSpeciesLevel1Stats": {
+              "maxHp": 55,
+              "attack": 14,
+              "defense": 7,
+              "quick": 6
+            },
+            "petGrowth": {
+              "schemaVersion": 1,
+              "modelVersion": "pet_growth_authority_v1",
+              "profileId": "blue_man_dragon_v1",
+              "settledLevel": 1,
+              "private": {
+                "schemaVersion": 1,
+                "privateSeed": "bps1_CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+                "privateRoll": {
+                  "modelVersion": "pet_growth_authority_v1",
+                  "profileId": "blue_man_dragon_v1",
+                  "initialBonus": {
+                    "maxHp": -5,
+                    "attack": 0,
+                    "defense": -1,
+                    "quick": 0
+                  },
+                  "innateGrowthBonus": {
+                    "maxHp": 0.810666,
+                    "attack": -0.059841,
+                    "defense": 0.049036,
+                    "quick": 0.111899
+                  }
+                },
+                "cultivation": {
+                  "schemaVersion": 1,
+                  "initialBonus": {
+                    "maxHp": 0,
+                    "attack": 0,
+                    "defense": 0,
+                    "quick": 0
+                  },
+                  "growthBonus": {
+                    "maxHp": 0,
+                    "attack": 0,
+                    "defense": 0,
+                    "quick": 0
+                  }
+                },
+                "continuousStats": {
+                  "maxHp": 55,
+                  "attack": 14,
+                  "defense": 7,
+                  "quick": 6
+                }
+              },
+              "public": {
+                "schemaVersion": 1,
+                "growthModelVersion": "pet_growth_authority_v1",
+                "growthSpeciesProfileId": "blue_man_dragon_v1",
+                "level": 1,
+                "levelOneFourV": {
+                  "maxHp": 55,
+                  "attack": 14,
+                  "defense": 7,
+                  "quick": 6
+                },
+                "stats": {
+                  "maxHp": 55,
+                  "attack": 14,
+                  "defense": 7,
+                  "quick": 6
+                }
+              }
+            },
+            "futurePrivateGrowthState": "PRIVATE_CANARY_AUTHORITY_UNKNOWN"
+          },
+          {
+            "instanceId": "pet_vector_legacy",
+            "petId": "pet_vector_legacy",
+            "templateId": "wuli_normal_orange_fire10",
+            "formId": "wuli_normal_orange_fire10",
+            "name": "向量旧乌力",
+            "state": "standby",
+            "level": 7,
+            "hp": 70,
+            "maxHp": 80,
+            "attack": 20,
+            "defense": 12,
+            "quick": 18,
+            "initialStats": {
+              "maxHp": 62,
+              "attack": 14,
+              "defense": 9,
+              "quick": 12
+            },
+            "growthSpeciesLevel1Stats": {
+              "maxHp": 62,
+              "attack": 14,
+              "defense": 9,
+              "quick": 12
+            },
+            "individualSeed": "PRIVATE_CANARY_LEGACY_SEED",
+            "individualVariance": {
+              "qualityRoll": "PRIVATE_CANARY_LEGACY_ROLL"
+            },
+            "futurePrivateGrowthState": "PRIVATE_CANARY_LEGACY_UNKNOWN"
+          }
+        ],
+        "groundPetDrops": [
+          {
+            "dropId": "drop_vector_1",
+            "mapId": "firebud_village",
+            "cell": [
+              3,
+              4
+            ],
+            "expiresAtSec": 999999,
+            "pet": {
+              "instanceId": "pet_vector_drop",
+              "petId": "pet_vector_drop",
+              "templateId": "bui_normal_red_fire10",
+              "formId": "bui_normal_red_fire10",
+              "name": "掉落布伊",
+              "state": "storage",
+              "level": 1,
+              "hp": 74,
+              "maxHp": 74,
+              "attack": 16,
+              "defense": 8,
+              "quick": 20,
+              "individualSeed": "PRIVATE_CANARY_DROP_SEED"
+            }
+          }
+        ],
+        "trainingPartners": [
+          {
+            "partnerId": "partner_vector_1",
+            "name": "向量伙伴",
+            "level": 20,
+            "pet": {
+              "instanceId": "pet_vector_partner",
+              "petId": "pet_vector_partner",
+              "templateId": "blue_man_dragon_water10",
+              "formId": "blue_man_dragon_water10",
+              "name": "陪练快照宠",
+              "state": "battle",
+              "level": 20,
+              "hp": 150,
+              "maxHp": 180,
+              "attack": 70,
+              "defense": 44,
+              "quick": 55,
+              "growthSpeciesProfileId": "blue_man_dragon_v1",
+              "individualSeed": "PRIVATE_CANARY_PARTNER_SEED"
+            }
+          }
+        ],
+        "unrelatedScorecard": {
+          "qualityScore": 88,
+          "growthBonus": 3,
+          "label": "非宠物同名字段保留"
+        }
+      },
+      "expectedPublicProfile": {
+        "schemaVersion": 1,
+        "player": {
+          "name": "公开向量玩家",
+          "level": 20
+        },
+        "stoneCoins": 321,
+        "petInstances": [
+          {
+            "instanceId": "pet_vector_authority",
+            "petId": "pet_vector_authority",
+            "templateId": "blue_man_dragon_water10",
+            "formId": "blue_man_dragon_water10",
+            "name": "向量蓝人龙",
+            "state": "battle",
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "level": 1,
+            "hp": 55,
+            "maxHp": 55,
+            "attack": 14,
+            "defense": 7,
+            "quick": 6,
+            "growthSpeciesLevel1Stats": {
+              "maxHp": 55,
+              "attack": 14,
+              "defense": 7,
+              "quick": 6
+            },
+            "initialStats": {
+              "maxHp": 55,
+              "attack": 14,
+              "defense": 7,
+              "quick": 6
+            },
+            "petGrowth": {
+              "schemaVersion": 1,
+              "modelVersion": "pet_growth_authority_v1",
+              "profileId": "blue_man_dragon_v1",
+              "settledLevel": 1,
+              "public": {
+                "schemaVersion": 1,
+                "growthModelVersion": "pet_growth_authority_v1",
+                "growthSpeciesProfileId": "blue_man_dragon_v1",
+                "level": 1,
+                "levelOneFourV": {
+                  "maxHp": 55,
+                  "attack": 14,
+                  "defense": 7,
+                  "quick": 6
+                },
+                "stats": {
+                  "maxHp": 55,
+                  "attack": 14,
+                  "defense": 7,
+                  "quick": 6
+                }
+              }
+            },
+            "growthAuthority": {
+              "schemaVersion": 1,
+              "source": "server",
+              "modelVersion": "pet_growth_authority_v1",
+              "settledLevel": 1
+            }
+          },
+          {
+            "instanceId": "pet_vector_legacy",
+            "petId": "pet_vector_legacy",
+            "templateId": "wuli_normal_orange_fire10",
+            "formId": "wuli_normal_orange_fire10",
+            "name": "向量旧乌力",
+            "state": "standby",
+            "level": 7,
+            "hp": 70,
+            "maxHp": 80,
+            "attack": 20,
+            "defense": 12,
+            "quick": 18,
+            "growthSpeciesLevel1Stats": {
+              "maxHp": 62,
+              "attack": 14,
+              "defense": 9,
+              "quick": 12
+            },
+            "initialStats": {
+              "maxHp": 62,
+              "attack": 14,
+              "defense": 9,
+              "quick": 12
+            },
+            "growthAuthority": {
+              "schemaVersion": 1,
+              "source": "server",
+              "modelVersion": "legacy_individual_v0",
+              "settledLevel": 7
+            },
+            "growthModelVersion": "legacy_individual_v0"
+          }
+        ],
+        "groundPetDrops": [
+          {
+            "dropId": "drop_vector_1",
+            "mapId": "firebud_village",
+            "cell": [
+              3,
+              4
+            ],
+            "expiresAtSec": 999999,
+            "pet": {
+              "instanceId": "pet_vector_drop",
+              "petId": "pet_vector_drop",
+              "templateId": "bui_normal_red_fire10",
+              "formId": "bui_normal_red_fire10",
+              "name": "掉落布伊",
+              "state": "storage",
+              "level": 1,
+              "hp": 74,
+              "maxHp": 74,
+              "attack": 16,
+              "defense": 8,
+              "quick": 20,
+              "growthAuthority": {
+                "schemaVersion": 1,
+                "source": "server",
+                "modelVersion": "legacy_individual_v0",
+                "settledLevel": 1
+              },
+              "growthModelVersion": "legacy_individual_v0"
+            }
+          }
+        ],
+        "trainingPartners": [
+          {
+            "partnerId": "partner_vector_1",
+            "name": "向量伙伴",
+            "level": 20,
+            "pet": {
+              "instanceId": "pet_vector_partner",
+              "petId": "pet_vector_partner",
+              "templateId": "blue_man_dragon_water10",
+              "formId": "blue_man_dragon_water10",
+              "name": "陪练快照宠",
+              "state": "battle",
+              "growthSpeciesProfileId": "blue_man_dragon_v1",
+              "level": 20,
+              "hp": 150,
+              "maxHp": 180,
+              "attack": 70,
+              "defense": 44,
+              "quick": 55,
+              "growthAuthority": {
+                "schemaVersion": 1,
+                "source": "server",
+                "modelVersion": "legacy_species_linear_v0",
+                "settledLevel": 20
+              },
+              "growthModelVersion": "legacy_species_linear_v0"
+            }
+          }
+        ],
+        "unrelatedScorecard": {
+          "qualityScore": 88,
+          "growthBonus": 3,
+          "label": "非宠物同名字段保留"
+        }
+      }
+    }
+  ]
+}

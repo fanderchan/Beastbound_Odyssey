@@ -10,7 +10,7 @@ const {
   battleProfile,
 } = require("../test-support/auth-service-test-context");
 const {loadPetGrowthCatalog} = require("../src/auth/pet-growth-catalog");
-const {initializePetGrowth} = require("../src/auth/pet-growth-runtime");
+const {initializePetGrowth, validatePetGrowth} = require("../src/auth/pet-growth-runtime");
 
 const PET_EXP_ITEM_ID = "item_pet_exp_pill_lv131";
 const PRIVATE_SEED = `bps1_${"A".repeat(43)}`;
@@ -160,7 +160,7 @@ test("world pet EXP item uses the dispatcher and preserves legacy pet stats", ()
   assert.equal(profileItemCount(after, PET_EXP_ITEM_ID), 0);
 });
 
-test("default service rejects authority-v1 EXP item without consuming or leaking", () => {
+test("production service settles authority-v1 EXP items without exposing private growth", () => {
   const pet = authorityPet();
   const {account, service} = seededProductionService(
     "petexpvone",
@@ -176,16 +176,101 @@ test("default service rejects authority-v1 EXP item without consuming or leaking
     payload: {itemId: PET_EXP_ITEM_ID, instanceId: pet.instanceId},
   });
 
-  assert.equal(result.ok, false);
-  assert.equal(result.code, "pet_growth_runtime_disabled");
+  assert.equal(result.ok, true);
   assert.equal(JSON.stringify(result).includes(PRIVATE_SEED), false);
   assert.equal(JSON.stringify(result).includes("continuousStats"), false);
+  assert.equal(firstPrivatePath(result), "");
+  assert.equal(service.snapshot().profileBindings[accountId].profileRevision, beforeRevision + 1);
+  assert.equal(profileItemCount(result.profile, PET_EXP_ITEM_ID), 0);
+  const after = internalProfileForAccount(service, accountId);
+  const afterPet = after.petInstances.find((entry) => entry.instanceId === pet.instanceId);
+  assert.equal(afterPet.level, 131);
+  assert.equal(afterPet.petGrowth.settledLevel, 131);
+  assert.equal(afterPet.petGrowth.private.privateSeed, PRIVATE_SEED);
+  assert.equal(validatePetGrowth(afterPet, loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
+  assert.equal(profileItemCount(after, PET_EXP_ITEM_ID), 0);
+  assert.equal(profileItemCount(before, PET_EXP_ITEM_ID), 1);
+});
+
+test("damaged authority-v1 state fails closed before consuming an EXP item", () => {
+  const pet = authorityPet("damaged_authority_exp_pet");
+  pet.attack += 1;
+  const {account, service} = seededProductionService(
+    "petexpdamaged",
+    "损坏成长玩家",
+    profileWithPet("损坏成长玩家", pet),
+  );
+  const accountId = account.account.accountId;
+  const before = internalProfileForAccount(service, accountId);
+  const beforeRevision = service.snapshot().profileBindings[accountId].profileRevision;
+
+  const result = service.profileAction(account.session.token, {
+    action: "world_item_use",
+    payload: {itemId: PET_EXP_ITEM_ID, instanceId: pet.instanceId},
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "pet_growth_state_invalid");
+  assert.equal(firstPrivatePath(result), "");
+  assert.equal(JSON.stringify(result).includes(PRIVATE_SEED), false);
   assert.equal(service.snapshot().profileBindings[accountId].profileRevision, beforeRevision);
   assert.deepEqual(internalProfileForAccount(service, accountId), before);
   assert.equal(profileItemCount(before, PET_EXP_ITEM_ID), 1);
 });
 
-test("one authority-v1 participant blocks EXP for the whole battle without leaking", () => {
+test("a solo authority-v1 battle pet receives deterministic server growth without leaking", () => {
+  const pet = authorityPet("solo_authority_battle_pet");
+  const {account, service} = seededProductionService(
+    "petexpsolovone",
+    "单人新版成长",
+    profileWithPet("单人新版成长", pet),
+  );
+  assert.equal(service.updatePlayerPosition(account.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 18,
+    cellY: 18,
+    facing: "east",
+    moving: false,
+  }).ok, true);
+  const encounter = service.startPartyEncounter(account.session.token, {
+    enemyCount: 1,
+    encounterZone: {
+      id: "solo_authority_growth_grass",
+      name: "单人成长草丛",
+      selectedWildPet: {
+        formId: "wuli_normal_orange_fire10",
+        name: "成长木桩",
+        level: 1,
+        expReward: 122,
+        battleStats: {maxHp: 1, attack: 1, defense: 1, quick: 1},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const playerActor = encounter.room.battle.actors.find((actor) => actor.kind === "player");
+  const petActor = encounter.room.battle.actors.find((actor) => actor.kind === "pet");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(service.submitBattleCommand(account.session.token, encounter.room.roomId, {
+    round: 1,
+    actorId: playerActor.actorId,
+    actionId: "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(account.session.token, encounter.room.roomId, {
+    round: 1,
+    actorId: petActor.actorId,
+    actionId: "pet_attack",
+    targetActorId: enemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  assert.equal(firstPrivatePath(resolved), "");
+  const internalPet = internalProfileForAccount(service, account.account.accountId).petInstances[0];
+  assert.equal(internalPet.level > 1 || Number(internalPet.exp || 0) > 0, true);
+  assert.equal(internalPet.petGrowth.private.privateSeed, PRIVATE_SEED);
+  assert.equal(validatePetGrowth(internalPet, loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
+});
+
+test("authority-v1, legacy, riding, and partner pets share one successful battle EXP settlement", () => {
   const store = createMemoryAuthStore();
   const bootstrap = createAuthService({store});
   const leader = bootstrap.register({
@@ -312,36 +397,40 @@ test("one authority-v1 participant blocks EXP for the whole battle without leaki
   });
   assert.equal(encounter.ok, true);
   const actors = encounter.room.battle.actors;
-  const enemy = actors.find((actor) => actor.side === "enemy");
   const leaderPlayer = actors.find((actor) => actor.username === leader.account.username && actor.kind === "player");
   const leaderPetActor = actors.find((actor) => actor.username === leader.account.username && actor.kind === "pet");
   const memberPlayer = actors.find((actor) => actor.username === member.account.username && actor.kind === "player");
   const memberPetActor = actors.find((actor) => actor.username === member.account.username && actor.kind === "pet");
-  assert.equal(Boolean(enemy && leaderPlayer && leaderPetActor && memberPlayer && memberPetActor), true);
+  assert.equal(Boolean(leaderPlayer && leaderPetActor && memberPlayer && memberPetActor), true);
 
-  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: leaderPlayer.actorId,
-    actionId: "attack",
-    targetActorId: enemy.actorId,
-  }).turn, null);
-  assert.equal(service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: leaderPetActor.actorId,
-    actionId: "pet_attack",
-    targetActorId: enemy.actorId,
-  }).turn, null);
-  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: memberPlayer.actorId,
-    actionId: "attack",
-    targetActorId: enemy.actorId,
-  }).turn, null);
-  const resolved = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: memberPetActor.actorId,
-    actionId: "pet_defend",
-  });
+  let resolved = null;
+  let currentRoom = encounter.room;
+  for (let attempt = 0; attempt < 10 && currentRoom.status !== "closed"; attempt += 1) {
+    const round = currentRoom.battle.round;
+    const enemies = currentRoom.battle.actors.filter((actor) => actor.side === "enemy" && actor.hp > 0 && !actor.defeated);
+    assert.equal(enemies.length > 0, true);
+    const commands = [
+      [leader.session.token, leaderPlayer.actorId, "attack"],
+      [leader.session.token, leaderPetActor.actorId, "pet_attack"],
+      [member.session.token, memberPlayer.actorId, "defend"],
+      [member.session.token, memberPetActor.actorId, "pet_attack"],
+    ];
+    for (let commandIndex = 0; commandIndex < commands.length; commandIndex += 1) {
+      const [token, actorId, actionId] = commands[commandIndex];
+      const target = enemies[Math.min(commandIndex, enemies.length - 1)];
+      const command = {
+        round,
+        actorId,
+        actionId,
+      };
+      if (actionId === "attack" || actionId === "pet_attack") {
+        command.targetActorId = target.actorId;
+      }
+      resolved = service.submitBattleCommand(token, encounter.room.roomId, command);
+      assert.equal(resolved.ok, true);
+    }
+    currentRoom = resolved.room;
+  }
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
   assert.equal(firstPrivatePath(resolved), "");
@@ -356,22 +445,19 @@ test("one authority-v1 participant blocks EXP for the whole battle without leaki
   const writebacks = storedRoom.battle.profileWriteback.profiles;
   assert.equal(writebacks.length, 2);
   for (const writeback of writebacks) {
-    assert.equal(writeback.exp.failed, true);
-    assert.equal(writeback.exp.code, "pet_growth_runtime_disabled");
-    assert.equal(writeback.exp.amount, 0);
-    assert.equal(writeback.exp.baseAmount, 0);
-    assert.equal(writeback.exp.rawBaseAmount, 0);
-    assert.equal(writeback.exp.scaledAmount, 0);
-    assert.equal(writeback.exp.partyBonusAmount, 0);
-    assert.equal(writeback.exp.killCount, 0);
-    assert.equal(writeback.exp.attemptedAmount > 0, true);
-    assert.equal(writeback.exp.attemptedBaseAmount > 0, true);
-    assert.equal(writeback.exp.attemptedKillCount > 0, true);
-    assert.equal(writeback.exp.player, null);
-    assert.deepEqual(writeback.exp.pets, []);
-    assert.deepEqual(writeback.exp.ridePets, []);
-    assert.deepEqual(writeback.exp.trainingPartners, []);
+    assert.equal(Boolean(writeback.exp.failed), false);
+    assert.equal(String(writeback.exp.code || ""), "");
+    assert.equal(writeback.exp.amount > 0, true);
+    assert.equal(writeback.exp.baseAmount > 0, true);
+    assert.equal(writeback.exp.killCount > 0, true);
+    assert.equal(Boolean(writeback.exp.player), true);
   }
+  const leaderWriteback = writebacks.find((entry) => entry.accountId === leader.account.accountId);
+  const memberWriteback = writebacks.find((entry) => entry.accountId === member.account.accountId);
+  assert.equal(leaderWriteback.exp.pets.length, 1);
+  assert.equal(leaderWriteback.exp.ridePets.length, 1);
+  assert.equal(leaderWriteback.exp.trainingPartners.length, 1);
+  assert.equal(memberWriteback.exp.pets.length, 1);
   assert.equal(firstPrivatePath(storedRoom.battle.profileWriteback), "");
   assert.equal(JSON.stringify(storedRoom.battle.profileWriteback).includes(PRIVATE_SEED), false);
   const record = service.snapshot().battleRecords.find((entry) => (
@@ -380,29 +466,22 @@ test("one authority-v1 participant blocks EXP for the whole battle without leaki
   assert.equal(Boolean(record), true);
   assert.equal(record.expSummaries.length, 2);
   for (const expSummary of record.expSummaries) {
-    assert.equal(expSummary.amount, 0);
-    assert.equal(expSummary.baseAmount, 0);
-    assert.equal(expSummary.killCount, 0);
-    assert.equal(expSummary.failed, true);
-    assert.equal(expSummary.code, "pet_growth_runtime_disabled");
-    assert.equal(expSummary.attemptedAmount > 0, true);
+    assert.equal(expSummary.amount > 0, true);
+    assert.equal(expSummary.baseAmount > 0, true);
+    assert.equal(expSummary.killCount > 0, true);
+    assert.equal(expSummary.failed, false);
+    assert.equal(expSummary.code, "");
   }
 
   const leaderAfter = internalProfileForAccount(service, leader.account.accountId);
   const memberAfter = internalProfileForAccount(service, member.account.accountId);
-  assert.equal(leaderAfter.player.level, 1);
+  assert.equal(leaderAfter.player.level > 1 || Number(leaderAfter.player.exp || 0) > 0, true);
   const leaderBattlePet = leaderAfter.petInstances.find((pet) => pet.instanceId === "preflight_legacy_pet");
   const leaderRidePet = leaderAfter.petInstances.find((pet) => pet.instanceId === "preflight_ride_pet");
-  assert.equal(leaderBattlePet.level, 1);
-  assert.equal(Number(leaderBattlePet.exp || 0), 0);
-  assert.equal(leaderRidePet.level, 1);
-  assert.equal(Number(leaderRidePet.exp || 0), 0);
-  assert.equal(leaderAfter.trainingPartners[0].level, 1);
-  assert.equal(Number(leaderAfter.trainingPartners[0].exp || 0), 0);
-  assert.equal(leaderAfter.trainingPartners[0].pet.level, 1);
-  assert.equal(Number(leaderAfter.trainingPartners[0].pet.exp || 0), 0);
-  assert.equal(memberAfter.player.level, 1);
-  assert.equal(Number(memberAfter.player.exp || 0), 0);
-  assert.equal(memberAfter.petInstances[0].level, 1);
+  assert.equal(leaderBattlePet.level > 1 || Number(leaderBattlePet.exp || 0) > 0, true);
+  assert.equal(leaderRidePet.level > 1 || Number(leaderRidePet.exp || 0) > 0, true);
+  assert.equal(leaderAfter.trainingPartners[0].level > 1 || Number(leaderAfter.trainingPartners[0].exp || 0) > 0, true);
+  assert.equal(leaderAfter.trainingPartners[0].pet.level > 1 || Number(leaderAfter.trainingPartners[0].pet.exp || 0) > 0, true);
   assert.equal(memberAfter.petInstances[0].petGrowth.private.privateSeed, PRIVATE_SEED);
+  assert.equal(validatePetGrowth(memberAfter.petInstances[0], loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
 });

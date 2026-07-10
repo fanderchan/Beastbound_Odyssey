@@ -5,6 +5,7 @@ const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_g
 const ROOT_PET_ARRAY_KEYS: Array[String] = ["petInstances", "pets"]
 const WRAPPED_PET_ARRAY_KEYS: Array[String] = ["groundPetDrops", "trainingPartners"]
 const CURRENT_STAT_KEYS: Array[String] = ["level", "hp", "maxHp", "attack", "defense", "quick"]
+const PUBLIC_V2_VECTOR_PATH := "res://../../tools/fixtures/server_pet_profile_public_v2_vectors.json"
 
 
 static func project_server_profile(source: Dictionary) -> Dictionary:
@@ -149,6 +150,34 @@ static func self_check() -> Dictionary:
 		"结构不安全缓存没有保持原样并拒绝写回",
 		errors
 	)
+
+	var shared_vectors = JSON.parse_string(FileAccess.get_file_as_string(PUBLIC_V2_VECTOR_PATH))
+	case_count += 1
+	_expect(shared_vectors is Dictionary, "无法读取共享 public DTO v2 向量", errors)
+	if shared_vectors is Dictionary:
+		_expect(int((shared_vectors as Dictionary).get("schemaVersion", 0)) == 2, "共享 public DTO 向量版本错误", errors)
+		for vector in (shared_vectors as Dictionary).get("cases", []):
+			if not (vector is Dictionary):
+				continue
+			var expected = (vector as Dictionary).get("expectedPublicProfile", null)
+			if not (expected is Dictionary):
+				_expect(false, "共享 public DTO 向量缺 expectedPublicProfile", errors)
+				continue
+			var vector_projection := project_server_profile(expected as Dictionary)
+			_expect(bool(vector_projection.get("ok", false)), "Godot 拒绝 Node 共享 public DTO", errors)
+			var vector_public := vector_projection.get("profile", {}) as Dictionary
+			for pet in _known_projected_pets(vector_public):
+				_expect(
+					_current_stats_preserved(source_before_pet(expected as Dictionary, str((pet as Dictionary).get("instanceId", ""))), pet),
+					"Godot 改写共享 public DTO 当前属性",
+					errors
+				)
+			var vector_replay := project_server_profile(vector_public)
+			_expect(
+				_deep_equal(vector_replay.get("profile", {}), vector_public),
+				"Godot 对共享 public DTO 的二次投影不幂等",
+				errors
+			)
 
 	return {
 		"ok": errors.is_empty(),

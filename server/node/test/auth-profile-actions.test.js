@@ -388,6 +388,36 @@ test("server world pet eggs hatch pets with default attack and defend skills", (
   assert.deepEqual(internalPet.growthSpeciesLevel1Stats, expectedLevelOneStats);
 });
 
+test("linked MM eggs hatch canonical authority-v1 pets and return only public growth facts", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "peteggmmvone", password: "test1234", displayName: "MM蛋玩家"});
+  const profile = battleProfile("MM蛋玩家", {level: 80, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [
+    {itemId: "pet_rebirth_mm1_egg", count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(registered.session.token, {expectedRevision: 0, profile}).ok, true);
+
+  const hatched = service.profileAction(registered.session.token, {
+    action: "world_item_use",
+    payload: {itemId: "pet_rebirth_mm1_egg"},
+  });
+  assert.equal(hatched.ok, true);
+  assert.equal(profileItemCount(hatched.profile, "pet_rebirth_mm1_egg"), 0);
+  const publicPet = hatched.profile.petInstances.find((pet) => pet.instanceId === hatched.result.instanceId);
+  assert.equal(publicPet.formId, "pet_rebirth_mm_stage1");
+  assert.equal(publicPet.growthAuthority.modelVersion, "pet_growth_authority_v1");
+  assert.equal(JSON.stringify(publicPet).includes("privateSeed"), false);
+
+  const internalPet = internalProfileForAccount(service, registered.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === publicPet.instanceId);
+  assert.equal(Object.hasOwn(internalPet, "individualSeed"), false);
+  assert.equal(isValidPetPrivateSeed(internalPet.petGrowth.private.privateSeed), true);
+  assert.equal(internalPet.petRebirthHelper.stage, 1);
+  assert.deepEqual(internalPet.initialStats, internalPet.petGrowth.public.levelOneFourV);
+  assert.deepEqual(internalPet.growthSpeciesLevel1Stats, internalPet.initialStats);
+});
+
 test("server bank tab unlock consumes diamonds and opens next bank page", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "bankunlock", "password": "test1234", "displayName": "银行开页"});
@@ -1028,7 +1058,9 @@ test("server player rebirth consumes trial requirements and writes authoritative
   assert.equal(reborn.profile.activePetInstanceId, starter.instanceId);
   const internalStarter = internalProfileForAccount(service, registered.account.accountId)
     .petInstances.find((pet) => pet.instanceId === starter.instanceId);
-  assert.equal(isValidPetPrivateSeed(internalStarter.individualSeed), true);
+  assert.equal(Object.hasOwn(internalStarter, "individualSeed"), false);
+  assert.equal(internalStarter.growthModelVersion, "pet_growth_authority_v1");
+  assert.equal(isValidPetPrivateSeed(internalStarter.petGrowth.private.privateSeed), true);
   assert.deepEqual(internalStarter.initialStats, {
     maxHp: internalStarter.maxHp,
     attack: internalStarter.attack,
@@ -1036,6 +1068,8 @@ test("server player rebirth consumes trial requirements and writes authoritative
     quick: internalStarter.quick,
   });
   assert.deepEqual(internalStarter.growthSpeciesLevel1Stats, internalStarter.initialStats);
+  assert.equal(starter.growthAuthority.modelVersion, "pet_growth_authority_v1");
+  assert.equal(JSON.stringify(starter).includes("privateSeed"), false);
   assert.equal(reborn.rebirth.consumedRingIds.length, 4);
   assert.equal(reborn.rebirth.consumedPets[0].formId, "rebirth_beast_earth_lv50");
   assert.equal(reborn.rebirth.rewardItems[0].itemId, "armor_grace_cloth_3");

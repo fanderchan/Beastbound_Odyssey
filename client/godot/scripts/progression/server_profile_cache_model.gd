@@ -7,6 +7,7 @@ const PROFILE_FILE_NAME := "player_profile.json"
 const STATUS_MISSING := "missing"
 const STATUS_UNCHANGED := "unchanged"
 const STATUS_SANITIZED := "sanitized"
+const STATUS_PUBLISHED := "published"
 const STATUS_INVALID_PATH := "invalid_path"
 const STATUS_READ_FAILED := "read_failed"
 const STATUS_INVALID_JSON := "invalid_json"
@@ -47,6 +48,35 @@ static func sanitize_server_cache_pair(active_path: String) -> Dictionary:
 		),
 		"active": active_result,
 		"lastGood": backup_result,
+	}
+
+
+static func publish_fresh_server_profile(active_path: String, source: Dictionary) -> Dictionary:
+	var normalized_path := active_path.strip_edges()
+	if not _valid_server_cache_path(normalized_path):
+		return {
+			"ok": false,
+			"active": _file_result(normalized_path, false, STATUS_INVALID_PATH),
+			"lastGood": _file_result("", false, STATUS_INVALID_PATH),
+		}
+	var projection := ServerPetProfileProjectionModel.project_server_profile(source)
+	if not bool(projection.get("ok", false)):
+		var invalid := _file_result(normalized_path, false, STATUS_INVALID_PROFILE)
+		invalid["requiresFreshServerProfile"] = true
+		return {
+			"ok": false,
+			"active": invalid,
+			"lastGood": _file_result(backup_path_for_active(normalized_path), false, STATUS_INVALID_PROFILE),
+		}
+	var public_profile := (projection.get("profile", {}) as Dictionary).duplicate(true)
+	var backup_path := backup_path_for_active(normalized_path)
+	var active_ok := _replace_json_file(normalized_path, public_profile)
+	var backup_ok := _replace_json_file(backup_path, public_profile)
+	return {
+		"ok": active_ok and backup_ok,
+		"active": _file_result(normalized_path, active_ok, STATUS_PUBLISHED if active_ok else STATUS_WRITE_FAILED),
+		"lastGood": _file_result(backup_path, backup_ok, STATUS_PUBLISHED if backup_ok else STATUS_WRITE_FAILED),
+		"projectedPetCount": int(projection.get("projectedPetCount", 0)),
 	}
 
 
@@ -172,6 +202,27 @@ static func self_check() -> Dictionary:
 	)
 	_expect(backup_path == "%s/player_profile.last_good.json" % directory, "last_good 路径推导错误", errors)
 	_expect(not _directory_has_temp_file(directory), "清洗后残留临时文件", errors)
+
+	var vector_document = JSON.parse_string(FileAccess.get_file_as_string("res://../../tools/fixtures/server_pet_profile_public_v2_vectors.json"))
+	var vector_cases = (vector_document as Dictionary).get("cases", []) if vector_document is Dictionary else []
+	var fresh_profile = ((vector_cases as Array)[0] as Dictionary).get("expectedPublicProfile", {}) if vector_cases is Array and not (vector_cases as Array).is_empty() else {}
+	var published := publish_fresh_server_profile(active_path, fresh_profile as Dictionary if fresh_profile is Dictionary else {})
+	case_count += 1
+	var published_active := _read_dictionary(active_path)
+	var published_backup := _read_dictionary(backup_path)
+	_expect(bool(published.get("ok", false)), "新鲜服务器公开档案发布失败", errors)
+	_expect(_deep_equal(published_active, published_backup), "active 与 last_good 发布内容不一致", errors)
+	_expect(_known_pet_private_path(published_active) == "", "新鲜服务器缓存发布了私有字段", errors)
+	var published_before := published_active.duplicate(true)
+	var rejected_publish := publish_fresh_server_profile(active_path, malformed_source)
+	case_count += 1
+	_expect(not bool(rejected_publish.get("ok", true)), "缺 marker 的服务器档案被错误发布", errors)
+	_expect(
+		_deep_equal(_read_dictionary(active_path), published_before)
+			and _deep_equal(_read_dictionary(backup_path), published_before),
+		"失败发布改写了既有安全缓存",
+		errors
+	)
 
 	var invalid_path := sanitize_server_cache_pair("user://player_profile.json")
 	case_count += 1

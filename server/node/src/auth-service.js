@@ -14,10 +14,12 @@ const {
   initializeNewLegacyPetPrivateState,
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
+const {createNewPetFactory} = require("./auth/new-pet-factory");
 const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
 } = require("./auth/pet-exp-settlement");
+const {publicPet, publicProfile} = require("./auth/profile-visibility");
 const {
   createFamilyManorDomain,
   familyOwnsManor,
@@ -354,10 +356,13 @@ function createAuthService(options = {}) {
   const allowFullProfileSave = Boolean(
     options.allowFullProfileSave ?? (process.env.BEASTBOUND_ALLOW_PROFILE_SAVE === "1")
   );
-  // 新成长运行时尚未完成公开响应与协议 v2 原子切换；服务层先统一路由，v1 必须失败关闭。
+  const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
+  const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
+  // 协议 v2 只公开安全成长投影；所有宠物经验入口在同一原子切换中启用权威成长。
   const petExpSettlement = createPetExpSettlement({
-    growthCatalog: options.petGrowthCatalog || loadPetGrowthCatalog(),
+    growthCatalog: petGrowthCatalog,
     calculateAward: battleAwardExpEntry,
+    enableAuthorityV1: true,
   });
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
@@ -1516,7 +1521,7 @@ function createAuthService(options = {}) {
   }
 
   function expireBattleTimeoutsAndEmit(data) {
-    const timeoutEvents = expireBattleTimeouts(data, now, {runtimeActiveSessionIds, petExpSettlement});
+    const timeoutEvents = expireBattleTimeouts(data, now, {runtimeActiveSessionIds, newPetFactory, petExpSettlement});
     if (timeoutEvents.length > 0) {
       save(data);
       for (const event of timeoutEvents) {
@@ -1751,7 +1756,7 @@ function createAuthService(options = {}) {
       action,
       params,
       nowFn,
-      {petExpSettlement},
+      {newPetFactory, petExpSettlement},
     ),
     bagItemById,
     bagItemIsBound,
@@ -1775,7 +1780,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {petExpSettlement},
+      {newPetFactory, petExpSettlement},
     ),
     consumeBackpackItem,
     createBattleRoomBattleState,
@@ -1783,7 +1788,7 @@ function createAuthService(options = {}) {
     currentProfileQuestId,
     emitServiceEvent,
     ensureProfileForAccount,
-    executePlayerRebirthToProfile,
+    executePlayerRebirthToProfile: (profile) => executePlayerRebirthToProfile(profile, {newPetFactory}),
     expireBattleInvite,
     expireBattleTimeoutsAndEmit,
     fail,
@@ -1857,7 +1862,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, petExpSettlement},
+      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
@@ -1867,7 +1872,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {petExpSettlement},
+      {newPetFactory, petExpSettlement},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -1889,7 +1894,7 @@ function createAuthService(options = {}) {
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
 
-  return {
+  const serviceApi = {
     register,
     login,
     refreshSession,
@@ -1969,6 +1974,34 @@ function createAuthService(options = {}) {
     authorizeGmCommand,
     snapshot,
   };
+  for (const [name, method] of Object.entries(serviceApi)) {
+    if (name === "snapshot" || typeof method !== "function") {
+      continue;
+    }
+    serviceApi[name] = (...args) => projectPublicServiceResult(method(...args));
+  }
+  return serviceApi;
+}
+
+function projectPublicServiceResult(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const result = {...value};
+  if (result.profile && typeof result.profile === "object" && !Array.isArray(result.profile)) {
+    result.profile = publicProfile(result.profile);
+  }
+  if (result.rebirth && typeof result.rebirth === "object" && !Array.isArray(result.rebirth)) {
+    result.rebirth = {...result.rebirth};
+    if (
+      result.rebirth.starterPet
+      && typeof result.rebirth.starterPet === "object"
+      && !Array.isArray(result.rebirth.starterPet)
+    ) {
+      result.rebirth.starterPet = publicPet(result.rebirth.starterPet);
+    }
+  }
+  return result;
 }
 
 function createMemoryAuthStore(initialData = null) {
@@ -3030,7 +3063,7 @@ function petSkillTrainingDocument() {
   return petSkillTrainingDocumentCache;
 }
 
-function executePlayerRebirthToProfile(profile) {
+function executePlayerRebirthToProfile(profile, options = {}) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
     return {ok: false, code: "profile_missing", message: "请先创建角色档案。"};
   }
@@ -3087,7 +3120,10 @@ function executePlayerRebirthToProfile(profile) {
   const rewardResult = addRewardItemsToBackpack(profileBackpackSlots(profile), rewardItems);
   profile.backpackSlots = rewardResult.slots;
   profile.captureTools = captureToolBagFromProfile(profile);
-  const starterResult = appendPlayerRebirthStarterPetToProfile(profile, targetCount);
+  const starterResult = appendPlayerRebirthStarterPetToProfile(profile, targetCount, options.newPetFactory);
+  if (!starterResult.ok) {
+    return starterResult;
+  }
   const rewardTexts = [];
   if (starterResult.starterPet && Object.keys(starterResult.starterPet).length > 0) {
     rewardTexts.push(`${starterResult.starterPet.name || "幼兽"} Lv${starterResult.starterPet.level || 1}`);
@@ -3398,11 +3434,11 @@ function playerRebirthStarterPetPlanForTarget(targetCount) {
   return clone(PLAYER_REBIRTH_STARTER_PET_BY_TARGET[clampInt(targetCount, 1, PLAYER_REBIRTH_MAX_COUNT, 1)] || {});
 }
 
-function appendPlayerRebirthStarterPetToProfile(profile, targetCount) {
+function appendPlayerRebirthStarterPetToProfile(profile, targetCount, newPetFactory) {
   const plan = playerRebirthStarterPetPlanForTarget(targetCount);
   const formId = String(plan.formId || "").trim();
   if (!formId) {
-    return {starterPet: {}};
+    return {ok: true, starterPet: {}};
   }
   if (!Array.isArray(profile.petInstances)) {
     profile.petInstances = [];
@@ -3418,9 +3454,21 @@ function appendPlayerRebirthStarterPetToProfile(profile, targetCount) {
       }
     }
   }
-  const starterPet = createPlayerRebirthStarterPet(instanceId, String(plan.name || ""), formId, state, serial);
+  let starterPet;
+  try {
+    starterPet = createPlayerRebirthStarterPet(
+      instanceId,
+      String(plan.name || ""),
+      formId,
+      state,
+      serial,
+      newPetFactory,
+    );
+  } catch (_error) {
+    return {ok: false, code: "pet_creation_failed", message: "转生赠宠创建失败，本次转生未结算。"};
+  }
   if (Object.keys(starterPet).length <= 0) {
-    return {starterPet: {}};
+    return {ok: false, code: "pet_template_missing", message: "转生赠宠模板不存在，本次转生未结算。"};
   }
   profile.petInstances.push(starterPet);
   profile.nextPetInstanceSerial = serial + 1;
@@ -3428,17 +3476,17 @@ function appendPlayerRebirthStarterPetToProfile(profile, targetCount) {
     profile.activePetInstanceId = instanceId;
   }
   recordProfilePetCodexForm(profile, formId, false);
-  return {starterPet};
+  return {ok: true, starterPet};
 }
 
-function createPlayerRebirthStarterPet(instanceId, name, formId, state, serial) {
+function createPlayerRebirthStarterPet(instanceId, name, formId, state, serial, newPetFactory) {
   const template = petTemplateForFormId(formId);
   if (!template || Object.keys(template).length <= 0) {
     return {};
   }
   const baseStats = objectOrEmpty(template.baseStats);
   const maxHp = Math.max(1, Math.trunc(Number(baseStats.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
-  return initializeNewLegacyPetPrivateState({
+  const candidate = {
     instanceId,
     petId: instanceId,
     templateId: formId,
@@ -3467,7 +3515,10 @@ function createPlayerRebirthStarterPet(instanceId, name, formId, state, serial) 
     capturedSerial: serial,
     isNew: true,
     schemaVersion: 1,
-  }, "player_rebirth_reward_growth", {knownLevelOneStats: true});
+  };
+  return newPetFactory.finalizeLevelOne(candidate, {
+    purpose: "player_rebirth_reward_growth",
+  }).pet;
 }
 
 function ensureActivePetAfterInstanceRemoval(profile) {
@@ -8306,7 +8357,13 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     const rewardWriteback = applyBattleVictoryRewardsToProfile(profile, room, battle, result);
     changed = changed || rewardWriteback.changed;
     summary.rewards = rewardWriteback.publicRewards;
-    const specialWriteback = applyBattleSpecialVictoryProgressToProfile(profile, room, battle, result);
+    const specialWriteback = applyBattleSpecialVictoryProgressToProfile(
+      profile,
+      room,
+      battle,
+      result,
+      options.newPetFactory,
+    );
     changed = changed || specialWriteback.changed;
     summary.special = specialWriteback.publicSpecial;
     const questWriteback = applyBattleQuestProgressToProfile(profile, room, battle, result, accountId, captureWriteback.capturedPets);
@@ -9600,7 +9657,7 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result) {
   return {changed, publicRewards};
 }
 
-function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, result) {
+function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, result, newPetFactory) {
   if (!battleRoomIsPartyPveVictory(room, battle, result)) {
     return {changed: false, publicSpecial: null};
   }
@@ -9632,7 +9689,7 @@ function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, resul
   }
   if (groupId === PET_REBIRTH_MM_TRIAL_GROUP_ID) {
     const access = petRebirthMmTrialAccess(profile);
-    const grant = access.ok ? grantPetRebirthMm(profile, 1) : access;
+    const grant = access.ok ? grantPetRebirthMm(profile, 1, newPetFactory) : access;
     if (grant.ok) {
       changed = true;
       publicSpecial.petRebirthMm = {
@@ -11802,7 +11859,7 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
     case "pet_mark_seen":
       return applyPetMarkSeenAction(profile, params);
     case "pet_rebirth_mm_stage2_claim":
-      return applyPetRebirthMmStage2ClaimAction(profile);
+      return applyPetRebirthMmStage2ClaimAction(profile, options.newPetFactory);
     case "pet_rebirth_mm_guide_start":
       return applyPetRebirthMmGuideStartAction(profile, now);
     case "pet_cultivation_apply":
@@ -12209,7 +12266,7 @@ function applyWorldItemUseAction(profile, params, options = {}) {
     return applyWorldMmStoneItemAction(profile, itemId, params);
   }
   if (useType === "pet_form_egg" || useType === "pet_rebirth_mm_egg") {
-    return applyWorldPetEggItemAction(profile, itemId);
+    return applyWorldPetEggItemAction(profile, itemId, options.newPetFactory);
   }
   if (useType === "encounter_stone") {
     return {ok: false, code: "item_use_hang_endpoint", message: "遇敌石请通过挂机入口使用。"};
@@ -12395,9 +12452,9 @@ function mmStoneStatLabel(stat) {
   return {maxHp: "生命", attack: "攻击", defense: "防御", quick: "敏捷"}[String(stat || "")] || "能力";
 }
 
-function applyWorldPetEggItemAction(profile, itemId) {
+function applyWorldPetEggItemAction(profile, itemId, newPetFactory) {
   const itemLabel = bagItemLabel(itemId);
-  const grant = grantPetFromWorldEgg(profile, itemId);
+  const grant = grantPetFromWorldEgg(profile, itemId, newPetFactory);
   if (!grant.ok) {
     return grant;
   }
@@ -12412,7 +12469,7 @@ function applyWorldPetEggItemAction(profile, itemId) {
   };
 }
 
-function grantPetFromWorldEgg(profile, itemId) {
+function grantPetFromWorldEgg(profile, itemId, newPetFactory) {
   const worldUse = worldUseForItem(itemId);
   let formId = String(worldUse.formId || "").trim();
   let name = String(worldUse.petName || "").trim();
@@ -12434,12 +12491,8 @@ function grantPetFromWorldEgg(profile, itemId) {
   }
   const serial = nextProfilePetInstanceSerial(profile, instances);
   const instanceId = `pet_egg_${safeIdPart(formId)}_${serial}`;
-  const pet = createDefaultServerPet(instanceId, name || "宠物", formId, state, 1);
-  if (!pet || Object.keys(pet).length <= 0) {
-    return {ok: false, code: "pet_template_missing", message: `${bagItemLabel(itemId)} 对应宠物不存在。`};
-  }
+  let pet = createDefaultServerPet(instanceId, name || "宠物", formId, state, 1);
   pet.capturedSerial = serial;
-  initializeNewLegacyPetPrivateState(pet, "world_egg_growth", {knownLevelOneStats: true});
   pet.isNew = true;
   pet.binding = bagItemBinding(itemId);
   if (TAME_ELIGIBLE_EGG_ITEM_IDS.has(itemId)) {
@@ -12447,6 +12500,11 @@ function grantPetFromWorldEgg(profile, itemId) {
   }
   if (useType === "pet_rebirth_mm_egg") {
     pet.petRebirthHelper = normalizedPetRebirthHelperRecord({petRebirthHelper: {stage: Math.max(1, Math.trunc(Number(worldUse.stage || 1))) }});
+  }
+  try {
+    pet = newPetFactory.finalizeLevelOne(pet, {purpose: "world_egg_growth"}).pet;
+  } catch (_error) {
+    return {ok: false, code: "pet_creation_failed", message: `${bagItemLabel(itemId)} 对应宠物创建失败。`};
   }
   instances.push(pet);
   profile.nextPetInstanceSerial = serial + 1;
@@ -13459,11 +13517,11 @@ function stablePositiveHash(text) {
   return hash;
 }
 
-function applyPetRebirthMmStage2ClaimAction(profile) {
+function applyPetRebirthMmStage2ClaimAction(profile, newPetFactory) {
   if (Boolean(profile[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY])) {
     return {ok: false, code: "mm_stage2_claimed", message: "2转小MM任务奖励每个角色只能领取一次。"};
   }
-  const grant = grantPetRebirthMm(profile, 2);
+  const grant = grantPetRebirthMm(profile, 2, newPetFactory);
   if (!grant.ok) {
     return grant;
   }
@@ -13471,7 +13529,7 @@ function applyPetRebirthMmStage2ClaimAction(profile) {
   return {ok: true, message: `完成2转小MM任务，${grant.message}`, instanceId: grant.instanceId};
 }
 
-function grantPetRebirthMm(profile, stage) {
+function grantPetRebirthMm(profile, stage, newPetFactory) {
   const safeStage = Math.max(1, Math.trunc(Number(stage || 1)));
   const formId = safeStage >= 2 ? "pet_rebirth_mm_stage2" : "pet_rebirth_mm_stage1";
   const name = safeStage >= 2 ? "2转小MM" : "1转小MM";
@@ -13484,14 +13542,15 @@ function grantPetRebirthMm(profile, stage) {
   }
   const serial = nextProfilePetInstanceSerial(profile, instances);
   const instanceId = `pet_rebirth_mm${safeStage}_${serial}`;
-  const pet = createDefaultServerPet(instanceId, name, formId, state, 1);
-  if (!pet || Object.keys(pet).length <= 0) {
-    return {ok: false, code: "pet_template_missing", message: `${name} 模板不存在。`};
-  }
+  let pet = createDefaultServerPet(instanceId, name, formId, state, 1);
   pet.petRebirthHelper = normalizedPetRebirthHelperRecord({petRebirthHelper: {stage: safeStage}});
   pet.capturedSerial = serial;
-  initializeNewLegacyPetPrivateState(pet, "rebirth_mm_reward_growth", {knownLevelOneStats: true});
   pet.isNew = true;
+  try {
+    pet = newPetFactory.finalizeLevelOne(pet, {purpose: "rebirth_mm_reward_growth"}).pet;
+  } catch (_error) {
+    return {ok: false, code: "pet_creation_failed", message: `${name} 创建失败。`};
+  }
   instances.push(pet);
   profile.nextPetInstanceSerial = serial + 1;
   recordProfilePetCodexForm(profile, formId, true);

@@ -167,26 +167,28 @@
 - [ ] **P0.2 统一 Lv1 4V、隐藏成长、观察与 Lv140 双端事实**
   - [x] **P0.2a 双端权威成长影子算法与黄金向量**
     - 证据（2026-07-11）：新增版本化 `pet_growth_authority_v1` Node/Godot 纯算法，明确 SHA-256 随机键、远离 0 取整、6 位量化、不可被培养回写的 Lv1 公开 4V、隐藏个体底板及可选逐级独立波动；共享 3 组黄金向量覆盖现有蓝人龙输入、中文种子、三种分布、培养修正和 Lv1/2/20/140，Node 5/5 通过，Godot 权威向量、既有物种模拟与观察组合 4/4 通过。当前只做 shadow，不接管运行时、不改数值、不迁移或重滚旧宠；完整契约见 `docs/phase_206_pet_growth_authority_contract.md`。
-  - [ ] **P0.2b 隐藏成长响应边界、服务端私有种子与联网客户端不重滚**
+  - [x] **P0.2b 隐藏成长响应边界、服务端私有种子与联网客户端不重滚**
     - [x] **P0.2b1 玩家档案公开投影与 CSPRNG 私有种子影子原语**
       - 证据（2026-07-11）：内存账号先复现 `getProfile` 同时泄漏 5 类代表性隐藏成长字段；新增严格正向 `publicProfile/publicPet/publicGrowthObservation` 投影，覆盖当前/legacy/地面掉落/训练伙伴/未来嵌套宠、培养历史和 `petGrowth`/观察/权威标记白名单，未知宠物字段默认丢弃；新增生产 API 固定使用 32 字节 CSPRNG、命名域隔离且拒绝第二参数的 `bps1_` 私有种子，测试固定熵不进入产品接口。与 P0.2a 组合 Node 13/13 通过。当前未接 runtime，真实切换必须与 Godot 不重滚、缓存清洗、24 个响应出口和协议 v2 原子上线；完整边界见 `docs/phase_207_pet_growth_privacy_primitives.md`。
-    - [ ] **P0.2b2 客户端/服务端原子启用公开投影、私有种子、缓存清洗与协议 v2**
+    - [x] **P0.2b2 客户端/服务端原子启用公开投影、私有种子、缓存清洗与协议 v2**
       - [x] **P0.2b2a 服务端权威模型标记与 Godot 公开投影影子边界**
         - 证据（2026-07-11）：服务端现在从内部状态派生三种可运行 marker，并把已声明但不完整的 v1 标成不可运行的 `invalid_pet_growth_authority_v1`；公开 DTO 兼容 `id/battleState/speciesName/rebirthHelper` 和旧数字字符串，保持 v1/invalid/profile 投影幂等，定向清洗 `petGrowth` 而不误删非宠系统同名字段。Godot 新投影不加载目录、不调用 RNG，十二种自检覆盖当前属性/受伤血量保持、秘密擦除、Lv1 补记录、v1 缺记录失败关闭、legacy 缺记录不循环刷新、公开成长档/四维冲突、未知/损坏/等级冲突；Godot parse + focused 3/3、Node 4/4 通过。通用整响应递归清洗因会破坏 battle actor/经验摘要已明确否决；当前仍未接运行时，完整边界见 `docs/phase_208_pet_growth_public_projection_contract.md`。
-      - [ ] **P0.2b2b 原子接入运行时：profile/奖励响应、客户端不重滚、缓存、全部新种子、Lv1 记录、非精确 UI 与协议 v2**
+      - [x] **P0.2b2b 原子接入运行时：profile/奖励响应、客户端不重滚、缓存、全部新种子、Lv1 记录、非精确 UI 与协议 v2**
         - [x] **P0.2b2b-1 服务端新宠私密身份、真实 Lv1 事实与培养安全开奖**
           - 证据（2026-07-11）：先复现人物转生赠宠、战斗捕捉、世界蛋和 MM 奖励宠均使用可猜字符串身份，MM 转生开奖还可由宠物 ID 与秒级时间推测；新增聚焦 `pet-private-state.js`，四条正式创建路径只生成一次 32 字节 CSPRNG `bps1_` 身份，人物转生/蛋/MM/Lv1 捕捉同时固化不可重写的 `initialStats` 与 `growthSpeciesLevel1Stats`，Lv2+ 捕捉明确只保存身份而不伪造历史；错误声明已知 Lv1 却缺四维会在写身份前失败关闭；MM 转生开奖改用独立 CSPRNG 命名域。目标与存储组 93/93、完整 Node 服务端 167/167 通过。此切片保持旧响应结构和协议 v1，最终删除私有字段、客户端不重滚、双缓存清洗与协议 v2 仍必须原子切换；见 `docs/phase_209_server_pet_private_state.md`。
-        - [ ] **P0.2b2b-2 联网运行时公开响应、不重滚、双缓存、非精确 UI 与协议 v2**
+        - [x] **P0.2b2b-2 联网运行时公开响应、不重滚、双缓存、非精确 UI 与协议 v2**
           - [x] **P0.2b2b-2a Godot 档案级公开投影与双缓存安全清洗影子边界**
             - 证据（2026-07-11）：新增严格联网档案投影，只处理 `petInstances/pets`、`groundPetDrops[].pet`、`trainingPartners[].pet` 四条登记路径，分别报告 marker 缺失、marker 损坏与 envelope 错误，保持所有非宠字段、数组顺序、当前六项属性和输入对象不变；缓存宽容投影即使旧档缺 marker 也能擦除秘密，但结构或属性不安全时拒绝写回。新增只允许 `user://server_accounts/*/player_profile.json` 的双文件清洗器，active 与 `.last_good` 分别采用同目录临时文件、flush、回读深比较及覆盖 rename，坏 JSON/坏档案原样保留且不阻碍另一份清洗；不返回解析档案、不调用 normalize/RNG/网络。单宠 12、档案 8、缓存 8 共 28 个离线场景通过，Godot parse + focused/authority 3/3 通过且日志无 ERROR；当前仍未接登录运行时，见 `docs/phase_210_server_profile_projection_cache_shadow.md`。
-          - [ ] **P0.2b2b-2b 原子启用公开响应、联网客户端不重滚、双缓存登录切换、非精确 UI 与协议 v2**
+          - [x] **P0.2b2b-2b 原子启用公开响应、联网客户端不重滚、双缓存登录切换、非精确 UI 与协议 v2**
+            - 证据（2026-07-11）：服务端所有对外方法统一浅层投影顶层 `profile` 与 `rebirth.starterPet`，内部 `snapshot`/持久化继续保留 v1 私密 envelope；共享 public DTO v2 向量同时锁定 Node 精确输出和 Godot 接受边界。Godot 协议 v2 登录先独立清洗 active/last-good、绝不载入旧服务器缓存，所有完整档案响应收口到严格投影→server-marker 无 RNG normalize→专用双缓存 publisher；缺/坏 marker 不替换运行态、revision 或缓存，通用服务器会话保存被关闭。联网成长页保留 Lv1、当前值、实际成长/级与分位评级，但把精确“预测140”改为“观察趋势/观察中/不预判”，缺品质不再误报“普通”。真实 Metal 1280×720 截图位于 `.run/evidence/phase213/server_pet_growth_observation_v2.png`；focused Godot 6/6、idle `0.14–0.24ms`、moving `0.12–0.21ms @ 60FPS`、移动连点 `max_input_us=168`。见 `docs/phase_213_pet_growth_protocol_v2_cutover.md`。
   - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
     - [x] **P0.2c-1 严格服务端成长目录与 v1 逐级结算影子内核**
       - 证据（2026-07-11）：新增固定读取共享 JSON 的严格 Node 成长目录，验证 schema、精确四轴/范围/分布/概率、最差属性下界及 profile↔form ID/名称/基础属性引用；当前 7 个 active linked form 返回带 form 身份、深冻结且不可绕过的 authority profile，24 个未链接形态保持 legacy；同形态历史 v1/v2 可共存，新宠只取模板 active 档，旧宠无实例 envelope 时明确 `legacy_existing`，不会因模板新增档案重抽。新增纯 `pet-growth-runtime.js`，锁定唯一 canonical seed/envelope、冻结培养与公开转生加成交叉校验、6 位 continuous 逐级累加、确定性全量重算、公开等级证据和满血/绝对伤势/死亡 0 语义；一次 Lv1→140 与逐级调用 139 次完全相同，损坏 seed/roll/continuous/public/root/Lv1 事实全部失败关闭且输入不变。公开 marker 同步要求 exact envelope/private/public keys、六位量化、无根部私密别名，并由真实 runtime→public 投影测试锁定无秘密且幂等。成长相关 Node 37/37、完整服务端 185/185 通过；尚未接任何生产 EXP/创建/转生/响应路径，不迁移或重滚旧宠，见 `docs/phase_211_server_pet_growth_runtime_shadow.md`。
-    - [ ] **P0.2c-2 安全新 Lv1 v1 创建与三个普通 EXP 入口统一 dispatcher**
+    - [x] **P0.2c-2 安全新 Lv1 v1 创建与三个普通 EXP 入口统一 dispatcher**
       - [x] **P0.2c-2a 默认关闭的战宠、骑宠与世界经验道具统一 dispatcher 暗接线**
         - 证据（2026-07-11）：新增纯 `pet-exp-settlement.js`，正式服务从严格目录构造唯一且默认关闭的 dispatcher；linked/unlinked legacy 保持旧等级经验公式且不改四维，合法 v1、未知或损坏 authority 状态固定失败关闭，不回退旧 writer。世界经验道具先预结算再扣道具/替换宠物，失败时宠物、背包、任务与 revision 不变；战斗 writeback 先预检全场真实战宠/骑宠，任一失败时所有参战账号的人物、战宠、骑宠和训练伙伴 EXP 均不发，内部错误、seed 与逐级 settlement 不进入响应/战报。宠物设计 inspector 现在能报告服务端成长目录、dispatcher 已接线及 v1 仍关闭；现有假 `bui_normal_blue_water10` 回归夹具改用目录真实 legacy 形态。成长/战斗/档案定向 74/74、完整服务端 198/198、Godot 4.7 parse 与宠物/战斗目录检查通过；尚未创建或启用任何 v1 宠，见 `docs/phase_212_default_off_pet_exp_dispatcher.md`。
-      - [ ] **P0.2c-2b 依赖公开投影/协议 v2 的安全新 Lv1 v1 创建与 dispatcher 正式启用**
+      - [x] **P0.2c-2b 依赖公开投影/协议 v2 的安全新 Lv1 v1 创建与 dispatcher 正式启用**
+        - 证据（2026-07-11）：新增严格 `createNewPetFactory`，全新 Lv1 候选先经目录 `resolveNewPetProfile`，只生成一次 CSPRNG 身份；linked 直接生成 canonical authority-v1，unlinked 保持 legacy 身份与真实 Lv1 事实，绝不先 legacy 再 v1。人物 1–4 转赠宠、MM1/MM2、世界蛋与 MM 奖励已接入；5–6 转/其他未链接形态保持 legacy，战斗捕捉明确留在 P0.2c-3。正式服务固定启用 v1 dispatcher，合法 v1 世界道具与多人战斗结算成功，损坏 v1 在扣道具/revision 前失败关闭，响应/room/writeback/record 无私密字段。完整 Node 210/210，宠物 design inspector `errors=0` 且成长/dispatcher/v1/factory/public/v2/客户端不重掷均为 true；见 `docs/phase_213_pet_growth_protocol_v2_cutover.md`。
     - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与完整升级入口收口**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

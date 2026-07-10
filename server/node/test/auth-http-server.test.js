@@ -221,7 +221,7 @@ test("HTTP server rejects incompatible protocol versions with upgrade guidance",
     "headers": {
       "content-type": "application/json",
       [CLIENT_VERSION_HEADER]: "0.0.1",
-      [CLIENT_PROTOCOL_HEADER]: "999",
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION - 1),
     },
     "body": JSON.stringify({"username": "future", "password": "test1234"}),
   });

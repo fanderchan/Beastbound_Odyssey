@@ -1414,7 +1414,9 @@ test("party pve guardian victories write server-side trial rewards", () => {
   assert.equal(mmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), true);
   const internalMmPet = internalProfileForAccount(service, mmPlayer.account.accountId)
     .petInstances.find((pet) => pet.instanceId === mmWriteback.special.petRebirthMm.instanceId);
-  assert.equal(isValidPetPrivateSeed(internalMmPet.individualSeed), true);
+  assert.equal(Object.hasOwn(internalMmPet, "individualSeed"), false);
+  assert.equal(internalMmPet.growthModelVersion, "pet_growth_authority_v1");
+  assert.equal(isValidPetPrivateSeed(internalMmPet.petGrowth.private.privateSeed), true);
   assert.deepEqual(internalMmPet.initialStats, {
     maxHp: internalMmPet.maxHp,
     attack: internalMmPet.attack,
@@ -1422,6 +1424,9 @@ test("party pve guardian victories write server-side trial rewards", () => {
     quick: internalMmPet.quick,
   });
   assert.deepEqual(internalMmPet.growthSpeciesLevel1Stats, internalMmPet.initialStats);
+  const publicMmPet = mmAfter.profile.petInstances.find((pet) => pet.instanceId === internalMmPet.instanceId);
+  assert.equal(publicMmPet.growthAuthority.modelVersion, "pet_growth_authority_v1");
+  assert.equal(JSON.stringify(publicMmPet).includes("privateSeed"), false);
   const mmCountAfterFirstVictory = mmAfter.profile.petInstances.filter((pet) => pet.formId === "pet_rebirth_mm_stage1").length;
   const duplicateMmEncounter = service.startPartyEncounter(mmPlayer.session.token, {
     "enemyCount": 1,

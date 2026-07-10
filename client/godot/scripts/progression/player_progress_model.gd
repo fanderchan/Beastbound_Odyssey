@@ -15,6 +15,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PetCultivationModel := preload("res://scripts/progression/pet_cultivation_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
 const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -5712,9 +5713,10 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 		int(instance.get("quick", 0)),
 	])
 	lines.append(PetPowerModel.combat_power_label_for_pet(instance))
+	var individual_label := _pet_individual_display_label(instance)
 	lines.append("成长档：%s    个体：%s" % [
 		str(instance.get("growthTierLabel", growth_profile_label(str(instance.get("growthProfileId", ""))))),
-		str(instance.get("individualQualityLabel", "普通")),
+		individual_label,
 	])
 	if bool(instance.get("locked", false)):
 		lines.append("保护：已锁定")
@@ -5750,6 +5752,40 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 	elif int(instance.get("hp", 0)) <= 0:
 		lines.append("%s 生命为 0，不能出战。" % str(instance.get("name", "宠物")))
 	return lines
+
+
+static func _pet_individual_display_label(instance: Dictionary) -> String:
+	if not PetGrowthPublicProjectionModel.has_server_authority_marker(instance):
+		var local_label := str(instance.get("individualQualityLabel", "普通")).strip_edges()
+		return local_label if local_label != "" else "普通"
+	var observation := _server_pet_public_growth_observation(instance)
+	var observed_levels := maxi(0, int(observation.get("observedLevels", 0)))
+	var grade := str(observation.get("overallGrade", "")).strip_edges()
+	if observed_levels > 0 and grade != "" and grade not in ["未观察", "未记录", "未开启"]:
+		return "%s（观察）" % grade
+	if str(instance.get("growthObservationUnavailableReason", "")).strip_edges() != "":
+		return "暂无可靠观察"
+	if not observation.is_empty() and not bool(observation.get("enabled", true)):
+		return "尚未开放"
+	return "未观察"
+
+
+static func _server_pet_public_growth_observation(instance: Dictionary) -> Dictionary:
+	var root_observation = instance.get("growthObservation", null)
+	if root_observation is Dictionary and not (root_observation as Dictionary).is_empty():
+		return (root_observation as Dictionary).duplicate(true)
+	var growth_value = instance.get("petGrowth", null)
+	if not (growth_value is Dictionary):
+		return PetGrowthObservationModel.evaluate_pet(instance)
+	var growth := growth_value as Dictionary
+	var growth_observation = growth.get("growthObservation", null)
+	if growth_observation is Dictionary and not (growth_observation as Dictionary).is_empty():
+		return (growth_observation as Dictionary).duplicate(true)
+	var public_value = growth.get("public", null)
+	if not (public_value is Dictionary):
+		return PetGrowthObservationModel.evaluate_pet(instance)
+	var public_observation = (public_value as Dictionary).get("growthObservation", null)
+	return (public_observation as Dictionary).duplicate(true) if public_observation is Dictionary else PetGrowthObservationModel.evaluate_pet(instance)
 
 
 static func pet_cultivation_preview(profile: Dictionary, instance_id: String, mode: String = "") -> Dictionary:
@@ -8000,31 +8036,34 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["level"] = clampi(int(instance.get("level", 1)), 1, MAX_PET_LEVEL)
 	instance["exp"] = maxi(0, int(instance.get("exp", 0)))
 	instance["nextExp"] = exp_to_next_level(int(instance.get("level", 1)))
-	var species_profile_id := str(instance.get("growthSpeciesProfileId", template.get("growthSpeciesProfileId", ""))).strip_edges()
-	if species_profile_id != "":
-		instance["growthSpeciesProfileId"] = species_profile_id
-		instance = PetGrowthObservationModel.normalize_pet_instance(instance, template)
+	if PetGrowthPublicProjectionModel.has_server_authority_marker(instance):
+		instance = _normalize_server_authoritative_pet_instance(instance)
 	else:
-		var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
-		var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
-		var missing_hp := maxi(0, old_max_hp - old_hp)
-		var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
-		var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, instance, int(instance.get("level", 1)), growth_rates, instance_id)
-		var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
-		var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
-		instance["maxHp"] = grown_max_hp
-		instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
-		instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
-		instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
-		instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
-		instance["growthTierId"] = str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced")))
-		instance["growthTierLabel"] = str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", "")))))
-		instance["individualSeed"] = str(growth_snapshot.get("individualSeed", instance_id))
-		instance["individualVariance"] = growth_snapshot.get("individualVariance", {})
-		instance["individualQualityScore"] = int(growth_snapshot.get("individualQualityScore", 5000))
-		instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
-		instance["initialStats"] = growth_snapshot.get("initialStats", {})
-		instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
+		var species_profile_id := str(instance.get("growthSpeciesProfileId", template.get("growthSpeciesProfileId", ""))).strip_edges()
+		if species_profile_id != "":
+			instance["growthSpeciesProfileId"] = species_profile_id
+			instance = PetGrowthObservationModel.normalize_pet_instance(instance, template)
+		else:
+			var old_max_hp := maxi(1, int(instance.get("maxHp", 1)))
+			var old_hp := clampi(int(instance.get("hp", old_max_hp)), 0, old_max_hp)
+			var missing_hp := maxi(0, old_max_hp - old_hp)
+			var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
+			var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, instance, int(instance.get("level", 1)), growth_rates, instance_id)
+			var grown_stats: Dictionary = growth_snapshot.get("finalStats", {})
+			var grown_max_hp := maxi(1, int(grown_stats.get("maxHp", old_max_hp)))
+			instance["maxHp"] = grown_max_hp
+			instance["hp"] = clampi(grown_max_hp - missing_hp, 0, grown_max_hp)
+			instance["quick"] = int(grown_stats.get("quick", instance.get("quick", 50)))
+			instance["attack"] = int(grown_stats.get("attack", instance.get("attack", 12)))
+			instance["defense"] = int(grown_stats.get("defense", instance.get("defense", 6)))
+			instance["growthTierId"] = str(growth_snapshot.get("growthTierId", template.get("growthProfileId", "balanced")))
+			instance["growthTierLabel"] = str(growth_snapshot.get("growthTierLabel", growth_profile_label(str(template.get("growthProfileId", "")))))
+			instance["individualSeed"] = str(growth_snapshot.get("individualSeed", instance_id))
+			instance["individualVariance"] = growth_snapshot.get("individualVariance", {})
+			instance["individualQualityScore"] = int(growth_snapshot.get("individualQualityScore", 5000))
+			instance["individualQualityLabel"] = str(growth_snapshot.get("individualQualityLabel", "普通"))
+			instance["initialStats"] = growth_snapshot.get("initialStats", {})
+			instance["growthRecord"] = growth_snapshot.get("growthRecord", {})
 	var cultivation := PetCultivationModel.normalized_record(instance.get("petCultivation", {}))
 	instance["petCultivation"] = cultivation
 	var helper_stage := PetRebirthMmModel.helper_stage_for_pet(instance)
@@ -8057,6 +8096,14 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["combatPower"] = PetPowerModel.combat_power_for_pet(instance)
 	instance["combatPowerBreakdown"] = PetPowerModel.combat_power_breakdown_for_pet(instance)
 	return instance
+
+
+static func _normalize_server_authoritative_pet_instance(instance: Dictionary) -> Dictionary:
+	# A server authority claim is a one-way boundary: even a damaged marker must
+	# stay on the safe snapshot path and must never fall back to local growth RNG.
+	var projection := PetGrowthPublicProjectionModel.project_server_pet(instance)
+	var projected_value = projection.get("pet", null)
+	return (projected_value as Dictionary).duplicate(true) if projected_value is Dictionary else instance.duplicate(true)
 
 
 static func _pet_instances(profile: Dictionary) -> Array[Dictionary]:

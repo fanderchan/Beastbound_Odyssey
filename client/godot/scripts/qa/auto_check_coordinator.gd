@@ -738,7 +738,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok else "failed"
+	var protocol_v2_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 2
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v2_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -3704,12 +3705,50 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and str(stage_one_observation.get("overallGrade", "")) != "未开启"
 		and not bool(stage_two_observation.get("enabled", true))
 	)
-	var status = "ok" if bool(grant.get("ok", false)) and level_up_ok and not selected.is_empty() and int(selected.get("level", 1)) == 11 and bool(csv.get("ok", false)) and ui_ok else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s" % [
+	var server_source := selected.duplicate(true)
+	server_source["growthAuthority"] = {
+		"schemaVersion": 1,
+		"source": "server",
+		"modelVersion": PetGrowthPublicProjectionModel.MODEL_LEGACY_SPECIES_LINEAR,
+		"settledLevel": int(selected.get("level", 1)),
+	}
+	server_source["growthModelVersion"] = PetGrowthPublicProjectionModel.MODEL_LEGACY_SPECIES_LINEAR
+	var server_projection := PetGrowthPublicProjectionModel.project_server_pet(server_source)
+	var server_pet := server_projection.get("pet", {}) as Dictionary
+	var server_rows := PetGrowthObservationModel.attribute_table_rows_for_stage(server_pet, 0, 140)
+	var server_detail := "\n".join(PlayerProgressModel.pet_detail_lines(server_pet))
+	var server_observation := PetGrowthObservationModel.evaluate_pet(server_pet)
+	var server_ui_contract_ok := (
+		bool(server_projection.get("ok", false))
+		and PetGrowthObservationModel.target_column_label(server_pet) == "观察趋势"
+		and not server_rows.is_empty()
+		and server_rows.all(func(row: Dictionary) -> bool: return not (row.get("target", "") is int or row.get("target", "") is float))
+		and server_detail.find("个体：普通") < 0
+		and int(server_observation.get("observedLevels", 0)) == 10
+	)
+	var screenshot_ok := true
+	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if screenshot_path != "":
+		var screenshot_profile := PlayerProgressModel.default_profile()
+		screenshot_profile["petInstances"] = [server_pet]
+		screenshot_profile["activePetInstanceId"] = str(server_pet.get("instanceId", ""))
+		host.player_profile = PlayerProgressModel.normalize_profile(screenshot_profile)
+		host.pet_selected_instance_id = str(server_pet.get("instanceId", ""))
+		host.pet_growth_stage = 0
+		host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
+		host._refresh_pet_panel()
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(screenshot_path)
+		screenshot_ok = screenshot_error == OK
+		print("pet growth observation screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
+	var status = "ok" if bool(grant.get("ok", false)) and level_up_ok and not selected.is_empty() and int(selected.get("level", 1)) == 11 and bool(csv.get("ok", false)) and ui_ok and server_ui_contract_ok and screenshot_ok else "failed"
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
 		str(ui_ok),
+		str(server_ui_contract_ok),
 		str(table_ok),
 		str(stage_tabs_ok),
 		str(host.pet_panel != null and host.pet_panel.visible),
@@ -3757,6 +3796,37 @@ func _run_auto_server_pet_growth_boundary_check() -> void:
 	var pet_result := PetGrowthPublicProjectionModel.self_check()
 	var profile_result := ServerPetProfileProjectionModel.self_check()
 	var cache_result := ServerProfileCacheModel.self_check()
+	var runtime_ok := false
+	var vector_document = JSON.parse_string(FileAccess.get_file_as_string(ServerPetProfileProjectionModel.PUBLIC_V2_VECTOR_PATH))
+	if vector_document is Dictionary:
+		var cases = (vector_document as Dictionary).get("cases", [])
+		if cases is Array and not (cases as Array).is_empty():
+			var expected = ((cases as Array)[0] as Dictionary).get("expectedPublicProfile", {})
+			if expected is Dictionary:
+				var strict_projection := ServerPetProfileProjectionModel.project_server_profile(expected as Dictionary)
+				var first_normalized := PlayerProgressModel.normalize_profile(strict_projection.get("profile", {}) as Dictionary)
+				var second_normalized := PlayerProgressModel.normalize_profile(first_normalized)
+				var authority_before := PlayerProgressModel.pet_instance_by_id(expected as Dictionary, "pet_vector_authority")
+				var authority_after := PlayerProgressModel.pet_instance_by_id(second_normalized, "pet_vector_authority")
+				var current_stats_ok := true
+				for key in ["level", "hp", "maxHp", "attack", "defense", "quick"]:
+					current_stats_ok = current_stats_ok and authority_before.get(key) == authority_after.get(key)
+				var serialized := JSON.stringify(second_normalized)
+				var private_free := true
+				for marker in ["individualSeed", "growthSpeciesSeed", "growthSpeciesRoll", "privateSeed", "privateRoll", "continuousStats", "individualQualityScore"]:
+					private_free = private_free and serialized.find(marker) < 0
+				var invalid_profile := (strict_projection.get("profile", {}) as Dictionary).duplicate(true)
+				var invalid_pet := ((invalid_profile.get("petInstances", []) as Array)[0] as Dictionary)
+				invalid_pet["growthAuthority"]["modelVersion"] = PetGrowthPublicProjectionModel.MODEL_INVALID_AUTHORITY_V1
+				invalid_pet["growthModelVersion"] = PetGrowthPublicProjectionModel.MODEL_INVALID_AUTHORITY_V1
+				var invalid_normalized := PlayerProgressModel.normalize_profile(invalid_profile)
+				var invalid_after := PlayerProgressModel.pet_instance_by_id(invalid_normalized, "pet_vector_authority")
+				var invalid_stats_ok := true
+				for key in ["level", "hp", "maxHp", "attack", "defense", "quick"]:
+					invalid_stats_ok = invalid_stats_ok and authority_before.get(key) == invalid_after.get(key)
+				runtime_ok = bool(strict_projection.get("ok", false)) \
+					and JSON.stringify(first_normalized) == JSON.stringify(second_normalized) \
+					and current_stats_ok and invalid_stats_ok and private_free
 	var errors: Array[String] = []
 	for error_message in pet_result.get("errors", []) as Array:
 		errors.append("pet:%s" % str(error_message))
@@ -3766,12 +3836,14 @@ func _run_auto_server_pet_growth_boundary_check() -> void:
 		errors.append("cache:%s" % str(error_message))
 	var status := "ok" if bool(pet_result.get("ok", false)) \
 		and bool(profile_result.get("ok", false)) \
-		and bool(cache_result.get("ok", false)) else "failed"
-	print("server pet growth boundary ready: status=%s pet_cases=%d profile_cases=%d cache_cases=%d models=%s errors=%s" % [
+		and bool(cache_result.get("ok", false)) \
+		and runtime_ok else "failed"
+	print("server pet growth boundary ready: status=%s pet_cases=%d profile_cases=%d cache_cases=%d runtime=%s models=%s errors=%s" % [
 		status,
 		int(pet_result.get("caseCount", 0)),
 		int(profile_result.get("caseCount", 0)),
 		int(cache_result.get("caseCount", 0)),
+		str(runtime_ok),
 		",".join(pet_result.get("supportedModelVersions", [])),
 		";".join(errors),
 	])
@@ -15244,6 +15316,8 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 2
+		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
 		and refresh_headers.has(protocol_client_header)
@@ -21527,7 +21601,7 @@ func _run_auto_server_battle_item_live_check() -> void:
 func _run_auto_server_profile_sync_check() -> void:
 	host.profile_save_enabled = false
 	var original_save_path = PlayerProgressModel.current_save_path()
-	var temp_save_path = "user://server_profile_sync_check/player_profile.json"
+	var temp_save_path = "user://server_accounts/__server_profile_sync_check/player_profile.json"
 	PlayerProgressModel.set_active_save_path(temp_save_path)
 	var session = {
 		"username": "syncuser",
@@ -21535,7 +21609,7 @@ func _run_auto_server_profile_sync_check() -> void:
 		"role": AccountAuthModel.ROLE_PLAYER,
 		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
 		"gmPluginInstalled": false,
-		"profileSavePath": "user://server_accounts/syncuser/player_profile.json",
+		"profileSavePath": temp_save_path,
 		"authSource": ServerAuthClientModel.SOURCE_SERVER,
 		"serverBaseUrl": "http://127.0.0.1:8787",
 		"serverSessionToken": "token_sync",
@@ -21607,6 +21681,33 @@ func _run_auto_server_profile_sync_check() -> void:
 	host._apply_server_profile_pull_result(pull_response)
 	var pulled_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
 	var pull_ok = str(pulled_player.get("name", "")) == "云端猎人" and host.server_profile_sync_expected_revision == 2
+	var cache_before_invalid := FileAccess.get_file_as_string(temp_save_path)
+	var invalid_remote_profile := remote_profile.duplicate(true)
+	invalid_remote_profile["petInstances"] = [{
+		"instanceId": "missing_marker_pet",
+		"petId": "missing_marker_pet",
+		"formId": "bui_normal_red_fire10",
+		"templateId": "bui_normal_red_fire10",
+		"level": 1,
+		"hp": 70,
+		"maxHp": 70,
+		"attack": 16,
+		"defense": 8,
+		"quick": 20,
+	}]
+	var invalid_pull_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": invalid_remote_profile,
+		"profileSummary": {"playerId": "player_sync", "profileRevision": 99},
+	}).to_utf8_buffer())
+	host._apply_server_profile_pull_result(invalid_pull_response, false)
+	var invalid_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
+	var invalid_pull_rejected_ok = (
+		str(invalid_player.get("name", "")) == "云端猎人"
+		and host.server_profile_sync_expected_revision == 2
+		and FileAccess.get_file_as_string(temp_save_path) == cache_before_invalid
+		and host.server_profile_sync_pull_queued
+	)
 	host.server_profile_sync_pull_queued = false
 	host.server_profile_sync_deferred_pull_result.clear()
 	host.server_profile_sync_state = "ready"
@@ -21705,14 +21806,15 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.auth_username_input.text == "syncuser"
 		and host.world_log_message.find("登录会话已过期") >= 0
 	)
-	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and panel_defer_ok and session_expired_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
+	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and invalid_pull_rejected_ok and panel_defer_ok and session_expired_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s invalid_rejected=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
 		str(no_upload_ok),
 		str(upload_denied_ok),
 		str(upload_conflict_disabled_ok),
 		str(pull_ok),
+		str(invalid_pull_rejected_ok),
 		str(panel_defer_ok),
 		str(panel_deferred_timeout_ok),
 		str(session_expired_ok),
@@ -21720,6 +21822,11 @@ func _run_auto_server_profile_sync_check() -> void:
 		host.server_profile_sync_expected_revision,
 	])
 	PlayerProgressModel.set_active_save_path(original_save_path)
+	var backup_path := ServerProfileCacheModel.backup_path_for_active(temp_save_path)
+	for cleanup_path in [temp_save_path, backup_path]:
+		if FileAccess.file_exists(cleanup_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(cleanup_path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_save_path.get_base_dir()))
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_qa_panel_check() -> void:

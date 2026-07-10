@@ -7025,7 +7025,7 @@ func _reset_perf_probe_counters() -> void:
 
 func _request_profile_save(delay_seconds: float = 0.3) -> void:
 	_mark_progress_ui_caches_dirty()
-	if not profile_save_enabled:
+	if not profile_save_enabled or _is_server_account_session():
 		return
 	profile_save_pending = true
 	profile_save_debounce_remaining = maxf(profile_save_debounce_remaining, delay_seconds)
@@ -7033,6 +7033,8 @@ func _request_profile_save(delay_seconds: float = 0.3) -> void:
 
 func _save_player_profile_now() -> bool:
 	_mark_progress_ui_caches_dirty()
+	if _is_server_account_session():
+		return false
 	return PlayerProgressModel.save_profile(player_profile)
 
 

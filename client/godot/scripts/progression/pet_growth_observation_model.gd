@@ -132,7 +132,52 @@ static func evaluate_pet_for_stage(instance: Dictionary, stage: int = 0) -> Dict
 	var safe_stage := clampi(stage, 0, 2)
 	if safe_stage > 0:
 		return _evaluate_rebirth_growth(instance, safe_stage)
+	if _is_server_growth_pet(instance):
+		return _evaluate_server_observed_growth(instance)
 	return _evaluate_base_growth(instance)
+
+
+static func _evaluate_server_observed_growth(instance: Dictionary) -> Dictionary:
+	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
+	var profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
+	var level := clampi(int(instance.get("level", 1)), 1, 140)
+	var observed_levels := maxi(0, level - 1)
+	var level1 := _strict_public_level_one_stats(instance)
+	var current := _strict_current_stats(instance)
+	var has_record := not profile.is_empty() and not level1.is_empty() and not current.is_empty() and observed_levels > 0
+	var stat_averages := {}
+	var stat_percentiles := {}
+	var stat_grades := {}
+	var power_growth := 0.0
+	var power_percentile := 0.0
+	if has_record:
+		for key in STAT_KEYS:
+			var average := (float(current.get(key, 0.0)) - float(level1.get(key, 0.0))) / float(observed_levels)
+			var percentile := _growth_percentile_for_stat(profile, key, average)
+			stat_averages[key] = snappedf(average, 0.001)
+			stat_percentiles[key] = snappedf(percentile, 0.1)
+			stat_grades[key] = _grade_for_percentile(percentile)
+		power_growth = (
+			float(PetPowerModel.combat_power_for_stats(current))
+			- float(PetPowerModel.combat_power_for_stats(level1))
+		) / float(observed_levels)
+		power_percentile = _power_growth_percentile(profile, power_growth, level)
+	return {
+		"schemaVersion": 1,
+		"profileId": profile_id,
+		"level": level,
+		"observedLevels": observed_levels,
+		"stage": 0,
+		"stageLabel": str(REBIRTH_STAGE_LABELS.get(0, "0转成长")),
+		"enabled": true,
+		"hasRecord": has_record,
+		"statAverages": stat_averages,
+		"statPercentiles": stat_percentiles,
+		"statGrades": stat_grades,
+		"powerGrowthPerLevel": snappedf(power_growth, 0.001),
+		"powerPercentile": snappedf(power_percentile, 0.1),
+		"overallGrade": _grade_for_percentile(power_percentile) if has_record else ("未观察" if observed_levels <= 0 else "资料不足"),
+	}
 
 
 static func _evaluate_base_growth(instance: Dictionary) -> Dictionary:
@@ -304,6 +349,13 @@ static func attribute_table_rows(instance: Dictionary, target_level: int = 140) 
 
 static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0, target_level: int = 140) -> Array[Dictionary]:
 	var safe_stage := clampi(stage, 0, 2)
+	if _is_server_growth_pet(instance):
+		if safe_stage <= 0:
+			return _server_observation_attribute_rows(instance)
+		var rebirth_rows := _rebirth_attribute_table_rows(instance, safe_stage, target_level)
+		for row in rebirth_rows:
+			row["target"] = "观察中"
+		return rebirth_rows
 	if safe_stage > 0:
 		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
 	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
@@ -353,6 +405,78 @@ static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0,
 		"percentile": data.get("powerPercentile", ""),
 	})
 	return rows
+
+
+static func target_column_label(instance: Dictionary) -> String:
+	return "观察趋势" if _is_server_growth_pet(instance) else "预测140"
+
+
+static func _server_observation_attribute_rows(instance: Dictionary) -> Array[Dictionary]:
+	var level := clampi(int(instance.get("level", 1)), 1, 140)
+	var level1 := _strict_public_level_one_stats(instance)
+	var current := _strict_current_stats(instance)
+	var data := _evaluate_server_observed_growth(instance)
+	var averages := data.get("statAverages", {}) as Dictionary
+	var percentiles := data.get("statPercentiles", {}) as Dictionary
+	var grades := data.get("statGrades", {}) as Dictionary
+	var rows: Array[Dictionary] = [{
+		"label": "等级",
+		"initial": "Lv1",
+		"current": "Lv%d" % level,
+		"target": "不预判",
+		"growth": "-",
+		"grade": str(data.get("overallGrade", "未观察")),
+		"percentile": data.get("powerPercentile", ""),
+	}]
+	for key in STAT_KEYS:
+		rows.append({
+			"label": str(STAT_LABELS.get(key, key)),
+			"initial": level1.get(key, "资料不足"),
+			"current": current.get(key, "资料不足"),
+			"target": "观察中",
+			"growth": _growth_cell_text(averages.get(key, "")),
+			"grade": str(grades.get(key, "未观察")),
+			"percentile": percentiles.get(key, ""),
+		})
+	rows.append({
+		"label": "战力",
+		"initial": PetPowerModel.combat_power_for_stats(level1) if not level1.is_empty() else "资料不足",
+		"current": PetPowerModel.combat_power_for_stats(current) if not current.is_empty() else "资料不足",
+		"target": "观察中",
+		"growth": _growth_cell_text(data.get("powerGrowthPerLevel", "")),
+		"grade": str(data.get("overallGrade", "未观察")),
+		"percentile": data.get("powerPercentile", ""),
+	})
+	return rows
+
+
+static func _is_server_growth_pet(instance: Dictionary) -> bool:
+	var authority = instance.get("growthAuthority", null)
+	return authority is Dictionary and str((authority as Dictionary).get("source", "")) == "server"
+
+
+static func _strict_public_level_one_stats(instance: Dictionary) -> Dictionary:
+	for field in ["growthSpeciesLevel1Stats", "initialStats"]:
+		var source = instance.get(field, null)
+		if source is Dictionary:
+			var result := _strict_stat_map(source as Dictionary)
+			if not result.is_empty():
+				return result
+	return {}
+
+
+static func _strict_current_stats(instance: Dictionary) -> Dictionary:
+	return _strict_stat_map(instance)
+
+
+static func _strict_stat_map(source: Dictionary) -> Dictionary:
+	var result := {}
+	for key in STAT_KEYS:
+		var value = source.get(key, null)
+		if not (value is int or value is float) or float(value) < 1.0:
+			return {}
+		result[key] = int(value)
+	return result
 
 
 static func _rebirth_attribute_table_rows(instance: Dictionary, stage: int, target_level: int = 140) -> Array[Dictionary]:

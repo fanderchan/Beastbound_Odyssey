@@ -2,6 +2,8 @@ extends RefCounted
 
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
+const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
+const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 
 const AUTH_SERVER_ONLY := true
 const PROFILE_PULL_DEFER_TIMEOUT_SECONDS := 8.0
@@ -142,13 +144,11 @@ func apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = tr
 	if allow_defer and server_profile_pull_should_wait_for_profile_panel():
 		defer_server_profile_pull_result(parsed)
 		return
-	var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
 	var remote_profile = parsed.get("profile", null)
 	if remote_profile is Dictionary:
-		host.player_profile = PlayerProgressModel.normalize_profile((remote_profile as Dictionary).duplicate(true))
-		host._apply_auth_profile_metadata_fields(str(host.current_account_session.get("displayName", "")))
-		apply_server_profile_summary(summary)
-		PlayerProgressModel.save_profile(host.player_profile)
+		if not apply_server_profile_payload(parsed):
+			host.server_profile_sync_state = "ready" if is_server_account_session() else "off"
+			return
 		host.server_profile_sync_state = "ready"
 		host.server_profile_sync_dirty = false
 		host.server_profile_sync_message = "已读取服务器档案。"
@@ -158,8 +158,6 @@ func apply_server_profile_pull_result(parsed: Dictionary, allow_defer: bool = tr
 		host._layout_hud()
 		continue_pending_server_profile_sync()
 		return
-	apply_server_profile_summary(summary)
-	PlayerProgressModel.save_profile(host.player_profile)
 	host.server_profile_sync_state = "ready"
 	host.server_profile_sync_dirty = false
 	host.server_profile_sync_message = "服务器未返回角色档案，请重新登录。"
@@ -270,15 +268,29 @@ func apply_server_profile_summary(summary: Dictionary) -> void:
 
 
 func apply_server_profile_payload(parsed: Dictionary) -> bool:
-	var summary = parsed.get("profileSummary", {})
-	if summary is Dictionary:
-		apply_server_profile_summary(summary as Dictionary)
 	var server_profile = parsed.get("profile", null)
 	if not (server_profile is Dictionary):
 		return false
-	host.player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-	if host.profile_save_enabled:
-		PlayerProgressModel.save_profile(host.player_profile)
+	var projection := ServerPetProfileProjectionModel.project_server_profile(server_profile as Dictionary)
+	if not bool(projection.get("ok", false)):
+		host.server_profile_sync_message = "服务器宠物成长档案校验失败，正在等待重新同步。"
+		host.server_profile_sync_pull_queued = true
+		return false
+	var projected_profile := (projection.get("profile", {}) as Dictionary).duplicate(true)
+	var normalized_profile := PlayerProgressModel.normalize_profile(projected_profile)
+	host.player_profile = normalized_profile
+	host._apply_auth_profile_metadata_fields(str(host.current_account_session.get("displayName", "")))
+	var summary = parsed.get("profileSummary", {})
+	if summary is Dictionary:
+		apply_server_profile_summary(summary as Dictionary)
+	parsed["profile"] = host.player_profile.duplicate(true)
+	if is_server_account_session():
+		var published := ServerProfileCacheModel.publish_fresh_server_profile(
+			PlayerProgressModel.current_save_path(),
+			host.player_profile
+		)
+		if not bool(published.get("ok", false)):
+			host.server_profile_sync_message = "服务器档案已载入，但本地公开缓存写入失败。"
 	host._mark_progress_ui_caches_dirty()
 	host._refresh_quick_bar()
 	host._refresh_backpack_panel()
@@ -354,13 +366,7 @@ func submit_server_quest_claim(quest_id: String = "", reward_choice_id: String =
 func apply_server_quest_action_result(parsed: Dictionary, fallback_message: String) -> Dictionary:
 	var log_lines: Array[String] = []
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			host.player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if host.profile_save_enabled:
-				PlayerProgressModel.save_profile(host.player_profile)
-			host._mark_progress_ui_caches_dirty()
+		if apply_server_profile_payload(parsed):
 			for message in parsed.get("questMessages", []):
 				var quest_message := str(message).strip_edges()
 				if quest_message != "":

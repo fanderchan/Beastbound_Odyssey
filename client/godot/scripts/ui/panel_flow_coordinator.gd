@@ -60,6 +60,7 @@ const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_mode
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
 const ServerAuthContractModel := preload("res://scripts/progression/server_auth_contract_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
+const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
@@ -10209,19 +10210,23 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	profile_save_debounce_remaining = 0.0
 	PlayerProgressModel.set_active_save_path(str(session.get("profileSavePath", "")))
 	var migrated = false
-	if migrate_legacy:
-		migrated = PlayerProgressModel.copy_legacy_save_to_active_if_missing()
-	player_profile = PlayerProgressModel.load_profile()
 	if _is_server_account_session():
+		# 协议 v2 登录后只清洗旧公开缓存；服务器首拉取前绝不把 active/last_good 载入运行态。
+		ServerProfileCacheModel.sanitize_server_cache_pair(PlayerProgressModel.current_save_path())
+		player_profile = PlayerProgressModel.default_profile()
 		_apply_auth_profile_metadata_fields(str(session.get("displayName", "")))
 		player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	else:
+		if migrate_legacy:
+			migrated = PlayerProgressModel.copy_legacy_save_to_active_if_missing()
+		player_profile = PlayerProgressModel.load_profile()
 		_apply_auth_profile_metadata(str(session.get("displayName", "")))
 	_close_auth_panel(false)
 	_close_account_panel(false)
 	_refresh_gm_visibility()
 	_save_profile_after_exp_pill_starter_update()
-	_show_exp_pill_starter_notice_if_needed()
+	if not _is_server_account_session():
+		_show_exp_pill_starter_notice_if_needed()
 	if migrated:
 		_set_world_log_message("已导入旧本地存档。")
 	elif world_log_message == "":
@@ -13339,18 +13344,12 @@ func _submit_server_player_rebirth() -> void:
 	var log_lines: Array[String] = [_server_player_message(parsed, "转生失败。")]
 	if bool(parsed.get("ok", false)):
 		player_rebirth_confirm_pending = false
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
+		if _apply_server_profile_payload(parsed):
 			var return_entry = parsed.get("returnEntry", {}) as Dictionary if parsed.get("returnEntry", {}) is Dictionary else {}
 			var record_point = return_entry.get("recordPoint", {}) as Dictionary if return_entry.get("recordPoint", {}) is Dictionary else {}
 			var point_label = str(record_point.get("label", PlayerProgressModel.DEFAULT_RECORD_POINT_LABEL))
 			if point_label != "":
 				log_lines.append("转生后已回到记录点「%s」。" % point_label)
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-			host._mark_progress_ui_caches_dirty()
 			_queue_server_profile_pull()
 		else:
 			log_lines = ["转生成功，但服务器没有返回档案，请重新拉取。"]
@@ -14001,13 +14000,8 @@ func _submit_server_equipment_unequip(slot_id: String) -> void:
 	var parsed = ServerAuthClientModel.parse_equipment_unequip_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines: Array[String] = [_server_player_message(parsed, "卸下失败。")]
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-			host._mark_progress_ui_caches_dirty()
+		if _apply_server_profile_payload(parsed):
+			pass
 		else:
 			log_lines = ["卸下成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
@@ -14057,17 +14051,11 @@ func _submit_server_equipment_enhance(slot_id: String) -> void:
 	var parsed = ServerAuthClientModel.parse_equipment_enhance_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines: Array[String] = [_server_player_message(parsed, "强化失败。")]
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
+		if _apply_server_profile_payload(parsed):
 			for message in parsed.get("questMessages", []):
 				var quest_message = str(message)
 				if quest_message != "":
 					log_lines.append(quest_message)
-			host._mark_progress_ui_caches_dirty()
 		else:
 			log_lines = ["强化成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
@@ -14204,17 +14192,11 @@ func _submit_server_equipment_synthesis(recipe_id: String) -> void:
 	var parsed = ServerAuthClientModel.parse_equipment_synthesize_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines: Array[String] = [_server_player_message(parsed, "合成失败。")]
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
+		if _apply_server_profile_payload(parsed):
 			for message in parsed.get("questMessages", []):
 				var quest_message = str(message)
 				if quest_message != "":
 					log_lines.append(quest_message)
-			host._mark_progress_ui_caches_dirty()
 		else:
 			log_lines = ["合成成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
@@ -15049,17 +15031,11 @@ func _request_server_equipment_equip(item_id: String, refresh_backpack_before: b
 func _apply_server_equipment_equip_result(parsed: Dictionary) -> Dictionary:
 	var log_lines: Array[String] = [_server_player_message(parsed, "装备失败。")]
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
+		if _apply_server_profile_payload(parsed):
 			for message in parsed.get("questMessages", []):
 				var quest_message = str(message)
 				if quest_message != "":
 					log_lines.append(quest_message)
-			host._mark_progress_ui_caches_dirty()
 		else:
 			log_lines = ["装备成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
@@ -15927,19 +15903,13 @@ func _submit_server_shop_action() -> void:
 	var log_lines: Array[String] = [_server_player_message(parsed, "商店交易失败。")]
 	var should_equip_after_buy = false
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
+		if _apply_server_profile_payload(parsed):
 			for message in parsed.get("questMessages", []):
 				var quest_message = str(message)
 				if quest_message != "":
 					log_lines.append(quest_message)
 			if requested_equip_after_buy:
 				should_equip_after_buy = true
-			host._mark_progress_ui_caches_dirty()
 		else:
 			log_lines = [str(parsed.get("message", "商店交易成功。")), "正在读取服务器档案。"]
 			for message in parsed.get("questMessages", []):
@@ -16039,13 +16009,8 @@ func _submit_server_equipment_repair_all() -> void:
 	var parsed = ServerAuthClientModel.parse_equipment_repair_all_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines: Array[String] = [_server_player_message(parsed, "修理失败。")]
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			_apply_server_profile_summary(parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {})
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-			host._mark_progress_ui_caches_dirty()
+		if _apply_server_profile_payload(parsed):
+			pass
 		else:
 			log_lines = ["修理成功，但服务器没有返回档案，请重新拉取。"]
 			_queue_server_profile_pull()
@@ -16808,15 +16773,7 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_chat_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
-			var chat_profile = parsed_send.get("profile", null)
-			if chat_profile is Dictionary:
-				player_profile = PlayerProgressModel.normalize_profile((chat_profile as Dictionary).duplicate(true))
-				var chat_summary = parsed_send.get("profileSummary", {})
-				if chat_summary is Dictionary:
-					_apply_server_profile_summary(chat_summary as Dictionary)
-				host._mark_progress_ui_caches_dirty()
-				if profile_save_enabled:
-					PlayerProgressModel.save_profile(player_profile)
+			_apply_server_profile_payload(parsed_send)
 			if chat_input != null:
 				chat_input.text = ""
 			if chat_status_label != null:
@@ -18622,14 +18579,7 @@ func _on_player_action_http_request_completed(result: int, response_code: int, _
 				if player_action_status_label != null:
 					player_action_status_label.text = _player_action_trade_received_text()
 			elif kind == "trade_accept":
-				var server_profile = parsed_trade.get("profile", null)
-				if server_profile is Dictionary:
-					player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-					if profile_save_enabled:
-						PlayerProgressModel.save_profile(player_profile)
-				var trade_summary = parsed_trade.get("profileSummary", {})
-				if trade_summary is Dictionary:
-					_apply_server_profile_summary(trade_summary as Dictionary)
+				_apply_server_profile_payload(parsed_trade)
 				player_action_trade_received.clear()
 				if player_action_status_label != null:
 					player_action_status_label.text = str(parsed_trade.get("message", "交易已完成。"))
@@ -19186,14 +19136,7 @@ func _on_market_http_request_completed(result: int, response_code: int, _headers
 	var parsed = ServerAuthClientModel.parse_market_response(response_code, body)
 	if bool(parsed.get("ok", false)):
 		_apply_market_payload(parsed.get("market", {}) as Dictionary if parsed.get("market", {}) is Dictionary else {})
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-		var summary = parsed.get("profileSummary", {})
-		if summary is Dictionary:
-			_apply_server_profile_summary(summary as Dictionary)
+		_apply_server_profile_payload(parsed)
 		var message = str(parsed.get("message", "交易所已更新。"))
 		if market_status_label != null:
 			market_status_label.text = message
@@ -19594,14 +19537,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 	elif kind == "claim":
 		var parsed_claim = ServerAuthClientModel.parse_mail_claim_response(response_code, body)
 		if bool(parsed_claim.get("ok", false)):
-			var server_profile = parsed_claim.get("profile", null)
-			if server_profile is Dictionary:
-				player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-				if profile_save_enabled:
-					PlayerProgressModel.save_profile(player_profile)
-			var summary = parsed_claim.get("profileSummary", {})
-			if summary is Dictionary:
-				_apply_server_profile_summary(summary as Dictionary)
+			_apply_server_profile_payload(parsed_claim)
 			var claim_mail_id = _mailbox_key_id(mailbox_selected_mail_id, "server:")
 			var claim_mail = parsed_claim.get("mail", null)
 			var replaced = false
@@ -19962,14 +19898,7 @@ func _on_bank_http_request_completed(result: int, response_code: int, _headers: 
 		return
 	var parsed = ServerAuthClientModel.parse_bank_transaction_response(response_code, body)
 	if bool(parsed.get("ok", false)):
-		var server_profile = parsed.get("profile", null)
-		if server_profile is Dictionary:
-			player_profile = PlayerProgressModel.normalize_profile((server_profile as Dictionary).duplicate(true))
-			if profile_save_enabled:
-				PlayerProgressModel.save_profile(player_profile)
-		var summary = parsed.get("profileSummary", {})
-		if summary is Dictionary:
-			_apply_server_profile_summary(summary as Dictionary)
+		_apply_server_profile_payload(parsed)
 		if bank_status_label != null:
 			bank_status_label.text = str(parsed.get("message", "银行已更新。"))
 		_set_world_log_message(str(parsed.get("message", "银行已更新。")))
@@ -22467,7 +22396,7 @@ func _refresh_pet_growth_table(instance: Dictionary) -> void:
 		pet_growth_table_grid.visible = false
 		return
 	pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH
-	for header in ["属性", "初始", "当前", "预测140", "成长/级", "评级"]:
+	for header in ["属性", "初始", "当前", PetGrowthObservationModel.target_column_label(instance), "成长/级", "评级"]:
 		pet_growth_table_grid.add_child(_pet_growth_table_cell(header, true, ""))
 	for row in PetGrowthObservationModel.attribute_table_rows_for_stage(instance, pet_growth_stage, 140):
 		var grade = str(row.get("grade", ""))
