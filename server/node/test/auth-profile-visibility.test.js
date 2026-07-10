@@ -4,6 +4,9 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  GROWTH_MODEL_LEGACY_INDIVIDUAL,
+  GROWTH_MODEL_LEGACY_SPECIES_LINEAR,
   publicGrowthObservation,
   publicPet,
   publicProfile,
@@ -172,15 +175,25 @@ function petFixture(instanceId) {
       modelVersion: "pet_growth_authority_v1",
       settledLevel: 20,
       public: {
+        schemaVersion: 1,
+        growthModelVersion: "pet_growth_authority_v1",
+        growthSpeciesProfileId: "blue_man_dragon_v1",
+        level: 20,
         levelOneFourV: {maxHp: 71, attack: 31, defense: 29, quick: 35},
-        stats: {maxHp: 200, attack: 91, defense: 68, quick: 74, hiddenMean: 9.9},
+        stats: {maxHp: 200, attack: 91, defense: 68, quick: 74},
+        hiddenMean: 9.9,
         exactLv140Stats: {attack: 612},
       },
       futurePrediction: {attack: 612},
       private: {
-        privateSeed: `${instanceId}:future-seed`,
-        privateRoll: {innateGrowthBonus: {attack: 0.744}},
-        continuousStats: {attack: 90.718421},
+        privateSeed: `bps1_${"A".repeat(43)}`,
+        privateRoll: {
+          modelVersion: "pet_growth_authority_v1",
+          profileId: "blue_man_dragon_v1",
+          initialBonus: {maxHp: 1, attack: 2, defense: 0, quick: -1},
+          innateGrowthBonus: {maxHp: 0.4, attack: 0.744, defense: 0.1, quick: -0.02},
+        },
+        continuousStats: {maxHp: 199.8, attack: 90.718421, defense: 67.9, quick: 73.8},
       },
     },
     petCultivation: {
@@ -209,6 +222,11 @@ function petFixture(instanceId) {
       }],
       seedValue: "DO_NOT_EXPOSE_CULTIVATION_SEED",
       qualityEntropy: "DO_NOT_EXPOSE_CULTIVATION_ENTROPY",
+      lastPreview: {
+        mode: "rebirth",
+        message: "DO_NOT_RETURN_STALE_PREVIEW",
+        nextCultivation: {privateSeed: "DO_NOT_EXPOSE_PREVIEW_SEED"},
+      },
     },
     lastCultivationResult: {
       summary: "最近一次转生完成",
@@ -293,7 +311,7 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   assert.deepEqual(actual.growthAuthority, {
     schemaVersion: 1,
     source: "server",
-    modelVersion: "legacy_species_linear_v0",
+    modelVersion: "pet_growth_authority_v1",
     settledLevel: 20,
   });
   assert.deepEqual(actual.growthSpeciesLevel1Stats, {maxHp: 71, attack: 31, defense: 29, quick: 35});
@@ -305,6 +323,10 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
     modelVersion: "pet_growth_authority_v1",
     settledLevel: 20,
     public: {
+      schemaVersion: 1,
+      growthModelVersion: "pet_growth_authority_v1",
+      growthSpeciesProfileId: "blue_man_dragon_v1",
+      level: 20,
       levelOneFourV: {maxHp: 71, attack: 31, defense: 29, quick: 35},
       stats: {maxHp: 200, attack: 91, defense: 68, quick: 74},
     },
@@ -315,6 +337,7 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
     defense: 0.2,
     quick: 0.1,
   });
+  assert.equal(actual.petCultivation.lastPreview, undefined);
   assert.equal(actual.petCultivation.history[0].summary, "0转 -> 1转，Lv140 -> Lv1");
   assert.equal(actual.petCultivation.history[0].audit, undefined);
   assert.deepEqual(actual.lastCultivationResult, {summary: "最近一次转生完成"});
@@ -337,6 +360,67 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   assert.equal(source.elements.water, 10);
   assert.deepEqual(source.activeSkillIds, ["pet_attack", "pet_water_bite"]);
   assert.equal(source.petCultivation.history[0].visibleGrowthBonus.attack, 0.4);
+
+  const replayed = publicPet(actual);
+  assert.deepEqual(replayed, actual);
+
+  const speciesLegacy = petFixture("pet_species_legacy");
+  delete speciesLegacy.petGrowth;
+  speciesLegacy.growthAuthority.modelVersion = "pet_growth_authority_v1";
+  assert.equal(publicPet(speciesLegacy).growthAuthority.modelVersion, GROWTH_MODEL_LEGACY_SPECIES_LINEAR);
+  const malformedV1 = petFixture("pet_malformed_v1");
+  delete malformedV1.petGrowth.private.continuousStats.quick;
+  const malformedPublic = publicPet(malformedV1);
+  assert.equal(malformedPublic.growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  assert.equal(malformedPublic.growthModelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  assert.equal(malformedPublic.petGrowth, undefined);
+  assert.deepEqual(publicPet(malformedPublic), malformedPublic);
+  const wrongProfileV1 = petFixture("pet_wrong_profile_v1");
+  wrongProfileV1.petGrowth.private.privateRoll.profileId = "wrong_profile";
+  assert.equal(publicPet(wrongProfileV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const wrongPublicProfileV1 = petFixture("pet_wrong_public_profile_v1");
+  wrongPublicProfileV1.petGrowth.public.growthSpeciesProfileId = "wrong_profile";
+  assert.equal(publicPet(wrongPublicProfileV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const fractionalLevelV1 = petFixture("pet_fractional_level_v1");
+  fractionalLevelV1.level = 20.5;
+  fractionalLevelV1.petGrowth.settledLevel = 20.5;
+  assert.equal(publicPet(fractionalLevelV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const individualLegacy = petFixture("pet_individual_legacy");
+  delete individualLegacy.petGrowth;
+  delete individualLegacy.growthSpeciesProfileId;
+  assert.equal(publicPet(individualLegacy).growthAuthority.modelVersion, GROWTH_MODEL_LEGACY_INDIVIDUAL);
+
+  const aliasLegacy = publicPet({
+    id: "pet_alias_legacy",
+    speciesId: "wuli_normal_orange_fire10",
+    speciesName: "橙乌力",
+    battleState: "battle",
+    level: "7",
+    exp: "12",
+    hp: "61",
+    maxHp: "73",
+    attack: "18",
+    defense: "11",
+    quick: "15",
+    rebirthHelper: {
+      schemaVersion: "1",
+      stage: "1",
+      stonePoints: {maxHp: "3", attack: "4", defense: "2", quick: "1"},
+    },
+  });
+  assert.equal(aliasLegacy.instanceId, "pet_alias_legacy");
+  assert.equal(aliasLegacy.petId, "pet_alias_legacy");
+  assert.equal(aliasLegacy.formId, "wuli_normal_orange_fire10");
+  assert.equal(aliasLegacy.templateId, "wuli_normal_orange_fire10");
+  assert.equal(aliasLegacy.name, "橙乌力");
+  assert.equal(aliasLegacy.state, "battle");
+  assert.equal(aliasLegacy.level, 7);
+  assert.equal(aliasLegacy.maxHp, 73);
+  assert.deepEqual(aliasLegacy.petRebirthHelper, {
+    schemaVersion: 1,
+    stage: 1,
+    stonePoints: {maxHp: 3, attack: 4, defense: 2, quick: 1},
+  });
 });
 
 test("publicProfile sanitizes current, legacy, dropped, and future nested pet containers", () => {
@@ -375,6 +459,7 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
         private: {privateSeed: "future-profile-secret"},
         exactLv140Stats: {attack: 9999},
       },
+      unrelatedScorecard: {qualityScore: 91, growthBonus: 3, label: "保留非宠物同名字段"},
     },
   };
   const before = structuredClone(source);
@@ -385,21 +470,53 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
   assert.equal(actual.stoneCoins, source.stoneCoins);
   assert.deepEqual(actual.backpackSlots, source.backpackSlots);
   assert.equal(actual.petInstances[0].instanceId, "pet_current");
-  assert.deepEqual(actual.petInstances[1], {instanceId: "pet_partial", formId: "future_form"});
+  assert.deepEqual(actual.petInstances[1], {
+    instanceId: "pet_partial",
+    petId: "pet_partial",
+    formId: "future_form",
+    templateId: "future_form",
+    growthModelVersion: GROWTH_MODEL_LEGACY_INDIVIDUAL,
+    growthAuthority: {
+      schemaVersion: 1,
+      source: "server",
+      modelVersion: GROWTH_MODEL_LEGACY_INDIVIDUAL,
+      settledLevel: 1,
+    },
+  });
   assert.equal(actual.pets[0].instanceId, "pet_legacy");
   assert.equal(actual.trainingPartners[0].pet.instanceId, "pet_partner_snapshot");
   assert.equal(actual.groundPetDrops[0].pet.instanceId, "pet_drop");
   assert.equal(actual.futureFeature.roster.reserve.instanceId, "pet_future");
   assert.deepEqual(actual.futureFeature.roster.partialReserve, {
     instanceId: "pet_future_partial",
+    petId: "pet_future_partial",
     formId: "future_form",
+    templateId: "future_form",
     name: "未来精简宠",
     level: 1,
+    growthModelVersion: GROWTH_MODEL_LEGACY_INDIVIDUAL,
+    growthAuthority: {
+      schemaVersion: 1,
+      source: "server",
+      modelVersion: GROWTH_MODEL_LEGACY_INDIVIDUAL,
+      settledLevel: 1,
+    },
   });
   assert.deepEqual(actual.futureFeature.petGrowth, {
     public: {growthModelVersion: "pet_growth_authority_v1"},
   });
-  assert.deepEqual(privatePaths(actual), []);
+  assert.deepEqual(actual.futureFeature.unrelatedScorecard, source.futureFeature.unrelatedScorecard);
+  for (const pet of [
+    ...actual.petInstances,
+    ...actual.pets,
+    actual.trainingPartners[0].pet,
+    actual.groundPetDrops[0].pet,
+    actual.futureFeature.roster.reserve,
+    actual.futureFeature.roster.partialReserve,
+  ]) {
+    assert.deepEqual(privatePaths(pet), []);
+  }
+  assert.deepEqual(publicProfile(actual), actual);
   assert.deepEqual(source, before);
 });
 

@@ -171,6 +171,9 @@
     - [x] **P0.2b1 玩家档案公开投影与 CSPRNG 私有种子影子原语**
       - 证据（2026-07-11）：内存账号先复现 `getProfile` 同时泄漏 5 类代表性隐藏成长字段；新增严格正向 `publicProfile/publicPet/publicGrowthObservation` 投影，覆盖当前/legacy/地面掉落/训练伙伴/未来嵌套宠、培养历史和 `petGrowth`/观察/权威标记白名单，未知宠物字段默认丢弃；新增生产 API 固定使用 32 字节 CSPRNG、命名域隔离且拒绝第二参数的 `bps1_` 私有种子，测试固定熵不进入产品接口。与 P0.2a 组合 Node 13/13 通过。当前未接 runtime，真实切换必须与 Godot 不重滚、缓存清洗、24 个响应出口和协议 v2 原子上线；完整边界见 `docs/phase_207_pet_growth_privacy_primitives.md`。
     - [ ] **P0.2b2 客户端/服务端原子启用公开投影、私有种子、缓存清洗与协议 v2**
+      - [x] **P0.2b2a 服务端权威模型标记与 Godot 公开投影影子边界**
+        - 证据（2026-07-11）：服务端现在从内部状态派生三种可运行 marker，并把已声明但不完整的 v1 标成不可运行的 `invalid_pet_growth_authority_v1`；公开 DTO 兼容 `id/battleState/speciesName/rebirthHelper` 和旧数字字符串，保持 v1/invalid/profile 投影幂等，定向清洗 `petGrowth` 而不误删非宠系统同名字段。Godot 新投影不加载目录、不调用 RNG，十二种自检覆盖当前属性/受伤血量保持、秘密擦除、Lv1 补记录、v1 缺记录失败关闭、legacy 缺记录不循环刷新、公开成长档/四维冲突、未知/损坏/等级冲突；Godot parse + focused 3/3、Node 4/4 通过。通用整响应递归清洗因会破坏 battle actor/经验摘要已明确否决；当前仍未接运行时，完整边界见 `docs/phase_208_pet_growth_public_projection_contract.md`。
+      - [ ] **P0.2b2b 原子接入运行时：profile/奖励响应、客户端不重滚、缓存、全部新种子、Lv1 记录、非精确 UI 与协议 v2**
   - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

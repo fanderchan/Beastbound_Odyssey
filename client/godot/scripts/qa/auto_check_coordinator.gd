@@ -38,6 +38,7 @@ const NumericExperimentModel := preload("res://scripts/progression/numeric_exper
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
+const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
@@ -3748,6 +3749,20 @@ func _run_auto_pet_growth_authority_check() -> void:
 		";".join(errors),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_pet_growth_boundary_check() -> void:
+	var result := PetGrowthPublicProjectionModel.self_check()
+	var errors: Array = result.get("errors", [])
+	var status := "ok" if bool(result.get("ok", false)) else "failed"
+	print("server pet growth boundary ready: status=%s cases=%d models=%s errors=%s" % [
+		status,
+		int(result.get("caseCount", 0)),
+		",".join(result.get("supportedModelVersions", [])),
+		";".join(errors),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
 
 func _run_auto_pet_growth_threshold_check() -> void:
 	var result = PetGrowthObservationModel.write_power_growth_percentile_table(PetGrowthObservationModel.DEFAULT_PROFILE_ID, PetGrowthObservationModel.DEFAULT_THRESHOLD_SAMPLE_COUNT)

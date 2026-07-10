@@ -32,6 +32,7 @@
 | Client battle interpretation | `client/godot/scripts/battle/` catalogs/models |
 | Server authoritative battle/capture/profile settlement | focused `server/node/src/auth/` domains where present; legacy wiring/rules remain in `server/node/src/auth-service.js` |
 | Player-visible pet/profile projection (P0.2 shadow only) | `server/node/src/auth/profile-visibility.js` |
+| Server pet growth marker and client public projection (P0.2 shadow only) | `server/node/src/auth/profile-visibility.js`, `client/godot/scripts/progression/pet_growth_public_projection_model.gd` |
 | Cryptographic private pet seed primitive (P0.2 shadow only) | `server/node/src/auth/pet-private-seed.js` |
 | Persistent profile storage | `server/node/src/mysql-store.js` plus normalization/persistent snapshot contracts |
 
@@ -104,7 +105,8 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 
 - Only a minority of forms currently link to species-specific growth profiles; the rest use legacy generic growth.
 - Client growth and server EXP/stat settlement are not yet one complete P0.2 truth.
-- P0.2 now has shadow-only cross-runtime growth, public profile projection, and CSPRNG seed primitives, but they are not wired into runtime creation/responses yet. Current responses still expose legacy hidden fields, and current predictable seeds remain active until the atomic client/server cutover.
+- P0.2 now has shadow-only cross-runtime growth, server-derived model markers, idempotent public profile/client projections, and CSPRNG seed primitives, but they are not wired into runtime creation/responses yet. Current responses still expose legacy hidden fields, Godot still rerolls missing private state in its normal profile path, and predictable seeds remain active until the atomic client/server protocol-v2 cutover.
+- Legacy Lv2+ pets may have no persisted Lv1 4V. Preserve their current server stats and mark observation unavailable; never reconstruct the missing historical fact from a template or instance ID. Every new pet created after the cutover must persist Lv1 4V.
 - Current player growth UI can derive precise Lv140 values from stored hidden roll; intended observation should be evidence-driven.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
