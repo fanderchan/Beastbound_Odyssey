@@ -176,7 +176,10 @@
       - [ ] **P0.2b2b 原子接入运行时：profile/奖励响应、客户端不重滚、缓存、全部新种子、Lv1 记录、非精确 UI 与协议 v2**
         - [x] **P0.2b2b-1 服务端新宠私密身份、真实 Lv1 事实与培养安全开奖**
           - 证据（2026-07-11）：先复现人物转生赠宠、战斗捕捉、世界蛋和 MM 奖励宠均使用可猜字符串身份，MM 转生开奖还可由宠物 ID 与秒级时间推测；新增聚焦 `pet-private-state.js`，四条正式创建路径只生成一次 32 字节 CSPRNG `bps1_` 身份，人物转生/蛋/MM/Lv1 捕捉同时固化不可重写的 `initialStats` 与 `growthSpeciesLevel1Stats`，Lv2+ 捕捉明确只保存身份而不伪造历史；错误声明已知 Lv1 却缺四维会在写身份前失败关闭；MM 转生开奖改用独立 CSPRNG 命名域。目标与存储组 93/93、完整 Node 服务端 167/167 通过。此切片保持旧响应结构和协议 v1，最终删除私有字段、客户端不重滚、双缓存清洗与协议 v2 仍必须原子切换；见 `docs/phase_209_server_pet_private_state.md`。
-        - [ ] **P0.2b2b-2 原子切换公开响应、联网客户端不重滚、双缓存清洗、非精确 UI 与协议 v2**
+        - [ ] **P0.2b2b-2 联网运行时公开响应、不重滚、双缓存、非精确 UI 与协议 v2**
+          - [x] **P0.2b2b-2a Godot 档案级公开投影与双缓存安全清洗影子边界**
+            - 证据（2026-07-11）：新增严格联网档案投影，只处理 `petInstances/pets`、`groundPetDrops[].pet`、`trainingPartners[].pet` 四条登记路径，分别报告 marker 缺失、marker 损坏与 envelope 错误，保持所有非宠字段、数组顺序、当前六项属性和输入对象不变；缓存宽容投影即使旧档缺 marker 也能擦除秘密，但结构或属性不安全时拒绝写回。新增只允许 `user://server_accounts/*/player_profile.json` 的双文件清洗器，active 与 `.last_good` 分别采用同目录临时文件、flush、回读深比较及覆盖 rename，坏 JSON/坏档案原样保留且不阻碍另一份清洗；不返回解析档案、不调用 normalize/RNG/网络。单宠 12、档案 8、缓存 8 共 28 个离线场景通过，Godot parse + focused/authority 3/3 通过且日志无 ERROR；当前仍未接登录运行时，见 `docs/phase_210_server_profile_projection_cache_shadow.md`。
+          - [ ] **P0.2b2b-2b 原子启用公开响应、联网客户端不重滚、双缓存登录切换、非精确 UI 与协议 v2**
   - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

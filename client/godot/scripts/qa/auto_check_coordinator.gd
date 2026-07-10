@@ -39,6 +39,8 @@ const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbe
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
 const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
+const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
+const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
@@ -3752,13 +3754,25 @@ func _run_auto_pet_growth_authority_check() -> void:
 
 
 func _run_auto_server_pet_growth_boundary_check() -> void:
-	var result := PetGrowthPublicProjectionModel.self_check()
-	var errors: Array = result.get("errors", [])
-	var status := "ok" if bool(result.get("ok", false)) else "failed"
-	print("server pet growth boundary ready: status=%s cases=%d models=%s errors=%s" % [
+	var pet_result := PetGrowthPublicProjectionModel.self_check()
+	var profile_result := ServerPetProfileProjectionModel.self_check()
+	var cache_result := ServerProfileCacheModel.self_check()
+	var errors: Array[String] = []
+	for error_message in pet_result.get("errors", []) as Array:
+		errors.append("pet:%s" % str(error_message))
+	for error_message in profile_result.get("errors", []) as Array:
+		errors.append("profile:%s" % str(error_message))
+	for error_message in cache_result.get("errors", []) as Array:
+		errors.append("cache:%s" % str(error_message))
+	var status := "ok" if bool(pet_result.get("ok", false)) \
+		and bool(profile_result.get("ok", false)) \
+		and bool(cache_result.get("ok", false)) else "failed"
+	print("server pet growth boundary ready: status=%s pet_cases=%d profile_cases=%d cache_cases=%d models=%s errors=%s" % [
 		status,
-		int(result.get("caseCount", 0)),
-		",".join(result.get("supportedModelVersions", [])),
+		int(pet_result.get("caseCount", 0)),
+		int(profile_result.get("caseCount", 0)),
+		int(cache_result.get("caseCount", 0)),
+		",".join(pet_result.get("supportedModelVersions", [])),
 		";".join(errors),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)

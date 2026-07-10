@@ -6,6 +6,9 @@ const MODEL_LEGACY_INDIVIDUAL := "legacy_individual_v0"
 const MODEL_LEGACY_SPECIES_LINEAR := "legacy_species_linear_v0"
 const MODEL_AUTHORITY_V1 := "pet_growth_authority_v1"
 const MODEL_INVALID_AUTHORITY_V1 := "invalid_pet_growth_authority_v1"
+const MARKER_STATUS_VALID := "valid"
+const MARKER_STATUS_MISSING := "missing"
+const MARKER_STATUS_INVALID := "invalid"
 const SUPPORTED_MODEL_VERSIONS: Array[String] = [
 	MODEL_LEGACY_INDIVIDUAL,
 	MODEL_LEGACY_SPECIES_LINEAR,
@@ -58,19 +61,34 @@ static func project_server_pet(source: Dictionary) -> Dictionary:
 	var sanitized_value = _sanitize_public_value(source)
 	var pet := sanitized_value as Dictionary if sanitized_value is Dictionary else {}
 	var errors: Array[String] = []
+	var marker_errors: Array[String] = []
 	var warnings: Array[String] = []
 	_validate_current_stats(pet, errors)
-	_validate_growth_authority(pet, errors)
+	_validate_growth_authority(pet, marker_errors)
+	for marker_error in marker_errors:
+		_append_error(errors, marker_error)
 	_validate_growth_envelope(pet, errors)
 	_validate_growth_observations(pet, errors)
 	_validate_or_supply_level_one(pet, errors, warnings)
+	var marker_status := MARKER_STATUS_VALID
+	if not (source.get("growthAuthority", null) is Dictionary):
+		marker_status = MARKER_STATUS_MISSING
+	elif not marker_errors.is_empty():
+		marker_status = MARKER_STATUS_INVALID
 	return {
 		"ok": errors.is_empty(),
 		"refreshNeeded": not errors.is_empty(),
 		"errors": errors,
+		"markerErrors": marker_errors,
+		"markerStatus": marker_status,
 		"warnings": warnings,
 		"pet": pet,
 	}
+
+
+static func has_server_authority_marker(source: Dictionary) -> bool:
+	var authority = source.get("growthAuthority", null)
+	return authority is Dictionary and str((authority as Dictionary).get("source", "")) == AUTHORITY_SOURCE
 
 
 static func self_check() -> Dictionary:
