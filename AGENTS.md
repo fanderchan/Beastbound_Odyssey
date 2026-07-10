@@ -7,7 +7,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 - Run `git status --short --branch` and inspect recent `git log` before editing. Preserve unrelated user changes and never assume a dirty file belongs to the current task.
 - Read the active plan's `进度追踪` section and the newest relevant `docs/phase_*.md` files before planning work. An explicit user request takes priority over the next unchecked plan item; a generic “继续” means continue from the first unchecked item.
 - `tasks.md` has 32 completed bug items, `release_plan.md` stages A-E are accepted, and `quality_cleanup_plan.md` stages 1-6 are complete. Do not reopen them without a reproduced regression.
-- The active content roadmap is `stoneage_gap_plan.md`: execution stages are F0-F8 and work items are grouped as G1-G9. Do not describe this as a separate F-only or G-only roadmap.
+- The active roadmap is `stoneage_gap_plan.md`: current execution priorities are P0-P3. Its old F0-F8/G1-G9 structure is retained only as historical evidence. A generic “继续” means continue from the first unchecked P0-P3 item.
 - Before editing a subsystem, read its scoped `AGENTS.md`, nearby tests, and the most recent phase note that established the behavior. Line numbers in old phase notes are historical evidence, not current locations.
 
 ## Repository Architecture
@@ -22,6 +22,8 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 ## Product Direction
 
 - Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Use StoneAge references for behavior intent only.
+- The commercial target is an always-online Chinese recharge-supported private-server-style MMORPG, not a Steam/single-player/buy-to-play product. The long-term capacity target is at least 200 players on one map; do not claim that capacity before load evidence exists.
+- The primary player promise is pet jackpot cultivation: visible Lv1 4V, hidden per-level growth learned through training, and high-variance rebirth/evolution/fusion with active/passive inheritance. Preserve that uncertainty instead of exposing one final quality number immediately.
 - The release target is PC desktop first at the normal 1280x720 client path. Keep shared contracts reusable where cheap, but do not add mobile-only layouts, portrait flows, touch-only features, or mobile release blockers unless the user explicitly reprioritizes mobile.
 - Player-facing UI is Chinese by default. Never expose raw error codes, server/debug fields, smoke summaries, test flags, audit IDs, or agent/QA instructions in normal player UI.
 - Preserve the established input contract from `docs/phase_201_pc_mouse_interaction.md`: all main flows work with left click/buttons; right click is auxiliary and must never become required for gameplay.
@@ -42,7 +44,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 
 - Implement in small reviewable slices. A planned gameplay feature normally gets `docs/phase_XXX_<slug>.md` covering reference intent, original Beastbound rule, contracts, non-goals, validation, and performance evidence.
 - After completing a roadmap item, tick it in the active plan and append one concise evidence line. Do not mark it complete before code, targeted tests, and required manual/visual acceptance are actually complete.
-- After a stage, run the stage-appropriate targeted suite and stop for user confirmation before entering the next stage.
+- After a stage, run the stage-appropriate targeted suite and continue automatically unless the next work requires a major product direction, economy rule, destructive migration, external authorization, or an unsafe conflict.
 - The repository-level targeted-validation rule overrides old plan text that says to run full local CI unconditionally. Run `node tools/run_local_ci.mjs` only when the user asks or the work is a true release/export gate that cannot be validated safely with narrower checks.
 - Refactors must preserve behavior and player-facing wording unless the current task explicitly changes them. Do not opportunistically rename IDs, UI text, or compatibility fields.
 
@@ -82,6 +84,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 ## Git And Delivery
 
 - Do not create commits, push, or open a PR unless the current request includes publishing. When asked, stage only the requested scope and keep commits small with motivation-explaining messages.
+- For the active long-running `stoneage_gap_plan.md` execution, the user has explicitly authorized one narrow commit and push after each completed issue or tightly related issue group.
 - Before pushing, verify `git config user.name`, `git config user.email`, the remote owner, the branch, and staged diff. Confirm local HEAD, upstream, and remote SHA after push.
 - GitHub remotes use SSH. For this repository, keep `origin` as `git@github-fanderchan:fanderchan/Beastbound_Odyssey.git` unless the user explicitly changes ownership or transport.
 - Identity mapping: `energyjyasashi-hash` uses `github-energyjyasashi-hash`; `fanderchan` uses `github-fanderchan`. Never silently switch a GitHub remote to HTTPS.

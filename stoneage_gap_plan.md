@@ -1,214 +1,208 @@
-# Beastbound Odyssey — 相对 StoneAge 8.0 的功能差距与内容迭代计划
+# Beastbound Odyssey — 正式运营版统一路线图
 
-> **执行者说明（Codex）**
-> - `tasks.md` 32 条联网 bug 已修完；`release_plan.md` A–E 开发项和用户验收确认均已完成。**不要重复做 release_plan 或 tasks 里的工作。**
-> - 本计划对照本地参考源码 `/Users/fander/projects/_local_references/StoneAge`（亦见 AGENTS.md），找出 **Beastbound 仍缺、偏薄、或未联网化** 的玩法，按阶段补齐到「可发行的原创石器风 MMORPG」。
-> - **只参考机制与数据契约，禁止复制 SA 源码、数值、地图、NPC 脚本或美术。**
-> - 每完成一项：在本文件「进度追踪」打勾并附一行证据（测试/自动检查/走查摘要）；每完成一阶段：跑 `node tools/run_local_ci.mjs`，停下等用户确认。
-> - 每次开新会话：读本文件进度追踪 + `git log` + 最新 `docs/phase_*.md`，从第一个未勾选项继续。
+> 更新时间：2026-07-11
+> 唯一路线图：本文件同时维护产品判断、P0/P1/P2/P3 优先级、进度与验收证据。`release_plan.md`、`quality_cleanup_plan.md`、`tasks.md` 和旧 F0–F8 只保留历史证据，不再作为下一项来源。
 
-## 当前已具备（相对 SA 8.0 的基线，勿重复建设）
+## 1. 已确认的产品定义
 
-以下在 Beastbound 中**已有第一版或可玩闭环**（细节可能仍偏薄，但不算「缺失」）：
+- 产品不是 Steam、单机或买断游戏，而是必须联网、官方服务器关闭后不可玩的中文充值制宠物 MMORPG。
+- 目标体验是“现代化石器时代式联机冒险”，第一目标用户是石器时代老玩家。
+- 玩家日常以在线/离线挂机练级为主；朋友之间的主要价值是 PK、家族战、组队 Boss、市场与其他社交玩法。
+- 长期目标至少支持 **200 名玩家处于同一地图**。组队、家族、市场、世界事件与 PvP 是 MMO 身份的必要组成。
+- 第一核心是宠物极品培育：捕捉 Lv1 宠时立即看到 4V；真正的每级成长品质保持隐藏，练约 20 级后通过观察判断去留；转生继续保留高随机、高价值和高情绪波动。
+- 第二核心是高难度宠物构筑：普通二转、进化、融合最终强度处于相近档位，但进化/融合因获取难度更高，可以通过造型、主动技能、被动技能与遗传上限获得优势，不能沦为昂贵但无意义的支线。
+- 普通练级允许自动战斗、自动捕捉、自动丢弃和挂机；世界 Boss、刷楼、PvP、家族战必须保留高决策上限和宠物相克空间。
+- 离线挂机目标收益为在线挂机的 50%，但必须由 GM 配置，不把比例硬编码为所有服务器永远不变的规则。
+- 商业模式以商业宠物和节省时间道具充值为主。商业宠可以强或稀有，但必须有清晰的保值、转生补救与非付费替代边界，避免一次坏运气永久摧毁付费信任。
+- 视觉目标为 **原创高清 2.5D 石器宠物风**：继承原版等距地图、鲜艳色彩、清楚轮廓、人物/宠物比例和回合战斗读位，不复制原版素材，也不做写实 3D。
+- PC 1280×720 是当前正式主路径；左键完成主流程。新增快捷键应支持自定义，默认 `B` 开关背包。
+- 新手教学不允许跳过；其目的之一是提高多开速转号获取稀有转生宠的时间成本。
+- 不做 Demo。只有达到正式运营品质后才公开发布。
+- 已明确暂缓：摆摊、单账号多角色、职业树。删除当前“虚构陪练伙伴”产品方向；若未来需要临时伙伴，使用真实人物与宠物快照的克隆战斗能力。
+- 当前开发允许较大幅度内部重构，但必须保护玩法承诺、稳定 ID、可迁移档案和服务端权威边界。
+- 每完成一个问题或一组高度相关的问题：复现 → 修改 → 针对性测试 → 更新本文件 → 窄范围提交 → 推送；除重大产品方向、经济规则、破坏性迁移或外部授权外，不再等待阶段确认。
 
-| 域 | Beastbound 现状 | SA 8.0 对照 |
+## 2. 石器参考与原创边界
+
+- 机制首先查本地稳定参考：`/Users/fander/projects/_local_references/StoneAge`。
+- 原版公开资料用于理解视觉语法和玩家心智，例如 [17173 石器 7.5 游戏截图档案](https://news.17173.com/z/stoneage/banben/sa75_13.htm)、[原版战斗与宠物说明](https://news.17173.com/z/stoneage/guide/03.htm)、[石器 8.0 捕宠活动资料](https://news.17173.com/content/2005-6-24/n654_570351.html)。
+- 只参考玩法意图、信息层级、比例、节奏和验证方法；禁止复制源码、数值表、地图、NPC 脚本、美术、动画、音频或商标。
+- 高清化不是把低分辨率素材放大：正式资产必须重新设计轮廓、材质、光影、动作和 UI，并记录项目所有权、来源、替换路径与验收证据。
+
+## 3. 真实项目评估（2026-07-11）
+
+### 3.1 完成度
+
+| 维度 | 当前估计 | 判断 |
+| --- | ---: | --- |
+| 联网技术骨架 | 65% | 账号、MySQL、服务端权威档案、战斗、交易、家族等已有第一版，但仍是单进程、小规模验证形态。 |
+| 宠物核心循环 | 40% | Lv1 与隐藏成长观察已有基础；普通培养、二转、进化、融合、技能遗传和服务器结算尚未形成完整闭环。 |
+| 战斗与长期玩法 | 35% | N vs N、状态、技能和联网房间已存在；Boss、刷楼、PvP 构筑与权威被动深度不足。 |
+| 世界与内容 | 20% | 37 张地图、31 个宠物形态，但大部分地图稀疏/模板化，44 个任务以新手教学为主。 |
+| 美术、动画、音频 | 2% | 正式运行资产几乎为空，仍为 Polygon2D、程序网格和调色占位。 |
+| MMO 运营与商业 | 20% | GM、市场、邮件等有基础；200 同图、充值、退款、风控、监控、发布和客服链路尚未建立。 |
+| **正式运营版总体** | **约 30%** | 已是宽而可运行的技术原型，不是接近发版的内容成品。 |
+
+### 3.2 三个核心优势
+
+1. **服务器权威和自动验证基础较强**：账号、档案、物品、货币、宠物、任务、市场和联网战斗已经不是纯客户端假数据，Node 测试体系也能支撑持续收口。
+2. **真正抓住了石器宠物乐趣的种子**：Lv1 4V、隐藏成长种子、逐级观察和 Lv140 模拟方向与“抓到—练一段—判断去留”的随机惊喜高度一致。
+3. **已有可扩展的横向系统骨架**：N vs N 战斗、捕捉、挂机、市场、家族庄园、任务和数据目录已经打通，后续可以把资源集中到深度与品质，而不必从零搭 MMO 原型。
+
+### 3.3 十大问题与发行风险
+
+1. 正式美术、动画、BGM、环境音和战斗音效几乎为零；玩家第一眼会把它判断为开发工具而不是游戏。
+2. 普通宠物强化没有实际属性收益，普通转生缺少有意义的继承；进化、融合与技能遗传尚无完整权威契约，核心卖点未闭环。
+3. 多个 Lv20–140 进度区间引用空地图或不存在的遇敌组；数值模拟绿灯不能证明真实世界能顺畅练到 140。
+4. 客户端可解释宠物被动，服务端主要携带被动 ID，却没有完整映射全部被动、反击、闪避和幸运一击；竞技结果存在双端语义漂移风险。
+5. 新账号改为空宠、空背包、零钻石后，六个客户端回归检查仍依赖旧默认档案；当前全量 Godot 门禁不可信。
+6. “200 人同地图”尚无 AOI、广播预算、背压、掉线风暴和长时压测证据；当前单进程状态模型存在规模风险。
+7. 充值、商业宠发放、订单幂等、退款回收、补单、审计和客服工具尚未设计；直接接钱会形成严重资产与信任风险。
+8. 地图和任务数量看似不少，但一座核心村外大多缺 NPC、事件、奖励链和故事目标；重复洞窟/庄园无法支撑长期探索。
+9. 新手任务链过度集中于 Lv1 且不可跳过；如果节奏不经实机验证，会从“多开成本”变成所有正常玩家的流失点。
+10. `main.gd`、两个大协调器和 `auth-service.js` 仍高度集中；档案长期保持 schemaVersion 1，缺少明确的版本迁移、回滚和兼容审计链。
+
+## 4. 保留、合并、删除与重做
+
+### 4.1 保留并强化
+
+- Lv1 4V 明牌、隐藏每级成长、约 20 级观察、Lv140 极品目标。
+- 自动练级、自动捕捉、自动丢弃、在线挂机和可配置 50% 离线挂机。
+- 统一 N vs N 战斗模板；1v1 是冒烟，10v10 是容量上限，同一规则服务普通战、Boss、PvP 和家族战。
+- 服务端权威档案、市场、邮件、组队、家族与庄园框架。
+- 记录点与击飞规则、宠物战斗/待机/休息状态、兽栏自由存取的现有交互约定。
+- 人物 1–6 转以及稀有转生宠奖励，作为长线目标和限制批量速转的时间成本。
+
+### 4.2 合并或隐藏
+
+- 面对面交易仅保留协议兼容，普通玩家入口统一到交易所；未来确有社交交易需求再重做。
+- 等级试验草地、numeric workbench、QA/GM 面板只作为开发工具，不计入玩家世界内容。
+- 九座庄园先共享规则和战斗框架，正式内容阶段再做视觉、路线、守军和奖励差异，不复制九套逻辑。
+- “商业宠洗点/回 0 转”与付费保护统一成一套可审计的重置服务，避免散落多个不可追踪道具。
+
+### 4.3 删除或暂缓
+
+- 删除虚构训练伙伴作为正式产品功能；未来伙伴必须来自真实人物+宠物快照，并明确快照时间与竞技禁用规则。
+- 摆摊、单账号多角色、职业树暂缓，不进入 P0–P2。
+- 删除 Steam Demo、Steam 商店页、Demo seed 作为发布目标；已有脚本仅保留隔离测试用途。
+- 物品兑换 NPC、拍卖、赌博、宠物赛等不再按旧顺序抢占核心宠物循环前的资源。
+
+### 4.4 必须重新设计
+
+- 普通二转、进化、融合、主动/被动技能遗传和商业宠保值规则。
+- Lv1–140 真实世界进度、经验/掉落/石币产出和挂机消耗。
+- 高决策 Boss、刷楼、PvP、家族战以及宠物相克。
+- 充值经济、离线挂机、耐久惩罚、重置服务及 GM 可配置边界。
+- 高清 2.5D 资产管线、动作契约、音频风格和玩家 UI。
+- 200 人同地图的网络广播、AOI、容量保护和生产部署。
+
+## 5. 距离各可用阶段还缺什么
+
+| 阶段 | 当前状态 | 进入条件 |
 | --- | --- | --- |
-| 世界移动 | 等距地图、寻路、传送点、记录点 | `char_walk` / `map_warppoint` |
-| 遇敌/挂机 | 草丛遇敌、遇敌石、挂机走路、内挂/自动战斗/自动捕捉 | `encount` / 遇敌石 |
-| 战斗核心 | 10v10 阵型、速度序、合击、捕捉、精灵、战斗道具、状态技、换宠、训练伙伴 AI | `battle*.c` / `pet_skill.c` |
-| 骑宠 | 骑乘状态、战斗内骑宠 HP/承伤/经验（Phase141） | 骑宠系统 |
-| 宠物 | 捕捉、兽栏、丢弃/拾取、改名、状态、图鉴、技能学习、培养、MM 转生、成长档位 | `pet.c` / 转生 |
-| 人物 | 升级加点、转生 1–6 转框架、四属性试炼洞窟 + 玄影洞窟 | `transmigration` |
-| 装备 | 穿戴、强化、合成、修理、耐久、转生需求 | `item` / 装备铺 |
-| 任务 | 主线/可选任务、奖励选择、任务追踪/导航 | NPC 任务链 |
-| 商店 | 道具铺/装备铺、庄园占领商店 | `itemshop` / `simpleshop` |
-| 社交 | 组队、切磋（duel room）、聊天频道、邮件（含附件） | `party` / 邮件 |
-| 联网 | 账号、MySQL 档案、服务端权威战斗/商店/任务/转生/挂机/家族 | `saac` + `gmsv` |
-| 家族庄园 | 家族 CRUD、九大庄园配置、宣战/准备/休战、参战名单、庄园战 battle room、占领商店 | `family.c` / `FMPOINT` / `manorsman` |
+| 开发者可试玩 | 已达到但不稳定 | 修复失真的回归检查；提供幂等、全面且不依赖真实玩家档案的 GM 测试账号；真实世界路径可从新号完成捕捉与挂机。 |
+| 内部系统测试 | 未达到 | Lv1–140 进度连通；宠物成长双端一致；服务端被动/反击/闪避一致；普通二转规则明确；关键玩法测试全绿。 |
+| 小规模封闭测试 | 未达到 | 第一批正式原创资产和音频；一个完整村庄+多个练级区+一条刷楼/Boss 线；充值采用沙箱；档案迁移、备份、日志和 20–50 人压测通过。 |
+| 公开测试 | 未达到 | 核心宠物培育、进化/融合至少一条完整闭环；市场/家族/PvP 稳定；经济回收与反作弊；100–200 人同图压测和长时运行通过。 |
+| 正式运营 | 约 30% | 全部正式首发内容与资产、真实支付/退款/补单、客服与 GM 审计、监控告警、备份恢复、安全部署、容量计划、人工长线试玩及不删档迁移方案全部通过。 |
+| Steam Demo | **不适用** | 产品决定为充值制常联网私服式 MMO，不再维护该里程碑。 |
 
----
+## 6. P0/P1/P2/P3 执行计划
 
-## 相对 SA 8.0 仍缺或明显偏薄（差距清单）
+### P0 — 恢复可信基础与核心事实
 
-> 参考：SA `gmsv/src/npc/npc_*.c`、`gmsv/src/char/*.c`、`gmsv/src/battle/*.c`、`saac/src/*.c`  
-> Beastbound 证据：`client/godot/data/`、`docs/phase_190`–`196`、`docs/asset_audit.md`、`docs/release_playability_walkthrough.md`
+| ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
+| --- | --- | --- | --- | --- | --- |
+| P0.1 | 空白新账号改动后六个 Godot 检查仍假定默认有宠物/物品/钻石，全量门禁失真。 | 测试显式构造所需宠物和资产；不把产品默认档案改回旧状态；把纯公式检查与玩家开局夹具解耦。 | `client/godot/scripts/qa/auto_check_coordinator.gd`、`client/godot/scripts/main.gd`、相关 focused model/tests、本文档 | 测试夹具可能意外掩盖真实开局问题。 | 先复现六个失败；修改后六项全部通过；新账号空宠/空背包契约检查仍通过；Godot parse、`git diff --check` 通过。 |
+| P0.2 | Lv1 4V 与隐藏成长是核心，但当前物种档案覆盖少，客户端/服务端种子、逐级成长和观察等级需要统一。 | 定义稳定的实例成长字段与服务端权威升级；每物种独立分布；观察结果只给证据/区间，不泄露隐藏品质；离线生成百分位。 | `data/balance/pet_growth_species_profiles.json`、`pet_templates.json`、`pet_individual_growth_model.gd`、`pet_growth_observation_model.gd`、服务端 pet/progression focused domain、测试与 CSV 工具 | 改公式会影响旧宠与商业宠价值。 | 固定种子双端 Lv1→140 一致；每档至少 10,000 样本审计；约 Lv20 能区分明显优劣但不能精确反推种子；旧宠迁移报告无丢失。 |
+| P0.3 | Lv20–140 进度配置存在空 mapIds、错误 map/group ID，真实挂机路线与数值模拟脱节。 | 逐段建立真实地图—遇敌组—经验—掉落—消耗契约；修正无效引用；接入在线挂机与可配置离线 50% 收益。 | `data/balance/progression_zones.json`、`data/encounter_tables.json`、地图 JSON、`profile-actions.js`、progression/hang models、GM config、测试 | 调整产出会改变经济速度。 | 新号隔离档案可自动练到每个关键等级门槛；所有引用有效；在线/离线比例可由 GM 改且有审计；经济账本不出现无限产出。 |
+| P0.4 | 服务端被动、反击、闪避、幸运一击与客户端显示/本地模型可能不一致，PvP 不可信。 | 建立共享数据解释器或服务端等价解析；所有竞技结算只认服务端；输出稳定 battle event list。 | `battle_passive_skills.json`、`battle_model.gd`、新 focused server battle rules module、`auth-service.js` 仅 wiring、battle tests | 会改变现有战斗结果与回放。 | 五个现有被动逐项服务端用例；反击/闪避/幸运一击固定种子用例；客户端只回放服务端事件；N vs N 回归全绿。 |
+| P0.5 | 缺少明确档案版本迁移和随时可用的全面 GM 测试号。 | 增加版本化迁移/备份报告；提供幂等 GM QA seed/refresh 命令，授予全货币、代表性道具、各成长档宠物与关键权限，但不覆盖普通玩家。 | profile normalization、MySQL store、`server/node/scripts/`、GM plugin/userdata helper、storage/GM tests | GM 工具若鉴权错误会成为资产漏洞。 | 重复执行结果幂等；GM 登录后能测试全部核心面板；普通玩家调用全部拒绝；迁移前后数量/资产校验一致；可回滚备份。 |
+| P0.6 | 200 人同地图目标尚无容量证据，公网边界仍有可信代理、请求体、WS token、限流和广播风险。 | 先写容量预算与压测器；实现可信代理/请求限制/AOI 广播/背压的最小安全基线；不在尚未压测前大改成分布式架构。 | `http-server.js`、event hub/presence focused modules、protocol、load tools、deployment docs/tests | 网络改动可能造成掉线或漏同步。 | 200 模拟连接同地图 30 分钟；移动/聊天/战斗广播有上限；事件延迟和内存不持续增长；伪造代理头与超大请求被拒绝。 |
+| P0.7 | 当前“训练伙伴”会凭空生成陪练人物/宠物，与用户要求的真实角色快照伙伴冲突。 | 退役玩家可见的虚构训练伙伴与服务端兜底；若未来重新启用伙伴，单独定义来源账号、快照时点、人物+宠物属性、过期规则和 PvP 禁用边界。 | training partner model/data、battle room fallback、panel flow、相关任务/测试 | 删除兜底可能暴露依赖假伙伴才能启动的旧战斗测试。 | 正常玩家流程不再出现“陪练伙伴”；单人和真实组队战斗仍可启动；所有旧引用清点完成；未来快照契约不伪造资产。 |
 
-### G1 世界内容与可玩体量（SA 有数百地图/宠/道具，BB 目前偏 Demo）
+### P1 — 做深“抓、练、判、转、融”的核心乐趣
 
-- [ ] **G1.1 宠物图鉴体量**：当前 `pet_templates.json` 仅 **21 个 form**，且 **全部为 placeholderPalette**（`docs/asset_audit.md`）。SA 有大规模宠物表与捕获分布。
-- [ ] **G1.2 野外分布与等级带**：除火芽村、四洞、玄影、等级试验场、九大庄园外，缺少 SA 式「多大陆、多等级段、多属性区域」的可玩地图网（`map_regions.json` 仅 ~6 个 region）。
-- [x] **G1.3 道具与装备种类**：已补一批原创消耗品、宠物治疗道具、遇敌石和任务道具；后续仍可继续扩装备与特殊效果道具链。
-- [x] **G1.4 任务与 NPC 密度**：已补福利/说书两类支线 NPC 与可选 talk 任务；后续仍可扩问答、日常、活动 NPC。
-- [ ] **G1.5 交通网络**：SA 有 `bus` / `airplane` / 多 warp 网络；BB 仅有 map transfer 点，无大陆级巴士/航班式快捷交通。
+| ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
+| --- | --- | --- | --- | --- | --- |
+| P1.1 | 自动捕捉/丢弃已有入口，但必须服务于 Lv1 4V 和隐藏成长，而不能误删潜力宠。 | 审计现有规则；支持按物种、4V、元素、数量、是否新品种筛选；隐藏成长只能在达到观察证据后参与规则；关键/付费/绑定宠永不自动丢弃。 | hang settings、capture settlement、pet codex、相关 UI/服务端 tests | 误删宠物是不可接受的高危损失。 | 全部筛选组合固定种子测试；任何保护宠都无法自动删除；玩家可查看最近自动处理记录并由 GM 审计。 |
+| P1.2 | 普通宠二转需要与进化/融合形成可比较的终局档位，现有普通转生过薄。 | 定义 0→1→2 转的成本、随机增益、失败/保底、历史记录和重置规则；商业宠使用可配置的付费重置而非直接退款式改档。 | pet rebirth models/data、新 server pet domain、profile migration、UI preview/confirm、tests | 数值稍有偏差就会摧毁老宠价值。 | 10,000 样本显示普通二转目标区间与设计一致；每次结果可追溯；预览不泄露随机结果；付费重置幂等且有审计。 |
+| P1.3 | 进化会换 form/species ID，但必须保留宠物实例历史，并要求先一转。 | 定义进化路线数据、前置、材料、继承项、新造型/动作资产门禁、服务端原子事务和失败回滚。 | 新 `pet_evolution_routes.json`、focused model/domain、pet templates、asset manifest、UI/tests | form 变化会影响图鉴、交易、技能与旧存档。 | 一转前拒绝；成功后实例 ID/历史保留、form 更新、技能继承符合契约；中断不会吞宠/材料；新形态有正式资产。 |
+| P1.4 | 融合要求三只一转材料宠，并通过技能遗传提供更高追求，当前完全缺失。 | 先定父母/底板角色、主动/被动池、冲突规则、随机权重、预览信息、消耗/锁定和交易限制；再实现服务端权威事务。 | 新 fusion contract/data/server domain、pet instance schema、UI、battle catalogs、tests | 消耗三只高价值宠，任何 bug 都是重大资产事故。 | 事务原子；断线/重试不重复消费；固定种子可复现；遗传分布模拟通过；融合宠与普通二转同档但拥有明确构筑优势。 |
+| P1.5 | 普通挂机战斗和高端战斗尚未形成两种决策密度。 | 普通战保留自动；Boss/PvP 加入阶段机制、目标优先、驱散/控制、换宠、元素相克、资源窗口与明确事件反馈。 | battle actions/passives/AI/event list、Boss encounter data、server battle domain、battle UI/tests | 机制过多会降低可读性并拖慢 10v10。 | 普通挂机无需频繁干预；Boss/PvP 至少有三类可改变胜负的决定；同战力不同策略结果显著；10v10 性能不退化。 |
+| P1.6 | 死亡、耐久、挂机和充值经济尚未形成稳定闭环。 | 普通气绝回场景 1HP；超额伤害击飞回记录点；失败扣装备耐久但不直接掉落装备；所有比例由 GM 配置。建立石币/钻石/商业宠/时间道具的来源、回收与日志。 | equipment durability、battle settlement、economy config/ledger、GM config、UI/tests | 惩罚或付费压力过强会赶走玩家。 | 所有扣除只有服务端执行；配置有范围限制和审计；经济模拟不存在必然通胀；玩家能在确认前看懂损失。 |
 
-### G2 经济与社会（SA 核心长线玩法，BB 基本缺失）
+### P2 — 首发内容、社交与正式视听品质
 
-- [x] **G2.1 玩家交易**：已按用户验收反馈改为交易所买卖入口，默认 1% 税，支持 GM 配置默认税率与单物品税率；旧面对面交易接口仅保留兼容，不在普通 UI 展示。
-- [ ] **G2.2 拍卖行**：SA `auctioneer` / `pauctionman` / `saac/auction.c`；BB **无**。
-- [x] **G2.3 银行/仓库**：已补仓库 NPC 与服务端权威石币/物品存取 v1；后续可扩大容量、分类和家族银行。
-- [ ] **G2.4 摆摊/寄售**：SA `sellsthman` 等；BB **无**。
-- [ ] **G2.5 黑市/特殊商店**：SA `blackmarket`、`poolitemshop`、`pkpetshop`；BB **无**。
-- [ ] **G2.6 赌博/小游戏**：SA `gamblemaster`、`gambleroulette`、`janken`、`bigsmall`；BB **无**（numeric 实验不算玩家玩法）。
-- [ ] **G2.7 物品兑换/改造**：SA `itemchange`、`exchangeman`；BB 仅有装备合成，**无**通用物品兑换 NPC。
+| ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
+| --- | --- | --- | --- | --- | --- |
+| P2.1 | 当前世界是一个高密村庄加大量空/模板地图，不能支撑正式运营。 | 以 StoneAge 8.0 的世界层级作规模参考但原创制作：多个村庄、连续等级带、交通、任务链、稀有 Lv1 点、刷楼和世界 Boss。 | map regions/maps/encounters/quests/shops/items、world models、server validation、phase docs | 内容量大，容易继续铺空地图。 | 每张正式地图都有明确目的、入口/出口、遭遇、奖励和玩家停留理由；完整 Lv1→140 路线人工实玩通过。 |
+| P2.2 | 31 个形态仍为程序色块，人物、地图和 UI 缺正式美术。 | 建立原创高清 2.5D 资产规范与 manifest；先完成主角、核心村、首批捕捉宠、战斗背景，再按玩家路径扩展。 | `client/godot/assets/`、asset manifest、pet templates、map renderer、UI theme、asset audit | 风格漂移、版权不清、资产量失控。 | 无来源不明资产；首发路径无占位；轮廓在 1280×720 清楚；地图、角色、宠物比例统一；截图由人工验收。 |
+| P2.3 | 无正式动画、BGM、环境音和战斗音效。 | 每个正式宠物至少 idle/walk/run/attack/hurt/defend/skill/down/celebrate，覆盖 16 方向或经批准的等价视图；建立村庄、野外、洞窟、战斗和关键反馈音频集。 | sprite/action manifests、animation player、battle playback、audio buses/assets、tests | 动作数量和方向数带来巨大制作成本。 | 正式宠物动作清单 100% 完整；战斗事件都有可辨识视听反馈；短 MP4 验收无滑步、跳帧、音量突变。 |
+| P2.4 | 家族庄园和社交已有结构但缺少荣耀、长期目标和差异内容。 | 完成家族银行/公告/权限、守备战、赛程与观战；庄园提供原创坐骑权限、称号和视觉荣耀；补好友/黑名单/排行榜/世界事件。 | family/manor/social domains、maps/UI/data/tests | 奖励过强会固化头部家族。 | 新家族有追赶渠道；赛程、参战、结算和奖励可审计；跨家族竞争不允许客户端伪造。 |
+| P2.5 | 不可跳过教学、15 个底栏入口和缺少快捷键可能同时制造认知负担。 | 保留强制教学但按正常玩家节奏分层；多开成本来自真实成长时间而非重复点按钮。加入可配置键位，默认 `B` 开关背包，并重组底栏入口。 | input settings/new focused model、project config、tutorial/quest data、panel registry/UI、tests | 改输入与 HUD 可能造成误触和性能回归。 | 全流程只用左键可完成；`B` 可开关且可改/冲突检测；正常新玩家教学完成率与时长达标；idle/moving/input 性能不退化。 |
 
-### G3 宠物深度（SA 特色，BB 部分有、部分无）
+### P3 — 真实充值运营、容量与正式发版
 
-- [ ] **G3.1 宠物融合**：SA `petfusion` / `npc_petfusion.c`；BB **无** pet fusion（装备合成 ≠ 宠融合）。
-- [ ] **G3.2 宠物赛跑**：SA `petracemaster` / `petracepet`；BB **无**。
-- [ ] **G3.3 宠物邮件/托运**：SA `petmail.c`；BB 邮件仅玩家邮件，**无**宠物寄送。
-- [ ] **G3.4 宠物制造/特殊获取**：SA `petmaker`；BB 主要靠捕捉 + GM，**无**正式 NPC 制造链。
-- [ ] **G3.5 被动技能与战斗深度对齐**：BB 有 `battle_passive_skills.json`，需审计 **服务端权威战斗** 是否完整结算被动/反击/闪避/幸运一击（对照 SA `battle_event.c` 与本地 `battle_model.gd` 差异），补齐遗漏项。
+| ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
+| --- | --- | --- | --- | --- | --- |
+| P3.1 | 商业模式依赖充值，但没有支付、补单、退款和资产回收系统。 | 接入正式支付前先建 provider-neutral 订单状态机；签名校验、幂等发货、退款冻结/回收、人工补单双人审计、沙箱测试。 | 新 payment/order domain、MySQL entities、GM ops/UI、HTTP routes、audit/tests | 涉及真实资金、合规和外部授权，必须单独批准 provider。 | 沙箱重复回调只发一次；退款和补单可追溯；普通 GM 不能私自发高价值资产；财务对账一致。 |
+| P3.2 | 生产服务器缺少完整部署、安全、监控、恢复和长时容量证据。 | TLS/reverse proxy、密钥管理、结构化指标、告警、备份恢复演练、滚动维护方案、200 人同图与混合业务 soak test。 | deployment/ops、server config、health/metrics、backup tooling、load reports | 基础设施错误会导致停服或档案损失。 | 200 同图 + 额外业务并发长时通过；故障恢复 RPO/RTO 达标；备份可实际恢复；无明文密钥或 WS token 泄漏。 |
+| P3.3 | 长线经济、商业宠保值、自动化和多开行为未经真实玩家验证。 | 进行小规模删档封测与至少一次长线加速服；记录捕捉、留宠、升级、交易、充值沙箱、家族/PvP 数据，按证据调数值。 | balance configs、telemetry、GM dashboards、migration scripts、reports | 测试样本偏差会误导经济设计。 | 核心漏斗、经济源汇、宠物留存分布和异常账号可解释；没有必须靠付费才能继续玩的硬墙；正式不删档前完成迁移演练。 |
+| P3.4 | 当前不存在能证明“可以正式发版”的统一门禁。 | 建立正式运营 release gate：客户端包、服务器部署、支付、档案、内容、资产、音频、安全、性能、客服、GM、人工长线试玩一体化清单。 | 本文件、release tooling、export presets、ops docs、QA reports | 只看自动检查会漏掉手感和运营问题。 | 自动门禁全绿；用户按脚本亲自完成捕捉观察、二转/进化/融合、挂机、刷楼、PvP、家族战、充值沙箱；视觉/动画用 MP4、静态 UI 用截图验收。 |
 
-### G4 家族与庄园（BB 已有第一版，SA 仍远未追平）
+## 7. 进度追踪
 
-> 已做：Phase190–196（家族、宣战、名单、manor_war room、休战/准备、庄园商店、管家入口等）  
-> 仍缺（见 `docs/phase_190` / `phase_193` / `phase_191` 明示）：
+> 从第一个未完成的 P0 项开始。只有代码、针对性测试和需要的人工证据均完成后才打勾。
 
-- [ ] **G4.1 家族银行与家族资金**：SA 家族银行/留言/税收；BB **无** family bank。
-- [ ] **G4.2 家族权限体系**：族长/长老/成员权限、职务代理；BB 仅基础族长操作。
-- [ ] **G4.3 家族留言/公告板**：SA `fmdengon` / `fmletter`；BB **无** 家族专用公告。
-- [ ] **G4.4 中立庄园 NPC 守备战**：Phase193：中立庄园仍走「结算」而非 battle room；需守备队 NPC 房间或等价 PvE。
-- [ ] **G4.5 庄园战观战/锁名单/踢人/入场地图**：Phase193 边界项。
-- [ ] **G4.6 跨时段赛程与运营向战期**：Phase196 已有短准备/休战；缺 SA 式长周期赛程 UI、报名截止、开战窗口提醒。
-- [ ] **G4.7 家族专属设施**：SA `fmhealer`、`fmwarp`；BB **无** 家族治疗/传送点。
+### P0
 
-### G5 PK、排行与竞技（SA 有，BB 弱或没有）
+- [ ] **P0.1 恢复空白新账号后的可信 Godot 回归门禁**
+- [ ] **P0.2 统一 Lv1 4V、隐藏成长、观察与 Lv140 双端事实**
+- [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
+- [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**
+- [ ] **P0.5 版本化档案迁移 + 全面 GM QA 账号**
+- [ ] **P0.6 200 人同地图容量与安全基线**
+- [ ] **P0.7 退役虚构训练伙伴并保留真实快照伙伴边界**
 
-- [ ] **G5.1 切磋排行榜**：SA `duelranking`；BB 有 duel room + battle record summary，**无** 持久排行榜 UI/赛季。
-- [ ] **G5.2 死亡争夺/特殊 PK 活动**：SA `deathcontend`；BB **无**。
-- [ ] **G5.3 野外 PK 规则**：SA 有 PK 旗/区域规则；BB 以邀请切磋为主，**无** 野外 PK 开关与惩罚。
-- [ ] **G5.4 宠物 PK 店/特殊对战**：SA `pkpetshop`；BB **无**。
+### P1
 
-### G6 角色与账号（SA 多角色、称号、Charm）
+- [ ] **P1.1 自动捕捉/自动丢弃安全迭代**
+- [ ] **P1.2 普通宠 0→1→2 转与重置平衡**
+- [ ] **P1.3 一转前置的宠物进化**
+- [ ] **P1.4 三只一转材料宠融合与技能遗传**
+- [ ] **P1.5 高决策 Boss/PvP 战斗深度**
+- [ ] **P1.6 死亡耐久、挂机与充值经济闭环**
 
-- [ ] **G6.1 单账号多角色**：SA 多角色选择；BB 当前 **一账号一档案**，无选角界面。
-- [ ] **G6.2 称号系统**：SA `title.c`；BB **无** 玩家称号展示与获取。
-- [ ] **G6.3 魅力/幸运玩法**：SA `charm` / `luckyman`；BB **无**。
-- [ ] **G6.4 通讯录/好友**：SA `addressbook`；BB 有 `players/search` 与在线列表，**无** 好友/黑名单/常联系人。
+### P2
 
-### G7 战斗与职业（SA 魔法/职业/AI 更丰富）
+- [ ] **P2.1 正式世界内容与刷楼主线**
+- [ ] **P2.2 原创高清 2.5D 正式美术**
+- [ ] **P2.3 正式动画与音频**
+- [ ] **P2.4 家族庄园、社交、PvP 与世界事件**
+- [ ] **P2.5 强制教学节奏、底栏重组与自定义快捷键**
 
-- [ ] **G7.1 人物魔法/职业技能树**：SA `battle_magic.c` / `profession_skill.c`；BB 以「精灵 + 装备附带精灵」为主，**无** 独立职业技能体系。
-- [ ] **G7.2 敌人 AI 与 BOSS 机制**：SA `battle_ai.c` + 复杂 NPC 战；BB 有 guardian 与 wild AI，BOSS 机制偏少（多为一波 wild/group）。
-- [ ] **G7.3 战斗记录/回放**：BB 有 `battle_event_ledger` 与 server trace，**无** 玩家可见的回放/战报分享 UI。
+### P3
 
-### G8 表现与资产（发行门槛，非 SA 独有但当前最大短板）
+- [ ] **P3.1 支付、发货、退款、补单与资产审计**
+- [ ] **P3.2 生产部署、监控、备份恢复和长时压测**
+- [ ] **P3.3 封测、长线经济验证与不删档迁移演练**
+- [ ] **P3.4 正式运营统一 release gate 与用户验收**
 
-- [ ] **G8.1 替换全部 placeholder 宠形态**（21/21）：见 `docs/asset_audit.md`。
-- [ ] **G8.2 人物/宠物/地图/战斗/UI 原创美术**：当前 Polygon2D + 程序绘制。
-- [ ] **G8.3 音效与 BGM**：SA 有完整音频；BB 运行时 **无** 跟踪音频资源。
-- [ ] **G8.4 中文化文案统一润色**：自动走查已通过，但仍需人工验收首玩可读性（见 `release_playability_walkthrough.md`）。
+## 8. 历史完成记录
 
-### G9 运营与发布配套（release_plan 工程项收尾）
+- 旧 F0：release 工程 A–E、隔离 seed、首 30 分钟脚本与当时的自动门禁已完成；它们是历史技术证据，不代表正式运营品质。
+- 旧 F1：新增雾帽沼泽、裂阳荒地、风镜高地和 10 个可捕捉形态；当前仍使用占位视觉。
+- 旧 F2：交易所、银行、任务/空状态体验、绑定资产和任务等级字段已完成第一版。
+- `tasks.md` 32 条联网 bug、`quality_cleanup_plan.md` 1–6、`release_plan.md` A–E 不主动重开；只有当前回归复现证明失效时，才以本路线图的新 P 项修复。
 
-- [x] **G9.1 完成 release_plan B/C/D/E 用户验收确认**。
-- [x] **G9.3 干净演示库/种子数据**：走查提到本地 MySQL 历史测试账号噪音；已补 demo seed 脚本。
-- [x] **G9.4 新手 30 分钟体验曲线**：从注册到首次捕捉、首次组队、首次庄园信息可见的 pacing 文档 + 实机验收路径。
+## 9. 每项执行规则
 
----
-
-## 推荐执行顺序（给 Codex 的阶段）
-
-> **原则**：先「能发行的一服闭环」，再「SA 式长线系统」。每阶段 3–8 个小项，小步提交。
-
-| 阶段 | 目标 | 包含项 | 停止条件 |
-| --- | --- | --- | --- |
-| **F0** | 收尾 release_plan | G9.1、G9.3、G9.4 | 用户确认可进入内容迭代 |
-| **F1** | 内容体量 MVP | G1.2 扩 2–3 个新 region + G1.1 新增 10 种可捕 wild 宠（含数据+遭遇+图鉴） | 新区域可挂机练级 20 级段，CI 绿 |
-| **F2** | 经济闭环 v1 | G2.1 交易所买卖 + G2.3 银行存取（服务端权威） | 两账号可买卖/存取，防刷测试通过 |
-| **F3** | 宠物深度 v1 | G3.1 宠物融合（简化公式）+ G3.5 服务端被动/反击审计补齐 | 融合 + 服务端 battle 回归绿 |
-| **F4** | 家族庄园 v2 | G4.1 家族银行 + G4.4 中立守备 battle room + G4.3 家族公告 | 家族战全路径 battle room 化 |
-| **F5** | 竞技与社交 v1 | G5.1 切磋排行榜 + G6.4 好友/黑名单 | 排行榜可查、好友可在线邀请 |
-| **F6** | 世界便利与支线 | G1.5 巴士/快捷传送 + G1.4 2 类支线 NPC（问答/福利） | 跨 region 旅行 <2 分钟 |
-| **F7** | 表现替换 v1 | G8.1–G8.2 先替换主角+3 首发宠+火芽村地面贴图 | asset_audit 占位计数下降 |
-| **F8** | SA 式长线（可选） | G2.2 拍卖、G2.6 赌博、G3.2 宠物赛、G5.2 死亡争夺、G6.1 多角色 | 按用户优先级选取，不做一次性大杂烩 |
-
----
-
-## 每个功能项的标准交付物（Codex 必须遵守）
-
-1. **设计笔记**：`docs/phase_XXX_<slug>.md`，写清 SA 8.0 参考路径、Beastbound 原创规则、不做项。
-2. **数据契约**：JSON 或 MySQL 迁移（DB 操作用 MCP server）。
-3. **服务端权威**：联网账号不得仅本地改 profile；需 API + 测试。
-4. **客户端 UI**：中文、PC 窗口优先验收；不新增移动端专属功能或移动导出阻塞，除非用户重新指定移动端优先级。
-5. **自动检查**：新增或扩展 `--auto-*-check`；纳入 `tools/run_godot_auto_checks.mjs`。
-6. **服务端测试**：`server/node/test/auth-*.test.js` 覆盖 happy path + 权限/作弊拒绝。
-7. **性能**：改动后 idle/moving `--perf-probe` 不退化。
-8. **本文件打勾 + 证据一行**。
-
----
-
-## 进度追踪
-
-> 从第一项未勾选项继续。完成打 `[x]` 并附证据。
-
-### F0 — release_plan 收尾
-- [x] G9.1 release_plan B/C/D/E 用户验收确认
-  - 证据：2026-07-04 用户明确确认“我认为我测完了”，并要求直接打钩；`release_plan.md` 阶段 B/C/D/E 验收项已同步打勾并保留已有自动验证证据。
-- [x] G9.3 demo 种子库脚本
-  - 证据：`server/node/scripts/seed-demo-data.js` + `npm run seed:demo --prefix server/node`；`node --check` exit 0；memory/json store 验证 4 accounts / 2 families / 1 manor，第二次 JSON seed 为 `reused` / `already_owned`；`npm test --prefix server/node` 92/92 pass，详见 `docs/phase_197_demo_seed_data.md`。
-- [x] G9.4 新手 30 分钟体验曲线文档
-  - 证据：`docs/phase_198_first_30_minutes_pacing.md` 记录 0-30 分钟注册、任务、遇敌、捕捉、组队、家族/庄园可见验收曲线；release_plan B/C/D/E 已由用户确认。
-- 阶段 F0 验证（2026-07-04）：`node tools/run_local_ci.mjs` 通过 10/10，summary `.run/local_ci/2026-07-03T23-46-40-505Z_summary.json`，log `.run/local_ci/2026-07-03T23-46-40-505Z.log`；服务端 92/92，Godot 自动检查 188/188；性能基线 `perf-idle` process_total median=0.270ms p95=0.370ms，`perf-moving` median=0.210ms p95=0.240ms，`perf-movement-spam` max_input_us=192 且 coalesced=true/settled=true，`perf-shop-select` 与 `perf-player-stat-spam` 通过。
-
-### F1 — 内容体量 MVP
-- [x] G1.2 新 region ×2~3
-  - 证据：新增 `mistcap_marsh`、`suncrack_badlands`、`windglass_highlands` 三个 field region、三张 map JSON、火芽村入口往返传送；`node tools/run_godot_auto_checks.mjs --only --auto-map-region-contract-check,--auto-pet-template-catalog-check,--auto-pet-codex-list-check,--auto-pet-encounter-table-check --fail-fast --timeout-ms 180000` 通过 5/5，log `.run/godot_auto_checks/2026-07-04T01-10-04-355Z.log`，其中 `f1_regions=true f1_transfers=true`。
-- [x] G1.1 新可捕宠物 ×10（非 placeholder 或明确 art 计划）
-  - 证据：`client/godot/data/pet_templates.json` 新增苔背兽/风狐/炽角兽/潮鳍兽 4 个种系与 10 个 `capture.catchable=true` form，每个 form 带 `visual.artPlan.replacementPath`；同一轮 `--auto-pet-template-catalog-check` 输出 `f1_forms=true f1_lines=true`，`--auto-pet-codex-list-check` 通过；`node tools/run_godot_auto_checks.mjs --only --auto-balance-catalog-check --fail-fast --timeout-ms 180000` 通过 2/2，log `.run/godot_auto_checks/2026-07-04T01-10-30-559Z.log`。
-- [x] G1.3 扩展消耗品/任务道具一批
-  - 证据：新增 `trail_ration_pack`、`item_pet_salve_mid`、`item_pet_salve_large`、`encounter_stone_patrol`、`quest_welfare_token`、`quest_field_note`，并接入火芽村道具铺；JSON 解析通过，`--auto-stage6-content-check` 输出 `items=true shop=true`。
-- [x] G1.4 支线 NPC ×2 类
-  - 证据：火芽村入口新增福利员阿檀、说书人阿舟及两条 optional talk 支线；`node tools/run_godot_auto_checks.mjs --only --auto-quest-objective-templates-check,--auto-npc-quest-marker-check,--auto-task-tracker-route-check,--auto-stage6-content-check --fail-fast --timeout-ms 180000` 覆盖任务模板、NPC 标记、追踪路线与阶段 6 内容。
-
-### F2 — 经济闭环 v1
-- [x] G2.1 玩家交易/交易所
-  - 历史证据（兼容接口）：新增 `/trade/propose`、`/trade/accept`、`/trade/cancel`、`/trade/state`；`node --test server/node/test/auth-economy.test.js` 覆盖距离拒绝、状态读取和双账号原子交换。
-  - 证据（2026-07-05）：按用户验收反馈改为交易所入口，底部新增“买卖”，普通 UI 不再展示面对面交易控件；新增 `/market/listings`、`/market/list`、`/market/buy`、`/market/cancel` 与 GM 税率配置 `/gm/market/config`，默认交易税 1%，支持单物品税率覆盖；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js server/node/test/auth-http-server.test.js`、`node tools/run_godot_auto_checks.mjs --only --auto-market-panel-check,--auto-stage6-content-check --fail-fast --timeout-ms 180000` 通过。
-- [x] G2.3 银行/仓库 NPC
-  - 证据：新增仓库员阿衡、`/bank/deposit`、`/bank/withdraw` 与仓库面板；`node --test server/node/test/auth-economy.test.js server/node/test/auth-storage.test.js` 通过 12/12，`--auto-stage6-content-check` 覆盖仓库 NPC、地图标记与仓库面板。
-- 体验加固（Phase202，不改变 G2.7 状态）：完成 PC 玩家流程审计，强化世界任务目标/行动/奖励层级，修正背包与交易所空状态，并将战斗 `help` 显示统一为“帮助”；Godot 针对性检查 6/6，idle/moving/移动连点性能门禁通过，详见 `docs/phase_202_player_guidance_polish.md`。
-- [x] 体验加固（Phase203，不改变 G2.7 状态）：把底栏未教学功能拆成渐进式主线任务，完成挂机、商店出售、玩家挂单、教学机器人购买、成交邮件领取、教学机器人售卖与附近聊天的服务端闭环；战斗内预约停止后按钮由“停”恢复“挂机”。原阶段 Node 针对性测试 58/58 + 38/38、Godot 针对性检查 14/14、idle/moving/移动连点/商店选择性能通过。2026-07-10 补入“骑宠之外设置四灵幼兽为战斗宠”的缺失教学，骑宠误切战斗不计完成；详见 `docs/phase_203_bottom_bar_tutorial.md`。
-- [x] 体验加固（Phase204，不改变 G2.7 状态）：建立物品和宠物的 `bound/unbound` 所有权契约；绑定只阻止跨玩家转移，银行、使用和销毁保持可用。对战宠物蛋设为绑定，孵化四灵幼兽继承绑定，并补齐任务缺蛋时向阿牧重新领取的服务端权威闭环；补充 Node 47/47、Godot 8/8 窄回归通过，详见 `docs/phase_204_bound_assets_and_battle_pet_tutorial.md`。
-- [x] 体验加固（Phase205，不改变 G2.7 状态）：44 个正式任务全部显式配置 `requiredLevel` / `recommendedLevel`，Lv1 也统一显示 `[1]`；38 个当前新手/功能任务为 Lv1/推荐 Lv1，六个转生资格任务为 Lv80/推荐 Lv100。等级只限制新接取，已接任务降级后仍可完成；宠物转生 MM 教学保持最低 Lv80、推荐 Lv130，详见 `docs/phase_205_task_level_requirements.md`。
-- [ ] G2.7 物品兑换 NPC（可选简化版）
-
-### F3 — 宠物深度 v1
-- [ ] G3.1 宠物融合
-- [ ] G3.5 服务端战斗被动/反击/闪避对齐审计
-
-### F4 — 家族庄园 v2
-- [ ] G4.1 家族银行
-- [ ] G4.3 家族公告/留言
-- [ ] G4.4 中立庄园守备 battle room
-- [ ] G4.5 观战/锁名单/踢人（子集）
-
-### F5 — 竞技与社交 v1
-- [ ] G5.1 切磋排行榜
-- [ ] G6.4 好友/黑名单
-
-### F6 — 世界便利
-- [ ] G1.5 巴士/快捷交通
-- [ ] G2.4 摆摊（简化）
-
-### F7 — 表现替换 v1
-- [ ] G8.1 替换 21 占位宠（或分批完成并记录）
-- [ ] G8.2 主角/村/map 贴图首包
-- [ ] G8.3 BGM/SFX 最小集
-
-### F8 — 长线可选
-- [ ] G2.2 拍卖行
-- [ ] G2.6 赌博/小游戏
-- [ ] G3.2 宠物赛
-- [ ] G6.1 多角色
-- [ ] G7.1 职业技能树
-
----
-
-## 红线（与 AGENTS.md / release_plan 一致）
-
-- 不复制 StoneAge 8.0 / StoneAge9 / SA80 的代码、数值表、地图、NPC 脚本、美术。
-- 不改动 `tasks.md` 已修复行为，除非回归测试证明失败。
-- 不把新域塞回 `main.gd`；用 `scripts/net/`、`scripts/battle/`、`scripts/ui/`、`scripts/progression/`、`scripts/world/`。
-- 产品决策（融合公式、拍卖税、PK 惩罚、多角色上限）先问用户。
-- 每阶段结束跑 `node tools/run_local_ci.mjs`，汇报 CPU/perf 证据。
+1. 先复现并保存证据；无法复现则不得把猜测当修复。
+2. 新玩法先写玩家承诺、数据所有者、实例影响、服务端权威、失败/回滚、玩家文案、视听动作需求和验收命令。
+3. 不把新领域继续堆进 `main.gd`、大协调器或 `auth-service.js`；先建 focused model/domain，再做薄 wiring。
+4. 不直接改真实玩家档案。数据库迁移先在隔离副本验证，输出数量/资产对账和回滚方案。
+5. 先跑 `git diff --check`、语法/解析和最窄测试；涉及 UI/移动/战斗热路径时补 idle、moving、真实输入性能对比。
+6. 普通规则检查使用隔离 memory/JSON 服务。只有明确需要且确认目标为本地 QA 时才跑 live check。
+7. 需要判断手感、节奏、美术或音效时，提供具体操作、观察指标、通过标准；动画/战斗优先 MP4，静态 UI 优先截图。
+8. 完成后在本节打勾并写一行证据；只 stage 本项文件，提交并推送，确认本地 HEAD、upstream 与远端 SHA 一致。
