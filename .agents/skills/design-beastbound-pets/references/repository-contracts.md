@@ -27,9 +27,12 @@
 | Client template resolution/validation | `client/godot/scripts/battle/pet_template_catalog.gd` |
 | Encounter selection | `client/godot/scripts/world/encounter_model.gd` |
 | Growth instance/observation | `client/godot/scripts/progression/pet_individual_growth_model.gd`, `pet_growth_observation_model.gd` |
+| Versioned cross-runtime growth algorithm (P0.2 shadow only) | `client/godot/scripts/progression/pet_growth_authority_model.gd`, `server/node/src/auth/pet-growth-authority.js`, `tools/fixtures/pet_growth_authority_v1_vectors.json` |
 | Pet profile state, skills, safety, GM tools | `client/godot/scripts/progression/player_progress_model.gd` and focused models |
 | Client battle interpretation | `client/godot/scripts/battle/` catalogs/models |
 | Server authoritative battle/capture/profile settlement | focused `server/node/src/auth/` domains where present; legacy wiring/rules remain in `server/node/src/auth-service.js` |
+| Player-visible pet/profile projection (P0.2 shadow only) | `server/node/src/auth/profile-visibility.js` |
+| Cryptographic private pet seed primitive (P0.2 shadow only) | `server/node/src/auth/pet-private-seed.js` |
 | Persistent profile storage | `server/node/src/mysql-store.js` plus normalization/persistent snapshot contracts |
 
 Do not create a parallel pet catalog. Extend shared data and focused consumers.
@@ -43,6 +46,7 @@ For a server session:
 - Client submits intent, such as target, action, capture tool, or setting change.
 - Server validates ownership/state, derives randomness/rewards/stats, persists the result, increments revision, and returns authoritative state/events.
 - Client applies the returned profile/battle event list and presents mapped Chinese text.
+- A player response must never contain private growth seed, roll, continuous accumulator, exact hidden quality, or a reconstruction path. Only Lv1 4V, current visible stats, and evidence-based observation belong in the public view.
 
 Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for online players. Do not enable `PUT /profiles/me` or trust client-reported pet fields.
 
@@ -100,6 +104,7 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 
 - Only a minority of forms currently link to species-specific growth profiles; the rest use legacy generic growth.
 - Client growth and server EXP/stat settlement are not yet one complete P0.2 truth.
+- P0.2 now has shadow-only cross-runtime growth, public profile projection, and CSPRNG seed primitives, but they are not wired into runtime creation/responses yet. Current responses still expose legacy hidden fields, and current predictable seeds remain active until the atomic client/server cutover.
 - Current player growth UI can derive precise Lv140 values from stored hidden roll; intended observation should be evidence-driven.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
@@ -121,11 +126,13 @@ Useful existing checks include:
 - `--auto-pet-growth-observation-check`
 - `--auto-pet-growth-threshold-check`
 - `--auto-pet-growth-species-simulation-check`
+- `--auto-pet-growth-authority-check`
 - `--auto-pet-encounter-table-check`
 - `--auto-capture-tools-check`
 - `--auto-capture-settings-check`
 - `--auto-pet-skill-training-check`
 - `--auto-pet-management-safety-check`
 - closest server battle-room/profile-action/storage tests
+- `node --test server/node/test/pet-growth-authority.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js`
 
 Use `tools/run_godot_auto_checks.mjs --only <flags> --fail-fast` for selected client checks. Run the full local CI only for a genuine release/export gate or explicit user request.
