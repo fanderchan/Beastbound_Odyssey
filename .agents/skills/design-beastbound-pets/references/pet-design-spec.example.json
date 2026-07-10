@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "designId": "example_tidefin_moon",
+  "playerPromise": {
+    "fantasy": "在浓雾中抢先保护队友、但害怕爆发集火的稀有潮鳍兽形态。",
+    "acquisitionTier": "rare_wild",
+    "roles": ["speed_support", "capture_helper"],
+    "strengths": ["高速睡眠支援", "水风属性带来的控制抗性"],
+    "weaknesses": ["攻击和物理耐久偏低"],
+    "counters": ["高速单体爆发", "睡眠免疫或净化"],
+    "synergies": ["需要压低野宠血量的自动捕捉队伍", "慢速高攻宠"]
+  },
+  "taxonomy": {
+    "lineId": "tidefin",
+    "lineName": "潮鳍兽系",
+    "subtypeId": "tidefin_mist",
+    "subtypeName": "潮鳍兽",
+    "formId": "example_tidefin_moon_water6_wind4",
+    "formName": "示例月潮鳍兽",
+    "reuse": "new_form"
+  },
+  "elements": {
+    "fire": 0,
+    "water": 6,
+    "earth": 0,
+    "wind": 4
+  },
+  "acquisition": {
+    "sourceType": "wild",
+    "catchable": true,
+    "captureDifficulty": 58,
+    "specialCaptureRule": "沿用通用捕捉公式；示例不批准正式投放。",
+    "placements": [
+      {
+        "mapId": "mistcap_marsh",
+        "encounterZoneId": "mistcap_pools_02",
+        "encounterGroupId": "mistcap_pools_02",
+        "weight": 2,
+        "levelMin": 1,
+        "levelMax": 20,
+        "enemyCountMin": 1,
+        "enemyCountMax": 3,
+        "targetLv1PerEnemyRate": 0.001
+      }
+    ]
+  },
+  "worldIntegration": {
+    "progressionBand": {
+      "levelMin": 10,
+      "levelMax": 24,
+      "purpose": "雾帽湿地稀有 Lv1 培育目标和高速支援收藏线。"
+    },
+    "battleRewardGroupId": "mistcap_pools_02",
+    "rewardEconomyGroupId": "mistcap_marsh",
+    "questIds": [],
+    "serverEncounterAuthority": "blocked",
+    "overflowCapturePolicy": "正式投放前必须提供可恢复临时收容，不能写入不可恢复 lostCapturedPets。"
+  },
+  "growth": {
+    "profileId": "example_tidefin_moon_v1",
+    "familyRole": "speed_support",
+    "lv1FourVInterpretation": "P0.2 前仅把 Lv1 血攻防敏及其浮动作为当前 4V 代理，不建立新全局公式。",
+    "outputBase": {
+      "maxHp": 58,
+      "attack": 8,
+      "defense": 9,
+      "quick": 15
+    },
+    "outputGrowth": {
+      "maxHp": 7.8,
+      "attack": 0.9,
+      "defense": 1.2,
+      "quick": 2.2
+    },
+    "initialOutputSpread": {
+      "maxHp": [-5, 5],
+      "attack": [-1, 1],
+      "defense": [-2, 2],
+      "quick": [-3, 3]
+    },
+    "growthOutputSpread": {
+      "maxHp": [-0.9, 0.9],
+      "attack": [-0.12, 0.12],
+      "defense": [-0.18, 0.18],
+      "quick": [-0.3, 0.3]
+    },
+    "distribution": "weighted_center",
+    "targetAudit": {
+      "lv140PowerBand": [820, 1020],
+      "threeStatGrowthBand": [3.8, 4.8],
+      "hpGrowthBand": [6.9, 8.7],
+      "lv20DecisionIntent": "多数明显高速极品或明显低成长个体可以区分，综合隐藏值仍不可精确反推。"
+    }
+  },
+  "skills": {
+    "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder"],
+    "passiveSkillId": "bui_resistant_skin",
+    "newActiveSkills": [],
+    "newPassiveSkill": null,
+    "trainingSkillIds": ["pet_sleep_powder"],
+    "inheritancePolicy": {
+      "status": "deferred_until_fusion_contract",
+      "eligibleActiveSkills": ["pet_sleep_powder"],
+      "eligiblePassive": false
+    },
+    "autoBattlePolicy": {
+      "useSleepWhen": "目标可被睡眠且队友不会立即打醒",
+      "captureMode": "玩家捕捉回合优先防御或睡眠目标"
+    }
+  },
+  "progression": {
+    "rebirth": "允许普通 0→1→2 转，目标与同档普通宠一致。",
+    "evolution": "本示例不配置进化路线。",
+    "fusion": "仅作为未来主动技能遗传候选，不在当前运行时实现。",
+    "tradePolicy": "未绑定时允许交易；培养后按正式经济规则处理。",
+    "commercialPolicy": "非商业宠。",
+    "autoDiscardProtection": ["locked", "task", "riding", "cultivated", "bound", "new_codex", "lv1_unobserved"]
+  },
+  "presentation": {
+    "codexText": "雾帽镜池中极少出现的潮鳍兽形态，速度优秀，擅长睡眠支援。",
+    "captureText": "捕捉到示例月潮鳍兽；Lv1 四项可见，成长需要继续训练观察。",
+    "growthVisibility": "显示 Lv1 当前四项、逐级观察评级和带误差范围的 Lv140 估计；隐藏种子与真实成长值仅 GM 可见。",
+    "artStatus": "deferred",
+    "futureArtBrief": "仅记录方向：月色水纹与轻盈鳍翼；第一版 Skill 不生成素材。"
+  },
+  "validation": {
+    "growthSampleCount": 10000,
+    "fixedSeedCases": ["low_tail", "median", "high_tail", "lv1_visible_high_growth_low"],
+    "requiredChecks": ["pet_template_catalog", "growth_distribution", "encounter_probability", "capture_formula", "server_authority"],
+    "serverAuthorityChecks": ["服务端拒绝客户端覆盖 form/level/stats/captureChance/expReward", "服务端生成并保存宠物成长种子"],
+    "manualAcceptance": ["在隔离 QA 服按真实路径遇到并捕捉", "训练至 Lv20 后观察评价逐渐稳定", "自动捕捉期间宠物不会误杀目标"]
+  }
+}

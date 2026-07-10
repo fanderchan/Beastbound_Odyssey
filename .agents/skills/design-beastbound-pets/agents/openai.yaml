@@ -1,0 +1,4 @@
+interface:
+  display_name: "Beastbound 宠物设计"
+  short_description: "用自然语言完成宠物定位、成长、遇敌、捕捉、技能与验证"
+  default_prompt: "Use $design-beastbound-pets 根据这份自然语言需求设计并落地一只 Beastbound 宠物。"

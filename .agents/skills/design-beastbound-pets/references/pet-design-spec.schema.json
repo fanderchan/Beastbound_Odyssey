@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://beastbound.local/schemas/pet-design-spec-v1.json",
+  "title": "Beastbound Pet Design Contract",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "designId",
+    "playerPromise",
+    "taxonomy",
+    "elements",
+    "acquisition",
+    "worldIntegration",
+    "growth",
+    "skills",
+    "progression",
+    "presentation",
+    "validation"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "designId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "playerPromise": {
+      "type": "object",
+      "required": ["fantasy", "acquisitionTier", "roles", "strengths", "weaknesses", "counters"],
+      "properties": {
+        "fantasy": {"type": "string", "minLength": 1},
+        "acquisitionTier": {"enum": ["common_wild", "rare_wild", "boss_reward", "floor_reward", "event", "commercial", "rebirth", "evolution", "fusion"]},
+        "roles": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "strengths": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "weaknesses": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "counters": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "synergies": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "taxonomy": {
+      "type": "object",
+      "required": ["lineId", "lineName", "subtypeId", "subtypeName", "formId", "formName"],
+      "properties": {
+        "lineId": {"type": "string", "minLength": 1},
+        "lineName": {"type": "string", "minLength": 1},
+        "subtypeId": {"type": "string", "minLength": 1},
+        "subtypeName": {"type": "string", "minLength": 1},
+        "formId": {"type": "string", "minLength": 1},
+        "formName": {"type": "string", "minLength": 1},
+        "reuse": {"enum": ["new_line", "new_subtype", "new_form", "rebalance_existing"]}
+      }
+    },
+    "elements": {
+      "type": "object",
+      "required": ["fire", "water", "earth", "wind"],
+      "properties": {
+        "fire": {"type": "integer", "minimum": 0, "maximum": 10},
+        "water": {"type": "integer", "minimum": 0, "maximum": 10},
+        "earth": {"type": "integer", "minimum": 0, "maximum": 10},
+        "wind": {"type": "integer", "minimum": 0, "maximum": 10}
+      }
+    },
+    "acquisition": {
+      "type": "object",
+      "required": ["sourceType", "catchable", "captureDifficulty", "placements"],
+      "properties": {
+        "sourceType": {"enum": ["wild", "boss_reward", "floor_reward", "quest", "event", "commercial", "rebirth", "evolution", "fusion"]},
+        "catchable": {"type": "boolean"},
+        "captureDifficulty": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 100},
+            {"type": "null"}
+          ]
+        },
+        "specialCaptureRule": {"type": "string"},
+        "placements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["mapId", "encounterZoneId", "encounterGroupId", "weight", "levelMin", "levelMax"],
+            "properties": {
+              "mapId": {"type": "string", "minLength": 1},
+              "encounterZoneId": {"type": "string", "minLength": 1},
+              "encounterGroupId": {"type": "string", "minLength": 1},
+              "weight": {"type": "number", "minimum": 0},
+              "levelMin": {"type": "integer", "minimum": 1, "maximum": 140},
+              "levelMax": {"type": "integer", "minimum": 1, "maximum": 140},
+              "enemyCountMin": {"type": "integer", "minimum": 1, "maximum": 10},
+              "enemyCountMax": {"type": "integer", "minimum": 1, "maximum": 10},
+              "targetLv1PerEnemyRate": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        }
+      }
+    },
+    "worldIntegration": {
+      "type": "object",
+      "required": ["progressionBand", "battleRewardGroupId", "rewardEconomyGroupId", "questIds", "serverEncounterAuthority", "overflowCapturePolicy"],
+      "properties": {
+        "progressionBand": {
+          "type": "object",
+          "required": ["levelMin", "levelMax", "purpose"],
+          "properties": {
+            "levelMin": {"type": "integer", "minimum": 1, "maximum": 140},
+            "levelMax": {"type": "integer", "minimum": 1, "maximum": 140},
+            "purpose": {"type": "string", "minLength": 1}
+          }
+        },
+        "battleRewardGroupId": {"type": "string", "minLength": 1},
+        "rewardEconomyGroupId": {"type": "string", "minLength": 1},
+        "questIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "serverEncounterAuthority": {"enum": ["implemented", "blocked", "not_applicable"]},
+        "overflowCapturePolicy": {"type": "string", "minLength": 1}
+      }
+    },
+    "growth": {
+      "type": "object",
+      "required": ["profileId", "familyRole", "lv1FourVInterpretation", "outputBase", "outputGrowth", "initialOutputSpread", "growthOutputSpread", "distribution", "targetAudit"],
+      "properties": {
+        "profileId": {"type": "string", "minLength": 1},
+        "familyRole": {"type": "string", "minLength": 1},
+        "lv1FourVInterpretation": {"type": "string", "minLength": 1},
+        "outputBase": {"$ref": "#/$defs/fourStats"},
+        "outputGrowth": {"$ref": "#/$defs/fourStats"},
+        "initialOutputSpread": {"$ref": "#/$defs/fourRanges"},
+        "growthOutputSpread": {"$ref": "#/$defs/fourRanges"},
+        "distribution": {"enum": ["weighted_center", "uniform", "rare_spike"]},
+        "targetAudit": {
+          "type": "object",
+          "required": ["lv140PowerBand", "threeStatGrowthBand", "hpGrowthBand"],
+          "properties": {
+            "lv140PowerBand": {"$ref": "#/$defs/range"},
+            "threeStatGrowthBand": {"$ref": "#/$defs/range"},
+            "hpGrowthBand": {"$ref": "#/$defs/range"},
+            "lv20DecisionIntent": {"type": "string"}
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "required": ["activeSkillIds", "passiveSkillId", "inheritancePolicy", "autoBattlePolicy"],
+      "properties": {
+        "activeSkillIds": {"type": "array", "minItems": 2, "maxItems": 7, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "passiveSkillId": {"type": "string", "minLength": 1},
+        "newActiveSkills": {"type": "array", "items": {"type": "object"}},
+        "newPassiveSkill": {"type": ["object", "null"]},
+        "trainingSkillIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "inheritancePolicy": {"type": "object"},
+        "autoBattlePolicy": {"type": "object"}
+      }
+    },
+    "progression": {
+      "type": "object",
+      "required": ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy", "autoDiscardProtection"],
+      "properties": {
+        "rebirth": {"type": "string"},
+        "evolution": {"type": "string"},
+        "fusion": {"type": "string"},
+        "tradePolicy": {"type": "string"},
+        "commercialPolicy": {"type": "string"},
+        "autoDiscardProtection": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "required": ["codexText", "captureText", "growthVisibility", "artStatus", "futureArtBrief"],
+      "properties": {
+        "codexText": {"type": "string"},
+        "captureText": {"type": "string"},
+        "growthVisibility": {"type": "string"},
+        "artStatus": {"const": "deferred"},
+        "futureArtBrief": {"type": "string"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["growthSampleCount", "fixedSeedCases", "requiredChecks", "serverAuthorityChecks", "manualAcceptance"],
+      "properties": {
+        "growthSampleCount": {"type": "integer", "minimum": 100},
+        "fixedSeedCases": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "requiredChecks": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "serverAuthorityChecks": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "manualAcceptance": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "array",
+      "prefixItems": [{"type": "number"}, {"type": "number"}],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "fourStats": {
+      "type": "object",
+      "required": ["maxHp", "attack", "defense", "quick"],
+      "properties": {
+        "maxHp": {"type": "number"},
+        "attack": {"type": "number"},
+        "defense": {"type": "number"},
+        "quick": {"type": "number"}
+      }
+    },
+    "fourRanges": {
+      "type": "object",
+      "required": ["maxHp", "attack", "defense", "quick"],
+      "properties": {
+        "maxHp": {"$ref": "#/$defs/range"},
+        "attack": {"$ref": "#/$defs/range"},
+        "defense": {"$ref": "#/$defs/range"},
+        "quick": {"$ref": "#/$defs/range"}
+      }
+    }
+  }
+}

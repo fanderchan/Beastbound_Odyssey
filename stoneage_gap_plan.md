@@ -115,8 +115,8 @@
 | --- | --- | --- | --- | --- | --- |
 | P0.1 | 空白新账号改动后六个已知 Godot 检查仍假定默认有宠物/物品/钻石；扩展复现又发现战斗道具、数量和换宠三项同源失败。 | 测试显式构造所需宠物和资产；不把产品默认档案改回旧状态；把纯公式检查与玩家开局夹具解耦。 | `client/godot/scripts/qa/auto_check_coordinator.gd`、`client/godot/scripts/main.gd`、相关 focused model/tests、本文档 | 测试夹具可能意外掩盖真实开局问题。 | 先复现失败；所有同源检查通过；新账号空宠/空背包/零钻石契约仍通过；Godot parse、`git diff --check` 通过。 |
 | P0.2 | Lv1 4V 与隐藏成长是核心，但当前物种档案覆盖少，客户端/服务端种子、逐级成长和观察等级需要统一。 | 定义稳定的实例成长字段与服务端权威升级；每物种独立分布；观察结果只给证据/区间，不泄露隐藏品质；离线生成百分位。 | `data/balance/pet_growth_species_profiles.json`、`pet_templates.json`、`pet_individual_growth_model.gd`、`pet_growth_observation_model.gd`、服务端 pet/progression focused domain、测试与 CSV 工具 | 改公式会影响旧宠与商业宠价值。 | 固定种子双端 Lv1→140 一致；每档至少 10,000 样本审计；约 Lv20 能区分明显优劣但不能精确反推种子；旧宠迁移报告无丢失。 |
-| P0.3 | Lv20–140 进度配置存在空 mapIds、错误 map/group ID，真实挂机路线与数值模拟脱节。 | 逐段建立真实地图—遇敌组—经验—掉落—消耗契约；修正无效引用；接入在线挂机与可配置离线 50% 收益。 | `data/balance/progression_zones.json`、`data/encounter_tables.json`、地图 JSON、`profile-actions.js`、progression/hang models、GM config、测试 | 调整产出会改变经济速度。 | 新号隔离档案可自动练到每个关键等级门槛；所有引用有效；在线/离线比例可由 GM 改且有审计；经济账本不出现无限产出。 |
-| P0.4 | 服务端被动、反击、闪避、幸运一击与客户端显示/本地模型可能不一致，PvP 不可信。 | 建立共享数据解释器或服务端等价解析；所有竞技结算只认服务端；输出稳定 battle event list。 | `battle_passive_skills.json`、`battle_model.gd`、新 focused server battle rules module、`auth-service.js` 仅 wiring、battle tests | 会改变现有战斗结果与回放。 | 五个现有被动逐项服务端用例；反击/闪避/幸运一击固定种子用例；客户端只回放服务端事件；N vs N 回归全绿。 |
+| P0.3 | Lv20–140 进度配置存在空/错误 map/group ID，真实挂机路线与数值模拟脱节；联网遇敌还接受客户端提交的 form、等级、战斗属性、捕捉覆盖值与经验，可伪造高价值宠或巨额经验。 | 建立服务端权威地图—遇敌组—宠物池—等级—战斗属性—奖励目录，客户端只提交遇敌意图或一次性服务端凭证；拒绝所有野怪事实覆盖。逐段修正路线并接入在线挂机与可配置离线 50% 收益。 | `data/balance/progression_zones.json`、地图 JSON、`map_regions.json`、focused server encounter catalog/domain、`battle-room.js`、progression/hang models、GM config、测试 | 权威化会改变现有遇敌协议和产出速度。 | 伪造 form/等级/属性/captureChance/expReward 全部被拒绝；新号隔离档案可自动练到每个关键等级门槛；所有引用有效；在线/离线比例可由 GM 改且有审计；经济账本不出现无限产出。 |
+| P0.4 | 服务端未加载宠物被动目录，反击、闪避、幸运一击与客户端显示/本地模型可能不一致；宠技 `slot` 又被全局唯一校验，1–7 已占满，实际无法扩展第八个技能，PvP 和后续融合构筑都不可信。 | 把“可扩展技能目录”与“实例最多装备 7 格”解耦；建立共享数据解释器或服务端等价主动/被动规则；所有竞技结算只认服务端；输出稳定 battle event list。 | `battle_actions.json`、`battle_passive_skills.json`、pet template/action catalogs、`battle_model.gd`、新 focused server battle rules module、`auth-service.js` 仅 wiring、battle tests | 会改变现有战斗结果、技能槽迁移与回放。 | 技能目录可安全超过 7 个而单宠仍为 7 格；五个现有被动逐项服务端用例；反击/闪避/幸运一击固定种子用例；客户端只回放服务端事件；N vs N 回归全绿。 |
 | P0.5 | 缺少明确档案版本迁移和随时可用的全面 GM 测试号。 | 增加版本化迁移/备份报告；提供幂等 GM QA seed/refresh 命令，授予全货币、代表性道具、各成长档宠物与关键权限，但不覆盖普通玩家。 | profile normalization、MySQL store、`server/node/scripts/`、GM plugin/userdata helper、storage/GM tests | GM 工具若鉴权错误会成为资产漏洞。 | 重复执行结果幂等；GM 登录后能测试全部核心面板；普通玩家调用全部拒绝；迁移前后数量/资产校验一致；可回滚备份。 |
 | P0.6 | 200 人同地图目标尚无容量证据，公网边界仍有可信代理、请求体、WS token、限流和广播风险。 | 先写容量预算与压测器；实现可信代理/请求限制/AOI 广播/背压的最小安全基线；不在尚未压测前大改成分布式架构。 | `http-server.js`、event hub/presence focused modules、protocol、load tools、deployment docs/tests | 网络改动可能造成掉线或漏同步。 | 200 模拟连接同地图 30 分钟；移动/聊天/战斗广播有上限；事件延迟和内存不持续增长；伪造代理头与超大请求被拒绝。 |
 | P0.7 | 当前“训练伙伴”会凭空生成陪练人物/宠物，与用户要求的真实角色快照伙伴冲突。 | 退役玩家可见的虚构训练伙伴与服务端兜底；若未来重新启用伙伴，单独定义来源账号、快照时点、人物+宠物属性、过期规则和 PvP 禁用边界。 | training partner model/data、battle room fallback、panel flow、相关任务/测试 | 删除兜底可能暴露依赖假伙伴才能启动的旧战斗测试。 | 正常玩家流程不再出现“陪练伙伴”；单人和真实组队战斗仍可启动；所有旧引用清点完成；未来快照契约不伪造资产。 |
@@ -125,7 +125,7 @@
 
 | ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
-| P1.1 | 自动捕捉/丢弃已有入口，但必须服务于 Lv1 4V 和隐藏成长，而不能误删潜力宠。 | 审计现有规则；支持按物种、4V、元素、数量、是否新品种筛选；隐藏成长只能在达到观察证据后参与规则；关键/付费/绑定宠永不自动丢弃。 | hang settings、capture settlement、pet codex、相关 UI/服务端 tests | 误删宠物是不可接受的高危损失。 | 全部筛选组合固定种子测试；任何保护宠都无法自动删除；玩家可查看最近自动处理记录并由 GM 审计。 |
+| P1.1 | 自动捕捉/丢弃已有入口，但必须服务于 Lv1 4V 和隐藏成长，不能误删潜力宠；当前队伍与兽栏同时满时成功捕捉可能只进入不可恢复的 `lostCapturedPets` 记录。 | 审计现有规则；支持按物种、4V、元素、数量、是否新品种筛选；隐藏成长只能在达到观察证据后参与规则；关键/付费/绑定宠永不自动丢弃；增加临时收容/邮件恢复与容量预警。 | hang settings、capture settlement、pet codex、临时收容/恢复、相关 UI/服务端 tests | 误删或吞掉宠物是不可接受的高危损失。 | 全部筛选组合固定种子测试；任何保护宠都无法自动删除；队伍/兽栏满时高价值捕获仍可恢复；玩家可查看最近自动处理记录并由 GM 审计。 |
 | P1.2 | 普通宠二转需要与进化/融合形成可比较的终局档位，现有普通转生过薄。 | 定义 0→1→2 转的成本、随机增益、失败/保底、历史记录和重置规则；商业宠使用可配置的付费重置而非直接退款式改档。 | pet rebirth models/data、新 server pet domain、profile migration、UI preview/confirm、tests | 数值稍有偏差就会摧毁老宠价值。 | 10,000 样本显示普通二转目标区间与设计一致；每次结果可追溯；预览不泄露随机结果；付费重置幂等且有审计。 |
 | P1.3 | 进化会换 form/species ID，但必须保留宠物实例历史，并要求先一转。 | 定义进化路线数据、前置、材料、继承项、新造型/动作资产门禁、服务端原子事务和失败回滚。 | 新 `pet_evolution_routes.json`、focused model/domain、pet templates、asset manifest、UI/tests | form 变化会影响图鉴、交易、技能与旧存档。 | 一转前拒绝；成功后实例 ID/历史保留、form 更新、技能继承符合契约；中断不会吞宠/材料；新形态有正式资产。 |
 | P1.4 | 融合要求三只一转材料宠，并通过技能遗传提供更高追求，当前完全缺失。 | 先定父母/底板角色、主动/被动池、冲突规则、随机权重、预览信息、消耗/锁定和交易限制；再实现服务端权威事务。 | 新 fusion contract/data/server domain、pet instance schema、UI、battle catalogs、tests | 消耗三只高价值宠，任何 bug 都是重大资产事故。 | 事务原子；断线/重试不重复消费；固定种子可复现；遗传分布模拟通过；融合宠与普通二转同档但拥有明确构筑优势。 |
@@ -154,6 +154,11 @@
 ## 7. 进度追踪
 
 > 从第一个未完成的 P0 项开始。只有代码、针对性测试和需要的人工证据均完成后才打勾。
+
+### 横向开发工具
+
+- [x] **内置自然语言宠物设计 Skill**
+  - 证据（2026-07-11）：新增项目级 `.agents/skills/design-beastbound-pets/`，把定位/克制、种系/亚种/形态、Lv1 当前四项代理与隐藏成长、Lv1 遇敌概率、捕捉率、主动/被动技能、训练/遗传边界、自动处理保护、服务端权威和验证统一为 Pet Design Contract；`inspect_pet_design.mjs --check` 对当前 11 种系/12 亚种/31 形态输出 `errors=0`，同时明确暴露仅 7 个物种成长档、正式 4V 契约缺失、宠技槽全局唯一、服务端未加载成长/被动目录及客户端遇敌载荷过度可信等阻断；示例设计合同通过校验，Skill Creator `quick_validate.py` 通过。初版按约定不生成美术、动画或音频。
 
 ### P0
 

@@ -29,6 +29,12 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 - Preserve the established input contract from `docs/phase_201_pc_mouse_interaction.md`: all main flows work with left click/buttons; right click is auxiliary and must never become required for gameplay.
 - The server is authoritative for accounts, profiles, inventory, currency, pets, quests, movement acceptance, social state, and network battles. Client-side state may present or cache authoritative data but must not bypass server writes for server sessions.
 
+## Pet Design Workflow
+
+- For any request to design, add, rebalance, audit, place, capture, grow, skill, evolve, fuse, or otherwise change a pet, use the repository skill at `.agents/skills/design-beastbound-pets/SKILL.md`.
+- Start natural-language pet work with its validated Pet Design Contract and catalog inspection. Do not scatter an idea directly across JSON files without resolving role/counterplay, taxonomy, growth/Lv1 proxy, acquisition probability, capture, active/passive skills, server authority, safety, and tests.
+- The initial project skill deliberately excludes art, sprites, animation, and audio. Record future asset requirements but use the dedicated art pipeline only when the user explicitly includes visual production in scope.
+
 ## Change Routing And Boundaries
 
 - Do not put a new feature domain into `client/godot/scripts/main.gd`, `ui/panel_flow_coordinator.gd`, `qa/auto_check_coordinator.gd`, `server/node/src/auth-service.js`, or `server/node/src/http-server.js` merely because those files already touch everything. Add a focused model/controller/domain first and keep entrypoint changes to wiring, dispatch, and compatibility shims.
