@@ -5325,11 +5325,11 @@ func _auto_apply_pet_status_skill_for_check(skill_id: String, target_id: String,
 	}
 
 
-func _auto_check_status_cleanse_item() -> bool:
+func _auto_check_status_cleanse_item() -> Dictionary:
 	var started := _start_stat_formula_test_battle()
 	await get_tree().process_frame
 	if not started:
-		return false
+		return {"ok": false, "reason": "not_started"}
 	var target_id := "ally_speed_normal"
 	battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_POISON, 3, 6, "enemy_back_1")
 	battle_state = BattleModel.set_actor_status(battle_state, target_id, BattleModel.STATUS_SLEEP, 2, 0, "enemy_back_1")
@@ -5349,7 +5349,11 @@ func _auto_check_status_cleanse_item() -> bool:
 	var saw_event: bool = await _auto_wait_for_event_type("item_cleanse", 1200)
 	var target := BattleModel.actor_by_id(battle_state, target_id)
 	var after_count := BattleModel.item_count(battle_state, BattleModel.ITEM_CLEANSE_SINGLE)
-	return (
+	var poison_removed := not BattleStatusModel.has_status(target, BattleModel.STATUS_POISON)
+	var sleep_removed := not BattleStatusModel.has_status(target, BattleModel.STATUS_SLEEP)
+	var ledger_cleansed := str(battle_last_event_ledger.get("statusResult", "")) == "cleansed"
+	return {
+		"ok": (
 		menu_open
 		and button_label_ok
 		and mode_ok
@@ -5357,10 +5361,23 @@ func _auto_check_status_cleanse_item() -> bool:
 		and pet_panel_open
 		and saw_event
 		and after_count == before_count - 1
-		and not BattleStatusModel.has_status(target, BattleModel.STATUS_POISON)
-		and not BattleStatusModel.has_status(target, BattleModel.STATUS_SLEEP)
-		and str(battle_last_event_ledger.get("statusResult", "")) == "cleansed"
-	)
+		and poison_removed
+		and sleep_removed
+		and ledger_cleansed
+		),
+		"menu": menu_open,
+		"label": button_label_ok,
+		"mode": mode_ok,
+		"selected": selected,
+		"petMenu": pet_panel_open,
+		"event": saw_event,
+		"beforeCount": before_count,
+		"afterCount": after_count,
+		"poisonRemoved": poison_removed,
+		"sleepRemoved": sleep_removed,
+		"ledgerCleansed": ledger_cleansed,
+		"lastEvent": battle_last_event_type,
+	}
 
 
 func _auto_check_status_overwrite() -> Dictionary:
@@ -5963,7 +5980,20 @@ func _start_stat_formula_test_battle() -> bool:
 	if not loaded or zones.is_empty():
 		return false
 	var previous_profile := player_profile.duplicate(true)
-	player_profile = PlayerProgressModel.default_profile()
+	var test_profile := PlayerProgressModel.default_profile()
+	test_profile["petInstances"] = [
+		PlayerProgressModel.create_pet_instance_from_form(
+			"pet_stat_formula_active",
+			"数值验证布伊",
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_BATTLE,
+			1
+		),
+	]
+	test_profile["activePetInstanceId"] = "pet_stat_formula_active"
+	test_profile["nextPetInstanceSerial"] = 2
+	test_profile = PlayerProgressModel.with_battle_item_inventory(test_profile, BattleModel.default_item_bag())
+	player_profile = PlayerProgressModel.normalize_profile(test_profile)
 	_start_battle(BattleModel.create_stat_formula_test_battle(zones[0] as Dictionary))
 	player_profile = previous_profile
 	return true

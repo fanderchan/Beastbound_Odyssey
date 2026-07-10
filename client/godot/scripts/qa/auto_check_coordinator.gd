@@ -204,6 +204,12 @@ func _qa_bui_pet_profile() -> Dictionary:
 	return PlayerProgressModel.normalize_profile(profile)
 
 
+func _qa_battle_profile() -> Dictionary:
+	var profile := PlayerProgressModel.with_starter_equipment(_qa_bui_pet_profile())
+	profile = PlayerProgressModel.with_battle_item_inventory(profile, BattleModel.default_item_bag())
+	return PlayerProgressModel.normalize_profile(profile)
+
+
 func _qa_send_touch_press(screen_point: Vector2) -> void:
 	var event := InputEventScreenTouch.new()
 	event.index = 0
@@ -4214,6 +4220,8 @@ func _run_auto_battle_action_system_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_battle_pet_command_check() -> void:
+	host.profile_save_enabled = false
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -4260,6 +4268,8 @@ func _run_auto_battle_pet_command_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_battle_pet_target_check() -> void:
+	host.profile_save_enabled = false
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -4308,7 +4318,7 @@ func _run_auto_battle_pet_target_check() -> void:
 
 func _run_auto_battle_switch_pet_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -10846,7 +10856,11 @@ func _run_auto_stage6_content_check() -> void:
 	var saved_bank_event_socket = host.server_event_socket
 	var saved_bank_event_state: String = host.server_event_state
 	var saved_bank_event_reconnect_remaining: float = host.server_event_reconnect_remaining
-	var quick_bank_profile := PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 5000)
+	var quick_bank_profile := PlayerProgressModel.with_backpack_slots(
+		PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 5000),
+		[{"itemId": "item_meat_small", "count": 6}]
+	)
+	quick_bank_profile = PlayerProgressModel.with_diamonds(quick_bank_profile, 5000)
 	quick_bank_profile = PlayerProgressModel.normalize_profile(quick_bank_profile)
 	quick_bank_profile["bank"] = {
 		"stoneCoins": 2000,
@@ -12051,7 +12065,24 @@ func _run_auto_player_growth_contract_check() -> void:
 
 func _run_auto_server_profile_contract_check() -> void:
 	host.profile_save_enabled = false
-	var profile = PlayerProgressModel.normalize_profile(PlayerProgressModel.default_profile())
+	var empty_profile = PlayerProgressModel.normalize_profile(PlayerProgressModel.default_profile())
+	var empty_preview = PlayerProgressModel.server_migration_preview(empty_profile)
+	var empty_counts = empty_preview.get("counts", {}) as Dictionary
+	var empty_backpack_occupied := 0
+	for slot in PlayerProgressModel.backpack_slots(empty_profile):
+		if str(slot.get("itemId", "")).strip_edges() != "" and int(slot.get("count", 0)) > 0:
+			empty_backpack_occupied += 1
+	var empty_start_ok = (
+		int(empty_counts.get("pets", -1)) == 0
+		and int(empty_counts.get("backpackSlots", 0)) >= BackpackModel.BASE_SLOT_LIMIT
+		and empty_backpack_occupied == 0
+		and int(empty_counts.get("equipmentSlots", -1)) == 0
+		and int(empty_counts.get("equipmentInstances", -1)) == 0
+		and int(empty_counts.get("equipmentSlotInstanceIds", -1)) == 0
+		and PlayerProgressModel.diamonds(empty_profile) == 0
+	)
+	var profile = PlayerProgressModel.with_starter_equipment(_qa_bui_pet_profile())
+	profile = PlayerProgressModel.normalize_profile(profile)
 	var sync = PlayerProgressModel.server_sync_state(profile)
 	var contract = PlayerProgressModel.server_profile_contract()
 	var errors = PlayerProgressModel.server_contract_errors()
@@ -12083,7 +12114,7 @@ func _run_auto_server_profile_contract_check() -> void:
 		and manifest.has("contract")
 		and manifest.has("preview")
 	)
-	var counts_ok = (
+	var populated_counts_ok = (
 		int(counts.get("pets", 0)) >= 4
 		and int(counts.get("backpackSlots", 0)) >= BackpackModel.BASE_SLOT_LIMIT
 		and int(counts.get("equipmentSlots", 0)) >= 8
@@ -12092,13 +12123,17 @@ func _run_auto_server_profile_contract_check() -> void:
 		and int(module_counts.get("wallet", 0)) >= 2
 		and int(module_counts.get("serverSync", 0)) >= 1
 	)
+	var counts_ok = empty_start_ok and populated_counts_ok
 	var status = "ok" if sync_ok and contract_ok and counts_ok else "failed"
-	print("server profile contract check ready: status=%s sync=%s contract=%s counts=%s modules=%d equipment_instances=%d equipment_slots=%d profile_errors=%s errors=%s" % [
+	print("server profile contract check ready: status=%s sync=%s contract=%s counts=%s empty_start=%s populated=%s modules=%d pets=%d equipment_instances=%d equipment_slots=%d profile_errors=%s errors=%s" % [
 		status,
 		str(sync_ok),
 		str(contract_ok),
 		str(counts_ok),
+		str(empty_start_ok),
+		str(populated_counts_ok),
 		int(preview.get("moduleCount", 0)),
+		int(counts.get("pets", 0)),
 		int(counts.get("equipmentInstances", 0)),
 		int(counts.get("equipmentSlotInstanceIds", 0)),
 		" | ".join(profile_errors),
@@ -22375,13 +22410,15 @@ func _run_auto_battle_status_hit_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_battle_status_rule_check() -> void:
-	var cleanse_ok = await host._auto_check_status_cleanse_item()
+	var cleanse_result = await host._auto_check_status_cleanse_item()
+	var cleanse_ok = bool(cleanse_result.get("ok", false))
 	var overwrite_result = host._auto_check_status_overwrite()
 	var immune_result = host._auto_check_status_immunity()
 	var status = "ok" if cleanse_ok and bool(overwrite_result.get("ok", false)) and bool(immune_result.get("ok", false)) else "failed"
-	print("battle status rule check ready: status=%s cleanse=%s overwrite=%s immune=%s overwrite_result=%s immune_result=%s" % [
+	print("battle status rule check ready: status=%s cleanse=%s cleanse_result=%s overwrite=%s immune=%s overwrite_result=%s immune_result=%s" % [
 		status,
 		str(cleanse_ok),
+		str(cleanse_result),
 		str(overwrite_result.get("ok", false)),
 		str(immune_result.get("ok", false)),
 		str(overwrite_result.get("result", "")),
@@ -22794,7 +22831,7 @@ func _run_auto_battle_spirit_four_check() -> void:
 
 func _run_auto_battle_item_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -22819,7 +22856,7 @@ func _run_auto_battle_item_check() -> void:
 
 func _run_auto_battle_item_count_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()

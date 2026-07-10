@@ -55,7 +55,7 @@
 2. 普通宠物强化没有实际属性收益，普通转生缺少有意义的继承；进化、融合与技能遗传尚无完整权威契约，核心卖点未闭环。
 3. 多个 Lv20–140 进度区间引用空地图或不存在的遇敌组；数值模拟绿灯不能证明真实世界能顺畅练到 140。
 4. 客户端可解释宠物被动，服务端主要携带被动 ID，却没有完整映射全部被动、反击、闪避和幸运一击；竞技结果存在双端语义漂移风险。
-5. 新账号改为空宠、空背包、零钻石后，六个客户端回归检查仍依赖旧默认档案；当前全量 Godot 门禁不可信。
+5. 调查时，新账号改为空宠、空背包、零钻石后至少九个客户端检查仍依赖旧默认档案；P0.1 已修复这些已复现项，但后续新增测试仍必须使用显式夹具。
 6. “200 人同地图”尚无 AOI、广播预算、背压、掉线风暴和长时压测证据；当前单进程状态模型存在规模风险。
 7. 充值、商业宠发放、订单幂等、退款回收、补单、审计和客服工具尚未设计；直接接钱会形成严重资产与信任风险。
 8. 地图和任务数量看似不少，但一座核心村外大多缺 NPC、事件、奖励链和故事目标；重复洞窟/庄园无法支撑长期探索。
@@ -113,7 +113,7 @@
 
 | ID | 问题与原因 | 方案 | 主要涉及文件 | 风险 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
-| P0.1 | 空白新账号改动后六个 Godot 检查仍假定默认有宠物/物品/钻石，全量门禁失真。 | 测试显式构造所需宠物和资产；不把产品默认档案改回旧状态；把纯公式检查与玩家开局夹具解耦。 | `client/godot/scripts/qa/auto_check_coordinator.gd`、`client/godot/scripts/main.gd`、相关 focused model/tests、本文档 | 测试夹具可能意外掩盖真实开局问题。 | 先复现六个失败；修改后六项全部通过；新账号空宠/空背包契约检查仍通过；Godot parse、`git diff --check` 通过。 |
+| P0.1 | 空白新账号改动后六个已知 Godot 检查仍假定默认有宠物/物品/钻石；扩展复现又发现战斗道具、数量和换宠三项同源失败。 | 测试显式构造所需宠物和资产；不把产品默认档案改回旧状态；把纯公式检查与玩家开局夹具解耦。 | `client/godot/scripts/qa/auto_check_coordinator.gd`、`client/godot/scripts/main.gd`、相关 focused model/tests、本文档 | 测试夹具可能意外掩盖真实开局问题。 | 先复现失败；所有同源检查通过；新账号空宠/空背包/零钻石契约仍通过；Godot parse、`git diff --check` 通过。 |
 | P0.2 | Lv1 4V 与隐藏成长是核心，但当前物种档案覆盖少，客户端/服务端种子、逐级成长和观察等级需要统一。 | 定义稳定的实例成长字段与服务端权威升级；每物种独立分布；观察结果只给证据/区间，不泄露隐藏品质；离线生成百分位。 | `data/balance/pet_growth_species_profiles.json`、`pet_templates.json`、`pet_individual_growth_model.gd`、`pet_growth_observation_model.gd`、服务端 pet/progression focused domain、测试与 CSV 工具 | 改公式会影响旧宠与商业宠价值。 | 固定种子双端 Lv1→140 一致；每档至少 10,000 样本审计；约 Lv20 能区分明显优劣但不能精确反推种子；旧宠迁移报告无丢失。 |
 | P0.3 | Lv20–140 进度配置存在空 mapIds、错误 map/group ID，真实挂机路线与数值模拟脱节。 | 逐段建立真实地图—遇敌组—经验—掉落—消耗契约；修正无效引用；接入在线挂机与可配置离线 50% 收益。 | `data/balance/progression_zones.json`、`data/encounter_tables.json`、地图 JSON、`profile-actions.js`、progression/hang models、GM config、测试 | 调整产出会改变经济速度。 | 新号隔离档案可自动练到每个关键等级门槛；所有引用有效；在线/离线比例可由 GM 改且有审计；经济账本不出现无限产出。 |
 | P0.4 | 服务端被动、反击、闪避、幸运一击与客户端显示/本地模型可能不一致，PvP 不可信。 | 建立共享数据解释器或服务端等价解析；所有竞技结算只认服务端；输出稳定 battle event list。 | `battle_passive_skills.json`、`battle_model.gd`、新 focused server battle rules module、`auth-service.js` 仅 wiring、battle tests | 会改变现有战斗结果与回放。 | 五个现有被动逐项服务端用例；反击/闪避/幸运一击固定种子用例；客户端只回放服务端事件；N vs N 回归全绿。 |
@@ -157,7 +157,8 @@
 
 ### P0
 
-- [ ] **P0.1 恢复空白新账号后的可信 Godot 回归门禁**
+- [x] **P0.1 恢复空白新账号后的可信 Godot 回归门禁**
+  - 证据（2026-07-11）：先稳定复现六个已知失败（`.run/godot_auto_checks/2026-07-10T17-27-04-539Z.log`），扩展回归又复现 battle item/item count/switch pet 三个同源失败；改为显式宠物、战斗道具、银行资产和迁移档案夹具后，最终组合检查 11/11 通过（`.run/godot_auto_checks/2026-07-10T17-41-34-128Z.log`），宠物指令/选敌补充组 6/6 通过（`.run/godot_auto_checks/2026-07-10T17-40-10-114Z.log`）。`--auto-server-profile-contract-check` 同时输出 `empty_start=true populated=true`，继续锁定默认零宠、空背包、零装备、零钻石；未连接或写入 MySQL。
 - [ ] **P0.2 统一 Lv1 4V、隐藏成长、观察与 Lv140 双端事实**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**
