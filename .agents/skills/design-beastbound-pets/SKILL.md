@@ -101,7 +101,7 @@ git diff --check
 Then select affected checks:
 
 - Template/skills: `--auto-pet-template-catalog-check`, battle pet command/target, passive and server battle checks.
-- Growth/4V: balance catalog, growth observation, fixed-seed parity, and at least 10,000 offline samples per finalized profile.
+- Growth/4V: balance catalog, growth observation, fixed-seed parity, `pet-exp-settlement` plus service-entry integration tests, and at least 10,000 offline samples per finalized profile.
 - Encounter/capture: encounter table, capture tools/settings/result, map/region, server battle-room capture, and hang settlement checks.
 - Management/inheritance: pet safety, stable capacity, skill training, rebirth/evolution/fusion transaction and replay tests.
 - UI/runtime: launch the real 1280x720 client; add idle/moving/input performance evidence when touching visible or hot paths.

@@ -184,6 +184,9 @@
     - [x] **P0.2c-1 严格服务端成长目录与 v1 逐级结算影子内核**
       - 证据（2026-07-11）：新增固定读取共享 JSON 的严格 Node 成长目录，验证 schema、精确四轴/范围/分布/概率、最差属性下界及 profile↔form ID/名称/基础属性引用；当前 7 个 active linked form 返回带 form 身份、深冻结且不可绕过的 authority profile，24 个未链接形态保持 legacy；同形态历史 v1/v2 可共存，新宠只取模板 active 档，旧宠无实例 envelope 时明确 `legacy_existing`，不会因模板新增档案重抽。新增纯 `pet-growth-runtime.js`，锁定唯一 canonical seed/envelope、冻结培养与公开转生加成交叉校验、6 位 continuous 逐级累加、确定性全量重算、公开等级证据和满血/绝对伤势/死亡 0 语义；一次 Lv1→140 与逐级调用 139 次完全相同，损坏 seed/roll/continuous/public/root/Lv1 事实全部失败关闭且输入不变。公开 marker 同步要求 exact envelope/private/public keys、六位量化、无根部私密别名，并由真实 runtime→public 投影测试锁定无秘密且幂等。成长相关 Node 37/37、完整服务端 185/185 通过；尚未接任何生产 EXP/创建/转生/响应路径，不迁移或重滚旧宠，见 `docs/phase_211_server_pet_growth_runtime_shadow.md`。
     - [ ] **P0.2c-2 安全新 Lv1 v1 创建与三个普通 EXP 入口统一 dispatcher**
+      - [x] **P0.2c-2a 默认关闭的战宠、骑宠与世界经验道具统一 dispatcher 暗接线**
+        - 证据（2026-07-11）：新增纯 `pet-exp-settlement.js`，正式服务从严格目录构造唯一且默认关闭的 dispatcher；linked/unlinked legacy 保持旧等级经验公式且不改四维，合法 v1、未知或损坏 authority 状态固定失败关闭，不回退旧 writer。世界经验道具先预结算再扣道具/替换宠物，失败时宠物、背包、任务与 revision 不变；战斗 writeback 先预检全场真实战宠/骑宠，任一失败时所有参战账号的人物、战宠、骑宠和训练伙伴 EXP 均不发，内部错误、seed 与逐级 settlement 不进入响应/战报。宠物设计 inspector 现在能报告服务端成长目录、dispatcher 已接线及 v1 仍关闭；现有假 `bui_normal_blue_water10` 回归夹具改用目录真实 legacy 形态。成长/战斗/档案定向 74/74、完整服务端 198/198、Godot 4.7 parse 与宠物/战斗目录检查通过；尚未创建或启用任何 v1 宠，见 `docs/phase_212_default_off_pet_exp_dispatcher.md`。
+      - [ ] **P0.2c-2b 依赖公开投影/协议 v2 的安全新 Lv1 v1 创建与 dispatcher 正式启用**
     - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与完整升级入口收口**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

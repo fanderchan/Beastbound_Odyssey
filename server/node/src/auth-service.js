@@ -13,6 +13,11 @@ const {
   generatePetCultivationRollSeed,
   initializeNewLegacyPetPrivateState,
 } = require("./auth/pet-private-state");
+const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
+const {
+  createPetExpSettlement,
+  publicPetExpSettlementFailure,
+} = require("./auth/pet-exp-settlement");
 const {
   createFamilyManorDomain,
   familyOwnsManor,
@@ -349,6 +354,11 @@ function createAuthService(options = {}) {
   const allowFullProfileSave = Boolean(
     options.allowFullProfileSave ?? (process.env.BEASTBOUND_ALLOW_PROFILE_SAVE === "1")
   );
+  // 新成长运行时尚未完成公开响应与协议 v2 原子切换；服务层先统一路由，v1 必须失败关闭。
+  const petExpSettlement = createPetExpSettlement({
+    growthCatalog: options.petGrowthCatalog || loadPetGrowthCatalog(),
+    calculateAward: battleAwardExpEntry,
+  });
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
   const runtimeActiveSessionIds = new Map();
@@ -1506,7 +1516,7 @@ function createAuthService(options = {}) {
   }
 
   function expireBattleTimeoutsAndEmit(data) {
-    const timeoutEvents = expireBattleTimeouts(data, now, {runtimeActiveSessionIds});
+    const timeoutEvents = expireBattleTimeouts(data, now, {runtimeActiveSessionIds, petExpSettlement});
     if (timeoutEvents.length > 0) {
       save(data);
       for (const event of timeoutEvents) {
@@ -1736,7 +1746,13 @@ function createAuthService(options = {}) {
     addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
-    applyProfileActionToProfile,
+    applyProfileActionToProfile: (profile, action, params, nowFn) => applyProfileActionToProfile(
+      profile,
+      action,
+      params,
+      nowFn,
+      {petExpSettlement},
+    ),
     bagItemById,
     bagItemIsBound,
     bagItemLabel,
@@ -1754,7 +1770,13 @@ function createAuthService(options = {}) {
     claimQuestByIdToProfile,
     clampInt,
     clone,
-    closeBattleRoomWithResult,
+    closeBattleRoomWithResult: (serviceData, roomValue, result, nowFn) => closeBattleRoomWithResult(
+      serviceData,
+      roomValue,
+      result,
+      nowFn,
+      {petExpSettlement},
+    ),
     consumeBackpackItem,
     createBattleRoomBattleState,
     createPartyForLeader,
@@ -1831,11 +1853,22 @@ function createAuthService(options = {}) {
     recordQuestEventByIdToProfile,
     recordQuestEventToProfile,
     removeAccountFromParty,
-    removeOfflinePartyPveParticipantsFromRoom: (serviceData, roomValue, accountIds) => removeOfflinePartyPveParticipantsFromRoom(serviceData, roomValue, accountIds, {now, runtimeActiveSessionIds}),
+    removeOfflinePartyPveParticipantsFromRoom: (serviceData, roomValue, accountIds) => removeOfflinePartyPveParticipantsFromRoom(
+      serviceData,
+      roomValue,
+      accountIds,
+      {now, runtimeActiveSessionIds, petExpSettlement},
+    ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
-    resolveBattleRoomTurn,
+    resolveBattleRoomTurn: (serviceData, roomValue, battleValue, nowFn) => resolveBattleRoomTurn(
+      serviceData,
+      roomValue,
+      battleValue,
+      nowFn,
+      {petExpSettlement},
+    ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
       runtimeActiveSessionIds,
@@ -5406,13 +5439,13 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
   }
   if (room.participantAccountIds.length <= 0) {
     const closeResult = battleRoomResultForLeave(room, result.removedAccountIds[0] || "", nowFn);
-    closeBattleRoomWithResult(data, room, closeResult, nowFn);
+    closeBattleRoomWithResult(data, room, closeResult, nowFn, options);
   } else if (
     String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
     battle.requiredActorIds.length > 0 &&
     battle.requiredActorIds.every((actorId) => battle.commands && battle.commands[actorId])
   ) {
-    result.turn = resolveBattleRoomTurn(data, room, battle, nowFn);
+    result.turn = resolveBattleRoomTurn(data, room, battle, nowFn, options);
   }
   data.battleRooms[room.roomId] = room;
   recordBattleTrace(data, room, "party_pve_offline_participants_removed", {
@@ -6622,7 +6655,7 @@ function battleCommandTargetActor(payload, data, room, battle, actor, actionId) 
   return targetAccountId ? battlePlayerActorByAccountId(battle, targetAccountId) : null;
 }
 
-function resolveBattleRoomTurn(data, room, battle, now) {
+function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
   battle.turnSeq = Number(battle.turnSeq || 0) + 1;
   const round = Number(battle.round || 1);
   const orderedCommands = battleTurnCommandsForResolution(room, battle, round)
@@ -6752,7 +6785,7 @@ function resolveBattleRoomTurn(data, room, battle, now) {
   battle.updatedAt = eventList.resolvedAt;
   room.updatedAt = eventList.resolvedAt;
   if (result) {
-    closeBattleRoomWithResult(data, room, result, now);
+    closeBattleRoomWithResult(data, room, result, now, options);
     eventList.actors = battle.actors.map(publicBattleActor);
     eventList.result = publicBattleResult(battle.result);
   }
@@ -7897,7 +7930,7 @@ function battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now)
   };
 }
 
-function closeBattleRoomWithResult(data, room, result, now) {
+function closeBattleRoomWithResult(data, room, result, now, options = {}) {
   const battle = battleRoomBattleStateForMutation(room, now);
   const recordId = `battle_record_${String(room.roomId || "").replace(/^battle_room_/, "")}`;
   room.status = BATTLE_ROOM_CLOSED;
@@ -7912,7 +7945,7 @@ function closeBattleRoomWithResult(data, room, result, now) {
   battle.submittedAccountIds = [];
   battle.commandDeadlineAt = "";
   battle.updatedAt = room.closedAt;
-  battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now);
+  battle.profileWriteback = applyBattleRoomProfileWriteback(data, room, battle, battle.result, now, options);
   const recordPointReturns = applyBattleRoomResultReturns(data, room, battle, battle.result, now);
   const recordPointReturnAccountIds = new Set(recordPointReturns.map((entry) => String(entry.accountId || "")).filter(Boolean));
   const positionRestores = restoreBattleParticipantPositions(data, room, {
@@ -8065,6 +8098,9 @@ function battleRecordExpSummaries(writeback) {
         amount: Math.max(0, Math.trunc(Number(exp.amount || 0))),
         baseAmount: Math.max(0, Math.trunc(Number(exp.baseAmount || 0))),
         killCount: Math.max(0, Math.trunc(Number(exp.killCount || 0))),
+        failed: Boolean(exp.failed),
+        code: String(exp.code || ""),
+        attemptedAmount: Math.max(0, Math.trunc(Number(exp.attemptedAmount || 0))),
         playerAmount: Math.max(0, Math.trunc(Number(exp.player && exp.player.amount || 0))),
         petAmount: Array.isArray(exp.pets) ? exp.pets.reduce((sum, pet) => sum + Math.max(0, Math.trunc(Number(pet && pet.amount || 0))), 0) : 0,
         ridePetAmount: Array.isArray(exp.ridePets) ? exp.ridePets.reduce((sum, pet) => sum + Math.max(0, Math.trunc(Number(pet && pet.amount || 0))), 0) : 0,
@@ -8140,7 +8176,7 @@ function battleRecordSummaryAgainst(data, selfAccount, targetAccount) {
 }
 
 
-function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
+function applyBattleRoomProfileWriteback(data, room, battle, result, now, options = {}) {
   const updatedAt = String(result && result.endedAt || room.closedAt || isoNow(now));
   const writeback = {
     kind: "battle_profile_writeback",
@@ -8154,6 +8190,13 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
   if (!data || !battle || !Array.isArray(battle.actors)) {
     return writeback;
   }
+  const expPreflight = preflightBattleRoomPetExpSettlements(
+    data,
+    room,
+    battle,
+    result,
+    options.petExpSettlement,
+  );
   for (const accountId of requiredBattleCommandAccountIds(room)) {
     const binding = data.profileBindings[String(accountId || "")] || null;
     if (!binding || !binding.playerId) {
@@ -8250,7 +8293,14 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
     summary.capturedPets = captureWriteback.capturedPets;
     summary.lostCapturedPets = captureWriteback.lostCapturedPets;
     const expReward = battleRoomProfileExpReward(room, battle, result, profile, accountId);
-    const expWriteback = applyBattleExpRewardToProfile(profile, battle, accountId, expReward);
+    const expWriteback = applyBattleExpRewardToProfile(
+      profile,
+      battle,
+      accountId,
+      expReward,
+      options.petExpSettlement,
+      expPreflight.ok ? null : expPreflight,
+    );
     changed = changed || expWriteback.changed;
     summary.exp = expWriteback.publicExp;
     const rewardWriteback = applyBattleVictoryRewardsToProfile(profile, room, battle, result);
@@ -8302,6 +8352,28 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now) {
     writeback.profiles.push(summary);
   }
   return writeback;
+}
+
+function preflightBattleRoomPetExpSettlements(data, room, battle, result, petExpSettlement) {
+  for (const accountId of requiredBattleCommandAccountIds(room)) {
+    const binding = data.profileBindings[String(accountId || "")] || null;
+    const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? clone(profileDoc.profile)
+      : null;
+    if (!profile) {
+      continue;
+    }
+    const reward = battleRoomProfileExpReward(room, battle, result, profile, accountId);
+    if (!reward || typeof reward !== "object" || Array.isArray(reward)) {
+      continue;
+    }
+    const prepared = prepareBattlePetExpSettlements(profile, reward, petExpSettlement);
+    if (!prepared.ok) {
+      return prepared;
+    }
+  }
+  return {ok: true};
 }
 
 function applyBattleHangSessionToProfile(profile, room, battle, result, accountId, capturedCount) {
@@ -10787,7 +10859,14 @@ function battleScaledExpForRecipientLevel(baseReward, recipientLevel, enemyLevel
   return Math.max(1, Math.trunc(base * decayFactor / BATTLE_EXP_DECAY_LEVEL_RANGE));
 }
 
-function applyBattleExpRewardToProfile(profile, battle, accountId, reward) {
+function applyBattleExpRewardToProfile(
+  profile,
+  battle,
+  accountId,
+  reward,
+  petExpSettlement,
+  preflightFailure = null,
+) {
   if (!reward || typeof reward !== "object" || Array.isArray(reward)) {
     return {changed: false, publicExp: null};
   }
@@ -10808,6 +10887,14 @@ function applyBattleExpRewardToProfile(profile, battle, accountId, reward) {
     trainingPartners: [],
     schemaVersion: 2,
   };
+  if (preflightFailure) {
+    return failedBattleExpWriteback(summary, preflightFailure);
+  }
+  const preparedPets = prepareBattlePetExpSettlements(profile, reward, petExpSettlement);
+  if (!preparedPets.ok) {
+    return failedBattleExpWriteback(summary, preparedPets);
+  }
+
   let changed = false;
   if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
     profile.player = {};
@@ -10824,47 +10911,12 @@ function applyBattleExpRewardToProfile(profile, battle, accountId, reward) {
     };
   }
 
-  const petRewards = Array.isArray(reward.pets) ? reward.pets : [];
-  for (const petReward of petRewards) {
-    const petId = String(petReward && petReward.petId || "").trim();
-    if (petId === "" || !battleExpAwardIsPresent(petReward)) {
-      continue;
-    }
-    const pet = profilePetById(profile, petId);
-    if (!pet) {
-      continue;
-    }
-    const petAward = applyBattleExpToEntry(pet, battleExpAwardAmount(petReward), MAX_PET_LEVEL, {
-      name: String(pet.name || pet.displayName || petReward.name || "宠物"),
-    });
-    changed = changed || petAward.changed;
-    summary.pets.push({
-      petId,
-      ...petAward.publicExp,
-      ...publicBattleExpAwardDetails(petReward),
-    });
+  for (const prepared of preparedPets.pets) {
+    replaceObjectContents(prepared.target, prepared.pet);
   }
-
-  const ridePetRewards = Array.isArray(reward.ridePets) ? reward.ridePets : [];
-  for (const rideReward of ridePetRewards) {
-    const petId = String(rideReward && rideReward.petId || "").trim();
-    if (petId === "" || !battleExpAwardIsPresent(rideReward)) {
-      continue;
-    }
-    const pet = profilePetById(profile, petId);
-    if (!pet) {
-      continue;
-    }
-    const petAward = applyBattleExpToEntry(pet, battleExpAwardAmount(rideReward), MAX_PET_LEVEL, {
-      name: String(pet.name || pet.displayName || rideReward.name || "骑宠"),
-    });
-    changed = changed || petAward.changed;
-    summary.ridePets.push({
-      petId,
-      ...petAward.publicExp,
-      ...publicBattleExpAwardDetails(rideReward),
-    });
-  }
+  changed = changed || preparedPets.changed;
+  summary.pets = preparedPets.publicPets;
+  summary.ridePets = preparedPets.publicRidePets;
 
   const partnerRewards = new Map((Array.isArray(reward.trainingPartners) ? reward.trainingPartners : [])
     .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
@@ -10934,6 +10986,90 @@ function applyBattleExpRewardToProfile(profile, battle, accountId, reward) {
     changed,
     publicExp: summary,
   };
+}
+
+function failedBattleExpWriteback(summary, failure) {
+  return {
+    changed: false,
+    publicExp: {
+      ...summary,
+      amount: 0,
+      baseAmount: 0,
+      rawBaseAmount: 0,
+      scaledAmount: 0,
+      partyBonusAmount: 0,
+      killCount: 0,
+      attemptedAmount: summary.amount,
+      attemptedBaseAmount: summary.baseAmount,
+      attemptedRawBaseAmount: summary.rawBaseAmount,
+      attemptedScaledAmount: summary.scaledAmount,
+      attemptedPartyBonusAmount: summary.partyBonusAmount,
+      attemptedKillCount: summary.killCount,
+      failed: true,
+      code: String(failure && failure.code || "pet_growth_state_invalid"),
+      message: String(failure && failure.message || "宠物成长数据异常，本次经验未结算。"),
+    },
+  };
+}
+
+function prepareBattlePetExpSettlements(profile, reward, petExpSettlement) {
+  const candidates = new Map();
+  const publicPets = [];
+  const publicRidePets = [];
+  let changed = false;
+
+  function prepare(rewardEntry, targetSummaries, fallbackName) {
+    const petId = String(rewardEntry && rewardEntry.petId || "").trim();
+    if (petId === "" || !battleExpAwardIsPresent(rewardEntry)) {
+      return null;
+    }
+    const target = profilePetById(profile, petId);
+    if (!target) {
+      return null;
+    }
+    const current = candidates.has(target) ? candidates.get(target).pet : target;
+    const result = petExpSettlement.settle(
+      current,
+      battleExpAwardAmount(rewardEntry),
+      MAX_PET_LEVEL,
+      {name: String(current.name || current.displayName || rewardEntry.name || fallbackName)},
+    );
+    candidates.set(target, {target, pet: result.pet});
+    changed = changed || result.changed;
+    targetSummaries.push({
+      petId,
+      ...result.publicExp,
+      ...publicBattleExpAwardDetails(rewardEntry),
+    });
+    return result;
+  }
+
+  try {
+    for (const petReward of Array.isArray(reward.pets) ? reward.pets : []) {
+      prepare(petReward, publicPets, "宠物");
+    }
+    for (const rideReward of Array.isArray(reward.ridePets) ? reward.ridePets : []) {
+      prepare(rideReward, publicRidePets, "骑宠");
+    }
+  } catch (error) {
+    return publicPetExpSettlementFailure(error);
+  }
+
+  return {
+    ok: true,
+    changed,
+    pets: Array.from(candidates.values()),
+    publicPets,
+    publicRidePets,
+  };
+}
+
+function replaceObjectContents(target, source) {
+  for (const key of Object.keys(target)) {
+    delete target[key];
+  }
+  Object.assign(target, clone(source));
+  return target;
 }
 
 function battleExpAwardAmount(award) {
@@ -11613,7 +11749,7 @@ function normalizeProfileActionId(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function applyProfileActionToProfile(profile, action, params, now) {
+function applyProfileActionToProfile(profile, action, params, now, options = {}) {
   switch (action) {
     case "player_stat_allocate":
       return applyPlayerStatAllocateAction(profile, params);
@@ -11634,7 +11770,7 @@ function applyProfileActionToProfile(profile, action, params, now) {
     case "record_point_save":
       return applyRecordPointSaveAction(profile, params);
     case "world_item_use":
-      return applyWorldItemUseAction(profile, params);
+      return applyWorldItemUseAction(profile, params, options);
     case "pet_skill_set_slot":
       return applyPetSkillSetSlotAction(profile, params);
     case "pet_skill_move_slot":
@@ -12053,7 +12189,7 @@ function applyRecordPointSaveAction(profile, params) {
   return {ok: true, message: `记录点已保存：${profile.recordPoint.label}。`};
 }
 
-function applyWorldItemUseAction(profile, params) {
+function applyWorldItemUseAction(profile, params, options = {}) {
   const itemId = String(params.itemId || "").trim();
   const item = bagItemById(itemId);
   if (!item) {
@@ -12067,7 +12203,7 @@ function applyWorldItemUseAction(profile, params) {
     return applyWorldPlayerExpItemAction(profile, itemId);
   }
   if (useType === "pet_exp") {
-    return applyWorldPetExpItemAction(profile, itemId, params);
+    return applyWorldPetExpItemAction(profile, itemId, params, options.petExpSettlement);
   }
   if (useType === "mm_stone") {
     return applyWorldMmStoneItemAction(profile, itemId, params);
@@ -12145,7 +12281,7 @@ function applyWorldPlayerExpItemAction(profile, itemId) {
   };
 }
 
-function applyWorldPetExpItemAction(profile, itemId, params) {
+function applyWorldPetExpItemAction(profile, itemId, params, petExpSettlement) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const pet = profilePetByInstanceId(profile, petId);
   const itemLabel = bagItemLabel(itemId);
@@ -12155,12 +12291,21 @@ function applyWorldPetExpItemAction(profile, itemId, params) {
   if (Math.trunc(Number(pet.level || 1)) >= MAX_PET_LEVEL) {
     return {ok: false, code: "pet_level_max", message: `${profilePetName(pet)} 已满级。`};
   }
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+  if (backpackItemCount(profileBackpackSlots(profile), itemId) <= 0) {
     return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
   }
   const exp = expGrantForWorldItem(itemId);
-  const award = applyBattleExpToEntry(pet, exp, MAX_PET_LEVEL, {name: profilePetName(pet)});
-  const publicExp = award.publicExp || {};
+  let settlement;
+  try {
+    settlement = petExpSettlement.settle(pet, exp, MAX_PET_LEVEL, {name: profilePetName(pet)});
+  } catch (error) {
+    return publicPetExpSettlementFailure(error);
+  }
+  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
+    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  }
+  replaceObjectContents(pet, settlement.pet);
+  const publicExp = settlement.publicExp || {};
   return {
     ok: true,
     message: Number(publicExp.levelsGained || 0) > 0
@@ -13886,7 +14031,11 @@ function expireBattleTimeouts(data, now, options = {}) {
     const battle = battleRoomBattleStateForMutation(room, now);
     const partyPveOfflineAccountIds = offlinePartyPveBattleParticipantAccountIds(data, room, {now, runtimeActiveSessionIds});
     if (partyPveOfflineAccountIds.length > 0) {
-      const update = removeOfflinePartyPveParticipantsFromRoom(data, room, partyPveOfflineAccountIds, {now, runtimeActiveSessionIds});
+      const update = removeOfflinePartyPveParticipantsFromRoom(data, room, partyPveOfflineAccountIds, {
+        now,
+        runtimeActiveSessionIds,
+        petExpSettlement: options.petExpSettlement,
+      });
       if (update.changed) {
         for (const partyEvent of update.partyEvents) {
           events.push(partyEvent);
@@ -13920,7 +14069,7 @@ function expireBattleTimeouts(data, now, options = {}) {
     if (!result) {
       continue;
     }
-    closeBattleRoomWithResult(data, room, result, now);
+    closeBattleRoomWithResult(data, room, result, now, options);
     data.battleRooms[room.roomId] = room;
     events.push({
       type: "battle.room_closed",

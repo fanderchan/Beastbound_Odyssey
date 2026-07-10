@@ -310,15 +310,26 @@ const trainedSkillIds = new Set(trainingSkills.map((entry) => String(entry.skill
 const trainerSkillIds = new Set(trainers.flatMap((trainer) => Array.isArray(trainer.skillIds) ? trainer.skillIds.map(String) : []));
 
 const authServiceText = readText("server/node/src/auth-service.js");
+const growthCatalogText = readText("server/node/src/auth/pet-growth-catalog.js");
+const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
 const serverAuthority = {
   loadsPetTemplates: authServiceText.includes("pet_templates.json"),
-  loadsSpeciesGrowthProfiles: authServiceText.includes("pet_growth_species_profiles.json"),
+  loadsSpeciesGrowthProfiles: authServiceText.includes("loadPetGrowthCatalog")
+    && growthCatalogText.includes("pet_growth_species_profiles.json"),
   loadsPassiveCatalog: authServiceText.includes("battle_passive_skills.json"),
   acceptsClientEncounterZonePayload: authServiceText.includes("payload.encounterZone"),
+  petExpDispatcherWired: authServiceText.includes("createPetExpSettlement")
+    && authServiceText.includes("petExpSettlement.settle")
+    && petExpSettlementText.includes("settlePetGrowthToLevel"),
+  petExpAuthorityV1Enabled: authServiceText.includes("enableAuthorityV1: true"),
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
 if (!serverAuthority.loadsPassiveCatalog) issues.warnings.push("Node 当前未加载 battle_passive_skills.json；不能把被动目录存在当成服务端已执行");
 if (serverAuthority.acceptsClientEncounterZonePayload) issues.warnings.push("Node 当前接收客户端 encounterZone；正式遇敌/捕捉前必须补服务端目录校验与权威抽取");
+if (!serverAuthority.petExpDispatcherWired) issues.warnings.push("Node 宠物经验入口尚未统一接入成长 dispatcher");
+if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1Enabled) {
+  issues.warnings.push("Node 宠物经验 dispatcher 已接线但 authority-v1 仍安全关闭；需等待公开投影、客户端不重滚与协议 v2 原子切换");
+}
 
 function resolvedForm(formId) {
   const form = formById.get(formId);
@@ -407,7 +418,7 @@ if (requestedFormId) {
     for (const [toolId, chances] of Object.entries(detail.captureChance)) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
-    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
+    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
   console.log(JSON.stringify(summary, null, 2));
@@ -415,7 +426,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`4V正式契约: ${summary.formalLv14VContract.present ? "有" : "无"}`);
-  console.log(`服务端成长档/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/EXP dispatcher/v1/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

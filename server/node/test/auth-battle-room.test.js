@@ -1908,7 +1908,7 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
   leaderProfile.petInstances.push({
     "instanceId": "exp_ride_pet",
     "petId": "exp_ride_pet",
-    "formId": "bui_normal_blue_water10",
+    "formId": "bui_normal_yellow_wind10",
     "name": "经验骑宠",
     "state": "riding",
     "level": 1,
@@ -2031,6 +2031,18 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
   assert.equal(memberAfter.profile.player.level, 1);
   assert.equal(leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_leader_pet").level > 1, true);
   assert.equal(leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_ride_pet").level > 1, true);
+  assert.deepEqual(
+    (({maxHp, attack, defense, quick}) => ({maxHp, attack, defense, quick}))(
+      leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_leader_pet"),
+    ),
+    {maxHp: 90, attack: 22, defense: 6, quick: 89},
+  );
+  assert.deepEqual(
+    (({maxHp, attack, defense, quick}) => ({maxHp, attack, defense, quick}))(
+      leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_ride_pet"),
+    ),
+    {maxHp: 95, attack: 12, defense: 7, quick: 72},
+  );
   assert.equal(memberAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_member_pet").level, 1);
   assert.equal(leaderAfter.profile.trainingPartners[0].level, 1);
   assert.equal(leaderAfter.profile.trainingPartners[0].pet.level, 1);
