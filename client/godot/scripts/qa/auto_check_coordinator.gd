@@ -37,6 +37,7 @@ const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_ec
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
@@ -3732,6 +3733,19 @@ func _run_auto_pet_growth_observation_check() -> void:
 		str(csv.get("path", "")),
 		int(csv.get("rows", 0)),
 		str(csv.get("error", "")),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_authority_check() -> void:
+	var result := PetGrowthAuthorityModel.validate_golden_vectors()
+	var errors: Array = result.get("errors", [])
+	var status := "ok" if bool(result.get("ok", false)) else "failed"
+	print("pet growth authority ready: status=%s version=%s vectors=%d errors=%s" % [
+		status,
+		PetGrowthAuthorityModel.MODEL_VERSION,
+		int(result.get("vectorCount", 0)),
+		";".join(errors),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

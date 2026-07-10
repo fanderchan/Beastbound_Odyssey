@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "pet_growth_authority_v1",
+  "_comment": "Shared Node/Godot shadow vectors. privateSeed/privateRoll are QA-only and must never enter player responses.",
+  "vectors": [
+    {
+      "id": "uniform_runtime_profile",
+      "profile": {
+        "profileId": "blue_man_dragon_v1",
+        "outputBase": {
+          "maxHp": 60,
+          "attack": 14,
+          "defense": 8,
+          "quick": 6
+        },
+        "outputGrowth": {
+          "maxHp": 8.3,
+          "attack": 2.32,
+          "defense": 1.03,
+          "quick": 1.3
+        },
+        "individualRules": {
+          "initialOutputSpread": {
+            "maxHp": [-5, 5],
+            "attack": [-2, 2],
+            "defense": [-1, 1],
+            "quick": [-2, 2]
+          },
+          "growthOutputSpread": {
+            "maxHp": [-1.1, 1.1],
+            "attack": [-0.32, 0.31],
+            "defense": [-0.15, 0.16],
+            "quick": [-0.22, 0.21]
+          },
+          "distribution": "uniform",
+          "rareExtremeRate": 0
+        }
+      },
+      "privateSeed": "capture-private-0001",
+      "expected": {
+        "privateRoll": {
+          "modelVersion": "pet_growth_authority_v1",
+          "profileId": "blue_man_dragon_v1",
+          "initialBonus": {
+            "maxHp": 2,
+            "attack": 1,
+            "defense": -1,
+            "quick": -1
+          },
+          "innateGrowthBonus": {
+            "maxHp": -0.143908,
+            "attack": 0.215391,
+            "defense": 0.047791,
+            "quick": 0.173693
+          }
+        },
+        "publicSnapshots": [
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "level": 1,
+            "levelOneFourV": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5},
+            "stats": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "level": 2,
+            "levelOneFourV": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5},
+            "stats": {"maxHp": 70, "attack": 18, "defense": 8, "quick": 6}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "level": 20,
+            "levelOneFourV": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5},
+            "stats": {"maxHp": 217, "attack": 63, "defense": 27, "quick": 33}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "blue_man_dragon_v1",
+            "level": 140,
+            "levelOneFourV": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5},
+            "stats": {"maxHp": 1196, "attack": 367, "defense": 157, "quick": 210}
+          }
+        ],
+        "continuousSnapshots": [
+          {"level": 1, "stats": {"maxHp": 62, "attack": 15, "defense": 7, "quick": 5}},
+          {"level": 2, "stats": {"maxHp": 70.156092, "attack": 17.535391, "defense": 8.077791, "quick": 6.473693}},
+          {"level": 20, "stats": {"maxHp": 216.965748, "attack": 63.172429, "defense": 27.478029, "quick": 33.000167}},
+          {"level": 140, "stats": {"maxHp": 1195.696788, "attack": 367.419349, "defense": 156.812949, "quick": 209.843327}}
+        ],
+        "growthDeltas": [
+          {"level": 2, "stats": {"maxHp": 8.156092, "attack": 2.535391, "defense": 1.077791, "quick": 1.473693}},
+          {"level": 20, "stats": {"maxHp": 8.156092, "attack": 2.535391, "defense": 1.077791, "quick": 1.473693}},
+          {"level": 140, "stats": {"maxHp": 8.156092, "attack": 2.535391, "defense": 1.077791, "quick": 1.473693}}
+        ]
+      }
+    },
+    {
+      "id": "weighted_noise_unicode",
+      "profile": {
+        "profileId": "qa_weighted_noise_v1",
+        "outputBase": {"maxHp": 42, "attack": 11, "defense": 9, "quick": 8},
+        "outputGrowth": {"maxHp": 6.75, "attack": 1.85, "defense": 1.42, "quick": 1.63},
+        "individualRules": {
+          "initialOutputSpread": {
+            "maxHp": [-4, 4],
+            "attack": [-2, 2],
+            "defense": [-2, 2],
+            "quick": [-3, 3]
+          },
+          "growthOutputSpread": {
+            "maxHp": [-0.7, 0.7],
+            "attack": [-0.25, 0.25],
+            "defense": [-0.2, 0.2],
+            "quick": [-0.3, 0.3]
+          },
+          "levelOutputNoiseSpread": {
+            "maxHp": [-0.8, 0.8],
+            "attack": [-0.22, 0.22],
+            "defense": [-0.18, 0.18],
+            "quick": [-0.2, 0.2]
+          },
+          "distribution": "weighted_center",
+          "rareExtremeRate": 0.04,
+          "levelNoiseDistribution": "uniform",
+          "levelNoiseRareExtremeRate": 0
+        }
+      },
+      "privateSeed": "石器成长-极品候选-甲",
+      "cultivation": {
+        "initialBonus": {"maxHp": 2, "attack": 1, "defense": 0, "quick": -1},
+        "growthBonus": {"maxHp": 0.15, "attack": 0.04, "defense": 0.02, "quick": 0.03}
+      },
+      "expected": {
+        "privateRoll": {
+          "modelVersion": "pet_growth_authority_v1",
+          "profileId": "qa_weighted_noise_v1",
+          "initialBonus": {"maxHp": 0, "attack": -1, "defense": 0, "quick": -2},
+          "innateGrowthBonus": {
+            "maxHp": -0.386134,
+            "attack": 0.109934,
+            "defense": -0.104994,
+            "quick": -0.035247
+          }
+        },
+        "publicSnapshots": [
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_weighted_noise_v1",
+            "level": 1,
+            "levelOneFourV": {"maxHp": 42, "attack": 10, "defense": 9, "quick": 6},
+            "stats": {"maxHp": 44, "attack": 11, "defense": 9, "quick": 5}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_weighted_noise_v1",
+            "level": 2,
+            "levelOneFourV": {"maxHp": 42, "attack": 10, "defense": 9, "quick": 6},
+            "stats": {"maxHp": 50, "attack": 13, "defense": 10, "quick": 7}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_weighted_noise_v1",
+            "level": 20,
+            "levelOneFourV": {"maxHp": 42, "attack": 10, "defense": 9, "quick": 6},
+            "stats": {"maxHp": 166, "attack": 48, "defense": 34, "quick": 36}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_weighted_noise_v1",
+            "level": 140,
+            "levelOneFourV": {"maxHp": 42, "attack": 10, "defense": 9, "quick": 6},
+            "stats": {"maxHp": 951, "attack": 287, "defense": 194, "quick": 232}
+          }
+        ],
+        "continuousSnapshots": [
+          {"level": 1, "stats": {"maxHp": 44, "attack": 11, "defense": 9, "quick": 5}},
+          {"level": 2, "stats": {"maxHp": 49.790684, "attack": 13.219889, "defense": 10.30832, "quick": 6.664731}},
+          {"level": 20, "stats": {"maxHp": 166.216019, "attack": 48.196854, "defense": 34.215073, "quick": 35.799051}},
+          {"level": 140, "stats": {"maxHp": 951.015189, "attack": 286.841607, "defense": 193.711376, "quick": 231.597303}}
+        ],
+        "growthDeltas": [
+          {"level": 2, "stats": {"maxHp": 5.790684, "attack": 2.219889, "defense": 1.30832, "quick": 1.664731}},
+          {"level": 20, "stats": {"maxHp": 7.020262, "attack": 1.925597, "defense": 1.48927, "quick": 1.525002}},
+          {"level": 140, "stats": {"maxHp": 7.050438, "attack": 1.960658, "defense": 1.460501, "quick": 1.761441}}
+        ]
+      }
+    },
+    {
+      "id": "rare_spike_noise",
+      "profile": {
+        "profileId": "qa_rare_spike_v1",
+        "outputBase": {"maxHp": 36, "attack": 10, "defense": 7, "quick": 12},
+        "outputGrowth": {"maxHp": 5.8, "attack": 1.55, "defense": 1.1, "quick": 2},
+        "individualRules": {
+          "initialOutputSpread": {
+            "maxHp": [-3, 3],
+            "attack": [-2, 2],
+            "defense": [-1, 1],
+            "quick": [-3, 3]
+          },
+          "growthOutputSpread": {
+            "maxHp": [-0.6, 0.6],
+            "attack": [-0.3, 0.3],
+            "defense": [-0.2, 0.2],
+            "quick": [-0.35, 0.35]
+          },
+          "levelOutputNoiseSpread": {
+            "maxHp": [-0.5, 0.5],
+            "attack": [-0.2, 0.2],
+            "defense": [-0.15, 0.15],
+            "quick": [-0.25, 0.25]
+          },
+          "distribution": "rare_spike",
+          "rareExtremeRate": 0.2,
+          "levelNoiseDistribution": "rare_spike",
+          "levelNoiseRareExtremeRate": 0.08
+        }
+      },
+      "privateSeed": "rare-private-0013",
+      "expected": {
+        "privateRoll": {
+          "modelVersion": "pet_growth_authority_v1",
+          "profileId": "qa_rare_spike_v1",
+          "initialBonus": {"maxHp": -3, "attack": -2, "defense": 0, "quick": -2},
+          "innateGrowthBonus": {
+            "maxHp": -0.079194,
+            "attack": -0.286367,
+            "defense": 0.170595,
+            "quick": -0.267464
+          }
+        },
+        "publicSnapshots": [
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_rare_spike_v1",
+            "level": 1,
+            "levelOneFourV": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10},
+            "stats": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_rare_spike_v1",
+            "level": 2,
+            "levelOneFourV": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10},
+            "stats": {"maxHp": 39, "attack": 9, "defense": 8, "quick": 12}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_rare_spike_v1",
+            "level": 20,
+            "levelOneFourV": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10},
+            "stats": {"maxHp": 139, "attack": 31, "defense": 30, "quick": 41}
+          },
+          {
+            "schemaVersion": 1,
+            "growthModelVersion": "pet_growth_authority_v1",
+            "growthSpeciesProfileId": "qa_rare_spike_v1",
+            "level": 140,
+            "levelOneFourV": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10},
+            "stats": {"maxHp": 807, "attack": 178, "defense": 177, "quick": 242}
+          }
+        ],
+        "continuousSnapshots": [
+          {"level": 1, "stats": {"maxHp": 33, "attack": 8, "defense": 7, "quick": 10}},
+          {"level": 2, "stats": {"maxHp": 38.517257, "attack": 9.291314, "defense": 8.294383, "quick": 11.670448}},
+          {"level": 20, "stats": {"maxHp": 139.492233, "attack": 31.438672, "defense": 30.204256, "quick": 41.059066}},
+          {"level": 140, "stats": {"maxHp": 807.450436, "attack": 177.634193, "defense": 176.582555, "quick": 241.634274}}
+        ],
+        "growthDeltas": [
+          {"level": 2, "stats": {"maxHp": 5.517257, "attack": 1.291314, "defense": 1.294383, "quick": 1.670448}},
+          {"level": 20, "stats": {"maxHp": 5.3284, "attack": 1.282469, "defense": 1.130403, "quick": 1.637052}},
+          {"level": 140, "stats": {"maxHp": 5.242749, "attack": 1.136409, "defense": 1.260575, "quick": 1.543722}}
+        ]
+      }
+    }
+  ]
+}

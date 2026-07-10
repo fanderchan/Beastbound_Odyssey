@@ -874,6 +874,7 @@ var auto_server_auth_contract_check: bool = false
 var auto_balance_version_receipt_check: bool = false
 var auto_balance_snapshot_digest_check: bool = false
 var auto_balance_catalog_check: bool = false
+var auto_pet_growth_authority_check: bool = false
 var auto_pet_growth_threshold_check: bool = false
 var auto_pet_growth_observation_check: bool = false
 var auto_pet_growth_species_simulation_check: bool = false
@@ -1506,6 +1507,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_balance_snapshot_digest_check")
 	elif auto_balance_catalog_check:
 		call_deferred("_run_auto_balance_catalog_check")
+	elif auto_pet_growth_authority_check:
+		call_deferred("_run_auto_pet_growth_authority_check")
 	elif auto_pet_growth_threshold_check:
 		call_deferred("_run_auto_pet_growth_threshold_check")
 	elif auto_pet_growth_observation_check:
@@ -2239,6 +2242,8 @@ func _apply_preview_window_args() -> void:
 			auto_balance_snapshot_digest_check = true
 		elif arg == "--auto-balance-catalog-check":
 			auto_balance_catalog_check = true
+		elif arg == "--auto-pet-growth-authority-check":
+			auto_pet_growth_authority_check = true
 		elif arg == "--auto-pet-growth-threshold-check":
 			auto_pet_growth_threshold_check = true
 		elif arg == "--auto-pet-growth-observation-check":
@@ -3068,6 +3073,10 @@ func _run_numeric_experiment_report(check_only: bool = false) -> void:
 
 func _run_auto_pet_growth_observation_check() -> void:
 	await _auto_checks()._run_auto_pet_growth_observation_check()
+
+
+func _run_auto_pet_growth_authority_check() -> void:
+	await _auto_checks()._run_auto_pet_growth_authority_check()
 
 
 func _run_auto_pet_growth_threshold_check() -> void:
