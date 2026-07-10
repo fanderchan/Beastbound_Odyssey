@@ -28,6 +28,8 @@
 | Encounter selection | `client/godot/scripts/world/encounter_model.gd` |
 | Growth instance/observation | `client/godot/scripts/progression/pet_individual_growth_model.gd`, `pet_growth_observation_model.gd` |
 | Versioned cross-runtime growth algorithm (P0.2 shadow only) | `client/godot/scripts/progression/pet_growth_authority_model.gd`, `server/node/src/auth/pet-growth-authority.js`, `tools/fixtures/pet_growth_authority_v1_vectors.json` |
+| Strict server species-growth catalog (P0.2 shadow only) | `server/node/src/auth/pet-growth-catalog.js`; fixed-path reader over shared JSON, new-pet active-profile selection, and existing-instance historical-profile resolution |
+| Pure server v1 initialization, validation, and level settlement (P0.2 shadow only) | `server/node/src/auth/pet-growth-runtime.js` |
 | Pet profile state, skills, safety, GM tools | `client/godot/scripts/progression/player_progress_model.gd` and focused models |
 | Client battle interpretation | `client/godot/scripts/battle/` catalogs/models |
 | Server authoritative battle/capture/profile settlement | focused `server/node/src/auth/` domains where present; legacy wiring/rules remain in `server/node/src/auth-service.js` |
@@ -106,8 +108,8 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 ## Current gaps
 
 - Only a minority of forms currently link to species-specific growth profiles; the rest use legacy generic growth.
-- Client growth and server EXP/stat settlement are not yet one complete P0.2 truth.
-- P0.2 now has shadow-only cross-runtime growth, server-derived model markers, idempotent public pet/profile projections, offline-safe server-cache cleaning, and CSPRNG primitives. The four current production pet creation paths use CSPRNG identity and persist true Lv1 facts when known, but response projection, cache cleaning, and no-reroll routing are not connected to login/runtime until the atomic client/server protocol-v2 cutover.
+- Client growth and server EXP/stat settlement are not yet one complete P0.2 truth. The strict Node catalog and pure v1 runtime can initialize, validate, and settle a linked-form pet in isolation, but production EXP writers still only change level/EXP until P0.2c-2.
+- P0.2 now has shadow-only cross-runtime growth, a strict server growth catalog, a pure deterministic settlement runtime, server-derived model markers, idempotent public pet/profile projections, offline-safe server-cache cleaning, and CSPRNG primitives. The four current production pet creation paths use CSPRNG identity and persist true Lv1 facts when known, but response projection, cache cleaning, no-reroll routing, and v1 creation/EXP dispatch are not connected until their staged runtime cutovers.
 - Legacy Lv2+ pets may have no persisted Lv1 4V. Preserve their current server stats and mark observation unavailable; never reconstruct the missing historical fact from a template or instance ID. Every known-Lv1 pet created by the current production paths now persists Lv1 4V; authoritative encounter generation must establish the fact earlier before Lv2+ captures can do the same.
 - Current player growth UI can derive precise Lv140 values from stored hidden roll; intended observation should be evidence-driven.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
@@ -137,6 +139,6 @@ Useful existing checks include:
 - `--auto-pet-skill-training-check`
 - `--auto-pet-management-safety-check`
 - closest server battle-room/profile-action/storage tests
-- `node --test server/node/test/pet-growth-authority.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js server/node/test/pet-private-state.test.js`
+- `node --test server/node/test/pet-growth-authority.test.js server/node/test/pet-growth-catalog.test.js server/node/test/pet-growth-runtime.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js server/node/test/pet-private-state.test.js`
 
 Use `tools/run_godot_auto_checks.mjs --only <flags> --fail-fast` for selected client checks. Run the full local CI only for a genuine release/export gate or explicit user request.

@@ -173,6 +173,7 @@ function petFixture(instanceId) {
     petGrowth: {
       schemaVersion: 1,
       modelVersion: "pet_growth_authority_v1",
+      profileId: "blue_man_dragon_v1",
       settledLevel: 20,
       public: {
         schemaVersion: 1,
@@ -186,12 +187,18 @@ function petFixture(instanceId) {
       },
       futurePrediction: {attack: 612},
       private: {
+        schemaVersion: 1,
         privateSeed: `bps1_${"A".repeat(43)}`,
         privateRoll: {
           modelVersion: "pet_growth_authority_v1",
           profileId: "blue_man_dragon_v1",
           initialBonus: {maxHp: 1, attack: 2, defense: 0, quick: -1},
           innateGrowthBonus: {maxHp: 0.4, attack: 0.744, defense: 0.1, quick: -0.02},
+        },
+        cultivation: {
+          schemaVersion: 1,
+          initialBonus: {maxHp: 0, attack: 0, defense: 0, quick: 0},
+          growthBonus: {maxHp: 0, attack: 0, defense: 0, quick: 0},
         },
         continuousStats: {maxHp: 199.8, attack: 90.718421, defense: 67.9, quick: 73.8},
       },
@@ -258,6 +265,22 @@ function petFixture(instanceId) {
   };
 }
 
+function canonicalPetFixture(instanceId) {
+  const pet = petFixture(instanceId);
+  for (const key of PRIVATE_FIELD_KEYS) {
+    delete pet[key];
+  }
+  delete pet.growthAuthority;
+  delete pet.petGrowth.futurePrediction;
+  delete pet.petGrowth.public.hiddenMean;
+  delete pet.petGrowth.public.exactLv140Stats;
+  delete pet.growthSpeciesLevel1Stats.hiddenMean;
+  pet.petGrowth.private.cultivation.growthBonus = structuredClone(
+    pet.petCultivation.rebirthGrowthBonus,
+  );
+  return pet;
+}
+
 test("publicGrowthObservation keeps only player evidence fields and four stat axes", () => {
   const source = fullObservation();
   const before = structuredClone(source);
@@ -294,7 +317,7 @@ test("publicGrowthObservation keeps only player evidence fields and four stat ax
 });
 
 test("publicPet deep-clones visible pet facts and removes private growth state at every depth", () => {
-  const source = petFixture("pet_primary");
+  const source = canonicalPetFixture("pet_primary");
   const before = structuredClone(source);
 
   const actual = publicPet(source);
@@ -321,6 +344,7 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   assert.deepEqual(actual.petGrowth, {
     schemaVersion: 1,
     modelVersion: "pet_growth_authority_v1",
+    profileId: "blue_man_dragon_v1",
     settledLevel: 20,
     public: {
       schemaVersion: 1,
@@ -364,30 +388,119 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   const replayed = publicPet(actual);
   assert.deepEqual(replayed, actual);
 
-  const speciesLegacy = petFixture("pet_species_legacy");
+  const duplicatePrivate = petFixture("pet_duplicate_private");
+  const duplicatePrivatePublic = publicPet(duplicatePrivate);
+  assert.equal(
+    duplicatePrivatePublic.growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  assert.equal(duplicatePrivatePublic.petGrowth, undefined);
+  assert.deepEqual(privatePaths(duplicatePrivatePublic), []);
+
+  const speciesLegacy = canonicalPetFixture("pet_species_legacy");
   delete speciesLegacy.petGrowth;
-  speciesLegacy.growthAuthority.modelVersion = "pet_growth_authority_v1";
+  delete speciesLegacy.growthModelVersion;
   assert.equal(publicPet(speciesLegacy).growthAuthority.modelVersion, GROWTH_MODEL_LEGACY_SPECIES_LINEAR);
-  const malformedV1 = petFixture("pet_malformed_v1");
+  const missingEnvelopeV1 = canonicalPetFixture("pet_missing_envelope_v1");
+  delete missingEnvelopeV1.petGrowth;
+  assert.equal(publicPet(missingEnvelopeV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const missingEnvelopeModelV1 = canonicalPetFixture("pet_missing_envelope_model_v1");
+  delete missingEnvelopeModelV1.petGrowth.modelVersion;
+  assert.equal(
+    publicPet(missingEnvelopeModelV1).growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  const missingBothModelFieldsV1 = canonicalPetFixture("pet_missing_both_model_fields_v1");
+  delete missingBothModelFieldsV1.petGrowth.modelVersion;
+  delete missingBothModelFieldsV1.growthModelVersion;
+  assert.equal(
+    publicPet(missingBothModelFieldsV1).growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  const corruptRootModelV1 = canonicalPetFixture("pet_corrupt_root_model_v1");
+  delete corruptRootModelV1.petGrowth;
+  corruptRootModelV1.growthModelVersion = "pet_growth_authority_v1 ";
+  assert.equal(publicPet(corruptRootModelV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const numericRootModelV1 = canonicalPetFixture("pet_numeric_root_model_v1");
+  delete numericRootModelV1.petGrowth;
+  numericRootModelV1.growthModelVersion = 1;
+  assert.equal(publicPet(numericRootModelV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const nonObjectEnvelopeV1 = canonicalPetFixture("pet_non_object_envelope_v1");
+  nonObjectEnvelopeV1.petGrowth = "bad";
+  delete nonObjectEnvelopeV1.growthModelVersion;
+  assert.equal(publicPet(nonObjectEnvelopeV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const malformedV1 = canonicalPetFixture("pet_malformed_v1");
   delete malformedV1.petGrowth.private.continuousStats.quick;
   const malformedPublic = publicPet(malformedV1);
   assert.equal(malformedPublic.growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
   assert.equal(malformedPublic.growthModelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
   assert.equal(malformedPublic.petGrowth, undefined);
   assert.deepEqual(publicPet(malformedPublic), malformedPublic);
-  const wrongProfileV1 = petFixture("pet_wrong_profile_v1");
+  const wrongProfileV1 = canonicalPetFixture("pet_wrong_profile_v1");
   wrongProfileV1.petGrowth.private.privateRoll.profileId = "wrong_profile";
   assert.equal(publicPet(wrongProfileV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
-  const wrongPublicProfileV1 = petFixture("pet_wrong_public_profile_v1");
+  const wrongPublicProfileV1 = canonicalPetFixture("pet_wrong_public_profile_v1");
   wrongPublicProfileV1.petGrowth.public.growthSpeciesProfileId = "wrong_profile";
   assert.equal(publicPet(wrongPublicProfileV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
-  const fractionalLevelV1 = petFixture("pet_fractional_level_v1");
+  const missingCultivationV1 = canonicalPetFixture("pet_missing_cultivation_v1");
+  delete missingCultivationV1.petGrowth.private.cultivation;
+  assert.equal(publicPet(missingCultivationV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const malformedCultivationV1 = canonicalPetFixture("pet_malformed_cultivation_v1");
+  malformedCultivationV1.petGrowth.private.cultivation.growthBonus.attack = "0";
+  assert.equal(publicPet(malformedCultivationV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const wrongEnvelopeProfileV1 = canonicalPetFixture("pet_wrong_envelope_profile_v1");
+  wrongEnvelopeProfileV1.petGrowth.profileId = "wrong_profile";
+  assert.equal(publicPet(wrongEnvelopeProfileV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const extraPrivateV1 = canonicalPetFixture("pet_extra_private_v1");
+  extraPrivateV1.petGrowth.private.secretCopy = `bps1_${"B".repeat(43)}`;
+  assert.equal(publicPet(extraPrivateV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const extraGrowthV1 = canonicalPetFixture("pet_extra_growth_v1");
+  extraGrowthV1.petGrowth.futurePrediction = {attack: 999};
+  assert.equal(publicPet(extraGrowthV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const overPreciseCultivationV1 = canonicalPetFixture("pet_over_precise_cultivation_v1");
+  overPreciseCultivationV1.petGrowth.private.cultivation.growthBonus.attack = 0.0000001;
+  overPreciseCultivationV1.petCultivation.rebirthGrowthBonus.attack = 0.0000001;
+  assert.equal(
+    publicPet(overPreciseCultivationV1).growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  const persistedMarkerV1 = canonicalPetFixture("pet_persisted_marker_v1");
+  persistedMarkerV1.growthAuthority = {
+    schemaVersion: 1,
+    source: "server",
+    modelVersion: "pet_growth_authority_v1",
+    settledLevel: 20,
+  };
+  assert.equal(publicPet(persistedMarkerV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const corruptCultivationRecordV1 = canonicalPetFixture("pet_corrupt_cultivation_record_v1");
+  corruptCultivationRecordV1.petCultivation = "corrupt";
+  assert.equal(
+    publicPet(corruptCultivationRecordV1).growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  const conflictingRootModelV1 = canonicalPetFixture("pet_conflicting_root_model_v1");
+  conflictingRootModelV1.growthModelVersion = GROWTH_MODEL_LEGACY_INDIVIDUAL;
+  assert.equal(
+    publicPet(conflictingRootModelV1).growthAuthority.modelVersion,
+    GROWTH_MODEL_INVALID_AUTHORITY_V1,
+  );
+  const paddedProfileIdV1 = canonicalPetFixture("pet_padded_profile_id_v1");
+  paddedProfileIdV1.growthSpeciesProfileId = " blue_man_dragon_v1 ";
+  assert.equal(publicPet(paddedProfileIdV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const numericStringStatV1 = canonicalPetFixture("pet_numeric_string_stat_v1");
+  numericStringStatV1.attack = "91";
+  assert.equal(publicPet(numericStringStatV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const invalidHpV1 = canonicalPetFixture("pet_invalid_hp_v1");
+  invalidHpV1.hp = invalidHpV1.maxHp + 1;
+  assert.equal(publicPet(invalidHpV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
+  const fractionalLevelV1 = canonicalPetFixture("pet_fractional_level_v1");
   fractionalLevelV1.level = 20.5;
   fractionalLevelV1.petGrowth.settledLevel = 20.5;
   assert.equal(publicPet(fractionalLevelV1).growthAuthority.modelVersion, GROWTH_MODEL_INVALID_AUTHORITY_V1);
-  const individualLegacy = petFixture("pet_individual_legacy");
+  const individualLegacy = canonicalPetFixture("pet_individual_legacy");
   delete individualLegacy.petGrowth;
   delete individualLegacy.growthSpeciesProfileId;
+  delete individualLegacy.growthModelVersion;
   assert.equal(publicPet(individualLegacy).growthAuthority.modelVersion, GROWTH_MODEL_LEGACY_INDIVIDUAL);
 
   const aliasLegacy = publicPet({

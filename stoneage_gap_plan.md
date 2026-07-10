@@ -181,6 +181,10 @@
             - 证据（2026-07-11）：新增严格联网档案投影，只处理 `petInstances/pets`、`groundPetDrops[].pet`、`trainingPartners[].pet` 四条登记路径，分别报告 marker 缺失、marker 损坏与 envelope 错误，保持所有非宠字段、数组顺序、当前六项属性和输入对象不变；缓存宽容投影即使旧档缺 marker 也能擦除秘密，但结构或属性不安全时拒绝写回。新增只允许 `user://server_accounts/*/player_profile.json` 的双文件清洗器，active 与 `.last_good` 分别采用同目录临时文件、flush、回读深比较及覆盖 rename，坏 JSON/坏档案原样保留且不阻碍另一份清洗；不返回解析档案、不调用 normalize/RNG/网络。单宠 12、档案 8、缓存 8 共 28 个离线场景通过，Godot parse + focused/authority 3/3 通过且日志无 ERROR；当前仍未接登录运行时，见 `docs/phase_210_server_profile_projection_cache_shadow.md`。
           - [ ] **P0.2b2b-2b 原子启用公开响应、联网客户端不重滚、双缓存登录切换、非精确 UI 与协议 v2**
   - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
+    - [x] **P0.2c-1 严格服务端成长目录与 v1 逐级结算影子内核**
+      - 证据（2026-07-11）：新增固定读取共享 JSON 的严格 Node 成长目录，验证 schema、精确四轴/范围/分布/概率、最差属性下界及 profile↔form ID/名称/基础属性引用；当前 7 个 active linked form 返回带 form 身份、深冻结且不可绕过的 authority profile，24 个未链接形态保持 legacy；同形态历史 v1/v2 可共存，新宠只取模板 active 档，旧宠无实例 envelope 时明确 `legacy_existing`，不会因模板新增档案重抽。新增纯 `pet-growth-runtime.js`，锁定唯一 canonical seed/envelope、冻结培养与公开转生加成交叉校验、6 位 continuous 逐级累加、确定性全量重算、公开等级证据和满血/绝对伤势/死亡 0 语义；一次 Lv1→140 与逐级调用 139 次完全相同，损坏 seed/roll/continuous/public/root/Lv1 事实全部失败关闭且输入不变。公开 marker 同步要求 exact envelope/private/public keys、六位量化、无根部私密别名，并由真实 runtime→public 投影测试锁定无秘密且幂等。成长相关 Node 37/37、完整服务端 185/185 通过；尚未接任何生产 EXP/创建/转生/响应路径，不迁移或重滚旧宠，见 `docs/phase_211_server_pet_growth_runtime_shadow.md`。
+    - [ ] **P0.2c-2 安全新 Lv1 v1 创建与三个普通 EXP 入口统一 dispatcher**
+    - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与完整升级入口收口**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**

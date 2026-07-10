@@ -1,6 +1,7 @@
 "use strict";
 
 const {isValidPetPrivateSeed} = require("./pet-private-seed");
+const {quantize, roundHalfAwayFromZero} = require("./pet-growth-authority");
 
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
@@ -12,6 +13,71 @@ const GROWTH_MODEL_LEGACY_INDIVIDUAL = "legacy_individual_v0";
 const GROWTH_MODEL_LEGACY_SPECIES_LINEAR = "legacy_species_linear_v0";
 const GROWTH_MODEL_AUTHORITY_V1 = "pet_growth_authority_v1";
 const GROWTH_MODEL_INVALID_AUTHORITY_V1 = "invalid_pet_growth_authority_v1";
+const INTERNAL_PET_GROWTH_KEYS = Object.freeze([
+  "schemaVersion",
+  "modelVersion",
+  "profileId",
+  "settledLevel",
+  "private",
+  "public",
+]);
+const PROJECTED_PET_GROWTH_KEYS = Object.freeze([
+  "schemaVersion",
+  "modelVersion",
+  "profileId",
+  "settledLevel",
+  "public",
+]);
+const PRIVATE_GROWTH_KEYS = Object.freeze([
+  "schemaVersion",
+  "privateSeed",
+  "privateRoll",
+  "cultivation",
+  "continuousStats",
+]);
+const PRIVATE_ROLL_KEYS = Object.freeze([
+  "modelVersion",
+  "profileId",
+  "initialBonus",
+  "innateGrowthBonus",
+]);
+const PRIVATE_CULTIVATION_KEYS = Object.freeze([
+  "schemaVersion",
+  "initialBonus",
+  "growthBonus",
+]);
+const PUBLIC_GROWTH_KEYS = Object.freeze([
+  "schemaVersion",
+  "growthModelVersion",
+  "growthSpeciesProfileId",
+  "level",
+  "levelOneFourV",
+  "stats",
+]);
+const ROOT_PRIVATE_GROWTH_KEYS = new Set([
+  "continuousStats",
+  "growthBonus",
+  "growthPrivate",
+  "growthRecord",
+  "growthSpeciesRoll",
+  "growthSpeciesSampleNo",
+  "growthSpeciesSeed",
+  "helperGrowthWeights",
+  "individualQualityLabel",
+  "individualQualityScore",
+  "individualSeed",
+  "individualVariance",
+  "initialBonus",
+  "innateGrowthBonus",
+  "internalGrowthBonus",
+  "petGrowthPrivate",
+  "privateRoll",
+  "privateSeed",
+  "qualityRoll",
+  "rebirthBonusInternalPower",
+  "rebirthRollSeed",
+  "settledContinuousStats",
+]);
 
 const GROWTH_OBSERVATION_FIELD_KEYS = Object.freeze([
   "schemaVersion",
@@ -207,6 +273,12 @@ function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+function hasExactKeys(value, keys) {
+  return isObjectRecord(value)
+    && Object.keys(value).length === keys.length
+    && keys.every((key) => hasOwn(value, key));
+}
+
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -343,8 +415,43 @@ function hasExactNumericStatMap(value) {
     && STAT_KEYS.every((key) => hasOwn(value, key) && isFiniteNumber(value[key]));
 }
 
-function hasNumericStatFields(value) {
-  return isObjectRecord(value) && STAT_KEYS.every((key) => isFiniteNumber(value[key]));
+function hasExactQuantizedStatMap(value, options = {}) {
+  return hasExactNumericStatMap(value)
+    && STAT_KEYS.every((key) => (
+      quantize(value[key]) === value[key]
+      && (!options.integer || Number.isInteger(value[key]))
+      && (!options.visible || value[key] >= 1)
+    ));
+}
+
+function hasRootPrivateGrowthAlias(pet) {
+  return isObjectRecord(pet)
+    && Object.keys(pet).some((key) => ROOT_PRIVATE_GROWTH_KEYS.has(key));
+}
+
+function hasMatchingVisibleCultivation(pet, cultivation) {
+  if (!isObjectRecord(pet) || !hasOwn(pet, "petCultivation")) {
+    return true;
+  }
+  if (!isObjectRecord(pet.petCultivation)) {
+    return false;
+  }
+  if (!hasOwn(pet.petCultivation, "rebirthGrowthBonus")) {
+    return true;
+  }
+  return hasExactQuantizedStatMap(pet.petCultivation.rebirthGrowthBonus)
+    && statMapsEqual(pet.petCultivation.rebirthGrowthBonus, cultivation.growthBonus);
+}
+
+function strictRootStats(pet) {
+  return Object.fromEntries(STAT_KEYS.map((key) => [key, pet && pet[key]]));
+}
+
+function hasValidRootHp(pet) {
+  return Number.isInteger(pet && pet.hp)
+    && pet.hp >= 0
+    && Number.isInteger(pet.maxHp)
+    && pet.hp <= pet.maxHp;
 }
 
 function statMapsEqual(left, right) {
@@ -357,12 +464,52 @@ function visibleStatsFromContinuous(value) {
   if (!hasExactNumericStatMap(value)) {
     return {};
   }
-  return Object.fromEntries(STAT_KEYS.map((key) => [key, Math.max(1, Math.round(value[key]))]));
+  return Object.fromEntries(
+    STAT_KEYS.map((key) => [key, Math.max(1, roundHalfAwayFromZero(value[key]))]),
+  );
 }
 
 function declaresAuthorityV1(pet) {
-  const growth = isObjectRecord(pet && pet.petGrowth) ? pet.petGrowth : {};
-  return growth.modelVersion === GROWTH_MODEL_AUTHORITY_V1;
+  if (!isObjectRecord(pet)) {
+    return false;
+  }
+  const hasGrowthEnvelope = hasOwn(pet, "petGrowth");
+  if (hasGrowthEnvelope && !isObjectRecord(pet.petGrowth)) {
+    return true;
+  }
+  const growth = isObjectRecord(pet.petGrowth) ? pet.petGrowth : {};
+  const hasRootModelVersion = hasOwn(pet, "growthModelVersion");
+  if (
+    hasRootModelVersion
+    && (typeof pet.growthModelVersion !== "string" || pet.growthModelVersion === "")
+  ) {
+    return true;
+  }
+  const rootModelVersion = typeof pet.growthModelVersion === "string" ? pet.growthModelVersion : "";
+  const knownLegacyRoot = rootModelVersion === GROWTH_MODEL_LEGACY_INDIVIDUAL
+    || rootModelVersion === GROWTH_MODEL_LEGACY_SPECIES_LINEAR;
+  const hasAuthorityMarker = hasOwn(pet, "growthAuthority");
+  if (hasAuthorityMarker && !isObjectRecord(pet.growthAuthority)) {
+    return true;
+  }
+  if (hasAuthorityMarker && isObjectRecord(pet.growthAuthority)) {
+    const markerModel = pet.growthAuthority.modelVersion;
+    const knownLegacyMarker = markerModel === GROWTH_MODEL_LEGACY_INDIVIDUAL
+      || markerModel === GROWTH_MODEL_LEGACY_SPECIES_LINEAR;
+    if (pet.growthAuthority.source !== GROWTH_AUTHORITY_SOURCE_SERVER || !knownLegacyMarker) {
+      return true;
+    }
+  }
+  return growth.modelVersion === GROWTH_MODEL_AUTHORITY_V1
+    || rootModelVersion === GROWTH_MODEL_AUTHORITY_V1
+    || (hasGrowthEnvelope && (
+      Object.keys(growth).length === 0
+      || hasOwn(growth, "modelVersion")
+      || hasOwn(growth, "schemaVersion")
+      || hasOwn(growth, "private")
+      || hasOwn(growth, "public")
+    ))
+    || (rootModelVersion !== "" && !knownLegacyRoot);
 }
 
 function hasPublicAuthorityV1State(pet) {
@@ -370,24 +517,37 @@ function hasPublicAuthorityV1State(pet) {
   const growth = isObjectRecord(pet && pet.petGrowth) ? pet.petGrowth : {};
   const publicState = isObjectRecord(growth.public) ? growth.public : {};
   const level = pet && pet.level;
+  const profileId = firstNonEmptyString(pet && pet.growthSpeciesProfileId);
   return authority.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
     && authority.source === GROWTH_AUTHORITY_SOURCE_SERVER
     && authority.modelVersion === GROWTH_MODEL_AUTHORITY_V1
+    && !hasRootPrivateGrowthAlias(pet)
+    && pet.growthModelVersion === GROWTH_MODEL_AUTHORITY_V1
+    && pet.growthSpeciesProfileId === profileId
+    && profileId !== ""
     && isPositiveInteger(level)
     && level <= 140
     && authority.settledLevel === level
+    && hasExactKeys(growth, PROJECTED_PET_GROWTH_KEYS)
     && growth.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
     && growth.modelVersion === GROWTH_MODEL_AUTHORITY_V1
+    && growth.profileId === profileId
     && growth.settledLevel === level
     && !hasOwn(growth, "private")
+    && hasExactKeys(publicState, PUBLIC_GROWTH_KEYS)
     && publicState.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
     && publicState.growthModelVersion === GROWTH_MODEL_AUTHORITY_V1
-    && publicState.growthSpeciesProfileId === pet.growthSpeciesProfileId
+    && publicState.growthSpeciesProfileId === profileId
     && publicState.level === level
-    && hasNumericStatFields(pet)
-    && hasExactNumericStatMap(publicState.levelOneFourV)
-    && hasExactNumericStatMap(publicState.stats)
-    && statMapsEqual(publicState.stats, cloneNumericMap(pet, STAT_KEYS));
+    && hasExactQuantizedStatMap(strictRootStats(pet), {integer: true, visible: true})
+    && hasValidRootHp(pet)
+    && hasExactQuantizedStatMap(publicState.levelOneFourV, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(publicState.stats, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(pet.initialStats, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(pet.growthSpeciesLevel1Stats, {integer: true, visible: true})
+    && statMapsEqual(publicState.levelOneFourV, pet.initialStats)
+    && statMapsEqual(publicState.levelOneFourV, pet.growthSpeciesLevel1Stats)
+    && statMapsEqual(publicState.stats, strictRootStats(pet));
 }
 
 function hasInvalidAuthorityV1Marker(pet) {
@@ -406,30 +566,50 @@ function hasAuthorityV1PrivateState(pet) {
   const publicState = isObjectRecord(growth.public) ? growth.public : {};
   const privateState = isObjectRecord(growth.private) ? growth.private : {};
   const privateRoll = isObjectRecord(privateState.privateRoll) ? privateState.privateRoll : {};
+  const cultivation = isObjectRecord(privateState.cultivation) ? privateState.cultivation : {};
   const level = pet && pet.level;
   const profileId = firstNonEmptyString(pet && pet.growthSpeciesProfileId);
   return growth.modelVersion === GROWTH_MODEL_AUTHORITY_V1
+    && hasExactKeys(growth, INTERNAL_PET_GROWTH_KEYS)
     && growth.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
+    && growth.profileId === profileId
     && isPositiveInteger(level)
     && level <= 140
     && isPositiveInteger(growth.settledLevel)
     && growth.settledLevel === level
     && profileId !== ""
+    && pet.growthSpeciesProfileId === profileId
+    && (!hasOwn(pet, "growthModelVersion") || pet.growthModelVersion === GROWTH_MODEL_AUTHORITY_V1)
+    && !hasRootPrivateGrowthAlias(pet)
+    && !hasOwn(pet, "growthAuthority")
+    && hasExactKeys(privateState, PRIVATE_GROWTH_KEYS)
+    && privateState.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
     && isValidPetPrivateSeed(privateState.privateSeed)
-    && Object.keys(privateRoll).length === 4
+    && hasExactKeys(privateRoll, PRIVATE_ROLL_KEYS)
     && privateRoll.modelVersion === GROWTH_MODEL_AUTHORITY_V1
     && privateRoll.profileId === profileId
-    && hasExactNumericStatMap(privateRoll.initialBonus)
-    && hasExactNumericStatMap(privateRoll.innateGrowthBonus)
-    && hasExactNumericStatMap(privateState.continuousStats)
-    && hasNumericStatFields(pet)
+    && hasExactQuantizedStatMap(privateRoll.initialBonus, {integer: true})
+    && hasExactQuantizedStatMap(privateRoll.innateGrowthBonus)
+    && hasExactKeys(cultivation, PRIVATE_CULTIVATION_KEYS)
+    && cultivation.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
+    && hasExactQuantizedStatMap(cultivation.initialBonus)
+    && hasExactQuantizedStatMap(cultivation.growthBonus)
+    && hasMatchingVisibleCultivation(pet, cultivation)
+    && hasExactQuantizedStatMap(privateState.continuousStats)
+    && hasExactQuantizedStatMap(strictRootStats(pet), {integer: true, visible: true})
+    && hasValidRootHp(pet)
+    && hasExactKeys(publicState, PUBLIC_GROWTH_KEYS)
     && publicState.schemaVersion === GROWTH_AUTHORITY_SCHEMA_VERSION
     && publicState.growthModelVersion === GROWTH_MODEL_AUTHORITY_V1
     && publicState.growthSpeciesProfileId === profileId
     && publicState.level === level
-    && hasExactNumericStatMap(publicState.levelOneFourV)
-    && hasExactNumericStatMap(publicState.stats)
-    && statMapsEqual(publicState.stats, cloneNumericMap(pet, STAT_KEYS))
+    && hasExactQuantizedStatMap(publicState.levelOneFourV, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(publicState.stats, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(pet.initialStats, {integer: true, visible: true})
+    && hasExactQuantizedStatMap(pet.growthSpeciesLevel1Stats, {integer: true, visible: true})
+    && statMapsEqual(publicState.levelOneFourV, pet.initialStats)
+    && statMapsEqual(publicState.levelOneFourV, pet.growthSpeciesLevel1Stats)
+    && statMapsEqual(publicState.stats, strictRootStats(pet))
     && statMapsEqual(publicState.stats, visibleStatsFromContinuous(privateState.continuousStats));
 }
 
