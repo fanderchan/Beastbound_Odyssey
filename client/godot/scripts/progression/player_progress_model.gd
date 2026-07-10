@@ -81,6 +81,8 @@ const PET_REBIRTH_MM_GUIDE_KEY := "petRebirthMmGuide"
 const PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE := "available"
 const PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE := "active"
 const PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED := "completed"
+const PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL := 80
+const PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL := 130
 const PET_REBIRTH_MM_GUIDE_STEP_START := "start"
 const PET_REBIRTH_MM_GUIDE_STEP_CLAIM_MM := "claim_mm"
 const PET_REBIRTH_MM_GUIDE_STEP_WITHDRAW_MM := "withdraw_mm"
@@ -161,6 +163,9 @@ const MAIL_REWARD_FALLBACK_PREFIX := "system_reward_fallback"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
+const QUEST_SET_BATTLE_PET_ID := "quest_set_battle_pet"
+const QUEST_OPEN_STATUS_PANEL_ID := "quest_open_status_panel"
+const BATTLE_PET_TUTORIAL_FORM_ID := "rebirth_starter_four_spirit_cub"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
@@ -2982,6 +2987,14 @@ static func bank_stone_coins(profile: Dictionary) -> int:
 	return int(bank_data(profile).get(STONE_COINS_KEY, 0))
 
 
+static func bank_item_count(profile: Dictionary, item_id: String) -> int:
+	var count := 0
+	for item in bank_data(profile).get("items", []):
+		if item is Dictionary and str((item as Dictionary).get("itemId", "")) == item_id:
+			count += maxi(0, int((item as Dictionary).get("count", 0)))
+	return count
+
+
 static func bank_slots(profile: Dictionary) -> Array[Dictionary]:
 	var bank := bank_data(profile)
 	var slots: Array[Dictionary] = []
@@ -3312,6 +3325,12 @@ static func active_quest_id(profile: Dictionary, profile_is_normalized: bool = f
 	return str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
 
 
+static func player_level(profile: Dictionary, profile_is_normalized: bool = false) -> int:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	var player := normalized.get("player", {}) as Dictionary
+	return maxi(1, int(player.get("level", 1)))
+
+
 static func active_quest(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
 	return QuestModel.quest_for_id(active_quest_id(profile, profile_is_normalized))
 
@@ -3389,6 +3408,28 @@ static func first_blocked_unfinished_quest(profile: Dictionary, profile_is_norma
 	return {}
 
 
+static func first_level_blocked_unfinished_quest(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
+	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	var states := _quest_states(normalized)
+	var current_player_level := player_level(normalized, true)
+	for quest in QuestModel.quests():
+		if QuestModel.is_optional(quest):
+			continue
+		var quest_id := str(quest.get("id", ""))
+		if quest_id == "":
+			continue
+		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+		if states.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if _quest_available_for_profile(quest, normalized):
+			return {}
+		if current_player_level < QuestModel.required_level_for(quest):
+			return quest
+		if _quest_should_show_blocked_marker(quest, normalized):
+			return {}
+	return {}
+
+
 static func optional_quest_for_interaction(profile: Dictionary, interaction_id: String, profile_is_normalized: bool = false) -> Dictionary:
 	var normalized := profile if profile_is_normalized else normalize_profile(profile)
 	var item_id := str(interaction_id).strip_edges()
@@ -3439,9 +3480,9 @@ static func blocked_optional_quest_for_interaction(profile: Dictionary, interact
 static func can_claim_optional_quest(profile: Dictionary, quest_id: String) -> bool:
 	var normalized := normalize_profile(profile)
 	var quest := QuestModel.quest_for_id(quest_id)
-	if quest.is_empty() or not QuestModel.is_optional(quest):
-		return false
 	var states := _quest_states(normalized)
+	if quest.is_empty() or not QuestModel.is_optional(quest) or not states.has(quest_id) or not _quest_progress_available_for_profile(quest, normalized):
+		return false
 	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
 	return str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_READY
 
@@ -3449,7 +3490,10 @@ static func can_claim_optional_quest(profile: Dictionary, quest_id: String) -> b
 static func record_optional_quest_event(profile: Dictionary, quest_id: String, event: Dictionary) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest := QuestModel.quest_for_id(quest_id)
-	if quest.is_empty() or not QuestModel.is_optional(quest) or not _quest_available_for_profile(quest, normalized):
+	var states := _quest_states(normalized)
+	var accepted := states.has(quest_id)
+	var prerequisites_ok := _quest_progress_available_for_profile(quest, normalized) if accepted else _quest_available_for_profile(quest, normalized)
+	if quest.is_empty() or not QuestModel.is_optional(quest) or not prerequisites_ok:
 		return {
 			"profile": normalized,
 			"changed": false,
@@ -3457,7 +3501,6 @@ static func record_optional_quest_event(profile: Dictionary, quest_id: String, e
 			"questId": "",
 			"message": "",
 		}
-	var states := _quest_states(normalized)
 	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
 	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
 		return {
@@ -3563,6 +3606,77 @@ static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictio
 	}
 
 
+static func record_current_battle_pet_quest(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var quest := active_quest(normalized, true)
+	var objective := QuestModel.objective_for(quest)
+	if str(objective.get("type", "")) != "battle_pet":
+		return {"profile": normalized, "changed": false, "ready": false, "questId": "", "message": ""}
+	var active_instance_id := str(normalized.get("activePetInstanceId", "")).strip_edges()
+	var ride_instance_id := str(normalized.get(RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	var instance := pet_instance_by_id(normalized, active_instance_id)
+	if active_instance_id == "" or ride_instance_id == "" or active_instance_id == ride_instance_id or str(instance.get("state", "")) != PET_STATE_BATTLE:
+		return {"profile": normalized, "changed": false, "ready": false, "questId": str(quest.get("id", "")), "message": ""}
+	return record_quest_event(normalized, {
+		"type": "battle_pet",
+		"instanceId": active_instance_id,
+		"ridePetInstanceId": ride_instance_id,
+		"formId": str(instance.get("formId", instance.get("templateId", ""))),
+		"lineId": str(instance.get("lineId", "")),
+		"amount": 1,
+	})
+
+
+static func _battle_pet_tutorial_egg_reclaim_ownership_check(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	if active_quest_id(normalized, true) != QUEST_SET_BATTLE_PET_ID:
+		return {"ok": false, "profile": normalized, "message": "当前不需要补领对战宠物蛋。"}
+	var state := quest_state_for_id(normalized, QUEST_SET_BATTLE_PET_ID, true)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_ACTIVE:
+		return {"ok": false, "profile": normalized, "message": "这个任务已经完成。"}
+	if backpack_item_count(normalized, ITEM_NOVICE_BATTLE_PET_EGG) > 0:
+		return {"ok": false, "profile": normalized, "message": "对战宠物蛋还在随身包里。"}
+	if bank_item_count(normalized, ITEM_NOVICE_BATTLE_PET_EGG) > 0:
+		return {"ok": false, "profile": normalized, "message": "对战宠物蛋还在银行里，请先取回。"}
+	for instance in all_pet_instances(normalized):
+		if str(instance.get("formId", instance.get("templateId", ""))) == BATTLE_PET_TUTORIAL_FORM_ID:
+			return {"ok": false, "profile": normalized, "message": "四灵幼兽已经在你的队伍或兽栏里。"}
+	return {"ok": true, "profile": normalized, "message": "可以补领对战宠物蛋。"}
+
+
+static func battle_pet_tutorial_egg_reclaim_available(profile: Dictionary) -> bool:
+	return bool(_battle_pet_tutorial_egg_reclaim_ownership_check(profile).get("ok", false))
+
+
+static func can_reclaim_battle_pet_tutorial_egg(profile: Dictionary) -> Dictionary:
+	var ownership_check := _battle_pet_tutorial_egg_reclaim_ownership_check(profile)
+	var normalized := ownership_check.get("profile", normalize_profile(profile)) as Dictionary
+	if not bool(ownership_check.get("ok", false)):
+		return ownership_check
+	var add_result := BackpackModel.add_items(backpack_slots(normalized), [{"itemId": ITEM_NOVICE_BATTLE_PET_EGG, "count": 1}])
+	if (add_result.get("added", []) as Array).is_empty():
+		return {"ok": false, "profile": normalized, "message": "背包已满，请先整理后再来领取。"}
+	return {"ok": true, "profile": normalized, "message": "可以补领对战宠物蛋。"}
+
+
+static func reclaim_battle_pet_tutorial_egg(profile: Dictionary) -> Dictionary:
+	var check := can_reclaim_battle_pet_tutorial_egg(profile)
+	var normalized := check.get("profile", normalize_profile(profile)) as Dictionary
+	if not bool(check.get("ok", false)):
+		return check
+	var add_result := BackpackModel.add_items(backpack_slots(normalized), [{"itemId": ITEM_NOVICE_BATTLE_PET_EGG, "count": 1}])
+	if (add_result.get("added", []) as Array).is_empty():
+		return {"ok": false, "profile": normalized, "message": "背包已满，请先整理后再来领取。"}
+	normalized[BACKPACK_SLOTS_KEY] = add_result.get("slots", backpack_slots(normalized))
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"itemId": ITEM_NOVICE_BATTLE_PET_EGG,
+		"message": "已重新领取对战宠物蛋。",
+	}
+
+
 static func deliver_pet_for_quest(profile: Dictionary, quest_id: String, instance_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var quest := QuestModel.quest_for_id(quest_id)
@@ -3571,6 +3685,14 @@ static func deliver_pet_for_quest(profile: Dictionary, quest_id: String, instanc
 			"ok": false,
 			"profile": normalized,
 			"message": "任务不存在。",
+		}
+	var states := _quest_states(normalized)
+	var accepted := states.has(quest_id) or str(normalized.get(ACTIVE_QUEST_ID_KEY, "")) == quest_id
+	if not accepted or not _quest_progress_available_for_profile(quest, normalized):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "任务尚未接取。",
 		}
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
@@ -3608,7 +3730,6 @@ static func deliver_pet_for_quest(profile: Dictionary, quest_id: String, instanc
 	normalized["petInstances"] = next_instances
 	if str(normalized.get("activePetInstanceId", "")) == instance_id:
 		normalized["activePetInstanceId"] = _first_battle_pet_id(normalized)
-	var states := _quest_states(normalized)
 	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
 	if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_ACTIVE:
 		var required := QuestModel.objective_required_count(quest)
@@ -3641,6 +3762,12 @@ static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_cho
 			"ok": false,
 			"profile": normalized,
 			"message": "当前没有可领取的任务奖励。",
+		}
+	if not _quest_progress_available_for_profile(quest, normalized):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "任务暂不可领取。",
 		}
 	var states := _quest_states(normalized)
 	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
@@ -3685,7 +3812,8 @@ static func _claim_quest_by_id(profile: Dictionary, quest_id: String, reward_cho
 	states[quest_id] = state
 	var next_id := QuestModel.next_quest_id(quest)
 	if advance_active and str(normalized.get(ACTIVE_QUEST_ID_KEY, "")) == quest_id:
-		if next_id != "":
+		var next_quest := QuestModel.quest_for_id(next_id)
+		if next_id != "" and not next_quest.is_empty() and _quest_available_for_profile(next_quest, normalized):
 			if not states.has(next_id):
 				states[next_id] = QuestModel.normalize_state({}, next_id)
 			normalized[ACTIVE_QUEST_ID_KEY] = next_id
@@ -3857,7 +3985,9 @@ static func _pet_required_by_active_quest(profile: Dictionary, instance: Diction
 	return QuestModel.progress_amount_for_event(quest, event) > 0
 
 
-static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary) -> bool:
+static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary, check_level: bool = true) -> bool:
+	if check_level and not QuestModel.can_accept_at_level(quest, player_level(profile, true)):
+		return false
 	var current_rebirth_count := RebirthModel.rebirth_count(profile)
 	var target := QuestModel.rebirth_completion_target(quest)
 	if target > 0:
@@ -3871,6 +4001,10 @@ static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary)
 		if abilities.has(required_missing_ability):
 			return false
 	return true
+
+
+static func _quest_progress_available_for_profile(quest: Dictionary, profile: Dictionary) -> bool:
+	return _quest_available_for_profile(quest, profile, false)
 
 
 static func _quest_should_show_blocked_marker(quest: Dictionary, profile: Dictionary) -> bool:
@@ -3893,14 +4027,17 @@ static func _first_available_unfinished_quest_id(states: Dictionary, profile: Di
 	for quest in QuestModel.quests():
 		if QuestModel.is_optional(quest):
 			continue
-		if not _quest_available_for_profile(quest, profile):
-			continue
 		var quest_id := str(quest.get("id", ""))
 		if quest_id == "":
 			continue
 		var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
-		if not states.has(quest_id) or str(state.get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_CLAIMED:
-			return quest_id
+		if states.has(quest_id) and str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+			continue
+		if not _quest_available_for_profile(quest, profile):
+			if not QuestModel.can_accept_at_level(quest, player_level(profile, true)):
+				return ""
+			continue
+		return quest_id
 	return ""
 
 
@@ -5275,6 +5412,8 @@ static func can_drop_pet(profile: Dictionary, instance_id: String) -> Dictionary
 		return {"ok": false, "message": "兽栏里的宠物不能直接丢弃。"}
 	if bool(instance.get("locked", false)):
 		return {"ok": false, "message": "%s 已锁定，不能丢弃。" % str(instance.get("name", "宠物"))}
+	if str(instance.get("binding", BackpackModel.BINDING_UNBOUND)) == BackpackModel.BINDING_BOUND:
+		return {"ok": false, "message": "%s 已绑定，不能丢到公共区域。" % str(instance.get("name", "宠物"))}
 	if _pet_required_by_active_quest(normalized, instance):
 		return {"ok": false, "message": "%s 是当前任务需要的宠物，不能丢弃。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 可以丢弃。" % str(instance.get("name", "宠物"))}
@@ -5579,6 +5718,7 @@ static func pet_detail_lines(instance: Dictionary) -> Array[String]:
 	])
 	if bool(instance.get("locked", false)):
 		lines.append("保护：已锁定")
+	lines.append("绑定：%s" % ("已绑定" if str(instance.get("binding", BackpackModel.BINDING_UNBOUND)) == BackpackModel.BINDING_BOUND else "非绑定"))
 	if bool(instance.get("tameEligible", false)):
 		lines.append("驯宠：可放出游街")
 	lines.append_array(PetCultivationModel.detail_lines_for_pet(instance))
@@ -6069,9 +6209,15 @@ static func start_pet_rebirth_mm_guide(profile: Dictionary, now_sec: int = -1) -
 		return {
 			"ok": false,
 			"profile": normalized,
-			"message": "宠物转生教学已完成。之后可反复挑战1转MM试炼领取1转小MM。",
+			"message": "宠物转生教学已完成。人物达到 Lv80 后，可反复挑战1转MM试炼领取1转小MM。",
 		}
 	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	if str(guide.get("status", "")) != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE and player_level(normalized, true) < PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "需要人物达到 Lv%d 才能接取宠物转生教学。" % PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL,
+		}
 	if str(guide.get("status", "")) != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
 		guide["status"] = PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE
 		guide["startedAtSec"] = _safe_now_sec(now_sec)
@@ -6081,7 +6227,7 @@ static func start_pet_rebirth_mm_guide(profile: Dictionary, now_sec: int = -1) -
 	return {
 		"ok": true,
 		"profile": normalized,
-		"message": "开始任务「宠物转生教学」。%s" % str(info.get("taskText", "")),
+		"message": "开始任务「%s」。%s" % [str(info.get("title", "宠物转生教学")), str(info.get("taskText", ""))],
 		"info": info,
 	}
 
@@ -6105,13 +6251,15 @@ static func complete_pet_rebirth_mm_guide_if_ready(profile: Dictionary, now_sec:
 
 static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized: bool = false) -> Dictionary:
 	var normalized := profile if profile_is_normalized else normalize_profile(profile)
+	var current_player_level := player_level(normalized, true)
 	if pet_rebirth_mm_guide_completed(normalized, true):
 		return _pet_rebirth_mm_guide_info_for_step(
 			PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED,
 			"completed",
 			"宠物转生教学",
 			"宠物转生教学已完成",
-			["之后可找 1转MM试炼师阿澄反复挑战，领取新的1转小MM。"]
+			["人物达到 Lv80 后，可找 1转MM试炼师阿澄反复挑战，领取新的1转小MM。"],
+			current_player_level
 		)
 	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
 	if str(guide.get("status", "")) != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
@@ -6123,7 +6271,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			[
 				"目标：找 1转MM试炼师阿澄开始教学。",
 				"教学会引导领取1转小MM、喂满四种MM石、练到Lv79，再给一只Lv80以上宠物转生。",
-			]
+			],
+			current_player_level
 		)
 	var party_helper := _pet_rebirth_mm_best_helper(normalized, PetRebirthMmModel.STAGE_ONE, false)
 	var any_helper := _pet_rebirth_mm_best_helper(normalized, PetRebirthMmModel.STAGE_ONE, true)
@@ -6136,7 +6285,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			[
 				"目标：打赢1转MM试炼师阿澄的试炼。",
 				"胜利后会获得 Lv1 1转小MM。",
-			]
+			],
+			current_player_level
 		)
 	if party_helper.is_empty():
 		return _pet_rebirth_mm_guide_info_for_step(
@@ -6147,7 +6297,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			[
 				"%s 在兽栏中，先从兽栏取出到队伍。" % str(any_helper.get("name", "1转小MM")),
 				"转生时需要队伍中有对应阶段的转生MM。",
-			]
+			],
+			current_player_level
 		)
 	var helper_record := PetRebirthMmModel.normalized_helper_record(party_helper.get("petRebirthHelper", {}), PetRebirthMmModel.STAGE_ONE)
 	var completion := PetRebirthMmModel.stone_completion(helper_record)
@@ -6163,7 +6314,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			PET_REBIRTH_MM_GUIDE_STEP_FEED_MM,
 			"宠物转生教学：喂满MM石",
 			"宠物转生教学 - 喂满1转小MM四种MM石",
-			lines
+			lines,
+			current_player_level
 		)
 	if int(party_helper.get("level", 1)) < PetRebirthMmModel.HELPER_REQUIRED_LEVEL:
 		return _pet_rebirth_mm_guide_info_for_step(
@@ -6178,7 +6330,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 					PetRebirthMmModel.HELPER_REQUIRED_LEVEL,
 				],
 				"提示：测试阶段可以用经验丹，也可以实战练级。",
-			]
+			],
+			current_player_level
 		)
 	var target := _pet_rebirth_mm_guide_target_candidate(normalized)
 	if target.is_empty():
@@ -6190,7 +6343,8 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			[
 				"目标：准备一只非MM宠物，等级至少 Lv%d。" % PetRebirthMmModel.TARGET_REQUIRED_LEVEL,
 				"之后在宠物界面选中它，使用转强/转生。",
-			]
+			],
+			current_player_level
 		)
 	return _pet_rebirth_mm_guide_info_for_step(
 		PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE,
@@ -6201,8 +6355,39 @@ static func pet_rebirth_mm_guide_info(profile: Dictionary, profile_is_normalized
 			"目标宠：%s Lv%d。" % [str(target.get("name", "宠物")), int(target.get("level", 1))],
 			"转生MM：%s Lv%d，四种MM石已满。" % [str(party_helper.get("name", "1转小MM")), int(party_helper.get("level", 1))],
 			"打开宠物界面，选中目标宠，点击「转强」后确认转生。",
-		]
+		],
+		current_player_level
 	)
+
+
+static func pet_rebirth_mm_trial_access(profile: Dictionary) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var current_player_level := player_level(normalized, true)
+	if current_player_level < PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "需要人物达到 Lv%d 才能挑战1转MM试炼。" % PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL,
+		}
+	var guide := _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))
+	var status := str(guide.get("status", ""))
+	if status == PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED or _has_pet_rebirth_count_at_least(normalized, 1):
+		return {"ok": true, "profile": normalized, "message": "可以挑战1转MM试炼。"}
+	if status == PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
+		if not _pet_rebirth_mm_best_helper(normalized, PetRebirthMmModel.STAGE_ONE, true).is_empty():
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "你已持有1转小MM，请继续喂石、练级并完成转生。",
+			}
+		return {"ok": true, "profile": normalized, "message": "可以挑战1转MM试炼。"}
+	if status != PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "请先向1转MM试炼师阿澄接取宠物转生教学。",
+		}
+	return {"ok": false, "profile": normalized, "message": "暂时不能挑战1转MM试炼。"}
 
 
 static func pet_rebirth_mm_guide_signature(profile: Dictionary) -> String:
@@ -6260,16 +6445,29 @@ static func _with_pet_rebirth_mm_guide_status(profile: Dictionary, status: Strin
 	return normalize_profile(next)
 
 
-static func _pet_rebirth_mm_guide_info_for_step(status: String, step: String, title: String, task_text: String, detail_lines: Array) -> Dictionary:
-	var normalized_lines: Array[String] = []
+static func _pet_rebirth_mm_guide_info_for_step(status: String, step: String, title: String, task_text: String, detail_lines: Array, current_player_level: int) -> Dictionary:
+	var normalized_lines: Array[String] = [
+		"接取等级：Lv%d" % PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL,
+		"推荐等级：Lv%d" % PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL,
+	]
 	for line in detail_lines:
 		normalized_lines.append(str(line))
+	var display_title := QuestModel.title_with_required_level(title, PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL)
+	var display_task_text := task_text
+	if display_task_text.begins_with("可接任务 - "):
+		display_task_text = "可接任务 - %s" % QuestModel.title_with_required_level(display_task_text.trim_prefix("可接任务 - "), PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL)
+	else:
+		display_task_text = QuestModel.title_with_required_level(display_task_text, PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL)
 	return {
 		"status": status,
 		"step": step,
-		"title": title,
-		"taskText": task_text,
+		"title": display_title,
+		"taskText": display_task_text,
 		"detailLines": normalized_lines,
+		"requiredLevel": PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL,
+		"recommendedLevel": PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL,
+		"playerLevel": maxi(1, current_player_level),
+		"meetsRequiredLevel": current_player_level >= PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL,
 	}
 
 
@@ -6438,6 +6636,7 @@ static func _grant_pet_from_form_egg(profile: Dictionary, item_id: String) -> Di
 	var instance := _pet_instance_from_form(instance_id, pet_name, form_id, state, 1, {
 		"individualSeed": "pet_egg:%s:%d" % [form_id, serial],
 		"capturedSerial": serial,
+		"binding": BackpackModel.binding_for(item_id),
 	})
 	if instance.is_empty():
 		return {"ok": false, "profile": normalized, "message": "%s 模板不存在。" % pet_name}
@@ -6600,18 +6799,28 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 
 	var had_quest_data := normalized.has(QUEST_STATES_KEY) or normalized.has(ACTIVE_QUEST_ID_KEY)
 	var quest_states := QuestModel.normalize_states(normalized.get(QUEST_STATES_KEY, {}))
+	if not quest_states.has(QUEST_SET_BATTLE_PET_ID) and quest_states.has(QUEST_OPEN_STATUS_PANEL_ID):
+		var status_panel_state := QuestModel.normalize_state(quest_states.get(QUEST_OPEN_STATUS_PANEL_ID, {}), QUEST_OPEN_STATUS_PANEL_ID)
+		if str(status_panel_state.get("status", "")) == QuestModel.STATUS_CLAIMED:
+			quest_states[QUEST_SET_BATTLE_PET_ID] = {
+				"questId": QUEST_SET_BATTLE_PET_ID,
+				"status": QuestModel.STATUS_CLAIMED,
+				"progress": 1,
+			}
 	var active_quest_id_value := str(normalized.get(ACTIVE_QUEST_ID_KEY, ""))
 	if active_quest_id_value != "":
 		var active_quest := QuestModel.quest_for_id(active_quest_id_value)
 		var active_state := QuestModel.normalize_state(quest_states.get(active_quest_id_value, {}), active_quest_id_value)
-		if active_quest.is_empty() or QuestModel.is_optional(active_quest) or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED or not _quest_available_for_profile(active_quest, normalized):
+		if active_quest.is_empty() or QuestModel.is_optional(active_quest) or str(active_state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED or not _quest_progress_available_for_profile(active_quest, normalized):
 			active_quest_id_value = ""
 		else:
 			quest_states[active_quest_id_value] = active_state
 	if active_quest_id_value == "":
 		active_quest_id_value = _first_available_unfinished_quest_id(quest_states, normalized)
 		if active_quest_id_value == "" and not had_quest_data:
-			active_quest_id_value = QuestModel.first_quest_id()
+			var first_quest := QuestModel.quest_for_id(QuestModel.first_quest_id())
+			if not first_quest.is_empty() and _quest_available_for_profile(first_quest, normalized):
+				active_quest_id_value = str(first_quest.get("id", ""))
 	if active_quest_id_value != "" and not quest_states.has(active_quest_id_value):
 		quest_states[active_quest_id_value] = QuestModel.normalize_state({}, active_quest_id_value)
 	normalized[ACTIVE_QUEST_ID_KEY] = active_quest_id_value
@@ -6996,6 +7205,8 @@ static func apply_battle_result(profile: Dictionary, state: Dictionary, result_o
 		var mm_trial_result := _grant_pet_rebirth_mm_for_trial_victory(next_profile, state)
 		next_profile = mm_trial_result.get("profile", next_profile)
 		if bool(mm_trial_result.get("ok", false)):
+			level_up_lines.append(str(mm_trial_result.get("message", "")))
+		elif str(mm_trial_result.get("message", "")) != "":
 			level_up_lines.append(str(mm_trial_result.get("message", "")))
 	if result == "victory" or result == "defeat":
 		var wear_result := apply_equipment_wear_from_battle_usage(next_profile, state.get("equipmentWearUsage", {}))
@@ -7607,7 +7818,10 @@ static func _grant_pet_rebirth_mm_for_trial_victory(profile: Dictionary, state: 
 	var group_id := str(state.get("sourceEncounterGroupId", state.get("encounterGroupId", "")))
 	if group_id != PET_REBIRTH_MM_TRIAL_GROUP_ID:
 		return {"ok": false, "profile": profile}
-	return grant_pet_rebirth_mm(profile, PetRebirthMmModel.STAGE_ONE, group_id)
+	var access := pet_rebirth_mm_trial_access(profile)
+	if not bool(access.get("ok", false)):
+		return access
+	return grant_pet_rebirth_mm(access.get("profile", profile), PetRebirthMmModel.STAGE_ONE, group_id)
 
 
 static func _owned_pet_form_counts(profile: Dictionary) -> Dictionary:
@@ -7724,6 +7938,8 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 				species_instance[key] = template.get(key)
 		if stat_overrides.has("hp"):
 			species_instance["hp"] = clampi(int(stat_overrides.get("hp", species_instance.get("hp", 1))), 0, maxi(1, int(species_instance.get("maxHp", 1))))
+		if stat_overrides.has("binding"):
+			species_instance["binding"] = str(stat_overrides.get("binding", BackpackModel.BINDING_UNBOUND))
 		return _normalize_pet_instance(species_instance)
 	var growth_rates := _pet_growth_rates(str(template.get("growthProfileId", "balanced")))
 	var growth_snapshot := PetIndividualGrowthModel.growth_snapshot(template, {
@@ -7760,6 +7976,7 @@ static func _pet_instance_from_form(instance_id: String, pet_name: String, form_
 		"individualQualityLabel": str(growth_snapshot.get("individualQualityLabel", "普通")),
 		"initialStats": growth_snapshot.get("initialStats", {}),
 		"growthRecord": growth_snapshot.get("growthRecord", {}),
+		"binding": str(stat_overrides.get("binding", BackpackModel.BINDING_UNBOUND)),
 	}
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if template.has(key):
@@ -7819,6 +8036,7 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["capturedSerial"] = maxi(0, int(instance.get("capturedSerial", 0)))
 	instance["isNew"] = bool(instance.get("isNew", false))
 	instance["locked"] = bool(instance.get("locked", false))
+	instance["binding"] = BackpackModel.BINDING_BOUND if str(instance.get("binding", BackpackModel.BINDING_UNBOUND)) == BackpackModel.BINDING_BOUND else BackpackModel.BINDING_UNBOUND
 	instance["tameEligible"] = bool(instance.get("tameEligible", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):

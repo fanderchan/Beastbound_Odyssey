@@ -41,6 +41,31 @@ function createProfileActionsDomain(ctx) {
     save,
   } = ctx;
 
+  function recordCurrentBattlePetQuest(profile) {
+    const activePetInstanceId = String(profile && profile.activePetInstanceId || "").trim();
+    const ridePetInstanceId = String(profile && profile.ridePetInstanceId || "").trim();
+    const pets = Array.isArray(profile && profile.petInstances) ? profile.petInstances : [];
+    const pet = pets.find((entry) => entry && [entry.instanceId, entry.petId].some((value) => String(value || "") === activePetInstanceId)) || null;
+    if (
+      activePetInstanceId === "" ||
+      ridePetInstanceId === "" ||
+      activePetInstanceId === ridePetInstanceId ||
+      !pet ||
+      String(pet.state || "") !== "battle"
+    ) {
+      return {changed: false, ready: false, message: ""};
+    }
+    return recordQuestEventToProfile(profile, {
+      type: "battle_pet",
+      instanceId: activePetInstanceId,
+      ridePetInstanceId,
+      formId: String(pet.formId || pet.templateId || pet.speciesId || "").trim(),
+      lineId: String(pet.lineId || "").trim(),
+      amount: 1,
+      schemaVersion: 1,
+    });
+  }
+
   function startHangSession(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
@@ -203,6 +228,7 @@ function createProfileActionsDomain(ctx) {
     }
     const profile = clone(profileDoc.profile);
     const params = objectOrEmpty(payload.payload || payload.params || payload);
+    const ridePetInstanceIdBefore = String(profile.ridePetInstanceId || "").trim();
     const actionResult = applyProfileActionToProfile(profile, action, params, now);
     if (!actionResult.ok) {
       return fail(actionResult.code || "profile_action_failed", actionResult.message || "档案操作失败。", {
@@ -253,6 +279,36 @@ function createProfileActionsDomain(ctx) {
         instanceId: String(actionResult.instanceId || params.instanceId || params.petId || "").trim(),
         formId: String(actionResult.formId || "").trim(),
         lineId: String(actionResult.lineId || "").trim(),
+        amount: 1,
+        schemaVersion: 1,
+      });
+      if (questProgress.changed && questProgress.message) {
+        questMessages.push(questProgress.message);
+      }
+      if (questProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
+      const currentBattlePetProgress = recordCurrentBattlePetQuest(profile);
+      if (currentBattlePetProgress.changed && currentBattlePetProgress.message) {
+        questMessages.push(currentBattlePetProgress.message);
+      }
+      if (currentBattlePetProgress.ready && activeQuestAutoClaim(profile)) {
+        const claim = claimActiveQuestToProfile(profile);
+        if (claim.ok && claim.message) {
+          questMessages.push(claim.message);
+        }
+      }
+    }
+    if (action === "pet_state_cycle" && String(actionResult.state || "") === "battle") {
+      const questProgress = recordQuestEventToProfile(profile, {
+        type: "battle_pet",
+        instanceId: String(actionResult.instanceId || params.instanceId || params.petId || "").trim(),
+        formId: String(actionResult.formId || "").trim(),
+        lineId: String(actionResult.lineId || "").trim(),
+        ridePetInstanceId: ridePetInstanceIdBefore,
         amount: 1,
         schemaVersion: 1,
       });

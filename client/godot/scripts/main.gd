@@ -11917,6 +11917,13 @@ func _current_task_text_uncached() -> String:
 		var available_quest := _first_available_unfinished_quest_for_tracker()
 		if not available_quest.is_empty():
 			return "可接任务 - %s" % QuestModel.title_for(available_quest)
+		var blocked_quest := PlayerProgressModel.first_level_blocked_unfinished_quest(player_profile)
+		if not blocked_quest.is_empty():
+			var current_level := PlayerProgressModel.player_level(player_profile)
+			return "%s - %s" % [
+				"等级不足" if current_level < QuestModel.required_level_for(blocked_quest) else "暂不可接",
+				QuestModel.title_for(blocked_quest),
+			]
 		var mm_guide := _pet_rebirth_mm_guide_task_info(false)
 		if not mm_guide.is_empty():
 			return str(mm_guide.get("taskText", mm_guide.get("title", "宠物转生教学")))
@@ -13983,11 +13990,11 @@ func _pet_rebirth_mm_guide_marker_state_for_item(item_id: String, normalized_pro
 	var step := str(info.get("step", ""))
 	if item_id == "firebud_pet_mm_trial_mentor":
 		if status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED:
-			return QUEST_MARKER_REPEATABLE
+			return QUEST_MARKER_REPEATABLE if bool(info.get("meetsRequiredLevel", false)) else QUEST_MARKER_BLOCKED
 		if status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE:
-			return QUEST_MARKER_AVAILABLE
+			return QUEST_MARKER_AVAILABLE if bool(info.get("meetsRequiredLevel", false)) else QUEST_MARKER_BLOCKED
 		if status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE and step == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STEP_CLAIM_MM:
-			return QUEST_MARKER_IN_PROGRESS
+			return QUEST_MARKER_IN_PROGRESS if bool(info.get("meetsRequiredLevel", false)) else QUEST_MARKER_BLOCKED
 	if status != PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE:
 		return QUEST_MARKER_NONE
 	match step:

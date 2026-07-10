@@ -5,6 +5,8 @@
     {
       "id": "quest_intro_talk",
       "title": "认识训练师",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "trainer",
       "turnInId": "trainer",
       "autoClaimOnReady": true,
@@ -29,6 +31,8 @@
     {
       "id": "quest_open_task_panel",
       "title": "查看当前任务",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "trainer",
       "turnInId": "trainer",
       "autoClaimOnReady": true,
@@ -48,6 +52,8 @@
     {
       "id": "quest_open_map_panel",
       "title": "学会看地图",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "trainer",
       "turnInId": "trainer",
       "autoClaimOnReady": true,
@@ -67,6 +73,8 @@
     {
       "id": "quest_bank_intro",
       "title": "认识银行管理员",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_bank_keeper",
       "turnInId": "firebud_bank_keeper",
       "autoClaimOnReady": true,
@@ -86,6 +94,8 @@
     {
       "id": "quest_stable_intro",
       "title": "认识兽栏管理员",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_stable_keeper",
       "turnInId": "firebud_stable_keeper",
       "autoClaimOnReady": true,
@@ -114,6 +124,8 @@
     {
       "id": "quest_riding_certificate",
       "title": "学习骑虎证",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "autoClaimOnReady": true,
@@ -143,6 +155,8 @@
     {
       "id": "quest_try_riding_tiger",
       "title": "试骑新手老虎",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "autoClaimOnReady": true,
@@ -157,11 +171,36 @@
         "stoneCoins": 0,
         "items": []
       },
+      "nextQuestId": "quest_set_battle_pet"
+    },
+    {
+      "id": "quest_set_battle_pet",
+      "title": "设置战斗宠物",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
+      "giverId": "firebud_riding_trainer",
+      "turnInId": "firebud_riding_trainer",
+      "autoClaimOnReady": true,
+      "summary": "骑宠负责骑乘，再让另一只伙伴参加战斗。",
+      "objective": {
+        "type": "battle_pet",
+        "itemId": "novice_battle_pet_egg",
+        "formId": "rebirth_starter_four_spirit_cub",
+        "excludeRidePet": true,
+        "count": 1,
+        "text": "使用对战宠物蛋后，在宠物界面把四灵幼兽切换为战斗"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": []
+      },
       "nextQuestId": "quest_open_status_panel"
     },
     {
       "id": "quest_open_status_panel",
       "title": "认识人物状态",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "autoClaimOnReady": true,
@@ -181,6 +220,8 @@
     {
       "id": "side_firebud_welfare_chat",
       "title": "福利登记",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "questType": "side",
       "optional": true,
       "giverId": "firebud_welfare_clerk",
@@ -210,6 +251,8 @@
     {
       "id": "side_firebud_story_note",
       "title": "旅人见闻",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "questType": "side",
       "optional": true,
       "giverId": "firebud_storyteller",
@@ -239,6 +282,8 @@
     {
       "id": "quest_buy_supply",
       "title": "补给准备",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "trainer",
       "turnInId": "firebud_shopkeeper",
       "autoClaimOnReady": true,
@@ -264,6 +309,8 @@
     {
       "id": "quest_use_meat",
       "title": "给宠物喂肉",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_shopkeeper",
       "turnInId": "firebud_shopkeeper",
       "autoClaimOnReady": true,
@@ -289,6 +336,8 @@
     {
       "id": "quest_sell_to_shop",
       "title": "清理旧兽皮",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_shopkeeper",
       "turnInId": "firebud_shopkeeper",
       "autoClaimOnReady": true,
@@ -309,6 +358,8 @@
     {
       "id": "quest_buy_weapon",
       "title": "准备武器",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_shopkeeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -329,6 +380,8 @@
     {
       "id": "quest_equip_weapon",
       "title": "装备木棒",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -354,6 +407,8 @@
     {
       "id": "quest_open_equipment_panel",
       "title": "检查身上装备",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -373,6 +428,8 @@
     {
       "id": "quest_first_victory",
       "title": "村外试炼",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -397,6 +454,8 @@
     {
       "id": "quest_open_auto_settings",
       "title": "设置自动战斗",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -416,6 +475,8 @@
     {
       "id": "quest_start_hang",
       "title": "第一次挂机",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -436,6 +497,8 @@
     {
       "id": "quest_market_sell_player",
       "title": "卖给其他玩家",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -458,6 +521,8 @@
     {
       "id": "quest_claim_market_mail",
       "title": "邮箱领取货款",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -477,6 +542,8 @@
     {
       "id": "quest_market_buy_player",
       "title": "向玩家购买",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -497,6 +564,8 @@
     {
       "id": "quest_buy_spirit_armor",
       "title": "认识装备精灵1",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -517,6 +586,8 @@
     {
       "id": "quest_equip_spirit_armor",
       "title": "装备滋润精灵",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -542,6 +613,8 @@
     {
       "id": "quest_use_moist_spirit",
       "title": "战斗中加血",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -563,6 +636,8 @@
     {
       "id": "quest_buy_poison_spirit_armor",
       "title": "认识装备精灵2",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -583,6 +658,8 @@
     {
       "id": "quest_equip_poison_spirit_armor",
       "title": "使用毒藤布衣",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -603,6 +680,8 @@
     {
       "id": "quest_chat_greeting",
       "title": "和附近的人打招呼",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "firebud_equipment_keeper",
       "autoClaimOnReady": true,
@@ -622,6 +701,8 @@
     {
       "id": "quest_training_partner_intro",
       "title": "陪练伙伴",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -640,6 +721,8 @@
     {
       "id": "quest_group_brawl",
       "title": "群殴",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -665,6 +748,8 @@
     {
       "id": "quest_use_poison_spirit",
       "title": "释放毒精灵",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_equipment_keeper",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -695,6 +780,8 @@
     {
       "id": "quest_capture_wuli",
       "title": "捕捉乌力",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": false,
@@ -748,6 +835,8 @@
     {
       "id": "quest_open_codex_panel",
       "title": "查看宠物图鉴",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -767,6 +856,8 @@
     {
       "id": "quest_open_family_panel",
       "title": "认识家族",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -786,6 +877,8 @@
     {
       "id": "quest_open_account_panel",
       "title": "保护账号",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
@@ -805,6 +898,8 @@
     {
       "id": "quest_rebirth_1_guidance",
       "title": "一转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -825,6 +920,8 @@
     {
       "id": "quest_rebirth_2_guidance",
       "title": "二转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -845,6 +942,8 @@
     {
       "id": "quest_rebirth_3_guidance",
       "title": "三转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -865,6 +964,8 @@
     {
       "id": "quest_rebirth_4_guidance",
       "title": "四转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -885,6 +986,8 @@
     {
       "id": "quest_rebirth_5_guidance",
       "title": "五转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -905,6 +1008,8 @@
     {
       "id": "quest_rebirth_6_guidance",
       "title": "六转资格",
+      "requiredLevel": 80,
+      "recommendedLevel": 100,
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "autoClaimOnReady": true,
@@ -925,6 +1030,8 @@
     {
       "id": "quest_remote_stable_unlock",
       "title": "远程兽栏",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_stable_keeper",
       "turnInId": "firebud_stable_keeper",
       "optional": true,
@@ -953,6 +1060,8 @@
     {
       "id": "quest_riding_unlock",
       "title": "奇怪的骑宠课",
+      "requiredLevel": 1,
+      "recommendedLevel": 1,
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "optional": true,

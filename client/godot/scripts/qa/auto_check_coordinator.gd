@@ -1033,7 +1033,7 @@ func _run_auto_npc_interaction_check() -> void:
 	host._confirm_dialog_action()
 	await host.get_tree().process_frame
 	var quest_advanced = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_bank_intro"
-	var quest_log_ok = host.world_log_message.find("完成任务「认识训练师」") >= 0
+	var quest_log_ok = host.world_log_message.find("完成任务「[1] 认识训练师」") >= 0
 	var player_close = false
 	if trainer_found:
 		var player_cell = IsoMapModel.world_to_grid(host.map_data, host.player.global_position)
@@ -5981,10 +5981,15 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	)
 
 	var trial_profile = PlayerProgressModel.default_profile()
+	var trial_player := (trial_profile.get("player", {}) as Dictionary).duplicate(true)
+	trial_player["level"] = PlayerProgressModel.PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL
+	trial_profile["player"] = trial_player
 	trial_profile["petInstances"] = []
 	trial_profile["activePetInstanceId"] = ""
 	trial_profile = PlayerProgressModel.with_backpack_slots(trial_profile, [])
 	trial_profile = PlayerProgressModel.normalize_profile(trial_profile)
+	var trial_guide_start := PlayerProgressModel.start_pet_rebirth_mm_guide(trial_profile, 12680)
+	trial_profile = trial_guide_start.get("profile", trial_profile)
 	var trial_zone = {
 		"id": "pet_rebirth_mm_trial_1_check",
 		"encounterGroupId": PlayerProgressModel.PET_REBIRTH_MM_TRIAL_GROUP_ID,
@@ -6002,18 +6007,79 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 		if PetRebirthMmModel.helper_stage_for_pet(instance) == PetRebirthMmModel.STAGE_ONE:
 			trial_reward_ok = true
 			break
+	trial_reward_ok = bool(trial_guide_start.get("ok", false)) and trial_reward_ok
+	var duplicate_trial_result := PlayerProgressModel.apply_battle_result(trial_after, trial_state, "victory")
+	var duplicate_trial_profile := duplicate_trial_result.get("profile", trial_after) as Dictionary
+	var duplicate_trial_mm_count := 0
+	for instance in PlayerProgressModel.all_pet_instances(duplicate_trial_profile):
+		if PetRebirthMmModel.helper_stage_for_pet(instance) == PetRebirthMmModel.STAGE_ONE:
+			duplicate_trial_mm_count += 1
+	var duplicate_trial_block_ok := duplicate_trial_mm_count == 1 and "\n".join(duplicate_trial_result.get("logLines", [])).find("已持有1转小MM") >= 0
+	trial_reward_ok = trial_reward_ok and duplicate_trial_block_ok
 
 	var marker_profile = PlayerProgressModel.default_profile()
+	var marker_player := (marker_profile.get("player", {}) as Dictionary).duplicate(true)
+	marker_player["level"] = PlayerProgressModel.PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL - 1
+	marker_profile["player"] = marker_player
+	var completed_main_states := {}
+	for quest in QuestModel.quests():
+		if not QuestModel.is_optional(quest) and QuestModel.rebirth_completion_target(quest) < 2:
+			completed_main_states[str(quest.get("id", ""))] = {
+				"status": QuestModel.STATUS_CLAIMED,
+				"progress": QuestModel.objective_required_count(quest),
+			}
+	marker_profile[PlayerProgressModel.QUEST_STATES_KEY] = completed_main_states
+	marker_profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = ""
 	marker_profile[PlayerProgressModel.PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = false
 	host.player_profile = PlayerProgressModel.normalize_profile(marker_profile)
 	host._load_map("firebud_village_gate", "default")
 	var trial_item = InteractionModel.find_by_id(host.map_data, "firebud_pet_mm_trial_mentor")
 	var stage2_item = InteractionModel.find_by_id(host.map_data, "firebud_pet_mm_stage2_keeper")
 	var diamond_item = InteractionModel.find_by_id(host.map_data, "firebud_diamond_keeper")
+	var low_guide_info := PlayerProgressModel.pet_rebirth_mm_guide_info(host.player_profile)
+	var low_start_guide := PlayerProgressModel.start_pet_rebirth_mm_guide(host.player_profile, 12690)
+	var low_trial_result := PlayerProgressModel.apply_battle_result(host.player_profile, trial_state, "victory")
+	var low_trial_profile := low_trial_result.get("profile", host.player_profile) as Dictionary
+	var low_start_profile := low_start_guide.get("profile", {}) as Dictionary
+	var low_start_guide_state := low_start_profile.get(PlayerProgressModel.PET_REBIRTH_MM_GUIDE_KEY, {}) as Dictionary
+	var low_trial_has_mm := false
+	for instance in PlayerProgressModel.party_pet_instances(low_trial_profile):
+		if PetRebirthMmModel.helper_stage_for_pet(instance) == PetRebirthMmModel.STAGE_ONE:
+			low_trial_has_mm = true
+			break
+	var low_level_gate_ok = (
+		host._compute_quest_marker_state_for_item(trial_item) == QUEST_MARKER_BLOCKED
+		and not bool(low_start_guide.get("ok", false))
+		and str(low_start_guide_state.get("status", "")) == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE
+		and str(low_start_guide.get("message", "")).find("Lv80") >= 0
+		and int(low_guide_info.get("requiredLevel", 0)) == 80
+		and int(low_guide_info.get("recommendedLevel", 0)) == 130
+		and str(low_guide_info.get("title", "")).begins_with("[80] ")
+		and "\n".join(low_guide_info.get("detailLines", [])).find("推荐等级：Lv130") >= 0
+		and not low_trial_has_mm
+	)
+	marker_player = (host.player_profile.get("player", {}) as Dictionary).duplicate(true)
+	marker_player["level"] = PlayerProgressModel.PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL
+	host.player_profile["player"] = marker_player
+	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var guide_available_marker_ok = host._compute_quest_marker_state_for_item(trial_item) == QUEST_MARKER_AVAILABLE
 	var start_guide = PlayerProgressModel.start_pet_rebirth_mm_guide(host.player_profile, 12700)
 	host.player_profile = start_guide.get("profile", host.player_profile)
 	var guide_claim_marker_ok = host._compute_quest_marker_state_for_item(trial_item) == QUEST_MARKER_IN_PROGRESS
+	host._mark_progress_ui_caches_dirty()
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	var guide_panel_ok = (
+		host.quest_title_label != null
+		and host.quest_title_label.text == "[80] 宠物转生教学：领取1转小MM"
+		and host.quest_detail_label != null
+		and host.quest_detail_label.text.find("推荐等级：Lv130") >= 0
+		and str(PlayerProgressModel.first_blocked_unfinished_quest(host.player_profile).get("id", "")) == "quest_rebirth_2_guidance"
+		and PlayerProgressModel.first_level_blocked_unfinished_quest(host.player_profile).is_empty()
+		and host._current_task_text().find("[80] 宠物转生教学") >= 0
+		and str((host._current_task_navigation_target().get("interaction", {}) as Dictionary).get("id", "")) == "firebud_pet_mm_trial_mentor"
+	)
+	host._close_quest_panel()
 	var guide_grant = PlayerProgressModel.grant_pet_rebirth_mm(host.player_profile, PetRebirthMmModel.STAGE_ONE, "marker_check")
 	host.player_profile = guide_grant.get("profile", host.player_profile)
 	var guide_feed_marker_ok = host._compute_quest_marker_state_for_item(diamond_item) == QUEST_MARKER_IN_PROGRESS
@@ -6024,13 +6090,25 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	host.player_profile["petInstances"] = guide_instances
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var guide_repeat_marker_ok = host._compute_quest_marker_state_for_item(trial_item) == QUEST_MARKER_REPEATABLE
+	marker_player = (host.player_profile.get("player", {}) as Dictionary).duplicate(true)
+	marker_player["level"] = PlayerProgressModel.PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL - 1
+	host.player_profile["player"] = marker_player
+	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
+	var guide_completed_locked_marker_ok: bool = host._compute_quest_marker_state_for_item(trial_item) == QUEST_MARKER_BLOCKED
+	var guide_completed_options: Array[Dictionary] = host._dialog_quest()._dialog_action_options(trial_item)
+	var guide_completed_primary_option: Dictionary = guide_completed_options[0] if not guide_completed_options.is_empty() else {}
+	var guide_completed_locked_button_ok: bool = (
+		bool(guide_completed_primary_option.get("disabled", false))
+		and str(guide_completed_primary_option.get("label", "")) == "需要 Lv80"
+	)
+	var guide_completed_level_gate_ok: bool = guide_completed_locked_marker_ok and guide_completed_locked_button_ok
 	var stage2_before_ok = host._compute_quest_marker_state_for_item(stage2_item) == QUEST_MARKER_AVAILABLE
 	host.player_profile[PlayerProgressModel.PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = true
 	var stage2_after_ok = host._compute_quest_marker_state_for_item(stage2_item) == QUEST_MARKER_NONE
 
-	var guide_marker_ok = guide_available_marker_ok and guide_claim_marker_ok and guide_feed_marker_ok and guide_repeat_marker_ok
+	var guide_marker_ok = low_level_gate_ok and guide_available_marker_ok and guide_claim_marker_ok and guide_feed_marker_ok and guide_repeat_marker_ok and guide_completed_level_gate_ok and guide_panel_ok
 	var status = "ok" if catalog_ok and buy_stone_ok and feed_ok and rebirth_ok and stage2_claim_ok and mm1_egg_ok and egg_ok and trial_reward_ok and guide_marker_ok and stage2_before_ok and stage2_after_ok else "failed"
-	print("pet rebirth mm check ready: status=%s catalog=%s buy_stone=%s feed=%s rebirth=%s stage2_claim=%s mm1_egg=%s egg=%s trial_reward=%s guide_marker=%s guide_available=%s guide_claim=%s guide_feed=%s guide_repeat=%s stage2_before=%s stage2_after=%s attack_bonus=%.3f" % [
+	print("pet rebirth mm check ready: status=%s catalog=%s buy_stone=%s feed=%s rebirth=%s stage2_claim=%s mm1_egg=%s egg=%s trial_reward=%s duplicate_trial=%s guide_marker=%s low_gate=%s guide_available=%s guide_claim=%s guide_panel=%s guide_feed=%s guide_repeat=%s completed_level_gate=%s stage2_before=%s stage2_after=%s attack_bonus=%.3f" % [
 		status,
 		str(catalog_ok),
 		str(buy_stone_ok),
@@ -6040,11 +6118,15 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 		str(mm1_egg_ok),
 		str(egg_ok),
 		str(trial_reward_ok),
+		str(duplicate_trial_block_ok),
 		str(guide_marker_ok),
+		str(low_level_gate_ok),
 		str(guide_available_marker_ok),
 		str(guide_claim_marker_ok),
+		str(guide_panel_ok),
 		str(guide_feed_marker_ok),
 		str(guide_repeat_marker_ok),
+		str(guide_completed_level_gate_ok),
 		str(stage2_before_ok),
 		str(stage2_after_ok),
 		float(rebirth_bonus.get("attack", 0.0)),
@@ -7161,6 +7243,11 @@ func _run_auto_backpack_check() -> void:
 		and int(capture_counts.get(BattleModel.CAPTURE_TOOL_NET, 0)) == 3
 		and not capture_counts.has(BattleModel.ITEM_MEAT_SMALL)
 	)
+	var binding_ok = (
+		BackpackModel.item_is_bound(PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+		and not BackpackModel.item_is_bound(BattleModel.ITEM_MEAT_SMALL)
+		and "\n".join(BackpackModel.detail_lines_for_slot({"itemId": PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG, "count": 1})).find("绑定：已绑定") >= 0
+	)
 
 	host._open_backpack_panel()
 	await host.get_tree().process_frame
@@ -7265,13 +7352,14 @@ func _run_auto_backpack_check() -> void:
 		var after_meat = BattleModel.item_count(host.battle_state, BattleModel.ITEM_MEAT_SMALL)
 		var profile_meat = PlayerProgressModel.backpack_item_count(host.player_profile, BattleModel.ITEM_MEAT_SMALL)
 		meat_consumed_ok = meat_mode_ok and selected and saw_meat_event and before_meat == 6 and after_meat == 5 and profile_meat == 5
-	var status = "ok" if slot_limit_ok and starting_empty_ok and stack_ok and context_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
-	print("backpack check ready: status=%s slots=%s starting_empty=%s stack=%s context=%s panel=%s currency=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
+	var status = "ok" if slot_limit_ok and starting_empty_ok and stack_ok and context_ok and binding_ok and panel_ok and shared_slot_ok and backpack_quick_use_ok and unlock_ok and loaded and zone_found and item_menu_ok and capture_menu_ok and meat_consumed_ok else "failed"
+	print("backpack check ready: status=%s slots=%s starting_empty=%s stack=%s context=%s binding=%s panel=%s currency=%s shared_slot=%s quick_use=%s unlock=%s item_menu=%s capture_menu=%s meat_consumed=%s" % [
 		status,
 		str(slot_limit_ok),
 		str(starting_empty_ok),
 		str(stack_ok),
 		str(context_ok),
+		str(binding_ok),
 		str(panel_ok),
 		str(currency_ok),
 		str(shared_slot_ok),
@@ -9272,7 +9360,7 @@ func _run_auto_remote_stable_unlock_check() -> void:
 	var unlocked_ok = (
 		PlayerProgressModel.has_remote_stable(host.player_profile)
 		and PlayerProgressModel.active_quest_id(host.player_profile) == remote_unlock_active_id
-		and host.world_log_message.find("完成任务「远程兽栏」") >= 0
+		and host.world_log_message.find("完成任务「[1] 远程兽栏」") >= 0
 		and host.world_log_message.find("远程兽栏能力") >= 0
 	)
 
@@ -10471,6 +10559,16 @@ func _run_auto_quest_objective_templates_check() -> void:
 			"count": 1,
 		},
 	}
+	var battle_pet_quest = {
+		"id": "test_battle_pet",
+		"title": "设置战斗宠物",
+		"objective": {
+			"type": "battle_pet",
+			"formId": "rebirth_starter_four_spirit_cub",
+			"excludeRidePet": true,
+			"count": 1,
+		},
+	}
 	var equip_quest = {
 		"id": "test_equip_item",
 		"title": "装备指定装备",
@@ -10510,10 +10608,18 @@ func _run_auto_quest_objective_templates_check() -> void:
 			},
 		],
 	}
+	var level_quest = {
+		"id": "test_level_task",
+		"title": "等级任务",
+		"requiredLevel": 80,
+		"recommendedLevel": 130,
+		"objective": {"type": "talk", "targetId": "trainer", "count": 1},
+	}
 	var templates_ok = (
 		QuestModel.supported_objective_types().has("defeat_npc")
 		and QuestModel.supported_objective_types().has("deliver_pet")
 		and QuestModel.supported_objective_types().has("reach_map")
+		and str(QuestModel.objective_template_for_type("battle_pet").get("label", "")) == "设置战斗宠物"
 		and str(QuestModel.objective_template_for_type("equip_item").get("label", "")) == "装备指定装备"
 		and "\n".join(QuestModel.objective_contract_lines()).find("capture_pet：捕捉宠物") >= 0
 	)
@@ -10555,6 +10661,36 @@ func _run_auto_quest_objective_templates_check() -> void:
 			"targetType": "enemy",
 		}) == 0
 	)
+	var battle_pet_ok = (
+		QuestModel.progress_amount_for_event(battle_pet_quest, {
+			"type": "battle_pet",
+			"instanceId": "pet_four_spirit",
+			"ridePetInstanceId": "pet_tiger",
+			"formId": "rebirth_starter_four_spirit_cub",
+		}) == 1
+		and QuestModel.progress_amount_for_event(battle_pet_quest, {
+			"type": "battle_pet",
+			"instanceId": "pet_tiger",
+			"ridePetInstanceId": "pet_tiger",
+			"formId": "rebirth_starter_four_spirit_cub",
+		}) == 0
+		and QuestModel.progress_amount_for_event(battle_pet_quest, {
+			"type": "battle_pet",
+			"instanceId": "pet_other",
+			"ridePetInstanceId": "pet_tiger",
+			"formId": "novice_tiger_mount",
+		}) == 0
+		and QuestModel.progress_amount_for_event(battle_pet_quest, {
+			"type": "battle_pet",
+			"instanceId": "pet_four_spirit",
+			"formId": "rebirth_starter_four_spirit_cub",
+		}) == 1
+		and QuestModel.progress_amount_for_event(battle_pet_quest, {
+			"type": "battle_pet",
+			"instanceId": "",
+			"formId": "rebirth_starter_four_spirit_cub",
+		}) == 0
+	)
 	var multi_ok = (
 		QuestModel.objectives_for(equip_quest).size() == 2
 		and QuestModel.objective_required_count(equip_quest) == 2
@@ -10582,16 +10718,55 @@ func _run_auto_quest_objective_templates_check() -> void:
 			"mapId": "shadow_oath_cavern_top",
 		}) == 0
 	)
+	var level_contract_ok = (
+		QuestModel.raw_title_for(level_quest) == "等级任务"
+		and QuestModel.title_for(level_quest) == "[80] 等级任务"
+		and QuestModel.required_level_for(level_quest) == 80
+		and QuestModel.recommended_level_for(level_quest) == 130
+		and QuestModel.recommended_level_text_for(level_quest) == "推荐等级：Lv130"
+		and not QuestModel.can_accept_at_level(level_quest, 79)
+		and QuestModel.can_accept_at_level(level_quest, 80)
+	)
+	var formal_quests := QuestModel.quests()
+	var formal_levels_ok := formal_quests.size() == 44
+	for formal_quest in formal_quests:
+		formal_levels_ok = (
+			formal_levels_ok
+			and formal_quest.has("requiredLevel")
+			and formal_quest.has("recommendedLevel")
+		)
+	var riding_level_quest := QuestModel.quest_for_id("quest_riding_certificate")
+	var rebirth_level_quest := QuestModel.quest_for_id("quest_rebirth_1_guidance")
+	level_contract_ok = (
+		level_contract_ok
+		and formal_levels_ok
+		and QuestModel.title_for(riding_level_quest) == "[1] 学习骑虎证"
+		and QuestModel.required_level_text_for(riding_level_quest) == "接取等级：Lv1"
+		and QuestModel.recommended_level_text_for(riding_level_quest) == "推荐等级：Lv1"
+		and QuestModel.title_for(rebirth_level_quest) == "[80] 一转资格"
+		and QuestModel.required_level_for(rebirth_level_quest) == 80
+		and QuestModel.recommended_level_text_for(rebirth_level_quest) == "推荐等级：Lv100"
+	)
+	var level_profile := PlayerProgressModel.default_profile()
+	var level_player := (level_profile.get("player", {}) as Dictionary).duplicate(true)
+	level_player["level"] = 79
+	level_profile["player"] = level_player
+	level_contract_ok = level_contract_ok and not PlayerProgressModel.quest_available_for_profile(level_profile, level_quest)
+	level_player["level"] = 80
+	level_profile["player"] = level_player
+	level_contract_ok = level_contract_ok and PlayerProgressModel.quest_available_for_profile(level_profile, level_quest)
 	var catalog_ok = QuestModel.validation_errors().is_empty()
-	var status = "ok" if templates_ok and defeat_ok and deliver_ok and use_ok and multi_ok and reach_ok and catalog_ok else "failed"
-	print("quest objective templates check ready: status=%s templates=%s defeat=%s deliver=%s use=%s multi=%s reach=%s catalog=%s" % [
+	var status = "ok" if templates_ok and defeat_ok and deliver_ok and use_ok and battle_pet_ok and multi_ok and reach_ok and level_contract_ok and catalog_ok else "failed"
+	print("quest objective templates check ready: status=%s templates=%s defeat=%s deliver=%s use=%s battle_pet=%s multi=%s reach=%s level=%s catalog=%s" % [
 		status,
 		str(templates_ok),
 		str(defeat_ok),
 		str(deliver_ok),
 		str(use_ok),
+		str(battle_pet_ok),
 		str(multi_ok),
 		str(reach_ok),
+		str(level_contract_ok),
 		str(catalog_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -12600,6 +12775,7 @@ func _run_auto_quest_chain_check() -> void:
 	var battle_pet_hatch_ok = (
 		bool(battle_pet_hatch_result.get("ok", false))
 		and str(battle_pet_instance.get("formId", "")) == "rebirth_starter_four_spirit_cub"
+		and str(battle_pet_instance.get("binding", "")) == BackpackModel.BINDING_BOUND
 		and str(battle_pet_instance.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE
 	)
 
@@ -12624,6 +12800,51 @@ func _run_auto_quest_chain_check() -> void:
 		and str(tiger_ride_result.get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
 		and bool(try_riding_event.get("ready", false))
 		and bool(try_riding_claim.get("ok", false))
+		and PlayerProgressModel.active_quest_id(profile) == "quest_set_battle_pet"
+	)
+	var battle_pet_store_check := PlayerProgressModel.can_store_pet(profile, battle_pet_instance_id)
+	var battle_pet_drop_check := PlayerProgressModel.can_drop_pet(profile, battle_pet_instance_id)
+	var battle_pet_binding_ok = (
+		bool(battle_pet_store_check.get("ok", false))
+		and not bool(battle_pet_drop_check.get("ok", false))
+		and str(battle_pet_drop_check.get("message", "")).find("已绑定") >= 0
+	)
+	var reclaim_profile: Dictionary = profile.duplicate(true) as Dictionary
+	var reclaim_instances: Array = []
+	for reclaim_instance in PlayerProgressModel.all_pet_instances(reclaim_profile):
+		if str(reclaim_instance.get("formId", reclaim_instance.get("templateId", ""))) != PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID:
+			reclaim_instances.append(reclaim_instance)
+	reclaim_profile["petInstances"] = reclaim_instances
+	var reclaim_result := PlayerProgressModel.reclaim_battle_pet_tutorial_egg(reclaim_profile)
+	var reclaim_again := PlayerProgressModel.reclaim_battle_pet_tutorial_egg(reclaim_result.get("profile", reclaim_profile) as Dictionary)
+	var battle_pet_reclaim_ok = (
+		bool(reclaim_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(reclaim_result.get("profile", {}) as Dictionary, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG) == 1
+		and not bool(reclaim_again.get("ok", false))
+	)
+	var ride_pet_instance_id_before := str(profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, ""))
+	var battle_pet_state_result = PlayerProgressModel.cycle_pet_state(profile, battle_pet_instance_id)
+	profile = battle_pet_state_result.get("profile", profile)
+	var battle_pet_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "battle_pet",
+		"instanceId": str(battle_pet_state_result.get("instanceId", battle_pet_instance_id)),
+		"formId": str(battle_pet_state_result.get("formId", "")),
+		"lineId": str(battle_pet_state_result.get("lineId", "")),
+		"ridePetInstanceId": ride_pet_instance_id_before,
+		"amount": 1,
+	})
+	profile = battle_pet_event.get("profile", profile)
+	var battle_pet_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = battle_pet_claim.get("profile", profile)
+	var battle_pet_after = PlayerProgressModel.pet_instance_by_id(profile, battle_pet_instance_id)
+	var battle_pet_ok = (
+		bool(battle_pet_state_result.get("ok", false))
+		and str(battle_pet_state_result.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE
+		and bool(battle_pet_event.get("ready", false))
+		and bool(battle_pet_claim.get("ok", false))
+		and str(profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")) == tiger_instance_id
+		and str(profile.get("activePetInstanceId", "")) == battle_pet_instance_id
+		and str(battle_pet_after.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE
 		and PlayerProgressModel.active_quest_id(profile) == "quest_open_status_panel"
 	)
 	var status_panel_event = PlayerProgressModel.record_quest_event(profile, {"type": "open_feature", "featureId": "status"})
@@ -12631,6 +12852,15 @@ func _run_auto_quest_chain_check() -> void:
 	var status_panel_claim = PlayerProgressModel.claim_active_quest(profile)
 	profile = status_panel_claim.get("profile", profile)
 	var status_feature_ok = bool(status_panel_event.get("ready", false)) and bool(status_panel_claim.get("ok", false)) and PlayerProgressModel.active_quest_id(profile) == "quest_buy_supply"
+	var legacy_profile: Dictionary = profile.duplicate(true) as Dictionary
+	var legacy_states: Dictionary = (legacy_profile.get("questStates", {}) as Dictionary).duplicate(true) as Dictionary
+	legacy_states.erase("quest_set_battle_pet")
+	legacy_profile["questStates"] = legacy_states
+	legacy_profile = PlayerProgressModel.normalize_profile(legacy_profile)
+	var legacy_battle_pet_backfill_ok = (
+		str(PlayerProgressModel.quest_state_for_id(legacy_profile, "quest_set_battle_pet", true).get("status", "")) == QuestModel.STATUS_CLAIMED
+		and PlayerProgressModel.active_quest_id(legacy_profile, true) == "quest_buy_supply"
+	)
 
 	var before_rope = PlayerProgressModel.backpack_item_count(profile, BattleModel.CAPTURE_TOOL_ROPE_BASIC)
 	var before_buy_meat = PlayerProgressModel.backpack_item_count(profile, BattleModel.ITEM_MEAT_SMALL)
@@ -13029,7 +13259,7 @@ func _run_auto_quest_chain_check() -> void:
 			host._record_battle_event(poison_event, ledger)
 			spirit_hook_ok = (
 				PlayerProgressModel.active_quest_id(host.player_profile) == "quest_capture_wuli"
-				and host.world_log_message.find("完成任务「释放毒精灵」") >= 0
+				and host.world_log_message.find("完成任务「[1] 释放毒精灵」") >= 0
 			)
 	host.battle_active = false
 	host.battle_state = {}
@@ -13154,12 +13384,29 @@ func _run_auto_quest_chain_check() -> void:
 	profile = account_event.get("profile", profile)
 	var account_claim = PlayerProgressModel.claim_active_quest(profile)
 	profile = account_claim.get("profile", profile)
+	var rebirth_quest := QuestModel.quest_for_id("quest_rebirth_1_guidance")
+	var rebirth_locked_ok := (
+		PlayerProgressModel.active_quest_id(profile) == ""
+		and not PlayerProgressModel.quest_available_for_profile(profile, rebirth_quest)
+		and QuestModel.title_for(rebirth_quest) == "[80] 一转资格"
+		and QuestModel.recommended_level_text_for(rebirth_quest) == "推荐等级：Lv100"
+	)
 	var closing_features_ok = (
 		bool(codex_event.get("ready", false)) and bool(codex_claim.get("ok", false))
 		and bool(family_event.get("ready", false)) and bool(family_claim.get("ok", false))
 		and bool(account_event.get("ready", false)) and bool(account_claim.get("ok", false))
-		and PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
+		and rebirth_locked_ok
 	)
+	var rebirth_player := (profile.get("player", {}) as Dictionary).duplicate(true)
+	rebirth_player["level"] = 80
+	profile["player"] = rebirth_player
+	profile = PlayerProgressModel.normalize_profile(profile)
+	var rebirth_accepted_ok := PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
+	rebirth_player = (profile.get("player", {}) as Dictionary).duplicate(true)
+	rebirth_player["level"] = 1
+	profile["player"] = rebirth_player
+	profile = PlayerProgressModel.normalize_profile(profile)
+	var rebirth_persists_after_level_drop_ok := PlayerProgressModel.active_quest_id(profile) == "quest_rebirth_1_guidance"
 
 	var rebirth_event = PlayerProgressModel.record_quest_event(profile, {
 		"type": "talk",
@@ -13170,7 +13417,9 @@ func _run_auto_quest_chain_check() -> void:
 	profile = rebirth_claim.get("profile", profile)
 	var rebirth_requirement = PlayerProgressModel.rebirth_requirement_state(profile)
 	var rebirth_quest_ok = (
-		bool(rebirth_event.get("ready", false))
+		rebirth_accepted_ok
+		and rebirth_persists_after_level_drop_ok
+		and bool(rebirth_event.get("ready", false))
 		and bool(rebirth_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == ""
 		and bool(rebirth_requirement.get("questOk", false))
@@ -13190,7 +13439,7 @@ func _run_auto_quest_chain_check() -> void:
 			and host.dialog_option_button != null
 			and host.dialog_option_button.text == "完成"
 			and host.dialog_body_label != null
-			and host.dialog_body_label.text.find("任务：认识训练师") >= 0
+			and host.dialog_body_label.text.find("任务：[1] 认识训练师") >= 0
 		)
 		host._confirm_dialog_action()
 		await host.get_tree().process_frame
@@ -13199,12 +13448,12 @@ func _run_auto_quest_chain_check() -> void:
 		var ui_world_log = host.world_log_message
 		ui_advance_ok = (
 			ui_active_quest_id == "quest_open_task_panel"
-			and ui_world_log.find("完成任务「认识训练师」") >= 0
+			and ui_world_log.find("完成任务「[1] 认识训练师」") >= 0
 			and ui_task_text.find("查看当前任务") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and entry_features_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and status_feature_ok and buy_ok and use_ok and shop_sell_ok and buy_weapon_ok and equip_ok and equipment_feature_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and hang_market_mail_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and closing_features_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and entry_features_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and battle_pet_binding_ok and battle_pet_reclaim_ok and battle_pet_ok and status_feature_ok and legacy_battle_pet_backfill_ok and buy_ok and use_ok and shop_sell_ok and buy_weapon_ok and equip_ok and equipment_feature_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and hang_market_mail_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and closing_features_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and chat_tutorial_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s battle_pet_binding=%s battle_pet_reclaim=%s battle_pet=%s legacy_backfill=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -13215,6 +13464,10 @@ func _run_auto_quest_chain_check() -> void:
 		str(riding_ok),
 		str(battle_pet_hatch_ok),
 		str(try_riding_ok),
+		str(battle_pet_binding_ok),
+		str(battle_pet_reclaim_ok),
+		str(battle_pet_ok),
+		str(legacy_battle_pet_backfill_ok),
 		str(buy_ok),
 		str(use_ok),
 		str(buy_weapon_ok),
@@ -13272,9 +13525,11 @@ func _run_auto_quest_ui_check() -> void:
 		and host.quest_menu_button != null
 		and host.quest_menu_button.text == "任务"
 		and host.quest_title_label != null
-		and host.quest_title_label.text == "认识训练师"
+		and host.quest_title_label.text == "[1] 认识训练师"
 		and host.quest_detail_label != null
 		and host.quest_detail_label.text.find("和训练师阿土对话") >= 0
+		and host.quest_detail_label.text.find("接取等级：Lv1") >= 0
+		and host.quest_detail_label.text.find("推荐等级：Lv1") >= 0
 		and host.quest_detail_label.text.find("奖励") >= 0
 		and host.quest_route_button != null
 		and not host.quest_route_button.disabled
@@ -13331,7 +13586,7 @@ func _run_auto_quest_ui_check() -> void:
 	await host.get_tree().process_frame
 	var bank_detail_ok = (
 		host.quest_title_label != null
-		and host.quest_title_label.text == "认识银行管理员"
+		and host.quest_title_label.text == "[1] 认识银行管理员"
 		and host.quest_detail_label != null
 		and host.quest_detail_label.text.find("银行管理员阿衡") >= 0
 	)
@@ -13435,7 +13690,106 @@ func _run_auto_quest_ui_check() -> void:
 		"lineId": str(tiger_ride_result.get("lineId", "")),
 		"amount": 1,
 	})
-	var status_profile: Dictionary = PlayerProgressModel.claim_active_quest(try_ride_event.get("profile", {}) as Dictionary).get("profile", {})
+	var battle_task_profile: Dictionary = PlayerProgressModel.claim_active_quest(try_ride_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = battle_task_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var battle_pet_backpack_route_ok = (
+		host.backpack_panel != null
+		and host.backpack_panel.visible
+		and host.world_log_message.find("对战宠物蛋") >= 0
+		and host._current_task_text().find("设置战斗宠物") >= 0
+	)
+	var missing_egg_profile: Dictionary = battle_task_profile.duplicate(true) as Dictionary
+	missing_egg_profile["backpackSlots"] = BackpackModel.consume(PlayerProgressModel.backpack_slots(missing_egg_profile), PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG, 1)
+	host.player_profile = PlayerProgressModel.normalize_profile(missing_egg_profile)
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var stable_keeper := InteractionModel.find_by_id(host.map_data, "firebud_stable_keeper")
+	var battle_pet_reclaim_route_ok = host.has_pending_interaction and str(host.pending_interaction.get("id", "")) == "firebud_stable_keeper"
+	if battle_pet_reclaim_route_ok and not stable_keeper.is_empty():
+		host._open_interaction_dialog(stable_keeper)
+		await host.get_tree().process_frame
+		var found_reclaim_button := false
+		for button in host.dialog_secondary_buttons:
+			if button != null and str((button as Button).text).find("补领对战宠物蛋") >= 0:
+				found_reclaim_button = true
+				break
+		battle_pet_reclaim_route_ok = found_reclaim_button
+	var full_missing_profile: Dictionary = missing_egg_profile.duplicate(true) as Dictionary
+	var full_slots: Array[Dictionary] = []
+	for _index in range(BackpackModel.BASE_SLOT_LIMIT):
+		full_slots.append({"itemId": BattleModel.ITEM_MEAT_SMALL, "count": BackpackModel.stack_limit_for(BattleModel.ITEM_MEAT_SMALL)})
+	full_missing_profile["backpackSlots"] = full_slots
+	host.player_profile = PlayerProgressModel.normalize_profile(full_missing_profile)
+	var full_reclaim_check := PlayerProgressModel.can_reclaim_battle_pet_tutorial_egg(host.player_profile)
+	var battle_pet_full_reclaim_button_ok = (
+		PlayerProgressModel.battle_pet_tutorial_egg_reclaim_available(host.player_profile)
+		and not bool(full_reclaim_check.get("ok", false))
+		and str(full_reclaim_check.get("message", "")).find("背包已满") >= 0
+	)
+	if battle_pet_full_reclaim_button_ok and not stable_keeper.is_empty():
+		host._open_interaction_dialog(stable_keeper)
+		await host.get_tree().process_frame
+		var found_full_reclaim_button := false
+		for button in host.dialog_secondary_buttons:
+			if button != null and str((button as Button).text).find("补领对战宠物蛋") >= 0:
+				found_full_reclaim_button = true
+				break
+		battle_pet_full_reclaim_button_ok = found_full_reclaim_button
+	var battle_pet_hatch_result = PlayerProgressModel.use_world_pet_egg_item(battle_task_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)
+	var battle_pet_profile: Dictionary = battle_pet_hatch_result.get("profile", battle_task_profile) as Dictionary
+	var battle_pet_instance_id := str(battle_pet_hatch_result.get("instanceId", ""))
+	host.player_profile = battle_pet_profile
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var battle_pet_panel_route_ok = (
+		host.pet_panel != null
+		and host.pet_panel.visible
+		and host.pet_selected_instance_id == battle_pet_instance_id
+		and host.world_log_message.find("四灵幼兽") >= 0
+		and host._current_task_text().find("设置战斗宠物") >= 0
+	)
+	var store_battle_pet_result := PlayerProgressModel.store_pet(battle_pet_profile, battle_pet_instance_id)
+	var stored_battle_pet_profile: Dictionary = store_battle_pet_result.get("profile", battle_pet_profile) as Dictionary
+	host.player_profile = stored_battle_pet_profile
+	host.pet_selected_instance_id = ""
+	host._clear_navigation_state()
+	host._load_map("firebud_village_gate", "from_training_yard")
+	host._open_quest_panel()
+	await host.get_tree().process_frame
+	host._on_quest_route_pressed()
+	await host.get_tree().process_frame
+	var battle_pet_storage_route_ok = (
+		bool(store_battle_pet_result.get("ok", false))
+		and host.has_pending_interaction
+		and str(host.pending_interaction.get("id", "")) == "firebud_stable_keeper"
+		and host.pet_selected_instance_id == battle_pet_instance_id
+	)
+	var ride_pet_instance_id_before := str(battle_pet_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, ""))
+	var battle_pet_state_result = PlayerProgressModel.cycle_pet_state(battle_pet_profile, battle_pet_instance_id)
+	battle_pet_profile = battle_pet_state_result.get("profile", battle_pet_profile) as Dictionary
+	var battle_pet_event = PlayerProgressModel.record_quest_event(battle_pet_profile, {
+		"type": "battle_pet",
+		"instanceId": battle_pet_instance_id,
+		"ridePetInstanceId": ride_pet_instance_id_before,
+		"formId": str(battle_pet_state_result.get("formId", "")),
+		"lineId": str(battle_pet_state_result.get("lineId", "")),
+		"amount": 1,
+	})
+	var status_profile: Dictionary = PlayerProgressModel.claim_active_quest(battle_pet_event.get("profile", {}) as Dictionary).get("profile", {})
 	var status_event = PlayerProgressModel.record_quest_event(status_profile, {"type": "open_feature", "featureId": "status"})
 	var buy_profile: Dictionary = PlayerProgressModel.claim_active_quest(status_event.get("profile", {}) as Dictionary).get("profile", {})
 	host.player_profile = buy_profile
@@ -13746,8 +14100,8 @@ func _run_auto_quest_ui_check() -> void:
 		and host.world_log_message == "历史记录13"
 	)
 
-	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and battle_pet_backpack_route_ok and battle_pet_reclaim_route_ok and battle_pet_full_reclaim_button_ok and battle_pet_panel_route_ok and battle_pet_storage_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s battle_pet_bag=%s battle_pet_reclaim=%s battle_pet_full_reclaim=%s battle_pet_panel=%s battle_pet_storage=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(server_route_uses_step_ok),
@@ -13759,6 +14113,11 @@ func _run_auto_quest_ui_check() -> void:
 		str(riding_route_ok),
 		str(try_ride_backpack_route_ok),
 		str(try_ride_pet_route_ok),
+		str(battle_pet_backpack_route_ok),
+		str(battle_pet_reclaim_route_ok),
+		str(battle_pet_full_reclaim_button_ok),
+		str(battle_pet_panel_route_ok),
+		str(battle_pet_storage_route_ok),
 		str(buy_detail_ok),
 		str(cross_map_route_ok),
 		str(shop_route_ok),
@@ -13823,7 +14182,7 @@ func _run_auto_quest_reward_choice_check() -> void:
 		and host.quest_panel != null
 		and host.quest_panel.visible
 		and host.quest_title_label != null
-		and host.quest_title_label.text == "捕捉乌力"
+		and host.quest_title_label.text == "[1] 捕捉乌力"
 		and host.quest_detail_label != null
 		and host.quest_detail_label.text.find("自选") >= 0
 		and host.quest_reward_choice_option != null
@@ -13946,7 +14305,7 @@ func _run_auto_quest_equipment_reward_check() -> void:
 		and host.quest_panel != null
 		and host.quest_panel.visible
 		and host.quest_title_label != null
-		and host.quest_title_label.text == "释放毒精灵"
+		and host.quest_title_label.text == "[1] 释放毒精灵"
 		and detail_text.find("奖励：20石币、祝木棒 x1、缚毒捕捉网 x1") >= 0
 		and detail_text.find("奖励装备") >= 0
 		and detail_text.find("祝木棒 x1") >= 0
@@ -15254,7 +15613,7 @@ func _run_auto_auth_server_client_check() -> void:
 			"questId": "quest_intro_talk",
 			"ready": true,
 		},
-		"questMessages": ["完成任务「认识训练师」，获得20石币、物品。"],
+		"questMessages": ["完成任务「[1] 认识训练师」，获得20石币、物品。"],
 	}).to_utf8_buffer())
 	var quest_record_parse_ok = (
 		bool(parsed_quest_record.get("ok", false))
@@ -15290,7 +15649,7 @@ func _run_auto_auth_server_client_check() -> void:
 			"questId": "quest_capture_wuli",
 			"rewardChoiceId": "rope_pack",
 		},
-		"questMessages": ["完成任务「捕捉乌力」，获得60石币。"],
+		"questMessages": ["完成任务「[1] 捕捉乌力」，获得60石币。"],
 	}).to_utf8_buffer())
 	var quest_claim_parse_ok = (
 		bool(parsed_quest_claim.get("ok", false))

@@ -111,6 +111,44 @@ test("bank item slots preserve stacks and enforce unlocked pages", () => {
   assert.equal(refill.code, "bank_storage_full");
 });
 
+test("bound items stay usable in account storage but cannot enter player markets or trades", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const owner = service.register({"username": "bound_owner", "password": "test1234", "displayName": "绑定甲"});
+  const other = service.register({"username": "bound_other", "password": "test1234", "displayName": "绑定乙"});
+  seedBackpack(service, owner.session.token, [{"itemId": "novice_battle_pet_egg", "count": 1}]);
+
+  const deposit = service.bankDeposit(owner.session.token, {
+    "items": [{"itemId": "novice_battle_pet_egg", "count": 1}],
+  });
+  assert.equal(deposit.ok, true);
+  assert.equal(profileItemCount(deposit.profile, "novice_battle_pet_egg"), 0);
+
+  const withdraw = service.bankWithdraw(owner.session.token, {
+    "items": [{"itemId": "novice_battle_pet_egg", "count": 1}],
+  });
+  assert.equal(withdraw.ok, true);
+  assert.equal(profileItemCount(withdraw.profile, "novice_battle_pet_egg"), 1);
+
+  const listing = service.createMarketListing(owner.session.token, {
+    "itemId": "novice_battle_pet_egg",
+    "count": 1,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(listing.ok, false);
+  assert.equal(listing.code, "market_item_bound");
+
+  assert.equal(service.updatePlayerPosition(owner.session.token, {"mapId": "firebud_training_yard", "cellX": 10, "cellY": 10, "facing": "east", "moving": false}).ok, true);
+  assert.equal(service.updatePlayerPosition(other.session.token, {"mapId": "firebud_training_yard", "cellX": 11, "cellY": 10, "facing": "west", "moving": false}).ok, true);
+  const trade = service.proposeTrade(owner.session.token, {
+    "targetUsername": "bound_other",
+    "items": [{"itemId": "novice_battle_pet_egg", "count": 1}],
+  });
+  assert.equal(trade.ok, false);
+  assert.equal(trade.code, "trade_item_bound");
+  assert.equal(profileItemCount(service.getProfile(owner.session.token).profile, "novice_battle_pet_egg"), 1);
+});
+
 test("bank enforces wallet and bank stone coin caps", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const account = service.register({"username": "bankcapuser", "password": "test1234", "displayName": "银行上限号"});

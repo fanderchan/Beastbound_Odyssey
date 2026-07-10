@@ -31,6 +31,7 @@ function createEconomyDomain(ctx) {
     addRewardItemsToBackpack,
     authorizeGmCommand,
     bagItemById,
+    bagItemIsBound,
     bagItemLabel,
     bagItemStackLimit,
     backpackItemCount,
@@ -237,6 +238,9 @@ function createEconomyDomain(ctx) {
     if (items.length <= 0 || items[0].itemId !== itemId) {
       return fail("market_item_invalid", "请选择可以上架的物品。", profilePayload(prepared, prepared.profile));
     }
+    if (bagItemIsBound(itemId)) {
+      return fail("market_item_bound", `${bagItemLabel(itemId)} 已绑定，不能上架交易所。`, profilePayload(prepared, prepared.profile));
+    }
     if (count <= 0) {
       return fail("market_count_invalid", "上架数量需要大于0。", profilePayload(prepared, prepared.profile));
     }
@@ -313,6 +317,9 @@ function createEconomyDomain(ctx) {
     const listing = normalizeMarketListing(data.marketListings && data.marketListings[listingId]);
     if (!listing || !listing.listingId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    if (bagItemIsBound(listing.itemId)) {
+      return fail("market_item_bound", `${bagItemLabel(listing.itemId)} 已绑定，不能继续交易。`);
     }
     if (listing.sellerAccountId === resolved.account.accountId) {
       return fail("market_buy_self", "不能购买自己的挂单。");
@@ -512,6 +519,10 @@ function createEconomyDomain(ctx) {
     }
     const offerItems = normalizeLimitedItems(payload.items || payload.offerItems || []);
     const offerStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.offerStoneCoins || 0);
+    const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
+    if (boundOfferItem) {
+      return fail("trade_item_bound", `${bagItemLabel(boundOfferItem.itemId)} 已绑定，不能与其他玩家交易。`);
+    }
     if (offerItems.length <= 0 && offerStoneCoins <= 0) {
       return fail("trade_offer_empty", "请选择要交易的石币或物品。");
     }
@@ -570,6 +581,10 @@ function createEconomyDomain(ctx) {
     }
     const counterItems = normalizeLimitedItems(payload.items || payload.counterItems || []);
     const counterStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.counterStoneCoins || 0);
+    const boundCounterItem = counterItems.find((item) => bagItemIsBound(item.itemId));
+    if (boundCounterItem) {
+      return fail("trade_item_bound", `${bagItemLabel(boundCounterItem.itemId)} 已绑定，不能与其他玩家交易。`);
+    }
     const initiatorPrepared = profileForAccount(data, initiator);
     if (!initiatorPrepared.ok) {
       return initiatorPrepared;
@@ -582,6 +597,10 @@ function createEconomyDomain(ctx) {
     const accepterProfile = clone(accepterPrepared.profile);
     const offerItems = normalizeLimitedItems(offer.offerItems || []);
     const offerStoneCoins = normalizeCoinAmount(offer.offerStoneCoins || 0);
+    const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
+    if (boundOfferItem) {
+      return fail("trade_item_bound", `${bagItemLabel(boundOfferItem.itemId)} 已绑定，不能与其他玩家交易。`);
+    }
     const initiatorCheck = canPayProfile(initiatorProfile, offerItems, offerStoneCoins, "trade_initiator");
     if (!initiatorCheck.ok) {
       return initiatorCheck;

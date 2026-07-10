@@ -97,6 +97,12 @@ const OBJECTIVE_TEMPLATES := {
 		"requiredAnyFields": ["formId", "lineId"],
 		"summary": "把指定形态或系别的宠物切换为骑乘。",
 	},
+	"battle_pet": {
+		"label": "设置战斗宠物",
+		"eventTypes": ["battle_pet"],
+		"requiredAnyFields": ["formId", "lineId"],
+		"summary": "把指定形态或系别的非骑宠切换为战斗。",
+	},
 	"battle_victory": {
 		"label": "战斗胜利",
 		"eventTypes": ["battle_victory"],
@@ -188,8 +194,45 @@ static func next_quest_id(quest: Dictionary) -> String:
 	return next_id if not quest_for_id(next_id).is_empty() else ""
 
 
-static func title_for(quest: Dictionary) -> String:
+static func raw_title_for(quest: Dictionary) -> String:
 	return str(quest.get("title", "任务"))
+
+
+static func required_level_for(quest: Dictionary) -> int:
+	return maxi(1, int(quest.get("requiredLevel", 1)))
+
+
+static func recommended_level_for(quest: Dictionary) -> int:
+	return maxi(0, int(quest.get("recommendedLevel", 0)))
+
+
+static func can_accept_at_level(quest: Dictionary, player_level: int) -> bool:
+	return maxi(1, player_level) >= required_level_for(quest)
+
+
+static func title_with_required_level(title: String, required_level: int) -> String:
+	var normalized_title := title.strip_edges()
+	if normalized_title == "":
+		normalized_title = "任务"
+	return "[%d] %s" % [maxi(1, required_level), normalized_title]
+
+
+static func title_for(quest: Dictionary) -> String:
+	return title_with_required_level(raw_title_for(quest), required_level_for(quest))
+
+
+static func recommended_level_text_for(quest: Dictionary) -> String:
+	var recommended_level := recommended_level_for(quest)
+	return "推荐等级：Lv%d" % recommended_level if recommended_level > 0 else ""
+
+
+static func required_level_text_for(quest: Dictionary, player_level: int = 0) -> String:
+	var required_level := required_level_for(quest)
+	if player_level <= 0:
+		return "接取等级：Lv%d" % required_level
+	if player_level < required_level:
+		return "接取等级：Lv%d（当前 Lv%d，尚未达到）" % [required_level, maxi(1, player_level)]
+	return "接取等级：Lv%d（已达到）" % required_level
 
 
 static func giver_id_for(quest: Dictionary) -> String:
@@ -683,6 +726,19 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 			if not _matches_string_filter(objective, event, "formId"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
+		"battle_pet":
+			if event_type != "battle_pet":
+				return 0
+			if not _matches_string_filter(objective, event, "lineId"):
+				return 0
+			if not _matches_string_filter(objective, event, "formId"):
+				return 0
+			if bool(objective.get("excludeRidePet", false)):
+				var instance_id := str(event.get("instanceId", "")).strip_edges()
+				var ride_instance_id := str(event.get("ridePetInstanceId", "")).strip_edges()
+				if instance_id == "" or (ride_instance_id != "" and instance_id == ride_instance_id):
+					return 0
+			return maxi(1, int(event.get("amount", 1)))
 		"battle_victory":
 			if event_type != "battle_victory":
 				return 0
@@ -770,8 +826,20 @@ static func validation_errors() -> Array[String]:
 			errors.append("任务 ID 重复: %s" % quest_id)
 		else:
 			ids[quest_id] = true
-		if title_for(quest) == "":
+		if raw_title_for(quest).strip_edges() == "":
 			errors.append("%s.title 不能为空" % quest_id)
+		if not quest.has("requiredLevel"):
+			errors.append("%s.requiredLevel 必须显式配置" % quest_id)
+		elif int(quest.get("requiredLevel", 0)) < 1:
+			errors.append("%s.requiredLevel 必须大于等于 1" % quest_id)
+		if not quest.has("recommendedLevel"):
+			errors.append("%s.recommendedLevel 必须显式配置" % quest_id)
+		else:
+			var recommended_level := int(quest.get("recommendedLevel", 0))
+			if recommended_level < 1:
+				errors.append("%s.recommendedLevel 必须大于等于 1" % quest_id)
+			elif recommended_level < required_level_for(quest):
+				errors.append("%s.recommendedLevel 不能低于 requiredLevel" % quest_id)
 		var objectives := objectives_for(quest)
 		if objectives.is_empty():
 			errors.append("%s.objective.type 不能为空" % quest_id)

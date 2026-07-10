@@ -440,6 +440,7 @@
       "id": "novice_battle_pet_egg",
       "label": "对战宠物蛋",
       "menuLabel": "对战宠蛋",
+      "binding": "bound",
       "stackLimit": 20,
       "startingCount": 0,
       "useContexts": ["world_pet_egg"],

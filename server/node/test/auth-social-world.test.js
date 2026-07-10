@@ -76,12 +76,23 @@ test("players can search and send text mail across accounts", () => {
   const senderProfile = battleProfile("甲", {"level": 1, "hp": 120, "maxHp": 120}, null);
   senderProfile.backpackSlots = [
     {"itemId": "item_meat_small", "count": 3},
-    ...Array.from({"length": 14}, () => ({})),
+    {"itemId": "novice_battle_pet_egg", "count": 1},
+    ...Array.from({"length": 13}, () => ({})),
   ];
   const recipientProfile = battleProfile("乙", {"level": 1, "hp": 120, "maxHp": 120}, null);
   recipientProfile.backpackSlots = Array.from({"length": 15}, () => ({}));
   assert.equal(service.saveProfile(sender.session.token, {"expectedRevision": 0, "profile": senderProfile}).ok, true);
   assert.equal(service.saveProfile(recipient.session.token, {"expectedRevision": 0, "profile": recipientProfile}).ok, true);
+
+  const boundAttachment = service.sendMail(sender.session.token, {
+    "recipientUsername": "mailb",
+    "title": "绑定蛋",
+    "body": "这枚蛋不能转交。",
+    "items": [{"itemId": "novice_battle_pet_egg", "count": 1}],
+  });
+  assert.equal(boundAttachment.ok, false);
+  assert.equal(boundAttachment.code, "mail_attachment_bound");
+  assert.equal(profileItemCount(service.getProfile(sender.session.token).profile, "novice_battle_pet_egg"), 1);
 
   const attached = service.sendMail(sender.session.token, {
     "recipientUsername": "mailb",

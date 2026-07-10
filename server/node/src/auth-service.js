@@ -66,6 +66,10 @@ const POSITION_WARP_PROXIMITY_CELLS = 4;
 const QUEST_TALK_PROXIMITY_CELLS = 3;
 const QUEST_EVENT_CLIENT_REPORTABLE_TYPES = new Set(["talk", "open_feature"]);
 const QUEST_TUTORIAL_FEATURE_IDS = new Set(["status", "equipment", "codex", "quest", "map", "family", "auto_settings", "account"]);
+const QUEST_SET_BATTLE_PET_ID = "quest_set_battle_pet";
+const QUEST_OPEN_STATUS_PANEL_ID = "quest_open_status_panel";
+const ITEM_BINDING_UNBOUND = "unbound";
+const ITEM_BINDING_BOUND = "bound";
 const PARTY_OFFLINE_AUTO_KICK_MS = 10 * 60 * 1000;
 const BATTLE_ROOM_ENTRY_MAX_DISTANCE = 4;
 const BATTLE_MODE_DUEL = "duel";
@@ -231,6 +235,8 @@ const PET_REBIRTH_MM_GUIDE_KEY = "petRebirthMmGuide";
 const PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE = "available";
 const PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE = "active";
 const PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED = "completed";
+const PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL = 80;
+const PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL = 130;
 const PET_REBIRTH_MM_TRIAL_GROUP_ID = "pet_rebirth_mm_trial_1";
 const PET_CULTIVATION_MODE_ENHANCE = "enhance";
 const PET_CULTIVATION_MODE_REBIRTH = "rebirth";
@@ -269,6 +275,7 @@ const PROFILE_ACTION_IDS = new Set([
   "backpack_move_stack",
   "backpack_split_stack",
   "backpack_discard_item",
+  "battle_pet_tutorial_egg_reclaim",
   "village_heal",
   "record_point_save",
   "world_item_use",
@@ -1727,6 +1734,7 @@ function createAuthService(options = {}) {
     applyPlayerRebirthReturn,
     applyProfileActionToProfile,
     bagItemById,
+    bagItemIsBound,
     bagItemLabel,
     bagItemStackLimit,
     backpackItemCount,
@@ -8622,11 +8630,13 @@ function recordQuestEventByIdToProfile(profile, questId, event) {
   if (!quest) {
     return {ok: false, code: "quest_missing", changed: false, ready: false, questId: "", title: "", message: "任务不存在。"};
   }
-  if (!questAvailableForProfile(profile, quest)) {
-    return {ok: false, code: "quest_unavailable", changed: false, ready: false, questId, title: questTitle(quest), message: "任务暂不可接取。"};
-  }
   const states = profileQuestStates(profile);
   const state = normalizeQuestState(states[questId], questId);
+  const accepted = Boolean(states[questId]) || String(profile && profile.activeQuestId || "") === questId;
+  const prerequisitesOk = accepted ? questProgressAvailableForProfile(profile, quest) : questAvailableForProfile(profile, quest);
+  if (!prerequisitesOk) {
+    return {ok: false, code: "quest_unavailable", changed: false, ready: false, questId, title: questTitle(quest), message: "任务暂不可接取。"};
+  }
   if (String(state.status || "") === "claimed") {
     return {ok: false, code: "quest_already_claimed", changed: false, ready: false, questId, title: questTitle(quest), message: "任务已经完成。"};
   }
@@ -8671,7 +8681,7 @@ function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceA
   if (!quest) {
     return {ok: false, code: "quest_missing", message: "当前没有可领取的任务奖励。"};
   }
-  if (!questAvailableForProfile(profile, quest)) {
+  if (!questProgressAvailableForProfile(profile, quest)) {
     return {ok: false, code: "quest_unavailable", message: "任务暂不可领取。"};
   }
   const states = profileQuestStates(profile);
@@ -8689,7 +8699,8 @@ function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceA
   states[questId] = state;
   const nextQuestId = questNextId(quest);
   if (advanceActive && activeQuestIdBeforeClaim === questId) {
-    if (nextQuestId !== "" && questById(nextQuestId)) {
+    const nextQuest = questById(nextQuestId);
+    if (nextQuestId !== "" && nextQuest && questAvailableForProfile(profile, nextQuest)) {
       if (!states[nextQuestId]) {
         states[nextQuestId] = normalizeQuestState({}, nextQuestId);
       }
@@ -8758,14 +8769,17 @@ function currentProfileQuestId(profile) {
     const quest = questById(explicit);
     const states = profileQuestStates(profile || {});
     const state = normalizeQuestState(states[explicit], explicit);
-    if (quest && !questIsOptional(quest) && String(state.status || "active") !== "claimed" && questAvailableForProfile(profile, quest)) {
+    if (quest && !questIsOptional(quest) && String(state.status || "active") !== "claimed" && questProgressAvailableForProfile(profile, quest)) {
       return explicit;
     }
   }
-  return firstAvailableUnfinishedQuestIdForProfile(profile) || firstQuestId();
+  return firstAvailableUnfinishedQuestIdForProfile(profile);
 }
 
-function questAvailableForProfile(profile, quest) {
+function questAvailableForProfile(profile, quest, checkLevel = true) {
+  if (checkLevel && questPlayerLevel(profile) < questRequiredLevel(quest)) {
+    return false;
+  }
   const currentRebirthCount = Math.max(0, Math.trunc(Number(profile && profile[PLAYER_REBIRTH_COUNT_KEY] || 0)));
   const rebirthTarget = questRebirthCompletionTarget(quest);
   if (rebirthTarget > 0) {
@@ -8782,6 +8796,10 @@ function questAvailableForProfile(profile, quest) {
   return true;
 }
 
+function questProgressAvailableForProfile(profile, quest) {
+  return questAvailableForProfile(profile, quest, false);
+}
+
 function ensureActiveQuestForProfile(profile) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
     return "";
@@ -8789,7 +8807,7 @@ function ensureActiveQuestForProfile(profile) {
   const states = profileQuestStates(profile);
   let questId = currentProfileQuestId(profile);
   const quest = questById(questId);
-  if (!quest || questIsOptional(quest) || !questAvailableForProfile(profile, quest)) {
+  if (!quest || questIsOptional(quest) || !questProgressAvailableForProfile(profile, quest)) {
     questId = firstAvailableUnfinishedQuestIdForProfile(profile);
   }
   if (questId !== "") {
@@ -8819,9 +8837,13 @@ function firstAvailableUnfinishedQuestIdForProfile(profile) {
     if (states[questId] && String(state.status || "active") === "claimed") {
       continue;
     }
-    if (questAvailableForProfile(profile, quest)) {
-      return questId;
+    if (!questAvailableForProfile(profile, quest)) {
+      if (questPlayerLevel(profile) < questRequiredLevel(quest)) {
+        return "";
+      }
+      continue;
     }
+    return questId;
   }
   return "";
 }
@@ -8829,6 +8851,16 @@ function firstAvailableUnfinishedQuestIdForProfile(profile) {
 function profileQuestStates(profile) {
   if (!profile.questStates || typeof profile.questStates !== "object" || Array.isArray(profile.questStates)) {
     profile.questStates = {};
+  }
+  if (!profile.questStates[QUEST_SET_BATTLE_PET_ID]) {
+    const statusPanelState = normalizeQuestState(profile.questStates[QUEST_OPEN_STATUS_PANEL_ID], QUEST_OPEN_STATUS_PANEL_ID);
+    if (profile.questStates[QUEST_OPEN_STATUS_PANEL_ID] && String(statusPanelState.status || "") === "claimed") {
+      profile.questStates[QUEST_SET_BATTLE_PET_ID] = {
+        questId: QUEST_SET_BATTLE_PET_ID,
+        status: "claimed",
+        progress: 1,
+      };
+    }
   }
   return profile.questStates;
 }
@@ -8852,7 +8884,21 @@ function firstQuestId() {
 }
 
 function questTitle(quest) {
-  return String(quest && quest.title || "任务");
+  const title = String(quest && quest.title || "任务");
+  const requiredLevel = questRequiredLevel(quest);
+  return `[${requiredLevel}] ${title}`;
+}
+
+function questRequiredLevel(quest) {
+  return Math.max(1, Math.trunc(Number(quest && quest.requiredLevel || 1)));
+}
+
+function questRecommendedLevel(quest) {
+  return Math.max(0, Math.trunc(Number(quest && quest.recommendedLevel || 0)));
+}
+
+function questPlayerLevel(profile) {
+  return Math.max(1, Math.trunc(Number(profile && profile.player && profile.player.level || 1)));
 }
 
 function questNextId(quest) {
@@ -9150,6 +9196,25 @@ function questObjectiveProgressAmountForEvent(objective, event) {
       !questMatchesStringFilter(objective, event, "formId")
     ) {
       return 0;
+    }
+    return Math.max(1, Math.trunc(Number(event.amount || 1)));
+  }
+  if (type === "battle_pet") {
+    if (eventType !== "battle_pet") {
+      return 0;
+    }
+    if (
+      !questMatchesStringFilter(objective, event, "lineId") ||
+      !questMatchesStringFilter(objective, event, "formId")
+    ) {
+      return 0;
+    }
+    if (Boolean(objective.excludeRidePet)) {
+      const instanceId = String(event.instanceId || "").trim();
+      const ridePetInstanceId = String(event.ridePetInstanceId || "").trim();
+      if (instanceId === "" || (ridePetInstanceId !== "" && instanceId === ridePetInstanceId)) {
+        return 0;
+      }
     }
     return Math.max(1, Math.trunc(Number(event.amount || 1)));
   }
@@ -9491,7 +9556,8 @@ function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, resul
     messages.push("玄影守护证明已记录。");
   }
   if (groupId === PET_REBIRTH_MM_TRIAL_GROUP_ID) {
-    const grant = grantPetRebirthMm(profile, 1, groupId);
+    const access = petRebirthMmTrialAccess(profile);
+    const grant = access.ok ? grantPetRebirthMm(profile, 1, groupId) : access;
     if (grant.ok) {
       changed = true;
       publicSpecial.petRebirthMm = {
@@ -10025,6 +10091,19 @@ function normalizeProfileBankData(value) {
   };
 }
 
+function profileBankItemCount(profile, itemId) {
+  const normalizedItemId = String(itemId || "").trim();
+  if (normalizedItemId === "") {
+    return 0;
+  }
+  const bank = normalizeProfileBankData(profile && profile.bank);
+  return (Array.isArray(bank.items) ? bank.items : []).reduce((sum, item) => (
+    String(item && item.itemId || "") === normalizedItemId
+      ? sum + Math.max(0, Math.trunc(Number(item.count || 0)))
+      : sum
+  ), 0);
+}
+
 function normalizeBankItemSlots(value) {
   const result = [];
   if (Array.isArray(value)) {
@@ -10142,6 +10221,17 @@ function bagItemLabel(itemId) {
 function bagItemStackLimit(itemId) {
   const item = bagItemById(itemId);
   return Math.max(1, Math.trunc(Number(item && item.stackLimit || 1)));
+}
+
+function bagItemBinding(itemId) {
+  const item = bagItemById(itemId);
+  return String(item && item.binding || ITEM_BINDING_UNBOUND) === ITEM_BINDING_BOUND
+    ? ITEM_BINDING_BOUND
+    : ITEM_BINDING_UNBOUND;
+}
+
+function bagItemIsBound(itemId) {
+  return bagItemBinding(itemId) === ITEM_BINDING_BOUND;
 }
 
 function petTemplateForFormId(formId) {
@@ -11535,6 +11625,8 @@ function applyProfileActionToProfile(profile, action, params, now) {
       return applyBackpackSplitStackAction(profile, params);
     case "backpack_discard_item":
       return applyBackpackDiscardItemAction(profile, params);
+    case "battle_pet_tutorial_egg_reclaim":
+      return applyBattlePetTutorialEggReclaimAction(profile);
     case "village_heal":
       return applyVillageHealAction(profile);
     case "record_point_save":
@@ -11649,6 +11741,16 @@ function profilePetName(pet) {
 
 function profilePetState(pet) {
   return String(pet && pet.state || BATTLE_PET_STATE_STANDBY);
+}
+
+function profilePetBinding(pet) {
+  return String(pet && pet.binding || ITEM_BINDING_UNBOUND) === ITEM_BINDING_BOUND
+    ? ITEM_BINDING_BOUND
+    : ITEM_BINDING_UNBOUND;
+}
+
+function profilePetIsBound(pet) {
+  return profilePetBinding(pet) === ITEM_BINDING_BOUND;
 }
 
 function stateLabel(state) {
@@ -11852,6 +11954,35 @@ function applyBackpackDiscardItemAction(profile, params) {
   profile.backpackSlots = result.slots;
   profile.captureTools = captureToolBagFromProfile(profile);
   return result;
+}
+
+function applyBattlePetTutorialEggReclaimAction(profile) {
+  const questId = currentProfileQuestId(profile);
+  const state = normalizeQuestState(profileQuestStates(profile)[QUEST_SET_BATTLE_PET_ID], QUEST_SET_BATTLE_PET_ID);
+  if (questId !== QUEST_SET_BATTLE_PET_ID || String(state.status || "active") !== "active") {
+    return {ok: false, code: "battle_pet_tutorial_reclaim_unavailable", message: "当前不需要补领对战宠物蛋。"};
+  }
+  if (backpackItemCount(profileBackpackSlots(profile), "novice_battle_pet_egg") > 0) {
+    return {ok: false, code: "battle_pet_tutorial_egg_owned", message: "对战宠物蛋还在随身包里。"};
+  }
+  if (profileBankItemCount(profile, "novice_battle_pet_egg") > 0) {
+    return {ok: false, code: "battle_pet_tutorial_egg_banked", message: "对战宠物蛋还在银行里，请先取回。"};
+  }
+  if (profilePetInstances(profile).some((pet) => String(pet && (pet.formId || pet.templateId) || "") === "rebirth_starter_four_spirit_cub")) {
+    return {ok: false, code: "battle_pet_tutorial_pet_owned", message: "四灵幼兽已经在你的队伍或兽栏里。"};
+  }
+  const addResult = addSingleItemToBackpack(profileBackpackSlots(profile), "novice_battle_pet_egg", 1);
+  if (addResult.addedCount < 1) {
+    return {ok: false, code: "backpack_full", message: "背包已满，请先整理后再来领取。"};
+  }
+  profile.backpackSlots = normalizeBackpackSlots(addResult.slots);
+  profile.captureTools = captureToolBagFromProfile(profile);
+  return {
+    ok: true,
+    message: "已重新领取对战宠物蛋。",
+    itemId: "novice_battle_pet_egg",
+    amount: 1,
+  };
 }
 
 function applyVillageHealAction(profile) {
@@ -12163,6 +12294,7 @@ function grantPetFromWorldEgg(profile, itemId) {
   pet.capturedSerial = serial;
   pet.individualSeed = `pet_egg:${formId}:${serial}`;
   pet.isNew = true;
+  pet.binding = bagItemBinding(itemId);
   if (TAME_ELIGIBLE_EGG_ITEM_IDS.has(itemId)) {
     pet.tameEligible = true;
   }
@@ -12561,6 +12693,9 @@ function applyPetDropAction(profile, params, now) {
   if (Boolean(pet.locked)) {
     return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能丢弃。`};
   }
+  if (profilePetIsBound(pet)) {
+    return {ok: false, code: "pet_bound", message: `${profilePetName(pet)} 已绑定，不能丢到公共区域。`};
+  }
   const mapId = String(params.mapId || "").trim();
   const cell = Array.isArray(params.cell) ? params.cell : [params.cellX, params.cellY];
   if (mapId === "" || !Array.isArray(cell) || cell.length < 2) {
@@ -12906,6 +13041,9 @@ function petRebirthMmHelperForTarget(profile, targetPet, expectedStage) {
     if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
       continue;
     }
+    if (!petRebirthMmIsHelperPet(pet)) {
+      continue;
+    }
     if (profilePetIdentityValues(pet).includes(targetId)) {
       continue;
     }
@@ -12928,8 +13066,8 @@ function petRebirthMmHelperForTarget(profile, targetPet, expectedStage) {
 }
 
 function petRebirthMmHelperStage(pet) {
-  const record = normalizedPetRebirthHelperRecord(pet, 0);
-  const stage = Math.max(0, Math.trunc(Number(record.stage || 0)));
+  const helper = objectOrEmpty(pet && pet.petRebirthHelper);
+  const stage = Math.max(0, Math.trunc(Number(helper.stage || 0)));
   if (stage > 0) {
     return stage;
   }
@@ -13224,12 +13362,71 @@ function grantPetRebirthMm(profile, stage, source) {
 
 function applyPetRebirthMmGuideStartAction(profile, now) {
   const guide = normalizePetRebirthMmGuide(profile[PET_REBIRTH_MM_GUIDE_KEY]);
+  if (guide.status === PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED || profileHasPetRebirthCountAtLeast(profile, 1)) {
+    return {
+      ok: false,
+      code: "pet_rebirth_mm_guide_completed",
+      message: "宠物转生教学已完成。人物达到 Lv80 后，可反复挑战1转MM试炼领取1转小MM。",
+    };
+  }
+  const playerLevel = questPlayerLevel(profile);
+  if (guide.status !== PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE && playerLevel < PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL) {
+    return {
+      ok: false,
+      code: "pet_rebirth_mm_guide_level_required",
+      message: `需要人物达到 Lv${PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL} 才能接取宠物转生教学。`,
+    };
+  }
   if (guide.status !== PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE) {
     guide.status = PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE;
     guide.startedAtSec = guide.startedAtSec > 0 ? guide.startedAtSec : Math.max(0, Math.trunc(now() / 1000));
   }
   profile[PET_REBIRTH_MM_GUIDE_KEY] = guide;
-  return {ok: true, message: "开始任务「宠物转生教学」。目标：找 1转MM试炼师阿澄开始教学。"};
+  return {
+    ok: true,
+    message: `开始任务「[${PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL}] 宠物转生教学」。推荐等级：Lv${PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL}。`,
+  };
+}
+
+function petRebirthMmTrialAccess(profile) {
+  const playerLevel = questPlayerLevel(profile);
+  if (playerLevel < PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL) {
+    return {
+      ok: false,
+      code: "pet_rebirth_mm_trial_level_required",
+      message: `需要人物达到 Lv${PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL} 才能挑战1转MM试炼。`,
+    };
+  }
+  const guide = normalizePetRebirthMmGuide(profile && profile[PET_REBIRTH_MM_GUIDE_KEY]);
+  if (guide.status === PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED || profileHasPetRebirthCountAtLeast(profile, 1)) {
+    return {ok: true};
+  }
+  if (guide.status === PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE) {
+    if (profilePetInstances(profile).some((pet) => petRebirthMmIsHelperPet(pet) && petRebirthMmHelperStage(pet) === 1)) {
+      return {
+        ok: false,
+        code: "pet_rebirth_mm_helper_owned",
+        message: "你已持有1转小MM，请继续喂石、练级并完成转生。",
+      };
+    }
+    return {ok: true};
+  }
+  if (guide.status !== PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE) {
+    return {
+      ok: false,
+      code: "pet_rebirth_mm_guide_required",
+      message: "请先向1转MM试炼师阿澄接取宠物转生教学。",
+    };
+  }
+  return {ok: false, code: "pet_rebirth_mm_trial_unavailable", message: "暂时不能挑战1转MM试炼。"};
+}
+
+function profileHasPetRebirthCountAtLeast(profile, minimum) {
+  const required = Math.max(1, Math.trunc(Number(minimum || 1)));
+  return profilePetInstances(profile).some((pet) => {
+    const record = normalizedPetCultivationRecord(pet && pet.petCultivation);
+    return Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) >= required;
+  });
 }
 
 function normalizePetRebirthMmGuide(value) {

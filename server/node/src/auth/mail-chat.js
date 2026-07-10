@@ -11,6 +11,7 @@ function createMailChatDomain(ctx) {
     activeQuestAutoClaim,
     addClaimedMailItemsToActiveBattleRoom,
     addRewardItemsToBackpack,
+    bagItemIsBound,
     bagItemLabel,
     backpackItemCount,
     captureToolBagFromProfile,
@@ -90,6 +91,11 @@ function createMailChatDomain(ctx) {
       senderProfile = clone(senderProfileDoc.profile);
       const senderSlots = normalizeBackpackSlots(profileBackpackSlots(senderProfile));
       for (const item of attachments) {
+        if (bagItemIsBound(item.itemId)) {
+          return fail("mail_attachment_bound", `${bagItemLabel(item.itemId)} 已绑定，不能作为邮件附件发送。`, {
+            itemId: item.itemId,
+          });
+        }
         if (backpackItemCount(senderSlots, item.itemId) < item.count) {
           return fail("mail_attachment_not_enough", `${bagItemLabel(item.itemId)} 数量不够。`, {
             itemId: item.itemId,

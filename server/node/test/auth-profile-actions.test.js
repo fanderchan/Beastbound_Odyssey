@@ -234,6 +234,20 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
     "quick": 42,
     "petRebirthHelper": {"stage": 1, "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50}},
   });
+  beforeCultivation.petInstances.push({
+    "instanceId": "valuable_normal_pet",
+    "petId": "valuable_normal_pet",
+    "formId": "bui_normal_red_fire10",
+    "templateId": "bui_normal_red_fire10",
+    "name": "珍贵普通宠",
+    "state": "standby",
+    "level": 130,
+    "hp": 800,
+    "maxHp": 800,
+    "attack": 180,
+    "defense": 120,
+    "quick": 140,
+  });
   assert.equal(service.saveProfile(token, {"expectedRevision": recordPoint.profileSummary.profileRevision, "profile": beforeCultivation}).ok, true);
   const cultivated = service.profileAction(token, {"action": "pet_cultivation_apply", "payload": {"instanceId": "pet_action_target"}});
   assert.equal(cultivated.ok, true);
@@ -241,11 +255,52 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   assert.equal(cultivatedPet.level, 1);
   assert.equal(cultivatedPet.petCultivation.rebirthCount, 1);
   assert.equal(cultivated.profile.petInstances.some((pet) => pet.instanceId === "pet_rebirth_helper"), false);
+  assert.equal(cultivated.profile.petInstances.some((pet) => pet.instanceId === "valuable_normal_pet"), true);
   assert.equal(cultivated.profile.petRebirthMmGuide.status, "completed");
 
   const loaded = service.getProfile(token);
   assert.equal(loaded.profileSummary.profileRevision, cultivated.profileSummary.profileRevision);
   assert.equal(loaded.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
+});
+
+test("pet rebirth MM guide requires Lv80 and never reopens a completed guide", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "mmguidelevel", "password": "test1234", "displayName": "等级教学"});
+  assert.equal(registered.ok, true);
+  const token = registered.session.token;
+  const profile = battleProfile("等级教学", {"level": 79, "hp": 500, "maxHp": 500, "attack": 80, "defense": 50, "quick": 100}, null);
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const rejected = service.profileAction(token, {"action": "pet_rebirth_mm_guide_start", "payload": {}});
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "pet_rebirth_mm_guide_level_required");
+  assert.match(rejected.message, /Lv80/);
+  let loaded = service.getProfile(token);
+  assert.equal(loaded.profileSummary.profileRevision, 1);
+  assert.equal(String(loaded.profile.petRebirthMmGuide && loaded.profile.petRebirthMmGuide.status || "available"), "available");
+
+  loaded.profile.player.level = 80;
+  const leveled = service.saveProfile(token, {"expectedRevision": 1, "profile": loaded.profile});
+  assert.equal(leveled.ok, true);
+  const started = service.profileAction(token, {"action": "pet_rebirth_mm_guide_start", "payload": {}});
+  assert.equal(started.ok, true);
+  assert.equal(started.profile.petRebirthMmGuide.status, "active");
+  assert.match(started.message, /\[80\] 宠物转生教学/);
+  assert.match(started.message, /推荐等级：Lv130/);
+
+  const completedProfile = started.profile;
+  completedProfile.petRebirthMmGuide.status = "completed";
+  const completedSave = service.saveProfile(token, {
+    "expectedRevision": started.profileSummary.profileRevision,
+    "profile": completedProfile,
+  });
+  assert.equal(completedSave.ok, true);
+  const reopened = service.profileAction(token, {"action": "pet_rebirth_mm_guide_start", "payload": {}});
+  assert.equal(reopened.ok, false);
+  assert.equal(reopened.code, "pet_rebirth_mm_guide_completed");
+  loaded = service.getProfile(token);
+  assert.equal(loaded.profile.petRebirthMmGuide.status, "completed");
+  assert.equal(loaded.profileSummary.profileRevision, completedSave.profileSummary.profileRevision);
 });
 
 test("server backpack actions merge split and discard item stacks", () => {
@@ -379,8 +434,8 @@ test("training partner action advances the partner tutorial quest server-side", 
   assert.equal(trained.profile.questStates.quest_training_partner_intro.status, "claimed");
   assert.equal(trained.profile.questStates.quest_training_partner_intro.progress, 1);
   assert.equal(trained.profile.questStates.quest_group_brawl.status, "active");
-  assert.ok(trained.questMessages.some((message) => String(message).includes("完成任务「陪练伙伴」")));
-  assert.ok(trained.logLines.some((message) => String(message).includes("完成任务「陪练伙伴」")));
+  assert.ok(trained.questMessages.some((message) => String(message).includes("完成任务「[1] 陪练伙伴」")));
+  assert.ok(trained.logLines.some((message) => String(message).includes("完成任务「[1] 陪练伙伴」")));
 });
 
 test("server shop transactions validate price, currency, backpack, and buy quests", () => {
@@ -464,6 +519,7 @@ test("server shop transactions recover missing active main quest before buy prog
   assert.equal(buy.profile.stoneCoins, 92);
   assert.equal(profileItemCount(buy.profile, "item_meat_small"), 1);
   assert.equal(profileItemCount(buy.profile, "capture_rope_basic"), 1);
+  assert.equal(buy.profile.questStates.quest_set_battle_pet.status, "claimed");
   assert.equal(buy.profile.questStates.quest_buy_supply.status, "claimed");
   assert.equal(buy.profile.activeQuestId, "quest_use_meat");
   assert.equal(buy.questMessages.some((message) => String(message).includes("补给准备")), true);
@@ -483,6 +539,7 @@ test("server pet riding advances novice tiger tutorial quest", () => {
     "quest_riding_certificate": {"questId": "quest_riding_certificate", "status": "claimed", "progress": 1},
     "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "active", "progress": 0},
   };
+  profile.backpackSlots = [{"itemId": "novice_battle_pet_egg", "count": 1}];
   profile.petInstances.push({
     "instanceId": "pet_tiger_quest",
     "petId": "pet_tiger_quest",
@@ -499,6 +556,22 @@ test("server pet riding advances novice tiger tutorial quest", () => {
     "defense": 16,
     "quick": 28,
   });
+  profile.petInstances.push({
+    "instanceId": "pet_battle_quest",
+    "petId": "pet_battle_quest",
+    "formId": "rebirth_starter_four_spirit_cub",
+    "templateId": "rebirth_starter_four_spirit_cub",
+    "speciesId": "rebirth_starter_four_spirit_cub",
+    "lineId": "four_spirit_cub",
+    "name": "四灵幼兽",
+    "state": "standby",
+    "level": 1,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 22,
+    "defense": 18,
+    "quick": 20,
+  });
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
 
   const riding = service.profileAction(token, {
@@ -509,8 +582,165 @@ test("server pet riding advances novice tiger tutorial quest", () => {
   assert.equal(riding.result.state, "riding");
   assert.equal(riding.profile.ridePetInstanceId, "pet_tiger_quest");
   assert.equal(riding.profile.questStates.quest_try_riding_tiger.status, "claimed");
-  assert.equal(riding.profile.activeQuestId, "quest_open_status_panel");
+  assert.equal(riding.profile.activeQuestId, "quest_set_battle_pet");
   assert.equal(riding.questMessages.some((message) => String(message).includes("试骑新手老虎")), true);
+
+  const tigerAsBattle = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": "pet_tiger_quest"},
+  });
+  assert.equal(tigerAsBattle.ok, true);
+  assert.equal(tigerAsBattle.result.state, "battle");
+  assert.equal(tigerAsBattle.profile.questStates.quest_set_battle_pet.status, "active");
+  assert.equal(tigerAsBattle.profile.activeQuestId, "quest_set_battle_pet");
+
+  for (const expectedState of ["rest", "standby", "riding"]) {
+    const restored = service.profileAction(token, {
+      "action": "pet_state_cycle",
+      "payload": {"instanceId": "pet_tiger_quest"},
+    });
+    assert.equal(restored.ok, true);
+    assert.equal(restored.result.state, expectedState);
+  }
+
+  const battlePet = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": "pet_battle_quest"},
+  });
+  assert.equal(battlePet.ok, true);
+  assert.equal(battlePet.result.state, "battle");
+  assert.equal(battlePet.profile.ridePetInstanceId, "pet_tiger_quest");
+  assert.equal(battlePet.profile.activePetInstanceId, "pet_battle_quest");
+  assert.equal(battlePet.profile.questStates.quest_set_battle_pet.status, "claimed");
+  assert.equal(battlePet.profile.activeQuestId, "quest_open_status_panel");
+  assert.equal(battlePet.questMessages.some((message) => String(message).includes("设置战斗宠物")), true);
+});
+
+test("riding tutorial reconciles an already active non-mount battle pet", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "ridingreadyquest", "password": "test1234", "displayName": "双宠玩家"});
+  const token = registered.session.token;
+  const profile = battleProfileWithPets("双宠玩家", {"level": 1, "hp": 120, "maxHp": 120}, [
+    {"petId": "pet_ready_tiger", "formId": "novice_tiger_mount", "name": "新手老虎", "state": "standby", "hp": 80, "maxHp": 80},
+    {"petId": "pet_ready_battle", "formId": "rebirth_starter_four_spirit_cub", "name": "四灵幼兽", "state": "battle", "hp": 90, "maxHp": 90},
+  ]);
+  profile.unlockedAbilities = ["riding"];
+  profile.activeQuestId = "quest_try_riding_tiger";
+  profile.questStates = {
+    "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const riding = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": "pet_ready_tiger"},
+  });
+  assert.equal(riding.ok, true);
+  assert.equal(riding.result.state, "riding");
+  assert.equal(riding.profile.ridePetInstanceId, "pet_ready_tiger");
+  assert.equal(riding.profile.activePetInstanceId, "pet_ready_battle");
+  assert.equal(riding.profile.questStates.quest_try_riding_tiger.status, "claimed");
+  assert.equal(riding.profile.questStates.quest_set_battle_pet.status, "claimed");
+  assert.equal(riding.profile.activeQuestId, "quest_open_status_panel");
+  assert.equal(riding.questMessages.some((message) => String(message).includes("设置战斗宠物")), true);
+});
+
+test("battle pet tutorial egg can be discarded, reclaimed, and hatches a bound pet", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "battleeggreclaim", "password": "test1234", "displayName": "补领玩家"});
+  const token = registered.session.token;
+  const profile = battleProfile("补领玩家", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.activeQuestId = "quest_set_battle_pet";
+  profile.questStates = {
+    "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "claimed", "progress": 1},
+    "quest_set_battle_pet": {"questId": "quest_set_battle_pet", "status": "active", "progress": 0},
+  };
+  profile.backpackSlots = [
+    {"itemId": "novice_battle_pet_egg", "count": 1},
+    ...Array.from({"length": 14}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const discarded = service.profileAction(token, {
+    "action": "backpack_discard_item",
+    "payload": {"sourceSlotIndex": 0, "quantity": 1},
+  });
+  assert.equal(discarded.ok, true);
+  assert.equal(profileItemCount(discarded.profile, "novice_battle_pet_egg"), 0);
+
+  const fullProfile = discarded.profile;
+  fullProfile.backpackSlots = Array.from({"length": 15}, () => ({"itemId": "item_meat_small", "count": 20}));
+  assert.equal(service.saveProfile(token, {
+    "expectedRevision": discarded.profileSummary.profileRevision,
+    "profile": fullProfile,
+  }).ok, true);
+  const fullReclaim = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(fullReclaim.ok, false);
+  assert.equal(fullReclaim.code, "backpack_full");
+  assert.equal(service.profileAction(token, {
+    "action": "backpack_discard_item",
+    "payload": {"sourceSlotIndex": 0, "quantity": 20},
+  }).ok, true);
+
+  const reclaimed = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(reclaimed.ok, true);
+  assert.equal(profileItemCount(reclaimed.profile, "novice_battle_pet_egg"), 1);
+
+  const banked = service.bankDeposit(token, {"items": [{"itemId": "novice_battle_pet_egg", "count": 1}]});
+  assert.equal(banked.ok, true);
+  const reclaimWhileBanked = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(reclaimWhileBanked.ok, false);
+  assert.equal(reclaimWhileBanked.code, "battle_pet_tutorial_egg_banked");
+  const withdrawn = service.bankWithdraw(token, {"items": [{"itemId": "novice_battle_pet_egg", "count": 1}]});
+  assert.equal(withdrawn.ok, true);
+
+  const duplicate = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "battle_pet_tutorial_egg_owned");
+  assert.equal(profileItemCount(service.getProfile(token).profile, "novice_battle_pet_egg"), 1);
+
+  const hatched = service.profileAction(token, {
+    "action": "world_item_use",
+    "payload": {"itemId": "novice_battle_pet_egg"},
+  });
+  assert.equal(hatched.ok, true);
+  assert.equal(profileItemCount(hatched.profile, "novice_battle_pet_egg"), 0);
+  const boundPet = hatched.profile.petInstances.find((pet) => pet.formId === "rebirth_starter_four_spirit_cub");
+  assert.ok(boundPet);
+  assert.equal(boundPet.binding, "bound");
+
+  const dropBoundPet = service.profileAction(token, {
+    "action": "pet_drop",
+    "payload": {"instanceId": boundPet.instanceId, "mapId": "firebud_village_gate", "cell": [10, 10]},
+  });
+  assert.equal(dropBoundPet.ok, false);
+  assert.equal(dropBoundPet.code, "pet_bound");
+
+  const reclaimWithPet = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(reclaimWithPet.ok, false);
+  assert.equal(reclaimWithPet.code, "battle_pet_tutorial_pet_owned");
+
+  const storedBoundPet = service.profileAction(token, {
+    "action": "pet_stable_toggle",
+    "payload": {"instanceId": boundPet.instanceId},
+  });
+  assert.equal(storedBoundPet.ok, true);
+  assert.equal(storedBoundPet.profile.petInstances.find((pet) => pet.instanceId === boundPet.instanceId).state, "storage");
+  const withdrewBoundPet = service.profileAction(token, {
+    "action": "pet_stable_toggle",
+    "payload": {"instanceId": boundPet.instanceId},
+  });
+  assert.equal(withdrewBoundPet.ok, true);
+  assert.equal(withdrewBoundPet.profile.petInstances.find((pet) => pet.instanceId === boundPet.instanceId).state, "standby");
+
+  const battleWithoutCurrentMount = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": boundPet.instanceId},
+  });
+  assert.equal(battleWithoutCurrentMount.ok, true);
+  assert.equal(battleWithoutCurrentMount.result.state, "battle");
+  assert.equal(battleWithoutCurrentMount.profile.questStates.quest_set_battle_pet.status, "claimed");
+  assert.equal(battleWithoutCurrentMount.profile.activeQuestId, "quest_open_status_panel");
 });
 
 test("server shop equipment purchase can be equipped immediately", () => {

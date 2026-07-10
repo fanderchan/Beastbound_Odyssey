@@ -25,6 +25,7 @@ const DIALOG_ACTION_CLAIM_MM_STAGE2 := "claim_mm_stage2"
 const DIALOG_ACTION_START_MM_GUIDE := "start_mm_guide"
 const DIALOG_ACTION_FAMILY_MANOR := "family_manor"
 const DIALOG_ACTION_BANK := "bank"
+const DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG := "reclaim_battle_pet_egg"
 
 var host
 
@@ -70,6 +71,12 @@ func _refresh_quest_panel() -> void:
 				"可接任务：%s" % QuestModel.title_for(available_quest),
 				"目标：%s" % QuestModel.objective_text_for(available_quest),
 			]
+			var required_level_text := QuestModel.required_level_text_for(available_quest, PlayerProgressModel.player_level(host.player_profile))
+			if required_level_text != "":
+				lines.insert(1, required_level_text)
+			var recommended_level_text := QuestModel.recommended_level_text_for(available_quest)
+			if recommended_level_text != "":
+				lines.insert(2 if required_level_text != "" else 1, recommended_level_text)
 			var summary := str(available_quest.get("summary", ""))
 			if summary != "":
 				lines.append("说明：%s" % summary)
@@ -84,6 +91,36 @@ func _refresh_quest_panel() -> void:
 			if host.quest_route_button != null:
 				host.quest_route_button.text = "前往接取"
 				host.quest_route_button.disabled = host.battle_active or host._current_task_navigation_target().is_empty()
+			return
+		var blocked_quest := PlayerProgressModel.first_level_blocked_unfinished_quest(host.player_profile)
+		if not blocked_quest.is_empty():
+			var current_level := PlayerProgressModel.player_level(host.player_profile)
+			var blocked_required := QuestModel.required_level_for(blocked_quest)
+			var blocked_lines: Array[String] = [
+				"任务：%s" % QuestModel.title_for(blocked_quest),
+			]
+			var blocked_required_text := QuestModel.required_level_text_for(blocked_quest, current_level)
+			if blocked_required_text != "":
+				blocked_lines.append(blocked_required_text)
+			var blocked_recommended_text := QuestModel.recommended_level_text_for(blocked_quest)
+			if blocked_recommended_text != "":
+				blocked_lines.append(blocked_recommended_text)
+			blocked_lines.append("目标：%s" % QuestModel.objective_text_for(blocked_quest))
+			var blocked_summary := str(blocked_quest.get("summary", ""))
+			if blocked_summary != "":
+				blocked_lines.append("说明：%s" % blocked_summary)
+			var blocked_reward_text := QuestModel.reward_text(blocked_quest)
+			if blocked_reward_text != "":
+				blocked_lines.append("奖励：%s" % blocked_reward_text)
+			var blocked_route_hint: String = str(host._quest_route_hint(blocked_quest, QuestModel.objective_for(blocked_quest)))
+			if blocked_route_hint != "":
+				blocked_lines.append("地点：%s" % blocked_route_hint)
+			host.quest_title_label.text = "等级不足" if current_level < blocked_required else "任务未开放"
+			host.quest_detail_label.text = "\n".join(blocked_lines)
+			_set_quest_reward_controls({}, "")
+			if host.quest_route_button != null:
+				host.quest_route_button.text = "前往查看"
+				host.quest_route_button.disabled = host.battle_active or host._navigation_target_for_interaction_id(QuestModel.giver_id_for(blocked_quest)).is_empty()
 			return
 		var mm_guide = host._pet_rebirth_mm_guide_task_info(true)
 		if not mm_guide.is_empty():
@@ -148,6 +185,15 @@ func _refresh_quest_panel() -> void:
 		"目标：%s" % QuestModel.objective_text_for(quest),
 		"进度：%d/%d" % [progress, required],
 	]
+	var required_level_text := QuestModel.required_level_text_for(quest)
+	if required_level_text != "":
+		lines.insert(2, required_level_text)
+	var recommended_level_text := QuestModel.recommended_level_text_for(quest)
+	if recommended_level_text != "":
+		lines.insert(3 if required_level_text != "" else 2, recommended_level_text)
+	var summary := str(quest.get("summary", ""))
+	if summary != "":
+		lines.append("说明：%s" % summary)
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
 	var reward_equipment_lines := QuestModel.reward_equipment_detail_lines(quest)
@@ -312,6 +358,8 @@ func _perform_dialog_action(action_id: String) -> void:
 		DIALOG_ACTION_STABLE:
 			_close_dialog()
 			host._open_pet_panel(true)
+		DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG:
+			_reclaim_battle_pet_tutorial_egg()
 		DIALOG_ACTION_SHOP:
 			var next_shop_id = str(host.active_dialog_interaction.get("shopId", ""))
 			_close_dialog()
@@ -602,7 +650,7 @@ func _dialog_primary_action_id(item: Dictionary) -> String:
 		var mm_status := str(mm_guide.get("status", ""))
 		var mm_step := str(mm_guide.get("step", ""))
 		if mm_status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE:
-			return DIALOG_ACTION_START_MM_GUIDE
+			return DIALOG_ACTION_START_MM_GUIDE if bool(mm_guide.get("meetsRequiredLevel", false)) else DIALOG_ACTION_ACK
 		if mm_status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE and mm_step == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STEP_CLAIM_MM:
 			return DIALOG_ACTION_GUARDIAN_BATTLE
 		if mm_status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED:
@@ -636,6 +684,8 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 			return str(item.get("option", "覆盖"))
 		DIALOG_ACTION_STABLE:
 			return str(item.get("option", "兽栏"))
+		DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG:
+			return "补领对战宠物蛋"
 		DIALOG_ACTION_BANK:
 			return str(item.get("option", "银行"))
 		DIALOG_ACTION_SHOP:
@@ -657,6 +707,14 @@ func _dialog_action_label(item: Dictionary, action_id: String) -> String:
 	return str(item.get("option", "知道了"))
 
 func _dialog_action_options(item: Dictionary) -> Array[Dictionary]:
+	if _dialog_item_is_pet_rebirth_mm_trial(item):
+		var mm_guide := PlayerProgressModel.pet_rebirth_mm_guide_info(host.player_profile)
+		if not bool(mm_guide.get("meetsRequiredLevel", false)):
+			return [{
+				"id": DIALOG_ACTION_ACK,
+				"label": "需要 Lv%d" % int(mm_guide.get("requiredLevel", PlayerProgressModel.PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL)),
+				"disabled": true,
+			}]
 	var primary_action := _dialog_primary_action_id(item)
 	var options: Array[Dictionary] = [{
 		"id": primary_action,
@@ -667,12 +725,39 @@ func _dialog_action_options(item: Dictionary) -> Array[Dictionary]:
 			"id": DIALOG_ACTION_BANK,
 			"label": _dialog_action_label(item, DIALOG_ACTION_BANK),
 		})
+	if _dialog_item_is_stable(item) and PlayerProgressModel.battle_pet_tutorial_egg_reclaim_available(host.player_profile):
+		options.append({
+			"id": DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG,
+			"label": _dialog_action_label(item, DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG),
+		})
 	if _dialog_should_offer_quest_button(item):
 		options.append({
 			"id": DIALOG_ACTION_OPEN_QUEST,
 			"label": _dialog_action_label(item, DIALOG_ACTION_OPEN_QUEST),
 		})
 	return options
+
+
+func _reclaim_battle_pet_tutorial_egg() -> void:
+	var result := {}
+	if host._is_server_account_session():
+		result = await host._submit_server_profile_action("battle_pet_tutorial_egg_reclaim", {}, "补领对战宠物蛋失败。")
+	else:
+		if host._local_profile_mutation_blocked_for_server_only("补领对战宠物蛋"):
+			return
+		result = PlayerProgressModel.reclaim_battle_pet_tutorial_egg(host.player_profile)
+		host.player_profile = result.get("profile", host.player_profile)
+		if bool(result.get("ok", false)):
+			host._mark_progress_ui_caches_dirty()
+			if host.profile_save_enabled:
+				host._save_player_profile_now()
+	var log_lines: Array[String] = host._string_array_values(result.get("logLines", []))
+	if log_lines.is_empty() and str(result.get("message", "")) != "":
+		log_lines.append(str(result.get("message", "")))
+	host._set_world_log_message("\n".join(log_lines))
+	if bool(result.get("ok", false)):
+		_close_dialog()
+		host._open_backpack_panel()
 
 func _dialog_should_offer_quest_button(item: Dictionary) -> bool:
 	if PlayerProgressModel.active_quest(host.player_profile).is_empty():
@@ -695,7 +780,7 @@ func _refresh_dialog_action_buttons(item: Dictionary) -> void:
 	var primary := options[0] if not options.is_empty() else {"id": DIALOG_ACTION_ACK, "label": "知道了"}
 	host.dialog_option_button.text = str(primary.get("label", "知道了"))
 	host.dialog_option_button.visible = true
-	host.dialog_option_button.disabled = false
+	host.dialog_option_button.disabled = bool(primary.get("disabled", false))
 	if host.dialog_close_button != null:
 		host.dialog_close_button.text = "取消" if str(item.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE else "离开"
 	if host.dialog_button_row == null:
@@ -705,6 +790,7 @@ func _refresh_dialog_action_buttons(item: Dictionary) -> void:
 		var action_id := str(option.get("id", DIALOG_ACTION_ACK))
 		var button := Button.new()
 		button.text = str(option.get("label", "操作"))
+		button.disabled = bool(option.get("disabled", false))
 		button.custom_minimum_size = Vector2(112, 48)
 		button.add_theme_font_size_override("font_size", 16)
 		button.pressed.connect(_perform_dialog_action.bind(action_id))
@@ -753,6 +839,8 @@ func _dialog_body_for(item: Dictionary) -> String:
 	var quest_hint := _dialog_quest_hint_for(item)
 	if quest_hint == "":
 		quest_hint = _dialog_optional_quest_hint_for(item)
+	if quest_hint == "":
+		quest_hint = _dialog_blocked_quest_hint_for(item)
 	if quest_hint != "":
 		text_parts.append("")
 		text_parts.append(quest_hint)
@@ -825,7 +913,7 @@ func _dialog_pet_rebirth_mm_guide_hint_for(item: Dictionary) -> String:
 	var info = PlayerProgressModel.pet_rebirth_mm_guide_info(host.player_profile)
 	var status := str(info.get("status", ""))
 	if status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED:
-		return "循环任务：挑战成功后领取 Lv1 1转小MM。"
+		return "循环任务：人物达到 Lv80 后，挑战成功可领取 Lv1 1转小MM。"
 	var lines: Array[String] = []
 	lines.append("任务：%s" % str(info.get("title", "宠物转生教学")))
 	for line in info.get("detailLines", []):
@@ -931,6 +1019,9 @@ func _dialog_quest_hint_for(item: Dictionary) -> String:
 	else:
 		lines.append("任务：%s" % QuestModel.title_for(quest))
 		lines.append(QuestModel.objective_text_for(quest))
+	var recommended_level_text := QuestModel.recommended_level_text_for(quest)
+	if recommended_level_text != "":
+		lines.append(recommended_level_text)
 	var reward_text = PlayerProgressModel.quest_reward_text(host.player_profile)
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
@@ -953,6 +1044,9 @@ func _dialog_optional_quest_hint_for(item: Dictionary) -> String:
 	else:
 		lines.append("任务：%s" % QuestModel.title_for(quest))
 		lines.append(QuestModel.objective_text_for(quest))
+	var recommended_level_text := QuestModel.recommended_level_text_for(quest)
+	if recommended_level_text != "":
+		lines.append(recommended_level_text)
 	var reward_text := QuestModel.reward_text(quest)
 	if reward_text != "":
 		lines.append("奖励：%s" % reward_text)
@@ -961,4 +1055,25 @@ func _dialog_optional_quest_hint_for(item: Dictionary) -> String:
 		lines.append("奖励装备：")
 		for reward_equipment_line in reward_equipment_lines:
 			lines.append("- %s" % reward_equipment_line)
+	return "\n".join(lines)
+
+
+func _dialog_blocked_quest_hint_for(item: Dictionary) -> String:
+	var item_id := str(item.get("id", ""))
+	if item_id == "":
+		return ""
+	var quest := PlayerProgressModel.first_level_blocked_unfinished_quest(host.player_profile)
+	if quest.is_empty() or QuestModel.giver_id_for(quest) != item_id:
+		quest = PlayerProgressModel.blocked_optional_quest_for_interaction(host.player_profile, item_id)
+	if quest.is_empty():
+		return ""
+	var lines: Array[String] = ["任务：%s" % QuestModel.title_for(quest)]
+	var required_level_text := QuestModel.required_level_text_for(quest, PlayerProgressModel.player_level(host.player_profile))
+	if required_level_text != "":
+		lines.append(required_level_text)
+	var recommended_level_text := QuestModel.recommended_level_text_for(quest)
+	if recommended_level_text != "":
+		lines.append(recommended_level_text)
+	if required_level_text == "":
+		lines.append("当前条件尚未满足。")
 	return "\n".join(lines)

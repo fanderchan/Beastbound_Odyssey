@@ -1363,7 +1363,23 @@ test("party pve guardian victories write server-side trial rewards", () => {
   const mmPlayer = service.register({"username": "guardianmm", "password": "test1234", "displayName": "MM挑战号"});
   assert.equal(mmPlayer.ok, true);
   const mmProfile = battleProfile("MM挑战号", {"level": 80, "hp": 520, "maxHp": 520, "attack": 999, "defense": 45, "quick": 120, "comboRateOverride": 0}, null);
+  mmProfile.petInstances.push({
+    "instanceId": "mm_guardian_normal_pet",
+    "petId": "mm_guardian_normal_pet",
+    "formId": "bui_normal_red_fire10",
+    "templateId": "bui_normal_red_fire10",
+    "name": "普通布伊",
+    "state": "standby",
+    "level": 30,
+    "hp": 100,
+    "maxHp": 100,
+    "attack": 30,
+    "defense": 20,
+    "quick": 40,
+  });
   assert.equal(service.saveProfile(mmPlayer.session.token, {"expectedRevision": 0, "profile": mmProfile}).ok, true);
+  const mmGuideStarted = service.profileAction(mmPlayer.session.token, {"action": "pet_rebirth_mm_guide_start", "payload": {}});
+  assert.equal(mmGuideStarted.ok, true);
   const mmEncounter = service.startPartyEncounter(mmPlayer.session.token, {
     "enemyCount": 1,
     "encounterZone": {
@@ -1394,6 +1410,73 @@ test("party pve guardian victories write server-side trial rewards", () => {
   assert.equal(mmWriteback.special.petRebirthMm.stage, 1);
   const mmAfter = service.getProfile(mmPlayer.session.token);
   assert.equal(mmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), true);
+  const mmCountAfterFirstVictory = mmAfter.profile.petInstances.filter((pet) => pet.formId === "pet_rebirth_mm_stage1").length;
+  const duplicateMmEncounter = service.startPartyEncounter(mmPlayer.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "pet_rebirth_mm_trial_floor_duplicate",
+      "name": "1转MM试炼",
+      "encounterGroupId": "pet_rebirth_mm_trial_1",
+      "sourceInteractionId": "firebud_pet_mm_trial_mentor",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "MM试炼兽",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(duplicateMmEncounter.ok, true);
+  const duplicateMmActor = duplicateMmEncounter.room.battle.actors.find((actor) => actor.accountId === mmPlayer.account.accountId && actor.kind === "player");
+  const duplicateMmEnemy = duplicateMmEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const duplicateMmResolved = service.submitBattleCommand(mmPlayer.session.token, duplicateMmEncounter.room.roomId, {
+    "round": 1,
+    "actorId": duplicateMmActor.actorId,
+    "actionId": "attack",
+    "targetActorId": duplicateMmEnemy.actorId,
+  });
+  assert.equal(duplicateMmResolved.ok, true);
+  const duplicateMmWriteback = duplicateMmResolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === mmPlayer.account.accountId);
+  assert.equal(duplicateMmWriteback.special.petRebirthMm.ok, false);
+  assert.equal(duplicateMmWriteback.special.petRebirthMm.code, "pet_rebirth_mm_helper_owned");
+  const duplicateMmAfter = service.getProfile(mmPlayer.session.token);
+  assert.equal(duplicateMmAfter.profile.petInstances.filter((pet) => pet.formId === "pet_rebirth_mm_stage1").length, mmCountAfterFirstVictory);
+
+  const lowMmPlayer = service.register({"username": "guardianmmlow", "password": "test1234", "displayName": "低级MM挑战号"});
+  assert.equal(lowMmPlayer.ok, true);
+  const lowMmProfile = battleProfile("低级MM挑战号", {"level": 79, "hp": 520, "maxHp": 520, "attack": 999, "defense": 45, "quick": 120, "comboRateOverride": 0}, null);
+  assert.equal(service.saveProfile(lowMmPlayer.session.token, {"expectedRevision": 0, "profile": lowMmProfile}).ok, true);
+  const lowMmEncounter = service.startPartyEncounter(lowMmPlayer.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "pet_rebirth_mm_trial_floor_low",
+      "name": "1转MM试炼",
+      "encounterGroupId": "pet_rebirth_mm_trial_1",
+      "sourceInteractionId": "firebud_pet_mm_trial_mentor",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "MM试炼兽",
+        "level": 1,
+        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
+      },
+    },
+  });
+  assert.equal(lowMmEncounter.ok, true);
+  const lowMmActor = lowMmEncounter.room.battle.actors.find((actor) => actor.accountId === lowMmPlayer.account.accountId && actor.kind === "player");
+  const lowMmEnemy = lowMmEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const lowMmResolved = service.submitBattleCommand(lowMmPlayer.session.token, lowMmEncounter.room.roomId, {
+    "round": 1,
+    "actorId": lowMmActor.actorId,
+    "actionId": "attack",
+    "targetActorId": lowMmEnemy.actorId,
+  });
+  assert.equal(lowMmResolved.ok, true);
+  assert.equal(lowMmResolved.room.status, "closed");
+  const lowMmWriteback = lowMmResolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === lowMmPlayer.account.accountId);
+  assert.equal(lowMmWriteback.special.petRebirthMm.ok, false);
+  assert.equal(lowMmWriteback.special.petRebirthMm.code, "pet_rebirth_mm_trial_level_required");
+  const lowMmAfter = service.getProfile(lowMmPlayer.session.token);
+  assert.equal(lowMmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), false);
 });
 
 test("party pve escape closes room without win or loss result", () => {

@@ -11249,7 +11249,15 @@ func _open_backpack_discard_confirm(slot_data: Dictionary, quantity: int, screen
 	if backpack_discard_confirm_title_label != null:
 		backpack_discard_confirm_title_label.text = "丢弃物品"
 	if backpack_discard_confirm_body_label != null:
-		backpack_discard_confirm_body_label.text = "确定丢弃 %s x%d 吗？\n丢弃后无法找回。" % [BackpackModel.label_for(item_id), count]
+		var reclaim_hint := (
+			item_id == PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG
+			and str(PlayerProgressModel.quest_state_for_id(player_profile, PlayerProgressModel.QUEST_SET_BATTLE_PET_ID, true).get("status", QuestModel.STATUS_ACTIVE)) != QuestModel.STATUS_CLAIMED
+		)
+		backpack_discard_confirm_body_label.text = (
+			"确定丢弃 %s x%d 吗？\n任务未完成时可找兽栏管理员阿牧重新领取。" % [BackpackModel.label_for(item_id), count]
+			if reclaim_hint
+			else "确定丢弃 %s x%d 吗？\n丢弃后无法找回。" % [BackpackModel.label_for(item_id), count]
+		)
 	var viewport_size: Vector2 = host.get_viewport_rect().size if host != null else Vector2(1280, 720)
 	var panel_size := Vector2(minf(360.0, viewport_size.x - 32.0), 188.0)
 	backpack_discard_confirm_panel.size = panel_size
@@ -12167,6 +12175,12 @@ func _start_guardian_battle_from_dialog() -> void:
 	if active_dialog_interaction.is_empty():
 		return
 	var interaction = active_dialog_interaction.duplicate(true)
+	if str(interaction.get("id", "")) == "firebud_pet_mm_trial_mentor":
+		var mm_access := PlayerProgressModel.pet_rebirth_mm_trial_access(player_profile)
+		if not bool(mm_access.get("ok", false)):
+			_set_world_log_message(str(mm_access.get("message", "暂时不能挑战1转MM试炼。")))
+			host._update_dialog_text()
+			return
 	var zone = _guardian_zone_for_interaction(interaction)
 	if zone.is_empty():
 		_set_world_log_message("暂时无法挑战%s。" % str(interaction.get("name", "守护兽")))
@@ -18455,7 +18469,7 @@ func _player_action_trade_item_ids() -> Array[String]:
 	var order: Array[String] = []
 	for slot in PlayerProgressModel.backpack_slots(player_profile):
 		var item_id = str(slot.get("itemId", ""))
-		if item_id != "" and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
+		if item_id != "" and not BackpackModel.item_is_bound(item_id) and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
 			order.append(item_id)
 	return order
 
@@ -19055,7 +19069,7 @@ func _market_sell_item_ids() -> Array[String]:
 	var order: Array[String] = []
 	for slot in PlayerProgressModel.backpack_slots(player_profile):
 		var item_id = str(slot.get("itemId", ""))
-		if item_id != "" and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
+		if item_id != "" and not BackpackModel.item_is_bound(item_id) and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
 			order.append(item_id)
 	return order
 
@@ -21495,6 +21509,9 @@ func _current_task_navigation_target_uncached() -> Dictionary:
 	var available_quest = _first_available_unfinished_quest_for_tracker()
 	if not available_quest.is_empty():
 		return _navigation_target_for_interaction_id(QuestModel.giver_id_for(available_quest))
+	var blocked_quest := PlayerProgressModel.first_level_blocked_unfinished_quest(player_profile)
+	if not blocked_quest.is_empty():
+		return _navigation_target_for_interaction_id(QuestModel.giver_id_for(blocked_quest))
 	var mm_guide = _pet_rebirth_mm_guide_task_info(true)
 	if not mm_guide.is_empty():
 		var mm_target_value = mm_guide.get("target", {})
@@ -21526,7 +21543,23 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 		"ride_pet":
 			if _quest_ride_objective_should_open_backpack(objective):
 				return _navigation_target_for_backpack("先使用新手老虎蛋")
-			return _navigation_target_for_pet_panel(QuestModel.objective_text_for(quest))
+			return _navigation_target_for_pet_panel(QuestModel.objective_text_for(quest), str(objective.get("formId", "")))
+		"battle_pet":
+			var target_pet := _quest_battle_pet_objective_target_pet(objective)
+			if not target_pet.is_empty():
+				var target_form_id := str(objective.get("formId", ""))
+				if str(target_pet.get("state", PlayerProgressModel.PET_STATE_STANDBY)) == PlayerProgressModel.PET_STATE_STORAGE:
+					var stable_target := _navigation_target_for_interaction_id("firebud_stable_keeper")
+					stable_target["petFormId"] = target_form_id
+					stable_target["label"] = "找阿牧取出四灵幼兽"
+					return stable_target
+				return _navigation_target_for_pet_panel(QuestModel.objective_text_for(quest), target_form_id)
+			var tutorial_item_id := str(objective.get("itemId", PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)).strip_edges()
+			if PlayerProgressModel.backpack_item_count(player_profile, tutorial_item_id) > 0:
+				return _navigation_target_for_backpack("先使用对战宠物蛋")
+			if PlayerProgressModel.bank_item_count(player_profile, tutorial_item_id) > 0:
+				return {"kind": "bank_panel", "mapId": "", "label": "从银行取回对战宠物蛋"}
+			return _navigation_target_for_interaction_id("firebud_stable_keeper")
 		"use_spirit":
 			return _navigation_target_for_encounter_group(str(objective.get("encounterGroupId", "")))
 		"battle_victory":
@@ -21560,6 +21593,16 @@ func _quest_ride_objective_should_open_backpack(objective: Dictionary) -> bool:
 		if str(instance.get("formId", instance.get("templateId", ""))).strip_edges() == form_id:
 			return false
 	return true
+
+
+func _quest_battle_pet_objective_target_pet(objective: Dictionary) -> Dictionary:
+	var form_id := str(objective.get("formId", "")).strip_edges()
+	if form_id != "rebirth_starter_four_spirit_cub":
+		return {}
+	for instance in PlayerProgressModel.all_pet_instances(player_profile):
+		if str(instance.get("formId", instance.get("templateId", ""))).strip_edges() == form_id:
+			return instance
+	return {}
 
 func _first_available_unfinished_quest_for_tracker() -> Dictionary:
 	var normalized = PlayerProgressModel.normalize_profile(player_profile)
@@ -21977,6 +22020,12 @@ func _quest_route_hint(quest: Dictionary, _objective: Dictionary) -> String:
 	return "%s / %s" % [map_name, label]
 
 func _route_to_quest_target(target: Dictionary) -> void:
+	var pet_form_id := str(target.get("petFormId", "")).strip_edges()
+	if pet_form_id != "":
+		for instance in PlayerProgressModel.all_pet_instances(player_profile):
+			if str(instance.get("formId", instance.get("templateId", ""))).strip_edges() == pet_form_id:
+				pet_selected_instance_id = str(instance.get("instanceId", ""))
+				break
 	var target_map_id = str(target.get("mapId", ""))
 	var label = _navigation_target_display_label(target)
 	if target_map_id != "" and target_map_id != current_map_id:
@@ -22016,6 +22065,9 @@ func _route_to_quest_target(target: Dictionary) -> void:
 		"pet_panel":
 			_open_pet_panel()
 			_set_world_log_message("请在宠物界面完成：%s。" % label)
+		"bank_panel":
+			_open_bank_panel()
+			_set_world_log_message("请在银行完成：%s。" % label)
 		"tutorial_feature":
 			_open_tutorial_feature_panel(str(target.get("featureId", "")))
 		"market_panel":
@@ -22220,11 +22272,12 @@ func _navigation_target_for_backpack(label: String) -> Dictionary:
 		"label": label if label != "" else "随身包",
 	}
 
-func _navigation_target_for_pet_panel(label: String) -> Dictionary:
+func _navigation_target_for_pet_panel(label: String, pet_form_id: String = "") -> Dictionary:
 	return {
 		"kind": "pet_panel",
 		"mapId": "",
 		"label": label if label != "" else "宠物",
+		"petFormId": pet_form_id.strip_edges(),
 	}
 
 func _navigation_target_for_encounter_group(group_id: String) -> Dictionary:
@@ -22944,18 +22997,21 @@ func _on_pet_state_cycle_pressed() -> void:
 		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
 		_refresh_pet_panel()
 		return
+	var ride_pet_instance_id_before := str(player_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
 	var result = PlayerProgressModel.cycle_pet_state(player_profile, pet_selected_instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = []
 	var state_message := str(result.get("message", ""))
 	if state_message != "":
 		log_lines.append(state_message)
-	if bool(result.get("ok", false)) and str(result.get("state", "")) == PlayerProgressModel.PET_STATE_RIDING:
+	var result_state := str(result.get("state", ""))
+	if bool(result.get("ok", false)) and [PlayerProgressModel.PET_STATE_RIDING, PlayerProgressModel.PET_STATE_BATTLE].has(result_state):
 		var quest_event = PlayerProgressModel.record_quest_event(player_profile, {
-			"type": "ride_pet",
+			"type": "ride_pet" if result_state == PlayerProgressModel.PET_STATE_RIDING else "battle_pet",
 			"instanceId": str(result.get("instanceId", pet_selected_instance_id)),
 			"formId": str(result.get("formId", "")),
 			"lineId": str(result.get("lineId", "")),
+			"ridePetInstanceId": ride_pet_instance_id_before,
 			"amount": 1,
 		})
 		player_profile = quest_event.get("profile", player_profile)
@@ -22966,6 +23022,16 @@ func _on_pet_state_cycle_pressed() -> void:
 			player_profile = quest_claim.get("profile", player_profile)
 			if bool(quest_claim.get("ok", false)) and str(quest_claim.get("message", "")) != "":
 				log_lines.append(str(quest_claim.get("message", "")))
+	if bool(result.get("ok", false)) and result_state == PlayerProgressModel.PET_STATE_RIDING:
+		var current_battle_progress := PlayerProgressModel.record_current_battle_pet_quest(player_profile)
+		player_profile = current_battle_progress.get("profile", player_profile)
+		if bool(current_battle_progress.get("changed", false)) and str(current_battle_progress.get("message", "")) != "":
+			log_lines.append(str(current_battle_progress.get("message", "")))
+		if bool(current_battle_progress.get("ready", false)) and PlayerProgressModel.active_quest_auto_claim(player_profile):
+			var current_battle_claim := PlayerProgressModel.claim_active_quest(player_profile)
+			player_profile = current_battle_claim.get("profile", player_profile)
+			if bool(current_battle_claim.get("ok", false)) and str(current_battle_claim.get("message", "")) != "":
+				log_lines.append(str(current_battle_claim.get("message", "")))
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		host._save_player_profile_now()
 	_set_world_log_message("\n".join(log_lines))

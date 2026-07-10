@@ -15,6 +15,8 @@ const CONTEXT_WORLD_PET_EXP := "world_pet_exp"
 const CONTEXT_WORLD_MM_STONE := "world_mm_stone"
 const CONTEXT_WORLD_PET_EGG := "world_pet_egg"
 const CONTEXT_EQUIPMENT := "equipment"
+const BINDING_UNBOUND := "unbound"
+const BINDING_BOUND := "bound"
 static var data_cache_loaded: bool = false
 static var data_cache: Dictionary = {}
 
@@ -58,6 +60,15 @@ static func menu_label_for(item_id: String, fallback: String = "物品") -> Stri
 static func stack_limit_for(item_id: String) -> int:
 	var item := item_for_id(item_id)
 	return maxi(1, int(item.get("stackLimit", 1)))
+
+
+static func binding_for(item_id: String) -> String:
+	var item := item_for_id(item_id)
+	return BINDING_BOUND if str(item.get("binding", BINDING_UNBOUND)) == BINDING_BOUND else BINDING_UNBOUND
+
+
+static func item_is_bound(item_id: String) -> bool:
+	return binding_for(item_id) == BINDING_BOUND
 
 
 static func use_contexts_for(item_id: String) -> Array[String]:
@@ -556,6 +567,7 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 		context_labels.append("暂不可用")
 	var lines: Array[String] = [
 		"%s x%d" % [label_for(item_id), maxi(0, int(slot.get("count", 0)))],
+		"绑定：%s" % ("已绑定" if item_is_bound(item_id) else "非绑定"),
 		"用途: %s" % " / ".join(context_labels),
 		"堆叠: %d" % stack_limit_for(item_id),
 	]

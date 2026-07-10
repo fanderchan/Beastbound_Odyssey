@@ -31,6 +31,28 @@ const {
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
 
+test("quest catalog gives every formal quest explicit pickup and recommended levels", () => {
+  const questCatalog = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../client/godot/data/quests.json"), "utf8"));
+  assert.equal(Array.isArray(questCatalog.quests), true);
+  assert.equal(questCatalog.quests.length, 44);
+  assert.equal(questCatalog.quests.every((quest) => Object.hasOwn(quest, "requiredLevel")), true);
+  assert.equal(questCatalog.quests.every((quest) => Object.hasOwn(quest, "recommendedLevel")), true);
+  assert.equal(questCatalog.quests.filter((quest) => Number(quest.requiredLevel) === 1).length, 38);
+  assert.deepEqual(
+    questCatalog.quests
+      .filter((quest) => Number(quest.requiredLevel) === 80 && Number(quest.recommendedLevel) === 100)
+      .map((quest) => quest.id),
+    [
+      "quest_rebirth_1_guidance",
+      "quest_rebirth_2_guidance",
+      "quest_rebirth_3_guidance",
+      "quest_rebirth_4_guidance",
+      "quest_rebirth_5_guidance",
+      "quest_rebirth_6_guidance",
+    ],
+  );
+});
+
 test("quest record endpoint advances and auto-claims talk quests server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const player = service.register({"username": "questrecorda", "password": "test1234", "displayName": "任务记录"});
@@ -54,7 +76,45 @@ test("quest record endpoint advances and auto-claims talk quests server-side", (
   assert.equal(recorded.profile.activeQuestId, "quest_open_task_panel");
   assert.equal(recorded.profile.stoneCoins, 20);
   assert.equal(profileItemCount(recorded.profile, "item_meat_small"), 2);
-  assert.equal(recorded.questMessages.some((message) => String(message).includes("认识训练师")), true);
+  assert.equal(recorded.questMessages.some((message) => String(message).includes("[1] 认识训练师")), true);
+});
+
+test("quest pickup level does not block an already accepted quest after level drops", () => {
+  const service = createAuthService({"store": createMemoryAuthStore(), "allowPositionTeleport": true});
+  const acceptedPlayer = service.register({"username": "questlevelaccepted", "password": "test1234", "displayName": "已接等级任务"});
+  assert.equal(acceptedPlayer.ok, true);
+  const acceptedProfile = battleProfile("已接等级任务", {"level": 80, "hp": 120, "maxHp": 120}, null);
+  acceptedProfile.activeQuestId = "quest_rebirth_1_guidance";
+  acceptedProfile.questStates = {
+    "quest_rebirth_1_guidance": {"questId": "quest_rebirth_1_guidance", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(acceptedPlayer.session.token, {"expectedRevision": 0, "profile": acceptedProfile}).ok, true);
+  const loweredProfile = service.getProfile(acceptedPlayer.session.token).profile;
+  loweredProfile.player.level = 1;
+  assert.equal(service.saveProfile(acceptedPlayer.session.token, {"expectedRevision": 1, "profile": loweredProfile}).ok, true);
+
+  const completed = service.questRecord(acceptedPlayer.session.token, {
+    "questId": "quest_rebirth_1_guidance",
+    "event": {"type": "talk", "targetId": "firebud_rebirth_mentor"},
+  });
+  assert.equal(completed.ok, true);
+  assert.equal(completed.profile.player.level, 1);
+  assert.equal(completed.profile.questStates.quest_rebirth_1_guidance.status, "claimed");
+  assert.equal(completed.profile.activeQuestId, "");
+  assert.equal(completed.questMessages.some((message) => String(message).includes("[80] 一转资格")), true);
+
+  const blockedPlayer = service.register({"username": "questlevelblocked", "password": "test1234", "displayName": "未接等级任务"});
+  assert.equal(blockedPlayer.ok, true);
+  const blockedProfile = battleProfile("未接等级任务", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  blockedProfile.activeQuestId = "";
+  blockedProfile.questStates = {};
+  assert.equal(service.saveProfile(blockedPlayer.session.token, {"expectedRevision": 0, "profile": blockedProfile}).ok, true);
+  const rejected = service.questRecord(blockedPlayer.session.token, {
+    "questId": "quest_rebirth_1_guidance",
+    "event": {"type": "talk", "targetId": "firebud_rebirth_mentor"},
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "quest_unavailable");
 });
 
 test("quest record recovers missing active main quest before auto-claiming", () => {
@@ -99,6 +159,7 @@ test("quest record rejects client-reported settlement events and out-of-range ta
     {"type": "buy_item", "shopId": "firebud_general", "itemId": "item_meat_small", "amount": 1},
     {"type": "use_world_item", "itemId": "item_meat_small", "targetType": "pet", "amount": 1},
     {"type": "equip_item", "itemId": "weapon_wood_axe_1", "slot": "weapon", "amount": 1},
+    {"type": "battle_pet", "instanceId": "pet_four_spirit", "ridePetInstanceId": "pet_tiger", "formId": "rebirth_starter_four_spirit_cub"},
   ]) {
     const rejected = service.questRecord(player.session.token, {"event": forged});
     assert.equal(rejected.ok, false, `event ${forged.type} should be rejected`);
