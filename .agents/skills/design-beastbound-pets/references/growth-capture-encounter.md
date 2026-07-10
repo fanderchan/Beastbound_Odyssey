@@ -26,6 +26,8 @@ There is not yet an independent, formally defined `4V` field or formula. Current
 
 Store immutable identity once on the server. Never reroll it on login, UI open, reconnect, offline挂机, or GM level-up. Use versioned fields and fixed-seed golden vectors.
 
+For current production creation paths, call the focused server initializer in `server/node/src/auth/pet-private-state.js` exactly once. A pet known to be Lv1 must persist both `initialStats` and `growthSpeciesLevel1Stats` from its actual visible stats. A Lv2+ capture must still receive private identity, but must not label current battle stats as historical Lv1 facts. Do not add a new pet grant by manually composing `individualSeed`.
+
 ## Species profile contract
 
 Runtime forms link through `growthSpeciesProfileId` to `client/godot/data/balance/pet_growth_species_profiles.json`.

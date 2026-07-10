@@ -19,6 +19,8 @@ const {
   SERVER_VERSION,
   createMysqlAuthStore,
   createCountingAuthStore,
+  internalProfileForAccount,
+  isValidPetPrivateSeed,
   testPasswordHash,
   withEnv,
   battleProfile,
@@ -257,6 +259,10 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   assert.equal(cultivated.profile.petInstances.some((pet) => pet.instanceId === "pet_rebirth_helper"), false);
   assert.equal(cultivated.profile.petInstances.some((pet) => pet.instanceId === "valuable_normal_pet"), true);
   assert.equal(cultivated.profile.petRebirthMmGuide.status, "completed");
+  const cultivatedInternal = internalProfileForAccount(service, registered.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === "pet_action_target");
+  const cultivationEvent = cultivatedInternal.petCultivation.history.at(-1);
+  assert.equal(isValidPetPrivateSeed(cultivationEvent.rebirthRollSeed), true);
 
   const loaded = service.getProfile(token);
   assert.equal(loaded.profileSummary.profileRevision, cultivated.profileSummary.profileRevision);
@@ -369,6 +375,17 @@ test("server world pet eggs hatch pets with default attack and defend skills", (
   assert.equal(pet.activeSkillIds.includes("pet_attack"), true);
   assert.equal(pet.activeSkillIds.includes("pet_defend"), true);
   assert.deepEqual(pet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
+  const internalPet = internalProfileForAccount(service, registered.account.accountId)
+    .petInstances.find((entry) => entry.instanceId === hatched.result.instanceId);
+  assert.equal(isValidPetPrivateSeed(internalPet.individualSeed), true);
+  const expectedLevelOneStats = {
+    maxHp: internalPet.maxHp,
+    attack: internalPet.attack,
+    defense: internalPet.defense,
+    quick: internalPet.quick,
+  };
+  assert.deepEqual(internalPet.initialStats, expectedLevelOneStats);
+  assert.deepEqual(internalPet.growthSpeciesLevel1Stats, expectedLevelOneStats);
 });
 
 test("server bank tab unlock consumes diamonds and opens next bank page", () => {
@@ -1009,6 +1026,16 @@ test("server player rebirth consumes trial requirements and writes authoritative
   assert.equal(Boolean(starter), true);
   assert.equal(starter.state, "battle");
   assert.equal(reborn.profile.activePetInstanceId, starter.instanceId);
+  const internalStarter = internalProfileForAccount(service, registered.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === starter.instanceId);
+  assert.equal(isValidPetPrivateSeed(internalStarter.individualSeed), true);
+  assert.deepEqual(internalStarter.initialStats, {
+    maxHp: internalStarter.maxHp,
+    attack: internalStarter.attack,
+    defense: internalStarter.defense,
+    quick: internalStarter.quick,
+  });
+  assert.deepEqual(internalStarter.growthSpeciesLevel1Stats, internalStarter.initialStats);
   assert.equal(reborn.rebirth.consumedRingIds.length, 4);
   assert.equal(reborn.rebirth.consumedPets[0].formId, "rebirth_beast_earth_lv50");
   assert.equal(reborn.rebirth.rewardItems[0].itemId, "armor_grace_cloth_3");

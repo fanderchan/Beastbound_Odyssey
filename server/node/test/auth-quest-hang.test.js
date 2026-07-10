@@ -19,6 +19,8 @@ const {
   SERVER_VERSION,
   createMysqlAuthStore,
   createCountingAuthStore,
+  internalProfileForAccount,
+  isValidPetPrivateSeed,
   testPasswordHash,
   withEnv,
   battleProfile,
@@ -297,7 +299,10 @@ test("quest claim endpoint requires reward choice and grants selected rewards se
 });
 
 test("party pve capture advances capture quest and stops hang capture target", () => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "randomBytes": (size) => Buffer.alloc(size, 0x19),
+  });
   const solo = service.register({"username": "pvequestcap", "password": "test1234", "displayName": "捕捉任务"});
   assert.equal(solo.ok, true);
   const profile = battleProfile("捕捉任务", {
@@ -327,7 +332,7 @@ test("party pve capture advances capture quest and stops hang capture target", (
       "selectedWildPet": {
         "formId": "wuli_normal_orange_fire10",
         "name": "任务乌力",
-        "level": 3,
+        "level": 1,
         "catchable": true,
         "captureDifficulty": 1,
         "captureChanceOverride": 1.0,
@@ -367,7 +372,7 @@ test("party pve capture advances capture quest and stops hang capture target", (
     "targetActorId": enemy.actorId,
     "captureToolId": "capture_poison_wuli_net",
   });
-  assert.equal(resolved.ok, true);
+  assert.equal(resolved.ok, true, JSON.stringify(resolved));
   const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
   assert.equal(writeback.capturedPets[0].lineId, "wuli");
   assert.equal(writeback.capturedPets[0].captureToolId, "capture_poison_wuli_net");
@@ -392,6 +397,17 @@ test("party pve capture advances capture quest and stops hang capture target", (
   assert.equal(capturedPet.activeSkillIds.includes("pet_attack"), true);
   assert.equal(capturedPet.activeSkillIds.includes("pet_defend"), true);
   assert.deepEqual(capturedPet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
+  const internalCapturedPet = internalProfileForAccount(service, solo.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === capturedPet.instanceId);
+  assert.equal(isValidPetPrivateSeed(internalCapturedPet.individualSeed), true);
+  const expectedLevelOneStats = {
+    maxHp: internalCapturedPet.maxHp,
+    attack: internalCapturedPet.attack,
+    defense: internalCapturedPet.defense,
+    quick: internalCapturedPet.quick,
+  };
+  assert.deepEqual(internalCapturedPet.initialStats, expectedLevelOneStats);
+  assert.deepEqual(internalCapturedPet.growthSpeciesLevel1Stats, expectedLevelOneStats);
 });
 
 test("party pve victory stops hang when player remains below low hp threshold", () => {

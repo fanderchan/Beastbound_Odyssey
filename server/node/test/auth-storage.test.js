@@ -274,7 +274,16 @@ process.stdin.on("end", () => {
       accountId: "acc_entity",
       profileRevision: 3,
       updatedAt: "2026-07-04T00:01:00.000Z",
-      profile: {name: "实体档案", level: 12},
+      profile: {
+        name: "实体档案",
+        level: 12,
+        petInstances: [{
+          instanceId: "pet_private_entity",
+          individualSeed: "bps1_" + "A".repeat(43),
+          initialStats: {maxHp: 81, attack: 29, defense: 24, quick: 36},
+          growthSpeciesLevel1Stats: {maxHp: 81, attack: 29, defense: 24, quick: 36},
+        }],
+      },
     }],
     ["mail_messages", "mail_entity", {
       mailId: "mail_entity",
@@ -318,6 +327,13 @@ process.stdin.on("end", () => {
     const loaded = store.load();
     assert.equal(loaded.accounts.entityuser.accountId, "acc_entity");
     assert.equal(loaded.profiles.player_entity.profile.name, "实体档案");
+    assert.equal(loaded.profiles.player_entity.profile.petInstances[0].individualSeed, `bps1_${"A".repeat(43)}`);
+    assert.deepEqual(loaded.profiles.player_entity.profile.petInstances[0].growthSpeciesLevel1Stats, {
+      maxHp: 81,
+      attack: 29,
+      defense: 24,
+      quick: 36,
+    });
     assert.equal(loaded.mailMessages.mail_entity.title, "实体邮件");
     assert.equal(loaded.gmCommandGrants.acc_entity[0].commandId, "*");
     assert.equal(loaded.battleTrace[0].traceId, "trace_entity");
@@ -559,10 +575,31 @@ test("JSON auth store is available only when explicitly selected", async () => {
             "updatedAt": "2026-07-03T00:00:00.000Z",
           },
         },
+        "profileBindings": {
+          "acc_jsonuser": {"accountId": "acc_jsonuser", "playerId": "player_jsonuser"},
+        },
+        "profiles": {
+          "player_jsonuser": {
+            "playerId": "player_jsonuser",
+            "accountId": "acc_jsonuser",
+            "profile": {
+              "petInstances": [{
+                "instanceId": "pet_private_json",
+                "individualSeed": `bps1_${"B".repeat(43)}`,
+                "initialStats": {"maxHp": 72, "attack": 26, "defense": 22, "quick": 34},
+                "growthSpeciesLevel1Stats": {"maxHp": 72, "attack": 26, "defense": 22, "quick": 34},
+              }],
+            },
+          },
+        },
       });
     });
     const saved = JSON.parse(fs.readFileSync(storePath, "utf8"));
     assert.equal(saved.accounts.jsonuser.username, "jsonuser");
+    const reloaded = createJsonAuthStore(storePath).load();
+    const privatePet = reloaded.profiles.player_jsonuser.profile.petInstances[0];
+    assert.equal(privatePet.individualSeed, `bps1_${"B".repeat(43)}`);
+    assert.deepEqual(privatePet.initialStats, {maxHp: 72, attack: 26, defense: 22, quick: 34});
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

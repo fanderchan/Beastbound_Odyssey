@@ -19,6 +19,8 @@ const {
   SERVER_VERSION,
   createMysqlAuthStore,
   createCountingAuthStore,
+  internalProfileForAccount,
+  isValidPetPrivateSeed,
   testPasswordHash,
   withEnv,
   battleProfile,
@@ -1410,6 +1412,16 @@ test("party pve guardian victories write server-side trial rewards", () => {
   assert.equal(mmWriteback.special.petRebirthMm.stage, 1);
   const mmAfter = service.getProfile(mmPlayer.session.token);
   assert.equal(mmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), true);
+  const internalMmPet = internalProfileForAccount(service, mmPlayer.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === mmWriteback.special.petRebirthMm.instanceId);
+  assert.equal(isValidPetPrivateSeed(internalMmPet.individualSeed), true);
+  assert.deepEqual(internalMmPet.initialStats, {
+    maxHp: internalMmPet.maxHp,
+    attack: internalMmPet.attack,
+    defense: internalMmPet.defense,
+    quick: internalMmPet.quick,
+  });
+  assert.deepEqual(internalMmPet.growthSpeciesLevel1Stats, internalMmPet.initialStats);
   const mmCountAfterFirstVictory = mmAfter.profile.petInstances.filter((pet) => pet.formId === "pet_rebirth_mm_stage1").length;
   const duplicateMmEncounter = service.startPartyEncounter(mmPlayer.session.token, {
     "enemyCount": 1,
@@ -1862,6 +1874,11 @@ test("party pve capture command stores captured wild pet and consumes capture to
   assert.equal(Boolean(captured), true);
   assert.equal(captured.state, "standby");
   assert.equal(captured.level, 3);
+  const internalCaptured = internalProfileForAccount(service, solo.account.accountId)
+    .petInstances.find((pet) => pet.instanceId === captured.instanceId);
+  assert.equal(isValidPetPrivateSeed(internalCaptured.individualSeed), true);
+  assert.equal(Object.hasOwn(internalCaptured, "initialStats"), false);
+  assert.equal(Object.hasOwn(internalCaptured, "growthSpeciesLevel1Stats"), false);
   assert.equal(after.profile.petCodexCapturedFormIds.includes("wuli_normal_orange_fire10"), true);
   const remainingNetCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
     sum + (slot && slot.itemId === "capture_net" ? Number(slot.count || 0) : 0)

@@ -174,6 +174,9 @@
       - [x] **P0.2b2a 服务端权威模型标记与 Godot 公开投影影子边界**
         - 证据（2026-07-11）：服务端现在从内部状态派生三种可运行 marker，并把已声明但不完整的 v1 标成不可运行的 `invalid_pet_growth_authority_v1`；公开 DTO 兼容 `id/battleState/speciesName/rebirthHelper` 和旧数字字符串，保持 v1/invalid/profile 投影幂等，定向清洗 `petGrowth` 而不误删非宠系统同名字段。Godot 新投影不加载目录、不调用 RNG，十二种自检覆盖当前属性/受伤血量保持、秘密擦除、Lv1 补记录、v1 缺记录失败关闭、legacy 缺记录不循环刷新、公开成长档/四维冲突、未知/损坏/等级冲突；Godot parse + focused 3/3、Node 4/4 通过。通用整响应递归清洗因会破坏 battle actor/经验摘要已明确否决；当前仍未接运行时，完整边界见 `docs/phase_208_pet_growth_public_projection_contract.md`。
       - [ ] **P0.2b2b 原子接入运行时：profile/奖励响应、客户端不重滚、缓存、全部新种子、Lv1 记录、非精确 UI 与协议 v2**
+        - [x] **P0.2b2b-1 服务端新宠私密身份、真实 Lv1 事实与培养安全开奖**
+          - 证据（2026-07-11）：先复现人物转生赠宠、战斗捕捉、世界蛋和 MM 奖励宠均使用可猜字符串身份，MM 转生开奖还可由宠物 ID 与秒级时间推测；新增聚焦 `pet-private-state.js`，四条正式创建路径只生成一次 32 字节 CSPRNG `bps1_` 身份，人物转生/蛋/MM/Lv1 捕捉同时固化不可重写的 `initialStats` 与 `growthSpeciesLevel1Stats`，Lv2+ 捕捉明确只保存身份而不伪造历史；错误声明已知 Lv1 却缺四维会在写身份前失败关闭；MM 转生开奖改用独立 CSPRNG 命名域。目标与存储组 93/93、完整 Node 服务端 167/167 通过。此切片保持旧响应结构和协议 v1，最终删除私有字段、客户端不重滚、双缓存清洗与协议 v2 仍必须原子切换；见 `docs/phase_209_server_pet_private_state.md`。
+        - [ ] **P0.2b2b-2 原子切换公开响应、联网客户端不重滚、双缓存清洗、非精确 UI 与协议 v2**
   - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

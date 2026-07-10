@@ -10,6 +10,10 @@ const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {createEconomyDomain} = require("./auth/economy");
 const {
+  generatePetCultivationRollSeed,
+  initializeNewLegacyPetPrivateState,
+} = require("./auth/pet-private-state");
+const {
   createFamilyManorDomain,
   familyOwnsManor,
   settleManorWarFromBattleRoomResult,
@@ -3401,7 +3405,7 @@ function createPlayerRebirthStarterPet(instanceId, name, formId, state, serial) 
   }
   const baseStats = objectOrEmpty(template.baseStats);
   const maxHp = Math.max(1, Math.trunc(Number(baseStats.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
-  return {
+  return initializeNewLegacyPetPrivateState({
     instanceId,
     petId: instanceId,
     templateId: formId,
@@ -3428,10 +3432,9 @@ function createPlayerRebirthStarterPet(instanceId, name, formId, state, serial) 
     petSkillSlots: stringArray(template.petSkillSlots),
     passiveSkillIds: stringArray(template.passiveSkillIds),
     capturedSerial: serial,
-    individualSeed: `rebirth:${formId}:${serial}`,
     isNew: true,
     schemaVersion: 1,
-  };
+  }, "player_rebirth_reward_growth", {knownLevelOneStats: true});
 }
 
 function ensureActivePetAfterInstanceRemoval(profile) {
@@ -9557,7 +9560,7 @@ function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, resul
   }
   if (groupId === PET_REBIRTH_MM_TRIAL_GROUP_ID) {
     const access = petRebirthMmTrialAccess(profile);
-    const grant = access.ok ? grantPetRebirthMm(profile, 1, groupId) : access;
+    const grant = access.ok ? grantPetRebirthMm(profile, 1) : access;
     if (grant.ok) {
       changed = true;
       publicSpecial.petRebirthMm = {
@@ -11359,7 +11362,7 @@ function capturedPetInstanceFromBattleActor(actor, instanceId, state, serial, ro
   const template = petTemplateForFormId(formId);
   const lineId = String(actor.lineId || template.lineId || "").trim();
   const activeSkillIds = petActiveSkillIdsForSource(actor);
-  return {
+  return initializeNewLegacyPetPrivateState({
     instanceId,
     petId: instanceId,
     templateId: formId,
@@ -11384,10 +11387,9 @@ function capturedPetInstanceFromBattleActor(actor, instanceId, state, serial, ro
     capturedBattleActorId: String(actor.actorId || ""),
     captureToolId: String(actor.captureToolId || ""),
     captureStatusIds: uniqueStringArray(actor.captureStatusIds || battleActorActiveStatusIds(actor)),
-    individualSeed: `capture:${String(room && (room.seed || room.roomId) || "")}:${formId}:${level}:${serial}`,
     isNew: true,
     schemaVersion: 1,
-  };
+  }, "capture_growth", {knownLevelOneStats: level === 1});
 }
 
 function nextProfilePetInstanceSerial(profile, instances) {
@@ -12292,7 +12294,7 @@ function grantPetFromWorldEgg(profile, itemId) {
     return {ok: false, code: "pet_template_missing", message: `${bagItemLabel(itemId)} 对应宠物不存在。`};
   }
   pet.capturedSerial = serial;
-  pet.individualSeed = `pet_egg:${formId}:${serial}`;
+  initializeNewLegacyPetPrivateState(pet, "world_egg_growth", {knownLevelOneStats: true});
   pet.isNew = true;
   pet.binding = bagItemBinding(itemId);
   if (TAME_ELIGIBLE_EGG_ITEM_IDS.has(itemId)) {
@@ -12899,7 +12901,7 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
   }
   const helperRecord = normalizedPetRebirthHelperRecord(helper, expectedStage);
   const nowSec = Math.trunc(now() / 1000);
-  const rollSeed = petRebirthMmRollSeed(pet, helper, nowSec);
+  const rollSeed = generatePetCultivationRollSeed();
   const bonusPackage = petRebirthMmBonusPackage(pet, helper, helperRecord, expectedStage, rollSeed);
   const cumulative = petCultivationGrowthBonus(record.rebirthGrowthBonus);
   const visibleBonus = petCultivationGrowthBonus(bonusPackage.visibleGrowthBonus);
@@ -13237,15 +13239,6 @@ function petRebirthMmGradeForPercentile(percentile) {
   return "D";
 }
 
-function petRebirthMmRollSeed(targetPet, helperPet, nowSec) {
-  return [
-    "server",
-    String(targetPet && (targetPet.instanceId || targetPet.petId) || ""),
-    String(helperPet && (helperPet.instanceId || helperPet.petId) || ""),
-    Math.max(0, Math.trunc(Number(nowSec || 0))),
-  ].join(":");
-}
-
 function petRebirthMmBonusText(bonus) {
   const normalized = petCultivationGrowthBonus(bonus);
   return `血 ${Number(normalized.maxHp || 0).toFixed(3)}/级，攻 ${Number(normalized.attack || 0).toFixed(3)}/级，防 ${Number(normalized.defense || 0).toFixed(3)}/级，敏 ${Number(normalized.quick || 0).toFixed(3)}/级`;
@@ -13325,7 +13318,7 @@ function applyPetRebirthMmStage2ClaimAction(profile) {
   if (Boolean(profile[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY])) {
     return {ok: false, code: "mm_stage2_claimed", message: "2转小MM任务奖励每个角色只能领取一次。"};
   }
-  const grant = grantPetRebirthMm(profile, 2, "stage2_once");
+  const grant = grantPetRebirthMm(profile, 2);
   if (!grant.ok) {
     return grant;
   }
@@ -13333,7 +13326,7 @@ function applyPetRebirthMmStage2ClaimAction(profile) {
   return {ok: true, message: `完成2转小MM任务，${grant.message}`, instanceId: grant.instanceId};
 }
 
-function grantPetRebirthMm(profile, stage, source) {
+function grantPetRebirthMm(profile, stage) {
   const safeStage = Math.max(1, Math.trunc(Number(stage || 1)));
   const formId = safeStage >= 2 ? "pet_rebirth_mm_stage2" : "pet_rebirth_mm_stage1";
   const name = safeStage >= 2 ? "2转小MM" : "1转小MM";
@@ -13352,7 +13345,7 @@ function grantPetRebirthMm(profile, stage, source) {
   }
   pet.petRebirthHelper = normalizedPetRebirthHelperRecord({petRebirthHelper: {stage: safeStage}});
   pet.capturedSerial = serial;
-  pet.individualSeed = `pet_rebirth_mm:${source}:${safeStage}:${serial}`;
+  initializeNewLegacyPetPrivateState(pet, "rebirth_mm_reward_growth", {knownLevelOneStats: true});
   pet.isNew = true;
   instances.push(pet);
   profile.nextPetInstanceSerial = serial + 1;

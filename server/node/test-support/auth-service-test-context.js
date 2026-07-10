@@ -32,6 +32,15 @@ const {
 const {
   createMysqlAuthStore,
 } = require("../src/mysql-store");
+const {isValidPetPrivateSeed} = require("../src/auth/pet-private-seed");
+
+function internalProfileForAccount(service, accountId) {
+  const snapshot = service.snapshot();
+  const binding = snapshot.profileBindings && snapshot.profileBindings[accountId];
+  const profileDoc = binding && snapshot.profiles && snapshot.profiles[binding.playerId];
+  assert.ok(profileDoc && profileDoc.profile, `missing internal profile for account ${accountId}`);
+  return profileDoc.profile;
+}
 
 function createCountingAuthStore(initialData = null) {
   const store = createMemoryAuthStore(initialData);
@@ -346,6 +355,8 @@ module.exports = {
   SERVER_VERSION,
   createMysqlAuthStore,
   createCountingAuthStore,
+  internalProfileForAccount,
+  isValidPetPrivateSeed,
   testPasswordHash,
   withEnv,
   battleProfile,
