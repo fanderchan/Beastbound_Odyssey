@@ -539,7 +539,10 @@ test("party pve capture advances capture quest and stops hang capture target", (
   });
   assert.equal(poisoned.ok, true);
   assert.equal(poisoned.room.status, "ready");
-  assert.equal(poisoned.turn.events.some((event) => event.eventType === "spirit_poison" && event.statusId === "poison"), true);
+  const poisonSpiritEvent = poisoned.turn.events.find((event) => event.eventType === "spirit_poison" && event.statusId === "poison");
+  assert.equal(Boolean(poisonSpiritEvent), true);
+  assert.equal(poisonSpiritEvent.sourceActorId, poisonSpiritEvent.actorId);
+  assert.equal(poisonSpiritEvent.statusChanges.find((change) => change.change === "apply").sourceId, poisonSpiritEvent.actorId);
   const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 2,
     "actorId": player.actorId,

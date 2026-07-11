@@ -133,9 +133,9 @@ function createFixturePetEncounterPermitAuthority() {
 
 function createFixtureBattleRandomAuthority() {
   const rooms = new Set();
-  const fixedRoll = (roomId) => {
+  const fixedRoll = (roomId, context = {}) => {
     assert.equal(rooms.has(String(roomId || "")), true);
-    return 0.9999;
+    return String(context.purpose || "") === "status.v1" ? 0 : 0.9999;
   };
   return Object.freeze({
     openRoom(roomId) {
@@ -152,12 +152,12 @@ function createFixtureBattleRandomAuthority() {
     hasRoom(roomId) {
       return rooms.has(String(roomId || ""));
     },
-    roll(roomId) {
-      return fixedRoll(roomId);
+    roll(roomId, context) {
+      return fixedRoll(roomId, context);
     },
     index(roomId, context, size) {
       const count = Math.max(1, Math.trunc(Number(size || 0)));
-      return Math.min(count - 1, Math.floor(fixedRoll(roomId) * count));
+      return Math.min(count - 1, Math.floor(fixedRoll(roomId, context) * count));
     },
   });
 }

@@ -826,6 +826,7 @@ var auto_server_battle_switch_pet_live_check: bool = false
 var auto_server_battle_item_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
 var auto_server_battle_reaction_replay_check: bool = false
+var auto_server_battle_status_replay_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
 var auto_server_solo_pve_live_check: bool = false
 var auto_server_party_pve_sync_live_check: bool = false
@@ -1269,6 +1270,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_target_mapping_check")
 	elif auto_server_battle_reaction_replay_check:
 		call_deferred("_run_auto_server_battle_reaction_replay_check")
+	elif auto_server_battle_status_replay_check:
+		call_deferred("_run_auto_server_battle_status_replay_check")
 	elif auto_server_battle_stale_room_check:
 		call_deferred("_run_auto_server_battle_stale_room_check")
 	elif auto_server_solo_pve_live_check:
@@ -2155,6 +2158,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_target_mapping_check = true
 		elif arg == "--auto-server-battle-reaction-replay-check":
 			auto_server_battle_reaction_replay_check = true
+		elif arg == "--auto-server-battle-status-replay-check":
+			auto_server_battle_status_replay_check = true
 		elif arg == "--auto-server-battle-stale-room-check":
 			auto_server_battle_stale_room_check = true
 		elif arg == "--auto-server-solo-pve-live-check":
@@ -4889,6 +4894,10 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 
 func _run_auto_server_battle_reaction_replay_check() -> void:
 	await _auto_checks()._run_auto_server_battle_reaction_replay_check()
+
+
+func _run_auto_server_battle_status_replay_check() -> void:
+	await _auto_checks()._run_auto_server_battle_status_replay_check()
 
 
 func _auto_fetch_server_profile_for_session(session: Dictionary) -> Dictionary:

@@ -233,6 +233,7 @@ static func run() -> Dictionary:
 		"sequence": 1,
 		"actorId": "enemy_front_3",
 		"targetActorId": BattleModel.PLAYER_PET_ID,
+		"sourceActorId": "enemy_front_3",
 		"actionId": "pet_sleep_powder",
 		"skillId": "pet_sleep_powder",
 		"statusId": BattleModel.STATUS_SLEEP,
@@ -242,6 +243,15 @@ static func run() -> Dictionary:
 		"statusRoll": 0.1,
 		"statusChance": 0.8,
 		"statusResistance": 0.0,
+		"statusChanges": [{
+			"actorId": BattleModel.PLAYER_PET_ID,
+			"statusId": BattleModel.STATUS_SLEEP,
+			"change": "apply",
+			"turns": 2,
+			"potency": 0,
+			"sourceId": "enemy_front_3",
+			"schemaVersion": 1,
+		}],
 	}]))
 	var status_events: Array = status_replay.get("events", [])
 	var status_state := status_replay.get("state", {}) as Dictionary

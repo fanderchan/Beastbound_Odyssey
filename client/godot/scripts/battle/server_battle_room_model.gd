@@ -118,6 +118,9 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 	next_state["round"] = maxi(1, int(event_list.get("round", next_state.get("round", 1))))
 	next_state["phase"] = "round_events"
 	next_state["lastServerEventList"] = event_list.duplicate(true)
+	var actors_before: Array = event_list.get("actorsBefore", []) if event_list.get("actorsBefore", []) is Array else []
+	if not actors_before.is_empty():
+		return _state_with_server_actor_snapshots(next_state, actors_before, true)
 	var started_actor_ids := {}
 	var raw_events: Array = event_list.get("events", []) if event_list.get("events", []) is Array else []
 	for value in raw_events:
@@ -141,6 +144,7 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 				"spirit_poison",
 				"spirit_poison_all",
 				"skill_status",
+				"status_tick",
 				"status_skip",
 		].has(event_type):
 			continue
@@ -187,6 +191,11 @@ static func state_with_server_event_actor_snapshot(state: Dictionary, event_list
 	if str(event_list.get("kind", "")) != "battle_event_list":
 		return next_state
 	var server_actors: Array = event_list.get("actors", []) if event_list.get("actors", []) is Array else []
+	return _state_with_server_actor_snapshots(next_state, server_actors, false)
+
+
+static func _state_with_server_actor_snapshots(state: Dictionary, server_actors: Array, replay_start: bool) -> Dictionary:
+	var next_state := state.duplicate(true)
 	var guarding_ids: Array[String] = []
 	for value in server_actors:
 		if not (value is Dictionary):
@@ -202,7 +211,7 @@ static func state_with_server_event_actor_snapshot(state: Dictionary, event_list
 		)
 		if actor_id == "":
 			continue
-		next_state = _apply_server_actor_snapshot(next_state, actor_id, server_actor)
+		next_state = _apply_server_actor_snapshot(next_state, actor_id, server_actor, replay_start)
 		if bool(server_actor.get("guarding", false)) and int(server_actor.get("hp", 0)) > 0:
 			guarding_ids.append(actor_id)
 	next_state["guardingActorIds"] = guarding_ids
@@ -308,13 +317,12 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 static func _apply_server_ride_fields(actor: Dictionary, server_actor: Dictionary) -> void:
 	var ride_pet_id := str(server_actor.get("ridePetInstanceId", "")).strip_edges()
 	if ride_pet_id == "":
-		for key in ["ridePetInstanceId", "ridePetName", "ridePetFormId", "ridePetLevel", "ridePetHp", "ridePetMaxHp", "ridePetBattleState"]:
-			actor.erase(key)
+		_clear_server_ride_fields(actor)
 		return
 	var ride_max_hp := maxi(1, int(server_actor.get("ridePetMaxHp", 1)))
 	var ride_hp := clampi(int(server_actor.get("ridePetHp", ride_max_hp)), 0, ride_max_hp)
 	if ride_hp <= 0:
-		actor.erase("ridePetInstanceId")
+		_clear_server_ride_fields(actor)
 		return
 	actor["ridePetInstanceId"] = ride_pet_id
 	actor["ridePetName"] = str(server_actor.get("ridePetName", "骑宠"))
@@ -323,6 +331,11 @@ static func _apply_server_ride_fields(actor: Dictionary, server_actor: Dictionar
 	actor["ridePetHp"] = ride_hp
 	actor["ridePetMaxHp"] = ride_max_hp
 	actor["ridePetBattleState"] = str(server_actor.get("ridePetBattleState", "riding"))
+
+
+static func _clear_server_ride_fields(actor: Dictionary) -> void:
+	for key in ["ridePetInstanceId", "ridePetName", "ridePetFormId", "ridePetLevel", "ridePetHp", "ridePetMaxHp", "ridePetBattleState"]:
+		actor.erase(key)
 
 
 static func _pet_party_for_session(room: Dictionary, session: Dictionary) -> Array[Dictionary]:
@@ -404,7 +417,7 @@ static func _capture_tool_bag_for_session(room: Dictionary, session: Dictionary)
 	return CaptureToolCatalog.starting_inventory()
 
 
-static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, server_actor: Dictionary) -> Dictionary:
+static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, server_actor: Dictionary, replay_start: bool = false) -> Dictionary:
 	var next_state := state.duplicate(true)
 	var actors: Array = next_state.get("actors", []) if next_state.get("actors", []) is Array else []
 	for index in range(actors.size()):
@@ -431,6 +444,7 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["catchable"] = bool(server_actor.get("catchable", actor.get("catchable", false)))
 		actor["captureDifficulty"] = maxi(0, int(server_actor.get("captureDifficulty", actor.get("captureDifficulty", 0))))
 		actor["captured"] = bool(server_actor.get("captured", actor.get("captured", false)))
+		actor["escaped"] = bool(server_actor.get("escaped", actor.get("escaped", false)))
 		var launched := bool(server_actor.get("launched", actor.get("launched", false))) or str(server_actor.get("actionState", "")).strip_edges() == "launched" or (server_actor.has("revivable") and not bool(server_actor.get("revivable", true)))
 		actor["launched"] = launched
 		actor["revivable"] = bool(server_actor.get("revivable", actor.get("revivable", true))) and not launched
@@ -442,16 +456,22 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 			actor["actionState"] = "captured"
 		elif int(actor.get("hp", 0)) <= 0:
 			actor["actionState"] = "down"
+		elif replay_start:
+			actor["actionState"] = "idle"
+			actor.erase("launchHpBefore")
+			if str(actor.get("kind", "")) == "pet" or str(actor.get("kind", "")) == "wild_pet":
+				actor["petBattleState"] = BattleModel.PET_STATE_BATTLE
 		_apply_server_ride_fields(actor, server_actor)
 		actor["activeSkillIds"] = _string_array(server_actor.get("activeSkillIds", actor.get("activeSkillIds", [])))
 		actor["petSkillSlots"] = _string_array(server_actor.get("petSkillSlots", actor.get("petSkillSlots", [])))
 		actor["passiveSkillIds"] = _string_array(server_actor.get("passiveSkillIds", actor.get("passiveSkillIds", [])))
 		actor["spiritIds"] = _string_array(server_actor.get("spiritIds", actor.get("spiritIds", [])))
 		actor["statuses"] = _dictionary_value(server_actor.get("statuses", actor.get("statuses", {})))
+		actor["poisoned"] = (actor.get("statuses", {}) as Dictionary).has(BattleModel.STATUS_POISON) if actor.get("statuses", {}) is Dictionary else false
 		actor["statusResist"] = _dictionary_value(server_actor.get("statusResist", actor.get("statusResist", {})))
 		actor["statusImmune"] = _dictionary_value(server_actor.get("statusImmune", actor.get("statusImmune", {})))
 		actor["serverGuarding"] = bool(server_actor.get("guarding", false))
-		actor["serverDefeated"] = bool(server_actor.get("defeated", false))
+		actor["serverDefeated"] = bool(server_actor.get("defeated", false)) or int(actor.get("hp", 0)) <= 0
 		actor["serverCaptured"] = bool(server_actor.get("captured", false))
 		actor["serverLaunched"] = launched
 		actors[index] = actor
@@ -621,6 +641,72 @@ static func _dictionary_value(value) -> Dictionary:
 	return {}
 
 
+static func _with_server_status_replay_fields(local_event: Dictionary, state: Dictionary, server_event: Dictionary) -> Dictionary:
+	var next_event := local_event.duplicate(true)
+	for key in ["statusId", "statusResult", "fromTurns", "toTurns"]:
+		if server_event.has(key):
+			next_event[str(key)] = server_event.get(key)
+	if server_event.has("statusBefore"):
+		next_event["serverStatusBefore"] = _dictionary_value(server_event.get("statusBefore", {})) if server_event.get("statusBefore", null) is Dictionary else null
+	if server_event.has("statusAfter"):
+		next_event["serverStatusAfter"] = _dictionary_value(server_event.get("statusAfter", {})) if server_event.get("statusAfter", null) is Dictionary else null
+	if server_event.has("statusesBefore"):
+		next_event["serverStatusesBefore"] = _dictionary_value(server_event.get("statusesBefore", {}))
+	if server_event.has("statusesAfter"):
+		next_event["serverStatusesAfter"] = _dictionary_value(server_event.get("statusesAfter", {}))
+	next_event["serverStatusChanges"] = _local_status_changes_from_server(state, server_event.get("statusChanges", []))
+	var server_source_actor_id := str(server_event.get("sourceActorId", "")).strip_edges()
+	if server_source_actor_id == "" and not (next_event.get("serverStatusChanges", []) as Array).is_empty():
+		server_source_actor_id = str(server_event.get("actorId", "")).strip_edges()
+	if server_source_actor_id != "":
+		var local_source_actor_id := _local_actor_id_for_server_actor(state, server_source_actor_id, "", "", "")
+		next_event["serverSourceActorId"] = server_source_actor_id
+		next_event["sourceActorId"] = local_source_actor_id if local_source_actor_id != "" else server_source_actor_id
+	next_event["serverTargetFacts"] = _local_server_target_facts(state, server_event.get("targets", []))
+	return next_event
+
+
+static func _local_status_changes_from_server(state: Dictionary, value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not (value is Array):
+		return result
+	for raw_change in (value as Array):
+		if not (raw_change is Dictionary):
+			continue
+		var change := (raw_change as Dictionary).duplicate(true)
+		var server_actor_id := str(change.get("actorId", "")).strip_edges()
+		var local_actor_id := _local_actor_id_for_server_actor(state, server_actor_id, "", "", "")
+		if local_actor_id != "":
+			change["serverActorId"] = server_actor_id
+			change["actorId"] = local_actor_id
+		result.append(change)
+	return result
+
+
+static func _local_server_target_facts(state: Dictionary, value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not (value is Array):
+		return result
+	for raw_target in (value as Array):
+		if not (raw_target is Dictionary):
+			continue
+		var target := (raw_target as Dictionary).duplicate(true)
+		var server_actor_id := str(target.get("targetActorId", target.get("actorId", ""))).strip_edges()
+		var local_actor_id := _local_actor_id_for_server_actor(
+			state,
+			server_actor_id,
+			str(target.get("targetAccountId", target.get("accountId", ""))),
+			str(target.get("targetUsername", target.get("username", ""))),
+			str(target.get("targetKind", target.get("kind", "")))
+		)
+		if local_actor_id == "":
+			continue
+		target["serverTargetActorId"] = server_actor_id
+		target["targetId"] = local_actor_id
+		result.append(target)
+	return result
+
+
 static func _local_value_map_from_server_actor_map(state: Dictionary, server_event: Dictionary, key: String) -> Dictionary:
 	var source := _dictionary_value(server_event.get(key, {}))
 	var result := {}
@@ -755,12 +841,12 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		if item_poison_target_id == "":
 			return {}
 		var item_poison_target := BattleModel.actor_by_id(state, item_poison_target_id)
-		return {
+		var item_poison_event := {
 			"type": "item_poison",
 			"attackerId": actor_id,
 			"targetId": item_poison_target_id,
 			"targetSide": str(item_poison_target.get("side", BattleModel.SIDE_ENEMY)),
-			"damage": maxi(1, int(server_event.get("damage", 1))),
+			"damage": maxi(0, int(server_event.get("damage", 0))),
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"itemName": str(server_event.get("itemName", "物品")),
@@ -774,6 +860,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"forcedStatusRoll": float(server_event.get("statusRoll", -1.0)),
 			"forcedStatusChance": float(server_event.get("statusChance", -1.0)),
 			"forcedStatusResistance": float(server_event.get("statusResistance", 0.0)),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
@@ -782,15 +869,17 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverDefeated": bool(server_event.get("defeated", false)),
 			"remainingItemCount": int(server_event.get("remainingItemCount", -1)),
 			"serverRemainingItemCount": int(server_event.get("remainingItemCount", -1)),
+			"applyServerRemainingItemCount": actor_id == BattleModel.PLAYER_ACTOR_ID,
 		}
+		return _with_server_status_replay_fields(item_poison_event, state, server_event)
 	if event_type == "item_poison_all":
-		return {
+		var item_poison_all_event := {
 			"type": "item_poison_all",
 			"attackerId": actor_id,
 			"targetId": "",
 			"targetSide": BattleModel.SIDE_ENEMY,
 			"targetIds": _local_actor_ids_from_server_actor_ids(state, server_event.get("targetActorIds", []) if server_event.get("targetActorIds", []) is Array else []),
-			"damage": maxi(1, int(server_event.get("damage", 1))),
+			"damage": maxi(0, int(server_event.get("damage", 0))),
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"itemName": str(server_event.get("itemName", "物品")),
@@ -804,13 +893,15 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"forcedStatusRollPerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusRollPerTarget"),
 			"forcedStatusChancePerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusChancePerTarget"),
 			"forcedStatusResistancePerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusResistancePerTarget"),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
-			"serverTargets": server_event.get("targets", []),
 			"remainingItemCount": int(server_event.get("remainingItemCount", -1)),
 			"serverRemainingItemCount": int(server_event.get("remainingItemCount", -1)),
+			"applyServerRemainingItemCount": actor_id == BattleModel.PLAYER_ACTOR_ID,
 		}
+		return _with_server_status_replay_fields(item_poison_all_event, state, server_event)
 	if event_type == "item_cleanse":
 		var item_cleanse_target_id := _local_actor_id_for_server_actor(
 			state,
@@ -822,7 +913,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		if item_cleanse_target_id == "":
 			return {}
 		var item_cleanse_target := BattleModel.actor_by_id(state, item_cleanse_target_id)
-		return {
+		var item_cleanse_event := {
 			"type": "item_cleanse",
 			"attackerId": actor_id,
 			"targetId": item_cleanse_target_id,
@@ -833,12 +924,16 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"itemId": str(server_event.get("itemId", server_event.get("actionId", ""))),
 			"actionId": str(server_event.get("actionId", server_event.get("itemId", ""))),
 			"statusIds": server_event.get("statusIds", []),
+			"removedStatusIds": server_event.get("removedStatusIds", []),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 			"remainingItemCount": int(server_event.get("remainingItemCount", -1)),
 			"serverRemainingItemCount": int(server_event.get("remainingItemCount", -1)),
+			"applyServerRemainingItemCount": actor_id == BattleModel.PLAYER_ACTOR_ID,
 		}
+		return _with_server_status_replay_fields(item_cleanse_event, state, server_event)
 	if event_type == "capture":
 		var capture_target_id := _local_actor_id_for_server_actor(
 			state,
@@ -928,12 +1023,12 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 		if spirit_poison_target_id == "":
 			return {}
 		var spirit_poison_target := BattleModel.actor_by_id(state, spirit_poison_target_id)
-		return {
+		var spirit_poison_event := {
 			"type": "spirit_poison",
 			"attackerId": actor_id,
 			"targetId": spirit_poison_target_id,
 			"targetSide": str(spirit_poison_target.get("side", BattleModel.SIDE_ENEMY)),
-			"damage": maxi(1, int(server_event.get("damage", 1))),
+			"damage": maxi(0, int(server_event.get("damage", 0))),
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"spiritId": str(server_event.get("spiritId", server_event.get("actionId", ""))),
@@ -947,6 +1042,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"forcedStatusRoll": float(server_event.get("statusRoll", -1.0)),
 			"forcedStatusChance": float(server_event.get("statusChance", -1.0)),
 			"forcedStatusResistance": float(server_event.get("statusResistance", 0.0)),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
@@ -954,13 +1050,14 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverHpAfter": int(server_event.get("hpAfter", 0)),
 			"serverDefeated": bool(server_event.get("defeated", false)),
 		}
+		return _with_server_status_replay_fields(spirit_poison_event, state, server_event)
 	if event_type == "spirit_poison_all":
-		return {
+		var spirit_poison_all_event := {
 			"type": "spirit_poison_all",
 			"attackerId": actor_id,
 			"targetId": "",
 			"targetSide": BattleModel.SIDE_ENEMY,
-			"damage": maxi(1, int(server_event.get("damage", 1))),
+			"damage": maxi(0, int(server_event.get("damage", 0))),
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"spiritId": str(server_event.get("spiritId", server_event.get("actionId", ""))),
@@ -974,11 +1071,12 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"forcedStatusRollPerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusRollPerTarget"),
 			"forcedStatusChancePerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusChancePerTarget"),
 			"forcedStatusResistancePerTarget": _local_value_map_from_server_actor_map(state, server_event, "statusResistancePerTarget"),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
-			"serverTargets": server_event.get("targets", []),
 		}
+		return _with_server_status_replay_fields(spirit_poison_all_event, state, server_event)
 	if event_type == "skill_status":
 		var status_target_id := _local_actor_id_for_server_actor(
 			state,
@@ -991,7 +1089,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			return {}
 		var status_target := BattleModel.actor_by_id(state, status_target_id)
 		var skill_id := str(server_event.get("skillId", server_event.get("actionId", "pet_sleep_powder")))
-		return {
+		var status_skill_event := {
 			"type": "skill_status",
 			"attackerId": actor_id,
 			"targetId": status_target_id,
@@ -1014,8 +1112,39 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 		}
+		return _with_server_status_replay_fields(status_skill_event, state, server_event)
+	if event_type == "status_tick":
+		var tick_target_id := _local_actor_id_for_server_actor(
+			state,
+			str(server_event.get("targetActorId", server_event.get("actorId", ""))),
+			str(server_event.get("targetAccountId", server_event.get("actorAccountId", ""))),
+			str(server_event.get("targetUsername", server_event.get("actorUsername", ""))),
+			str(server_event.get("targetKind", server_event.get("actorKind", "")))
+		)
+		if tick_target_id == "":
+			tick_target_id = actor_id
+		var tick_target := BattleModel.actor_by_id(state, tick_target_id)
+		var tick_event := {
+			"type": "status_tick",
+			"attackerId": actor_id,
+			"targetId": tick_target_id,
+			"targetSide": str(tick_target.get("side", actor.get("side", ""))),
+			"speed": 0,
+			"sequence": sequence,
+			"actionId": str(server_event.get("actionId", "")),
+			"statusId": str(server_event.get("statusId", BattleModel.STATUS_POISON)),
+			"damage": maxi(0, int(server_event.get("damage", 0))),
+			"serverResolved": true,
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+			"serverHpBefore": maxi(0, int(server_event.get("hpBefore", tick_target.get("hp", 0)))),
+			"serverHpAfter": maxi(0, int(server_event.get("hpAfter", tick_target.get("hp", 0)))),
+			"serverDefeated": bool(server_event.get("defeated", false)),
+		}
+		return _with_server_status_replay_fields(tick_event, state, server_event)
 	if event_type == "status_skip":
-		return {
+		var status_skip_event := {
 			"type": "status_skip",
 			"attackerId": actor_id,
 			"targetId": actor_id,
@@ -1024,10 +1153,15 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"sequence": sequence,
 			"actionId": str(server_event.get("actionId", "")),
 			"statusId": str(server_event.get("statusId", "")),
+			"damage": 0,
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
+			"serverHpBefore": int(actor.get("hp", 0)),
+			"serverHpAfter": int(actor.get("hp", 0)),
 		}
+		return _with_server_status_replay_fields(status_skip_event, state, server_event)
 	if ["basic_attack", "pet_skill", "combo_attack", "counter_attack"].has(event_type):
 		return _local_server_resolved_damage_event(state, server_event, actor_id, actor, sequence)
 	return {}
@@ -1102,7 +1236,7 @@ static func _local_server_resolved_damage_event(state: Dictionary, server_event:
 	if event_type == "pet_skill":
 		local_event["skillId"] = skill_id
 		local_event["skillName"] = BattleActionCatalog.label_for(skill_id, "宠物技能")
-	return local_event
+	return _with_server_status_replay_fields(local_event, state, server_event)
 
 
 static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id: String, account_id: String, username: String, kind: String = "", pet_id: String = "") -> String:

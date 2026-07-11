@@ -1829,15 +1829,21 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastCounterTriggered"] = false
 	state["lastReactionKind"] = ""
 	var event_type := str(event.get("type", ""))
+	if bool(event.get("serverResolved", false)):
+		if event_type == "status_tick":
+			return _apply_server_resolved_status_tick_event(state, event)
+		if event_type == "status_skip":
+			return _apply_server_resolved_status_skip_event(state, event)
+		if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
+			return _apply_server_resolved_damage_event(state, event)
+		if event_type == "item_poison" or event_type == "item_poison_all" or event_type == "spirit_poison" or event_type == "spirit_poison_all":
+			return _apply_server_resolved_poison_event(state, event)
+		if event_type == "skill_status" or event_type == "item_cleanse":
+			return _apply_server_resolved_status_mutation_event(state, event)
 	if event_type == "status_tick":
 		return _apply_status_tick_event(state, event)
 	if event_type == "status_skip":
 		return _apply_status_skip_event(state, event, str(event.get("statusId", "")))
-	if bool(event.get("serverResolved", false)):
-		if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
-			return _apply_server_resolved_damage_event(state, event)
-		if event_type == "skill_status":
-			return _apply_status_apply_event(state, event)
 	var blocking_status_id := _blocking_status_for_event_actor(state, event)
 	if blocking_status_id != "":
 		return _apply_status_skip_event(state, event, blocking_status_id)
@@ -1932,6 +1938,293 @@ static func _blocking_status_for_event_actor(state: Dictionary, event: Dictionar
 	if actor.is_empty() or int(actor.get("hp", 0)) <= 0:
 		return ""
 	return BattleStatusModel.blocking_status_id(actor)
+
+
+static func _server_status_changes(event: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var raw_changes = event.get("serverStatusChanges", [])
+	if not (raw_changes is Array):
+		return result
+	for value in (raw_changes as Array):
+		if value is Dictionary:
+			result.append((value as Dictionary).duplicate(true))
+	return result
+
+
+static func _server_status_changes_for_actor(event: Dictionary, actor_id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for change in _server_status_changes(event):
+		var change_actor_id := str(change.get("actorId", ""))
+		if change_actor_id == "" or change_actor_id == actor_id:
+			result.append(change)
+	return result
+
+
+static func _actor_with_server_status_after(actor: Dictionary, event: Dictionary, actor_id: String) -> Dictionary:
+	var next_actor := actor.duplicate(true)
+	if event.has("serverStatusesAfter"):
+		next_actor["statuses"] = (event.get("serverStatusesAfter", {}) as Dictionary).duplicate(true) if event.get("serverStatusesAfter", {}) is Dictionary else {}
+		next_actor["poisoned"] = BattleStatusModel.has_status(next_actor, STATUS_POISON)
+		return next_actor
+	var statuses := BattleStatusModel.statuses_for(next_actor)
+	for change in _server_status_changes_for_actor(event, actor_id):
+		var status_id := str(change.get("statusId", "")).strip_edges()
+		if status_id == "":
+			continue
+		if change.has("statusAfter"):
+			var exact_after = change.get("statusAfter", null)
+			if exact_after is Dictionary:
+				statuses[status_id] = (exact_after as Dictionary).duplicate(true)
+			else:
+				statuses.erase(status_id)
+			continue
+		var change_kind := str(change.get("change", "")).strip_edges()
+		if change_kind == "apply":
+			statuses[status_id] = {
+				"id": status_id,
+				"label": BattleStatusModel.status_label(status_id),
+				"turns": maxi(1, int(change.get("turns", event.get("statusTurns", 1)))),
+				"potency": maxi(0, int(change.get("potency", event.get("statusPotency", 0)))),
+				"sourceId": str(change.get("sourceId", event.get("serverSourceActorId", event.get("sourceActorId", event.get("attackerId", ""))))),
+			}
+		elif change_kind == "decrement":
+			var to_turns := maxi(0, int(change.get("toTurns", event.get("toTurns", 0))))
+			if to_turns <= 0:
+				statuses.erase(status_id)
+			else:
+				var next_status := (statuses.get(status_id, {}) as Dictionary).duplicate(true) if statuses.get(status_id, {}) is Dictionary else {}
+				next_status["id"] = status_id
+				next_status["label"] = str(next_status.get("label", BattleStatusModel.status_label(status_id)))
+				next_status["turns"] = to_turns
+				statuses[status_id] = next_status
+		elif change_kind.begins_with("remove_") or change_kind == "remove" or change_kind == "expire":
+			statuses.erase(status_id)
+	if event.has("serverStatusAfter") and actor_id == str(event.get("targetId", event.get("attackerId", ""))):
+		var status_id := str(event.get("statusId", "")).strip_edges()
+		if status_id != "":
+			var exact_after = event.get("serverStatusAfter", null)
+			if exact_after is Dictionary:
+				statuses[status_id] = (exact_after as Dictionary).duplicate(true)
+			else:
+				statuses.erase(status_id)
+	next_actor["statuses"] = statuses
+	next_actor["poisoned"] = BattleStatusModel.has_status(next_actor, STATUS_POISON)
+	return next_actor
+
+
+static func _apply_server_item_count_if_owned(state: Dictionary, event: Dictionary) -> Dictionary:
+	if not bool(event.get("applyServerRemainingItemCount", false)):
+		return state
+	var remaining := int(event.get("serverRemainingItemCount", event.get("remainingItemCount", -1)))
+	var item_id := str(event.get("itemId", ""))
+	if remaining >= 0 and item_id != "":
+		return set_item_count(state, item_id, remaining)
+	return state
+
+
+static func _apply_server_resolved_status_tick_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var target_id := str(event.get("targetId", ""))
+	var actors: Array = state.get("actors", [])
+	var target_index := actor_index(state, target_id)
+	if target_index < 0:
+		return state
+	var target := actors[target_index] as Dictionary
+	var damage := maxi(0, int(event.get("damage", 0)))
+	var hp_after := maxi(0, int(event.get("serverHpAfter", target.get("hp", 0))))
+	target["hp"] = hp_after
+	target = _actor_with_server_status_after(target, event, target_id)
+	target["actionState"] = "down" if hp_after <= 0 else "hit"
+	target["serverDefeated"] = bool(event.get("serverDefeated", hp_after <= 0))
+	actors[target_index] = target
+	state["actors"] = actors
+	state = _sync_player_pet_party_from_actor(state, target)
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = "status_tick"
+	state["lastAttackerId"] = str(event.get("attackerId", target_id))
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastDamage"] = damage
+	state["lastEffectPerTarget"] = {target_id: damage}
+	state["lastActorDamagePerTarget"] = {target_id: damage}
+	state["lastRideDamagePerTarget"] = {target_id: 0}
+	state["lastParticipants"] = [str(event.get("sourceActorId", event.get("attackerId", target_id)))]
+	state["lastStatusId"] = str(event.get("statusId", STATUS_POISON))
+	state["lastStatusResult"] = str(event.get("statusResult", "tick"))
+	state["lastStatusChanges"] = _server_status_changes(event)
+	state["message"] = "%s 因%s受到 %d 点伤害。" % [
+		str(target.get("name", "目标")),
+		BattleStatusModel.status_label(str(event.get("statusId", STATUS_POISON))),
+		damage,
+	]
+	if hp_after <= 0:
+		state["message"] += " %s 倒下了。" % str(target.get("name", "目标"))
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_server_resolved_status_skip_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var actor_id := str(event.get("attackerId", event.get("targetId", "")))
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	var actor := actors[actor_index_value] as Dictionary
+	var status_id := str(event.get("statusId", ""))
+	actor = _actor_with_server_status_after(actor, event, actor_id)
+	actor["actionState"] = "status_%s" % status_id
+	actors[actor_index_value] = actor
+	state["actors"] = actors
+	state = _remove_guarding_actor(state, actor_id)
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = "status_skip"
+	state["lastAttackerId"] = actor_id
+	state["lastTargetId"] = actor_id
+	state["lastTargetIds"] = [actor_id]
+	state["lastParticipants"] = [actor_id]
+	state["lastActorDamagePerTarget"] = {actor_id: 0}
+	state["lastRideDamagePerTarget"] = {actor_id: 0}
+	state["lastStatusId"] = status_id
+	state["lastStatusResult"] = str(event.get("statusResult", "skip"))
+	state["lastStatusChanges"] = _server_status_changes(event)
+	state["message"] = "%s 处于%s状态，无法行动。" % [
+		str(actor.get("name", "目标")),
+		BattleStatusModel.status_label(status_id),
+	]
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_server_resolved_status_mutation_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var event_type := str(event.get("type", ""))
+	var attacker_id := str(event.get("attackerId", ""))
+	var target_id := str(event.get("targetId", ""))
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	var target_index := actor_index(state, target_id)
+	if attacker_index < 0 or target_index < 0:
+		return state
+	var attacker := actors[attacker_index] as Dictionary
+	var target := actors[target_index] as Dictionary
+	attacker["actionState"] = "item" if event_type == "item_cleanse" else "skill"
+	target = _actor_with_server_status_after(target, event, target_id)
+	var status_result := str(event.get("statusResult", ""))
+	if event_type == "item_cleanse":
+		target["actionState"] = "heal" if status_result == "cleansed" else "idle"
+	else:
+		target["actionState"] = "hit"
+	actors[attacker_index] = attacker
+	actors[target_index] = target
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = event_type
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastParticipants"] = [attacker_id]
+	state["lastActorDamagePerTarget"] = {target_id: 0}
+	state["lastRideDamagePerTarget"] = {target_id: 0}
+	state["lastStatusId"] = "cleanse" if event_type == "item_cleanse" else str(event.get("statusId", ""))
+	state["lastStatusResult"] = status_result
+	state["lastStatusChanges"] = _server_status_changes(event)
+	state["lastStatusRoll"] = float(event.get("forcedStatusRoll", -1.0))
+	state["lastStatusChance"] = float(event.get("forcedStatusChance", -1.0))
+	state["lastStatusResistance"] = float(event.get("forcedStatusResistance", 0.0))
+	state = _apply_server_item_count_if_owned(state, event)
+	if event_type == "item_cleanse":
+		state["message"] = "%s 使用%s，%s%s。" % [
+			str(attacker.get("name", "我方")),
+			str(event.get("itemName", "物品")),
+			str(target.get("name", "目标")),
+			"的异常状态已解除" if status_result == "cleansed" else "没有可解除的异常",
+		]
+	else:
+		state["message"] = "%s 使用%s，%s%s%s。" % [
+			str(attacker.get("name", "宠物")),
+			str(event.get("skillName", "宠物技能")),
+			str(target.get("name", "目标")),
+			"陷入" if status_result == "applied" else "没有受到",
+			BattleStatusModel.status_label(str(event.get("statusId", ""))),
+		]
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_server_resolved_poison_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var event_type := str(event.get("type", ""))
+	var attacker_id := str(event.get("attackerId", ""))
+	var actors: Array = state.get("actors", [])
+	var attacker_index := actor_index(state, attacker_id)
+	if attacker_index < 0:
+		return state
+	var attacker := actors[attacker_index] as Dictionary
+	attacker["actionState"] = "item" if event_type.begins_with("item_") else "spirit"
+	actors[attacker_index] = attacker
+	var target_facts: Array = event.get("serverTargetFacts", []) if event.get("serverTargetFacts", []) is Array else []
+	if target_facts.is_empty() and str(event.get("targetId", "")) != "":
+		target_facts = [{
+			"targetId": str(event.get("targetId", "")),
+			"hpBefore": int(event.get("serverHpBefore", 0)),
+			"hpAfter": int(event.get("serverHpAfter", 0)),
+			"damage": int(event.get("damage", 0)),
+			"defeated": bool(event.get("serverDefeated", false)),
+			"statusResult": str(event.get("statusResult", event.get("forcedStatusResult", ""))),
+		}]
+	var target_ids: Array[String] = []
+	var effect_per_target := {}
+	var status_result_per_target := {}
+	var total_damage := 0
+	for value in target_facts:
+		if not (value is Dictionary):
+			continue
+		var fact := value as Dictionary
+		var target_id := str(fact.get("targetId", ""))
+		var target_index := actor_index(state, target_id)
+		if target_index < 0:
+			continue
+		var target := actors[target_index] as Dictionary
+		var damage := maxi(0, int(fact.get("damage", event.get("damage", 0))))
+		var hp_after := maxi(0, int(fact.get("hpAfter", target.get("hp", 0))))
+		target["hp"] = hp_after
+		target = _actor_with_server_status_after(target, event, target_id)
+		target["actionState"] = "down" if hp_after <= 0 else "hit"
+		target["serverDefeated"] = bool(fact.get("defeated", hp_after <= 0))
+		actors[target_index] = target
+		target_ids.append(target_id)
+		effect_per_target[target_id] = damage
+		status_result_per_target[target_id] = str(fact.get("statusResult", ""))
+		total_damage += damage
+	state["actors"] = actors
+	for target_id in target_ids:
+		state = _sync_player_pet_party_from_actor(state, actor_by_id(state, target_id))
+	if target_ids.is_empty():
+		return state
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = event_type
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_ids[0]
+	state["lastTargetIds"] = target_ids
+	state["lastDamage"] = total_damage
+	state["lastEffectPerTarget"] = effect_per_target
+	state["lastActorDamagePerTarget"] = effect_per_target.duplicate(true)
+	state["lastRideDamagePerTarget"] = {}
+	state["lastParticipants"] = [attacker_id]
+	state["lastStatusId"] = str(event.get("statusId", STATUS_POISON))
+	state["lastStatusResult"] = str(event.get("statusResult", event.get("forcedStatusResult", "")))
+	state["lastStatusChanges"] = _server_status_changes(event)
+	state["lastStatusResultPerTarget"] = status_result_per_target
+	state["lastStatusRollPerTarget"] = (event.get("forcedStatusRollPerTarget", {}) as Dictionary).duplicate(true) if event.get("forcedStatusRollPerTarget", {}) is Dictionary else {}
+	state["lastStatusChancePerTarget"] = (event.get("forcedStatusChancePerTarget", {}) as Dictionary).duplicate(true) if event.get("forcedStatusChancePerTarget", {}) is Dictionary else {}
+	state["lastStatusResistancePerTarget"] = (event.get("forcedStatusResistancePerTarget", {}) as Dictionary).duplicate(true) if event.get("forcedStatusResistancePerTarget", {}) is Dictionary else {}
+	state = _apply_server_item_count_if_owned(state, event)
+	state["message"] = str(event.get("serverMessage", ""))
+	if str(state.get("message", "")) == "":
+		state["message"] = "%s 使用%s，造成 %d 点伤害。" % [
+			str(attacker.get("name", "我方")),
+			str(event.get("itemName", event.get("skillName", "精灵"))),
+			total_damage,
+		]
+	return state
 
 
 static func _apply_status_skip_event(state: Dictionary, event: Dictionary, status_id: String) -> Dictionary:
@@ -2262,6 +2555,7 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	var damage := 0 if dodged else maxi(0, int(event.get("damage", 0)))
 	var launched := bool(event.get("serverLaunched", event.get("launched", false))) and not dodged
 	target["hp"] = hp_after
+	target = _actor_with_server_status_after(target, event, target_id)
 	target["launched"] = launched
 	target["revivable"] = not launched
 	target["serverDefeated"] = hp_after <= 0
@@ -2304,6 +2598,11 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	state["lastCounterEvent"] = {}
 	state["lastCounterTriggered"] = bool(event.get("counterTriggered", false))
 	state["lastReactionKind"] = "dodge" if dodged else ("critical" if critical else ("counter" if event_type == "counter_attack" else ""))
+	var status_changes := _server_status_changes(event)
+	state["lastStatusChanges"] = status_changes
+	if not status_changes.is_empty():
+		state["lastStatusId"] = str(status_changes[0].get("statusId", ""))
+		state["lastStatusResult"] = str(status_changes[0].get("change", ""))
 
 	var attacker_name := str(attacker.get("name", "我方"))
 	var target_name := str(target.get("name", "目标"))

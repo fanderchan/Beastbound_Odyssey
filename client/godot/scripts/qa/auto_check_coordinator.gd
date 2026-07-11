@@ -15,6 +15,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
+const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_battle_status_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
@@ -742,8 +743,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var protocol_v4_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 4
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v4_ok else "failed"
+	var protocol_v5_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 5
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v5_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -15646,7 +15647,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 4
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 5
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -20433,6 +20434,16 @@ func _run_auto_server_battle_reaction_replay_check() -> void:
 	var report := ServerBattleReactionReplayCheck.run()
 	var ok := bool(report.get("ok", false))
 	print("server battle reaction replay check ready: status=%s checks=%s" % [
+		"ok" if ok else "failed",
+		JSON.stringify(report.get("checks", {})),
+	])
+	host.get_tree().quit(0 if ok else 1)
+
+
+func _run_auto_server_battle_status_replay_check() -> void:
+	var report := ServerBattleStatusReplayCheck.run()
+	var ok := bool(report.get("ok", false))
+	print("server battle status replay check ready: status=%s checks=%s" % [
 		"ok" if ok else "failed",
 		JSON.stringify(report.get("checks", {})),
 	])

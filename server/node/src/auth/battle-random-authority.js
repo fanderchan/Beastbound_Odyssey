@@ -11,6 +11,7 @@ const CONTEXT_FIELDS = Object.freeze([
   "actorId",
   "targetId",
   "actionId",
+  "statusId",
   "ordinal",
 ]);
 

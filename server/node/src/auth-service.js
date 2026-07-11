@@ -32,6 +32,13 @@ const {
 } = require("./auth/battle-reaction-resolver");
 const {counterDamageFor} = require("./auth/battle-reaction-rules");
 const {
+  freezeStatusSourceCredit,
+  publicBattleStatus,
+  publicBattleStatuses,
+  resolveStatusHit,
+  statusSourceActor,
+} = require("./auth/battle-status-rules");
+const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
 } = require("./auth/pet-skill-loadout");
@@ -3454,7 +3461,7 @@ function publicBattleActor(actor) {
     forgottenSkillIds: Array.isArray(actor.forgottenSkillIds) ? actor.forgottenSkillIds.map((value) => String(value)) : [],
     passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
     spiritIds: Array.isArray(actor.spiritIds) ? actor.spiritIds.map((value) => String(value)).filter(Boolean) : [],
-    statuses: actor.statuses && typeof actor.statuses === "object" && !Array.isArray(actor.statuses) ? clone(actor.statuses) : {},
+    statuses: publicBattleStatuses(actor.statuses),
     statusResist: actor.statusResist && typeof actor.statusResist === "object" && !Array.isArray(actor.statusResist) ? clone(actor.statusResist) : {},
     statusImmune: actor.statusImmune && typeof actor.statusImmune === "object" && !Array.isArray(actor.statusImmune) ? clone(actor.statusImmune) : {},
     schemaVersion: 1,
@@ -7400,6 +7407,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
   for (const actor of battle.actors) {
     actor.guarding = false;
   }
+  const actorsBefore = battle.actors.map(publicBattleActor);
   const events = [];
   let sequence = 1;
   let commandIndex = 0;
@@ -7440,7 +7448,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_ITEM) {
-      events.push(battleItemEvent(room, battle, command, actor, round, sequence));
+      events.push(battleItemEvent(room, battle, command, actor, round, sequence, options));
       sequence += 1;
       commandIndex += 1;
       if (battleResultForResolvedActors(room, battle, now)) {
@@ -7458,7 +7466,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_SPIRIT) {
-      events.push(battleSpiritEvent(room, battle, command, actor, round, sequence));
+      events.push(battleSpiritEvent(room, battle, command, actor, round, sequence, options));
       sequence += 1;
       commandIndex += 1;
       if (battleResultForResolvedActors(room, battle, now)) {
@@ -7476,7 +7484,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === "pet_skill" && battleActionEffectType(command.actionId) === "status") {
-      events.push(battlePetStatusSkillEvent(room, battle, command, actor, round, sequence));
+      events.push(battlePetStatusSkillEvent(room, battle, command, actor, round, sequence, options));
       sequence += 1;
       commandIndex += 1;
       continue;
@@ -7495,6 +7503,11 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       break;
     }
   }
+  if (!battleResultForResolvedActors(room, battle, now)) {
+    const poisonEvents = battleRoundEndPoisonEvents(room, battle, round, sequence, now);
+    events.push(...poisonEvents);
+    sequence += poisonEvents.length;
+  }
   const eventList = {
     schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
     kind: "battle_event_list",
@@ -7503,6 +7516,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     turnSeq: battle.turnSeq,
     phase: "resolved",
     events,
+    actorsBefore,
     actors: battle.actors.map(publicBattleActor),
     resolvedAt: isoNow(now),
   };
@@ -7511,7 +7525,8 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     eventList.result = publicBattleResult(result);
   }
   battle.lastEventList = eventList;
-  battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([eventList]).slice(-20) : [eventList];
+  const historyEventList = battleHistoricalEventList(eventList);
+  battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([historyEventList]).slice(-20) : [historyEventList];
   battle.commands = {};
   battle.submittedActorIds = [];
   battle.submittedAccountIds = [];
@@ -7543,6 +7558,105 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     resultReason: result ? String(result.reason || "") : "",
   }, now);
   return clone(eventList);
+}
+
+function battleHistoricalEventList(eventList) {
+  return {
+    schemaVersion: Math.max(1, Math.trunc(Number(eventList && eventList.schemaVersion || 1))),
+    kind: String(eventList && eventList.kind || "battle_event_list"),
+    roomId: String(eventList && eventList.roomId || ""),
+    round: Math.max(1, Math.trunc(Number(eventList && eventList.round || 1))),
+    turnSeq: Math.max(0, Math.trunc(Number(eventList && eventList.turnSeq || 0))),
+    phase: String(eventList && eventList.phase || "resolved"),
+    events: clone(Array.isArray(eventList && eventList.events) ? eventList.events : []),
+    resolvedAt: String(eventList && eventList.resolvedAt || ""),
+    ...(eventList && eventList.result ? {result: clone(eventList.result)} : {}),
+  };
+}
+
+function battleRoundEndPoisonEvents(room, battle, round, sequence, now) {
+  const events = [];
+  const actors = Array.isArray(battle && battle.actors) ? battle.actors : [];
+  for (const target of actors) {
+    if (!target || Number(target.hp || 0) <= 0 || !battleActorHasStatus(target, BATTLE_STATUS_POISON)) {
+      continue;
+    }
+    const status = battleActorStatuses(target)[BATTLE_STATUS_POISON];
+    const statusBefore = publicBattleStatus(BATTLE_STATUS_POISON, status);
+    if (!statusBefore) {
+      continue;
+    }
+    const sourceActor = statusSourceActor(status);
+    const hpBefore = Math.max(0, Math.trunc(Number(target.hp || 0)));
+    const damage = Math.max(1, Math.trunc(Number(statusBefore.potency || 0)));
+    const hpAfter = Math.max(0, hpBefore - damage);
+    target.hp = hpAfter;
+    target.defeated = hpAfter <= 0;
+    target.actionState = hpAfter <= 0 ? "down" : "hit";
+    target.launched = false;
+    target.revivable = true;
+    delete target.launchHpBefore;
+    const turns = battleDecrementActorStatus(target, BATTLE_STATUS_POISON);
+    syncParticipantPetSnapshotHp(room, target);
+    const expCredits = sourceActor
+      ? battleExpCreditsForDefeat(room, battle, sourceActor, target, hpBefore, hpAfter)
+      : [];
+    appendBattleExpCredits(battle, expCredits);
+    const event = {
+      eventId: `${room.roomId}:r${round}:e${sequence + events.length}`,
+      eventType: "status_tick",
+      round,
+      sequence: sequence + events.length,
+      actorAccountId: String(target.accountId || ""),
+      actorUsername: String(target.username || ""),
+      actorId: String(target.actorId || ""),
+      actorKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+      sourceActorId: String(statusBefore.sourceId || ""),
+      targetAccountId: String(target.accountId || ""),
+      targetUsername: String(target.username || ""),
+      targetActorId: String(target.actorId || ""),
+      targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+      actionId: BATTLE_STATUS_POISON,
+      skillId: "",
+      statusId: BATTLE_STATUS_POISON,
+      statusResult: "tick",
+      statusBefore: turns.statusBefore,
+      statusAfter: turns.statusAfter,
+      fromTurns: turns.fromTurns,
+      toTurns: turns.toTurns,
+      statusChanges: [{
+        actorId: String(target.actorId || ""),
+        statusId: BATTLE_STATUS_POISON,
+        change: "decrement",
+        fromTurns: turns.fromTurns,
+        toTurns: turns.toTurns,
+        schemaVersion: 1,
+      }],
+      damage,
+      hpBefore,
+      hpAfter,
+      defeated: hpAfter <= 0,
+      launched: false,
+      dodged: false,
+      critical: false,
+      counterTriggered: false,
+      animation: {
+        actor: "status",
+        targetReaction: hpAfter <= 0 ? "knockdown" : "hurt",
+        observer: "watch_target",
+      },
+      message: battleDamageMessage(`${target.displayName || target.username || "目标"} 因中毒受到 ${damage} 点伤害。`, target, hpAfter, false),
+      schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
+    };
+    if (expCredits.length > 0) {
+      event.expCredits = clone(expCredits);
+    }
+    events.push(event);
+    if (battleResultForResolvedActors(room, battle, now)) {
+      break;
+    }
+  }
+  return events;
 }
 
 function battleEventTargetCountsForRule(events, targetRule) {
@@ -7683,6 +7797,7 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     : applyBattleActorDamageResult(room, resolved.target, hpBefore, hpAfter, reaction.damage, {
       canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
     });
+  const statusChanges = battleWakeFromDirectDamage(resolved.target, reaction.damage, reaction.dodged);
   syncParticipantPetSnapshotHp(room, resolved.target);
   const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
@@ -7699,7 +7814,7 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     reaction.damage,
     expCredits,
     launched,
-    reaction,
+    {...reaction, statusChanges},
   );
   const events = [attackEvent];
   const counterTriggered = resolveCounterTrigger({
@@ -7768,6 +7883,7 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     : applyBattleActorDamageResult(room, target, hpBefore, hpAfter, reaction.damage, {
       canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
     });
+  const statusChanges = battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged);
   syncParticipantPetSnapshotHp(room, target);
   const expCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
@@ -7784,7 +7900,7 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     reaction.damage,
     expCredits,
     launched,
-    {...reaction, eventType: "counter_attack", counterSourceEventId},
+    {...reaction, eventType: "counter_attack", counterSourceEventId, statusChanges},
   );
 }
 
@@ -7883,6 +7999,7 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
   const launched = applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, {
     canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
   });
+  const statusChanges = battleWakeFromDirectDamage(target, damage, false);
   syncParticipantPetSnapshotHp(room, target);
   const actors = group.map((entry) => entry.actor);
   const expCredits = battleExpCreditsForComboDefeat(room, battle, actors, target, hpBefore, hpAfter);
@@ -7934,6 +8051,7 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     hpAfter,
     defeated: hpAfter <= 0,
     launched,
+    statusChanges,
     animation: {
       actor: "combo_attack",
       targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
@@ -15344,7 +15462,7 @@ function battleStatusesRemovedByApply(actor, statusId) {
   return BATTLE_CONTROL_STATUSES.filter((otherStatusId) => otherStatusId !== normalizedStatusId && battleActorHasStatus(actor, otherStatusId));
 }
 
-function battleApplyStatus(actor, statusId, turns, potency, sourceActorId) {
+function battleApplyStatus(actor, statusId, turns, potency, sourceActor) {
   const normalizedStatusId = String(statusId || "").trim();
   if (!actor || normalizedStatusId === "") {
     return [];
@@ -15359,7 +15477,8 @@ function battleApplyStatus(actor, statusId, turns, potency, sourceActorId) {
     label: battleStatusLabel(normalizedStatusId),
     turns: Math.max(1, Math.trunc(Number(turns || 1))),
     potency: Math.max(0, Math.trunc(Number(potency || 0))),
-    sourceId: String(sourceActorId || ""),
+    sourceId: String(sourceActor && sourceActor.actorId || ""),
+    sourceCredit: freezeStatusSourceCredit(sourceActor),
   };
   actor.statuses = statuses;
   actor.poisoned = battleActorHasStatus(actor, BATTLE_STATUS_POISON);
@@ -15384,13 +15503,32 @@ function battleRemoveStatuses(actor, statusIds) {
   return removed;
 }
 
+function battleWakeFromDirectDamage(actor, damage, dodged = false) {
+  if (!actor || Boolean(dodged) || Number(damage || 0) <= 0 || !battleActorHasStatus(actor, BATTLE_STATUS_SLEEP)) {
+    return [];
+  }
+  const statusBefore = publicBattleStatus(BATTLE_STATUS_SLEEP, battleActorStatuses(actor)[BATTLE_STATUS_SLEEP]);
+  battleRemoveStatuses(actor, [BATTLE_STATUS_SLEEP]);
+  return [{
+    actorId: String(actor.actorId || ""),
+    statusId: BATTLE_STATUS_SLEEP,
+    change: "remove_on_damage",
+    statusBefore,
+    statusAfter: null,
+    fromTurns: Math.max(0, Math.trunc(Number(statusBefore && statusBefore.turns || 0))),
+    toTurns: 0,
+    schemaVersion: 1,
+  }];
+}
+
 function battleDecrementActorStatus(actor, statusId) {
   const normalizedStatusId = String(statusId || "").trim();
   if (!battleActorHasStatus(actor, normalizedStatusId)) {
-    return {fromTurns: 0, toTurns: 0};
+    return {fromTurns: 0, toTurns: 0, statusBefore: null, statusAfter: null};
   }
   const statuses = battleActorStatuses(actor);
   const status = statuses[normalizedStatusId];
+  const statusBefore = publicBattleStatus(normalizedStatusId, status);
   const fromTurns = Math.max(0, Math.trunc(Number(status.turns || 0)));
   const toTurns = Math.max(0, fromTurns - 1);
   if (toTurns <= 0) {
@@ -15403,7 +15541,12 @@ function battleDecrementActorStatus(actor, statusId) {
   }
   actor.statuses = statuses;
   actor.poisoned = battleActorHasStatus(actor, BATTLE_STATUS_POISON);
-  return {fromTurns, toTurns};
+  return {
+    fromTurns,
+    toTurns,
+    statusBefore,
+    statusAfter: toTurns > 0 ? publicBattleStatus(normalizedStatusId, statuses[normalizedStatusId]) : null,
+  };
 }
 
 function battleBlockingStatusId(actor) {
@@ -15432,38 +15575,23 @@ function battleStatusImmune(actor, statusId) {
   return Boolean(immune.all || immune[statusId]);
 }
 
-function battleStatusRoll(room, battle, actor, target, actionId, statusId, round, sequence) {
-  const seed = [
-    room && (room.seed || room.roomId) || "",
-    battle && battle.turnSeq || 0,
-    round,
-    sequence,
-    actor && actor.actorId || "",
-    target && target.actorId || "",
-    actionId,
-    statusId,
-    "status",
-  ].join(":");
-  return Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 8), 16) / 0xffffffff;
-}
-
-function battleStatusHitCheck(room, battle, actor, target, actionId, statusId, round, sequence, baseRate = 1) {
+function battleStatusHitCheck(room, battle, actor, target, actionId, statusId, round, sequence, baseRate = 1, options = {}) {
   const normalizedStatusId = String(statusId || "").trim();
   const resistance = battleStatusResistance(target, normalizedStatusId);
-  if (battleStatusImmune(target, normalizedStatusId)) {
-    return {hit: false, result: "immune", chance: 0, roll: -1, resistance, immune: true};
-  }
-  const chance = Math.max(0, Math.min(1, Number(baseRate || 0) - resistance));
-  const roll = battleStatusRoll(room, battle, actor, target, actionId, normalizedStatusId, round, sequence);
-  const hit = roll < chance;
-  return {
-    hit,
-    result: hit ? "applied" : "resisted",
-    chance,
-    roll,
+  return resolveStatusHit({
+    randomAuthority: options.battleRandomAuthority,
+    roomId: String(room && room.roomId || ""),
+    turnSeq: Math.trunc(Number(battle && battle.turnSeq || 0)),
+    round,
+    sequence,
+    actorId: String(actor && actor.actorId || ""),
+    targetId: String(target && target.actorId || ""),
+    actionId,
+    statusId: normalizedStatusId,
+    baseRate,
     resistance,
-    immune: false,
-  };
+    immune: battleStatusImmune(target, normalizedStatusId),
+  });
 }
 
 function battleStatusSkipEvent(room, battle, command, actor, round, sequence) {
@@ -15472,6 +15600,7 @@ function battleStatusSkipEvent(room, battle, command, actor, round, sequence) {
     return null;
   }
   const turns = battleDecrementActorStatus(actor, statusId);
+  const hp = Math.max(0, Math.trunc(Number(actor.hp || 0)));
   return {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
     eventType: "status_skip",
@@ -15481,6 +15610,7 @@ function battleStatusSkipEvent(room, battle, command, actor, round, sequence) {
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    sourceActorId: String(turns.statusBefore && turns.statusBefore.sourceId || ""),
     targetAccountId: actor.accountId,
     targetUsername: actor.username,
     targetActorId: actor.actorId,
@@ -15489,6 +15619,10 @@ function battleStatusSkipEvent(room, battle, command, actor, round, sequence) {
     skillId: String(command.skillId || ""),
     statusId,
     statusResult: "skip",
+    statusBefore: turns.statusBefore,
+    statusAfter: turns.statusAfter,
+    fromTurns: turns.fromTurns,
+    toTurns: turns.toTurns,
     statusChanges: [{
       actorId: String(actor.actorId || ""),
       statusId,
@@ -15498,24 +15632,31 @@ function battleStatusSkipEvent(room, battle, command, actor, round, sequence) {
       schemaVersion: 1,
     }],
     damage: 0,
+    hpBefore: hp,
+    hpAfter: hp,
+    defeated: hp <= 0,
+    launched: false,
+    dodged: false,
+    critical: false,
+    counterTriggered: false,
     animation: {
       actor: "status",
       targetReaction: "none",
       observer: "watch_target",
     },
     message: `${actor.displayName || actor.username} 处于${battleStatusLabel(statusId)}状态，无法行动。`,
-    schemaVersion: 1,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
 }
 
-function battleItemEvent(room, battle, command, actor, round, sequence) {
+function battleItemEvent(room, battle, command, actor, round, sequence, options = {}) {
   const itemId = normalizeBattleItemId(command.itemId || command.actionId);
   const effectType = battleActionEffectType(itemId);
   if (effectType === "heal") {
     return battleItemHealEvent(room, battle, command, actor, round, sequence);
   }
   if (effectType === "poison") {
-    return battleItemPoisonEvent(room, battle, command, actor, round, sequence);
+    return battleItemPoisonEvent(room, battle, command, actor, round, sequence, options);
   }
   if (effectType === "cleanse") {
     return battleItemCleanseEvent(room, battle, command, actor, round, sequence);
@@ -15609,7 +15750,7 @@ function battleItemHealEvent(room, battle, command, actor, round, sequence) {
   };
 }
 
-function battleItemPoisonEvent(room, battle, command, actor, round, sequence) {
+function battleItemPoisonEvent(room, battle, command, actor, round, sequence, options = {}) {
   const itemId = normalizeBattleItemId(command.itemId || command.actionId);
   const participant = battleParticipantByAccountId(room, actor.accountId);
   const damage = battleActionEffectAmount(itemId, 1);
@@ -15647,9 +15788,9 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence) {
     let statusCheck = {hit: false, result: "target_down", chance: -1, roll: -1, resistance: battleStatusResistance(target, statusId), immune: false};
     let removedStatusIds = [];
     if (hpAfter > 0) {
-      statusCheck = battleStatusHitCheck(room, battle, actor, target, itemId, statusId, round, sequence, statusHitRate);
+      statusCheck = battleStatusHitCheck(room, battle, actor, target, itemId, statusId, round, sequence, statusHitRate, options);
       if (String(statusCheck.result || "") === "applied") {
-        removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor.actorId);
+        removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor);
       }
     }
     syncParticipantPetSnapshotHp(room, target);
@@ -15658,8 +15799,8 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence) {
     const targetActorId = String(target.actorId || "");
     effectPerTarget[targetActorId] = damage;
     statusResultPerTarget[targetActorId] = String(statusCheck.result || "resisted");
-    statusRollPerTarget[targetActorId] = Number(statusCheck.roll || -1);
-    statusChancePerTarget[targetActorId] = Number(statusCheck.chance || -1);
+    statusRollPerTarget[targetActorId] = Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1;
+    statusChancePerTarget[targetActorId] = Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1;
     statusResistancePerTarget[targetActorId] = Number(statusCheck.resistance || 0);
     for (const removedStatusId of removedStatusIds) {
       statusChanges.push({actorId: targetActorId, statusId: removedStatusId, change: "remove_overwritten", schemaVersion: 1});
@@ -15668,10 +15809,11 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence) {
       actorId: targetActorId,
       statusId,
       change: String(statusCheck.result || "resisted") === "applied" ? "apply" : String(statusCheck.result || "resisted"),
+      sourceId: String(statusCheck.result || "") === "applied" ? String(actor.actorId || "") : "",
       turns: String(statusCheck.result || "") === "applied" ? statusTurns : 0,
       potency: String(statusCheck.result || "") === "applied" ? statusPotency : 0,
-      chance: Number(statusCheck.chance || -1),
-      roll: Number(statusCheck.roll || -1),
+      chance: Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1,
+      roll: Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1,
       resistance: Number(statusCheck.resistance || 0),
       immune: Boolean(statusCheck.immune),
       schemaVersion: 1,
@@ -15701,6 +15843,7 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence) {
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    sourceActorId: String(actor.actorId || ""),
     targetAccountId: String(target.accountId || ""),
     targetUsername: String(target.username || ""),
     targetActorId: String(target.actorId || ""),
@@ -15801,7 +15944,7 @@ function battleItemCleanseEvent(room, battle, command, actor, round, sequence) {
   };
 }
 
-function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence) {
+function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence, options = {}) {
   const skillId = String(command.skillId || command.actionId || "").trim();
   const target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
   if (
@@ -15817,10 +15960,10 @@ function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence
   const statusTurns = battleActionStatusTurns(skillId, 1);
   const statusPotency = battleActionStatusPotency(skillId, 0, 0);
   const statusHitRate = battleActionStatusHitRate(skillId, 1);
-  const statusCheck = battleStatusHitCheck(room, battle, actor, target, skillId, statusId, round, sequence, statusHitRate);
+  const statusCheck = battleStatusHitCheck(room, battle, actor, target, skillId, statusId, round, sequence, statusHitRate, options);
   const statusResult = String(statusCheck.result || "resisted");
   const removedStatusIds = statusResult === "applied"
-    ? battleApplyStatus(target, statusId, statusTurns, statusPotency, actor.actorId)
+    ? battleApplyStatus(target, statusId, statusTurns, statusPotency, actor)
     : [];
   const targetActorId = String(target.actorId || "");
   const statusChanges = [];
@@ -15831,10 +15974,11 @@ function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence
     actorId: targetActorId,
     statusId,
     change: statusResult === "applied" ? "apply" : statusResult,
+    sourceId: statusResult === "applied" ? String(actor.actorId || "") : "",
     turns: statusResult === "applied" ? statusTurns : 0,
     potency: statusResult === "applied" ? statusPotency : 0,
-    chance: Number(statusCheck.chance || -1),
-    roll: Number(statusCheck.roll || -1),
+    chance: Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1,
+    roll: Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1,
     resistance: Number(statusCheck.resistance || 0),
     immune: Boolean(statusCheck.immune),
     schemaVersion: 1,
@@ -15851,6 +15995,7 @@ function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PET),
+    sourceActorId: String(actor.actorId || ""),
     targetAccountId: String(target.accountId || ""),
     targetUsername: String(target.username || ""),
     targetActorId,
@@ -15863,8 +16008,8 @@ function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence
     statusPotency,
     statusHitRate,
     statusResult,
-    statusRoll: Number(statusCheck.roll || -1),
-    statusChance: Number(statusCheck.chance || -1),
+    statusRoll: Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1,
+    statusChance: Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1,
     statusResistance: Number(statusCheck.resistance || 0),
     statusImmune: Boolean(statusCheck.immune),
     statusChanges,
@@ -15881,7 +16026,7 @@ function battlePetStatusSkillEvent(room, battle, command, actor, round, sequence
   };
 }
 
-function battleSpiritEvent(room, battle, command, actor, round, sequence) {
+function battleSpiritEvent(room, battle, command, actor, round, sequence, options = {}) {
   const spiritId = String(command.spiritId || command.skillId || command.actionId || "").trim();
   const effectType = battleSpiritEffectType(spiritId);
   if (!stringArray(actor.spiritIds).includes(spiritId) || (effectType !== "heal" && effectType !== "poison")) {
@@ -15890,7 +16035,7 @@ function battleSpiritEvent(room, battle, command, actor, round, sequence) {
   if (effectType === "heal") {
     return battleSpiritHealEvent(room, battle, command, actor, spiritId, round, sequence);
   }
-  return battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, sequence);
+  return battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, sequence, options);
 }
 
 function battleTrainingPartnerHealEvent(room, battle, command, actor, round, sequence) {
@@ -16042,7 +16187,7 @@ function battleSpiritHealEvent(room, battle, command, actor, spiritId, round, se
   };
 }
 
-function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, sequence) {
+function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, sequence, options = {}) {
   const damage = Math.max(1, battleSpiritEffectAmount(spiritId, 1));
   const isAll = battleSpiritIsAll(spiritId);
   const explicitTarget = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
@@ -16077,9 +16222,9 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
     let statusCheck = {hit: false, result: "target_down", chance: -1, roll: -1, resistance: battleStatusResistance(target, statusId), immune: false};
     let removedStatusIds = [];
     if (hpAfter > 0) {
-      statusCheck = battleStatusHitCheck(room, battle, actor, target, spiritId, statusId, round, sequence, statusHitRate);
+      statusCheck = battleStatusHitCheck(room, battle, actor, target, spiritId, statusId, round, sequence, statusHitRate, options);
       if (String(statusCheck.result || "") === "applied") {
-        removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor.actorId);
+        removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor);
       }
     }
     syncParticipantPetSnapshotHp(room, target);
@@ -16088,8 +16233,8 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
     const targetActorId = String(target.actorId || "");
     effectPerTarget[targetActorId] = damage;
     statusResultPerTarget[targetActorId] = String(statusCheck.result || "resisted");
-    statusRollPerTarget[targetActorId] = Number(statusCheck.roll || -1);
-    statusChancePerTarget[targetActorId] = Number(statusCheck.chance || -1);
+    statusRollPerTarget[targetActorId] = Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1;
+    statusChancePerTarget[targetActorId] = Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1;
     statusResistancePerTarget[targetActorId] = Number(statusCheck.resistance || 0);
     for (const removedStatusId of removedStatusIds) {
       statusChanges.push({actorId: targetActorId, statusId: removedStatusId, change: "remove_overwritten", schemaVersion: 1});
@@ -16098,10 +16243,11 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
       actorId: targetActorId,
       statusId,
       change: String(statusCheck.result || "resisted") === "applied" ? "apply" : String(statusCheck.result || "resisted"),
+      sourceId: String(statusCheck.result || "") === "applied" ? String(actor.actorId || "") : "",
       turns: String(statusCheck.result || "") === "applied" ? statusTurns : 0,
       potency: String(statusCheck.result || "") === "applied" ? statusPotency : 0,
-      chance: Number(statusCheck.chance || -1),
-      roll: Number(statusCheck.roll || -1),
+      chance: Number.isFinite(statusCheck.chance) ? Number(statusCheck.chance) : -1,
+      roll: Number.isFinite(statusCheck.roll) ? Number(statusCheck.roll) : -1,
       resistance: Number(statusCheck.resistance || 0),
       immune: Boolean(statusCheck.immune),
       schemaVersion: 1,
@@ -16131,6 +16277,7 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
     actorUsername: actor.username,
     actorId: actor.actorId,
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    sourceActorId: String(actor.actorId || ""),
     targetAccountId: String(target.accountId || ""),
     targetUsername: String(target.username || ""),
     targetActorId: String(target.actorId || ""),
@@ -16548,6 +16695,7 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     hpAfter,
     defeated: hpAfter <= 0,
     launched,
+    statusChanges: Array.isArray(reaction.statusChanges) ? clone(reaction.statusChanges) : [],
     animation: {
       actor: eventType === "counter_attack" ? "counter_attack" : "attack",
       targetReaction: dodged ? "dodge" : (launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt")),

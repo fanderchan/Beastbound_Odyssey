@@ -697,12 +697,13 @@ func play_event_list(event_list: Dictionary) -> bool:
 	var turn_key: String = host._server_battle_turn_key(event_list)
 	if turn_key != "" and turn_key == host.server_battle_last_playback_turn_key:
 		return false
-	var local_events := ServerBattleRoomModel.battle_events_from_server_event_list(host.battle_state, event_list)
+	var playback_start_state := ServerBattleRoomModel.state_at_server_event_list_start(host.battle_state, event_list)
+	var local_events := ServerBattleRoomModel.battle_events_from_server_event_list(playback_start_state, event_list)
 	if local_events.is_empty():
 		return false
 	if turn_key != "":
 		host.server_battle_last_playback_turn_key = turn_key
-	host.battle_state = ServerBattleRoomModel.state_at_server_event_list_start(host.battle_state, event_list)
+	host.battle_state = playback_start_state
 	host.battle_event_queue = local_events
 	host.battle_current_event.clear()
 	host.battle_current_event_duration = 0.0

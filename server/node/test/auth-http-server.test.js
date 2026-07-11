@@ -280,7 +280,7 @@ test("HTTP server rejects incompatible protocol versions with upgrade guidance",
     "headers": {
       "content-type": "application/json",
       [CLIENT_VERSION_HEADER]: "0.0.1",
-      [CLIENT_PROTOCOL_HEADER]: "3",
+      [CLIENT_PROTOCOL_HEADER]: "4",
     },
     "body": JSON.stringify({"username": "future", "password": "test1234"}),
   });
@@ -288,7 +288,7 @@ test("HTTP server rejects incompatible protocol versions with upgrade guidance",
   assert.equal(mismatchResponse.status, 426);
   assert.equal(mismatch.ok, false);
   assert.equal(mismatch.code, "protocol_version_mismatch");
-  assert.equal(mismatch.clientProtocolVersion, 3);
+  assert.equal(mismatch.clientProtocolVersion, 4);
   assert.equal(mismatch.message.includes("更新客户端"), true);
   assert.equal(mismatch.protocolVersion, PROTOCOL_VERSION);
   assert.equal(mismatch.upgrade.required, true);
