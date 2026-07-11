@@ -23,6 +23,11 @@ const {scaledForRecipientLevel: authoritativeScaledBattleExpForRecipientLevel} =
 const {createPetEncounterAuthority, zoneContainsCell} = require("./auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("./auth/pet-encounter-permit-authority");
 const {createManualEncounterAccess} = require("./auth/manual-encounter-access");
+const {loadBattlePassiveCatalog} = require("./auth/battle-passive-catalog");
+const {
+  equippedPetSkillIds,
+  normalizePetSkillSlots,
+} = require("./auth/pet-skill-loadout");
 const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
@@ -429,6 +434,8 @@ function createAuthService(options = {}) {
   const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
   const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
+  // P0.4 先以严格目录启动；战斗效果接线在下一小步完成，禁止缺档时静默退化。
+  const battlePassiveCatalog = options.battlePassiveCatalog || loadBattlePassiveCatalog();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
   const petCaptureCandidateAuthority = options.petCaptureCandidateAuthority || createPetCaptureCandidateAuthority({
     growthCatalog: petGrowthCatalog,
@@ -2376,6 +2383,7 @@ function createAuthService(options = {}) {
     partyForAccount,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
+    battlePassiveCatalog,
     manorEntries,
     persistProfileForAccount,
     petExpSettlement,
@@ -11264,40 +11272,16 @@ function petPassiveSkillIdsForSource(source) {
 }
 
 function petSkillSlotsForSkillIds(skillIds, rawSlots) {
-  const learned = uniqueStringArray(skillIds).filter((skillId) => battlePetSkillActionById(skillId));
-  const slots = Array.from({length: 7}, () => "");
-  const used = new Set();
-  const sourceSlots = Array.isArray(rawSlots) ? rawSlots : [];
-  for (let index = 0; index < Math.min(7, sourceSlots.length); index += 1) {
-    const skillId = String(sourceSlots[index] || "").trim();
-    if (skillId === "" || used.has(skillId) || !learned.includes(skillId) || !battlePetSkillActionById(skillId)) {
-      continue;
-    }
-    slots[index] = skillId;
-    used.add(skillId);
-  }
-  for (const skillId of learned) {
-    if (used.has(skillId)) {
-      continue;
-    }
-    const action = battlePetSkillActionById(skillId);
-    const preferredSlot = Math.trunc(Number(action && action.slot || 0));
-    if (preferredSlot >= 1 && preferredSlot <= 7 && slots[preferredSlot - 1] === "") {
-      slots[preferredSlot - 1] = skillId;
-      used.add(skillId);
-      continue;
-    }
-    const emptyIndex = slots.findIndex((value) => value === "");
-    if (emptyIndex >= 0) {
-      slots[emptyIndex] = skillId;
-      used.add(skillId);
-    }
-  }
-  return slots;
+  return normalizePetSkillSlots(skillIds, rawSlots, battlePetSkillActionById);
 }
 
 function battleActorPetSkillIds(actor) {
-  return petActiveSkillIdsForSource(actor || {});
+  const source = actor || {};
+  return equippedPetSkillIds(
+    petActiveSkillIdsForSource(source),
+    source.petSkillSlots,
+    battlePetSkillActionById,
+  );
 }
 
 function battleActorHasUsablePetSkill(actor) {

@@ -138,17 +138,10 @@ const passiveById = indexRows(passives, "id", "passives", issues);
 const growthById = indexRows(growthProfiles, "profileId", "growthProfiles", issues);
 
 const petActions = actions.filter((action) => String(action.owner || "") === "pet_skill");
-const petActionSlots = new Map();
 for (const action of petActions) {
-  const slot = Math.trunc(number(action.slot));
+  const slot = Math.trunc(number(action.preferredSlot ?? action.slot));
   if (slot < 1 || slot > 7) {
-    issues.errors.push(`宠物技能 ${action.id} 的 slot 必须在 1..7`);
-    continue;
-  }
-  if (petActionSlots.has(slot) && petActionSlots.get(slot) !== action.id) {
-    issues.errors.push(`当前目录要求宠物技能默认槽全局唯一，技${slot} 同时被 ${petActionSlots.get(slot)} 与 ${action.id} 使用`);
-  } else {
-    petActionSlots.set(slot, action.id);
+    issues.errors.push(`宠物技能 ${action.id} 的 preferredSlot 必须在 1..7`);
   }
 }
 
@@ -316,6 +309,7 @@ const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-a
 const petCaptureCandidateAuthorityText = readText("server/node/src/auth/pet-capture-candidate-authority.js");
 const newPetFactoryText = readText("server/node/src/auth/new-pet-factory.js");
 const petRebirthGrowthCycleText = readText("server/node/src/auth/pet-rebirth-growth-cycle.js");
+const battlePassiveCatalogText = readText("server/node/src/auth/battle-passive-catalog.js");
 const profileVisibilityText = readText("server/node/src/auth/profile-visibility.js");
 const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
@@ -328,7 +322,8 @@ const serverAuthority = {
   loadsPetTemplates: authServiceText.includes("pet_templates.json"),
   loadsSpeciesGrowthProfiles: authServiceText.includes("loadPetGrowthCatalog")
     && growthCatalogText.includes("pet_growth_species_profiles.json"),
-  loadsPassiveCatalog: authServiceText.includes("battle_passive_skills.json"),
+  loadsPassiveCatalog: authServiceText.includes("loadBattlePassiveCatalog")
+    && battlePassiveCatalogText.includes("battle_passive_skills.json"),
   acceptsClientEncounterZonePayload: authServiceText.includes("payload.encounterZone"),
   petEncounterAuthorityWired: authServiceText.includes("createPetEncounterAuthority")
     && authServiceText.includes("petEncounterAuthority.resolve")
@@ -422,8 +417,12 @@ const summary = {
   },
   petSkillSlotContract: {
     maxInstanceSlots: Math.trunc(number(actionDocument.maxPetSkillSlots, 7)),
-    globallyOccupiedPreferredSlots: Object.fromEntries([...petActionSlots.entries()].sort((a, b) => a[0] - b[0])),
-    note: "当前目录校验要求不同宠技的默认 slot 全局唯一；扩展技能库前需要解除该限制，实例仍保持七格。",
+    preferredSlotHints: Object.fromEntries(Array.from({length: 7}, (_, index) => {
+      const slot = index + 1;
+      return [slot, petActions.filter((action) => Math.trunc(number(action.preferredSlot ?? action.slot)) === slot).map((action) => action.id)];
+    })),
+    catalogCanExceedInstanceSlots: actionDocument.schemaVersion >= 2,
+    note: "schema v2 的 preferredSlot 只是可重复装配提示；目录可扩展，单个实例的 petSkillSlots 仍固定七格。",
   },
   formalLv14VContract: {
     present: [...forms, ...growthProfiles].some((entry) => Object.keys(entry || {}).some((key) => /(^|_)4v$|four.?v|lv1.?4v/i.test(key))),

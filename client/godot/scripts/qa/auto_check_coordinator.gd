@@ -23306,6 +23306,29 @@ func _run_auto_pet_template_catalog_check() -> void:
 	catalog_errors.append_array(BattlePassiveCatalog.validation_errors())
 	catalog_errors.append_array(PetSkillTrainingModel.validation_errors())
 	catalog_errors.append_array(PetTemplateCatalog.validation_errors())
+	var extensible_actions: Array[Dictionary] = []
+	for action in BattleActionCatalog.actions():
+		extensible_actions.append(action.duplicate(true))
+	var eighth_fixture := BattleActionCatalog.action_by_id(BattleModel.PET_SKILL_FOCUS_BITE).duplicate(true)
+	eighth_fixture["id"] = "fixture_pet_catalog_eighth"
+	eighth_fixture["label"] = "第八技能目录夹具"
+	extensible_actions.append(eighth_fixture)
+	var extensible_document := BattleActionCatalog.catalog().duplicate(true)
+	extensible_document["actions"] = extensible_actions
+	var extensible_errors := BattleActionCatalog.validation_errors_for_catalog(extensible_document)
+	var extensible_learned: Array[String] = []
+	for action in extensible_actions:
+		if str(action.get("owner", "")) == BattleActionCatalog.OWNER_PET_SKILL:
+			extensible_learned.append(str(action.get("id", "")))
+	var extensible_slots := PetTemplateCatalog.normalized_skill_slots_with_catalog(extensible_learned, [], extensible_actions)
+	var extensible_equipped := extensible_slots.filter(func(skill_id): return str(skill_id) != "")
+	var extensible_ok = (
+		extensible_errors.is_empty()
+		and extensible_learned.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1
+		and extensible_slots.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		and extensible_equipped.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		and not extensible_equipped.has("fixture_pet_catalog_eighth")
+	)
 	var f1_form_ids := [
 		"mossback_marsh_earth7_water3",
 		"mossback_sunbaked_earth6_fire4",
@@ -23429,10 +23452,13 @@ func _run_auto_pet_template_catalog_check() -> void:
 			and str(standby_tough.get("formId", "")) == "bui_normal_thick_earth10"
 			and int((standby_tough.get("elements", {}) as Dictionary).get("earth", 0)) == 10
 		)
-	var status = "ok" if catalog_errors.is_empty() and f1_forms_ok and f1_lines_ok and bui_skills_ok and wuli_skills_ok and resist_ok and battle_actor_ok and party_ok else "failed"
-	print("pet template catalog check ready: status=%s errors=%d f1_forms=%s f1_lines=%s bui_skills=%s wuli_skills=%s resist=%s battle_actor=%s party=%s bui=%s wuli=%s" % [
+	var status = "ok" if catalog_errors.is_empty() and extensible_ok and f1_forms_ok and f1_lines_ok and bui_skills_ok and wuli_skills_ok and resist_ok and battle_actor_ok and party_ok else "failed"
+	print("pet template catalog check ready: status=%s errors=%d extensible=%s catalog_skills=%d equipped=%d f1_forms=%s f1_lines=%s bui_skills=%s wuli_skills=%s resist=%s battle_actor=%s party=%s bui=%s wuli=%s" % [
 		status,
 		catalog_errors.size(),
+		str(extensible_ok),
+		extensible_learned.size(),
+		extensible_equipped.size(),
 		str(f1_forms_ok),
 		str(f1_lines_ok),
 		str(bui_skills_ok),

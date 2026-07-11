@@ -1,6 +1,7 @@
 extends RefCounted
 
 const ACTIONS_PATH := "res://data/battle_actions.json"
+const ACTION_CATALOG_SCHEMA_VERSION := 2
 const MAX_PET_SKILL_SLOTS_FALLBACK := 7
 const OWNER_PLAYER := "player"
 const OWNER_SPIRIT := "spirit"
@@ -239,9 +240,16 @@ static func effect_allows_counter(action_id: String, fallback: bool = true) -> b
 	return fallback
 
 
+static func preferred_slot_for_action(action: Dictionary, fallback: int = 0) -> int:
+	if action.has("preferredSlot"):
+		return int(action.get("preferredSlot", fallback))
+	# 仅供旧测试夹具/旧数据读取；schema v2 的正式目录会拒绝 legacy slot。
+	return int(action.get("slot", fallback))
+
+
 static func pet_skill_action_for_slot(slot: int) -> Dictionary:
 	for action in actions_by_owner(OWNER_PET_SKILL):
-		if int(action.get("slot", 0)) == slot:
+		if preferred_slot_for_action(action) == slot:
 			return action
 	return {}
 
@@ -254,11 +262,16 @@ static func pet_skill_label_for_slot(slot: int, fallback: String = "") -> String
 
 
 static func validation_errors() -> Array[String]:
+	return validation_errors_for_catalog(catalog())
+
+
+static func validation_errors_for_catalog(loaded_catalog: Dictionary) -> Array[String]:
 	var errors: Array[String] = []
-	var loaded_catalog := catalog()
 	if loaded_catalog.is_empty():
 		errors.append("battle_actions.json 缺失或不是 JSON 对象")
 		return errors
+	if int(loaded_catalog.get("schemaVersion", 0)) != ACTION_CATALOG_SCHEMA_VERSION:
+		errors.append("schemaVersion 当前必须是 %d" % ACTION_CATALOG_SCHEMA_VERSION)
 
 	var raw_actions: Array = loaded_catalog.get("actions", [])
 	if raw_actions.is_empty():
@@ -270,18 +283,17 @@ static func validation_errors() -> Array[String]:
 		errors.append("maxPetSkillSlots 当前必须是 %d" % MAX_PET_SKILL_SLOTS_FALLBACK)
 
 	var seen_ids := {}
-	var seen_pet_slots := {}
 	for index in range(raw_actions.size()):
 		var action = raw_actions[index]
 		if not (action is Dictionary):
 			errors.append("actions[%d] 不是对象" % index)
 			continue
-		_validate_action(action as Dictionary, index, max_pet_slots, seen_ids, seen_pet_slots, errors)
+		_validate_action(action as Dictionary, index, max_pet_slots, seen_ids, errors)
 	_validate_required_actions(seen_ids, errors)
 	return errors
 
 
-static func _validate_action(action: Dictionary, index: int, max_pet_slots: int, seen_ids: Dictionary, seen_pet_slots: Dictionary, errors: Array[String]) -> void:
+static func _validate_action(action: Dictionary, index: int, max_pet_slots: int, seen_ids: Dictionary, errors: Array[String]) -> void:
 	var action_id := str(action.get("id", ""))
 	if action_id == "":
 		errors.append("actions[%d].id 不能为空" % index)
@@ -310,7 +322,7 @@ static func _validate_action(action: Dictionary, index: int, max_pet_slots: int,
 		_validate_effect(action, effect as Dictionary, errors)
 
 	if owner == OWNER_PET_SKILL:
-		_validate_pet_skill_slot(action, max_pet_slots, seen_pet_slots, errors)
+		_validate_pet_skill_slot(action, max_pet_slots, errors)
 
 
 static func _validate_target_rule(action: Dictionary, target: Dictionary, errors: Array[String]) -> void:
@@ -418,15 +430,15 @@ static func _validate_cleanse_effect(action: Dictionary, effect: Dictionary, err
 			errors.append("%s.effect.statusIds 包含无效状态: %s" % [action_name, status_id])
 
 
-static func _validate_pet_skill_slot(action: Dictionary, max_pet_slots: int, seen_pet_slots: Dictionary, errors: Array[String]) -> void:
-	var slot := int(action.get("slot", 0))
-	if slot < 1 or slot > max_pet_slots:
-		errors.append("%s.slot 必须在 1-%d 之间" % [_action_name(action, -1), max_pet_slots])
+static func _validate_pet_skill_slot(action: Dictionary, max_pet_slots: int, errors: Array[String]) -> void:
+	if action.has("slot"):
+		errors.append("%s.slot 已废弃；目录使用 preferredSlot，实例装备位置使用 petSkillSlots" % _action_name(action, -1))
+	if not action.has("preferredSlot"):
+		errors.append("%s.preferredSlot 不能为空" % _action_name(action, -1))
 		return
-	if seen_pet_slots.has(slot):
-		errors.append("宠物技能槽重复: 技%d" % slot)
-	else:
-		seen_pet_slots[slot] = true
+	var slot := int(action.get("preferredSlot", 0))
+	if slot < 1 or slot > max_pet_slots:
+		errors.append("%s.preferredSlot 必须在 1-%d 之间" % [_action_name(action, -1), max_pet_slots])
 
 
 static func _validate_required_actions(seen_ids: Dictionary, errors: Array[String]) -> void:

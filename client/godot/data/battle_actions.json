@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "maxPetSkillSlots": 7,
   "actions": [
     {
@@ -319,7 +319,7 @@
     {
       "id": "pet_attack",
       "owner": "pet_skill",
-      "slot": 1,
+      "preferredSlot": 1,
       "label": "攻击",
       "command": "attack",
       "target": {
@@ -338,7 +338,7 @@
     {
       "id": "pet_defend",
       "owner": "pet_skill",
-      "slot": 2,
+      "preferredSlot": 2,
       "label": "防御",
       "command": "defend",
       "target": {
@@ -356,7 +356,7 @@
     {
       "id": "pet_bui_charge",
       "owner": "pet_skill",
-      "slot": 3,
+      "preferredSlot": 3,
       "label": "布伊冲撞",
       "command": "pet_skill",
       "target": {
@@ -375,7 +375,7 @@
     {
       "id": "pet_sleep_powder",
       "owner": "pet_skill",
-      "slot": 4,
+      "preferredSlot": 4,
       "label": "催眠粉",
       "command": "pet_skill",
       "target": {
@@ -396,7 +396,7 @@
     {
       "id": "pet_confuse_cry",
       "owner": "pet_skill",
-      "slot": 5,
+      "preferredSlot": 5,
       "label": "迷惑吼",
       "command": "pet_skill",
       "target": {
@@ -417,7 +417,7 @@
     {
       "id": "pet_stone_gaze",
       "owner": "pet_skill",
-      "slot": 6,
+      "preferredSlot": 6,
       "label": "石化凝视",
       "command": "pet_skill",
       "target": {
@@ -438,7 +438,7 @@
     {
       "id": "pet_focus_bite",
       "owner": "pet_skill",
-      "slot": 7,
+      "preferredSlot": 7,
       "label": "集中咬击",
       "command": "pet_skill",
       "target": {

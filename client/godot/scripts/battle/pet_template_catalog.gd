@@ -157,7 +157,16 @@ static func normalized_skill_slots_for_actor(actor: Dictionary) -> Array[String]
 
 
 static func normalized_skill_slots(learned_skill_ids, raw_slots) -> Array[String]:
-	var learned := _valid_unique_pet_skill_ids(_string_array(learned_skill_ids))
+	return normalized_skill_slots_with_catalog(learned_skill_ids, raw_slots, BattleActionCatalog.actions())
+
+
+static func normalized_skill_slots_with_catalog(learned_skill_ids, raw_slots, action_catalog) -> Array[String]:
+	var catalog_actions: Array[Dictionary] = []
+	if action_catalog is Array:
+		for value in (action_catalog as Array):
+			if value is Dictionary:
+				catalog_actions.append(value as Dictionary)
+	var learned := _valid_unique_pet_skill_ids_with_catalog(_string_array(learned_skill_ids), catalog_actions)
 	var slots := _empty_skill_slots()
 	var used := {}
 	if raw_slots is Array:
@@ -166,15 +175,15 @@ static func normalized_skill_slots(learned_skill_ids, raw_slots) -> Array[String
 			var skill_id := str(raw_array[index])
 			if skill_id == "" or used.has(skill_id) or not learned.has(skill_id):
 				continue
-			if not _is_pet_skill_id(skill_id):
+			if not _is_pet_skill_id_with_catalog(skill_id, catalog_actions):
 				continue
 			slots[index] = skill_id
 			used[skill_id] = true
 	for skill_id in learned:
 		if used.has(skill_id):
 			continue
-		var action := BattleActionCatalog.action_by_id(skill_id)
-		var preferred_slot := int(action.get("slot", 0))
+		var action := _pet_skill_action_by_id_with_catalog(skill_id, catalog_actions)
+		var preferred_slot := BattleActionCatalog.preferred_slot_for_action(action)
 		if preferred_slot >= 1 and preferred_slot <= MAX_PET_SKILL_SLOTS and str(slots[preferred_slot - 1]) == "":
 			slots[preferred_slot - 1] = skill_id
 			used[skill_id] = true
@@ -351,7 +360,6 @@ static func _validate_subtype(value, index: int, line_ids: Dictionary, subtype_i
 	if not (raw_actions is Array) or (raw_actions as Array).is_empty():
 		errors.append("%s.activeSkillIds 必须是非空数组" % _subtype_name(subtype, index))
 	elif raw_actions is Array:
-		var seen_slots := {}
 		var action_ids := _string_array(raw_actions)
 		for action_value in raw_actions:
 			var action_id := str(action_value)
@@ -361,13 +369,9 @@ static func _validate_subtype(value, index: int, line_ids: Dictionary, subtype_i
 				continue
 			if str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
 				errors.append("%s.activeSkillIds 只能引用宠物技能: %s" % [_subtype_name(subtype, index), action_id])
-			var slot := int(action.get("slot", 0))
+			var slot := BattleActionCatalog.preferred_slot_for_action(action)
 			if slot <= 0:
-				errors.append("%s.activeSkillIds 缺少有效技能槽: %s" % [_subtype_name(subtype, index), action_id])
-			elif seen_slots.has(slot):
-				errors.append("%s.activeSkillIds 技能槽重复: 技%d" % [_subtype_name(subtype, index), slot])
-			else:
-				seen_slots[slot] = true
+				errors.append("%s.activeSkillIds 缺少有效首选槽: %s" % [_subtype_name(subtype, index), action_id])
 		for required_id in ["pet_attack", "pet_defend"]:
 			if not action_ids.has(required_id):
 				errors.append("%s.activeSkillIds 必须包含 %s" % [_subtype_name(subtype, index), required_id])
@@ -461,17 +465,32 @@ static func _first_empty_slot_index(slots: Array[String]) -> int:
 
 
 static func _valid_unique_pet_skill_ids(values: Array[String]) -> Array[String]:
+	return _valid_unique_pet_skill_ids_with_catalog(values, BattleActionCatalog.actions())
+
+
+static func _valid_unique_pet_skill_ids_with_catalog(values: Array[String], action_catalog: Array[Dictionary]) -> Array[String]:
 	var result: Array[String] = []
 	for skill_id in values:
-		if skill_id == "" or result.has(skill_id) or not _is_pet_skill_id(skill_id):
+		if skill_id == "" or result.has(skill_id) or not _is_pet_skill_id_with_catalog(skill_id, action_catalog):
 			continue
 		result.append(skill_id)
 	return result
 
 
 static func _is_pet_skill_id(skill_id: String) -> bool:
-	var action := BattleActionCatalog.action_by_id(skill_id)
+	return _is_pet_skill_id_with_catalog(skill_id, BattleActionCatalog.actions())
+
+
+static func _is_pet_skill_id_with_catalog(skill_id: String, action_catalog: Array[Dictionary]) -> bool:
+	var action := _pet_skill_action_by_id_with_catalog(skill_id, action_catalog)
 	return not action.is_empty() and str(action.get("owner", "")) == BattleActionCatalog.OWNER_PET_SKILL
+
+
+static func _pet_skill_action_by_id_with_catalog(skill_id: String, action_catalog: Array[Dictionary]) -> Dictionary:
+	for action in action_catalog:
+		if str(action.get("id", "")) == skill_id:
+			return action
+	return {}
 
 
 static func _string_array(value) -> Array[String]:

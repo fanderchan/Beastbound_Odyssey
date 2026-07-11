@@ -11,6 +11,7 @@ const catalogPath = path.join(repoRoot, "client/godot/data/battle_actions.json")
 const passiveCatalogPath = path.join(repoRoot, "client/godot/data/battle_passive_skills.json");
 const petTemplateCatalogPath = path.join(repoRoot, "client/godot/data/pet_templates.json");
 const maxPetSkillSlots = 7;
+const battleActionSchemaVersion = 2;
 const validOwners = new Set(["player", "spirit", "pet_skill", "item", "equipment_action"]);
 const validEffectTypes = new Set(["damage", "heal", "poison", "status", "cleanse", "defend", "capture", "field_effect"]);
 const validStatusIds = new Set(["poison", "sleep", "confusion", "stone"]);
@@ -68,12 +69,14 @@ function validateCatalog(catalog) {
   if (!Array.isArray(catalog.actions) || catalog.actions.length === 0) {
     return ["actions 不能为空"];
   }
+  if (catalog.schemaVersion !== battleActionSchemaVersion) {
+    errors.push(`battle_actions.json schemaVersion 当前必须是 ${battleActionSchemaVersion}`);
+  }
   if (catalog.maxPetSkillSlots !== maxPetSkillSlots) {
     errors.push(`maxPetSkillSlots 当前必须是 ${maxPetSkillSlots}`);
   }
 
   const ids = new Set();
-  const petSlots = new Set();
   catalog.actions.forEach((action, index) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
       errors.push(`actions[${index}] 不是对象`);
@@ -96,7 +99,7 @@ function validateCatalog(catalog) {
     validateTarget(name, action.target, errors);
     validateEffect(name, action.effect, errors);
     if (action.owner === "pet_skill") {
-      validatePetSkillSlot(name, action.slot, petSlots, errors);
+      validatePetSkillPreferredSlot(name, action, errors);
     }
   });
 
@@ -223,16 +226,59 @@ function validateCleanseEffect(name, effect, errors) {
   }
 }
 
-function validatePetSkillSlot(name, slot, petSlots, errors) {
-  if (!Number.isInteger(slot) || slot < 1 || slot > maxPetSkillSlots) {
-    errors.push(`${name}.slot 必须在 1-${maxPetSkillSlots} 之间`);
+function preferredSlotForAction(action) {
+  return Number(action && (action.preferredSlot ?? action.slot) || 0);
+}
+
+function validatePetSkillPreferredSlot(name, action, errors) {
+  if (Object.prototype.hasOwnProperty.call(action, "slot")) {
+    errors.push(`${name}.slot 已废弃；目录使用 preferredSlot，实例装备位置使用 petSkillSlots`);
+  }
+  if (!Object.prototype.hasOwnProperty.call(action, "preferredSlot")) {
+    errors.push(`${name}.preferredSlot 不能为空`);
     return;
   }
-  if (petSlots.has(slot)) {
-    errors.push(`宠物技能槽重复: 技${slot}`);
-  } else {
-    petSlots.add(slot);
+  const slot = action.preferredSlot;
+  if (!Number.isInteger(slot) || slot < 1 || slot > maxPetSkillSlots) {
+    errors.push(`${name}.preferredSlot 必须在 1-${maxPetSkillSlots} 之间`);
   }
+}
+
+function extensiblePetSkillContract(catalog) {
+  const fixture = structuredClone(catalog);
+  const source = fixture.actions.find((action) => action && action.id === "pet_focus_bite");
+  if (!source) {
+    return {errors: ["缺少第八技能扩展夹具来源 pet_focus_bite"], catalogSkills: 0, equippedSlots: 0};
+  }
+  fixture.actions.push({
+    ...source,
+    id: "fixture_pet_catalog_eighth",
+    label: "第八技能目录夹具",
+    preferredSlot: preferredSlotForAction(source),
+  });
+  const errors = validateCatalog(fixture).map((error) => `第八技能扩展夹具失败: ${error}`);
+  const petActions = fixture.actions.filter((action) => action && action.owner === "pet_skill");
+  const slots = Array.from({length: maxPetSkillSlots}, () => "");
+  for (const action of petActions) {
+    const preferredSlot = preferredSlotForAction(action);
+    let index = preferredSlot >= 1 && preferredSlot <= maxPetSkillSlots && slots[preferredSlot - 1] === ""
+      ? preferredSlot - 1
+      : slots.findIndex((value) => value === "");
+    if (index >= 0) {
+      slots[index] = action.id;
+    }
+  }
+  const equipped = slots.filter(Boolean);
+  if (petActions.length <= maxPetSkillSlots) {
+    errors.push("第八技能扩展夹具没有让目录技能数超过 7");
+  }
+  if (slots.length !== maxPetSkillSlots || equipped.length !== maxPetSkillSlots || new Set(equipped).size !== equipped.length) {
+    errors.push("第八技能扩展夹具没有保持单宠恰好 7 个唯一装备槽");
+  }
+  if (!petActions.some((action) => !equipped.includes(action.id))) {
+    errors.push("第八技能扩展夹具没有留下至少一个已学但未装备技能");
+  }
+  return {errors, catalogSkills: petActions.length, equippedSlots: equipped.length};
 }
 
 function printList(catalog) {
@@ -244,7 +290,7 @@ function printList(catalog) {
     ].filter(Boolean).join("+") || "无";
     const scope = target.isAll ? "全体" : target.selfOnly ? "自己" : "单体";
     const select = target.requiresSelection ? "需点选" : "不点选";
-    const slot = action.owner === "pet_skill" ? ` 技${action.slot}` : "";
+    const slot = action.owner === "pet_skill" ? ` 首选技${preferredSlotForAction(action)}` : "";
     console.log(`${action.id.padEnd(24)} ${action.owner}${slot} ${action.label} ${sides}/${scope}/${select}`);
   }
 }
@@ -529,7 +575,7 @@ function printTemplate(kind) {
     pet_skill: {
       id: "pet_new_skill",
       owner: "pet_skill",
-      slot: 4,
+      preferredSlot: 4,
       label: "新宠技",
       command: "pet_skill",
       target: {
@@ -592,6 +638,8 @@ const errors = [
   ...validatePassiveCatalog(passiveCatalog),
   ...validatePetTemplateCatalog(petTemplateCatalog, catalog, passiveCatalog),
 ];
+const extensibleContract = extensiblePetSkillContract(catalog);
+errors.push(...extensibleContract.errors);
 if (args.includes("--list")) {
   printList(catalog);
 }
@@ -602,4 +650,4 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
-console.log(`battle action catalog check ready: status=ok actions=${catalog.actions.length} passives=${passiveCatalog.passives.length} petForms=${petTemplateCatalog.forms.length} petSkillSlots=${maxPetSkillSlots}`);
+console.log(`battle action catalog check ready: status=ok actions=${catalog.actions.length} passives=${passiveCatalog.passives.length} petForms=${petTemplateCatalog.forms.length} petSkillSlots=${maxPetSkillSlots} extensibleCatalogSkills=${extensibleContract.catalogSkills} fixtureEquipped=${extensibleContract.equippedSlots}`);
