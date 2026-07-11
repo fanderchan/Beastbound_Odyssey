@@ -689,6 +689,21 @@ static func _validate_reward_economy(errors: Array[String]) -> void:
 		var level_80_exp := battle_exp_reward_for_actor({"level": 80, "maxHp": 950, "attack": 95, "defense": 70, "quick": 70}, "earth_vein_guardian_group", 0)
 		if level_80_exp <= 1000:
 			errors.append("reward_economy.battleExp Lv80 样本经验过低")
+		var authority_samples := [
+			[{"level": 1, "maxHp": 92, "attack": 15, "defense": 7, "quick": 72}, "firebud_grass_01", 40],
+			[{"level": 16, "maxHp": 260, "attack": 34, "defense": 54, "quick": 50}, "growth_training_01", 216],
+			[{"level": 40, "maxHp": 520, "attack": 105, "defense": 72, "quick": 94}, "growth_training_01", 1314],
+			[{"level": 60, "maxHp": 760, "attack": 150, "defense": 90, "quick": 195}, "rebirth_prep_training_01", 2468],
+			[{"level": 110, "maxHp": 1250, "attack": 225, "defense": 190, "quick": 230}, "high_cave_training_01", 19139],
+			[{"level": 126, "maxHp": 1500, "attack": 260, "defense": 220, "quick": 265}, "shadow_chase_training_01", 56722],
+			[{"level": 136, "maxHp": 1800, "attack": 305, "defense": 265, "quick": 305}, "shadow_capstone_training_01", 101569],
+		]
+		for sample in authority_samples:
+			var actor := sample[0] as Dictionary
+			var group_id := str(sample[1])
+			var expected_exp := int(sample[2])
+			if battle_exp_reward_for_actor(actor, group_id, 0) != expected_exp:
+				errors.append("reward_economy.battleExp 双端向量不一致: %s" % group_id)
 	if battle_exp_stage_targets().is_empty():
 		errors.append("reward_economy.battleExp.stageTargets 不能为空")
 

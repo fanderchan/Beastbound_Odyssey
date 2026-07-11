@@ -9,8 +9,12 @@ const QUALIFICATION_CONTENT_TYPE = "qualification_battle";
 
 function loadProgressionRouteCatalog(options = {}) {
   const encounterCatalog = options.encounterCatalog;
+  const battleExpCatalog = options.battleExpCatalog;
   if (!encounterCatalog || !encounterCatalog.mapsById || !encounterCatalog.dataDir) {
     throw new Error("progression route catalog requires the strict encounter catalog");
+  }
+  if (!battleExpCatalog || typeof battleExpCatalog.hasExplicitGroupMultiplier !== "function") {
+    throw new Error("progression route catalog requires the strict battle EXP catalog");
   }
   const dataDir = path.resolve(options.dataDir || encounterCatalog.dataDir);
   const progressionDocument = readJson(path.join(dataDir, "balance", "progression_zones.json"));
@@ -86,6 +90,9 @@ function loadProgressionRouteCatalog(options = {}) {
         if (!rewardTableIds.has(rewardTableId)) {
           errors.push(`${zoneId}/${mapId}/${text(encounterZone.id)} references unknown reward table: ${rewardTableId}`);
         }
+        if (!battleExpCatalog.hasExplicitGroupMultiplier(rewardTableId)) {
+          errors.push(`${zoneId}/${mapId}/${text(encounterZone.id)} reward table has no explicit EXP multiplier: ${rewardTableId}`);
+        }
         if (rewardTableId !== expectedRewardTableId) {
           errors.push(`${zoneId}/${mapId}/${text(encounterZone.id)} reward table ${rewardTableId} does not match progression ${expectedRewardTableId}`);
         }
@@ -127,6 +134,14 @@ function loadProgressionRouteCatalog(options = {}) {
     progressionId: text(progression.id),
     maxLevel: MAX_LEVEL,
     coverage: coverage.ranges,
+    trainingZones: arrayOfObjects(progression.zones)
+      .filter((zone) => text(zone.contentType) === TRAINING_CONTENT_TYPE)
+      .map((zone) => ({
+        id: text(zone.id),
+        label: text(zone.label || zone.id),
+        levelRange: normalizedLevelRange(zone.levelRange),
+        targetBattlesPerLevel: normalizedLevelRange(zone.targetBattlesPerLevel),
+      })),
     routeEntries,
   });
 }

@@ -12613,10 +12613,10 @@ func _run_auto_balance_version_receipt_check() -> void:
 	var receipts: Array = result_profile.get("battleResultReceipts", [])
 	var receipt_balance = receipt.get("balance", {}) as Dictionary if receipt.get("balance", {}) is Dictionary else {}
 	var version_ok = (
-		str(version.get("balanceSetId", "")) == "phase123_core_v1"
+		str(version.get("balanceSetId", "")) == "p0_3_route_v2"
 			and str(version.get("formulaVersion", "")) == "combat_v1"
 			and str(version.get("captureFormulaVersion", "")) == "capture_v1"
-			and str(version.get("rewardEconomyVersion", "")) == "battle_exp_v1"
+			and str(version.get("rewardEconomyVersion", "")) == "battle_exp_v2_route"
 			and str(version.get("sourceDigest", "")) != ""
 			and int(version.get("sourceCount", 0)) >= 10
 	)
@@ -12671,7 +12671,7 @@ func _run_auto_balance_snapshot_digest_check() -> void:
 	)
 	var report_ok = str(report_balance.get("sourceDigest", "")) == digest
 	var version_ok = (
-		str(first.get("balanceSetId", "")) == "phase123_core_v1"
+		str(first.get("balanceSetId", "")) == "p0_3_route_v2"
 		and str(first.get("formulaVersion", "")) == "combat_v1"
 	)
 	var status = "ok" if digest_ok and sources_ok and report_ok and version_ok else "failed"

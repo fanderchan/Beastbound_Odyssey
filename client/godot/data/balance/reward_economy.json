@@ -14,7 +14,7 @@
     "defaultSellRate": 0.5
   },
   "battleExp": {
-    "activeFormulaId": "battle_exp_v1",
+    "activeFormulaId": "battle_exp_v2_route",
     "formulas": [
       {
         "id": "battle_exp_v1",
@@ -40,6 +40,39 @@
           "high_cave_training_01": 1.0,
           "shadow_chase_training_01": 1.0,
           "shadow_capstone_training_01": 1.0,
+          "earth_vein_guardian_group": 1.2,
+          "tide_echo_guardian_group": 1.2,
+          "ember_core_guardian_group": 1.2,
+          "gale_breath_guardian_group": 1.2,
+          "shadow_oath_rebirth_guardian": 1.5,
+          "gm_10v10_grass": 1.0,
+          "gm_high_knockaway_grass": 1.0
+        }
+      },
+      {
+        "id": "battle_exp_v2_route",
+        "label": "服务端权威路线经验 v2",
+        "minPerEnemy": 8,
+        "maxHpDivisor": 10.0,
+        "attackWeight": 1.0,
+        "defenseWeight": 1.0,
+        "quickDivisor": 8.0,
+        "levelScale": {
+          "enabled": true,
+          "pivotLevel": 20,
+          "exponent": 1.6,
+          "minMultiplier": 1.0,
+          "maxMultiplier": 30.0
+        },
+        "groupMultipliers": {
+          "default_wild": 1.0,
+          "firebud_grass_01": 1.0,
+          "growth_training_01": 1.8,
+          "rebirth_prep_training_01": 1.25,
+          "post_rebirth_training_01": 1.5,
+          "high_cave_training_01": 2.2,
+          "shadow_chase_training_01": 4.5,
+          "shadow_capstone_training_01": 6.0,
           "earth_vein_guardian_group": 1.2,
           "tide_echo_guardian_group": 1.2,
           "ember_core_guardian_group": 1.2,

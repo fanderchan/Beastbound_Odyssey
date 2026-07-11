@@ -151,7 +151,11 @@ test("pet encounter authority accepts only identifiers and ignores forged pet, c
   assert.equal(selected.battleStats.maxHp < 1000, true);
   assert.equal(selected.battleStats.attack < 1000, true);
   assert.equal(Object.hasOwn(selected, "captureChanceOverride"), false);
-  assert.equal(Object.hasOwn(selected, "expReward"), false);
+  assert.equal(selected.expReward, authority.battleExpCatalog.rewardForActor({
+    level: selected.level,
+    ...selected.battleStats,
+  }, resolved.encounter.rewardTableId));
+  assert.equal(selected.expReward < 1000, true);
   assert.equal(JSON.stringify(resolved).includes("rebirth_starter_shadow_cub"), false);
   assert.equal(JSON.stringify(resolved).includes("999999"), false);
 

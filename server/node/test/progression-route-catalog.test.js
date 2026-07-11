@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const {loadPetEncounterCatalog, createPetEncounterAuthority} = require("../src/auth/pet-encounter-authority");
+const {loadBattleExpCatalog} = require("../src/auth/battle-exp-catalog");
 const {
   loadProgressionRouteCatalog,
   trainingCoverage,
@@ -10,13 +11,15 @@ const {
 } = require("../src/auth/progression-route-catalog");
 
 const encounterCatalog = loadPetEncounterCatalog();
-const routeCatalog = loadProgressionRouteCatalog({encounterCatalog});
+const battleExpCatalog = loadBattleExpCatalog({dataDir: encounterCatalog.dataDir});
+const routeCatalog = loadProgressionRouteCatalog({battleExpCatalog, encounterCatalog});
 
 test("formal progression route resolves real maps and repeatable encounter groups from Lv1 through Lv140", () => {
   assert.equal(routeCatalog.progressionId, "progression_v1");
   assert.equal(routeCatalog.coverage[0].levelRange[0], 1);
   assert.equal(routeCatalog.coverage.at(-1).levelRange[1], 140);
-  assert.equal(routeCatalog.routeEntries.length, 20);
+  assert.equal(routeCatalog.coverage.length, 12);
+  assert.equal(routeCatalog.routeEntries.length, 23);
   assert.equal(Object.isFrozen(routeCatalog), true);
 
   const routeKeys = new Set(routeCatalog.routeEntries.map((entry) => (

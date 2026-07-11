@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "activeBalanceSetId": "phase123_core_v1",
+  "activeBalanceSetId": "p0_3_route_v2",
   "sets": [
     {
       "id": "phase123_core_v1",
@@ -29,6 +29,35 @@
         "本数值包以旧行为 parity 和固定样本稳定为目标，不代表最终商业化平衡。",
         "combat_v1 不直接做新平衡；新手感应新增 combat_v2。",
         "经济高阶区仍处于 watch，需要后续金币回收系统解释。"
+      ]
+    },
+    {
+      "id": "p0_3_route_v2",
+      "label": "P0.3 正式练级路线权威经验 v2",
+      "status": "candidate_locked",
+      "balanceVersion": "p0_3_route_v2",
+      "formulaVersion": "combat_v1",
+      "captureFormulaVersion": "capture_v1",
+      "rewardEconomyVersion": "battle_exp_v2_route",
+      "progressionVersion": "progression_v1",
+      "battleSimulationSuiteId": "phase127_core",
+      "economyLedgerId": "phase128_core",
+      "levelCurveId": "default_1_140",
+      "playerGrowthVersion": "player_growth_v1",
+      "petGrowthVersion": "pet_growth_v1",
+      "petPowerFormulaId": "stoneage_like_v1",
+      "createdPhase": 228,
+      "lockedThroughPhase": 228,
+      "serverAuthorityPolicy": {
+        "recordOnBattleReceipt": true,
+        "clientMayPreview": true,
+        "serverOwnsRewards": true,
+        "serverOwnsCaptureResult": true
+      },
+      "notes": [
+        "保留 combat_v1、capture_v1 与既有等级曲线，只版本化正式路线经验来源。",
+        "阶段倍率以 progression_zones 已批准目标范围为约束，不改变怪物四维或捕捉率。",
+        "正式 Node 遇敌和 Godot 数值报告必须读取同一 battle_exp_v2_route。"
       ]
     }
   ]

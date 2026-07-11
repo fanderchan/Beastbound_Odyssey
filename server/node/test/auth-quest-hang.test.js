@@ -32,6 +32,8 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 
 test("quest catalog gives every formal quest explicit pickup and recommended levels", () => {
   const questCatalog = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../client/godot/data/quests.json"), "utf8"));
@@ -240,6 +242,99 @@ test("starting a real hang session completes the hang tutorial server-side", () 
   assert.equal(started.profile.questStates.quest_start_hang.status, "claimed");
   assert.equal(started.profile.activeQuestId, "quest_market_sell_player");
   assert.equal(started.questMessages.length > 0, true);
+});
+
+test("online walk hang uses the formal high-level route and settles authoritative EXP and rewards", () => {
+  const catalog = loadPetEncounterCatalog();
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => Date.parse("2026-07-11T00:00:00.000Z"),
+    allowPositionTeleport: true,
+    useStrictPetEncounterAuthority: true,
+    petEncounterPermitAuthority: createPetEncounterPermitAuthority({
+      catalog,
+      randomBytes: (size) => crypto.randomBytes(size),
+      randomFloat: () => 0,
+      eligibleStepIntervalMs: 0,
+    }),
+  });
+  const player = service.register({username: "hangformalroute", password: "test1234", displayName: "正式路线挂机"});
+  const profile = battleProfile("正式路线挂机", {
+    level: 70, hp: 4000, maxHp: 4000, attack: 999, defense: 999, quick: 400, comboRateOverride: 0,
+  }, {
+    petId: "hang_route_pet",
+    name: "挂机路线宠",
+    level: 70,
+    hp: 1800,
+    maxHp: 1800,
+    attack: 1,
+    defense: 200,
+    quick: 200,
+    comboRateOverride: 0,
+  });
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [];
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "earth_vein_cave", cellX: 6, cellY: 8, moving: false,
+  }).ok, true);
+  const started = service.startHangSession(player.session.token, {
+    mode: "walk", mapId: "earth_vein_cave", cellX: 6, cellY: 8,
+  });
+  assert.equal(started.ok, true);
+  assert.equal(started.hang.enabled, true);
+  let permit = null;
+  for (const [fromCellX, toCellX] of [[6, 7], [7, 8], [8, 9]]) {
+    const moved = service.movePlayerStep(player.session.token, {
+      mapId: "earth_vein_cave",
+      fromCellX,
+      fromCellY: 8,
+      toCellX,
+      toCellY: 8,
+      moving: true,
+    });
+    assert.equal(moved.ok, true);
+    permit = moved.encounterPermit || permit;
+  }
+  assert.equal(typeof permit.token, "string");
+  const encounter = service.startPartyEncounter(player.session.token, {
+    encounterPermitToken: permit.token,
+    encounterIntent: {zoneId: "earth_vein_training_65_80", encounterGroupId: "rebirth_prep_training_01"},
+  });
+  assert.equal(encounter.ok, true);
+  const internalRoom = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.equal(internalRoom.encounter.rewardTableId, "rebirth_prep_training_01");
+  const playerActor = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId && actor.kind === "player");
+  const petActor = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId && actor.kind === "pet");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  let resolved = null;
+  for (let round = 1; round <= 100; round += 1) {
+    const playerCommand = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
+      round, actorId: playerActor.actorId, actionId: "attack", targetActorId: enemy.actorId,
+    });
+    assert.equal(playerCommand.ok, true);
+    if (playerCommand.room.status === "closed") {
+      resolved = playerCommand;
+      break;
+    }
+    const petCommand = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
+      round, actorId: petActor.actorId, actionId: "pet_attack", targetActorId: enemy.actorId,
+    });
+    assert.equal(petCommand.ok, true);
+    resolved = petCommand;
+    if (petCommand.room.status === "closed") {
+      break;
+    }
+  }
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === player.account.accountId);
+  assert.equal(writeback.rewards.tableId, "rebirth_prep_training_01");
+  const playerExp = writeback.exp.player.amount;
+  const petExp = writeback.exp.pets[0].amount;
+  assert.equal(playerExp + petExp > 0, true);
+  assert.equal((playerExp > 0) !== (petExp > 0), true);
+  assert.equal(writeback.hang.enabled, true);
+  assert.equal(writeback.hang.battleCount, 1);
 });
 
 test("server-authoritative encounter stones bind origin, duration and one battle per interval", () => {

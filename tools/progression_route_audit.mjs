@@ -4,14 +4,17 @@ import {createRequire} from "node:module";
 
 const require = createRequire(import.meta.url);
 const {loadPetEncounterCatalog} = require("../server/node/src/auth/pet-encounter-authority");
+const {loadBattleExpCatalog} = require("../server/node/src/auth/battle-exp-catalog");
 const {loadProgressionRouteCatalog} = require("../server/node/src/auth/progression-route-catalog");
 
 const encounterCatalog = loadPetEncounterCatalog();
-const routeCatalog = loadProgressionRouteCatalog({encounterCatalog});
+const battleExpCatalog = loadBattleExpCatalog({dataDir: encounterCatalog.dataDir});
+const routeCatalog = loadProgressionRouteCatalog({battleExpCatalog, encounterCatalog});
 const report = {
   schemaVersion: 1,
   status: "ok",
   progressionId: routeCatalog.progressionId,
+  battleExpFormulaId: battleExpCatalog.formulaId,
   maxLevel: routeCatalog.maxLevel,
   coverage: routeCatalog.coverage,
   routeEntryCount: routeCatalog.routeEntries.length,

@@ -3,6 +3,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const {loadBattleExpCatalog} = require("./battle-exp-catalog");
 const {loadProgressionRouteCatalog} = require("./progression-route-catalog");
 
 const MAX_ENEMY_COUNT = 10;
@@ -14,7 +15,9 @@ const CODEX_CATCHABLE_POOL_SOURCE = "codex_catchable";
 
 function createPetEncounterAuthority(options = {}) {
   const catalog = options.catalog || loadPetEncounterCatalog(options);
+  const battleExpCatalog = options.battleExpCatalog || loadBattleExpCatalog({dataDir: catalog.dataDir});
   const progressionRoutes = options.progressionRoutes || loadProgressionRouteCatalog({
+    battleExpCatalog,
     dataDir: catalog.dataDir,
     encounterCatalog: catalog,
   });
@@ -69,6 +72,7 @@ function createPetEncounterAuthority(options = {}) {
         ok: true,
         encounter: buildAuthoritativeEncounter({
           catalog,
+          battleExpCatalog,
           map,
           source,
           seed: String(input.seed || ""),
@@ -81,7 +85,7 @@ function createPetEncounterAuthority(options = {}) {
     }
   }
 
-  return Object.freeze({catalog, progressionRoutes, resolve});
+  return Object.freeze({battleExpCatalog, catalog, progressionRoutes, resolve});
 }
 
 function loadPetEncounterCatalog(options = {}) {
@@ -232,7 +236,7 @@ function resolveEncounterSource(map, intent) {
   return {ok: true, source: {zone, interaction: null}};
 }
 
-function buildAuthoritativeEncounter({catalog, map, source, seed, scenario, participantCharacterCount}) {
+function buildAuthoritativeEncounter({catalog, battleExpCatalog, map, source, seed, scenario, participantCharacterCount}) {
   const zone = source.zone;
   const interaction = source.interaction;
   const fixedEntries = arrayOfObjects(zone.fixedWildPets);
@@ -279,10 +283,17 @@ function buildAuthoritativeEncounter({catalog, map, source, seed, scenario, part
   const zoneId = String(zone.id || "").trim();
   const interactionId = String(interaction && interaction.id || "").trim();
   const groupId = String(zone.encounterGroupId || interaction && interaction.encounterGroupId || "");
+  const rewardTableId = String(zone.rewardTableId || interaction && interaction.rewardTableId || groupId);
+  for (const wildPet of selectedWildPets) {
+    wildPet.expReward = battleExpCatalog.rewardForActor({
+      level: wildPet.level,
+      ...wildPet.battleStats,
+    }, rewardTableId);
+  }
   return {
     zoneId,
     groupId,
-    rewardTableId: String(zone.rewardTableId || interaction && interaction.rewardTableId || groupId),
+    rewardTableId,
     interactionId,
     sourceInteractionId: interactionId,
     sourceInteractionName: String(interaction && interaction.name || ""),

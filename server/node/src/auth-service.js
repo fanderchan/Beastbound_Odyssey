@@ -14,9 +14,11 @@ const {
   generatePetCultivationRollSeed,
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
+const {loadPlayerLevelRuntime} = require("./auth/player-level-runtime");
 const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
 const {createPetCaptureCandidateAuthority} = require("./auth/pet-capture-candidate-authority");
+const {scaledForRecipientLevel: authoritativeScaledBattleExpForRecipientLevel} = require("./auth/battle-exp-catalog");
 const {createPetEncounterAuthority, zoneContainsCell} = require("./auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("./auth/pet-encounter-permit-authority");
 const {createManualEncounterAccess} = require("./auth/manual-encounter-access");
@@ -34,6 +36,8 @@ const {
   familyOwnsManor,
   settleManorWarFromBattleRoomResult,
 } = require("./auth/family-manor");
+
+const playerLevelRuntime = loadPlayerLevelRuntime();
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
@@ -203,8 +207,6 @@ const TAME_ELIGIBLE_EGG_ITEM_IDS = new Set(["novice_battle_pet_egg", "novice_tig
 const BATTLE_PARTY_PVE_PLAYER_SLOTS = [3, 4, 2, 5, 1];
 const BATTLE_PARTY_PVE_PARTNER_SLOTS = [1, 2, 4, 5];
 const TRAINING_PARTNER_MAX_COUNT = BATTLE_PARTY_PVE_PARTNER_SLOTS.length;
-const BATTLE_EXP_FULL_LEVEL_DELTA = 5;
-const BATTLE_EXP_DECAY_LEVEL_RANGE = 15;
 const BATTLE_RIDE_PET_EXP_RATE = 0.6;
 const BATTLE_PARTY_EXP_BONUS_RATES = Object.freeze({
   2: 0.10,
@@ -11639,16 +11641,7 @@ function battleAddExpAward(currentAward, recipient) {
 }
 
 function battleScaledExpForRecipientLevel(baseReward, recipientLevel, enemyLevel) {
-  const base = Math.max(1, Math.trunc(Number(baseReward || 1)));
-  const levelDelta = Math.trunc(Number(recipientLevel || 1)) - Math.max(1, Math.trunc(Number(enemyLevel || 1)));
-  if (levelDelta <= BATTLE_EXP_FULL_LEVEL_DELTA) {
-    return base;
-  }
-  const decayFactor = BATTLE_EXP_FULL_LEVEL_DELTA + BATTLE_EXP_DECAY_LEVEL_RANGE - levelDelta;
-  if (decayFactor <= 0) {
-    return 1;
-  }
-  return Math.max(1, Math.trunc(base * decayFactor / BATTLE_EXP_DECAY_LEVEL_RANGE));
+  return authoritativeScaledBattleExpForRecipientLevel(baseReward, recipientLevel, enemyLevel);
 }
 
 function applyBattleExpRewardToProfile(
@@ -12004,35 +11997,11 @@ function applyBattleExpToEntry(entry, amount, maxLevel, options = {}) {
 }
 
 function battleAwardExpEntry(entry, amount, maxLevel) {
-  const safeMaxLevel = Math.max(1, Math.trunc(Number(maxLevel || MAX_PLAYER_LEVEL)));
-  let level = Math.max(1, Math.min(safeMaxLevel, Math.trunc(Number(entry.level || 1))));
-  const startLevel = level;
-  let exp = Math.max(0, Math.trunc(Number(entry.exp || 0))) + Math.max(0, Math.trunc(Number(amount || 0)));
-  let nextExp = battleExpToNextLevel(level);
-  while (level < safeMaxLevel && exp >= nextExp) {
-    exp -= nextExp;
-    level += 1;
-    nextExp = battleExpToNextLevel(level);
-  }
-  let overflowExp = 0;
-  if (level >= safeMaxLevel && exp > 0) {
-    overflowExp = exp;
-    exp = 0;
-  }
-  return {
-    level,
-    exp,
-    nextExp,
-    levelsGained: Math.max(0, level - startLevel),
-    overflowExp,
-  };
+  return playerLevelRuntime.awardEntry(entry, amount, maxLevel);
 }
 
 function battleExpToNextLevel(level) {
-  const safeLevel = Math.max(1, Math.trunc(Number(level || 1)));
-  const base = (80 + safeLevel * 40) * Math.pow(1.052, safeLevel - 1);
-  const highLevelShape = Math.pow(safeLevel, 2.15) * 2.0;
-  return Math.max(1, Math.round(base + highLevelShape));
+  return playerLevelRuntime.expToNextLevel(level);
 }
 
 function growTrainingPartnerStats(partner, levels) {

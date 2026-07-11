@@ -26,60 +26,117 @@
         },
         {
           "id": "mistcap_growth",
-          "label": "雾帽湿地成长区",
+          "label": "雾帽芦苇成长区",
           "stageId": "growth",
           "contentType": "wild_training",
-          "levelRange": [10, 24],
+          "levelRange": [10, 17],
           "mapIds": ["mistcap_marsh"],
           "encounterGroupId": "mistcap_reeds_01",
           "rewardTableId": "growth_training_01",
           "repeatable": true,
-          "targetAvgExpPerBattle": [200, 700],
-          "targetBattlesPerLevel": [8, 24],
+          "targetAvgExpPerBattle": [180, 350],
+          "targetBattlesPerLevel": [8, 30],
           "targetStoneCoinsPerBattle": [35, 90],
           "typicalBattle": {
             "enemyCount": 1,
-            "enemy": {"level": 16, "maxHp": 260, "attack": 34, "defense": 54, "quick": 50}
+            "enemy": {"level": 14, "maxHp": 260, "attack": 34, "defense": 54, "quick": 50}
           },
           "designNotes": "承接火芽草丛，提供第一批明确角色宠与湿地捕捉路线。"
         },
         {
-          "id": "suncrack_growth",
-          "label": "裂日荒原成长区",
+          "id": "mistcap_pools_growth",
+          "label": "雾帽镜池成长区",
           "stageId": "growth",
           "contentType": "wild_training",
-          "levelRange": [25, 45],
-          "mapIds": ["suncrack_badlands"],
-          "encounterGroupId": "suncrack_ridge_02",
+          "levelRange": [18, 24],
+          "mapIds": ["mistcap_marsh"],
+          "encounterGroupId": "mistcap_pools_02",
           "rewardTableId": "growth_training_01",
           "repeatable": true,
-          "targetAvgExpPerBattle": [600, 1800],
+          "targetAvgExpPerBattle": [250, 500],
+          "targetBattlesPerLevel": [8, 30],
+          "targetStoneCoinsPerBattle": [35, 90],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 21, "maxHp": 330, "attack": 44, "defense": 60, "quick": 70}
+          },
+          "designNotes": "湿地后段使用真实镜池怪物等级，避免高等级玩家继续刷低级芦苇怪。"
+        },
+        {
+          "id": "suncrack_growth",
+          "label": "裂日灌木成长区",
+          "stageId": "growth",
+          "contentType": "wild_training",
+          "levelRange": [25, 34],
+          "mapIds": ["suncrack_badlands"],
+          "encounterGroupId": "suncrack_scrub_01",
+          "rewardTableId": "growth_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [500, 900],
           "targetBattlesPerLevel": [10, 30],
           "targetStoneCoinsPerBattle": [60, 140],
           "typicalBattle": {
             "enemyCount": 1,
-            "enemy": {"level": 40, "maxHp": 520, "attack": 105, "defense": 72, "quick": 94}
+            "enemy": {"level": 30, "maxHp": 390, "attack": 80, "defense": 42, "quick": 85}
           },
-          "designNotes": "中段火地生态练级区，承接湿地并导向风镜高地。"
+          "designNotes": "中段火地生态前半，承接湿地。"
+        },
+        {
+          "id": "suncrack_ridge_growth",
+          "label": "裂日岩脊成长区",
+          "stageId": "growth",
+          "contentType": "wild_training",
+          "levelRange": [35, 44],
+          "mapIds": ["suncrack_badlands"],
+          "encounterGroupId": "suncrack_ridge_02",
+          "rewardTableId": "growth_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [1000, 1800],
+          "targetBattlesPerLevel": [10, 30],
+          "targetStoneCoinsPerBattle": [60, 140],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 40, "maxHp": 520, "attack": 112, "defense": 58, "quick": 104}
+          },
+          "designNotes": "中段火地生态后半，导向风镜高地。"
         },
         {
           "id": "windglass_growth",
-          "label": "风镜高地成长区",
+          "label": "风镜草坡成长区",
           "stageId": "rebirth_prep",
           "contentType": "wild_training",
-          "levelRange": [45, 65],
+          "levelRange": [45, 54],
           "mapIds": ["windglass_highlands"],
-          "encounterGroupId": "windglass_cliff_02",
+          "encounterGroupId": "windglass_meadow_01",
           "rewardTableId": "rebirth_prep_training_01",
           "repeatable": true,
-          "targetAvgExpPerBattle": [1500, 4000],
+          "targetAvgExpPerBattle": [1200, 2200],
           "targetBattlesPerLevel": [12, 36],
           "targetStoneCoinsPerBattle": [90, 220],
           "typicalBattle": {
             "enemyCount": 1,
-            "enemy": {"level": 60, "maxHp": 760, "attack": 150, "defense": 90, "quick": 195}
+            "enemy": {"level": 50, "maxHp": 620, "attack": 112, "defense": 84, "quick": 150}
           },
-          "designNotes": "一转前半段的高速生态练级区，并为四洞路线做装备与捕捉准备。"
+          "designNotes": "一转前半段的高速生态前半。"
+        },
+        {
+          "id": "windglass_cliff_growth",
+          "label": "风镜断崖成长区",
+          "stageId": "rebirth_prep",
+          "contentType": "wild_training",
+          "levelRange": [55, 64],
+          "mapIds": ["windglass_highlands"],
+          "encounterGroupId": "windglass_cliff_02",
+          "rewardTableId": "rebirth_prep_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [2000, 3500],
+          "targetBattlesPerLevel": [12, 36],
+          "targetStoneCoinsPerBattle": [90, 220],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 60, "maxHp": 760, "attack": 140, "defense": 102, "quick": 176}
+          },
+          "designNotes": "一转前半段的高速生态后半，并为四洞路线做装备与捕捉准备。"
         },
         {
           "id": "forest_rebirth_prep",

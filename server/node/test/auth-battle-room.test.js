@@ -34,6 +34,7 @@ const {
 } = require("../test-support/auth-service-test-context");
 const {createPetEncounterAuthority, loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
+const {scaledForRecipientLevel} = require("../src/auth/battle-exp-catalog");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
@@ -1362,6 +1363,7 @@ test("formal field encounter groups keep their identity while using the server-o
   });
   const service = createAuthService({
     store: createMemoryAuthStore(),
+    now: () => Date.parse("2026-07-11T00:00:00.000Z"),
     useStrictPetEncounterAuthority: true,
     allowPositionTeleport: true,
     petEncounterPermitAuthority: permitAuthority,
@@ -1408,6 +1410,8 @@ test("formal field encounter groups keep their identity while using the server-o
   const storedEncounter = service.snapshot().battleRooms[encounter.room.roomId].encounter;
   assert.equal(storedEncounter.groupId, "mistcap_reeds_01");
   assert.equal(storedEncounter.rewardTableId, "growth_training_01");
+  const storedEnemy = service.snapshot().battleRooms[encounter.room.roomId].battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(storedEnemy.expReward > 0, true);
   const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
   const pet = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "pet");
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
@@ -1437,6 +1441,8 @@ test("formal field encounter groups keep their identity while using the server-o
   assert.equal(writeback.rewards.sourceEncounterGroupId, "mistcap_reeds_01");
   assert.equal(writeback.rewards.tableId, "growth_training_01");
   assert.equal(writeback.rewards.stoneCoins >= 45 && writeback.rewards.stoneCoins <= 90, true);
+  assert.equal(writeback.exp.player.rawBaseAmount, storedEnemy.expReward);
+  assert.equal(writeback.exp.player.baseAmount, scaledForRecipientLevel(storedEnemy.expReward, 20, storedEnemy.level));
 });
 
 test("encounter permit remains retryable after authoritative encounter construction fails", () => {
@@ -3308,7 +3314,7 @@ test("party pve victory writes stone coins and item drops to profile", () => {
   assert.equal(Boolean(record && record.profileWriteback.profiles[0].rewards), true);
 });
 
-test("party pve derives enemy exp from stats when expReward is omitted", () => {
+test("party pve derives enemy exp from stats and only rewards the last-hit participant", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "pveformulaa", "password": "test1234", "displayName": "公式队长"});
   const member = service.register({"username": "pveformulab", "password": "test1234", "displayName": "公式队员"});
@@ -3404,6 +3410,8 @@ test("party pve derives enemy exp from stats when expReward is omitted", () => {
   const leaderWriteback = service.snapshot().battleRooms[encounter.room.roomId].battle.profileWriteback.profiles
     .find((entry) => entry.accountId === leader.account.accountId);
   assert.equal(leaderWriteback.exp.amount, 33);
+  assert.equal(leaderWriteback.exp.player.amount, 0);
+  assert.equal(leaderWriteback.exp.player.killCount, 0);
   assert.equal(leaderWriteback.exp.pets[0].petId, "formula_leader_pet");
   assert.equal(leaderWriteback.exp.pets[0].baseAmount, 30);
   assert.equal(leaderWriteback.exp.pets[0].amount, 33);
