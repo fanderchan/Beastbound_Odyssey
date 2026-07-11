@@ -351,6 +351,7 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "mossback_marsh_earth7_water3_v1",
       "encounterWeight": 1.0,
       "baseStats": {
         "maxHp": 190,
@@ -385,6 +386,7 @@
         "wind": 0
       },
       "growthProfileId": "hp_high",
+      "growthSpeciesProfileId": "mossback_sunbaked_earth6_fire4_v1",
       "encounterWeight": 0.72,
       "baseStats": {
         "maxHp": 214,
@@ -419,6 +421,7 @@
         "wind": 7
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "driftfox_mist_wind7_water3_v1",
       "encounterWeight": 0.9,
       "baseStats": {
         "maxHp": 132,
@@ -453,6 +456,7 @@
         "wind": 9
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "driftfox_highland_wind9_earth1_v1",
       "encounterWeight": 0.78,
       "baseStats": {
         "maxHp": 142,
@@ -487,6 +491,7 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "emberhorn_red_fire8_earth2_v1",
       "encounterWeight": 1.0,
       "baseStats": {
         "maxHp": 174,
@@ -521,6 +526,7 @@
         "wind": 4
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "emberhorn_ash_fire6_wind4_v1",
       "encounterWeight": 0.86,
       "baseStats": {
         "maxHp": 164,
@@ -555,6 +561,7 @@
         "wind": 5
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "emberhorn_gale_fire5_wind5_v1",
       "encounterWeight": 0.68,
       "baseStats": {
         "maxHp": 178,
@@ -589,6 +596,7 @@
         "wind": 2
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "tidefin_mist_water8_wind2_v1",
       "encounterWeight": 1.0,
       "baseStats": {
         "maxHp": 168,
@@ -623,6 +631,7 @@
         "wind": 5
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "tidefin_sky_water5_wind5_v1",
       "encounterWeight": 0.75,
       "baseStats": {
         "maxHp": 176,
@@ -657,6 +666,7 @@
         "wind": 0
       },
       "growthProfileId": "hp_high",
+      "growthSpeciesProfileId": "tidefin_reed_water6_earth4_v1",
       "encounterWeight": 0.82,
       "baseStats": {
         "maxHp": 188,

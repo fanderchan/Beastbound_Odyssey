@@ -107,7 +107,7 @@ test("rebirth growth cycle strictly routes authority and both legacy compatibili
     profileId: "",
     authorityV1: false,
   });
-  assert.deepEqual(cycle.preflight(legacyPet("mossback_marsh_earth7_water3")), {
+  assert.deepEqual(cycle.preflight(legacyPet("rebirth_starter_four_spirit_cub")), {
     kind: PROFILE_RESOLUTION_LEGACY_UNLINKED,
     profileId: "",
     authorityV1: false,
@@ -139,7 +139,7 @@ test("rebirth growth cycle restarts authority-v1 without mutating input and leav
   assert.deepEqual(result.pet.petGrowth.private.cultivation.growthBonus, record.rebirthGrowthBonus);
   assert.deepEqual(validatePetGrowth(result.pet, authority.profile), {ok: true, code: "", errors: []});
 
-  const legacy = legacyPet("mossback_marsh_earth7_water3");
+  const legacy = legacyPet("rebirth_starter_four_spirit_cub");
   const legacyBefore = structuredClone(legacy);
   const legacyResult = cycle.restart(legacy, record);
   assert.equal(legacyResult.restarted, false);

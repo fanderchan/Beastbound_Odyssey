@@ -186,7 +186,7 @@ test("linked capture candidates start at Lv1 in the strict factory, settle once,
 test("unlinked capture candidates freeze Lv1 facts and settle wild levels with the shared legacy JSON model", () => {
   const {authority, expToNextLevel} = harness("legacy");
   const prepared = authority.prepareRoom(battleRoom([
-    wildActor({formId: "mossback_marsh_earth7_water3", level: 23}),
+    wildActor({formId: "rebirth_beast_earth_lv50", level: 23}),
   ]));
 
   assert.equal(prepared.ok, true);
