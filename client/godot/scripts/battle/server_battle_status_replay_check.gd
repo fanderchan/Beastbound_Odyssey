@@ -230,6 +230,61 @@ static func run() -> Dictionary:
 		and int(BattleModel.actor_by_id(wake_state, "enemy_front_4").get("hp", -1)) == int(BattleModel.actor_by_id(wake_before, "enemy_front_4").get("hp", 0))
 	)
 
+	var confusion_before := _server_state()
+	confusion_before = BattleModel.set_actor_status(confusion_before, "enemy_front_3", BattleModel.STATUS_CONFUSION, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+	var declared_hp_before := int(BattleModel.actor_by_id(confusion_before, BattleModel.PLAYER_ACTOR_ID).get("hp", 0))
+	var actual_hp_before := int(BattleModel.actor_by_id(confusion_before, "enemy_front_4").get("hp", 0))
+	var actual_hp_after := maxi(0, actual_hp_before - 6)
+	var confusion_after := confusion_before.duplicate(true)
+	confusion_after = BattleModel.set_actor_hp(confusion_after, "enemy_front_4", actual_hp_after)
+	confusion_after = BattleModel.set_actor_status(confusion_after, "enemy_front_3", BattleModel.STATUS_CONFUSION, 1, 0, BattleModel.PLAYER_ACTOR_ID)
+	var confusion_event := _damage_event(
+		"evt_confusion_retarget",
+		"enemy_front_3",
+		"enemy_front_4",
+		6,
+		actual_hp_before,
+		actual_hp_after,
+		[{
+			"actorId": "enemy_front_3",
+			"statusId": BattleModel.STATUS_CONFUSION,
+			"change": "decrement",
+			"statusBefore": _status_for_actor(confusion_before, "enemy_front_3", BattleModel.STATUS_CONFUSION),
+			"statusAfter": _status_for_actor(confusion_after, "enemy_front_3", BattleModel.STATUS_CONFUSION),
+			"fromTurns": 2,
+			"toTurns": 1,
+			"schemaVersion": 1,
+		}]
+	)
+	confusion_event["actorKind"] = "pet"
+	confusion_event["declaredTargetActorId"] = BattleModel.PLAYER_ACTOR_ID
+	confusion_event["targetActorId"] = "enemy_front_4"
+	confusion_event["confusionRetargeted"] = true
+	confusion_event["targetRule"] = "confusion_same_side"
+	confusion_event["statusId"] = BattleModel.STATUS_CONFUSION
+	confusion_event["statusResult"] = "confused_retarget"
+	var confusion_replay := _replay_from_final(confusion_after, _event_list([confusion_event], confusion_before, confusion_after, 7))
+	var confusion_state := confusion_replay.get("state", {}) as Dictionary
+	var confusion_events: Array = confusion_replay.get("events", [])
+	var confusion_ledgers: Array = confusion_replay.get("ledgers", [])
+	var mapped_confusion_event := confusion_events[0] as Dictionary if not confusion_events.is_empty() else {}
+	var confusion_ledger := confusion_ledgers[0] as Dictionary if not confusion_ledgers.is_empty() else {}
+	checks["confusion_retarget_replays_exactly"] = (
+		str(mapped_confusion_event.get("declaredTargetId", "")) == BattleModel.PLAYER_ACTOR_ID
+		and str(mapped_confusion_event.get("targetId", "")) == "enemy_front_4"
+		and bool(mapped_confusion_event.get("confusionRetargeted", false))
+		and str(mapped_confusion_event.get("targetRule", "")) == "confusion_same_side"
+		and str(mapped_confusion_event.get("statusId", "")) == BattleModel.STATUS_CONFUSION
+		and str(mapped_confusion_event.get("statusResult", "")) == "confused_retarget"
+		and int(BattleModel.actor_by_id(confusion_state, BattleModel.PLAYER_ACTOR_ID).get("hp", -1)) == declared_hp_before
+		and int(BattleModel.actor_by_id(confusion_state, "enemy_front_4").get("hp", -1)) == actual_hp_after
+		and BattleStatusModel.status_turns(BattleModel.actor_by_id(confusion_state, "enemy_front_3"), BattleModel.STATUS_CONFUSION) == 1
+		and str(confusion_ledger.get("declaredTargetId", "")) == BattleModel.PLAYER_ACTOR_ID
+		and str(confusion_ledger.get("resolvedTargetId", "")) == "enemy_front_4"
+		and bool(confusion_ledger.get("retargeted", false))
+		and str(confusion_ledger.get("statusResult", "")) == "confused_retarget"
+	)
+
 	checks["final_actor_snapshots_are_noop"] = (
 		bool(tick_replay.get("snapshotNoop", false))
 		and bool(expiry_replay.get("snapshotNoop", false))
@@ -237,6 +292,7 @@ static func run() -> Dictionary:
 		and bool(enemy_status_replay.get("snapshotNoop", false))
 		and bool(local_item_replay.get("snapshotNoop", false))
 		and bool(wake_replay.get("snapshotNoop", false))
+		and bool(confusion_replay.get("snapshotNoop", false))
 	)
 
 	var ok := true

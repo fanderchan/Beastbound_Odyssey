@@ -44,6 +44,11 @@ const {
   resolveRidingBattleStats,
 } = require("./auth/battle-riding-rules");
 const {
+  applyStoneDefenseReduction,
+  resolveConfusionTarget,
+  stoneDefenseExtraReduction,
+} = require("./auth/battle-control-rules");
+const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
 } = require("./auth/pet-skill-loadout");
@@ -196,6 +201,7 @@ const BATTLE_EVENT_CONTRACT_VERSION = 3;
 const BATTLE_TARGET_RULE_SLOT_ORDER = "slot_order";
 const BATTLE_TARGET_RULE_REVERSE_SLOT_ORDER = "reverse_slot_order";
 const BATTLE_TARGET_RULE_WILD_RANDOM = "wild_random";
+const BATTLE_TARGET_RULE_CONFUSION_SAME_SIDE = "confusion_same_side";
 const BATTLE_INVITE_TTL_MS = 2 * 60 * 1000;
 const BATTLE_COMMAND_TIMEOUT_MS = 99 * 1000;
 const BATTLE_TURN_PLAYBACK_GRACE_MS = 30 * 1000;
@@ -7771,6 +7777,9 @@ function battleEventMatchesTargetRule(event, targetRule) {
   if (String(event.targetRule || "") === rule) {
     return true;
   }
+  if (Boolean(event.confusionRetargeted)) {
+    return false;
+  }
   return Array.isArray(event.targetRules) && event.targetRules.some((value) => String(value || "") === rule);
 }
 
@@ -7794,6 +7803,15 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
       if (!battleCommandCanStartCombo(nextCommand)) {
         break;
       }
+      const nextActor = battleActorByActorId(battle, nextCommand && nextCommand.actorId);
+      if (
+        !nextActor ||
+        Number(nextActor.hp || 0) <= 0 ||
+        Boolean(nextActor.escaped) ||
+        battleBlockingStatusId(nextActor) !== ""
+      ) {
+        break;
+      }
       const nextResolved = battleResolvedAttackForCommand(room, battle, nextCommand, round);
       if (!nextResolved.ok || !battleResolvedAttackCanJoinCombo(group, nextResolved)) {
         break;
@@ -7805,7 +7823,7 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
   if (group.length >= 2) {
     return {
       consumed: group.length,
-      events: [battleComboAttackEvent(room, battle, group, round, sequence)],
+      events: [battleComboAttackEvent(room, battle, group, round, sequence, options)],
     };
   }
   return {
@@ -7824,6 +7842,7 @@ function battleResolvedAttackForCommand(room, battle, command, round) {
   }
   let effectiveCommand = command;
   let target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
+  const declaredTargetActorId = String(target && target.actorId || command.targetActorId || "");
   if (!target || Number(target.hp || 0) <= 0) {
     const fallbackTarget = battleRetargetActorForCommand(room, battle, actor, command, round);
     if (fallbackTarget) {
@@ -7843,13 +7862,36 @@ function battleResolvedAttackForCommand(room, battle, command, round) {
     ok: true,
     actor,
     target,
+    declaredTargetActorId,
     command: effectiveCommand,
     damage: battleAttackDamage(room, battle, effectiveCommand, actor, target),
   };
 }
 
 function battleSingleAttackEvents(room, battle, resolved, round, sequence, options = {}) {
-  const eventType = battleAttackEventTypeForCommand(resolved.command);
+  const confusion = battleConfusionAttackResolution(
+    room,
+    battle,
+    resolved.actor,
+    resolved.target,
+    round,
+    sequence,
+    resolved.command.actionId,
+    options,
+    resolved.declaredTargetActorId,
+  );
+  const target = confusion.target;
+  const command = confusion.triggered
+    ? {
+      ...resolved.command,
+      targetActorId: String(target.actorId || ""),
+      targetAccountId: String(target.accountId || ""),
+      targetUsername: String(target.username || ""),
+    }
+    : resolved.command;
+  const eventType = battleAttackEventTypeForCommand(command);
+  const attackDamageResult = battleAttackDamageResult(room, battle, command, resolved.actor, target);
+  const baseDamage = attackDamageResult.damage;
   const reaction = resolveDamageReaction({
     randomAuthority: options.battleRandomAuthority,
     roomId: room.roomId,
@@ -7857,30 +7899,30 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     round,
     sequence,
     eventType,
-    actionId: resolved.command.actionId,
-    effect: battleActionEffect(resolved.command.actionId),
+    actionId: command.actionId,
+    effect: battleActionEffect(command.actionId),
     actor: resolved.actor,
-    target: resolved.target,
-    baseDamage: resolved.damage,
+    target,
+    baseDamage,
   });
-  const hpBefore = Number(resolved.target.hp || 0);
-  const damageResult = applyBattleActorResolvedDamage(room, resolved.target, hpBefore, reaction.damage, {
+  const hpBefore = Number(target.hp || 0);
+  const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, reaction.damage, {
     dodged: reaction.dodged,
     shareWithRide: true,
     canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
   });
   const hpAfter = damageResult.hpAfter;
   const launched = damageResult.launched;
-  const statusChanges = battleWakeFromDirectDamage(resolved.target, reaction.damage, reaction.dodged);
-  syncParticipantPetSnapshotHp(room, resolved.target);
-  const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
+  const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged));
+  syncParticipantPetSnapshotHp(room, target);
+  const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   const attackEvent = battleAttackEvent(
     room,
     battle,
-    resolved.command,
+    command,
     resolved.actor,
-    resolved.target,
+    target,
     round,
     sequence,
     hpBefore,
@@ -7888,7 +7930,7 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     reaction.damage,
     expCredits,
     launched,
-    {...reaction, statusChanges, damageResult},
+    {...reaction, statusChanges, damageResult, confusion, attackDamageResult},
   );
   const events = [attackEvent];
   const counterTriggered = resolveCounterTrigger({
@@ -7898,10 +7940,10 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     round,
     sequence,
     eventType,
-    actionId: resolved.command.actionId,
-    effect: battleActionEffect(resolved.command.actionId),
+    actionId: command.actionId,
+    effect: battleActionEffect(command.actionId),
     attacker: resolved.actor,
-    target: resolved.target,
+    target,
     hpBefore,
     hpAfter,
   });
@@ -7910,7 +7952,7 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     events.push(battleCounterAttackEvent(
       room,
       battle,
-      resolved.target,
+      target,
       resolved.actor,
       round,
       sequence + 1,
@@ -7926,16 +7968,29 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
   const actionId = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER
     ? BATTLE_ACTION_ATTACK
     : BATTLE_ACTION_PET_ATTACK;
+  const confusion = battleConfusionAttackResolution(
+    room,
+    battle,
+    actor,
+    target,
+    round,
+    sequence,
+    actionId,
+    options,
+    "",
+  );
+  const actualTarget = confusion.target;
   const command = {
     actorId: String(actor.actorId || ""),
     actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
-    targetActorId: String(target.actorId || ""),
-    targetAccountId: String(target.accountId || ""),
+    targetActorId: String(actualTarget.actorId || ""),
+    targetAccountId: String(actualTarget.accountId || ""),
     actionId,
     actionKind: "counter_attack",
     skillId: actionId === BATTLE_ACTION_PET_ATTACK ? actionId : "",
   };
-  const normalAttackDamage = battleAttackDamage(room, battle, command, actor, target);
+  const attackDamageResult = battleAttackDamageResult(room, battle, command, actor, actualTarget);
+  const normalAttackDamage = attackDamageResult.damage;
   const reaction = resolveDamageReaction({
     randomAuthority: options.battleRandomAuthority,
     roomId: room.roomId,
@@ -7947,27 +8002,27 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     actionId,
     effect: battleActionEffect(actionId),
     actor,
-    target,
+    target: actualTarget,
     baseDamage: counterDamageFor(normalAttackDamage),
   });
-  const hpBefore = Number(target.hp || 0);
-  const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, reaction.damage, {
+  const hpBefore = Number(actualTarget.hp || 0);
+  const damageResult = applyBattleActorResolvedDamage(room, actualTarget, hpBefore, reaction.damage, {
     dodged: reaction.dodged,
     shareWithRide: true,
     canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
   });
   const hpAfter = damageResult.hpAfter;
   const launched = damageResult.launched;
-  const statusChanges = battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged);
-  syncParticipantPetSnapshotHp(room, target);
-  const expCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
+  const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(actualTarget, reaction.damage, reaction.dodged));
+  syncParticipantPetSnapshotHp(room, actualTarget);
+  const expCredits = battleExpCreditsForDefeat(room, battle, actor, actualTarget, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   return battleAttackEvent(
     room,
     battle,
     command,
     actor,
-    target,
+    actualTarget,
     round,
     sequence,
     hpBefore,
@@ -7975,7 +8030,7 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     reaction.damage,
     expCredits,
     launched,
-    {...reaction, eventType: "counter_attack", counterSourceEventId, statusChanges, damageResult},
+    {...reaction, eventType: "counter_attack", counterSourceEventId, statusChanges, damageResult, confusion, attackDamageResult},
   );
 }
 
@@ -8064,10 +8119,35 @@ function battleResolvedAttackCanJoinCombo(group, nextResolved) {
   return actorId !== "" && !group.some((entry) => String(entry.actor.actorId || "") === actorId);
 }
 
-function battleComboAttackEvent(room, battle, group, round, sequence) {
-  const target = group[0].target;
+function battleComboAttackEvent(room, battle, group, round, sequence, options = {}) {
+  const actor = group[0].actor;
+  const command = group[0].command;
+  const confusion = battleConfusionAttackResolution(
+    room,
+    battle,
+    actor,
+    group[0].target,
+    round,
+    sequence,
+    command.actionId,
+    options,
+    group[0].declaredTargetActorId,
+  );
+  const target = confusion.target;
   const hpBefore = Number(target.hp || 0);
-  const baseDamage = group.reduce((sum, entry) => sum + Math.max(0, Math.trunc(Number(entry.damage || 0))), 0);
+  const attackDamageResults = group.map((entry) => battleAttackDamageResult(
+    room,
+    battle,
+    {
+      ...entry.command,
+      targetActorId: String(target.actorId || ""),
+      targetAccountId: String(target.accountId || ""),
+      targetUsername: String(target.username || ""),
+    },
+    entry.actor,
+    target,
+  ));
+  const baseDamage = attackDamageResults.reduce((sum, entry) => sum + Math.max(0, Math.trunc(Number(entry.damage || 0))), 0);
   const comboBonus = Math.max(0, group.length - 1) * BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR;
   const damage = Math.max(1, baseDamage + comboBonus);
   const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
@@ -8076,21 +8156,27 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
   });
   const hpAfter = damageResult.hpAfter;
   const launched = damageResult.launched;
-  const statusChanges = battleWakeFromDirectDamage(target, damage, false);
+  const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(target, damage, false));
   syncParticipantPetSnapshotHp(room, target);
   const actors = group.map((entry) => entry.actor);
   const expCredits = battleExpCreditsForComboDefeat(room, battle, actors, target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
-  const actor = group[0].actor;
-  const command = group[0].command;
   const participantNames = actors.map((entry) => String(entry.displayName || entry.username || "参战者"));
   const participantActorIds = actors.map((entry) => String(entry.actorId || "")).filter(Boolean);
   const targetRules = group
     .map((entry) => String(entry.command && entry.command.targetRule || ""))
     .filter(Boolean);
-  const targetRule = targetRules.includes(BATTLE_TARGET_RULE_WILD_RANDOM)
+  const declaredTargetRule = targetRules.includes(BATTLE_TARGET_RULE_WILD_RANDOM)
     ? BATTLE_TARGET_RULE_WILD_RANDOM
     : (targetRules[0] || "");
+  const targetRule = confusion.triggered ? BATTLE_TARGET_RULE_CONFUSION_SAME_SIDE : declaredTargetRule;
+  const confusionFields = battleConfusionEventFields(confusion);
+  const stoneDefenseFacts = {
+    stoneDefenseApplied: attackDamageResults.some((entry) => Boolean(entry.stoneDefenseApplied)),
+    stoneDefenseExtraReduction: attackDamageResults.reduce((sum, entry) => (
+      sum + Math.max(0, Math.trunc(Number(entry.stoneDefenseExtraReduction || 0)))
+    ), 0),
+  };
   const event = {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
     eventType: "combo_attack",
@@ -8118,6 +8204,8 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     skillId: "",
     targetRule,
     targetRules,
+    ...(confusion.triggered ? {declaredTargetRule} : {}),
+    ...confusionFields,
     damage,
     comboBonus,
     blocked: Boolean(target.guarding),
@@ -8129,13 +8217,14 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     defeated: hpAfter <= 0,
     launched,
     ...battleDamageEventFields(damageResult),
+    ...battleStoneDefenseEventFields(stoneDefenseFacts),
     statusChanges,
     animation: {
       actor: "combo_attack",
       targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
       observer: "watch_target",
     },
-    message: battleDamageMessage(`${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害${battleRideDamageMessageSuffix(damageResult)}。`, target, hpAfter, launched),
+    message: battleDamageMessage(`${confusion.triggered ? `${actor.displayName || actor.username || "参战者"} 因混乱改变了合击目标，` : ""}${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害${battleRideDamageMessageSuffix(damageResult)}。`, target, hpAfter, launched),
     schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
   if (expCredits.length > 0) {
@@ -15700,6 +15789,78 @@ function battleDecrementActorStatus(actor, statusId) {
   };
 }
 
+function battleConfusionAttackResolution(
+  room,
+  battle,
+  actor,
+  declaredTarget,
+  round,
+  sequence,
+  actionId,
+  options = {},
+  originalDeclaredTargetActorId = "",
+) {
+  const declaredTargetActorId = String(originalDeclaredTargetActorId || declaredTarget && declaredTarget.actorId || "");
+  const resolution = resolveConfusionTarget({
+    randomAuthority: options.battleRandomAuthority,
+    roomId: String(room && room.roomId || ""),
+    turnSeq: Math.trunc(Number(battle && battle.turnSeq || 0)),
+    round,
+    sequence,
+    actionId,
+    actor,
+    declaredTargetActorId,
+    actors: Array.isArray(battle && battle.actors) ? battle.actors : [],
+  });
+  if (!resolution.triggered) {
+    return {
+      triggered: false,
+      declaredTargetActorId,
+      target: declaredTarget,
+      statusChanges: [],
+    };
+  }
+  const target = battleActorByActorId(battle, resolution.targetActorId);
+  if (!target || Number(target.hp || 0) <= 0) {
+    return {
+      triggered: false,
+      declaredTargetActorId,
+      target: declaredTarget,
+      statusChanges: [],
+    };
+  }
+  const turns = battleDecrementActorStatus(actor, BATTLE_STATUS_CONFUSION);
+  return {
+    triggered: true,
+    declaredTargetActorId,
+    target,
+    statusChanges: [{
+      actorId: String(actor && actor.actorId || ""),
+      statusId: BATTLE_STATUS_CONFUSION,
+      change: "decrement",
+      statusBefore: turns.statusBefore,
+      statusAfter: turns.statusAfter,
+      fromTurns: turns.fromTurns,
+      toTurns: turns.toTurns,
+      schemaVersion: 1,
+    }],
+  };
+}
+
+function battleConfusionEventFields(resolution) {
+  const value = resolution && typeof resolution === "object" && !Array.isArray(resolution) ? resolution : {};
+  if (!value.triggered) {
+    return {};
+  }
+  return {
+    declaredTargetActorId: String(value.declaredTargetActorId || ""),
+    confusionRetargeted: true,
+    targetRule: BATTLE_TARGET_RULE_CONFUSION_SAME_SIDE,
+    statusId: BATTLE_STATUS_CONFUSION,
+    statusResult: "confused_retarget",
+  };
+}
+
 function battleBlockingStatusId(actor) {
   if (battleActorHasStatus(actor, BATTLE_STATUS_STONE)) {
     return BATTLE_STATUS_STONE;
@@ -16942,6 +17103,15 @@ function battleRideDamageMessageSuffix(damageResult) {
   return `，其中${ridePetName}承受${rideDamage}，人物承受${actorDamage}${knockedNow ? `，${ridePetName}倒下并解除骑乘` : ""}`;
 }
 
+function battleStoneDefenseEventFields(damageResult) {
+  const result = damageResult && typeof damageResult === "object" && !Array.isArray(damageResult) ? damageResult : {};
+  return {
+    stoneDefenseApplied: Boolean(result.stoneDefenseApplied),
+    stoneDefenseMultiplier: Boolean(result.stoneDefenseApplied) ? 2 : 1,
+    stoneDefenseExtraReduction: Math.max(0, Math.trunc(Number(result.stoneDefenseExtraReduction || 0))),
+  };
+}
+
 function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false, reaction = {}) {
   const actionKind = String(command.actionKind || "attack");
   const actionId = String(command.actionId || BATTLE_ACTION_ATTACK);
@@ -16949,6 +17119,10 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
   const eventType = String(reaction.eventType || battleAttackEventTypeForCommand(command));
   const dodged = Boolean(reaction.dodged);
   const critical = Boolean(reaction.critical);
+  const confusion = reaction.confusion && typeof reaction.confusion === "object" && !Array.isArray(reaction.confusion)
+    ? reaction.confusion
+    : {};
+  const confusionFields = battleConfusionEventFields(confusion);
   const actorName = String(actor.displayName || actor.username || "参战者");
   const targetName = String(target.displayName || target.username || "目标");
   let message;
@@ -16965,6 +17139,9 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     const criticalMessage = critical ? " 触发幸运一击。" : "";
     message = battleDamageMessage(`${actorName} ${actionLabel} ${targetName}，造成 ${damage} 点伤害${battleRideDamageMessageSuffix(reaction.damageResult)}。${criticalMessage}`, target, hpAfter, launched);
   }
+  if (confusion.triggered) {
+    message = `${actorName} 因混乱改变了目标。${message}`;
+  }
   const event = {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
     eventType,
@@ -16980,7 +17157,9 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
     actionId,
     skillId,
-    targetRule: String(command.targetRule || ""),
+    targetRule: confusion.triggered ? BATTLE_TARGET_RULE_CONFUSION_SAME_SIDE : String(command.targetRule || ""),
+    ...(confusion.triggered ? {declaredTargetRule: String(command.targetRule || "")} : {}),
+    ...confusionFields,
     targetRollIndex: Math.trunc(Number(command.targetRollIndex || 0)),
     targetCandidateCount: Math.trunc(Number(command.targetCandidateCount || 0)),
     damage,
@@ -16993,6 +17172,7 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     defeated: hpAfter <= 0,
     launched,
     ...battleDamageEventFields(reaction.damageResult),
+    ...battleStoneDefenseEventFields(reaction.attackDamageResult),
     statusChanges: Array.isArray(reaction.statusChanges) ? clone(reaction.statusChanges) : [],
     animation: {
       actor: eventType === "counter_attack" ? "counter_attack" : "attack",
@@ -17011,10 +17191,12 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
   return event;
 }
 
-function battleAttackDamage(room, battle, command, actor, target) {
+function battleAttackDamageResult(room, battle, command, actor, target) {
   const seed = `${room.seed || room.roomId}:${battle.turnSeq}:${battle.round}:${command.actorId}:${command.targetActorId}`;
   const roll = Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 4), 16) % 7;
   const reduction = target.guarding ? BATTLE_DEFEND_REDUCTION : 0;
+  const defenseFactor = String(command.actionKind || "") === "pet_skill" ? 0.25 : 0.35;
+  const extraStoneReduction = stoneDefenseExtraReduction(target, defenseFactor);
   let baseDamage = BATTLE_BASE_ATTACK_DAMAGE;
   if (String(actor.kind || "") === BATTLE_ACTOR_KIND_PET || String(actor.kind || "") === BATTLE_ACTOR_KIND_WILD_PET) {
     baseDamage = Math.max(8, Math.round(Number(actor.attack || DEFAULT_PET_BATTLE_STATS.attack) * 0.75));
@@ -17022,7 +17204,17 @@ function battleAttackDamage(room, battle, command, actor, target) {
   if (String(command.actionKind || "") === "pet_skill") {
     baseDamage += Math.max(0, Math.trunc(Number(battleActionEffect(command.actionId).amountBonus || 12)));
   }
-  return Math.max(1, baseDamage + roll - reduction);
+  const damageBeforeStone = Math.max(1, baseDamage + roll - reduction);
+  const stoneResult = applyStoneDefenseReduction(damageBeforeStone, extraStoneReduction);
+  return {
+    damage: stoneResult.damage,
+    stoneDefenseApplied: battleActorHasStatus(target, BATTLE_STATUS_STONE),
+    stoneDefenseExtraReduction: stoneResult.extraReduction,
+  };
+}
+
+function battleAttackDamage(room, battle, command, actor, target) {
+  return battleAttackDamageResult(room, battle, command, actor, target).damage;
 }
 
 function accountById(data, accountId) {

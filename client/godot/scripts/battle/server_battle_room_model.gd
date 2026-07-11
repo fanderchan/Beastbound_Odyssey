@@ -1217,6 +1217,15 @@ static func _local_server_resolved_damage_event(state: Dictionary, server_event:
 	)
 	if target_id == "":
 		return {}
+	var declared_target_id := _local_actor_id_for_server_actor(
+		state,
+		str(server_event.get("declaredTargetActorId", "")),
+		"",
+		"",
+		""
+	)
+	if declared_target_id == "":
+		declared_target_id = target_id
 	var target := BattleModel.actor_by_id(state, target_id)
 	var participant_ids: Array[String] = []
 	if event_type == "combo_attack":
@@ -1243,6 +1252,7 @@ static func _local_server_resolved_damage_event(state: Dictionary, server_event:
 		"attackerId": actor_id,
 		"participantIds": participant_ids,
 		"targetId": target_id,
+		"declaredTargetId": declared_target_id,
 		"targetSide": str(target.get("side", BattleModel.SIDE_ENEMY)),
 		"damage": damage,
 		"speed": int(actor.get("quick", actor.get("speed", 0))),
@@ -1257,6 +1267,8 @@ static func _local_server_resolved_damage_event(state: Dictionary, server_event:
 		"dodged": bool(server_event.get("dodged", false)),
 		"critical": bool(server_event.get("critical", false)),
 		"counterTriggered": bool(server_event.get("counterTriggered", false)),
+		"confusionRetargeted": bool(server_event.get("confusionRetargeted", false)),
+		"targetRule": str(server_event.get("targetRule", "")),
 		"serverEventId": str(server_event.get("eventId", "")),
 		"serverEventType": event_type,
 		"serverMessage": str(server_event.get("message", "")),

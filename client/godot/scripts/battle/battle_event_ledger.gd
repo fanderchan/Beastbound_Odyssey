@@ -8,7 +8,7 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 	var sequence := int(source_event.get("sequence", 0))
 	var battle_id := str(state.get("id", ""))
 	var round_no := int(state.get("round", 1))
-	var declared_target_id := str(source_event.get("targetId", ""))
+	var declared_target_id := str(source_event.get("declaredTargetId", source_event.get("targetId", "")))
 	var resolved_target_id := str(state.get("lastTargetId", declared_target_id))
 	var target_ids := _string_array(state.get("lastTargetIds", []))
 	if target_ids.is_empty() and resolved_target_id != "":

@@ -1967,7 +1967,8 @@ static func _server_status_changes_for_actor(event: Dictionary, actor_id: String
 
 static func _actor_with_server_status_after(actor: Dictionary, event: Dictionary, actor_id: String) -> Dictionary:
 	var next_actor := actor.duplicate(true)
-	if event.has("serverStatusesAfter"):
+	var exact_status_actor_id := str(event.get("targetId", event.get("attackerId", "")))
+	if event.has("serverStatusesAfter") and actor_id == exact_status_actor_id:
 		next_actor["statuses"] = (event.get("serverStatusesAfter", {}) as Dictionary).duplicate(true) if event.get("serverStatusesAfter", {}) is Dictionary else {}
 		next_actor["poisoned"] = BattleStatusModel.has_status(next_actor, STATUS_POISON)
 		return next_actor
@@ -2015,6 +2016,25 @@ static func _actor_with_server_status_after(actor: Dictionary, event: Dictionary
 	next_actor["statuses"] = statuses
 	next_actor["poisoned"] = BattleStatusModel.has_status(next_actor, STATUS_POISON)
 	return next_actor
+
+
+static func _actors_with_server_status_changes_for_other_actors(actors: Array, event: Dictionary, excluded_actor_id: String) -> Array:
+	var next_actors := actors
+	var handled_ids: Array[String] = []
+	for change in _server_status_changes(event):
+		var actor_id := str(change.get("actorId", "")).strip_edges()
+		if actor_id == "" or actor_id == excluded_actor_id or handled_ids.has(actor_id):
+			continue
+		for index in range(next_actors.size()):
+			if not (next_actors[index] is Dictionary):
+				continue
+			var candidate := next_actors[index] as Dictionary
+			if str(candidate.get("id", "")) != actor_id:
+				continue
+			next_actors[index] = _actor_with_server_status_after(candidate, event, actor_id)
+			handled_ids.append(actor_id)
+			break
+	return next_actors
 
 
 static func _apply_server_item_count_if_owned(state: Dictionary, event: Dictionary) -> Dictionary:
@@ -2716,6 +2736,7 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	if not launched and hp_after > 0 and (str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet"):
 		target["petBattleState"] = PET_STATE_BATTLE
 	actors[target_index] = target
+	actors = _actors_with_server_status_changes_for_other_actors(actors, event, target_id)
 	state["actors"] = actors
 	state = _sync_player_pet_party_from_actor(state, target)
 	state["phase"] = "round_events"
@@ -2742,7 +2763,10 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	state["lastReactionKind"] = "dodge" if dodged else ("critical" if critical else ("counter" if event_type == "counter_attack" else ""))
 	var status_changes := _server_status_changes(event)
 	state["lastStatusChanges"] = status_changes
-	if not status_changes.is_empty():
+	if str(event.get("statusId", "")).strip_edges() != "" or str(event.get("statusResult", "")).strip_edges() != "":
+		state["lastStatusId"] = str(event.get("statusId", ""))
+		state["lastStatusResult"] = str(event.get("statusResult", ""))
+	elif not status_changes.is_empty():
 		state["lastStatusId"] = str(status_changes[0].get("statusId", ""))
 		state["lastStatusResult"] = str(status_changes[0].get("change", ""))
 
