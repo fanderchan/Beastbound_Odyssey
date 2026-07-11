@@ -3796,6 +3796,8 @@ func _profile_after_rebirths_for_test(count: int) -> Dictionary:
 		if not bool(execute_result.get("ok", false)):
 			break
 		profile = execute_result.get("profile", profile) as Dictionary
+		if target < 6:
+			profile = _profile_with_rebirth_test_level(profile, 80)
 	return PlayerProgressModel.normalize_profile(profile)
 
 

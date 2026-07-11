@@ -9395,7 +9395,8 @@ func _run_auto_player_rebirth_execute_check() -> void:
 	var data_ok = (
 		not quest.is_empty()
 		and QuestModel.rebirth_completion_target(quest) == 1
-		and QuestModel.next_quest_id(QuestModel.quest_for_id("quest_capture_wuli")) == "quest_rebirth_1_guidance"
+		and QuestModel.next_quest_id(QuestModel.quest_for_id("quest_capture_wuli")) == "quest_open_codex_panel"
+		and QuestModel.next_quest_id(QuestModel.quest_for_id("quest_open_account_panel")) == "quest_rebirth_1_guidance"
 	)
 	var quest_profile = host._profile_with_active_quest("quest_rebirth_1_guidance")
 	host.player_profile = quest_profile
@@ -9566,20 +9567,26 @@ func _run_auto_player_rebirth_chain_check() -> void:
 			and PlayerProgressModel.rebirth_count(executed_profile) == target
 			and int((executed_profile.get("player", {}) as Dictionary).get("level", 0)) == 1
 			and (executed_profile.get(PlayerProgressModel.REBIRTH_HISTORY_KEY, []) as Array).size() == target
-			and PlayerProgressModel.active_quest_id(executed_profile) == next_expected
+			and PlayerProgressModel.active_quest_id(executed_profile) == ""
 			and bool(requirement_ready.get("ok", false))
 		)
-		sequence_ok = sequence_ok and active_ok and completed_active_ok and quest_record_ok and execute_ok
-		chain_messages.append("%d:%s/%s/%s/%s" % [
+		var next_profile: Dictionary = executed_profile
+		var next_unlock_ok := PlayerProgressModel.active_quest_id(next_profile) == ""
+		if target < 6:
+			next_profile = host._profile_with_rebirth_test_level(executed_profile, 80) as Dictionary
+			next_unlock_ok = PlayerProgressModel.active_quest_id(next_profile) == next_expected
+		sequence_ok = sequence_ok and active_ok and completed_active_ok and quest_record_ok and execute_ok and next_unlock_ok
+		chain_messages.append("%d:%s/%s/%s/%s/%s" % [
 			target,
 			str(active_ok),
 			str(completed_active_ok),
 			str(quest_record_ok),
 			str(execute_ok),
+			str(next_unlock_ok),
 		])
 		if target == 5:
-			after_five_profile = executed_profile.duplicate(true)
-		profile = executed_profile
+			after_five_profile = next_profile.duplicate(true)
+		profile = next_profile
 
 	var maxed_preview = PlayerProgressModel.rebirth_preview(profile)
 	var maxed_ok = (
@@ -9662,7 +9669,17 @@ func _run_auto_remote_stable_unlock_check() -> void:
 		and not PlayerProgressModel.has_remote_stable(after_three)
 	)
 
-	host.player_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	var four_rebirth_profile = PlayerProgressModel.with_rebirth_count(PlayerProgressModel.default_profile(), 4)
+	four_rebirth_profile["petInstances"] = [
+		PlayerProgressModel.create_pet_instance_from_form(
+			"pet_bui_tough",
+			"远程兽栏布伊",
+			"bui_normal_thick_earth10",
+			PlayerProgressModel.PET_STATE_STANDBY,
+			20
+		),
+	]
+	host.player_profile = PlayerProgressModel.normalize_profile(four_rebirth_profile)
 	var remote_unlock_active_id = PlayerProgressModel.active_quest_id(host.player_profile)
 	var optional_quest = PlayerProgressModel.optional_quest_for_interaction(host.player_profile, "firebud_stable_keeper")
 	var four_ready = (
@@ -12294,20 +12311,20 @@ func _run_auto_pet_management_safety_check() -> void:
 	var batch_rest_profile = batch_rest_result.get("profile", {}) as Dictionary
 	var batch_rest_ok = (
 		bool(batch_rest_result.get("ok", false))
-		and int(batch_rest_result.get("changedCount", 0)) == 2
-		and int(batch_rest_result.get("skippedCount", 0)) == 3
+		and int(batch_rest_result.get("changedCount", 0)) == 3
+		and int(batch_rest_result.get("skippedCount", 0)) == 2
 		and str(batch_rest_profile.get("activePetInstanceId", "")) == ""
 		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_active").get("state", "")) == PlayerProgressModel.PET_STATE_REST
 		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_standby").get("state", "")) == PlayerProgressModel.PET_STATE_REST
 		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_locked").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
-		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_task").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
+		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_task").get("state", "")) == PlayerProgressModel.PET_STATE_REST
 		and str(PlayerProgressModel.pet_instance_by_id(batch_rest_profile, "pet_state_ride").get("state", "")) == PlayerProgressModel.PET_STATE_RIDING
 	)
 	var batch_standby_result = PlayerProgressModel.batch_set_party_pet_state(batch_rest_profile, PlayerProgressModel.PET_STATE_STANDBY)
 	var batch_standby_profile = batch_standby_result.get("profile", {}) as Dictionary
 	var batch_standby_ok = (
 		bool(batch_standby_result.get("ok", false))
-		and int(batch_standby_result.get("changedCount", 0)) == 3
+		and int(batch_standby_result.get("changedCount", 0)) == 4
 		and int(batch_standby_result.get("skippedCount", 0)) == 1
 		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_active").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 		and str(PlayerProgressModel.pet_instance_by_id(batch_standby_profile, "pet_state_standby").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
@@ -12345,8 +12362,7 @@ func _run_auto_pet_management_safety_check() -> void:
 		and str(locked_target_result.get("message", "")).find("锁定") >= 0
 		and not bool(locked_helper_result.get("ok", false))
 		and str(locked_helper_result.get("message", "")).find("材料") >= 0
-		and not bool(task_target_result.get("ok", false))
-		and str(task_target_result.get("message", "")).find("任务需要") >= 0
+		and bool(task_target_result.get("ok", false))
 	)
 
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -12380,7 +12396,7 @@ func _run_auto_pet_management_safety_check() -> void:
 		not bool(locked_drop.get("ok", false))
 		and str(locked_drop.get("message", "")).find("锁定") >= 0
 		and not bool(locked_deliver.get("ok", false))
-		and not bool(task_clear.get("ok", false))
+		and bool(task_clear.get("ok", false))
 		and bool(lock_result.get("locked", false))
 		and not bool(unlock_result.get("locked", true))
 		and batch_pet_state == PlayerProgressModel.PET_STATE_STORAGE

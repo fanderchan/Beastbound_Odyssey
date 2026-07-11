@@ -165,6 +165,7 @@
 
 - [x] **P0.1 恢复空白新账号后的可信 Godot 回归门禁**
   - 证据（2026-07-11）：先稳定复现六个已知失败（`.run/godot_auto_checks/2026-07-10T17-27-04-539Z.log`），扩展回归又复现 battle item/item count/switch pet 三个同源失败；改为显式宠物、战斗道具、银行资产和迁移档案夹具后，最终组合检查 11/11 通过（`.run/godot_auto_checks/2026-07-10T17-41-34-128Z.log`），宠物指令/选敌补充组 6/6 通过（`.run/godot_auto_checks/2026-07-10T17-40-10-114Z.log`）。`--auto-server-profile-contract-check` 同时输出 `empty_start=true populated=true`，继续锁定默认零宠、空背包、零装备、零钻石；未连接或写入 MySQL。
+  - 后续证据（2026-07-11）：P0.2d 扩展回归复现人物转生执行、宠物安全、1–6 转链和远程兽栏四项过时夹具；它们分别错误跳过图鉴/家族/账号教学、把已有乌力当作“捕捉新乌力”的任务资产、在转生回 Lv1 后立即期待下一项 Lv80 资格，并依赖默认档案自带宠物。仅更新 QA 事实与显式宠物夹具，不改玩法；Godot parse 及人物转生执行、宠物安全、任务链、宠物管理、六转链、远程兽栏、试炼执行 7/7 通过。见 `docs/phase_226_current_quest_and_rebirth_qa_fixtures.md`。
 - [ ] **P0.2 统一 Lv1 4V、隐藏成长、观察与 Lv140 双端事实**
   - [x] **P0.2a 双端权威成长影子算法与黄金向量**
     - 证据（2026-07-11）：新增版本化 `pet_growth_authority_v1` Node/Godot 纯算法，明确 SHA-256 随机键、远离 0 取整、6 位量化、不可被培养回写的 Lv1 公开 4V、隐藏个体底板及可选逐级独立波动；共享 3 组黄金向量覆盖现有蓝人龙输入、中文种子、三种分布、培养修正和 Lv1/2/20/140，Node 5/5 通过，Godot 权威向量、既有物种模拟与观察组合 4/4 通过。当前只做 shadow，不接管运行时、不改数值、不迁移或重滚旧宠；完整契约见 `docs/phase_206_pet_growth_authority_contract.md`。
