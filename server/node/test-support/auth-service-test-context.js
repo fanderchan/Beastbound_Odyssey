@@ -22,7 +22,7 @@ const fixtureManualEncounterAccess = Object.freeze({
   },
 });
 
-// 测试默认放开整档写入闸门并注入显式遭遇夹具，方便旧战斗用例精确造敌；
+// 测试默认放开整档写入闸门并注入显式遭遇与战斗随机夹具，方便旧战斗用例精确造敌并保持确定性；
 // useStrictPetEncounterAuthority: true 会改走与生产相同的地图目录与位置校验。
 function createAuthService(options = {}) {
   const serviceOptions = {"allowFullProfileSave": true, ...options};
@@ -48,6 +48,9 @@ function createAuthService(options = {}) {
   }
   if (!useStrictManualEncounterAccess && !serviceOptions.manualEncounterAccess) {
     serviceOptions.manualEncounterAccess = fixtureManualEncounterAccess;
+  }
+  if (!serviceOptions.battleRandomAuthority) {
+    serviceOptions.battleRandomAuthority = createFixtureBattleRandomAuthority();
   }
   return createAuthServiceStrict(serviceOptions);
 }
@@ -124,6 +127,37 @@ function createFixturePetEncounterPermitAuthority() {
     },
     consume() {
       return {ok: true};
+    },
+  });
+}
+
+function createFixtureBattleRandomAuthority() {
+  const rooms = new Set();
+  const fixedRoll = (roomId) => {
+    assert.equal(rooms.has(String(roomId || "")), true);
+    return 0.9999;
+  };
+  return Object.freeze({
+    openRoom(roomId) {
+      const id = String(roomId || "");
+      if (rooms.has(id)) {
+        return false;
+      }
+      rooms.add(id);
+      return true;
+    },
+    closeRoom(roomId) {
+      return rooms.delete(String(roomId || ""));
+    },
+    hasRoom(roomId) {
+      return rooms.has(String(roomId || ""));
+    },
+    roll(roomId) {
+      return fixedRoll(roomId);
+    },
+    index(roomId, context, size) {
+      const count = Math.max(1, Math.trunc(Number(size || 0)));
+      return Math.min(count - 1, Math.floor(fixedRoll(roomId) * count));
     },
   });
 }

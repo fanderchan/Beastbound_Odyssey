@@ -27,6 +27,11 @@ const {loadBattlePassiveCatalog} = require("./auth/battle-passive-catalog");
 const {createBattleActorRules} = require("./auth/battle-actor-rules");
 const {createBattleRandomAuthority} = require("./auth/battle-random-authority");
 const {
+  resolveCounterTrigger,
+  resolveDamageReaction,
+} = require("./auth/battle-reaction-resolver");
+const {counterDamageFor} = require("./auth/battle-reaction-rules");
+const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
 } = require("./auth/pet-skill-loadout");
@@ -175,6 +180,7 @@ const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_PLAYER_COMBO_BASE_RATE = 0.50;
 const BATTLE_MONSTER_COMBO_BASE_RATE = 0.20;
 const BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR = 8;
+const BATTLE_EVENT_CONTRACT_VERSION = 2;
 const BATTLE_TARGET_RULE_SLOT_ORDER = "slot_order";
 const BATTLE_TARGET_RULE_REVERSE_SLOT_ORDER = "reverse_slot_order";
 const BATTLE_TARGET_RULE_WILD_RANDOM = "wild_random";
@@ -7475,10 +7481,10 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       commandIndex += 1;
       continue;
     }
-    const attackResult = battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, round, sequence);
+    const attackResult = battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, round, sequence, options);
     commandIndex += Math.max(1, Number(attackResult.consumed || 1));
-    if (attackResult.event) {
-      events.push(attackResult.event);
+    for (const event of Array.isArray(attackResult.events) ? attackResult.events : []) {
+      events.push(event);
       sequence += 1;
     }
     if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE || String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
@@ -7490,7 +7496,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     }
   }
   const eventList = {
-    schemaVersion: 1,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
     kind: "battle_event_list",
     roomId: room.roomId,
     round,
@@ -7581,17 +7587,17 @@ function battleEventMatchesTargetRule(event, targetRule) {
   return Array.isArray(event.targetRules) && event.targetRules.some((value) => String(value || "") === rule);
 }
 
-function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, round, sequence) {
+function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, round, sequence, options = {}) {
   const command = orderedCommands[commandIndex];
   const resolved = battleResolvedAttackForCommand(room, battle, command, round);
   if (!resolved.ok) {
     if (resolved.missing && String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
       return {
         consumed: 1,
-        event: battleTargetMissingEvent(room, battle, command, resolved.actor || {}, round, sequence),
+        events: [battleTargetMissingEvent(room, battle, command, resolved.actor || {}, round, sequence)],
       };
     }
-    return {consumed: 1, event: null};
+    return {consumed: 1, events: []};
   }
 
   const group = [resolved];
@@ -7612,21 +7618,12 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
   if (group.length >= 2) {
     return {
       consumed: group.length,
-      event: battleComboAttackEvent(room, battle, group, round, sequence),
+      events: [battleComboAttackEvent(room, battle, group, round, sequence)],
     };
   }
-
-  const hpBefore = Number(resolved.target.hp || 0);
-  const hpAfter = Math.max(0, hpBefore - resolved.damage);
-  const launched = applyBattleActorDamageResult(room, resolved.target, hpBefore, hpAfter, resolved.damage, {
-    canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
-  });
-  syncParticipantPetSnapshotHp(room, resolved.target);
-  const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
-  appendBattleExpCredits(battle, expCredits);
   return {
     consumed: 1,
-    event: battleAttackEvent(room, battle, resolved.command, resolved.actor, resolved.target, round, sequence, hpBefore, hpAfter, resolved.damage, expCredits, launched),
+    events: battleSingleAttackEvents(room, battle, resolved, round, sequence, options),
   };
 }
 
@@ -7662,6 +7659,146 @@ function battleResolvedAttackForCommand(room, battle, command, round) {
     command: effectiveCommand,
     damage: battleAttackDamage(room, battle, effectiveCommand, actor, target),
   };
+}
+
+function battleSingleAttackEvents(room, battle, resolved, round, sequence, options = {}) {
+  const eventType = battleAttackEventTypeForCommand(resolved.command);
+  const reaction = resolveDamageReaction({
+    randomAuthority: options.battleRandomAuthority,
+    roomId: room.roomId,
+    turnSeq: battle.turnSeq,
+    round,
+    sequence,
+    eventType,
+    actionId: resolved.command.actionId,
+    effect: battleActionEffect(resolved.command.actionId),
+    actor: resolved.actor,
+    target: resolved.target,
+    baseDamage: resolved.damage,
+  });
+  const hpBefore = Number(resolved.target.hp || 0);
+  const hpAfter = Math.max(0, hpBefore - reaction.damage);
+  const launched = reaction.dodged
+    ? applyBattleActorDodgeResult(room, resolved.target)
+    : applyBattleActorDamageResult(room, resolved.target, hpBefore, hpAfter, reaction.damage, {
+      canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+    });
+  syncParticipantPetSnapshotHp(room, resolved.target);
+  const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
+  appendBattleExpCredits(battle, expCredits);
+  const attackEvent = battleAttackEvent(
+    room,
+    battle,
+    resolved.command,
+    resolved.actor,
+    resolved.target,
+    round,
+    sequence,
+    hpBefore,
+    hpAfter,
+    reaction.damage,
+    expCredits,
+    launched,
+    reaction,
+  );
+  const events = [attackEvent];
+  const counterTriggered = resolveCounterTrigger({
+    randomAuthority: options.battleRandomAuthority,
+    roomId: room.roomId,
+    turnSeq: battle.turnSeq,
+    round,
+    sequence,
+    eventType,
+    actionId: resolved.command.actionId,
+    effect: battleActionEffect(resolved.command.actionId),
+    attacker: resolved.actor,
+    target: resolved.target,
+    hpBefore,
+    hpAfter,
+  });
+  attackEvent.counterTriggered = counterTriggered;
+  if (counterTriggered) {
+    events.push(battleCounterAttackEvent(
+      room,
+      battle,
+      resolved.target,
+      resolved.actor,
+      round,
+      sequence + 1,
+      sequence,
+      attackEvent.eventId,
+      options,
+    ));
+  }
+  return events;
+}
+
+function battleCounterAttackEvent(room, battle, actor, target, round, sequence, sourceSequence, counterSourceEventId, options = {}) {
+  const actionId = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER
+    ? BATTLE_ACTION_ATTACK
+    : BATTLE_ACTION_PET_ATTACK;
+  const command = {
+    actorId: String(actor.actorId || ""),
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    targetActorId: String(target.actorId || ""),
+    targetAccountId: String(target.accountId || ""),
+    actionId,
+    actionKind: "counter_attack",
+    skillId: actionId === BATTLE_ACTION_PET_ATTACK ? actionId : "",
+  };
+  const normalAttackDamage = battleAttackDamage(room, battle, command, actor, target);
+  const reaction = resolveDamageReaction({
+    randomAuthority: options.battleRandomAuthority,
+    roomId: room.roomId,
+    turnSeq: battle.turnSeq,
+    round,
+    sequence,
+    rollSequence: Math.trunc(Number(sourceSequence || 0)) + 500,
+    eventType: "counter_attack",
+    actionId,
+    effect: battleActionEffect(actionId),
+    actor,
+    target,
+    baseDamage: counterDamageFor(normalAttackDamage),
+  });
+  const hpBefore = Number(target.hp || 0);
+  const hpAfter = Math.max(0, hpBefore - reaction.damage);
+  const launched = reaction.dodged
+    ? applyBattleActorDodgeResult(room, target)
+    : applyBattleActorDamageResult(room, target, hpBefore, hpAfter, reaction.damage, {
+      canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+    });
+  syncParticipantPetSnapshotHp(room, target);
+  const expCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
+  appendBattleExpCredits(battle, expCredits);
+  return battleAttackEvent(
+    room,
+    battle,
+    command,
+    actor,
+    target,
+    round,
+    sequence,
+    hpBefore,
+    hpAfter,
+    reaction.damage,
+    expCredits,
+    launched,
+    {...reaction, eventType: "counter_attack", counterSourceEventId},
+  );
+}
+
+function battleAttackEventTypeForCommand(command) {
+  return String(command && command.actionKind || "attack") === "pet_skill" ? "pet_skill" : "basic_attack";
+}
+
+function applyBattleActorDodgeResult(room, target) {
+  target.actionState = "dodge";
+  target.launched = false;
+  target.revivable = true;
+  delete target.launchHpBefore;
+  syncParticipantPetSnapshotHp(room, target);
+  return false;
 }
 
 function battleCommandDealsAttackDamage(command) {
@@ -7790,6 +7927,9 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     damage,
     comboBonus,
     blocked: Boolean(target.guarding),
+    dodged: false,
+    critical: false,
+    counterTriggered: false,
     hpBefore,
     hpAfter,
     defeated: hpAfter <= 0,
@@ -7800,7 +7940,7 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
       observer: "watch_target",
     },
     message: battleDamageMessage(`${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害。`, target, hpAfter, launched),
-    schemaVersion: 1,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
   if (expCredits.length > 0) {
     event.expCredits = clone(expCredits);
@@ -16358,12 +16498,29 @@ function battleDamageMessage(baseMessage, target, hpAfter, launched) {
   return baseMessage;
 }
 
-function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false) {
+function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false, reaction = {}) {
   const actionKind = String(command.actionKind || "attack");
   const actionId = String(command.actionId || BATTLE_ACTION_ATTACK);
   const skillId = String(command.skillId || "");
-  const eventType = actionKind === "pet_skill" ? "pet_skill" : "basic_attack";
-  const actionLabel = actionKind === "pet_skill" ? "使用技能" : "攻击了";
+  const eventType = String(reaction.eventType || battleAttackEventTypeForCommand(command));
+  const dodged = Boolean(reaction.dodged);
+  const critical = Boolean(reaction.critical);
+  const actorName = String(actor.displayName || actor.username || "参战者");
+  const targetName = String(target.displayName || target.username || "目标");
+  let message;
+  if (dodged) {
+    if (eventType === "counter_attack") {
+      message = `${actorName} 发起反击，${targetName} 闪避了。`;
+    } else if (actionKind === "pet_skill") {
+      message = `${actorName} 对 ${targetName} 使用技能，但被闪避了。`;
+    } else {
+      message = `${actorName} 攻击 ${targetName}，但被闪避了。`;
+    }
+  } else {
+    const actionLabel = eventType === "counter_attack" ? "反击了" : (actionKind === "pet_skill" ? "使用技能攻击了" : "攻击了");
+    const criticalMessage = critical ? " 触发幸运一击。" : "";
+    message = battleDamageMessage(`${actorName} ${actionLabel} ${targetName}，造成 ${damage} 点伤害。${criticalMessage}`, target, hpAfter, launched);
+  }
   const event = {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
     eventType,
@@ -16384,18 +16541,24 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     targetCandidateCount: Math.trunc(Number(command.targetCandidateCount || 0)),
     damage,
     blocked: Boolean(target.guarding),
+    dodged,
+    critical,
+    counterTriggered: false,
     hpBefore,
     hpAfter,
     defeated: hpAfter <= 0,
     launched,
     animation: {
-      actor: "attack",
-      targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
+      actor: eventType === "counter_attack" ? "counter_attack" : "attack",
+      targetReaction: dodged ? "dodge" : (launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt")),
       observer: "watch_target",
     },
-    message: battleDamageMessage(`${actor.displayName || actor.username} ${actionLabel} ${target.displayName || target.username}，造成 ${damage} 点伤害。`, target, hpAfter, launched),
-    schemaVersion: 1,
+    message,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
+  if (eventType === "counter_attack") {
+    event.counterSourceEventId = String(reaction.counterSourceEventId || "");
+  }
   if (Array.isArray(expCredits) && expCredits.length > 0) {
     event.expCredits = clone(expCredits);
   }

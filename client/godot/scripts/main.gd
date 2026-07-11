@@ -825,6 +825,7 @@ var auto_server_battle_pet_command_live_check: bool = false
 var auto_server_battle_switch_pet_live_check: bool = false
 var auto_server_battle_item_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
+var auto_server_battle_reaction_replay_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
 var auto_server_solo_pve_live_check: bool = false
 var auto_server_party_pve_sync_live_check: bool = false
@@ -1266,6 +1267,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_item_live_check")
 	elif auto_server_battle_target_mapping_check:
 		call_deferred("_run_auto_server_battle_target_mapping_check")
+	elif auto_server_battle_reaction_replay_check:
+		call_deferred("_run_auto_server_battle_reaction_replay_check")
 	elif auto_server_battle_stale_room_check:
 		call_deferred("_run_auto_server_battle_stale_room_check")
 	elif auto_server_solo_pve_live_check:
@@ -2150,6 +2153,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_item_live_check = true
 		elif arg == "--auto-server-battle-target-mapping-check":
 			auto_server_battle_target_mapping_check = true
+		elif arg == "--auto-server-battle-reaction-replay-check":
+			auto_server_battle_reaction_replay_check = true
 		elif arg == "--auto-server-battle-stale-room-check":
 			auto_server_battle_stale_room_check = true
 		elif arg == "--auto-server-solo-pve-live-check":
@@ -4880,6 +4885,10 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 
 func _run_auto_server_battle_target_mapping_check() -> void:
 	await _auto_checks()._run_auto_server_battle_target_mapping_check()
+
+
+func _run_auto_server_battle_reaction_replay_check() -> void:
+	await _auto_checks()._run_auto_server_battle_reaction_replay_check()
 
 
 func _auto_fetch_server_profile_for_session(session: Dictionary) -> Dictionary:
@@ -10506,7 +10515,7 @@ func _play_next_battle_event() -> void:
 		battle_last_round_applied_events += 1
 		_record_battle_event(event, ledger)
 		var counter_event = battle_state.get("lastCounterEvent", {})
-		if counter_event is Dictionary and not (counter_event as Dictionary).is_empty():
+		if not bool(event.get("serverResolved", false)) and counter_event is Dictionary and not (counter_event as Dictionary).is_empty():
 			battle_event_queue.push_front((counter_event as Dictionary).duplicate(true))
 		battle_current_event = BattleEventLedger.playback_event(event, ledger)
 		_add_battle_event_feedback(battle_current_event, ledger)

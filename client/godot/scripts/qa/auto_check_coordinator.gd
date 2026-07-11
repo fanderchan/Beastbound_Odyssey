@@ -14,6 +14,7 @@ const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd"
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
+const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
@@ -741,8 +742,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var protocol_v3_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 3
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v3_ok else "failed"
+	var protocol_v4_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 4
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v4_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -1808,7 +1809,7 @@ func _run_auto_battle_auto_attack_check() -> void:
 
 func _run_auto_battle_auto_10v10_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -15645,7 +15646,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 3
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 4
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -20426,6 +20427,16 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		host.world_log_message.replace("\n", " / "),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_server_battle_reaction_replay_check() -> void:
+	var report := ServerBattleReactionReplayCheck.run()
+	var ok := bool(report.get("ok", false))
+	print("server battle reaction replay check ready: status=%s checks=%s" % [
+		"ok" if ok else "failed",
+		JSON.stringify(report.get("checks", {})),
+	])
+	host.get_tree().quit(0 if ok else 1)
 
 func _run_auto_server_solo_pve_live_check() -> void:
 	host.profile_save_enabled = false

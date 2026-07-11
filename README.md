@@ -158,7 +158,7 @@ godot --path client/godot --scene res://scenes/Main.tscn
 
 客户端登录面板和顶部 HUD 都显示当前构建版本，例如 `版本 0.1.0`。这个值来自 `ServerAuthClientModel.CLIENT_VERSION`，同一个常量也会写入 HTTP 请求头 `X-Beastbound-Client-Version` 和 WebSocket 查询参数 `clientVersion`。
 
-服务器兼容判断使用独立协议号，不用构建号做硬性匹配。当前窗口是 `minClientProtocolVersion=1` 到 `maxClientProtocolVersion=1`；只改 UI、文案、资源或不改变请求/响应结构的修复，可以提升构建版本但保持协议号不变。任何会破坏 HTTP/WS 字段、语义或存档交互的改动，必须提升 `CLIENT_PROTOCOL_VERSION` / `PROTOCOL_VERSION`，并在服务端调整 `MIN_CLIENT_PROTOCOL_VERSION` 与 `MAX_CLIENT_PROTOCOL_VERSION` 窗口。
+服务器兼容判断使用独立协议号，不用构建号做硬性匹配。当前窗口是 `minClientProtocolVersion=4` 到 `maxClientProtocolVersion=4`；只改 UI、文案、资源或不改变请求/响应结构的修复，可以提升构建版本但保持协议号不变。任何会破坏 HTTP/WS 字段、语义或存档交互的改动，必须提升 `CLIENT_PROTOCOL_VERSION` / `PROTOCOL_VERSION`，并在服务端调整 `MIN_CLIENT_PROTOCOL_VERSION` 与 `MAX_CLIENT_PROTOCOL_VERSION` 窗口。
 
 不在窗口内或缺少版本信息的客户端会收到 HTTP `426`，响应里带中文升级提示、服务器版本、协议窗口和预留的 `hotUpdate` 字段。当前还没有热更新包，`hotUpdate.required=false` 仅作为后续发布通道占位。
 

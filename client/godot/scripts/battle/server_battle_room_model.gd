@@ -129,6 +129,7 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 				"basic_attack",
 				"pet_skill",
 				"combo_attack",
+				"counter_attack",
 				"item_heal",
 				"item_heal_all",
 				"item_poison",
@@ -155,8 +156,30 @@ static func state_at_server_event_list_start(state: Dictionary, event_list: Dict
 		if not server_event.has("hpBefore"):
 			continue
 		started_actor_ids[target_id] = true
-		next_state = BattleModel.set_actor_hp(next_state, target_id, int(server_event.get("hpBefore", 0)))
+		var hp_before := maxi(0, int(server_event.get("hpBefore", 0)))
+		next_state = BattleModel.set_actor_hp(next_state, target_id, hp_before)
+		if hp_before > 0:
+			next_state = _restore_living_actor_at_event_list_start(next_state, target_id)
 	return next_state
+
+
+static func _restore_living_actor_at_event_list_start(state: Dictionary, actor_id: String) -> Dictionary:
+	var actors: Array = state.get("actors", []) if state.get("actors", []) is Array else []
+	var index := BattleModel.actor_index(state, actor_id)
+	if index < 0:
+		return state
+	var actor := actors[index] as Dictionary
+	actor["actionState"] = "idle"
+	actor["launched"] = false
+	actor["revivable"] = true
+	actor["serverDefeated"] = false
+	actor["serverLaunched"] = false
+	actor.erase("launchHpBefore")
+	if str(actor.get("kind", "")) == "pet" or str(actor.get("kind", "")) == "wild_pet":
+		actor["petBattleState"] = BattleModel.PET_STATE_BATTLE
+	actors[index] = actor
+	state["actors"] = actors
+	return state
 
 
 static func state_with_server_event_actor_snapshot(state: Dictionary, event_list: Dictionary) -> Dictionary:
@@ -986,6 +1009,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"forcedStatusRoll": float(server_event.get("statusRoll", -1.0)),
 			"forcedStatusChance": float(server_event.get("statusChance", -1.0)),
 			"forcedStatusResistance": float(server_event.get("statusResistance", 0.0)),
+			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
@@ -1004,52 +1028,13 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 		}
-	if event_type == "combo_attack":
-		var combo_target_id := _local_actor_id_for_server_actor(
-			state,
-			str(server_event.get("targetActorId", "")),
-			str(server_event.get("targetAccountId", "")),
-			str(server_event.get("targetUsername", "")),
-			str(server_event.get("targetKind", ""))
-		)
-		if combo_target_id == "":
-			return {}
-		var combo_target := BattleModel.actor_by_id(state, combo_target_id)
-		var participant_ids: Array[String] = []
-		var server_participant_ids: Array = server_event.get("participantActorIds", []) if server_event.get("participantActorIds", []) is Array else []
-		for server_actor_id in server_participant_ids:
-			var participant_id := _local_actor_id_for_server_actor(state, str(server_actor_id), "", "", "")
-			if participant_id != "" and not participant_ids.has(participant_id):
-				participant_ids.append(participant_id)
-		if participant_ids.is_empty():
-			participant_ids.append(actor_id)
-		return {
-			"type": "combo_attack",
-			"attackerId": actor_id,
-			"participantIds": participant_ids,
-			"targetId": combo_target_id,
-			"targetSide": str(combo_target.get("side", BattleModel.SIDE_ENEMY)),
-			"damage": maxi(1, int(server_event.get("damage", 1))),
-			"speed": int(actor.get("quick", actor.get("speed", 0))),
-			"sequence": sequence,
-			"movementStyle": "melee_combo",
-			"canDodge": false,
-			"canCritical": false,
-			"canCounter": false,
-			"canLaunch": bool(server_event.get("launched", false)),
-			"actionId": str(server_event.get("actionId", "attack")),
-			"serverEventId": str(server_event.get("eventId", "")),
-			"serverEventType": event_type,
-			"serverMessage": str(server_event.get("message", "")),
-			"serverHpBefore": int(server_event.get("hpBefore", 0)),
-			"serverHpAfter": int(server_event.get("hpAfter", 0)),
-			"serverBlocked": bool(server_event.get("blocked", false)),
-			"serverDefeated": bool(server_event.get("defeated", false)),
-			"serverLaunched": bool(server_event.get("launched", false)),
-			"serverParticipants": server_event.get("participants", []),
-		}
-	if event_type != "basic_attack" and event_type != "pet_skill":
-		return {}
+	if ["basic_attack", "pet_skill", "combo_attack", "counter_attack"].has(event_type):
+		return _local_server_resolved_damage_event(state, server_event, actor_id, actor, sequence)
+	return {}
+
+
+static func _local_server_resolved_damage_event(state: Dictionary, server_event: Dictionary, actor_id: String, actor: Dictionary, sequence: int) -> Dictionary:
+	var event_type := str(server_event.get("eventType", ""))
 	var target_id := _local_actor_id_for_server_actor(
 		state,
 		str(server_event.get("targetActorId", "")),
@@ -1060,56 +1045,64 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 	if target_id == "":
 		return {}
 	var target := BattleModel.actor_by_id(state, target_id)
+	var participant_ids: Array[String] = []
+	if event_type == "combo_attack":
+		var server_participant_ids: Array = server_event.get("participantActorIds", []) if server_event.get("participantActorIds", []) is Array else []
+		for server_actor_id in server_participant_ids:
+			var participant_id := _local_actor_id_for_server_actor(state, str(server_actor_id), "", "", "")
+			if participant_id != "" and not participant_ids.has(participant_id):
+				participant_ids.append(participant_id)
+	if participant_ids.is_empty():
+		participant_ids.append(actor_id)
+	var local_type := "attack"
 	if event_type == "pet_skill":
-		var skill_id := str(server_event.get("skillId", server_event.get("actionId", "pet_bui_charge")))
-		return {
-			"type": "skill_attack",
-			"attackerId": actor_id,
-			"targetId": target_id,
-			"targetSide": str(target.get("side", BattleModel.SIDE_ENEMY)),
-			"damage": maxi(1, int(server_event.get("damage", 1))),
-			"speed": int(actor.get("quick", actor.get("speed", 0))),
-			"sequence": sequence,
-			"movementStyle": "melee",
-			"canDodge": false,
-			"canCritical": false,
-			"canCounter": false,
-			"canLaunch": bool(server_event.get("launched", false)),
-			"skillId": skill_id,
-			"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
-			"actionId": str(server_event.get("actionId", skill_id)),
-			"serverEventId": str(server_event.get("eventId", "")),
-			"serverEventType": event_type,
-			"serverMessage": str(server_event.get("message", "")),
-			"serverHpBefore": int(server_event.get("hpBefore", 0)),
-			"serverHpAfter": int(server_event.get("hpAfter", 0)),
-			"serverBlocked": bool(server_event.get("blocked", false)),
-			"serverDefeated": bool(server_event.get("defeated", false)),
-			"serverLaunched": bool(server_event.get("launched", false)),
-		}
-	return {
-		"type": "attack",
+		local_type = "skill_attack"
+	elif event_type == "combo_attack":
+		local_type = "combo_attack"
+	elif event_type == "counter_attack":
+		local_type = "counter_attack"
+	var damage := maxi(0, int(server_event.get("damage", 0)))
+	var hp_before := int(server_event.get("hpBefore", target.get("hp", 0)))
+	var hp_after := int(server_event.get("hpAfter", maxi(0, hp_before - damage)))
+	var skill_id := str(server_event.get("skillId", server_event.get("actionId", "pet_bui_charge"))) if event_type == "pet_skill" else ""
+	var local_event := {
+		"type": local_type,
 		"attackerId": actor_id,
+		"participantIds": participant_ids,
 		"targetId": target_id,
 		"targetSide": str(target.get("side", BattleModel.SIDE_ENEMY)),
-		"damage": maxi(1, int(server_event.get("damage", 1))),
+		"damage": damage,
 		"speed": int(actor.get("quick", actor.get("speed", 0))),
 		"sequence": sequence,
-		"movementStyle": "melee",
+		"movementStyle": "melee_combo" if event_type == "combo_attack" else "melee",
 		"canDodge": false,
 		"canCritical": false,
 		"canCounter": false,
 		"canLaunch": bool(server_event.get("launched", false)),
-		"actionId": str(server_event.get("actionId", "attack")),
+		"actionId": str(server_event.get("actionId", skill_id if skill_id != "" else "attack")),
+		"serverResolved": true,
+		"dodged": bool(server_event.get("dodged", false)),
+		"critical": bool(server_event.get("critical", false)),
+		"counterTriggered": bool(server_event.get("counterTriggered", false)),
 		"serverEventId": str(server_event.get("eventId", "")),
 		"serverEventType": event_type,
 		"serverMessage": str(server_event.get("message", "")),
-		"serverHpBefore": int(server_event.get("hpBefore", 0)),
-		"serverHpAfter": int(server_event.get("hpAfter", 0)),
+		"serverHpBefore": hp_before,
+		"serverHpAfter": hp_after,
 		"serverBlocked": bool(server_event.get("blocked", false)),
-		"serverDefeated": bool(server_event.get("defeated", false)),
+		"serverDefeated": bool(server_event.get("defeated", hp_after <= 0)),
 		"serverLaunched": bool(server_event.get("launched", false)),
+		"counterSourceEventId": str(server_event.get("counterSourceEventId", "")),
 	}
+	var server_skill_id := str(server_event.get("skillId", ""))
+	if server_skill_id != "":
+		local_event["skillId"] = server_skill_id
+	if event_type == "combo_attack":
+		local_event["serverParticipants"] = server_event.get("participants", [])
+	if event_type == "pet_skill":
+		local_event["skillId"] = skill_id
+		local_event["skillName"] = BattleActionCatalog.label_for(skill_id, "宠物技能")
+	return local_event
 
 
 static func _local_actor_id_for_server_actor(state: Dictionary, server_actor_id: String, account_id: String, username: String, kind: String = "", pet_id: String = "") -> String:

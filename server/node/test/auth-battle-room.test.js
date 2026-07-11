@@ -39,6 +39,88 @@ const {createBattleRandomAuthority} = require("../src/auth/battle-random-authori
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
+function createScriptedBattleRandomAuthority(rollForContext = () => 0.9999) {
+  const rooms = new Set();
+  return Object.freeze({
+    openRoom(roomId) {
+      const id = String(roomId || "");
+      if (rooms.has(id)) {
+        return false;
+      }
+      rooms.add(id);
+      return true;
+    },
+    closeRoom(roomId) {
+      return rooms.delete(String(roomId || ""));
+    },
+    hasRoom(roomId) {
+      return rooms.has(String(roomId || ""));
+    },
+    roll(roomId, context) {
+      assert.equal(rooms.has(String(roomId || "")), true);
+      return Number(rollForContext(context || {}));
+    },
+    index(roomId, context, size) {
+      const count = Math.max(1, Math.trunc(Number(size || 0)));
+      return Math.min(count - 1, Math.floor(Math.max(0, Math.min(1, this.roll(roomId, context))) * count));
+    },
+  });
+}
+
+function createDuelReactionFixture({
+  suffix,
+  rollForContext,
+  challengerPlayer,
+  opponentPlayer,
+  challengerPet = null,
+  opponentPet = null,
+}) {
+  const roles = {};
+  const rollContexts = [];
+  const battleRandomAuthority = createScriptedBattleRandomAuthority((context) => {
+    rollContexts.push({...context});
+    return rollForContext(context, roles);
+  });
+  const service = createAuthService({store: createMemoryAuthStore(), battleRandomAuthority});
+  const challenger = service.register({username: `rx${suffix}a`, password: "test1234", displayName: `${suffix}甲`});
+  const opponent = service.register({username: `rx${suffix}b`, password: "test1234", displayName: `${suffix}乙`});
+  assert.equal(challenger.ok, true);
+  assert.equal(opponent.ok, true);
+  assert.equal(service.saveProfile(challenger.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile(`${suffix}甲`, challengerPlayer, challengerPet),
+  }).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile(`${suffix}乙`, opponentPlayer, opponentPet),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 10,
+    cellY: 10,
+    facing: "east",
+    moving: false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 11,
+    cellY: 10,
+    facing: "west",
+    moving: false,
+  }).ok, true);
+  const invite = service.inviteToBattle(challenger.session.token, {username: opponent.account.username});
+  assert.equal(invite.ok, true);
+  const accepted = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+  Object.assign(roles, {
+    challengerPlayer: accepted.room.battle.actors.find((actor) => actor.accountId === challenger.account.accountId && actor.kind === "player"),
+    challengerPet: accepted.room.battle.actors.find((actor) => actor.accountId === challenger.account.accountId && actor.kind === "pet"),
+    opponentPlayer: accepted.room.battle.actors.find((actor) => actor.accountId === opponent.account.accountId && actor.kind === "player"),
+    opponentPet: accepted.room.battle.actors.find((actor) => actor.accountId === opponent.account.accountId && actor.kind === "pet"),
+  });
+  return {service, challenger, opponent, room: accepted.room, roles, rollContexts};
+}
+
 test("players can invite and accept duel battle rooms", () => {
   const battleRandomAuthority = createBattleRandomAuthority({
     randomBytes: (size) => Buffer.alloc(size, 0x41),
@@ -401,6 +483,201 @@ test("duel battle rooms snapshot active battle pets as targetable actors", () =>
   assert.equal(storedRoom.battle.profileWriteback.profiles.length, 1);
   assert.equal(storedRoom.battle.profileWriteback.profiles[0].accountId, opponent.account.accountId);
   assert.equal(storedRoom.battle.profileWriteback.profiles[0].petHps[0].hp, updatedOpponentPet.hp);
+});
+
+test("authoritative dodge can still trigger exactly one independently resolved critical counter", () => {
+  const fixture = createDuelReactionFixture({
+    suffix: "dodge",
+    rollForContext(context, roles) {
+      if (context.actorId === roles.challengerPlayer.actorId && context.targetId === roles.opponentPlayer.actorId && context.purpose === "dodge.v1") {
+        return 0;
+      }
+      if (context.actorId === roles.opponentPlayer.actorId && context.targetId === roles.challengerPlayer.actorId && context.purpose === "counter.v1") {
+        return 0;
+      }
+      if (context.actorId === roles.opponentPlayer.actorId && context.targetId === roles.challengerPlayer.actorId && context.sequence >= 500) {
+        return context.purpose === "critical.v1" ? 0 : 0.9999;
+      }
+      return 0.9999;
+    },
+    challengerPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 10, quick: 50, comboRateOverride: 0},
+    opponentPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 34, quick: 100, comboRateOverride: 0},
+  });
+  const {service, challenger, opponent, room, roles} = fixture;
+  assert.equal(service.submitBattleCommand(challenger.session.token, room.roomId, {
+    round: 1,
+    actorId: roles.challengerPlayer.actorId,
+    actionId: "attack",
+    targetActorId: roles.opponentPlayer.actorId,
+  }).turn, null);
+  const resolved = service.submitBattleCommand(opponent.session.token, room.roomId, {
+    round: 1,
+    actorId: roles.opponentPlayer.actorId,
+    actionId: "attack",
+    targetActorId: roles.challengerPlayer.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.turn.schemaVersion, 2);
+  const source = resolved.turn.events.find((event) => event.eventType === "basic_attack" && event.actorId === roles.challengerPlayer.actorId);
+  const counters = resolved.turn.events.filter((event) => event.eventType === "counter_attack");
+  assert.equal(Boolean(source), true);
+  assert.equal(source.schemaVersion, 2);
+  assert.equal(source.dodged, true);
+  assert.equal(source.critical, false);
+  assert.equal(source.damage, 0);
+  assert.equal(source.hpAfter, source.hpBefore);
+  assert.equal(source.animation.targetReaction, "dodge");
+  assert.equal(source.counterTriggered, true);
+  assert.equal(counters.length, 1);
+  assert.equal(counters[0].schemaVersion, 2);
+  assert.equal(counters[0].counterSourceEventId, source.eventId);
+  assert.equal(counters[0].actorId, roles.opponentPlayer.actorId);
+  assert.equal(counters[0].targetActorId, roles.challengerPlayer.actorId);
+  assert.equal(counters[0].dodged, false);
+  assert.equal(counters[0].critical, true);
+  assert.equal(counters[0].damage > 0, true);
+  assert.equal(counters[0].hpAfter, counters[0].hpBefore - counters[0].damage);
+  assert.equal(counters[0].counterTriggered, false);
+  assert.equal(resolved.turn.events.length <= 4, true);
+  assert.equal(counters.length <= resolved.turn.events.filter((event) => event.eventType === "basic_attack" || event.eventType === "pet_skill").length, true);
+  assert.equal(/rawRoll|dodge\.v1|critical\.v1|counter\.v1|secret/i.test(JSON.stringify(resolved.turn.events)), false);
+  const trace = service.getBattleTrace(challenger.session.token, {roomId: room.roomId, limit: 20});
+  assert.equal(trace.ok, true);
+  assert.equal(/rawRoll|dodge\.v1|critical\.v1|counter\.v1|secret/i.test(JSON.stringify(trace.traces)), false);
+});
+
+test("authoritative lucky strikes become final damage and defeated targets never counter", () => {
+  const criticalFixture = createDuelReactionFixture({
+    suffix: "crit",
+    rollForContext(context, roles) {
+      if (context.actorId === roles.challengerPlayer.actorId && context.targetId === roles.opponentPlayer.actorId) {
+        return context.purpose === "critical.v1" ? 0 : 0.9999;
+      }
+      return 0.9999;
+    },
+    challengerPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 10, quick: 100, comboRateOverride: 0},
+    opponentPlayer: {level: 10, hp: 160, maxHp: 160, attack: 18, defense: 34, quick: 50, comboRateOverride: 0},
+  });
+  assert.equal(criticalFixture.service.submitBattleCommand(criticalFixture.challenger.session.token, criticalFixture.room.roomId, {
+    round: 1,
+    actorId: criticalFixture.roles.challengerPlayer.actorId,
+    actionId: "attack",
+    targetActorId: criticalFixture.roles.opponentPlayer.actorId,
+  }).turn, null);
+  const criticalResolved = criticalFixture.service.submitBattleCommand(criticalFixture.opponent.session.token, criticalFixture.room.roomId, {
+    round: 1,
+    actorId: criticalFixture.roles.opponentPlayer.actorId,
+    actionId: "defend",
+  });
+  const criticalEvent = criticalResolved.turn.events.find((event) => event.eventType === "basic_attack");
+  assert.equal(criticalEvent.dodged, false);
+  assert.equal(criticalEvent.critical, true);
+  assert.equal(criticalEvent.damage, criticalEvent.hpBefore - criticalEvent.hpAfter);
+  assert.equal(criticalEvent.counterTriggered, false);
+  assert.equal(criticalResolved.turn.events.some((event) => event.eventType === "counter_attack"), false);
+
+  const killFixture = createDuelReactionFixture({
+    suffix: "kill",
+    rollForContext(context, roles) {
+      if (context.purpose === "counter.v1" && context.actorId === roles.opponentPlayer.actorId) {
+        return 0;
+      }
+      return 0.9999;
+    },
+    challengerPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 10, quick: 100, comboRateOverride: 0},
+    opponentPlayer: {level: 10, hp: 10, maxHp: 10, attack: 18, defense: 1, quick: 50, comboRateOverride: 0},
+  });
+  assert.equal(killFixture.service.submitBattleCommand(killFixture.challenger.session.token, killFixture.room.roomId, {
+    round: 1,
+    actorId: killFixture.roles.challengerPlayer.actorId,
+    actionId: "attack",
+    targetActorId: killFixture.roles.opponentPlayer.actorId,
+  }).turn, null);
+  const killResolved = killFixture.service.submitBattleCommand(killFixture.opponent.session.token, killFixture.room.roomId, {
+    round: 1,
+    actorId: killFixture.roles.opponentPlayer.actorId,
+    actionId: "defend",
+  });
+  const killEvent = killResolved.turn.events.find((event) => event.eventType === "basic_attack");
+  assert.equal(killEvent.hpAfter, 0);
+  assert.equal(killEvent.defeated, true);
+  assert.equal(killEvent.counterTriggered, false);
+  assert.equal(killResolved.turn.events.some((event) => event.eventType === "counter_attack"), false);
+  assert.equal(killFixture.rollContexts.some((context) => context.purpose === "counter.v1" && context.actorId === killFixture.roles.opponentPlayer.actorId), false);
+});
+
+test("guarded targets cannot dodge and damage pet skills cannot create counters", () => {
+  const guardFixture = createDuelReactionFixture({
+    suffix: "guard",
+    rollForContext(context, roles) {
+      if (context.actorId === roles.challengerPlayer.actorId && context.targetId === roles.opponentPlayer.actorId && context.purpose === "dodge.v1") {
+        return 0;
+      }
+      return 0.9999;
+    },
+    challengerPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 10, quick: 50, comboRateOverride: 0},
+    opponentPlayer: {level: 10, hp: 160, maxHp: 160, attack: 18, defense: 10, quick: 100, comboRateOverride: 0},
+  });
+  assert.equal(guardFixture.service.submitBattleCommand(guardFixture.challenger.session.token, guardFixture.room.roomId, {
+    round: 1,
+    actorId: guardFixture.roles.challengerPlayer.actorId,
+    actionId: "attack",
+    targetActorId: guardFixture.roles.opponentPlayer.actorId,
+  }).turn, null);
+  const guardResolved = guardFixture.service.submitBattleCommand(guardFixture.opponent.session.token, guardFixture.room.roomId, {
+    round: 1,
+    actorId: guardFixture.roles.opponentPlayer.actorId,
+    actionId: "defend",
+  });
+  const guardedAttack = guardResolved.turn.events.find((event) => event.eventType === "basic_attack");
+  assert.equal(guardedAttack.blocked, true);
+  assert.equal(guardedAttack.dodged, false);
+  assert.equal(guardedAttack.critical, false);
+  assert.equal(guardedAttack.damage > 0, true);
+  assert.equal(guardFixture.rollContexts.some((context) => context.purpose === "dodge.v1" && context.actorId === guardFixture.roles.challengerPlayer.actorId), false);
+
+  const skillFixture = createDuelReactionFixture({
+    suffix: "skill",
+    rollForContext(context, roles) {
+      if (context.actorId === roles.challengerPet.actorId && context.targetId === roles.opponentPet.actorId && context.purpose === "dodge.v1") {
+        return 0;
+      }
+      return 0.9999;
+    },
+    challengerPlayer: {level: 10, hp: 160, maxHp: 160, attack: 28, defense: 10, quick: 20, comboRateOverride: 0},
+    opponentPlayer: {level: 10, hp: 160, maxHp: 160, attack: 18, defense: 10, quick: 10, comboRateOverride: 0},
+    challengerPet: {petId: "reaction_skill_a", name: "技能宠甲", level: 10, hp: 200, maxHp: 200, attack: 24, defense: 10, quick: 50, comboRateOverride: 0},
+    opponentPet: {petId: "reaction_skill_b", name: "技能宠乙", level: 10, hp: 200, maxHp: 200, attack: 24, defense: 10, quick: 100, comboRateOverride: 0},
+  });
+  assert.equal(skillFixture.service.submitBattleCommand(skillFixture.challenger.session.token, skillFixture.room.roomId, {
+    round: 1,
+    actorId: skillFixture.roles.challengerPlayer.actorId,
+    actionId: "defend",
+  }).turn, null);
+  assert.equal(skillFixture.service.submitBattleCommand(skillFixture.challenger.session.token, skillFixture.room.roomId, {
+    round: 1,
+    actorId: skillFixture.roles.challengerPet.actorId,
+    actionId: "pet_bui_charge",
+    targetActorId: skillFixture.roles.opponentPet.actorId,
+  }).turn, null);
+  assert.equal(skillFixture.service.submitBattleCommand(skillFixture.opponent.session.token, skillFixture.room.roomId, {
+    round: 1,
+    actorId: skillFixture.roles.opponentPlayer.actorId,
+    actionId: "defend",
+  }).turn, null);
+  const skillResolved = skillFixture.service.submitBattleCommand(skillFixture.opponent.session.token, skillFixture.room.roomId, {
+    round: 1,
+    actorId: skillFixture.roles.opponentPet.actorId,
+    actionId: "pet_attack",
+    targetActorId: skillFixture.roles.challengerPlayer.actorId,
+  });
+  const skillEvent = skillResolved.turn.events.find((event) => event.eventType === "pet_skill" && event.actorId === skillFixture.roles.challengerPet.actorId);
+  assert.equal(skillEvent.dodged, true);
+  assert.equal(skillEvent.critical, false);
+  assert.equal(skillEvent.damage, 0);
+  assert.equal(skillEvent.hpAfter, skillEvent.hpBefore);
+  assert.equal(skillEvent.counterTriggered, false);
+  assert.equal(skillResolved.turn.events.some((event) => event.eventType === "counter_attack" && event.counterSourceEventId === skillEvent.eventId), false);
 });
 
 test("duel battle rooms skip command turns for pets with no usable skills", () => {
@@ -3836,10 +4113,15 @@ test("party pve collapses adjacent same-target attacks into combo events and sha
   });
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
+  assert.equal(resolved.turn.schemaVersion, 2);
   const comboEvent = resolved.turn.events.find((event) => event.eventType === "combo_attack");
   assert.equal(Boolean(comboEvent), true);
+  assert.equal(comboEvent.schemaVersion, 2);
   assert.deepEqual(comboEvent.participantActorIds, [leaderPlayer.actorId, leaderPet.actorId]);
   assert.equal(comboEvent.targetActorId, enemy.actorId);
+  assert.equal(comboEvent.dodged, false);
+  assert.equal(comboEvent.critical, false);
+  assert.equal(comboEvent.counterTriggered, false);
   assert.equal(comboEvent.defeated, true);
   assert.equal(comboEvent.expCredits.length, 1);
   const recipients = comboEvent.expCredits[0].recipients || [];

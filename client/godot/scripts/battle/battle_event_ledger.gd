@@ -79,6 +79,12 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 		ledger["itemId"] = str(source_event.get("itemId", ""))
 	if source_event.has("petId"):
 		ledger["petId"] = str(source_event.get("petId", ""))
+	if source_event.has("serverResolved"):
+		ledger["serverResolved"] = bool(source_event.get("serverResolved", false))
+	if source_event.has("serverEventId"):
+		ledger["serverEventId"] = str(source_event.get("serverEventId", ""))
+	if source_event.has("counterSourceEventId"):
+		ledger["counterSourceEventId"] = str(source_event.get("counterSourceEventId", ""))
 	return ledger
 
 

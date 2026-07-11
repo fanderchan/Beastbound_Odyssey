@@ -1833,6 +1833,11 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_status_tick_event(state, event)
 	if event_type == "status_skip":
 		return _apply_status_skip_event(state, event, str(event.get("statusId", "")))
+	if bool(event.get("serverResolved", false)):
+		if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
+			return _apply_server_resolved_damage_event(state, event)
+		if event_type == "skill_status":
+			return _apply_status_apply_event(state, event)
 	var blocking_status_id := _blocking_status_for_event_actor(state, event)
 	if blocking_status_id != "":
 		return _apply_status_skip_event(state, event, blocking_status_id)
@@ -2135,9 +2140,15 @@ static func _apply_status_apply_event(state: Dictionary, event: Dictionary) -> D
 	var attacker_id := str(event.get("attackerId", ""))
 	var target_side := str(event.get("targetSide", SIDE_ENEMY))
 	var target_id := str(event.get("targetId", ""))
-	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
+	var attacker_snapshot := actor_by_id(state, attacker_id)
+	if attacker_snapshot.is_empty() or int(attacker_snapshot.get("hp", 0)) <= 0:
 		return state
-	if not _is_living_side_actor(state, target_id, target_side):
+	var server_resolved := bool(event.get("serverResolved", false))
+	if server_resolved:
+		var exact_target := actor_by_id(state, target_id)
+		if exact_target.is_empty() or int(exact_target.get("hp", 0)) <= 0:
+			return state
+	elif not _is_living_side_actor(state, target_id, target_side):
 		target_id = _fallback_target_id(state, target_side, attacker_id, int(event.get("sequence", 0)))
 	if target_id == "":
 		return state
@@ -2219,6 +2230,111 @@ static func _apply_status_apply_event(state: Dictionary, event: Dictionary) -> D
 			status_label,
 		]
 	return state
+
+
+static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var event_type := str(event.get("type", ""))
+	var attacker_id := str(event.get("attackerId", ""))
+	var target_id := str(event.get("targetId", ""))
+	var attacker := actor_by_id(state, attacker_id)
+	var target_index := actor_index(state, target_id)
+	if attacker.is_empty() or target_index < 0:
+		return state
+	var participant_ids := _string_array(event.get("participantIds", [attacker_id]))
+	if participant_ids.is_empty():
+		participant_ids.append(attacker_id)
+	var actors: Array = state.get("actors", [])
+	var action_state := "combo" if event_type == "combo_attack" else ("skill" if event_type == "skill_attack" else "attack")
+	for participant_id in participant_ids:
+		var participant_index := actor_index(state, participant_id)
+		if participant_index < 0:
+			continue
+		var participant := actors[participant_index] as Dictionary
+		if int(participant.get("hp", 0)) > 0:
+			participant["actionState"] = action_state
+			actors[participant_index] = participant
+
+	var target := actors[target_index] as Dictionary
+	var hp_before := maxi(0, int(event.get("serverHpBefore", target.get("hp", 0))))
+	var hp_after := maxi(0, int(event.get("serverHpAfter", target.get("hp", 0))))
+	var dodged := bool(event.get("dodged", false))
+	var critical := bool(event.get("critical", false)) and not dodged
+	var damage := 0 if dodged else maxi(0, int(event.get("damage", 0)))
+	var launched := bool(event.get("serverLaunched", event.get("launched", false))) and not dodged
+	target["hp"] = hp_after
+	target["launched"] = launched
+	target["revivable"] = not launched
+	target["serverDefeated"] = hp_after <= 0
+	target["serverLaunched"] = launched
+	if dodged:
+		target["actionState"] = "dodge"
+		target.erase("launchHpBefore")
+	else:
+		if launched:
+			target["actionState"] = "launched"
+			target["launched"] = true
+			target["revivable"] = false
+			if str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet":
+				target["petBattleState"] = PET_STATE_REST
+			target["launchHpBefore"] = hp_before
+		else:
+			target["actionState"] = "down" if hp_after <= 0 else "hit"
+			target.erase("launchHpBefore")
+	if not launched and hp_after > 0 and (str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet"):
+		target["petBattleState"] = PET_STATE_BATTLE
+	actors[target_index] = target
+	state["actors"] = actors
+	state = _sync_player_pet_party_from_actor(state, target)
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastDamage"] = damage
+	state["lastEffectPerTarget"] = {target_id: damage}
+	state["lastActorDamagePerTarget"] = {target_id: damage}
+	state["lastRideDamagePerTarget"] = {target_id: 0}
+	state["lastParticipants"] = participant_ids
+	state["lastLaunch"] = launched
+	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
+	state["lastDodged"] = dodged
+	state["lastCritical"] = critical
+	state["lastDodgePerTarget"] = {target_id: dodged}
+	state["lastCriticalPerTarget"] = {target_id: critical}
+	state["lastCounterEvent"] = {}
+	state["lastCounterTriggered"] = bool(event.get("counterTriggered", false))
+	state["lastReactionKind"] = "dodge" if dodged else ("critical" if critical else ("counter" if event_type == "counter_attack" else ""))
+
+	var attacker_name := str(attacker.get("name", "我方"))
+	var target_name := str(target.get("name", "目标"))
+	if dodged:
+		if event_type == "counter_attack":
+			state["message"] = "%s 反击 %s，%s 回避了。" % [attacker_name, target_name, target_name]
+		elif event_type == "skill_attack":
+			state["message"] = "%s 使用%s，%s 回避了。" % [attacker_name, str(event.get("skillName", "技能")), target_name]
+		else:
+			state["message"] = "%s 攻击了 %s，%s 回避了。" % [attacker_name, target_name, target_name]
+	else:
+		if event_type == "combo_attack":
+			var participant_names: Array[String] = []
+			for participant_id in participant_ids:
+				var participant_actor := actor_by_id(state, participant_id)
+				if not participant_actor.is_empty():
+					participant_names.append(str(participant_actor.get("name", "我方")))
+			state["message"] = "%s 合击了 %s，造成 %d 点伤害。" % ["、".join(participant_names), target_name, damage]
+		elif event_type == "skill_attack":
+			state["message"] = "%s 使用%s，造成 %d 点伤害。" % [attacker_name, str(event.get("skillName", "技能")), damage]
+		elif event_type == "counter_attack":
+			state["message"] = "%s 反击了 %s，造成 %d 点伤害。" % [attacker_name, target_name, damage]
+		else:
+			state["message"] = "%s 攻击了 %s，造成 %d 点伤害。" % [attacker_name, target_name, damage]
+		if critical:
+			state["message"] += " 触发幸运一击。"
+		if launched:
+			state["message"] += " %s 被击飞。" % target_name
+		elif hp_after <= 0:
+			state["message"] += " %s 倒下了。" % target_name
+	return _apply_server_message_override(state, event)
 
 
 static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
