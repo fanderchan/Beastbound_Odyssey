@@ -186,7 +186,7 @@ test("linked capture candidates start at Lv1 in the strict factory, settle once,
 test("unlinked capture candidates freeze Lv1 facts and settle wild levels with the shared legacy JSON model", () => {
   const {authority, expToNextLevel} = harness("legacy");
   const prepared = authority.prepareRoom(battleRoom([
-    wildActor({formId: "wuli_normal_orange_fire10", level: 23}),
+    wildActor({formId: "mossback_marsh_earth7_water3", level: 23}),
   ]));
 
   assert.equal(prepared.ok, true);
@@ -238,7 +238,7 @@ test("ten same-form wild actors get ten unique private pets, secrets, and growth
   assert.equal(new Set(candidates.map((entry) => entry.candidateId)).size, 10);
   assert.equal(new Set(candidates.map((entry) => entry.captureSecret)).size, 10);
   assert.equal(new Set(candidates.map((entry) => entry.pet.instanceId)).size, 10);
-  assert.equal(new Set(candidates.map((entry) => entry.pet.individualSeed)).size, 10);
+  assert.equal(new Set(candidates.map((entry) => entry.pet.petGrowth.private.privateSeed)).size, 10);
   assert.equal(randomProbe.callCount(), 30);
 
   const preparedAgain = authority.prepareRoom(prepared.room);

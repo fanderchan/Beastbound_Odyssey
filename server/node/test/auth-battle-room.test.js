@@ -2384,7 +2384,9 @@ test("party pve capture command stores captured wild pet and consumes capture to
   assert.equal(captured.level, 3);
   const internalCaptured = internalProfileForAccount(service, solo.account.accountId)
     .petInstances.find((pet) => pet.instanceId === captured.instanceId);
-  assert.equal(isValidPetPrivateSeed(internalCaptured.individualSeed), true);
+  assert.equal(internalCaptured.growthSpeciesProfileId, "wuli_normal_orange_fire10_v1");
+  assert.equal(isValidPetPrivateSeed(internalCaptured.petGrowth.private.privateSeed), true);
+  assert.equal(Object.hasOwn(internalCaptured, "individualSeed"), false);
   for (const key of [
     "instanceId",
     "petId",

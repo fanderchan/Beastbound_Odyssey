@@ -90,7 +90,7 @@ test("linked Lv1 finalization uses one CSPRNG identity and creates canonical aut
 test("unlinked Lv1 finalization gives the same single generated seed to the legacy initializer", (t) => {
   const catalog = loadPetGrowthCatalog();
   const factory = createNewPetFactory({growthCatalog: catalog});
-  const source = levelOneCandidate("wuli_normal_orange_fire10", {
+  const source = levelOneCandidate("mossback_marsh_earth7_water3", {
     hp: 120,
     maxHp: 120,
     attack: 12,

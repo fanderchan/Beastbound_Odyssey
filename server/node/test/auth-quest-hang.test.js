@@ -479,7 +479,9 @@ test("party pve capture advances capture quest and stops hang capture target", (
   assert.deepEqual(capturedPet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
   const internalCapturedPet = internalProfileForAccount(service, solo.account.accountId)
     .petInstances.find((pet) => pet.instanceId === capturedPet.instanceId);
-  assert.equal(isValidPetPrivateSeed(internalCapturedPet.individualSeed), true);
+  assert.equal(internalCapturedPet.growthSpeciesProfileId, "wuli_normal_orange_fire10_v1");
+  assert.equal(isValidPetPrivateSeed(internalCapturedPet.petGrowth.private.privateSeed), true);
+  assert.equal(Object.hasOwn(internalCapturedPet, "individualSeed"), false);
   const expectedLevelOneStats = {
     maxHp: internalCapturedPet.maxHp,
     attack: internalCapturedPet.attack,

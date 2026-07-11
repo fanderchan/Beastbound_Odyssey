@@ -188,6 +188,7 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "bui_normal_red_fire10_v1",
       "baseStats": {
         "maxHp": 140,
         "attack": 18,
@@ -214,6 +215,7 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "bui_normal_yellow_wind10_v1",
       "baseStats": {
         "maxHp": 130,
         "attack": 15,
@@ -240,6 +242,7 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "bui_normal_thick_earth10_v1",
       "baseStats": {
         "maxHp": 150,
         "attack": 14,
@@ -266,6 +269,7 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "wuli_normal_orange_fire10_v1",
       "baseStats": {
         "maxHp": 170,
         "attack": 12,
@@ -292,6 +296,7 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "wuli_normal_fast_wind10_v1",
       "baseStats": {
         "maxHp": 170,
         "attack": 13,
@@ -318,6 +323,7 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "wuli_normal_tough_earth10_v1",
       "baseStats": {
         "maxHp": 220,
         "attack": 10,

@@ -104,7 +104,7 @@ test("GM pet grant uses server catalogs, CSPRNG private growth, capacity, codex,
   assert.equal(service.getProfile(gm.session.token).profileSummary.profileRevision, fullRevision);
 });
 
-test("GM pet level-up uses the canonical dispatcher for linked and legacy pets and rejects damaged v1", () => {
+test("GM pet level-up grows newly linked common pets, preserves legacy pets, and rejects damaged v1", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const gm = registerGm(service, "gmpetlevel");
   const linkedGrant = service.grantGmPet(gm.session.token, {growthSpeciesProfileId: "blue_man_dragon_v1"});
@@ -117,7 +117,19 @@ test("GM pet level-up uses the canonical dispatcher for linked and legacy pets a
   assert.equal(linkedAfter.petGrowth.settledLevel, 2);
   assert.equal(["maxHp", "attack", "defense", "quick"].some((key) => linkedAfter[key] > linkedBefore[key]), true);
 
-  const legacyGrant = service.grantGmPet(gm.session.token, {formId: "wuli_normal_orange_fire10"});
+  const commonGrant = service.grantGmPet(gm.session.token, {formId: "wuli_normal_orange_fire10"});
+  const commonBefore = internalProfile(service, gm.account.accountId).petInstances
+    .find((pet) => pet.instanceId === commonGrant.result.instanceId);
+  assert.equal(commonBefore.growthSpeciesProfileId, "wuli_normal_orange_fire10_v1");
+  assert.equal(Object.hasOwn(commonBefore, "individualSeed"), false);
+  const commonLevel = service.levelUpGmPet(gm.session.token, {instanceId: commonGrant.result.instanceId});
+  assert.equal(commonLevel.ok, true);
+  const commonAfter = internalProfile(service, gm.account.accountId).petInstances
+    .find((pet) => pet.instanceId === commonGrant.result.instanceId);
+  assert.equal(commonAfter.petGrowth.settledLevel, 2);
+  assert.equal(["maxHp", "attack", "defense", "quick"].some((key) => commonAfter[key] > commonBefore[key]), true);
+
+  const legacyGrant = service.grantGmPet(gm.session.token, {formId: "mossback_marsh_earth7_water3"});
   const legacyBefore = internalProfile(service, gm.account.accountId).petInstances
     .find((pet) => pet.instanceId === legacyGrant.result.instanceId);
   assert.equal(isValidPetPrivateSeed(legacyBefore.individualSeed), true);

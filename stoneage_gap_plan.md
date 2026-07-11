@@ -182,7 +182,7 @@
             - 证据（2026-07-11）：新增严格联网档案投影，只处理 `petInstances/pets`、`groundPetDrops[].pet`、`trainingPartners[].pet` 四条登记路径，分别报告 marker 缺失、marker 损坏与 envelope 错误，保持所有非宠字段、数组顺序、当前六项属性和输入对象不变；缓存宽容投影即使旧档缺 marker 也能擦除秘密，但结构或属性不安全时拒绝写回。新增只允许 `user://server_accounts/*/player_profile.json` 的双文件清洗器，active 与 `.last_good` 分别采用同目录临时文件、flush、回读深比较及覆盖 rename，坏 JSON/坏档案原样保留且不阻碍另一份清洗；不返回解析档案、不调用 normalize/RNG/网络。单宠 12、档案 8、缓存 8 共 28 个离线场景通过，Godot parse + focused/authority 3/3 通过且日志无 ERROR；当前仍未接登录运行时，见 `docs/phase_210_server_profile_projection_cache_shadow.md`。
           - [x] **P0.2b2b-2b 原子启用公开响应、联网客户端不重滚、双缓存登录切换、非精确 UI 与协议 v2**
             - 证据（2026-07-11）：服务端所有对外方法统一浅层投影顶层 `profile` 与 `rebirth.starterPet`，内部 `snapshot`/持久化继续保留 v1 私密 envelope；共享 public DTO v2 向量同时锁定 Node 精确输出和 Godot 接受边界。Godot 协议 v2 登录先独立清洗 active/last-good、绝不载入旧服务器缓存，所有完整档案响应收口到严格投影→server-marker 无 RNG normalize→专用双缓存 publisher；缺/坏 marker 不替换运行态、revision 或缓存，通用服务器会话保存被关闭。联网成长页保留 Lv1、当前值、实际成长/级与分位评级，缺品质不再误报“普通”；本阶段曾错误移除实测 Lv140 预测，已由 Phase219 恢复，当前仅禁止隐藏 roll/精确未来结果透视。真实 Metal 1280×720 截图位于 `.run/evidence/phase213/server_pet_growth_observation_v2.png`；focused Godot 6/6、idle `0.14–0.24ms`、moving `0.12–0.21ms @ 60FPS`、移动连点 `max_input_us=168`。见 `docs/phase_213_pet_growth_protocol_v2_cutover.md` 与 `docs/phase_219_observed_lv140_forecast.md`。
-  - [ ] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
+  - [x] **P0.2c 服务端逐级结算、成长历史与全部升级入口统一**
     - [x] **P0.2c-1 严格服务端成长目录与 v1 逐级结算影子内核**
       - 证据（2026-07-11）：新增固定读取共享 JSON 的严格 Node 成长目录，验证 schema、精确四轴/范围/分布/概率、最差属性下界及 profile↔form ID/名称/基础属性引用；当前 7 个 active linked form 返回带 form 身份、深冻结且不可绕过的 authority profile，24 个未链接形态保持 legacy；同形态历史 v1/v2 可共存，新宠只取模板 active 档，旧宠无实例 envelope 时明确 `legacy_existing`，不会因模板新增档案重抽。新增纯 `pet-growth-runtime.js`，锁定唯一 canonical seed/envelope、冻结培养与公开转生加成交叉校验、6 位 continuous 逐级累加、确定性全量重算、公开等级证据和满血/绝对伤势/死亡 0 语义；一次 Lv1→140 与逐级调用 139 次完全相同，损坏 seed/roll/continuous/public/root/Lv1 事实全部失败关闭且输入不变。公开 marker 同步要求 exact envelope/private/public keys、六位量化、无根部私密别名，并由真实 runtime→public 投影测试锁定无秘密且幂等。成长相关 Node 37/37、完整服务端 185/185 通过；尚未接任何生产 EXP/创建/转生/响应路径，不迁移或重滚旧宠，见 `docs/phase_211_server_pet_growth_runtime_shadow.md`。
     - [x] **P0.2c-2 安全新 Lv1 v1 创建与三个普通 EXP 入口统一 dispatcher**
@@ -208,6 +208,10 @@
         - 后续修正（2026-07-11）：确认“按 Lv1→当前实测成长外推 Lv140”属于核心养成反馈，不是隐藏品质泄露。联网 authority 宠恢复“预测140”：Lv1 待观察，Lv2 起按公开四项线性外推，Lv140 等于当前；注入 private seed/roll canary 不改变结果。Godot 3/3、真实 Metal 截图和性能/输入门禁通过，见 `docs/phase_219_observed_lv140_forecast.md`。
         - 列表反馈修正（2026-07-11）：宠物状态从第二行普通文字移到第一行独立异形徽章，形成“黄色战斗徽章＋宠物名 / 第二行 Lv＋战力”和“青色骑乘徽章＋新手老虎”的层级；不是字面方括号。新增聚焦 badge/entry 组件并预留五个自动纹理槽，正式美术可直接覆盖底板；整行左键/右键、筛选排序和存档契约不变。Godot 管理检查、真实 Metal 截图及性能门禁通过，见 `docs/phase_220_pet_state_badges.md`。
   - [ ] **P0.2d 观察证据/区间、24 个 unlinked 形态（含普通乌力）正式成长接档、全物种万人模拟与旧档迁移报告**
+    - [x] **P0.2d-1 普通布伊/乌力六形态成长接档与 authority 万人审计工具**
+      - 证据（2026-07-11）：三只布伊与三只乌力新增独立 `weighted_center + 2% extreme` 物种成长档，保留既有 Lv1 基础、元素、捕捉难度、技能和遇敌权重；新获得宠物由 factory 直接创建 authority-v1，旧同形态无 envelope 宠严格保持 `legacy_existing`，不补种子、不重抽。新增直接复用正式 Node 成长算法的 `pet_growth_population_audit.mjs`，六档各 10,000 只 Lv1→Lv140 全通过并写入 2–140 共 139 级观察表；当前全部 13 个 linked 档共 130,000 只复核通过，普通乌力/高速乌力/高防乌力 Lv140 平均战力分别 1035.34/1102.69/1083.26。目录从 7/31 提升到 13/31，未接档警告减少 6；Node 成长/创建/GM/捕捉/EXP/转生 45/45、战斗捕捉/挂机任务 71/71、完整 Node 274/274，Godot 目录/观察/权威 5/5。完整契约见 `docs/phase_221_common_bui_wuli_growth_profiles.md`。
+    - [ ] **P0.2d-2 剩余 18 个 legacy 形态分批成长接档与角色平衡**
+    - [ ] **P0.2d-3 玩家观察证据区间、31 形态最终万人报告与真实旧档只读迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**
 - [ ] **P0.5 版本化档案迁移 + 全面 GM QA 账号**

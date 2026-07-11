@@ -58,12 +58,15 @@ test("default pet growth catalog strictly links all current species profiles and
   const catalog = loadPetGrowthCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.profileCount, 7);
+  assert.equal(catalog.profileCount, 13);
   assert.equal(catalog.formCount, 31);
-  assert.equal(catalog.profiledFormCount, 7);
+  assert.equal(catalog.profiledFormCount, 13);
   assert.deepEqual(catalog.orphanProfileIds, []);
   assert.equal(catalog.profileIdForFormId("blue_man_dragon_water10"), "blue_man_dragon_v1");
-  assert.equal(catalog.profileForFormId("wuli_normal_orange_fire10"), null);
+  assert.equal(catalog.profileIdForFormId("wuli_normal_orange_fire10"), "wuli_normal_orange_fire10_v1");
+  assert.equal(catalog.profileForFormId("mossback_marsh_earth7_water3"), null);
+  assert.equal(catalog.resolvePetProfile({formId: "wuli_normal_orange_fire10"}).kind, "legacy_existing");
+  assert.equal(catalog.resolveNewPetProfile({formId: "wuli_normal_orange_fire10"}).kind, "authority_v1");
   assert.equal(catalog.profileForFormId("blue_man_dragon_water10").formId, "blue_man_dragon_water10");
   assert.deepEqual(catalog.profileForFormId("blue_man_dragon_water10").outputBase, {
     maxHp: 60,
