@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "vectors": [
+    {
+      "id": "enhanced_weapon_with_private_provenance",
+      "internalEnvelope": {
+        "schemaVersion": 1,
+        "envelopeId": "eqx_public_vector_0001",
+        "itemId": "weapon_wooden_club",
+        "instanceState": {
+          "schemaVersion": 1,
+          "itemId": "weapon_wooden_club",
+          "durability": 18,
+          "enhancement": {
+            "itemId": "weapon_wooden_club",
+            "level": 3,
+            "history": [
+              {
+                "level": 1,
+                "result": "success"
+              }
+            ]
+          },
+          "wearCounters": {
+            "itemId": "weapon_wooden_club",
+            "attackCount": 42,
+            "hitCount": 0
+          },
+          "expPillCharge": {},
+          "source": "market_escrow",
+          "quality": "rare",
+          "affixes": [
+            {
+              "id": "power",
+              "value": 7
+            }
+          ],
+          "futureVisual": {
+            "glow": "amber"
+          },
+          "transferProvenance": {
+            "schemaVersion": 1,
+            "originEnvelopeId": "eqx_private_previous_0001",
+            "sourceInstanceId": "equip_000017"
+          }
+        },
+        "stateFingerprint": "14ead5bd7e154c6b85dde9b3cd7ea5fddf0bdeaa0273ffd82b4b1206a75fd97c",
+        "provenance": {
+          "schemaVersion": 1,
+          "sourceInstanceId": "equip_000042"
+        }
+      },
+      "expectedPublic": {
+        "schemaVersion": 1,
+        "envelopeId": "eqx_public_vector_0001",
+        "itemId": "weapon_wooden_club",
+        "instanceState": {
+          "schemaVersion": 1,
+          "itemId": "weapon_wooden_club",
+          "durability": 18,
+          "enhancement": {
+            "itemId": "weapon_wooden_club",
+            "level": 3,
+            "history": [
+              {
+                "level": 1,
+                "result": "success"
+              }
+            ]
+          },
+          "wearCounters": {
+            "itemId": "weapon_wooden_club",
+            "attackCount": 42,
+            "hitCount": 0
+          },
+          "expPillCharge": {},
+          "quality": "rare",
+          "affixes": [
+            {
+              "id": "power",
+              "value": 7
+            }
+          ],
+          "futureVisual": {
+            "glow": "amber"
+          }
+        },
+        "stateFingerprint": "14ead5bd7e154c6b85dde9b3cd7ea5fddf0bdeaa0273ffd82b4b1206a75fd97c"
+      }
+    }
+  ]
+}

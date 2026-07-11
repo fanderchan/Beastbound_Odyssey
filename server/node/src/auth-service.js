@@ -2719,7 +2719,14 @@ function projectPublicServiceResult(value) {
   }
   const result = {...value};
   if (result.profile && typeof result.profile === "object" && !Array.isArray(result.profile)) {
-    result.profile = publicProfile(result.profile);
+    result.profile = publicProfile(result.profile, {
+      equipmentCatalog: battleEquipmentCatalog,
+      equipmentOptions: {
+        ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+        expToNextLevel: battleExpToNextLevel,
+        maxPlayerLevel: MAX_PLAYER_LEVEL,
+      },
+    });
   }
   if (result.rebirth && typeof result.rebirth === "object" && !Array.isArray(result.rebirth)) {
     result.rebirth = {...result.rebirth};

@@ -32,6 +32,7 @@ const TrainingPartnerModel := preload("res://scripts/progression/training_partne
 const SAVE_PATH := "user://player_profile.json"
 const SAVE_BACKUP_PATH := "user://player_profile.last_good.json"
 const PROFILE_SCHEMA_VERSION := 1
+const SERVER_PROFILE_SCHEMA_VERSION := 3
 const PET_STATE_BATTLE := "battle"
 const PET_STATE_STANDBY := "standby"
 const PET_STATE_REST := "rest"
@@ -6712,6 +6713,21 @@ static func _safe_id_part(value: String) -> String:
 
 
 static func normalize_profile(profile: Dictionary) -> Dictionary:
+	# Server schema v3 has already passed the authoritative migration/audit and the
+	# public-pet projection before it reaches this model.  The legacy normalizer
+	# below is intentionally lossy: it repairs old local saves, rebuilds equipment
+	# instances and rewrites bank documents.  Running it over a server profile
+	# would erase instance envelopes and future fields.  Treat current/future
+	# server documents as opaque runtime snapshots; the server-sync boundary is
+	# responsible for rejecting unsupported future schemas before assignment.
+	var source_schema_version := _exact_profile_schema_version(profile)
+	if source_schema_version == SERVER_PROFILE_SCHEMA_VERSION:
+		return profile.duplicate(true)
+	# A declared but unsupported/invalid modern schema must remain opaque.  It may
+	# be inspected or replaced by a fresh server pull, but the legacy repair code
+	# must never reinterpret it as schema1 and erase future assets.
+	if profile.has("schemaVersion") and source_schema_version != PROFILE_SCHEMA_VERSION:
+		return profile.duplicate(true)
 	var normalized := profile.duplicate(true)
 	normalized["schemaVersion"] = PROFILE_SCHEMA_VERSION
 	var player = normalized.get("player", {})
@@ -6910,6 +6926,33 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized["nextPetInstanceSerial"] = maxi(int(normalized.get("nextPetInstanceSerial", instances.size() + 1)), _next_serial_from_instances(instances))
 	normalized["nextPetDropSerial"] = maxi(int(normalized.get("nextPetDropSerial", 1)), _next_drop_serial_from_drops(drops))
 	return normalized
+
+
+static func server_runtime_profile_snapshot(profile: Dictionary) -> Dictionary:
+	var schema_version := _exact_profile_schema_version(profile)
+	if schema_version != SERVER_PROFILE_SCHEMA_VERSION:
+		return {
+			"ok": false,
+			"schemaVersion": schema_version,
+			"profile": {},
+		}
+	return {
+		"ok": true,
+		"schemaVersion": schema_version,
+		"profile": profile.duplicate(true),
+	}
+
+
+static func _exact_profile_schema_version(profile: Dictionary) -> int:
+	if not profile.has("schemaVersion"):
+		return PROFILE_SCHEMA_VERSION
+	var value = profile.get("schemaVersion")
+	if not (value is int or value is float):
+		return -1
+	var numeric := float(value)
+	if not is_finite(numeric) or numeric < 1.0 or numeric != floor(numeric):
+		return -1
+	return int(numeric)
 
 
 static func _normalize_record_point(value) -> Dictionary:

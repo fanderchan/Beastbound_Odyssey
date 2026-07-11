@@ -2,6 +2,7 @@
 
 const {isValidPetPrivateSeed} = require("./pet-private-seed");
 const {quantize, roundHalfAwayFromZero} = require("./pet-growth-authority");
+const {publicEquipmentTransferSummary} = require("./equipment-transfer-envelope");
 
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
@@ -799,12 +800,22 @@ function publicPet(pet) {
   return result;
 }
 
-function cloneProfileValue(value) {
+function cloneProfileValue(value, containerKey = "", options = {}) {
   if (Array.isArray(value)) {
-    return value.map((entry) => cloneProfileValue(entry));
+    if (containerKey === "equipmentEnvelopes") {
+      return value.map((entry) => publicEquipmentTransferSummary(
+        entry,
+        options.equipmentCatalog,
+        options.equipmentOptions,
+      ));
+    }
+    return value.map((entry) => cloneProfileValue(entry, containerKey, options));
   }
   if (!isObjectRecord(value)) {
     return value;
+  }
+  if (containerKey === "equipmentEnvelope" || looksLikeEquipmentTransferEnvelope(value)) {
+    return publicEquipmentTransferSummary(value, options.equipmentCatalog, options.equipmentOptions);
   }
   if (looksLikePet(value)) {
     return publicPet(value);
@@ -817,13 +828,45 @@ function cloneProfileValue(value) {
     if (key === "petGrowth") {
       result[key] = publicPetGrowth(nested);
     } else {
-      result[key] = cloneProfileValue(nested);
+      result[key] = cloneProfileValue(nested, key, options);
     }
   }
   return result;
 }
 
-function publicProfile(profile) {
+function looksLikeEquipmentTransferEnvelope(value) {
+  return isObjectRecord(value)
+    && Object.hasOwn(value, "envelopeId")
+    && (
+      Object.hasOwn(value, "instanceState")
+      || Object.hasOwn(value, "stateFingerprint")
+      || Object.hasOwn(value, "provenance")
+    );
+}
+
+function publicEquipmentInstances(value, options = {}) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const result = {};
+  for (const [instanceId, instance] of Object.entries(value)) {
+    if (!isObjectRecord(instance)) {
+      result[instanceId] = cloneProfileValue(instance, "", options);
+      continue;
+    }
+    const projected = {};
+    for (const [key, nested] of Object.entries(instance)) {
+      if (key === "transferProvenance" || UNSAFE_OBJECT_KEYS.has(key)) {
+        continue;
+      }
+      projected[key] = cloneProfileValue(nested, key, options);
+    }
+    result[instanceId] = projected;
+  }
+  return result;
+}
+
+function publicProfile(profile, options = {}) {
   if (!isObjectRecord(profile)) {
     return {};
   }
@@ -836,12 +879,16 @@ function publicProfile(profile) {
       result[key] = value.map(publicPet);
       continue;
     }
+    if (key === "equipmentInstances") {
+      result[key] = publicEquipmentInstances(value, options);
+      continue;
+    }
     if ((key === "trainingPartners" || key === "groundPetDrops") && Array.isArray(value)) {
       result[key] = value.map((entry) => {
         if (!isObjectRecord(entry)) {
-          return cloneProfileValue(entry);
+          return cloneProfileValue(entry, "", options);
         }
-        const projected = cloneProfileValue(entry);
+        const projected = cloneProfileValue(entry, "", options);
         if (isObjectRecord(entry.pet)) {
           projected.pet = publicPet(entry.pet);
         }
@@ -849,7 +896,7 @@ function publicProfile(profile) {
       });
       continue;
     }
-    result[key] = cloneProfileValue(value);
+    result[key] = cloneProfileValue(value, key, options);
   }
   return result;
 }

@@ -49,6 +49,7 @@ const ServerPetProfileProjectionModel := preload("res://scripts/progression/serv
 const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
+const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -3960,14 +3961,21 @@ func _run_auto_server_pet_growth_boundary_check() -> void:
 	var pet_result := PetGrowthPublicProjectionModel.self_check()
 	var profile_result := ServerPetProfileProjectionModel.self_check()
 	var cache_result := ServerProfileCacheModel.self_check()
+	var equipment_presenter_result := EquipmentInstancePresenter.self_check()
 	var runtime_ok := false
+	var schema_boundary_ok := false
+	var lossless_runtime_ok := false
+	var legacy_local_ok := false
+	var future_host_rejected_ok := false
 	var vector_document = JSON.parse_string(FileAccess.get_file_as_string(ServerPetProfileProjectionModel.PUBLIC_V2_VECTOR_PATH))
 	if vector_document is Dictionary:
 		var cases = (vector_document as Dictionary).get("cases", [])
 		if cases is Array and not (cases as Array).is_empty():
 			var expected = ((cases as Array)[0] as Dictionary).get("expectedPublicProfile", {})
 			if expected is Dictionary:
-				var strict_projection := ServerPetProfileProjectionModel.project_server_profile(expected as Dictionary)
+				expected = (expected as Dictionary).duplicate(true)
+				(expected as Dictionary)["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
+				var strict_projection := ServerPetProfileProjectionModel.project_runtime_server_profile(expected as Dictionary)
 				var first_normalized := PlayerProgressModel.normalize_profile(strict_projection.get("profile", {}) as Dictionary)
 				var second_normalized := PlayerProgressModel.normalize_profile(first_normalized)
 				var authority_before := PlayerProgressModel.pet_instance_by_id(expected as Dictionary, "pet_vector_authority")
@@ -3991,6 +3999,90 @@ func _run_auto_server_pet_growth_boundary_check() -> void:
 				runtime_ok = bool(strict_projection.get("ok", false)) \
 					and JSON.stringify(first_normalized) == JSON.stringify(second_normalized) \
 					and current_stats_ok and invalid_stats_ok and private_free
+
+				var missing_schema := (expected as Dictionary).duplicate(true)
+				missing_schema.erase("schemaVersion")
+				var legacy_schema := (expected as Dictionary).duplicate(true)
+				legacy_schema["schemaVersion"] = 2
+				var zero_schema := (expected as Dictionary).duplicate(true)
+				zero_schema["schemaVersion"] = 0
+				var future_schema := (expected as Dictionary).duplicate(true)
+				future_schema["schemaVersion"] = 4
+				future_schema["futureRootField"] = {"mustStay": true}
+				var invalid_schema := (expected as Dictionary).duplicate(true)
+				invalid_schema["schemaVersion"] = 3.5
+				var future_before := future_schema.duplicate(true)
+				var missing_result := ServerPetProfileProjectionModel.project_runtime_server_profile(missing_schema)
+				var legacy_result := ServerPetProfileProjectionModel.project_runtime_server_profile(legacy_schema)
+				var zero_result := ServerPetProfileProjectionModel.project_runtime_server_profile(zero_schema)
+				var future_result := ServerPetProfileProjectionModel.project_runtime_server_profile(future_schema)
+				var invalid_result := ServerPetProfileProjectionModel.project_runtime_server_profile(invalid_schema)
+				schema_boundary_ok = (
+					not bool(missing_result.get("ok", true))
+					and str(missing_result.get("profileSchemaStatus", "")) == "missing"
+					and not bool(legacy_result.get("ok", true))
+					and str(legacy_result.get("profileSchemaStatus", "")) == "legacy"
+					and not bool(zero_result.get("ok", true))
+					and str(zero_result.get("profileSchemaStatus", "")) == "invalid"
+					and not bool(future_result.get("ok", true))
+					and str(future_result.get("profileSchemaStatus", "")) == "future"
+					and not bool(invalid_result.get("ok", true))
+					and str(invalid_result.get("profileSchemaStatus", "")) == "invalid"
+					and JSON.stringify(future_schema) == JSON.stringify(future_before)
+				)
+
+				var saved_profile: Dictionary = host.player_profile.duplicate(true)
+				var saved_sync_message: String = str(host.server_profile_sync_message)
+				var saved_pull_queued: bool = bool(host.server_profile_sync_pull_queued)
+				var host_sentinel := {"schemaVersion": 1, "sentinel": {"unchanged": true}}
+				host.player_profile = host_sentinel.duplicate(true)
+				var future_applied: bool = bool(host._server_sync().apply_server_profile_payload({"profile": future_schema}))
+				future_host_rejected_ok = (
+					not future_applied
+					and JSON.stringify(host.player_profile) == JSON.stringify(host_sentinel)
+					and host.server_profile_sync_message.find("更新客户端") >= 0
+				)
+				host.player_profile = saved_profile
+				host.server_profile_sync_message = saved_sync_message
+				host.server_profile_sync_pull_queued = saved_pull_queued
+
+	var lossless_source := EquipmentInstancePresenter.schema3_fixture_for_check()
+	lossless_source["futureRootField"] = {"mustStay": [1, 2, 3]}
+	var lossless_before := lossless_source.duplicate(true)
+	var lossless_once := PlayerProgressModel.normalize_profile(lossless_source)
+	var lossless_twice := PlayerProgressModel.normalize_profile(lossless_once)
+	var exact_snapshot := PlayerProgressModel.server_runtime_profile_snapshot(lossless_source)
+	var string_schema := lossless_source.duplicate(true)
+	string_schema["schemaVersion"] = "3"
+	var fractional_schema := lossless_source.duplicate(true)
+	fractional_schema["schemaVersion"] = 3.5
+	var future_opaque := lossless_source.duplicate(true)
+	future_opaque["schemaVersion"] = 4
+	lossless_runtime_ok = (
+		JSON.stringify(lossless_source) == JSON.stringify(lossless_before)
+		and JSON.stringify(lossless_once) == JSON.stringify(lossless_before)
+		and JSON.stringify(lossless_twice) == JSON.stringify(lossless_before)
+		and bool(exact_snapshot.get("ok", false))
+		and JSON.stringify(exact_snapshot.get("profile", {})) == JSON.stringify(lossless_before)
+		and not bool(PlayerProgressModel.server_runtime_profile_snapshot(string_schema).get("ok", true))
+		and not bool(PlayerProgressModel.server_runtime_profile_snapshot(fractional_schema).get("ok", true))
+		and not bool(PlayerProgressModel.server_runtime_profile_snapshot(future_opaque).get("ok", true))
+		and JSON.stringify(PlayerProgressModel.normalize_profile(string_schema)) == JSON.stringify(string_schema)
+		and JSON.stringify(PlayerProgressModel.normalize_profile(fractional_schema)) == JSON.stringify(fractional_schema)
+		and JSON.stringify(PlayerProgressModel.normalize_profile(future_opaque)) == JSON.stringify(future_opaque)
+	)
+	var local_legacy := {
+		"schemaVersion": 1,
+		"player": {"name": "旧本地档", "level": 999, "exp": -5},
+		"bank": {"schemaVersion": 1, "items": [{"itemId": "item_meat_small", "count": 2}]},
+	}
+	var normalized_legacy := PlayerProgressModel.normalize_profile(local_legacy)
+	legacy_local_ok = (
+		int(normalized_legacy.get("schemaVersion", 0)) == PlayerProgressModel.PROFILE_SCHEMA_VERSION
+		and int((normalized_legacy.get("player", {}) as Dictionary).get("level", 0)) == PlayerProgressModel.MAX_PLAYER_LEVEL
+		and int((normalized_legacy.get("player", {}) as Dictionary).get("exp", -1)) == 0
+		and (normalized_legacy.get("bank", {}) as Dictionary).has("slots")
+	)
 	var errors: Array[String] = []
 	for error_message in pet_result.get("errors", []) as Array:
 		errors.append("pet:%s" % str(error_message))
@@ -3998,16 +4090,24 @@ func _run_auto_server_pet_growth_boundary_check() -> void:
 		errors.append("profile:%s" % str(error_message))
 	for error_message in cache_result.get("errors", []) as Array:
 		errors.append("cache:%s" % str(error_message))
+	for error_message in equipment_presenter_result.get("errors", []) as Array:
+		errors.append("equipment_presenter:%s" % str(error_message))
 	var status := "ok" if bool(pet_result.get("ok", false)) \
 		and bool(profile_result.get("ok", false)) \
 		and bool(cache_result.get("ok", false)) \
-		and runtime_ok else "failed"
-	print("server pet growth boundary ready: status=%s pet_cases=%d profile_cases=%d cache_cases=%d runtime=%s models=%s errors=%s" % [
+		and bool(equipment_presenter_result.get("ok", false)) \
+		and runtime_ok and schema_boundary_ok and lossless_runtime_ok and legacy_local_ok and future_host_rejected_ok else "failed"
+	print("server pet growth boundary ready: status=%s pet_cases=%d profile_cases=%d cache_cases=%d equipment_cases=%d runtime=%s schema=%s lossless=%s legacy=%s future_host=%s models=%s errors=%s" % [
 		status,
 		int(pet_result.get("caseCount", 0)),
 		int(profile_result.get("caseCount", 0)),
 		int(cache_result.get("caseCount", 0)),
+		int(equipment_presenter_result.get("caseCount", 0)),
 		str(runtime_ok),
+		str(schema_boundary_ok),
+		str(lossless_runtime_ok),
+		str(legacy_local_ok),
+		str(future_host_rejected_ok),
 		",".join(pet_result.get("supportedModelVersions", [])),
 		";".join(errors),
 	])
@@ -8567,6 +8667,7 @@ func _run_auto_shop_check() -> void:
 		recovery_profile,
 		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(recovery_profile), BattleModel.ITEM_MEAT_SMALL, before_recovery_meat + 1)
 	)
+	recovery_profile["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
 	host._apply_server_profile_pull_result({
 		"ok": true,
 		"profile": recovery_profile,
@@ -22340,6 +22441,7 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.server_profile_sync_expected_revision == 0
 	)
 	var remote_profile = PlayerProgressModel.default_profile()
+	remote_profile["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
 	var remote_player = remote_profile.get("player", {}) as Dictionary
 	remote_player["name"] = "云端猎人"
 	remote_profile["player"] = remote_player
@@ -22408,6 +22510,7 @@ func _run_auto_server_profile_sync_check() -> void:
 	host.server_profile_sync_deferred_pull_result.clear()
 	host._open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
 	var deferred_remote_profile = PlayerProgressModel.default_profile()
+	deferred_remote_profile["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
 	var deferred_player = deferred_remote_profile.get("player", {}) as Dictionary
 	deferred_player["name"] = "延迟猎人"
 	deferred_remote_profile["player"] = deferred_player
@@ -22439,6 +22542,7 @@ func _run_auto_server_profile_sync_check() -> void:
 	)
 	host._open_shop_panel(ShopCatalogModel.DEFAULT_SHOP_ID)
 	var timeout_remote_profile = PlayerProgressModel.default_profile()
+	timeout_remote_profile["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
 	var timeout_player_profile = timeout_remote_profile.get("player", {}) as Dictionary
 	timeout_player_profile["name"] = "超时猎人"
 	timeout_remote_profile["player"] = timeout_player_profile

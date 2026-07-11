@@ -59,7 +59,7 @@ static func publish_fresh_server_profile(active_path: String, source: Dictionary
 			"active": _file_result(normalized_path, false, STATUS_INVALID_PATH),
 			"lastGood": _file_result("", false, STATUS_INVALID_PATH),
 		}
-	var projection := ServerPetProfileProjectionModel.project_server_profile(source)
+	var projection := ServerPetProfileProjectionModel.project_runtime_server_profile(source)
 	if not bool(projection.get("ok", false)):
 		var invalid := _file_result(normalized_path, false, STATUS_INVALID_PROFILE)
 		invalid["requiresFreshServerProfile"] = true
@@ -206,11 +206,20 @@ static func self_check() -> Dictionary:
 	var vector_document = JSON.parse_string(FileAccess.get_file_as_string("res://../../tools/fixtures/server_pet_profile_public_v2_vectors.json"))
 	var vector_cases = (vector_document as Dictionary).get("cases", []) if vector_document is Dictionary else []
 	var fresh_profile = ((vector_cases as Array)[0] as Dictionary).get("expectedPublicProfile", {}) if vector_cases is Array and not (vector_cases as Array).is_empty() else {}
+	if fresh_profile is Dictionary:
+		fresh_profile = (fresh_profile as Dictionary).duplicate(true)
+		# The fixture came through JSON and therefore stores numeric fields as
+		# floats; keep that representation so the atomic write/read deep check is
+		# testing the cache rather than an int-vs-float fixture mismatch.
+		(fresh_profile as Dictionary)["schemaVersion"] = float(ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION)
 	var published := publish_fresh_server_profile(active_path, fresh_profile as Dictionary if fresh_profile is Dictionary else {})
 	case_count += 1
 	var published_active := _read_dictionary(active_path)
 	var published_backup := _read_dictionary(backup_path)
-	_expect(bool(published.get("ok", false)), "新鲜服务器公开档案发布失败", errors)
+	_expect(bool(published.get("ok", false)), "新鲜服务器公开档案发布失败：active=%s backup=%s" % [
+		str((published.get("active", {}) as Dictionary).get("status", "")),
+		str((published.get("lastGood", {}) as Dictionary).get("status", "")),
+	], errors)
 	_expect(_deep_equal(published_active, published_backup), "active 与 last_good 发布内容不一致", errors)
 	_expect(_known_pet_private_path(published_active) == "", "新鲜服务器缓存发布了私有字段", errors)
 	var published_before := published_active.duplicate(true)
@@ -230,6 +239,80 @@ static func self_check() -> Dictionary:
 		not bool(invalid_path.get("ok", true))
 			and str((invalid_path.get("active", {}) as Dictionary).get("status", "")) == STATUS_INVALID_PATH,
 		"路径白名单没有拒绝本地单机档案",
+		errors
+	)
+
+	var current_cache := {"schemaVersion": 3, "player": {"name": "当前缓存"}, "petInstances": [], "futureRoot": {"kept": true}}
+	var current_text := JSON.stringify(current_cache, "\t")
+	_expect(_write_raw(active_path, current_text), "无法写入 current 缓存夹具", errors)
+	var current_result := _sanitize_one(active_path)
+	case_count += 1
+	_expect(
+		bool(current_result.get("ok", false))
+			and str(current_result.get("status", "")) == STATUS_UNCHANGED
+			and str(current_result.get("profileSchemaStatus", "")) == "current"
+			and not bool(current_result.get("requiresFreshServerProfile", true))
+			and FileAccess.get_file_as_string(active_path) == current_text,
+		"current schema3 缓存没有保持可用且原样",
+		errors
+	)
+
+	var legacy_cache := _cache_fixture("legacy_schema_pet", "legacy_schema_secret")
+	var legacy_text := JSON.stringify(legacy_cache, "\t")
+	_expect(_write_raw(active_path, legacy_text), "无法写入 legacy 缓存夹具", errors)
+	var legacy_result := _sanitize_one(active_path)
+	case_count += 1
+	_expect(
+		bool(legacy_result.get("ok", false))
+			and str(legacy_result.get("profileSchemaStatus", "")) == "legacy"
+			and bool(legacy_result.get("requiresFreshServerProfile", false))
+			and _known_pet_private_path(_read_dictionary(active_path)) == "",
+		"legacy 缓存没有只清秘密并要求新鲜档案",
+		errors
+	)
+
+	var missing_cache := legacy_cache.duplicate(true)
+	missing_cache.erase("schemaVersion")
+	var missing_text := JSON.stringify(missing_cache, "\t")
+	_expect(_write_raw(active_path, missing_text), "无法写入 missing 缓存夹具", errors)
+	var missing_schema_result := _sanitize_one(active_path)
+	case_count += 1
+	_expect(
+		bool(missing_schema_result.get("ok", false))
+			and str(missing_schema_result.get("profileSchemaStatus", "")) == "missing"
+			and bool(missing_schema_result.get("requiresFreshServerProfile", false))
+			and _known_pet_private_path(_read_dictionary(active_path)) == "",
+		"missing schema 缓存没有只清秘密并要求新鲜档案",
+		errors
+	)
+
+	var future_cache := legacy_cache.duplicate(true)
+	future_cache["schemaVersion"] = 4
+	var future_text := JSON.stringify(future_cache, "\t")
+	_expect(_write_raw(active_path, future_text), "无法写入 future 缓存夹具", errors)
+	var future_result := _sanitize_one(active_path)
+	case_count += 1
+	_expect(
+		not bool(future_result.get("ok", true))
+			and str(future_result.get("profileSchemaStatus", "")) == "future"
+			and bool(future_result.get("requiresFreshServerProfile", false))
+			and FileAccess.get_file_as_string(active_path) == future_text,
+		"future 缓存没有原字节保留并失败关闭",
+		errors
+	)
+
+	var invalid_cache := legacy_cache.duplicate(true)
+	invalid_cache["schemaVersion"] = "3"
+	var invalid_text := JSON.stringify(invalid_cache, "\t")
+	_expect(_write_raw(active_path, invalid_text), "无法写入 invalid 缓存夹具", errors)
+	var invalid_schema_result := _sanitize_one(active_path)
+	case_count += 1
+	_expect(
+		not bool(invalid_schema_result.get("ok", true))
+			and str(invalid_schema_result.get("profileSchemaStatus", "")) == "invalid"
+			and bool(invalid_schema_result.get("requiresFreshServerProfile", false))
+			and FileAccess.get_file_as_string(active_path) == invalid_text,
+		"invalid schema 缓存没有原字节保留并失败关闭",
 		errors
 	)
 
@@ -257,24 +340,36 @@ static func _sanitize_one(path: String) -> Dictionary:
 	var parsed = parsed_result.get("data")
 	if not (parsed is Dictionary):
 		return _file_result(path, false, STATUS_INVALID_PROFILE)
+	var schema_info := ServerPetProfileProjectionModel.profile_schema_info(parsed as Dictionary)
+	var schema_status := str(schema_info.get("status", "invalid"))
+	# Future and malformed schema declarations are opaque.  Even the pet-secret
+	# sanitizer must not parse and rewrite bytes it does not understand.
+	if schema_status == "future" or schema_status == "invalid":
+		var opaque := _file_result(path, false, STATUS_INVALID_PROFILE)
+		opaque["requiresFreshServerProfile"] = true
+		opaque["profileSchemaStatus"] = schema_status
+		return opaque
 	var projection := ServerPetProfileProjectionModel.sanitize_cached_server_profile(parsed as Dictionary)
 	if not bool(projection.get("ok", false)):
 		var invalid_profile := _file_result(path, false, STATUS_INVALID_PROFILE)
 		invalid_profile["requiresFreshServerProfile"] = true
+		invalid_profile["profileSchemaStatus"] = schema_status
 		invalid_profile["projectedPetCount"] = int(projection.get("projectedPetCount", 0))
 		invalid_profile["profileErrorCount"] = (projection.get("profileErrors", []) as Array).size()
 		return invalid_profile
 	var sanitized := projection.get("profile", {}) as Dictionary
 	if _deep_equal(parsed, sanitized):
 		var unchanged := _file_result(path, true, STATUS_UNCHANGED)
-		unchanged["requiresFreshServerProfile"] = bool(projection.get("requiresFreshServerProfile", false))
+		unchanged["requiresFreshServerProfile"] = schema_status != "current" or bool(projection.get("requiresFreshServerProfile", false))
+		unchanged["profileSchemaStatus"] = schema_status
 		unchanged["projectedPetCount"] = int(projection.get("projectedPetCount", 0))
 		return unchanged
 	if not _replace_json_file(path, sanitized):
 		return _file_result(path, false, STATUS_WRITE_FAILED)
 	var result := _file_result(path, true, STATUS_SANITIZED)
 	result["changed"] = true
-	result["requiresFreshServerProfile"] = bool(projection.get("requiresFreshServerProfile", false))
+	result["requiresFreshServerProfile"] = schema_status != "current" or bool(projection.get("requiresFreshServerProfile", false))
+	result["profileSchemaStatus"] = schema_status
 	result["projectedPetCount"] = int(projection.get("projectedPetCount", 0))
 	return result
 
@@ -337,6 +432,7 @@ static func _file_result(path: String, ok_value: bool, status: String) -> Dictio
 		"requiresFreshServerProfile": false,
 		"projectedPetCount": 0,
 		"profileErrorCount": 0,
+		"profileSchemaStatus": "missing",
 	}
 
 

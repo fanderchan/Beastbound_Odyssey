@@ -275,14 +275,23 @@ func apply_server_profile_payload(parsed: Dictionary) -> bool:
 	var server_profile = parsed.get("profile", null)
 	if not (server_profile is Dictionary):
 		return false
-	var projection := ServerPetProfileProjectionModel.project_server_profile(server_profile as Dictionary)
+	var projection := ServerPetProfileProjectionModel.project_runtime_server_profile(server_profile as Dictionary)
 	if not bool(projection.get("ok", false)):
-		host.server_profile_sync_message = "服务器宠物成长档案校验失败，正在等待重新同步。"
+		var schema_status := str(projection.get("profileSchemaStatus", "current"))
+		host.server_profile_sync_message = (
+			"服务器档案版本较新，请更新客户端后重试。"
+			if schema_status == "future"
+			else "服务器档案校验失败，正在等待重新同步。"
+		)
 		host.server_profile_sync_pull_queued = true
 		return false
 	var projected_profile := (projection.get("profile", {}) as Dictionary).duplicate(true)
-	var normalized_profile := PlayerProgressModel.normalize_profile(projected_profile)
-	host.player_profile = normalized_profile
+	var runtime_snapshot := PlayerProgressModel.server_runtime_profile_snapshot(projected_profile)
+	if not bool(runtime_snapshot.get("ok", false)):
+		host.server_profile_sync_message = "服务器档案版本不受支持，请更新客户端后重试。"
+		host.server_profile_sync_pull_queued = true
+		return false
+	host.player_profile = (runtime_snapshot.get("profile", {}) as Dictionary).duplicate(true)
 	_notify_pending_offline_hang_once(host.player_profile)
 	host._apply_auth_profile_metadata_fields(str(host.current_account_session.get("displayName", "")))
 	var summary = parsed.get("profileSummary", {})

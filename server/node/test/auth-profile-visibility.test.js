@@ -3,6 +3,12 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+const equipmentTransferVectors = require("../../../tools/fixtures/equipment_transfer_public_v1_vectors.json");
+const {loadBattleEquipmentCatalog} = require("../src/auth/battle-equipment-rules");
+const {equipmentTransferStateFingerprint} = require("../src/auth/equipment-transfer-envelope");
+
+const equipmentCatalog = loadBattleEquipmentCatalog();
+
 const {
   GROWTH_MODEL_INVALID_AUTHORITY_V1,
   GROWTH_MODEL_LEGACY_INDIVIDUAL,
@@ -638,4 +644,95 @@ test("public visibility helpers fail closed for non-object roots", () => {
   assert.deepEqual(publicGrowthObservation([]), {});
   assert.deepEqual(publicPet("pet"), {});
   assert.deepEqual(publicProfile([]), {});
+});
+
+test("public profile projects persisted equipment envelopes and hides transfer provenance", () => {
+  const vector = equipmentTransferVectors.vectors[0];
+  const internalEnvelope = structuredClone(vector.internalEnvelope);
+  const source = {
+    schemaVersion: 3,
+    equipmentInstances: {
+      equip_000500: {
+        schemaVersion: 1,
+        instanceId: "equip_000500",
+        itemId: "weapon_wooden_club",
+        location: "backpack",
+        slotId: "",
+        durability: 18,
+        enhancement: {itemId: "weapon_wooden_club", level: 3, history: []},
+        wearCounters: {itemId: "weapon_wooden_club", attackCount: 42, hitCount: 0},
+        expPillCharge: {},
+        source: "mail_claim",
+        affixes: [{id: "power", value: 7}],
+        transferProvenance: {
+          schemaVersion: 1,
+          originEnvelopeId: internalEnvelope.envelopeId,
+          sourceInstanceId: "equip_private_source",
+        },
+      },
+    },
+    bank: {
+      schemaVersion: 2,
+      slots: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        equipmentEnvelopes: [internalEnvelope],
+      }],
+    },
+    futureContainer: {
+      equipmentEnvelope: structuredClone(internalEnvelope),
+    },
+  };
+  const before = structuredClone(source);
+
+  const projectionOptions = {equipmentCatalog};
+  const projected = publicProfile(source, projectionOptions);
+
+  assert.equal(Object.hasOwn(projected.equipmentInstances.equip_000500, "transferProvenance"), false);
+  assert.equal(projected.equipmentInstances.equip_000500.source, "mail_claim");
+  assert.deepEqual(projected.bank.slots[0].equipmentEnvelopes[0], vector.expectedPublic);
+  assert.deepEqual(projected.futureContainer.equipmentEnvelope, vector.expectedPublic);
+  assert.equal(Object.hasOwn(projected.bank.slots[0].equipmentEnvelopes[0], "provenance"), false);
+  assert.equal(Object.hasOwn(projected.bank.slots[0].equipmentEnvelopes[0].instanceState, "source"), false);
+  assert.equal(Object.hasOwn(projected.bank.slots[0].equipmentEnvelopes[0].instanceState, "transferProvenance"), false);
+  assert.deepEqual(publicProfile(projected, projectionOptions), projected);
+  assert.deepEqual(source, before);
+});
+
+test("public profile fails malformed and future equipment envelopes closed without leaking provenance", () => {
+  const vector = equipmentTransferVectors.vectors[0];
+  const futureEnvelope = structuredClone(vector.internalEnvelope);
+  futureEnvelope.schemaVersion = 2;
+  const missingFingerprint = structuredClone(vector.internalEnvelope);
+  delete missingFingerprint.stateFingerprint;
+  const unknownRoot = structuredClone(vector.internalEnvelope);
+  unknownRoot.futureRoot = {privateAudit: "DO_NOT_EXPOSE"};
+  const malformedState = structuredClone(vector.internalEnvelope);
+  delete malformedState.instanceState;
+  const exhaustedWear = structuredClone(vector.internalEnvelope);
+  exhaustedWear.instanceState.wearCounters.attackCount = 100;
+  exhaustedWear.stateFingerprint = equipmentTransferStateFingerprint(exhaustedWear);
+  const source = {
+    schemaVersion: 3,
+    bank: {
+      schemaVersion: 2,
+      slots: [{
+        itemId: "weapon_wooden_club",
+        count: 5,
+        equipmentEnvelopes: [futureEnvelope, missingFingerprint, unknownRoot, malformedState, exhaustedWear],
+      }],
+    },
+    futureContainer: {
+      equipmentEnvelope: structuredClone(malformedState),
+    },
+  };
+  const before = structuredClone(source);
+
+  const projected = publicProfile(source, {equipmentCatalog});
+
+  assert.deepEqual(projected.bank.slots[0].equipmentEnvelopes, [{}, {}, {}, {}, {}]);
+  assert.deepEqual(projected.futureContainer.equipmentEnvelope, {});
+  assert.equal(JSON.stringify(projected).includes("equip_000042"), false);
+  assert.equal(JSON.stringify(projected).includes("DO_NOT_EXPOSE"), false);
+  assert.deepEqual(source, before);
 });

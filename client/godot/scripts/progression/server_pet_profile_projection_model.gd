@@ -6,14 +6,58 @@ const ROOT_PET_ARRAY_KEYS: Array[String] = ["petInstances", "pets"]
 const WRAPPED_PET_ARRAY_KEYS: Array[String] = ["groundPetDrops", "trainingPartners"]
 const CURRENT_STAT_KEYS: Array[String] = ["level", "hp", "maxHp", "attack", "defense", "quick"]
 const PUBLIC_V2_VECTOR_PATH := "res://../../tools/fixtures/server_pet_profile_public_v2_vectors.json"
+const CURRENT_SERVER_PROFILE_SCHEMA_VERSION := 3
 
 
 static func project_server_profile(source: Dictionary) -> Dictionary:
 	return _project_known_pet_paths(source, true)
 
 
+static func project_runtime_server_profile(source: Dictionary) -> Dictionary:
+	var result := _project_known_pet_paths(source, true)
+	var schema_info := profile_schema_info(source)
+	var schema_version := int(schema_info.get("version", -1))
+	var profile_errors := (result.get("profileErrors", []) as Array[String]).duplicate()
+	var schema_status := str(schema_info.get("status", "invalid"))
+	if schema_status != "current":
+		profile_errors.append("schemaVersion:%s%s" % [
+			schema_status,
+			":%d" % schema_version if schema_version >= 0 else "",
+		])
+	result["profileSchemaVersion"] = schema_version
+	result["profileSchemaStatus"] = schema_status
+	result["profileErrors"] = profile_errors
+	result["ok"] = bool(result.get("ok", false)) and schema_status == "current"
+	result["refreshNeeded"] = not bool(result.get("ok", false))
+	if schema_status != "current":
+		result["requiresFreshServerProfile"] = true
+	return result
+
+
+static func profile_schema_info(source: Dictionary) -> Dictionary:
+	if not source.has("schemaVersion"):
+		return {"status": "missing", "version": -1}
+	var schema_version := _integer_schema_version(source.get("schemaVersion"))
+	if schema_version < 1:
+		return {"status": "invalid", "version": schema_version}
+	if schema_version > CURRENT_SERVER_PROFILE_SCHEMA_VERSION:
+		return {"status": "future", "version": schema_version}
+	if schema_version < CURRENT_SERVER_PROFILE_SCHEMA_VERSION:
+		return {"status": "legacy", "version": schema_version}
+	return {"status": "current", "version": schema_version}
+
+
 static func sanitize_cached_server_profile(source: Dictionary) -> Dictionary:
 	return _project_known_pet_paths(source, false)
+
+
+static func _integer_schema_version(value) -> int:
+	if not (value is int or value is float):
+		return -1
+	var numeric := float(value)
+	if not is_finite(numeric) or numeric < 1.0 or numeric != floor(numeric):
+		return -1
+	return int(numeric)
 
 
 static func self_check() -> Dictionary:
