@@ -1353,6 +1353,92 @@ test("production party encounters derive canonical wild pets from the server map
   assert.equal(replayed.code, "encounter_permit_replayed");
 });
 
+test("formal field encounter groups keep their identity while using the server-owned stage reward table", () => {
+  const permitAuthority = createPetEncounterPermitAuthority({
+    catalog: strictPetEncounterCatalog,
+    randomBytes: (size) => crypto.randomBytes(size),
+    randomFloat: () => 0,
+    eligibleStepIntervalMs: 0,
+  });
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    useStrictPetEncounterAuthority: true,
+    allowPositionTeleport: true,
+    petEncounterPermitAuthority: permitAuthority,
+  });
+  const solo = service.register({username: "routealias", password: "test1234", displayName: "路线奖励号"});
+  const profile = battleProfile("路线奖励号", {
+    level: 20, hp: 3000, maxHp: 3000, attack: 999, defense: 999, quick: 300, comboRateOverride: 0,
+  }, {
+    petId: "route_alias_pet",
+    name: "路线布伊",
+    level: 20,
+    hp: 180,
+    maxHp: 180,
+    attack: 1,
+    defense: 20,
+    quick: 100,
+    comboRateOverride: 0,
+  });
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [];
+  assert.equal(service.saveProfile(solo.session.token, {expectedRevision: 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    mapId: "mistcap_marsh", cellX: 9, cellY: 14, moving: false,
+  }).ok, true);
+  let permit = null;
+  for (const [fromCellX, toCellX] of [[9, 10], [10, 11], [11, 12]]) {
+    const moved = service.movePlayerStep(solo.session.token, {
+      mapId: "mistcap_marsh",
+      fromCellX,
+      fromCellY: 14,
+      toCellX,
+      toCellY: 14,
+      moving: true,
+    });
+    assert.equal(moved.ok, true);
+    permit = moved.encounterPermit || permit;
+  }
+  assert.equal(typeof permit.token, "string");
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    encounterPermitToken: permit.token,
+    encounterIntent: {zoneId: "mistcap_reeds_01", encounterGroupId: "mistcap_reeds_01"},
+  });
+  assert.equal(encounter.ok, true);
+  const storedEncounter = service.snapshot().battleRooms[encounter.room.roomId].encounter;
+  assert.equal(storedEncounter.groupId, "mistcap_reeds_01");
+  assert.equal(storedEncounter.rewardTableId, "growth_training_01");
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const pet = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "pet");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(Boolean(player && pet && enemy), true);
+  let resolved = null;
+  for (let round = 1; round <= 30; round += 1) {
+    const playerCommand = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+      round, actorId: player.actorId, actionId: "attack", targetActorId: enemy.actorId,
+    });
+    assert.equal(playerCommand.ok, true);
+    if (playerCommand.room.status === "closed") {
+      resolved = playerCommand;
+      break;
+    }
+    const petCommand = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+      round, actorId: pet.actorId, actionId: "pet_defend",
+    });
+    assert.equal(petCommand.ok, true);
+    resolved = petCommand;
+    if (petCommand.room.status === "closed") {
+      break;
+    }
+  }
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.equal(writeback.rewards.sourceEncounterGroupId, "mistcap_reeds_01");
+  assert.equal(writeback.rewards.tableId, "growth_training_01");
+  assert.equal(writeback.rewards.stoneCoins >= 45 && writeback.rewards.stoneCoins <= 90, true);
+});
+
 test("encounter permit remains retryable after authoritative encounter construction fails", () => {
   const strictEncounterAuthority = createPetEncounterAuthority({catalog: strictPetEncounterCatalog});
   let resolveAttempts = 0;

@@ -150,6 +150,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 		"phase": "command",
 		"sourceZoneId": str(encounter_zone.get("id", "")),
 		"sourceEncounterGroupId": str(encounter_zone.get("encounterGroupId", "")),
+		"sourceRewardTableId": str(encounter_zone.get("rewardTableId", encounter_zone.get("encounterGroupId", ""))),
 		"selectedWildPet": wild_pet,
 		"targetSeed": "local_wild_battle",
 		"message": "%s 出现了%s。" % [zone_name, enemy_name],

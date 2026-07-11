@@ -27,7 +27,21 @@
     {"cell": [17, 10], "kind": "flower"},
     {"cell": [21, 7], "kind": "grass"}
   ],
-  "encounterZones": [],
+  "encounterZones": [
+    {
+      "id": "ember_core_training_65_80",
+      "name": "焰心洞穴练级区",
+      "rects": [[6, 8, 16, 12]],
+      "encounterRate": 0.15,
+      "individualWildPets": true,
+      "encounterGroupId": "rebirth_prep_training_01",
+      "wildPetPool": [
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "野生岚角兽", "weight": 99, "levelMin": 65, "levelMax": 80, "battleStats": {"maxHp": 780, "attack": 180, "defense": 100, "agility": 185}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "Lv1 岚角兽", "weight": 1, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 178, "attack": 27, "defense": 13, "agility": 96}}
+      ],
+      "previewText": "洞穴深处适合练级，偶尔也会出现值得培育的 Lv1 岚角兽。"
+    }
+  ],
   "interactionPoints": [
     {
       "id": "ember_core_cave_exit",

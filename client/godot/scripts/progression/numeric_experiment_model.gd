@@ -431,6 +431,7 @@ static func _progression_zone_section() -> Dictionary:
 static func _progression_zone_sample(zone: Dictionary) -> Dictionary:
 	var zone_id := str(zone.get("id", ""))
 	var group_id := str(zone.get("encounterGroupId", ""))
+	var reward_table_id := str(zone.get("rewardTableId", group_id))
 	var repeatable := bool(zone.get("repeatable", false))
 	var battle_count := 30 if repeatable else 10
 	var typical_battle = zone.get("typicalBattle", {})
@@ -448,7 +449,7 @@ static func _progression_zone_sample(zone: Dictionary) -> Dictionary:
 			int(enemy.get("defense", 6)),
 			int(enemy.get("quick", 40))
 		))
-	var reward := _battle_reward_sample(zone_id, group_id, enemies, battle_count)
+	var reward := _battle_reward_sample(zone_id, reward_table_id, enemies, battle_count)
 	var level_range := _pair_from(zone.get("levelRange", []), 1, 1)
 	var anchor_level := clampi(int(round((float(level_range[0]) + float(level_range[1])) / 2.0)), 1, BalanceCatalogModel.max_player_level(PlayerProgressModel.MAX_PLAYER_LEVEL) - 1)
 	var avg_exp := float(reward.get("avgExp", 0.0))
@@ -470,6 +471,7 @@ static func _progression_zone_sample(zone: Dictionary) -> Dictionary:
 		"levelRange": level_range,
 		"anchorLevel": anchor_level,
 		"encounterGroupId": group_id,
+		"rewardTableId": reward_table_id,
 		"enemyCount": enemy_count,
 		"enemyLevel": int(enemy.get("level", 1)),
 		"targetAvgExpPerBattle": target_exp,
@@ -482,7 +484,7 @@ static func _progression_zone_sample(zone: Dictionary) -> Dictionary:
 		"expStatus": exp_status,
 		"stoneStatus": stone_status,
 		"battlesPerLevelStatus": battle_status,
-		"missingRewardTable": group_id != "" and BattleRewardCatalog.table_for_id(group_id).is_empty(),
+		"missingRewardTable": reward_table_id != "" and BattleRewardCatalog.table_for_id(reward_table_id).is_empty(),
 		"designNotes": str(zone.get("designNotes", "")),
 	}
 

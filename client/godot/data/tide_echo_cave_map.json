@@ -27,7 +27,21 @@
     {"cell": [17, 10], "kind": "grass"},
     {"cell": [21, 7], "kind": "flower"}
   ],
-  "encounterZones": [],
+  "encounterZones": [
+    {
+      "id": "tide_echo_training_65_80",
+      "name": "潮回洞穴练级区",
+      "rects": [[6, 8, 16, 12]],
+      "encounterRate": 0.15,
+      "individualWildPets": true,
+      "encounterGroupId": "rebirth_prep_training_01",
+      "wildPetPool": [
+        {"formId": "tidefin_sky_water5_wind5", "name": "野生云潮鳍兽", "weight": 99, "levelMin": 65, "levelMax": 80, "battleStats": {"maxHp": 760, "attack": 145, "defense": 120, "agility": 175}},
+        {"formId": "tidefin_sky_water5_wind5", "name": "Lv1 云潮鳍兽", "weight": 1, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 176, "attack": 18, "defense": 17, "agility": 88}}
+      ],
+      "previewText": "洞穴深处适合练级，偶尔也会出现值得培育的 Lv1 云潮鳍兽。"
+    }
+  ],
   "interactionPoints": [
     {
       "id": "tide_echo_cave_exit",

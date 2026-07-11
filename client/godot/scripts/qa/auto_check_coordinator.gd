@@ -12751,13 +12751,19 @@ func _run_auto_battle_reward_check() -> void:
 		and int(escape_result.get("stoneCoinsReward", 0)) == 0
 		and PlayerProgressModel.stone_coins(escape_profile) == before_coins
 	)
+	var alias_table := BattleRewardCatalog.table_for_state({
+		"sourceEncounterGroupId": "mistcap_reeds_01",
+		"sourceRewardTableId": "growth_training_01",
+	})
+	var alias_ok := str(alias_table.get("id", "")) == "growth_training_01"
 
-	var status = "ok" if reward_ok and full_block_ok and escape_ok else "failed"
-	print("battle reward check ready: status=%s reward=%s full=%s escape=%s meat=%d rope=%d coins=%d log=%s full_log=%s" % [
+	var status = "ok" if reward_ok and full_block_ok and escape_ok and alias_ok else "failed"
+	print("battle reward check ready: status=%s reward=%s full=%s escape=%s alias=%s meat=%d rope=%d coins=%d log=%s full_log=%s" % [
 		status,
 		str(reward_ok),
 		str(full_block_ok),
 		str(escape_ok),
+		str(alias_ok),
 		reward_meat,
 		reward_rope,
 		reward_coins,

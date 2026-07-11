@@ -57,7 +57,7 @@
         "mapId": "firebud_village_gate",
         "spawnName": "from_earth_vein_cave"
       },
-      "levelRange": {"min": 80, "max": 110},
+      "levelRange": {"min": 65, "max": 120},
       "subDungeons": [
         {
           "id": "earth_vein",
@@ -109,6 +109,9 @@
         }
       ],
       "encounterGroups": [
+        "rebirth_prep_training_01",
+        "post_rebirth_training_01",
+        "high_cave_training_01",
         "earth_vein_guardian_group",
         "tide_echo_guardian_group",
         "ember_core_guardian_group",
@@ -136,12 +139,14 @@
         "shadow_oath_cavern_f4",
         "shadow_oath_cavern_f5"
       ],
-      "levelRange": {"min": 90, "max": 130},
+      "levelRange": {"min": 90, "max": 140},
       "safeReturn": {
         "mapId": "firebud_village_gate",
         "spawnName": "from_shadow_oath_cavern"
       },
       "encounterGroups": [
+        "shadow_chase_training_01",
+        "shadow_capstone_training_01",
         "shadow_oath_rebirth_earth",
         "shadow_oath_rebirth_water",
         "shadow_oath_rebirth_fire",

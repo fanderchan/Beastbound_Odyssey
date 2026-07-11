@@ -27,7 +27,21 @@
     {"cell": [16, 10], "kind": "flower"},
     {"cell": [21, 7], "kind": "grass"}
   ],
-  "encounterZones": [],
+  "encounterZones": [
+    {
+      "id": "earth_vein_training_65_80",
+      "name": "岩脉洞穴练级区",
+      "rects": [[6, 8, 16, 12]],
+      "encounterRate": 0.15,
+      "individualWildPets": true,
+      "encounterGroupId": "rebirth_prep_training_01",
+      "wildPetPool": [
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "野生晒甲苔背兽", "weight": 99, "levelMin": 65, "levelMax": 80, "battleStats": {"maxHp": 900, "attack": 130, "defense": 160, "agility": 70}},
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "Lv1 晒甲苔背兽", "weight": 1, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 214, "attack": 16, "defense": 28, "agility": 38}}
+      ],
+      "previewText": "洞穴深处适合练级，偶尔也会出现值得培育的 Lv1 晒甲苔背兽。"
+    }
+  ],
   "interactionPoints": [
     {
       "id": "earth_vein_cave_exit",

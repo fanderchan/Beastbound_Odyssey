@@ -90,8 +90,10 @@ static func _ledger_sample_for_battle(battle_sample: Dictionary, assumptions: Di
 	var zone := _zone_for_id(zone_id)
 	var content_type := str(zone.get("contentType", ""))
 	var repeatable := bool(zone.get("repeatable", false))
-	var encounter_group_id := str((battle_sample.get("rewardPreview", {}) as Dictionary).get("encounterGroupId", zone.get("encounterGroupId", "")))
-	var reward_table := BattleRewardCatalog.table_for_id(encounter_group_id)
+	var reward_preview := battle_sample.get("rewardPreview", {}) as Dictionary
+	var encounter_group_id := str(reward_preview.get("encounterGroupId", zone.get("encounterGroupId", "")))
+	var reward_table_id := str(reward_preview.get("rewardTableId", zone.get("rewardTableId", encounter_group_id)))
+	var reward_table := BattleRewardCatalog.table_for_id(reward_table_id)
 	var expected_stone := _expected_stone_for_table(reward_table)
 	var expected_items := _expected_items_for_table(reward_table)
 	var item_value := _expected_item_sell_value(expected_items)
@@ -117,6 +119,7 @@ static func _ledger_sample_for_battle(battle_sample: Dictionary, assumptions: Di
 		"contentType": content_type,
 		"repeatable": repeatable,
 		"encounterGroupId": encounter_group_id,
+		"rewardTableId": reward_table_id,
 		"missingRewardTable": reward_table.is_empty(),
 		"rounds": rounds,
 		"battleSeconds": snappedf(battle_seconds, 0.01),

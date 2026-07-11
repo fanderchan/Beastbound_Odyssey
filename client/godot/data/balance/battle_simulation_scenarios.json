@@ -21,9 +21,9 @@
           "expect": {"result": "victory", "minRounds": 3, "maxRounds": 8, "minPlayerHpRatio": 0.35}
         },
         {
-          "id": "riverbank_growth_solo",
+          "id": "mistcap_growth_solo",
           "label": "河岸成长单人练级",
-          "progressionZoneId": "riverbank_growth",
+          "progressionZoneId": "mistcap_growth",
           "partySize": 1,
           "playerLevel": 35,
           "petLevel": 35,

@@ -40,6 +40,25 @@
   ],
   "encounterZones": [
     {
+      "id": "shadow_capstone_training_floor",
+      "name": "玄影洞窟顶层练级区",
+      "rects": [[6, 10, 13, 11]],
+      "encounterRate": 0.2,
+      "individualWildPets": true,
+      "encounterGroupId": "shadow_capstone_training_01",
+      "wildPetPool": [
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "玄影晒甲苔背兽", "weight": 24.75, "levelMin": 132, "levelMax": 140, "battleStats": {"maxHp": 2050, "attack": 290, "defense": 360, "agility": 130}},
+        {"formId": "tidefin_sky_water5_wind5", "name": "玄影云潮鳍兽", "weight": 24.75, "levelMin": 132, "levelMax": 140, "battleStats": {"maxHp": 1780, "attack": 305, "defense": 265, "agility": 305}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "玄影岚角兽", "weight": 24.75, "levelMin": 132, "levelMax": 140, "battleStats": {"maxHp": 1800, "attack": 380, "defense": 215, "agility": 320}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "玄影高地风狐", "weight": 24.75, "levelMin": 132, "levelMax": 140, "battleStats": {"maxHp": 1580, "attack": 340, "defense": 180, "agility": 405}},
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "Lv1 晒甲苔背兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 214, "attack": 16, "defense": 28, "agility": 38}},
+        {"formId": "tidefin_sky_water5_wind5", "name": "Lv1 云潮鳍兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 176, "attack": 18, "defense": 17, "agility": 88}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "Lv1 岚角兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 178, "attack": 27, "defense": 13, "agility": 96}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "Lv1 高地风狐", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 142, "attack": 20, "defense": 10, "agility": 142}}
+      ],
+      "previewText": "顶层回廊是满级冲刺区，四系 Lv1 个体极少出现。"
+    },
+    {
       "id": "shadow_oath_rebirth_guardian_floor",
       "name": "玄影洞窟顶层",
       "rects": [[20, 6, 4, 3]],

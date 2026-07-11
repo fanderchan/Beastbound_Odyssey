@@ -44,6 +44,7 @@
       "rects": [[9, 13, 8, 5]],
       "encounterRate": 0.13,
       "encounterGroupId": "windglass_meadow_01",
+      "rewardTableId": "rebirth_prep_training_01",
       "wildPetPool": [
         {
           "formId": "driftfox_highland_wind9_earth1",
@@ -78,6 +79,7 @@
       "rects": [[21, 14, 7, 6]],
       "encounterRate": 0.15,
       "encounterGroupId": "windglass_cliff_02",
+      "rewardTableId": "rebirth_prep_training_01",
       "wildPetPool": [
         {
           "formId": "driftfox_highland_wind9_earth1",

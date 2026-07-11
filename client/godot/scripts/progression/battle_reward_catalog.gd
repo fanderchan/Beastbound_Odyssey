@@ -76,6 +76,11 @@ static func stone_coins_for_state(state: Dictionary) -> int:
 
 
 static func table_for_state(state: Dictionary) -> Dictionary:
+	var reward_table_id := str(state.get("sourceRewardTableId", ""))
+	if reward_table_id != "":
+		var explicit_table := table_for_id(reward_table_id)
+		if not explicit_table.is_empty():
+			return explicit_table
 	var group_id := str(state.get("sourceEncounterGroupId", ""))
 	if group_id != "":
 		var group_table := table_for_id(group_id)

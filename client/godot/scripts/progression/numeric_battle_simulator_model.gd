@@ -141,6 +141,7 @@ static func simulate_scenario(
 	var reward_group_id := str(scenario.get("progressionZoneId", ""))
 	var reward_state := state.duplicate(true)
 	reward_state["sourceEncounterGroupId"] = _encounter_group_for_progression_zone(reward_group_id)
+	reward_state["sourceRewardTableId"] = _reward_table_for_progression_zone(reward_group_id)
 	var avg_exp := PlayerProgressModel.battle_exp_reward(reward_state)
 	var stone_coins := BattleRewardCatalog.stone_coins_for_state(reward_state)
 	var expectation := _expectation_result(expect, result, rounds, remaining_ratio)
@@ -167,6 +168,7 @@ static func simulate_scenario(
 			"exp": avg_exp,
 			"stoneCoins": stone_coins,
 			"encounterGroupId": str(reward_state.get("sourceEncounterGroupId", "")),
+			"rewardTableId": str(reward_state.get("sourceRewardTableId", "")),
 		},
 		"expectation": expectation,
 	}
@@ -446,6 +448,13 @@ static func _encounter_group_for_progression_zone(zone_id: String) -> String:
 	for zone in BalanceCatalogModel.progression_zone_list():
 		if str(zone.get("id", "")) == zone_id:
 			return str(zone.get("encounterGroupId", ""))
+	return ""
+
+
+static func _reward_table_for_progression_zone(zone_id: String) -> String:
+	for zone in BalanceCatalogModel.progression_zone_list():
+		if str(zone.get("id", "")) == zone_id:
+			return str(zone.get("rewardTableId", zone.get("encounterGroupId", "")))
 	return ""
 
 

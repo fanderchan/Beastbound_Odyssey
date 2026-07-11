@@ -10461,6 +10461,13 @@ function battleVictoryRewardForRoom(room) {
 
 function battleRewardTableForRoom(room) {
   const encounter = room && room.encounter && typeof room.encounter === "object" && !Array.isArray(room.encounter) ? room.encounter : {};
+  const rewardTableId = String(encounter.rewardTableId || "").trim();
+  if (rewardTableId !== "") {
+    const explicitTable = battleRewardTableForId(rewardTableId);
+    if (Object.keys(explicitTable).length > 0) {
+      return explicitTable;
+    }
+  }
   const groupId = String(encounter.groupId || "").trim();
   if (groupId !== "") {
     const groupTable = battleRewardTableForId(groupId);

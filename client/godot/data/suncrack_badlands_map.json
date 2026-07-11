@@ -44,6 +44,7 @@
       "rects": [[9, 12, 8, 5]],
       "encounterRate": 0.13,
       "encounterGroupId": "suncrack_scrub_01",
+      "rewardTableId": "growth_training_01",
       "wildPetPool": [
         {
           "formId": "emberhorn_red_fire8_earth2",
@@ -78,6 +79,7 @@
       "rects": [[20, 11, 7, 6]],
       "encounterRate": 0.15,
       "encounterGroupId": "suncrack_ridge_02",
+      "rewardTableId": "growth_training_01",
       "wildPetPool": [
         {
           "formId": "emberhorn_red_fire8_earth2",

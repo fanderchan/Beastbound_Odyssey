@@ -11,7 +11,7 @@
           "label": "火芽村入口草丛",
           "stageId": "newbie",
           "contentType": "wild_training",
-          "levelRange": [1, 20],
+          "levelRange": [1, 10],
           "mapIds": ["firebud_village_gate"],
           "encounterGroupId": "firebud_grass_01",
           "repeatable": true,
@@ -19,44 +19,83 @@
           "targetBattlesPerLevel": [10, 20],
           "targetStoneCoinsPerBattle": [10, 35],
           "typicalBattle": {
-            "enemyCount": 2,
+            "enemyCount": 1,
             "enemy": {"level": 2, "maxHp": 92, "attack": 15, "defense": 7, "quick": 72}
           },
           "designNotes": "教学、新手补给和第一批捕宠道具来源；不服务中后期练级。"
         },
         {
-          "id": "riverbank_growth",
-          "label": "河岸成长区",
+          "id": "mistcap_growth",
+          "label": "雾帽湿地成长区",
           "stageId": "growth",
           "contentType": "wild_training",
-          "levelRange": [20, 60],
-          "mapIds": [],
-          "encounterGroupId": "growth_training_01",
+          "levelRange": [10, 24],
+          "mapIds": ["mistcap_marsh"],
+          "encounterGroupId": "mistcap_reeds_01",
+          "rewardTableId": "growth_training_01",
           "repeatable": true,
-          "targetAvgExpPerBattle": [300, 1200],
-          "targetBattlesPerLevel": [10, 28],
-          "targetStoneCoinsPerBattle": [35, 120],
+          "targetAvgExpPerBattle": [200, 700],
+          "targetBattlesPerLevel": [8, 24],
+          "targetStoneCoinsPerBattle": [35, 90],
           "typicalBattle": {
-            "enemyCount": 3,
-            "enemy": {"level": 35, "maxHp": 260, "attack": 38, "defense": 24, "quick": 80}
+            "enemyCount": 1,
+            "enemy": {"level": 16, "maxHp": 260, "attack": 34, "defense": 54, "quick": 50}
           },
-          "designNotes": "承接新手任务后的第一段稳定练级区，后续需要正式地图和遇敌池。"
+          "designNotes": "承接火芽草丛，提供第一批明确角色宠与湿地捕捉路线。"
+        },
+        {
+          "id": "suncrack_growth",
+          "label": "裂日荒原成长区",
+          "stageId": "growth",
+          "contentType": "wild_training",
+          "levelRange": [25, 45],
+          "mapIds": ["suncrack_badlands"],
+          "encounterGroupId": "suncrack_ridge_02",
+          "rewardTableId": "growth_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [600, 1800],
+          "targetBattlesPerLevel": [10, 30],
+          "targetStoneCoinsPerBattle": [60, 140],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 40, "maxHp": 520, "attack": 105, "defense": 72, "quick": 94}
+          },
+          "designNotes": "中段火地生态练级区，承接湿地并导向风镜高地。"
+        },
+        {
+          "id": "windglass_growth",
+          "label": "风镜高地成长区",
+          "stageId": "rebirth_prep",
+          "contentType": "wild_training",
+          "levelRange": [45, 65],
+          "mapIds": ["windglass_highlands"],
+          "encounterGroupId": "windglass_cliff_02",
+          "rewardTableId": "rebirth_prep_training_01",
+          "repeatable": true,
+          "targetAvgExpPerBattle": [1500, 4000],
+          "targetBattlesPerLevel": [12, 36],
+          "targetStoneCoinsPerBattle": [90, 220],
+          "typicalBattle": {
+            "enemyCount": 1,
+            "enemy": {"level": 60, "maxHp": 760, "attack": 150, "defense": 90, "quick": 195}
+          },
+          "designNotes": "一转前半段的高速生态练级区，并为四洞路线做装备与捕捉准备。"
         },
         {
           "id": "forest_rebirth_prep",
           "label": "一转准备练级区",
           "stageId": "rebirth_prep",
           "contentType": "wild_training",
-          "levelRange": [60, 80],
-          "mapIds": [],
+          "levelRange": [65, 80],
+          "mapIds": ["earth_vein_cave", "tide_echo_cave", "ember_core_cave", "gale_breath_cave"],
           "encounterGroupId": "rebirth_prep_training_01",
           "repeatable": true,
           "targetAvgExpPerBattle": [3000, 7000],
           "targetBattlesPerLevel": [18, 45],
           "targetStoneCoinsPerBattle": [120, 280],
           "typicalBattle": {
-            "enemyCount": 4,
-            "enemy": {"level": 70, "maxHp": 520, "attack": 55, "defense": 35, "quick": 96}
+            "enemyCount": 1,
+            "enemy": {"level": 72, "maxHp": 760, "attack": 145, "defense": 120, "quick": 175}
           },
           "designNotes": "主要服务 Lv60-80 和一转前补强；收益应明显高于火芽草丛。"
         },
@@ -66,15 +105,15 @@
           "stageId": "post_rebirth",
           "contentType": "wild_training",
           "levelRange": [80, 100],
-          "mapIds": [],
+          "mapIds": ["earth_vein_cave_f2", "tide_echo_cave_f2", "ember_core_cave_f2", "gale_breath_cave_f2"],
           "encounterGroupId": "post_rebirth_training_01",
           "repeatable": true,
           "targetAvgExpPerBattle": [7000, 16000],
           "targetBattlesPerLevel": [25, 60],
           "targetStoneCoinsPerBattle": [220, 520],
           "typicalBattle": {
-            "enemyCount": 5,
-            "enemy": {"level": 90, "maxHp": 760, "attack": 78, "defense": 52, "quick": 118}
+            "enemyCount": 1,
+            "enemy": {"level": 90, "maxHp": 980, "attack": 180, "defense": 150, "quick": 200}
           },
           "designNotes": "一转后主循环区，应该开始考验自动战斗、补给和装备耐久。"
         },
@@ -85,10 +124,10 @@
           "contentType": "wild_training",
           "levelRange": [100, 120],
           "mapIds": [
-            "earth_vein_cave_f4",
-            "tide_echo_cave_f4",
-            "ember_core_cave_f4",
-            "gale_breath_cave_f4"
+            "earth_vein_cave_f3",
+            "tide_echo_cave_f3",
+            "ember_core_cave_f3",
+            "gale_breath_cave_f3"
           ],
           "encounterGroupId": "high_cave_training_01",
           "repeatable": true,
@@ -96,8 +135,8 @@
           "targetBattlesPerLevel": [30, 75],
           "targetStoneCoinsPerBattle": [450, 1000],
           "typicalBattle": {
-            "enemyCount": 6,
-            "enemy": {"level": 110, "maxHp": 1050, "attack": 112, "defense": 78, "quick": 138}
+            "enemyCount": 1,
+            "enemy": {"level": 110, "maxHp": 1250, "attack": 225, "defense": 190, "quick": 230}
           },
           "designNotes": "四洞正式刷级池应和守护兽资格战区分，避免玩家反复刷一次性守护。"
         },
@@ -107,15 +146,15 @@
           "stageId": "shadow_chase",
           "contentType": "wild_training",
           "levelRange": [120, 131],
-          "mapIds": ["shadow_oath_cave_f5"],
+          "mapIds": ["shadow_oath_cavern_f4"],
           "encounterGroupId": "shadow_chase_training_01",
           "repeatable": true,
           "targetAvgExpPerBattle": [55000, 110000],
           "targetBattlesPerLevel": [28, 55],
           "targetStoneCoinsPerBattle": [900, 1800],
           "typicalBattle": {
-            "enemyCount": 8,
-            "enemy": {"level": 130, "maxHp": 1400, "attack": 145, "defense": 98, "quick": 165}
+            "enemyCount": 1,
+            "enemy": {"level": 126, "maxHp": 1500, "attack": 260, "defense": 220, "quick": 265}
           },
           "designNotes": "经验丹测试和追赶段，经验较高但不代表最终满级耐玩段。"
         },
@@ -125,15 +164,15 @@
           "stageId": "capstone",
           "contentType": "wild_training",
           "levelRange": [132, 140],
-          "mapIds": ["shadow_oath_cave_f5"],
+          "mapIds": ["shadow_oath_cavern_f5"],
           "encounterGroupId": "shadow_capstone_training_01",
           "repeatable": true,
           "targetAvgExpPerBattle": [100000, 180000],
           "targetBattlesPerLevel": [30, 65],
           "targetStoneCoinsPerBattle": [1200, 2600],
           "typicalBattle": {
-            "enemyCount": 10,
-            "enemy": {"level": 138, "maxHp": 1650, "attack": 170, "defense": 120, "quick": 180}
+            "enemyCount": 1,
+            "enemy": {"level": 136, "maxHp": 1800, "attack": 305, "defense": 265, "quick": 305}
           },
           "designNotes": "最终长期满级冲刺段，经验高但应通过药耗、修理、捕捉成本和击飞风险回收。"
         },
@@ -166,7 +205,7 @@
           "stageId": "capstone",
           "contentType": "qualification_battle",
           "levelRange": [100, 140],
-          "mapIds": ["shadow_oath_cave_f5"],
+          "mapIds": ["shadow_oath_cavern_f5"],
           "encounterGroupId": "shadow_oath_rebirth_guardian",
           "repeatable": false,
           "targetAvgExpPerBattle": [6500, 14000],

@@ -48,6 +48,7 @@
       "rects": [[9, 14, 8, 5]],
       "encounterRate": 0.12,
       "encounterGroupId": "mistcap_reeds_01",
+      "rewardTableId": "growth_training_01",
       "wildPetPool": [
         {
           "formId": "mossback_marsh_earth7_water3",
@@ -90,6 +91,7 @@
       "rects": [[20, 9, 7, 5]],
       "encounterRate": 0.14,
       "encounterGroupId": "mistcap_pools_02",
+      "rewardTableId": "growth_training_01",
       "wildPetPool": [
         {
           "formId": "tidefin_reed_water6_earth4",

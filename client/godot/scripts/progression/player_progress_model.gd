@@ -7434,7 +7434,7 @@ static func _captured_pet_power(captured: Dictionary) -> int:
 
 static func battle_exp_reward(state: Dictionary) -> int:
 	var total := 0
-	var reward_group_id := str(state.get("sourceEncounterGroupId", state.get("sourceZoneId", "default_wild")))
+	var reward_group_id := str(state.get("sourceRewardTableId", state.get("sourceEncounterGroupId", state.get("sourceZoneId", "default_wild"))))
 	for actor in _actors(state):
 		if str(actor.get("side", "")) != "enemy":
 			continue

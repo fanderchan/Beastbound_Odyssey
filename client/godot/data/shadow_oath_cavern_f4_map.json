@@ -27,7 +27,27 @@
     {"cell": [19, 9], "kind": "flower"},
     {"cell": [22, 8], "kind": "grass"}
   ],
-  "encounterZones": [],
+  "encounterZones": [
+    {
+      "id": "shadow_chase_training_floor",
+      "name": "玄影洞窟四层练级区",
+      "rects": [[6, 9, 15, 12]],
+      "encounterRate": 0.18,
+      "individualWildPets": true,
+      "encounterGroupId": "shadow_chase_training_01",
+      "wildPetPool": [
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "玄影晒甲苔背兽", "weight": 24.75, "levelMin": 120, "levelMax": 132, "battleStats": {"maxHp": 1700, "attack": 245, "defense": 300, "agility": 115}},
+        {"formId": "tidefin_sky_water5_wind5", "name": "玄影云潮鳍兽", "weight": 24.75, "levelMin": 120, "levelMax": 132, "battleStats": {"maxHp": 1480, "attack": 260, "defense": 220, "agility": 265}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "玄影岚角兽", "weight": 24.75, "levelMin": 120, "levelMax": 132, "battleStats": {"maxHp": 1500, "attack": 320, "defense": 180, "agility": 280}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "玄影高地风狐", "weight": 24.75, "levelMin": 120, "levelMax": 132, "battleStats": {"maxHp": 1320, "attack": 285, "defense": 150, "agility": 350}},
+        {"formId": "mossback_sunbaked_earth6_fire4", "name": "Lv1 晒甲苔背兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 214, "attack": 16, "defense": 28, "agility": 38}},
+        {"formId": "tidefin_sky_water5_wind5", "name": "Lv1 云潮鳍兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 176, "attack": 18, "defense": 17, "agility": 88}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "Lv1 岚角兽", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 178, "attack": 27, "defense": 13, "agility": 96}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "Lv1 高地风狐", "weight": 0.25, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 142, "attack": 20, "defense": 10, "agility": 142}}
+      ],
+      "previewText": "玄影深处适合高阶练级，四系 Lv1 个体极少出现。"
+    }
+  ],
   "interactionPoints": [
     {
       "id": "shadow_oath_stair_4_to_3",

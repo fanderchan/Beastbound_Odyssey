@@ -31,6 +31,7 @@ test("pet encounter catalog strictly loads the shared map and pet template docum
   assert.equal(Object.keys(catalog.formsById).length, 32);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.mapsById.firebud_village_gate.zonesById.village_grass), true);
+  assert.equal(Object.isFrozen(catalog.mapsById.shadow_oath_cavern_f4.zonesById.shadow_chase_training_floor), true);
   assert.equal(zoneContainsCell(catalog.mapsById.firebud_village_gate.zonesById.village_grass, 11, 15), true);
   assert.equal(zoneContainsCell(catalog.mapsById.firebud_village_gate.zonesById.village_grass, 10, 15), false);
 });

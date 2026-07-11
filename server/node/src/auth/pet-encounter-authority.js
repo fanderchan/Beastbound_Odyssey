@@ -3,6 +3,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const {loadProgressionRouteCatalog} = require("./progression-route-catalog");
 
 const MAX_ENEMY_COUNT = 10;
 const MAX_PET_LEVEL = 140;
@@ -13,6 +14,10 @@ const CODEX_CATCHABLE_POOL_SOURCE = "codex_catchable";
 
 function createPetEncounterAuthority(options = {}) {
   const catalog = options.catalog || loadPetEncounterCatalog(options);
+  const progressionRoutes = options.progressionRoutes || loadProgressionRouteCatalog({
+    dataDir: catalog.dataDir,
+    encounterCatalog: catalog,
+  });
   const interactionDistance = clampInt(
     options.interactionDistance,
     0,
@@ -76,7 +81,7 @@ function createPetEncounterAuthority(options = {}) {
     }
   }
 
-  return Object.freeze({catalog, resolve});
+  return Object.freeze({catalog, progressionRoutes, resolve});
 }
 
 function loadPetEncounterCatalog(options = {}) {
@@ -273,9 +278,11 @@ function buildAuthoritativeEncounter({catalog, map, source, seed, scenario, part
   }
   const zoneId = String(zone.id || "").trim();
   const interactionId = String(interaction && interaction.id || "").trim();
+  const groupId = String(zone.encounterGroupId || interaction && interaction.encounterGroupId || "");
   return {
     zoneId,
-    groupId: String(zone.encounterGroupId || interaction && interaction.encounterGroupId || ""),
+    groupId,
+    rewardTableId: String(zone.rewardTableId || interaction && interaction.rewardTableId || groupId),
     interactionId,
     sourceInteractionId: interactionId,
     sourceInteractionName: String(interaction && interaction.name || ""),
@@ -462,6 +469,9 @@ function validateEncounterSource(source, formsById, label, options = {}) {
   }
   if (!String(source.encounterGroupId || "").trim()) {
     throw new Error(`${label} is missing encounterGroupId`);
+  }
+  if (source.rewardTableId !== undefined) {
+    requiredIdentifier(source.rewardTableId, `rewardTableId in ${label}`);
   }
   if (options.requireGeometry && !encounterSourceHasGeometry(source)) {
     throw new Error(`${label} is missing cells or rects`);

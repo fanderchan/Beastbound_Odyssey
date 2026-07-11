@@ -27,7 +27,21 @@
     {"cell": [19, 9], "kind": "grass"},
     {"cell": [21, 7], "kind": "grass"}
   ],
-  "encounterZones": [],
+  "encounterZones": [
+    {
+      "id": "gale_breath_training_100_120",
+      "name": "岚息洞穴三层练级区",
+      "rects": [[6, 8, 16, 12]],
+      "encounterRate": 0.17,
+      "individualWildPets": true,
+      "encounterGroupId": "high_cave_training_01",
+      "wildPetPool": [
+        {"formId": "driftfox_highland_wind9_earth1", "name": "野生高地风狐", "weight": 99, "levelMin": 100, "levelMax": 120, "battleStats": {"maxHp": 1100, "attack": 250, "defense": 130, "agility": 310}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "Lv1 高地风狐", "weight": 1, "levelMin": 1, "levelMax": 1, "battleStats": {"maxHp": 142, "attack": 20, "defense": 10, "agility": 142}}
+      ],
+      "previewText": "洞穴深处适合练级，偶尔也会出现值得培育的 Lv1 高地风狐。"
+    }
+  ],
   "interactionPoints": [
     {
       "id": "gale_breath_stair_3_to_2",
