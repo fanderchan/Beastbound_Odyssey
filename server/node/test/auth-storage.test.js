@@ -194,6 +194,89 @@ process.stdin.on("end", () => {
   }
 });
 
+test("read-only mysql store loads without schema DDL and rejects every save", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-read-only-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "reader",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      readOnly: true,
+      ensureSchema: false,
+    });
+    assert.deepEqual(store.load(), {});
+    assert.throws(() => store.save({}), /Read-only MySQL auth store cannot save/);
+    await assert.rejects(store.saveAsync({}), /Read-only MySQL auth store cannot save/);
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].stdin, /SELECT 'server_state'/);
+    assert.doesNotMatch(calls[0].stdin, /CREATE TABLE|CREATE DATABASE|START TRANSACTION/);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql entity state preserves configs even when every entity table is empty", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-state-only-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write(["server_state", "auth", JSON.stringify({
+      storage: "mysql_entity_tables",
+      schemaVersion: 2,
+      marketConfig: {taxBps: 750},
+      offlineHangConfig: {rewardRateBps: 5000},
+    })].join("\\t") + "\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "reader",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      readOnly: true,
+    });
+    const loaded = store.load();
+    assert.deepEqual(loaded.marketConfig, {taxBps: 750});
+    assert.deepEqual(loaded.offlineHangConfig, {rewardRateBps: 5000});
+    assert.deepEqual(loaded.accounts, {});
+    assert.deepEqual(loaded.profiles, {});
+  } finally {
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
 test("mysql store loads legacy state documents larger than the Node default buffer", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-load-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");

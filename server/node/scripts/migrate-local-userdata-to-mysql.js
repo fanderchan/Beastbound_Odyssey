@@ -4,19 +4,18 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const {createMysqlAuthStore} = require("../src/mysql-store");
+const {migrateProfile} = require("../src/auth/profile-migrations");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 loadEnvFile(path.resolve(repoRoot, "server/node/.local/mysql.env"));
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const apply = args.apply === true;
   const username = normalizeUsername(args.username || process.env.BEASTBOUND_MIGRATE_USERNAME || "auth1373");
   const password = String(args.password || process.env.BEASTBOUND_MIGRATE_PASSWORD || "");
   if (!username) {
     throw new Error("Missing --username.");
-  }
-  if (!password) {
-    throw new Error("Missing --password or BEASTBOUND_MIGRATE_PASSWORD.");
   }
   const userdataRoot = args.userdataRoot || process.env.BEASTBOUND_GODOT_USERDATA || path.join(
     process.env.HOME || "",
@@ -24,15 +23,87 @@ function main() {
   );
   const localAccounts = readJsonIfExists(path.join(userdataRoot, "accounts.json"));
   const localAccount = objectOrEmpty(objectOrEmpty(localAccounts.accounts)[username]);
-  const role = normalizedRole(args.role || process.env.BEASTBOUND_MIGRATE_ROLE || localAccount.role || (username === "auth1373" ? "gm" : "player"));
+  const requestedRole = String(args.role || process.env.BEASTBOUND_MIGRATE_ROLE || "");
   const profilePath = args.profilePath || bestProfilePath(userdataRoot, username);
   const profile = readJsonFile(profilePath);
   const nowIso = new Date().toISOString();
-  const store = createMysqlAuthStore();
-  const data = normalizedServerDocument(store.load());
+  const store = createMysqlAuthStore({readOnly: !apply, ensureSchema: apply});
+  const sourceData = cloneJson(store.load());
+  const migration = buildLocalUserdataMigration({
+    sourceData,
+    username,
+    password,
+    requestedRole,
+    profile,
+    profilePath,
+    localAccount,
+    nowIso,
+  });
+
+  if (!apply) {
+    console.log(JSON.stringify({
+      ...migration.report,
+      ok: true,
+      mode: "dry-run",
+      applied: false,
+      message: "仅生成迁移预演；未写 MySQL。使用 --apply 才会先备份再写入。",
+    }, null, 2));
+    return;
+  }
+
+  const backupPath = writeBackupSnapshot(sourceData, args.backupPath, nowIso);
+  const verification = applyLocalUserdataMigration(store, sourceData, migration, backupPath);
+
+  console.log(JSON.stringify({
+    ...migration.report,
+    ok: true,
+    mode: "apply",
+    applied: true,
+    backupPath,
+    verification,
+  }, null, 2));
+}
+
+function buildLocalUserdataMigration(options = {}) {
+  const sourceData = cloneJson(options.sourceData || {});
+  const data = ensureServerDocumentCollections(cloneJson(sourceData));
+  const username = normalizeUsername(options.username);
+  const password = String(options.password || "");
+  const sourceProfile = cloneJson(options.profile || {});
+  const profileMigration = migrateProfile(sourceProfile);
+  if (!profileMigration.ok) {
+    const codes = profileMigration.errors.map((error) => error.code).join(", ");
+    throw new Error(`Local profile schema migration is not safe: ${codes}`);
+  }
+  const profile = profileMigration.profile;
+  const profilePath = String(options.profilePath || "");
+  const localAccount = objectOrEmpty(options.localAccount);
+  const nowIso = String(options.nowIso || new Date().toISOString());
+  const randomUuid = typeof options.randomUuid === "function" ? options.randomUuid : () => crypto.randomUUID();
+  const randomBytes = typeof options.randomBytes === "function" ? options.randomBytes : (size) => crypto.randomBytes(size);
+  if (!username) {
+    throw new Error("Missing username for local userdata migration.");
+  }
+
   const account = objectOrEmpty(data.accounts[username]);
-  const accountId = String(account.accountId || `acc_${crypto.randomUUID()}`);
-  const salt = crypto.randomBytes(16).toString("hex");
+  const accountId = String(account.accountId || `acc_${randomUuid()}`);
+  const existingBinding = objectOrEmpty(data.profileBindings[accountId]);
+  const playerId = String(existingBinding.playerId || `player_${accountId.slice(4, 16)}`);
+  validateTargetIdentityGraph(data, {username, accountId, playerId});
+  const role = resolveMigrationRole({
+    requestedRole: options.requestedRole ?? options.role,
+    existingRole: account.role,
+    localRole: localAccount.role,
+    username,
+  });
+  const hasExistingCredential = String(account.passwordSalt || "") !== "" && String(account.passwordHash || "") !== "";
+  if (!password && !hasExistingCredential) {
+    throw new Error("A password is required when importing a new account.");
+  }
+  const salt = password ? randomBytes(16).toString("hex") : String(account.passwordSalt || "");
+  const passwordHash = password
+    ? crypto.scryptSync(password, salt, 32).toString("hex")
+    : String(account.passwordHash || "");
   const displayName = String(localAccount.displayName || profile.playerName || objectOrEmpty(profile.player).name || username);
 
   data.accounts[username] = {
@@ -42,7 +113,9 @@ function main() {
     displayName,
     role,
     passwordSalt: salt,
-    passwordHash: crypto.scryptSync(password, salt, 32).toString("hex"),
+    passwordHash,
+    passwordPolicyVersion: Math.max(1, Math.trunc(Number(account.passwordPolicyVersion || 1))),
+    passwordUpdatedAt: password ? nowIso : String(account.passwordUpdatedAt || nowIso),
     createdAt: isoFromLocalCreatedAt(localAccount.createdAt) || account.createdAt || nowIso,
     updatedAt: nowIso,
     schemaVersion: 1,
@@ -54,8 +127,6 @@ function main() {
     }
   }
 
-  const existingBinding = objectOrEmpty(data.profileBindings[accountId]);
-  const playerId = String(existingBinding.playerId || `player_${accountId.slice(4, 16)}`);
   const nextRevision = Math.max(Number(existingBinding.profileRevision || 0), Number(objectOrEmpty(data.profiles[playerId]).profileRevision || 0)) + 1;
   data.profileBindings[accountId] = {
     accountId,
@@ -97,8 +168,9 @@ function main() {
     delete data.gmUserGrants[accountId];
     delete data.gmCommandGrants[accountId];
   }
+  const eventId = `auth_${randomUuid()}`;
   data.authEvents.push({
-    eventId: `auth_${crypto.randomUUID()}`,
+    eventId,
     type: "local_userdata_migration",
     username,
     ok: true,
@@ -107,22 +179,213 @@ function main() {
     schemaVersion: 1,
   });
 
-  store.save(data);
-  console.log(JSON.stringify({
-    ok: true,
-    username,
-    accountId,
-    playerId,
-    profileRevision: nextRevision,
-    role,
-    effectiveRole: role,
-    profilePath,
-    playerLevel: Number(objectOrEmpty(profile.player).level || 1),
-    rebirthCount: Number(profile.rebirthCount || 0),
-    petInstances: Array.isArray(profile.petInstances) ? profile.petInstances.length : 0,
-    activePetInstanceId: String(profile.activePetInstanceId || ""),
-    stoneCoins: Number(profile.stoneCoins || profile.coins || 0),
-  }, null, 2));
+  const verificationContext = {username, accountId, playerId, eventId};
+  const integrityBefore = migrationUnrelatedDigest(sourceData, verificationContext);
+  const integrityAfter = migrationUnrelatedDigest(data, verificationContext);
+  if (integrityBefore !== integrityAfter) {
+    throw new Error("Local userdata migration changed unrelated persistent state.");
+  }
+  return {
+    data,
+    report: {
+      username,
+      accountId,
+      playerId,
+      profileRevision: nextRevision,
+      role,
+      effectiveRole: role,
+      profilePath,
+      playerLevel: Number(objectOrEmpty(profile.player).level || 1),
+      rebirthCount: Number(profile.rebirthCount || 0),
+      petInstances: Array.isArray(profile.petInstances) ? profile.petInstances.length : 0,
+      activePetInstanceId: String(profile.activePetInstanceId || ""),
+      stoneCoins: Number(profile.stoneCoins || profile.coins || 0),
+      passwordChanged: Boolean(password),
+      beforeCounts: persistentBucketCounts(sourceData),
+      afterCounts: persistentBucketCounts(data),
+      targetAssetsBefore: profileAssetSummary(objectOrEmpty(objectOrEmpty(sourceData.profiles)[playerId]).profile),
+      targetAssetsAfter: profileAssetSummary(profile),
+      profileMigration: {
+        fromVersion: profileMigration.fromVersion,
+        toVersion: profileMigration.toVersion,
+        changed: profileMigration.changed,
+        assetsUnchanged: profileMigration.assetsUnchanged,
+        steps: profileMigration.steps.map((step) => step.id),
+      },
+      unrelatedDigest: integrityBefore,
+      unrelatedStatePreserved: true,
+    },
+    targetProfileDigest: stableDigest(profile),
+    verificationContext,
+  };
+}
+
+function applyLocalUserdataMigration(store, sourceDataValue, migration, backupPath = "") {
+  const sourceData = ensureServerDocumentCollections(cloneJson(sourceDataValue || {}));
+  try {
+    store.save(migration.data);
+    const verification = verifyAppliedMigration(store.load(), migration);
+    if (!verification.ok) {
+      throw new Error(`Migration verification failed: ${verification.reasons.join(", ")}`);
+    }
+    return verification;
+  } catch (error) {
+    const rollback = rollbackTargetScope(store, sourceData, migration.verificationContext);
+    const details = rollback.error ? `; rollbackError=${rollback.error}` : "";
+    error.message = `${error.message}; targetRollback=${rollback.ok ? "ok" : "failed"}${details}; backup=${backupPath}`;
+    throw error;
+  }
+}
+
+function rollbackTargetScope(store, sourceData, context) {
+  try {
+    const currentData = ensureServerDocumentCollections(cloneJson(store.load()));
+    const rollbackData = restoreTargetScope(currentData, sourceData, context);
+    store.save(rollbackData);
+    const restored = ensureServerDocumentCollections(cloneJson(store.load()));
+    const ok = targetScopeDigest(restored, context) === targetScopeDigest(sourceData, context);
+    return {ok, error: ok ? "" : "target_scope_verification_failed"};
+  } catch (error) {
+    return {ok: false, error: String(error && error.message || error)};
+  }
+}
+
+function restoreTargetScope(currentValue, beforeValue, context) {
+  const current = ensureServerDocumentCollections(cloneJson(currentValue || {}));
+  const before = ensureServerDocumentCollections(cloneJson(beforeValue || {}));
+  restoreObjectEntry(current.accounts, before.accounts, context.username);
+  restoreObjectEntry(current.profileBindings, before.profileBindings, context.accountId);
+  restoreObjectEntry(current.profiles, before.profiles, context.playerId);
+  restoreObjectEntry(current.gmUserGrants, before.gmUserGrants, context.accountId);
+  restoreObjectEntry(current.gmCommandGrants, before.gmCommandGrants, context.accountId);
+  for (const [sessionId, session] of Object.entries(current.sessions)) {
+    if (String(session && session.accountId || "") === context.accountId) {
+      delete current.sessions[sessionId];
+    }
+  }
+  for (const [sessionId, session] of Object.entries(before.sessions)) {
+    if (String(session && session.accountId || "") === context.accountId) {
+      current.sessions[sessionId] = cloneJson(session);
+    }
+  }
+  current.authEvents = current.authEvents.filter((event) => String(event && event.eventId || "") !== context.eventId);
+  return current;
+}
+
+function restoreObjectEntry(target, source, key) {
+  if (Object.prototype.hasOwnProperty.call(source, key)) {
+    target[key] = cloneJson(source[key]);
+  } else {
+    delete target[key];
+  }
+}
+
+function targetScopeDigest(value, context) {
+  const data = ensureServerDocumentCollections(cloneJson(value || {}));
+  const sessions = Object.fromEntries(Object.entries(data.sessions)
+    .filter(([, session]) => String(session && session.accountId || "") === context.accountId));
+  return stableDigest({
+    account: Object.prototype.hasOwnProperty.call(data.accounts, context.username) ? data.accounts[context.username] : null,
+    binding: Object.prototype.hasOwnProperty.call(data.profileBindings, context.accountId) ? data.profileBindings[context.accountId] : null,
+    profile: Object.prototype.hasOwnProperty.call(data.profiles, context.playerId) ? data.profiles[context.playerId] : null,
+    gmUserGrant: Object.prototype.hasOwnProperty.call(data.gmUserGrants, context.accountId) ? data.gmUserGrants[context.accountId] : null,
+    gmCommandGrants: Object.prototype.hasOwnProperty.call(data.gmCommandGrants, context.accountId) ? data.gmCommandGrants[context.accountId] : null,
+    sessions,
+    migrationEvent: data.authEvents.find((event) => String(event && event.eventId || "") === context.eventId) || null,
+  });
+}
+
+function validateTargetIdentityGraph(data, context) {
+  const conflicts = [];
+  const hasTargetAccount = Object.prototype.hasOwnProperty.call(data.accounts, context.username);
+  const targetAccount = objectOrEmpty(data.accounts[context.username]);
+  if (hasTargetAccount && String(targetAccount.accountId || "") === "") {
+    conflicts.push("target_account_id_missing");
+  }
+  if (targetAccount.username && normalizeUsername(targetAccount.username) !== context.username) {
+    conflicts.push("target_account_username_mismatch");
+  }
+  for (const [username, account] of Object.entries(data.accounts)) {
+    if (normalizeUsername(username) !== context.username) {
+      if (String(account && account.accountId || "") === context.accountId) {
+        conflicts.push("account_id_reused_by_username");
+      }
+      if (normalizeUsername(account && account.username) === context.username) {
+        conflicts.push("username_reused_by_account_entry");
+      }
+    }
+  }
+  const hasTargetBinding = Object.prototype.hasOwnProperty.call(data.profileBindings, context.accountId);
+  const targetBinding = objectOrEmpty(data.profileBindings[context.accountId]);
+  if (hasTargetBinding && String(targetBinding.playerId || "") === "") {
+    conflicts.push("target_binding_player_missing");
+  }
+  if (targetBinding.accountId && String(targetBinding.accountId) !== context.accountId) {
+    conflicts.push("target_binding_account_mismatch");
+  }
+  if (targetBinding.playerId && String(targetBinding.playerId) !== context.playerId) {
+    conflicts.push("target_binding_player_mismatch");
+  }
+  for (const [accountId, binding] of Object.entries(data.profileBindings)) {
+    if (String(accountId) !== context.accountId) {
+      if (String(binding && binding.playerId || "") === context.playerId) {
+        conflicts.push("player_id_reused_by_binding");
+      }
+      if (String(binding && binding.accountId || "") === context.accountId) {
+        conflicts.push("account_id_reused_by_binding_entry");
+      }
+    }
+  }
+  const hasTargetDocument = Object.prototype.hasOwnProperty.call(data.profiles, context.playerId);
+  const targetDocument = objectOrEmpty(data.profiles[context.playerId]);
+  if (hasTargetDocument && (!targetDocument.profile || typeof targetDocument.profile !== "object" || Array.isArray(targetDocument.profile))) {
+    conflicts.push("target_profile_payload_invalid");
+  }
+  if (targetDocument.playerId && String(targetDocument.playerId) !== context.playerId) {
+    conflicts.push("target_profile_player_mismatch");
+  }
+  if (targetDocument.accountId && String(targetDocument.accountId) !== context.accountId) {
+    conflicts.push("target_profile_account_mismatch");
+  }
+  for (const [playerId, document] of Object.entries(data.profiles)) {
+    if (String(playerId) !== context.playerId) {
+      if (String(document && document.accountId || "") === context.accountId) {
+        conflicts.push("account_id_reused_by_profile");
+      }
+      if (String(document && document.playerId || "") === context.playerId) {
+        conflicts.push("player_id_reused_by_profile_entry");
+      }
+    }
+  }
+  const hasTargetGmGrant = Object.prototype.hasOwnProperty.call(data.gmUserGrants, context.accountId);
+  const rawTargetGmGrant = data.gmUserGrants[context.accountId];
+  if (hasTargetGmGrant && (!rawTargetGmGrant || typeof rawTargetGmGrant !== "object" || Array.isArray(rawTargetGmGrant))) {
+    conflicts.push("target_gm_grant_invalid");
+  }
+  const targetGmGrant = objectOrEmpty(rawTargetGmGrant);
+  if (targetGmGrant.username && normalizeUsername(targetGmGrant.username) !== context.username) {
+    conflicts.push("target_gm_grant_username_mismatch");
+  }
+  if (Object.prototype.hasOwnProperty.call(data.gmCommandGrants, context.accountId)) {
+    const commandGrants = data.gmCommandGrants[context.accountId];
+    if (!Array.isArray(commandGrants)) {
+      conflicts.push("target_gm_command_grants_invalid");
+    } else if (commandGrants.some((grant) => String(grant && grant.accountId || "") !== context.accountId)) {
+      conflicts.push("target_gm_command_grant_account_mismatch");
+    }
+  }
+  if (conflicts.length > 0) {
+    throw new Error(`Target identity graph is inconsistent: ${Array.from(new Set(conflicts)).join(", ")}`);
+  }
+}
+
+function resolveMigrationRole(options = {}) {
+  for (const value of [options.requestedRole, options.existingRole, options.localRole]) {
+    if (String(value || "").trim() !== "") {
+      return normalizedRole(value);
+    }
+  }
+  return options.username === "auth1373" ? "gm" : "player";
 }
 
 function bestProfilePath(userdataRoot, username) {
@@ -149,28 +412,210 @@ function profileScore(filePath) {
   return Number(profile.rebirthCount || 0) * 100000 + Number(player.level || 0) * 1000 + pets * 10 + Number(profile.coins || 0) / 1000000;
 }
 
-function normalizedServerDocument(data) {
-  const source = objectOrEmpty(data);
+const OBJECT_BUCKETS = Object.freeze([
+  "accounts",
+  "sessions",
+  "profileBindings",
+  "profiles",
+  "mailMessages",
+  "marketListings",
+  "marketConfig",
+  "offlineHangConfig",
+  "tradeOffers",
+  "parties",
+  "partyInvites",
+  "families",
+  "manors",
+  "playerPositions",
+  "battleInvites",
+  "battleRooms",
+  "gmUserGrants",
+  "gmCommandGrants",
+]);
+const ARRAY_BUCKETS = Object.freeze([
+  "manorWars",
+  "manorBattles",
+  "chatMessages",
+  "battleRecords",
+  "battleTrace",
+  "gmCommandAudit",
+  "authEvents",
+  "serviceEvents",
+]);
+
+function ensureServerDocumentCollections(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Server document root must be an object.");
+  }
+  const data = value;
+  if (!Object.prototype.hasOwnProperty.call(data, "schemaVersion")) {
+    data.schemaVersion = 1;
+  } else if (!Number.isInteger(data.schemaVersion) || data.schemaVersion < 1) {
+    throw new Error("Server document schemaVersion must be a positive integer.");
+  }
+  for (const key of OBJECT_BUCKETS) {
+    if (!Object.prototype.hasOwnProperty.call(data, key)) {
+      data[key] = {};
+    } else if (!data[key] || typeof data[key] !== "object" || Array.isArray(data[key])) {
+      throw new Error(`Server document bucket ${key} must be an object.`);
+    }
+  }
+  for (const key of ARRAY_BUCKETS) {
+    if (!Object.prototype.hasOwnProperty.call(data, key)) {
+      data[key] = [];
+    } else if (!Array.isArray(data[key])) {
+      throw new Error(`Server document bucket ${key} must be an array.`);
+    }
+  }
+  if (!Object.prototype.hasOwnProperty.call(data, "serviceEventSeq")) {
+    data.serviceEventSeq = 0;
+  } else if (!Number.isInteger(data.serviceEventSeq) || data.serviceEventSeq < 0) {
+    throw new Error("Server document serviceEventSeq must be a non-negative integer.");
+  }
+  return data;
+}
+
+function migrationUnrelatedDigest(value, context) {
+  const data = ensureServerDocumentCollections(cloneJson(value || {}));
+  const username = String(context.username || "");
+  const accountId = String(context.accountId || "");
+  const playerId = String(context.playerId || "");
+  const eventId = String(context.eventId || "");
+  delete data.accounts[username];
+  delete data.profileBindings[accountId];
+  delete data.profiles[playerId];
+  delete data.gmUserGrants[accountId];
+  delete data.gmCommandGrants[accountId];
+  for (const [sessionId, session] of Object.entries(data.sessions)) {
+    if (String(session && session.accountId || "") === accountId) {
+      delete data.sessions[sessionId];
+    }
+  }
+  data.authEvents = data.authEvents.filter((event) => String(event && event.eventId || "") !== eventId);
+  return stableDigest(data);
+}
+
+function verifyAppliedMigration(value, migration) {
+  const data = ensureServerDocumentCollections(cloneJson(value || {}));
+  const context = migration.verificationContext;
+  const reasons = [];
+  if (migrationUnrelatedDigest(data, context) !== migration.report.unrelatedDigest) {
+    reasons.push("unrelated_state_changed");
+  }
+  if (stableDigest(appliedTargetFacts(data, context)) !== stableDigest(appliedTargetFacts(migration.data, context))) {
+    reasons.push("target_scope_mismatch");
+  }
+  const account = objectOrEmpty(data.accounts[context.username]);
+  if (String(account.accountId || "") !== context.accountId || String(account.role || "") !== migration.report.role) {
+    reasons.push("target_account_mismatch");
+  }
+  const binding = objectOrEmpty(data.profileBindings[context.accountId]);
+  if (String(binding.playerId || "") !== context.playerId || Number(binding.profileRevision || 0) !== migration.report.profileRevision) {
+    reasons.push("target_binding_mismatch");
+  }
+  const profile = objectOrEmpty(objectOrEmpty(data.profiles[context.playerId]).profile);
+  if (stableDigest(profile) !== migration.targetProfileDigest) {
+    reasons.push("target_profile_mismatch");
+  }
+  if (!data.authEvents.some((event) => String(event && event.eventId || "") === context.eventId)) {
+    reasons.push("migration_audit_missing");
+  }
+  if (migration.report.role === "gm") {
+    const userGrant = objectOrEmpty(data.gmUserGrants[context.accountId]);
+    const commandGrants = Array.isArray(data.gmCommandGrants[context.accountId]) ? data.gmCommandGrants[context.accountId] : [];
+    if (!userGrant.enabled || !commandGrants.some((grant) => grant && grant.enabled && grant.commandId === "*")) {
+      reasons.push("gm_grant_mismatch");
+    }
+  }
   return {
-    schemaVersion: 1,
-    accounts: objectOrEmpty(source.accounts),
-    sessions: objectOrEmpty(source.sessions),
-    profileBindings: objectOrEmpty(source.profileBindings),
-    profiles: objectOrEmpty(source.profiles),
-    mailMessages: objectOrEmpty(source.mailMessages),
-    parties: objectOrEmpty(source.parties),
-    partyInvites: objectOrEmpty(source.partyInvites),
-    chatMessages: Array.isArray(source.chatMessages) ? source.chatMessages : [],
-    playerPositions: objectOrEmpty(source.playerPositions),
-    battleInvites: objectOrEmpty(source.battleInvites),
-    battleRooms: objectOrEmpty(source.battleRooms),
-    gmUserGrants: objectOrEmpty(source.gmUserGrants),
-    gmCommandGrants: objectOrEmpty(source.gmCommandGrants),
-    gmCommandAudit: Array.isArray(source.gmCommandAudit) ? source.gmCommandAudit : [],
-    authEvents: Array.isArray(source.authEvents) ? source.authEvents : [],
-    serviceEventSeq: Number(source.serviceEventSeq || 0),
-    serviceEvents: Array.isArray(source.serviceEvents) ? source.serviceEvents : [],
+    ok: reasons.length === 0,
+    reasons,
+    counts: persistentBucketCounts(data),
+    targetAssets: profileAssetSummary(profile),
   };
+}
+
+function appliedTargetFacts(value, context) {
+  const data = ensureServerDocumentCollections(cloneJson(value || {}));
+  const document = objectOrEmpty(data.profiles[context.playerId]);
+  const sessions = Object.fromEntries(Object.entries(data.sessions)
+    .filter(([, session]) => String(session && session.accountId || "") === context.accountId));
+  return {
+    account: Object.prototype.hasOwnProperty.call(data.accounts, context.username) ? data.accounts[context.username] : null,
+    binding: Object.prototype.hasOwnProperty.call(data.profileBindings, context.accountId) ? data.profileBindings[context.accountId] : null,
+    profileDocument: Object.keys(document).length > 0 ? {
+      playerId: String(document.playerId || ""),
+      accountId: String(document.accountId || ""),
+      profileRevision: Number(document.profileRevision || 0),
+      updatedAt: String(document.updatedAt || ""),
+      profile: document.profile,
+    } : null,
+    gmUserGrant: Object.prototype.hasOwnProperty.call(data.gmUserGrants, context.accountId) ? data.gmUserGrants[context.accountId] : null,
+    gmCommandGrants: Object.prototype.hasOwnProperty.call(data.gmCommandGrants, context.accountId) ? data.gmCommandGrants[context.accountId] : null,
+    sessions,
+    migrationEvent: data.authEvents.find((event) => String(event && event.eventId || "") === context.eventId) || null,
+  };
+}
+
+function writeBackupSnapshot(value, requestedPath, nowIso) {
+  const stamp = String(nowIso || new Date().toISOString()).replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const nonce = crypto.randomBytes(4).toString("hex");
+  const backupPath = requestedPath
+    ? path.resolve(String(requestedPath))
+    : path.resolve(repoRoot, "server/node/.local/backups", `userdata-migration-${stamp}-${nonce}.json`);
+  fs.mkdirSync(path.dirname(backupPath), {recursive: true});
+  fs.writeFileSync(backupPath, `${JSON.stringify(value, null, 2)}\n`, {encoding: "utf8", mode: 0o600, flag: "wx"});
+  fs.chmodSync(backupPath, 0o600);
+  return backupPath;
+}
+
+function persistentBucketCounts(value) {
+  const data = ensureServerDocumentCollections(cloneJson(value || {}));
+  const counts = {};
+  for (const key of OBJECT_BUCKETS) {
+    counts[key] = Object.keys(data[key]).length;
+  }
+  for (const key of ARRAY_BUCKETS) {
+    counts[key] = data[key].length;
+  }
+  return counts;
+}
+
+function profileAssetSummary(value) {
+  const profile = objectOrEmpty(value);
+  const bank = objectOrEmpty(profile.bank);
+  const backpackSlots = Array.isArray(profile.backpackSlots) ? profile.backpackSlots : [];
+  const bankSlots = Array.isArray(bank.slots) ? bank.slots : [];
+  return {
+    stoneCoins: Math.max(0, Math.trunc(Number(profile.stoneCoins || profile.coins || 0))),
+    diamonds: Math.max(0, Math.trunc(Number(profile.diamonds || 0))),
+    bankStoneCoins: Math.max(0, Math.trunc(Number(bank.stoneCoins || 0))),
+    backpackStacks: backpackSlots.filter((slot) => String(slot && slot.itemId || "") !== "").length,
+    backpackItems: slotItemCount(backpackSlots),
+    bankStacks: bankSlots.filter((slot) => String(slot && slot.itemId || "") !== "").length,
+    bankItems: slotItemCount(bankSlots),
+    pets: Array.isArray(profile.petInstances) ? profile.petInstances.length : 0,
+    equipmentInstances: Object.keys(objectOrEmpty(profile.equipmentInstances)).length,
+    equippedSlots: Object.values(objectOrEmpty(profile.equipmentSlots)).filter((itemId) => String(itemId || "") !== "").length,
+  };
+}
+
+function slotItemCount(slots) {
+  return slots.reduce((sum, slot) => sum + Math.max(0, Math.trunc(Number(slot && slot.count || 0))), 0);
+}
+
+function stableDigest(value) {
+  return crypto.createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function parseArgs(argv) {
@@ -180,13 +625,19 @@ function parseArgs(argv) {
     if (arg === "--username") {
       result.username = argv[++index] || "";
     } else if (arg === "--password") {
-      result.password = argv[++index] || "";
+      throw new Error("Do not place passwords in process arguments; use BEASTBOUND_MIGRATE_PASSWORD.");
     } else if (arg === "--role") {
       result.role = argv[++index] || "";
     } else if (arg === "--profile-path") {
       result.profilePath = argv[++index] || "";
     } else if (arg === "--userdata-root") {
       result.userdataRoot = argv[++index] || "";
+    } else if (arg === "--backup-path") {
+      result.backupPath = argv[++index] || "";
+    } else if (arg === "--apply") {
+      result.apply = true;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
     }
   }
   return result;
@@ -224,13 +675,20 @@ function objectOrEmpty(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
 function normalizeUsername(username) {
   return String(username || "").trim().toLowerCase();
 }
 
 function normalizedRole(role) {
   const value = String(role || "").trim().toLowerCase();
-  return value === "gm" ? "gm" : "player";
+  if (value !== "gm" && value !== "player") {
+    throw new Error(`Migration role must be gm or player, received: ${value || "<empty>"}`);
+  }
+  return value;
 }
 
 function isoFromLocalCreatedAt(value) {
@@ -251,4 +709,25 @@ function unquoteShellValue(value) {
   return value;
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  ARRAY_BUCKETS,
+  OBJECT_BUCKETS,
+  applyLocalUserdataMigration,
+  buildLocalUserdataMigration,
+  ensureServerDocumentCollections,
+  migrationUnrelatedDigest,
+  parseArgs,
+  persistentBucketCounts,
+  profileAssetSummary,
+  resolveMigrationRole,
+  restoreTargetScope,
+  stableDigest,
+  targetScopeDigest,
+  validateTargetIdentityGraph,
+  verifyAppliedMigration,
+  writeBackupSnapshot,
+};

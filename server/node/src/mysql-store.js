@@ -7,11 +7,17 @@ const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
+  const readOnly = options.readOnly === true;
+  const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
   let lastPersistentData = null;
 
   function ensureSchema() {
     if (schemaReady) {
+      return;
+    }
+    if (!ensureSchemaEnabled) {
+      schemaReady = true;
       return;
     }
     if (config.createDatabase) {
@@ -269,6 +275,9 @@ function createMysqlAuthStore(options = {}) {
       return loaded;
     },
     save(nextData) {
+      if (readOnly) {
+        throw new Error("Read-only MySQL auth store cannot save.");
+      }
       ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
@@ -278,6 +287,9 @@ function createMysqlAuthStore(options = {}) {
       lastPersistentData = data;
     },
     async saveAsync(nextData) {
+      if (readOnly) {
+        throw new Error("Read-only MySQL auth store cannot save.");
+      }
       ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
@@ -374,7 +386,8 @@ function parsePersistentDataRows(output) {
     entityRows += 1;
     appendLoadedEntity(data, bucket, rowKey, document);
   }
-  if (entityRows > 0) {
+  const entityTableState = Boolean(stateDocument && stateDocument.storage === "mysql_entity_tables");
+  if (entityRows > 0 || entityTableState) {
     if (stateDocument && stateDocument.marketConfig && typeof stateDocument.marketConfig === "object" && !Array.isArray(stateDocument.marketConfig)) {
       data.marketConfig = stateDocument.marketConfig;
     }
