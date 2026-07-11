@@ -4,6 +4,8 @@ const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
+const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 
 const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
@@ -817,6 +819,69 @@ func _command_error_should_sync(parsed: Dictionary) -> bool:
 	].has(code)
 
 
+func handle_capture_capacity_full_response(parsed: Dictionary) -> bool:
+	if str(parsed.get("code", "")).strip_edges() != "battle_capture_capacity_full":
+		return false
+	var room = parsed.get("room", null)
+	if room is Dictionary:
+		host.server_battle_state["room"] = (room as Dictionary).duplicate(true)
+		host._sync_server_battle_room_scene(false)
+	elif host._battle_is_server_authority():
+		host.battle_state["phase"] = "command"
+		host._reset_battle_command_countdown()
+	var has_hang_activity: bool = (
+		host._hang_activity_active()
+		or bool(PlayerProgressModel.hang_session(host.player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	)
+	var message := (
+		"宠物栏和兽栏已满，自动挂机已停止，请清理位置后再继续。"
+		if has_hang_activity
+		else "宠物栏和兽栏已满，自动战斗已停止，请先清理位置。"
+	)
+	host._set_battle_auto_attack_enabled(false, false)
+	if has_hang_activity:
+		host._stop_hang_activity(message, false)
+	host._set_battle_message(message)
+	host._sync_battle_buttons()
+	host._layout_hud()
+	return true
+
+
+func handle_auto_capture_terminal_response(parsed: Dictionary, command_id: String) -> bool:
+	if command_id != "capture" or not host.battle_auto_attack_enabled or not host._battle_auto_capture_enabled():
+		return false
+	var code := str(parsed.get("code", "")).strip_edges()
+	if not [
+		"battle_command_capture_invalid",
+		"battle_command_capture_tool_missing",
+		"battle_capture_candidate_invalid",
+	].has(code):
+		return false
+	var room = parsed.get("room", null)
+	if room is Dictionary:
+		host.server_battle_state["room"] = (room as Dictionary).duplicate(true)
+		host._sync_server_battle_room_scene(false)
+	elif host._battle_is_server_authority():
+		host.battle_state["phase"] = "command"
+		host._reset_battle_command_countdown()
+	var has_hang_activity: bool = (
+		host._hang_activity_active()
+		or bool(PlayerProgressModel.hang_session(host.player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	)
+	var reason := ServerAuthClientModel.player_message_from_parsed(parsed, "自动捕捉失败，请检查设置后再试。").strip_edges()
+	var message := "%s %s" % [
+		reason,
+		"自动挂机已停止，请处理后再继续。" if has_hang_activity else "自动战斗已停止，请处理后再继续。",
+	]
+	host._set_battle_auto_attack_enabled(false, false)
+	if has_hang_activity:
+		host._stop_hang_activity(message, false)
+	host._set_battle_message(message)
+	host._sync_battle_buttons()
+	host._layout_hud()
+	return true
+
+
 func open_pet_command() -> void:
 	if not needs_self_pet_command():
 		return
@@ -865,6 +930,10 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 		_apply_command_success(parsed, command_id, true)
 		return
 	if handle_session_invalid_response(parsed):
+		return
+	if handle_capture_capacity_full_response(parsed):
+		return
+	if handle_auto_capture_terminal_response(parsed, command_id):
 		return
 	if apply_command_error_room(parsed):
 		return

@@ -15,6 +15,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
@@ -9543,6 +9544,10 @@ func _server_party_pve_result_log_message(room: Dictionary, base_message: String
 		if line != "" and not lines.has(line):
 			lines.append(line)
 	for line in _server_battle_reward_log_lines_for_current_account(room):
+		if line != "" and not lines.has(line):
+			lines.append(line)
+	var profile_writeback := _server_battle_profile_writeback_for_current_account(room)
+	for line in ServerCaptureFeedbackModel.lines_for_writeback(profile_writeback):
 		if line != "" and not lines.has(line):
 			lines.append(line)
 	return "\n".join(lines)
@@ -21213,19 +21218,21 @@ func _refresh_auto_capture_settings_tab() -> void:
 		AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY,
 		int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT))
 	)
-	_add_auto_settings_checkbox(
-		"低战力丢弃",
-		AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
-		bool(settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, true))
-	)
-	_add_auto_settings_int_spinbox(
-		"丢弃低于",
-		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
-		int(settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)),
-		AutoCaptureSettingsModel.MIN_POWER,
-		AutoCaptureSettingsModel.MAX_POWER,
-		"战力"
-	)
+	# 联网自动丢弃尚未具备服务端保护、收容与审计，不能显示一个实际不会安全执行的开关。
+	if not (_is_server_account_session() and not auth_auto_bypass):
+		_add_auto_settings_checkbox(
+			"低战力丢弃",
+			AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
+			bool(settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, false))
+		)
+		_add_auto_settings_int_spinbox(
+			"丢弃低于",
+			AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
+			int(settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)),
+			AutoCaptureSettingsModel.MIN_POWER,
+			AutoCaptureSettingsModel.MAX_POWER,
+			"战力"
+		)
 
 func _set_auto_settings_tab(tab: String) -> void:
 	auto_settings_active_tab = tab if ["battle", "hang", "capture"].has(tab) else "battle"

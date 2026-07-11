@@ -2909,6 +2909,14 @@ func _run_auto_capture_settings_check() -> void:
 func _auto_capture_full_pet_profile() -> Dictionary:
 	var profile := PlayerProgressModel.default_profile()
 	var base_pet := PlayerProgressModel.pet_instance_by_id(profile, "pet_bui_main")
+	if base_pet.is_empty():
+		base_pet = PlayerProgressModel.create_pet_instance_from_form(
+			"pet_bui_main",
+			"随行布伊",
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_BATTLE,
+			1
+		)
 	var instances: Array = []
 	for index in range(PlayerProgressModel.PARTY_LIMIT):
 		var pet_instance := base_pet.duplicate(true)
@@ -6318,11 +6326,15 @@ func _battle_auto_try_submit_capture() -> bool:
 		return false
 	var target := BattleModel.actor_by_id(battle_state, target_id)
 	if not _battle_auto_has_capture_space():
-		_set_battle_message("兽栏和宠物栏满，请清理")
+		var has_hang_activity := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+		var full_message := "宠物栏和兽栏已满，自动挂机已停止，请清理位置后再继续。" if has_hang_activity else "宠物栏和兽栏已满，请先清理位置。"
+		_set_battle_message(full_message)
+		if has_hang_activity:
+			_stop_hang_activity(full_message, false)
 		return false
 	var inventory := BattleModel.capture_tool_inventory(battle_state)
 	var preferred_tool_id := str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID))
-	var tool_id := CaptureToolCatalog.best_available_fallback_tool(preferred_tool_id, inventory)
+	var tool_id := _battle_auto_capture_tool_for_target(preferred_tool_id, inventory, target_id)
 	if not BattleModel.has_capture_tool(battle_state, tool_id):
 		_set_battle_message("%s 不够了。" % CaptureToolCatalog.full_name_for(tool_id))
 		return false
@@ -6338,6 +6350,13 @@ func _battle_auto_try_submit_capture() -> bool:
 	if _battle_auto_capture_enabled() and battle_command_owner == "pet":
 		_battle_auto_submit_capture_pet_action(settings)
 	return true
+
+
+func _battle_auto_capture_tool_for_target(preferred_tool_id: String, inventory: Dictionary, target_id: String) -> String:
+	for tool_id in CaptureToolCatalog.fallback_tool_ids_for(preferred_tool_id, inventory, false):
+		if _capture_tool_target_requirement_message(tool_id, target_id) == "":
+			return tool_id
+	return CaptureToolCatalog.EMPTY_HAND_ID
 
 
 func _battle_auto_capture_hold_target_id(settings: Dictionary) -> String:
@@ -6460,10 +6479,24 @@ func _battle_auto_capture_actor_matches(actor: Dictionary, settings: Dictionary)
 
 
 func _battle_auto_has_capture_space() -> bool:
-	return (
-		PlayerProgressModel.party_pet_instances(player_profile).size() < PlayerProgressModel.PARTY_LIMIT
-		or PlayerProgressModel.storage_pet_instances(player_profile).size() < PlayerProgressModel.STORAGE_LIMIT
+	var profile_pet_count := (
+		PlayerProgressModel.party_pet_instances(player_profile).size()
+		+ PlayerProgressModel.storage_pet_instances(player_profile).size()
 	)
+	return (
+		profile_pet_count + _battle_auto_pending_capture_count()
+		< PlayerProgressModel.PARTY_LIMIT + PlayerProgressModel.STORAGE_LIMIT
+	)
+
+
+func _battle_auto_pending_capture_count() -> int:
+	if not _battle_is_server_authority():
+		return 0
+	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
+	var active_room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
+	if room.is_empty() or active_room_id == "" or str(room.get("roomId", "")).strip_edges() != active_room_id:
+		return 0
+	return ServerBattleRoomModel.captured_wild_pet_count_for_account(room, current_account_session)
 
 
 func _battle_auto_submit_item_action(item_id: String, target_id: String = "") -> bool:
@@ -9707,8 +9740,9 @@ func _battle_attack() -> void:
 
 
 func _begin_player_enemy_target_selection(command_id: String) -> void:
-	if BattleModel.living_enemy_id(battle_state) == "":
-		_set_battle_message("没有可选择的目标。")
+	var first_target_id := _first_catchable_living_enemy_id() if command_id == "capture" else BattleModel.living_enemy_id(battle_state)
+	if first_target_id == "":
+		_set_battle_message("当前没有可捕捉的宠物。" if command_id == "capture" else "没有可选择的目标。")
 		return
 	battle_selected_target_id = ""
 	battle_hover_target_id = ""
@@ -9724,9 +9758,20 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 	if command_id == "attack" or command_id == "capture":
 		battle_selected_target_id = target_id
 		if battle_selected_target_id == "":
-			_set_battle_message("没有可选择的目标。")
+			if command_id == "capture":
+				battle_target_mode = "player_capture_target" if _first_catchable_living_enemy_id() != "" else "enemy"
+				_set_battle_message("请选择捕捉目标。" if battle_target_mode == "player_capture_target" else "当前没有可捕捉的宠物。")
+			else:
+				_set_battle_message("没有可选择的目标。")
 			return
 		if command_id == "capture":
+			var capture_target := BattleModel.actor_by_id(battle_state, battle_selected_target_id)
+			if not _battle_actor_is_catchable_living_enemy(capture_target):
+				battle_target_mode = "player_capture_target" if _first_catchable_living_enemy_id() != "" else "enemy"
+				battle_selected_target_id = ""
+				_set_battle_message(_capture_target_rejection_message(capture_target))
+				_sync_battle_buttons()
+				return
 			var target_requirement_message := _capture_tool_target_requirement_message(battle_pending_capture_tool_id, battle_selected_target_id)
 			if target_requirement_message != "":
 				battle_target_mode = "player_capture_target"
@@ -9922,6 +9967,10 @@ func _open_item_command_menu() -> void:
 
 
 func _open_capture_command_menu() -> void:
+	if _first_catchable_living_enemy_id() == "":
+		_set_battle_message("当前没有可捕捉的宠物。")
+		_sync_battle_buttons()
+		return
 	battle_target_mode = "enemy"
 	battle_pending_item_id = ""
 	battle_pending_spirit_id = ""
@@ -9965,6 +10014,32 @@ func _capture_tool_target_requirement_message(tool_id: String, target_id: String
 	return ""
 
 
+func _battle_actor_is_catchable_living_enemy(actor: Dictionary) -> bool:
+	return (
+		not actor.is_empty()
+		and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY
+		and int(actor.get("hp", 0)) > 0
+		and bool(actor.get("catchable", false))
+		and not bool(actor.get("captured", false))
+	)
+
+
+func _first_catchable_living_enemy_id() -> String:
+	for actor_id in BattleModel.living_actor_ids(battle_state, BattleModel.SIDE_ENEMY):
+		var actor := BattleModel.actor_by_id(battle_state, actor_id)
+		if _battle_actor_is_catchable_living_enemy(actor):
+			return str(actor_id)
+	return ""
+
+
+func _capture_target_rejection_message(actor: Dictionary) -> String:
+	if _first_catchable_living_enemy_id() == "":
+		return "当前没有可捕捉的宠物。"
+	if bool(actor.get("captured", false)):
+		return "这个目标已经被捕捉。"
+	return "这个目标不可捕捉。"
+
+
 func _battle_actor_is_poisoned_wuli(actor: Dictionary) -> bool:
 	var line_id := str(actor.get("lineId", "")).strip_edges()
 	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
@@ -9995,15 +10070,15 @@ func _on_capture_battle_command_pressed(command_id: String) -> void:
 
 
 func _begin_capture_target_selection(tool_id: String) -> void:
-	if BattleModel.living_enemy_id(battle_state) == "":
-		_set_battle_message("没有可选择的目标。")
+	var target_id := _first_catchable_living_enemy_id()
+	if target_id == "":
+		_set_battle_message("当前没有可捕捉的宠物。")
 		return
 	battle_pending_capture_tool_id = CaptureToolCatalog.normalized_tool_id(tool_id)
 	battle_selected_target_id = ""
 	battle_hover_target_id = ""
 	battle_hover_ally_target_id = ""
 	battle_target_mode = "player_capture_target"
-	var target_id := BattleModel.living_enemy_id(battle_state)
 	var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), target_id, battle_pending_capture_tool_id)
 	if battle_pending_capture_tool_id == BattleModel.CAPTURE_TOOL_POISON_WULI_NET:
 		_set_battle_message("%s：请选择中毒乌力。" % CaptureToolCatalog.full_name_for(battle_pending_capture_tool_id))
@@ -10902,11 +10977,15 @@ func _select_battle_target_at_screen_point(screen_point: Vector2) -> bool:
 		var player_target_id := _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
 		if player_target_id == "":
 			return false
+		var player_target := BattleModel.actor_by_id(battle_state, player_target_id)
+		if battle_target_mode == "player_capture_target" and not _battle_actor_is_catchable_living_enemy(player_target):
+			_set_battle_message(_capture_target_rejection_message(player_target))
+			queue_redraw()
+			return true
 		battle_selected_target_id = player_target_id
 		battle_hover_target_id = player_target_id
 		battle_hover_info_actor_id = player_target_id
 		_update_battle_passive_panel()
-		var player_target := BattleModel.actor_by_id(battle_state, player_target_id)
 		var command_id := "capture" if battle_target_mode == "player_capture_target" else "attack"
 		if command_id == "capture":
 			var chance := BattleModel.capture_chance(battle_state, BattleModel.player_actor_id(battle_state), player_target_id, battle_pending_capture_tool_id)
@@ -11075,6 +11154,8 @@ func _update_battle_hover_at_screen_point(screen_point: Vector2) -> void:
 	if battle_active and not _battle_commands_locked() and not _battle_point_overlaps_panel(screen_point):
 		if _battle_target_mode_selects_enemy():
 			next_enemy_id = _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ENEMY)
+			if battle_target_mode == "player_capture_target" and not _battle_actor_is_catchable_living_enemy(BattleModel.actor_by_id(battle_state, next_enemy_id)):
+				next_enemy_id = ""
 		elif _battle_target_mode_selects_ally():
 			next_ally_id = _battle_actor_id_at_screen_point(screen_point, BattleModel.SIDE_ALLY)
 	if next_info_id != battle_hover_info_actor_id:
@@ -11179,6 +11260,8 @@ func _sync_battle_target_selection() -> void:
 		return
 	if not _battle_selected_target_is_valid():
 		battle_selected_target_id = ""
+	elif battle_target_mode == "player_capture_target" and not _battle_actor_is_catchable_living_enemy(BattleModel.actor_by_id(battle_state, battle_selected_target_id)):
+		battle_selected_target_id = ""
 	if not _battle_selected_ally_target_is_valid():
 		battle_selected_ally_target_id = ""
 	if battle_hover_target_id != "" and not _battle_actor_is_living_side(battle_hover_target_id, BattleModel.SIDE_ENEMY):
@@ -11212,6 +11295,7 @@ func _sync_battle_buttons() -> void:
 	if battle_active:
 		_sync_battle_target_selection()
 	var has_enemy := can_command and BattleModel.living_enemy_id(battle_state) != ""
+	var has_capture_target := can_command and _first_catchable_living_enemy_id() != ""
 	var has_ally := can_command and BattleModel.living_ally_id(battle_state) != ""
 	if battle_command_owner == "player" and battle_command_buttons.has("run"):
 		var run_button := battle_command_buttons["run"] as Button
@@ -11259,7 +11343,7 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not can_command
 					_:
 						var capture_tool_id := str(battle_capture_button_tool_ids.get(str(command_id), ""))
-						button.disabled = capture_tool_id == "" or not has_enemy or not BattleModel.has_capture_tool(battle_state, capture_tool_id)
+						button.disabled = capture_tool_id == "" or not has_capture_target or not BattleModel.has_capture_tool(battle_state, capture_tool_id)
 			elif battle_command_owner == "switch_pet":
 				if str(command_id) == "run":
 					button.disabled = not can_command
@@ -11274,7 +11358,7 @@ func _sync_battle_buttons() -> void:
 						"attack":
 							button.disabled = not has_enemy
 						"capture":
-							button.disabled = not has_enemy
+							button.disabled = not has_capture_target
 						"defend", "run", "help":
 							button.disabled = not can_command
 						"item":
@@ -11295,8 +11379,10 @@ func _sync_battle_buttons() -> void:
 							button.disabled = true
 				else:
 					match str(command_id):
-						"attack", "capture":
+						"attack":
 							button.disabled = not has_enemy
+						"capture":
+							button.disabled = not has_capture_target
 						"spirit":
 							button.disabled = not has_ally
 						"switch_pet":

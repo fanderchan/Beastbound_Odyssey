@@ -38,6 +38,7 @@
 | Godot server-profile pet projection and cache cleaning (P0.2 shadow only) | `client/godot/scripts/progression/server_pet_profile_projection_model.gd`, `server_profile_cache_model.gd` |
 | Cryptographic private pet seed primitive | `server/node/src/auth/pet-private-seed.js` |
 | New production pet private identity and known-Lv1 fact initialization | `server/node/src/auth/pet-private-state.js`; wired by the focused creation paths in `server/node/src/auth-service.js` |
+| Encounter-time private capture candidate, roll, claim, and exact materialization | `server/node/src/auth/pet-capture-candidate-authority.js`; prepared by `auth/battle-room.js` and settled through `auth-service.js` |
 | Persistent profile storage | `server/node/src/mysql-store.js` plus normalization/persistent snapshot contracts |
 
 Do not create a parallel pet catalog. Extend shared data and focused consumers.
@@ -110,17 +111,17 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 
 - Only a minority of forms currently link to species-specific growth profiles; the rest use legacy generic growth.
 - Protocol v2 now makes public pet/profile projection the service response boundary. Battle pets, riding pets, and world pet-EXP items share the enabled authority-v1 dispatcher; legacy pets keep level/EXP-only behavior, while unknown or damaged authority state fails closed without falling back to a legacy writer.
-- New deterministic Lv1 rewards use the strict server new-pet factory: linked forms receive canonical authority-v1 state, while unlinked forms retain CSPRNG legacy identity and true Lv1 facts. Player rebirth rewards, world eggs, and MM rewards are connected. Server encounter selection now comes from registered map/pet data and validates position, but captured identity is still created after battle instead of transferred from an encounter-time private candidate.
+- New deterministic Lv1 rewards use the strict server new-pet factory: linked forms receive canonical authority-v1 state, while unlinked forms retain CSPRNG legacy identity and true Lv1 facts. Player rebirth rewards, world eggs, MM rewards, and encounter-time capture candidates are connected. Every catchable wild actor freezes a separate private candidate before permit consumption; a successful capture claims that candidate once and materializes its unchanged pet facts instead of rolling again after battle.
 - Authority-v1 MM rebirth uses the dedicated server growth-cycle reset: validate the target and exact client-confirmed helper before the roll, retain private identity/Lv1 facts/initial cultivation, atomically rebuild level/continuous/public/root state at Lv1 with the cumulative growth bonus, then consume the helper. Legacy pets keep their existing reset path and are not silently upgraded.
 - The Godot v2 login path cleans both server caches but never loads either before the first fresh pull. Every full server profile passes strict projection, marker-aware no-RNG normalization, and dedicated public-cache publication. Growth UI shows only Lv1/current evidence and observed grades, never an exact hidden Lv140 result.
-- Legacy Lv2+ pets may have no persisted Lv1 4V. Preserve their current server stats and mark observation unavailable; never reconstruct the missing historical fact from a template or instance ID. Every known-Lv1 pet created by the current production paths now persists Lv1 4V; authoritative encounter generation must establish the fact earlier before Lv2+ captures can do the same.
+- Historical legacy Lv2+ pets may have no persisted Lv1 4V. Preserve those existing instances and mark observation unavailable; never invent their missing history from an instance ID. New legacy captures now begin as real Lv1 candidates at encounter time, freeze their CSPRNG Lv1 4V/growth facts, then deterministically settle to the wild level before combat.
 - Local/offline legacy growth tools can still derive precise Lv140 values for QA. Server-marker pets must stay on the evidence-only observation path.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
 - Distinct pet actions currently require globally unique preferred slots; all seven slots are occupied, so expand the catalog/slot contract before adding new active skill IDs.
 - Server passive semantics are incomplete relative to client presentation for some effects; verify handlers before reuse.
-- Online party encounter requests now carry only zone/interaction intent; protocol-v2 legacy payloads are accepted only for those identifiers, while all client pet/count/stat/capture/EXP facts are ignored. Encounter frequency/tickets and encounter-time private capture candidates remain incomplete.
-- Full pet party and stable can turn a successful capture into a non-recoverable `lostCapturedPets` record; rare/paid capture design needs overflow recovery.
+- Online party encounter requests now carry only zone/interaction intent plus a server-issued one-time permit under protocol v3; client pet/count/stat/capture/EXP facts are ignored. Encounter-time candidates use independent CSPRNG identities and capture secrets that never enter public rooms, events, records, or profiles.
+- A full five-pet party plus twenty-pet stable is rejected before the capture roll and tool spend; an internal out-of-band race falls back to temporary overflow storage rather than deleting the claimed pet. Player-facing recovery/audit for historical overflow and a safe server-authoritative auto-discard policy remain P1.1 work.
 - Formal evolution and fusion runtime data/contracts are roadmap work, not established sources of truth.
 
 Do not hide these gaps with fallback data in a new pet. Either close the relevant gap in the same slice or mark the feature deferred and avoid claiming completion.
@@ -143,5 +144,6 @@ Useful existing checks include:
 - `--auto-pet-management-safety-check`
 - closest server battle-room/profile-action/storage tests
 - `node --test server/node/test/pet-growth-authority.test.js server/node/test/pet-growth-catalog.test.js server/node/test/pet-growth-runtime.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js server/node/test/pet-private-state.test.js`
+- `node --test server/node/test/pet-capture-candidate-authority.test.js server/node/test/auth-battle-room.test.js`
 
 Use `tools/run_godot_auto_checks.mjs --only <flags> --fail-fast` for selected client checks. Run the full local CI only for a genuine release/export gate or explicit user request.

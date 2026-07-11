@@ -44,6 +44,7 @@ function createBattleRoomDomain(ctx) {
     ok,
     partyEncounterEntry,
     partyForAccount,
+    preparePartyEncounterCaptureCandidates,
     publicBattleCommand,
     publicBattleInvite,
     publicBattleResult,
@@ -300,7 +301,7 @@ function createBattleRoomDomain(ctx) {
     });
     return ok({
       invite: publicBattleInvite(invite, data),
-      room: publicBattleRoom(room),
+      room: publicBattleRoom(room, resolved.account.accountId),
       message: "切磋房间已就绪。",
     });
   }
@@ -411,6 +412,14 @@ function createBattleRoomDomain(ctx) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    const candidatePreparation = preparePartyEncounterCaptureCandidates(room);
+    if (!candidatePreparation || candidatePreparation.ok !== true || !candidatePreparation.room) {
+      return fail(
+        "battle_capture_candidate_invalid",
+        "这次遭遇的宠物状态异常，请重新遇敌。",
+      );
+    }
+    Object.assign(room, candidatePreparation.room);
     battleRoomConnectionStateForMutation(room);
     const consumed = consumePartyEncounterAuthorization(data, authorization);
     if (!consumed.ok) {
@@ -445,7 +454,7 @@ function createBattleRoomDomain(ctx) {
     });
     const skippedOfflineCount = Math.max(0, allMemberAccountIds.length - memberAccountIds.length);
     return ok({
-      room: publicBattleRoom(room),
+      room: publicBattleRoom(room, resolved.account.accountId),
       message: skippedOfflineCount > 0 ? "队伍遭遇了野生宠物，离线队员未参战。" : (memberAccountIds.length > 1 ? "队伍遭遇了野生宠物。" : "遭遇了野生宠物。"),
     });
   }
@@ -550,7 +559,7 @@ function createBattleRoomDomain(ctx) {
       });
     }
     return ok({
-      room: publicBattleRoom(room),
+      room: publicBattleRoom(room, resolved.account.accountId),
       result: publicBattleResult(result),
       message: isPartyPve ? (partyRemoval && partyRemoval.changed ? "已逃离战斗并离开队伍。" : "已逃离战斗。") : "已离开切磋房间。",
     });
@@ -574,7 +583,7 @@ function createBattleRoomDomain(ctx) {
     const battle = battleRoomBattleStateForMutation(room, now);
     if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
       return fail("battle_command_phase_invalid", "当前不能提交回合命令。", {
-        room: publicBattleRoom(room),
+        room: publicBattleRoom(room, resolved.account.accountId),
       });
     }
     const expectedRound = Number(battle.round || 1);
@@ -582,19 +591,19 @@ function createBattleRoomDomain(ctx) {
     if (commandRound !== expectedRound) {
       return fail("battle_command_round_mismatch", "回合已变化，请重新同步。", {
         expectedRound,
-        room: publicBattleRoom(room),
+        room: publicBattleRoom(room, resolved.account.accountId),
       });
     }
     const commandResult = normalizeBattleCommandPayload(payload, data, room, battle, resolved.account, now, randomId);
     if (!commandResult.ok) {
       return {
         ...commandResult,
-        room: publicBattleRoom(room),
+        room: publicBattleRoom(room, resolved.account.accountId),
       };
     }
     if (battle.commands && battle.commands[commandResult.command.actorId]) {
       return fail("battle_command_duplicate", "本回合命令已经提交。", {
-        room: publicBattleRoom(room),
+        room: publicBattleRoom(room, resolved.account.accountId),
       });
     }
     battle.commands[commandResult.command.actorId] = commandResult.command;
@@ -658,7 +667,7 @@ function createBattleRoomDomain(ctx) {
       }
     }
     return ok({
-      room: publicBattleRoom(room),
+      room: publicBattleRoom(room, resolved.account.accountId),
       command: publicBattleCommand(commandResult.command),
       turn,
       message: turn ? "本回合已结算。" : "回合命令已提交。",

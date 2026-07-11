@@ -1703,8 +1703,9 @@ test("party pve guardian victories write server-side trial rewards", () => {
   assert.equal(lowMmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), false);
 });
 
-test("one-time qualification rewards are claimed per rebirth cycle and mailed when the backpack is full", () => {
+test("one-time qualification rewards use the reserved preflight slot and are claimed per rebirth cycle", () => {
   let idSerial = 0;
+  const store = createMemoryAuthStore();
   const wildPet = {
     formId: "wuli_normal_tough_earth10",
     name: "岩脉守护兽",
@@ -1713,7 +1714,7 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
     battleStats: {maxHp: 1, attack: 1, defense: 1, agility: 1},
   };
   const service = createAuthService({
-    store: createMemoryAuthStore(),
+    store,
     randomId: () => `q${++idSerial}_qualification`,
     useStrictManualEncounterAccess: true,
     petEncounterAuthority: {
@@ -1740,9 +1741,7 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
     },
   });
   const player = service.register({username: "qualificationmail", password: "test1234", displayName: "资格邮件号"});
-  const supplier = service.register({username: "qualificationsupply", password: "test1234", displayName: "资格补给员"});
   assert.equal(player.ok, true);
-  assert.equal(supplier.ok, true);
   const profile = battleProfile("资格邮件号", {
     level: 80,
     hp: 520,
@@ -1756,13 +1755,7 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
     ...Array.from({length: 14}, () => ({itemId: "item_meat_small", count: 99})),
     {},
   ];
-  const supplierProfile = battleProfile("资格补给员", {level: 1, hp: 120, maxHp: 120});
-  supplierProfile.backpackSlots = [
-    {itemId: "item_meat_small", count: 99},
-    ...Array.from({length: 14}, () => ({})),
-  ];
   assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
-  assert.equal(service.saveProfile(supplier.session.token, {expectedRevision: 0, profile: supplierProfile}).ok, true);
   assert.equal(service.updatePlayerPosition(player.session.token, {
     mapId: "earth_vein_cave_f4", cellX: 20, cellY: 7, moving: false,
   }).ok, true);
@@ -1775,15 +1768,6 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
   };
   const encounter = service.startPartyEncounter(player.session.token, encounterRequest);
   assert.equal(encounter.ok, true, JSON.stringify(encounter));
-  const supplyMail = service.sendMail(supplier.session.token, {
-    recipientUsername: "qualificationmail",
-    title: "战中补给",
-    body: "把最后一格装满。",
-    items: [{itemId: "item_meat_small", count: 99}],
-  });
-  assert.equal(supplyMail.ok, true);
-  const supplyInbox = service.listInbox(player.session.token);
-  assert.equal(service.claimMailAttachments(player.session.token, supplyInbox.messages[0].mailId).ok, true);
   const actor = encounter.room.battle.actors.find((entry) => entry.accountId === player.account.accountId && entry.kind === "player");
   const enemy = encounter.room.battle.actors.find((entry) => entry.side === "enemy");
   const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
@@ -1798,13 +1782,13 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
   assert.equal(writeback.rewards.rewardRole, "qualification_battle");
   assert.equal(writeback.rewards.repeatable, false);
   assert.equal(writeback.rewards.qualificationClaimCycle, 0);
-  assert.deepEqual(writeback.rewards.addedItems, []);
-  assert.deepEqual(writeback.rewards.mailedItems, [{itemId: "ring_earth_trial", count: 1}]);
+  assert.deepEqual(writeback.rewards.addedItems, [{itemId: "ring_earth_trial", count: 1}]);
+  assert.deepEqual(writeback.rewards.mailedItems, []);
   assert.deepEqual(writeback.rewards.lostItems, []);
-  assert.equal(writeback.rewards.rewardMail.mailKind, "qualification_reward");
+  assert.equal(writeback.rewards.rewardMail, null);
 
   const after = service.getProfile(player.session.token);
-  assert.equal(profileItemCount(after.profile, "ring_earth_trial"), 0);
+  assert.equal(profileItemCount(after.profile, "ring_earth_trial"), 1);
   assert.deepEqual(after.profile.qualificationBattleClaims.earth_vein_guardian_group, {
     rebirthCycle: 0,
     claimed: true,
@@ -1812,9 +1796,7 @@ test("one-time qualification rewards are claimed per rebirth cycle and mailed wh
   });
   const inbox = service.listInbox(player.session.token);
   assert.equal(inbox.ok, true);
-  assert.equal(inbox.messages.length, 1);
-  assert.equal(inbox.messages[0].mailKind, "qualification_reward");
-  assert.deepEqual(inbox.messages[0].items, [{itemId: "ring_earth_trial", count: 1}]);
+  assert.equal(inbox.messages.length, 0);
   const roomCountBeforeRetry = Object.keys(service.snapshot().battleRooms).length;
   const duplicate = service.startPartyEncounter(player.session.token, encounterRequest);
   assert.equal(duplicate.ok, false);
@@ -2355,6 +2337,24 @@ test("party pve capture command stores captured wild pet and consumes capture to
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
   assert.equal(Boolean(player && enemy), true);
   assert.equal(enemy.catchable, true);
+  const candidateBefore = service.snapshot().battleRooms[encounter.room.roomId]
+    .battle.captureCandidatesByActorId[enemy.actorId];
+  assert.equal(Boolean(candidateBefore && candidateBefore.pet), true);
+  assert.equal(candidateBefore.attemptCount, 0);
+  assert.equal(candidateBefore.status, "available");
+  const publicEncounterJson = JSON.stringify(encounter.room);
+  assert.equal(publicEncounterJson.includes("captureCandidatesByActorId"), false);
+  assert.equal(publicEncounterJson.includes(String(candidateBefore.captureSecret)), false);
+  assert.equal(publicEncounterJson.includes(String(candidateBefore.integrityTag)), false);
+
+  const listingDuringBattle = service.createMarketListing(solo.session.token, {
+    "itemId": "capture_net",
+    "count": 1,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(listingDuringBattle.ok, false);
+  assert.equal(listingDuringBattle.code, "battle_profile_mutation_locked");
   const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
     "actorId": player.actorId,
@@ -2385,13 +2385,573 @@ test("party pve capture command stores captured wild pet and consumes capture to
   const internalCaptured = internalProfileForAccount(service, solo.account.accountId)
     .petInstances.find((pet) => pet.instanceId === captured.instanceId);
   assert.equal(isValidPetPrivateSeed(internalCaptured.individualSeed), true);
-  assert.equal(Object.hasOwn(internalCaptured, "initialStats"), false);
-  assert.equal(Object.hasOwn(internalCaptured, "growthSpeciesLevel1Stats"), false);
+  for (const key of [
+    "instanceId",
+    "petId",
+    "templateId",
+    "formId",
+    "speciesId",
+    "lineId",
+    "name",
+    "level",
+    "exp",
+    "nextExp",
+    "hp",
+    "maxHp",
+    "attack",
+    "defense",
+    "quick",
+    "activeSkillIds",
+    "petSkillSlots",
+    "passiveSkillIds",
+    "individualSeed",
+    "petGrowth",
+    "growthModelVersion",
+    "growthSpeciesProfileId",
+    "initialStats",
+    "growthSpeciesLevel1Stats",
+  ]) {
+    assert.deepEqual(internalCaptured[key], candidateBefore.pet[key], `captured candidate field changed: ${key}`);
+  }
+  assert.equal(Object.hasOwn(internalCaptured, "captureSecret"), false);
+  assert.equal(Object.hasOwn(internalCaptured, "integrityTag"), false);
   assert.equal(after.profile.petCodexCapturedFormIds.includes("wuli_normal_orange_fire10"), true);
   const remainingNetCount = (after.profile.backpackSlots || []).reduce((sum, slot) => (
     sum + (slot && slot.itemId === "capture_net" ? Number(slot.count || 0) : 0)
   ), 0);
   assert.equal(remainingNetCount, 0);
+});
+
+test("capture tools listed before battle cannot reappear in the battle snapshot", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "capturelistlock", "password": "test1234", "displayName": "捕捉网挂牌号"});
+  const profile = battleProfile("捕捉网挂牌号", {
+    "level": 10, "hp": 160, "maxHp": 160, "attack": 24, "defense": 12, "quick": 100,
+  });
+  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  profile.captureTools = {"capture_net": 1};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+  const listing = service.createMarketListing(solo.session.token, {
+    "itemId": "capture_net",
+    "count": 1,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(listing.ok, true);
+  assert.equal(profileItemCount(listing.profile, "capture_net"), 0);
+  assert.equal(listing.profile.captureTools.capture_net, 0);
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_listing_lock_grass",
+      "name": "挂牌后捕捉草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "挂牌锁乌力",
+        "level": 1,
+        "catchable": true,
+        "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(encounter.room.participants[0].teamSnapshot.captureToolBag.capture_net, 0);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const rejected = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "battle_command_capture_tool_missing");
+  const storedListing = Object.values(service.snapshot().marketListings)
+    .find((entry) => entry.listingId === listing.listing.listingId);
+  assert.equal(Boolean(storedListing), true);
+  assert.equal(storedListing.count, 1);
+});
+
+test("legacy capture tool bags migrate once into canonical backpack slots", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "capturelegacymove", "password": "test1234", "displayName": "旧网迁移号"});
+  const profile = battleProfile("旧网迁移号", {"level": 10, "quick": 100});
+  delete profile.backpackSlots;
+  profile.captureTools = {"capture_net": 1};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+  const listing = service.createMarketListing(solo.session.token, {
+    "itemId": "capture_net",
+    "count": 1,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(listing.ok, true);
+  assert.equal(Array.isArray(listing.profile.backpackSlots), true);
+  assert.equal(profileItemCount(listing.profile, "capture_net"), 0);
+  assert.equal(listing.profile.captureTools.capture_net, 0);
+});
+
+test("party pve linked-growth capture transfers the encounter candidate without rerolling it", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvecapturegrowth", "password": "test1234", "displayName": "成长捕捉号"});
+  const profile = battleProfile("成长捕捉号", {
+    "level": 30,
+    "hp": 260,
+    "maxHp": 260,
+    "attack": 48,
+    "defense": 24,
+    "quick": 140,
+  });
+  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  profile.captureTools = {"capture_net": 1};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_growth_grass",
+      "name": "成长捕捉草丛",
+      "selectedWildPet": {
+        "formId": "blue_man_dragon_water10",
+        "name": "野生蓝人龙",
+        "level": 20,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {"maxHp": 120, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const candidateBefore = service.snapshot().battleRooms[encounter.room.roomId]
+    .battle.captureCandidatesByActorId[enemy.actorId];
+  assert.equal(candidateBefore.pet.growthModelVersion, "pet_growth_authority_v1");
+  assert.equal(candidateBefore.pet.growthSpeciesProfileId, "blue_man_dragon_v1");
+  assert.equal(candidateBefore.pet.level, 20);
+  assert.equal(Boolean(candidateBefore.pet.initialStats), true);
+  assert.equal(Boolean(candidateBefore.pet.growthSpeciesLevel1Stats), true);
+  assert.notEqual(candidateBefore.pet.attack, enemy.attack);
+  const publicBeforeJson = JSON.stringify(encounter.room);
+  assert.equal(publicBeforeJson.includes(String(candidateBefore.pet.individualSeed)), false);
+  assert.equal(publicBeforeJson.includes(String(candidateBefore.captureSecret)), false);
+
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const internalCaptured = internalProfileForAccount(service, solo.account.accountId)
+    .petInstances.find((pet) => pet.capturedBattleActorId === enemy.actorId);
+  assert.equal(Boolean(internalCaptured), true);
+  for (const key of [
+    "instanceId",
+    "petId",
+    "formId",
+    "level",
+    "hp",
+    "maxHp",
+    "attack",
+    "defense",
+    "quick",
+    "activeSkillIds",
+    "petSkillSlots",
+    "passiveSkillIds",
+    "individualSeed",
+    "petGrowth",
+    "growthModelVersion",
+    "growthSpeciesProfileId",
+    "initialStats",
+    "growthSpeciesLevel1Stats",
+  ]) {
+    assert.deepEqual(internalCaptured[key], candidateBefore.pet[key], `linked captured candidate field changed: ${key}`);
+  }
+  const ownWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
+  assert.deepEqual(ownWriteback.capturedPets[0].initialStats, candidateBefore.pet.initialStats);
+  assert.equal(JSON.stringify(ownWriteback).includes(String(candidateBefore.pet.individualSeed)), false);
+  assert.equal(JSON.stringify(service.getProfile(solo.session.token).profile).includes(String(candidateBefore.captureSecret)), false);
+});
+
+test("party pve capture rejects legacy full pet capacity before rolling or consuming a tool", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "pvecapturefull", "password": "test1234", "displayName": "捕捉满栏号"});
+  const profile = battleProfile("捕捉满栏号", {
+    "level": 20,
+    "hp": 220,
+    "maxHp": 220,
+    "attack": 36,
+    "defense": 18,
+    "quick": 120,
+  });
+  profile.petInstances = Array.from({"length": 25}, (_value, index) => ({
+    "instanceId": `capture_full_pet_${index + 1}`,
+    "petId": `capture_full_pet_${index + 1}`,
+    "formId": "wuli_normal_orange_fire10",
+    "name": `满栏宠${index + 1}`,
+    "state": index < 5 ? "standby" : "storage",
+    "level": 1,
+    "hp": 80,
+    "maxHp": 80,
+    "attack": 10,
+    "defense": 5,
+    "quick": 30,
+  }));
+  profile.pets = profile.petInstances;
+  delete profile.petInstances;
+  profile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  profile.captureTools = {"capture_net": 1};
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, "profile": profile}).ok, true);
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_full_grass",
+      "name": "满栏捕捉草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "满栏测试乌力",
+        "level": 1,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const player = encounter.room.battle.actors.find((actor) => actor.accountId === solo.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const rejected = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": player.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "battle_capture_capacity_full");
+  const storedCandidate = service.snapshot().battleRooms[encounter.room.roomId]
+    .battle.captureCandidatesByActorId[enemy.actorId];
+  assert.equal(storedCandidate.attemptCount, 0);
+  assert.equal(profileItemCount(service.getProfile(solo.session.token).profile, "capture_net"), 1);
+  assert.equal(encounter.room.participants[0].teamSnapshot.captureToolBag.capture_net, 1);
+});
+
+test("party pve capture writeback is private to the capturing account across state and events", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const leader = service.register({"username": "captureprivlead", "password": "test1234", "displayName": "私密捕捉甲"});
+  const member = service.register({"username": "captureprivmem", "password": "test1234", "displayName": "私密捕捉乙"});
+  const leaderProfile = battleProfile("私密捕捉甲", {
+    "level": 12, "hp": 180, "maxHp": 180, "attack": 30, "defense": 12, "quick": 120,
+  });
+  leaderProfile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  leaderProfile.captureTools = {"capture_net": 1};
+  const memberProfile = battleProfile("私密捕捉乙", {
+    "level": 12, "hp": 180, "maxHp": 180, "attack": 28, "defense": 12, "quick": 80,
+  });
+  assert.equal(service.saveProfile(leader.session.token, {"expectedRevision": 0, "profile": leaderProfile}).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {"expectedRevision": 0, "profile": memberProfile}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "captureprivmem"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 1,
+    "encounterZone": {
+      "id": "capture_private_grass",
+      "name": "私密捕捉草丛",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "私密捕捉乌力",
+        "level": 1,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const storedBefore = service.snapshot().battleRooms[encounter.room.roomId];
+  const leaderActor = encounter.room.battle.actors.find((actor) => actor.accountId === leader.account.accountId && actor.kind === "player");
+  const memberActor = encounter.room.battle.actors.find((actor) => actor.accountId === member.account.accountId && actor.kind === "player");
+  const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const candidate = storedBefore.battle.captureCandidatesByActorId[enemy.actorId];
+  const leaderCommand = service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderActor.actorId,
+    "actionId": "capture",
+    "targetActorId": enemy.actorId,
+    "captureToolId": "capture_net",
+  });
+  assert.equal(leaderCommand.ok, true);
+  assert.equal(leaderCommand.turn, null);
+  const resolvedForMember = service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberActor.actorId,
+    "actionId": "defend",
+  });
+  assert.equal(resolvedForMember.ok, true);
+  assert.equal(resolvedForMember.room.status, "closed");
+  const memberResponseProfiles = resolvedForMember.room.battle.profileWriteback.profiles;
+  assert.equal(memberResponseProfiles.every((entry) => entry.accountId === member.account.accountId), true);
+  assert.equal(memberResponseProfiles.some((entry) => entry.accountId === leader.account.accountId), false);
+
+  const leaderState = service.getBattleState(leader.session.token);
+  const memberState = service.getBattleState(member.session.token);
+  assert.equal(leaderState.room.battle.profileWriteback.profiles.every((entry) => entry.accountId === leader.account.accountId), true);
+  assert.equal(leaderState.room.battle.profileWriteback.profiles[0].capturedPets.length, 1);
+  assert.equal(memberState.room.battle.profileWriteback.profiles.every((entry) => entry.accountId === member.account.accountId), true);
+  assert.equal(memberState.room.battle.profileWriteback.profiles.some((entry) => entry.accountId === leader.account.accountId), false);
+
+  for (const [token, expectedAccountId] of [
+    [leader.session.token, leader.account.accountId],
+    [member.session.token, member.account.accountId],
+  ]) {
+    const listed = service.listEventsForSession(token, {"afterSeq": 0});
+    assert.equal(listed.ok, true);
+    const battleEvents = listed.events.filter((event) => event && String(event.type || "").startsWith("battle."));
+    assert.equal(JSON.stringify(battleEvents).includes(String(candidate.captureSecret)), false);
+    assert.equal(JSON.stringify(battleEvents).includes(String(candidate.integrityTag)), false);
+    for (const event of battleEvents) {
+      const profiles = event.room && event.room.battle && event.room.battle.profileWriteback
+        ? event.room.battle.profileWriteback.profiles
+        : [];
+      assert.equal(profiles.every((entry) => entry.accountId === expectedAccountId), true);
+    }
+  }
+  const storedSharedEvents = service.snapshot().serviceEvents.filter((event) => event && String(event.type || "").startsWith("battle."));
+  for (const event of storedSharedEvents) {
+    const profiles = event.room && event.room.battle && event.room.battle.profileWriteback
+      ? event.room.battle.profileWriteback.profiles
+      : [];
+    assert.deepEqual(profiles, []);
+  }
+});
+
+test("party pve preserves a claimed capture when its owner disconnects before room settlement", () => {
+  let nowMs = Date.parse("2026-02-04T01:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const leader = service.register({"username": "capturedroplead", "password": "test1234", "displayName": "掉线捕捉队长"});
+  const member = service.register({"username": "capturedropmem", "password": "test1234", "displayName": "掉线捕捉队员"});
+  const leaderProfile = battleProfile("掉线捕捉队长", {
+    "level": 20, "hp": 220, "maxHp": 220, "attack": 32, "defense": 18, "quick": 80,
+  });
+  const memberProfile = battleProfile("掉线捕捉队员", {
+    "level": 20, "hp": 220, "maxHp": 220, "attack": 32, "defense": 18, "quick": 150,
+  });
+  memberProfile.backpackSlots = [{"itemId": "capture_net", "count": 1}];
+  memberProfile.captureTools = {"capture_net": 1};
+  assert.equal(service.saveProfile(leader.session.token, {"expectedRevision": 0, "profile": leaderProfile}).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {"expectedRevision": 0, "profile": memberProfile}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "capturedropmem"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 2,
+    "encounterZone": {
+      "id": "capture_disconnect_grass",
+      "name": "掉线捕捉草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "掉线捕捉乌力",
+        "level": 1,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 1,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const leaderActor = encounter.room.battle.actors.find((actor) => actor.accountId === leader.account.accountId && actor.kind === "player");
+  const memberActor = encounter.room.battle.actors.find((actor) => actor.accountId === member.account.accountId && actor.kind === "player");
+  const target = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberActor.actorId,
+    "actionId": "capture",
+    "targetActorId": target.actorId,
+    "captureToolId": "capture_net",
+  }).turn, null);
+  const firstTurn = service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderActor.actorId,
+    "actionId": "defend",
+  });
+  assert.equal(firstTurn.ok, true);
+  assert.equal(firstTurn.room.status, "ready");
+  assert.equal(firstTurn.turn.events.some((event) => event.eventType === "capture" && event.success === true), true);
+
+  assert.equal(service.markBattleConnection(member.session.token, false).ok, true);
+  nowMs += 20 * 1000;
+  assert.equal(service.getSession(leader.session.token).ok, true);
+  assert.equal(service.getSession(member.session.token).ok, true);
+  nowMs += 10 * 1000;
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+  const storedAfterRemoval = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.deepEqual(storedAfterRemoval.participantAccountIds, [leader.account.accountId]);
+  assert.equal(Boolean(storedAfterRemoval.departedParticipantsByAccountId[member.account.accountId]), true);
+  const mutationWhilePending = service.createMarketListing(member.session.token, {
+    "itemId": "capture_net",
+    "count": 1,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(mutationWhilePending.ok, false);
+  assert.equal(mutationWhilePending.code, "battle_profile_mutation_locked");
+
+  const closed = service.leaveBattleRoom(leader.session.token, encounter.room.roomId);
+  assert.equal(closed.ok, true);
+  assert.equal(closed.room.status, "closed");
+  const memberAfter = service.getProfile(member.session.token);
+  const captured = memberAfter.profile.petInstances.filter((pet) => pet.capturedBattleActorId === target.actorId);
+  assert.equal(captured.length, 1);
+  assert.equal(profileItemCount(memberAfter.profile, "capture_net"), 0);
+  const replay = service.getBattleState(member.session.token);
+  assert.equal(replay.ok, true);
+  assert.equal(replay.room.roomId, encounter.room.roomId);
+  assert.equal(replay.room.battle.profileWriteback.profiles.length, 1);
+  assert.equal(replay.room.battle.profileWriteback.profiles[0].accountId, member.account.accountId);
+  assert.equal(replay.room.battle.profileWriteback.profiles[0].capturedPets.length, 1);
+});
+
+test("party pve keeps departed participants asset-locked after a failed capture", () => {
+  let nowMs = Date.parse("2026-02-04T01:30:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
+  const leader = service.register({"username": "capturefaillocka", "password": "test1234", "displayName": "失败锁队长"});
+  const member = service.register({"username": "capturefaillockb", "password": "test1234", "displayName": "失败锁队员"});
+  const leaderProfile = battleProfile("失败锁队长", {
+    "level": 20, "hp": 220, "maxHp": 220, "attack": 32, "defense": 18, "quick": 80,
+  });
+  const memberProfile = battleProfile("失败锁队员", {
+    "level": 20, "hp": 220, "maxHp": 220, "attack": 32, "defense": 18, "quick": 150,
+  });
+  memberProfile.backpackSlots = [{"itemId": "capture_net", "count": 2}];
+  memberProfile.captureTools = {"capture_net": 2};
+  assert.equal(service.saveProfile(leader.session.token, {"expectedRevision": 0, "profile": leaderProfile}).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {"expectedRevision": 0, "profile": memberProfile}).ok, true);
+  const invite = service.inviteToParty(leader.session.token, {"username": "capturefaillockb"});
+  assert.equal(invite.ok, true);
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const encounter = service.startPartyEncounter(leader.session.token, {
+    "enemyCount": 2,
+    "encounterZone": {
+      "id": "capture_fail_lock_grass",
+      "name": "失败捕捉锁草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPet": {
+        "formId": "wuli_normal_orange_fire10",
+        "name": "失败锁乌力",
+        "level": 1,
+        "catchable": true,
+        "captureDifficulty": 1,
+        "captureChanceOverride": 0,
+        "battleStats": {"maxHp": 500, "attack": 1, "defense": 1, "quick": 10},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const leaderActor = encounter.room.battle.actors.find((actor) => actor.accountId === leader.account.accountId && actor.kind === "player");
+  const memberActor = encounter.room.battle.actors.find((actor) => actor.accountId === member.account.accountId && actor.kind === "player");
+  const target = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const storedTarget = service.snapshot().battleRooms[encounter.room.roomId].battle.actors
+    .find((actor) => actor.actorId === target.actorId);
+  assert.equal(storedTarget.captureChanceOverride, 0);
+  assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": memberActor.actorId,
+    "actionId": "capture",
+    "targetActorId": target.actorId,
+    "captureToolId": "capture_net",
+  }).turn, null);
+  const firstTurn = service.submitBattleCommand(leader.session.token, encounter.room.roomId, {
+    "round": 1,
+    "actorId": leaderActor.actorId,
+    "actionId": "defend",
+  });
+  assert.equal(firstTurn.ok, true);
+  assert.equal(firstTurn.room.status, "ready");
+  assert.equal(firstTurn.turn.events.some((event) => event.eventType === "capture" && event.success === false), true);
+  const storedAfterFailure = service.snapshot().battleRooms[encounter.room.roomId];
+  const memberParticipant = storedAfterFailure.participants.find((participant) => participant.accountId === member.account.accountId);
+  assert.equal(memberParticipant.teamSnapshot.captureToolBag.capture_net, 1);
+  assert.equal(Object.values(storedAfterFailure.battle.captureCandidatesByActorId).some((candidate) => candidate.claimedByAccountId), false);
+
+  assert.equal(service.markBattleConnection(member.session.token, false).ok, true);
+  nowMs += 20 * 1000;
+  assert.equal(service.getSession(leader.session.token).ok, true);
+  assert.equal(service.getSession(member.session.token).ok, true);
+  nowMs += 10 * 1000;
+  const maintenance = service.runBattleMaintenance();
+  assert.equal(maintenance.ok, true);
+  const storedAfterRemoval = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.deepEqual(storedAfterRemoval.participantAccountIds, [leader.account.accountId]);
+  assert.equal(Boolean(storedAfterRemoval.departedParticipantsByAccountId[member.account.accountId]), true);
+  const mutationWhileDeparted = service.createMarketListing(member.session.token, {
+    "itemId": "capture_net",
+    "count": 2,
+    "unitPrice": 1,
+    "currency": "stoneCoins",
+  });
+  assert.equal(mutationWhileDeparted.ok, false);
+  assert.equal(mutationWhileDeparted.code, "battle_profile_mutation_locked");
+
+  const closed = service.leaveBattleRoom(leader.session.token, encounter.room.roomId);
+  assert.equal(closed.ok, true);
+  assert.equal(closed.room.status, "closed");
+  const memberAfter = service.getProfile(member.session.token);
+  assert.equal(profileItemCount(memberAfter.profile, "capture_net"), 1);
+  assert.equal(memberAfter.profile.captureTools.capture_net, 1);
+  assert.equal(memberAfter.profile.petInstances.some((pet) => pet.capturedBattleRoomId === encounter.room.roomId), false);
+  assert.deepEqual(Object.values(service.snapshot().marketListings), []);
+});
+
+test("party pve preserves explicit zero and nonzero capture chance overrides", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const solo = service.register({"username": "captureoverride", "password": "test1234", "displayName": "捕捉率配置号"});
+  assert.equal(service.saveProfile(solo.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("捕捉率配置号", {"level": 10, "quick": 100}),
+  }).ok, true);
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 2,
+    "encounterZone": {
+      "id": "capture_override_grass",
+      "name": "捕捉率配置草丛",
+      "formationTemplate": "10v10",
+      "selectedWildPets": [
+        {
+          "formId": "wuli_normal_orange_fire10",
+          "name": "零率乌力",
+          "level": 1,
+          "catchable": true,
+          "captureChanceOverride": 0,
+          "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+        },
+        {
+          "formId": "wuli_normal_fast_wind10",
+          "name": "七成乌力",
+          "level": 1,
+          "catchable": true,
+          "captureChanceOverride": 0.7,
+          "battleStats": {"maxHp": 80, "attack": 1, "defense": 1, "quick": 10},
+        },
+      ],
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const enemies = service.snapshot().battleRooms[encounter.room.roomId].battle.actors
+    .filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 2);
+  assert.equal(enemies[0].captureChanceOverride, 0);
+  assert.equal(enemies[1].captureChanceOverride, 0.7);
 });
 
 test("party pve retargets defeated enemies and writes exp to participants", () => {
@@ -2578,7 +3138,8 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
   assert.equal(storedMemberWriteback.exp.player.killCount, 0);
   assert.equal(storedMemberWriteback.exp.pets[0].petId, "exp_member_pet");
   assert.equal(storedMemberWriteback.exp.pets[0].amount, 0);
-  const publicLeaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  const publicLeaderWriteback = service.getBattleState(leader.session.token).room.battle.profileWriteback.profiles
+    .find((entry) => entry.accountId === leader.account.accountId);
   assert.equal(publicLeaderWriteback.exp.amount, 572);
   assert.equal(publicLeaderWriteback.exp.ridePets[0].name, "经验骑宠");
   const expRecord = service.snapshot().battleRecords.find((record) => record.roomId === encounter.room.roomId);
@@ -2752,7 +3313,8 @@ test("party pve derives enemy exp from stats when expReward is omitted", () => {
   const attackEvent = resolved.turn.events.find((event) => event.actorId === leaderPet.actorId && event.eventType === "basic_attack");
   assert.equal(Boolean(attackEvent), true);
   assert.equal(attackEvent.expCredits[0].rawBaseAmount, 30);
-  const leaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
+  const leaderWriteback = service.snapshot().battleRooms[encounter.room.roomId].battle.profileWriteback.profiles
+    .find((entry) => entry.accountId === leader.account.accountId);
   assert.equal(leaderWriteback.exp.amount, 33);
   assert.equal(leaderWriteback.exp.pets[0].petId, "formula_leader_pet");
   assert.equal(leaderWriteback.exp.pets[0].baseAmount, 30);
@@ -2975,7 +3537,11 @@ test("party pve wild enemies can combo when random targets match", () => {
   let randomByteIndex = 0;
   const service = createAuthService({
     "store": createMemoryAuthStore(),
-    "randomBytes": (size) => Buffer.alloc(size, seedBytes[randomByteIndex++] ?? 42),
+    "randomBytes": (size) => {
+      const value = seedBytes[randomByteIndex] ?? (42 + randomByteIndex);
+      randomByteIndex += 1;
+      return Buffer.alloc(size, value % 256);
+    },
   });
   const leader = service.register({"username": "pvewildca", "password": "test1234", "displayName": "野合队长"});
   const member = service.register({"username": "pvewildcb", "password": "test1234", "displayName": "野合队员"});
@@ -3172,8 +3738,9 @@ test("party pve collapses adjacent same-target attacks into combo events and sha
   assert.equal(recipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "player" && entry.amount === 110), true);
   assert.equal(recipients.some((entry) => entry.accountId === leader.account.accountId && entry.type === "pet" && entry.petId === "combo_leader_pet" && entry.amount === 110), true);
   assert.equal(recipients.some((entry) => entry.accountId === member.account.accountId), false);
-  const leaderWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === leader.account.accountId);
-  const memberWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === member.account.accountId);
+  const storedWritebackProfiles = service.snapshot().battleRooms[encounter.room.roomId].battle.profileWriteback.profiles;
+  const leaderWriteback = storedWritebackProfiles.find((entry) => entry.accountId === leader.account.accountId);
+  const memberWriteback = storedWritebackProfiles.find((entry) => entry.accountId === member.account.accountId);
   assert.equal(leaderWriteback.exp.amount, 220);
   assert.equal(memberWriteback.exp.amount, 0);
   const trace = service.getBattleTrace(leader.session.token, {"roomId": encounter.room.roomId, "limit": 20});
@@ -3379,7 +3946,7 @@ test("party pve victory applies StoneAge-style high level exp decay floor", () =
   });
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
-  const profiles = resolved.room.battle.profileWriteback.profiles;
+  const profiles = service.snapshot().battleRooms[encounter.room.roomId].battle.profileWriteback.profiles;
   const leaderWriteback = profiles.find((entry) => entry.accountId === leader.account.accountId);
   assert.equal(Boolean(leaderWriteback && leaderWriteback.exp), true);
   assert.equal(leaderWriteback.exp.amount, 2);

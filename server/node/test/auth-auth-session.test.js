@@ -364,7 +364,8 @@ test("duel battle close writes back active hang session", () => {
   const resolved = service.leaveBattleRoom(challenger.session.token, accept.room.roomId);
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
-  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === opponent.account.accountId);
+  const writeback = service.getBattleState(opponent.session.token).room.battle.profileWriteback.profiles
+    .find((entry) => entry.accountId === opponent.account.accountId);
   assert.equal(writeback.hang.enabled, false);
   assert.equal(writeback.hang.battleCount, 5);
   assert.equal(writeback.hang.lastStopReason, "low_hp");

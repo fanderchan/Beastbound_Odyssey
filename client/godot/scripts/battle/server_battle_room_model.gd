@@ -201,6 +201,26 @@ static func current_account_submitted(room: Dictionary, session: Dictionary) -> 
 	return true
 
 
+static func captured_wild_pet_count_for_account(room: Dictionary, session: Dictionary) -> int:
+	var account_id := str(session.get("accountId", "")).strip_edges()
+	if account_id == "":
+		return 0
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	var actors: Array = battle.get("actors", []) if battle.get("actors", []) is Array else []
+	var count := 0
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if (
+			bool(actor.get("captured", false))
+			and str(actor.get("kind", "")).strip_edges() == "wild_pet"
+			and str(actor.get("capturedByAccountId", "")).strip_edges() == account_id
+		):
+			count += 1
+	return count
+
+
 static func target_command_payload_for_actor(actor: Dictionary) -> Dictionary:
 	return {
 		"targetActorId": str(actor.get("serverActorId", "")).strip_edges(),

@@ -7886,7 +7886,7 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 	var capture_settings := auto_capture_settings(profile)
 	var auto_discard_enabled := (
 		bool(capture_settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
-		and bool(capture_settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, true))
+		and bool(capture_settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, false))
 	)
 	var auto_discard_threshold := maxi(0, int(capture_settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)))
 	for actor in _actors(state):

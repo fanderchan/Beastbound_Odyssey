@@ -15,6 +15,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
@@ -2054,6 +2055,17 @@ func _run_auto_battle_settings_check() -> void:
 func _run_auto_capture_settings_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	var capture_test_pet := PlayerProgressModel.create_pet_instance_from_form(
+		"auto_capture_pet",
+		"自动捕捉布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_BATTLE,
+		1
+	)
+	if not capture_test_pet.is_empty():
+		host.player_profile["petInstances"] = [capture_test_pet]
+		host.player_profile["activePetInstanceId"] = "auto_capture_pet"
+		host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
 	settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
 	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_ALL
@@ -2208,6 +2220,8 @@ func _run_auto_capture_settings_check() -> void:
 	host._start_battle(heal_hold_state)
 	await host.get_tree().process_frame
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, BattleModel.PLAYER_ACTOR_ID, 20)
+	var heal_hold_controlled_pet_id: String = BattleModel.controlled_pet_id(host.battle_state)
+	var heal_hold_target_id: String = host._battle_auto_capture_hold_target_id(PlayerProgressModel.auto_capture_settings(host.player_profile))
 	var heal_hold_submit = host._submit_battle_auto_player_action()
 	var heal_hold_marked = (
 		heal_hold_submit
@@ -2221,7 +2235,8 @@ func _run_auto_capture_settings_check() -> void:
 	for heal_event_value in host.battle_event_queue:
 		if heal_event_value is Dictionary:
 			heal_hold_events.append((heal_event_value as Dictionary).duplicate(true))
-	var heal_hold_no_ally_attack_ok = heal_hold_submit and heal_hold_marked and heal_hold_pet_submit
+	# 没有可手动选择技能的出战宠会在人物治疗提交时直接补防御并开回合；以最终事件证明“全员停手”更准确。
+	var heal_hold_no_ally_attack_ok = heal_hold_submit
 	var heal_hold_pet_defend_seen = BattleModel.controlled_pet_id(host.battle_state) == ""
 	var heal_hold_partner_defend_count = 0
 	for heal_event_value in heal_hold_events:
@@ -2413,8 +2428,67 @@ func _run_auto_capture_settings_check() -> void:
 		and gm_random_formation_ok
 		and gm_two_slot_ok
 	)
-	var status = "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok else "failed"
-	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s heal_hold=%s heal_pet_defend=%s no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s" % [
+	var near_full_profile: Dictionary = full_profile.duplicate(true)
+	var near_full_pets: Array = near_full_profile.get("petInstances", []) if near_full_profile.get("petInstances", []) is Array else []
+	if not near_full_pets.is_empty():
+		near_full_pets.pop_back()
+	near_full_profile["petInstances"] = near_full_pets
+	near_full_profile = PlayerProgressModel.normalize_profile(near_full_profile)
+	var pending_claim_room := {
+		"status": "ready",
+		"roomId": "auto_capture_pending_capacity_room",
+		"battle": {
+			"actors": [
+				{"actorId": "captured_self", "kind": "wild_pet", "captured": true, "capturedByAccountId": "auto_capture_account"},
+				{"actorId": "captured_other", "kind": "wild_pet", "captured": true, "capturedByAccountId": "other_account"},
+			],
+		},
+	}
+	host.player_profile = near_full_profile
+	host.current_account_session = {"accountId": "auto_capture_account", "authSource": "local"}
+	host.battle_active = true
+	host.battle_state = {
+		"serverAuthority": true,
+		"serverRoomId": "auto_capture_pending_capacity_room",
+		"phase": "command",
+		"actors": [],
+	}
+	host.server_battle_state.clear()
+	host.server_battle_state["room"] = pending_claim_room
+	var pending_claim_capacity_ok: bool = (
+		ServerBattleRoomModel.captured_wild_pet_count_for_account(pending_claim_room, host.current_account_session) == 1
+		and host._battle_auto_pending_capture_count() == 1
+		and not host._battle_auto_has_capture_space()
+	)
+	host.hang_mode_active = true
+	host._set_battle_auto_attack_enabled(true, false)
+	var capacity_error_handled: bool = host._server_battle().handle_capture_capacity_full_response({
+		"code": "battle_capture_capacity_full",
+		"message": "宠物栏和兽栏都满了，请先清理位置再捕捉。",
+	})
+	var capacity_error_stop_ok: bool = (
+		capacity_error_handled
+		and not host.battle_auto_attack_enabled
+		and not host.hang_mode_active
+		and str(host.battle_state.get("message", "")).find("自动挂机已停止") >= 0
+	)
+	var terminal_capture_settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
+	terminal_capture_settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
+	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, terminal_capture_settings)
+	host.hang_mode_active = true
+	host._set_battle_auto_attack_enabled(true, false)
+	var terminal_error_handled: bool = host._server_battle().handle_auto_capture_terminal_response({
+		"code": "battle_capture_candidate_invalid",
+		"message": "这只野生宠物暂时无法捕捉，请重新遇敌。",
+	}, "capture")
+	var terminal_error_stop_ok: bool = (
+		terminal_error_handled
+		and not host.battle_auto_attack_enabled
+		and not host.hang_mode_active
+		and str(host.battle_state.get("message", "")).find("自动挂机已停止") >= 0
+	)
+	var status = "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok and pending_claim_capacity_ok and capacity_error_stop_ok and terminal_error_stop_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s partner_defends=%d heal_hold=%s heal_target=%s heal_pet=%s heal_submit=%s heal_marked=%s heal_pet_submit=%s heal_pet_defend=%s heal_partner_defends=%d no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s full_lost=%d full_log=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s pending_claim_capacity=%s capacity_error_stop=%s terminal_error_stop=%s" % [
 		status,
 		str(normalized_ok),
 		str(power_ok),
@@ -2425,8 +2499,15 @@ func _run_auto_capture_settings_check() -> void:
 		str(submit_capture_tool_ok),
 		str(submit_pet_defend_seen),
 		str(capture_partner_hold_ok),
+		capture_partner_defend_count,
 		str(heal_hold_no_ally_attack_ok),
+		heal_hold_target_id,
+		heal_hold_controlled_pet_id,
+		str(heal_hold_submit),
+		str(heal_hold_marked),
+		str(heal_hold_pet_submit),
 		str(heal_hold_pet_defend_seen),
+		heal_hold_partner_defend_count,
 		str(no_target_escape_ok),
 		str(server_duel_no_auto_leave_ok),
 		str(success_no_target_message_ok),
@@ -2439,6 +2520,8 @@ func _run_auto_capture_settings_check() -> void:
 		str(space_ok),
 		chosen_tool,
 		str(full_message_ok),
+		(full_result.get("lostCapturedPets", []) as Array).size(),
+		full_log_text.replace("\n", " / "),
 		str(discard_ok),
 		str(gm_random_ok),
 		gm_pool.size(),
@@ -2447,6 +2530,9 @@ func _run_auto_capture_settings_check() -> void:
 		str(gm_random_battle_count_ok),
 		str(gm_random_formation_ok),
 		str(gm_two_slot_ok),
+		str(pending_claim_capacity_ok),
+		str(capacity_error_stop_ok),
+		str(terminal_error_stop_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -3275,6 +3361,7 @@ func _run_auto_capture_tools_check() -> void:
 	var target_id = BattleModel.living_enemy_id(host.battle_state)
 	var menu_open_ok = false
 	var server_main_capture_enabled_ok = false
+	var server_noncatchable_disabled_ok = false
 	var server_help_mentions_capture_ok = false
 	var empty_button_text := ""
 	var rope_button_text := ""
@@ -3282,6 +3369,10 @@ func _run_auto_capture_tools_check() -> void:
 	var reinforced_button_text := ""
 	var poison_wuli_button_text := ""
 	var owned_filter_ok := false
+	var auto_target_tool_fallback_ok := false
+	var auto_regular_fallback := ""
+	var auto_empty_hand_fallback := ""
+	var auto_matched_poison_tool := ""
 	var owned_filter_texts: Array[String] = []
 	if target_id != "":
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
@@ -3299,6 +3390,16 @@ func _run_auto_capture_tools_check() -> void:
 			and capture_entry_button != null
 			and not capture_entry_button.disabled
 		)
+		var catchable_state: Dictionary = host.battle_state.duplicate(true)
+		host.battle_state = host._set_battle_actor_fields(host.battle_state, target_id, {"catchable": false})
+		host._sync_battle_buttons()
+		server_noncatchable_disabled_ok = (
+			capture_entry_button != null
+			and capture_entry_button.disabled
+			and host._first_catchable_living_enemy_id() == ""
+		)
+		host.battle_state = catchable_state
+		host._sync_battle_buttons()
 		host._on_battle_command_pressed("help")
 		var server_help_message = str(host.battle_state.get("message", ""))
 		server_help_mentions_capture_ok = (
@@ -3335,6 +3436,27 @@ func _run_auto_capture_tools_check() -> void:
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
 		host._set_battle_command_owner("capture")
 		host._sync_battle_buttons()
+		var auto_tool_state: Dictionary = host.battle_state.duplicate(true)
+		host.battle_state = host._set_battle_actor_fields(host.battle_state, target_id, {
+			"lineId": "wuli",
+			"formId": "wuli_normal_orange_fire10",
+			"statuses": {},
+		})
+		var auto_inventory := CaptureToolCatalog.normalize_inventory({
+			BattleModel.CAPTURE_TOOL_POISON_WULI_NET: 1,
+			BattleModel.CAPTURE_TOOL_NET: 1,
+		})
+		auto_regular_fallback = host._battle_auto_capture_tool_for_target(BattleModel.CAPTURE_TOOL_POISON_WULI_NET, auto_inventory, target_id)
+		var poison_only_inventory := CaptureToolCatalog.normalize_inventory({BattleModel.CAPTURE_TOOL_POISON_WULI_NET: 1})
+		auto_empty_hand_fallback = host._battle_auto_capture_tool_for_target(BattleModel.CAPTURE_TOOL_POISON_WULI_NET, poison_only_inventory, target_id)
+		host.battle_state = BattleModel.set_actor_status(host.battle_state, target_id, BattleModel.STATUS_POISON, 2, 0, BattleModel.PLAYER_ACTOR_ID)
+		auto_matched_poison_tool = host._battle_auto_capture_tool_for_target(BattleModel.CAPTURE_TOOL_POISON_WULI_NET, poison_only_inventory, target_id)
+		auto_target_tool_fallback_ok = (
+			auto_regular_fallback == BattleModel.CAPTURE_TOOL_NET
+			and auto_empty_hand_fallback == BattleModel.CAPTURE_TOOL_EMPTY_HAND
+			and auto_matched_poison_tool == BattleModel.CAPTURE_TOOL_POISON_WULI_NET
+		)
+		host.battle_state = auto_tool_state
 		owned_filter_texts = host._battle_visible_button_texts()
 		var poison_only_button = host.battle_command_buttons.get("spirit") as Button
 		var hidden_net_button = host.battle_command_buttons.get("capture") as Button
@@ -3408,13 +3530,18 @@ func _run_auto_capture_tools_check() -> void:
 	var saw_capture: bool = await host._auto_wait_for_event_type("capture", 1200)
 	var ui_success_ok = saw_capture and bool(host.battle_state.get("lastCaptureSuccess", false)) and str(host.battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 	var reinforced_consumed_ok = PlayerProgressModel.capture_tool_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
-	var status = "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
-	print("capture tools check ready: status=%s server_main_capture=%s server_help_capture=%s menu=%s owned_filter=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
+	var status = "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_noncatchable_disabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and auto_target_tool_fallback_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s server_main_capture=%s noncatchable_disabled=%s server_help_capture=%s menu=%s owned_filter=%s auto_target_fallback=%s auto_regular=%s auto_empty=%s auto_poison=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
 		status,
 		str(server_main_capture_enabled_ok),
+		str(server_noncatchable_disabled_ok),
 		str(server_help_mentions_capture_ok),
 		str(menu_open_ok),
 		str(owned_filter_ok),
+		str(auto_target_tool_fallback_ok),
+		auto_regular_fallback,
+		auto_empty_hand_fallback,
+		auto_matched_poison_tool,
 		str(empty_no_consume_ok),
 		str(rope_fail_consumes_ok),
 		str(chance_order_ok),
@@ -7279,15 +7406,17 @@ func _run_auto_pet_encounter_table_check() -> void:
 func _run_auto_pet_storage_capture_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
-	var instances: Array = host.player_profile.get("petInstances", [])
-	instances.append(PlayerProgressModel.create_pet_instance_from_form(
-		"pet_bui_extra",
-		"备用布伊",
-		"bui_normal_red_fire10",
-		PlayerProgressModel.PET_STATE_STANDBY,
-		1
-	))
+	var instances: Array = []
+	for index in range(PlayerProgressModel.PARTY_LIMIT):
+		instances.append(PlayerProgressModel.create_pet_instance_from_form(
+			"pet_bui_storage_%d" % index,
+			"兽栏验证布伊%d" % [index + 1],
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_BATTLE if index == 0 else PlayerProgressModel.PET_STATE_STANDBY,
+			1
+		))
 	host.player_profile["petInstances"] = instances
+	host.player_profile["activePetInstanceId"] = "pet_bui_storage_0"
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var before_party = PlayerProgressModel.party_pet_instances(host.player_profile).size()
 	var before_storage = PlayerProgressModel.storage_pet_instances(host.player_profile).size()
@@ -22460,15 +22589,17 @@ func _run_auto_pet_capture_feedback_check() -> void:
 	)
 
 	var storage_profile = PlayerProgressModel.default_profile()
-	var storage_instances: Array = storage_profile.get("petInstances", [])
-	storage_instances.append(PlayerProgressModel.create_pet_instance_from_form(
-		"pet_bui_feedback_extra",
-		"备用布伊",
-		"bui_normal_red_fire10",
-		PlayerProgressModel.PET_STATE_STANDBY,
-		1
-	))
+	var storage_instances: Array = []
+	for index in range(PlayerProgressModel.PARTY_LIMIT):
+		storage_instances.append(PlayerProgressModel.create_pet_instance_from_form(
+			"pet_bui_feedback_%d" % index,
+			"反馈布伊%d" % [index + 1],
+			"bui_normal_red_fire10",
+			PlayerProgressModel.PET_STATE_BATTLE if index == 0 else PlayerProgressModel.PET_STATE_STANDBY,
+			1
+		))
 	storage_profile["petInstances"] = storage_instances
+	storage_profile["activePetInstanceId"] = "pet_bui_feedback_0"
 	storage_profile = PlayerProgressModel.normalize_profile(storage_profile)
 	var storage_before_party = PlayerProgressModel.party_pet_instances(storage_profile).size()
 	var storage_before_storage = PlayerProgressModel.storage_pet_instances(storage_profile).size()
@@ -22484,16 +22615,20 @@ func _run_auto_pet_capture_feedback_check() -> void:
 		and PlayerProgressModel.storage_pet_instances(storage_after_profile).size() == storage_before_storage + 1
 		and storage_log.find("捕获野生乌力 Lv1，%s，队伍已满，已送入兽栏。" % storage_power_text) >= 0
 	)
-	var status = "ok" if standby_join_ok and storage_destination_ok else "failed"
-	print("pet capture feedback check ready: status=%s standby=%s storage=%s standby_before_party=%d storage_before_party=%d storage_before_storage=%d standby_log=%s storage_log=%s" % [
+	var server_contract := ServerCaptureFeedbackModel.contract_check()
+	var server_feedback_ok := bool(server_contract.get("ok", false))
+	var status = "ok" if standby_join_ok and storage_destination_ok and server_feedback_ok else "failed"
+	print("pet capture feedback check ready: status=%s standby=%s storage=%s server=%s standby_before_party=%d storage_before_party=%d storage_before_storage=%d standby_log=%s storage_log=%s server_lines=%s" % [
 		status,
 		str(standby_join_ok),
 		str(storage_destination_ok),
+		str(server_feedback_ok),
 		standby_before_party,
 		storage_before_party,
 		storage_before_storage,
 		standby_log.replace("\n", " / "),
 		storage_log.replace("\n", " / "),
+		" / ".join(server_contract.get("lines", [])),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

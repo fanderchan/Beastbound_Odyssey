@@ -191,7 +191,7 @@
       - [x] **P0.2c-2b 依赖公开投影/协议 v2 的安全新 Lv1 v1 创建与 dispatcher 正式启用**
         - 证据（2026-07-11）：新增严格 `createNewPetFactory`，全新 Lv1 候选先经目录 `resolveNewPetProfile`，只生成一次 CSPRNG 身份；linked 直接生成 canonical authority-v1，unlinked 保持 legacy 身份与真实 Lv1 事实，绝不先 legacy 再 v1。人物 1–4 转赠宠、MM1/MM2、世界蛋与 MM 奖励已接入；5–6 转/其他未链接形态保持 legacy，战斗捕捉明确留在 P0.2c-3。正式服务固定启用 v1 dispatcher，合法 v1 世界道具与多人战斗结算成功，损坏 v1 在扣道具/revision 前失败关闭，响应/room/writeback/record 无私密字段。完整 Node 210/210，宠物 design inspector `errors=0` 且成长/dispatcher/v1/factory/public/v2/客户端不重掷均为 true；见 `docs/phase_213_pet_growth_protocol_v2_cutover.md`。
     - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与现有升级入口收口**
-      - [ ] **P0.2c-3a 服务端权威野外遭遇与捕捉来源**
+      - [x] **P0.2c-3a 服务端权威野外遭遇与捕捉来源**
         - [x] **P0.2c-3a-1 服务端权威遇敌内容、位置与教程边界**
           - 证据（2026-07-11）：先用隔离服务复现客户端可伪造十只 `rebirth_starter_shadow_cub`、Lv140、`999999` 属性、捕捉率与 EXP；现新增严格 `pet-encounter-authority`，从共享 37 张地图和宠物模板权威决定候选池、权重、数量、等级、属性、捕捉/EXP，客户端只发送区域/分组/交互 ID。普通草地校验服务端区域位置，守卫校验登记交互，队伍全员要求同图、停稳且邻近；生产首位置只能从人物记录点建立，新手乌力特例只读内部任务档案。旧 v2 `encounterZone` 仅兼容标识符，全部事实字段被忽略。定向 67/67、完整 Node 221/221、Godot 4/4 与隔离单人 live 通过；见 `docs/phase_214_server_authoritative_pet_encounter_content.md`。
         - [x] **P0.2c-3a-2 服务端遇敌资格、频率与一次性许可**
@@ -199,11 +199,12 @@
           - [x] **P0.2c-3a-2b 在线挂机逐格移动、遇敌石绝对时钟与重启防重放**
           - [x] **P0.2c-3a-2c 四戒/玄影/MM 全队资格、周期领取与奖励邮件兜底**
           - 证据（2026-07-11）：先复现合法草地区域 5 次直接 POST 创建 5 个房间；现普通遇敌只接受服务端逐格移动签发的 10 秒不透明票，精确绑定账号/会话/地图/格子/序号/区域/队伍/档案，只在完整房间构造后消费且不广播/不落盘。服务端与客户端统一禁斜穿双阻挡角；账号移动为 100ms/步、突发 4 的前置门，遇敌频率另有 150ms 信用、2 安全步、区域 `encounterRate` CSPRNG。在线挂机复用逐格 ACK；遇敌石绑定 origin/zone/group、绝对时钟和持久化 consumed slot，战斗中不暂停。构造期强制六个手动入口规则完整；四戒 Lv80、玄影 Lv100+四戒、MM 正式教学/容量均逐队员预检，资格胜利按当前人物转生周期写 claim，战中塞满背包则戒指进入系统邮件而不能二刷。协议原子切到 v3；定向 93/93、HTTP 22/22、完整 Node 251/251、Godot 8/8、隔离服务 movement/click-recovery/单人 PVE live 全通过；idle `0.23–0.34ms`、moving `0.37–0.43ms @ 60FPS`、317 次输入 `avg/max=16/168us`。未连接 MySQL；200 人混合 WS/多 worker/长时挂机 soak 仍未证明，见 `docs/phase_216_server_encounter_permits_and_qualifications.md`。
-        - [ ] **P0.2c-3a-3 遇敌时私有捕捉候选及成功后原样转移**
+        - [x] **P0.2c-3a-3 遇敌时私有捕捉候选及成功后原样转移**
+          - 证据（2026-07-11）：每只可捕捉 actor 现在在许可消费前冻结独立 CSPRNG pet/candidate/capture secret；linked 与 legacy 都先建立真实 Lv1 4V/隐藏候选事实再结算到野外等级，捕捉 HMAC roll 不依赖公开 room seed，失败不换宠、成功唯一 claim 并原样 materialize。旧格式档案满 5+20 在 roll/扣工具前拒绝；房间本人 pending claim 计入客户端容量，容量竞态与非法目标/缺工具/坏候选会关闭自动战斗并停挂机，缚毒网目标不符时安全降级。标准背包的 0 不再被旧 `captureTools` 复活，真正旧档只迁移一次；战中及掉线离场待结算期资产写入口持续锁定，失败捕捉/成功捕捉均只结算一次。HTTP/WS/event writeback 按账号隔离；联网低战力自动丢弃默认关闭并隐藏，手动目标只允许可捕捉活体。必须保留的限制：当前 7 个 linked form 捕后能逐级结算四维并观察，普通乌力等 24 个 unlinked legacy form 的 EXP 路由仍只涨等级/经验，完整闭环属于 P0.2d。候选 8/8、battle-room 57/57、完整 Node 267/267、Godot 8/8、skill inspector `errors=0`；空闲/移动 `process_total` 分别 `0.20–0.35ms`/`0.10–0.31ms`，317 次连点 `avg/max=13/176us`。完整契约见 `docs/phase_217_server_private_capture_candidates.md`。
       - [x] **P0.2c-3b authority-v1 转生成长周期原子重启**
         - 证据（2026-07-11）：先复现合法 Lv140 v1 宠转生返回成功并吞掉 MM，却形成 `level=1 / settledLevel=140 / public.level=140`、公开/私有转生加成不一致和 invalid marker；现新增纯 `restartPetGrowthCycle` 与严格 `pet-rebirth-growth-cycle` 路由，保留 privateSeed/privateRoll/Lv1 4V/initial bonus，用新累计 growth bonus 从 Lv1 原子重建 continuous/public/root，清除旧观察且最终再次验证。目标与实际确认的 MM 均在开奖前预检；Godot 提交精确 `helperInstanceId`，多材料旧请求失败关闭，不再自动替换。损坏目标/材料不删 MM、不写历史、不增 revision；legacy 不迁移，随机量化抖动已用 30/30 次开奖锁定。定向 54/54、完整 Node 229/229、Godot 6/6 通过；见 `docs/phase_215_authority_pet_rebirth_growth_cycle.md`。
       - [ ] **P0.2c-3c GM 宠物创建/升级服务端化与现有剩余升级入口封口**
-  - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
+  - [ ] **P0.2d 观察证据/区间、24 个 unlinked 形态（含普通乌力）正式成长接档、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**
 - [ ] **P0.5 版本化档案迁移 + 全面 GM QA 账号**

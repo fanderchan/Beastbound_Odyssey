@@ -114,7 +114,7 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
 });
 
-test("claiming battle item mail during a battle updates the active room item bag", () => {
+test("claiming battle item mail is locked until the active battle ends", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const supplier = service.register({"username": "bmsupply", "password": "test1234", "displayName": "补给员"});
   const recipient = service.register({"username": "bmrecv", "password": "test1234", "displayName": "收件战士"});
@@ -162,24 +162,20 @@ test("claiming battle item mail during a battle updates the active room item bag
   });
   assert.equal(sent.ok, true);
   const inbox = service.listInbox(recipient.session.token);
+  const locked = service.claimMailAttachments(recipient.session.token, inbox.messages[0].mailId);
+  assert.equal(locked.ok, false);
+  assert.equal(locked.code, "battle_profile_mutation_locked");
+  assert.equal(service.snapshot().battleRooms[accept.room.roomId].participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 0);
+  assert.equal(profileItemCount(service.getProfile(recipient.session.token).profile, "item_heal_single_5"), 0);
+
+  const closed = service.leaveBattleRoom(recipient.session.token, accept.room.roomId);
+  assert.equal(closed.ok, true);
+  assert.equal(closed.room.status, "closed");
   const claimed = service.claimMailAttachments(recipient.session.token, inbox.messages[0].mailId);
   assert.equal(claimed.ok, true);
   assert.equal(claimed.claim.addedItems[0].itemId, "item_heal_single_5");
-  assert.equal(claimed.battleRoom.roomId, accept.room.roomId);
-  assert.equal(claimed.battleRoom.participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
-  assert.equal(service.snapshot().battleRooms[accept.room.roomId].participants[0].teamSnapshot.battleItemBag.item_heal_single_5, 2);
-
-  const recipientPlayer = claimed.battleRoom.battle.actors.find((actor) => actor.username === "bmrecv" && actor.kind === "player");
-  const recipientPet = claimed.battleRoom.battle.actors.find((actor) => actor.username === "bmrecv" && actor.kind === "pet");
-  const itemCommand = service.submitBattleCommand(recipient.session.token, claimed.battleRoom.roomId, {
-    "round": 1,
-    "actorId": recipientPlayer.actorId,
-    "actionId": "item_heal_single_5",
-    "itemId": "item_heal_single_5",
-    "targetActorId": recipientPet.actorId,
-  });
-  assert.equal(itemCommand.ok, true);
-  assert.equal(itemCommand.command.actionKind, "item");
+  assert.equal(profileItemCount(claimed.profile, "item_heal_single_5"), 2);
+  assert.equal(claimed.battleRoom, null);
 });
 
 test("players can invite, accept, and leave server parties", () => {

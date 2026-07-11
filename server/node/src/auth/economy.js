@@ -27,6 +27,7 @@ const BANK_DEFAULT_UNLOCKED_TABS = 1;
 function createEconomyDomain(ctx) {
   const {
     accountById,
+    activeBattleRoomForAccount,
     activeQuestAutoClaim,
     addRewardItemsToBackpack,
     authorizeGmCommand,
@@ -574,6 +575,18 @@ function createEconomyDomain(ctx) {
       delete data.tradeOffers[tradeId];
       save(data);
       return fail("trade_target_missing", "交易发起人不存在。");
+    }
+    if (
+      typeof activeBattleRoomForAccount === "function"
+      && (
+        activeBattleRoomForAccount(data, initiator.accountId)
+        || activeBattleRoomForAccount(data, resolved.account.accountId)
+      )
+    ) {
+      return fail(
+        "battle_profile_mutation_locked",
+        "任一方正在战斗时不能完成交易，请在战斗结束后重试。",
+      );
     }
     const positionCheck = tradePositionCheck(data, initiator.accountId, resolved.account.accountId);
     if (!positionCheck.ok) {

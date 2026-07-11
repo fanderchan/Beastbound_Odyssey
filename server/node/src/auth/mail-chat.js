@@ -265,7 +265,9 @@ function createMailChatDomain(ctx) {
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
       mail: remaining.length > 0 ? publicMail(mail) : null,
-      battleRoom: battleRoom && publicBattleRoom ? publicBattleRoom(battleRoom) : null,
+      battleRoom: battleRoom && publicBattleRoom
+        ? publicBattleRoom(battleRoom, resolved.account.accountId)
+        : null,
       claim: {
         mailId: normalizedMailId,
         addedItems: addResult.addedItems,
