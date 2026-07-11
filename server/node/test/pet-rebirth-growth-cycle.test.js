@@ -7,6 +7,7 @@ const {
   PROFILE_RESOLUTION_AUTHORITY_V1,
   PROFILE_RESOLUTION_LEGACY_EXISTING,
   PROFILE_RESOLUTION_LEGACY_UNLINKED,
+  createPetGrowthCatalog,
   loadPetGrowthCatalog,
 } = require("../src/auth/pet-growth-catalog");
 const {
@@ -66,6 +67,52 @@ function legacyPet(formId) {
   };
 }
 
+function legacyOnlyCatalog() {
+  const linkedProfile = {
+    profileId: "fixture_linked_v1",
+    displayName: "测试成长档",
+    formId: "fixture_linked",
+    formName: "测试宠物",
+    outputBase: {maxHp: 60, attack: 14, defense: 8, quick: 6},
+    outputGrowth: {maxHp: 8.3, attack: 2.3, defense: 1.1, quick: 1.3},
+    individualRules: {
+      initialOutputSpread: {
+        maxHp: [-5, 5],
+        attack: [-2, 2],
+        defense: [-1, 1],
+        quick: [-2, 2],
+      },
+      growthOutputSpread: {
+        maxHp: [-1, 1],
+        attack: [-0.3, 0.3],
+        defense: [-0.2, 0.2],
+        quick: [-0.2, 0.2],
+      },
+      distribution: "weighted_center",
+      rareExtremeRate: 0.02,
+    },
+  };
+  return createPetGrowthCatalog({
+    profileDocument: {schemaVersion: 1, profiles: [linkedProfile]},
+    templateDocument: {
+      schemaVersion: 1,
+      forms: [
+        {
+          formId: "fixture_linked",
+          formName: "测试宠物",
+          growthSpeciesProfileId: "fixture_linked_v1",
+          baseStats: {maxHp: 60, attack: 14, defense: 8, agility: 6},
+        },
+        {
+          formId: "legacy_mount_fixture",
+          formName: "旧坐骑夹具",
+          baseStats: {maxHp: 120, attack: 12, defense: 24, agility: 55},
+        },
+      ],
+    },
+  });
+}
+
 function nextRecord() {
   return {
     schemaVersion: 1,
@@ -107,7 +154,8 @@ test("rebirth growth cycle strictly routes authority and both legacy compatibili
     profileId: "",
     authorityV1: false,
   });
-  assert.deepEqual(cycle.preflight(legacyPet("novice_tiger_mount")), {
+  const legacyCycle = createPetRebirthGrowthCycle({growthCatalog: legacyOnlyCatalog()});
+  assert.deepEqual(legacyCycle.preflight(legacyPet("legacy_mount_fixture")), {
     kind: PROFILE_RESOLUTION_LEGACY_UNLINKED,
     profileId: "",
     authorityV1: false,
@@ -139,9 +187,10 @@ test("rebirth growth cycle restarts authority-v1 without mutating input and leav
   assert.deepEqual(result.pet.petGrowth.private.cultivation.growthBonus, record.rebirthGrowthBonus);
   assert.deepEqual(validatePetGrowth(result.pet, authority.profile), {ok: true, code: "", errors: []});
 
-  const legacy = legacyPet("novice_tiger_mount");
+  const legacyCycle = createPetRebirthGrowthCycle({growthCatalog: legacyOnlyCatalog()});
+  const legacy = legacyPet("legacy_mount_fixture");
   const legacyBefore = structuredClone(legacy);
-  const legacyResult = cycle.restart(legacy, record);
+  const legacyResult = legacyCycle.restart(legacy, record);
   assert.equal(legacyResult.restarted, false);
   assert.equal(legacyResult.kind, PROFILE_RESOLUTION_LEGACY_UNLINKED);
   assert.deepEqual(legacyResult.pet, legacyBefore);

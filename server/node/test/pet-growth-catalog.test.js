@@ -58,9 +58,9 @@ test("default pet growth catalog strictly links all current species profiles and
   const catalog = loadPetGrowthCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.profileCount, 30);
+  assert.equal(catalog.profileCount, 32);
   assert.equal(catalog.formCount, 32);
-  assert.equal(catalog.profiledFormCount, 30);
+  assert.equal(catalog.profiledFormCount, 32);
   assert.deepEqual(catalog.orphanProfileIds, []);
   assert.equal(catalog.profileIdForFormId("blue_man_dragon_water10"), "blue_man_dragon_v1");
   assert.equal(catalog.profileIdForFormId("wuli_normal_orange_fire10"), "wuli_normal_orange_fire10_v1");
@@ -73,7 +73,8 @@ test("default pet growth catalog strictly links all current species profiles and
     catalog.profileIdForFormId("rebirth_starter_four_spirit_cub"),
     "rebirth_starter_four_spirit_cub_v1",
   );
-  assert.equal(catalog.profileForFormId("novice_tiger_mount"), null);
+  assert.equal(catalog.profileIdForFormId("novice_tiger_mount"), "novice_tiger_mount_v1");
+  assert.equal(catalog.profileIdForFormId("thunder_dragon_mount"), "thunder_dragon_mount_v1");
   assert.equal(catalog.resolvePetProfile({formId: "wuli_normal_orange_fire10"}).kind, "legacy_existing");
   assert.equal(catalog.resolveNewPetProfile({formId: "wuli_normal_orange_fire10"}).kind, "authority_v1");
   assert.equal(catalog.resolvePetProfile({formId: "mossback_marsh_earth7_water3"}).kind, "legacy_existing");

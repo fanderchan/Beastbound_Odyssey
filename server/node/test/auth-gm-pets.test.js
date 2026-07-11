@@ -129,15 +129,47 @@ test("GM pet level-up grows newly linked common pets, preserves legacy pets, and
   assert.equal(commonAfter.petGrowth.settledLevel, 2);
   assert.equal(["maxHp", "attack", "defense", "quick"].some((key) => commonAfter[key] > commonBefore[key]), true);
 
-  const legacyGrant = service.grantGmPet(gm.session.token, {formId: "novice_tiger_mount"});
+  const mountGrant = service.grantGmPet(gm.session.token, {formId: "novice_tiger_mount"});
+  const mountBefore = internalProfile(service, gm.account.accountId).petInstances
+    .find((pet) => pet.instanceId === mountGrant.result.instanceId);
+  assert.equal(mountBefore.growthSpeciesProfileId, "novice_tiger_mount_v1");
+  assert.equal(isValidPetPrivateSeed(mountBefore.petGrowth.private.privateSeed), true);
+  assert.equal(service.levelUpGmPet(gm.session.token, {instanceId: mountGrant.result.instanceId}).ok, true);
+  const mountAfter = internalProfile(service, gm.account.accountId).petInstances
+    .find((pet) => pet.instanceId === mountGrant.result.instanceId);
+  assert.equal(mountAfter.petGrowth.settledLevel, 2);
+
+  const legacyProfile = internalProfile(service, gm.account.accountId);
+  const legacyInstanceId = "legacy_tiger_before_growth_link";
+  legacyProfile.petInstances.push({
+    instanceId: legacyInstanceId,
+    petId: legacyInstanceId,
+    formId: "novice_tiger_mount",
+    templateId: "novice_tiger_mount",
+    name: "旧档新手老虎",
+    state: "standby",
+    level: 1,
+    exp: 0,
+    nextExp: 122,
+    hp: 48,
+    maxHp: 48,
+    attack: 8,
+    defense: 5,
+    quick: 28,
+    schemaVersion: 1,
+  });
+  const legacySaveRevision = service.getProfile(gm.session.token).profileSummary.profileRevision;
+  assert.equal(service.saveProfile(gm.session.token, {
+    expectedRevision: legacySaveRevision,
+    profile: legacyProfile,
+  }).ok, true);
   const legacyBefore = internalProfile(service, gm.account.accountId).petInstances
-    .find((pet) => pet.instanceId === legacyGrant.result.instanceId);
-  assert.equal(isValidPetPrivateSeed(legacyBefore.individualSeed), true);
+    .find((pet) => pet.instanceId === legacyInstanceId);
   const legacyStats = [legacyBefore.maxHp, legacyBefore.attack, legacyBefore.defense, legacyBefore.quick];
-  const legacyLevel = service.levelUpGmPet(gm.session.token, {instanceId: legacyGrant.result.instanceId});
+  const legacyLevel = service.levelUpGmPet(gm.session.token, {instanceId: legacyInstanceId});
   assert.equal(legacyLevel.ok, true);
   const legacyAfter = internalProfile(service, gm.account.accountId).petInstances
-    .find((pet) => pet.instanceId === legacyGrant.result.instanceId);
+    .find((pet) => pet.instanceId === legacyInstanceId);
   assert.equal(legacyAfter.level, 2);
   assert.deepEqual([legacyAfter.maxHp, legacyAfter.attack, legacyAfter.defense, legacyAfter.quick], legacyStats);
 

@@ -692,6 +692,38 @@ test("linked MM eggs hatch canonical authority-v1 pets and return only public gr
   assert.deepEqual(internalPet.growthSpeciesLevel1Stats, internalPet.initialStats);
 });
 
+test("new rider eggs hatch authoritative tiger and thunder dragon growth", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "mountgrowth", password: "test1234", displayName: "骑宠玩家"});
+  const profile = battleProfile("骑宠玩家", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [
+    {itemId: "novice_tiger_egg", count: 1},
+    {itemId: "thunder_dragon_egg", count: 1},
+    ...Array.from({length: 13}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(registered.session.token, {expectedRevision: 0, profile}).ok, true);
+
+  const expected = [
+    ["novice_tiger_egg", "novice_tiger_mount", "novice_tiger_mount_v1"],
+    ["thunder_dragon_egg", "thunder_dragon_mount", "thunder_dragon_mount_v1"],
+  ];
+  for (const [itemId, formId, profileId] of expected) {
+    const hatched = service.profileAction(registered.session.token, {
+      action: "world_item_use",
+      payload: {itemId},
+    });
+    assert.equal(hatched.ok, true);
+    const publicPet = hatched.profile.petInstances.find((pet) => pet.instanceId === hatched.result.instanceId);
+    assert.equal(publicPet.formId, formId);
+    assert.equal(publicPet.growthSpeciesProfileId, profileId);
+    assert.equal(publicPet.growthAuthority.modelVersion, "pet_growth_authority_v1");
+    assert.equal(JSON.stringify(publicPet).includes("privateSeed"), false);
+    const internalPet = internalProfileForAccount(service, registered.account.accountId)
+      .petInstances.find((pet) => pet.instanceId === publicPet.instanceId);
+    assert.equal(isValidPetPrivateSeed(internalPet.petGrowth.private.privateSeed), true);
+  }
+});
+
 test("server bank tab unlock consumes diamonds and opens next bank page", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "bankunlock", "password": "test1234", "displayName": "银行开页"});

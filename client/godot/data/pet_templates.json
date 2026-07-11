@@ -1091,6 +1091,7 @@
         "wind": 8
       },
       "growthProfileId": "starter_mount_low",
+      "growthSpeciesProfileId": "novice_tiger_mount_v1",
       "baseStats": {
         "maxHp": 48,
         "attack": 8,
@@ -1124,6 +1125,7 @@
         "wind": 2
       },
       "growthProfileId": "thunder_dragon_mount",
+      "growthSpeciesProfileId": "thunder_dragon_mount_v1",
       "baseStats": {
         "maxHp": 92,
         "attack": 12,
