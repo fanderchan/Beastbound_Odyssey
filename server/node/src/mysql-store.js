@@ -378,6 +378,9 @@ function parsePersistentDataRows(output) {
     if (stateDocument && stateDocument.marketConfig && typeof stateDocument.marketConfig === "object" && !Array.isArray(stateDocument.marketConfig)) {
       data.marketConfig = stateDocument.marketConfig;
     }
+    if (stateDocument && stateDocument.offlineHangConfig && typeof stateDocument.offlineHangConfig === "object" && !Array.isArray(stateDocument.offlineHangConfig)) {
+      data.offlineHangConfig = stateDocument.offlineHangConfig;
+    }
     data.serviceEventSeq = Math.max(
       Number(data.serviceEventSeq || 0),
       ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
@@ -497,6 +500,7 @@ function emptyPersistentData() {
     mailMessages: {},
     marketListings: {},
     marketConfig: {},
+    offlineHangConfig: {},
     parties: {},
     partyInvites: {},
     families: {},
@@ -928,6 +932,7 @@ function stateMetadata(data) {
     },
     serviceEventSeq: Number(persistent.serviceEventSeq || 0),
     marketConfig: objectOrEmpty(persistent.marketConfig),
+    offlineHangConfig: objectOrEmpty(persistent.offlineHangConfig),
   };
 }
 

@@ -157,6 +157,10 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("questClaim", "POST", "/quests/claim", "session", "服务端领取主线/可选任务奖励并回写档案。"),
 		_endpoint("hangSessionStart", "POST", "/hang/session/start", "session", "服务端开启走动挂机或遇敌石挂机，并在遇敌石模式扣除道具。"),
 		_endpoint("hangSessionStop", "POST", "/hang/session/stop", "session", "服务端停止挂机会话并回写停止原因。"),
+		_endpoint("offlineHangStatus", "GET", "/hang/offline/status", "session", "读取离线修行累计状态、当前配置和最近领取账本。"),
+		_endpoint("offlineHangStart", "POST", "/hang/offline/start", "session", "在当前正式练级区开启服务器离线修行并停止在线挂机。"),
+		_endpoint("offlineHangClaim", "POST", "/hang/offline/claim", "session", "按服务器唯一会话原子领取离线经验与石币。"),
+		_endpoint("offlineHangCancel", "POST", "/hang/offline/cancel", "session", "取消当前离线修行且不产生收益。"),
 		_endpoint("familyState", "GET", "/families/state", "session", "读取当前账号的家族和庄园视图。"),
 		_endpoint("familyList", "GET", "/families", "session", "读取可加入的家族列表。"),
 		_endpoint("familyCreate", "POST", "/families/create", "session", "成立家族并把当前账号设为族长。"),
@@ -170,6 +174,7 @@ static func _endpoint_definitions() -> Array[Dictionary]:
 		_endpoint("manorResolve", "POST", "/manors/resolve", "family_leader", "参战族长开战结算，胜利后占领庄园。"),
 		_endpoint("gmTools", "GET", "/gm/tools", "gm_session", "读取当前账号可见的GM工具入口。"),
 		_endpoint("gmCommand", "POST", "/gm/commands/{commandId}", "gm_command_grant", "执行GM命令，服务端必须重新鉴权并写审计。"),
+		_endpoint("gmOfflineHangConfig", "PUT", "/gm/hang/offline/config", "gm_command_grant", "读取或更新离线收益比例、时长封顶和折算节奏，并写GM审计。"),
 	]
 
 

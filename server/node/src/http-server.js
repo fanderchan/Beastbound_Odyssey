@@ -25,6 +25,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_level_pet", "label": "宠物升1级"},
   {"id": "gm_battle_speed_gear", "label": "变速齿轮"},
   {"id": "gm_market_tax", "label": "交易所税率配置"},
+  {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
 ];
 
 function createHttpServer(options = {}) {
@@ -122,6 +123,25 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "PUT" && url.pathname === "/gm/market/config") {
         return sendResult(res, service.updateMarketConfig(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/gm/hang/offline/config") {
+        return sendResult(res, service.getOfflineHangConfig(bearerToken(req)));
+      }
+      if (req.method === "PUT" && url.pathname === "/gm/hang/offline/config") {
+        return sendResult(res, service.updateOfflineHangConfig(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/hang/offline/status") {
+        return sendResult(res, service.offlineHangStatus(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/offline/start") {
+        return sendResult(res, service.startOfflineHang(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/offline/claim") {
+        return sendResult(res, service.claimOfflineHang(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/offline/cancel") {
+        await readJson(req);
+        return sendResult(res, service.cancelOfflineHang(bearerToken(req)));
       }
       if (req.method === "GET" && url.pathname === "/profiles/me") {
         return sendResult(res, service.getProfile(bearerToken(req)));

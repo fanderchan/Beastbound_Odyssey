@@ -260,7 +260,11 @@ process.stdin.on("end", () => {
     return;
   }
   const rows = [
-    ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    ["server_state", "auth", {
+      schemaVersion: 2,
+      storage: "mysql_entity_tables",
+      offlineHangConfig: {rewardRateBps: 5000, maxMinutes: 480, battleIntervalSeconds: 30, revision: 2},
+    }],
     ["accounts", "acc_entity", {
       accountId: "acc_entity",
       username: "entityuser",
@@ -338,6 +342,8 @@ process.stdin.on("end", () => {
     assert.equal(loaded.gmCommandGrants.acc_entity[0].commandId, "*");
     assert.equal(loaded.battleTrace[0].traceId, "trace_entity");
     assert.equal(loaded.serviceEventSeq, 7);
+    assert.equal(loaded.offlineHangConfig.rewardRateBps, 5000);
+    assert.equal(loaded.offlineHangConfig.maxMinutes, 480);
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

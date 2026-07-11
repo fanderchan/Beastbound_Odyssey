@@ -199,6 +199,55 @@ test("HTTP GM market config routes are command-scoped", async (t) => {
   assert.equal(read.marketConfig.itemTaxBps.item_meat_small, 500);
 });
 
+test("HTTP offline hang status and GM configuration routes enforce authentication and command scope", async (t) => {
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    method: "POST",
+    body: JSON.stringify({username: "httpofflinegm", password: "test1234"}),
+  });
+  const unauthenticated = await fetchJson(`${base}/hang/offline/status`);
+  assert.equal(unauthenticated.ok, false);
+  assert.equal(unauthenticated.code, "session_missing");
+  const denied = await fetchJson(`${base}/gm/hang/offline/config`, {
+    headers: {authorization: `Bearer ${registered.session.token}`},
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "gm_denied");
+
+  assert.equal(service.grantGm({
+    username: "httpofflinegm",
+    commandIds: ["gm_offline_hang_config"],
+    grantedBy: "unit_test",
+  }).ok, true);
+  const updated = await fetchJson(`${base}/gm/hang/offline/config`, {
+    method: "PUT",
+    headers: {authorization: `Bearer ${registered.session.token}`},
+    body: JSON.stringify({rewardRateBps: 6000, maxMinutes: 600, battleIntervalSeconds: 40}),
+  });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.config.rewardRatePercent, 60);
+  assert.equal(updated.config.maxMinutes, 600);
+  const read = await fetchJson(`${base}/gm/hang/offline/config`, {
+    headers: {authorization: `Bearer ${registered.session.token}`},
+  });
+  assert.equal(read.ok, true);
+  assert.equal(read.config.battleIntervalSeconds, 40);
+  const status = await fetchJson(`${base}/hang/offline/status`, {
+    headers: {authorization: `Bearer ${registered.session.token}`},
+  });
+  assert.equal(status.ok, true);
+  assert.equal(status.config.rewardRatePercent, 60);
+  assert.equal(status.offlineHang.pending, false);
+});
+
 test("HTTP server rejects incompatible protocol versions with upgrade guidance", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});

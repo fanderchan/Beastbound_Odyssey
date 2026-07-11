@@ -95,6 +95,7 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["equipment_", "装备操作失败，请检查装备状态。"],
 	["encounter_", "遇敌状态已变化，请继续移动。"],
 	["family_", "家族操作失败，请检查家族状态。"],
+	["offline_hang_", "离线挂机操作失败，请刷新累计状态后重试。"],
 	["hang_", "挂机操作失败，请检查队伍和道具状态。"],
 	["item_use_", "这个物品暂时不能这样使用。"],
 	["item_", "物品操作失败，请检查数量和状态。"],
@@ -842,6 +843,52 @@ static func hang_session_stop_request(base_url: String, session_token: String, r
 	}
 
 
+static func offline_hang_status_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/hang/offline/status" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func offline_hang_start_request(base_url: String, session_token: String, map_id: String, cell: Vector2i) -> Dictionary:
+	return {
+		"url": "%s/hang/offline/start" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"mapId": map_id, "cellX": cell.x, "cellY": cell.y}),
+	}
+
+
+static func offline_hang_claim_request(base_url: String, session_token: String, session_id: String) -> Dictionary:
+	return {
+		"url": "%s/hang/offline/claim" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"sessionId": session_id}),
+	}
+
+
+static func offline_hang_cancel_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/hang/offline/cancel" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": "{}",
+	}
+
+
+static func gm_offline_hang_config_request(base_url: String, session_token: String, config: Dictionary = {}) -> Dictionary:
+	var read_only := config.is_empty()
+	return {
+		"url": "%s/gm/hang/offline/config" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token) if read_only else _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET if read_only else HTTPClient.METHOD_PUT,
+		"body": "" if read_only else JSON.stringify(config),
+	}
+
+
 static func battle_invite_accept_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
 	return _battle_invite_action_request(base_url, session_token, invite_id, "accept")
 
@@ -1374,6 +1421,20 @@ static func parse_hang_session_response(response_code: int, body: PackedByteArra
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["hang"] = response.get("hang", {}) if response.get("hang", {}) is Dictionary else {}
 	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_offline_hang_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "离线挂机同步失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["config"] = response.get("config", {}) if response.get("config", {}) is Dictionary else {}
+	parsed["offlineHang"] = response.get("offlineHang", {}) if response.get("offlineHang", {}) is Dictionary else {}
+	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
+	parsed["idempotent"] = bool(response.get("idempotent", false))
+	parsed["auditId"] = str(response.get("auditId", ""))
 	return parsed
 
 

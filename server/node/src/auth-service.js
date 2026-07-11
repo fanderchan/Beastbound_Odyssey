@@ -10,6 +10,7 @@ const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {createEconomyDomain} = require("./auth/economy");
 const {createGmPetsDomain} = require("./auth/gm-pets");
+const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
   generatePetCultivationRollSeed,
 } = require("./auth/pet-private-state");
@@ -326,6 +327,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "saveProfile",
   "profileAction",
   "startHangSession",
+  "startOfflineHang",
   "playerRebirth",
   "questRecord",
   "questClaim",
@@ -347,6 +349,34 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "claimMailAttachments",
   "grantGmPet",
   "levelUpGmPet",
+]);
+const OFFLINE_HANG_LOCKED_SERVICE_MUTATIONS = new Set([
+  ...BATTLE_LOCKED_SERVICE_MUTATIONS,
+  "stopHangSession",
+  "updatePlayerPosition",
+  "movePlayerStep",
+  "inviteToParty",
+  "applyToParty",
+  "acceptPartyInvite",
+  "declinePartyInvite",
+  "leaveParty",
+  "createFamily",
+  "joinFamily",
+  "leaveFamily",
+  "challengeManor",
+  "startManorWarBattleRoom",
+  "enterManorWar",
+  "leaveManorWar",
+  "resolveManorWar",
+  "sendChatMessage",
+  "markMailRead",
+  "inviteToBattle",
+  "acceptBattleInvite",
+  "startPartyEncounter",
+  "declineBattleInvite",
+  "cancelBattleInvite",
+  "leaveBattleRoom",
+  "submitBattleCommand",
 ]);
 const PLAYER_REBIRTH_COUNT_KEY = "rebirthCount";
 const PLAYER_REBIRTH_HISTORY_KEY = "rebirthHistory";
@@ -2117,6 +2147,28 @@ function createAuthService(options = {}) {
     );
   }
 
+  function offlineHangLockedMutationResult(methodName, args) {
+    if (!OFFLINE_HANG_LOCKED_SERVICE_MUTATIONS.has(String(methodName || ""))) {
+      return null;
+    }
+    const token = Array.isArray(args) ? args[0] : "";
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return null;
+    }
+    const binding = data.profileBindings[resolved.account.accountId] || null;
+    const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+    const session = profileDoc && profileDoc.profile && profileDoc.profile.offlineHang
+      && profileDoc.profile.offlineHang.session;
+    if (String(session && session.status || "") !== "active") {
+      return null;
+    }
+    return fail("offline_hang_active", "正在离线挂机；请先领取或取消离线收益，再继续游戏。", {
+      offlineHang: clone(profileDoc.profile.offlineHang),
+    });
+  }
+
   function validateClientQuestEvent(data, account, event) {
     const type = String(event && event.type || "");
     if (!QUEST_EVENT_CLIENT_REPORTABLE_TYPES.has(type)) {
@@ -2190,6 +2242,23 @@ function createAuthService(options = {}) {
     addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
     addRewardItemsToBackpack,
     applyPlayerRebirthReturn,
+    applyOfflineTrainingExpToProfile: (profile, accountId, playerExp, petExp, petInstanceId) => {
+      const reward = {
+        amount: Math.max(0, Math.trunc(Number(playerExp || 0))) + Math.max(0, Math.trunc(Number(petExp || 0))),
+        player: {amount: Math.max(0, Math.trunc(Number(playerExp || 0))), name: "人物"},
+        pets: petInstanceId ? [{
+          amount: Math.max(0, Math.trunc(Number(petExp || 0))),
+          petId: String(petInstanceId),
+          name: "离线修行宠物",
+        }] : [],
+        schemaVersion: 2,
+      };
+      const result = applyBattleExpRewardToProfile(profile, null, accountId, reward, petExpSettlement);
+      if (result.publicExp && result.publicExp.failed) {
+        return {ok: false, code: result.publicExp.code, message: result.publicExp.message};
+      }
+      return {ok: true, changed: result.changed, publicExp: result.publicExp};
+    },
     applyProfileActionToProfile: (profile, action, params, nowFn) => applyProfileActionToProfile(
       profile,
       action,
@@ -2310,7 +2379,9 @@ function createAuthService(options = {}) {
     manorEntries,
     persistProfileForAccount,
     petExpSettlement,
+    petEncounterAuthority,
     petGrowthCatalog,
+    playerLevelRuntime,
     playerPositionHasCell,
     profileActionLogLines,
     profileBackpackSlots,
@@ -2391,6 +2462,7 @@ function createAuthService(options = {}) {
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
   const gmPets = createGmPetsDomain(domainContext);
+  const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
     register,
@@ -2403,6 +2475,12 @@ function createAuthService(options = {}) {
     profileAction: profileActions.profileAction,
     startHangSession: profileActions.startHangSession,
     stopHangSession: profileActions.stopHangSession,
+    offlineHangStatus: offlineHang.status,
+    startOfflineHang: offlineHang.start,
+    claimOfflineHang: offlineHang.claim,
+    cancelOfflineHang: offlineHang.cancel,
+    getOfflineHangConfig: offlineHang.getConfig,
+    updateOfflineHangConfig: offlineHang.updateConfig,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,
     questClaim: quest.questClaim,
@@ -2479,7 +2557,7 @@ function createAuthService(options = {}) {
       continue;
     }
     serviceApi[name] = (...args) => {
-      const locked = battleLockedMutationResult(name, args);
+      const locked = battleLockedMutationResult(name, args) || offlineHangLockedMutationResult(name, args);
       return projectPublicServiceResult(locked || method(...args));
     };
   }
@@ -2619,6 +2697,7 @@ function normalizeData(raw) {
     tradeOffers: objectOrEmpty(data.tradeOffers),
     marketListings: objectOrEmpty(data.marketListings),
     marketConfig: objectOrEmpty(data.marketConfig),
+    offlineHangConfig: objectOrEmpty(data.offlineHangConfig),
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
     families: normalizeFamilies(data.families),
@@ -16611,6 +16690,7 @@ function createDefaultServerProfile(account) {
     autoCaptureSettings: defaultAutoCaptureSettings(),
     hangSettings: defaultHangSettings(),
     hangSession: defaultHangSession(),
+    offlineHang: {session: {status: "idle", schemaVersion: 1}, ledger: [], schemaVersion: 1},
     trainingPartners: [],
     playerGrowth: defaultPlayerGrowth(),
     battleResultReceipts: [],
