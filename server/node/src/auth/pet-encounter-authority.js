@@ -471,6 +471,12 @@ function validateEncounterSource(source, formsById, label, options = {}) {
   }
   if (options.requireGeometry) {
     validateEncounterGeometry(source, options.gridSize, label);
+    if (!Boolean(source.manualOnly)) {
+      const encounterRate = Number(source.encounterRate);
+      if (!Number.isFinite(encounterRate) || encounterRate < 0 || encounterRate > 1) {
+        throw new Error(`${label} has invalid encounterRate`);
+      }
+    }
   }
   if (options.requireInteractionCell) {
     validateMapCell(source.cell, options.gridSize, `${label} interaction cell`);

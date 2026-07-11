@@ -71,6 +71,8 @@
     "bossInteractionId": "shadow_oath_rebirth_guardian_npc",
     "captureFloors": [1, 2, 3],
     "bossFloor": 5,
+    "minAttemptLevel": 100,
+    "recommendedLevel": 120,
     "rebirthBossGroup": {
       "id": "shadow_oath_rebirth_guardian",
       "enemyCount": 10,

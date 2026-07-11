@@ -16,7 +16,9 @@ const {
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
 const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
-const {createPetEncounterAuthority} = require("./auth/pet-encounter-authority");
+const {createPetEncounterAuthority, zoneContainsCell} = require("./auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("./auth/pet-encounter-permit-authority");
+const {createManualEncounterAccess} = require("./auth/manual-encounter-access");
 const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
@@ -77,7 +79,8 @@ const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
 const MOVEMENT_MAX_STEP_CELLS = 1;
-const POSITION_SNAPSHOT_MAX_DRIFT_CELLS = 2;
+const MOVEMENT_STEP_RATE_INTERVAL_MS = 100;
+const MOVEMENT_STEP_RATE_BURST = 4;
 const POSITION_SPAWN_TOLERANCE_CELLS = 1;
 const POSITION_WARP_PROXIMITY_CELLS = 4;
 const QUEST_TALK_PROXIMITY_CELLS = 3;
@@ -191,11 +194,6 @@ const BATTLE_PET_STORAGE_LIMIT = 20;
 const BATTLE_CAPTURE_TOOL_EMPTY_HAND = "empty_hand";
 const BATTLE_CAPTURE_TOOL_POISON_WULI_NET = "capture_poison_wuli_net";
 const TAME_ELIGIBLE_EGG_ITEM_IDS = new Set(["novice_battle_pet_egg", "novice_tiger_egg"]);
-const ENCOUNTER_STONE_ITEM_IDS = new Set([
-  "encounter_stone_low",
-  "encounter_stone_mid",
-  "encounter_stone_high",
-]);
 const BATTLE_PARTY_PVE_PLAYER_SLOTS = [3, 4, 2, 5, 1];
 const BATTLE_PARTY_PVE_PARTNER_SLOTS = [1, 2, 4, 5];
 const TRAINING_PARTNER_MAX_COUNT = BATTLE_PARTY_PVE_PARTNER_SLOTS.length;
@@ -320,6 +318,7 @@ const PLAYER_REBIRTH_COUNT_KEY = "rebirthCount";
 const PLAYER_REBIRTH_HISTORY_KEY = "rebirthHistory";
 const PLAYER_REBIRTH_QUEST_COMPLETIONS_KEY = "rebirthQuestCompletions";
 const PLAYER_REBIRTH_TRIAL_PROOFS_KEY = "rebirthTrialProofs";
+const QUALIFICATION_BATTLE_CLAIMS_KEY = "qualificationBattleClaims";
 const PLAYER_REBIRTH_FINAL_BOSS_PROOF_ID = "shadow_oath_rebirth_guardian";
 const PLAYER_REBIRTH_MAX_COUNT = 6;
 const PLAYER_REBIRTH_MIN_LEVEL = 80;
@@ -364,9 +363,35 @@ function createAuthService(options = {}) {
   );
   // 仅测试夹具可跳过首次记录点播种；没有环境变量或 HTTP 开关，正式服务始终从角色记录点恢复。
   const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
+  const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
   const petEncounterAuthority = options.petEncounterAuthority || createPetEncounterAuthority();
+  const petEncounterPermitAuthority = options.petEncounterPermitAuthority || createPetEncounterPermitAuthority({
+    catalog: petEncounterAuthority.catalog,
+    now,
+    randomBytes,
+  });
+  const manualEncounterAccess = options.manualEncounterAccess || createManualEncounterAccess({
+    catalog: petEncounterAuthority.catalog,
+    rebirthTrials: rebirthTrialDocument(),
+    qualificationClaimsKey: QUALIFICATION_BATTLE_CLAIMS_KEY,
+    finalProofId: PLAYER_REBIRTH_FINAL_BOSS_PROOF_ID,
+    mmTrialInteractionId: "firebud_pet_mm_trial_mentor",
+    profileLevel: (profile) => questPlayerLevel(profile),
+    profileRebirthCycle: (profile) => Math.max(0, Math.trunc(Number(profile && profile[PLAYER_REBIRTH_COUNT_KEY] || 0))),
+    backpackItemCount: (profile, itemId) => backpackItemCount(profileBackpackSlots(profile), itemId),
+    storageItemCount: (profile, itemId) => profileBankItemCount(profile, itemId),
+    canReceiveItem: (profile, itemId, count) => addRewardItemsToBackpack(
+      profileBackpackSlots(profile),
+      [{itemId, count}],
+    ).lostItems.length === 0,
+    canReceivePet: (profile) => (
+      profilePartyVisiblePetCount(profile) < BATTLE_PET_MAX_PER_PARTICIPANT ||
+      profileStoragePetCount(profile) < BATTLE_PET_STORAGE_LIMIT
+    ),
+    mmTrialAccess: (profile) => petRebirthMmTrialAccess(profile),
+  });
   const petRebirthGrowthCycle = options.petRebirthGrowthCycle || createPetRebirthGrowthCycle({
     growthCatalog: petGrowthCatalog,
   });
@@ -378,6 +403,7 @@ function createAuthService(options = {}) {
   });
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
+  const movementStepRateByAccountId = new Map();
   const runtimeActiveSessionIds = new Map();
   const serverStartedAtMs = now();
   let cachedData = null;
@@ -563,6 +589,8 @@ function createAuthService(options = {}) {
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
+    movementStepRateByAccountId.delete(account.accountId);
+    invalidateEncounterPermitForAccount(account.accountId, "session_replaced");
     markRuntimeSession(sessionResult.session);
     recordAuthEvent(data, "login", username, true, "", now);
     if (replacement.revokedSessions.length > 0) {
@@ -599,6 +627,8 @@ function createAuthService(options = {}) {
     const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
     resolved.session.revokedAt = isoNow(now);
     const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
+    movementStepRateByAccountId.delete(resolved.account.accountId);
+    invalidateEncounterPermitForAccount(resolved.account.accountId, "session_refreshed");
     markRuntimeSession(sessionResult.session);
     const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
@@ -631,6 +661,8 @@ function createAuthService(options = {}) {
     }
     const partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
     clearRuntimeSessionsForAccount(data, resolved.account.accountId, runtimeActiveSessionIds);
+    movementStepRateByAccountId.delete(resolved.account.accountId);
+    invalidateEncounterPermitForAccount(resolved.account.accountId, "logout");
     resolved.session.revokedAt = isoNow(now);
     recordAuthEvent(data, "logout", resolved.account.username, true, "", now);
     save(data);
@@ -1376,6 +1408,21 @@ function createAuthService(options = {}) {
       if (stepMapDoc && !positionCellStandable(stepMapDoc, step.toCellX, step.toCellY)) {
         return rejectMovementStep("movement_cell_blocked", "目标格不可通行。", currentPosition);
       }
+      if (stepMapDoc && !positionStepCanTraverse(stepMapDoc, step)) {
+        return rejectMovementStep("movement_corner_blocked", "不能从阻挡物夹角斜穿。", currentPosition);
+      }
+    }
+    const rate = consumeMovementStepRateCredit(
+      movementStepRateByAccountId,
+      resolved.account.accountId,
+      resolved.session.sessionId,
+      now(),
+    );
+    if (!rate.ok) {
+      return rejectMovementStep("movement_rate_limited", "移动过快，请稍候。", currentPosition, {
+        retryAfterMs: rate.retryAfterMs,
+        movement: {retryable: false, requiresSync: false},
+      });
     }
     const position = normalizePlayerPositionPayload({
       mapId: currentPosition.mapId,
@@ -1389,8 +1436,29 @@ function createAuthService(options = {}) {
     const previousPosition = publicPlayerPosition(currentPosition);
     data.playerPositions[resolved.account.accountId] = position;
     applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
+    const permitBinding = partyEncounterPermitBinding(
+      data,
+      resolved.account.accountId,
+      resolved.session.sessionId,
+    );
+    let permitObservation = null;
+    try {
+      permitObservation = petEncounterPermitAuthority.observeAcceptedStep({
+        accountId: resolved.account.accountId,
+        sessionId: resolved.session.sessionId,
+        mapId: position.mapId,
+        cellX: position.cellX,
+        cellY: position.cellY,
+        movementSeq: position.movementSeq,
+        partyFingerprint: permitBinding.partyFingerprint,
+        rosterFingerprint: permitBinding.rosterFingerprint,
+      });
+    } catch {
+      permitObservation = null;
+    }
     return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
       authority: "server_step",
+      encounterPermit: permitObservation && permitObservation.ok ? permitObservation.permit : null,
       movement: {
         authority: "server_step",
         stepAccepted: true,
@@ -1441,14 +1509,272 @@ function createAuthService(options = {}) {
       authority: extra.authority || "client_snapshot",
       movement: extra.movement || null,
     });
-    return ok({
+    const response = {
       position: publicPlayerPosition(position),
       players,
       party: publicPartyForAccount(data, account.accountId, {now, runtimeActiveSessionIds}),
       aoi: publicOnlineAoi(aoi),
       authority: extra.authority || "client_snapshot",
       movement: extra.movement || null,
-    });
+    };
+    // 一次性许可只返回给本次 HTTP 请求者，绝不广播到 online.position 事件。
+    if (extra.encounterPermit && typeof extra.encounterPermit === "object") {
+      response.encounterPermit = clone(extra.encounterPermit);
+    }
+    return ok(response);
+  }
+
+  function resolveHangOrigin(data, accountId, payload = {}) {
+    const currentPosition = data.playerPositions[String(accountId || "")] || null;
+    const requested = normalizeHangOriginPayload(payload);
+    if (!currentPosition || !playerPositionHasCell(currentPosition)) {
+      if (allowHangOriginWithoutPositionForTests) {
+        return {
+          ok: true,
+          mapId: requested.mapId,
+          originCell: requested.originCell,
+          zoneId: "",
+          encounterGroupId: "",
+        };
+      }
+      return fail("hang_position_missing", "开始挂机前需要先同步当前位置。");
+    }
+    const mapId = String(currentPosition.mapId || "");
+    const currentCell = [Math.trunc(Number(currentPosition.cellX || 0)), Math.trunc(Number(currentPosition.cellY || 0))];
+    if (
+      requested.mapId !== mapId ||
+      requested.originCell[0] !== currentCell[0] ||
+      requested.originCell[1] !== currentCell[1]
+    ) {
+      return fail("hang_position_mismatch", "挂机位置与服务器记录不一致，请重新移动后再试。");
+    }
+    const catalog = petEncounterAuthority && petEncounterAuthority.catalog;
+    const map = catalog && catalog.mapsById && Object.hasOwn(catalog.mapsById, mapId)
+      ? catalog.mapsById[mapId]
+      : null;
+    const zones = Object.values(map && map.zonesById || {}).filter((zone) => (
+      zone && !Boolean(zone.manualOnly) && zoneContainsCell(zone, currentCell[0], currentCell[1])
+    ));
+    if (zones.length !== 1) {
+      return fail("hang_zone_invalid", "当前位置不是可挂机的遇敌区域。");
+    }
+    return {
+      ok: true,
+      mapId,
+      originCell: currentCell,
+      zoneId: String(zones[0].id || ""),
+      encounterGroupId: String(zones[0].encounterGroupId || ""),
+    };
+  }
+
+  function partyEncounterPermitBinding(data, leaderAccountId, sessionId, participantAccountIds = null) {
+    const normalizedLeaderAccountId = String(leaderAccountId || "");
+    const party = partyForAccount(data, normalizedLeaderAccountId);
+    const memberAccountIds = party
+      ? partyMemberAccountIds(party)
+      : [normalizedLeaderAccountId];
+    const onlineAccountIds = new Set(
+      activeOnlinePlayers(data, now, runtimeActiveSessionIds)
+        .map((account) => String(account && account.accountId || ""))
+        .filter(Boolean),
+    );
+    const battleAccountIds = (Array.isArray(participantAccountIds)
+      ? participantAccountIds
+      : memberAccountIds.filter((accountId) => onlineAccountIds.has(accountId)))
+      .map((accountId) => String(accountId || ""))
+      .filter(Boolean);
+    const partyFingerprint = crypto.createHash("sha256").update(JSON.stringify({
+      partyId: String(party && party.partyId || ""),
+      leaderAccountId: String(party && party.leaderAccountId || normalizedLeaderAccountId),
+      memberAccountIds,
+    })).digest("hex");
+    const rosterFingerprint = crypto.createHash("sha256").update(JSON.stringify({
+      sessionId: String(sessionId || ""),
+      participants: battleAccountIds.map((accountId) => {
+        const position = data.playerPositions[accountId] || null;
+        const binding = data.profileBindings[accountId] || null;
+        return {
+          accountId,
+          profileRevision: Math.max(0, Math.trunc(Number(binding && binding.profileRevision || 0))),
+          mapId: String(position && position.mapId || ""),
+          cellX: Math.trunc(Number(position && position.cellX || 0)),
+          cellY: Math.trunc(Number(position && position.cellY || 0)),
+          movementSeq: Math.max(0, Math.trunc(Number(position && position.movementSeq || 0))),
+        };
+      }),
+    })).digest("hex");
+    return {
+      party,
+      memberAccountIds,
+      battleAccountIds,
+      partyFingerprint,
+      rosterFingerprint,
+    };
+  }
+
+  function authorizePartyEncounter(data, resolved, payload, participantAccountIds) {
+    const binding = partyEncounterPermitBinding(
+      data,
+      resolved.account.accountId,
+      resolved.session.sessionId,
+      participantAccountIds,
+    );
+    try {
+      const leaderPosition = data.playerPositions[resolved.account.accountId] || null;
+      const manualAccess = manualEncounterAccess.authorize({
+        mapId: String(leaderPosition && leaderPosition.mapId || ""),
+        request: payload,
+        participants: binding.battleAccountIds.map((accountId) => {
+          const account = accountById(data, accountId);
+          const profileBinding = data.profileBindings[accountId] || null;
+          const profileDoc = profileBinding && profileBinding.playerId
+            ? data.profiles[profileBinding.playerId] || null
+            : null;
+          return {
+            accountId,
+            displayName: String(account && (account.displayName || account.username) || ""),
+            profile: profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+              ? profileDoc.profile
+              : null,
+          };
+        }),
+      });
+      if (!manualAccess.ok) {
+        return fail(manualAccess.code, manualAccess.message);
+      }
+      if (manualAccess.manual) {
+        return petEncounterPermitAuthority.authorizeEncounter({
+          accountId: resolved.account.accountId,
+          sessionId: resolved.session.sessionId,
+          request: payload,
+          position: leaderPosition,
+          partyFingerprint: binding.partyFingerprint,
+          rosterFingerprint: binding.rosterFingerprint,
+        });
+      }
+      if (typeof petEncounterPermitAuthority.authorizeTimedEncounter === "function") {
+        const profileBinding = data.profileBindings[resolved.account.accountId] || null;
+        const profileDoc = profileBinding && profileBinding.playerId
+          ? data.profiles[profileBinding.playerId] || null
+          : null;
+        const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+          ? profileDoc.profile
+          : null;
+        const hangSession = normalizeHangSession(profile && profile.hangSession);
+        if (hangSession.enabled && hangSession.mode === "encounter_stone") {
+          const stoneConfig = encounterStoneConfigForItem(hangSession.encounterStoneItemId);
+          const startedAtMs = Date.parse(hangSession.startedAt);
+          const expiresAtMs = Date.parse(hangSession.expiresAt);
+          if (
+            !stoneConfig ||
+            hangSession.encounterIntervalMs !== stoneConfig.intervalMs ||
+            !Number.isFinite(startedAtMs) ||
+            !Number.isFinite(expiresAtMs) ||
+            expiresAtMs - startedAtMs !== stoneConfig.durationMs ||
+            !hangSession.encounterActivationId ||
+            !hangSession.encounterZoneId ||
+            !hangSession.encounterGroupId
+          ) {
+            return fail("encounter_stone_session_invalid", "遇敌石状态不完整，请重新使用遇敌石。");
+          }
+          return petEncounterPermitAuthority.authorizeTimedEncounter({
+            accountId: resolved.account.accountId,
+            sessionId: resolved.session.sessionId,
+            request: payload,
+            position: data.playerPositions[resolved.account.accountId] || null,
+            partyFingerprint: binding.partyFingerprint,
+            rosterFingerprint: binding.rosterFingerprint,
+            sourceId: hangSession.encounterActivationId,
+            lastConsumedSlot: hangSession.encounterConsumedSlot,
+            startedAtMs,
+            expiresAtMs,
+            intervalMs: stoneConfig.intervalMs,
+            originMapId: hangSession.originMapId,
+            originCell: hangSession.originCell,
+            zoneId: hangSession.encounterZoneId,
+            encounterGroupId: hangSession.encounterGroupId,
+          });
+        }
+      }
+      return petEncounterPermitAuthority.authorizeEncounter({
+        accountId: resolved.account.accountId,
+        sessionId: resolved.session.sessionId,
+        request: payload,
+        position: leaderPosition,
+        partyFingerprint: binding.partyFingerprint,
+        rosterFingerprint: binding.rosterFingerprint,
+      });
+    } catch {
+      return fail("encounter_permit_unavailable", "服务端遇敌许可暂不可用，请继续移动后重试。");
+    }
+  }
+
+  function consumePartyEncounterAuthorization(data, authorization) {
+    try {
+      if (authorization && String(authorization.mode || "") === "timed") {
+        const accountId = String(authorization.accountId || "");
+        const account = accountById(data, accountId);
+        const binding = data.profileBindings[accountId] || null;
+        const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+        const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+          ? clone(profileDoc.profile)
+          : null;
+        const hangSession = normalizeHangSession(profile && profile.hangSession);
+        const expectedSlot = Math.max(0, Math.trunc(Number(authorization.previousConsumedSlot || 0)));
+        const nextSlot = Math.max(0, Math.trunc(Number(authorization.slot || 0)));
+        if (
+          !account || !binding || !profile ||
+          !hangSession.enabled || hangSession.mode !== "encounter_stone" ||
+          hangSession.encounterActivationId !== String(authorization.sourceId || "") ||
+          hangSession.encounterConsumedSlot !== expectedSlot ||
+          nextSlot <= expectedSlot
+        ) {
+          return fail("encounter_stone_binding_mismatch", "遇敌石状态已经变化，请重新使用遇敌石。");
+        }
+        const consumed = petEncounterPermitAuthority.consume(authorization);
+        if (!consumed.ok) {
+          return consumed;
+        }
+        profile.hangSession = {
+          ...objectOrEmpty(profile.hangSession),
+          ...hangSession,
+          encounterConsumedSlot: nextSlot,
+        };
+        persistProfileForAccount(data, account, binding, profile, now);
+        return {ok: true};
+      }
+      return petEncounterPermitAuthority.consume(authorization);
+    } catch {
+      return fail("encounter_permit_unavailable", "服务端遇敌许可暂不可用，请继续移动后重试。");
+    }
+  }
+
+  function invalidateEncounterPermitForAccount(accountId, reason = "state_changed") {
+    if (typeof petEncounterPermitAuthority.invalidateAccount !== "function") {
+      return;
+    }
+    try {
+      petEncounterPermitAuthority.invalidateAccount(accountId, reason);
+    } catch {
+      // 运行时许可失效失败不能把已持久化的挂机事务回滚成半状态；后续绑定校验仍会失败关闭。
+    }
+  }
+
+  function settlePartyEncounterPositions(data, participantAccountIds, authorization) {
+    if (!authorization || String(authorization.mode || "") !== "permit") {
+      return;
+    }
+    for (const accountId of participantAccountIds) {
+      const normalizedAccountId = String(accountId || "");
+      const position = data.playerPositions[normalizedAccountId] || null;
+      if (!position) {
+        continue;
+      }
+      position.moving = false;
+      position.authority = "server_encounter_permit";
+      position.updatedAt = isoNow(now);
+      data.playerPositions[normalizedAccountId] = position;
+    }
   }
 
   function eventForSession(token, event = {}) {
@@ -1752,7 +2078,6 @@ function createAuthService(options = {}) {
     CHAT_CHANNEL_NEARBY,
     CHAT_CHANNEL_TEAM,
     CHAT_HISTORY_LIMIT,
-    ENCOUNTER_STONE_ITEM_IDS,
     MAIL_BODY_MAX_LENGTH,
     MAIL_TITLE_MAX_LENGTH,
     MAX_CHAT_MESSAGES,
@@ -1797,17 +2122,21 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {newPetFactory, petExpSettlement},
+      {newPetFactory, petExpSettlement, randomId},
     ),
+    authorizePartyEncounter,
+    consumePartyEncounterAuthorization,
     consumeBackpackItem,
     createBattleRoomBattleState,
     createPartyForLeader,
     currentProfileQuestId,
     emitServiceEvent,
     ensureProfileForAccount,
+    encounterStoneConfigForItem,
     executePlayerRebirthToProfile: (profile) => executePlayerRebirthToProfile(profile, {newPetFactory}),
     expireBattleInvite,
     expireBattleTimeoutsAndEmit,
+    invalidateEncounterPermitForAccount,
     fail,
     isoNow,
     itemAmountText,
@@ -1834,7 +2163,7 @@ function createAuthService(options = {}) {
     ok,
     offlinePartyPveBattleParticipantAccountIds: (serviceData, roomValue) => offlinePartyPveBattleParticipantAccountIds(serviceData, roomValue, {now, runtimeActiveSessionIds}),
     partyEncounterEntry,
-    resolvePartyEncounter: (serviceData, leaderAccountId, payload, participants, seed) => {
+    resolvePartyEncounter: (serviceData, leaderAccountId, payload, participants, seed, authorization = null) => {
       const normalizedLeaderAccountId = String(leaderAccountId || "");
       const position = serviceData.playerPositions[normalizedLeaderAccountId] || null;
       const binding = serviceData.profileBindings[normalizedLeaderAccountId] || null;
@@ -1842,19 +2171,28 @@ function createAuthService(options = {}) {
       const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
         ? profileDoc.profile
         : null;
+      const permitStopsMovement = Boolean(authorization && String(authorization.mode || "") === "permit");
+      const encounterPosition = permitStopsMovement && position ? {...position, moving: false} : position;
       return petEncounterAuthority.resolve({
-        mapId: String(position && position.mapId || ""),
-        position,
+        mapId: String(encounterPosition && encounterPosition.mapId || ""),
+        position: encounterPosition,
         profile,
         request: payload,
         participants,
-        participantPositions: participants.map((participant) => ({
-          accountId: String(participant && participant.accountId || ""),
-          position: serviceData.playerPositions[String(participant && participant.accountId || "")] || null,
-        })),
+        participantPositions: participants.map((participant) => {
+          const accountId = String(participant && participant.accountId || "");
+          const participantPosition = serviceData.playerPositions[accountId] || null;
+          return {
+            accountId,
+            position: permitStopsMovement && participantPosition
+              ? {...participantPosition, moving: false}
+              : participantPosition,
+          };
+        }),
         seed,
       });
     },
+    resolveHangOrigin,
     partyForAccount,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
@@ -1917,6 +2255,7 @@ function createAuthService(options = {}) {
       serverStartedAtMs,
     }),
     save,
+    settlePartyEncounterPositions,
     setProfileCurrencyAmount,
     shopCurrencyLabel,
     submittedBattleCommandAccountIds,
@@ -8318,7 +8657,13 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     );
     changed = changed || expWriteback.changed;
     summary.exp = expWriteback.publicExp;
-    const rewardWriteback = applyBattleVictoryRewardsToProfile(profile, room, battle, result);
+    const rewardWriteback = applyBattleVictoryRewardsToProfile(profile, room, battle, result, {
+      data,
+      accountId,
+      roomId: String(room && room.roomId || ""),
+      now,
+      randomId: options.randomId,
+    });
     changed = changed || rewardWriteback.changed;
     summary.rewards = rewardWriteback.publicRewards;
     const specialWriteback = applyBattleSpecialVictoryProgressToProfile(
@@ -8501,6 +8846,14 @@ function normalizeHangSession(value) {
       Math.trunc(Number(rawCell[0] || 0)),
       Math.trunc(Number(rawCell[1] || 0)),
     ],
+    encounterZoneId: String(raw.encounterZoneId || ""),
+    encounterGroupId: String(raw.encounterGroupId || ""),
+    encounterStoneItemId: String(raw.encounterStoneItemId || ""),
+    encounterIntervalMs: Math.max(0, Math.trunc(Number(raw.encounterIntervalMs || 0))),
+    startedAt: String(raw.startedAt || ""),
+    expiresAt: String(raw.expiresAt || ""),
+    encounterActivationId: String(raw.encounterActivationId || ""),
+    encounterConsumedSlot: Math.max(0, Math.trunc(Number(raw.encounterConsumedSlot || 0))),
   };
 }
 
@@ -8535,6 +8888,14 @@ function publicHangSession(session) {
     lastStopReason: String(normalized.lastStopReason || ""),
     originMapId: String(normalized.originMapId || ""),
     originCell: Array.isArray(normalized.originCell) ? normalized.originCell.slice(0, 2) : [0, 0],
+    encounterZoneId: normalized.encounterZoneId,
+    encounterGroupId: normalized.encounterGroupId,
+    encounterStoneItemId: normalized.encounterStoneItemId,
+    encounterIntervalMs: normalized.encounterIntervalMs,
+    startedAt: normalized.startedAt,
+    expiresAt: normalized.expiresAt,
+    encounterActivationId: normalized.encounterActivationId,
+    encounterConsumedSlot: normalized.encounterConsumedSlot,
     schemaVersion: 1,
   };
 }
@@ -9588,7 +9949,7 @@ function battleRoomIsPartyPveVictory(room, battle, result) {
   return !battleHasLivingEnemy(battle);
 }
 
-function applyBattleVictoryRewardsToProfile(profile, room, battle, result) {
+function applyBattleVictoryRewardsToProfile(profile, room, battle, result, options = {}) {
   if (!battleRoomIsPartyPveVictory(room, battle, result)) {
     return {changed: false, publicRewards: null};
   }
@@ -9609,16 +9970,104 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result) {
     profile.captureTools = captureToolBagFromProfile(profile);
     changed = true;
   }
+  const qualificationClaim = markQualificationBattleClaim(profile, reward);
+  changed = changed || qualificationClaim.changed;
+  const mailedItems = qualificationClaim.qualification
+    ? createQualificationRewardMail(options, reward, itemResult.lostItems)
+    : {items: [], mail: null};
   const publicRewards = {
     tableId: reward.tableId,
+    rewardRole: reward.rewardRole,
+    repeatable: reward.repeatable,
     sourceZoneId: reward.sourceZoneId,
     sourceEncounterGroupId: reward.sourceEncounterGroupId,
     stoneCoins: reward.stoneCoins,
     addedItems: itemResult.addedItems,
-    lostItems: itemResult.lostItems,
+    mailedItems: mailedItems.items,
+    lostItems: mailedItems.items.length > 0 ? [] : itemResult.lostItems,
+    qualificationClaimCycle: qualificationClaim.claimCycle,
+    rewardMail: mailedItems.mail ? publicMail(mailedItems.mail) : null,
     schemaVersion: 1,
   };
   return {changed, publicRewards};
+}
+
+function markQualificationBattleClaim(profile, reward) {
+  const qualification = (
+    String(reward && reward.rewardRole || "") === "qualification_battle" &&
+    reward && reward.repeatable === false
+  );
+  const groupId = String(reward && reward.sourceEncounterGroupId || "").trim();
+  if (!qualification || groupId === "") {
+    return {changed: false, qualification: false, claimCycle: 0};
+  }
+  const claimCycle = Math.max(0, Math.trunc(Number(profile && profile[PLAYER_REBIRTH_COUNT_KEY] || 0)));
+  const claims = objectOrEmpty(profile[QUALIFICATION_BATTLE_CLAIMS_KEY]);
+  const previousClaim = objectOrEmpty(claims[groupId]);
+  const previousCycle = Number(previousClaim.rebirthCycle ?? previousClaim.cycle);
+  if (previousClaim.claimed !== false && Number.isInteger(previousCycle) && previousCycle === claimCycle) {
+    return {changed: false, qualification: true, claimCycle};
+  }
+  claims[groupId] = {rebirthCycle: claimCycle, claimed: true, schemaVersion: 1};
+  profile[QUALIFICATION_BATTLE_CLAIMS_KEY] = claims;
+  return {changed: true, qualification: true, claimCycle};
+}
+
+function createQualificationRewardMail(options, reward, items) {
+  const attachments = mergeItemAmounts(items);
+  if (attachments.length <= 0) {
+    return {items: [], mail: null};
+  }
+  const data = options && options.data;
+  const accountId = String(options && options.accountId || "").trim();
+  const account = data && accountById(data, accountId);
+  if (!data || !account) {
+    return {items: [], mail: null};
+  }
+  const nowFn = typeof options.now === "function" ? options.now : () => Date.now();
+  const randomId = typeof options.randomId === "function" ? options.randomId : () => crypto.randomUUID();
+  data.mailMessages = objectOrEmpty(data.mailMessages);
+  let mailId = "";
+  const roomId = String(options && options.roomId || "").trim();
+  if (roomId !== "") {
+    const digest = crypto.createHash("sha256").update([
+      accountId,
+      roomId,
+      String(reward && reward.tableId || ""),
+    ].join(":"), "utf8").digest("hex").slice(0, 32);
+    const candidate = `mail_qualification_${digest}`;
+    if (!Object.hasOwn(data.mailMessages, candidate)) {
+      mailId = candidate;
+    }
+  }
+  for (let attempt = 0; attempt < 8 && mailId === ""; attempt += 1) {
+    const candidate = `mail_qualification_${String(randomId() || "").trim()}`;
+    if (candidate !== "mail_qualification_" && !Object.hasOwn(data.mailMessages, candidate)) {
+      mailId = candidate;
+    }
+  }
+  if (mailId === "") {
+    throw new Error("qualification reward mail id unavailable");
+  }
+  const rewardText = itemAmountText(attachments);
+  const mail = {
+    mailId,
+    mailKind: "qualification_reward",
+    senderAccountId: "system_qualification",
+    senderUsername: "trial_guardian",
+    senderDisplayName: "试炼守护",
+    recipientAccountId: account.accountId,
+    recipientUsername: account.username,
+    recipientDisplayName: account.displayName,
+    title: "试炼资格奖励",
+    body: `背包空间不足，${rewardText} 已放入本邮件附件，请及时领取。`,
+    items: attachments,
+    createdAt: isoNow(nowFn),
+    readAt: null,
+    schemaVersion: 1,
+  };
+  data.mailMessages[mail.mailId] = mail;
+  return {items: attachments, mail};
 }
 
 function applyBattleSpecialVictoryProgressToProfile(profile, room, battle, result, newPetFactory) {
@@ -9688,6 +10137,8 @@ function battleVictoryRewardForRoom(room) {
   const seedBase = String(room && (room.seed || room.roomId) || "battle");
   return {
     tableId,
+    rewardRole: String(table.rewardRole || ""),
+    repeatable: table.repeatable !== false,
     sourceZoneId: String(encounter.zoneId || ""),
     sourceEncounterGroupId: String(encounter.groupId || ""),
     stoneCoins: battleRewardStoneCoins(seedBase, table),
@@ -12243,6 +12694,25 @@ function worldUseForItem(itemId) {
   return objectOrEmpty(item && item.worldUse);
 }
 
+function encounterStoneConfigForItem(itemId) {
+  const normalizedItemId = String(itemId || "").trim();
+  const worldUse = worldUseForItem(normalizedItemId);
+  const intervalSeconds = Number(worldUse.intervalSeconds);
+  const durationSeconds = Number(worldUse.durationSeconds);
+  if (
+    String(worldUse.type || "") !== "encounter_stone" ||
+    !Number.isFinite(intervalSeconds) || intervalSeconds < 1 || intervalSeconds > 3600 ||
+    !Number.isFinite(durationSeconds) || durationSeconds < intervalSeconds || durationSeconds > 24 * 60 * 60
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    itemId: normalizedItemId,
+    intervalMs: Math.round(intervalSeconds * 1000),
+    durationMs: Math.round(durationSeconds * 1000),
+  });
+}
+
 function applyWorldPetHealItemAction(profile, itemId, params) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const pet = profilePetByInstanceId(profile, petId);
@@ -13943,6 +14413,49 @@ function positionCellStandable(mapDoc, cellX, cellY) {
   return true;
 }
 
+function positionStepCanTraverse(mapDoc, step) {
+  const dx = Math.trunc(Number(step && step.toCellX || 0)) - Math.trunc(Number(step && step.fromCellX || 0));
+  const dy = Math.trunc(Number(step && step.toCellY || 0)) - Math.trunc(Number(step && step.fromCellY || 0));
+  if (Math.abs(dx) !== 1 || Math.abs(dy) !== 1) {
+    return true;
+  }
+  const sideAStandable = positionCellStandable(
+    mapDoc,
+    Math.trunc(Number(step.fromCellX || 0)) + dx,
+    Math.trunc(Number(step.fromCellY || 0)),
+  );
+  const sideBStandable = positionCellStandable(
+    mapDoc,
+    Math.trunc(Number(step.fromCellX || 0)),
+    Math.trunc(Number(step.fromCellY || 0)) + dy,
+  );
+  return sideAStandable || sideBStandable;
+}
+
+function consumeMovementStepRateCredit(states, accountId, sessionId, nowMs) {
+  const key = String(accountId || "").trim();
+  const sessionKey = String(sessionId || "").trim();
+  const currentMs = Number.isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
+  const previous = states.get(key) || null;
+  let credits = MOVEMENT_STEP_RATE_BURST;
+  if (previous && previous.sessionId === sessionKey) {
+    const elapsedMs = Math.max(0, currentMs - Number(previous.updatedAtMs || currentMs));
+    credits = Math.min(
+      MOVEMENT_STEP_RATE_BURST,
+      Number(previous.credits || 0) + elapsedMs / MOVEMENT_STEP_RATE_INTERVAL_MS,
+    );
+  }
+  if (credits < 1) {
+    states.set(key, {sessionId: sessionKey, credits, updatedAtMs: currentMs});
+    return {
+      ok: false,
+      retryAfterMs: Math.max(1, Math.ceil((1 - credits) * MOVEMENT_STEP_RATE_INTERVAL_MS)),
+    };
+  }
+  states.set(key, {sessionId: sessionKey, credits: credits - 1, updatedAtMs: currentMs});
+  return {ok: true, retryAfterMs: 0};
+}
+
 function questTalkNpcLocations(targetId) {
   const normalized = String(targetId || "").trim();
   if (normalized === "") {
@@ -14034,10 +14547,9 @@ function validateClientPositionSnapshot(data, account, previousPosition, positio
       return validateInitialPositionAtRecordPoint(data, account, position);
     }
     const drift = cellChebyshevDistance(previousPosition.cellX, previousPosition.cellY, position.cellX, position.cellY);
-    if (drift <= POSITION_SNAPSHOT_MAX_DRIFT_CELLS) {
-      return okResult;
-    }
-    if (mapDoc && positionNearMapSpawn(mapDoc, position.cellX, position.cellY)) {
+    // 精确位置一旦由服务端建立，同图换格只能通过 /movement/step。
+    // 快照仍可在原格更新朝向/移动状态，避免它成为重置 movementSeq 或跳格刷遇敌的旁路。
+    if (drift === 0) {
       return okResult;
     }
     return {ok: false, code: "position_desync", message: "位置与服务器不一致，已按服务器位置纠正。"};
@@ -15768,6 +16280,7 @@ function createDefaultServerProfile(account) {
     rebirthHistory: [],
     rebirthQuestCompletions: [],
     rebirthTrialProofs: {},
+    qualificationBattleClaims: {},
   };
   if (profile.petInstances.length <= 0) {
     profile.activePetInstanceId = "";
@@ -16310,6 +16823,11 @@ function normalizePlayerPositionPayload(payload, account, now, previousPosition 
     playerPositionHasCell(previousPosition) &&
     String(previousPosition.mapId || "") === mapId
   );
+  const canReusePreviousMovementSeq = Boolean(
+    previousPosition &&
+    playerPositionHasCell(previousPosition) &&
+    String(previousPosition.mapId || "") === mapId
+  );
   let facing = String(payload.facing || "south").trim().toLowerCase();
   if (!hasPayloadCell && canReusePreviousCell) {
     facing = String(previousPosition.facing || facing).trim().toLowerCase();
@@ -16330,7 +16848,7 @@ function normalizePlayerPositionPayload(payload, account, now, previousPosition 
       : (canReusePreviousCell ? clampInt(previousPosition.cellY, -9999, 9999, 0) : 0),
     facing,
     moving: hasPayloadCell ? Boolean(payload.moving) : false,
-    movementSeq: canReusePreviousCell ? Math.max(0, Math.trunc(Number(previousPosition.movementSeq || 0))) : 0,
+    movementSeq: canReusePreviousMovementSeq ? Math.max(0, Math.trunc(Number(previousPosition.movementSeq || 0))) : 0,
     hasCell: hasPayloadCell || canReusePreviousCell,
     publicPrecision: hasPayloadCell ? "cell" : "map",
     updatedAt: isoNow(now),

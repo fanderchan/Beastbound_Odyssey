@@ -30,6 +30,10 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
+
+const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
 test("HTTP server exposes auth and session endpoints", async (t) => {
   const store = createMemoryAuthStore();
@@ -1082,6 +1086,12 @@ test("HTTP production encounter intent ignores forged client pet facts", async (
   const service = createAuthService({
     "store": createMemoryAuthStore(),
     "useStrictPetEncounterAuthority": true,
+    "petEncounterPermitAuthority": createPetEncounterPermitAuthority({
+      catalog: strictPetEncounterCatalog,
+      randomBytes: (size) => crypto.randomBytes(size),
+      randomFloat: () => 0,
+      eligibleStepIntervalMs: 0,
+    }),
   });
   const server = createHttpServer({service});
   server.listen(0, "127.0.0.1");
@@ -1095,24 +1105,55 @@ test("HTTP production encounter intent ignores forged client pet facts", async (
     "body": JSON.stringify({"username": "httpstrictpve", "password": "test1234", "displayName": "HTTP权威遇敌"}),
   });
   assert.equal(solo.ok, true);
-  for (const cell of [[10, 17], [11, 15]]) {
-    const position = await fetchJson(`${base}/players/position`, {
+  const position = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${solo.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_village_gate",
+      "cellX": 10,
+      "cellY": 17,
+      "facing": "south",
+      "moving": false,
+    }),
+  });
+  assert.equal(position.ok, true);
+  let encounterPermit = null;
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17],
+    [11, 17, 11, 16],
+    [11, 16, 11, 15],
+  ]) {
+    const step = await fetchJson(`${base}/movement/step`, {
       "method": "POST",
       "headers": {"authorization": `Bearer ${solo.session.token}`},
       "body": JSON.stringify({
         "mapId": "firebud_village_gate",
-        "cellX": cell[0],
-        "cellY": cell[1],
+        fromCellX,
+        fromCellY,
+        toCellX,
+        toCellY,
         "facing": "south",
-        "moving": false,
+        "moving": true,
       }),
     });
-    assert.equal(position.ok, true);
+    assert.equal(step.ok, true);
+    if (step.encounterPermit) {
+      encounterPermit = step.encounterPermit;
+    }
   }
+  assert.equal(typeof encounterPermit.token, "string");
+  const missingPermit = await fetchJson(`${base}/battle/party-encounter`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${solo.session.token}`},
+    "body": JSON.stringify({"encounterIntent": {"zoneId": "village_grass", "encounterGroupId": "firebud_grass_01"}}),
+  });
+  assert.equal(missingPermit.ok, false);
+  assert.equal(missingPermit.code, "encounter_permit_required");
   const encounter = await fetchJson(`${base}/battle/party-encounter`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${solo.session.token}`},
     "body": JSON.stringify({
+      "encounterPermitToken": encounterPermit.token,
       "enemyCount": 10,
       "encounterIntent": {"zoneId": "village_grass", "encounterGroupId": "firebud_grass_01"},
       "encounterZone": {
@@ -1532,7 +1573,8 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
 });
 
 test("HTTP server exposes websocket event stream", async (t) => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), now: () => nowMs});
   const server = createHttpServer({service});
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -1613,13 +1655,15 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(snapshot.players.some((player) => player.username === "httpwsb"), true);
   assert.equal(snapshot.players.some((player) => player.username === "httpwsc"), false);
 
-  const position = await fetchJson(`${base}/players/position`, {
+  const position = await fetchJson(`${base}/movement/step`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${actor.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 18,
-      "cellY": 9,
+      "fromCellX": 17,
+      "fromCellY": 9,
+      "toCellX": 18,
+      "toCellY": 9,
       "facing": "west",
       "moving": true,
     }),
@@ -1630,13 +1674,15 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(positionEvent.position.cellX, 18);
   assert.equal(positionEvent.players.some((player) => player.username === "httpwsc"), false);
 
-  const distantStillFar = await fetchJson(`${base}/players/position`, {
+  const distantStillFar = await fetchJson(`${base}/movement/step`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${distant.session.token}`},
     "body": JSON.stringify({
       "mapId": "firebud_training_yard",
-      "cellX": 31,
-      "cellY": 11,
+      "fromCellX": 30,
+      "fromCellY": 11,
+      "toCellX": 31,
+      "toCellY": 11,
       "facing": "west",
       "moving": true,
     }),
@@ -1647,6 +1693,7 @@ test("HTTP server exposes websocket event stream", async (t) => {
   // 远处玩家通过权威单步移动走进观察者的 AOI 范围。
   let distantCellX = 31;
   while (distantCellX > 26) {
+    nowMs += 100;
     const distantStep = await fetchJson(`${base}/movement/step`, {
       "method": "POST",
       "headers": {"authorization": `Bearer ${distant.session.token}`},

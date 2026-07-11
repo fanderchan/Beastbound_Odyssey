@@ -5,6 +5,7 @@ const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
+const ServerEncounterPermitModel := preload("res://scripts/world/server_encounter_permit_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
@@ -10453,6 +10454,8 @@ func _switch_account_to_login(save_before_logout: bool = true) -> void:
 	server_battle_state_poll_request_active = false
 	server_battle_waiting_poll_elapsed = 0.0
 	server_battle_room_restore_poll_elapsed = 0.0
+	host.pending_server_encounter_permit.clear()
+	_cancel_server_step_move()
 	server_event_last_seq = 0
 	party_current_state.clear()
 	party_online_players.clear()
@@ -11635,7 +11638,7 @@ func _set_click_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, mar
 		return _set_server_step_move_target_cell(goal_cell, marker_point, marker_cell)
 	return _set_move_target_cell(goal_cell, marker_point, marker_cell)
 
-func _should_use_server_step_movement() -> bool:
+func _should_use_server_step_movement(include_hang: bool = false) -> bool:
 	return (
 		server_step_world_move_enabled
 		and _is_server_account_session()
@@ -11643,10 +11646,13 @@ func _should_use_server_step_movement() -> bool:
 		and not map_data.is_empty()
 		and not battle_active
 		and not encounter_active
-		and not hang_mode_active
+		and (include_hang or not hang_mode_active)
 	)
 
 func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	# 服务端已经决定本格遇敌后，新的点击不能取消这次遭遇或越过绑定格。
+	if not host.pending_server_encounter_permit.is_empty():
+		return false
 	_clear_pending_click_move_target(false)
 	if not IsoMapModel.is_inside(map_data, goal_cell):
 		return false
@@ -11704,6 +11710,9 @@ func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector
 	return true
 
 func _update_server_step_move() -> void:
+	_update_pending_server_encounter_permit()
+	if not host.pending_server_encounter_permit.is_empty():
+		return
 	if not server_step_move_active:
 		return
 	if server_step_move_request_pending:
@@ -11768,6 +11777,9 @@ func _request_next_server_step_move(plan_id: int) -> void:
 	server_step_move_ack_count += 1
 	server_step_move_last_error_code = ""
 	var ack_cell = server_step_move_authority_cell
+	var encounter_permit := ServerEncounterPermitModel.from_movement_response(parsed.get("encounterPermit", {}), position)
+	if not encounter_permit.is_empty() and _arm_server_encounter_permit(encounter_permit, ack_cell):
+		return
 	server_step_move_path_index = mini(server_step_move_path_index + 1, server_step_move_path_cells.size() - 1)
 	server_step_move_visual_target_cell = ack_cell
 	server_step_move_waiting_for_visual = true
@@ -11776,6 +11788,79 @@ func _request_next_server_step_move(plan_id: int) -> void:
 		player.set_path(step_points)
 	_sync_server_step_current_path_cells()
 	host.queue_redraw()
+
+
+func _arm_server_encounter_permit(encounter_permit: Dictionary, ack_cell: Vector2i) -> bool:
+	if encounter_permit.is_empty() or ServerEncounterPermitModel.bound_cell(encounter_permit) != ack_cell:
+		return false
+	host.pending_server_encounter_permit = encounter_permit.duplicate(true)
+	server_step_move_plan_id += 1
+	server_step_move_active = false
+	server_step_move_request_pending = false
+	# 视觉尚未到达时，位置心跳继续上报服务端已确认的绑定格，不能用插值中的本地格覆盖权威位置。
+	server_step_move_waiting_for_visual = true
+	server_step_move_path_cells.clear()
+	server_step_move_path_index = 0
+	server_step_move_sync_retry_count = 0
+	current_path_cells.clear()
+	current_path_cells.append(ack_cell)
+	current_path_is_direct = true
+	has_target_marker = false
+	has_target_cell = false
+	if player != null:
+		player.clear_move_target()
+		var target_point := IsoMapModel.grid_to_world(map_data, ack_cell)
+		if player.global_position.distance_to(target_point) <= 4.0:
+			player.global_position = target_point
+		else:
+			var permit_step_points: Array[Vector2] = [target_point]
+			player.set_path(permit_step_points)
+	host.queue_redraw()
+	return true
+
+
+func _update_pending_server_encounter_permit() -> void:
+	if host.pending_server_encounter_permit.is_empty():
+		return
+	if (
+		not _is_server_account_session()
+		or player == null
+		or map_data.is_empty()
+		or battle_active
+	):
+		host.pending_server_encounter_permit.clear()
+		server_step_move_waiting_for_visual = false
+		return
+	if server_party_encounter_request_pending or player.is_auto_moving():
+		return
+	var permit: Dictionary = host.pending_server_encounter_permit
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	if not ServerEncounterPermitModel.matches_visual_cell(permit, current_map_id, player_cell):
+		host.pending_server_encounter_permit.clear()
+		server_step_move_waiting_for_visual = false
+		return
+	var zone: Dictionary = host._encounter_zone_by_id(str(permit.get("zoneId", "")))
+	if (
+		zone.is_empty()
+		or EncounterModel.is_manual_only(zone)
+		or str(zone.get("encounterGroupId", "")) != str(permit.get("encounterGroupId", ""))
+		or not EncounterModel.zone_contains_cell(zone, player_cell)
+		or not _should_start_server_party_encounter()
+	):
+		host.pending_server_encounter_permit.clear()
+		server_step_move_waiting_for_visual = false
+		return
+	var permit_token := str(permit.get("token", ""))
+	# 一次性票据在任何网络尝试前从本地删除；失败或超时都不能重放同一票据。
+	host.pending_server_encounter_permit.clear()
+	server_step_move_waiting_for_visual = false
+	_start_server_party_encounter(
+		zone,
+		"遭遇野生宠物，正在同步。",
+		"",
+		"遇敌同步失败，请继续移动。",
+		permit_token
+	)
 
 func _seed_server_step_move_position(plan_id: int) -> bool:
 	if not _is_server_account_session() or player == null or map_data.is_empty():
@@ -11815,6 +11900,7 @@ func _seed_server_step_move_position(plan_id: int) -> bool:
 	return _rebuild_server_step_move_path_from_authority()
 
 func _handle_server_step_move_failure(parsed: Dictionary) -> void:
+	host.pending_server_encounter_permit.clear()
 	server_step_move_last_error_code = str(parsed.get("code", "movement_step_failed"))
 	var response = parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
 	var movement = parsed.get("movement", {}) as Dictionary if parsed.get("movement", {}) is Dictionary else {}
@@ -11893,6 +11979,7 @@ func _cancel_server_step_move(invalidate_plan: bool = true) -> void:
 	server_step_move_sync_retry_count = 0
 
 func _reset_server_step_move_authority_after_map_change() -> void:
+	host.pending_server_encounter_permit.clear()
 	_cancel_server_step_move()
 	server_step_move_authority_cell = Vector2i.ZERO
 	server_step_move_authority_valid = false
@@ -11948,6 +12035,7 @@ func _apply_server_position_correction_from_response(parsed: Dictionary, cancel_
 		return false
 	var applied := _apply_server_step_move_authority_position(position, true, true)
 	if applied:
+		host.pending_server_encounter_permit.clear()
 		if cancel_current_move:
 			_cancel_server_step_move(false)
 			current_path_cells.clear()
@@ -12017,6 +12105,10 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 			return ""
 		"movement_cell_blocked":
 			return "目标格不可通行，请换个位置。"
+		"movement_corner_blocked":
+			return "不能从阻挡物夹角斜穿，请换个方向。"
+		"movement_rate_limited":
+			return "移动过快，请稍候。"
 		"position_desync", "position_seed_not_spawn", "position_initial_not_record":
 			return ""
 		"position_transition_invalid":
@@ -12069,6 +12161,8 @@ func _facing_for_grid_step(from_cell: Vector2i, to_cell: Vector2i) -> String:
 	return player.get_facing_key() if player != null and player.has_method("get_facing_key") else "south"
 
 func _set_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
+	if not host.pending_server_encounter_permit.is_empty():
+		return false
 	_cancel_server_step_move()
 	_clear_pending_click_move_target(false)
 	if not IsoMapModel.is_inside(map_data, goal_cell):
@@ -12257,6 +12351,10 @@ func _update_encounter_zone_check() -> void:
 	if encounter_grace_remaining > 0.0:
 		return
 	var player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
+	if _is_server_account_session():
+		last_checked_player_cell = player_cell
+		encounter_zone_step_count = 0
+		return
 	if player_cell == last_checked_player_cell:
 		return
 	last_checked_player_cell = player_cell
@@ -12398,7 +12496,7 @@ func _server_encounter_block_message() -> String:
 		return "队伍状态未同步，暂不能触发遇敌。"
 	return "当前状态不能触发遇敌，请稍后再试。"
 
-func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。") -> void:
+func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。", encounter_permit_token: String = "") -> void:
 	if server_party_encounter_request_pending or battle_active or zone.is_empty():
 		return
 	var encounter_zone := _progression_encounter_zone(zone)
@@ -12410,7 +12508,8 @@ func _start_server_party_encounter(zone: Dictionary, pending_message: String = "
 		_server_profile_base_url(),
 		_server_profile_token(),
 		active_encounter_zone,
-		enemy_count
+		enemy_count,
+		encounter_permit_token
 	))
 	server_party_encounter_request_pending = false
 	if battle_active:
@@ -12432,6 +12531,13 @@ func _start_server_party_encounter(zone: Dictionary, pending_message: String = "
 	active_encounter_zone.clear()
 	if _handle_session_invalid_response(parsed):
 		return
+	var encounter_error_code := str(parsed.get("code", ""))
+	if _encounter_stone_active() and encounter_error_code in [
+		"encounter_stone_binding_mismatch",
+		"encounter_stone_expired",
+		"encounter_stone_session_invalid",
+	]:
+		_clear_encounter_stone_effect(false)
 	_set_world_log_message(_server_player_message(parsed, failure_message))
 
 func _encounter_enemy_count_fallback() -> int:
@@ -12487,6 +12593,7 @@ func _refresh_battle_target_seed() -> void:
 	]
 
 func _start_battle(next_battle_state: Dictionary) -> void:
+	host.pending_server_encounter_permit.clear()
 	host._clear_navigation_state()
 	host._close_dialog()
 	_close_backpack_panel()
@@ -12575,6 +12682,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	host.queue_redraw()
 
 func _end_battle(_restore_world: bool = true) -> void:
+	host.pending_server_encounter_permit.clear()
 	var was_battle_active = battle_active
 	battle_active = false
 	battle_state.clear()
@@ -15147,11 +15255,11 @@ func _clear_encounter_stone_effect(show_message: bool = false, sync_server: bool
 func _update_stationary_encounter_stone(delta: float) -> void:
 	if not _encounter_stone_active():
 		return
-	if encounter_active or battle_active:
-		return
 	encounter_stone_remaining = maxf(0.0, encounter_stone_remaining - delta)
 	if encounter_stone_remaining <= 0.0:
 		_clear_encounter_stone_effect(true)
+		return
+	if encounter_active or battle_active:
 		return
 	if player == null or map_data.is_empty() or player.is_auto_moving() or host._dialog_is_open() or has_pending_interaction or host._world_menu_is_open():
 		encounter_stone_elapsed = 0.0

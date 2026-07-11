@@ -16,6 +16,7 @@ function createBattleRoomDomain(ctx) {
     accountById,
     activeBattleRoomForAccount,
     activeOnlinePlayers,
+    authorizePartyEncounter,
     battleInviteIsExpired,
     battleParticipantSnapshot,
     battleRecordSummaryAgainst,
@@ -25,8 +26,10 @@ function createBattleRoomDomain(ctx) {
     battleRoomResultForLeave,
     battleStatePayload,
     clampInt,
+    clone,
     closeBattleRoomWithResult,
     createBattleRoomBattleState,
+    consumePartyEncounterAuthorization,
     emitServiceEvent,
     expireBattleInvite,
     expireBattleTimeoutsAndEmit,
@@ -60,6 +63,7 @@ function createBattleRoomDomain(ctx) {
     resolveBattleRoomTurn,
     resolveSession,
     save,
+    settlePartyEncounterPositions,
     submittedBattleCommandAccountIds,
     submittedBattleCommandActorIds,
   } = ctx;
@@ -315,9 +319,21 @@ function createBattleRoomDomain(ctx) {
     }
     let activeParty = party;
     let partyPresenceRefresh = null;
+    let partyPresencePreview = null;
     if (activeParty && typeof refreshPartyPresence === "function") {
-      partyPresenceRefresh = refreshPartyPresence(data, activeParty);
+      const partyId = String(activeParty.partyId || "");
+      const previewParty = clone(activeParty);
+      const previewData = {
+        ...data,
+        parties: {...data.parties, [partyId]: previewParty},
+        partyInvites: clone(data.partyInvites),
+      };
+      partyPresenceRefresh = refreshPartyPresence(previewData, previewParty);
       activeParty = partyPresenceRefresh.party;
+      partyPresencePreview = {
+        parties: previewData.parties,
+        partyInvites: previewData.partyInvites,
+      };
     }
     const onlineAccountIds = new Set(activeOnlinePlayers(data, now).map((account) => String(account.accountId || "")));
     const allMemberAccountIds = (activeParty && Array.isArray(activeParty.memberAccountIds) ? activeParty.memberAccountIds : [resolved.account.accountId])
@@ -332,22 +348,52 @@ function createBattleRoomDomain(ctx) {
       const busyAccount = accountById(data, busyAccountId);
       return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "队员"} 已在战斗房间中。`);
     }
+    const authorizationResult = authorizePartyEncounter(data, resolved, payload, memberAccountIds);
+    if (!authorizationResult.ok) {
+      return fail(authorizationResult.code, authorizationResult.message);
+    }
+    const authorization = authorizationResult.authorization || {mode: "direct"};
+    const permitStopsMovement = String(authorization.mode || "") === "permit";
     const participants = memberAccountIds
       .map((accountId) => accountById(data, accountId))
       .filter(Boolean)
-      .map((account) => battleParticipantSnapshot(data, account, BATTLE_SIDE_ALLY));
-    const seed = randomBytes(8).toString("hex");
+      .map((account) => {
+        const participant = battleParticipantSnapshot(data, account, BATTLE_SIDE_ALLY);
+        if (permitStopsMovement && participant.position) {
+          participant.position = {...participant.position, moving: false};
+        }
+        return participant;
+      });
+    const seed = String(authorization.encounterSeed || randomBytes(8).toString("hex"));
     const encounterResolution = resolvePartyEncounter(
       data,
       partyLeaderAccountId,
       payload,
       participants,
       seed,
+      authorization,
     );
     if (!encounterResolution.ok) {
       return fail(encounterResolution.code, encounterResolution.message);
     }
     const encounter = encounterResolution.encounter;
+    const entry = partyEncounterEntry(data, activeParty ? {
+      ...activeParty,
+      memberAccountIds,
+    } : {
+      leaderAccountId: resolved.account.accountId,
+      memberAccountIds,
+    });
+    if (permitStopsMovement) {
+      if (entry.leaderPosition) {
+        entry.leaderPosition.moving = false;
+      }
+      for (const position of Object.values(entry.memberPositions || {})) {
+        if (position && typeof position === "object") {
+          position.moving = false;
+        }
+      }
+    }
     const room = {
       roomId: `battle_room_${randomId()}`,
       mode: BATTLE_MODE_PARTY_PVE,
@@ -357,13 +403,7 @@ function createBattleRoomDomain(ctx) {
       leaderAccountId: partyLeaderAccountId,
       seed,
       participantAccountIds: memberAccountIds,
-      entry: partyEncounterEntry(data, activeParty ? {
-        ...activeParty,
-        memberAccountIds,
-      } : {
-        leaderAccountId: resolved.account.accountId,
-        memberAccountIds,
-      }),
+      entry,
       participants,
       encounter,
       createdAt: isoNow(now),
@@ -372,6 +412,15 @@ function createBattleRoomDomain(ctx) {
     };
     room.battle = createBattleRoomBattleState(room, now);
     battleRoomConnectionStateForMutation(room);
+    const consumed = consumePartyEncounterAuthorization(data, authorization);
+    if (!consumed.ok) {
+      return fail(consumed.code, consumed.message);
+    }
+    if (partyPresencePreview) {
+      data.parties = partyPresencePreview.parties;
+      data.partyInvites = partyPresencePreview.partyInvites;
+    }
+    settlePartyEncounterPositions(data, memberAccountIds, authorization);
     data.battleRooms[room.roomId] = room;
     recordBattleTrace(data, room, "party_pve_room_created", {
       enemyCount: Number(room.encounter && room.encounter.enemyCount || 0),

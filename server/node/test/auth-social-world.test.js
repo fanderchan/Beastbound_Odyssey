@@ -411,6 +411,29 @@ test("server movement steps are authoritative and bounded", () => {
   assert.equal(step.movement.stepAccepted, true);
   assert.equal(events.some((event) => event.type === "online.position" && event.authority === "server_step" && event.position.cellX === 11), true);
 
+  const stopSnapshot = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 11,
+    "cellY": 10,
+    "facing": "south",
+    "moving": false,
+  });
+  assert.equal(stopSnapshot.ok, true);
+  assert.equal(stopSnapshot.position.movementSeq, 1);
+  assert.equal(service.snapshot().playerPositions[scout.account.accountId].movementSeq, 1);
+
+  const snapshotStepBypass = service.updatePlayerPosition(scout.session.token, {
+    "mapId": "firebud_training_yard",
+    "cellX": 12,
+    "cellY": 10,
+    "facing": "east",
+    "moving": true,
+  });
+  assert.equal(snapshotStepBypass.ok, false);
+  assert.equal(snapshotStepBypass.code, "position_desync");
+  assert.equal(snapshotStepBypass.position.cellX, 11);
+  assert.equal(snapshotStepBypass.position.movementSeq, 1);
+
   const stale = service.movePlayerStep(scout.session.token, {
     "mapId": "firebud_training_yard",
     "fromCellX": 10,
@@ -430,6 +453,78 @@ test("server movement steps are authoritative and bounded", () => {
   });
   assert.equal(jump.ok, false);
   assert.equal(jump.code, "movement_step_too_far");
+});
+
+test("server movement rejects diagonal corner cutting and rate-limits rapid valid step spam", () => {
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const service = createAuthService({store: createMemoryAuthStore(), now: () => nowMs});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const corner = service.register({username: "movecorner", password: "test1234", displayName: "夹角移动号"});
+  assert.equal(service.updatePlayerPosition(corner.session.token, {
+    mapId: "earth_vein_cave_f4", cellX: 9, cellY: 6, moving: false,
+  }).ok, true);
+  const cornerCut = service.movePlayerStep(corner.session.token, {
+    mapId: "earth_vein_cave_f4",
+    fromCellX: 9,
+    fromCellY: 6,
+    toCellX: 10,
+    toCellY: 5,
+    moving: true,
+  });
+  assert.equal(cornerCut.ok, false);
+  assert.equal(cornerCut.code, "movement_corner_blocked");
+  assert.equal(cornerCut.position.movementSeq, 0);
+  assert.deepEqual([cornerCut.position.cellX, cornerCut.position.cellY], [9, 6]);
+
+  const spammer = service.register({username: "movespammer", password: "test1234", displayName: "高速移动号"});
+  assert.equal(service.updatePlayerPosition(spammer.session.token, {
+    mapId: "firebud_training_yard", cellX: 10, cellY: 10, moving: false,
+  }).ok, true);
+  let fromCellX = 10;
+  for (let index = 0; index < 4; index += 1) {
+    const toCellX = fromCellX === 10 ? 11 : 10;
+    const accepted = service.movePlayerStep(spammer.session.token, {
+      mapId: "firebud_training_yard",
+      fromCellX,
+      fromCellY: 10,
+      toCellX,
+      toCellY: 10,
+      moving: true,
+    });
+    assert.equal(accepted.ok, true);
+    fromCellX = toCellX;
+  }
+  const positionEventsBeforeLimit = events.filter((event) => (
+    event.type === "online.position" && event.accountId === spammer.account.accountId
+  )).length;
+  const limited = service.movePlayerStep(spammer.session.token, {
+    mapId: "firebud_training_yard",
+    fromCellX,
+    fromCellY: 10,
+    toCellX: fromCellX === 10 ? 11 : 10,
+    toCellY: 10,
+    moving: true,
+  });
+  assert.equal(limited.ok, false);
+  assert.equal(limited.code, "movement_rate_limited");
+  assert.equal(limited.movement.requiresSync, false);
+  assert.equal(limited.position.movementSeq, 4);
+  assert.equal(events.filter((event) => (
+    event.type === "online.position" && event.accountId === spammer.account.accountId
+  )).length, positionEventsBeforeLimit);
+
+  nowMs += 100;
+  const resumed = service.movePlayerStep(spammer.session.token, {
+    mapId: "firebud_training_yard",
+    fromCellX,
+    fromCellY: 10,
+    toCellX: fromCellX === 10 ? 11 : 10,
+    toCellY: 10,
+    moving: true,
+  });
+  assert.equal(resumed.ok, true);
+  assert.equal(resumed.position.movementSeq, 5);
 });
 
 test("party members follow the leader and cannot move independently", () => {
@@ -727,6 +822,7 @@ test("map-only presence keeps internal cells private but preserves movement anch
   assert.equal(stored.cellY, 8);
   assert.equal(stored.hasCell, true);
   assert.equal(stored.publicPrecision, "map");
+  assert.equal(stored.movementSeq, precise.position.movementSeq);
 
   const sameMap = service.listOnlinePlayers(watcher.session.token, {"scope": "map", "mapId": "firebud_training_yard"});
   assert.equal(sameMap.ok, true);

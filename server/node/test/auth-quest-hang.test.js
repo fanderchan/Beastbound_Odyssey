@@ -242,6 +242,86 @@ test("starting a real hang session completes the hang tutorial server-side", () 
   assert.equal(started.questMessages.length > 0, true);
 });
 
+test("server-authoritative encounter stones bind origin, duration and one battle per interval", () => {
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const store = createMemoryAuthStore();
+  const service = createAuthService({
+    store,
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const player = service.register({username: "timedstone", password: "test1234", displayName: "遇敌石计时号"});
+  const profile = battleProfile("遇敌石计时号", {level: 5, hp: 120, maxHp: 120, attack: 18, defense: 8, quick: 70}, null);
+  profile.backpackSlots = [{itemId: "encounter_stone_patrol", count: 1}];
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+
+  const missingPosition = service.startHangSession(player.session.token, {
+    mode: "encounter_stone", itemId: "encounter_stone_patrol", mapId: "firebud_village_gate", cellX: 11, cellY: 15,
+  });
+  assert.equal(missingPosition.ok, false);
+  assert.equal(missingPosition.code, "hang_position_missing");
+  assert.equal(profileItemCount(service.getProfile(player.session.token).profile, "encounter_stone_patrol"), 1);
+
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 17, moving: false,
+  }).ok, true);
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17], [11, 17, 11, 16], [11, 16, 11, 15],
+  ]) {
+    assert.equal(service.movePlayerStep(player.session.token, {
+      mapId: "firebud_village_gate", fromCellX, fromCellY, toCellX, toCellY, moving: false,
+    }).ok, true);
+  }
+  const forgedOrigin = service.startHangSession(player.session.token, {
+    mode: "encounter_stone", itemId: "encounter_stone_patrol", mapId: "firebud_village_gate", cellX: 12, cellY: 15,
+  });
+  assert.equal(forgedOrigin.ok, false);
+  assert.equal(forgedOrigin.code, "hang_position_mismatch");
+  assert.equal(profileItemCount(service.getProfile(player.session.token).profile, "encounter_stone_patrol"), 1);
+
+  const started = service.startHangSession(player.session.token, {
+    mode: "encounter_stone", itemId: "encounter_stone_patrol", mapId: "firebud_village_gate", cellX: 11, cellY: 15,
+  });
+  assert.equal(started.ok, true);
+  assert.equal(started.hang.encounterStoneItemId, "encounter_stone_patrol");
+  assert.equal(started.hang.encounterIntervalMs, 2500);
+  assert.equal(started.hang.encounterZoneId, "village_grass");
+  assert.equal(Date.parse(started.hang.expiresAt) - Date.parse(started.hang.startedAt), 900_000);
+  assert.equal(profileItemCount(started.profile, "encounter_stone_patrol"), 0);
+
+  const request = {encounterIntent: {zoneId: "village_grass", encounterGroupId: "firebud_grass_01"}};
+  const tooEarly = service.startPartyEncounter(player.session.token, request);
+  assert.equal(tooEarly.ok, false);
+  assert.equal(tooEarly.code, "encounter_stone_interval_pending");
+  nowMs += 2500;
+  const first = service.startPartyEncounter(player.session.token, request);
+  assert.equal(first.ok, true);
+  assert.equal(service.leaveBattleRoom(player.session.token, first.room.roomId).ok, true);
+  const restarted = createAuthService({
+    store,
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const relogged = restarted.login({username: "timedstone", password: "test1234"});
+  assert.equal(relogged.ok, true);
+  assert.equal(restarted.updatePlayerPosition(relogged.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 17, moving: false,
+  }).ok, true);
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17], [11, 17, 11, 16], [11, 16, 11, 15],
+  ]) {
+    assert.equal(restarted.movePlayerStep(relogged.session.token, {
+      mapId: "firebud_village_gate", fromCellX, fromCellY, toCellX, toCellY, moving: false,
+    }).ok, true);
+  }
+  const duplicate = restarted.startPartyEncounter(relogged.session.token, request);
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "encounter_stone_interval_pending");
+  nowMs += 2500;
+  const second = restarted.startPartyEncounter(relogged.session.token, request);
+  assert.equal(second.ok, true);
+});
+
 test("world item use profile action advances use item quests server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const player = service.register({"username": "questusemeat", "password": "test1234", "displayName": "任务用肉"});

@@ -159,6 +159,7 @@
 
 - [x] **内置自然语言宠物设计 Skill**
   - 证据（2026-07-11）：新增项目级 `.agents/skills/design-beastbound-pets/`，把定位/克制、种系/亚种/形态、Lv1 当前四项代理与隐藏成长、Lv1 遇敌概率、捕捉率、主动/被动技能、训练/遗传边界、自动处理保护、服务端权威和验证统一为 Pet Design Contract；`inspect_pet_design.mjs --check` 对当前 11 种系/12 亚种/31 形态输出 `errors=0`，同时明确暴露仅 7 个物种成长档、正式 4V 契约缺失、宠技槽全局唯一、服务端未加载成长/被动目录及客户端遇敌载荷过度可信等阻断；示例设计合同通过校验，Skill Creator `quick_validate.py` 通过。初版按约定不生成美术、动画或音频。
+  - 后续证据（2026-07-11）：随遇敌安全协议切到 v3，inspector 的旧“必须恰好 v2”断言已升级为客户端/服务端同一份 v2+ 协议边界；当前成长/EXP/v1/factory/转生周期/公开档/协议/客户端不重掷均为 `true`，`errors=0`，避免以后自然语言宠物设计被旧检查误导。
 
 ### P0
 
@@ -193,7 +194,11 @@
       - [ ] **P0.2c-3a 服务端权威野外遭遇与捕捉来源**
         - [x] **P0.2c-3a-1 服务端权威遇敌内容、位置与教程边界**
           - 证据（2026-07-11）：先用隔离服务复现客户端可伪造十只 `rebirth_starter_shadow_cub`、Lv140、`999999` 属性、捕捉率与 EXP；现新增严格 `pet-encounter-authority`，从共享 37 张地图和宠物模板权威决定候选池、权重、数量、等级、属性、捕捉/EXP，客户端只发送区域/分组/交互 ID。普通草地校验服务端区域位置，守卫校验登记交互，队伍全员要求同图、停稳且邻近；生产首位置只能从人物记录点建立，新手乌力特例只读内部任务档案。旧 v2 `encounterZone` 仅兼容标识符，全部事实字段被忽略。定向 67/67、完整 Node 221/221、Godot 4/4 与隔离单人 live 通过；见 `docs/phase_214_server_authoritative_pet_encounter_content.md`。
-        - [ ] **P0.2c-3a-2 服务端遇敌资格、频率与一次性许可**
+        - [x] **P0.2c-3a-2 服务端遇敌资格、频率与一次性许可**
+          - [x] **P0.2c-3a-2a 普通移动遇敌的一次性服务端许可与协议 v3**
+          - [x] **P0.2c-3a-2b 在线挂机逐格移动、遇敌石绝对时钟与重启防重放**
+          - [x] **P0.2c-3a-2c 四戒/玄影/MM 全队资格、周期领取与奖励邮件兜底**
+          - 证据（2026-07-11）：先复现合法草地区域 5 次直接 POST 创建 5 个房间；现普通遇敌只接受服务端逐格移动签发的 10 秒不透明票，精确绑定账号/会话/地图/格子/序号/区域/队伍/档案，只在完整房间构造后消费且不广播/不落盘。服务端与客户端统一禁斜穿双阻挡角；账号移动为 100ms/步、突发 4 的前置门，遇敌频率另有 150ms 信用、2 安全步、区域 `encounterRate` CSPRNG。在线挂机复用逐格 ACK；遇敌石绑定 origin/zone/group、绝对时钟和持久化 consumed slot，战斗中不暂停。构造期强制六个手动入口规则完整；四戒 Lv80、玄影 Lv100+四戒、MM 正式教学/容量均逐队员预检，资格胜利按当前人物转生周期写 claim，战中塞满背包则戒指进入系统邮件而不能二刷。协议原子切到 v3；定向 93/93、HTTP 22/22、完整 Node 251/251、Godot 8/8、隔离服务 movement/click-recovery/单人 PVE live 全通过；idle `0.23–0.34ms`、moving `0.37–0.43ms @ 60FPS`、317 次输入 `avg/max=16/168us`。未连接 MySQL；200 人混合 WS/多 worker/长时挂机 soak 仍未证明，见 `docs/phase_216_server_encounter_permits_and_qualifications.md`。
         - [ ] **P0.2c-3a-3 遇敌时私有捕捉候选及成功后原样转移**
       - [x] **P0.2c-3b authority-v1 转生成长周期原子重启**
         - 证据（2026-07-11）：先复现合法 Lv140 v1 宠转生返回成功并吞掉 MM，却形成 `level=1 / settledLevel=140 / public.level=140`、公开/私有转生加成不一致和 invalid marker；现新增纯 `restartPetGrowthCycle` 与严格 `pet-rebirth-growth-cycle` 路由，保留 privateSeed/privateRoll/Lv1 4V/initial bonus，用新累计 growth bonus 从 Lv1 原子重建 continuous/public/root，清除旧观察且最终再次验证。目标与实际确认的 MM 均在开奖前预检；Godot 提交精确 `helperInstanceId`，多材料旧请求失败关闭，不再自动替换。损坏目标/材料不删 MM、不写历史、不增 revision；legacy 不迁移，随机量化抖动已用 30/30 次开奖锁定。定向 54/54、完整 Node 229/229、Godot 6/6 通过；见 `docs/phase_215_authority_pet_rebirth_growth_cycle.md`。

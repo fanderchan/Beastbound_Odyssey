@@ -47,6 +47,7 @@ test("pet encounter catalog fails startup for unknown forms, bad ranges, stats a
   const baseZone = {
     id: "test_zone",
     encounterGroupId: "test_group",
+    encounterRate: 0.12,
     rects: [[0, 0, 2, 2]],
     wildPetPool: [{
       formId: "test_form",
@@ -76,6 +77,16 @@ test("pet encounter catalog fails startup for unknown forms, bad ranges, stats a
       name: "unknown dynamic source",
       mutate(zone) { zone.wildPetPool = []; zone.wildPetPoolSource = "client_pool"; },
       pattern: /unsupported wildPetPoolSource/,
+    },
+    {
+      name: "missing encounter rate",
+      mutate(zone) { delete zone.encounterRate; },
+      pattern: /invalid encounterRate/,
+    },
+    {
+      name: "out of range encounter rate",
+      mutate(zone) { zone.encounterRate = 1.01; },
+      pattern: /invalid encounterRate/,
     },
   ];
   for (const fixture of cases) {

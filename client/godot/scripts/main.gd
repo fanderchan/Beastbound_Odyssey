@@ -1093,6 +1093,7 @@ var gm_battle_speed_multiplier: int = GM_BATTLE_SPEED_MIN
 var last_checked_player_cell: Vector2i = Vector2i.ZERO
 var encounter_zone_step_count: int = 0
 var encounter_grace_remaining: float = 0.0
+var pending_server_encounter_permit: Dictionary = {}
 var hang_mode_active: bool = false
 var hang_walk_direction_index: int = 0
 var hang_walk_cooldown: float = 0.0
@@ -7966,8 +7967,8 @@ func _clear_pending_click_move_target(reset_cooldown: bool = true) -> void:
 func _set_click_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
 	return _panel_flow()._set_click_move_target_cell(goal_cell, marker_point, marker_cell)
 
-func _should_use_server_step_movement() -> bool:
-	return _panel_flow()._should_use_server_step_movement()
+func _should_use_server_step_movement(include_hang: bool = false) -> bool:
+	return _panel_flow()._should_use_server_step_movement(include_hang)
 
 func _set_server_step_move_target_cell(goal_cell: Vector2i, marker_point: Vector2, marker_cell: Vector2i) -> bool:
 	return _panel_flow()._set_server_step_move_target_cell(goal_cell, marker_point, marker_cell)
@@ -8062,8 +8063,8 @@ func _can_start_local_encounter_model() -> bool:
 func _server_encounter_block_message() -> String:
 	return _panel_flow()._server_encounter_block_message()
 
-func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。") -> void:
-	await _panel_flow()._start_server_party_encounter(zone, pending_message, success_message, failure_message)
+func _start_server_party_encounter(zone: Dictionary, pending_message: String = "遭遇野生宠物，正在同步。", success_message: String = "", failure_message: String = "遇敌同步失败，请重试。", encounter_permit_token: String = "") -> void:
+	await _panel_flow()._start_server_party_encounter(zone, pending_message, success_message, failure_message, encounter_permit_token)
 
 func _encounter_enemy_count_fallback() -> int:
 	return _panel_flow()._encounter_enemy_count_fallback()
@@ -12179,6 +12180,8 @@ func _update_hang_walk(delta: float) -> void:
 		return
 	if player.is_auto_moving():
 		return
+	if server_step_move_active or server_step_move_request_pending or server_step_move_waiting_for_visual:
+		return
 	hang_walk_cooldown = maxf(0.0, hang_walk_cooldown - delta)
 	if hang_walk_cooldown > 0.0:
 		return
@@ -12191,7 +12194,10 @@ func _update_hang_walk(delta: float) -> void:
 	if next_cell == player_cell:
 		_stop_hang_activity("附近没有可走的遇敌格，挂机停止。", false)
 		return
-	_set_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
+	if _should_use_server_step_movement(true):
+		_set_server_step_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
+	else:
+		_set_move_target_cell(next_cell, IsoMapModel.grid_to_world(map_data, next_cell), next_cell)
 	has_target_marker = false
 	has_target_cell = false
 	hang_walk_cooldown = HANG_WALK_COOLDOWN_SECONDS / float(_gm_battle_speed_multiplier())
@@ -12250,6 +12256,7 @@ func _consume_hang_stop_after_battle_request() -> bool:
 
 
 func _clear_navigation_state() -> void:
+	pending_server_encounter_permit.clear()
 	_cancel_server_step_move()
 	_clear_pending_click_move_target()
 	current_path_cells.clear()

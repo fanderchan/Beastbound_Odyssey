@@ -319,6 +319,10 @@ const profileVisibilityText = readText("server/node/src/auth/profile-visibility.
 const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
 const serverAuthClientText = readText("client/godot/scripts/progression/server_auth_client_model.gd");
+const protocolVersion = Number(protocolText.match(/const PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
+const minimumProtocolVersion = Number(protocolText.match(/const MIN_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
+const maximumProtocolVersion = Number(protocolText.match(/const MAX_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
+const clientProtocolVersion = Number(serverAuthClientText.match(/const CLIENT_PROTOCOL_VERSION := (\d+)/)?.[1] || 0);
 const serverAuthority = {
   loadsPetTemplates: authServiceText.includes("pet_templates.json"),
   loadsSpeciesGrowthProfiles: authServiceText.includes("loadPetGrowthCatalog")
@@ -347,9 +351,10 @@ const serverAuthority = {
   publicProfileBoundaryWired: authServiceText.includes("projectPublicServiceResult")
     && authServiceText.includes("publicProfile(result.profile)")
     && profileVisibilityText.includes("function publicProfile"),
-  protocolV2: protocolText.includes("PROTOCOL_VERSION = 2")
-    && protocolText.includes("MIN_CLIENT_PROTOCOL_VERSION = 2")
-    && protocolText.includes("MAX_CLIENT_PROTOCOL_VERSION = 2"),
+  publicGrowthProtocolBoundary: protocolVersion >= 2
+    && minimumProtocolVersion === protocolVersion
+    && maximumProtocolVersion === protocolVersion
+    && clientProtocolVersion === protocolVersion,
   clientServerPetNoReroll: playerProgressText.includes("_normalize_server_authoritative_pet_instance")
     && playerProgressText.includes("has_server_authority_marker"),
 };
@@ -360,12 +365,12 @@ if (serverAuthority.acceptsClientEncounterZonePayload && !serverAuthority.petEnc
 if (!serverAuthority.clientEncounterIntentOnly) issues.warnings.push("Godot 联网遇敌请求仍携带本地抽取的宠物、数量或战斗数值，而不是纯 zone/interaction 意图");
 if (!serverAuthority.petExpDispatcherWired) issues.warnings.push("Node 宠物经验入口尚未统一接入成长 dispatcher");
 if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1Enabled) {
-  issues.warnings.push("Node 宠物经验 dispatcher 已接线但 authority-v1 仍安全关闭；需等待公开投影、客户端不重滚与协议 v2 原子切换");
+  issues.warnings.push("Node 宠物经验 dispatcher 已接线但 authority-v1 仍安全关闭；需等待公开投影、客户端不重滚与协议边界原子切换");
 }
 if (!serverAuthority.newLevelOneFactoryWired) issues.warnings.push("Node 新 Lv1 宠物尚未统一经过严格成长 factory");
 if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node authority-v1 宠物转生尚未接入严格成长周期重启与材料预检");
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
-if (!serverAuthority.protocolV2) issues.warnings.push("宠物公开成长契约尚未锁定为协议 v2");
+if (!serverAuthority.publicGrowthProtocolBoundary) issues.warnings.push("宠物公开成长契约要求客户端与服务端锁定在同一份 v2+ 协议边界");
 if (!serverAuthority.clientServerPetNoReroll) issues.warnings.push("Godot 联网宠物仍缺少明确的无重掷 normalize 路径");
 
 function resolvedForm(formId) {
@@ -463,7 +468,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`4V正式契约: ${summary.formalLv14VContract.present ? "有" : "无"}`);
-  console.log(`服务端成长档/EXP/v1/新宠factory/转生周期/公开档/v2/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.protocolV2}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/EXP/v1/新宠factory/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

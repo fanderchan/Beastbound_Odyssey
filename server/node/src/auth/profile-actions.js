@@ -2,7 +2,6 @@
 
 function createProfileActionsDomain(ctx) {
   const {
-    ENCOUNTER_STONE_ITEM_IDS,
     PROFILE_ACTION_IDS,
     activeQuestAutoClaim,
     applyPlayerRebirthReturn,
@@ -13,13 +12,14 @@ function createProfileActionsDomain(ctx) {
     clone,
     consumeBackpackItem,
     ensureProfileForAccount,
+    encounterStoneConfigForItem,
     executePlayerRebirthToProfile,
     fail,
     isoNow,
+    invalidateEncounterPermitForAccount,
     load,
     normalizeBackpackSlots,
     normalizeHangMode,
-    normalizeHangOriginPayload,
     normalizeHangSession,
     normalizeHangSettings,
     normalizeHangStopReason,
@@ -38,6 +38,7 @@ function createProfileActionsDomain(ctx) {
     publicProfileActionResult,
     recordQuestEventToProfile,
     resolveSession,
+    resolveHangOrigin,
     save,
   } = ctx;
 
@@ -98,27 +99,40 @@ function createProfileActionsDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const origin = resolveHangOrigin(data, resolved.account.accountId, payload);
+    if (!origin.ok) {
+      return fail(origin.code, origin.message, {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    let itemId = "";
+    let encounterStoneConfig = null;
+    if (mode === "encounter_stone") {
+      itemId = String(payload.itemId || payload.encounterStoneItemId || "").trim();
+      encounterStoneConfig = encounterStoneConfigForItem(itemId);
+      if (!encounterStoneConfig) {
+        return fail("hang_item_invalid", "遇敌石道具不正确。", {
+          profileBinding: ensured.binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+    }
     const settings = normalizeHangSettings(payload.settings);
     profile.hangSettings = settings;
     let session = normalizeHangSession(profile.hangSession);
-    const origin = normalizeHangOriginPayload(payload);
     session = {
       ...session,
       enabled: true,
       mode,
       pendingResume: false,
       lastStopReason: "",
-      originMapId: origin.mapId || session.originMapId,
+      originMapId: origin.mapId,
       originCell: origin.originCell,
+      encounterZoneId: origin.zoneId,
+      encounterGroupId: origin.encounterGroupId,
     };
     if (mode === "encounter_stone") {
-      const itemId = String(payload.itemId || payload.encounterStoneItemId || "").trim();
-      if (!ENCOUNTER_STONE_ITEM_IDS.has(itemId)) {
-        return fail("hang_item_invalid", "遇敌石道具不正确。", {
-          profileBinding: ensured.binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
-        });
-      }
       const slots = normalizeBackpackSlots(profileBackpackSlots(profile));
       if (backpackItemCount(slots, itemId) <= 0) {
         return fail("item_not_enough", "遇敌石不够。", {
@@ -128,6 +142,20 @@ function createProfileActionsDomain(ctx) {
       }
       profile.backpackSlots = consumeBackpackItem(slots, itemId, 1);
       profile.captureTools = captureToolBagFromProfile(profile);
+      const startedAtMs = now();
+      session.encounterStoneItemId = itemId;
+      session.encounterIntervalMs = encounterStoneConfig.intervalMs;
+      session.startedAt = new Date(startedAtMs).toISOString();
+      session.expiresAt = new Date(startedAtMs + encounterStoneConfig.durationMs).toISOString();
+      session.encounterActivationId = `stone_${resolved.account.accountId}_${Math.max(0, Number(ensured.binding.profileRevision || 0)) + 1}_${startedAtMs}`;
+      session.encounterConsumedSlot = 0;
+    } else {
+      session.encounterStoneItemId = "";
+      session.encounterIntervalMs = 0;
+      session.startedAt = "";
+      session.expiresAt = "";
+      session.encounterActivationId = "";
+      session.encounterConsumedSlot = 0;
     }
     profile.hangSession = session;
     const questMessages = [];
@@ -148,6 +176,7 @@ function createProfileActionsDomain(ctx) {
     }
     const persisted = persistProfileForAccount(data, resolved.account, ensured.binding, profile, now);
     save(data);
+    invalidateEncounterPermitForAccount(resolved.account.accountId, `hang_${mode}_started`);
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: persisted.binding,
@@ -183,6 +212,12 @@ function createProfileActionsDomain(ctx) {
       enabled: false,
       pendingResume: Boolean(payload.pendingResume),
       lastStopReason: reason,
+      encounterStoneItemId: "",
+      encounterIntervalMs: 0,
+      startedAt: "",
+      expiresAt: "",
+      encounterActivationId: "",
+      encounterConsumedSlot: 0,
     };
     profile.hangSession = nextSession;
     const changed = JSON.stringify(previousSession) !== JSON.stringify(nextSession);

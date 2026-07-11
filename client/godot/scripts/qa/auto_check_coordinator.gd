@@ -5,6 +5,7 @@ const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
+const ServerEncounterPermitModel := preload("res://scripts/world/server_encounter_permit_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
@@ -738,8 +739,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var protocol_v2_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 2
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v2_ok else "failed"
+	var protocol_v3_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 3
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v3_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -11660,11 +11661,11 @@ func _run_auto_encounter_loop_check() -> void:
 			if host.world_log_message.find("队伍中只有队长可以触发遇敌") >= 0:
 				break
 		party_member_grass_block = (
-			host.world_log_message.find("队伍中只有队长可以触发遇敌") >= 0
-			and host.world_log_message.find("队伍遇敌由队长触发") < 0
-			and not host.battle_active
+			not host.battle_active
 			and not host.encounter_active
 			and not host.server_party_encounter_request_pending
+			and host.pending_server_encounter_permit.is_empty()
+			and host.encounter_zone_step_count == 0
 		)
 		host.current_account_session = saved_session
 		host.party_current_state = saved_party_state
@@ -11673,6 +11674,7 @@ func _run_auto_encounter_loop_check() -> void:
 
 	var stone_consumed = false
 	var stone_effect = false
+	var stone_battle_clock = false
 	var stone_wait = false
 	var stone_triggered = false
 	var party_member_stone_block = false
@@ -11735,14 +11737,39 @@ func _run_auto_encounter_loop_check() -> void:
 		host._use_backpack_encounter_stone(ENCOUNTER_STONE_LOW_ID)
 		stone_consumed = PlayerProgressModel.backpack_item_count(host.player_profile, ENCOUNTER_STONE_LOW_ID) == before_stones - 1
 		stone_effect = host._encounter_stone_active() and is_equal_approx(host.encounter_stone_interval, 3.0)
+		var remaining_before_battle: float = float(host.encounter_stone_remaining)
+		host.battle_active = true
+		host._update_stationary_encounter_stone(0.5)
+		stone_battle_clock = is_equal_approx(host.encounter_stone_remaining, remaining_before_battle - 0.5)
+		host.battle_active = false
 		host._update_stationary_encounter_stone(2.99)
 		stone_wait = not host.battle_active
 		host._update_stationary_encounter_stone(0.02)
 		await host.get_tree().process_frame
 		stone_triggered = host.battle_active and host.encounter_panel != null and not host.encounter_panel.visible
 
-	var status = "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and normal_walk_button_ok and natural_direct and natural_no_prompt and party_member_grass_block and party_member_stone_block and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_wait and stone_triggered else "failed"
-	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s normal_walk_button=%s natural=%s no_prompt=%s member_grass=%s member_stone=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_wait=%s stone_trigger=%s" % [
+	var route_session: Dictionary = host.current_account_session.duplicate(true)
+	var route_hang: bool = host.hang_mode_active
+	var route_battle: bool = host.battle_active
+	var route_encounter: bool = host.encounter_active
+	var route_server_step: bool = host.server_step_world_move_enabled
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "hang_step_token",
+	}
+	host.hang_mode_active = true
+	host.battle_active = false
+	host.encounter_active = false
+	host.server_step_world_move_enabled = true
+	var server_hang_step_route: bool = host._should_use_server_step_movement(true) and not host._should_use_server_step_movement(false)
+	host.current_account_session = route_session
+	host.hang_mode_active = route_hang
+	host.battle_active = route_battle
+	host.encounter_active = route_encounter
+	host.server_step_world_move_enabled = route_server_step
+
+	var status = "ok" if loaded and zone_found and cells_ok and rate_ok and encounter_stone_data_ok and shop_ok and hang_started and hang_stopped and normal_walk_button_ok and natural_direct and natural_no_prompt and party_member_grass_block and party_member_stone_block and grace_started and grace_blocks and grace_one_second and stone_consumed and stone_effect and stone_battle_clock and stone_wait and stone_triggered and server_hang_step_route else "failed"
+	print("encounter loop check ready: status=%s loaded=%s zone=%s cells=%s rate=%s stones=%s shop=%s hang_start=%s hang_stop=%s normal_walk_button=%s natural=%s no_prompt=%s member_grass=%s member_stone=%s grace_start=%s grace_blocks=%s grace_1s=%s stone_consume=%s stone_effect=%s stone_battle_clock=%s stone_wait=%s stone_trigger=%s server_hang_step=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -11762,8 +11789,10 @@ func _run_auto_encounter_loop_check() -> void:
 		str(grace_one_second),
 		str(stone_consumed),
 		str(stone_effect),
+		str(stone_battle_clock),
 		str(stone_wait),
 		str(stone_triggered),
+		str(server_hang_step_route),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -15317,7 +15346,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 2
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 3
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -16016,15 +16045,44 @@ func _run_auto_auth_server_client_check() -> void:
 			"stepAccepted": true,
 			"movementSeq": 1,
 		},
+		"encounterPermit": {
+			"token": "permit_private_test",
+			"mapId": "firebud_training_yard",
+			"zoneId": "zone_test",
+			"encounterGroupId": "group_test",
+			"cellX": 9,
+			"cellY": 12,
+			"movementSeq": 1,
+			"expiresAt": "2030-01-01T00:00:00.000Z",
+			"schemaVersion": 1,
+		},
 		"authority": "server_step",
 		"players": [],
 		"aoi": {"scope": "aoi", "radius": 18},
 	}).to_utf8_buffer())
+	var parsed_encounter_permit := parsed_movement.get("encounterPermit", {}) as Dictionary if parsed_movement.get("encounterPermit", {}) is Dictionary else {}
+	var normalized_encounter_permit := ServerEncounterPermitModel.from_movement_response(
+		parsed_encounter_permit,
+		parsed_movement.get("position", {}) as Dictionary
+	)
+	var rejected_mismatched_permit := ServerEncounterPermitModel.from_movement_response(
+		parsed_encounter_permit,
+		{
+			"mapId": "firebud_training_yard",
+			"cellX": 8,
+			"cellY": 12,
+			"movementSeq": 1,
+		}
+	)
 	var movement_parse_ok = (
 		bool(parsed_movement.get("ok", false))
 		and str(parsed_movement.get("authority", "")) == "server_step"
 		and int((parsed_movement.get("position", {}) as Dictionary).get("movementSeq", 0)) == 1
 		and bool((parsed_movement.get("movement", {}) as Dictionary).get("stepAccepted", false))
+		and str(normalized_encounter_permit.get("token", "")) == "permit_private_test"
+		and ServerEncounterPermitModel.bound_cell(normalized_encounter_permit) == Vector2i(9, 12)
+		and ServerEncounterPermitModel.matches_visual_cell(normalized_encounter_permit, "firebud_training_yard", Vector2i(9, 12))
+		and rejected_mismatched_permit.is_empty()
 	)
 	var event_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url = ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
@@ -16065,6 +16123,16 @@ func _run_auto_auth_server_client_check() -> void:
 	var battle_decline_spec = ServerAuthClientModel.battle_invite_decline_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var battle_cancel_spec = ServerAuthClientModel.battle_invite_cancel_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var party_battle_encounter_spec = ServerAuthClientModel.party_battle_encounter_request("http://127.0.0.1:8787/", "token_test", {"id": "zone_test"}, 10)
+	var permitted_battle_encounter_spec = ServerAuthClientModel.party_battle_encounter_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		{"id": "zone_test", "encounterGroupId": "group_test"},
+		10,
+		"permit_private_test"
+	)
+	var permitted_battle_body_value = JSON.parse_string(str(permitted_battle_encounter_spec.get("body", "")))
+	var permitted_battle_body := permitted_battle_body_value as Dictionary if permitted_battle_body_value is Dictionary else {}
+	var permitted_battle_intent := permitted_battle_body.get("encounterIntent", {}) as Dictionary if permitted_battle_body.get("encounterIntent", {}) is Dictionary else {}
 	var battle_leave_spec = ServerAuthClientModel.battle_room_leave_request("http://127.0.0.1:8787/", "token_test", "battle_room_test")
 	var battle_command_spec = ServerAuthClientModel.battle_command_submit_request("http://127.0.0.1:8787/", "token_test", "battle_room_test", {
 		"round": 1,
@@ -16100,6 +16168,11 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(party_battle_encounter_spec.get("body", "")).find("\"zoneId\":\"zone_test\"") >= 0
 		and str(party_battle_encounter_spec.get("body", "")).find("enemyCount") < 0
 		and str(party_battle_encounter_spec.get("body", "")).find("selectedWildPet") < 0
+		and str(party_battle_encounter_spec.get("body", "")).find("encounterPermitToken") < 0
+		and str(permitted_battle_body.get("encounterPermitToken", "")) == "permit_private_test"
+		and str(permitted_battle_intent.get("zoneId", "")) == "zone_test"
+		and str(permitted_battle_intent.get("encounterGroupId", "")) == "group_test"
+		and not permitted_battle_intent.has("encounterPermitToken")
 		and str(battle_leave_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/leave"
 		and int(battle_leave_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/commands"
@@ -16617,7 +16690,7 @@ func _run_auto_auth_server_client_check() -> void:
 		"ok": false,
 		"code": "protocol_version_mismatch",
 		"message": "客户端版本与服务器协议不兼容，请更新客户端后重试。",
-		"protocolVersion": 2,
+		"protocolVersion": ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
 		"upgrade": {"required": true, "message": "请更新客户端后重试。"},
 	}).to_utf8_buffer())
 	var protocol_mismatch_ok = (
@@ -16639,6 +16712,10 @@ func _run_auto_auth_server_client_check() -> void:
 		"battle_room_missing", "battle_self_busy", "battle_target_busy", "battle_target_missing",
 		"battle_target_offline", "chat_channel_invalid", "chat_empty", "chat_team_missing",
 		"client_version_missing", "command_denied", "empty_command", "equipment_already_equipped",
+		"encounter_permit_binding_mismatch", "encounter_permit_expired", "encounter_permit_invalid",
+		"encounter_permit_replayed", "encounter_permit_required", "encounter_permit_unavailable",
+		"encounter_stone_binding_mismatch", "encounter_stone_expired", "encounter_stone_interval_pending",
+		"encounter_stone_session_invalid",
 		"equipment_enhance_max", "equipment_enhance_not_supported", "equipment_exp_pill_locked",
 		"equipment_item_invalid", "equipment_item_missing", "equipment_repair_not_needed",
 		"equipment_requirement_not_met", "equipment_slot_empty", "equipment_slot_invalid",
@@ -16664,7 +16741,7 @@ func _run_auto_auth_server_client_check() -> void:
 		"pet_rebirth_target_is_helper", "pet_required_by_quest", "pet_riding", "pet_skill_base",
 		"pet_skill_empty", "pet_skill_invalid", "pet_skill_not_offered", "pet_skill_same_slot",
 		"pet_skill_slot_empty", "pet_state_invalid", "pet_storage_full", "pet_template_missing",
-		"player_rebirth_not_ready", "player_rebirth_trial_not_ready", "player_stat_invalid",
+		"movement_corner_blocked", "movement_rate_limited", "player_rebirth_not_ready", "player_rebirth_trial_not_ready", "player_stat_invalid",
 		"player_stat_points_empty", "position_map_missing", "profile_action_invalid", "profile_missing",
 		"profile_upload_denied", "protocol_version_mismatch", "quest_already_claimed", "quest_event_invalid",
 		"quest_missing", "quest_not_ready", "quest_reward_choice_required", "quest_unavailable",
@@ -19881,6 +19958,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 func _run_auto_server_solo_pve_live_check() -> void:
 	host.profile_save_enabled = false
 	host.auth_auto_bypass = false
+	var map_loaded: bool = bool(host._load_map("firebud_village_gate", "doctor_record"))
 	var suffix = str(Time.get_ticks_usec() % 10000000000)
 	var username = ("spve%s" % suffix).substr(0, 20)
 	var register_response = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
@@ -19906,19 +19984,54 @@ func _run_auto_server_solo_pve_live_check() -> void:
 		}
 	))
 	var seed_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(seed_position_response.get("responseCode", 0)), seed_position_response.get("body", PackedByteArray()) as PackedByteArray)
-	var position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
-		str(session.get("serverSessionToken", "")),
-		{
-			"mapId": "firebud_village_gate",
-			"cellX": 11,
-			"cellY": 15,
-			"facing": "south",
-			"moving": false,
-		}
-	))
-	var position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(position_response.get("responseCode", 0)), position_response.get("body", PackedByteArray()) as PackedByteArray)
-	var position_ok = bool(seed_position_parsed.get("ok", false)) and bool(position_parsed.get("ok", false))
+	var current_cell := Vector2i(10, 17)
+	var visual_from_cell := current_cell
+	var encounter_zone: Dictionary = host._encounter_zone_by_id("village_grass")
+	var zone_cells := EncounterModel.cells_for_zone(encounter_zone)
+	var movement_ok: bool = bool(seed_position_parsed.get("ok", false)) and not encounter_zone.is_empty() and not zone_cells.is_empty()
+	var encounter_permit: Dictionary = {}
+	for attempt in range(256):
+		if not movement_ok or not encounter_permit.is_empty():
+			break
+		var candidates: Array[Vector2i] = []
+		for candidate in zone_cells:
+			if candidate == current_cell:
+				continue
+			if (
+				absi(candidate.x - current_cell.x) <= 1
+				and absi(candidate.y - current_cell.y) <= 1
+				and IsoMapModel.can_step(host.map_data, current_cell, candidate)
+			):
+				candidates.append(candidate)
+		if candidates.is_empty():
+			movement_ok = false
+			break
+		var next_cell := candidates[attempt % candidates.size()]
+		visual_from_cell = current_cell
+		var step_response = await host._auto_http_request_spec(ServerAuthClientModel.movement_step_request(
+			ServerAuthClientModel.DEFAULT_BASE_URL,
+			str(session.get("serverSessionToken", "")),
+			{
+				"mapId": "firebud_village_gate",
+				"fromCellX": current_cell.x,
+				"fromCellY": current_cell.y,
+				"toCellX": next_cell.x,
+				"toCellY": next_cell.y,
+				"facing": "east",
+				"moving": true,
+			}
+		))
+		var step_parsed := ServerAuthClientModel.parse_movement_step_response(
+			int(step_response.get("responseCode", 0)),
+			step_response.get("body", PackedByteArray()) as PackedByteArray
+		)
+		if not bool(step_parsed.get("ok", false)):
+			movement_ok = false
+			break
+		var step_position := step_parsed.get("position", {}) as Dictionary if step_parsed.get("position", {}) is Dictionary else {}
+		current_cell = Vector2i(int(step_position.get("cellX", next_cell.x)), int(step_position.get("cellY", next_cell.y)))
+		encounter_permit = ServerEncounterPermitModel.from_movement_response(step_parsed.get("encounterPermit", {}), step_position)
+	var permit_ok: bool = movement_ok and not encounter_permit.is_empty()
 	host.current_account_session = session
 	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	host.account_authenticated = true
@@ -19931,14 +20044,18 @@ func _run_auto_server_solo_pve_live_check() -> void:
 	host.server_battle_state.clear()
 	host.server_battle_pending_closed_room.clear()
 	var route_ok = host._should_start_server_party_encounter() and not host._can_start_local_encounter_model()
-	var encounter_zone = {
-		"id": "village_grass",
-		"name": "村外草丛",
-		"encounterGroupId": "firebud_grass_01",
-	}
-	host._trigger_encounter(encounter_zone)
+	if permit_ok:
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, visual_from_cell)
+		host.server_step_move_authority_cell = current_cell
+		host.server_step_move_authority_valid = true
+		host._panel_flow()._arm_server_encounter_permit(encounter_permit, current_cell)
 	var frames = 0
-	while frames < 360 and (host.server_party_encounter_request_pending or not host.battle_active):
+	while frames < 720 and (
+		not host.battle_active
+		or host.server_party_encounter_request_pending
+		or not host.pending_server_encounter_permit.is_empty()
+		or host.player.is_auto_moving()
+	):
 		frames += 1
 		await host.get_tree().process_frame
 	var room_value = host.server_battle_state.get("room", null)
@@ -19968,12 +20085,13 @@ func _run_auto_server_solo_pve_live_check() -> void:
 		))
 	host._end_battle(true)
 	host._stop_server_event_stream()
-	var status = "ok" if register_ok and profile_ok and position_ok and route_ok and server_room_ok and message_ok else "failed"
-	print("server solo pve live check ready: status=%s register=%s profile=%s position=%s route=%s server_room=%s message=%s room=%s participants=%d actors=%d username=%s log=%s" % [
+	var status = "ok" if map_loaded and register_ok and profile_ok and permit_ok and route_ok and server_room_ok and message_ok and host.pending_server_encounter_permit.is_empty() else "failed"
+	print("server solo pve live check ready: status=%s map=%s register=%s profile=%s permit=%s route=%s server_room=%s message=%s room=%s participants=%d actors=%d username=%s log=%s" % [
 		status,
+		str(map_loaded),
 		str(register_ok),
 		str(profile_ok),
-		str(position_ok),
+		str(permit_ok),
 		str(route_ok),
 		str(server_room_ok),
 		str(message_ok),

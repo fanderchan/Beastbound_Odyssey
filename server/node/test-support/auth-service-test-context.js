@@ -15,18 +15,39 @@ const {
 } = require("../src/auth-service");
 
 const fixturePetEncounterAuthority = createFixturePetEncounterAuthority();
+const fixturePetEncounterPermitAuthority = createFixturePetEncounterPermitAuthority();
+const fixtureManualEncounterAccess = Object.freeze({
+  authorize() {
+    return {ok: true, manual: false, notManual: true, schemaVersion: 1};
+  },
+});
 
 // 测试默认放开整档写入闸门并注入显式遭遇夹具，方便旧战斗用例精确造敌；
 // useStrictPetEncounterAuthority: true 会改走与生产相同的地图目录与位置校验。
 function createAuthService(options = {}) {
   const serviceOptions = {"allowFullProfileSave": true, ...options};
-  const useStrictPetEncounterAuthority = Boolean(serviceOptions.useStrictPetEncounterAuthority);
+  const useStrictPetEncounterPermitAuthority = Boolean(serviceOptions.useStrictPetEncounterPermitAuthority);
+  const useStrictManualEncounterAccess = Boolean(serviceOptions.useStrictManualEncounterAccess);
+  const useStrictPetEncounterAuthority = Boolean(
+    serviceOptions.useStrictPetEncounterAuthority || useStrictPetEncounterPermitAuthority
+  );
   delete serviceOptions.useStrictPetEncounterAuthority;
+  delete serviceOptions.useStrictPetEncounterPermitAuthority;
+  delete serviceOptions.useStrictManualEncounterAccess;
   if (serviceOptions.allowInitialPositionSeedForTests === undefined) {
     serviceOptions.allowInitialPositionSeedForTests = !useStrictPetEncounterAuthority;
   }
+  if (serviceOptions.allowHangOriginWithoutPositionForTests === undefined) {
+    serviceOptions.allowHangOriginWithoutPositionForTests = !useStrictPetEncounterPermitAuthority;
+  }
   if (!useStrictPetEncounterAuthority && !serviceOptions.petEncounterAuthority) {
     serviceOptions.petEncounterAuthority = fixturePetEncounterAuthority;
+  }
+  if (!useStrictPetEncounterPermitAuthority && !serviceOptions.petEncounterPermitAuthority) {
+    serviceOptions.petEncounterPermitAuthority = fixturePetEncounterPermitAuthority;
+  }
+  if (!useStrictManualEncounterAccess && !serviceOptions.manualEncounterAccess) {
+    serviceOptions.manualEncounterAccess = fixtureManualEncounterAccess;
   }
   return createAuthServiceStrict(serviceOptions);
 }
@@ -89,6 +110,20 @@ function createFixturePetEncounterAuthority() {
           schemaVersion: 1,
         },
       };
+    },
+  });
+}
+
+function createFixturePetEncounterPermitAuthority() {
+  return Object.freeze({
+    observeAcceptedStep() {
+      return {ok: true, permit: null};
+    },
+    authorizeEncounter() {
+      return {ok: true, mode: "direct", authorization: {mode: "direct"}};
+    },
+    consume() {
+      return {ok: true};
     },
   });
 }

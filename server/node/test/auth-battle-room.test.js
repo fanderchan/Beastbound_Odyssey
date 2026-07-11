@@ -32,6 +32,10 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {createPetEncounterAuthority, loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
+
+const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
 test("players can invite and accept duel battle rooms", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
@@ -1222,10 +1226,20 @@ test("party pve encounters support a solo server account without local battle fa
 });
 
 test("production party encounters derive canonical wild pets from the server map catalog", () => {
-  const service = createAuthService({
-    "store": createMemoryAuthStore(),
-    "useStrictPetEncounterAuthority": true,
+  const store = createMemoryAuthStore();
+  const permitAuthority = createPetEncounterPermitAuthority({
+    catalog: strictPetEncounterCatalog,
+    randomBytes: (size) => crypto.randomBytes(size),
+    randomFloat: () => 0,
+    eligibleStepIntervalMs: 0,
   });
+  const service = createAuthService({
+    store,
+    "useStrictPetEncounterAuthority": true,
+    "petEncounterPermitAuthority": permitAuthority,
+  });
+  const events = [];
+  service.onEvent((event) => events.push(event));
   const solo = service.register({"username": "strictencounter", "password": "test1234", "displayName": "权威遇敌号"});
   assert.equal(solo.ok, true);
   const profile = battleProfile("权威遇敌号", {"level": 1, "hp": 120, "maxHp": 120, "attack": 18, "defense": 6, "quick": 70});
@@ -1252,15 +1266,49 @@ test("production party encounters derive canonical wild pets from the server map
     "facing": "east",
     "moving": false,
   }).ok, true);
-  assert.equal(service.updatePlayerPosition(solo.session.token, {
-    "mapId": "firebud_village_gate",
-    "cellX": 11,
-    "cellY": 15,
-    "facing": "east",
-    "moving": false,
-  }).ok, true);
+  let issuedPermit = null;
+  let stepIndex = 0;
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17],
+    [11, 17, 11, 16],
+    [11, 16, 11, 15],
+  ]) {
+    stepIndex += 1;
+    const step = service.movePlayerStep(solo.session.token, {
+      "mapId": "firebud_village_gate",
+      fromCellX,
+      fromCellY,
+      toCellX,
+      toCellY,
+      "facing": "east",
+      "moving": true,
+    });
+    assert.equal(step.ok, true);
+    if (stepIndex <= 2) {
+      assert.equal(Object.hasOwn(step, "encounterPermit"), false);
+    } else {
+      issuedPermit = step.encounterPermit;
+    }
+  }
+  assert.equal(typeof issuedPermit.token, "string");
+  assert.equal(issuedPermit.zoneId, "village_grass");
+  assert.equal(issuedPermit.encounterGroupId, "firebud_grass_01");
+  assert.equal(issuedPermit.movementSeq, 3);
+  assert.equal(Object.hasOwn(issuedPermit, "encounterSeed"), false);
+  assert.equal(events.some((event) => JSON.stringify(event).includes(issuedPermit.token)), false);
+
+  const roomCountBefore = Object.keys(service.snapshot().battleRooms).length;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const missingPermit = service.startPartyEncounter(solo.session.token, {
+      "encounterIntent": {"zoneId": "village_grass", "encounterGroupId": "firebud_grass_01"},
+    });
+    assert.equal(missingPermit.ok, false);
+    assert.equal(missingPermit.code, "encounter_permit_required");
+  }
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, roomCountBefore);
 
   const encounter = service.startPartyEncounter(solo.session.token, {
+    "encounterPermitToken": issuedPermit.token,
     "enemyCount": 10,
     "encounterZone": {
       "id": "village_grass",
@@ -1290,13 +1338,94 @@ test("production party encounters derive canonical wild pets from the server map
   assert.equal(stored.encounter.authority, "server_pet_encounter_v1");
   assert.equal(JSON.stringify(stored.encounter).includes("rebirth_starter_shadow_cub"), false);
   assert.equal(JSON.stringify(stored.encounter).includes("999999"), false);
+  assert.equal(JSON.stringify(service.snapshot()).includes(issuedPermit.token), false);
+  assert.equal(JSON.stringify(store.load()).includes(issuedPermit.token), false);
+  assert.equal(store.load().playerPositions[solo.account.accountId], undefined);
+  assert.equal(service.snapshot().playerPositions[solo.account.accountId].moving, false);
+  assert.equal(service.snapshot().playerPositions[solo.account.accountId].movementSeq, 3);
 
   assert.equal(service.leaveBattleRoom(solo.session.token, encounter.room.roomId).ok, true);
-  const rejected = service.startPartyEncounter(solo.session.token, {
-    "encounterZone": {"id": "client_forged_zone"},
+  const replayed = service.startPartyEncounter(solo.session.token, {
+    "encounterPermitToken": issuedPermit.token,
+    "encounterIntent": {"zoneId": "village_grass", "encounterGroupId": "firebud_grass_01"},
+  });
+  assert.equal(replayed.ok, false);
+  assert.equal(replayed.code, "encounter_permit_replayed");
+});
+
+test("encounter permit remains retryable after authoritative encounter construction fails", () => {
+  const strictEncounterAuthority = createPetEncounterAuthority({catalog: strictPetEncounterCatalog});
+  let resolveAttempts = 0;
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "useStrictPetEncounterAuthority": true,
+    "petEncounterAuthority": {
+      catalog: strictPetEncounterCatalog,
+      resolve(input) {
+        resolveAttempts += 1;
+        if (resolveAttempts === 1) {
+          return {ok: false, code: "encounter_test_construction_failed", message: "测试构造失败。"};
+        }
+        return strictEncounterAuthority.resolve(input);
+      },
+    },
+    "petEncounterPermitAuthority": createPetEncounterPermitAuthority({
+      catalog: strictPetEncounterCatalog,
+      randomBytes: (size) => crypto.randomBytes(size),
+      randomFloat: () => 0,
+      eligibleStepIntervalMs: 0,
+    }),
+  });
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const solo = service.register({"username": "permitretry", "password": "test1234", "displayName": "许可重试号"});
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 17, moving: false,
+  }).ok, true);
+  let permit = null;
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17], [11, 17, 11, 16], [11, 16, 11, 15],
+  ]) {
+    const moved = service.movePlayerStep(solo.session.token, {
+      mapId: "firebud_village_gate", fromCellX, fromCellY, toCellX, toCellY, moving: true,
+    });
+    permit = moved.encounterPermit || permit;
+  }
+  assert.equal(typeof permit.token, "string");
+  const request = {
+    encounterPermitToken: permit.token,
+    encounterIntent: {zoneId: "village_grass", encounterGroupId: "firebud_grass_01"},
+  };
+  const failed = service.startPartyEncounter(solo.session.token, request);
+  assert.equal(failed.ok, false);
+  assert.equal(failed.code, "encounter_test_construction_failed");
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, 0);
+  assert.equal(events.some((event) => event.type === "battle.room_ready"), false);
+  const retried = service.startPartyEncounter(solo.session.token, request);
+  assert.equal(retried.ok, true);
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, 1);
+});
+
+test("failed encounter permit preflight does not mutate party presence", () => {
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const leader = service.register({username: "permitpartya", password: "test1234", displayName: "许可队长"});
+  const member = service.register({username: "permitpartyb", password: "test1234", displayName: "许可队员"});
+  const invite = service.inviteToParty(leader.session.token, {username: "permitpartyb"});
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const partyBefore = JSON.parse(JSON.stringify(service.snapshot().parties));
+  nowMs += 30 * 1000;
+  const rejected = service.startPartyEncounter(leader.session.token, {
+    encounterIntent: {zoneId: "village_grass", encounterGroupId: "firebud_grass_01"},
   });
   assert.equal(rejected.ok, false);
-  assert.equal(rejected.code, "encounter_zone_invalid");
+  assert.equal(rejected.code, "encounter_permit_required");
+  assert.deepEqual(service.snapshot().parties, partyBefore);
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, 0);
 });
 
 test("party pve encounter fallback count uses server profile instead of local client partners", () => {
@@ -1572,6 +1701,302 @@ test("party pve guardian victories write server-side trial rewards", () => {
   assert.equal(lowMmWriteback.special.petRebirthMm.code, "pet_rebirth_mm_trial_level_required");
   const lowMmAfter = service.getProfile(lowMmPlayer.session.token);
   assert.equal(lowMmAfter.profile.petInstances.some((pet) => pet.formId === "pet_rebirth_mm_stage1"), false);
+});
+
+test("one-time qualification rewards are claimed per rebirth cycle and mailed when the backpack is full", () => {
+  let idSerial = 0;
+  const wildPet = {
+    formId: "wuli_normal_tough_earth10",
+    name: "岩脉守护兽",
+    level: 1,
+    catchable: false,
+    battleStats: {maxHp: 1, attack: 1, defense: 1, agility: 1},
+  };
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    randomId: () => `q${++idSerial}_qualification`,
+    useStrictManualEncounterAccess: true,
+    petEncounterAuthority: {
+      catalog: strictPetEncounterCatalog,
+      resolve() {
+        return {
+          ok: true,
+          encounter: {
+            zoneId: "earth_vein_guardian_floor",
+            groupId: "earth_vein_guardian_group",
+            interactionId: "earth_vein_guardian_npc",
+            sourceInteractionId: "earth_vein_guardian_npc",
+            sourceInteractionName: "岩脉守护兽",
+            name: "岩脉守护层",
+            formationTemplate: "",
+            enemyCount: 1,
+            selectedWildPet: wildPet,
+            selectedWildPets: [wildPet],
+            authority: "qualification_test_authority",
+            schemaVersion: 1,
+          },
+        };
+      },
+    },
+  });
+  const player = service.register({username: "qualificationmail", password: "test1234", displayName: "资格邮件号"});
+  const supplier = service.register({username: "qualificationsupply", password: "test1234", displayName: "资格补给员"});
+  assert.equal(player.ok, true);
+  assert.equal(supplier.ok, true);
+  const profile = battleProfile("资格邮件号", {
+    level: 80,
+    hp: 520,
+    maxHp: 520,
+    attack: 999,
+    defense: 45,
+    quick: 120,
+    comboRateOverride: 0,
+  });
+  profile.backpackSlots = [
+    ...Array.from({length: 14}, () => ({itemId: "item_meat_small", count: 99})),
+    {},
+  ];
+  const supplierProfile = battleProfile("资格补给员", {level: 1, hp: 120, maxHp: 120});
+  supplierProfile.backpackSlots = [
+    {itemId: "item_meat_small", count: 99},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  assert.equal(service.saveProfile(supplier.session.token, {expectedRevision: 0, profile: supplierProfile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "earth_vein_cave_f4", cellX: 20, cellY: 7, moving: false,
+  }).ok, true);
+  const encounterRequest = {
+    encounterIntent: {
+      zoneId: "earth_vein_guardian_floor",
+      encounterGroupId: "earth_vein_guardian_group",
+      sourceInteractionId: "earth_vein_guardian_npc",
+    },
+  };
+  const encounter = service.startPartyEncounter(player.session.token, encounterRequest);
+  assert.equal(encounter.ok, true, JSON.stringify(encounter));
+  const supplyMail = service.sendMail(supplier.session.token, {
+    recipientUsername: "qualificationmail",
+    title: "战中补给",
+    body: "把最后一格装满。",
+    items: [{itemId: "item_meat_small", count: 99}],
+  });
+  assert.equal(supplyMail.ok, true);
+  const supplyInbox = service.listInbox(player.session.token);
+  assert.equal(service.claimMailAttachments(player.session.token, supplyInbox.messages[0].mailId).ok, true);
+  const actor = encounter.room.battle.actors.find((entry) => entry.accountId === player.account.accountId && entry.kind === "player");
+  const enemy = encounter.room.battle.actors.find((entry) => entry.side === "enemy");
+  const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
+    round: 1,
+    actorId: actor.actorId,
+    actionId: "attack",
+    targetActorId: enemy.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.room.status, "closed");
+  const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === player.account.accountId);
+  assert.equal(writeback.rewards.rewardRole, "qualification_battle");
+  assert.equal(writeback.rewards.repeatable, false);
+  assert.equal(writeback.rewards.qualificationClaimCycle, 0);
+  assert.deepEqual(writeback.rewards.addedItems, []);
+  assert.deepEqual(writeback.rewards.mailedItems, [{itemId: "ring_earth_trial", count: 1}]);
+  assert.deepEqual(writeback.rewards.lostItems, []);
+  assert.equal(writeback.rewards.rewardMail.mailKind, "qualification_reward");
+
+  const after = service.getProfile(player.session.token);
+  assert.equal(profileItemCount(after.profile, "ring_earth_trial"), 0);
+  assert.deepEqual(after.profile.qualificationBattleClaims.earth_vein_guardian_group, {
+    rebirthCycle: 0,
+    claimed: true,
+    schemaVersion: 1,
+  });
+  const inbox = service.listInbox(player.session.token);
+  assert.equal(inbox.ok, true);
+  assert.equal(inbox.messages.length, 1);
+  assert.equal(inbox.messages[0].mailKind, "qualification_reward");
+  assert.deepEqual(inbox.messages[0].items, [{itemId: "ring_earth_trial", count: 1}]);
+  const roomCountBeforeRetry = Object.keys(service.snapshot().battleRooms).length;
+  const duplicate = service.startPartyEncounter(player.session.token, encounterRequest);
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "manual_guardian_reward_claimed");
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, roomCountBeforeRetry);
+});
+
+test("strict manual guardian access enforces capacity and one claim per current rebirth cycle", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    useStrictPetEncounterAuthority: true,
+    useStrictManualEncounterAccess: true,
+    allowPositionTeleport: true,
+  });
+  const request = {
+    encounterIntent: {
+      zoneId: "earth_vein_guardian_floor",
+      encounterGroupId: "earth_vein_guardian_group",
+      sourceInteractionId: "earth_vein_guardian_npc",
+    },
+  };
+  const player = service.register({username: "strictguardcycle", password: "test1234", displayName: "周期守护号"});
+  const readyProfile = battleProfile("周期守护号", {
+    level: 80, hp: 520, maxHp: 520, attack: 999, defense: 45, quick: 120,
+  });
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile: readyProfile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "earth_vein_cave_f4", cellX: 21, cellY: 7, moving: false,
+  }).ok, true);
+  const allowed = service.startPartyEncounter(player.session.token, request);
+  assert.equal(allowed.ok, true);
+  assert.equal(service.leaveBattleRoom(player.session.token, allowed.room.roomId).ok, true);
+
+  let current = service.getProfile(player.session.token);
+  const claimedProfile = current.profile;
+  claimedProfile.qualificationBattleClaims = {
+    earth_vein_guardian_group: {rebirthCycle: 0, claimed: true, schemaVersion: 1},
+  };
+  assert.equal(service.saveProfile(player.session.token, {
+    expectedRevision: current.profileBinding.profileRevision,
+    profile: claimedProfile,
+  }).ok, true);
+  const roomCountBeforeDuplicate = Object.keys(service.snapshot().battleRooms).length;
+  const duplicate = service.startPartyEncounter(player.session.token, request);
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "manual_guardian_reward_claimed");
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, roomCountBeforeDuplicate);
+
+  current = service.getProfile(player.session.token);
+  const nextCycleProfile = current.profile;
+  nextCycleProfile.rebirthCount = 1;
+  assert.equal(service.saveProfile(player.session.token, {
+    expectedRevision: current.profileBinding.profileRevision,
+    profile: nextCycleProfile,
+  }).ok, true);
+  const nextCycle = service.startPartyEncounter(player.session.token, request);
+  assert.equal(nextCycle.ok, true);
+  assert.equal(service.leaveBattleRoom(player.session.token, nextCycle.room.roomId).ok, true);
+
+  const full = service.register({username: "strictguardfull", password: "test1234", displayName: "满包守护号"});
+  const fullProfile = battleProfile("满包守护号", {
+    level: 80, hp: 520, maxHp: 520, attack: 999, defense: 45, quick: 120,
+  });
+  fullProfile.backpackSlots = Array.from({length: 15}, () => ({itemId: "item_meat_small", count: 99}));
+  assert.equal(service.saveProfile(full.session.token, {expectedRevision: 0, profile: fullProfile}).ok, true);
+  assert.equal(service.updatePlayerPosition(full.session.token, {
+    mapId: "earth_vein_cave_f4", cellX: 21, cellY: 7, moving: false,
+  }).ok, true);
+  const noCapacity = service.startPartyEncounter(full.session.token, request);
+  assert.equal(noCapacity.ok, false);
+  assert.equal(noCapacity.code, "manual_guardian_reward_capacity_full");
+});
+
+test("strict manual access validates every party member before creating a guardian room", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    useStrictPetEncounterAuthority: true,
+    useStrictManualEncounterAccess: true,
+    allowPositionTeleport: true,
+  });
+  const leader = service.register({username: "strictguardlead", password: "test1234", displayName: "守护队长"});
+  const member = service.register({username: "strictguardmember", password: "test1234", displayName: "低级队员"});
+  assert.equal(service.saveProfile(leader.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("守护队长", {level: 80, hp: 520, maxHp: 520, attack: 80, defense: 45, quick: 120}),
+  }).ok, true);
+  assert.equal(service.saveProfile(member.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("低级队员", {level: 79, hp: 520, maxHp: 520, attack: 80, defense: 45, quick: 120}),
+  }).ok, true);
+  for (const token of [leader.session.token, member.session.token]) {
+    assert.equal(service.updatePlayerPosition(token, {
+      mapId: "earth_vein_cave_f4", cellX: 21, cellY: 7, moving: false,
+    }).ok, true);
+  }
+  const invite = service.inviteToParty(leader.session.token, {username: "strictguardmember"});
+  assert.equal(service.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  const denied = service.startPartyEncounter(leader.session.token, {
+    encounterIntent: {
+      zoneId: "earth_vein_guardian_floor",
+      encounterGroupId: "earth_vein_guardian_group",
+      sourceInteractionId: "earth_vein_guardian_npc",
+    },
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "manual_guardian_level_required");
+  assert.match(denied.message, /低级队员.*Lv80/);
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, 0);
+});
+
+test("strict final guardian and MM trial qualifications fail before battle room creation", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    useStrictPetEncounterAuthority: true,
+    useStrictManualEncounterAccess: true,
+    allowPositionTeleport: true,
+  });
+  const finalPlayer = service.register({username: "strictfinalguard", password: "test1234", displayName: "玄影资格号"});
+  assert.equal(service.saveProfile(finalPlayer.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("玄影资格号", {level: 100, hp: 520, maxHp: 520, attack: 80, defense: 45, quick: 120}),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(finalPlayer.session.token, {
+    mapId: "shadow_oath_cavern_f5", cellX: 21, cellY: 7, moving: false,
+  }).ok, true);
+  const missingRings = service.startPartyEncounter(finalPlayer.session.token, {
+    encounterIntent: {
+      zoneId: "shadow_oath_rebirth_guardian_floor",
+      encounterGroupId: "shadow_oath_rebirth_guardian",
+      sourceInteractionId: "shadow_oath_rebirth_guardian_npc",
+    },
+  });
+  assert.equal(missingRings.ok, false);
+  assert.equal(missingRings.code, "manual_final_guardian_rings_required");
+
+  const mmPlayer = service.register({username: "strictmmguard", password: "test1234", displayName: "MM资格号"});
+  assert.equal(service.saveProfile(mmPlayer.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("MM资格号", {level: 80, hp: 520, maxHp: 520, attack: 80, defense: 45, quick: 120}),
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(mmPlayer.session.token, {
+    mapId: "firebud_village_gate", cellX: 12, cellY: 14, moving: false,
+  }).ok, true);
+  const missingGuide = service.startPartyEncounter(mmPlayer.session.token, {
+    encounterIntent: {
+      encounterGroupId: "pet_rebirth_mm_trial_1",
+      sourceInteractionId: "firebud_pet_mm_trial_mentor",
+    },
+  });
+  assert.equal(missingGuide.ok, false);
+  assert.equal(missingGuide.code, "pet_rebirth_mm_guide_required");
+
+  const fullMm = service.register({username: "strictmmfull", password: "test1234", displayName: "MM满栏号"});
+  const fullMmProfile = battleProfile("MM满栏号", {
+    level: 80, hp: 520, maxHp: 520, attack: 80, defense: 45, quick: 120,
+  });
+  fullMmProfile.petRebirthMmGuide = {status: "active", startedAtSec: 1, completedAtSec: 0, schemaVersion: 1};
+  fullMmProfile.petInstances = Array.from({length: 25}, (_value, index) => ({
+    instanceId: `mm_capacity_pet_${index + 1}`,
+    petId: `mm_capacity_pet_${index + 1}`,
+    formId: "bui_normal_red_fire10",
+    templateId: "bui_normal_red_fire10",
+    name: `满栏宠${index + 1}`,
+    state: index < 5 ? "standby" : "storage",
+    level: 1,
+  }));
+  assert.equal(service.saveProfile(fullMm.session.token, {
+    expectedRevision: 0,
+    profile: fullMmProfile,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(fullMm.session.token, {
+    mapId: "firebud_village_gate", cellX: 12, cellY: 14, moving: false,
+  }).ok, true);
+  const fullCapacity = service.startPartyEncounter(fullMm.session.token, {
+    encounterIntent: {
+      encounterGroupId: "pet_rebirth_mm_trial_1",
+      sourceInteractionId: "firebud_pet_mm_trial_mentor",
+    },
+  });
+  assert.equal(fullCapacity.ok, false);
+  assert.equal(fullCapacity.code, "manual_mm_trial_pet_capacity_full");
+  assert.equal(Object.keys(service.snapshot().battleRooms).length, 0);
 });
 
 test("party pve escape closes room without win or loss result", () => {
@@ -3708,7 +4133,8 @@ test("duel battle room timeout and leave race closes idempotently", () => {
 });
 
 test("duel battle rooms require nearby settled positions", () => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const service = createAuthService({"store": createMemoryAuthStore(), now: () => nowMs});
   const challenger = service.register({"username": "nearba", "password": "test1234", "displayName": "近战甲"});
   const opponent = service.register({"username": "nearbb", "password": "test1234", "displayName": "近战乙"});
   assert.equal(challenger.ok, true);
@@ -3740,6 +4166,7 @@ test("duel battle rooms require nearby settled positions", () => {
 
   // 对手通过权威单步移动走近挑战者，位置快照不允许直接跳格。
   for (let cellX = 16; cellX > 11; cellX -= 1) {
+    nowMs += 100;
     const step = service.movePlayerStep(opponent.session.token, {
       "mapId": "firebud_training_yard",
       "fromCellX": cellX,

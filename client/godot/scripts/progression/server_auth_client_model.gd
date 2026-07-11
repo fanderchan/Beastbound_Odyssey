@@ -5,7 +5,7 @@ const AccountAuthModel := preload("res://scripts/progression/account_auth_model.
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
 const CLIENT_VERSION := "0.1.0"
-const CLIENT_PROTOCOL_VERSION := 2
+const CLIENT_PROTOCOL_VERSION := 3
 const RETRY_POLICY_NONE := "none"
 const RETRY_POLICY_IDEMPOTENT := "idempotent"
 const DEFAULT_RETRY_ATTEMPTS := 3
@@ -44,6 +44,10 @@ const ERROR_CODE_MESSAGES := {
 	"command_denied": "当前账号没有执行该操作的权限。",
 	"connection_failed": "服务器连接失败，请稍后重试。",
 	"empty_command": "操作命令不能为空。",
+	"encounter_stone_binding_mismatch": "遇敌石位置已变化，请重新使用遇敌石。",
+	"encounter_stone_expired": "遇敌石效果已经结束。",
+	"encounter_stone_interval_pending": "遇敌石正在积累下一次遇敌。",
+	"encounter_stone_session_invalid": "遇敌石状态不完整，请重新使用遇敌石。",
 	"gm_denied": "当前账号没有 GM 权限。",
 	"heal_not_needed": "队伍生命已满。",
 	"invalid_body": "内容不能为空。",
@@ -51,6 +55,8 @@ const ERROR_CODE_MESSAGES := {
 	"invalid_shop_action": "商店操作不正确。",
 	"invalid_title": "标题不能为空。",
 	"invalid_username": "账号格式不正确。",
+	"movement_corner_blocked": "不能从阻挡物夹角斜穿，请换个方向。",
+	"movement_rate_limited": "移动过快，请稍候。",
 	"missing_username": "服务器会话缺少账号。",
 	"network_failed": "网络连接失败，请稍后重试。",
 	"network_retry_failed": "网络不稳定，已重试，请稍后再试。",
@@ -84,6 +90,7 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["equipment_enhance_", "装备强化失败，请检查装备和材料。"],
 	["equipment_repair_", "装备修理失败，请检查耐久和费用。"],
 	["equipment_", "装备操作失败，请检查装备状态。"],
+	["encounter_", "遇敌状态已变化，请继续移动。"],
 	["family_", "家族操作失败，请检查家族状态。"],
 	["hang_", "挂机操作失败，请检查队伍和道具状态。"],
 	["item_use_", "这个物品暂时不能这样使用。"],
@@ -767,7 +774,7 @@ static func battle_invite_request(base_url: String, session_token: String, usern
 	}
 
 
-static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, _enemy_count: int) -> Dictionary:
+static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, _enemy_count: int, encounter_permit_token: String = "") -> Dictionary:
 	var intent := {}
 	var zone_id := str(encounter_zone.get("id", encounter_zone.get("zoneId", ""))).strip_edges()
 	var group_id := str(encounter_zone.get("encounterGroupId", encounter_zone.get("groupId", ""))).strip_edges()
@@ -778,11 +785,15 @@ static func party_battle_encounter_request(base_url: String, session_token: Stri
 		intent["encounterGroupId"] = group_id
 	if interaction_id != "":
 		intent["sourceInteractionId"] = interaction_id
+	var body := {"encounterIntent": intent}
+	var permit_token := encounter_permit_token.strip_edges()
+	if permit_token != "":
+		body["encounterPermitToken"] = permit_token
 	return {
 		"url": "%s/battle/party-encounter" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
-		"body": JSON.stringify({"encounterIntent": intent}),
+		"body": JSON.stringify(body),
 	}
 
 
@@ -1010,6 +1021,7 @@ static func parse_movement_step_response(response_code: int, body: PackedByteArr
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	parsed["authority"] = str(response.get("authority", ""))
 	parsed["movement"] = response.get("movement", {}) if response.get("movement", {}) is Dictionary else {}
+	parsed["encounterPermit"] = response.get("encounterPermit", {}) if response.get("encounterPermit", {}) is Dictionary else {}
 	return parsed
 
 
