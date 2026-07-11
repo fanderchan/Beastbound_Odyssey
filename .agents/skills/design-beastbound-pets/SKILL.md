@@ -71,6 +71,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Require one meaningful weakness and counter. A passive must not erase the pet's intended weakness without a substantial cost.
 - Treat active/passive mechanics as contracts, not prose. If the server cannot execute an effect, implement focused server rules and parity tests before assigning it.
 - Refuse production placement while the server trusts client-supplied wild form, level, stats, capture override, or EXP for that path. Close or explicitly gate the authoritative encounter gap first.
+- For a catchable growth-profile pet, server-side encounter selection alone is insufficient: require an encounter-time private capture candidate whose seed, Lv1 facts, growth envelope, and current stats transfer unchanged on capture.
 - Keep normal two-rebirth, evolution, and fusion in comparable end-power bands. Let harder paths win through build choice, inheritance, appearance, or utility rather than uncontrolled raw-stat inflation.
 - Protect locked, task, riding, cultivated, bound, paid, and inheritance-relevant pets from automatic discard or consumption.
 - Keep large simulations offline; never add population scans or JSON I/O to frame, draw, HUD, or movement hot paths.

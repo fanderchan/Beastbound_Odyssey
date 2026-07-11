@@ -767,15 +767,22 @@ static func battle_invite_request(base_url: String, session_token: String, usern
 	}
 
 
-static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, enemy_count: int) -> Dictionary:
+static func party_battle_encounter_request(base_url: String, session_token: String, encounter_zone: Dictionary, _enemy_count: int) -> Dictionary:
+	var intent := {}
+	var zone_id := str(encounter_zone.get("id", encounter_zone.get("zoneId", ""))).strip_edges()
+	var group_id := str(encounter_zone.get("encounterGroupId", encounter_zone.get("groupId", ""))).strip_edges()
+	var interaction_id := str(encounter_zone.get("sourceInteractionId", encounter_zone.get("interactionId", ""))).strip_edges()
+	if zone_id != "":
+		intent["zoneId"] = zone_id
+	if group_id != "":
+		intent["encounterGroupId"] = group_id
+	if interaction_id != "":
+		intent["sourceInteractionId"] = interaction_id
 	return {
 		"url": "%s/battle/party-encounter" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
-		"body": JSON.stringify({
-			"encounterZone": encounter_zone,
-			"enemyCount": enemy_count,
-		}),
+		"body": JSON.stringify({"encounterIntent": intent}),
 	}
 
 

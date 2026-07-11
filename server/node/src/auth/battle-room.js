@@ -40,7 +40,6 @@ function createBattleRoomDomain(ctx) {
     offlinePartyPveBattleParticipantAccountIds,
     ok,
     partyEncounterEntry,
-    partyEncounterSnapshotFromPayload,
     partyForAccount,
     publicBattleCommand,
     publicBattleInvite,
@@ -57,6 +56,7 @@ function createBattleRoomDomain(ctx) {
     refreshPartyPresence,
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
+    resolvePartyEncounter,
     resolveBattleRoomTurn,
     resolveSession,
     save,
@@ -336,7 +336,18 @@ function createBattleRoomDomain(ctx) {
       .map((accountId) => accountById(data, accountId))
       .filter(Boolean)
       .map((account) => battleParticipantSnapshot(data, account, BATTLE_SIDE_ALLY));
-    const encounter = partyEncounterSnapshotFromPayload(payload, participants);
+    const seed = randomBytes(8).toString("hex");
+    const encounterResolution = resolvePartyEncounter(
+      data,
+      partyLeaderAccountId,
+      payload,
+      participants,
+      seed,
+    );
+    if (!encounterResolution.ok) {
+      return fail(encounterResolution.code, encounterResolution.message);
+    }
+    const encounter = encounterResolution.encounter;
     const room = {
       roomId: `battle_room_${randomId()}`,
       mode: BATTLE_MODE_PARTY_PVE,
@@ -344,7 +355,7 @@ function createBattleRoomDomain(ctx) {
       inviteId: "",
       partyId: activeParty ? activeParty.partyId : "",
       leaderAccountId: partyLeaderAccountId,
-      seed: randomBytes(8).toString("hex"),
+      seed,
       participantAccountIds: memberAccountIds,
       entry: partyEncounterEntry(data, activeParty ? {
         ...activeParty,

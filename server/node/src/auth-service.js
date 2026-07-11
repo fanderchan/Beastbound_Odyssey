@@ -15,6 +15,7 @@ const {
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
+const {createPetEncounterAuthority} = require("./auth/pet-encounter-authority");
 const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
@@ -356,8 +357,11 @@ function createAuthService(options = {}) {
   const allowFullProfileSave = Boolean(
     options.allowFullProfileSave ?? (process.env.BEASTBOUND_ALLOW_PROFILE_SAVE === "1")
   );
+  // 仅测试夹具可跳过首次记录点播种；没有环境变量或 HTTP 开关，正式服务始终从角色记录点恢复。
+  const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
+  const petEncounterAuthority = options.petEncounterAuthority || createPetEncounterAuthority();
   // 协议 v2 只公开安全成长投影；所有宠物经验入口在同一原子切换中启用权威成长。
   const petExpSettlement = createPetExpSettlement({
     growthCatalog: petGrowthCatalog,
@@ -1283,12 +1287,17 @@ function createAuthService(options = {}) {
       return fail("position_map_missing", "位置缺少地图。");
     }
     if (!allowPositionTeleport) {
-      const validation = validateClientPositionSnapshot(data, resolved.account, previousPosition, position);
+      const validation = validateClientPositionSnapshot(data, resolved.account, previousPosition, position, {
+        allowInitialPositionSeedForTests,
+      });
       if (!validation.ok) {
-        return rejectMovementStep(validation.code, validation.message, previousPosition, {
+        const correctionPosition = validation.code === "position_initial_not_record"
+          ? recordPointPositionForAccount(data, resolved.account, now)
+          : previousPosition;
+        return rejectMovementStep(validation.code, validation.message, correctionPosition, {
           movement: {
             retryable: false,
-            requiresSync: Boolean(previousPosition),
+            requiresSync: Boolean(correctionPosition),
           },
         });
       }
@@ -1817,7 +1826,27 @@ function createAuthService(options = {}) {
     ok,
     offlinePartyPveBattleParticipantAccountIds: (serviceData, roomValue) => offlinePartyPveBattleParticipantAccountIds(serviceData, roomValue, {now, runtimeActiveSessionIds}),
     partyEncounterEntry,
-    partyEncounterSnapshotFromPayload,
+    resolvePartyEncounter: (serviceData, leaderAccountId, payload, participants, seed) => {
+      const normalizedLeaderAccountId = String(leaderAccountId || "");
+      const position = serviceData.playerPositions[normalizedLeaderAccountId] || null;
+      const binding = serviceData.profileBindings[normalizedLeaderAccountId] || null;
+      const profileDoc = binding && binding.playerId ? serviceData.profiles[binding.playerId] || null : null;
+      const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+        ? profileDoc.profile
+        : null;
+      return petEncounterAuthority.resolve({
+        mapId: String(position && position.mapId || ""),
+        position,
+        profile,
+        request: payload,
+        participants,
+        participantPositions: participants.map((participant) => ({
+          accountId: String(participant && participant.accountId || ""),
+          position: serviceData.playerPositions[String(participant && participant.accountId || "")] || null,
+        })),
+        seed,
+      });
+    },
     partyForAccount,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
@@ -5705,79 +5734,6 @@ function partyEncounterEntry(data, party) {
     memberPositions,
     schemaVersion: 1,
   };
-}
-
-function partyEncounterSnapshotFromPayload(payload = {}, participants = []) {
-  const zone = payload.encounterZone && typeof payload.encounterZone === "object" && !Array.isArray(payload.encounterZone)
-    ? clone(payload.encounterZone)
-    : {};
-  const formationTemplate = String(zone.formationTemplate || "");
-  const authoritativeFallback = partyEncounterEnemyCountFallbackFromParticipants(participants);
-  const selectedWildPetsSource = Array.isArray(zone.selectedWildPets)
-    ? zone.selectedWildPets
-    : (Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : []);
-  const rawEnemyCount = clientSelectedEncounterCountNeedsServerFallback(zone)
-    ? authoritativeFallback
-    : payload.enemyCount || zone.enemyCount || zone.selectedEnemyCount || selectedWildPetsSource.length;
-  const enemyCount = clampInt(rawEnemyCount, 1, BATTLE_PARTY_PVE_PLAYER_SLOTS.length * 2, formationTemplate === "10v10" ? 10 : authoritativeFallback);
-  return {
-    zoneId: String(zone.id || ""),
-    groupId: String(zone.encounterGroupId || ""),
-    interactionId: String(zone.interactionId || zone.sourceInteractionId || ""),
-    sourceInteractionId: String(zone.sourceInteractionId || zone.interactionId || ""),
-    sourceInteractionName: String(zone.sourceInteractionName || ""),
-    name: String(zone.name || "野外"),
-    formationTemplate: String(formationTemplate || (enemyCount > 1 ? "10v10" : "")),
-    enemyCount,
-    selectedWildPet: zone.selectedWildPet && typeof zone.selectedWildPet === "object" && !Array.isArray(zone.selectedWildPet) ? clone(zone.selectedWildPet) : null,
-    selectedWildPets: selectedWildPetsSource.filter((item) => item && typeof item === "object" && !Array.isArray(item)).map((item) => clone(item)),
-    wildPetPool: Array.isArray(zone.wildPetPool)
-      ? zone.wildPetPool.filter((item) => item && typeof item === "object" && !Array.isArray(item)).map((item) => clone(item))
-      : [],
-    schemaVersion: 1,
-  };
-}
-
-function clientSelectedEncounterCountNeedsServerFallback(zone) {
-  if (!zone || typeof zone !== "object" || Array.isArray(zone)) {
-    return false;
-  }
-  const hasSelectedEnemyCount = Object.prototype.hasOwnProperty.call(zone, "selectedEnemyCount");
-  const hasConfiguredEnemyCount = Object.prototype.hasOwnProperty.call(zone, "enemyCount");
-  const hasRandomEnemyRange = Object.prototype.hasOwnProperty.call(zone, "enemyCountMin")
-    || Object.prototype.hasOwnProperty.call(zone, "enemyCountMax");
-  const fixedWildPets = Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : [];
-  return hasSelectedEnemyCount
-    && !hasConfiguredEnemyCount
-    && !hasRandomEnemyRange
-    && fixedWildPets.length < 1
-    && String(zone.formationTemplate || "") !== "10v10";
-}
-
-function partyEncounterEnemyCountFallbackFromParticipants(participants = []) {
-  return partyEncounterCharacterCountFromParticipants(participants) > 1 ? 10 : 1;
-}
-
-function partyEncounterCharacterCountFromParticipants(participants = []) {
-  const activeParticipants = Array.isArray(participants)
-    ? participants.slice(0, BATTLE_PARTY_PVE_PLAYER_SLOTS.length).filter((participant) => participant && String(participant.accountId || "") !== "")
-    : [];
-  const usedSlots = new Set();
-  activeParticipants.forEach((_participant, index) => {
-    usedSlots.add(BATTLE_PARTY_PVE_PLAYER_SLOTS[index] || 3);
-  });
-  const partnerCandidates = [];
-  for (const participant of activeParticipants) {
-    const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object" ? participant.teamSnapshot : {};
-    const partners = Array.isArray(snapshot.trainingPartners) ? snapshot.trainingPartners : [];
-    for (const partner of partners) {
-      if (partner && typeof partner === "object" && !Array.isArray(partner)) {
-        partnerCandidates.push(partner);
-      }
-    }
-  }
-  const availablePartnerSlots = BATTLE_PARTY_PVE_PARTNER_SLOTS.filter((slotNumber) => !usedSlots.has(slotNumber));
-  return activeParticipants.length + Math.min(partnerCandidates.length, availablePartnerSlots.length);
 }
 
 function battleCommandDeadlineAt(now, extraMs = 0) {
@@ -14003,14 +13959,17 @@ function mapWarpToMapAllowed(previousMapDoc, previousPosition, targetMapId) {
   return false;
 }
 
-function validateClientPositionSnapshot(data, account, previousPosition, position) {
+function validateClientPositionSnapshot(data, account, previousPosition, position, options = {}) {
   const okResult = {ok: true};
   const mapDoc = mapDocumentById(position.mapId);
   if (position.hasCell && mapDoc && !positionCellStandable(mapDoc, position.cellX, position.cellY)) {
     return {ok: false, code: "position_cell_blocked", message: "该位置无法站立，请重新同步位置。"};
   }
   if (!previousPosition || !previousPosition.mapId) {
-    return okResult;
+    if (options.allowInitialPositionSeedForTests) {
+      return okResult;
+    }
+    return validateInitialPositionAtRecordPoint(data, account, position);
   }
   const sameMap = String(previousPosition.mapId || "") === String(position.mapId || "");
   if (sameMap) {
@@ -14018,10 +13977,10 @@ function validateClientPositionSnapshot(data, account, previousPosition, positio
       return okResult;
     }
     if (!playerPositionHasCell(previousPosition)) {
-      if (!mapDoc || positionNearMapSpawn(mapDoc, position.cellX, position.cellY)) {
+      if (options.allowInitialPositionSeedForTests) {
         return okResult;
       }
-      return {ok: false, code: "position_seed_not_spawn", message: "位置校验失败，请从地图入口重新进入。"};
+      return validateInitialPositionAtRecordPoint(data, account, position);
     }
     const drift = cellChebyshevDistance(previousPosition.cellX, previousPosition.cellY, position.cellX, position.cellY);
     if (drift <= POSITION_SNAPSHOT_MAX_DRIFT_CELLS) {
@@ -14052,6 +14011,35 @@ function validateClientPositionSnapshot(data, account, previousPosition, positio
     return {ok: false, code: "position_seed_not_spawn", message: "位置校验失败，请从地图入口重新进入。"};
   }
   return okResult;
+}
+
+function validateInitialPositionAtRecordPoint(data, account, position) {
+  const recordPoint = recordPointForAccount(data, account.accountId);
+  if (String(position.mapId || "") !== String(recordPoint.mapId || "")) {
+    return {ok: false, code: "position_initial_not_record", message: "登录后需要先从角色记录点恢复位置。"};
+  }
+  if (!position.hasCell) {
+    return {ok: true};
+  }
+  const recordCell = spawnCellForRecordPoint(recordPoint);
+  if (cellChebyshevDistance(position.cellX, position.cellY, recordCell[0], recordCell[1]) > POSITION_SPAWN_TOLERANCE_CELLS) {
+    return {ok: false, code: "position_initial_not_record", message: "登录后需要先从角色记录点恢复位置。"};
+  }
+  return {ok: true};
+}
+
+function recordPointPositionForAccount(data, account, now) {
+  const recordPoint = recordPointForAccount(data, account.accountId);
+  const spawnCell = spawnCellForRecordPoint(recordPoint);
+  const position = normalizePlayerPositionPayload({
+    mapId: recordPoint.mapId,
+    cellX: spawnCell[0],
+    cellY: spawnCell[1],
+    facing: "south",
+    moving: false,
+  }, account, now);
+  position.authority = "record_point_restore";
+  return position;
 }
 
 function battleInviteIsExpired(invite, now) {

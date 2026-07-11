@@ -189,7 +189,14 @@
         - 证据（2026-07-11）：新增纯 `pet-exp-settlement.js`，正式服务从严格目录构造唯一且默认关闭的 dispatcher；linked/unlinked legacy 保持旧等级经验公式且不改四维，合法 v1、未知或损坏 authority 状态固定失败关闭，不回退旧 writer。世界经验道具先预结算再扣道具/替换宠物，失败时宠物、背包、任务与 revision 不变；战斗 writeback 先预检全场真实战宠/骑宠，任一失败时所有参战账号的人物、战宠、骑宠和训练伙伴 EXP 均不发，内部错误、seed 与逐级 settlement 不进入响应/战报。宠物设计 inspector 现在能报告服务端成长目录、dispatcher 已接线及 v1 仍关闭；现有假 `bui_normal_blue_water10` 回归夹具改用目录真实 legacy 形态。成长/战斗/档案定向 74/74、完整服务端 198/198、Godot 4.7 parse 与宠物/战斗目录检查通过；尚未创建或启用任何 v1 宠，见 `docs/phase_212_default_off_pet_exp_dispatcher.md`。
       - [x] **P0.2c-2b 依赖公开投影/协议 v2 的安全新 Lv1 v1 创建与 dispatcher 正式启用**
         - 证据（2026-07-11）：新增严格 `createNewPetFactory`，全新 Lv1 候选先经目录 `resolveNewPetProfile`，只生成一次 CSPRNG 身份；linked 直接生成 canonical authority-v1，unlinked 保持 legacy 身份与真实 Lv1 事实，绝不先 legacy 再 v1。人物 1–4 转赠宠、MM1/MM2、世界蛋与 MM 奖励已接入；5–6 转/其他未链接形态保持 legacy，战斗捕捉明确留在 P0.2c-3。正式服务固定启用 v1 dispatcher，合法 v1 世界道具与多人战斗结算成功，损坏 v1 在扣道具/revision 前失败关闭，响应/room/writeback/record 无私密字段。完整 Node 210/210，宠物 design inspector `errors=0` 且成长/dispatcher/v1/factory/public/v2/客户端不重掷均为 true；见 `docs/phase_213_pet_growth_protocol_v2_cutover.md`。
-    - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与完整升级入口收口**
+    - [ ] **P0.2c-3 服务端权威捕捉创建、转生成长周期与现有升级入口收口**
+      - [ ] **P0.2c-3a 服务端权威野外遭遇与捕捉来源**
+        - [x] **P0.2c-3a-1 服务端权威遇敌内容、位置与教程边界**
+          - 证据（2026-07-11）：先用隔离服务复现客户端可伪造十只 `rebirth_starter_shadow_cub`、Lv140、`999999` 属性、捕捉率与 EXP；现新增严格 `pet-encounter-authority`，从共享 37 张地图和宠物模板权威决定候选池、权重、数量、等级、属性、捕捉/EXP，客户端只发送区域/分组/交互 ID。普通草地校验服务端区域位置，守卫校验登记交互，队伍全员要求同图、停稳且邻近；生产首位置只能从人物记录点建立，新手乌力特例只读内部任务档案。旧 v2 `encounterZone` 仅兼容标识符，全部事实字段被忽略。定向 67/67、完整 Node 221/221、Godot 4/4 与隔离单人 live 通过；见 `docs/phase_214_server_authoritative_pet_encounter_content.md`。
+        - [ ] **P0.2c-3a-2 服务端遇敌资格、频率与一次性许可**
+        - [ ] **P0.2c-3a-3 遇敌时私有捕捉候选及成功后原样转移**
+      - [ ] **P0.2c-3b authority-v1 转生成长周期原子重启**
+      - [ ] **P0.2c-3c GM 宠物创建/升级服务端化与现有剩余升级入口封口**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**

@@ -1078,6 +1078,66 @@ test("HTTP server exposes solo pve encounter endpoint", async (t) => {
   assert.equal(enemies[0].hp, enemies[0].maxHp);
 });
 
+test("HTTP production encounter intent ignores forged client pet facts", async (t) => {
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "useStrictPetEncounterAuthority": true,
+  });
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const solo = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httpstrictpve", "password": "test1234", "displayName": "HTTP权威遇敌"}),
+  });
+  assert.equal(solo.ok, true);
+  for (const cell of [[10, 17], [11, 15]]) {
+    const position = await fetchJson(`${base}/players/position`, {
+      "method": "POST",
+      "headers": {"authorization": `Bearer ${solo.session.token}`},
+      "body": JSON.stringify({
+        "mapId": "firebud_village_gate",
+        "cellX": cell[0],
+        "cellY": cell[1],
+        "facing": "south",
+        "moving": false,
+      }),
+    });
+    assert.equal(position.ok, true);
+  }
+  const encounter = await fetchJson(`${base}/battle/party-encounter`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${solo.session.token}`},
+    "body": JSON.stringify({
+      "enemyCount": 10,
+      "encounterIntent": {"zoneId": "village_grass", "encounterGroupId": "firebud_grass_01"},
+      "encounterZone": {
+        "id": "client_forged",
+        "selectedWildPet": {
+          "formId": "rebirth_starter_shadow_cub",
+          "level": 140,
+          "captureChanceOverride": 1,
+          "expReward": 999999,
+          "battleStats": {"maxHp": 999999, "attack": 999999, "defense": 999999, "quick": 999999},
+        },
+      },
+    }),
+  });
+  assert.equal(encounter.ok, true);
+  const enemies = encounter.room.battle.actors.filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 1);
+  assert.equal(enemies[0].formId.startsWith("wuli_"), true);
+  assert.equal(enemies[0].level, 1);
+  assert.equal(enemies[0].maxHp < 1000, true);
+  assert.equal(enemies[0].attack < 1000, true);
+  assert.equal(JSON.stringify(encounter).includes("rebirth_starter_shadow_cub"), false);
+  assert.equal(JSON.stringify(encounter).includes("999999"), false);
+});
+
 test("HTTP server exposes hang session endpoints", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});

@@ -312,16 +312,26 @@ const trainerSkillIds = new Set(trainers.flatMap((trainer) => Array.isArray(trai
 const authServiceText = readText("server/node/src/auth-service.js");
 const growthCatalogText = readText("server/node/src/auth/pet-growth-catalog.js");
 const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
+const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-authority.js");
 const newPetFactoryText = readText("server/node/src/auth/new-pet-factory.js");
 const profileVisibilityText = readText("server/node/src/auth/profile-visibility.js");
 const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
+const serverAuthClientText = readText("client/godot/scripts/progression/server_auth_client_model.gd");
 const serverAuthority = {
   loadsPetTemplates: authServiceText.includes("pet_templates.json"),
   loadsSpeciesGrowthProfiles: authServiceText.includes("loadPetGrowthCatalog")
     && growthCatalogText.includes("pet_growth_species_profiles.json"),
   loadsPassiveCatalog: authServiceText.includes("battle_passive_skills.json"),
   acceptsClientEncounterZonePayload: authServiceText.includes("payload.encounterZone"),
+  petEncounterAuthorityWired: authServiceText.includes("createPetEncounterAuthority")
+    && authServiceText.includes("petEncounterAuthority.resolve")
+    && petEncounterAuthorityText.includes("server_pet_encounter_v1")
+    && petEncounterAuthorityText.includes("zoneContainsCell")
+    && petEncounterAuthorityText.includes("positionNearInteraction"),
+  clientEncounterIntentOnly: serverAuthClientText.includes('"encounterIntent": intent')
+    && !serverAuthClientText.includes('"encounterZone": encounter_zone')
+    && !serverAuthClientText.includes('"enemyCount": enemy_count'),
   petExpDispatcherWired: authServiceText.includes("createPetExpSettlement")
     && authServiceText.includes("petExpSettlement.settle")
     && petExpSettlementText.includes("settlePetGrowthToLevel"),
@@ -340,7 +350,9 @@ const serverAuthority = {
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
 if (!serverAuthority.loadsPassiveCatalog) issues.warnings.push("Node 当前未加载 battle_passive_skills.json；不能把被动目录存在当成服务端已执行");
-if (serverAuthority.acceptsClientEncounterZonePayload) issues.warnings.push("Node 当前接收客户端 encounterZone；正式遇敌/捕捉前必须补服务端目录校验与权威抽取");
+if (!serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 尚未接入服务端地图遇敌目录、位置校验与权威抽取");
+if (serverAuthority.acceptsClientEncounterZonePayload && !serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 当前接收客户端 encounterZone 的宠物事实；正式遇敌/捕捉前必须删除信任");
+if (!serverAuthority.clientEncounterIntentOnly) issues.warnings.push("Godot 联网遇敌请求仍携带本地抽取的宠物、数量或战斗数值，而不是纯 zone/interaction 意图");
 if (!serverAuthority.petExpDispatcherWired) issues.warnings.push("Node 宠物经验入口尚未统一接入成长 dispatcher");
 if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1Enabled) {
   issues.warnings.push("Node 宠物经验 dispatcher 已接线但 authority-v1 仍安全关闭；需等待公开投影、客户端不重滚与协议 v2 原子切换");

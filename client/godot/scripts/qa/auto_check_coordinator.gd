@@ -16095,7 +16095,10 @@ func _run_auto_auth_server_client_check() -> void:
 		and int(battle_cancel_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(party_battle_encounter_spec.get("url", "")) == "http://127.0.0.1:8787/battle/party-encounter"
 		and int(party_battle_encounter_spec.get("method", -1)) == HTTPClient.METHOD_POST
-		and str(party_battle_encounter_spec.get("body", "")).find("\"enemyCount\":10") >= 0
+		and str(party_battle_encounter_spec.get("body", "")).find("\"encounterIntent\":") >= 0
+		and str(party_battle_encounter_spec.get("body", "")).find("\"zoneId\":\"zone_test\"") >= 0
+		and str(party_battle_encounter_spec.get("body", "")).find("enemyCount") < 0
+		and str(party_battle_encounter_spec.get("body", "")).find("selectedWildPet") < 0
 		and str(battle_leave_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/leave"
 		and int(battle_leave_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_command_spec.get("url", "")) == "http://127.0.0.1:8787/battle/rooms/battle_room_test/commands"
@@ -16405,18 +16408,19 @@ func _run_auto_auth_server_client_check() -> void:
 	var guardian_request_spec = ServerAuthClientModel.party_battle_encounter_request("http://127.0.0.1:8787/", "token_test", guardian_zone, EncounterModel.enemy_count(guardian_zone, 10))
 	var guardian_request_body = JSON.parse_string(str(guardian_request_spec.get("body", "")))
 	var guardian_body = guardian_request_body as Dictionary if guardian_request_body is Dictionary else {}
-	var guardian_body_zone = guardian_body.get("encounterZone", {}) as Dictionary if guardian_body.get("encounterZone", {}) is Dictionary else {}
-	var guardian_selected_pets: Array = guardian_body_zone.get("selectedWildPets", []) if guardian_body_zone.get("selectedWildPets", []) is Array else []
+	var guardian_body_intent = guardian_body.get("encounterIntent", {}) as Dictionary if guardian_body.get("encounterIntent", {}) is Dictionary else {}
 	var guardian_route_ok = (
 		guardian_solo_server_route_ok
 		and guardian_leader_server_route_ok
 		and guardian_member_block_route_ok
 		and guardian_offline_block_route_ok
 		and guardian_local_route_ok
-		and str(guardian_body_zone.get("encounterGroupId", "")) == "shadow_oath_rebirth_guardian"
-		and str(guardian_body_zone.get("sourceInteractionId", "")) == "guardian_contract_npc"
-		and int(guardian_body.get("enemyCount", 0)) == 10
-		and guardian_selected_pets.size() == 10
+		and str(guardian_body_intent.get("zoneId", "")) == "guardian_contract_floor"
+		and str(guardian_body_intent.get("encounterGroupId", "")) == "shadow_oath_rebirth_guardian"
+		and str(guardian_body_intent.get("sourceInteractionId", "")) == "guardian_contract_npc"
+		and not guardian_body.has("enemyCount")
+		and not guardian_body.has("encounterZone")
+		and str(guardian_request_spec.get("body", "")).find("selectedWildPets") < 0
 	)
 	host.current_account_session = {
 		"accountId": "account_test",
@@ -19887,20 +19891,32 @@ func _run_auto_server_solo_pve_live_check() -> void:
 	var session = register_parsed.get("session", {}) as Dictionary if register_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(register_parsed.get("ok", false)) and str(session.get("serverSessionToken", "")).strip_edges() != ""
 	var profile_ready = await host._auto_fetch_server_profile_for_session(session)
-	var profile_ok = bool(profile_ready.get("ok", false)) and host._auto_server_profile_has_battle_pet(profile_ready)
-	var position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+	var profile_ok = bool(profile_ready.get("ok", false))
+	var seed_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(session.get("serverSessionToken", "")),
 		{
 			"mapId": "firebud_village_gate",
-			"cellX": 15,
+			"cellX": 10,
 			"cellY": 17,
 			"facing": "south",
 			"moving": false,
 		}
 	))
+	var seed_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(seed_position_response.get("responseCode", 0)), seed_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(session.get("serverSessionToken", "")),
+		{
+			"mapId": "firebud_village_gate",
+			"cellX": 11,
+			"cellY": 15,
+			"facing": "south",
+			"moving": false,
+		}
+	))
 	var position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(position_response.get("responseCode", 0)), position_response.get("body", PackedByteArray()) as PackedByteArray)
-	var position_ok = bool(position_parsed.get("ok", false))
+	var position_ok = bool(seed_position_parsed.get("ok", false)) and bool(position_parsed.get("ok", false))
 	host.current_account_session = session
 	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
 	host.account_authenticated = true
@@ -19914,19 +19930,9 @@ func _run_auto_server_solo_pve_live_check() -> void:
 	host.server_battle_pending_closed_room.clear()
 	var route_ok = host._should_start_server_party_encounter() and not host._can_start_local_encounter_model()
 	var encounter_zone = {
-		"id": "client_solo_pve_grass",
-		"name": "单人同步草丛",
-		"selectedWildPet": {
-			"formId": "wuli_normal_orange_fire10",
-			"name": "单人同步乌力",
-			"level": 3,
-			"battleStats": {
-				"maxHp": 80,
-				"attack": 10,
-				"defense": 5,
-				"quick": 40,
-			},
-		},
+		"id": "village_grass",
+		"name": "村外草丛",
+		"encounterGroupId": "firebud_grass_01",
 	}
 	host._trigger_encounter(encounter_zone)
 	var frames = 0
@@ -19948,7 +19954,7 @@ func _run_auto_server_solo_pve_live_check() -> void:
 		and str(room.get("mode", "")) == "party_pve"
 		and str(room.get("partyId", "")) == ""
 		and participant_ids.size() == 1
-		and actors.filter(func(actor): return actor is Dictionary and str((actor as Dictionary).get("side", "")) == "ally").size() >= 2
+		and actors.filter(func(actor): return actor is Dictionary and str((actor as Dictionary).get("side", "")) == "ally").size() >= 1
 		and actors.filter(func(actor): return actor is Dictionary and str((actor as Dictionary).get("side", "")) == "enemy").size() == 1
 	)
 	var message_ok = host.world_log_message.find("队伍遇敌由队长触发") < 0 and host.world_log_message.find("请先登录服务器账号") < 0
@@ -20007,12 +20013,22 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		and host._auto_server_profile_has_battle_pet(leader_profile_ready)
 		and host._auto_server_profile_has_battle_pet(member_profile_ready)
 	)
-	var battle_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(4, 2)
+	var battle_cell := Vector2i(11, 15)
+	var leader_seed_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(leader_session.get("serverSessionToken", "")),
+		{"mapId": "firebud_village_gate", "cellX": 10, "cellY": 17, "facing": "east", "moving": false}
+	))
+	var member_seed_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		str(member_session.get("serverSessionToken", "")),
+		{"mapId": "firebud_village_gate", "cellX": 10, "cellY": 17, "facing": "east", "moving": false}
+	))
 	var leader_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", "")),
 		{
-			"mapId": host.current_map_id,
+			"mapId": "firebud_village_gate",
 			"cellX": battle_cell.x,
 			"cellY": battle_cell.y,
 			"facing": "east",
@@ -20023,16 +20039,23 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(member_session.get("serverSessionToken", "")),
 		{
-			"mapId": host.current_map_id,
+			"mapId": "firebud_village_gate",
 			"cellX": battle_cell.x,
 			"cellY": battle_cell.y,
 			"facing": "east",
 			"moving": false,
 		}
 	))
+	var leader_seed_position = ServerAuthClientModel.parse_player_position_update_response(int(leader_seed_position_response.get("responseCode", 0)), leader_seed_position_response.get("body", PackedByteArray()) as PackedByteArray)
+	var member_seed_position = ServerAuthClientModel.parse_player_position_update_response(int(member_seed_position_response.get("responseCode", 0)), member_seed_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var leader_position = ServerAuthClientModel.parse_player_position_update_response(int(leader_position_response.get("responseCode", 0)), leader_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var member_position = ServerAuthClientModel.parse_player_position_update_response(int(member_position_response.get("responseCode", 0)), member_position_response.get("body", PackedByteArray()) as PackedByteArray)
-	var positions_ok = bool(leader_position.get("ok", false)) and bool(member_position.get("ok", false))
+	var positions_ok = (
+		bool(leader_seed_position.get("ok", false))
+		and bool(member_seed_position.get("ok", false))
+		and bool(leader_position.get("ok", false))
+		and bool(member_position.get("ok", false))
+	)
 	var invite_response = await host._auto_http_request_spec(ServerAuthClientModel.party_invite_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		str(leader_session.get("serverSessionToken", "")),
@@ -20069,20 +20092,9 @@ func _run_auto_server_party_pve_sync_live_check() -> void:
 	host._close_encounter()
 	host._stop_server_event_stream()
 	var encounter_zone = {
-		"id": "client_sync_grass",
-		"name": "同步草丛",
-		"formationTemplate": "10v10",
-		"selectedWildPet": {
-			"formId": "wuli_normal_orange_fire10",
-			"name": "同步乌力",
-			"level": 5,
-			"battleStats": {
-				"maxHp": 180,
-				"attack": 10,
-				"defense": 6,
-				"quick": 45,
-			},
-		},
+		"id": "village_grass",
+		"name": "村外草丛",
+		"encounterGroupId": "firebud_grass_01",
 	}
 	var first_encounter_response = await host._auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,

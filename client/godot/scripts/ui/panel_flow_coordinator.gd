@@ -12017,7 +12017,7 @@ func _server_step_move_failure_message(code: String, parsed: Dictionary) -> Stri
 			return ""
 		"movement_cell_blocked":
 			return "目标格不可通行，请换个位置。"
-		"position_desync", "position_seed_not_spawn":
+		"position_desync", "position_seed_not_spawn", "position_initial_not_record":
 			return ""
 		"position_transition_invalid":
 			return "只能通过传送点或记录点前往其他地图。"
@@ -12402,8 +12402,8 @@ func _start_server_party_encounter(zone: Dictionary, pending_message: String = "
 	if server_party_encounter_request_pending or battle_active or zone.is_empty():
 		return
 	var encounter_zone := _progression_encounter_zone(zone)
-	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(encounter_zone, encounter_rng, _encounter_enemy_count_fallback())
-	var enemy_count = EncounterModel.enemy_count(active_encounter_zone, _encounter_enemy_count_fallback())
+	active_encounter_zone = encounter_zone.duplicate(true)
+	var enemy_count = EncounterModel.enemy_count(encounter_zone, _encounter_enemy_count_fallback())
 	server_party_encounter_request_pending = true
 	_set_world_log_message(pending_message)
 	var response = await host._auto_http_request_spec(ServerAuthClientModel.party_battle_encounter_request(

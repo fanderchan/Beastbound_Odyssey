@@ -1221,6 +1221,84 @@ test("party pve encounters support a solo server account without local battle fa
   assert.equal(restored.room.roomId, encounter.room.roomId);
 });
 
+test("production party encounters derive canonical wild pets from the server map catalog", () => {
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "useStrictPetEncounterAuthority": true,
+  });
+  const solo = service.register({"username": "strictencounter", "password": "test1234", "displayName": "权威遇敌号"});
+  assert.equal(solo.ok, true);
+  const profile = battleProfile("权威遇敌号", {"level": 1, "hp": 120, "maxHp": 120, "attack": 18, "defense": 6, "quick": 70});
+  profile.activeQuestId = "quest_capture_wuli";
+  profile.questStates = {
+    "quest_capture_wuli": {"id": "quest_capture_wuli", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(solo.session.token, {"expectedRevision": 0, profile}).ok, true);
+  const forgedInitialPosition = service.updatePlayerPosition(solo.session.token, {
+    "mapId": "gm_10v10_training_ground",
+    "cellX": 18,
+    "cellY": 11,
+    "facing": "east",
+    "moving": false,
+  });
+  assert.equal(forgedInitialPosition.ok, false);
+  assert.equal(forgedInitialPosition.code, "position_initial_not_record");
+  assert.equal(forgedInitialPosition.position.mapId, "firebud_village_gate");
+  assert.deepEqual([forgedInitialPosition.position.cellX, forgedInitialPosition.position.cellY], [10, 17]);
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 10,
+    "cellY": 17,
+    "facing": "east",
+    "moving": false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(solo.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 11,
+    "cellY": 15,
+    "facing": "east",
+    "moving": false,
+  }).ok, true);
+
+  const encounter = service.startPartyEncounter(solo.session.token, {
+    "enemyCount": 10,
+    "encounterZone": {
+      "id": "village_grass",
+      "encounterGroupId": "firebud_grass_01",
+      "selectedEnemyCount": 10,
+      "selectedWildPet": {
+        "formId": "rebirth_starter_shadow_cub",
+        "name": "伪造野宠",
+        "level": 140,
+        "catchable": true,
+        "captureChanceOverride": 1,
+        "expReward": 999999,
+        "battleStats": {"maxHp": 999999, "attack": 999999, "defense": 999999, "quick": 999999},
+      },
+    },
+  });
+  assert.equal(encounter.ok, true);
+  const enemies = encounter.room.battle.actors.filter((actor) => actor.side === "enemy");
+  assert.equal(enemies.length, 1);
+  assert.equal(["wuli_normal_orange_fire10", "wuli_normal_fast_wind10", "wuli_normal_tough_earth10"].includes(enemies[0].formId), true);
+  assert.equal(enemies[0].level, 1);
+  assert.equal(enemies[0].captureDifficulty, 1);
+  assert.equal(enemies[0].maxHp < 1000, true);
+  assert.equal(enemies[0].attack < 1000, true);
+  assert.equal(Object.hasOwn(enemies[0], "captureChanceOverride"), false);
+  const stored = service.snapshot().battleRooms[encounter.room.roomId];
+  assert.equal(stored.encounter.authority, "server_pet_encounter_v1");
+  assert.equal(JSON.stringify(stored.encounter).includes("rebirth_starter_shadow_cub"), false);
+  assert.equal(JSON.stringify(stored.encounter).includes("999999"), false);
+
+  assert.equal(service.leaveBattleRoom(solo.session.token, encounter.room.roomId).ok, true);
+  const rejected = service.startPartyEncounter(solo.session.token, {
+    "encounterZone": {"id": "client_forged_zone"},
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "encounter_zone_invalid");
+});
+
 test("party pve encounter fallback count uses server profile instead of local client partners", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "solostaleclient", "password": "test1234", "displayName": "单人服务器档案"});
