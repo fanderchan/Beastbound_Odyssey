@@ -137,6 +137,78 @@ test("offline hang enforces minimum time, formal route level, and the configured
   assert.equal(cancelled.profile.offlineHang.ledger.length, 0);
 });
 
+test("offline hang writers preserve unsafe backpack and equipment instance state", () => {
+  let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
+  const seedService = offlineService({now: () => nowMs});
+
+  const startPlayer = seedRouteProfile(seedService, "offlineunsafestart");
+  const startSeed = seedService.snapshot();
+  const startBinding = startSeed.profileBindings[startPlayer.account.accountId];
+  startSeed.profiles[startBinding.playerId].profile.backpackSlots = [{
+    itemId: "future_offline_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  }];
+  const startBefore = structuredClone(startSeed.profiles[startBinding.playerId].profile);
+  const startRevision = startBinding.profileRevision;
+  const unsafeStartService = offlineService({store: createMemoryAuthStore(startSeed), now: () => nowMs});
+  const blockedStart = unsafeStartService.startOfflineHang(startPlayer.session.token, {
+    mapId: "mistcap_marsh",
+    cellX: 20,
+    cellY: 9,
+  });
+  assert.equal(blockedStart.ok, false);
+  assert.equal(blockedStart.code, "backpack_item_unknown");
+  const startAfter = unsafeStartService.snapshot();
+  assert.equal(startAfter.profileBindings[startPlayer.account.accountId].profileRevision, startRevision);
+  assert.deepEqual(startAfter.profiles[startBinding.playerId].profile, startBefore);
+
+  const claimPlayer = seedRouteProfile(seedService, "offlineunsafeclaim");
+  const started = seedService.startOfflineHang(claimPlayer.session.token, {
+    mapId: "mistcap_marsh",
+    cellX: 20,
+    cellY: 9,
+  });
+  assert.equal(started.ok, true);
+  nowMs += 10 * 60 * 1000;
+  const claimSeed = seedService.snapshot();
+  const claimBinding = claimSeed.profileBindings[claimPlayer.account.accountId];
+  const claimProfile = claimSeed.profiles[claimBinding.playerId].profile;
+  claimProfile.backpackSlots = [{itemId: "weapon_wooden_club", count: 1}];
+  claimProfile.equipmentInstances = {
+    equip_future_offline: {
+      schemaVersion: 2,
+      instanceId: "equip_future_offline",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 7, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      futureAffixes: [{id: "future_offline_power", value: 99}],
+    },
+  };
+  claimProfile.nextEquipmentInstanceSerial = 2;
+  claimProfile.equipmentSlotsVersion = 5;
+  const claimBefore = structuredClone(claimProfile);
+  const claimRevision = claimBinding.profileRevision;
+  const unsafeClaimService = offlineService({store: createMemoryAuthStore(claimSeed), now: () => nowMs});
+  assert.equal(unsafeClaimService.offlineHangStatus(claimPlayer.session.token).ok, true);
+
+  const blockedClaim = unsafeClaimService.claimOfflineHang(claimPlayer.session.token, {
+    sessionId: started.offlineHang.session.sessionId,
+  });
+  assert.equal(blockedClaim.ok, false);
+  assert.equal(blockedClaim.code, "equipment_instance_schema_future");
+  const blockedCancel = unsafeClaimService.cancelOfflineHang(claimPlayer.session.token);
+  assert.equal(blockedCancel.ok, false);
+  assert.equal(blockedCancel.code, "equipment_instance_schema_future");
+  const claimAfter = unsafeClaimService.snapshot();
+  assert.equal(claimAfter.profileBindings[claimPlayer.account.accountId].profileRevision, claimRevision);
+  assert.deepEqual(claimAfter.profiles[claimBinding.playerId].profile, claimBefore);
+});
+
 test("GM offline hang configuration is authorized, audited, validated, and changes later claims", () => {
   let nowMs = Date.parse("2026-07-11T00:00:00.000Z");
   const service = offlineService({now: () => nowMs});

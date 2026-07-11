@@ -31,6 +31,39 @@ const {
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
 
+function seedMailBackpackEquipment(service, token, itemId = "weapon_wooden_club") {
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.backpackSlots = [
+    {itemId, count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {
+    equip_mail_guard_1: {
+      schemaVersion: 1,
+      instanceId: "equip_mail_guard_1",
+      itemId,
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId, level: 2, history: []},
+      wearCounters: {itemId, attackCount: 3, hitCount: 0},
+      expPillCharge: {},
+      source: "mail_guard_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 2;
+  const saved = service.saveProfile(token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile,
+  });
+  assert.equal(saved.ok, true);
+  return saved;
+}
+
 test("players can search and send text mail across accounts", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const sender = service.register({"username": "maila", "password": "test1234", "displayName": "甲"});
@@ -112,6 +145,213 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(claimed.mail, null);
   const afterClaimInbox = service.listInbox(recipient.session.token);
   assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
+});
+
+test("equipment mail send and historical claim fail atomically without deleting attachments", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mailequip_sender", password: "test1234", displayName: "装备寄件人"});
+  const recipient = seedService.register({username: "mailequip_recipient", password: "test1234", displayName: "装备收件人"});
+  seedMailBackpackEquipment(seedService, sender.session.token);
+  const senderBefore = seedService.getProfile(sender.session.token);
+
+  const sent = seedService.sendMail(sender.session.token, {
+    recipientUsername: "mailequip_recipient",
+    title: "装备附件",
+    body: "这件装备应被安全拦截。",
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+  });
+  assert.equal(sent.ok, false);
+  assert.equal(sent.code, "mail_equipment_transfer_unsupported");
+  const senderAfter = seedService.getProfile(sender.session.token);
+  assert.equal(senderAfter.profileSummary.profileRevision, senderBefore.profileSummary.profileRevision);
+  assert.equal(senderAfter.profile.stoneCoins, senderBefore.profile.stoneCoins);
+  assert.equal(profileItemCount(senderAfter.profile, "weapon_wooden_club"), 1);
+  assert.deepEqual(senderAfter.profile.equipmentInstances, senderBefore.profile.equipmentInstances);
+  assert.equal(seedService.listInbox(recipient.session.token).messages.length, 0);
+
+  const seed = seedService.snapshot();
+  seed.mailMessages.legacy_equipment_mail = {
+    mailId: "legacy_equipment_mail",
+    senderAccountId: sender.account.accountId,
+    senderUsername: sender.account.username,
+    senderDisplayName: sender.account.displayName,
+    recipientAccountId: recipient.account.accountId,
+    recipientUsername: recipient.account.username,
+    recipientDisplayName: recipient.account.displayName,
+    title: "历史装备附件",
+    body: "等待装备实例迁移。",
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+    currency: {stoneCoins: 17},
+    createdAt: "2026-07-12T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const recipientBefore = service.getProfile(recipient.session.token);
+  const mailBefore = service.snapshot().mailMessages.legacy_equipment_mail;
+  const claimed = service.claimMailAttachments(recipient.session.token, "legacy_equipment_mail");
+  assert.equal(claimed.ok, false);
+  assert.equal(claimed.code, "mail_equipment_transfer_unsupported");
+  const recipientAfter = service.getProfile(recipient.session.token);
+  assert.equal(recipientAfter.profileSummary.profileRevision, recipientBefore.profileSummary.profileRevision);
+  assert.equal(recipientAfter.profile.stoneCoins, recipientBefore.profile.stoneCoins);
+  assert.equal(profileItemCount(recipientAfter.profile, "weapon_wooden_club"), 0);
+  assert.deepEqual(service.snapshot().mailMessages.legacy_equipment_mail, mailBefore);
+  const inbox = service.listInbox(recipient.session.token);
+  const historical = inbox.messages.find((mail) => mail.mailId === "legacy_equipment_mail");
+  assert.ok(historical);
+  assert.equal(historical.items[0].itemId, "weapon_wooden_club");
+  assert.equal(historical.currency.stoneCoins, 17);
+});
+
+test("unknown mail attachments preserve the whole mail and currency atomically", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mailunknownsender", password: "test1234", displayName: "未知寄件人"});
+  const recipient = seedService.register({username: "mailunknownrecipient", password: "test1234", displayName: "未知收件人"});
+  const seed = seedService.snapshot();
+  seed.mailMessages.future_unknown_mail = {
+    mailId: "future_unknown_mail",
+    senderAccountId: sender.account.accountId,
+    senderUsername: sender.account.username,
+    senderDisplayName: sender.account.displayName,
+    recipientAccountId: recipient.account.accountId,
+    recipientUsername: recipient.account.username,
+    recipientDisplayName: recipient.account.displayName,
+    title: "未来附件",
+    body: "旧服不能理解但绝不能删除。",
+    items: [{itemId: "future_mail_relic_999", count: 1, futureEnvelope: {quality: 9}}],
+    currency: {stoneCoins: 17},
+    createdAt: "2026-07-12T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const mailBefore = structuredClone(seed.mailMessages.future_unknown_mail);
+  const binding = seed.profileBindings[recipient.account.accountId];
+  const recipientProfileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const claimed = service.claimMailAttachments(recipient.session.token, "future_unknown_mail");
+  assert.equal(claimed.ok, false);
+  assert.equal(claimed.code, "mail_item_unknown");
+  const after = service.snapshot();
+  assert.deepEqual(after.mailMessages.future_unknown_mail, mailBefore);
+  assert.equal(after.profileBindings[recipient.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, recipientProfileBefore);
+});
+
+test("malformed and alternate mail asset envelopes cannot claim currency or delete mail", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mailrawsender", password: "test1234", displayName: "原档寄件人"});
+  const recipient = seedService.register({username: "mailrawrecipient", password: "test1234", displayName: "原档收件人"});
+  const baseSeed = seedService.snapshot();
+  const baseMail = {
+    mailId: "raw_guard_mail",
+    senderAccountId: sender.account.accountId,
+    senderUsername: sender.account.username,
+    senderDisplayName: sender.account.displayName,
+    recipientAccountId: recipient.account.accountId,
+    recipientUsername: recipient.account.username,
+    recipientDisplayName: recipient.account.displayName,
+    title: "原始附件",
+    body: "任何无法解释的附件都必须整体保留。",
+    items: [],
+    currency: {stoneCoins: 17},
+    createdAt: "2026-07-12T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const scenarios = [
+    {
+      expectedCode: "mail_equipment_transfer_unsupported",
+      patch: {items: [{itemId: "weapon_wooden_club", count: "bad", futureMeta: {keep: true}}]},
+    },
+    {
+      expectedCode: "mail_representation_conflict",
+      patch: {items: undefined, itemAmounts: [{itemId: "item_meat_small", count: 5}]},
+    },
+    {
+      expectedCode: "mail_schema_invalid",
+      patch: {items: [{itemId: "item_meat_small", count: 1}], schemaVersion: "not-a-version"},
+    },
+    {
+      expectedCode: "mail_currency_invalid",
+      patch: {currency: {stoneCoins: 17}, currencies: {stoneCoins: 18}},
+    },
+    {
+      expectedCode: "mail_item_invalid",
+      patch: {items: null},
+    },
+    {
+      expectedCode: "mail_schema_unsupported",
+      patch: {futureEnvelope: {assets: ["future_mail_asset"]}},
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const seed = structuredClone(baseSeed);
+    const mail = {...structuredClone(baseMail), ...structuredClone(scenario.patch)};
+    if (scenario.patch.items === undefined) {
+      delete mail.items;
+    }
+    seed.mailMessages.raw_guard_mail = mail;
+    const mailBefore = structuredClone(mail);
+    const binding = seed.profileBindings[recipient.account.accountId];
+    const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+    const revisionBefore = binding.profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const claimed = service.claimMailAttachments(recipient.session.token, "raw_guard_mail");
+    assert.equal(claimed.ok, false);
+    assert.equal(claimed.code, scenario.expectedCode);
+    const after = service.snapshot();
+    assert.deepEqual(after.mailMessages.raw_guard_mail, mailBefore);
+    assert.equal(after.profileBindings[recipient.account.accountId].profileRevision, revisionBefore);
+    assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+  }
+});
+
+test("currency-only mail preserves an unsafe future backpack and the whole mail", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mailfbags", password: "test1234", displayName: "未来背包寄件人"});
+  const recipient = seedService.register({username: "mailfbagr", password: "test1234", displayName: "未来背包收件人"});
+  assert.equal(sender.ok, true);
+  assert.equal(recipient.ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[recipient.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots[0] = {
+    itemId: "future_backpack_relic_999",
+    count: 1,
+    futureEnvelope: {assetId: "future_asset_mail"},
+  };
+  seed.mailMessages.future_backpack_currency_mail = {
+    mailId: "future_backpack_currency_mail",
+    senderAccountId: sender.account.accountId,
+    senderUsername: sender.account.username,
+    senderDisplayName: sender.account.displayName,
+    recipientAccountId: recipient.account.accountId,
+    recipientUsername: recipient.account.username,
+    recipientDisplayName: recipient.account.displayName,
+    title: "石币附件",
+    body: "背包坏档时也不能领币并改写背包。",
+    items: [],
+    currency: {stoneCoins: 17},
+    createdAt: "2026-07-12T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const mailBefore = structuredClone(seed.mailMessages.future_backpack_currency_mail);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const claimed = service.claimMailAttachments(recipient.session.token, "future_backpack_currency_mail");
+  assert.equal(claimed.ok, false);
+  assert.equal(claimed.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[recipient.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+  assert.deepEqual(after.mailMessages.future_backpack_currency_mail, mailBefore);
 });
 
 test("claiming battle item mail is locked until the active battle ends", () => {
@@ -959,4 +1199,34 @@ test("sending a nearby message completes the chat tutorial with an authoritative
   assert.equal(sent.profile.activeQuestId, "quest_training_partner_intro");
   assert.equal(sent.profile.stoneCoins, 5);
   assert.equal(sent.questMessages.length > 0, true);
+});
+
+test("chat stays available without mutating quests when profile assets are unsafe", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({username: "chat_unsafe_assets", password: "test1234", displayName: "聊天坏档号"});
+  const profile = battleProfile("聊天坏档号", {level: 3, hp: 120, maxHp: 120}, null);
+  profile.stoneCoins = 0;
+  profile.activeQuestId = "quest_chat_greeting";
+  profile.questStates = {quest_chat_greeting: {questId: "quest_chat_greeting", status: "active", progress: 0}};
+  assert.equal(seedService.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[player.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots = [{
+    itemId: "future_chat_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  }];
+  const before = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const sent = service.sendChatMessage(player.session.token, {channel: "nearby", text: "坏档也能聊天"});
+
+  assert.equal(sent.ok, true);
+  assert.equal(sent.profile, undefined);
+  assert.deepEqual(sent.questMessages, []);
+  assert.equal(service.listChatMessages(player.session.token, {channel: "nearby"}).messages[0].text, "坏档也能聊天");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[player.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, before);
 });

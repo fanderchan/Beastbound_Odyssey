@@ -279,6 +279,25 @@ test("occupied manor wars can open a battle room and settle ownership", () => {
   assert.equal(defenderEntered.war.defenderParticipantCount, 1);
 
   currentMs = advanceToAfterIso(currentMs, declared.war.startsAt);
+  const unsafeSeed = service.snapshot();
+  const unsafeBinding = unsafeSeed.profileBindings[challenger.account.accountId];
+  unsafeSeed.profiles[unsafeBinding.playerId].profile.backpackSlots = [
+    {
+      itemId: "future_backpack_relic_999",
+      count: 1,
+      futureEnvelope: {assetId: "future_manor_asset"},
+    },
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  const unsafeProfileBefore = structuredClone(unsafeSeed.profiles[unsafeBinding.playerId].profile);
+  const unsafeService = createAuthService({store: createMemoryAuthStore(unsafeSeed), now: () => currentMs});
+  const blockedRoom = unsafeService.startManorWarBattleRoom(challenger.session.token, {warId: declared.war.warId});
+  assert.equal(blockedRoom.ok, false);
+  assert.equal(blockedRoom.code, "backpack_item_unknown");
+  const unsafeAfter = unsafeService.snapshot();
+  assert.deepEqual(unsafeAfter.battleRooms, {});
+  assert.deepEqual(unsafeAfter.profiles[unsafeBinding.playerId].profile, unsafeProfileBefore);
+
   const roomReady = service.startManorWarBattleRoom(challenger.session.token, {"warId": declared.war.warId});
   assert.equal(roomReady.ok, true);
   assert.equal(roomReady.room.mode, "manor_war");

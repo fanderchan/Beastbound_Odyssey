@@ -502,6 +502,37 @@ test("HTTP server exposes server-authoritative equipment equip endpoint", async 
   ];
   profile.equipmentSlots = {"right_hand_weapon": "weapon_stone_dagger"};
   profile.equipmentDurability = {"right_hand_weapon": 30};
+  profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_stone_dagger", "level": 0, "history": []}};
+  profile.equipmentWearCounters = {"right_hand_weapon": {"itemId": "weapon_stone_dagger", "attackCount": 0, "hitCount": 0}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "backpack",
+      "slotId": "",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "http_test"
+    },
+    "equip_000002": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000002",
+      "itemId": "weapon_stone_dagger",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_stone_dagger", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_stone_dagger", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "http_test"
+    }
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000002"};
+  profile.nextEquipmentInstanceSerial = 3;
+  profile.equipmentSlotsVersion = 5;
   const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
@@ -559,6 +590,24 @@ test("HTTP server exposes server-authoritative equipment enhance endpoint", asyn
   profile.equipmentSlots = {"right_hand_weapon": "weapon_wooden_club"};
   profile.equipmentDurability = {"right_hand_weapon": 30};
   profile.equipmentEnhancement = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "level": 0, "history": []}};
+  profile.equipmentWearCounters = {"right_hand_weapon": {"itemId": "weapon_wooden_club", "attackCount": 0, "hitCount": 0}};
+  profile.equipmentInstances = {
+    "equip_000001": {
+      "schemaVersion": 1,
+      "instanceId": "equip_000001",
+      "itemId": "weapon_wooden_club",
+      "location": "equipped",
+      "slotId": "right_hand_weapon",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_wooden_club", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_wooden_club", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "http_test"
+    }
+  };
+  profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 2;
   const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
@@ -617,6 +666,7 @@ test("HTTP server exposes server-authoritative equipment repair endpoint", async
     },
   };
   profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = 2;
   const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);

@@ -22,6 +22,7 @@ function createFamilyManorDomain(ctx) {
     accountById,
     accountRuntimeActivity = () => ({online: false, lastSeenMs: null}),
     activeBattleRoomForAccount,
+    battleBackpackEntryCheck,
     battleParticipantSnapshot,
     battleRandomAuthority,
     battleRoomConnectionStateForMutation,
@@ -384,6 +385,10 @@ function createFamilyManorDomain(ctx) {
     if (busyAccountId) {
       const busyAccount = accountById(data, busyAccountId);
       return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "参战成员"} 已在战斗房间中。`);
+    }
+    const backpackEntry = battleBackpackEntryCheck(data, participantAccountIds);
+    if (!backpackEntry.ok) {
+      return backpackEntry;
     }
     const participants = challengerIds
       .map((accountId) => accountById(data, accountId))

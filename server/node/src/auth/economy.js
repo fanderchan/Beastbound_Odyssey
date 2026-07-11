@@ -45,6 +45,7 @@ function createEconomyDomain(ctx) {
     fail,
     isoNow,
     itemAmountText,
+    isEquipmentItemId,
     load,
     normalizeBackpackSlots,
     normalizeMailItems,
@@ -55,6 +56,7 @@ function createEconomyDomain(ctx) {
     playerPositionHasCell,
     bankStoneCoinLimit = 100000000,
     profileBackpackSlots,
+    rawBackpackAssetConflict,
     profileBindingForAccount,
     profileCurrencyAmount,
     profileStoneCoinLimit = 10000000,
@@ -71,14 +73,28 @@ function createEconomyDomain(ctx) {
     shopCurrencyLabel,
   } = ctx;
 
+  const equipmentItemPredicate = typeof isEquipmentItemId === "function" ? isEquipmentItemId : null;
+
   function bankDeposit(token, payload = {}) {
     const prepared = prepareSingleProfileMutation(token);
     if (!prepared.ok) {
       return prepared;
     }
     const profile = clone(prepared.profile);
+    const rawBankConflict = rawBankAssetConflict(profile.bank);
+    if (rawBankConflict) {
+      return fail(rawBankConflict.code, rawBankConflict.message, rawBankProfilePayload(prepared, profile));
+    }
     const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
     const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
+    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
+    if (unsupportedEquipment) {
+      return fail(
+        "bank_equipment_transfer_unsupported",
+        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能存入银行，请先留在背包。`,
+        profilePayload(prepared, profile),
+      );
+    }
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_deposit_empty", "请选择要存入的石币或物品。", profilePayload(prepared, profile));
     }
@@ -130,8 +146,20 @@ function createEconomyDomain(ctx) {
       return prepared;
     }
     const profile = clone(prepared.profile);
+    const rawBankConflict = rawBankAssetConflict(profile.bank);
+    if (rawBankConflict) {
+      return fail(rawBankConflict.code, rawBankConflict.message, rawBankProfilePayload(prepared, profile));
+    }
     const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
     const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
+    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
+    if (unsupportedEquipment) {
+      return fail(
+        "bank_equipment_transfer_unsupported",
+        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能从银行取出，物品会安全保留，请联系GM处理。`,
+        profilePayload(prepared, profile),
+      );
+    }
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_withdraw_empty", "请选择要取出的石币或物品。", profilePayload(prepared, profile));
     }
@@ -239,6 +267,14 @@ function createEconomyDomain(ctx) {
     if (items.length <= 0 || items[0].itemId !== itemId) {
       return fail("market_item_invalid", "请选择可以上架的物品。", profilePayload(prepared, prepared.profile));
     }
+    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
+    if (unsupportedEquipment) {
+      return fail(
+        "market_equipment_transfer_unsupported",
+        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能上架交易所，请先留在背包。`,
+        profilePayload(prepared, prepared.profile),
+      );
+    }
     if (bagItemIsBound(itemId)) {
       return fail("market_item_bound", `${bagItemLabel(itemId)} 已绑定，不能上架交易所。`, profilePayload(prepared, prepared.profile));
     }
@@ -315,9 +351,20 @@ function createEconomyDomain(ctx) {
     if (isTutorialBuyListingForAccount(listingId, resolved.account.accountId)) {
       return buyTutorialMarketListing(data, resolved.account, listingId);
     }
-    const listing = normalizeMarketListing(data.marketListings && data.marketListings[listingId]);
+    const rawListing = data.marketListings && data.marketListings[listingId];
+    const rawListingConflict = rawMarketListingAssetConflict(rawListing);
+    if (rawListingConflict) {
+      return fail(rawListingConflict.code, rawListingConflict.message);
+    }
+    const listing = normalizeMarketListing(rawListing);
     if (!listing || !listing.listingId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    if (firstUnsupportedEquipmentTransfer([listing])) {
+      return fail(
+        "market_equipment_transfer_unsupported",
+        `${bagItemLabel(listing.itemId)} 暂不能通过交易所购买，挂单会原样保留。`,
+      );
     }
     if (bagItemIsBound(listing.itemId)) {
       return fail("market_item_bound", `${bagItemLabel(listing.itemId)} 已绑定，不能继续交易。`);
@@ -327,9 +374,7 @@ function createEconomyDomain(ctx) {
     }
     const seller = accountById(data, listing.sellerAccountId);
     if (!seller) {
-      delete data.marketListings[listingId];
-      save(data);
-      return fail("market_seller_missing", "卖家账号不存在，挂单已下架。");
+      return fail("market_seller_missing", "卖家账号档案异常，挂单会原样保留，请联系GM处理。");
     }
     const buyerPrepared = profileForAccount(data, resolved.account);
     if (!buyerPrepared.ok) {
@@ -398,9 +443,26 @@ function createEconomyDomain(ctx) {
       return fail(resolved.code, resolved.message);
     }
     const listingId = String(payload.listingId || payload.id || "").trim();
-    const listing = normalizeMarketListing(data.marketListings && data.marketListings[listingId]);
-    if (!listing || listing.sellerAccountId !== resolved.account.accountId) {
+    const rawListing = data.marketListings && data.marketListings[listingId];
+    const rawSellerAccountId = rawListing && typeof rawListing === "object" && !Array.isArray(rawListing)
+      ? String(rawListing.sellerAccountId || "").trim()
+      : "";
+    if (!rawListing || rawSellerAccountId !== resolved.account.accountId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    const rawListingConflict = rawMarketListingAssetConflict(rawListing);
+    if (rawListingConflict) {
+      return fail(rawListingConflict.code, rawListingConflict.message);
+    }
+    const listing = normalizeMarketListing(rawListing);
+    if (!listing) {
+      return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    if (firstUnsupportedEquipmentTransfer([listing])) {
+      return fail(
+        "market_equipment_transfer_unsupported",
+        `${bagItemLabel(listing.itemId)} 暂不能从交易所下架，挂单会原样保留，请联系GM处理。`,
+      );
     }
     const prepared = profileForAccount(data, resolved.account);
     if (!prepared.ok) {
@@ -441,6 +503,12 @@ function createEconomyDomain(ctx) {
     const listing = tutorialBuyListing(account, isoNow(now));
     if (!listing || listing.listingId !== listingId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
+    }
+    if (firstUnsupportedEquipmentTransfer([listing])) {
+      return fail(
+        "market_equipment_transfer_unsupported",
+        `${bagItemLabel(listing.itemId)} 暂不能通过教学交易购买。`,
+      );
     }
     const profile = clone(prepared.profile);
     const totalPrice = marketListingTotalPrice(listing);
@@ -501,10 +569,17 @@ function createEconomyDomain(ctx) {
 
   function proposeTrade(token, payload = {}) {
     const data = load();
-    expireTradeOffers(data);
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    const offerItems = normalizeLimitedItems(payload.items || payload.offerItems || []);
+    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(offerItems);
+    if (unsupportedEquipment) {
+      return fail(
+        "trade_equipment_transfer_unsupported",
+        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能用于面对面交易，请先留在背包。`,
+      );
     }
     const targetUsername = normalizeUsername(payload.targetUsername || payload.username || payload.toUsername || "");
     const target = data.accounts[targetUsername];
@@ -518,7 +593,6 @@ function createEconomyDomain(ctx) {
     if (!positionCheck.ok) {
       return positionCheck;
     }
-    const offerItems = normalizeLimitedItems(payload.items || payload.offerItems || []);
     const offerStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.offerStoneCoins || 0);
     const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
     if (boundOfferItem) {
@@ -550,6 +624,7 @@ function createEconomyDomain(ctx) {
       expiresAt: new Date(now() + TRADE_OFFER_TTL_MS).toISOString(),
       schemaVersion: 1,
     };
+    expireTradeOffers(data);
     data.tradeOffers[tradeId] = offer;
     save(data);
     return ok({
@@ -560,20 +635,26 @@ function createEconomyDomain(ctx) {
 
   function acceptTrade(token, payload = {}) {
     const data = load();
-    expireTradeOffers(data);
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
     const tradeId = String(payload.tradeId || payload.id || "").trim();
     const offer = data.tradeOffers[tradeId];
-    if (!offer || offer.toAccountId !== resolved.account.accountId) {
+    if (!offer || offer.toAccountId !== resolved.account.accountId || tradeOfferIsExpired(offer)) {
       return fail("trade_offer_missing", "交易请求不存在或已过期。");
+    }
+    const counterItems = normalizeLimitedItems(payload.items || payload.counterItems || []);
+    const offerItems = normalizeLimitedItems(offer.offerItems || []);
+    const unsupportedEquipment = firstUnsupportedEquipmentTransfer([...offerItems, ...counterItems]);
+    if (unsupportedEquipment) {
+      return fail(
+        "trade_equipment_transfer_unsupported",
+        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能用于面对面交易，本次交易不会扣除任何资产。`,
+      );
     }
     const initiator = accountById(data, offer.fromAccountId);
     if (!initiator) {
-      delete data.tradeOffers[tradeId];
-      save(data);
       return fail("trade_target_missing", "交易发起人不存在。");
     }
     if (
@@ -592,7 +673,6 @@ function createEconomyDomain(ctx) {
     if (!positionCheck.ok) {
       return positionCheck;
     }
-    const counterItems = normalizeLimitedItems(payload.items || payload.counterItems || []);
     const counterStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.counterStoneCoins || 0);
     const boundCounterItem = counterItems.find((item) => bagItemIsBound(item.itemId));
     if (boundCounterItem) {
@@ -608,7 +688,6 @@ function createEconomyDomain(ctx) {
     }
     const initiatorProfile = clone(initiatorPrepared.profile);
     const accepterProfile = clone(accepterPrepared.profile);
-    const offerItems = normalizeLimitedItems(offer.offerItems || []);
     const offerStoneCoins = normalizeCoinAmount(offer.offerStoneCoins || 0);
     const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
     if (boundOfferItem) {
@@ -638,6 +717,7 @@ function createEconomyDomain(ctx) {
     if (!nextAccepter.ok) {
       return fail("trade_acceptor_backpack_full", "你的背包空间不足，交易无法完成。");
     }
+    expireTradeOffers(data);
     const initiatorPersisted = persistProfileForAccount(data, initiator, initiatorPrepared.binding, nextInitiator.profile, now);
     const accepterPersisted = persistProfileForAccount(data, resolved.account, accepterPrepared.binding, nextAccepter.profile, now);
     delete data.tradeOffers[tradeId];
@@ -731,6 +811,15 @@ function createEconomyDomain(ctx) {
         profileSummary: profileSummaryForAccount(account, data),
       });
     }
+    const backpackConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(profileDoc.profile)
+      : {ok: false, code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(account, data),
+      });
+    }
     return {
       ok: true,
       data,
@@ -757,8 +846,268 @@ function createEconomyDomain(ctx) {
     };
   }
 
+  function rawBankAssetConflict(value) {
+    if (value !== undefined && (!value || typeof value !== "object" || Array.isArray(value))) {
+      return {
+        code: "bank_schema_invalid",
+        message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+      };
+    }
+    const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const schemaStatus = rawSchemaVersionStatus(raw, 1);
+    if (schemaStatus === "invalid") {
+      return {
+        code: "bank_schema_invalid",
+        message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+      };
+    }
+    if (schemaStatus === "future") {
+      return {
+        code: "bank_schema_future",
+        message: "银行数据来自更高版本，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+      };
+    }
+    for (const field of ["slots", "items", "itemAmounts"]) {
+      if (Object.hasOwn(raw, field) && !Array.isArray(raw[field])) {
+        return rawBankRepresentationConflict();
+      }
+    }
+    if (Array.isArray(raw.slots) && raw.slots.length > BANK_SLOT_LIMIT) {
+      return rawBankRepresentationConflict();
+    }
+    const rawEntries = [
+      ...(Array.isArray(raw.slots) ? raw.slots : []),
+      ...(Array.isArray(raw.items) ? raw.items : []),
+      ...(Array.isArray(raw.itemAmounts) ? raw.itemAmounts : []),
+    ];
+    const entryConflict = rawBankEntryConflict(rawEntries);
+    if (entryConflict) {
+      return entryConflict;
+    }
+    const representationConflict = rawBankRepresentationStateConflict(raw);
+    if (representationConflict) {
+      return representationConflict;
+    }
+    return null;
+  }
+
+  function rawMarketListingAssetConflict(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    const schemaStatus = rawSchemaVersionStatus(value, 1);
+    if (schemaStatus === "invalid") {
+      return {
+        code: "market_listing_schema_invalid",
+        message: "这条挂单的数据版本无法识别，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
+      };
+    }
+    if (schemaStatus === "future") {
+      return {
+        code: "market_listing_schema_future",
+        message: "这条挂单来自更高版本，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
+      };
+    }
+    const itemId = String(value.itemId || "").trim();
+    if (itemId !== "" && !bagItemById(itemId)) {
+      return {
+        code: "market_item_unknown",
+        message: "这条挂单含当前版本无法识别的物品，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
+      };
+    }
+    if (itemId !== "" && (!equipmentItemPredicate || equipmentItemPredicate(itemId))) {
+      return {
+        code: "market_equipment_transfer_unsupported",
+        message: `${bagItemLabel(itemId)} 暂不能通过交易所流转，挂单会原样保留，请联系GM处理。`,
+      };
+    }
+    const allowedFields = new Set(["listingId", "sellerAccountId", "itemId", "count", "unitPrice", "currency", "createdAt", "schemaVersion"]);
+    if (Object.keys(value).some((key) => !allowedFields.has(key))) {
+      return {
+        code: "market_listing_schema_unsupported",
+        message: "这条挂单含当前版本无法安全读取的数据，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
+      };
+    }
+    const count = Number(value.count);
+    const unitPrice = Number(value.unitPrice);
+    const currency = String(value.currency || MARKET_CURRENCY_STONE_COINS).trim();
+    if (
+      itemId === ""
+      || !Number.isSafeInteger(count) || count < 1 || count > MARKET_MAX_LISTING_COUNT
+      || !Number.isSafeInteger(unitPrice) || unitPrice < 1 || unitPrice > MARKET_MAX_UNIT_PRICE
+      || ![MARKET_CURRENCY_STONE_COINS, MARKET_CURRENCY_DIAMONDS].includes(currency)
+    ) {
+      return {
+        code: "market_listing_asset_invalid",
+        message: "这条挂单的物品或价格档案异常，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
+      };
+    }
+    return null;
+  }
+
+  function rawBankEntryConflict(entries) {
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return rawBankRepresentationConflict();
+      }
+      const itemId = String(entry.itemId || "").trim();
+      const count = Number(entry.count ?? 0);
+      if (itemId === "") {
+        if (
+          !Number.isSafeInteger(count)
+          || count !== 0
+          || Object.keys(entry).some((key) => !["itemId", "count"].includes(key))
+        ) {
+          return rawBankRepresentationConflict();
+        }
+        continue;
+      }
+      if (!bagItemById(itemId)) {
+        return {
+          code: "bank_item_unknown",
+          message: "银行内有当前版本无法识别的物品，本次操作已取消；全部资产会原样保留，请联系GM处理。",
+        };
+      }
+      if (!equipmentItemPredicate || equipmentItemPredicate(itemId)) {
+        return {
+          code: "bank_equipment_transfer_unsupported",
+          message: `${bagItemLabel(itemId)} 暂不能由银行操作整理；本次操作已取消，全部资产会原样保留，请联系GM处理。`,
+        };
+      }
+      if (!Number.isSafeInteger(count) || count < 1) {
+        return rawBankRepresentationConflict();
+      }
+      if (Object.keys(entry).some((key) => !["itemId", "count"].includes(key))) {
+        return rawBankRepresentationConflict();
+      }
+    }
+    return null;
+  }
+
+  function rawBankRepresentationStateConflict(raw) {
+    const itemRepresentations = [];
+    if (Array.isArray(raw.items)) {
+      itemRepresentations.push(rawBankItemCounts(raw.items));
+    }
+    if (Array.isArray(raw.itemAmounts)) {
+      itemRepresentations.push(rawBankItemCounts(raw.itemAmounts));
+    }
+    if (itemRepresentations.length > 1 && itemRepresentations.some((counts) => counts !== itemRepresentations[0])) {
+      return rawBankRepresentationConflict();
+    }
+    if (Array.isArray(raw.slots) && raw.slots.length > 0 && itemRepresentations.length > 0) {
+      const slotCounts = rawBankItemCounts(raw.slots);
+      if (itemRepresentations.some((counts) => counts !== slotCounts)) {
+        return rawBankRepresentationConflict();
+      }
+    }
+    if (Array.isArray(raw.slots)) {
+      for (const slot of raw.slots) {
+        const itemId = String(slot && slot.itemId || "").trim();
+        if (itemId !== "" && Number(slot.count) > bankItemStackLimit(itemId)) {
+          return rawBankRepresentationConflict();
+        }
+      }
+    }
+    for (const entries of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
+      if (rawBankRequiredSlotCount(entries) > BANK_SLOT_LIMIT) {
+        return rawBankRepresentationConflict();
+      }
+    }
+    const coinConflict = rawAliasedIntegerConflict(raw, "stoneCoins", "coins", 0, bankStoneCoinLimit);
+    const tabConflict = rawAliasedIntegerConflict(raw, "unlockedTabs", "tabs", BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT);
+    if (coinConflict || tabConflict) {
+      return rawBankRepresentationConflict();
+    }
+    const unlockedTabs = Number(raw.unlockedTabs ?? raw.tabs ?? BANK_DEFAULT_UNLOCKED_TABS);
+    const unlockedSlots = unlockedTabs * BANK_SLOTS_PER_TAB;
+    if (Array.isArray(raw.slots) && raw.slots.some((slot, index) => index >= unlockedSlots && String(slot && slot.itemId || "").trim() !== "")) {
+      return rawBankRepresentationConflict();
+    }
+    if (!Array.isArray(raw.slots) || raw.slots.length === 0) {
+      for (const entries of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
+        if (rawBankRequiredSlotCount(entries) > unlockedSlots) {
+          return rawBankRepresentationConflict();
+        }
+      }
+    }
+    const allowedRootFields = new Set(["stoneCoins", "coins", "items", "itemAmounts", "slots", "unlockedTabs", "tabs", "schemaVersion"]);
+    return Object.keys(raw).some((key) => !allowedRootFields.has(key)) ? rawBankRepresentationConflict() : null;
+  }
+
+  function rawBankItemCounts(entries) {
+    const counts = new Map();
+    for (const entry of entries) {
+      const itemId = String(entry && entry.itemId || "").trim();
+      if (itemId === "") {
+        continue;
+      }
+      counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
+    }
+    return JSON.stringify(Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right)));
+  }
+
+  function rawBankRequiredSlotCount(entries) {
+    const counts = new Map();
+    for (const entry of entries) {
+      const itemId = String(entry && entry.itemId || "").trim();
+      if (itemId === "") {
+        continue;
+      }
+      counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
+    }
+    let required = 0;
+    for (const [itemId, count] of counts) {
+      required += Math.ceil(count / bankItemStackLimit(itemId));
+    }
+    return required;
+  }
+
+  function rawAliasedIntegerConflict(raw, primaryField, legacyField, minimum, maximum) {
+    const fields = [primaryField, legacyField].filter((field) => Object.hasOwn(raw, field));
+    for (const field of fields) {
+      const value = Number(raw[field]);
+      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+        return true;
+      }
+    }
+    return fields.length > 1 && Number(raw[primaryField]) !== Number(raw[legacyField]);
+  }
+
+  function rawBankRepresentationConflict() {
+    return {
+      code: "bank_representation_conflict",
+      message: "银行物品或石币的两份档案不一致，本次操作已取消；全部资产会原样保留，请联系GM处理。",
+    };
+  }
+
+  function rawSchemaVersionStatus(container, currentVersion) {
+    if (!container || !Object.hasOwn(container, "schemaVersion")) {
+      return "legacy";
+    }
+    const version = Number(container.schemaVersion);
+    if (!Number.isInteger(version) || version < 1) {
+      return "invalid";
+    }
+    return version > currentVersion ? "future" : "current";
+  }
+
   function normalizeLimitedItems(value) {
     return normalizeMailItems(value).slice(0, TRADE_MAX_ITEM_LINES);
+  }
+
+  function firstUnsupportedEquipmentTransfer(items) {
+    for (const item of Array.isArray(items) ? items : []) {
+      const itemId = String(item && item.itemId || "").trim();
+      if (itemId === "") {
+        continue;
+      }
+      // Missing catalog authority must not silently reopen template-only equipment transfers.
+      if (!equipmentItemPredicate || equipmentItemPredicate(itemId)) {
+        return {itemId};
+      }
+    }
+    return null;
   }
 
   function normalizeBankTransferItems(value) {
@@ -1159,6 +1508,11 @@ function createEconomyDomain(ctx) {
     }
   }
 
+  function tradeOfferIsExpired(offer) {
+    const expiresAtMs = Date.parse(offer && offer.expiresAt || "");
+    return Number.isFinite(expiresAtMs) && expiresAtMs <= now();
+  }
+
   function activeMarketListings(data) {
     return Object.values(objectMap(data.marketListings))
       .map(normalizeMarketListing)
@@ -1452,6 +1806,16 @@ function createEconomyDomain(ctx) {
       profileSummary: profileSummaryForAccount(prepared.account, prepared.data),
       profile: clone(profile),
       bank: clone(bank || normalizeBank(profile.bank)),
+    };
+  }
+
+  function rawBankProfilePayload(prepared, profile) {
+    return {
+      account: publicAccount(prepared.account),
+      profileBinding: prepared.binding,
+      profileSummary: profileSummaryForAccount(prepared.account, prepared.data),
+      profile: clone(profile),
+      bank: clone(profile.bank || {}),
     };
   }
 

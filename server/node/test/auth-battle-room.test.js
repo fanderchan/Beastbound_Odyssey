@@ -3605,6 +3605,129 @@ test("party pve victory writes stone coins and item drops to profile", () => {
   assert.equal(Boolean(record && record.profileWriteback.profiles[0].rewards), true);
 });
 
+test("equipment reward conflicts skip only rewards while battle exp still persists", () => {
+  const cases = [
+    {
+      suffix: "full",
+      expectedReason: "battle_reward_equipment_backpack_full",
+      prepare(profile) {
+        profile.backpackSlots = Array.from({length: 15}, () => ({itemId: "item_meat_small", count: 99}));
+      },
+    },
+    {
+      suffix: "surplus",
+      expectedReason: "equipment_grant_state_conflict",
+      prepare(profile) {
+        profile.backpackSlots = [{}];
+      },
+      injectAfterSave(profile) {
+        profile.equipmentInstances = {
+          equip_surplus: {
+            schemaVersion: 1,
+            instanceId: "equip_surplus",
+            itemId: "accessory_firebud_charm",
+            location: "backpack",
+            slotId: "",
+            durability: 30,
+            enhancement: {itemId: "accessory_firebud_charm", level: 0, history: []},
+            wearCounters: {itemId: "accessory_firebud_charm", attackCount: 0, hitCount: 0},
+            expPillCharge: {},
+            futureAffixes: [{id: "surplus_reward_power", value: 9}],
+          },
+        };
+        profile.equipmentSlotInstanceIds = {};
+        profile.equipmentSlotsVersion = 5;
+        profile.nextEquipmentInstanceSerial = 1;
+      },
+    },
+  ];
+
+  for (const fixture of cases) {
+    const serviceOptions = {
+      store: createMemoryAuthStore(),
+      battleVictoryRewardResolver: () => ({
+        tableId: `atomic_equipment_reward_${fixture.suffix}`,
+        rewardRole: "atomicity_regression",
+        repeatable: true,
+        sourceZoneId: "atomic_reward_zone",
+        sourceEncounterGroupId: "atomic_reward_group",
+        stoneCoins: 77,
+        items: [{itemId: "accessory_firebud_charm", count: 1}],
+      }),
+    };
+    let service = createAuthService(serviceOptions);
+    const player = service.register({
+      username: `rewardatomic${fixture.suffix}`,
+      password: "test1234",
+      displayName: `奖励原子${fixture.suffix}`,
+    });
+    assert.equal(player.ok, true);
+    const profile = battleProfile(`奖励原子${fixture.suffix}`, {
+      level: 80,
+      hp: 520,
+      maxHp: 520,
+      attack: 999,
+      defense: 45,
+      quick: 120,
+      comboRateOverride: 0,
+    }, null);
+    profile.stoneCoins = 11;
+    fixture.prepare(profile);
+    assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+    if (typeof fixture.injectAfterSave === "function") {
+      const seed = service.snapshot();
+      const binding = seed.profileBindings[player.account.accountId];
+      fixture.injectAfterSave(seed.profiles[binding.playerId].profile);
+      service = createAuthService({...serviceOptions, store: createMemoryAuthStore(seed)});
+    }
+    const before = service.getProfile(player.session.token);
+
+    const encounter = service.startPartyEncounter(player.session.token, {
+      enemyCount: 1,
+      encounterZone: {
+        id: "atomic_reward_zone",
+        name: "原子奖励测试区",
+        encounterGroupId: "atomic_reward_group",
+        selectedWildPet: {
+          formId: "wuli_normal_orange_fire10",
+          name: "原子奖励乌力",
+          level: 1,
+          catchable: false,
+          battleStats: {maxHp: 1, attack: 1, defense: 1, quick: 1},
+        },
+      },
+    });
+    assert.equal(encounter.ok, true);
+    const actor = encounter.room.battle.actors.find((entry) => (
+      entry.accountId === player.account.accountId && entry.kind === "player"
+    ));
+    const enemy = encounter.room.battle.actors.find((entry) => entry.side === "enemy");
+    const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
+      round: 1,
+      actorId: actor.actorId,
+      actionId: "attack",
+      targetActorId: enemy.actorId,
+    });
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.room.status, "closed");
+
+    const writeback = resolved.room.battle.profileWriteback.profiles.find((entry) => (
+      entry.accountId === player.account.accountId
+    ));
+    assert.equal(writeback.rewards.skippedReason, fixture.expectedReason);
+    assert.equal(resolved.room.battle.profileWriteback.skippedProfiles.some((entry) => (
+      entry.accountId === player.account.accountId && entry.reason === fixture.expectedReason
+    )), true);
+
+    const after = service.getProfile(player.session.token);
+    assert.equal(after.profileBinding.profileRevision, before.profileBinding.profileRevision + 1);
+    assert.equal(after.profile.player.exp > Number(before.profile.player.exp || 0), true);
+    assert.equal(writeback.profileRevision, after.profileBinding.profileRevision);
+    assert.equal(after.profile.stoneCoins, 11);
+    assert.equal(profileItemCount(after.profile, "accessory_firebud_charm"), 0);
+  }
+});
+
 test("party pve derives enemy exp from stats and only rewards the last-hit participant", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const leader = service.register({"username": "pveformulaa", "password": "test1234", "displayName": "公式队长"});
@@ -4685,6 +4808,43 @@ test("duel battle rooms snapshot and resolve server-authoritative battle items",
   assert.equal(challengerAfter.profile.backpackSlots.filter((slot) => slot.itemId === "item_meat_small").reduce((total, slot) => total + slot.count, 0), 0);
 });
 
+test("unsafe future backpack assets cannot enter battle or enable free item use", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const challenger = seedService.register({username: "futurebagduela", password: "test1234", displayName: "未来背包甲"});
+  const opponent = seedService.register({username: "futurebagduelb", password: "test1234", displayName: "未来背包乙"});
+  const challengerProfile = battleProfile("未来背包甲", {level: 12, hp: 150, maxHp: 150, attack: 20, defense: 8, quick: 90}, null);
+  challengerProfile.backpackSlots = [
+    {itemId: "item_heal_single_5", count: 2},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  assert.equal(seedService.saveProfile(challenger.session.token, {expectedRevision: 0, profile: challengerProfile}).ok, true);
+  assert.equal(seedService.saveProfile(opponent.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("未来背包乙", {level: 12, hp: 150, maxHp: 150, attack: 18, defense: 8, quick: 70}, null),
+  }).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[challenger.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots[1] = {
+    itemId: "future_backpack_relic_999",
+    count: 1,
+    futureEnvelope: {assetId: "future_battle_asset"},
+  };
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {mapId: "village", cellX: 10, cellY: 10, moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {mapId: "village", cellX: 11, cellY: 10, moving: false}).ok, true);
+
+  const invite = service.inviteToBattle(challenger.session.token, {username: "futurebagduelb"});
+  assert.equal(invite.ok, false);
+  assert.equal(invite.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.deepEqual(after.battleInvites, {});
+  assert.deepEqual(after.battleRooms, {});
+  assert.equal(after.profileBindings[challenger.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+});
+
 test("duel battle rooms resolve expanded battle items and pet status skills", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "statusa", "password": "test1234", "displayName": "状态甲"});
@@ -4915,6 +5075,63 @@ test("duel battle rooms snapshot and resolve equipment spirits", () => {
     "left_hand_weapon": 30,
     "body": 30,
   };
+  challengerProfile.equipmentSlotInstanceIds = {
+    "accessory_left": "equip_spirit_accessory_left",
+    "accessory_right": "equip_spirit_accessory_right",
+    "left_hand_weapon": "equip_spirit_left_weapon",
+    "body": "equip_spirit_body",
+  };
+  challengerProfile.equipmentInstances = {
+    "equip_spirit_accessory_left": {
+      "schemaVersion": 1,
+      "instanceId": "equip_spirit_accessory_left",
+      "itemId": "accessory_firebud_charm",
+      "location": "equipped",
+      "slotId": "accessory_left",
+      "durability": 30,
+      "enhancement": {"itemId": "accessory_firebud_charm", "level": 0, "history": []},
+      "wearCounters": {"itemId": "accessory_firebud_charm", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+    "equip_spirit_accessory_right": {
+      "schemaVersion": 1,
+      "instanceId": "equip_spirit_accessory_right",
+      "itemId": "accessory_wind_ring",
+      "location": "equipped",
+      "slotId": "accessory_right",
+      "durability": 30,
+      "enhancement": {"itemId": "accessory_wind_ring", "level": 0, "history": []},
+      "wearCounters": {"itemId": "accessory_wind_ring", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+    "equip_spirit_left_weapon": {
+      "schemaVersion": 1,
+      "instanceId": "equip_spirit_left_weapon",
+      "itemId": "weapon_training_spear",
+      "location": "equipped",
+      "slotId": "left_hand_weapon",
+      "durability": 30,
+      "enhancement": {"itemId": "weapon_training_spear", "level": 0, "history": []},
+      "wearCounters": {"itemId": "weapon_training_spear", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+    "equip_spirit_body": {
+      "schemaVersion": 1,
+      "instanceId": "equip_spirit_body",
+      "itemId": "armor_moist_cloth",
+      "location": "equipped",
+      "slotId": "body",
+      "durability": 30,
+      "enhancement": {"itemId": "armor_moist_cloth", "level": 0, "history": []},
+      "wearCounters": {"itemId": "armor_moist_cloth", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+  };
+  challengerProfile.equipmentSlotsVersion = 5;
   assert.equal(service.saveProfile(challenger.session.token, {
     "expectedRevision": 0,
     "profile": challengerProfile,

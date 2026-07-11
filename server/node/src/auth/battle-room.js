@@ -18,6 +18,7 @@ function createBattleRoomDomain(ctx) {
     activeOnlinePlayers,
     authorizePartyEncounter,
     battleInviteIsExpired,
+    battleBackpackEntryCheck,
     battleParticipantSnapshot,
     battleRecordSummaryAgainst,
     battleRoomBattleStateForMutation,
@@ -201,6 +202,10 @@ function createBattleRoomDomain(ctx) {
     if (activeBattleRoomForAccount(data, target.accountId)) {
       return fail("battle_target_busy", "对方已经在切磋房间中。");
     }
+    const backpackEntry = battleBackpackEntryCheck(data, [resolved.account.accountId, target.accountId]);
+    if (!backpackEntry.ok) {
+      return backpackEntry;
+    }
     const pendingInvite = Object.values(data.battleInvites).find((invite) => (
       invite &&
       invite.status === BATTLE_INVITE_PENDING &&
@@ -345,6 +350,10 @@ function createBattleRoomDomain(ctx) {
     const memberAccountIds = allMemberAccountIds.filter((accountId) => onlineAccountIds.has(accountId));
     if (memberAccountIds.length < 1) {
       return fail("party_encounter_party_missing", "缺少参战账号。");
+    }
+    const backpackEntry = battleBackpackEntryCheck(data, memberAccountIds);
+    if (!backpackEntry.ok) {
+      return backpackEntry;
     }
     const busyAccountId = memberAccountIds.find((accountId) => activeBattleRoomForAccount(data, accountId));
     if (busyAccountId) {
@@ -594,6 +603,10 @@ function createBattleRoomDomain(ctx) {
     }
     if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
       return fail("battle_room_forbidden", "你不在这个切磋房间中。");
+    }
+    const backpackEntry = battleBackpackEntryCheck(data, requiredBattleCommandAccountIds(room));
+    if (!backpackEntry.ok) {
+      return backpackEntry;
     }
     const battle = battleRoomBattleStateForMutation(room, now);
     if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {

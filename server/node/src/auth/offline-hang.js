@@ -31,6 +31,7 @@ function createOfflineHangDomain(ctx) {
     profileStoneCoins,
     profileSummaryForAccount,
     publicAccount,
+    rawBackpackAssetConflict,
     randomId,
     recordGmCommandAudit,
     resolveHangOrigin,
@@ -93,7 +94,7 @@ function createOfflineHangDomain(ctx) {
   }
 
   function start(token, payload = {}) {
-    const prepared = preparePlayer(token);
+    const prepared = preparePlayer(token, {requireWritableAssets: true});
     if (!prepared.ok) {
       return prepared.result;
     }
@@ -167,7 +168,7 @@ function createOfflineHangDomain(ctx) {
   }
 
   function claim(token, payload = {}) {
-    const prepared = preparePlayer(token);
+    const prepared = preparePlayer(token, {requireWritableAssets: true});
     if (!prepared.ok) {
       return prepared.result;
     }
@@ -277,7 +278,7 @@ function createOfflineHangDomain(ctx) {
   }
 
   function cancel(token) {
-    const prepared = preparePlayer(token);
+    const prepared = preparePlayer(token, {requireWritableAssets: true});
     if (!prepared.ok) {
       return prepared.result;
     }
@@ -314,7 +315,7 @@ function createOfflineHangDomain(ctx) {
     return {ok: true, data, access};
   }
 
-  function preparePlayer(token) {
+  function preparePlayer(token, options = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
@@ -324,6 +325,18 @@ function createOfflineHangDomain(ctx) {
     const profile = ensured.profileDoc && objectOrNull(ensured.profileDoc.profile);
     if (!profile) {
       return {ok: false, result: fail("profile_missing", "请先创建角色档案。")};
+    }
+    if (options.requireWritableAssets && typeof rawBackpackAssetConflict === "function") {
+      const assetConflict = rawBackpackAssetConflict(profile);
+      if (assetConflict) {
+        return {
+          ok: false,
+          result: fail(assetConflict.code, assetConflict.message, {
+            profileBinding: ensured.binding,
+            profileSummary: profileSummaryForAccount(resolved.account, data),
+          }),
+        };
+      }
     }
     return {
       ok: true,

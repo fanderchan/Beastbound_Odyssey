@@ -144,6 +144,128 @@ test("profile revision conflicts keep the newer server profile intact", () => {
   assert.equal(loaded.profileSummary.profileRevision, 1);
 });
 
+test("full profile save cannot overwrite an existing unsafe future backpack", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "savefuturebag", password: "test1234", displayName: "整档保护号"});
+  const token = registered.session.token;
+  const cleanProfile = battleProfile("整档保护号", {level: 1, hp: 120, maxHp: 120}, null);
+  cleanProfile.backpackSlots = Array.from({length: 15}, () => ({}));
+  const saved = seedService.saveProfile(token, {expectedRevision: 0, profile: cleanProfile});
+  assert.equal(saved.ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[registered.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots[0] = {
+    itemId: "future_backpack_relic_999",
+    count: 1,
+    futureEnvelope: {assetId: "future_full_save_asset"},
+  };
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const overwritten = service.saveProfile(token, {expectedRevision: revisionBefore, profile: cleanProfile});
+  assert.equal(overwritten.ok, false);
+  assert.equal(overwritten.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+});
+
+test("full profile save preserves unsafe bank and equipment instance assets", () => {
+  const cases = [
+    {
+      suffix: "bank",
+      code: "bank_item_unknown",
+      makeUnsafe(profile) {
+        profile.bank = {
+          schemaVersion: 1,
+          stoneCoins: 25,
+          unlockedTabs: 1,
+          slots: [{itemId: "future_bank_relic_999", count: 1}],
+          items: [{itemId: "future_bank_relic_999", count: 1}],
+          futureField: {assetId: "future_bank_asset"},
+        };
+      },
+    },
+    {
+      suffix: "equip",
+      code: "equipment_instance_schema_future",
+      makeUnsafe(profile) {
+        profile.backpackSlots[0] = {itemId: "weapon_wooden_club", count: 1};
+        profile.equipmentInstances = {
+          equip_000001: {
+            schemaVersion: 2,
+            instanceId: "equip_000001",
+            itemId: "weapon_wooden_club",
+            location: "backpack",
+            slotId: "",
+            enhancement: {itemId: "weapon_wooden_club", level: 7, history: []},
+            wearCounters: {itemId: "weapon_wooden_club", attackCount: 23, hitCount: 4},
+            futureAffixes: [{id: "future_power", value: 99}],
+          },
+        };
+        profile.nextEquipmentInstanceSerial = 2;
+        profile.equipmentSlotsVersion = 5;
+      },
+    },
+    {
+      suffix: "orphan",
+      code: "equipment_profile_state_conflict",
+      makeUnsafe(profile) {
+        profile.equipmentInstances = {
+          orphan_asset: {
+            schemaVersion: 1,
+            instanceId: "orphan_asset",
+            itemId: "weapon_wooden_club",
+            location: "backpack",
+            slotId: "",
+            durability: 30,
+            enhancement: {itemId: "weapon_wooden_club", level: 4, history: []},
+            wearCounters: {itemId: "weapon_wooden_club", attackCount: 11, hitCount: 2},
+            expPillCharge: {},
+            futureAffixes: [{id: "rare_orphan_power", value: 88}],
+          },
+        };
+        profile.nextEquipmentInstanceSerial = 1;
+        profile.equipmentSlotInstanceIds = {};
+        profile.equipmentSlotsVersion = 5;
+      },
+    },
+  ];
+
+  for (const scenario of cases) {
+    const seedService = createAuthService({store: createMemoryAuthStore()});
+    const username = `saveasset${scenario.suffix}`;
+    const registered = seedService.register({username, password: "test1234", displayName: `资产保护${scenario.suffix}`});
+    const token = registered.session.token;
+    const cleanProfile = battleProfile(`资产保护${scenario.suffix}`, {level: 1, hp: 120, maxHp: 120}, null);
+    cleanProfile.backpackSlots = Array.from({length: 15}, () => ({}));
+    assert.equal(seedService.saveProfile(token, {expectedRevision: 0, profile: cleanProfile}).ok, true);
+    const seed = seedService.snapshot();
+    const binding = seed.profileBindings[registered.account.accountId];
+    scenario.makeUnsafe(seed.profiles[binding.playerId].profile);
+    const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+    const revisionBefore = binding.profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const overwritten = service.saveProfile(token, {expectedRevision: revisionBefore, profile: cleanProfile});
+    assert.equal(overwritten.ok, false);
+    assert.equal(overwritten.code, scenario.code);
+    const after = service.snapshot();
+    assert.equal(after.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+    assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+
+    const unsafeIncoming = structuredClone(cleanProfile);
+    scenario.makeUnsafe(unsafeIncoming);
+    const incomingResult = service.saveProfile(token, {expectedRevision: revisionBefore, profile: unsafeIncoming});
+    assert.equal(incomingResult.ok, false);
+    assert.equal(incomingResult.code, scenario.code);
+    const afterIncoming = service.snapshot();
+    assert.equal(afterIncoming.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+    assert.deepEqual(afterIncoming.profiles[binding.playerId].profile, profileBefore);
+  }
+});
+
 test("profile action endpoint applies whitelisted gameplay mutations server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "profileaction", "password": "test1234", "displayName": "档案动作"});
@@ -750,6 +872,116 @@ test("server bank tab unlock consumes diamonds and opens next bank page", () => 
   assert.equal(skipped.code, "bank_tab_order");
 });
 
+test("bank tab unlock preserves unknown and equipment raw assets atomically", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "bankunlockfuture", password: "test1234", displayName: "未来银行号"});
+  const token = registered.session.token;
+  const current = seedService.getProfile(token);
+  current.profile.diamonds = 200;
+  assert.equal(seedService.saveProfile(token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  }).ok, true);
+
+  const baseSeed = seedService.snapshot();
+  for (const scenario of [
+    {itemId: "future_relic_from_new_server", expectedCode: "bank_item_unknown"},
+    {itemId: "weapon_wooden_club", expectedCode: "bank_equipment_transfer_unsupported"},
+  ]) {
+    const seed = structuredClone(baseSeed);
+    const seedBinding = seed.profileBindings[registered.account.accountId];
+    const profileDoc = seed.profiles[seedBinding.playerId].profile;
+    profileDoc.diamonds = 200;
+    profileDoc.bank = {
+      stoneCoins: 37,
+      items: [{itemId: scenario.itemId, count: 1, futureMeta: {grade: 9}}],
+      slots: [
+        {itemId: scenario.itemId, count: 1, futureMeta: {grade: 9}},
+        ...Array.from({length: 89}, () => ({})),
+      ],
+      unlockedTabs: 1,
+      schemaVersion: 1,
+      futureField: {keep: true},
+    };
+    const bankBefore = structuredClone(profileDoc.bank);
+    const revisionBefore = seedBinding.profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const unlock = service.profileAction(token, {action: "bank_unlock_tab", payload: {tabIndex: 1}});
+    assert.equal(unlock.ok, false);
+    assert.equal(unlock.code, scenario.expectedCode);
+    const after = service.snapshot();
+    const afterBinding = after.profileBindings[registered.account.accountId];
+    const afterProfile = after.profiles[afterBinding.playerId].profile;
+    assert.equal(after.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+    assert.equal(afterProfile.diamonds, 200);
+    assert.deepEqual(afterProfile.bank, bankBefore);
+  }
+});
+
+test("bank tab unlock rejects conflicting, overflowing, and malformed raw banks", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "bankunlockshape", password: "test1234", displayName: "银行开页坏档号"});
+  const token = registered.session.token;
+  const current = seedService.getProfile(token);
+  current.profile.diamonds = 200;
+  assert.equal(seedService.saveProfile(token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  }).ok, true);
+  const baseSeed = seedService.snapshot();
+  const scenarios = [
+    {
+      expectedCode: "bank_representation_conflict",
+      bank: {
+        stoneCoins: 25,
+        items: [{itemId: "item_meat_small", count: 5}],
+        slots: Array.from({length: 90}, () => ({})),
+        unlockedTabs: 1,
+        schemaVersion: 1,
+      },
+    },
+    {
+      expectedCode: "bank_representation_conflict",
+      bank: {
+        stoneCoins: 25,
+        items: [{itemId: "item_meat_small", count: 10000}],
+        slots: [{itemId: "item_meat_small", count: 10000}, ...Array.from({length: 89}, () => ({}))],
+        unlockedTabs: 6,
+        schemaVersion: 1,
+      },
+    },
+    {
+      expectedCode: "bank_schema_invalid",
+      bank: {
+        stoneCoins: 25,
+        items: [{itemId: "item_meat_small", count: 5}],
+        slots: [{itemId: "item_meat_small", count: 5}, ...Array.from({length: 89}, () => ({}))],
+        unlockedTabs: 1,
+        schemaVersion: "not-a-version",
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const seed = structuredClone(baseSeed);
+    const binding = seed.profileBindings[registered.account.accountId];
+    const profile = seed.profiles[binding.playerId].profile;
+    profile.bank = structuredClone(scenario.bank);
+    const profileBefore = structuredClone(profile);
+    const revisionBefore = binding.profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const unlock = service.profileAction(token, {action: "bank_unlock_tab", payload: {tabIndex: 1}});
+    assert.equal(unlock.ok, false);
+    assert.equal(unlock.code, scenario.expectedCode);
+    const after = service.snapshot();
+    const afterBinding = after.profileBindings[registered.account.accountId];
+    assert.equal(afterBinding.profileRevision, revisionBefore);
+    assert.deepEqual(after.profiles[afterBinding.playerId].profile, profileBefore);
+  }
+});
+
 test("training partner action advances the partner tutorial quest server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "partnerquest", "password": "test1234", "displayName": "陪练任务"});
@@ -838,6 +1070,73 @@ test("server shop transactions validate price, currency, backpack, and buy quest
   assert.equal(expensive.ok, false);
   assert.equal(expensive.code, "not_enough_currency");
   assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
+});
+
+test("shop writers preserve an unsafe future backpack without charging currency", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "shopfuturebag", password: "test1234", displayName: "未来背包商店号"});
+  const token = registered.session.token;
+  const profile = battleProfile("未来背包商店号", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.stoneCoins = 100;
+  profile.backpackSlots = Array.from({length: 15}, () => ({}));
+  assert.equal(seedService.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+  const cleanSeed = seedService.snapshot();
+  const seed = structuredClone(cleanSeed);
+  const binding = seed.profileBindings[registered.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots[0] = {
+    itemId: "future_backpack_relic_999",
+    count: 1,
+    futureEnvelope: {assetId: "future_asset_shop"},
+  };
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const buy = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  });
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+
+  const futureEquipmentSeed = structuredClone(cleanSeed);
+  const futureEquipmentProfile = futureEquipmentSeed.profiles[binding.playerId].profile;
+  futureEquipmentProfile.backpackSlots[0] = {itemId: "weapon_wooden_club", count: 1};
+  futureEquipmentProfile.equipmentInstances = {
+    equip_future_shop: {
+      schemaVersion: 2,
+      instanceId: "equip_future_shop",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 7, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      futureAffixes: [{id: "future_shop_power", value: 99}],
+    },
+  };
+  futureEquipmentProfile.nextEquipmentInstanceSerial = 2;
+  futureEquipmentProfile.equipmentSlotsVersion = 5;
+  const futureEquipmentBefore = structuredClone(futureEquipmentProfile);
+  const futureEquipmentService = createAuthService({store: createMemoryAuthStore(futureEquipmentSeed)});
+
+  const futureEquipmentBuy = futureEquipmentService.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  });
+  assert.equal(futureEquipmentBuy.ok, false);
+  assert.equal(futureEquipmentBuy.code, "equipment_instance_schema_future");
+  const futureEquipmentAfter = futureEquipmentService.snapshot();
+  assert.equal(futureEquipmentAfter.profileBindings[registered.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(futureEquipmentAfter.profiles[binding.playerId].profile, futureEquipmentBefore);
 });
 
 test("server shop transactions recover missing active main quest before buy progress", () => {
@@ -1119,13 +1418,292 @@ test("server shop equipment purchase can be equipped immediately", () => {
   assert.equal(buy.profileSummary.profileRevision, 2);
   assert.equal(buy.profile.stoneCoins, 55);
   assert.equal(profileItemCount(buy.profile, "weapon_wooden_club"), 1);
+  const boughtInstanceId = Object.keys(buy.profile.equipmentInstances)[0];
+  assert.ok(boughtInstanceId);
+  assert.equal(buy.profile.equipmentInstances[boughtInstanceId].itemId, "weapon_wooden_club");
+  assert.equal(buy.profile.equipmentInstances[boughtInstanceId].location, "backpack");
+  assert.equal(buy.profile.equipmentInstances[boughtInstanceId].source, "shop");
 
   const equipped = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});
   assert.equal(equipped.ok, true);
   assert.equal(equipped.profileSummary.profileRevision, 3);
   assert.equal(equipped.profile.equipmentSlots.right_hand_weapon, "weapon_wooden_club");
+  assert.equal(equipped.profile.equipmentSlotInstanceIds.right_hand_weapon, boughtInstanceId);
+  assert.equal(equipped.profile.equipmentInstances[boughtInstanceId].location, "equipped");
   assert.equal(profileItemCount(equipped.profile, "weapon_wooden_club"), 0);
   assert.equal(service.getProfile(token).profileSummary.profileRevision, 3);
+});
+
+test("selling or discarding equipment removes its instance and rebuy cannot resurrect enhancement", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "equipassetwriter", "password": "test1234", "displayName": "装备资产号"});
+  const token = registered.session.token;
+  const profile = battleProfile("装备资产号", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.stoneCoins = 500;
+  profile.backpackSlots = Array.from({"length": 15}, () => ({}));
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const firstBuy = service.shopTransaction(token, {
+    "mode": "buy",
+    "shopId": "firebud_equipment_shop",
+    "itemId": "weapon_wooden_club",
+    "amount": 1,
+  });
+  assert.equal(firstBuy.ok, true);
+  const firstInstanceId = Object.keys(firstBuy.profile.equipmentInstances)[0];
+  const equipped = service.equipmentEquip(token, {"itemId": "weapon_wooden_club"});
+  assert.equal(equipped.ok, true);
+
+  const enhancedProfile = service.getProfile(token);
+  enhancedProfile.profile.equipmentEnhancement.right_hand_weapon = {
+    itemId: "weapon_wooden_club",
+    level: 2,
+    history: [],
+  };
+  enhancedProfile.profile.equipmentInstances[firstInstanceId].enhancement = {
+    itemId: "weapon_wooden_club",
+    level: 2,
+    history: [],
+  };
+  assert.equal(service.saveProfile(token, {
+    expectedRevision: enhancedProfile.profileSummary.profileRevision,
+    profile: enhancedProfile.profile,
+  }).ok, true);
+  assert.equal(service.equipmentUnequip(token, {slotId: "right_hand_weapon"}).ok, true);
+
+  const sold = service.shopTransaction(token, {
+    mode: "sell",
+    shopId: "firebud_equipment_shop",
+    itemId: "weapon_wooden_club",
+    amount: 1,
+  });
+  assert.equal(sold.ok, true);
+  assert.equal(profileItemCount(sold.profile, "weapon_wooden_club"), 0);
+  assert.equal(sold.profile.equipmentInstances[firstInstanceId], undefined);
+
+  const secondBuy = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_equipment_shop",
+    itemId: "weapon_wooden_club",
+    amount: 1,
+  });
+  assert.equal(secondBuy.ok, true);
+  const secondInstanceId = Object.keys(secondBuy.profile.equipmentInstances)[0];
+  assert.notEqual(secondInstanceId, firstInstanceId);
+  assert.equal(secondBuy.profile.equipmentInstances[secondInstanceId].enhancement.level, 0);
+
+  const discarded = service.profileAction(token, {
+    action: "backpack_discard_item",
+    payload: {sourceSlotIndex: 0, quantity: 1},
+  });
+  assert.equal(discarded.ok, true);
+  assert.equal(profileItemCount(discarded.profile, "weapon_wooden_club"), 0);
+  assert.deepEqual(discarded.profile.equipmentInstances, {});
+});
+
+test("equipment slot mismatch fails without rewriting or charging the mapped instance", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "equipmismatch", password: "test1234", displayName: "错配装备号"});
+  const token = registered.session.token;
+  const profile = battleProfile("错配装备号", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.stoneCoins = 500;
+  profile.backpackSlots = [
+    {itemId: "equip_frag_wood_basic", count: 5},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentSlots = {right_hand_weapon: "weapon_wooden_club"};
+  profile.equipmentDurability = {right_hand_weapon: 30};
+  profile.equipmentEnhancement = {right_hand_weapon: {itemId: "weapon_wooden_club", level: 0, history: []}};
+  profile.equipmentWearCounters = {right_hand_weapon: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0}};
+  profile.equipmentInstances = {
+    equip_000001: {
+      schemaVersion: 1,
+      instanceId: "equip_000001",
+      itemId: "weapon_wooden_club",
+      location: "equipped",
+      slotId: "right_hand_weapon",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      source: "legacy_mismatch",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {right_hand_weapon: "equip_000001"};
+  profile.equipmentSlotsVersion = 5;
+  assert.equal(seedService.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[registered.account.accountId];
+  const mismatched = seed.profiles[binding.playerId].profile.equipmentInstances.equip_000001;
+  mismatched.itemId = "weapon_stone_axe";
+  mismatched.enhancement.itemId = "weapon_stone_axe";
+  mismatched.wearCounters.itemId = "weapon_stone_axe";
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const before = service.getProfile(token);
+
+  const result = service.equipmentEnhance(token, {slotId: "right_hand_weapon"});
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "equipment_slot_instance_conflict");
+  const after = service.getProfile(token);
+  assert.equal(after.profileSummary.profileRevision, before.profileSummary.profileRevision);
+  assert.equal(after.profile.stoneCoins, before.profile.stoneCoins);
+  assert.equal(after.profile.equipmentInstances.equip_000001.itemId, "weapon_stone_axe");
+  assert.equal(after.profile.equipmentInstances.equip_000001.enhancement.level, 0);
+});
+
+test("using a stackable equipment exp pill consumes exactly one matching instance", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "equipworldpill", password: "test1234", displayName: "经验丹实例号"});
+  const token = registered.session.token;
+  const profile = battleProfile("经验丹实例号", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [
+    {itemId: "item_player_exp_pill_lv131", count: 2},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {};
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 1;
+  const grantProfile = structuredClone(profile);
+  grantProfile.equipmentInstances = {
+    equip_000001: {
+      schemaVersion: 1,
+      instanceId: "equip_000001",
+      itemId: "item_player_exp_pill_lv131",
+      location: "backpack",
+      slotId: "",
+      durability: 0,
+      enhancement: {},
+      wearCounters: {},
+      expPillCharge: {itemId: "item_player_exp_pill_lv131", level: 131, exp: 0, nextExp: 1},
+      source: "test",
+    },
+    equip_000002: {
+      schemaVersion: 1,
+      instanceId: "equip_000002",
+      itemId: "item_player_exp_pill_lv131",
+      location: "backpack",
+      slotId: "",
+      durability: 0,
+      enhancement: {},
+      wearCounters: {},
+      expPillCharge: {itemId: "item_player_exp_pill_lv131", level: 131, exp: 0, nextExp: 1},
+      source: "test",
+    },
+  };
+  grantProfile.nextEquipmentInstanceSerial = 3;
+  grantProfile.equipmentSlotsVersion = 5;
+  assert.equal(service.saveProfile(token, {expectedRevision: 0, profile: grantProfile}).ok, true);
+
+  const used = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {itemId: "item_player_exp_pill_lv131"},
+  });
+
+  assert.equal(used.ok, true);
+  assert.equal(profileItemCount(used.profile, "item_player_exp_pill_lv131"), 1);
+  assert.equal(Object.keys(used.profile.equipmentInstances).length, 1);
+  assert.equal(used.profile.player.level, 131);
+});
+
+test("Lv140 overflow exp charges the exact equipped pill and reports the stored gain", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "equipoverflowpill", password: "test1234", displayName: "满级充丹号"});
+  const token = registered.session.token;
+  const profile = battleProfile("满级充丹号", {level: 140, exp: 0, nextExp: 1, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [
+    {itemId: "item_exp_pill_lv1", count: 1},
+    {itemId: "item_player_exp_pill_lv131", count: 1},
+    ...Array.from({length: 13}, () => ({})),
+  ];
+  profile.equipmentSlots = {};
+  profile.equipmentExpPillCharge = {};
+  profile.equipmentInstances = {
+    equip_empty_pill: {
+      schemaVersion: 1,
+      instanceId: "equip_empty_pill",
+      itemId: "item_exp_pill_lv1",
+      location: "backpack",
+      slotId: "",
+      durability: 0,
+      enhancement: {},
+      wearCounters: {},
+      expPillCharge: {itemId: "item_exp_pill_lv1", level: 1, exp: 0, nextExp: 1, futureCalibration: {keep: true}},
+      source: "test",
+    },
+    equip_consumable_pill: {
+      schemaVersion: 1,
+      instanceId: "equip_consumable_pill",
+      itemId: "item_player_exp_pill_lv131",
+      location: "backpack",
+      slotId: "",
+      durability: 0,
+      enhancement: {},
+      wearCounters: {},
+      expPillCharge: {itemId: "item_player_exp_pill_lv131", level: 131, exp: 0, nextExp: 1},
+      source: "test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.nextEquipmentInstanceSerial = 3;
+  profile.equipmentSlotsVersion = 5;
+  assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+
+  const equipped = service.equipmentEquip(token, {
+    itemId: "item_exp_pill_lv1",
+    equipmentInstanceId: "equip_empty_pill",
+  });
+  assert.equal(equipped.ok, true);
+  assert.equal(equipped.profile.equipmentSlotInstanceIds.exp_pill, "equip_empty_pill");
+  assert.equal(equipped.profile.equipmentExpPillCharge.level, 1);
+  assert.ok(equipped.profile.equipmentExpPillCharge.nextExp > 1);
+  assert.deepEqual(
+    equipped.profile.equipmentInstances.equip_empty_pill.expPillCharge.futureCalibration,
+    {keep: true},
+  );
+
+  const used = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {
+      itemId: "item_player_exp_pill_lv131",
+      equipmentInstanceIds: ["equip_consumable_pill"],
+    },
+  });
+  assert.equal(used.ok, true);
+  assert.equal(used.profile.player.level, 140);
+  assert.equal(profileItemCount(used.profile, "item_player_exp_pill_lv131"), 0);
+  assert.equal(used.profile.equipmentInstances.equip_consumable_pill, undefined);
+  assert.equal(used.profile.equipmentSlotInstanceIds.exp_pill, "equip_empty_pill");
+  assert.ok(used.result.chargedExp > 0);
+  assert.equal(used.result.unchargedExp, 0);
+  assert.equal(used.result.expPillItemId, "item_exp_pill_lv1");
+  assert.equal(used.result.expPillInstanceId, "equip_empty_pill");
+  assert.equal(used.result.expPillLevel, 131);
+  assert.match(used.message, /已储入经验丹/);
+  assert.deepEqual(
+    used.profile.equipmentExpPillCharge,
+    {
+      itemId: "item_exp_pill_lv1",
+      level: 131,
+      exp: 0,
+      nextExp: used.profile.equipmentExpPillCharge.nextExp,
+    },
+  );
+  assert.ok(used.profile.equipmentExpPillCharge.nextExp > 1);
+  assert.deepEqual(
+    {
+      itemId: used.profile.equipmentInstances.equip_empty_pill.expPillCharge.itemId,
+      level: used.profile.equipmentInstances.equip_empty_pill.expPillCharge.level,
+      exp: used.profile.equipmentInstances.equip_empty_pill.expPillCharge.exp,
+      nextExp: used.profile.equipmentInstances.equip_empty_pill.expPillCharge.nextExp,
+    },
+    used.profile.equipmentExpPillCharge,
+  );
+  assert.deepEqual(
+    used.profile.equipmentInstances.equip_empty_pill.expPillCharge.futureCalibration,
+    {keep: true},
+  );
 });
 
 test("server equipment equip validates ownership, swaps equipment, and advances quests", () => {
@@ -1168,6 +1746,7 @@ test("server equipment equip validates ownership, swaps equipment, and advances 
     },
   };
   profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000002"};
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = 3;
   profile.activeQuestId = "quest_equip_weapon";
   profile.questStates = {"quest_equip_weapon": {"questId": "quest_equip_weapon", "status": "active", "progress": 0}};
@@ -1232,6 +1811,7 @@ test("server equipment enhance validates equipped slot, consumes cost, and updat
     },
   };
   profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = 2;
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
 
@@ -1283,8 +1863,26 @@ test("server equipment repair validates missing durability, consumes coins, and 
     },
   };
   profile.equipmentSlotInstanceIds = {"right_hand_weapon": "equip_000001"};
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = 2;
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const unsafeSeed = service.snapshot();
+  const unsafeBinding = unsafeSeed.profileBindings[registered.account.accountId];
+  unsafeSeed.profiles[unsafeBinding.playerId].profile.backpackSlots[0] = {
+    itemId: "future_repair_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  };
+  const unsafeBefore = structuredClone(unsafeSeed.profiles[unsafeBinding.playerId].profile);
+  const unsafeRevision = unsafeBinding.profileRevision;
+  const unsafeService = createAuthService({store: createMemoryAuthStore(unsafeSeed)});
+  const blockedRepair = unsafeService.equipmentRepairAll(token);
+  assert.equal(blockedRepair.ok, false);
+  assert.equal(blockedRepair.code, "backpack_item_unknown");
+  const unsafeAfter = unsafeService.snapshot();
+  assert.equal(unsafeAfter.profileBindings[registered.account.accountId].profileRevision, unsafeRevision);
+  assert.deepEqual(unsafeAfter.profiles[unsafeBinding.playerId].profile, unsafeBefore);
 
   const repaired = service.equipmentRepairAll(token);
   assert.equal(repaired.ok, true);
@@ -1314,6 +1912,8 @@ test("server equipment synthesis validates materials, currency, backpack, and in
     ...Array.from({"length": 14}, () => ({})),
   ];
   profile.equipmentInstances = {};
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = 1;
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
 
@@ -1344,6 +1944,22 @@ test("server player rebirth consumes trial requirements and writes authoritative
   const profile = playerRebirthReadyProfile("转生玩家");
   profile.equipmentSlots = {"accessory_left": "accessory_firebud_charm"};
   profile.equipmentDurability = {"accessory_left": 30};
+  profile.equipmentSlotInstanceIds = {"accessory_left": "equip_rebirth_firebud_charm"};
+  profile.equipmentInstances = {
+    "equip_rebirth_firebud_charm": {
+      "schemaVersion": 1,
+      "instanceId": "equip_rebirth_firebud_charm",
+      "itemId": "accessory_firebud_charm",
+      "location": "equipped",
+      "slotId": "accessory_left",
+      "durability": 30,
+      "enhancement": {"itemId": "accessory_firebud_charm", "level": 0, "history": []},
+      "wearCounters": {"itemId": "accessory_firebud_charm", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+  };
+  profile.equipmentSlotsVersion = 5;
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
   service.updatePlayerPosition(token, {"mapId": "level_grass_trial_ground", "cellX": 12, "cellY": 8, "facing": "east", "moving": false});
 
@@ -1365,6 +1981,11 @@ test("server player rebirth consumes trial requirements and writes authoritative
   assert.equal(profileItemCount(reborn.profile, "ring_fire_trial"), 0);
   assert.equal(profileItemCount(reborn.profile, "ring_wind_trial"), 0);
   assert.equal(profileItemCount(reborn.profile, "armor_grace_cloth_3"), 1);
+  const rebirthEquipmentInstances = Object.values(reborn.profile.equipmentInstances || {}).filter((instance) => (
+    instance && instance.itemId === "armor_grace_cloth_3" && instance.location === "backpack"
+  ));
+  assert.equal(rebirthEquipmentInstances.length, 1);
+  assert.equal(rebirthEquipmentInstances[0].source, "player_rebirth_1");
   assert.equal(reborn.profile.rebirthTrialProofs.shadow_oath_rebirth_guardian, undefined);
   assert.equal(reborn.profile.petInstances.some((pet) => pet.formId === "rebirth_beast_earth_lv50"), false);
   const starter = reborn.profile.petInstances.find((pet) => pet.formId === "rebirth_starter_earth_cub");
@@ -1395,4 +2016,68 @@ test("server player rebirth consumes trial requirements and writes authoritative
   assert.equal(second.ok, false);
   assert.equal(second.code, "player_rebirth_not_ready");
   assert.equal(service.getProfile(token).profileSummary.profileRevision, 2);
+});
+
+test("player rebirth reserves its equipment reward after simulating consumed trial slots", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "rebirthfullbag", password: "test1234", displayName: "转生满包号"});
+  const token = registered.session.token;
+  const profile = playerRebirthReadyProfile("转生满包号");
+  profile.backpackSlots = profile.backpackSlots.map((slot) => (
+    slot && slot.itemId ? slot : {itemId: "item_meat_small", count: 99}
+  ));
+  assert.equal(profile.backpackSlots.every((slot) => slot && slot.itemId), true);
+  assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+  const reborn = service.playerRebirth(token);
+
+  assert.equal(reborn.ok, true);
+  assert.equal(profileItemCount(reborn.profile, "ring_earth_trial"), 0);
+  assert.equal(profileItemCount(reborn.profile, "armor_grace_cloth_3"), 1);
+  assert.equal(Object.values(reborn.profile.equipmentInstances || {}).filter((instance) => (
+    instance && instance.itemId === "armor_grace_cloth_3"
+  )).length, 1);
+});
+
+test("player rebirth instance preflight fails before consuming any requirement", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "rebirthfutureequip", password: "test1234", displayName: "转生未来装备号"});
+  const token = registered.session.token;
+  const profile = playerRebirthReadyProfile("转生未来装备号");
+  const emptyIndex = profile.backpackSlots.findIndex((slot) => !slot || !slot.itemId);
+  assert.ok(emptyIndex >= 0);
+  profile.backpackSlots[emptyIndex] = {itemId: "weapon_wooden_club", count: 1};
+  profile.equipmentInstances = {
+    equip_future_rebirth: {
+      schemaVersion: 1,
+      instanceId: "equip_future_rebirth",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      source: "future_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  assert.equal(seedService.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[registered.account.accountId];
+  seed.profiles[binding.playerId].profile.equipmentInstances.equip_future_rebirth.schemaVersion = 2;
+  seed.profiles[binding.playerId].profile.equipmentInstances.equip_future_rebirth.affixes = [{id: "future", value: 1}];
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const before = service.getProfile(token);
+
+  const reborn = service.playerRebirth(token);
+
+  assert.equal(reborn.ok, false);
+  assert.equal(reborn.code, "equipment_instance_schema_future");
+  const after = service.getProfile(token);
+  assert.equal(after.profileSummary.profileRevision, before.profileSummary.profileRevision);
+  assert.equal(profileItemCount(after.profile, "ring_earth_trial"), 1);
+  assert.equal(after.profile.petInstances.some((pet) => pet.formId === "rebirth_beast_earth_lv50"), true);
+  assert.equal(profileItemCount(after.profile, "armor_grace_cloth_3"), 0);
+  assert.deepEqual(after.profile.equipmentInstances.equip_future_rebirth.affixes, [{id: "future", value: 1}]);
 });

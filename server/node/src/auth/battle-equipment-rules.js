@@ -2,6 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const {requireEquippedEquipmentInstance} = require("./equipment-profile-state");
 
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const WEAPON_SLOTS = Object.freeze(["right_hand_weapon", "left_hand_weapon"]);
@@ -193,7 +194,47 @@ function equipmentSlotActivation(profileValue, catalog, slotId, durabilityValue 
   };
 }
 
-function resolveEquipmentBattleStats(profileValue, catalogValue) {
+function validateEquipmentSlotInstanceForBattle(profile, catalog, slotId, options = {}) {
+  const equipped = requireEquippedEquipmentInstance(profile, catalog, slotId);
+  if (!equipped.ok) {
+    return equipped;
+  }
+  const itemId = equipped.itemId;
+  const item = catalog.itemById.get(itemId);
+  const instance = record(equipped.instance);
+  const maxDurability = itemMaxDurability(item);
+  if (maxDurability > 0) {
+    const slotDurability = clampInteger(record(profile.equipmentDurability)[slotId], 0, maxDurability, maxDurability);
+    const instanceDurability = clampInteger(instance.durability, 0, maxDurability, maxDurability);
+    if (slotDurability !== instanceDurability) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "装备耐久与实例档案不一致。"};
+    }
+  }
+  const slotEnhancement = record(record(profile.equipmentEnhancement)[slotId]);
+  const instanceEnhancement = record(instance.enhancement);
+  const slotEnhancementLevel = enhancementLevelForSlot(slotId, itemId, item, profile.equipmentEnhancement);
+  const instanceEnhancementLevel = String(instanceEnhancement.itemId || itemId) === itemId
+    ? clampInteger(instanceEnhancement.level, 0, itemMaxEnhancement(item), 0)
+    : -1;
+  if (slotEnhancementLevel !== instanceEnhancementLevel || String(slotEnhancement.itemId || itemId) !== itemId) {
+    return {ok: false, code: "equipment_slot_instance_conflict", message: "装备强化与实例档案不一致。"};
+  }
+  if (options.checkWear && maxDurability > 0) {
+    const slotWear = record(record(profile.equipmentWearCounters)[slotId]);
+    const instanceWear = record(instance.wearCounters);
+    for (const key of ["attackCount", "hitCount"]) {
+      if (nonNegativeInteger(slotWear[key], 0) !== nonNegativeInteger(instanceWear[key], 0)) {
+        return {ok: false, code: "equipment_slot_instance_conflict", message: "装备磨损与实例档案不一致。"};
+      }
+    }
+    if (String(slotWear.itemId || itemId) !== itemId || String(instanceWear.itemId || itemId) !== itemId) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "装备磨损物品与实例档案不一致。"};
+    }
+  }
+  return equipped;
+}
+
+function resolveEquipmentBattleStats(profileValue, catalogValue, options = {}) {
   const profile = record(profileValue);
   const catalog = catalogValue && catalogValue.itemById instanceof Map
     ? catalogValue
@@ -208,6 +249,8 @@ function resolveEquipmentBattleStats(profileValue, catalogValue) {
   const spiritIds = [];
   const battleActionIds = [];
   const activeItemBySlot = {};
+  const equipmentStateConflicts = [];
+  const requireInstances = Boolean(options.requireInstances);
 
   for (const slotId of catalog.slotIds) {
     const activation = equipmentSlotActivation(profile, catalog, slotId, durability);
@@ -219,6 +262,22 @@ function resolveEquipmentBattleStats(profileValue, catalogValue) {
     if (!item) {
       slotFacts.push({slotId, itemId, active: false, reason: activation.reason});
       continue;
+    }
+    if (requireInstances && String(item.slot || "") === slotId) {
+      const instanceCheck = validateEquipmentSlotInstanceForBattle(profile, catalog, slotId, {checkWear: true});
+      if (!instanceCheck.ok) {
+        equipmentStateConflicts.push({slotId, itemId, code: String(instanceCheck.code || "equipment_slot_instance_conflict")});
+        slotFacts.push({
+          slotId,
+          itemId,
+          active: false,
+          broken: Boolean(activation.broken),
+          requirementsMet: Boolean(activation.requirementsMet),
+          enhancementLevel: 0,
+          reason: String(instanceCheck.code || "equipment_slot_instance_conflict"),
+        });
+        continue;
+      }
     }
     const enhanceLevel = enhancementLevelForSlot(slotId, itemId, item, enhancement);
     slotFacts.push({
@@ -280,6 +339,8 @@ function resolveEquipmentBattleStats(profileValue, catalogValue) {
     battleActionIds: battleActionIds.sort(),
     attackActionId,
     attackStyle: /(?:bow|shot|throw)/i.test(attackActionId) ? "ranged" : "melee",
+    equipmentStateOk: equipmentStateConflicts.length === 0,
+    equipmentStateConflicts,
   };
 }
 
@@ -291,11 +352,17 @@ function equipmentWearRulesFromDocument(documentValue) {
   });
 }
 
-function activeWearSlot(profile, catalog, slotOrder) {
+function activeWearSlot(profile, catalog, slotOrder, options = {}) {
   const durability = record(profile.equipmentDurability);
   for (const slotId of slotOrder) {
     const activation = equipmentSlotActivation(profile, catalog, slotId, durability);
-    if (activation.active && itemMaxDurability(activation.item) > 0) {
+    if (!activation.active || itemMaxDurability(activation.item) <= 0) {
+      continue;
+    }
+    if (options.requireInstances && !validateEquipmentSlotInstanceForBattle(profile, catalog, slotId, {checkWear: true}).ok) {
+      continue;
+    }
+    if (activation.active) {
       return slotId;
     }
   }
@@ -313,7 +380,6 @@ function applyEquipmentWearUsageToProfile(profileValue, usageValue, catalog, wea
   const slots = record(profile.equipmentSlots);
   const durability = {...record(profile.equipmentDurability)};
   const counters = cloneRecord(profile.equipmentWearCounters);
-  const instances = cloneRecord(profile.equipmentInstances);
   const slotInstanceIds = record(profile.equipmentSlotInstanceIds);
   const durabilityDrops = [];
   const brokenLabels = [];
@@ -362,10 +428,32 @@ function applyEquipmentWearUsageToProfile(profileValue, usageValue, catalog, wea
     }
   }
 
-  const weaponSlot = activeWearSlot({...profile, equipmentDurability: durability}, catalog, WEAPON_SLOTS);
+  const weaponSlot = activeWearSlot({...profile, equipmentDurability: durability}, catalog, WEAPON_SLOTS, {requireInstances: true});
   applyCounter(weaponSlot, "attackCount", usage.weaponAttacks, rules.weaponAttacksPerDurability || 100);
-  const armorSlot = activeWearSlot({...profile, equipmentDurability: durability}, catalog, ARMOR_SLOTS);
+  const armorSlot = activeWearSlot({...profile, equipmentDurability: durability}, catalog, ARMOR_SLOTS, {requireInstances: true});
   applyCounter(armorSlot, "hitCount", usage.armorHits, rules.armorHitsPerDurability || 10);
+
+  let instances = null;
+  for (const slotId of changedSlots) {
+    const instanceCheck = validateEquipmentSlotInstanceForBattle(profile, catalog, slotId, {checkWear: true});
+    if (!instanceCheck.ok) {
+      return {
+        ok: false,
+        code: String(instanceCheck.code || "equipment_slot_instance_conflict"),
+        message: String(instanceCheck.message || "装备实例档案异常，战斗磨损未写入。"),
+        changed: false,
+        usage: {
+          weaponAttacks: nonNegativeInteger(usage.weaponAttacks, 0),
+          armorHits: nonNegativeInteger(usage.armorHits, 0),
+        },
+        durabilityDrops: [],
+        brokenLabels: [],
+      };
+    }
+    if (!instances) {
+      instances = cloneRecord(instanceCheck.state.instances);
+    }
+  }
 
   for (const slotId of changedSlots) {
     const instanceId = String(slotInstanceIds[slotId] || "").trim();
@@ -376,7 +464,10 @@ function applyEquipmentWearUsageToProfile(profileValue, usageValue, catalog, wea
     instances[instanceId] = {
       ...instances[instanceId],
       durability: durability[slotId],
-      wearCounters: cloneRecord(counters[slotId]),
+      wearCounters: {
+        ...cloneRecord(instances[instanceId].wearCounters),
+        ...cloneRecord(counters[slotId]),
+      },
     };
   }
 
@@ -386,6 +477,7 @@ function applyEquipmentWearUsageToProfile(profileValue, usageValue, catalog, wea
     profile.equipmentInstances = instances;
   }
   return {
+    ok: true,
     changed,
     usage: {
       weaponAttacks: nonNegativeInteger(usage.weaponAttacks, 0),

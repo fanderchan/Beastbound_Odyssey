@@ -71,6 +71,7 @@ function profileWithEquipment(name, playerStats, equipment = {}) {
   profile.equipmentWearCounters = wearCounters;
   profile.equipmentInstances = instances;
   profile.equipmentSlotInstanceIds = slotInstanceIds;
+  profile.equipmentSlotsVersion = 5;
   profile.nextEquipmentInstanceSerial = serial;
   return profile;
 }
@@ -225,6 +226,9 @@ test("broken and requirement-inactive equipment cannot affect the public actor",
 });
 
 test("a weapon placed in the wrong slot cannot grant an equipment spirit", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const challenger = seedService.register({username: "eqawrongslotspirit", password: "test1234", displayName: "错槽甲"});
+  const opponent = seedService.register({username: "eqbwrongslotspirit", password: "test1234", displayName: "错槽乙"});
   const challengerProfile = profileWithEquipment("错槽甲", {
     level: 20,
     hp: 120,
@@ -232,9 +236,6 @@ test("a weapon placed in the wrong slot cannot grant an equipment spirit", () =>
     attack: 18,
     defense: 6,
     quick: 70,
-  }, {
-    slots: {head: "weapon_training_spear"},
-    durability: {head: 30},
   });
   const opponentProfile = profileWithEquipment("错槽乙", {
     level: 20,
@@ -244,10 +245,43 @@ test("a weapon placed in the wrong slot cannot grant an equipment spirit", () =>
     defense: 6,
     quick: 60,
   });
-  const fixture = createEquipmentDuel({suffix: "wrongslotspirit", challengerProfile, opponentProfile});
-  const actor = fixture.room.battle.actors.find((entry) => entry.accountId === fixture.challenger.account.accountId);
-  assert.equal(actor.attack, 18);
-  assert.deepEqual(actor.spiritIds, []);
+  assert.equal(seedService.saveProfile(challenger.session.token, {expectedRevision: 0, profile: challengerProfile}).ok, true);
+  assert.equal(seedService.saveProfile(opponent.session.token, {expectedRevision: 0, profile: opponentProfile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[challenger.account.accountId];
+  const unsafe = seed.profiles[binding.playerId].profile;
+  unsafe.equipmentSlots = {head: "weapon_training_spear"};
+  unsafe.equipmentDurability = {head: 30};
+  unsafe.equipmentEnhancement = {head: {itemId: "weapon_training_spear", level: 0, history: []}};
+  unsafe.equipmentWearCounters = {head: {itemId: "weapon_training_spear", attackCount: 0, hitCount: 0}};
+  unsafe.equipmentInstances = {
+    equip_wrong_slot: {
+      schemaVersion: 1,
+      instanceId: "equip_wrong_slot",
+      itemId: "weapon_training_spear",
+      location: "equipped",
+      slotId: "head",
+      durability: 30,
+      enhancement: {itemId: "weapon_training_spear", level: 0, history: []},
+      wearCounters: {itemId: "weapon_training_spear", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+    },
+  };
+  unsafe.equipmentSlotInstanceIds = {head: "equip_wrong_slot"};
+  unsafe.equipmentSlotsVersion = 5;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false,
+  }).ok, true);
+
+  const invite = service.inviteToBattle(challenger.session.token, {username: opponent.account.username});
+
+  assert.equal(invite.ok, false);
+  assert.equal(invite.code, "equipment_profile_field_invalid");
+  assert.deepEqual(service.snapshot().battleRooms, {});
 });
 
 test("equipment stats are applied before the established melee and ranged riding formulas", () => {

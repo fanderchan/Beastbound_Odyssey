@@ -244,6 +244,39 @@ test("starting a real hang session completes the hang tutorial server-side", () 
   assert.equal(started.questMessages.length > 0, true);
 });
 
+test("stopping hang cannot rewrite an unsafe future backpack", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({username: "stopfuturehang", password: "test1234", displayName: "挂机坏档号"});
+  const profile = battleProfile("挂机坏档号", {level: 20, hp: 300, maxHp: 300}, null);
+  profile.backpackSlots = [];
+  profile.hangSession = {
+    enabled: true,
+    mode: "walk",
+    pendingResume: false,
+    lastStopReason: "",
+    schemaVersion: 1,
+  };
+  assert.equal(seedService.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[player.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots = [{
+    itemId: "future_hang_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  }];
+  const before = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const stopped = service.stopHangSession(player.session.token, {reason: "manual"});
+
+  assert.equal(stopped.ok, false);
+  assert.equal(stopped.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[player.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, before);
+});
+
 test("online walk hang uses the formal high-level route and settles authoritative EXP and rewards", () => {
   const catalog = loadPetEncounterCatalog();
   const service = createAuthService({
@@ -473,6 +506,144 @@ test("quest claim endpoint requires reward choice and grants selected rewards se
   assert.equal(claimed.profile.activeQuestId, "quest_open_codex_panel");
 });
 
+test("quest rewards preserve an unsafe future backpack without partial payout", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({username: "questfuturebag", password: "test1234", displayName: "未来背包任务号"});
+  const profile = battleProfile("未来背包任务号", {level: 5, hp: 130, maxHp: 130}, null);
+  profile.stoneCoins = 3;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_capture_wuli";
+  profile.questStates = {quest_capture_wuli: {questId: "quest_capture_wuli", status: "ready", progress: 1}};
+  assert.equal(seedService.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[player.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots = [{
+    itemId: "future_backpack_relic_999",
+    count: 1,
+    futureEnvelope: {assetId: "future_asset_1"},
+  }];
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const claimed = service.questClaim(player.session.token, {
+    questId: "quest_capture_wuli",
+    rewardChoiceId: "rope_pack",
+  });
+  assert.equal(claimed.ok, false);
+  assert.equal(claimed.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[player.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+});
+
+test("quest record preserves unsafe assets before progress or auto-claim", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({username: "questrecordfuture", password: "test1234", displayName: "任务记录坏档号"});
+  const profile = battleProfile("任务记录坏档号", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.stoneCoins = 0;
+  profile.backpackSlots = [];
+  profile.activeQuestId = "quest_open_task_panel";
+  profile.questStates = {quest_open_task_panel: {questId: "quest_open_task_panel", status: "active", progress: 0}};
+  assert.equal(seedService.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[player.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots = [{
+    itemId: "future_quest_record_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  }];
+  const before = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const recorded = service.questRecord(player.session.token, {
+    event: {type: "open_feature", featureId: "quest"},
+  });
+
+  assert.equal(recorded.ok, false);
+  assert.equal(recorded.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[player.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, before);
+});
+
+test("equipment quest reward failure is atomic and cannot be claimed repeatedly", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({username: "questequipatomic", password: "test1234", displayName: "任务装备原子号"});
+  const profile = battleProfile("任务装备原子号", {level: 8, hp: 140, maxHp: 140}, null);
+  profile.stoneCoins = 13;
+  profile.backpackSlots = [
+    {itemId: "weapon_wooden_club", count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {
+    equip_future_quest: {
+      schemaVersion: 1,
+      instanceId: "equip_future_quest",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      source: "future_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.activeQuestId = "quest_use_poison_spirit";
+  profile.questStates = {
+    quest_first_victory: {questId: "quest_first_victory", status: "claimed", progress: 1},
+    quest_buy_spirit_armor: {questId: "quest_buy_spirit_armor", status: "claimed", progress: 1},
+    quest_equip_spirit_armor: {questId: "quest_equip_spirit_armor", status: "claimed", progress: 1},
+    quest_use_moist_spirit: {questId: "quest_use_moist_spirit", status: "claimed", progress: 1},
+    quest_buy_poison_spirit_armor: {questId: "quest_buy_poison_spirit_armor", status: "claimed", progress: 1},
+    quest_equip_poison_spirit_armor: {questId: "quest_equip_poison_spirit_armor", status: "claimed", progress: 1},
+    quest_training_partner_intro: {questId: "quest_training_partner_intro", status: "claimed", progress: 1},
+    quest_group_brawl: {questId: "quest_group_brawl", status: "claimed", progress: 1},
+    quest_use_poison_spirit: {questId: "quest_use_poison_spirit", status: "ready", progress: 1},
+  };
+  assert.equal(seedService.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[player.account.accountId];
+  seed.profiles[binding.playerId].profile.equipmentInstances.equip_future_quest.schemaVersion = 2;
+  seed.profiles[binding.playerId].profile.equipmentInstances.equip_future_quest.affixes = [{id: "future_affix", value: 9}];
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const before = service.getProfile(player.session.token);
+
+  const claimed = service.questClaim(player.session.token, {questId: "quest_use_poison_spirit"});
+
+  assert.equal(claimed.ok, false);
+  assert.equal(claimed.code, "equipment_instance_schema_future");
+  const after = service.getProfile(player.session.token);
+  assert.equal(after.profileSummary.profileRevision, before.profileSummary.profileRevision);
+  assert.equal(after.profile.stoneCoins, before.profile.stoneCoins);
+  assert.equal(profileItemCount(after.profile, "weapon_blessed_club"), 0);
+  assert.equal(after.profile.questStates.quest_use_poison_spirit.status, "ready");
+  assert.deepEqual(after.profile.equipmentInstances.equip_future_quest.affixes, [{id: "future_affix", value: 9}]);
+
+  const fullService = createAuthService({store: createMemoryAuthStore()});
+  const fullPlayer = fullService.register({username: "questequipfull", password: "test1234", displayName: "任务装备满包号"});
+  const fullProfile = structuredClone(profile);
+  fullProfile.player.name = "任务装备满包号";
+  fullProfile.backpackSlots = Array.from({length: 15}, () => ({itemId: "item_meat_small", count: 99}));
+  fullProfile.equipmentInstances = {};
+  assert.equal(fullService.saveProfile(fullPlayer.session.token, {expectedRevision: 0, profile: fullProfile}).ok, true);
+  const fullBefore = fullService.getProfile(fullPlayer.session.token);
+
+  const fullClaim = fullService.questClaim(fullPlayer.session.token, {questId: "quest_use_poison_spirit"});
+
+  assert.equal(fullClaim.ok, false);
+  assert.equal(fullClaim.code, "quest_reward_backpack_full");
+  const fullAfter = fullService.getProfile(fullPlayer.session.token);
+  assert.equal(fullAfter.profileSummary.profileRevision, fullBefore.profileSummary.profileRevision);
+  assert.equal(fullAfter.profile.stoneCoins, fullBefore.profile.stoneCoins);
+  assert.equal(profileItemCount(fullAfter.profile, "weapon_blessed_club"), 0);
+  assert.equal(fullAfter.profile.questStates.quest_use_poison_spirit.status, "ready");
+});
+
 test("party pve capture advances capture quest and stops hang capture target", () => {
   const service = createAuthService({
     "store": createMemoryAuthStore(),
@@ -491,6 +662,23 @@ test("party pve capture advances capture quest and stops hang capture target", (
   profile.backpackSlots = [{"itemId": "capture_poison_wuli_net", "count": 1}];
   profile.captureTools = {"capture_poison_wuli_net": 1};
   profile.equipmentSlots = {"body": "armor_toxin_wrap"};
+  profile.equipmentDurability = {"body": 30};
+  profile.equipmentSlotInstanceIds = {"body": "equip_capture_toxin_wrap"};
+  profile.equipmentInstances = {
+    "equip_capture_toxin_wrap": {
+      "schemaVersion": 1,
+      "instanceId": "equip_capture_toxin_wrap",
+      "itemId": "armor_toxin_wrap",
+      "location": "equipped",
+      "slotId": "body",
+      "durability": 30,
+      "enhancement": {"itemId": "armor_toxin_wrap", "level": 0, "history": []},
+      "wearCounters": {"itemId": "armor_toxin_wrap", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+  };
+  profile.equipmentSlotsVersion = 5;
   profile.activeQuestId = "quest_capture_wuli";
   profile.questStates = {"quest_capture_wuli": {"questId": "quest_capture_wuli", "status": "active", "progress": 0}};
   profile.hangSettings = {"captureTargetCount": 1};
@@ -662,6 +850,22 @@ test("party pve spirit event advances battle quest chain from server event log",
   profile.backpackSlots = [];
   profile.equipmentSlots = {"body": "armor_toxin_wrap"};
   profile.equipmentDurability = {"body": 30};
+  profile.equipmentSlotInstanceIds = {"body": "equip_spirit_toxin_wrap"};
+  profile.equipmentInstances = {
+    "equip_spirit_toxin_wrap": {
+      "schemaVersion": 1,
+      "instanceId": "equip_spirit_toxin_wrap",
+      "itemId": "armor_toxin_wrap",
+      "location": "equipped",
+      "slotId": "body",
+      "durability": 30,
+      "enhancement": {"itemId": "armor_toxin_wrap", "level": 0, "history": []},
+      "wearCounters": {"itemId": "armor_toxin_wrap", "attackCount": 0, "hitCount": 0},
+      "expPillCharge": {},
+      "source": "test_fixture"
+    },
+  };
+  profile.equipmentSlotsVersion = 5;
   profile.activeQuestId = "quest_use_poison_spirit";
   profile.questStates = {
     "quest_first_victory": {"questId": "quest_first_victory", "status": "claimed", "progress": 1},
@@ -725,6 +929,11 @@ test("party pve spirit event advances battle quest chain from server event log",
     sum + (slot && slot.itemId === "weapon_blessed_club" ? Number(slot.count || 0) : 0)
   ), 0);
   assert.equal(blessedClubCount, 1);
+  const blessedClubInstances = Object.values(after.profile.equipmentInstances || {}).filter((instance) => (
+    instance && instance.itemId === "weapon_blessed_club" && instance.location === "backpack"
+  ));
+  assert.equal(blessedClubInstances.length, 1);
+  assert.equal(blessedClubInstances[0].source, "quest:quest_use_poison_spirit");
   assert.equal(profileItemCount(after.profile, "capture_poison_wuli_net"), 1);
   assert.equal(after.profile.captureTools.capture_poison_wuli_net, 1);
 });

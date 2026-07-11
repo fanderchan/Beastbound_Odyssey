@@ -32,6 +32,47 @@ function seedDiamonds(service, token, diamonds) {
   assert.equal(saved.ok, true);
 }
 
+function seedBackpackEquipment(service, token, itemId = "weapon_wooden_club") {
+  const current = service.getProfile(token);
+  assert.equal(current.ok, true);
+  const profile = current.profile;
+  profile.backpackSlots = [
+    {itemId, count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {
+    equip_transfer_guard_1: {
+      schemaVersion: 1,
+      instanceId: "equip_transfer_guard_1",
+      itemId,
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId, level: 2, history: []},
+      wearCounters: {itemId, attackCount: 3, hitCount: 0},
+      expPillCharge: {},
+      source: "transfer_guard_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 2;
+  const saved = service.saveProfile(token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile,
+  });
+  assert.equal(saved.ok, true);
+  return saved;
+}
+
+function snapshotProfileDocument(snapshot, accountId) {
+  const binding = snapshot.profileBindings[accountId];
+  assert.ok(binding);
+  const profileDoc = snapshot.profiles[binding.playerId];
+  assert.ok(profileDoc);
+  return profileDoc;
+}
+
 test("bank deposit and withdraw move server-owned coins and items", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const account = service.register({"username": "bankuser", "password": "test1234", "displayName": "银行号"});
@@ -60,6 +101,262 @@ test("bank deposit and withdraw move server-owned coins and items", () => {
   const overdraft = service.bankWithdraw(account.session.token, {"stoneCoins": 99});
   assert.equal(overdraft.ok, false);
   assert.equal(overdraft.code, "bank_stone_coins_not_enough");
+});
+
+test("equipment bank transfers fail atomically in both directions", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const account = seedService.register({username: "bankequipguard", password: "test1234", displayName: "装备银行号"});
+  const token = account.session.token;
+  seedBackpackEquipment(seedService, token);
+  const beforeDeposit = seedService.getProfile(token);
+  const deposit = seedService.bankDeposit(token, {
+    stoneCoins: 10,
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+  });
+  assert.equal(deposit.ok, false);
+  assert.equal(deposit.code, "bank_equipment_transfer_unsupported");
+  const afterDeposit = seedService.getProfile(token);
+  assert.equal(afterDeposit.profileSummary.profileRevision, beforeDeposit.profileSummary.profileRevision);
+  assert.equal(afterDeposit.profile.stoneCoins, beforeDeposit.profile.stoneCoins);
+  assert.equal(profileItemCount(afterDeposit.profile, "weapon_wooden_club"), 1);
+  assert.deepEqual(afterDeposit.profile.equipmentInstances, beforeDeposit.profile.equipmentInstances);
+  assert.equal(afterDeposit.profile.bank.stoneCoins, beforeDeposit.profile.bank.stoneCoins);
+
+  const seed = seedService.snapshot();
+  const profileDoc = snapshotProfileDocument(seed, account.account.accountId);
+  profileDoc.profile.backpackSlots = Array.from({length: 15}, () => ({}));
+  profileDoc.profile.equipmentInstances = {};
+  profileDoc.profile.bank = {
+    stoneCoins: 25,
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+    slots: [
+      {itemId: "weapon_wooden_club", count: 1},
+      ...Array.from({length: 89}, () => ({})),
+    ],
+    unlockedTabs: 1,
+    schemaVersion: 1,
+  };
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const beforeWithdraw = service.getProfile(token);
+  const withdraw = service.bankWithdraw(token, {
+    stoneCoins: 5,
+    items: [{itemId: "weapon_wooden_club", count: 1, bankSlotIndex: 0}],
+  });
+  assert.equal(withdraw.ok, false);
+  assert.equal(withdraw.code, "bank_equipment_transfer_unsupported");
+  const afterWithdraw = service.getProfile(token);
+  assert.equal(afterWithdraw.profileSummary.profileRevision, beforeWithdraw.profileSummary.profileRevision);
+  assert.equal(afterWithdraw.profile.stoneCoins, beforeWithdraw.profile.stoneCoins);
+  assert.equal(afterWithdraw.profile.bank.stoneCoins, 25);
+  assert.equal(afterWithdraw.profile.bank.slots[0].itemId, "weapon_wooden_club");
+  assert.equal(profileItemCount(afterWithdraw.profile, "weapon_wooden_club"), 0);
+});
+
+test("coin-only bank writes preserve unsupported raw assets atomically", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const account = seedService.register({username: "bankrawguard", password: "test1234", displayName: "银行原档号"});
+  const token = account.session.token;
+  const baseSeed = seedService.snapshot();
+
+  for (const scenario of [
+    {itemId: "weapon_wooden_club", expectedCode: "bank_equipment_transfer_unsupported", action: "deposit"},
+    {itemId: "future_bank_relic_999", expectedCode: "bank_item_unknown", action: "withdraw"},
+  ]) {
+    const seed = structuredClone(baseSeed);
+    const profileDoc = snapshotProfileDocument(seed, account.account.accountId);
+    profileDoc.profile.bank = {
+      stoneCoins: 25,
+      items: [{itemId: scenario.itemId, count: 1, futureEnvelope: {quality: 9}}],
+      slots: [
+        {itemId: scenario.itemId, count: 1, futureEnvelope: {quality: 9}},
+        ...Array.from({length: 89}, () => ({})),
+      ],
+      unlockedTabs: 1,
+      schemaVersion: 1,
+      futureField: {keep: true},
+    };
+    const bankBefore = structuredClone(profileDoc.profile.bank);
+    const stoneCoinsBefore = profileDoc.profile.stoneCoins;
+    const revisionBefore = seed.profileBindings[account.account.accountId].profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+    const result = scenario.action === "deposit"
+      ? service.bankDeposit(token, {stoneCoins: 1})
+      : service.bankWithdraw(token, {stoneCoins: 1});
+    assert.equal(result.ok, false);
+    assert.equal(result.code, scenario.expectedCode);
+    const after = service.snapshot();
+    const afterDoc = snapshotProfileDocument(after, account.account.accountId);
+    assert.equal(after.profileBindings[account.account.accountId].profileRevision, revisionBefore);
+    assert.equal(afterDoc.profile.stoneCoins, stoneCoinsBefore);
+    assert.deepEqual(afterDoc.profile.bank, bankBefore);
+  }
+});
+
+test("coin-only bank writes reject conflicting, overflowing, and malformed raw banks", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const account = seedService.register({username: "bankrawshape", password: "test1234", displayName: "银行坏档号"});
+  const token = account.session.token;
+  const baseSeed = seedService.snapshot();
+  const emptySlots = () => Array.from({length: 90}, () => ({}));
+  const scenarios = [
+    {
+      expectedCode: "bank_representation_conflict",
+      bank: {stoneCoins: 25, items: [{itemId: "item_meat_small", count: 5}], slots: emptySlots(), unlockedTabs: 1, schemaVersion: 1},
+    },
+    {
+      expectedCode: "bank_representation_conflict",
+      bank: {
+        stoneCoins: 25,
+        items: [{itemId: "item_meat_small", count: 10000}],
+        slots: [{itemId: "item_meat_small", count: 10000}, ...Array.from({length: 89}, () => ({}))],
+        unlockedTabs: 6,
+        schemaVersion: 1,
+      },
+    },
+    {
+      expectedCode: "bank_schema_invalid",
+      bank: {
+        stoneCoins: 25,
+        items: [{itemId: "item_meat_small", count: 5}],
+        slots: [{itemId: "item_meat_small", count: 5}, ...Array.from({length: 89}, () => ({}))],
+        unlockedTabs: 1,
+        schemaVersion: "not-a-version",
+      },
+    },
+    {
+      expectedCode: "bank_representation_conflict",
+      bank: {
+        stoneCoins: 25,
+        items: [],
+        slots: [{futureEnvelope: {assetId: "future_empty_slot_asset"}}, ...Array.from({length: 89}, () => ({}))],
+        unlockedTabs: 1,
+        schemaVersion: 1,
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const seed = structuredClone(baseSeed);
+    const profileDoc = snapshotProfileDocument(seed, account.account.accountId);
+    profileDoc.profile.bank = structuredClone(scenario.bank);
+    const bankBefore = structuredClone(profileDoc.profile.bank);
+    const playerCoinsBefore = profileDoc.profile.stoneCoins;
+    const revisionBefore = seed.profileBindings[account.account.accountId].profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const result = service.bankWithdraw(token, {stoneCoins: 1});
+    assert.equal(result.ok, false);
+    assert.equal(result.code, scenario.expectedCode);
+    const after = service.snapshot();
+    const afterDoc = snapshotProfileDocument(after, account.account.accountId);
+    assert.equal(after.profileBindings[account.account.accountId].profileRevision, revisionBefore);
+    assert.equal(afterDoc.profile.stoneCoins, playerCoinsBefore);
+    assert.deepEqual(afterDoc.profile.bank, bankBefore);
+  }
+});
+
+test("bank and market writers preserve unsafe future backpack assets", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "econfbags", password: "test1234", displayName: "未来背包卖家"});
+  const buyer = seedService.register({username: "econfbagb", password: "test1234", displayName: "未来背包买家"});
+  assert.equal(seller.ok, true);
+  assert.equal(buyer.ok, true);
+  const seed = seedService.snapshot();
+  for (const accountId of [seller.account.accountId, buyer.account.accountId]) {
+    const profileDoc = snapshotProfileDocument(seed, accountId);
+    profileDoc.profile.backpackSlots[0] = {
+      itemId: "future_backpack_relic_999",
+      count: 1,
+      futureEnvelope: {assetId: `future_${accountId}`},
+    };
+  }
+  const sellerDoc = snapshotProfileDocument(seed, seller.account.accountId);
+  sellerDoc.profile.backpackSlots[1] = {itemId: "item_meat_small", count: 1};
+  const buyerDoc = snapshotProfileDocument(seed, buyer.account.accountId);
+  buyerDoc.profile.bank = {stoneCoins: 25, items: [], slots: Array.from({length: 90}, () => ({})), unlockedTabs: 1, schemaVersion: 1};
+  seed.marketListings.future_backpack_listing = {
+    listingId: "future_backpack_listing",
+    sellerAccountId: seller.account.accountId,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+    createdAt: "2026-07-12T00:00:00.000Z",
+    schemaVersion: 1,
+  };
+  const sellerBefore = structuredClone(sellerDoc.profile);
+  const buyerBefore = structuredClone(buyerDoc.profile);
+  const listingBefore = structuredClone(seed.marketListings.future_backpack_listing);
+  const sellerRevision = seed.profileBindings[seller.account.accountId].profileRevision;
+  const buyerRevision = seed.profileBindings[buyer.account.accountId].profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const bank = service.bankWithdraw(buyer.session.token, {stoneCoins: 1});
+  assert.equal(bank.ok, false);
+  assert.equal(bank.code, "backpack_item_unknown");
+  const create = service.createMarketListing(seller.session.token, {itemId: "item_meat_small", count: 1, unitPrice: 10});
+  assert.equal(create.ok, false);
+  assert.equal(create.code, "backpack_item_unknown");
+  const buy = service.buyMarketListing(buyer.session.token, {listingId: "future_backpack_listing"});
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "backpack_item_unknown");
+  const cancel = service.cancelMarketListing(seller.session.token, {listingId: "future_backpack_listing"});
+  assert.equal(cancel.ok, false);
+  assert.equal(cancel.code, "backpack_item_unknown");
+
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[seller.account.accountId].profileRevision, sellerRevision);
+  assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, buyerRevision);
+  assert.deepEqual(snapshotProfileDocument(after, seller.account.accountId).profile, sellerBefore);
+  assert.deepEqual(snapshotProfileDocument(after, buyer.account.accountId).profile, buyerBefore);
+  assert.deepEqual(after.marketListings.future_backpack_listing, listingBefore);
+});
+
+test("legacy and mirrored capture-tool envelopes fail closed before bank writes", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const account = seedService.register({username: "legacytoolguard", password: "test1234", displayName: "旧工具保护号"});
+  const token = account.session.token;
+  const baseSeed = seedService.snapshot();
+  const scenarios = [
+    {
+      expectedCode: "backpack_item_unknown",
+      prepare(profile) {
+        delete profile.backpackSlots;
+        profile.captureTools = {capture_rope_basic: 3, future_capture_tool_999: 7};
+      },
+    },
+    {
+      expectedCode: "backpack_asset_state_invalid",
+      prepare(profile) {
+        delete profile.backpackSlots;
+        profile.captureTools = {capture_rope_basic: 10000};
+      },
+    },
+    {
+      expectedCode: "backpack_item_unknown",
+      prepare(profile) {
+        profile.backpackSlots = [{itemId: "capture_rope_basic", count: 3}, ...Array.from({length: 14}, () => ({}))];
+        profile.captureTools = {capture_rope_basic: 3, future_capture_tool_999: 7};
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const seed = structuredClone(baseSeed);
+    const profileDoc = snapshotProfileDocument(seed, account.account.accountId);
+    scenario.prepare(profileDoc.profile);
+    profileDoc.profile.bank = {stoneCoins: 25, items: [], slots: Array.from({length: 90}, () => ({})), unlockedTabs: 1, schemaVersion: 1};
+    const profileBefore = structuredClone(profileDoc.profile);
+    const revisionBefore = seed.profileBindings[account.account.accountId].profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const result = service.bankWithdraw(token, {stoneCoins: 1});
+    assert.equal(result.ok, false);
+    assert.equal(result.code, scenario.expectedCode);
+    const after = service.snapshot();
+    assert.equal(after.profileBindings[account.account.accountId].profileRevision, revisionBefore);
+    assert.deepEqual(snapshotProfileDocument(after, account.account.accountId).profile, profileBefore);
+  }
 });
 
 test("bank item slots preserve stacks and enforce unlocked pages", () => {
@@ -233,6 +530,178 @@ test("market listings sell through with default tax", () => {
   assert.equal(claimed.claim.currency.stoneCoins, 39);
   assert.equal(claimed.profile.stoneCoins, 159);
   assert.equal(claimed.mail, null);
+});
+
+test("equipment market create, buy, and cancel preserve all assets and historical listings", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "marketequip_seller", password: "test1234", displayName: "装备卖家"});
+  const buyer = seedService.register({username: "marketequip_buyer", password: "test1234", displayName: "装备买家"});
+  seedBackpackEquipment(seedService, seller.session.token);
+
+  const sellerBeforeCreate = seedService.getProfile(seller.session.token);
+  const create = seedService.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(create.ok, false);
+  assert.equal(create.code, "market_equipment_transfer_unsupported");
+  const sellerAfterCreate = seedService.getProfile(seller.session.token);
+  assert.equal(sellerAfterCreate.profileSummary.profileRevision, sellerBeforeCreate.profileSummary.profileRevision);
+  assert.equal(profileItemCount(sellerAfterCreate.profile, "weapon_wooden_club"), 1);
+  assert.deepEqual(sellerAfterCreate.profile.equipmentInstances, sellerBeforeCreate.profile.equipmentInstances);
+  assert.deepEqual(seedService.snapshot().marketListings, {});
+
+  const seed = seedService.snapshot();
+  const sellerDoc = snapshotProfileDocument(seed, seller.account.accountId);
+  sellerDoc.profile.backpackSlots = Array.from({length: 15}, () => ({}));
+  sellerDoc.profile.equipmentInstances = {};
+  seed.marketListings.legacy_equipment_listing = {
+    listingId: "legacy_equipment_listing",
+    sellerAccountId: seller.account.accountId,
+    itemId: "weapon_wooden_club",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+    createdAt: "2026-07-12T00:00:00.000Z",
+    schemaVersion: 1,
+  };
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const buyerBefore = service.getProfile(buyer.session.token);
+  const sellerBefore = service.getProfile(seller.session.token);
+
+  const buy = service.buyMarketListing(buyer.session.token, {listingId: "legacy_equipment_listing"});
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "market_equipment_transfer_unsupported");
+  const buyerAfter = service.getProfile(buyer.session.token);
+  assert.equal(buyerAfter.profileSummary.profileRevision, buyerBefore.profileSummary.profileRevision);
+  assert.equal(buyerAfter.profile.stoneCoins, buyerBefore.profile.stoneCoins);
+  assert.equal(profileItemCount(buyerAfter.profile, "weapon_wooden_club"), 0);
+  assert.ok(service.snapshot().marketListings.legacy_equipment_listing);
+
+  const cancel = service.cancelMarketListing(seller.session.token, {listingId: "legacy_equipment_listing"});
+  assert.equal(cancel.ok, false);
+  assert.equal(cancel.code, "market_equipment_transfer_unsupported");
+  const sellerAfter = service.getProfile(seller.session.token);
+  assert.equal(sellerAfter.profileSummary.profileRevision, sellerBefore.profileSummary.profileRevision);
+  assert.equal(profileItemCount(sellerAfter.profile, "weapon_wooden_club"), 0);
+  assert.deepEqual(sellerAfter.profile.equipmentInstances, {});
+  assert.ok(service.snapshot().marketListings.legacy_equipment_listing);
+});
+
+test("unknown market listings cannot charge buyers or disappear on buy and cancel", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "marketunknownseller", password: "test1234", displayName: "未知挂单卖家"});
+  const buyer = seedService.register({username: "marketunknownbuyer", password: "test1234", displayName: "未知挂单买家"});
+  const seed = seedService.snapshot();
+  seed.marketListings.future_unknown_listing = {
+    listingId: "future_unknown_listing",
+    sellerAccountId: seller.account.accountId,
+    itemId: "future_market_relic_999",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+    createdAt: "2026-07-12T00:00:00.000Z",
+    schemaVersion: 1,
+    futureEnvelope: {quality: 9},
+  };
+  const listingBefore = structuredClone(seed.marketListings.future_unknown_listing);
+  const buyerBefore = snapshotProfileDocument(seed, buyer.account.accountId);
+  const sellerBefore = snapshotProfileDocument(seed, seller.account.accountId);
+  const buyerCoinsBefore = buyerBefore.profile.stoneCoins;
+  const buyerRevisionBefore = seed.profileBindings[buyer.account.accountId].profileRevision;
+  const sellerRevisionBefore = seed.profileBindings[seller.account.accountId].profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const buy = service.buyMarketListing(buyer.session.token, {listingId: "future_unknown_listing"});
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "market_item_unknown");
+  let after = service.snapshot();
+  assert.deepEqual(after.marketListings.future_unknown_listing, listingBefore);
+  assert.equal(snapshotProfileDocument(after, buyer.account.accountId).profile.stoneCoins, buyerCoinsBefore);
+  assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, buyerRevisionBefore);
+
+  const cancel = service.cancelMarketListing(seller.session.token, {listingId: "future_unknown_listing"});
+  assert.equal(cancel.ok, false);
+  assert.equal(cancel.code, "market_item_unknown");
+  after = service.snapshot();
+  assert.deepEqual(after.marketListings.future_unknown_listing, listingBefore);
+  assert.equal(after.profileBindings[seller.account.accountId].profileRevision, sellerRevisionBefore);
+  assert.deepEqual(snapshotProfileDocument(after, seller.account.accountId).profile, sellerBefore.profile);
+});
+
+test("future and malformed market listing schemas preserve listings and wallets", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "marketschemaseller", password: "test1234", displayName: "版本挂单卖家"});
+  const buyer = seedService.register({username: "marketschemabuyer", password: "test1234", displayName: "版本挂单买家"});
+  const baseSeed = seedService.snapshot();
+
+  for (const scenario of [
+    {schemaVersion: 2, expectedCode: "market_listing_schema_future"},
+    {schemaVersion: "not-a-version", expectedCode: "market_listing_schema_invalid"},
+  ]) {
+    const seed = structuredClone(baseSeed);
+    seed.marketListings.schema_guard_listing = {
+      listingId: "schema_guard_listing",
+      sellerAccountId: seller.account.accountId,
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 20,
+      currency: "stoneCoins",
+      createdAt: "2026-07-12T00:00:00.000Z",
+      schemaVersion: scenario.schemaVersion,
+    };
+    const listingBefore = structuredClone(seed.marketListings.schema_guard_listing);
+    const buyerBefore = structuredClone(snapshotProfileDocument(seed, buyer.account.accountId).profile);
+    const buyerRevision = seed.profileBindings[buyer.account.accountId].profileRevision;
+    const sellerRevision = seed.profileBindings[seller.account.accountId].profileRevision;
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+    const buy = service.buyMarketListing(buyer.session.token, {listingId: "schema_guard_listing"});
+    assert.equal(buy.ok, false);
+    assert.equal(buy.code, scenario.expectedCode);
+    let after = service.snapshot();
+    assert.deepEqual(after.marketListings.schema_guard_listing, listingBefore);
+    assert.deepEqual(snapshotProfileDocument(after, buyer.account.accountId).profile, buyerBefore);
+    assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, buyerRevision);
+
+    const cancel = service.cancelMarketListing(seller.session.token, {listingId: "schema_guard_listing"});
+    assert.equal(cancel.ok, false);
+    assert.equal(cancel.code, scenario.expectedCode);
+    after = service.snapshot();
+    assert.deepEqual(after.marketListings.schema_guard_listing, listingBefore);
+    assert.equal(after.profileBindings[seller.account.accountId].profileRevision, sellerRevision);
+  }
+});
+
+test("a missing market seller cannot make an escrowed listing disappear", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const buyer = seedService.register({username: "mktmissbuyer", password: "test1234", displayName: "失联卖家买家"});
+  assert.equal(buyer.ok, true);
+  const seed = seedService.snapshot();
+  seed.marketListings.missing_seller_listing = {
+    listingId: "missing_seller_listing",
+    sellerAccountId: "acc_missing_seller",
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+    createdAt: "2026-07-12T00:00:00.000Z",
+    schemaVersion: 1,
+  };
+  const listingBefore = structuredClone(seed.marketListings.missing_seller_listing);
+  const buyerBefore = structuredClone(snapshotProfileDocument(seed, buyer.account.accountId).profile);
+  const revisionBefore = seed.profileBindings[buyer.account.accountId].profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const result = service.buyMarketListing(buyer.session.token, {listingId: "missing_seller_listing"});
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "market_seller_missing");
+  const after = service.snapshot();
+  assert.deepEqual(after.marketListings.missing_seller_listing, listingBefore);
+  assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(snapshotProfileDocument(after, buyer.account.accountId).profile, buyerBefore);
 });
 
 test("market listings support item tax overrides and cancellation", () => {
@@ -474,4 +943,56 @@ test("trade accept atomically exchanges both player offers", () => {
   const duplicate = service.acceptTrade(beta.session.token, {"tradeId": proposal.trade.tradeId});
   assert.equal(duplicate.ok, false);
   assert.equal(duplicate.code, "trade_offer_missing");
+});
+
+test("equipment trade offers and counters fail before offer or profile mutation", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const alpha = seedService.register({username: "tradeequip_a", password: "test1234", displayName: "装备交易甲"});
+  const beta = seedService.register({username: "tradeequip_b", password: "test1234", displayName: "装备交易乙"});
+  seedBackpackEquipment(seedService, alpha.session.token);
+  assert.equal(seedService.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(seedService.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const alphaBeforeProposal = seedService.getProfile(alpha.session.token);
+  const proposal = seedService.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeequip_b",
+    stoneCoins: 10,
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+  });
+  assert.equal(proposal.ok, false);
+  assert.equal(proposal.code, "trade_equipment_transfer_unsupported");
+  const alphaAfterProposal = seedService.getProfile(alpha.session.token);
+  assert.equal(alphaAfterProposal.profileSummary.profileRevision, alphaBeforeProposal.profileSummary.profileRevision);
+  assert.equal(alphaAfterProposal.profile.stoneCoins, alphaBeforeProposal.profile.stoneCoins);
+  assert.equal(profileItemCount(alphaAfterProposal.profile, "weapon_wooden_club"), 1);
+  assert.deepEqual(alphaAfterProposal.profile.equipmentInstances, alphaBeforeProposal.profile.equipmentInstances);
+  assert.deepEqual(seedService.snapshot().tradeOffers, {});
+
+  const counterSeedService = createAuthService({store: createMemoryAuthStore()});
+  const giver = counterSeedService.register({username: "tradeequip_offer", password: "test1234", displayName: "普通报价方"});
+  const accepter = counterSeedService.register({username: "tradeequip_counter", password: "test1234", displayName: "装备还价方"});
+  seedBackpack(counterSeedService, giver.session.token, [{itemId: "item_meat_small", count: 2}]);
+  seedBackpackEquipment(counterSeedService, accepter.session.token);
+  assert.equal(counterSeedService.updatePlayerPosition(giver.session.token, {mapId: "firebud_training_yard", cellX: 20, cellY: 20, facing: "east", moving: false}).ok, true);
+  assert.equal(counterSeedService.updatePlayerPosition(accepter.session.token, {mapId: "firebud_training_yard", cellX: 21, cellY: 20, facing: "west", moving: false}).ok, true);
+  const normalProposal = counterSeedService.proposeTrade(giver.session.token, {
+    targetUsername: "tradeequip_counter",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(normalProposal.ok, true);
+  const giverBeforeCounter = counterSeedService.getProfile(giver.session.token);
+  const accepterBeforeCounter = counterSeedService.getProfile(accepter.session.token);
+  const counterAccept = counterSeedService.acceptTrade(accepter.session.token, {
+    tradeId: normalProposal.trade.tradeId,
+    stoneCoins: 7,
+    items: [{itemId: "weapon_wooden_club", count: 1}],
+  });
+  assert.equal(counterAccept.ok, false);
+  assert.equal(counterAccept.code, "trade_equipment_transfer_unsupported");
+  const giverAfterCounter = counterSeedService.getProfile(giver.session.token);
+  const accepterAfterCounter = counterSeedService.getProfile(accepter.session.token);
+  assert.equal(giverAfterCounter.profileSummary.profileRevision, giverBeforeCounter.profileSummary.profileRevision);
+  assert.equal(accepterAfterCounter.profileSummary.profileRevision, accepterBeforeCounter.profileSummary.profileRevision);
+  assert.equal(profileItemCount(giverAfterCounter.profile, "item_meat_small"), 2);
+  assert.equal(profileItemCount(accepterAfterCounter.profile, "weapon_wooden_club"), 1);
+  assert.ok(counterSeedService.snapshot().tradeOffers[normalProposal.trade.tradeId]);
 });

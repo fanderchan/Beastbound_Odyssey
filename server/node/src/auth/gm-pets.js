@@ -29,6 +29,7 @@ function createGmPetsDomain(ctx) {
     profileStoragePetCount,
     profileSummaryForAccount,
     publicAccount,
+    rawBackpackAssetConflict,
     randomId,
     recordGmCommandAudit,
     recordProfilePetCodexForm,
@@ -75,6 +76,12 @@ function createGmPetsDomain(ctx) {
     const sourceProfile = ensured.profileDoc && ensured.profileDoc.profile;
     if (!isObjectRecord(sourceProfile)) {
       return auditedFailure(data, access, "profile_missing", "请先创建角色档案。");
+    }
+    const assetConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(sourceProfile)
+      : {code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+    if (assetConflict) {
+      return auditedFailure(data, access, assetConflict.code, assetConflict.message);
     }
     const profile = clone(sourceProfile);
     const partyCount = profilePartyVisiblePetCount(profile);
@@ -148,6 +155,12 @@ function createGmPetsDomain(ctx) {
     const sourceProfile = ensured.profileDoc && ensured.profileDoc.profile;
     if (!isObjectRecord(sourceProfile)) {
       return auditedFailure(data, access, "profile_missing", "请先创建角色档案。");
+    }
+    const assetConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(sourceProfile)
+      : {code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+    if (assetConflict) {
+      return auditedFailure(data, access, assetConflict.code, assetConflict.message);
     }
     const profile = clone(sourceProfile);
     const instances = profilePetInstances(profile);

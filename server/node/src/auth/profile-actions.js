@@ -31,6 +31,7 @@ function createProfileActionsDomain(ctx) {
     persistProfileForAccount,
     profileActionLogLines,
     profileBackpackSlots,
+    rawBackpackAssetConflict,
     profileBindingForAccount,
     profileSummaryForAccount,
     publicAccount,
@@ -41,6 +42,12 @@ function createProfileActionsDomain(ctx) {
     resolveHangOrigin,
     save,
   } = ctx;
+
+  function backpackAssetConflict(profile) {
+    return typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(profile)
+      : {ok: false, code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+  }
 
   function recordCurrentBattlePetQuest(profile) {
     const activePetInstanceId = String(profile && profile.activePetInstanceId || "").trim();
@@ -80,6 +87,13 @@ function createProfileActionsDomain(ctx) {
       : null;
     if (!profile) {
       return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const backpackConflict = backpackAssetConflict(profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
         profileBinding: ensured.binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
@@ -205,6 +219,13 @@ function createProfileActionsDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const backpackConflict = backpackAssetConflict(profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
+        profileBinding: ensured.binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
     const previousSession = normalizeHangSession(profile.hangSession);
     const reason = normalizeHangStopReason(payload.reason || payload.message || "manual");
     const nextSession = {
@@ -257,6 +278,13 @@ function createProfileActionsDomain(ctx) {
     const action = normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command);
     if (!PROFILE_ACTION_IDS.has(action)) {
       return fail("profile_action_invalid", "档案操作不正确。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const backpackConflict = backpackAssetConflict(profileDoc.profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
@@ -381,6 +409,13 @@ function createProfileActionsDomain(ctx) {
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const backpackConflict = backpackAssetConflict(profileDoc.profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });

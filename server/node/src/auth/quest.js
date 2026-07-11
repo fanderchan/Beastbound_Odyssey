@@ -19,6 +19,7 @@ function createQuestDomain(ctx) {
     questById,
     questIsOptional,
     questRewardChoices,
+    rawBackpackAssetConflict,
     recordQuestEventByIdToProfile,
     recordQuestEventToProfile,
     resolveSession,
@@ -36,6 +37,15 @@ function createQuestDomain(ctx) {
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const assetConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(profileDoc.profile)
+      : {code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+    if (assetConflict) {
+      return fail(assetConflict.code, assetConflict.message, {
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
@@ -101,6 +111,15 @@ function createQuestDomain(ctx) {
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const assetConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(profileDoc.profile)
+      : {code: "backpack_asset_guard_missing", message: "背包安全校验暂不可用，本次操作已取消，请联系GM处理。"};
+    if (assetConflict) {
+      return fail(assetConflict.code, assetConflict.message, {
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });

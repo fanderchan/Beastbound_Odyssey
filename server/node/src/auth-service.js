@@ -53,6 +53,18 @@ const {
   resolveEquipmentBattleStats,
 } = require("./auth/battle-equipment-rules");
 const {
+  EQUIPMENT_SLOTS_VERSION,
+  auditEquipmentProfileState,
+  consumeBackpackEquipmentInstances,
+  firstEquipmentTransferEntry,
+  grantFreshBackpackEquipmentInstances,
+  isEquipmentItemId: catalogHasEquipmentItemId,
+  moveBackpackEquipmentInstanceToSlot,
+  moveEquippedEquipmentInstanceToBackpack,
+  readEquipmentInstanceState,
+  requireEquippedEquipmentInstance,
+} = require("./auth/equipment-profile-state");
+const {
   comboDamageFor,
   loadBattleCombatFormula,
   resolvePhysicalDamage,
@@ -261,7 +273,6 @@ const BACKPACK_UNLOCK_COSTS = [50, 100, 200, 400, 1000];
 const DEFAULT_STONE_COINS = 120;
 const DEFAULT_DIAMONDS = 0;
 const DEV_DIAMONDS_GRANT_VERSION = 0;
-const EQUIPMENT_SLOTS_VERSION = 5;
 const EQUIPMENT_STARTER_SET_VERSION = 1;
 const EXP_PILL_STARTER_VERSION = 2;
 const DEFAULT_RECORD_POINT = {
@@ -518,6 +529,9 @@ function createAuthService(options = {}) {
     calculateAward: battleAwardExpEntry,
     enableAuthorityV1: true,
   });
+  const battleVictoryRewardResolver = typeof options.battleVictoryRewardResolver === "function"
+    ? options.battleVictoryRewardResolver
+    : battleVictoryRewardForRoom;
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
   const movementStepRateByAccountId = new Map();
@@ -852,7 +866,43 @@ function createAuthService(options = {}) {
     if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
       return fail("invalid_profile", "角色档案必须是对象。");
     }
+    const backpackConflict = rawBackpackAssetConflict(profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message);
+    }
+    const bankConflict = rawProfileBankAssetConflict(profile.bank);
+    if (bankConflict) {
+      return fail(bankConflict.code, bankConflict.message);
+    }
+    const equipmentAudit = fullSaveEquipmentAuditConflict(profile);
+    if (equipmentAudit) {
+      return fail(equipmentAudit.code, equipmentAudit.message);
+    }
     const binding = profileBindingForAccount(data, resolved.account, now);
+    const currentProfileDoc = data.profiles[binding.playerId] || null;
+    if (currentProfileDoc && currentProfileDoc.profile) {
+      const currentBackpackConflict = rawBackpackAssetConflict(currentProfileDoc.profile);
+      if (currentBackpackConflict) {
+        return fail(currentBackpackConflict.code, currentBackpackConflict.message, {
+          profileBinding: binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      const currentBankConflict = rawProfileBankAssetConflict(currentProfileDoc.profile.bank);
+      if (currentBankConflict) {
+        return fail(currentBankConflict.code, currentBankConflict.message, {
+          profileBinding: binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      const currentEquipmentAudit = fullSaveEquipmentAuditConflict(currentProfileDoc.profile);
+      if (currentEquipmentAudit) {
+        return fail(currentEquipmentAudit.code, currentEquipmentAudit.message, {
+          profileBinding: binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+    }
     const currentRevision = Number(binding.profileRevision || 0);
     const expectedRevision = Number(payload.expectedRevision || 0);
     if (expectedRevision !== currentRevision) {
@@ -915,6 +965,13 @@ function createAuthService(options = {}) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const backpackConflict = rawBackpackAssetConflict(profileDoc.profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
     const profile = clone(profileDoc.profile);
     const currency = shopCurrencyFor(shopId);
     const currencyLabel = shopCurrencyLabel(currency);
@@ -935,6 +992,16 @@ function createAuthService(options = {}) {
         return fail("backpack_full", "背包已满。");
       }
       profile.backpackSlots = normalizeBackpackSlots(addResult.slots);
+      const instanceGrant = grantFreshBackpackEquipmentInstances(
+        profile,
+        battleEquipmentCatalog,
+        [{itemId, count: amount}],
+        "shop",
+        {expToNextLevel: battleExpToNextLevel},
+      );
+      if (!instanceGrant.ok) {
+        return fail(instanceGrant.code, instanceGrant.message);
+      }
       profile.captureTools = captureToolBagFromProfile(profile);
       setProfileCurrencyAmount(profile, currency, currentCurrency - totalPrice);
       transaction = {
@@ -973,6 +1040,16 @@ function createAuthService(options = {}) {
       const totalPrice = shopSellPrice(shopId, entry) * amount;
       if (currency === SHOP_CURRENCY_STONE_COINS && profileCurrencyAmount(profile, currency) + totalPrice > PROFILE_STONE_COIN_LIMIT) {
         return fail("wallet_stone_coin_limit", "身上石币已达上限，请先存入银行。");
+      }
+      const instanceConsume = consumeBackpackEquipmentInstances(
+        profile,
+        battleEquipmentCatalog,
+        itemId,
+        amount,
+        {instanceIds: payload.equipmentInstanceIds},
+      );
+      if (!instanceConsume.ok && isEquipmentAssetItemId(itemId)) {
+        return fail(instanceConsume.code, instanceConsume.message);
       }
       profile.backpackSlots = consumeBackpackItem(backpackSlots, itemId, amount);
       profile.captureTools = captureToolBagFromProfile(profile);
@@ -1051,7 +1128,9 @@ function createAuthService(options = {}) {
       });
     }
     const profile = clone(profileDoc.profile);
-    const equipResult = equipItemToProfile(profile, itemId);
+    const equipResult = equipItemToProfile(profile, itemId, {
+      instanceId: payload.equipmentInstanceId || payload.instanceId,
+    });
     if (!equipResult.ok) {
       return fail(equipResult.code || "equipment_equip_failed", equipResult.message || "装备失败。", {
         profileBinding: binding,
@@ -1838,6 +1917,10 @@ function createAuthService(options = {}) {
         const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
           ? clone(profileDoc.profile)
           : null;
+        const assetConflict = profile ? rawBackpackAssetConflict(profile) : null;
+        if (assetConflict) {
+          return fail(assetConflict.code, assetConflict.message);
+        }
         const hangSession = normalizeHangSession(profile && profile.hangSession);
         const expectedSlot = Math.max(0, Math.trunc(Number(authorization.previousConsumedSlot || 0)));
         const nextSlot = Math.max(0, Math.trunc(Number(authorization.slot || 0)));
@@ -2009,6 +2092,7 @@ function createAuthService(options = {}) {
       randomId,
       battleActorRules,
       battleRandomAuthority,
+      battleVictoryRewardResolver,
     });
     if (timeoutEvents.length > 0) {
       save(data);
@@ -2322,6 +2406,7 @@ function createAuthService(options = {}) {
     bagItemStackLimit,
     backpackItemCount,
     battleInviteIsExpired,
+    battleBackpackEntryCheck,
     battleParticipantSnapshot,
     battleRecordSummaryAgainst,
     battleRoomBattleStateForMutation: (roomValue, nowFn) => battleRoomBattleStateForMutation(
@@ -2343,7 +2428,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority},
+      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
@@ -2367,6 +2452,7 @@ function createAuthService(options = {}) {
     gmCommandAccess,
     isoNow,
     itemAmountText,
+    isEquipmentItemId: isEquipmentAssetItemId,
     load,
     applyBattleConnectionState,
     markBattleConnectionForAccount,
@@ -2446,6 +2532,7 @@ function createAuthService(options = {}) {
     playerPositionHasCell,
     profileActionLogLines,
     profileBackpackSlots,
+    rawBackpackAssetConflict,
     profileBindingForAccount,
     profilePartyVisiblePetCount,
     profilePetIndexById,
@@ -2489,7 +2576,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority},
+      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
@@ -2499,7 +2586,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority},
+      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -3754,6 +3841,10 @@ function executePlayerRebirthToProfile(profile, options = {}) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
     return {ok: false, code: "profile_missing", message: "请先创建角色档案。"};
   }
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
     profile.player = {};
   }
@@ -3771,6 +3862,31 @@ function executePlayerRebirthToProfile(profile, options = {}) {
     };
   }
   const targetCount = clampInt(preview.targetCount, 1, PLAYER_REBIRTH_MAX_COUNT, Math.max(1, Number(profile[PLAYER_REBIRTH_COUNT_KEY] || 0) + 1));
+  const rewardItems = playerRebirthRewardItemsForTarget(targetCount);
+  const rewardProfilePreflight = clone(profile);
+  const consumePreflight = consumePlayerRebirthTrialRequirements(rewardProfilePreflight, targetCount);
+  if (!consumePreflight.ok) {
+    return consumePreflight;
+  }
+  const rewardPreflight = addRewardItemsToBackpack(profileBackpackSlots(rewardProfilePreflight), rewardItems);
+  if (rewardPreflight.lostItems.length > 0) {
+    return {
+      ok: false,
+      code: "player_rebirth_backpack_full",
+      message: "请先留出背包空位，再进行转生；转生奖励不会通过丢失处理。",
+    };
+  }
+  rewardProfilePreflight.backpackSlots = rewardPreflight.slots;
+  const instancePreflight = grantFreshBackpackEquipmentInstances(
+    rewardProfilePreflight,
+    battleEquipmentCatalog,
+    rewardPreflight.addedItems,
+    `player_rebirth_${targetCount}`,
+    {expToNextLevel: battleExpToNextLevel},
+  );
+  if (!instancePreflight.ok) {
+    return instancePreflight;
+  }
   const consumeResult = consumePlayerRebirthTrialRequirements(profile, targetCount);
   if (!consumeResult.ok) {
     return consumeResult;
@@ -3803,9 +3919,18 @@ function executePlayerRebirthToProfile(profile, options = {}) {
   profile[PLAYER_REBIRTH_COUNT_KEY] = targetCount;
   profile[PLAYER_REBIRTH_HISTORY_KEY] = history;
 
-  const rewardItems = playerRebirthRewardItemsForTarget(targetCount);
   const rewardResult = addRewardItemsToBackpack(profileBackpackSlots(profile), rewardItems);
   profile.backpackSlots = rewardResult.slots;
+  const instanceGrant = grantFreshBackpackEquipmentInstances(
+    profile,
+    battleEquipmentCatalog,
+    rewardResult.addedItems,
+    `player_rebirth_${targetCount}`,
+    {expToNextLevel: battleExpToNextLevel},
+  );
+  if (!instanceGrant.ok) {
+    return instanceGrant;
+  }
   profile.captureTools = captureToolBagFromProfile(profile);
   const starterResult = appendPlayerRebirthStarterPetToProfile(profile, targetCount, options.newPetFactory);
   if (!starterResult.ok) {
@@ -4323,6 +4448,15 @@ function equipmentItemById(itemId) {
   return items.find((item) => item && String(item.id || "").trim() === normalizedItemId) || null;
 }
 
+function isEquipmentAssetItemId(itemId) {
+  const normalizedItemId = String(itemId || "").trim();
+  if (catalogHasEquipmentItemId(battleEquipmentCatalog, normalizedItemId)) {
+    return true;
+  }
+  const bagItem = bagItemById(normalizedItemId);
+  return Boolean(bagItem && Array.isArray(bagItem.useContexts) && bagItem.useContexts.includes("equipment"));
+}
+
 function battleActionById(actionId) {
   const normalizedActionId = String(actionId || "").trim();
   if (!normalizedActionId) {
@@ -4515,7 +4649,48 @@ function equipmentItemMeetsRequirements(item, playerLevel, playerRebirth) {
     && Math.max(0, Math.trunc(Number(playerRebirth || 0))) >= requiredRebirth;
 }
 
-function equipItemToProfile(profile, itemId) {
+function validateEquipmentSlotInstanceCompatibility(profile, equipped) {
+  if (!equipped || !equipped.ok) {
+    return equipped || {ok: false, code: "equipment_slot_instance_conflict", message: "装备实例档案异常，请联系GM处理。"};
+  }
+  const slotId = String(equipped.slotId || "").trim();
+  const itemId = String(equipped.itemId || "").trim();
+  const instance = objectOrEmpty(equipped.instance);
+  const maxDurability = equipmentItemMaxDurability(itemId);
+  if (maxDurability > 0) {
+    const slotDurability = clampInt(objectOrEmpty(profile.equipmentDurability)[slotId], 0, maxDurability, maxDurability);
+    const instanceDurability = clampInt(instance.durability, 0, maxDurability, maxDurability);
+    if (slotDurability !== instanceDurability) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "装备耐久与实例档案不一致，请联系GM处理。"};
+    }
+    const slotWear = normalizeEquipmentWearCounter(itemId, objectOrEmpty(profile.equipmentWearCounters)[slotId]);
+    const instanceWear = normalizeEquipmentWearCounter(itemId, instance.wearCounters);
+    if (JSON.stringify(slotWear) !== JSON.stringify(instanceWear)) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "装备磨损与实例档案不一致，请联系GM处理。"};
+    }
+  }
+  if (equipmentItemEnhanceMax(itemId) > 0) {
+    const slotEnhancement = normalizeEquipmentEnhancement(itemId, objectOrEmpty(profile.equipmentEnhancement)[slotId]);
+    const instanceEnhancement = normalizeEquipmentEnhancement(itemId, instance.enhancement);
+    if (JSON.stringify(slotEnhancement) !== JSON.stringify(instanceEnhancement)) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "装备强化与实例档案不一致，请联系GM处理。"};
+    }
+  }
+  if (slotId === "exp_pill") {
+    const slotCharge = normalizeEquipmentExpPillCharge(itemId, profile.equipmentExpPillCharge);
+    const instanceCharge = normalizeEquipmentExpPillCharge(itemId, instance.expPillCharge);
+    if (JSON.stringify(slotCharge) !== JSON.stringify(instanceCharge)) {
+      return {ok: false, code: "equipment_slot_instance_conflict", message: "经验丹储存进度与实例档案不一致，请联系GM处理。"};
+    }
+  }
+  return {ok: true};
+}
+
+function equipItemToProfile(profile, itemId, options = {}) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const normalizedItemId = String(itemId || "").trim();
   const item = equipmentItemById(normalizedItemId);
   const itemLabel = equipmentItemLabel(normalizedItemId);
@@ -4551,18 +4726,7 @@ function equipItemToProfile(profile, itemId) {
   }
 
   const slots = equipmentSlotsFromProfile(profile);
-  const instances = equipmentInstancesFromProfile(profile);
-  const slotInstanceIds = equipmentSlotInstanceIdsFromProfile(profile, instances);
-  let nextSerial = nextEquipmentInstanceSerial(profile, instances);
-  let backpackInstanceId = firstEquipmentInstanceIdForLocation(instances, "backpack", normalizedItemId);
-  if (!backpackInstanceId) {
-    const created = createEquipmentInstanceRecord(instances, nextSerial, normalizedItemId, "backpack", "", "server_equip_fallback");
-    backpackInstanceId = created.instanceId;
-    nextSerial = created.nextSerial;
-  }
-
   const previousItemId = String(slots[slotId] || "").trim();
-  const previousInstanceId = String(slotInstanceIds[slotId] || "").trim();
   if (previousItemId === normalizedItemId) {
     return {ok: false, code: "equipment_already_equipped", message: `${itemLabel} 已经装备。`};
   }
@@ -4583,22 +4747,32 @@ function equipItemToProfile(profile, itemId) {
     backpackAfterTake = returnResult.slots;
   }
 
+  if (previousItemId) {
+    const previousEquipped = requireEquippedEquipmentInstance(profile, battleEquipmentCatalog, slotId);
+    if (!previousEquipped.ok) {
+      return previousEquipped;
+    }
+    const previousCompatibility = validateEquipmentSlotInstanceCompatibility(profile, previousEquipped);
+    if (!previousCompatibility.ok) {
+      return previousCompatibility;
+    }
+  }
+  const instanceMove = moveBackpackEquipmentInstanceToSlot(
+    profile,
+    battleEquipmentCatalog,
+    normalizedItemId,
+    slotId,
+    {instanceId: options.instanceId},
+  );
+  if (!instanceMove.ok) {
+    return instanceMove;
+  }
+  const backpackInstanceId = instanceMove.instanceId;
+  const previousInstanceId = instanceMove.previousInstanceId;
+  const instances = profile.equipmentInstances;
+  const slotInstanceIds = profile.equipmentSlotInstanceIds;
+
   slots[slotId] = normalizedItemId;
-  if (previousInstanceId && instances[previousInstanceId]) {
-    instances[previousInstanceId] = {
-      ...instances[previousInstanceId],
-      location: "backpack",
-      slotId: "",
-    };
-  }
-  if (backpackInstanceId && instances[backpackInstanceId]) {
-    instances[backpackInstanceId] = {
-      ...instances[backpackInstanceId],
-      location: "equipped",
-      slotId,
-    };
-    slotInstanceIds[slotId] = backpackInstanceId;
-  }
 
   const durability = equipmentDurabilityFromProfile(profile);
   const enhancement = equipmentEnhancementFromProfile(profile);
@@ -4609,33 +4783,41 @@ function equipItemToProfile(profile, itemId) {
     durability[slotId] = clampInt(equippedRecord.durability, 0, maxDurability, maxDurability);
     wearCounters[slotId] = normalizeEquipmentWearCounter(normalizedItemId, equippedRecord.wearCounters);
     instances[backpackInstanceId].durability = durability[slotId];
-    instances[backpackInstanceId].wearCounters = wearCounters[slotId];
+    instances[backpackInstanceId].wearCounters = {
+      ...objectOrEmpty(instances[backpackInstanceId].wearCounters),
+      ...wearCounters[slotId],
+    };
   } else {
     delete durability[slotId];
     delete wearCounters[slotId];
   }
   if (equipmentItemEnhanceMax(normalizedItemId) > 0) {
     enhancement[slotId] = normalizeEquipmentEnhancement(normalizedItemId, equippedRecord.enhancement);
-    instances[backpackInstanceId].enhancement = enhancement[slotId];
+    instances[backpackInstanceId].enhancement = {
+      ...objectOrEmpty(instances[backpackInstanceId].enhancement),
+      ...enhancement[slotId],
+    };
   } else {
     delete enhancement[slotId];
   }
   if (slotId === "exp_pill") {
     const charge = normalizeEquipmentExpPillCharge(normalizedItemId, equippedRecord.expPillCharge);
     profile.equipmentExpPillCharge = charge;
-    instances[backpackInstanceId].expPillCharge = charge;
+    instances[backpackInstanceId].expPillCharge = {
+      ...objectOrEmpty(instances[backpackInstanceId].expPillCharge),
+      ...charge,
+    };
   }
 
   profile.backpackSlots = normalizeBackpackSlots(backpackAfterTake);
   profile.captureTools = captureToolBagFromProfile(profile);
   profile.equipmentInstances = instances;
   profile.equipmentSlotInstanceIds = slotInstanceIds;
-  profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
   profile.equipmentSlots = slots;
   profile.equipmentDurability = durability;
   profile.equipmentEnhancement = enhancement;
   profile.equipmentWearCounters = wearCounters;
-  profile.equipmentSlotsVersion = 3;
+  profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
   synchronizeProfileEquipmentStats(profile);
 
   const message = previousItemId && previousItemId !== normalizedItemId
@@ -4653,6 +4835,10 @@ function equipItemToProfile(profile, itemId) {
 }
 
 function unequipEquipmentSlotFromProfile(profile, slotId) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const normalizedSlotId = String(slotId || "").trim();
   if (!equipmentSlotIds().includes(normalizedSlotId)) {
     return {ok: false, code: "equipment_slot_invalid", message: "装备槽无效。"};
@@ -4672,33 +4858,40 @@ function unequipEquipmentSlotFromProfile(profile, slotId) {
     return {ok: false, code: "backpack_full", message: `背包已满，无法卸下${equipmentItemLabel(itemId)}。`};
   }
 
-  const instances = equipmentInstancesFromProfile(profile);
-  const slotInstanceIds = equipmentSlotInstanceIdsFromProfile(profile, instances);
   const durability = equipmentDurabilityFromProfile(profile);
   const enhancement = equipmentEnhancementFromProfile(profile);
   const wearCounters = equipmentWearCountersFromProfile(profile);
-  const instanceId = String(slotInstanceIds[normalizedSlotId] || "").trim();
-  if (instanceId && instances[instanceId]) {
-    const record = {
-      ...instances[instanceId],
-      location: "backpack",
-      slotId: "",
-    };
-    if (equipmentItemMaxDurability(itemId) > 0) {
-      record.durability = durability[normalizedSlotId];
-      record.wearCounters = wearCounters[normalizedSlotId];
-    }
-    if (equipmentItemEnhanceMax(itemId) > 0) {
-      record.enhancement = enhancement[normalizedSlotId];
-    }
-    if (normalizedSlotId === "exp_pill") {
-      record.expPillCharge = normalizeEquipmentExpPillCharge(itemId, profile.equipmentExpPillCharge);
-    }
-    instances[instanceId] = record;
+  const equipped = requireEquippedEquipmentInstance(profile, battleEquipmentCatalog, normalizedSlotId);
+  if (!equipped.ok) {
+    return equipped;
   }
+  const compatibility = validateEquipmentSlotInstanceCompatibility(profile, equipped);
+  if (!compatibility.ok) {
+    return compatibility;
+  }
+  const instanceMove = moveEquippedEquipmentInstanceToBackpack(profile, battleEquipmentCatalog, normalizedSlotId);
+  if (!instanceMove.ok) {
+    return instanceMove;
+  }
+  const instanceId = instanceMove.instanceId;
+  const instances = profile.equipmentInstances;
+  const record = {...instances[instanceId]};
+  if (equipmentItemMaxDurability(itemId) > 0) {
+    record.durability = durability[normalizedSlotId];
+    record.wearCounters = {...objectOrEmpty(record.wearCounters), ...wearCounters[normalizedSlotId]};
+  }
+  if (equipmentItemEnhanceMax(itemId) > 0) {
+    record.enhancement = {...objectOrEmpty(record.enhancement), ...enhancement[normalizedSlotId]};
+  }
+  if (normalizedSlotId === "exp_pill") {
+    record.expPillCharge = {
+      ...objectOrEmpty(record.expPillCharge),
+      ...normalizeEquipmentExpPillCharge(itemId, profile.equipmentExpPillCharge),
+    };
+  }
+  instances[instanceId] = record;
 
   delete slots[normalizedSlotId];
-  delete slotInstanceIds[normalizedSlotId];
   delete durability[normalizedSlotId];
   delete enhancement[normalizedSlotId];
   delete wearCounters[normalizedSlotId];
@@ -4709,12 +4902,11 @@ function unequipEquipmentSlotFromProfile(profile, slotId) {
   profile.backpackSlots = normalizeBackpackSlots(returnResult.slots);
   profile.captureTools = captureToolBagFromProfile(profile);
   profile.equipmentInstances = instances;
-  profile.equipmentSlotInstanceIds = slotInstanceIds;
   profile.equipmentSlots = slots;
   profile.equipmentDurability = durability;
   profile.equipmentEnhancement = enhancement;
   profile.equipmentWearCounters = wearCounters;
-  profile.equipmentSlotsVersion = 3;
+  profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
   synchronizeProfileEquipmentStats(profile);
 
   return {
@@ -4727,6 +4919,10 @@ function unequipEquipmentSlotFromProfile(profile, slotId) {
 }
 
 function enhanceEquipmentSlotToProfile(profile, slotId) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const normalizedSlotId = String(slotId || "").trim();
   if (!equipmentSlotIds().includes(normalizedSlotId)) {
     return {ok: false, code: "equipment_slot_invalid", message: "装备槽无效。"};
@@ -4782,16 +4978,16 @@ function enhanceEquipmentSlotToProfile(profile, slotId) {
     };
   }
 
-  const instances = equipmentInstancesFromProfile(profile);
-  const slotInstanceIds = equipmentSlotInstanceIdsFromProfile(profile, instances);
-  let nextSerial = nextEquipmentInstanceSerial(profile, instances);
-  let instanceId = String(slotInstanceIds[normalizedSlotId] || "").trim();
-  if (!instanceId || !instances[instanceId]) {
-    const created = createEquipmentInstanceRecord(instances, nextSerial, itemId, "equipped", normalizedSlotId, "server_enhance_fallback");
-    instanceId = created.instanceId;
-    nextSerial = created.nextSerial;
-    slotInstanceIds[normalizedSlotId] = instanceId;
+  const equipped = requireEquippedEquipmentInstance(profile, battleEquipmentCatalog, normalizedSlotId);
+  if (!equipped.ok) {
+    return equipped;
   }
+  const compatibility = validateEquipmentSlotInstanceCompatibility(profile, equipped);
+  if (!compatibility.ok) {
+    return compatibility;
+  }
+  const instances = equipped.state.instances;
+  const instanceId = equipped.instanceId;
 
   const nextSlots = consumeBackpackItem(backpackSlots, materialId, materialCount);
   const history = Array.isArray(currentRecord.history) ? currentRecord.history.map(clone) : [];
@@ -4812,7 +5008,7 @@ function enhanceEquipmentSlotToProfile(profile, slotId) {
     itemId,
     location: "equipped",
     slotId: normalizedSlotId,
-    enhancement: record,
+    enhancement: {...objectOrEmpty(instances[instanceId].enhancement), ...record},
   };
   profile.backpackSlots = normalizeBackpackSlots(nextSlots);
   profile.captureTools = captureToolBagFromProfile(profile);
@@ -4820,9 +5016,7 @@ function enhanceEquipmentSlotToProfile(profile, slotId) {
   profile.equipmentSlots = slots;
   profile.equipmentEnhancement = enhancement;
   profile.equipmentInstances = instances;
-  profile.equipmentSlotInstanceIds = slotInstanceIds;
-  profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
-  profile.equipmentSlotsVersion = 3;
+  profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
   synchronizeProfileEquipmentStats(profile);
 
   const bonusText = equipmentEnhanceBonusTextFor(itemId, nextLevel);
@@ -4882,12 +5076,13 @@ function equipmentEnhanceBonusTextFor(itemId, level) {
 }
 
 function repairAllEquipmentToProfile(profile) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const slots = equipmentSlotsFromProfile(profile);
   const durability = equipmentDurabilityFromProfile(profile);
   const wearCounters = equipmentWearCountersFromProfile(profile);
-  const instances = equipmentInstancesFromProfile(profile);
-  const slotInstanceIds = equipmentSlotInstanceIdsFromProfile(profile, instances);
-  let nextSerial = nextEquipmentInstanceSerial(profile, instances);
   let missingDurability = 0;
   const repairedSlots = [];
   for (const slotId of equipmentSlotIds()) {
@@ -4929,26 +5124,35 @@ function repairAllEquipmentToProfile(profile) {
     };
   }
 
+  const equippedBySlot = new Map();
+  let instances = null;
+  for (const repaired of repairedSlots) {
+    const equipped = requireEquippedEquipmentInstance(profile, battleEquipmentCatalog, repaired.slotId);
+    if (!equipped.ok) {
+      return equipped;
+    }
+    const compatibility = validateEquipmentSlotInstanceCompatibility(profile, equipped);
+    if (!compatibility.ok) {
+      return compatibility;
+    }
+    equippedBySlot.set(repaired.slotId, equipped);
+    instances = equipped.state.instances;
+  }
+
   for (const repaired of repairedSlots) {
     const slotId = String(repaired.slotId || "");
     const itemId = String(repaired.itemId || "");
     const maxDurability = equipmentItemMaxDurability(itemId);
     durability[slotId] = maxDurability;
     wearCounters[slotId] = normalizeEquipmentWearCounter(itemId, {});
-    let instanceId = String(slotInstanceIds[slotId] || "").trim();
-    if (!instanceId || !instances[instanceId]) {
-      const created = createEquipmentInstanceRecord(instances, nextSerial, itemId, "equipped", slotId, "server_repair_fallback");
-      instanceId = created.instanceId;
-      nextSerial = created.nextSerial;
-      slotInstanceIds[slotId] = instanceId;
-    }
+    const instanceId = equippedBySlot.get(slotId).instanceId;
     instances[instanceId] = {
       ...instances[instanceId],
       itemId,
       location: "equipped",
       slotId,
       durability: maxDurability,
-      wearCounters: wearCounters[slotId],
+      wearCounters: {...objectOrEmpty(instances[instanceId].wearCounters), ...wearCounters[slotId]},
     };
   }
 
@@ -4957,9 +5161,7 @@ function repairAllEquipmentToProfile(profile) {
   profile.equipmentDurability = durability;
   profile.equipmentWearCounters = wearCounters;
   profile.equipmentInstances = instances;
-  profile.equipmentSlotInstanceIds = slotInstanceIds;
-  profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
-  profile.equipmentSlotsVersion = 3;
+  profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
   synchronizeProfileEquipmentStats(profile);
   return {
     ok: true,
@@ -4981,6 +5183,10 @@ function equipmentRepairDurabilityPerCoin() {
 }
 
 function synthesizeEquipmentToProfile(profile, recipeId) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const recipe = equipmentSynthesisRecipeForId(recipeId);
   if (!recipe) {
     return {ok: false, code: "equipment_synthesis_recipe_missing", message: "配方不存在。"};
@@ -5036,10 +5242,33 @@ function synthesizeEquipmentToProfile(profile, recipeId) {
       message: `背包空间不足，无法合成${outputLabel}。`,
     };
   }
+  for (const material of materials) {
+    if (!isEquipmentAssetItemId(material.itemId)) {
+      continue;
+    }
+    const instanceConsume = consumeBackpackEquipmentInstances(
+      profile,
+      battleEquipmentCatalog,
+      material.itemId,
+      material.count,
+    );
+    if (!instanceConsume.ok) {
+      return instanceConsume;
+    }
+  }
   profile.backpackSlots = normalizeBackpackSlots(addResult.slots);
+  const instanceGrant = grantFreshBackpackEquipmentInstances(
+    profile,
+    battleEquipmentCatalog,
+    [{itemId: outputItemId, count: outputCount}],
+    "synthesis",
+    {expToNextLevel: battleExpToNextLevel},
+  );
+  if (!instanceGrant.ok) {
+    return instanceGrant;
+  }
   profile.captureTools = captureToolBagFromProfile(profile);
   profile.stoneCoins = currentCoins - stoneCost;
-  const instanceIds = addEquipmentBackpackInstancesToProfile(profile, outputItemId, outputCount, "synthesis");
   const costText = stoneCost > 0 ? `、${stoneCost}石币` : "";
   return {
     ok: true,
@@ -5050,7 +5279,7 @@ function synthesizeEquipmentToProfile(profile, recipeId) {
     materials,
     stoneCost,
     category: String(recipe.category || ""),
-    instanceIds,
+    instanceIds: instanceGrant.instanceIds,
   };
 }
 
@@ -5097,21 +5326,6 @@ function equipmentSynthesisMaterialEntries(recipe) {
     }))
     .filter((entry) => entry.itemId !== "" && entry.count > 0 && bagItemById(entry.itemId));
   return mergeItemAmounts(entries);
-}
-
-function addEquipmentBackpackInstancesToProfile(profile, itemId, count, source) {
-  const instanceIds = [];
-  const instances = equipmentInstancesFromProfile(profile);
-  let nextSerial = nextEquipmentInstanceSerial(profile, instances);
-  const total = Math.max(0, Math.trunc(Number(count || 0)));
-  for (let index = 0; index < total; index += 1) {
-    const created = createEquipmentInstanceRecord(instances, nextSerial, itemId, "backpack", "", source);
-    instanceIds.push(created.instanceId);
-    nextSerial = created.nextSerial;
-  }
-  profile.equipmentInstances = instances;
-  profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
-  return instanceIds;
 }
 
 function equipmentSlotsFromProfile(profile) {
@@ -5166,118 +5380,6 @@ function equipmentWearCountersFromProfile(profile) {
   return result;
 }
 
-function equipmentInstancesFromProfile(profile) {
-  const raw = objectOrEmpty(profile && profile.equipmentInstances);
-  const result = {};
-  for (const [key, value] of Object.entries(raw)) {
-    const record = normalizeEquipmentInstanceRecord(value, key);
-    if (record.instanceId) {
-      result[record.instanceId] = record;
-    }
-  }
-  return result;
-}
-
-function equipmentSlotInstanceIdsFromProfile(profile, instances) {
-  const raw = objectOrEmpty(profile && profile.equipmentSlotInstanceIds);
-  const result = {};
-  for (const slotId of equipmentSlotIds()) {
-    const instanceId = String(raw[slotId] || "").trim();
-    const record = instances[instanceId] || null;
-    if (!record || equipmentItemSlotId(record.itemId) !== slotId) {
-      continue;
-    }
-    record.location = "equipped";
-    record.slotId = slotId;
-    result[slotId] = instanceId;
-  }
-  return result;
-}
-
-function normalizeEquipmentInstanceRecord(value, fallbackInstanceId = "") {
-  const raw = objectOrEmpty(value);
-  const itemId = String(raw.itemId || "").trim();
-  if (!equipmentItemById(itemId)) {
-    return {};
-  }
-  const instanceId = String(raw.instanceId || fallbackInstanceId || "").trim();
-  if (!instanceId) {
-    return {};
-  }
-  const itemSlotId = equipmentItemSlotId(itemId);
-  let location = String(raw.location || "backpack").trim();
-  if (location !== "equipped" && location !== "backpack") {
-    location = "backpack";
-  }
-  let slotId = String(raw.slotId || "").trim();
-  if (location !== "equipped" || itemSlotId !== slotId) {
-    slotId = "";
-  }
-  const maxDurability = equipmentItemMaxDurability(itemId);
-  return {
-    schemaVersion: 1,
-    instanceId,
-    itemId,
-    location,
-    slotId,
-    durability: maxDurability > 0 ? clampInt(raw.durability, 0, maxDurability, maxDurability) : 0,
-    enhancement: normalizeEquipmentEnhancement(itemId, raw.enhancement),
-    wearCounters: normalizeEquipmentWearCounter(itemId, raw.wearCounters),
-    expPillCharge: normalizeEquipmentExpPillCharge(itemId, raw.expPillCharge),
-    source: String(raw.source || ""),
-  };
-}
-
-function firstEquipmentInstanceIdForLocation(instances, location, itemId) {
-  const normalizedLocation = String(location || "");
-  const normalizedItemId = String(itemId || "");
-  return Object.keys(objectOrEmpty(instances))
-    .sort()
-    .find((instanceId) => {
-      const record = instances[instanceId] || {};
-      return String(record.location || "") === normalizedLocation && (!normalizedItemId || String(record.itemId || "") === normalizedItemId);
-    }) || "";
-}
-
-function nextEquipmentInstanceSerial(profile, instances) {
-  let nextSerial = Math.max(1, Math.trunc(Number(profile && profile.nextEquipmentInstanceSerial || 1)));
-  for (const instanceId of Object.keys(objectOrEmpty(instances))) {
-    const match = String(instanceId || "").match(/^equip_(\d+)$/);
-    if (match) {
-      nextSerial = Math.max(nextSerial, Math.trunc(Number(match[1] || 0)) + 1);
-    }
-  }
-  return nextSerial;
-}
-
-function createEquipmentInstanceRecord(instances, nextSerial, itemId, location, slotId, source) {
-  let serial = Math.max(1, Math.trunc(Number(nextSerial || 1)));
-  let instanceId = equipmentInstanceIdForSerial(serial);
-  while (instances[instanceId]) {
-    serial += 1;
-    instanceId = equipmentInstanceIdForSerial(serial);
-  }
-  const maxDurability = equipmentItemMaxDurability(itemId);
-  const record = {
-    schemaVersion: 1,
-    instanceId,
-    itemId,
-    location: location === "equipped" ? "equipped" : "backpack",
-    slotId: location === "equipped" && equipmentItemSlotId(itemId) === slotId ? slotId : "",
-    durability: maxDurability > 0 ? maxDurability : 0,
-    enhancement: normalizeEquipmentEnhancement(itemId, {}),
-    wearCounters: normalizeEquipmentWearCounter(itemId, {}),
-    expPillCharge: normalizeEquipmentExpPillCharge(itemId, {}),
-    source: String(source || ""),
-  };
-  instances[instanceId] = record;
-  return {instanceId, nextSerial: serial + 1};
-}
-
-function equipmentInstanceIdForSerial(serial) {
-  return `equip_${String(Math.max(1, Math.trunc(Number(serial || 1)))).padStart(6, "0")}`;
-}
-
 function normalizeEquipmentEnhancement(itemId, value) {
   if (equipmentItemEnhanceMax(itemId) <= 0) {
     return {};
@@ -5310,16 +5412,24 @@ function normalizeEquipmentWearCounter(itemId, value) {
 
 function normalizeEquipmentExpPillCharge(itemId, value) {
   const item = bagItemById(itemId);
-  if (!item || !Array.isArray(item.useContexts) || !item.useContexts.includes("world_player_exp")) {
+  const equipmentItem = equipmentItemById(itemId) || {};
+  if (!item || equipmentItem.expPill !== true || String(equipmentItem.slot || "") !== "exp_pill") {
     return {};
   }
   const raw = objectOrEmpty(value);
-  const baseLevel = Math.max(1, Math.trunc(Number(item.worldExpLevel || item.level || 1)));
+  const worldUse = objectOrEmpty(item.worldUse);
+  const baseLevel = Math.max(1, Math.trunc(Number(
+    equipmentItem.expPillLevel || item.worldExpLevel || worldUse.level || item.level || 1,
+  )));
+  const award = playerLevelRuntime.awardEntry({
+    level: Math.max(baseLevel, clampInt(raw.level, 1, MAX_PLAYER_LEVEL, baseLevel)),
+    exp: Math.max(0, Math.trunc(Number(raw.exp || 0))),
+  }, 0, MAX_PLAYER_LEVEL);
   return {
     itemId,
-    level: Math.max(baseLevel, Math.trunc(Number(raw.level || baseLevel))),
-    exp: Math.max(0, Math.trunc(Number(raw.exp || 0))),
-    nextExp: Math.max(1, Math.trunc(Number(raw.nextExp || 1))),
+    level: Math.max(baseLevel, award.level),
+    exp: award.level >= MAX_PLAYER_LEVEL ? 0 : award.exp,
+    nextExp: battleExpToNextLevel(Math.max(baseLevel, award.level)),
   };
 }
 
@@ -5333,13 +5443,17 @@ function equipmentExpPillChargeHasProgress(slots, value) {
     return false;
   }
   const item = bagItemById(itemId) || {};
-  const baseLevel = Math.max(1, Math.trunc(Number(item.worldExpLevel || item.level || 1)));
+  const equipmentItem = equipmentItemById(itemId) || {};
+  const worldUse = objectOrEmpty(item.worldUse);
+  const baseLevel = Math.max(1, Math.trunc(Number(
+    equipmentItem.expPillLevel || item.worldExpLevel || worldUse.level || item.level || 1,
+  )));
   return Math.trunc(Number(charge.level || baseLevel)) > baseLevel || Math.trunc(Number(charge.exp || 0)) > 0;
 }
 
 function battlePlayerSnapshotFromProfile(profile, account) {
   const player = profile && profile.player && typeof profile.player === "object" ? profile.player : {};
-  const equipmentStats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog);
+  const equipmentStats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog, {requireInstances: true});
   const baseStats = equipmentStats.effectiveStats;
   const maxHp = positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
   const ride = ridingPetSnapshotFromProfile(profile);
@@ -5391,7 +5505,7 @@ function synchronizeProfileEquipmentStats(profile) {
   if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
     profile.player = {};
   }
-  const stats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog);
+  const stats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog, {requireInstances: true});
   const player = profile.player;
   const previousHp = Number(player.hp);
   const previousMaxHp = Number(player.maxHp);
@@ -6415,6 +6529,10 @@ function nextBattleMaintenanceDelayMs(data, now) {
 }
 
 function battleRoomEntryCheck(data, invite) {
+  const backpackEntry = battleBackpackEntryCheck(data, [invite.fromAccountId, invite.toAccountId]);
+  if (!backpackEntry.ok) {
+    return backpackEntry;
+  }
   const challengerPosition = data.playerPositions[invite.fromAccountId] || null;
   const opponentPosition = data.playerPositions[invite.toAccountId] || null;
   if (!challengerPosition || !opponentPosition || !challengerPosition.mapId || !opponentPosition.mapId) {
@@ -6445,6 +6563,22 @@ function battleRoomEntryCheck(data, invite) {
       schemaVersion: 1,
     },
   });
+}
+
+function battleBackpackEntryCheck(data, accountIds) {
+  for (const accountIdValue of Array.isArray(accountIds) ? accountIds : []) {
+    const accountId = String(accountIdValue || "").trim();
+    const binding = data && data.profileBindings && data.profileBindings[accountId];
+    const profileDoc = binding && binding.playerId && data.profiles ? data.profiles[binding.playerId] : null;
+    if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
+      return fail("profile_missing", "参战角色档案不存在，暂不能进入战斗。");
+    }
+    const backpackConflict = rawBackpackAssetConflict(profileDoc.profile);
+    if (backpackConflict) {
+      return fail(backpackConflict.code, `${backpackConflict.message} 修复前暂不能进入战斗。`);
+    }
+  }
+  return ok({});
 }
 
 function partyEncounterEntry(data, party) {
@@ -9620,6 +9754,15 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       writeback.skippedProfiles.push({accountId, playerId: binding.playerId, reason: "profile_document_missing"});
       continue;
     }
+    const assetConflict = rawBackpackAssetConflict(profile);
+    if (assetConflict) {
+      writeback.skippedProfiles.push({
+        accountId: String(accountId || ""),
+        playerId: String(binding.playerId || ""),
+        reason: String(assetConflict.code || "profile_asset_state_conflict"),
+      });
+      continue;
+    }
     const accountActors = battle.actors.filter((actor) => actor && String(actor.accountId || "") === String(accountId || ""));
     const summary = {
       accountId: String(accountId || ""),
@@ -9673,11 +9816,19 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
         battleEquipmentCatalog,
         equipmentWearRulesFromDocument(playerGrowthDocument()),
       );
+      if (!equipmentWear.ok) {
+        writeback.skippedProfiles.push({
+          accountId: String(accountId || ""),
+          playerId: String(binding.playerId || ""),
+          reason: String(equipmentWear.code || "equipment_wear_state_conflict"),
+        });
+      }
       changed = changed || equipmentWear.changed;
       summary.equipmentWear = {
         usage: clone(equipmentWear.usage),
         durabilityDrops: clone(equipmentWear.durabilityDrops),
         brokenLabels: clone(equipmentWear.brokenLabels),
+        ...(equipmentWear.ok ? {} : {skippedReason: String(equipmentWear.code || "equipment_wear_state_conflict")}),
         schemaVersion: 1,
       };
       const synchronizedStats = synchronizeProfileEquipmentStats(profile);
@@ -9731,11 +9882,25 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     const itemWriteback = participant
       ? applyBattleItemBagToProfile(profile, participantBattleItemBag(participant))
       : {changed: false, publicItemBag: battleItemBagFromProfile(profile)};
+    if (itemWriteback.skippedReason) {
+      writeback.skippedProfiles.push({
+        accountId: String(accountId || ""),
+        playerId: String(binding.playerId || ""),
+        reason: String(itemWriteback.skippedReason),
+      });
+    }
     changed = changed || itemWriteback.changed;
     summary.battleItemBag = itemWriteback.publicItemBag;
     const captureToolWriteback = participant
       ? applyCaptureToolBagToProfile(profile, participantCaptureToolBag(participant))
       : {changed: false, publicCaptureToolBag: captureToolBagFromProfile(profile)};
+    if (captureToolWriteback.skippedReason) {
+      writeback.skippedProfiles.push({
+        accountId: String(accountId || ""),
+        playerId: String(binding.playerId || ""),
+        reason: String(captureToolWriteback.skippedReason),
+      });
+    }
     changed = changed || captureToolWriteback.changed;
     summary.captureToolBag = captureToolWriteback.publicCaptureToolBag;
     const captureWriteback = applyBattleCapturedPetsToProfile(profile, battle, accountId, room, options);
@@ -9760,9 +9925,24 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
         roomId: String(room && room.roomId || ""),
         now,
         randomId: options.randomId,
+        battleVictoryRewardResolver: options.battleVictoryRewardResolver,
       });
-      changed = changed || rewardWriteback.changed;
-      summary.rewards = rewardWriteback.publicRewards;
+      if (!rewardWriteback.ok) {
+        const skippedReason = String(rewardWriteback.code || "battle_reward_equipment_state_conflict");
+        writeback.skippedProfiles.push({
+          accountId: String(accountId || ""),
+          playerId: String(binding.playerId || ""),
+          reason: skippedReason,
+        });
+        summary.rewards = {
+          skippedReason,
+          message: String(rewardWriteback.message || "战斗奖励结算已安全暂停，请联系GM处理。"),
+          schemaVersion: 1,
+        };
+      } else {
+        changed = changed || rewardWriteback.changed;
+        summary.rewards = rewardWriteback.publicRewards;
+      }
       const specialWriteback = applyBattleSpecialVictoryProgressToProfile(
         profile,
         room,
@@ -10269,6 +10449,10 @@ function claimActiveQuestToProfile(profile) {
 }
 
 function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceActive = true) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const activeQuestIdBeforeClaim = advanceActive ? ensureActiveQuestForProfile(profile) : currentProfileQuestId(profile);
   const quest = questById(questId);
   if (!quest) {
@@ -10287,6 +10471,9 @@ function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceA
     return choiceResult;
   }
   const rewards = grantQuestRewardsToProfile(profile, quest, choiceResult.choice);
+  if (!rewards.ok) {
+    return rewards;
+  }
   state.status = "claimed";
   state.progress = questRequiredCount(quest);
   states[questId] = state;
@@ -10326,18 +10513,38 @@ function claimQuestByIdToProfile(profile, questId, rewardChoiceId = "", advanceA
 }
 
 function grantQuestRewardsToProfile(profile, quest, rewardChoice = {}) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
+  const staged = clone(profile);
   const choice = rewardChoice && typeof rewardChoice === "object" && !Array.isArray(rewardChoice) ? rewardChoice : {};
   const stoneCoins = questRewardStoneCoins(quest) + Math.max(0, Math.trunc(Number(choice.stoneCoins || 0)));
   if (stoneCoins > 0) {
-    setProfileCurrencyAmount(profile, SHOP_CURRENCY_STONE_COINS, profileStoneCoins(profile) + stoneCoins);
+    setProfileCurrencyAmount(staged, SHOP_CURRENCY_STONE_COINS, profileStoneCoins(staged) + stoneCoins);
   }
-  const itemResult = addRewardItemsToBackpack(profileBackpackSlots(profile), mergeItemAmounts([
+  const itemResult = addRewardItemsToBackpack(profileBackpackSlots(staged), mergeItemAmounts([
     ...questRewardItems(quest),
     ...questRewardChoiceItems(choice),
   ]));
-  profile.backpackSlots = itemResult.slots;
-  profile.captureTools = captureToolBagFromProfile(profile);
-  const unlockedAbilities = new Set(uniqueStringArray(profile.unlockedAbilities || []));
+  if (itemResult.lostItems.length > 0) {
+    return fail("quest_reward_backpack_full", "请先整理背包再领取任务奖励；奖励不会因背包已满而丢失。", {
+      lostItems: itemResult.lostItems,
+    });
+  }
+  staged.backpackSlots = itemResult.slots;
+  const instanceGrant = grantFreshBackpackEquipmentInstances(
+    staged,
+    battleEquipmentCatalog,
+    itemResult.addedItems,
+    `quest:${String(quest && quest.id || "reward")}`,
+    {expToNextLevel: battleExpToNextLevel},
+  );
+  if (!instanceGrant.ok) {
+    return instanceGrant;
+  }
+  staged.captureTools = captureToolBagFromProfile(staged);
+  const unlockedAbilities = new Set(uniqueStringArray(staged.unlockedAbilities || []));
   const addedAbilities = [];
   for (const ability of [...questRewardAbilities(quest), ...questRewardChoiceAbilities(choice)]) {
     const abilityId = String(ability.abilityId || ability.id || "").trim();
@@ -10346,8 +10553,10 @@ function grantQuestRewardsToProfile(profile, quest, rewardChoice = {}) {
       addedAbilities.push({abilityId, label: String(ability.label || abilityId)});
     }
   }
-  profile.unlockedAbilities = Array.from(unlockedAbilities);
+  staged.unlockedAbilities = Array.from(unlockedAbilities);
+  replaceObjectContents(profile, staged);
   return {
+    ok: true,
     stoneCoins,
     addedItems: itemResult.addedItems,
     lostItems: itemResult.lostItems,
@@ -11092,26 +11301,50 @@ function battleRoomIsPartyPveVictory(room, battle, result) {
 
 function applyBattleVictoryRewardsToProfile(profile, room, battle, result, options = {}) {
   if (!battleRoomIsPartyPveVictory(room, battle, result)) {
-    return {changed: false, publicRewards: null};
+    return {ok: true, changed: false, publicRewards: null};
   }
-  const reward = battleVictoryRewardForRoom(room);
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
+  const rewardResolver = typeof options.battleVictoryRewardResolver === "function"
+    ? options.battleVictoryRewardResolver
+    : battleVictoryRewardForRoom;
+  const reward = rewardResolver(room);
   if (!reward || (reward.stoneCoins <= 0 && reward.items.length <= 0)) {
-    return {changed: false, publicRewards: null};
+    return {ok: true, changed: false, publicRewards: null};
   }
+  const staged = clone(profile);
   let changed = false;
-  const previousCoins = profileStoneCoins(profile);
+  const previousCoins = profileStoneCoins(staged);
   if (reward.stoneCoins > 0) {
-    setProfileCurrencyAmount(profile, SHOP_CURRENCY_STONE_COINS, previousCoins + reward.stoneCoins);
+    setProfileCurrencyAmount(staged, SHOP_CURRENCY_STONE_COINS, previousCoins + reward.stoneCoins);
     changed = true;
   }
-  const beforeSlots = normalizeBackpackSlots(profileBackpackSlots(profile));
+  const beforeSlots = normalizeBackpackSlots(profileBackpackSlots(staged));
   const itemResult = addRewardItemsToBackpack(beforeSlots, reward.items);
   if (itemResult.changed) {
-    profile.backpackSlots = itemResult.slots;
-    profile.captureTools = captureToolBagFromProfile(profile);
+    staged.backpackSlots = itemResult.slots;
+    const instanceGrant = grantFreshBackpackEquipmentInstances(
+      staged,
+      battleEquipmentCatalog,
+      itemResult.addedItems,
+      `battle_reward:${String(reward.tableId || "unknown")}`,
+      {expToNextLevel: battleExpToNextLevel},
+    );
+    if (!instanceGrant.ok) {
+      return instanceGrant;
+    }
+    staged.captureTools = captureToolBagFromProfile(staged);
     changed = true;
   }
-  const qualificationClaim = markQualificationBattleClaim(profile, reward);
+  const lostEquipment = firstEquipmentTransferEntry(battleEquipmentCatalog, itemResult.lostItems);
+  if (lostEquipment) {
+    return fail("battle_reward_equipment_backpack_full", "背包空间不足，装备奖励结算已安全暂停，请联系GM处理。", {
+      itemId: lostEquipment.itemId,
+    });
+  }
+  const qualificationClaim = markQualificationBattleClaim(staged, reward);
   changed = changed || qualificationClaim.changed;
   const mailedItems = qualificationClaim.qualification
     ? createQualificationRewardMail(options, reward, itemResult.lostItems)
@@ -11130,7 +11363,8 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result, optio
     rewardMail: mailedItems.mail ? publicMail(mailedItems.mail) : null,
     schemaVersion: 1,
   };
-  return {changed, publicRewards};
+  replaceObjectContents(profile, staged);
+  return {ok: true, changed, publicRewards};
 }
 
 function markQualificationBattleClaim(profile, reward) {
@@ -11784,6 +12018,192 @@ function normalizeProfileBankData(value) {
     unlockedTabs: Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.min(BANK_TAB_COUNT, Math.max(rawUnlockedTabs, requiredTabs))),
     schemaVersion: 1,
   };
+}
+
+function rawProfileBankAssetConflict(value) {
+  if (value !== undefined && (!value || typeof value !== "object" || Array.isArray(value))) {
+    return {
+      ok: false,
+      code: "bank_schema_invalid",
+      message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+    };
+  }
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const schemaStatus = rawProfileSchemaVersionStatus(raw, 1);
+  if (schemaStatus === "invalid") {
+    return {
+      ok: false,
+      code: "bank_schema_invalid",
+      message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+    };
+  }
+  if (schemaStatus === "future") {
+    return {
+      ok: false,
+      code: "bank_schema_future",
+      message: "银行数据来自更高版本，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
+    };
+  }
+  for (const field of ["slots", "items", "itemAmounts"]) {
+    if (Object.hasOwn(raw, field) && !Array.isArray(raw[field])) {
+      return rawProfileBankRepresentationConflict();
+    }
+  }
+  if (Array.isArray(raw.slots) && raw.slots.length > BANK_SLOT_LIMIT) {
+    return rawProfileBankRepresentationConflict();
+  }
+  const entries = [
+    ...(Array.isArray(raw.slots) ? raw.slots : []),
+    ...(Array.isArray(raw.items) ? raw.items : []),
+    ...(Array.isArray(raw.itemAmounts) ? raw.itemAmounts : []),
+  ];
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return rawProfileBankRepresentationConflict();
+    }
+    const itemId = String(entry.itemId || "").trim();
+    const count = Number(entry.count ?? 0);
+    if (itemId === "") {
+      if (
+        !Number.isSafeInteger(count)
+        || count !== 0
+        || Object.keys(entry).some((key) => !["itemId", "count"].includes(key))
+      ) {
+        return rawProfileBankRepresentationConflict();
+      }
+      continue;
+    }
+    if (!bagItemById(itemId)) {
+      return {
+        ok: false,
+        code: "bank_item_unknown",
+        message: "银行内有当前版本无法识别的物品，本次操作已取消；全部资产会原样保留，请联系GM处理。",
+      };
+    }
+    if (isEquipmentAssetItemId(itemId)) {
+      return {
+        ok: false,
+        code: "bank_equipment_transfer_unsupported",
+        message: `${bagItemLabel(itemId)} 暂不能由银行操作整理；本次操作已取消，全部资产会原样保留，请联系GM处理。`,
+      };
+    }
+    if (!Number.isSafeInteger(count) || count < 1) {
+      return rawProfileBankRepresentationConflict();
+    }
+    if (Object.keys(entry).some((key) => !["itemId", "count"].includes(key))) {
+      return rawProfileBankRepresentationConflict();
+    }
+  }
+  const itemRepresentations = [];
+  if (Array.isArray(raw.items)) {
+    itemRepresentations.push(rawProfileBankItemCounts(raw.items));
+  }
+  if (Array.isArray(raw.itemAmounts)) {
+    itemRepresentations.push(rawProfileBankItemCounts(raw.itemAmounts));
+  }
+  if (itemRepresentations.length > 1 && itemRepresentations.some((counts) => counts !== itemRepresentations[0])) {
+    return rawProfileBankRepresentationConflict();
+  }
+  if (Array.isArray(raw.slots) && raw.slots.length > 0 && itemRepresentations.length > 0) {
+    const slotCounts = rawProfileBankItemCounts(raw.slots);
+    if (itemRepresentations.some((counts) => counts !== slotCounts)) {
+      return rawProfileBankRepresentationConflict();
+    }
+  }
+  if (Array.isArray(raw.slots)) {
+    for (const slot of raw.slots) {
+      const itemId = String(slot && slot.itemId || "").trim();
+      if (itemId !== "" && Number(slot.count) > bagItemStackLimit(itemId)) {
+        return rawProfileBankRepresentationConflict();
+      }
+    }
+  }
+  for (const entriesValue of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
+    if (rawProfileBankRequiredSlotCount(entriesValue) > BANK_SLOT_LIMIT) {
+      return rawProfileBankRepresentationConflict();
+    }
+  }
+  if (
+    rawProfileAliasedIntegerConflict(raw, "stoneCoins", "coins", 0, BANK_STONE_COIN_LIMIT)
+    || rawProfileAliasedIntegerConflict(raw, "unlockedTabs", "tabs", BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT)
+  ) {
+    return rawProfileBankRepresentationConflict();
+  }
+  const unlockedTabs = Number(raw.unlockedTabs ?? raw.tabs ?? BANK_DEFAULT_UNLOCKED_TABS);
+  const unlockedSlots = unlockedTabs * BANK_SLOTS_PER_TAB;
+  if (Array.isArray(raw.slots) && raw.slots.some((slot, index) => index >= unlockedSlots && String(slot && slot.itemId || "").trim() !== "")) {
+    return rawProfileBankRepresentationConflict();
+  }
+  if (!Array.isArray(raw.slots) || raw.slots.length === 0) {
+    for (const entriesValue of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
+      if (rawProfileBankRequiredSlotCount(entriesValue) > unlockedSlots) {
+        return rawProfileBankRepresentationConflict();
+      }
+    }
+  }
+  const allowedRootFields = new Set(["stoneCoins", "coins", "items", "itemAmounts", "slots", "unlockedTabs", "tabs", "schemaVersion"]);
+  if (Object.keys(raw).some((key) => !allowedRootFields.has(key))) {
+    return rawProfileBankRepresentationConflict();
+  }
+  return null;
+}
+
+function rawProfileBankItemCounts(entries) {
+  const counts = new Map();
+  for (const entry of entries) {
+    const itemId = String(entry && entry.itemId || "").trim();
+    if (itemId === "") {
+      continue;
+    }
+    counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
+  }
+  return JSON.stringify(Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function rawProfileBankRequiredSlotCount(entries) {
+  const counts = new Map();
+  for (const entry of entries) {
+    const itemId = String(entry && entry.itemId || "").trim();
+    if (itemId === "") {
+      continue;
+    }
+    counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
+  }
+  let required = 0;
+  for (const [itemId, count] of counts) {
+    required += Math.ceil(count / bagItemStackLimit(itemId));
+  }
+  return required;
+}
+
+function rawProfileAliasedIntegerConflict(raw, primaryField, legacyField, minimum, maximum) {
+  const fields = [primaryField, legacyField].filter((field) => Object.hasOwn(raw, field));
+  for (const field of fields) {
+    const value = Number(raw[field]);
+    if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+      return true;
+    }
+  }
+  return fields.length > 1 && Number(raw[primaryField]) !== Number(raw[legacyField]);
+}
+
+function rawProfileBankRepresentationConflict() {
+  return {
+    ok: false,
+    code: "bank_representation_conflict",
+    message: "银行物品或石币的两份档案不一致，本次操作已取消；全部资产会原样保留，请联系GM处理。",
+  };
+}
+
+function rawProfileSchemaVersionStatus(container, currentVersion) {
+  if (!container || !Object.hasOwn(container, "schemaVersion")) {
+    return "legacy";
+  }
+  const version = Number(container.schemaVersion);
+  if (!Number.isInteger(version) || version < 1) {
+    return "invalid";
+  }
+  return version > currentVersion ? "future" : "current";
 }
 
 function profileBankItemCount(profile, itemId) {
@@ -12496,10 +12916,13 @@ function applyBattleExpRewardToProfile(
     profile.player = {};
   }
   if (battleExpAwardIsPresent(reward.player)) {
-    const playerAward = applyBattleExpToEntry(profile.player, battleExpAwardAmount(reward.player), MAX_PLAYER_LEVEL, {
+    const playerAward = applyPlayerExpToProfile(profile, battleExpAwardAmount(reward.player), {
       statPointsPerLevel: PLAYER_STAT_POINTS_PER_LEVEL,
       name: String(profile.player.name || profile.player.displayName || reward.player.name || "人物"),
     });
+    if (!playerAward.ok) {
+      return failedBattleExpWriteback(summary, playerAward);
+    }
     changed = changed || playerAward.changed;
     summary.player = {
       ...playerAward.publicExp,
@@ -12770,6 +13193,85 @@ function profilePetById(profile, petId) {
   return null;
 }
 
+function chargeEquippedPlayerExpPill(profile, amount) {
+  const overflowExp = Math.max(0, Math.trunc(Number(amount || 0)));
+  if (overflowExp <= 0) {
+    return {ok: true, changed: false, chargedExp: 0, unchargedExp: 0, pillLevelsGained: 0, itemId: ""};
+  }
+  const itemId = String(objectOrEmpty(profile && profile.equipmentSlots).exp_pill || "").trim();
+  if (itemId === "") {
+    return {ok: true, changed: false, chargedExp: 0, unchargedExp: overflowExp, pillLevelsGained: 0, itemId: ""};
+  }
+  const item = equipmentItemById(itemId);
+  if (!item || item.expPill !== true || String(item.slot || "") !== "exp_pill") {
+    return {ok: false, code: "equipment_exp_pill_invalid", message: "经验丹槽档案异常，请联系GM处理。"};
+  }
+  const equipped = requireEquippedEquipmentInstance(profile, battleEquipmentCatalog, "exp_pill");
+  if (!equipped.ok) {
+    return equipped;
+  }
+  const compatibility = validateEquipmentSlotInstanceCompatibility(profile, equipped);
+  if (!compatibility.ok) {
+    return compatibility;
+  }
+  const beforeCharge = normalizeEquipmentExpPillCharge(itemId, profile.equipmentExpPillCharge);
+  const award = playerLevelRuntime.awardEntry(beforeCharge, overflowExp, MAX_PLAYER_LEVEL);
+  const nextCharge = {
+    itemId,
+    level: award.level,
+    exp: award.exp,
+    nextExp: award.nextExp,
+  };
+  const chargedExp = Math.max(0, overflowExp - Math.max(0, Number(award.overflowExp || 0)));
+  const instances = equipped.state.instances;
+  instances[equipped.instanceId] = {
+    ...instances[equipped.instanceId],
+    expPillCharge: {
+      ...objectOrEmpty(instances[equipped.instanceId].expPillCharge),
+      ...nextCharge,
+    },
+  };
+  profile.equipmentExpPillCharge = nextCharge;
+  profile.equipmentInstances = instances;
+  profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
+  return {
+    ok: true,
+    changed: chargedExp > 0,
+    chargedExp,
+    unchargedExp: Math.max(0, Number(award.overflowExp || 0)),
+    pillLevelsGained: Math.max(0, award.level - beforeCharge.level),
+    itemId,
+    instanceId: equipped.instanceId,
+    charge: nextCharge,
+  };
+}
+
+function applyPlayerExpToProfile(profile, amount, options = {}) {
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const nextPlayer = clone(profile.player);
+  const award = applyBattleExpToEntry(nextPlayer, amount, MAX_PLAYER_LEVEL, options);
+  const charge = chargeEquippedPlayerExpPill(profile, Number(award.publicExp && award.publicExp.overflowExp || 0));
+  if (!charge.ok) {
+    return charge;
+  }
+  profile.player = nextPlayer;
+  return {
+    ok: true,
+    changed: award.changed || charge.changed,
+    publicExp: {
+      ...award.publicExp,
+      chargedExp: charge.chargedExp,
+      unchargedExp: charge.unchargedExp,
+      pillLevelsGained: charge.pillLevelsGained,
+      expPillItemId: charge.itemId,
+      expPillInstanceId: charge.instanceId || "",
+      expPillCharge: clone(charge.charge || {}),
+    },
+  };
+}
+
 function applyBattleExpToEntry(entry, amount, maxLevel, options = {}) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     return {changed: false, publicExp: null};
@@ -12946,6 +13448,14 @@ function applyBattleActorRideHpToProfile(profile, actor) {
 }
 
 function applyBattleItemBagToProfile(profile, battleItemBag) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return {
+      changed: false,
+      publicItemBag: battleItemBagFromProfile(profile),
+      skippedReason: backpackConflict.code,
+    };
+  }
   const nextBag = {};
   const sourceBag = battleItemBag && typeof battleItemBag === "object" && !Array.isArray(battleItemBag) ? battleItemBag : {};
   for (const itemId of BATTLE_ITEM_IDS) {
@@ -12971,6 +13481,14 @@ function backpackSlotsWithBattleItemCounts(slots, counts) {
 }
 
 function applyCaptureToolBagToProfile(profile, captureToolBag) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return {
+      changed: false,
+      publicCaptureToolBag: captureToolBagFromProfile(profile),
+      skippedReason: backpackConflict.code,
+    };
+  }
   const nextBag = {};
   const sourceBag = captureToolBag && typeof captureToolBag === "object" && !Array.isArray(captureToolBag) ? captureToolBag : {};
   for (const toolId of battleCaptureToolIds()) {
@@ -13342,6 +13860,10 @@ function normalizeProfileActionId(value) {
 }
 
 function applyProfileActionToProfile(profile, action, params, now, options = {}) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   switch (action) {
     case "player_stat_allocate":
       return applyPlayerStatAllocateAction(profile, params);
@@ -13431,6 +13953,12 @@ function publicProfileActionResult(action, result) {
     amount: Math.max(0, Math.trunc(Number(source.amount || source.heal || source.exp || 0))),
     changedCount: Math.max(0, Math.trunc(Number(source.changedCount || 0))),
     skippedCount: Math.max(0, Math.trunc(Number(source.skippedCount || 0))),
+    chargedExp: Math.max(0, Math.trunc(Number(source.chargedExp || 0))),
+    unchargedExp: Math.max(0, Math.trunc(Number(source.unchargedExp || 0))),
+    pillLevelsGained: Math.max(0, Math.trunc(Number(source.pillLevelsGained || 0))),
+    expPillItemId: String(source.expPillItemId || ""),
+    expPillInstanceId: String(source.expPillInstanceId || ""),
+    expPillLevel: Math.max(0, Math.trunc(Number(source.expPillLevel || 0))),
     schemaVersion: 1,
   };
 }
@@ -13533,6 +14061,134 @@ function profileBackpackSlotLimit(profile) {
   return resolvedBackpackSlotLimit(BACKPACK_BASE_SLOT_LIMIT + profileBackpackExtraSlots(profile));
 }
 
+function rawBackpackAssetConflict(profile) {
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    return {
+      ok: false,
+      code: "backpack_asset_state_invalid",
+      message: "背包档案异常，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+    };
+  }
+  if (!Object.hasOwn(profile, "backpackSlots")) {
+    const captureToolConflict = rawCaptureToolMirrorConflict(profile, null);
+    return captureToolConflict || rawEquipmentInstanceConflict(profile);
+  }
+  const slots = profile.backpackSlots;
+  if (!Array.isArray(slots) || slots.length > profileBackpackSlotLimit(profile)) {
+    return {
+      ok: false,
+      code: "backpack_asset_state_invalid",
+      message: "背包档案异常，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+    };
+  }
+  for (const slot of slots) {
+    if (!slot || typeof slot !== "object" || Array.isArray(slot)) {
+      return {
+        ok: false,
+        code: "backpack_asset_state_invalid",
+        message: "背包档案异常，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+      };
+    }
+    const itemId = String(slot.itemId || "").trim();
+    const keys = Object.keys(slot);
+    if (itemId === "") {
+      const emptyCount = Number(slot.count ?? 0);
+      if (
+        !Number.isSafeInteger(emptyCount)
+        || emptyCount !== 0
+        || keys.some((key) => !["itemId", "count"].includes(key))
+      ) {
+        return {
+          ok: false,
+          code: "backpack_asset_state_invalid",
+          message: "背包空格含当前版本无法识别的数据，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+        };
+      }
+      continue;
+    }
+    if (!bagItemById(itemId)) {
+      return {
+        ok: false,
+        code: "backpack_item_unknown",
+        message: "背包内有当前版本无法识别的物品，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+      };
+    }
+    const count = Number(slot.count);
+    if (
+      !Number.isSafeInteger(count)
+      || count < 1
+      || count > bagItemStackLimit(itemId)
+      || keys.some((key) => !["itemId", "count"].includes(key))
+    ) {
+      return {
+        ok: false,
+        code: "backpack_asset_state_invalid",
+        message: "背包物品档案异常，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+      };
+    }
+  }
+  const captureToolConflict = rawCaptureToolMirrorConflict(profile, slots);
+  return captureToolConflict || rawEquipmentInstanceConflict(profile);
+}
+
+function rawEquipmentInstanceConflict(profile) {
+  const state = readEquipmentInstanceState(profile, battleEquipmentCatalog);
+  return state.ok ? null : state;
+}
+
+function fullSaveEquipmentAuditConflict(profile) {
+  const raw = profile && typeof profile === "object" && !Array.isArray(profile) ? profile : {};
+  const declaresInstanceAuthority = Object.hasOwn(raw, "equipmentInstances")
+    || Object.hasOwn(raw, "equipmentSlotInstanceIds")
+    || Number(raw.equipmentSlotsVersion || 0) >= EQUIPMENT_SLOTS_VERSION;
+  if (!declaresInstanceAuthority) {
+    return null;
+  }
+  const audit = auditEquipmentProfileState(raw, battleEquipmentCatalog);
+  return audit.ok ? null : audit;
+}
+
+function rawCaptureToolMirrorConflict(profile, canonicalSlots) {
+  if (!Object.hasOwn(profile, "captureTools")) {
+    return null;
+  }
+  const tools = profile.captureTools;
+  if (!tools || typeof tools !== "object" || Array.isArray(tools)) {
+    return {
+      ok: false,
+      code: "backpack_asset_state_invalid",
+      message: "捕捉工具档案异常，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+    };
+  }
+  const knownToolIds = new Set(battleCaptureToolIds().filter((toolId) => (
+    toolId !== BATTLE_CAPTURE_TOOL_EMPTY_HAND && battleCaptureToolIsConsumable(toolId)
+  )));
+  for (const [toolId, countValue] of Object.entries(tools)) {
+    const count = Number(countValue);
+    if (!knownToolIds.has(toolId) || !Number.isSafeInteger(count) || count < 0) {
+      return {
+        ok: false,
+        code: knownToolIds.has(toolId) ? "backpack_asset_state_invalid" : "backpack_item_unknown",
+        message: "捕捉工具档案含当前版本无法识别的数据，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+      };
+    }
+  }
+  if (!Array.isArray(canonicalSlots)) {
+    let requiredSlots = 0;
+    for (const toolId of knownToolIds) {
+      requiredSlots += Math.ceil(Number(tools[toolId] ?? 0) / bagItemStackLimit(toolId));
+    }
+    if (requiredSlots > profileBackpackSlotLimit(profile)) {
+      return {
+        ok: false,
+        code: "backpack_asset_state_invalid",
+        message: "旧背包物品超过当前容量，本次操作已取消；全部物品会原样保留，请联系GM处理。",
+      };
+    }
+  }
+  return null;
+}
+
 function normalizeProfileBackpack(profile) {
   const limit = profileBackpackSlotLimit(profile);
   profile.backpackSlots = normalizeBackpackSlots(profileBackpackSlots(profile), limit);
@@ -13540,16 +14196,32 @@ function normalizeProfileBackpack(profile) {
   return profile.backpackSlots;
 }
 
-function consumeProfileBackpackItem(profile, itemId, count = 1) {
+function consumeProfileBackpackItem(profile, itemId, count = 1, options = {}) {
+  const backpackConflict = rawBackpackAssetConflict(profile);
+  if (backpackConflict) {
+    return backpackConflict;
+  }
   const slots = normalizeProfileBackpack(profile);
   const normalizedItemId = String(itemId || "").trim();
   const required = Math.max(1, Math.trunc(Number(count || 1)));
   if (backpackItemCount(slots, normalizedItemId) < required) {
-    return false;
+    return {ok: false, code: "item_not_enough", message: `${bagItemLabel(normalizedItemId)} 不够了。`};
+  }
+  if (isEquipmentAssetItemId(normalizedItemId)) {
+    const instanceConsume = consumeBackpackEquipmentInstances(
+      profile,
+      battleEquipmentCatalog,
+      normalizedItemId,
+      required,
+      {instanceIds: options.equipmentInstanceIds},
+    );
+    if (!instanceConsume.ok) {
+      return instanceConsume;
+    }
   }
   profile.backpackSlots = consumeBackpackItem(slots, normalizedItemId, required);
   profile.captureTools = captureToolBagFromProfile(profile);
-  return true;
+  return {ok: true};
 }
 
 function playerStatPointGainFor(statKey) {
@@ -13618,6 +14290,10 @@ function applyBackpackUnlockSlotAction(profile, params) {
 }
 
 function applyBankUnlockTabAction(profile, params) {
+  const rawBankConflict = rawProfileBankAssetConflict(profile && profile.bank);
+  if (rawBankConflict) {
+    return rawBankConflict;
+  }
   const bank = normalizeProfileBankData(profile && profile.bank);
   const unlockedTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.min(BANK_TAB_COUNT, Math.trunc(Number(bank.unlockedTabs || BANK_DEFAULT_UNLOCKED_TABS))));
   if (unlockedTabs >= BANK_TAB_COUNT) {
@@ -13680,6 +14356,18 @@ function applyBackpackDiscardItemAction(profile, params) {
   const result = discardBackpackStack(normalizeBackpackSlots(profileBackpackSlots(profile), slotLimit), sourceSlotIndex, params.quantity ?? params.count ?? -1);
   if (!result.ok) {
     return result;
+  }
+  if (isEquipmentAssetItemId(result.itemId)) {
+    const instanceConsume = consumeBackpackEquipmentInstances(
+      profile,
+      battleEquipmentCatalog,
+      result.itemId,
+      result.count,
+      {instanceIds: params.equipmentInstanceIds},
+    );
+    if (!instanceConsume.ok) {
+      return instanceConsume;
+    }
   }
   profile.backpackSlots = result.slots;
   profile.captureTools = captureToolBagFromProfile(profile);
@@ -13794,7 +14482,7 @@ function applyWorldItemUseAction(profile, params, options = {}) {
     return applyWorldPetHealItemAction(profile, itemId, params);
   }
   if (useType === "player_exp" || useType === "exp") {
-    return applyWorldPlayerExpItemAction(profile, itemId);
+    return applyWorldPlayerExpItemAction(profile, itemId, params);
   }
   if (useType === "pet_exp") {
     return applyWorldPetExpItemAction(profile, itemId, params, options.petExpSettlement);
@@ -13856,8 +14544,9 @@ function applyWorldPetHealItemAction(profile, itemId, params) {
   if (hp >= maxHp && !allowFull) {
     return {ok: false, code: "pet_hp_full", message: `${profilePetName(pet)} 生命已满。`};
   }
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
-    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
   }
   const healed = Math.min(healAmount, Math.max(0, maxHp - hp));
   pet.hp = hp + healed;
@@ -13870,27 +14559,49 @@ function applyWorldPetHealItemAction(profile, itemId, params) {
   };
 }
 
-function applyWorldPlayerExpItemAction(profile, itemId) {
+function applyWorldPlayerExpItemAction(profile, itemId, params = {}) {
   const itemLabel = bagItemLabel(itemId);
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
-    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
-  }
-  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
-    profile.player = {};
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1, {
+    equipmentInstanceIds: params.equipmentInstanceIds,
+  });
+  if (!consumeResult.ok) {
+    return consumeResult;
   }
   const exp = expGrantForWorldItem(itemId);
-  const award = applyBattleExpToEntry(profile.player, exp, MAX_PLAYER_LEVEL, {
-    name: String(profile.player.name || "见习猎人"),
+  const award = applyPlayerExpToProfile(profile, exp, {
+    name: String(objectOrEmpty(profile.player).name || "见习猎人"),
     statPointsPerLevel: PLAYER_STAT_POINTS_PER_LEVEL,
   });
+  if (!award.ok) {
+    return award;
+  }
   const publicExp = award.publicExp || {};
+  const chargedExp = Math.max(0, Math.trunc(Number(publicExp.chargedExp || 0)));
+  const unchargedExp = Math.max(0, Math.trunc(Number(publicExp.unchargedExp || 0)));
+  const expPillItemId = String(publicExp.expPillItemId || "").trim();
+  const charge = objectOrEmpty(publicExp.expPillCharge);
+  let message;
+  if (chargedExp > 0) {
+    message = `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，其中${chargedExp}经验已储入${bagItemLabel(expPillItemId)}（Lv${Math.max(1, Math.trunc(Number(charge.level || 1)))}）。`;
+    if (unchargedExp > 0) {
+      message += ` 另有${unchargedExp}溢出经验未能储存。`;
+    }
+  } else {
+    message = Number(publicExp.levelsGained || 0) > 0
+      ? `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，升到 Lv${Number(profile.player.level || 1)}。`
+      : `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，当前 Lv${Number(profile.player.level || 1)}。`;
+  }
   return {
     ok: true,
-    message: Number(publicExp.levelsGained || 0) > 0
-      ? `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，升到 Lv${Number(profile.player.level || 1)}。`
-      : `${String(profile.player.name || "见习猎人")} 使用${itemLabel}，获得${exp}经验，当前 Lv${Number(profile.player.level || 1)}。`,
+    message,
     itemId,
     exp,
+    chargedExp,
+    unchargedExp,
+    pillLevelsGained: Math.max(0, Math.trunc(Number(publicExp.pillLevelsGained || 0))),
+    expPillItemId,
+    expPillInstanceId: String(publicExp.expPillInstanceId || ""),
+    expPillLevel: Math.max(0, Math.trunc(Number(charge.level || 0))),
   };
 }
 
@@ -13914,8 +14625,9 @@ function applyWorldPetExpItemAction(profile, itemId, params, petExpSettlement) {
   } catch (error) {
     return publicPetExpSettlementFailure(error);
   }
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
-    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
   }
   replaceObjectContents(pet, settlement.pet);
   const publicExp = settlement.publicExp || {};
@@ -13966,8 +14678,9 @@ function applyWorldMmStoneItemAction(profile, itemId, params) {
   if (before >= PET_REBIRTH_MM_STONE_CAPACITY) {
     return {ok: false, code: "mm_stone_full", message: `${profilePetName(pet)} 的${mmStoneStatLabel(stat)}石已满。`};
   }
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
-    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
   }
   const after = Math.min(PET_REBIRTH_MM_STONE_CAPACITY, before + points);
   record.stonePoints[stat] = after;
@@ -14014,8 +14727,9 @@ function applyWorldPetEggItemAction(profile, itemId, newPetFactory) {
   if (!grant.ok) {
     return grant;
   }
-  if (!consumeProfileBackpackItem(profile, itemId, 1)) {
-    return {ok: false, code: "item_not_enough", message: `${itemLabel} 不够了。`};
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
   }
   return {
     ok: true,
@@ -17827,6 +18541,24 @@ function createDefaultServerProfile(account) {
   };
   if (profile.petInstances.length <= 0) {
     profile.activePetInstanceId = "";
+  }
+  const startingEquipmentCounts = new Map();
+  for (const slot of profile.backpackSlots) {
+    const itemId = String(slot && slot.itemId || "").trim();
+    const count = Math.max(0, Math.trunc(Number(slot && slot.count || 0)));
+    if (count > 0 && catalogHasEquipmentItemId(battleEquipmentCatalog, itemId)) {
+      startingEquipmentCounts.set(itemId, Math.max(0, Number(startingEquipmentCounts.get(itemId) || 0)) + count);
+    }
+  }
+  const startingEquipmentGrant = grantFreshBackpackEquipmentInstances(
+    profile,
+    battleEquipmentCatalog,
+    Array.from(startingEquipmentCounts, ([itemId, count]) => ({itemId, count})),
+    "server_starter",
+    {expToNextLevel: battleExpToNextLevel},
+  );
+  if (!startingEquipmentGrant.ok) {
+    throw new Error(`default equipment instance initialization failed: ${startingEquipmentGrant.code}`);
   }
   return profile;
 }

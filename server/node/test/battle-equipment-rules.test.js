@@ -156,6 +156,19 @@ test("sub-threshold equipment wear still persists its counter", () => {
   profile.equipmentWearCounters = {
     right_hand_weapon: {itemId: "weapon_wooden_club", attackCount: 98, hitCount: 0},
   };
+  profile.equipmentSlotInstanceIds = {right_hand_weapon: "equip_weapon"};
+  profile.equipmentInstances = {
+    equip_weapon: {
+      schemaVersion: 1,
+      instanceId: "equip_weapon",
+      itemId: "weapon_wooden_club",
+      location: "equipped",
+      slotId: "right_hand_weapon",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {...profile.equipmentWearCounters.right_hand_weapon},
+    },
+  };
   const result = applyEquipmentWearUsageToProfile(profile, {weaponAttacks: 1}, catalog, wearRules);
   assert.equal(result.changed, true);
   assert.deepEqual(result.durabilityDrops, []);
@@ -174,8 +187,103 @@ test("wear skips requirement-inactive equipment and reaches the next valid slot"
     right_hand_weapon: {itemId: "weapon_shadow_group_bow", attackCount: 0, hitCount: 0},
     left_hand_weapon: {itemId: "weapon_training_spear", attackCount: 0, hitCount: 0},
   };
+  profile.equipmentSlotInstanceIds = {left_hand_weapon: "equip_spear"};
+  profile.equipmentInstances = {
+    equip_spear: {
+      schemaVersion: 1,
+      instanceId: "equip_spear",
+      itemId: "weapon_training_spear",
+      location: "equipped",
+      slotId: "left_hand_weapon",
+      durability: 30,
+      enhancement: {itemId: "weapon_training_spear", level: 0, history: []},
+      wearCounters: {...profile.equipmentWearCounters.left_hand_weapon},
+    },
+  };
   const result = applyEquipmentWearUsageToProfile(profile, {weaponAttacks: 1}, catalog, wearRules);
   assert.equal(result.changed, true);
   assert.equal(profile.equipmentWearCounters.right_hand_weapon.attackCount, 0);
   assert.equal(profile.equipmentWearCounters.left_hand_weapon.attackCount, 1);
+});
+
+test("wear skips a high-priority slot with no canonical instance and reaches the next valid slot", () => {
+  const profile = baseProfile();
+  profile.equipmentSlots = {
+    right_hand_weapon: "weapon_wooden_club",
+    left_hand_weapon: "weapon_training_spear",
+  };
+  profile.equipmentDurability = {right_hand_weapon: 30, left_hand_weapon: 30};
+  profile.equipmentWearCounters = {
+    right_hand_weapon: {itemId: "weapon_wooden_club", attackCount: 99, hitCount: 0},
+    left_hand_weapon: {itemId: "weapon_training_spear", attackCount: 0, hitCount: 0},
+  };
+  profile.equipmentSlotInstanceIds = {left_hand_weapon: "equip_spear"};
+  profile.equipmentInstances = {
+    equip_spear: {
+      schemaVersion: 1,
+      instanceId: "equip_spear",
+      itemId: "weapon_training_spear",
+      location: "equipped",
+      slotId: "left_hand_weapon",
+      durability: 30,
+      enhancement: {itemId: "weapon_training_spear", level: 0, history: []},
+      wearCounters: {...profile.equipmentWearCounters.left_hand_weapon},
+    },
+  };
+
+  const result = applyEquipmentWearUsageToProfile(profile, {weaponAttacks: 1}, catalog, wearRules);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(profile.equipmentWearCounters.right_hand_weapon.attackCount, 99);
+  assert.equal(profile.equipmentWearCounters.left_hand_weapon.attackCount, 1);
+  assert.equal(profile.equipmentInstances.equip_spear.wearCounters.attackCount, 1);
+});
+
+test("strict battle stats ignore compatibility-only phantom equipment", () => {
+  const profile = baseProfile();
+  profile.equipmentSlots = {right_hand_weapon: "weapon_wooden_club"};
+  profile.equipmentDurability = {right_hand_weapon: 30};
+  profile.equipmentEnhancement = {right_hand_weapon: {itemId: "weapon_wooden_club", level: 5, history: []}};
+
+  const result = resolveEquipmentBattleStats(profile, catalog, {requireInstances: true});
+
+  assert.equal(result.equipmentStateOk, false);
+  assert.deepEqual(result.equipmentBonus, {maxHp: 0, attack: 0, defense: 0, quick: 0});
+  assert.equal(result.slotFacts[0].reason, "equipment_slot_instance_conflict");
+});
+
+test("wear safely skips missing mappings and future instances without changing compatibility fields", () => {
+  const missing = baseProfile();
+  missing.equipmentSlots = {right_hand_weapon: "weapon_wooden_club"};
+  missing.equipmentDurability = {right_hand_weapon: 30};
+  missing.equipmentWearCounters = {right_hand_weapon: {itemId: "weapon_wooden_club", attackCount: 99, hitCount: 0}};
+  const missingBefore = structuredClone(missing);
+  const missingResult = applyEquipmentWearUsageToProfile(missing, {weaponAttacks: 1}, catalog, wearRules);
+  assert.equal(missingResult.ok, true);
+  assert.equal(missingResult.changed, false);
+  assert.deepEqual(missingResult.durabilityDrops, []);
+  assert.deepEqual(missing, missingBefore);
+
+  const future = structuredClone(missingBefore);
+  future.equipmentSlotInstanceIds = {right_hand_weapon: "equip_future"};
+  future.equipmentInstances = {
+    equip_future: {
+      schemaVersion: 2,
+      instanceId: "equip_future",
+      itemId: "weapon_wooden_club",
+      location: "equipped",
+      slotId: "right_hand_weapon",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 99, hitCount: 0},
+      futureField: {keep: true},
+    },
+  };
+  const futureBefore = structuredClone(future);
+  const futureResult = applyEquipmentWearUsageToProfile(future, {weaponAttacks: 1}, catalog, wearRules);
+  assert.equal(futureResult.ok, true);
+  assert.equal(futureResult.changed, false);
+  assert.deepEqual(futureResult.durabilityDrops, []);
+  assert.deepEqual(future, futureBefore);
 });

@@ -104,6 +104,33 @@ test("GM pet grant uses server catalogs, CSPRNG private growth, capacity, codex,
   assert.equal(service.getProfile(gm.session.token).profileSummary.profileRevision, fullRevision);
 });
 
+test("GM pet writers preserve unsafe profile assets", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const gm = registerGm(seedService, "gmpetunsafe");
+  const granted = seedService.grantGmPet(gm.session.token, {growthSpeciesProfileId: "blue_man_dragon_v1"});
+  assert.equal(granted.ok, true);
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[gm.account.accountId];
+  seed.profiles[binding.playerId].profile.backpackSlots = [{
+    itemId: "future_gm_pet_relic_999",
+    count: 1,
+    futureEnvelope: {schemaVersion: 99},
+  }];
+  const profileBefore = structuredClone(seed.profiles[binding.playerId].profile);
+  const revisionBefore = binding.profileRevision;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const blockedGrant = service.grantGmPet(gm.session.token, {formId: "wuli_normal_orange_fire10"});
+  assert.equal(blockedGrant.ok, false);
+  assert.equal(blockedGrant.code, "backpack_item_unknown");
+  const blockedLevel = service.levelUpGmPet(gm.session.token, {instanceId: granted.result.instanceId});
+  assert.equal(blockedLevel.ok, false);
+  assert.equal(blockedLevel.code, "backpack_item_unknown");
+  const after = service.snapshot();
+  assert.equal(after.profileBindings[gm.account.accountId].profileRevision, revisionBefore);
+  assert.deepEqual(after.profiles[binding.playerId].profile, profileBefore);
+});
+
 test("GM pet level-up grows newly linked common pets, preserves legacy pets, and rejects damaged v1", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const gm = registerGm(service, "gmpetlevel");
