@@ -2565,7 +2565,7 @@ test("party pve knock-away defeats return players to record point", () => {
         "formId": "wuli_normal_orange_fire10",
         "name": "普通乌力",
         "level": 30,
-        "battleStats": {"maxHp": 80, "attack": 150, "defense": 5, "quick": 220},
+        "battleStats": {"maxHp": 80, "attack": 115, "defense": 5, "quick": 220},
       },
     },
   });

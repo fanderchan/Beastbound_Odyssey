@@ -1839,6 +1839,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 			return _apply_server_resolved_status_tick_event(state, event)
 		if event_type == "status_skip":
 			return _apply_server_resolved_status_skip_event(state, event)
+		if event_type == "multi_attack":
+			return _apply_server_resolved_multi_damage_event(state, event)
 		if event_type == "attack" or event_type == "skill_attack" or event_type == "combo_attack" or event_type == "counter_attack":
 			return _apply_server_resolved_damage_event(state, event)
 		if event_type == "item_poison" or event_type == "item_poison_all" or event_type == "spirit_poison" or event_type == "spirit_poison_all":
@@ -2800,6 +2802,114 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 			state["message"] += " %s 被击飞。" % target_name
 		elif hp_after <= 0:
 			state["message"] += " %s 倒下了。" % target_name
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var attacker_id := str(event.get("attackerId", ""))
+	var attacker_index := actor_index(state, attacker_id)
+	if attacker_index < 0:
+		return state
+	var actors: Array = state.get("actors", [])
+	var attacker := (actors[attacker_index] as Dictionary).duplicate(true)
+	if int(attacker.get("hp", 0)) <= 0:
+		return state
+	attacker["actionState"] = "attack"
+	actors[attacker_index] = attacker
+	var target_ids: Array[String] = []
+	var effect_per_target := {}
+	var actor_damage_per_target := {}
+	var ride_damage_per_target := {}
+	var ride_hp_before_per_target := {}
+	var ride_hp_after_per_target := {}
+	var ride_knocked_per_target := {}
+	var dodge_per_target := {}
+	var critical_per_target := {}
+	var total_damage := 0
+	var dodged_count := 0
+	var critical_count := 0
+	var raw_target_facts = event.get("serverTargetFacts", [])
+	if not (raw_target_facts is Array):
+		return state
+	for value in (raw_target_facts as Array):
+		if not (value is Dictionary):
+			continue
+		var facts := value as Dictionary
+		var target_id := str(facts.get("targetId", ""))
+		var target_index := actor_index(state, target_id)
+		if target_index < 0:
+			continue
+		var target := (actors[target_index] as Dictionary).duplicate(true)
+		var dodged := bool(facts.get("dodged", false))
+		var critical := bool(facts.get("critical", false)) and not dodged
+		var damage := 0 if dodged else maxi(0, int(facts.get("damage", 0)))
+		var hp_after := maxi(0, int(facts.get("hpAfter", target.get("hp", 0))))
+		var ride_result := _actor_with_server_ride_result(target, facts, damage)
+		target = ride_result.get("actor", target) as Dictionary
+		var actor_damage := maxi(0, int(ride_result.get("actorDamage", damage)))
+		var ride_damage := maxi(0, int(ride_result.get("rideDamage", 0)))
+		target["hp"] = hp_after
+		if facts.get("statusesAfter", null) is Dictionary:
+			target["statuses"] = (facts.get("statusesAfter", {}) as Dictionary).duplicate(true)
+			target["poisoned"] = BattleStatusModel.has_status(target, STATUS_POISON)
+		var launched := bool(facts.get("launched", false)) and not dodged
+		target["launched"] = launched
+		target["revivable"] = not launched
+		target["serverDefeated"] = bool(facts.get("defeated", hp_after <= 0))
+		target["serverLaunched"] = launched
+		if dodged:
+			target["actionState"] = "dodge"
+			dodged_count += 1
+		elif launched:
+			target["actionState"] = "launched"
+		else:
+			target["actionState"] = "down" if hp_after <= 0 else "hit"
+		if critical:
+			critical_count += 1
+		actors[target_index] = target
+		target_ids.append(target_id)
+		effect_per_target[target_id] = damage
+		actor_damage_per_target[target_id] = actor_damage
+		ride_damage_per_target[target_id] = ride_damage
+		ride_hp_before_per_target[target_id] = int(ride_result.get("rideHpBefore", 0))
+		ride_hp_after_per_target[target_id] = int(ride_result.get("rideHpAfter", 0))
+		ride_knocked_per_target[target_id] = bool(ride_result.get("ridePetKnocked", false))
+		dodge_per_target[target_id] = dodged
+		critical_per_target[target_id] = critical
+		total_damage += damage
+	if target_ids.is_empty():
+		return state
+	state["actors"] = actors
+	for target_id in target_ids:
+		state = _sync_player_pet_party_from_actor(state, actor_by_id(state, target_id))
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastEventType"] = "multi_attack"
+	state["lastAttackerId"] = attacker_id
+	state["lastTargetId"] = target_ids[0]
+	state["lastTargetIds"] = target_ids
+	state["lastDamage"] = total_damage
+	state["lastEffectPerTarget"] = effect_per_target
+	state["lastActorDamagePerTarget"] = actor_damage_per_target
+	state["lastRideDamagePerTarget"] = ride_damage_per_target
+	state["lastRideHpBeforePerTarget"] = ride_hp_before_per_target
+	state["lastRideHpAfterPerTarget"] = ride_hp_after_per_target
+	state["lastRideKnockedPerTarget"] = ride_knocked_per_target
+	state["lastParticipants"] = [attacker_id]
+	state["lastDodged"] = dodged_count == target_ids.size()
+	state["lastCritical"] = critical_count > 0
+	state["lastDodgePerTarget"] = dodge_per_target
+	state["lastCriticalPerTarget"] = critical_per_target
+	state["lastCounterEvent"] = {}
+	state["lastCounterTriggered"] = false
+	state["lastReactionKind"] = "multi_attack"
+	state["lastStatusChanges"] = _server_status_changes(event)
+	state["message"] = "%s 使用%s，攻击%d个目标，造成%d点伤害。" % [
+		str(attacker.get("name", "我方")),
+		str(event.get("skillName", "群体攻击")),
+		target_ids.size(),
+		total_damage,
+	]
 	return _apply_server_message_override(state, event)
 
 

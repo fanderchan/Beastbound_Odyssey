@@ -1342,6 +1342,8 @@ test("server player rebirth consumes trial requirements and writes authoritative
   const registered = service.register({"username": "rebirthuser", "password": "test1234", "displayName": "转生玩家"});
   const token = registered.session.token;
   const profile = playerRebirthReadyProfile("转生玩家");
+  profile.equipmentSlots = {"accessory_left": "accessory_firebud_charm"};
+  profile.equipmentDurability = {"accessory_left": 30};
   assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
   service.updatePlayerPosition(token, {"mapId": "level_grass_trial_ground", "cellX": 12, "cellY": 8, "facing": "east", "moving": false});
 
@@ -1352,6 +1354,9 @@ test("server player rebirth consumes trial requirements and writes authoritative
   assert.equal(reborn.profile.player.level, 1);
   assert.equal(reborn.profile.player.exp, 0);
   assert.equal(reborn.profile.player.nextExp, 122);
+  assert.deepEqual(reborn.profile.player.baseStats, reborn.rebirth.afterStats);
+  assert.equal(reborn.profile.player.maxHp, reborn.rebirth.afterStats.maxHp + 8);
+  assert.equal(reborn.profile.player.hp, reborn.rebirth.afterStats.maxHp);
   assert.equal(reborn.profile.rebirthHistory.length, 1);
   assert.equal(reborn.profile.rebirthHistory[0].toRebirth, 1);
   assert.equal(reborn.profile.rebirthHistory[0].questId, "rebirth_1");

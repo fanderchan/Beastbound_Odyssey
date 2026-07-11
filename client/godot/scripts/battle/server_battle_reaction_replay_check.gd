@@ -7,6 +7,39 @@ const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_
 
 static func run() -> Dictionary:
 	var checks := {}
+	var equipment_room_state := ServerBattleRoomModel.battle_state_from_room({
+		"roomId": "equipment_actor_mapping",
+		"status": "ready",
+		"battle": {
+			"round": 1,
+			"actors": [{
+				"actorId": "server_equipment_player",
+				"accountId": "equipment_account",
+				"username": "equipment_user",
+				"displayName": "装备猎人",
+				"side": "challenger",
+				"kind": "player",
+				"hp": 120,
+				"maxHp": 128,
+				"attack": 50,
+				"defense": 16,
+				"speed": 75,
+				"battleActionIds": ["weapon_shadow_group_shot"],
+				"attackActionId": "weapon_shadow_group_shot",
+				"equipmentStatBonus": {"maxHp": 8, "attack": 32, "defense": 10, "quick": 5},
+				"equipmentStatSummary": {"current": {"maxHp": 128, "attack": 50, "defense": 16, "quick": 75}},
+			}],
+		},
+	}, {"accountId": "equipment_account", "username": "equipment_user"})
+	var equipment_room_actor := BattleModel.actor_by_id(equipment_room_state, BattleModel.PLAYER_ACTOR_ID)
+	var equipment_room_bonus := equipment_room_actor.get("equipmentStatBonus", {}) as Dictionary
+	var equipment_room_summary := equipment_room_actor.get("equipmentStatSummary", {}) as Dictionary
+	checks["equipment_actor_snapshot_mapping"] = (
+		str(equipment_room_actor.get("attackActionId", "")) == "weapon_shadow_group_shot"
+		and (equipment_room_actor.get("battleActionIds", []) as Array).has("weapon_shadow_group_shot")
+		and int(equipment_room_bonus.get("attack", 0)) == 32
+		and int((equipment_room_summary.get("current", {}) as Dictionary).get("attack", 0)) == 50
+	)
 
 	var dodge_state := _server_state()
 	dodge_state = _set_actor_fields(dodge_state, "enemy_front_3", {
@@ -225,6 +258,111 @@ static func run() -> Dictionary:
 		and bool(combo_step.get("counterEventEmpty", false))
 		and int(combo_step.get("ledgerHpBefore", -1)) == 220
 		and int(combo_step.get("ledgerHpAfter", -1)) == 177
+	)
+
+	var multi_state := _server_state()
+	multi_state = _set_actor_fields(multi_state, "enemy_front_3", {
+		"hp": 100,
+		"maxHp": 100,
+		"attack": 44,
+		"defense": 33,
+		"quick": 55,
+		"ridePetInstanceId": "multi_ride",
+		"ridePetHp": 5,
+		"ridePetMaxHp": 20,
+		"ridePetBattleState": "riding",
+		"statuses": {BattleModel.STATUS_SLEEP: {"turns": 2, "potency": 0}},
+	})
+	multi_state = _set_actor_fields(multi_state, "enemy_front_4", {"hp": 100, "maxHp": 100})
+	var multi_event_list := _event_list([{
+		"eventId": "evt_equipment_multi",
+		"eventType": "multi_attack",
+		"sequence": 1,
+		"actorId": BattleModel.PLAYER_ACTOR_ID,
+		"actorKind": "player",
+		"targetActorId": "enemy_front_3",
+		"targetActorIds": ["enemy_front_3", "enemy_front_4"],
+		"targetCount": 2,
+		"requestedTargetCount": 6,
+		"candidateTargetCount": 2,
+		"actionId": "weapon_shadow_group_shot",
+		"damage": 12,
+		"dodged": false,
+		"critical": true,
+		"counterTriggered": false,
+		"targets": [{
+			"targetActorId": "enemy_front_3",
+			"targetKind": "wild_pet",
+			"damage": 12,
+			"actorDamage": 7,
+			"rideDamage": 5,
+			"hpBefore": 100,
+			"hpAfter": 93,
+			"ridePetInstanceId": "multi_ride",
+			"ridePetMaxHp": 20,
+			"rideHpBefore": 5,
+			"rideHpAfter": 0,
+			"ridePetKnocked": true,
+			"ridePetBattleStateAfter": BattleModel.PET_STATE_REST,
+			"attackAfter": 20,
+			"defenseAfter": 10,
+			"speedAfter": 30,
+			"dodged": false,
+			"critical": true,
+			"defeated": false,
+			"statusesAfter": {},
+		}, {
+			"targetActorId": "enemy_front_4",
+			"targetKind": "wild_pet",
+			"damage": 0,
+			"actorDamage": 0,
+			"rideDamage": 0,
+			"hpBefore": 100,
+			"hpAfter": 100,
+			"dodged": true,
+			"critical": false,
+			"defeated": false,
+			"statusesAfter": {},
+		}],
+	}])
+	var multi_replay := _replay(multi_state, multi_event_list)
+	var multi_events: Array = multi_replay.get("events", [])
+	var multi_ledgers: Array = multi_replay.get("ledgers", [])
+	var multi_result := multi_replay.get("state", {}) as Dictionary
+	var multi_event := multi_events[0] as Dictionary if not multi_events.is_empty() else {}
+	var multi_ledger := multi_ledgers[0] as Dictionary if not multi_ledgers.is_empty() else {}
+	var multi_ledger_targets: Array = multi_ledger.get("targets", []) if multi_ledger.get("targets", []) is Array else []
+	var multi_first_ledger_target := multi_ledger_targets[0] as Dictionary if not multi_ledger_targets.is_empty() else {}
+	var multi_targets: Array = multi_event.get("serverTargetFacts", []) if multi_event.get("serverTargetFacts", []) is Array else []
+	var multi_first_target := BattleModel.actor_by_id(multi_result, "enemy_front_3")
+	var multi_rewound := ServerBattleRoomModel.state_at_server_event_list_start(multi_result, multi_event_list)
+	checks["equipment_multi_attack_is_exact_server_replay"] = (
+		str(multi_event.get("type", "")) == "multi_attack"
+		and bool(multi_event.get("serverResolved", false))
+		and multi_targets.size() == 2
+		and int(multi_first_target.get("hp", -1)) == 93
+		and int(BattleModel.actor_by_id(multi_result, "enemy_front_4").get("hp", -1)) == 100
+		and int(multi_first_target.get("ridePetHp", -1)) == 0
+		and bool(multi_first_target.get("ridePetKnocked", false))
+		and int(multi_first_target.get("attack", -1)) == 20
+		and int(multi_first_target.get("defense", -1)) == 10
+		and int(multi_first_target.get("quick", -1)) == 30
+		and not _actor_has_status(multi_first_target, BattleModel.STATUS_SLEEP)
+		and int(multi_result.get("lastDamage", -1)) == 12
+		and int((multi_result.get("lastEffectPerTarget", {}) as Dictionary).get("enemy_front_3", -1)) == 12
+		and int((multi_result.get("lastEffectPerTarget", {}) as Dictionary).get("enemy_front_4", -1)) == 0
+		and bool((multi_result.get("lastDodgePerTarget", {}) as Dictionary).get("enemy_front_4", false))
+		and bool((multi_result.get("lastCriticalPerTarget", {}) as Dictionary).get("enemy_front_3", false))
+		and multi_ledger_targets.size() == 2
+		and int(multi_first_ledger_target.get("hpBefore", -1)) == 100
+		and int(multi_first_ledger_target.get("hpAfter", -1)) == 93
+		and int(multi_first_ledger_target.get("actorDamage", -1)) == 7
+		and int(multi_first_ledger_target.get("rideDamage", -1)) == 5
+		and int(multi_first_ledger_target.get("rideHpBefore", -1)) == 5
+		and int(multi_first_ledger_target.get("rideHpAfter", -1)) == 0
+		and int(BattleModel.actor_by_id(multi_rewound, "enemy_front_3").get("hp", -1)) == 100
+		and int(BattleModel.actor_by_id(multi_rewound, "enemy_front_4").get("hp", -1)) == 100
+		and not bool(multi_result.get("lastCounterTriggered", true))
 	)
 
 	var status_replay := _replay(_server_state(), _event_list([{

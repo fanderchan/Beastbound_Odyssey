@@ -44,10 +44,19 @@ const {
   resolveRidingBattleStats,
 } = require("./auth/battle-riding-rules");
 const {
-  applyStoneDefenseReduction,
   resolveConfusionTarget,
-  stoneDefenseExtraReduction,
 } = require("./auth/battle-control-rules");
+const {
+  applyEquipmentWearUsageToProfile,
+  equipmentWearRulesFromDocument,
+  loadBattleEquipmentCatalog,
+  resolveEquipmentBattleStats,
+} = require("./auth/battle-equipment-rules");
+const {
+  comboDamageFor,
+  loadBattleCombatFormula,
+  resolvePhysicalDamage,
+} = require("./auth/battle-combat-formula");
 const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
@@ -68,6 +77,8 @@ const {
 } = require("./auth/family-manor");
 
 const playerLevelRuntime = loadPlayerLevelRuntime();
+const battleEquipmentCatalog = loadBattleEquipmentCatalog();
+const authoritativeBattleCombatFormula = loadBattleCombatFormula();
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
@@ -192,11 +203,8 @@ const BATTLE_STATUS_STONE = "stone";
 const BATTLE_CONTROL_STATUSES = [BATTLE_STATUS_SLEEP, BATTLE_STATUS_CONFUSION, BATTLE_STATUS_STONE];
 const BATTLE_CLEANSE_STATUS_IDS = [BATTLE_STATUS_POISON, BATTLE_STATUS_SLEEP, BATTLE_STATUS_CONFUSION, BATTLE_STATUS_STONE];
 const BATTLE_ACTOR_MAX_HP = 120;
-const BATTLE_BASE_ATTACK_DAMAGE = 18;
-const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_PLAYER_COMBO_BASE_RATE = 0.50;
 const BATTLE_MONSTER_COMBO_BASE_RATE = 0.20;
-const BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR = 8;
 const BATTLE_EVENT_CONTRACT_VERSION = 3;
 const BATTLE_TARGET_RULE_SLOT_ORDER = "slot_order";
 const BATTLE_TARGET_RULE_REVERSE_SLOT_ORDER = "reverse_slot_order";
@@ -857,11 +865,13 @@ function createAuthService(options = {}) {
     binding.profileRevision = nextRevision;
     binding.updatedAt = isoNow(now);
     data.profileBindings[resolved.account.accountId] = binding;
+    const storedProfile = clone(profile);
+    synchronizeProfileEquipmentStats(storedProfile);
     data.profiles[binding.playerId] = {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
-      profile: clone(profile),
+      profile: storedProfile,
       updatedAt: binding.updatedAt,
       schemaVersion: 1,
     };
@@ -3378,6 +3388,9 @@ function publicBattleProfileWritebackEntry(entry) {
     playerHp: entry.playerHp && typeof entry.playerHp === "object" ? clone(entry.playerHp) : null,
     ridePetHp: entry.ridePetHp && typeof entry.ridePetHp === "object" ? clone(entry.ridePetHp) : null,
     petHps: Array.isArray(entry.petHps) ? clone(entry.petHps) : [],
+    equipmentWear: entry.equipmentWear && typeof entry.equipmentWear === "object" && !Array.isArray(entry.equipmentWear)
+      ? clone(entry.equipmentWear)
+      : null,
     battleItemBag: entry.battleItemBag && typeof entry.battleItemBag === "object" ? clone(entry.battleItemBag) : null,
     captureToolBag: entry.captureToolBag && typeof entry.captureToolBag === "object" ? clone(entry.captureToolBag) : null,
     capturedPets: Array.isArray(entry.capturedPets) ? clone(entry.capturedPets) : [],
@@ -3478,6 +3491,14 @@ function publicBattleActor(actor) {
     forgottenSkillIds: Array.isArray(actor.forgottenSkillIds) ? actor.forgottenSkillIds.map((value) => String(value)) : [],
     passiveSkillIds: Array.isArray(actor.passiveSkillIds) ? actor.passiveSkillIds.map((value) => String(value)) : [],
     spiritIds: Array.isArray(actor.spiritIds) ? actor.spiritIds.map((value) => String(value)).filter(Boolean) : [],
+    battleActionIds: Array.isArray(actor.battleActionIds) ? actor.battleActionIds.map((value) => String(value)).filter(Boolean) : [],
+    attackActionId: String(actor.attackActionId || ""),
+    equipmentStatBonus: actor.equipmentStatBonus && typeof actor.equipmentStatBonus === "object" && !Array.isArray(actor.equipmentStatBonus)
+      ? clone(actor.equipmentStatBonus)
+      : {},
+    equipmentStatSummary: actor.equipmentStatSummary && typeof actor.equipmentStatSummary === "object" && !Array.isArray(actor.equipmentStatSummary)
+      ? clone(actor.equipmentStatSummary)
+      : {},
     statuses: publicBattleStatuses(actor.statuses),
     statusResist: actor.statusResist && typeof actor.statusResist === "object" && !Array.isArray(actor.statusResist) ? clone(actor.statusResist) : {},
     statusImmune: actor.statusImmune && typeof actor.statusImmune === "object" && !Array.isArray(actor.statusImmune) ? clone(actor.statusImmune) : {},
@@ -3802,6 +3823,7 @@ function executePlayerRebirthToProfile(profile, options = {}) {
   if (lostText) {
     rewardTexts.push(`背包已满，${lostText} 未进入背包`);
   }
+  synchronizeProfileEquipmentStats(profile);
   const consumedPetText = consumeResult.consumedPets
     .map((pet) => `${pet.name || pet.formId || "转生兽"} Lv${Math.max(1, Math.trunc(Number(pet.level || 1)))}`)
     .join("、");
@@ -4493,50 +4515,6 @@ function equipmentItemMeetsRequirements(item, playerLevel, playerRebirth) {
     && Math.max(0, Math.trunc(Number(playerRebirth || 0))) >= requiredRebirth;
 }
 
-function equipmentSlotIsBroken(slotId, itemId, durability) {
-  if (!durability || typeof durability !== "object" || Array.isArray(durability)) {
-    return false;
-  }
-  const item = equipmentItemById(itemId);
-  const maxDurability = Math.trunc(Number(item && item.durabilityMax || 30));
-  if (maxDurability <= 0) {
-    return false;
-  }
-  return clampInt(durability[slotId], 0, maxDurability, maxDurability) <= 0;
-}
-
-function equipmentSpiritIdsFromProfile(profile) {
-  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
-    return [];
-  }
-  const slots = profile.equipmentSlots && typeof profile.equipmentSlots === "object" && !Array.isArray(profile.equipmentSlots)
-    ? profile.equipmentSlots
-    : {};
-  const durability = profile.equipmentDurability && typeof profile.equipmentDurability === "object" && !Array.isArray(profile.equipmentDurability)
-    ? profile.equipmentDurability
-    : {};
-  const player = profile.player && typeof profile.player === "object" && !Array.isArray(profile.player) ? profile.player : {};
-  const playerLevel = Math.max(1, Math.trunc(Number(player.level || 1)));
-  const playerRebirth = Math.max(0, Math.trunc(Number(profile.rebirthCount || 0)));
-  const result = [];
-  for (const slotId of equipmentSlotIds()) {
-    const itemId = String(slots[slotId] || "").trim();
-    if (!itemId || equipmentSlotIsBroken(slotId, itemId, durability)) {
-      continue;
-    }
-    const item = equipmentItemById(itemId);
-    if (!equipmentItemMeetsRequirements(item, playerLevel, playerRebirth)) {
-      continue;
-    }
-    for (const spiritId of battleSpiritIdsForItem(itemId)) {
-      if (!result.includes(spiritId)) {
-        result.push(spiritId);
-      }
-    }
-  }
-  return result.sort();
-}
-
 function equipItemToProfile(profile, itemId) {
   const normalizedItemId = String(itemId || "").trim();
   const item = equipmentItemById(normalizedItemId);
@@ -4658,6 +4636,7 @@ function equipItemToProfile(profile, itemId) {
   profile.equipmentEnhancement = enhancement;
   profile.equipmentWearCounters = wearCounters;
   profile.equipmentSlotsVersion = 3;
+  synchronizeProfileEquipmentStats(profile);
 
   const message = previousItemId && previousItemId !== normalizedItemId
     ? `装备${itemLabel}，换下${equipmentItemLabel(previousItemId)}。`
@@ -4736,6 +4715,7 @@ function unequipEquipmentSlotFromProfile(profile, slotId) {
   profile.equipmentEnhancement = enhancement;
   profile.equipmentWearCounters = wearCounters;
   profile.equipmentSlotsVersion = 3;
+  synchronizeProfileEquipmentStats(profile);
 
   return {
     ok: true,
@@ -4843,6 +4823,7 @@ function enhanceEquipmentSlotToProfile(profile, slotId) {
   profile.equipmentSlotInstanceIds = slotInstanceIds;
   profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
   profile.equipmentSlotsVersion = 3;
+  synchronizeProfileEquipmentStats(profile);
 
   const bonusText = equipmentEnhanceBonusTextFor(itemId, nextLevel);
   return {
@@ -4979,6 +4960,7 @@ function repairAllEquipmentToProfile(profile) {
   profile.equipmentSlotInstanceIds = slotInstanceIds;
   profile.nextEquipmentInstanceSerial = Math.max(1, nextSerial);
   profile.equipmentSlotsVersion = 3;
+  synchronizeProfileEquipmentStats(profile);
   return {
     ok: true,
     missingDurability,
@@ -5357,15 +5339,16 @@ function equipmentExpPillChargeHasProgress(slots, value) {
 
 function battlePlayerSnapshotFromProfile(profile, account) {
   const player = profile && profile.player && typeof profile.player === "object" ? profile.player : {};
-  const baseStats = player.baseStats && typeof player.baseStats === "object" ? player.baseStats : {};
-  const maxHp = positiveNumber(player.maxHp, positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp));
+  const equipmentStats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog);
+  const baseStats = equipmentStats.effectiveStats;
+  const maxHp = positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
   const ride = ridingPetSnapshotFromProfile(profile);
   const rideBaseStats = {
     attack: positiveNumber(baseStats.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
     defense: positiveNumber(baseStats.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
     quick: positiveNumber(baseStats.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
   };
-  const rideAttackStyle = ridingAttackStyleFromProfile(profile);
+  const rideAttackStyle = equipmentStats.attackStyle;
   const ridingStats = String(ride.ridePetInstanceId || "") !== ""
     ? resolveRidingBattleStats(rideBaseStats, {
       attack: ride.ridePetAttack,
@@ -5377,7 +5360,7 @@ function battlePlayerSnapshotFromProfile(profile, account) {
     kind: BATTLE_ACTOR_KIND_PLAYER,
     name: String(player.name || account.displayName || account.username || "猎人"),
     level: positiveNumber(player.level, 1),
-    hp: clampNumber(player.hp, 1, maxHp, maxHp),
+    hp: clampNumber(equipmentStats.currentHp, 1, maxHp, maxHp),
     maxHp,
     attack: ridingStats.attack,
     defense: ridingStats.defense,
@@ -5385,38 +5368,45 @@ function battlePlayerSnapshotFromProfile(profile, account) {
     rideBaseStats,
     rideAttackStyle: String(ride.ridePetInstanceId || "") !== "" ? rideAttackStyle : "",
     ...ride,
-    spiritIds: equipmentSpiritIdsFromProfile(profile),
+    spiritIds: equipmentStats.spiritIds.filter((spiritId) => Boolean(battleSpiritActionById(spiritId))),
+    battleActionIds: equipmentStats.battleActionIds.filter((actionId) => Boolean(battleActionById(actionId))),
+    attackActionId: battleActionById(equipmentStats.attackActionId) ? equipmentStats.attackActionId : "",
+    equipmentStatBonus: clone(equipmentStats.equipmentBonus),
+    equipmentStatSummary: {
+      base: clone(equipmentStats.baseStats),
+      bonus: clone(equipmentStats.equipmentBonus),
+      current: clone(equipmentStats.effectiveStats),
+      schemaVersion: 1,
+    },
+    equipmentWearUsage: {weaponAttacks: 0, armorHits: 0},
     comboRateOverride: battleComboRateOverrideValue(player.comboRateOverride),
     schemaVersion: 1,
   };
 }
 
-function ridingAttackStyleFromProfile(profile) {
-  const slots = equipmentSlotsFromProfile(profile);
-  const durability = equipmentDurabilityFromProfile(profile);
-  const player = profile && profile.player && typeof profile.player === "object" && !Array.isArray(profile.player)
-    ? profile.player
-    : {};
-  const playerLevel = Math.max(1, Math.trunc(Number(player.level || 1)));
-  const playerRebirth = Math.max(0, Math.trunc(Number(profile && profile.rebirthCount || 0)));
-  for (const slotId of ["right_hand_weapon", "left_hand_weapon"]) {
-    const itemId = String(slots[slotId] || "").trim();
-    if (
-      itemId === "" ||
-      equipmentSlotIsBroken(slotId, itemId, durability)
-    ) {
-      continue;
-    }
-    const item = equipmentItemById(itemId);
-    if (!equipmentItemMeetsRequirements(item, playerLevel, playerRebirth)) {
-      continue;
-    }
-    const actionId = String(item && item.attackActionId || "").trim().toLowerCase();
-    if (actionId !== "" && battleActionById(actionId) && (actionId.includes("bow") || actionId.includes("shot") || actionId.includes("throw"))) {
-      return "ranged";
-    }
+function synchronizeProfileEquipmentStats(profile) {
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    return {changed: false, stats: null};
   }
-  return "melee";
+  if (!profile.player || typeof profile.player !== "object" || Array.isArray(profile.player)) {
+    profile.player = {};
+  }
+  const stats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog);
+  const player = profile.player;
+  const previousHp = Number(player.hp);
+  const previousMaxHp = Number(player.maxHp);
+  const previousBaseStats = JSON.stringify(objectOrEmpty(player.baseStats));
+  player.baseStats = clone(stats.baseStats);
+  player.maxHp = stats.effectiveStats.maxHp;
+  player.hp = clampNumber(player.hp, 1, player.maxHp, player.maxHp);
+  return {
+    changed: (
+      !Number.isFinite(previousHp) || previousHp !== player.hp
+      || !Number.isFinite(previousMaxHp) || previousMaxHp !== player.maxHp
+      || previousBaseStats !== JSON.stringify(player.baseStats)
+    ),
+    stats,
+  };
 }
 
 function ridingPetSnapshotFromProfile(profile) {
@@ -6629,6 +6619,14 @@ function battlePlayerActorFromParticipant(participant, side, options = {}) {
     revivable: true,
     ...battleActorRideFieldsFromPlayerSnapshot(player),
     spiritIds: stringArray(player.spiritIds),
+    battleActionIds: stringArray(player.battleActionIds),
+    attackActionId: String(player.attackActionId || ""),
+    equipmentStatBonus: clone(objectOrEmpty(player.equipmentStatBonus)),
+    equipmentStatSummary: clone(objectOrEmpty(player.equipmentStatSummary)),
+    equipmentWearUsage: {
+      weaponAttacks: Math.max(0, Math.trunc(Number(objectOrEmpty(player.equipmentWearUsage).weaponAttacks || 0))),
+      armorHits: Math.max(0, Math.trunc(Number(objectOrEmpty(player.equipmentWearUsage).armorHits || 0))),
+    },
     comboRateOverride: battleComboRateOverrideValue(player.comboRateOverride),
     schemaVersion: 1,
   };
@@ -7796,6 +7794,31 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
     return {consumed: 1, events: []};
   }
 
+  const equipmentAttackActionId = battleEquipmentMultiAttackActionId(resolved.actor);
+  if (equipmentAttackActionId !== "") {
+    if (battleActorHasStatus(resolved.actor, BATTLE_STATUS_CONFUSION)) {
+      return {
+        consumed: 1,
+        events: battleSingleAttackEvents(room, battle, {
+          ...resolved,
+          command: {...resolved.command, actionId: equipmentAttackActionId},
+        }, round, sequence, options),
+      };
+    }
+    return {
+      consumed: 1,
+      events: [battleEquipmentMultiAttackEvent(
+        room,
+        battle,
+        resolved,
+        equipmentAttackActionId,
+        round,
+        sequence,
+        options,
+      )],
+    };
+  }
+
   const group = [resolved];
   if (battleCommandCanStartCombo(command) && battleComboRollSucceeds(room, battle, resolved, round, sequence)) {
     for (let index = commandIndex + 1; index < orderedCommands.length; index += 1) {
@@ -7808,7 +7831,8 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
         !nextActor ||
         Number(nextActor.hp || 0) <= 0 ||
         Boolean(nextActor.escaped) ||
-        battleBlockingStatusId(nextActor) !== ""
+        battleBlockingStatusId(nextActor) !== "" ||
+        battleEquipmentMultiAttackActionId(nextActor) !== ""
       ) {
         break;
       }
@@ -7830,6 +7854,194 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
     consumed: 1,
     events: battleSingleAttackEvents(room, battle, resolved, round, sequence, options),
   };
+}
+
+function battleEquipmentMultiAttackActionId(actor) {
+  if (!actor || String(actor.kind || "") !== BATTLE_ACTOR_KIND_PLAYER) {
+    return "";
+  }
+  const actionId = String(actor.attackActionId || "").trim();
+  const action = battleActionById(actionId);
+  const target = action && action.target && typeof action.target === "object" && !Array.isArray(action.target)
+    ? action.target
+    : {};
+  const effect = action && action.effect && typeof action.effect === "object" && !Array.isArray(action.effect)
+    ? action.effect
+    : {};
+  if (
+    !action
+    || String(action.owner || "") !== "equipment_action"
+    || String(action.command || "") !== BATTLE_ACTION_ATTACK
+    || String(target.targetMode || "") !== "enemy_random_range"
+    || String(effect.type || "") !== "damage"
+  ) {
+    return "";
+  }
+  return actionId;
+}
+
+function battleEquipmentMultiAttackTargets(room, battle, actor, actionId, round, sequence, options = {}) {
+  const authority = options.battleRandomAuthority;
+  if (!authority || typeof authority.index !== "function") {
+    throw new TypeError("equipment multi attack requires private random authority");
+  }
+  const targetRule = battleActionTarget(actionId);
+  const minTargets = Math.max(1, Math.trunc(Number(targetRule.minTargets || 1)));
+  const maxTargets = Math.max(minTargets, Math.trunc(Number(targetRule.maxTargets || minTargets)));
+  const desiredCount = minTargets + authority.index(room.roomId, {
+    purpose: "equipment_multi_target_count.v1",
+    turnSeq: battle.turnSeq,
+    round,
+    sequence,
+    actorId: String(actor.actorId || ""),
+    actionId,
+  }, maxTargets - minTargets + 1);
+  const candidates = (Array.isArray(battle.actors) ? battle.actors : []).filter((entry) => (
+    entry
+    && String(entry.side || "") !== String(actor.side || "")
+    && Number(entry.hp || 0) > 0
+    && !Boolean(entry.escaped)
+    && !Boolean(entry.captured)
+  ));
+  const candidateCount = candidates.length;
+  const selectionCount = Math.min(desiredCount, candidateCount);
+  const selected = [];
+  while (selected.length < selectionCount) {
+    const index = authority.index(room.roomId, {
+      purpose: "equipment_multi_target_pick.v1",
+      turnSeq: battle.turnSeq,
+      round,
+      sequence,
+      ordinal: selected.length,
+      actorId: String(actor.actorId || ""),
+      actionId,
+    }, candidates.length);
+    selected.push(candidates.splice(index, 1)[0]);
+  }
+  return {targets: selected, desiredCount, candidateCount};
+}
+
+function battleEquipmentMultiAttackEvent(room, battle, resolved, actionId, round, sequence, options = {}) {
+  const actor = resolved.actor;
+  const effect = battleActionEffect(actionId);
+  const configuredPowerMultiplier = Number(effect.powerMultiplier);
+  const powerMultiplier = Number.isFinite(configuredPowerMultiplier)
+    ? Math.max(0, configuredPowerMultiplier)
+    : 1;
+  const targetSelection = battleEquipmentMultiAttackTargets(room, battle, actor, actionId, round, sequence, options);
+  const targets = targetSelection.targets;
+  const targetResults = [];
+  const expCredits = [];
+  const allStatusChanges = [];
+  let totalDamage = 0;
+  for (let ordinal = 0; ordinal < targets.length; ordinal += 1) {
+    const target = targets[ordinal];
+    const attackDamageResult = resolvePhysicalDamage({
+      formula: authoritativeBattleCombatFormula,
+      actor,
+      target,
+      eventType: "multi_attack",
+      actionPowerMultiplier: powerMultiplier,
+    });
+    const reaction = resolveDamageReaction({
+      randomAuthority: options.battleRandomAuthority,
+      roomId: room.roomId,
+      turnSeq: battle.turnSeq,
+      round,
+      sequence,
+      ordinal,
+      eventType: "multi_attack",
+      actionId,
+      effect,
+      actor,
+      target,
+      baseDamage: attackDamageResult.damage,
+    });
+    if (reaction.critical && Number.isFinite(Number(effect.criticalDamageMultiplier))) {
+      reaction.damage = Math.max(1, Math.round(attackDamageResult.damage * Math.max(0, Number(effect.criticalDamageMultiplier))));
+    }
+    const hpBefore = Math.max(0, Math.trunc(Number(target.hp || 0)));
+    const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, reaction.damage, {
+      dodged: reaction.dodged,
+      shareWithRide: true,
+      canLaunch: false,
+    });
+    const hpAfter = damageResult.hpAfter;
+    const statusChanges = battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged);
+    allStatusChanges.push(...statusChanges);
+    syncParticipantPetSnapshotHp(room, target);
+    if (!reaction.dodged && reaction.damage > 0) {
+      addBattleEquipmentWearUsage(room, target, "armorHits", 1);
+    }
+    const targetExpCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
+    expCredits.push(...targetExpCredits);
+    appendBattleExpCredits(battle, targetExpCredits);
+    totalDamage += Math.max(0, Math.trunc(Number(reaction.damage || 0)));
+    targetResults.push({
+      targetActorId: String(target.actorId || ""),
+      targetAccountId: String(target.accountId || ""),
+      targetUsername: String(target.username || ""),
+      targetKind: String(target.kind || BATTLE_ACTOR_KIND_PLAYER),
+      damage: Math.max(0, Math.trunc(Number(reaction.damage || 0))),
+      hpBefore,
+      hpAfter,
+      defeated: hpAfter <= 0,
+      dodged: Boolean(reaction.dodged),
+      critical: Boolean(reaction.critical),
+      blocked: Boolean(target.guarding),
+      ...battleDamageEventFields(damageResult),
+      ...battleStoneDefenseEventFields(attackDamageResult),
+      ...battleCombatFormulaEventFields(attackDamageResult),
+      statusesAfter: publicBattleStatuses(target.statuses),
+      statusChanges: clone(statusChanges),
+      schemaVersion: 1,
+    });
+  }
+  addBattleEquipmentWearUsage(room, actor, "weaponAttacks", 1);
+  const targetActorIds = targetResults.map((entry) => entry.targetActorId);
+  const first = targetResults[0] || {};
+  const action = battleActionById(actionId);
+  const actionLabel = String(action && action.label || "群体攻击");
+  const event = {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: "multi_attack",
+    round,
+    sequence,
+    actorAccountId: String(actor.accountId || ""),
+    actorUsername: String(actor.username || ""),
+    actorId: String(actor.actorId || ""),
+    actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    targetActorId: String(first.targetActorId || ""),
+    targetAccountId: String(first.targetAccountId || ""),
+    targetUsername: String(first.targetUsername || ""),
+    targetKind: String(first.targetKind || ""),
+    targetActorIds,
+    targets: targetResults,
+    targetRule: "equipment_random_range",
+    targetCount: targetResults.length,
+    requestedTargetCount: targetSelection.desiredCount,
+    candidateTargetCount: targetSelection.candidateCount,
+    actionId,
+    skillId: "",
+    damage: totalDamage,
+    blocked: targetResults.length > 0 && targetResults.every((entry) => entry.blocked),
+    dodged: targetResults.length > 0 && targetResults.every((entry) => entry.dodged),
+    critical: targetResults.some((entry) => entry.critical),
+    counterTriggered: false,
+    combatFormulaId: String(authoritativeBattleCombatFormula.id || ""),
+    statusChanges: clone(allStatusChanges),
+    animation: {
+      actor: "multi_attack",
+      targetReaction: "multi_target",
+      observer: "watch_target",
+    },
+    message: `${actor.displayName || actor.username || "猎人"} 使用${actionLabel}，攻击${targetResults.length}个目标，造成${totalDamage}点伤害。`,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
+  };
+  if (expCredits.length > 0) {
+    event.expCredits = clone(expCredits);
+  }
+  return event;
 }
 
 function battleResolvedAttackForCommand(room, battle, command, round) {
@@ -7915,6 +8127,10 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
   const launched = damageResult.launched;
   const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged));
   syncParticipantPetSnapshotHp(room, target);
+  addBattleEquipmentWearUsage(room, resolved.actor, "weaponAttacks", 1);
+  if (!reaction.dodged && reaction.damage > 0) {
+    addBattleEquipmentWearUsage(room, target, "armorHits", 1);
+  }
   const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   const attackEvent = battleAttackEvent(
@@ -8015,6 +8231,10 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
   const launched = damageResult.launched;
   const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(actualTarget, reaction.damage, reaction.dodged));
   syncParticipantPetSnapshotHp(room, actualTarget);
+  addBattleEquipmentWearUsage(room, actor, "weaponAttacks", 1);
+  if (!reaction.dodged && reaction.damage > 0) {
+    addBattleEquipmentWearUsage(room, actualTarget, "armorHits", 1);
+  }
   const expCredits = battleExpCreditsForDefeat(room, battle, actor, actualTarget, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   return battleAttackEvent(
@@ -8147,9 +8367,10 @@ function battleComboAttackEvent(room, battle, group, round, sequence, options = 
     entry.actor,
     target,
   ));
-  const baseDamage = attackDamageResults.reduce((sum, entry) => sum + Math.max(0, Math.trunc(Number(entry.damage || 0))), 0);
-  const comboBonus = Math.max(0, group.length - 1) * BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR;
-  const damage = Math.max(1, baseDamage + comboBonus);
+  const comboDamage = comboDamageFor(authoritativeBattleCombatFormula, attackDamageResults.map((entry) => entry.damage));
+  const baseDamage = comboDamage.baseDamage;
+  const comboBonus = comboDamage.comboBonus;
+  const damage = comboDamage.damage;
   const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
     shareWithRide: true,
     canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
@@ -8157,8 +8378,14 @@ function battleComboAttackEvent(room, battle, group, round, sequence, options = 
   const hpAfter = damageResult.hpAfter;
   const launched = damageResult.launched;
   const statusChanges = confusion.statusChanges.concat(battleWakeFromDirectDamage(target, damage, false));
-  syncParticipantPetSnapshotHp(room, target);
   const actors = group.map((entry) => entry.actor);
+  syncParticipantPetSnapshotHp(room, target);
+  for (const participantActor of actors) {
+    addBattleEquipmentWearUsage(room, participantActor, "weaponAttacks", 1);
+  }
+  if (damage > 0) {
+    addBattleEquipmentWearUsage(room, target, "armorHits", 1);
+  }
   const expCredits = battleExpCreditsForComboDefeat(room, battle, actors, target, hpBefore, hpAfter);
   appendBattleExpCredits(battle, expCredits);
   const participantNames = actors.map((entry) => String(entry.displayName || entry.username || "参战者"));
@@ -8218,6 +8445,14 @@ function battleComboAttackEvent(room, battle, group, round, sequence, options = 
     launched,
     ...battleDamageEventFields(damageResult),
     ...battleStoneDefenseEventFields(stoneDefenseFacts),
+    combatFormulaId: String(comboDamage.formulaId || authoritativeBattleCombatFormula.id || ""),
+    participantDamageFacts: attackDamageResults.map((entry, index) => ({
+      actorId: String(actors[index] && actors[index].actorId || ""),
+      damage: Math.max(1, Math.trunc(Number(entry.damage || 1))),
+      ...battleCombatFormulaEventFields(entry),
+      ...battleStoneDefenseEventFields(entry),
+      schemaVersion: 1,
+    })),
     statusChanges,
     animation: {
       actor: "combo_attack",
@@ -9393,6 +9628,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       playerHp: null,
       ridePetHp: null,
       petHps: [],
+      equipmentWear: null,
       battleItemBag: null,
       captureToolBag: null,
       capturedPets: [],
@@ -9431,6 +9667,25 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       }
       changed = changed || rideApplied.changed;
       summary.ridePetHp = rideApplied.publicHp;
+      const equipmentWear = applyEquipmentWearUsageToProfile(
+        profile,
+        objectOrEmpty(playerActor.equipmentWearUsage),
+        battleEquipmentCatalog,
+        equipmentWearRulesFromDocument(playerGrowthDocument()),
+      );
+      changed = changed || equipmentWear.changed;
+      summary.equipmentWear = {
+        usage: clone(equipmentWear.usage),
+        durabilityDrops: clone(equipmentWear.durabilityDrops),
+        brokenLabels: clone(equipmentWear.brokenLabels),
+        schemaVersion: 1,
+      };
+      const synchronizedStats = synchronizeProfileEquipmentStats(profile);
+      changed = changed || synchronizedStats.changed;
+      if (summary.playerHp && synchronizedStats.stats) {
+        summary.playerHp.hp = Math.max(1, Math.trunc(Number(profile.player.hp || 1)));
+        summary.playerHp.maxHp = Math.max(1, Math.trunc(Number(profile.player.maxHp || 1)));
+      }
     }
     const petActors = accountActors.filter((actor) => String(actor.kind || "") === BATTLE_ACTOR_KIND_PET);
     const writtenPetIds = new Set();
@@ -9527,6 +9782,14 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     if (summary.rewards || summary.quests) {
       summary.battleItemBag = battleItemBagFromProfile(profile);
       summary.captureToolBag = captureToolBagFromProfile(profile);
+    }
+    if (playerActor) {
+      const finalSynchronizedStats = synchronizeProfileEquipmentStats(profile);
+      changed = changed || finalSynchronizedStats.changed;
+      if (summary.playerHp && finalSynchronizedStats.stats) {
+        summary.playerHp.hp = Math.max(1, Math.trunc(Number(profile.player.hp || 1)));
+        summary.playerHp.maxHp = Math.max(1, Math.trunc(Number(profile.player.maxHp || 1)));
+      }
     }
     if (
       !changed &&
@@ -16943,6 +17206,11 @@ function syncParticipantBattleActorSnapshot(room, actor) {
       "ridePetQuick",
       "rideBaseStats",
       "rideAttackStyle",
+      "battleActionIds",
+      "attackActionId",
+      "equipmentStatBonus",
+      "equipmentStatSummary",
+      "equipmentWearUsage",
     ]) {
       if (Object.prototype.hasOwnProperty.call(actor, key)) {
         player[key] = clone(actor[key]);
@@ -16966,6 +17234,26 @@ function syncParticipantBattleActorSnapshot(room, actor) {
 }
 
 function syncParticipantPetSnapshotHp(room, actor) {
+  syncParticipantBattleActorSnapshot(room, actor);
+}
+
+function addBattleEquipmentWearUsage(room, actor, key, amount = 1) {
+  if (
+    !actor
+    || String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) !== BATTLE_ACTOR_KIND_PLAYER
+    || String(actor.accountId || "") === ""
+    || String(actor.partnerId || "") !== ""
+  ) {
+    return;
+  }
+  const usage = actor.equipmentWearUsage && typeof actor.equipmentWearUsage === "object" && !Array.isArray(actor.equipmentWearUsage)
+    ? actor.equipmentWearUsage
+    : {weaponAttacks: 0, armorHits: 0};
+  if (key !== "weaponAttacks" && key !== "armorHits") {
+    return;
+  }
+  usage[key] = Math.max(0, Math.trunc(Number(usage[key] || 0))) + Math.max(0, Math.trunc(Number(amount || 0)));
+  actor.equipmentWearUsage = usage;
   syncParticipantBattleActorSnapshot(room, actor);
 }
 
@@ -17112,6 +17400,21 @@ function battleStoneDefenseEventFields(damageResult) {
   };
 }
 
+function battleCombatFormulaEventFields(damageResult) {
+  const result = damageResult && typeof damageResult === "object" && !Array.isArray(damageResult) ? damageResult : {};
+  const configuredGuardMultiplier = Number(result.guardMultiplier);
+  return {
+    combatFormulaId: String(result.formulaId || authoritativeBattleCombatFormula.id || ""),
+    attackStat: Math.max(0, Math.trunc(Number(result.actorAttack || 0))),
+    defenseStat: Math.max(0, Math.trunc(Number(result.targetDefense || 0))),
+    effectiveDefenseStat: Math.max(0, Math.trunc(Number(result.effectiveDefense || result.targetDefense || 0))),
+    defenseFactor: Math.max(0, Number(result.defenseFactor || 0)),
+    defenseReduction: Math.max(0, Math.trunc(Number(result.defenseReduction || 0))),
+    guardMultiplier: Number.isFinite(configuredGuardMultiplier) ? Math.max(0, configuredGuardMultiplier) : 1,
+    minimumDamage: Math.max(1, Math.trunc(Number(result.minimumDamage || 1))),
+  };
+}
+
 function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false, reaction = {}) {
   const actionKind = String(command.actionKind || "attack");
   const actionId = String(command.actionId || BATTLE_ACTION_ATTACK);
@@ -17173,6 +17476,7 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     launched,
     ...battleDamageEventFields(reaction.damageResult),
     ...battleStoneDefenseEventFields(reaction.attackDamageResult),
+    ...battleCombatFormulaEventFields(reaction.attackDamageResult),
     statusChanges: Array.isArray(reaction.statusChanges) ? clone(reaction.statusChanges) : [],
     animation: {
       actor: eventType === "counter_attack" ? "counter_attack" : "attack",
@@ -17192,25 +17496,27 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
 }
 
 function battleAttackDamageResult(room, battle, command, actor, target) {
-  const seed = `${room.seed || room.roomId}:${battle.turnSeq}:${battle.round}:${command.actorId}:${command.targetActorId}`;
-  const roll = Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 4), 16) % 7;
-  const reduction = target.guarding ? BATTLE_DEFEND_REDUCTION : 0;
-  const defenseFactor = String(command.actionKind || "") === "pet_skill" ? 0.25 : 0.35;
-  const extraStoneReduction = stoneDefenseExtraReduction(target, defenseFactor);
-  let baseDamage = BATTLE_BASE_ATTACK_DAMAGE;
-  if (String(actor.kind || "") === BATTLE_ACTOR_KIND_PET || String(actor.kind || "") === BATTLE_ACTOR_KIND_WILD_PET) {
-    baseDamage = Math.max(8, Math.round(Number(actor.attack || DEFAULT_PET_BATTLE_STATS.attack) * 0.75));
-  }
-  if (String(command.actionKind || "") === "pet_skill") {
-    baseDamage += Math.max(0, Math.trunc(Number(battleActionEffect(command.actionId).amountBonus || 12)));
-  }
-  const damageBeforeStone = Math.max(1, baseDamage + roll - reduction);
-  const stoneResult = applyStoneDefenseReduction(damageBeforeStone, extraStoneReduction);
-  return {
-    damage: stoneResult.damage,
-    stoneDefenseApplied: battleActorHasStatus(target, BATTLE_STATUS_STONE),
-    stoneDefenseExtraReduction: stoneResult.extraReduction,
-  };
+  const effect = battleActionEffect(command.actionId);
+  const action = battleActionById(command.actionId);
+  const eventType = String(command.actionKind || "") === "pet_skill"
+    ? "pet_skill"
+    : (action && String(action.owner || "") === "equipment_action" ? "multi_attack" : "attack");
+  const configuredAmountBonus = Number(effect.amountBonus);
+  const amountBonus = Object.prototype.hasOwnProperty.call(effect, "amountBonus") && Number.isFinite(configuredAmountBonus)
+    ? Math.max(0, Math.trunc(configuredAmountBonus))
+    : 12;
+  const configuredPowerMultiplier = Number(effect.powerMultiplier);
+  const powerMultiplier = Number.isFinite(configuredPowerMultiplier)
+    ? Math.max(0, configuredPowerMultiplier)
+    : 1;
+  return resolvePhysicalDamage({
+    formula: authoritativeBattleCombatFormula,
+    actor,
+    target,
+    eventType,
+    amountBonus: eventType === "pet_skill" ? amountBonus : 0,
+    actionPowerMultiplier: eventType === "multi_attack" ? powerMultiplier : 1,
+  });
 }
 
 function battleAttackDamage(room, battle, command, actor, target) {

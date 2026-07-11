@@ -744,8 +744,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var protocol_v6_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 6
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v6_ok else "failed"
+	var protocol_v7_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 7
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v7_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -10268,7 +10268,10 @@ func _run_auto_equipment_requirement_check() -> void:
 		and ShopCatalogModel.buy_price_for(FIREBUD_EQUIPMENT_SHOP_ID, "weapon_rebirth_bone_axe") == 180
 		and rebirth_contexts.has(BackpackModel.CONTEXT_EQUIPMENT)
 	)
-	var low_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	var low_profile = PlayerProgressModel.with_stone_coins(
+		PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile()),
+		300
+	)
 	var buy_result = PlayerProgressModel.buy_shop_item(low_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_bone_blade")
 	var bought_profile = buy_result.get("profile", {}) as Dictionary
 	var low_check = PlayerProgressModel.can_equip_item(bought_profile, "weapon_bone_blade")
@@ -10320,7 +10323,10 @@ func _run_auto_equipment_requirement_check() -> void:
 	await host.get_tree().process_frame
 	var shop_text = host.shop_detail_label.text if host.shop_detail_label != null else ""
 	var shop_detail_ok: bool = shop_text.find("骨刃") >= 0 and shop_text.find("需求: Lv3") >= 0 and shop_text.find("当前 Lv1：未满足") >= 0
-	var rebirth_base_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	var rebirth_base_profile = PlayerProgressModel.with_stone_coins(
+		PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile()),
+		500
+	)
 	var rebirth_buy_result = PlayerProgressModel.buy_shop_item(rebirth_base_profile, FIREBUD_EQUIPMENT_SHOP_ID, "weapon_rebirth_bone_axe")
 	var rebirth_bought_profile = rebirth_buy_result.get("profile", {}) as Dictionary
 	var rebirth_low_check = PlayerProgressModel.can_equip_item(rebirth_bought_profile, "weapon_rebirth_bone_axe")
@@ -10398,7 +10404,10 @@ func _run_auto_equipment_inactive_after_rebirth_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	var profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 500)
+	var profile = PlayerProgressModel.with_stone_coins(
+		PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile()),
+		500
+	)
 	var player_dict = profile.get("player", {}) as Dictionary
 	player_dict["level"] = 80
 	player_dict["exp"] = 0
@@ -10562,7 +10571,7 @@ func _run_auto_equipment_durability_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	var base_profile = PlayerProgressModel.default_profile()
+	var base_profile = PlayerProgressModel.with_starter_equipment(PlayerProgressModel.default_profile())
 	var base_durability = PlayerProgressModel.equipment_durability(base_profile)
 	var default_weapon_durability = int(base_durability.get(EquipmentModel.SLOT_RIGHT_HAND_WEAPON, 0))
 	var default_body_durability = int(base_durability.get(EquipmentModel.SLOT_BODY, 0))
@@ -15657,7 +15666,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 6
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 7
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
