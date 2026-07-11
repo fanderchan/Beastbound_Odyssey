@@ -3846,11 +3846,43 @@ func _run_auto_pet_growth_observation_check() -> void:
 	var server_rows := PetGrowthObservationModel.attribute_table_rows_for_stage(server_pet, 0, 140)
 	var server_detail := "\n".join(PlayerProgressModel.pet_detail_lines(server_pet))
 	var server_observation := PetGrowthObservationModel.evaluate_pet(server_pet)
+	var server_level := int(server_pet.get("level", 1))
+	var server_level1 := server_pet.get("growthSpeciesLevel1Stats", {}) as Dictionary
+	var forecast_stat_keys: Array[String] = ["maxHp", "attack", "defense", "quick"]
+	var expected_forecast := {}
+	for key in forecast_stat_keys:
+		var observed_growth := (
+			float(server_pet.get(key, 0)) - float(server_level1.get(key, 0))
+		) / float(maxi(1, server_level - 1))
+		expected_forecast[key] = int(round(float(server_level1.get(key, 0)) + observed_growth * 139.0))
+	var server_forecast_ok := server_rows.size() == 6
+	for index in range(4):
+		var expected_key := forecast_stat_keys[index]
+		server_forecast_ok = server_forecast_ok \
+			and int((server_rows[index + 1] as Dictionary).get("target", -1)) == int(expected_forecast.get(expected_key, -2))
+	server_forecast_ok = server_forecast_ok \
+		and str((server_rows[0] as Dictionary).get("target", "")) == "Lv140" \
+		and int((server_rows[5] as Dictionary).get("target", -1)) == PetPowerModel.combat_power_for_stats(expected_forecast)
+	var level_one_server_pet := server_pet.duplicate(true)
+	level_one_server_pet["level"] = 1
+	for key in forecast_stat_keys:
+		level_one_server_pet[key] = server_level1.get(key, 1)
+	var level_one_server_rows := PetGrowthObservationModel.attribute_table_rows_for_stage(level_one_server_pet, 0, 140)
+	var level_one_waits_for_evidence := level_one_server_rows.size() == 6
+	for index in range(1, 6):
+		level_one_waits_for_evidence = level_one_waits_for_evidence \
+			and str((level_one_server_rows[index] as Dictionary).get("target", "")) == "待观察"
+	var private_canary_pet := server_pet.duplicate(true)
+	private_canary_pet["privateSeed"] = "must_not_change_observed_forecast"
+	private_canary_pet["growthSpeciesRoll"] = {"growthBonus": {"attack": 999}}
+	var private_canary_rows := PetGrowthObservationModel.attribute_table_rows_for_stage(private_canary_pet, 0, 140)
 	var server_ui_contract_ok := (
 		bool(server_projection.get("ok", false))
-		and PetGrowthObservationModel.target_column_label(server_pet) == "观察趋势"
+		and PetGrowthObservationModel.target_column_label(server_pet) == "预测140"
 		and not server_rows.is_empty()
-		and server_rows.all(func(row: Dictionary) -> bool: return not (row.get("target", "") is int or row.get("target", "") is float))
+		and server_forecast_ok
+		and level_one_waits_for_evidence
+		and JSON.stringify(private_canary_rows) == JSON.stringify(server_rows)
 		and server_detail.find("个体：普通") < 0
 		and int(server_observation.get("observedLevels", 0)) == 10
 	)

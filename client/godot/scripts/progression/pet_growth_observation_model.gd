@@ -351,11 +351,8 @@ static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0,
 	var safe_stage := clampi(stage, 0, 2)
 	if _is_server_growth_pet(instance):
 		if safe_stage <= 0:
-			return _server_observation_attribute_rows(instance)
-		var rebirth_rows := _rebirth_attribute_table_rows(instance, safe_stage, target_level)
-		for row in rebirth_rows:
-			row["target"] = "观察中"
-		return rebirth_rows
+			return _server_observation_attribute_rows(instance, target_level)
+		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
 	if safe_stage > 0:
 		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
 	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
@@ -407,23 +404,25 @@ static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0,
 	return rows
 
 
-static func target_column_label(instance: Dictionary) -> String:
-	return "观察趋势" if _is_server_growth_pet(instance) else "预测140"
+static func target_column_label(_instance: Dictionary) -> String:
+	return "预测140"
 
 
-static func _server_observation_attribute_rows(instance: Dictionary) -> Array[Dictionary]:
+static func _server_observation_attribute_rows(instance: Dictionary, target_level: int = 140) -> Array[Dictionary]:
 	var level := clampi(int(instance.get("level", 1)), 1, 140)
+	var safe_target := clampi(target_level, level, 140)
 	var level1 := _strict_public_level_one_stats(instance)
 	var current := _strict_current_stats(instance)
 	var data := _evaluate_server_observed_growth(instance)
 	var averages := data.get("statAverages", {}) as Dictionary
 	var percentiles := data.get("statPercentiles", {}) as Dictionary
 	var grades := data.get("statGrades", {}) as Dictionary
+	var forecast := _observed_stat_forecast(level1, current, level, safe_target)
 	var rows: Array[Dictionary] = [{
 		"label": "等级",
 		"initial": "Lv1",
 		"current": "Lv%d" % level,
-		"target": "不预判",
+		"target": "Lv%d" % safe_target,
 		"growth": "-",
 		"grade": str(data.get("overallGrade", "未观察")),
 		"percentile": data.get("powerPercentile", ""),
@@ -433,21 +432,36 @@ static func _server_observation_attribute_rows(instance: Dictionary) -> Array[Di
 			"label": str(STAT_LABELS.get(key, key)),
 			"initial": level1.get(key, "资料不足"),
 			"current": current.get(key, "资料不足"),
-			"target": "观察中",
+			"target": forecast.get(key, "待观察"),
 			"growth": _growth_cell_text(averages.get(key, "")),
 			"grade": str(grades.get(key, "未观察")),
 			"percentile": percentiles.get(key, ""),
 		})
+	var forecast_power = PetPowerModel.combat_power_for_stats(forecast) if not forecast.is_empty() else "待观察"
 	rows.append({
 		"label": "战力",
 		"initial": PetPowerModel.combat_power_for_stats(level1) if not level1.is_empty() else "资料不足",
 		"current": PetPowerModel.combat_power_for_stats(current) if not current.is_empty() else "资料不足",
-		"target": "观察中",
+		"target": forecast_power,
 		"growth": _growth_cell_text(data.get("powerGrowthPerLevel", "")),
 		"grade": str(data.get("overallGrade", "未观察")),
 		"percentile": data.get("powerPercentile", ""),
 	})
 	return rows
+
+
+static func _observed_stat_forecast(level1: Dictionary, current: Dictionary, level: int, target_level: int) -> Dictionary:
+	var observed_levels := level - 1
+	if observed_levels <= 0 or level1.is_empty() or current.is_empty():
+		return {}
+	var target_levels := maxi(0, target_level - 1)
+	var result := {}
+	for key in STAT_KEYS:
+		var initial_value := float(level1.get(key, 0))
+		var current_value := float(current.get(key, 0))
+		var observed_growth := (current_value - initial_value) / float(observed_levels)
+		result[key] = maxi(1, int(round(initial_value + observed_growth * float(target_levels))))
+	return result
 
 
 static func _is_server_growth_pet(instance: Dictionary) -> bool:
