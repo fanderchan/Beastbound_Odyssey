@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -110,6 +112,29 @@ test("default pet growth catalog strictly links all current species profiles and
   assert.throws(() => {
     immutable.outputBase.attack = 999;
   }, TypeError);
+});
+
+test("all production growth profiles carry a 10k monotonic Lv20 observation interval", () => {
+  const profilePath = path.resolve(
+    __dirname,
+    "../../../client/godot/data/balance/pet_growth_species_profiles.json",
+  );
+  const document = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+
+  assert.equal(document.profiles.length, 32);
+  for (const profile of document.profiles) {
+    const observation = profile.growthObservation;
+    assert.equal(observation.sampleCount, 10000, profile.profileId);
+    assert.equal(observation.levelMin, 2, profile.profileId);
+    assert.equal(observation.levelMax, 140, profile.profileId);
+    const level20 = observation.powerGrowthPercentilesByLevel["20"];
+    const ordered = [level20.min, level20.p25, level20.p55, level20.p85, level20.p95, level20.max];
+    assert.equal(ordered.every(Number.isFinite), true, profile.profileId);
+    for (let index = 1; index < ordered.length; index += 1) {
+      assert.ok(ordered[index] >= ordered[index - 1], profile.profileId);
+    }
+    assert.ok(level20.p85 > level20.p25, profile.profileId);
+  }
 });
 
 test("catalog accepts injected strict documents and keeps legacy forms unprofiled", () => {
