@@ -17429,6 +17429,110 @@ func _run_auto_auth_server_live_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+
+func _run_auto_offline_hang_live_check() -> void:
+	host.profile_save_enabled = false
+	var username := "offline_live_%d" % int(Time.get_ticks_usec() % 100000000)
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
+	if host.auth_server_url_input != null:
+		host.auth_server_url_input.text = base_url
+	host.auth_username_input.text = username
+	host.auth_password_input.text = "test1234"
+	host.auth_password_confirm_input.text = "test1234"
+	host.auth_display_name_input.text = "离线闭环号"
+	host.auth_remember_check.button_pressed = false
+	host._set_auth_server_mode(true, false)
+	host._set_auth_mode(true)
+	host._on_auth_submit_pressed()
+	var frames := 0
+	while frames < 420 and (host.auth_request_pending or not host.account_authenticated):
+		frames += 1
+		await host.get_tree().process_frame
+	frames = 0
+	while frames < 420 and (host.server_profile_sync_state == "loading" or host.server_profile_sync_state == "uploading"):
+		frames += 1
+		await host.get_tree().process_frame
+	var registered_ok: bool = host.account_authenticated and host.server_profile_sync_state == "ready"
+
+	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
+	var zone: Dictionary = {}
+	if loaded:
+		for zone_value in EncounterModel.encounter_zones(host.map_data):
+			if zone_value is Dictionary and str((zone_value as Dictionary).get("id", "")) == "village_grass":
+				zone = (zone_value as Dictionary).duplicate(true)
+				break
+	var cell := EncounterModel.first_walkable_cell(host.map_data, zone) if not zone.is_empty() else Vector2i.ZERO
+	if host.player != null and not zone.is_empty():
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, cell)
+		host.last_checked_player_cell = cell
+	var position_ok: bool = await host._panel_flow()._publish_current_position_once_to_server()
+	for _settle_frame in range(12):
+		await host.get_tree().process_frame
+	frames = 0
+	while frames < 120 and host._server_sync().offline_hang_request_active:
+		frames += 1
+		await host.get_tree().process_frame
+	var started: Dictionary = await host._server_sync().submit_offline_hang_action("start")
+	var start_status: Dictionary = await host._server_sync().request_offline_hang_status(false)
+	var session_id := OfflineHangClientModel.active_session_id(host.player_profile)
+	var status_offline = start_status.get("offlineHang", {}) as Dictionary if start_status.get("offlineHang", {}) is Dictionary else {}
+	var status_session = status_offline.get("session", {}) as Dictionary if status_offline.get("session", {}) is Dictionary else {}
+	if session_id == "":
+		session_id = str(status_session.get("sessionId", ""))
+	var start_ok := (bool(started.get("ok", false)) or bool(start_status.get("ok", false)) and bool(status_offline.get("pending", false))) and session_id != ""
+
+	await host._panel_flow()._logout_in_place()
+	var logged_out_ok: bool = not host.account_authenticated
+	var clock_response: Dictionary = await host._auto_http_request_spec({
+		"url": "%s/__qa/clock/advance" % base_url,
+		"headers": PackedStringArray(["Content-Type: application/json"]),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"seconds": 360}),
+	})
+	var clock_body_text := (clock_response.get("body", PackedByteArray()) as PackedByteArray).get_string_from_utf8()
+	var clock_body = JSON.parse_string(clock_body_text)
+	var clock_ok := int(clock_response.get("responseCode", 0)) == 200 and clock_body is Dictionary and bool((clock_body as Dictionary).get("ok", false))
+
+	host.auth_username_input.text = username
+	host.auth_password_input.text = "test1234"
+	host.auth_password_confirm_input.text = "test1234"
+	host._set_auth_server_mode(true, false)
+	host._set_auth_mode(false)
+	host._on_auth_submit_pressed()
+	frames = 0
+	while frames < 420 and (host.auth_request_pending or not host.account_authenticated):
+		frames += 1
+		await host.get_tree().process_frame
+	frames = 0
+	while frames < 420 and (host.server_profile_sync_state == "loading" or host.server_profile_sync_state == "uploading"):
+		frames += 1
+		await host.get_tree().process_frame
+	var relogin_active := OfflineHangClientModel.active_session_id(host.player_profile) == session_id
+	var notice_ok: bool = host._server_sync().offline_hang_notice_session_id == session_id
+	var claimed: Dictionary = await host._server_sync().submit_offline_hang_action("claim")
+	var offline_hang = host.player_profile.get("offlineHang", {}) as Dictionary if host.player_profile.get("offlineHang", {}) is Dictionary else {}
+	var ledger: Array = offline_hang.get("ledger", []) if offline_hang.get("ledger", []) is Array else []
+	var claim_data = claimed.get("claim", {}) as Dictionary if claimed.get("claim", {}) is Dictionary else {}
+	var claim_ok := (
+		bool(claimed.get("ok", false))
+		and int(claim_data.get("equivalentBattles", 0)) == 6
+		and int(claim_data.get("stoneCoins", 0)) == 108
+		and int(claim_data.get("playerExp", 0)) > 0
+		and ledger.size() == 1
+		and str((offline_hang.get("session", {}) as Dictionary).get("status", "")) == "claimed"
+	)
+	var status := "ok" if registered_ok and loaded and not zone.is_empty() and position_ok and start_ok and logged_out_ok and clock_ok and relogin_active and notice_ok and claim_ok else "failed"
+	print("offline hang live check ready: status=%s register=%s map=%s position=%s start=%s logout=%s clock=%s relogin=%s notice=%s claim=%s battles=%d stone=%d player_exp=%d ledger=%d start_message=%s claim_message=%s" % [
+		status,
+		str(registered_ok), str(loaded and not zone.is_empty()), str(position_ok), str(start_ok), str(logged_out_ok),
+		str(clock_ok), str(relogin_active), str(notice_ok), str(claim_ok), int(claim_data.get("equivalentBattles", 0)),
+		int(claim_data.get("stoneCoins", 0)), int(claim_data.get("playerExp", 0)), ledger.size(),
+		str(started.get("message", "")), str(claimed.get("message", "")),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
 func _run_auto_startup_login_check() -> void:
 	host.profile_save_enabled = false
 	if not host.account_authenticated and not host.auth_request_pending:

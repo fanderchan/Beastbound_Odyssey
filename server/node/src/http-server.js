@@ -34,6 +34,7 @@ function createHttpServer(options = {}) {
   const eventHub = options.eventHub || createEventHub(service);
   const store = options.store || null;
   const logger = createStructuredLogger(options.logger);
+  const qaAdvanceClock = typeof options.qaAdvanceClock === "function" ? options.qaAdvanceClock : null;
   const unsubscribeServiceLogger = installServiceEventLogger(service, logger);
 
   const server = http.createServer(async (req, res) => {
@@ -59,6 +60,9 @@ function createHttpServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/health") {
         const health = healthPayload(store, eventHub);
         return sendJson(res, health.ok ? 200 : 503, health);
+      }
+      if (req.method === "POST" && url.pathname === "/__qa/clock/advance" && qaAdvanceClock) {
+        return sendResult(res, qaAdvanceClock(await readJson(req)));
       }
       const protocol = protocolCompatibility(req, url);
       if (!protocol.ok) {

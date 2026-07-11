@@ -246,6 +246,12 @@ test("HTTP offline hang status and GM configuration routes enforce authenticatio
   assert.equal(status.ok, true);
   assert.equal(status.config.rewardRatePercent, 60);
   assert.equal(status.offlineHang.pending, false);
+  const productionClockDenied = await fetchJson(`${base}/__qa/clock/advance`, {
+    method: "POST",
+    body: JSON.stringify({seconds: 360}),
+  });
+  assert.equal(productionClockDenied.ok, false);
+  assert.equal(productionClockDenied.code, "not_found");
 });
 
 test("HTTP server rejects incompatible protocol versions with upgrade guidance", async (t) => {

@@ -720,6 +720,7 @@ var auto_battle_settings_check: bool = false
 var auto_capture_settings_check: bool = false
 var auto_training_partner_check: bool = false
 var auto_hang_settings_check: bool = false
+var auto_offline_hang_live_check: bool = false
 var auto_gm_10v10_map_check: bool = false
 var auto_level_grass_trial_map_check: bool = false
 var auto_battle_formation_check: bool = false
@@ -1301,6 +1302,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_training_partner_check")
 	elif auto_hang_settings_check:
 		call_deferred("_run_auto_hang_settings_check")
+	elif auto_offline_hang_live_check:
+		call_deferred("_run_auto_offline_hang_live_check")
 	elif auto_gm_10v10_map_check:
 		call_deferred("_run_auto_gm_10v10_map_check")
 	elif auto_level_grass_trial_map_check:
@@ -1934,6 +1937,8 @@ func _apply_preview_window_args() -> void:
 			auto_training_partner_check = true
 		elif arg == "--auto-hang-settings-check":
 			auto_hang_settings_check = true
+		elif arg == "--auto-offline-hang-live-check":
+			auto_offline_hang_live_check = true
 		elif arg == "--auto-gm-10v10-map-check":
 			auto_gm_10v10_map_check = true
 		elif arg == "--auto-level-grass-trial-map-check":
@@ -4271,6 +4276,10 @@ func _run_hang_settings_preview() -> void:
 
 func _run_auto_hang_settings_check() -> void:
 	await _auto_checks()._run_auto_hang_settings_check()
+
+
+func _run_auto_offline_hang_live_check() -> void:
+	await _auto_checks()._run_auto_offline_hang_live_check()
 
 
 func _run_training_partner_demo() -> void:

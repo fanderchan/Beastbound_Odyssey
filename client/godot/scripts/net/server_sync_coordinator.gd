@@ -550,6 +550,7 @@ func cached_offline_hang_status() -> Dictionary:
 
 
 func request_offline_hang_status(emit_message: bool = false) -> Dictionary:
+	await host.get_tree().process_frame
 	if not server_hang_session_enabled():
 		return {"ok": false, "message": "请先登录服务器。"}
 	if offline_hang_request_active:
@@ -576,6 +577,7 @@ func request_offline_hang_status(emit_message: bool = false) -> Dictionary:
 
 
 func submit_offline_hang_action(action: String) -> Dictionary:
+	await host.get_tree().process_frame
 	if not server_hang_session_enabled():
 		return {"ok": false, "message": "请先登录服务器。"}
 	if offline_hang_request_active:
@@ -584,7 +586,7 @@ func submit_offline_hang_action(action: String) -> Dictionary:
 	var spec := {}
 	match normalized_action:
 		"start":
-			spec = ServerAuthClientModel.offline_hang_start_request(server_profile_base_url(), server_profile_token(), host.current_map_id, host.player_cell)
+			spec = ServerAuthClientModel.offline_hang_start_request(server_profile_base_url(), server_profile_token(), host.current_map_id, host.last_checked_player_cell)
 		"claim":
 			spec = ServerAuthClientModel.offline_hang_claim_request(
 				server_profile_base_url(),
@@ -616,6 +618,7 @@ func submit_offline_hang_action(action: String) -> Dictionary:
 
 
 func update_offline_hang_gm_config(config: Dictionary) -> Dictionary:
+	await host.get_tree().process_frame
 	if not server_hang_session_enabled():
 		return {"ok": false, "message": "请先登录服务器。"}
 	if offline_hang_request_active:
