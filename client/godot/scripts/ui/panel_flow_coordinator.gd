@@ -13494,6 +13494,9 @@ func _apply_server_quest_action_result(parsed: Dictionary, fallback_message: Str
 func _submit_server_profile_action(action: String, payload: Dictionary = {}, fallback_message: String = "档案操作失败。") -> Dictionary:
 	return await host._server_sync().submit_server_profile_action(action, payload, fallback_message)
 
+func _submit_server_gm_command(command_id: String, payload: Dictionary = {}, fallback_message: String = "GM宠物操作失败。") -> Dictionary:
+	return await host._server_sync().submit_server_gm_command(command_id, payload, fallback_message)
+
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
 	var base_value = int(base.get(stat_key, 0))
 	var bonus_value = int(bonus.get(stat_key, 0))
@@ -14581,7 +14584,7 @@ func _unlock_backpack_slot_from_dialog() -> void:
 		var parsed = await _submit_server_profile_action("backpack_unlock_slot", {"extraSlotIndex": extra_index}, "解锁背包位失败。")
 		var message = "\n".join(_string_array_values(parsed.get("logLines", [])))
 		_set_world_log_message(message)
-		if bool(parsed.get("ok", false)):
+		if bool(parsed.get("ok", false)) and bool(parsed.get("profileApplied", false)):
 			host._close_dialog()
 			_refresh_backpack_panel()
 			_refresh_quick_bar()
@@ -16503,7 +16506,7 @@ func _on_pet_skill_move_pressed(direction: int) -> void:
 			"direction": direction,
 		}, "移动宠物技能失败。")
 		var result = parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
-		if bool(parsed.get("ok", false)):
+		if bool(parsed.get("ok", false)) and bool(parsed.get("profileApplied", false)):
 			pet_skill_selected_slot = int(result.get("slot", pet_skill_selected_slot))
 		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
 		_refresh_pet_skill_panel()
@@ -20822,6 +20825,11 @@ func _refresh_qa_pet_tool_controls() -> void:
 	)
 	qa_pet_growth_profile_id = str(result.get("profileId", qa_pet_growth_profile_id))
 	qa_pet_level_instance_id = str(result.get("instanceId", qa_pet_level_instance_id))
+	if profile_action_request_pending:
+		if qa_pet_grant_button != null:
+			qa_pet_grant_button.disabled = true
+		if qa_pet_level_up_button != null:
+			qa_pet_level_up_button.disabled = true
 
 func _reset_qa_panel_scrolls() -> void:
 	QaPanelPresenter.reset_scrolls(qa_entry_scroll, qa_detail_scroll)
@@ -20842,6 +20850,16 @@ func _gm_allowed_command_ids() -> Array[String]:
 			command_ids.append(command_id)
 	return command_ids
 
+func _gm_pet_command_route() -> String:
+	return _gm_pet_command_route_for_state(_is_server_account_session(), auth_auto_bypass)
+
+func _gm_pet_command_route_for_state(has_server_session: bool, local_qa_bypass: bool) -> String:
+	if has_server_session:
+		return "server"
+	if local_qa_bypass:
+		return "local_qa"
+	return "blocked"
+
 func _authorize_gm_command(command_id: String) -> bool:
 	if host._release_entrypoints_locked():
 		_set_world_log_message("当前构建未开放GM工具。")
@@ -20852,7 +20870,9 @@ func _authorize_gm_command(command_id: String) -> bool:
 	var ok = bool(result.get("ok", false))
 	if not ok:
 		_set_world_log_message(str(result.get("message", "当前账号没有GM权限。")))
-	GmToolRuntimeModel.audit_command(current_account_session, command_id, ok, str(result.get("message", "")))
+	var server_authoritative_pet_command := ok and _is_server_account_session() and GM_TOOL_EXTRA_COMMAND_IDS.has(command_id)
+	if not server_authoritative_pet_command:
+		GmToolRuntimeModel.audit_command(current_account_session, command_id, ok, str(result.get("message", "")))
 	return ok
 
 func _on_qa_entry_pressed(entry_id: String) -> void:
@@ -20915,6 +20935,37 @@ func _on_qa_pet_grant_pressed() -> void:
 	var profile_id = qa_pet_growth_profile_id
 	if profile_id == "" and qa_pet_species_option != null and qa_pet_species_option.get_item_count() > 0:
 		profile_id = str(qa_pet_species_option.get_item_metadata(qa_pet_species_option.selected))
+	var command_route := _gm_pet_command_route()
+	if command_route == "server":
+		if profile_action_request_pending:
+			_set_world_log_message("档案操作同步中，请稍候。")
+			return
+		if qa_pet_grant_button != null:
+			qa_pet_grant_button.disabled = true
+		if qa_pet_level_up_button != null:
+			qa_pet_level_up_button.disabled = true
+		var parsed := await _submit_server_gm_command(
+			"gm_grant_pet",
+			{"growthSpeciesProfileId": profile_id},
+			"GM宠物发放失败。"
+		)
+		if bool(parsed.get("ok", false)):
+			var command_result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+			var granted_instance_id := str(command_result.get("instanceId", "")).strip_edges()
+			if granted_instance_id != "":
+				qa_pet_level_instance_id = granted_instance_id
+				pet_selected_instance_id = granted_instance_id
+				var granted_pet := PlayerProgressModel.pet_instance_by_id(player_profile, granted_instance_id)
+				pet_detail_mode = PET_DETAIL_MODE_GROWTH if str(granted_pet.get("growthSpeciesProfileId", "")).strip_edges() != "" else PET_DETAIL_MODE_INSTANCE
+		var log_lines := _string_array_values(parsed.get("logLines", []))
+		if log_lines.is_empty():
+			log_lines.append(_server_player_message(parsed, "GM宠物发放失败。"))
+		_set_world_log_message("\n".join(log_lines))
+		_refresh_qa_panel()
+		return
+	if command_route != "local_qa":
+		_set_world_log_message("GM宠物发放需要连接服务器。")
+		return
 	var result = PlayerProgressModel.gm_grant_growth_pet(player_profile, profile_id)
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)):
@@ -20932,6 +20983,37 @@ func _on_qa_pet_level_up_pressed() -> void:
 		return
 	if qa_pet_level_instance_id == "":
 		_set_world_log_message("请选择要升级的宠物。")
+		return
+	var command_route := _gm_pet_command_route()
+	if command_route == "server":
+		if profile_action_request_pending:
+			_set_world_log_message("档案操作同步中，请稍候。")
+			return
+		if qa_pet_grant_button != null:
+			qa_pet_grant_button.disabled = true
+		if qa_pet_level_up_button != null:
+			qa_pet_level_up_button.disabled = true
+		var parsed := await _submit_server_gm_command(
+			"gm_level_pet",
+			{"instanceId": qa_pet_level_instance_id},
+			"GM宠物升级失败。"
+		)
+		if bool(parsed.get("ok", false)):
+			var command_result := parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
+			var updated_instance_id := str(command_result.get("instanceId", qa_pet_level_instance_id)).strip_edges()
+			if updated_instance_id != "":
+				qa_pet_level_instance_id = updated_instance_id
+				pet_selected_instance_id = updated_instance_id
+				var updated_pet := PlayerProgressModel.pet_instance_by_id(player_profile, updated_instance_id)
+				pet_detail_mode = PET_DETAIL_MODE_GROWTH if str(updated_pet.get("growthSpeciesProfileId", "")).strip_edges() != "" else PET_DETAIL_MODE_INSTANCE
+		var log_lines := _string_array_values(parsed.get("logLines", []))
+		if log_lines.is_empty():
+			log_lines.append(_server_player_message(parsed, "GM宠物升级失败。"))
+		_set_world_log_message("\n".join(log_lines))
+		_refresh_qa_panel()
+		return
+	if command_route != "local_qa":
+		_set_world_log_message("GM宠物升级需要连接服务器。")
 		return
 	var result = PlayerProgressModel.gm_level_up_pet_once(player_profile, qa_pet_level_instance_id)
 	player_profile = result.get("profile", player_profile)
@@ -23161,31 +23243,6 @@ func _on_pet_batch_state_pressed(target_state: String) -> void:
 	player_profile = result.get("profile", player_profile)
 	if bool(result.get("ok", false)) and profile_save_enabled:
 		host._save_player_profile_now()
-	_set_world_log_message(str(result.get("message", "")))
-	_refresh_pet_panel()
-
-func _on_pet_gm_grant_blue_pressed() -> void:
-	var result = PlayerProgressModel.gm_grant_blue_man_dragon(player_profile)
-	player_profile = result.get("profile", player_profile)
-	if bool(result.get("ok", false)):
-		pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
-		pet_detail_mode = PET_DETAIL_MODE_GROWTH
-		if profile_save_enabled:
-			host._save_player_profile_now()
-	_set_world_log_message(str(result.get("message", "")))
-	_refresh_pet_panel()
-
-func _on_pet_gm_level_up_pressed() -> void:
-	if pet_selected_instance_id == "":
-		_set_world_log_message("请选择要升级的宠物。")
-		return
-	var result = PlayerProgressModel.gm_level_up_pet_once(player_profile, pet_selected_instance_id)
-	player_profile = result.get("profile", player_profile)
-	if bool(result.get("ok", false)):
-		var updated = result.get("pet", {})
-		pet_detail_mode = PET_DETAIL_MODE_GROWTH if updated is Dictionary and str((updated as Dictionary).get("growthSpeciesProfileId", "")).strip_edges() != "" else PET_DETAIL_MODE_INSTANCE
-		if profile_save_enabled:
-			host._save_player_profile_now()
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_pet_panel()
 

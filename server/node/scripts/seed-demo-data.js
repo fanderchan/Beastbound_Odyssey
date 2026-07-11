@@ -8,7 +8,12 @@ const {
   createMemoryAuthStore,
   isValidUsername,
 } = require("../src/auth-service");
-const {createMysqlAuthStore} = require("../src/mysql-store");
+const {createNewPetFactory} = require("../src/auth/new-pet-factory");
+const {
+  PROFILE_RESOLUTION_AUTHORITY_V1,
+  loadPetGrowthCatalog,
+} = require("../src/auth/pet-growth-catalog");
+const {settlePetGrowthToLevel} = require("../src/auth/pet-growth-runtime");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const DEFAULT_JSON_STORE_PATH = path.resolve(repoRoot, ".run/demo_seed/demo-auth-store.json");
@@ -17,8 +22,10 @@ const DEFAULT_PASSWORD = "DemoPass123";
 const DEFAULT_PREFIX = "demo";
 const DEFAULT_MANOR_ID = "firebud_manor";
 const BASE_SLOT_COUNT = 15;
-
-loadEnvFile(path.resolve(repoRoot, "server/node/.local/mysql.env"));
+const DEMO_PET_FORM_ID = "blue_man_dragon_water10";
+const PET_TEMPLATE_PATH = path.resolve(repoRoot, "client/godot/data/pet_templates.json");
+const petGrowthCatalog = loadPetGrowthCatalog();
+const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -27,7 +34,10 @@ function main() {
     return;
   }
   const options = normalizeOptions(args);
-  if (options.store === "json" && options.resetOutput && fs.existsSync(options.output)) {
+  if (options.store === "memory" && fs.existsSync(options.output) && !options.resetOutput) {
+    throw new Error("memory fixture output already exists; choose a new output or pass --reset-output");
+  }
+  if (options.resetOutput && fs.existsSync(options.output)) {
     fs.rmSync(options.output, {force: true});
   }
   const store = createStore(options);
@@ -35,7 +45,7 @@ function main() {
   const service = createAuthService({
     store,
     now: () => currentMs,
-    // seed 脚本属于运维路径，需要整档写入来构造演示账号档案。
+    // 只对全空的 memory/JSON disposable fixture 开启；MySQL 与既有档案在进入服务前已硬拒绝。
     allowFullProfileSave: true,
   });
   const result = seedDemoData(service, options, {
@@ -58,6 +68,7 @@ function main() {
 
 function seedDemoData(service, options, time) {
   const specs = demoAccountSpecs(options.prefix);
+  assertDisposableSeedStore(service, options);
   const ensured = {};
   for (const spec of specs) {
     ensured[spec.key] = ensureAccount(service, spec, options.password);
@@ -144,14 +155,9 @@ function demoAccountSpecs(prefix) {
         quick: 118,
       },
       pet: {
-        instanceId: "pet_bui_main",
+        instanceId: "pet_demo_main",
         name: "演示战宠",
         level: 32,
-        hp: 320,
-        maxHp: 320,
-        attack: 72,
-        defense: 44,
-        quick: 92,
       },
     },
     {
@@ -178,14 +184,9 @@ function demoAccountSpecs(prefix) {
         quick: 78,
       },
       pet: {
-        instanceId: "pet_bui_main",
-        name: "跟队布伊",
+        instanceId: "pet_demo_main",
+        name: "跟队蓝人龙",
         level: 16,
-        hp: 180,
-        maxHp: 180,
-        attack: 36,
-        defense: 22,
-        quick: 70,
       },
     },
     {
@@ -212,14 +213,9 @@ function demoAccountSpecs(prefix) {
         quick: 96,
       },
       pet: {
-        instanceId: "pet_bui_main",
-        name: "挑战布伊",
+        instanceId: "pet_demo_main",
+        name: "挑战蓝人龙",
         level: 25,
-        hp: 260,
-        maxHp: 260,
-        attack: 58,
-        defense: 32,
-        quick: 82,
       },
     },
     {
@@ -244,14 +240,9 @@ function demoAccountSpecs(prefix) {
         quick: 72,
       },
       pet: {
-        instanceId: "pet_bui_main",
-        name: "新手布伊",
+        instanceId: "pet_demo_main",
+        name: "新手蓝人龙",
         level: 4,
-        hp: 110,
-        maxHp: 110,
-        attack: 18,
-        defense: 9,
-        quick: 58,
       },
     },
   ];
@@ -266,22 +257,13 @@ function ensureAccount(service, spec, password) {
   if (registered.ok) {
     return {spec, action: "created", account: registered.account, session: registered.session};
   }
-  if (registered.code !== "account_exists") {
-    throw new Error(`register ${spec.username} failed: ${registered.code || ""} ${registered.message || ""}`.trim());
-  }
-  const login = service.login({username: spec.username, password});
-  if (!login.ok) {
-    throw new Error(`login ${spec.username} failed: ${login.code || ""} ${login.message || ""}`.trim());
-  }
-  return {spec, action: "reused", account: login.account, session: login.session};
+  const detail = `${registered.code || ""} ${registered.message || ""}`.trim();
+  throw new Error(`demo seed refuses existing or unavailable account ${spec.username}: ${detail}`);
 }
 
 function ensureDemoProfile(service, ensured, spec) {
-  const profileResult = service.getProfile(ensured.session.token);
-  if (!profileResult.ok) {
-    throw new Error(`profile ${spec.username} failed: ${profileResult.code || ""} ${profileResult.message || ""}`.trim());
-  }
-  const profile = clone(profileResult.profile || {});
+  const internal = freshInternalProfileForCreatedAccount(service, ensured);
+  const profile = internal.profile;
   profile.player = objectOrEmpty(profile.player);
   profile.player.name = spec.displayName;
   profile.player.level = Math.max(intValue(profile.player.level, 1), spec.player.level);
@@ -300,7 +282,7 @@ function ensureDemoProfile(service, ensured, spec) {
   profile.captureTools = mergeCounts(profile.captureTools, spec.captureTools);
   ensureDemoPet(profile, spec.pet);
   const save = service.saveProfile(ensured.session.token, {
-    expectedRevision: intValue(profileResult.profileSummary && profileResult.profileSummary.profileRevision, 0),
+    expectedRevision: internal.profileRevision,
     profile,
   });
   if (!save.ok) {
@@ -316,38 +298,56 @@ function ensureDemoProfile(service, ensured, spec) {
 }
 
 function ensureDemoPet(profile, petSpec) {
-  profile.petInstances = Array.isArray(profile.petInstances) ? profile.petInstances : [];
-  let pet = profile.petInstances.find((entry) => entry && String(entry.instanceId || "") === petSpec.instanceId);
-  if (!pet) {
-    pet = {
-      instanceId: petSpec.instanceId,
-      petId: petSpec.instanceId,
-      templateId: "bui_normal_red_fire10",
-      formId: "bui_normal_red_fire10",
-      speciesId: "bui_normal_red_fire10",
-      state: "battle",
-      activeSkillIds: ["pet_attack", "pet_defend", "pet_bui_charge"],
-      petSkillSlots: ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "", ""],
-      passiveSkillIds: [],
-      schemaVersion: 1,
-    };
-    profile.petInstances.push(pet);
+  if (!Array.isArray(profile.petInstances) || profile.petInstances.length !== 0) {
+    throw new Error("disposable demo profile must not contain pets before authority initialization");
   }
+  const template = demoPetTemplate(DEMO_PET_FORM_ID);
+  const stats = objectOrEmpty(template.baseStats);
+  const activeSkillIds = uniqueStrings(["pet_attack", "pet_defend", ...arrayOrEmpty(template.activeSkillIds)]);
+  const levelOne = newPetFactory.finalizeLevelOne({
+    instanceId: petSpec.instanceId,
+    petId: petSpec.instanceId,
+    templateId: DEMO_PET_FORM_ID,
+    formId: DEMO_PET_FORM_ID,
+    speciesId: DEMO_PET_FORM_ID,
+    lineId: String(template.lineId || ""),
+    lineName: String(template.lineName || ""),
+    subtypeId: String(template.subtypeId || ""),
+    subtypeName: String(template.subtypeName || ""),
+    formName: String(template.formName || petSpec.name),
+    name: petSpec.name,
+    state: "battle",
+    level: 1,
+    exp: 0,
+    nextExp: demoExpToNextLevel(1),
+    hp: Math.max(1, intValue(stats.maxHp, 1)),
+    maxHp: Math.max(1, intValue(stats.maxHp, 1)),
+    attack: Math.max(1, intValue(stats.attack, 1)),
+    defense: Math.max(1, intValue(stats.defense, 1)),
+    quick: Math.max(1, intValue(stats.quick ?? stats.agility, 1)),
+    elements: clone(objectOrEmpty(template.elements)),
+    growthProfileId: String(template.growthProfileId || ""),
+    growthSpeciesProfileId: String(template.growthSpeciesProfileId || ""),
+    activeSkillIds,
+    petSkillSlots: skillSlots(activeSkillIds),
+    passiveSkillIds: uniqueStrings(arrayOrEmpty(template.passiveSkillIds)),
+    schemaVersion: 1,
+  }, {purpose: "demo_seed"});
+  if (levelOne.growthKind !== PROFILE_RESOLUTION_AUTHORITY_V1) {
+    throw new Error(`disposable demo pet ${DEMO_PET_FORM_ID} must use authority-v1 growth`);
+  }
+  const resolution = petGrowthCatalog.resolvePetProfile(levelOne.pet);
+  if (resolution.kind !== PROFILE_RESOLUTION_AUTHORITY_V1 || !resolution.profile) {
+    throw new Error(`disposable demo pet ${DEMO_PET_FORM_ID} growth profile could not be resolved`);
+  }
+  const targetLevel = Math.max(1, intValue(petSpec.level, 1));
+  const pet = settlePetGrowthToLevel(levelOne.pet, resolution.profile, targetLevel).pet;
   pet.name = petSpec.name;
-  pet.formName = String(pet.formName || pet.name);
-  pet.level = Math.max(intValue(pet.level, 1), petSpec.level);
-  pet.maxHp = Math.max(intValue(pet.maxHp, 0), petSpec.maxHp);
-  pet.hp = pet.maxHp;
-  pet.attack = Math.max(intValue(pet.attack, 0), petSpec.attack);
-  pet.defense = Math.max(intValue(pet.defense, 0), petSpec.defense);
-  pet.quick = Math.max(intValue(pet.quick, 0), petSpec.quick);
   pet.state = "battle";
-  if (!Array.isArray(pet.activeSkillIds) || pet.activeSkillIds.length <= 0) {
-    pet.activeSkillIds = ["pet_attack", "pet_defend", "pet_bui_charge"];
-  }
-  if (!Array.isArray(pet.petSkillSlots) || pet.petSkillSlots.length <= 0) {
-    pet.petSkillSlots = ["pet_attack", "pet_defend", "pet_bui_charge", "", "", "", ""];
-  }
+  pet.exp = 0;
+  pet.nextExp = demoExpToNextLevel(targetLevel);
+  pet.hp = pet.maxHp;
+  profile.petInstances = [pet];
   profile.activePetInstanceId = pet.instanceId;
   profile.nextPetInstanceSerial = Math.max(intValue(profile.nextPetInstanceSerial, 1), 6);
 }
@@ -472,10 +472,121 @@ function snapshotCounts(snapshot) {
   };
 }
 
-function createStore(options) {
-  if (options.store === "mysql") {
-    return createMysqlAuthStore();
+function assertDisposableSeedStore(service, options) {
+  if (!options || !["json", "memory"].includes(options.store)) {
+    throw new Error("demo seed only supports disposable memory or JSON stores; MySQL is forbidden");
   }
+  const snapshot = service.snapshot();
+  const occupiedCollections = [];
+  for (const [key, value] of Object.entries(snapshot)) {
+    if (key === "schemaVersion") {
+      continue;
+    }
+    if (snapshotValueHasContent(value)) {
+      occupiedCollections.push(key);
+    }
+  }
+  if (occupiedCollections.length > 0) {
+    throw new Error(
+      `demo seed requires an empty disposable store; found ${occupiedCollections.join(",")}. ` +
+      "Choose a new output or pass --reset-output for an isolated JSON fixture."
+    );
+  }
+}
+
+function snapshotValueHasContent(value) {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (value && typeof value === "object") {
+    return Object.keys(value).length > 0;
+  }
+  return Number(value || 0) !== 0;
+}
+
+function freshInternalProfileForCreatedAccount(service, ensured) {
+  if (!ensured || ensured.action !== "created") {
+    throw new Error("demo seed refuses reused accounts");
+  }
+  const snapshot = service.snapshot();
+  const accountId = String(ensured.account && ensured.account.accountId || "");
+  const binding = objectOrEmpty(objectOrEmpty(snapshot.profileBindings)[accountId]);
+  const playerId = String(binding.playerId || "");
+  const profileDoc = objectOrEmpty(objectOrEmpty(snapshot.profiles)[playerId]);
+  const profile = clone(objectOrEmpty(profileDoc.profile));
+  const profileRevision = intValue(binding.profileRevision, -1);
+  if (accountId === "" || playerId === "" || profileRevision !== 0 || Object.keys(profile).length === 0) {
+    throw new Error("new disposable demo account did not have a pristine revision-zero profile");
+  }
+  if (
+    arrayOrEmpty(profile.petInstances).length > 0
+    || arrayOrEmpty(profile.groundPetDrops).length > 0
+    || arrayOrEmpty(profile.trainingPartners).length > 0
+    || containsPetGrowthPrivateState(profile)
+  ) {
+    throw new Error("new disposable demo profile unexpectedly contained pet state");
+  }
+  return {profile, profileRevision};
+}
+
+function containsPetGrowthPrivateState(value) {
+  if (Array.isArray(value)) {
+    return value.some(containsPetGrowthPrivateState);
+  }
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(value, "privateSeed")
+    || Object.prototype.hasOwnProperty.call(value, "privateRoll")
+    || Object.prototype.hasOwnProperty.call(value, "growthSpeciesSeed")
+    || (value.petGrowth && value.petGrowth.private)
+  ) {
+    return true;
+  }
+  return Object.values(value).some(containsPetGrowthPrivateState);
+}
+
+function demoPetTemplate(formId) {
+  const document = JSON.parse(fs.readFileSync(PET_TEMPLATE_PATH, "utf8"));
+  const form = arrayOrEmpty(document.forms).find((entry) => String(entry && entry.formId || "") === formId);
+  if (!form) {
+    throw new Error(`demo pet form ${formId} is missing`);
+  }
+  const line = arrayOrEmpty(document.lines).find((entry) => String(entry && entry.lineId || "") === String(form.lineId || ""));
+  const subtype = arrayOrEmpty(document.subtypes).find((entry) => String(entry && entry.subtypeId || "") === String(form.subtypeId || ""));
+  if (!line || !subtype) {
+    throw new Error(`demo pet form ${formId} taxonomy is incomplete`);
+  }
+  const passiveSkillIds = uniqueStrings([
+    ...arrayOrEmpty(line.passiveSkillIds),
+    String(line.passiveSkillId || ""),
+  ]);
+  return {
+    ...clone(form),
+    lineName: String(line.lineName || ""),
+    subtypeName: String(subtype.subtypeName || ""),
+    activeSkillIds: uniqueStrings(arrayOrEmpty(subtype.activeSkillIds)),
+    passiveSkillIds,
+  };
+}
+
+function skillSlots(skillIds) {
+  const slots = uniqueStrings(skillIds).slice(0, 7);
+  while (slots.length < 7) {
+    slots.push("");
+  }
+  return slots;
+}
+
+function demoExpToNextLevel(level) {
+  const safeLevel = Math.max(1, intValue(level, 1));
+  const base = (80 + safeLevel * 40) * Math.pow(1.052, safeLevel - 1);
+  const highLevelShape = Math.pow(safeLevel, 2.15) * 2.0;
+  return Math.max(1, Math.round(base + highLevelShape));
+}
+
+function createStore(options) {
   if (options.store === "json") {
     return createJsonAuthStore(options.output);
   }
@@ -483,9 +594,9 @@ function createStore(options) {
 }
 
 function normalizeOptions(args) {
-  const store = String(args.store || process.env.BEASTBOUND_DEMO_SEED_STORE || "mysql").trim().toLowerCase();
-  if (!["mysql", "json", "memory"].includes(store)) {
-    throw new Error("--store must be mysql, json, or memory.");
+  const store = String(args.store || process.env.BEASTBOUND_DEMO_SEED_STORE || "json").trim().toLowerCase();
+  if (!["json", "memory"].includes(store)) {
+    throw new Error("--store must be json or memory; MySQL seeding is forbidden.");
   }
   const prefix = normalizePrefix(args.prefix || process.env.BEASTBOUND_DEMO_SEED_PREFIX || DEFAULT_PREFIX);
   const password = String(args.password || process.env.BEASTBOUND_DEMO_SEED_PASSWORD || DEFAULT_PASSWORD);
@@ -605,27 +716,19 @@ function writeJsonFile(filePath, value) {
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
 }
 
-function loadEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return;
-  }
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match || process.env[match[1]]) {
-      continue;
-    }
-    process.env[match[1]] = unquoteShellValue(match[2].trim());
-  }
+function arrayOrEmpty(value) {
+  return Array.isArray(value) ? value : [];
 }
 
-function unquoteShellValue(value) {
-  if (value.startsWith("'") && value.endsWith("'")) {
-    return value.slice(1, -1).replace(/'\\''/g, "'");
+function uniqueStrings(values) {
+  const result = [];
+  for (const value of arrayOrEmpty(values)) {
+    const normalized = String(value || "").trim();
+    if (normalized !== "" && !result.includes(normalized)) {
+      result.push(normalized);
+    }
   }
-  if (value.startsWith("\"") && value.endsWith("\"")) {
-    return value.slice(1, -1).replace(/\\"/g, "\"");
-  }
-  return value;
+  return result;
 }
 
 function objectOrEmpty(value) {
@@ -646,7 +749,7 @@ function printHelp() {
   node server/node/scripts/seed-demo-data.js [options]
 
 Options:
-  --store mysql|json|memory       Target store. Defaults to mysql.
+  --store json|memory             Disposable fixture store. Defaults to json; MySQL is forbidden.
   --prefix <name>                 Username prefix. Defaults to demo.
   --password <password>           Demo account password. Defaults to DemoPass123.
   --output <path>                 JSON store path or memory snapshot path.
@@ -655,7 +758,7 @@ Options:
   --rival-family-name <name>      Rival demo family name.
   --manor <manorId>               Manor to occupy when possible.
   --skip-manor                    Do not seed manor occupation.
-  --reset-output                  Remove existing JSON output before seeding.
+  --reset-output                  Remove an existing isolated JSON fixture before seeding.
 `);
 }
 

@@ -9188,6 +9188,9 @@ func _qa_command_summary_text() -> String:
 func _gm_allowed_command_ids() -> Array[String]:
 	return _panel_flow()._gm_allowed_command_ids()
 
+func _gm_pet_command_route_for_state(has_server_session: bool, local_qa_bypass: bool) -> String:
+	return _panel_flow()._gm_pet_command_route_for_state(has_server_session, local_qa_bypass)
+
 func _authorize_gm_command(command_id: String) -> bool:
 	return _panel_flow()._authorize_gm_command(command_id)
 
@@ -9195,10 +9198,10 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 	_panel_flow()._on_qa_entry_pressed(entry_id)
 
 func _on_qa_pet_grant_pressed() -> void:
-	_panel_flow()._on_qa_pet_grant_pressed()
+	await _panel_flow()._on_qa_pet_grant_pressed()
 
 func _on_qa_pet_level_up_pressed() -> void:
-	_panel_flow()._on_qa_pet_level_up_pressed()
+	await _panel_flow()._on_qa_pet_level_up_pressed()
 
 func _qa_open_auto_settings(tab_id: String) -> void:
 	_panel_flow()._qa_open_auto_settings(tab_id)
@@ -9577,12 +9580,6 @@ func _on_pet_batch_store_pressed() -> void:
 
 func _on_pet_batch_state_pressed(target_state: String) -> void:
 	await _panel_flow()._on_pet_batch_state_pressed(target_state)
-
-func _on_pet_gm_grant_blue_pressed() -> void:
-	_panel_flow()._on_pet_gm_grant_blue_pressed()
-
-func _on_pet_gm_level_up_pressed() -> void:
-	_panel_flow()._on_pet_gm_level_up_pressed()
 
 func _on_pet_rename_pressed() -> void:
 	_panel_flow()._on_pet_rename_pressed()

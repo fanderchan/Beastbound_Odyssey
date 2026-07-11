@@ -109,6 +109,12 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname.startsWith("/gm/commands/")) {
         const commandId = decodeURIComponent(url.pathname.slice("/gm/commands/".length));
+        if (commandId === "gm_grant_pet") {
+          return sendResult(res, service.grantGmPet(bearerToken(req), await readJson(req)));
+        }
+        if (commandId === "gm_level_pet") {
+          return sendResult(res, service.levelUpGmPet(bearerToken(req), await readJson(req)));
+        }
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }
       if (req.method === "GET" && url.pathname === "/gm/market/config") {

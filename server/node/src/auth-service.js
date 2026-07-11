@@ -9,6 +9,7 @@ const {createMailChatDomain} = require("./auth/mail-chat");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {createEconomyDomain} = require("./auth/economy");
+const {createGmPetsDomain} = require("./auth/gm-pets");
 const {
   generatePetCultivationRollSeed,
 } = require("./auth/pet-private-state");
@@ -337,6 +338,8 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "cancelTrade",
   "sendMail",
   "claimMailAttachments",
+  "grantGmPet",
+  "levelUpGmPet",
 ]);
 const PLAYER_REBIRTH_COUNT_KEY = "rebirthCount";
 const PLAYER_REBIRTH_HISTORY_KEY = "rebirthHistory";
@@ -2043,37 +2046,48 @@ function createAuthService(options = {}) {
   }
 
   function authorizeGmCommand(payload = {}) {
-    const token = payload.token;
-    const commandId = normalizeCommandId(payload.commandId);
     const data = load();
-    const resolved = resolveServiceSession(data, token);
-    if (!resolved.ok) {
-      const audit = recordGmAudit(data, "", commandId, false, resolved.message, now, randomId);
-      save(data);
-      return fail(resolved.code, resolved.message, {"auditId": audit.auditId});
-    }
-    if (!commandId) {
-      const audit = recordGmAudit(data, resolved.account.username, commandId, false, "GM命令为空。", now, randomId);
-      save(data);
-      return fail("empty_command", "GM命令为空。", {"auditId": audit.auditId});
-    }
-    if (!effectiveRoleIsGm(data, resolved.account, now)) {
-      const audit = recordGmAudit(data, resolved.account.username, commandId, false, "当前账号没有GM权限。", now, randomId);
-      save(data);
-      return fail("gm_denied", "当前账号没有GM权限。", {"auditId": audit.auditId});
-    }
-    if (!commandAllowed(data, resolved.account.accountId, commandId)) {
-      const audit = recordGmAudit(data, resolved.account.username, commandId, false, "GM命令未授权。", now, randomId);
-      save(data);
-      return fail("command_denied", "GM命令未授权。", {"auditId": audit.auditId});
-    }
-    const audit = recordGmAudit(data, resolved.account.username, commandId, true, "", now, randomId);
+    const access = gmCommandAccess(data, payload.token, payload.commandId);
+    const audit = recordGmCommandAudit(data, access, access.ok, access.ok ? "" : access.message);
     save(data);
+    if (!access.ok) {
+      return fail(access.code, access.message, {"auditId": audit.auditId});
+    }
     return ok({
-      commandId,
+      commandId: access.commandId,
       auditId: audit.auditId,
       message: "GM命令已授权。",
     });
+  }
+
+  function gmCommandAccess(data, token, commandIdValue) {
+    const commandId = normalizeCommandId(commandIdValue);
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return {ok: false, code: resolved.code, message: resolved.message, commandId, username: "", resolved: null};
+    }
+    if (!commandId) {
+      return {ok: false, code: "empty_command", message: "GM命令为空。", commandId, username: resolved.account.username, resolved};
+    }
+    if (!effectiveRoleIsGm(data, resolved.account, now)) {
+      return {ok: false, code: "gm_denied", message: "当前账号没有GM权限。", commandId, username: resolved.account.username, resolved};
+    }
+    if (!commandAllowed(data, resolved.account.accountId, commandId)) {
+      return {ok: false, code: "command_denied", message: "GM命令未授权。", commandId, username: resolved.account.username, resolved};
+    }
+    return {ok: true, commandId, username: resolved.account.username, resolved};
+  }
+
+  function recordGmCommandAudit(data, access, okValue, message) {
+    return recordGmAudit(
+      data,
+      String(access && access.username || ""),
+      String(access && access.commandId || ""),
+      okValue,
+      String(message || ""),
+      now,
+      randomId,
+    );
   }
 
   function snapshot() {
@@ -2142,6 +2156,10 @@ function createAuthService(options = {}) {
     BATTLE_MODE_DUEL,
     BATTLE_MODE_MANOR_WAR,
     BATTLE_MODE_PARTY_PVE,
+    BATTLE_PET_MAX_PER_PARTICIPANT,
+    BATTLE_PET_STATE_STANDBY,
+    BATTLE_PET_STATE_STORAGE,
+    BATTLE_PET_STORAGE_LIMIT,
     BATTLE_PHASE_COMMAND,
     BATTLE_ROOM_CLOSED,
     BATTLE_ROOM_READY,
@@ -2152,6 +2170,7 @@ function createAuthService(options = {}) {
     MAIL_BODY_MAX_LENGTH,
     MAIL_TITLE_MAX_LENGTH,
     MAX_CHAT_MESSAGES,
+    MAX_PET_LEVEL,
     PARTY_MAX_MEMBERS,
     PROFILE_ACTION_IDS,
     accountById,
@@ -2188,6 +2207,7 @@ function createAuthService(options = {}) {
     claimQuestByIdToProfile,
     clampInt,
     clone,
+    createDefaultServerPet,
     closeBattleRoomWithResult: (serviceData, roomValue, result, nowFn) => closeBattleRoomWithResult(
       serviceData,
       roomValue,
@@ -2203,12 +2223,14 @@ function createAuthService(options = {}) {
     currentProfileQuestId,
     emitServiceEvent,
     ensureProfileForAccount,
+    expToNextLevel: battleExpToNextLevel,
     encounterStoneConfigForItem,
     executePlayerRebirthToProfile: (profile) => executePlayerRebirthToProfile(profile, {newPetFactory}),
     expireBattleInvite,
     expireBattleTimeoutsAndEmit,
     invalidateEncounterPermitForAccount,
     fail,
+    gmCommandAccess,
     isoNow,
     itemAmountText,
     load,
@@ -2239,6 +2261,7 @@ function createAuthService(options = {}) {
     normalizeUsername,
     normalizedQuestEventPayload,
     now,
+    newPetFactory,
     objectOrEmpty,
     ok,
     offlinePartyPveBattleParticipantAccountIds: (serviceData, roomValue) => offlinePartyPveBattleParticipantAccountIds(serviceData, roomValue, {now, runtimeActiveSessionIds}),
@@ -2279,14 +2302,21 @@ function createAuthService(options = {}) {
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
     manorEntries,
     persistProfileForAccount,
+    petExpSettlement,
+    petGrowthCatalog,
     playerPositionHasCell,
     profileActionLogLines,
     profileBackpackSlots,
     profileBindingForAccount,
+    profilePartyVisiblePetCount,
+    profilePetIndexById,
+    profilePetInstances,
+    profilePetName,
     profileCurrencyAmount,
     profileStoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
     profileStoneCoins,
     profileSummaryForAccount,
+    profileStoragePetCount,
     publicAccount,
     publicBattleCommand,
     publicBattleInvite,
@@ -2309,6 +2339,8 @@ function createAuthService(options = {}) {
     questRewardChoices,
     randomBytes,
     randomId,
+    recordGmCommandAudit,
+    recordProfilePetCodexForm,
     recordBattleStateTrace,
     recordBattleTrace,
     recordQuestEventByIdToProfile,
@@ -2336,6 +2368,7 @@ function createAuthService(options = {}) {
       serverStartedAtMs,
     }),
     save,
+    nextProfilePetInstanceSerial,
     settlePartyEncounterPositions,
     setProfileCurrencyAmount,
     shopCurrencyLabel,
@@ -2350,6 +2383,7 @@ function createAuthService(options = {}) {
   const battleRoom = createBattleRoomDomain(domainContext);
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
+  const gmPets = createGmPetsDomain(domainContext);
 
   const serviceApi = {
     register,
@@ -2429,6 +2463,8 @@ function createAuthService(options = {}) {
     grantGm,
     listGmTools,
     authorizeGmCommand,
+    grantGmPet: gmPets.grantGmPet,
+    levelUpGmPet: gmPets.levelUpGmPet,
     snapshot,
   };
   for (const [name, method] of Object.entries(serviceApi)) {

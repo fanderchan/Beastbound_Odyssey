@@ -15617,6 +15617,73 @@ func _run_auto_auth_server_client_check() -> void:
 		and str((parsed_profile_action.get("result", {}) as Dictionary).get("statKey", "")) == "attack"
 		and (parsed_profile_action.get("logLines", []) as Array).size() == 1
 	)
+	var gm_grant_spec = ServerAuthClientModel.gm_command_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"gm_grant_pet",
+		{"growthSpeciesProfileId": "rebirth_starter_fire_cub_v1"}
+	)
+	var gm_grant_body_value = JSON.parse_string(str(gm_grant_spec.get("body", "")))
+	var gm_grant_body := gm_grant_body_value as Dictionary if gm_grant_body_value is Dictionary else {}
+	var gm_level_spec = ServerAuthClientModel.gm_command_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"gm_level_pet",
+		{"instanceId": "pet_gm_test"}
+	)
+	var gm_level_body_value = JSON.parse_string(str(gm_level_spec.get("body", "")))
+	var gm_level_body := gm_level_body_value as Dictionary if gm_level_body_value is Dictionary else {}
+	var gm_command_request_ok = (
+		str(gm_grant_spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_grant_pet"
+		and int(gm_grant_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and host._packed_string_array(gm_grant_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and not ServerAuthClientModel.request_is_idempotent(gm_grant_spec)
+		and gm_grant_body.size() == 1
+		and str(gm_grant_body.get("growthSpeciesProfileId", "")) == "rebirth_starter_fire_cub_v1"
+		and str(gm_grant_spec.get("body", "")).find("privateSeed") < 0
+		and str(gm_grant_spec.get("body", "")).find("growthSpeciesRoll") < 0
+		and str(gm_grant_spec.get("body", "")).find("\"level\"") < 0
+		and str(gm_level_spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_level_pet"
+		and int(gm_level_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and not ServerAuthClientModel.request_is_idempotent(gm_level_spec)
+		and gm_level_body.size() == 1
+		and str(gm_level_body.get("instanceId", "")) == "pet_gm_test"
+	)
+	var parsed_gm_command = ServerAuthClientModel.parse_gm_command_response(200, JSON.stringify({
+		"ok": true,
+		"message": "获得 Lv1 焰纹幼兽，已加入队伍。",
+		"profile": {"schemaVersion": 1, "petInstances": []},
+		"profileBinding": {"playerId": "player_test", "profileRevision": 15},
+		"profileSummary": {"playerId": "player_test", "profileRevision": 15},
+		"result": {"commandId": "gm_grant_pet", "instanceId": "pet_gm_test"},
+		"logLines": ["获得 Lv1 焰纹幼兽，已加入队伍。"],
+		"auditId": "audit_gm_test",
+		"privateSeed": "must_not_survive_parser",
+	}).to_utf8_buffer())
+	var parsed_gm_denied = ServerAuthClientModel.parse_gm_command_response(403, JSON.stringify({
+		"ok": false,
+		"code": "gm_denied",
+		"message": "当前账号没有GM权限。",
+		"profileSummary": {"playerId": "player_test", "profileRevision": 15},
+		"auditId": "audit_gm_denied",
+		"privateRoll": {"attack": 999},
+	}).to_utf8_buffer())
+	var gm_command_parse_ok = (
+		bool(parsed_gm_command.get("ok", false))
+		and parsed_gm_command.get("profile", null) is Dictionary
+		and int((parsed_gm_command.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 15
+		and str((parsed_gm_command.get("result", {}) as Dictionary).get("instanceId", "")) == "pet_gm_test"
+		and (parsed_gm_command.get("logLines", []) as Array).size() == 1
+		and str(parsed_gm_command.get("auditId", "")) == "audit_gm_test"
+		and not parsed_gm_command.has("response")
+		and JSON.stringify(parsed_gm_command).find("must_not_survive_parser") < 0
+		and not bool(parsed_gm_denied.get("ok", true))
+		and str(parsed_gm_denied.get("code", "")) == "gm_denied"
+		and str(parsed_gm_denied.get("message", "")).find("GM权限") >= 0
+		and str(parsed_gm_denied.get("auditId", "")) == "audit_gm_denied"
+		and not parsed_gm_denied.has("response")
+		and JSON.stringify(parsed_gm_denied).find("privateRoll") < 0
+	)
 	var shop_transaction_spec = ServerAuthClientModel.shop_transaction_request(
 		"http://127.0.0.1:8787/",
 		"token_test",
@@ -16963,6 +17030,7 @@ func _run_auto_auth_server_client_check() -> void:
 	var status = "ok" if request_ok and refresh_request_ok and protocol_header_ok and parse_ok and error_ok and protocol_mismatch_ok and ui_server_ok and ui_server_only_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
+	status = "ok" if status == "ok" and gm_command_request_ok and gm_command_parse_ok else "failed"
 	status = "ok" if status == "ok" and shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok else "failed"
 	status = "ok" if status == "ok" and equipment_equip_request_ok and equipment_equip_parse_ok and equipment_unequip_request_ok and equipment_unequip_parse_ok else "failed"
 	status = "ok" if status == "ok" and equipment_enhance_request_ok and equipment_enhance_parse_ok else "failed"
@@ -16977,7 +17045,7 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
 	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s shop=%s equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s gm_command=%s shop=%s equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -16985,6 +17053,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(profile_request_ok),
 		str(upload_request_ok),
 		str(profile_action_request_ok and profile_action_parse_ok),
+		str(gm_command_request_ok and gm_command_parse_ok),
 		str(shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok),
 		str(equipment_equip_request_ok and equipment_equip_parse_ok),
 		str(equipment_unequip_request_ok and equipment_unequip_parse_ok),
@@ -22127,6 +22196,22 @@ func _run_auto_qa_panel_check() -> void:
 		and host.qa_pet_target_option != null
 		and host.qa_pet_level_up_button != null
 	)
+	host.profile_action_request_pending = true
+	host._refresh_qa_pet_tool_controls()
+	var gm_pet_pending_ok = (
+		host.qa_pet_grant_button != null
+		and host.qa_pet_grant_button.disabled
+		and host.qa_pet_level_up_button != null
+		and host.qa_pet_level_up_button.disabled
+	)
+	host.profile_action_request_pending = false
+	host._refresh_qa_pet_tool_controls()
+	var gm_pet_route_ok = (
+		host._gm_pet_command_route_for_state(true, true) == "server"
+		and host._gm_pet_command_route_for_state(true, false) == "server"
+		and host._gm_pet_command_route_for_state(false, true) == "local_qa"
+		and host._gm_pet_command_route_for_state(false, false) == "blocked"
+	)
 	var command_ok = (
 		command_text.find("--auto-backpack-check") >= 0
 		and command_text.find("--auto-shop-check") >= 0
@@ -22338,12 +22423,14 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, host.target_cell)
 		and host.world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status = "ok" if loaded and button_ok and pet_tool_options_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	var status = "ok" if loaded and button_ok and pet_tool_options_ok and gm_pet_pending_ok and gm_pet_route_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s pet_tools=%s gm_pending=%s gm_route=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
 		str(pet_tool_options_ok),
+		str(gm_pet_pending_ok),
+		str(gm_pet_route_ok),
 		str(command_ok),
 		str(first_layout_ok),
 		str(second_layout_ok),

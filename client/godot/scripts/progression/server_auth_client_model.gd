@@ -326,6 +326,16 @@ static func profile_action_request(base_url: String, session_token: String, acti
 	}
 
 
+static func gm_command_request(base_url: String, session_token: String, command_id: String, payload: Dictionary = {}) -> Dictionary:
+	return {
+		"url": "%s/gm/commands/%s" % [normalized_base_url(base_url), command_id.strip_edges().uri_encode()],
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(payload),
+		"retryPolicy": RETRY_POLICY_NONE,
+	}
+
+
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
 	return {
 		"url": "%s/shops/transaction" % normalized_base_url(base_url),
@@ -1340,6 +1350,19 @@ static func parse_profile_action_response(response_code: int, body: PackedByteAr
 	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
 	parsed["logLines"] = _string_array(response.get("logLines", []))
 	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_gm_command_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "GM宠物操作失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["result"] = response.get("result", {}) if response.get("result", {}) is Dictionary else {}
+	parsed["logLines"] = _string_array(response.get("logLines", []))
+	parsed["auditId"] = str(response.get("auditId", ""))
+	parsed.erase("response")
 	return parsed
 
 

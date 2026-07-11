@@ -436,6 +436,47 @@ func submit_server_profile_action(action: String, payload: Dictionary = {}, fall
 	return parsed
 
 
+func submit_server_gm_command(command_id: String, payload: Dictionary = {}, fallback_message: String = "GM宠物操作失败。") -> Dictionary:
+	if not is_server_account_session():
+		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
+	if host.profile_action_request_pending:
+		return {"ok": false, "message": "档案操作同步中，请稍候。", "logLines": ["档案操作同步中，请稍候。"]}
+	host.profile_action_request_pending = true
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.gm_command_request(
+		server_profile_base_url(),
+		server_profile_token(),
+		command_id,
+		payload
+	))
+	host.profile_action_request_pending = false
+	var parsed := ServerAuthClientModel.parse_gm_command_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	var log_lines := _string_array_values(parsed.get("logLines", []))
+	if bool(parsed.get("ok", false)):
+		var profile_applied := apply_server_profile_payload(parsed)
+		parsed["profileApplied"] = profile_applied
+		if profile_applied:
+			if log_lines.is_empty():
+				var success_message := str(parsed.get("message", "GM宠物操作已完成。")).strip_edges()
+				if success_message != "":
+					log_lines.append(success_message)
+		else:
+			log_lines = ["服务器已完成操作，但客户端未能载入更新后的档案；请勿重复操作，正在重新拉取。"]
+			queue_profile_pull()
+	else:
+		if handle_session_invalid_response(parsed):
+			parsed["logLines"] = [str(parsed.get("message", "登录已过期，请重新登录。"))]
+			return parsed
+		var summary = parsed.get("profileSummary", {})
+		if summary is Dictionary:
+			apply_server_profile_summary(summary as Dictionary)
+		var error_message := str(parsed.get("message", fallback_message)).strip_edges()
+		log_lines.append(error_message if error_message != "" else fallback_message)
+	if log_lines.is_empty():
+		log_lines.append(fallback_message)
+	parsed["logLines"] = log_lines
+	return parsed
+
+
 func server_hang_session_enabled() -> bool:
 	return is_server_account_session() and server_profile_token().strip_edges() != ""
 

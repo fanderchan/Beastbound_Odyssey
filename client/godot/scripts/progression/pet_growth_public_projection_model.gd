@@ -190,6 +190,36 @@ static func self_check() -> Dictionary:
 		errors
 	)
 
+	var unobserved_level_one_source := _fixture_pet(MODEL_LEGACY_INDIVIDUAL, 1)
+	unobserved_level_one_source["growthObservation"] = {
+		"schemaVersion": 1,
+		"level": 1,
+		"observedLevels": 0,
+		"enabled": true,
+		"statAverages": {},
+		"statPercentiles": {},
+		"statGrades": {},
+		"overallGrade": "未观察",
+	}
+	var unobserved_level_one_result := project_server_pet(unobserved_level_one_source)
+	case_count += 1
+	_expect(
+		bool(unobserved_level_one_result.get("ok", false)),
+		"旧版 Lv1 未观察空统计不应阻断整份服务器档案",
+		errors
+	)
+	var partial_observation_source := unobserved_level_one_source.duplicate(true)
+	partial_observation_source["growthObservation"]["observedLevels"] = 1
+	partial_observation_source["growthObservation"]["statAverages"] = {"attack": 2.5}
+	var partial_observation_result := project_server_pet(partial_observation_source)
+	case_count += 1
+	_expect(
+		bool(partial_observation_result.get("refreshNeeded", false))
+			and (partial_observation_result.get("errors", []) as Array).has("invalid_growth_observation"),
+		"非空但残缺的成长观察统计必须继续失败关闭",
+		errors
+	)
+
 	var missing_level_one_source := _fixture_pet(MODEL_AUTHORITY_V1, 2)
 	missing_level_one_source["growthAuthority"]["settledLevel"] = 2
 	missing_level_one_source["growthSpeciesProfileId"] = "blue_man_dragon_v1"
@@ -415,6 +445,7 @@ static func _validate_growth_observation(value, pet_level, errors: Array[String]
 		_append_error(errors, "invalid_growth_observation")
 		return
 	var observation := value as Dictionary
+	var observed_levels := -1
 	if observation.has("level"):
 		if not _is_integer_number(observation.get("level")):
 			_append_error(errors, "invalid_growth_observation")
@@ -425,11 +456,22 @@ static func _validate_growth_observation(value, pet_level, errors: Array[String]
 		or int(observation.get("observedLevels")) < 0
 	):
 		_append_error(errors, "invalid_growth_observation")
+	elif observation.has("observedLevels"):
+		observed_levels = int(observation.get("observedLevels"))
 	for key in OBSERVATION_STAT_NUMBER_KEYS + OBSERVATION_STAT_STRING_KEYS:
-		if observation.has(key) and (
-			not (observation.get(key) is Dictionary)
-			or not _stat_map_is_complete_for_type(observation.get(key) as Dictionary, OBSERVATION_STAT_STRING_KEYS.has(key))
-		):
+		if not observation.has(key):
+			continue
+		var stat_map = observation.get(key)
+		if not (stat_map is Dictionary):
+			_append_error(errors, "invalid_growth_observation")
+			continue
+		var stat_values := stat_map as Dictionary
+		# Lv1 has no level-up samples yet. Older authoritative profiles explicitly
+		# persisted empty observation maps; those are a valid "not observed" state,
+		# while partial/non-empty maps must still satisfy the strict four-stat shape.
+		if stat_values.is_empty() and observed_levels == 0:
+			continue
+		if not _stat_map_is_complete_for_type(stat_values, OBSERVATION_STAT_STRING_KEYS.has(key)):
 			_append_error(errors, "invalid_growth_observation")
 
 
