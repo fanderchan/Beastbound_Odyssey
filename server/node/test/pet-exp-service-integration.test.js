@@ -292,7 +292,7 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
     maxHp: 120,
     attack: 24,
     defense: 8,
-    quick: 90,
+    quick: 1,
     comboRateOverride: 0,
   }, {
     petId: "preflight_legacy_pet",
@@ -303,7 +303,7 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
     maxHp: 90,
     attack: 999,
     defense: 6,
-    quick: 120,
+    quick: 2,
     comboRateOverride: 0,
   });
   leaderProfile.ridePetInstanceId = "preflight_ride_pet";
@@ -324,7 +324,7 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
     maxHp: 120,
     attack: 18,
     defense: 6,
-    quick: 30,
+    quick: 1,
     pet: {
       petId: "preflight_partner_pet",
       name: "预检伙伴宠",
@@ -334,7 +334,7 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
       maxHp: 90,
       attack: 18,
       defense: 6,
-      quick: 29,
+      quick: 1,
       activeSkillIds: ["pet_attack", "pet_defend"],
       petSkillSlots: ["pet_attack", "pet_defend", "", "", "", "", ""],
     },

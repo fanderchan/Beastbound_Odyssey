@@ -181,14 +181,15 @@
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "autoClaimOnReady": true,
-      "summary": "骑宠负责骑乘，再让另一只伙伴参加战斗。",
+      "summary": "骑宠负责骑乘，再让芽耳布伊参加战斗。",
       "objective": {
         "type": "battle_pet",
         "itemId": "novice_battle_pet_egg",
-        "formId": "rebirth_starter_four_spirit_cub",
+        "formId": "bui_novice_sprout_earth5_wind5",
+        "legacyFormIds": ["rebirth_starter_four_spirit_cub"],
         "excludeRidePet": true,
         "count": 1,
-        "text": "使用对战宠物蛋后，在宠物界面把四灵幼兽切换为战斗"
+        "text": "使用对战宠物蛋后，在宠物界面把芽耳布伊切换为战斗"
       },
       "rewards": {
         "stoneCoins": 0,

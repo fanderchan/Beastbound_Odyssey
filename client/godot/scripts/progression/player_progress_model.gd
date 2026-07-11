@@ -166,7 +166,8 @@ const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
 const QUEST_SET_BATTLE_PET_ID := "quest_set_battle_pet"
 const QUEST_OPEN_STATUS_PANEL_ID := "quest_open_status_panel"
-const BATTLE_PET_TUTORIAL_FORM_ID := "rebirth_starter_four_spirit_cub"
+const BATTLE_PET_TUTORIAL_FORM_ID := "bui_novice_sprout_earth5_wind5"
+const BATTLE_PET_TUTORIAL_LEGACY_FORM_ID := "rebirth_starter_four_spirit_cub"
 const PET_CODEX_SEEN_FORM_IDS_KEY := "petCodexSeenFormIds"
 const PET_CODEX_CAPTURED_FORM_IDS_KEY := "petCodexCapturedFormIds"
 const AUTO_BATTLE_SETTINGS_KEY := AutoBattleSettingsModel.SETTINGS_KEY
@@ -3640,8 +3641,8 @@ static func _battle_pet_tutorial_egg_reclaim_ownership_check(profile: Dictionary
 	if bank_item_count(normalized, ITEM_NOVICE_BATTLE_PET_EGG) > 0:
 		return {"ok": false, "profile": normalized, "message": "对战宠物蛋还在银行里，请先取回。"}
 	for instance in all_pet_instances(normalized):
-		if str(instance.get("formId", instance.get("templateId", ""))) == BATTLE_PET_TUTORIAL_FORM_ID:
-			return {"ok": false, "profile": normalized, "message": "四灵幼兽已经在你的队伍或兽栏里。"}
+		if [BATTLE_PET_TUTORIAL_FORM_ID, BATTLE_PET_TUTORIAL_LEGACY_FORM_ID].has(str(instance.get("formId", instance.get("templateId", "")))):
+			return {"ok": false, "profile": normalized, "message": "教学战斗宠物已经在你的队伍或兽栏里。"}
 	return {"ok": true, "profile": normalized, "message": "可以补领对战宠物蛋。"}
 
 

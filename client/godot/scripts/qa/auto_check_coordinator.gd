@@ -5566,7 +5566,7 @@ func _run_auto_pet_management_check() -> void:
 		var egg_form_id := str(egg_pet.get("formId", ""))
 		egg_forms.append(egg_form_id)
 		egg_tame_ready = egg_tame_ready and bool(egg_pet.get("tameEligible", false))
-		if egg_form_id == "rebirth_starter_four_spirit_cub":
+		if egg_form_id == PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID:
 			battle_egg_instance_id = str(egg_pet.get("instanceId", ""))
 		elif egg_form_id == "novice_tiger_mount":
 			tiger_instance_id = str(egg_pet.get("instanceId", ""))
@@ -5590,7 +5590,7 @@ func _run_auto_pet_management_check() -> void:
 		bool(battle_egg_result.get("ok", false))
 		and bool(tiger_egg_result.get("ok", false))
 		and PlayerProgressModel.party_pet_instances(egg_profile).size() == 2
-		and egg_forms.has("rebirth_starter_four_spirit_cub")
+		and egg_forms.has(PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID)
 		and egg_forms.has("novice_tiger_mount")
 		and egg_tame_ready
 		and PlayerProgressModel.backpack_item_count(egg_profile, PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG) == 0
@@ -10917,7 +10917,8 @@ func _run_auto_quest_objective_templates_check() -> void:
 		"title": "设置战斗宠物",
 		"objective": {
 			"type": "battle_pet",
-			"formId": "rebirth_starter_four_spirit_cub",
+			"formId": PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID,
+			"legacyFormIds": [PlayerProgressModel.BATTLE_PET_TUTORIAL_LEGACY_FORM_ID],
 			"excludeRidePet": true,
 			"count": 1,
 		},
@@ -11017,15 +11018,15 @@ func _run_auto_quest_objective_templates_check() -> void:
 	var battle_pet_ok = (
 		QuestModel.progress_amount_for_event(battle_pet_quest, {
 			"type": "battle_pet",
-			"instanceId": "pet_four_spirit",
+			"instanceId": "pet_sprout_bui",
 			"ridePetInstanceId": "pet_tiger",
-			"formId": "rebirth_starter_four_spirit_cub",
+			"formId": PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID,
 		}) == 1
 		and QuestModel.progress_amount_for_event(battle_pet_quest, {
 			"type": "battle_pet",
 			"instanceId": "pet_tiger",
 			"ridePetInstanceId": "pet_tiger",
-			"formId": "rebirth_starter_four_spirit_cub",
+			"formId": PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID,
 		}) == 0
 		and QuestModel.progress_amount_for_event(battle_pet_quest, {
 			"type": "battle_pet",
@@ -11036,12 +11037,12 @@ func _run_auto_quest_objective_templates_check() -> void:
 		and QuestModel.progress_amount_for_event(battle_pet_quest, {
 			"type": "battle_pet",
 			"instanceId": "pet_four_spirit",
-			"formId": "rebirth_starter_four_spirit_cub",
+			"formId": PlayerProgressModel.BATTLE_PET_TUTORIAL_LEGACY_FORM_ID,
 		}) == 1
 		and QuestModel.progress_amount_for_event(battle_pet_quest, {
 			"type": "battle_pet",
 			"instanceId": "",
-			"formId": "rebirth_starter_four_spirit_cub",
+			"formId": PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID,
 		}) == 0
 	)
 	var multi_ok = (
@@ -13180,7 +13181,7 @@ func _run_auto_quest_chain_check() -> void:
 	var battle_pet_instance = PlayerProgressModel.pet_instance_by_id(profile, battle_pet_instance_id)
 	var battle_pet_hatch_ok = (
 		bool(battle_pet_hatch_result.get("ok", false))
-		and str(battle_pet_instance.get("formId", "")) == "rebirth_starter_four_spirit_cub"
+		and str(battle_pet_instance.get("formId", "")) == PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID
 		and str(battle_pet_instance.get("binding", "")) == BackpackModel.BINDING_BOUND
 		and str(battle_pet_instance.get("state", "")) != PlayerProgressModel.PET_STATE_STORAGE
 	)
@@ -14165,7 +14166,7 @@ func _run_auto_quest_ui_check() -> void:
 		host.pet_panel != null
 		and host.pet_panel.visible
 		and host.pet_selected_instance_id == battle_pet_instance_id
-		and host.world_log_message.find("四灵幼兽") >= 0
+		and host.world_log_message.find("芽耳布伊") >= 0
 		and host._current_task_text().find("设置战斗宠物") >= 0
 	)
 	var store_battle_pet_result := PlayerProgressModel.store_pet(battle_pet_profile, battle_pet_instance_id)

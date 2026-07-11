@@ -917,7 +917,15 @@ static func _reward_ability_validation_errors(raw_abilities, path: String) -> Ar
 
 static func _matches_string_filter(filter_source: Dictionary, event: Dictionary, key: String) -> bool:
 	var required := str(filter_source.get(key, ""))
-	return required == "" or str(event.get(key, "")) == required
+	var actual := str(event.get(key, ""))
+	if required == "" or actual == required:
+		return true
+	if key != "formId":
+		return false
+	for legacy_form_id in filter_source.get("legacyFormIds", []) as Array:
+		if actual == str(legacy_form_id):
+			return true
+	return false
 
 
 static func _matches_minimum_number_filter(filter_source: Dictionary, event: Dictionary, event_key: String, filter_key: String) -> bool:

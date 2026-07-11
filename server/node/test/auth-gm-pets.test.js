@@ -129,7 +129,7 @@ test("GM pet level-up grows newly linked common pets, preserves legacy pets, and
   assert.equal(commonAfter.petGrowth.settledLevel, 2);
   assert.equal(["maxHp", "attack", "defense", "quick"].some((key) => commonAfter[key] > commonBefore[key]), true);
 
-  const legacyGrant = service.grantGmPet(gm.session.token, {formId: "rebirth_starter_four_spirit_cub"});
+  const legacyGrant = service.grantGmPet(gm.session.token, {formId: "novice_tiger_mount"});
   const legacyBefore = internalProfile(service, gm.account.accountId).petInstances
     .find((pet) => pet.instanceId === legacyGrant.result.instanceId);
   assert.equal(isValidPetPrivateSeed(legacyBefore.individualSeed), true);

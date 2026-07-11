@@ -88,6 +88,11 @@ const QUEST_TALK_PROXIMITY_CELLS = 3;
 const QUEST_EVENT_CLIENT_REPORTABLE_TYPES = new Set(["talk", "open_feature"]);
 const QUEST_TUTORIAL_FEATURE_IDS = new Set(["status", "equipment", "codex", "quest", "map", "family", "auto_settings", "account"]);
 const QUEST_SET_BATTLE_PET_ID = "quest_set_battle_pet";
+const BATTLE_PET_TUTORIAL_FORM_ID = "bui_novice_sprout_earth5_wind5";
+const BATTLE_PET_TUTORIAL_COMPATIBLE_FORM_IDS = new Set([
+  BATTLE_PET_TUTORIAL_FORM_ID,
+  "rebirth_starter_four_spirit_cub",
+]);
 const QUEST_OPEN_STATUS_PANEL_ID = "quest_open_status_panel";
 const ITEM_BINDING_UNBOUND = "unbound";
 const ITEM_BINDING_BOUND = "bound";
@@ -10008,7 +10013,12 @@ function questObjectiveProgressAmountForEvent(objective, event) {
 
 function questMatchesStringFilter(objective, event, key) {
   const expected = String(objective && objective[key] || "").trim();
-  return expected === "" || String(event && event[key] || "").trim() === expected;
+  const actual = String(event && event[key] || "").trim();
+  if (expected === "" || actual === expected) {
+    return true;
+  }
+  return key === "formId"
+    && uniqueStringArray(objective && objective.legacyFormIds).includes(actual);
 }
 
 function questMatchesMinimumNumberFilter(objective, event, eventKey, objectiveKey) {
@@ -12860,8 +12870,10 @@ function applyBattlePetTutorialEggReclaimAction(profile) {
   if (profileBankItemCount(profile, "novice_battle_pet_egg") > 0) {
     return {ok: false, code: "battle_pet_tutorial_egg_banked", message: "对战宠物蛋还在银行里，请先取回。"};
   }
-  if (profilePetInstances(profile).some((pet) => String(pet && (pet.formId || pet.templateId) || "") === "rebirth_starter_four_spirit_cub")) {
-    return {ok: false, code: "battle_pet_tutorial_pet_owned", message: "四灵幼兽已经在你的队伍或兽栏里。"};
+  if (profilePetInstances(profile).some((pet) => BATTLE_PET_TUTORIAL_COMPATIBLE_FORM_IDS.has(
+    String(pet && (pet.formId || pet.templateId) || ""),
+  ))) {
+    return {ok: false, code: "battle_pet_tutorial_pet_owned", message: "教学战斗宠物已经在你的队伍或兽栏里。"};
   }
   const addResult = addSingleItemToBackpack(profileBackpackSlots(profile), "novice_battle_pet_egg", 1);
   if (addResult.addedCount < 1) {

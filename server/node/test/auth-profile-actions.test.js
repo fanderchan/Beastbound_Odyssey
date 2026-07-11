@@ -642,14 +642,16 @@ test("server world pet eggs hatch pets with default attack and defend skills", (
   assert.equal(profileItemCount(hatched.profile, "novice_battle_pet_egg"), 0);
   const pet = hatched.profile.petInstances.find((entry) => String(entry.instanceId || "") === hatched.result.instanceId);
   assert.equal(Boolean(pet), true);
-  assert.equal(pet.formId, "rebirth_starter_four_spirit_cub");
+  assert.equal(pet.formId, "bui_novice_sprout_earth5_wind5");
+  assert.equal(pet.growthSpeciesProfileId, "bui_novice_sprout_earth5_wind5_v1");
   assert.equal(pet.tameEligible, true);
   assert.equal(pet.activeSkillIds.includes("pet_attack"), true);
   assert.equal(pet.activeSkillIds.includes("pet_defend"), true);
   assert.deepEqual(pet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
   const internalPet = internalProfileForAccount(service, registered.account.accountId)
     .petInstances.find((entry) => entry.instanceId === hatched.result.instanceId);
-  assert.equal(isValidPetPrivateSeed(internalPet.individualSeed), true);
+  assert.equal(Object.hasOwn(internalPet, "individualSeed"), false);
+  assert.equal(isValidPetPrivateSeed(internalPet.petGrowth.private.privateSeed), true);
   const expectedLevelOneStats = {
     maxHp: internalPet.maxHp,
     attack: internalPet.attack,
@@ -858,7 +860,7 @@ test("server pet riding advances novice tiger tutorial quest", () => {
     "quest_riding_certificate": {"questId": "quest_riding_certificate", "status": "claimed", "progress": 1},
     "quest_try_riding_tiger": {"questId": "quest_try_riding_tiger", "status": "active", "progress": 0},
   };
-  profile.backpackSlots = [{"itemId": "novice_battle_pet_egg", "count": 1}];
+  profile.backpackSlots = [];
   profile.petInstances.push({
     "instanceId": "pet_tiger_quest",
     "petId": "pet_tiger_quest",
@@ -903,6 +905,10 @@ test("server pet riding advances novice tiger tutorial quest", () => {
   assert.equal(riding.profile.questStates.quest_try_riding_tiger.status, "claimed");
   assert.equal(riding.profile.activeQuestId, "quest_set_battle_pet");
   assert.equal(riding.questMessages.some((message) => String(message).includes("试骑新手老虎")), true);
+
+  const legacyPetReclaim = service.profileAction(token, {"action": "battle_pet_tutorial_egg_reclaim"});
+  assert.equal(legacyPetReclaim.ok, false);
+  assert.equal(legacyPetReclaim.code, "battle_pet_tutorial_pet_owned");
 
   const tigerAsBattle = service.profileAction(token, {
     "action": "pet_state_cycle",
@@ -1024,7 +1030,7 @@ test("battle pet tutorial egg can be discarded, reclaimed, and hatches a bound p
   });
   assert.equal(hatched.ok, true);
   assert.equal(profileItemCount(hatched.profile, "novice_battle_pet_egg"), 0);
-  const boundPet = hatched.profile.petInstances.find((pet) => pet.formId === "rebirth_starter_four_spirit_cub");
+  const boundPet = hatched.profile.petInstances.find((pet) => pet.formId === "bui_novice_sprout_earth5_wind5");
   assert.ok(boundPet);
   assert.equal(boundPet.binding, "bound");
 

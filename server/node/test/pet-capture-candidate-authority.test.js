@@ -8,7 +8,6 @@ const test = require("node:test");
 
 const {
   PROFILE_RESOLUTION_AUTHORITY_V1,
-  PROFILE_RESOLUTION_LEGACY_UNLINKED,
   loadPetGrowthCatalog,
 } = require("../src/auth/pet-growth-catalog");
 const {createNewPetFactory} = require("../src/auth/new-pet-factory");
@@ -183,40 +182,17 @@ test("linked capture candidates start at Lv1 in the strict factory, settle once,
   assert.notEqual(candidate.captureSecret, candidate.pet.petGrowth.private.privateSeed);
 });
 
-test("unlinked capture candidates freeze Lv1 facts and settle wild levels with the shared legacy JSON model", () => {
-  const {authority, expToNextLevel} = harness("legacy");
-  const prepared = authority.prepareRoom(battleRoom([
-    wildActor({formId: "rebirth_beast_earth_lv50", level: 23}),
-  ]));
+test("every production catchable form now uses authoritative growth", () => {
+  const {growthCatalog} = harness("all-catchable-linked");
+  const catchableForms = TEMPLATE_DOCUMENT.forms.filter((entry) => entry.capture?.catchable === true);
 
-  assert.equal(prepared.ok, true);
-  const candidate = candidateFor(prepared.room);
-  const pet = candidate.pet;
-  assert.equal(candidate.growthKind, PROFILE_RESOLUTION_LEGACY_UNLINKED);
-  assert.equal(pet.level, 23);
-  assert.equal(pet.exp, 0);
-  assert.equal(pet.nextExp, expToNextLevel(23));
-  assert.deepEqual(pet.growthSpeciesLevel1Stats, pet.initialStats);
-  assert.deepEqual(pet.growthRecord.initialStats, pet.initialStats);
-  assert.equal(pet.growthRecord.level, 23);
-  assert.deepEqual(pet.growthRecord.finalStats, {
-    maxHp: pet.maxHp,
-    attack: pet.attack,
-    defense: pet.defense,
-    quick: pet.quick,
-  });
-  for (const key of ["maxHp", "attack", "defense", "quick"]) {
-    const expectedGain = Math.round(Math.max(
-      0,
-      pet.growthRecord.growthRates[key] + pet.individualVariance.growthBonus[key],
-    ) * 22);
-    assert.equal(pet.growthRecord.statGains[key], expectedGain);
-    assert.equal(pet[key], pet.initialStats[key] + expectedGain);
-  }
-  assert.equal(Object.hasOwn(pet, "petGrowth"), false);
-  assert.equal(Object.hasOwn(pet, "candidateId"), false);
-  assert.equal(Object.hasOwn(pet, "captureSecret"), false);
-  assert.notEqual(candidate.captureSecret, pet.individualSeed);
+  assert.ok(catchableForms.length > 0);
+  assert.deepEqual(
+    catchableForms
+      .filter((entry) => growthCatalog.profileForFormId(entry.formId) === null)
+      .map((entry) => entry.formId),
+    [],
+  );
 });
 
 test("ten same-form wild actors get ten unique private pets, secrets, and growth identities without actor mutation", () => {

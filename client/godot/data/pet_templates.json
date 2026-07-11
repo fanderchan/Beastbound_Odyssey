@@ -84,6 +84,13 @@
       ]
     },
     {
+      "subtypeId": "bui_novice",
+      "subtypeName": "芽耳布伊",
+      "lineId": "bui",
+      "battleRole": "novice_battle_pet",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
       "subtypeId": "wuli_normal",
       "subtypeName": "普通乌力",
       "lineId": "wuli",
@@ -255,6 +262,39 @@
       },
       "visual": {
         "placeholderPalette": "bui_earth"
+      }
+    },
+    {
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "formName": "芽耳布伊",
+      "lineId": "bui",
+      "subtypeId": "bui_novice",
+      "elements": {
+        "fire": 0,
+        "water": 0,
+        "earth": 5,
+        "wind": 5
+      },
+      "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "bui_novice_sprout_earth5_wind5_v1",
+      "baseStats": {
+        "maxHp": 80,
+        "attack": 11,
+        "defense": 9,
+        "agility": 46
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "bui_yellow",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "小体型圆耳布伊，耳尖有嫩芽形毛簇",
+          "neededAnimations": ["idle", "walk", "attack", "hit"],
+          "replacementPath": "client/godot/assets/pets/novice_sprout_bui/"
+        }
       }
     },
     {
@@ -781,11 +821,12 @@
         "wind": 0
       },
       "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "rebirth_beast_earth_lv50_v1",
       "baseStats": {
-        "maxHp": 520,
-        "attack": 76,
-        "defense": 92,
-        "agility": 48
+        "maxHp": 89,
+        "attack": 15,
+        "defense": 11,
+        "agility": 11
       },
       "capture": {
         "catchable": true,
@@ -807,11 +848,12 @@
         "wind": 0
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "rebirth_beast_water_lv50_v1",
       "baseStats": {
-        "maxHp": 500,
-        "attack": 72,
-        "defense": 78,
-        "agility": 66
+        "maxHp": 84,
+        "attack": 13,
+        "defense": 14,
+        "agility": 15
       },
       "capture": {
         "catchable": true,
@@ -833,11 +875,12 @@
         "wind": 0
       },
       "growthProfileId": "attack_high",
+      "growthSpeciesProfileId": "rebirth_beast_fire_lv50_v1",
       "baseStats": {
-        "maxHp": 480,
-        "attack": 96,
-        "defense": 68,
-        "agility": 70
+        "maxHp": 88,
+        "attack": 15,
+        "defense": 17,
+        "agility": 16
       },
       "capture": {
         "catchable": true,
@@ -859,11 +902,12 @@
         "wind": 10
       },
       "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "rebirth_beast_wind_lv50_v1",
       "baseStats": {
-        "maxHp": 470,
-        "attack": 78,
-        "defense": 64,
-        "agility": 112
+        "maxHp": 88,
+        "attack": 17,
+        "defense": 17,
+        "agility": 19
       },
       "capture": {
         "catchable": true,
@@ -993,6 +1037,7 @@
         "wind": 2
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "rebirth_starter_four_spirit_cub_v1",
       "baseStats": {
         "maxHp": 104,
         "attack": 18,
@@ -1019,6 +1064,7 @@
         "wind": 3
       },
       "growthProfileId": "balanced",
+      "growthSpeciesProfileId": "rebirth_starter_shadow_cub_v1",
       "baseStats": {
         "maxHp": 112,
         "attack": 21,

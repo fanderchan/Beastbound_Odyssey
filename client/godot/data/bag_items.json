@@ -444,8 +444,8 @@
       "stackLimit": 20,
       "startingCount": 0,
       "useContexts": ["world_pet_egg"],
-      "worldUse": {"type": "pet_form_egg", "formId": "rebirth_starter_four_spirit_cub", "petName": "四灵幼兽"},
-      "description": "使用后获得一只 Lv1 四灵幼兽，适合新手对战。"
+      "worldUse": {"type": "pet_form_egg", "formId": "bui_novice_sprout_earth5_wind5", "petName": "芽耳布伊"},
+      "description": "使用后获得一只绑定的 Lv1 芽耳布伊，用于学习战斗宠物。"
     },
     {
       "id": "novice_tiger_egg",

@@ -58,14 +58,22 @@ test("default pet growth catalog strictly links all current species profiles and
   const catalog = loadPetGrowthCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.profileCount, 23);
-  assert.equal(catalog.formCount, 31);
-  assert.equal(catalog.profiledFormCount, 23);
+  assert.equal(catalog.profileCount, 30);
+  assert.equal(catalog.formCount, 32);
+  assert.equal(catalog.profiledFormCount, 30);
   assert.deepEqual(catalog.orphanProfileIds, []);
   assert.equal(catalog.profileIdForFormId("blue_man_dragon_water10"), "blue_man_dragon_v1");
   assert.equal(catalog.profileIdForFormId("wuli_normal_orange_fire10"), "wuli_normal_orange_fire10_v1");
   assert.equal(catalog.profileIdForFormId("mossback_marsh_earth7_water3"), "mossback_marsh_earth7_water3_v1");
-  assert.equal(catalog.profileForFormId("rebirth_starter_four_spirit_cub"), null);
+  assert.equal(
+    catalog.profileIdForFormId("bui_novice_sprout_earth5_wind5"),
+    "bui_novice_sprout_earth5_wind5_v1",
+  );
+  assert.equal(
+    catalog.profileIdForFormId("rebirth_starter_four_spirit_cub"),
+    "rebirth_starter_four_spirit_cub_v1",
+  );
+  assert.equal(catalog.profileForFormId("novice_tiger_mount"), null);
   assert.equal(catalog.resolvePetProfile({formId: "wuli_normal_orange_fire10"}).kind, "legacy_existing");
   assert.equal(catalog.resolveNewPetProfile({formId: "wuli_normal_orange_fire10"}).kind, "authority_v1");
   assert.equal(catalog.resolvePetProfile({formId: "mossback_marsh_earth7_water3"}).kind, "legacy_existing");
@@ -77,6 +85,23 @@ test("default pet growth catalog strictly links all current species profiles and
     defense: 8,
     quick: 6,
   });
+
+  const trialLevel50Benchmarks = {
+    rebirth_beast_earth_lv50: {maxHp: 520, attack: 76, defense: 92, quick: 48},
+    rebirth_beast_water_lv50: {maxHp: 501, attack: 72, defense: 78, quick: 66},
+    rebirth_beast_fire_lv50: {maxHp: 480, attack: 96, defense: 68, quick: 70},
+    rebirth_beast_wind_lv50: {maxHp: 470, attack: 78, defense: 64, quick: 112},
+  };
+  for (const [formId, expected] of Object.entries(trialLevel50Benchmarks)) {
+    const trialProfile = catalog.profileForFormId(formId);
+    const projected = Object.fromEntries(
+      Object.keys(expected).map((key) => [
+        key,
+        Math.round(trialProfile.outputBase[key] + (trialProfile.outputGrowth[key] * 49)),
+      ]),
+    );
+    assert.deepEqual(projected, expected);
+  }
 
   const immutable = catalog.profileById("blue_man_dragon_v1");
   assert.equal(Object.isFrozen(immutable), true);

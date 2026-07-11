@@ -21674,11 +21674,11 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 		"battle_pet":
 			var target_pet := _quest_battle_pet_objective_target_pet(objective)
 			if not target_pet.is_empty():
-				var target_form_id := str(objective.get("formId", ""))
+				var target_form_id := str(target_pet.get("formId", target_pet.get("templateId", objective.get("formId", ""))))
 				if str(target_pet.get("state", PlayerProgressModel.PET_STATE_STANDBY)) == PlayerProgressModel.PET_STATE_STORAGE:
 					var stable_target := _navigation_target_for_interaction_id("firebud_stable_keeper")
 					stable_target["petFormId"] = target_form_id
-					stable_target["label"] = "找阿牧取出四灵幼兽"
+					stable_target["label"] = "找阿牧取出教学战斗宠物"
 					return stable_target
 				return _navigation_target_for_pet_panel(QuestModel.objective_text_for(quest), target_form_id)
 			var tutorial_item_id := str(objective.get("itemId", PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG)).strip_edges()
@@ -21724,10 +21724,15 @@ func _quest_ride_objective_should_open_backpack(objective: Dictionary) -> bool:
 
 func _quest_battle_pet_objective_target_pet(objective: Dictionary) -> Dictionary:
 	var form_id := str(objective.get("formId", "")).strip_edges()
-	if form_id != "rebirth_starter_four_spirit_cub":
+	if form_id != PlayerProgressModel.BATTLE_PET_TUTORIAL_FORM_ID:
 		return {}
+	var compatible_form_ids: Array[String] = [form_id]
+	for legacy_form_id in objective.get("legacyFormIds", []) as Array:
+		var normalized_legacy_id := str(legacy_form_id).strip_edges()
+		if normalized_legacy_id != "" and not compatible_form_ids.has(normalized_legacy_id):
+			compatible_form_ids.append(normalized_legacy_id)
 	for instance in PlayerProgressModel.all_pet_instances(player_profile):
-		if str(instance.get("formId", instance.get("templateId", ""))).strip_edges() == form_id:
+		if compatible_form_ids.has(str(instance.get("formId", instance.get("templateId", ""))).strip_edges()):
 			return instance
 	return {}
 
