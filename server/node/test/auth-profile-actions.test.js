@@ -32,6 +32,39 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {loadPetGrowthCatalog} = require("../src/auth/pet-growth-catalog");
+const {
+  initializePetGrowth,
+  settlePetGrowthToLevel,
+  validatePetGrowth,
+} = require("../src/auth/pet-growth-runtime");
+
+function authorityPetAtLevel(catalog, profileId, instanceId, level, privateSeed, overrides = {}) {
+  const growthProfile = catalog.requireProfileById(profileId);
+  const source = {
+    "instanceId": instanceId,
+    "petId": instanceId,
+    "formId": growthProfile.formId,
+    "templateId": growthProfile.formId,
+    "growthSpeciesProfileId": growthProfile.profileId,
+    "name": String(overrides.name || growthProfile.displayName || growthProfile.formName || "权威成长宠"),
+    "state": String(overrides.state || "standby"),
+    "level": 1,
+    "exp": 0,
+    "nextExp": 100,
+    "hp": 1,
+    "maxHp": 1,
+    "attack": 1,
+    "defense": 1,
+    "quick": 1,
+    ...overrides,
+  };
+  const initialized = initializePetGrowth(source, growthProfile, {privateSeed}).pet;
+  const settled = settlePetGrowthToLevel(initialized, growthProfile, level).pet;
+  settled.exp = 0;
+  settled.nextExp = Math.max(1, level * 100);
+  return {growthProfile, pet: settled};
+}
 
 test("profiles sync with revision conflict protection", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
@@ -267,6 +300,245 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   const loaded = service.getProfile(token);
   assert.equal(loaded.profileSummary.profileRevision, cultivated.profileSummary.profileRevision);
   assert.equal(loaded.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
+});
+
+test("authority-v1 pet rebirth restarts one canonical growth cycle atomically", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "v1petrebirth", "password": "test1234", "displayName": "权威转宠"});
+  assert.equal(registered.ok, true);
+  const token = registered.session.token;
+  const catalog = loadPetGrowthCatalog();
+  const target = authorityPetAtLevel(
+    catalog,
+    "blue_man_dragon_v1",
+    "authority_rebirth_target",
+    140,
+    `bps1_${"T".repeat(43)}`,
+    {"name": "蓝人龙", "state": "battle"},
+  );
+  const helper = authorityPetAtLevel(
+    catalog,
+    "pet_rebirth_mm_stage1_v1",
+    "authority_rebirth_helper",
+    79,
+    `bps1_${"H".repeat(43)}`,
+    {
+      "name": "满石1转小MM",
+      "state": "standby",
+      "petRebirthHelper": {
+        "stage": 1,
+        "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50},
+      },
+    },
+  );
+  const profile = battleProfile("权威转宠", {"level": 140, "hp": 900, "maxHp": 900, "attack": 180, "defense": 120, "quick": 160}, null);
+  profile.activePetInstanceId = target.pet.instanceId;
+  const stageTwoHelper = {
+    "instanceId": "authority_rebirth_helper_stage2",
+    "petId": "authority_rebirth_helper_stage2",
+    "formId": "pet_rebirth_mm_stage2",
+    "templateId": "pet_rebirth_mm_stage2",
+    "name": "保留的2转小MM",
+    "state": "standby",
+    "level": 79,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 12,
+    "quick": 42,
+    "petRebirthHelper": {
+      "stage": 2,
+      "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50},
+    },
+  };
+  profile.petInstances = [target.pet, helper.pet, stageTwoHelper];
+  const saved = service.saveProfile(token, {"expectedRevision": 0, profile});
+  assert.equal(saved.ok, true);
+  const beforeTarget = structuredClone(
+    internalProfileForAccount(service, registered.account.accountId).petInstances
+      .find((pet) => pet.instanceId === target.pet.instanceId),
+  );
+
+  const reborn = service.profileAction(token, {
+    "action": "pet_cultivation_apply",
+    "payload": {"instanceId": target.pet.instanceId},
+  });
+  assert.equal(reborn.ok, true, JSON.stringify(reborn));
+  assert.equal(reborn.profileSummary.profileRevision, saved.profileSummary.profileRevision + 1);
+  const internalProfile = internalProfileForAccount(service, registered.account.accountId);
+  const rebornTarget = internalProfile.petInstances.find((pet) => pet.instanceId === target.pet.instanceId);
+  assert.equal(internalProfile.petInstances.some((pet) => pet.instanceId === helper.pet.instanceId), false);
+  assert.equal(internalProfile.petInstances.some((pet) => pet.instanceId === stageTwoHelper.instanceId), true);
+  assert.equal(rebornTarget.level, 1);
+  assert.equal(rebornTarget.exp, 0);
+  assert.equal(rebornTarget.petGrowth.settledLevel, 1);
+  assert.equal(rebornTarget.petGrowth.public.level, 1);
+  assert.deepEqual(rebornTarget.petGrowth.public.stats, {
+    maxHp: rebornTarget.maxHp,
+    attack: rebornTarget.attack,
+    defense: rebornTarget.defense,
+    quick: rebornTarget.quick,
+  });
+  assert.deepEqual(validatePetGrowth(rebornTarget, target.growthProfile), {ok: true, code: "", errors: []});
+  assert.equal(rebornTarget.petGrowth.private.privateSeed, beforeTarget.petGrowth.private.privateSeed);
+  assert.deepEqual(rebornTarget.petGrowth.private.privateRoll, beforeTarget.petGrowth.private.privateRoll);
+  assert.deepEqual(rebornTarget.initialStats, beforeTarget.initialStats);
+  assert.deepEqual(rebornTarget.growthSpeciesLevel1Stats, beforeTarget.growthSpeciesLevel1Stats);
+  assert.deepEqual(
+    rebornTarget.petGrowth.private.cultivation.growthBonus,
+    rebornTarget.petCultivation.rebirthGrowthBonus,
+  );
+  assert.equal(Object.values(rebornTarget.petCultivation.rebirthGrowthBonus).some((value) => value > 0), true);
+  const retrainedToLevel20 = settlePetGrowthToLevel(rebornTarget, target.growthProfile, 20).pet;
+  assert.equal(retrainedToLevel20.level, 20);
+  assert.deepEqual(validatePetGrowth(retrainedToLevel20, target.growthProfile), {ok: true, code: "", errors: []});
+  const publicTarget = reborn.profile.petInstances.find((pet) => pet.instanceId === target.pet.instanceId);
+  assert.equal(publicTarget.growthAuthority.modelVersion, "pet_growth_authority_v1");
+  const publicResponseText = JSON.stringify(reborn);
+  assert.equal(publicResponseText.includes(beforeTarget.petGrowth.private.privateSeed), false);
+  for (const privateField of ["privateSeed", "privateRoll", "continuousStats", "rebirthRollSeed", "helperGrowthWeights", "rebirthBonusInternalPower"]) {
+    assert.equal(publicResponseText.includes(`\"${privateField}\"`), false, privateField);
+  }
+
+  const historyAfterFirst = structuredClone(rebornTarget.petCultivation.history);
+  const repeated = service.profileAction(token, {
+    "action": "pet_cultivation_apply",
+    "payload": {"instanceId": target.pet.instanceId},
+  });
+  assert.equal(repeated.ok, false);
+  assert.equal(repeated.code, "pet_rebirth_level_low");
+  assert.equal(repeated.profileSummary.profileRevision, reborn.profileSummary.profileRevision);
+  const afterRepeated = internalProfileForAccount(service, registered.account.accountId);
+  assert.equal(afterRepeated.petInstances.some((pet) => pet.instanceId === stageTwoHelper.instanceId), true);
+  assert.deepEqual(
+    afterRepeated.petInstances.find((pet) => pet.instanceId === target.pet.instanceId).petCultivation.history,
+    historyAfterFirst,
+  );
+});
+
+test("authority-v1 pet rebirth rejects damaged target or selected MM before consumption", () => {
+  const catalog = loadPetGrowthCatalog();
+  const cases = [
+    {id: "target", mutate(target) { target.attack += 1; }},
+    {id: "helper", mutate(_target, helper) { helper.petGrowth.settledLevel = 1; }},
+  ];
+  for (const fixture of cases) {
+    const service = createAuthService({"store": createMemoryAuthStore()});
+    const registered = service.register({
+      "username": `badrebirth${fixture.id}`,
+      "password": "test1234",
+      "displayName": `坏档${fixture.id}`,
+    });
+    assert.equal(registered.ok, true);
+    const target = authorityPetAtLevel(
+      catalog,
+      "blue_man_dragon_v1",
+      `damaged_target_${fixture.id}`,
+      140,
+      `bps1_${fixture.id === "target" ? "A".repeat(43) : "B".repeat(43)}`,
+      {"name": "待转蓝人龙", "state": "battle"},
+    );
+    const helper = authorityPetAtLevel(
+      catalog,
+      "pet_rebirth_mm_stage1_v1",
+      `damaged_helper_${fixture.id}`,
+      79,
+      `bps1_${fixture.id === "target" ? "C".repeat(43) : "D".repeat(43)}`,
+      {
+        "name": "待验1转小MM",
+        "state": "standby",
+        "petRebirthHelper": {
+          "stage": 1,
+          "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50},
+        },
+      },
+    );
+    fixture.mutate(target.pet, helper.pet);
+    const profile = battleProfile(`坏档${fixture.id}`, {"level": 140, "hp": 900, "maxHp": 900}, null);
+    profile.activePetInstanceId = target.pet.instanceId;
+    profile.petInstances = [target.pet, helper.pet];
+    const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
+    assert.equal(saved.ok, true);
+    const before = structuredClone(internalProfileForAccount(service, registered.account.accountId));
+
+    const rejected = service.profileAction(registered.session.token, {
+      "action": "pet_cultivation_apply",
+      "payload": {"instanceId": target.pet.instanceId},
+    });
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.code, "pet_growth_state_invalid");
+    assert.match(rejected.message, /转生MM未消耗/);
+    assert.equal(rejected.profileSummary.profileRevision, saved.profileSummary.profileRevision);
+    assert.deepEqual(internalProfileForAccount(service, registered.account.accountId), before);
+    assert.equal(JSON.stringify(rejected).includes("privateSeed"), false);
+  }
+});
+
+test("pet rebirth consumes the exact MM confirmed by the player", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "exactmmhelper", "password": "test1234", "displayName": "精确材料"});
+  assert.equal(registered.ok, true);
+  const target = {
+    "instanceId": "exact_mm_target",
+    "petId": "exact_mm_target",
+    "formId": "wuli_normal_orange_fire10",
+    "templateId": "wuli_normal_orange_fire10",
+    "name": "待转乌力",
+    "state": "battle",
+    "level": 80,
+    "hp": 500,
+    "maxHp": 500,
+    "attack": 100,
+    "defense": 60,
+    "quick": 80,
+    "initialStats": {"maxHp": 90, "attack": 12, "defense": 6, "quick": 50},
+  };
+  const helper = (id, name, attackPoints) => ({
+    "instanceId": id,
+    "petId": id,
+    "formId": "pet_rebirth_mm_stage1",
+    "templateId": "pet_rebirth_mm_stage1",
+    name,
+    "state": "standby",
+    "level": 79,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 12,
+    "quick": 42,
+    "petRebirthHelper": {
+      "stage": 1,
+      "stonePoints": {"maxHp": 0, "attack": attackPoints, "defense": 0, "quick": 0},
+    },
+  });
+  const helperA = helper("exact_mm_a", "攻石MM-A", 10);
+  const helperB = helper("exact_mm_b", "攻石MM-B", 50);
+  const profile = battleProfile("精确材料", {"level": 80, "hp": 500, "maxHp": 500}, null);
+  profile.activePetInstanceId = target.instanceId;
+  profile.petInstances = [target, helperA, helperB];
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
+  assert.equal(saved.ok, true);
+  const before = structuredClone(internalProfileForAccount(service, registered.account.accountId));
+
+  const ambiguous = service.profileAction(registered.session.token, {
+    "action": "pet_cultivation_apply",
+    "payload": {"instanceId": target.instanceId},
+  });
+  assert.equal(ambiguous.ok, false);
+  assert.equal(ambiguous.code, "pet_rebirth_helper_selection_required");
+  assert.equal(ambiguous.profileSummary.profileRevision, saved.profileSummary.profileRevision);
+  assert.deepEqual(internalProfileForAccount(service, registered.account.accountId), before);
+
+  const applied = service.profileAction(registered.session.token, {
+    "action": "pet_cultivation_apply",
+    "payload": {"instanceId": target.instanceId, "helperInstanceId": helperB.instanceId},
+  });
+  assert.equal(applied.ok, true);
+  assert.equal(applied.profile.petInstances.some((pet) => pet.instanceId === helperA.instanceId), true);
+  assert.equal(applied.profile.petInstances.some((pet) => pet.instanceId === helperB.instanceId), false);
+  const internalTarget = internalProfileForAccount(service, registered.account.accountId).petInstances
+    .find((pet) => pet.instanceId === target.instanceId);
+  assert.equal(internalTarget.petCultivation.history.at(-1).helperInstanceId, helperB.instanceId);
 });
 
 test("pet rebirth MM guide requires Lv80 and never reopens a completed guide", () => {

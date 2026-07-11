@@ -19,6 +19,7 @@ const {
   ERROR_TARGET_INVALID,
   PetGrowthRuntimeError,
   initializePetGrowth,
+  restartPetGrowthCycle,
   settlePetGrowthToLevel,
   validatePetGrowth,
 } = require("../src/auth/pet-growth-runtime");
@@ -455,6 +456,81 @@ test("ordinary settlement preserves full, wounded, and dead HP semantics", () =>
   assert.equal(full.hp, full.maxHp);
   assert.equal(wounded.maxHp - wounded.hp, 52);
   assert.equal(dead.hp, 0);
+});
+
+test("rebirth cycle restart preserves private identity and rebuilds canonical level-one state", () => {
+  const profile = runtimeProfile();
+  const beforeCultivation = cultivation();
+  const source = petForProfile(profile, {
+    petCultivation: {
+      schemaVersion: 1,
+      rebirthCount: 0,
+      enhanceLevel: 3,
+      rebirthGrowthBonus: structuredClone(beforeCultivation.growthBonus),
+      history: [],
+    },
+  });
+  const initialized = initializePetGrowth(source, profile, {
+    privateSeed: PRIVATE_SEED_A,
+    cultivation: beforeCultivation,
+  }).pet;
+  const level140 = settlePetGrowthToLevel(initialized, profile, 140).pet;
+  level140.hp = Math.max(1, level140.maxHp - 77);
+  level140.growthObservation = {schemaVersion: 1, level: 140, observedLevels: 139};
+  const nextPetCultivation = {
+    schemaVersion: 1,
+    rebirthCount: 1,
+    enhanceLevel: 3,
+    rebirthGrowthBonus: {maxHp: 0.321, attack: 0.111, defense: 0.222, quick: 0.333},
+    history: [{schemaVersion: 1, mode: "rebirth"}],
+  };
+  const nextCultivation = {
+    schemaVersion: 1,
+    initialBonus: structuredClone(beforeCultivation.initialBonus),
+    growthBonus: structuredClone(nextPetCultivation.rebirthGrowthBonus),
+  };
+  const before = structuredClone(level140);
+
+  const result = restartPetGrowthCycle(level140, profile, {
+    cultivation: nextCultivation,
+    petCultivation: nextPetCultivation,
+  });
+
+  assert.equal(result.changed, true);
+  assert.deepEqual(level140, before);
+  assert.equal(result.pet.level, 1);
+  assert.equal(result.pet.petGrowth.settledLevel, 1);
+  assert.equal(result.pet.petGrowth.public.level, 1);
+  assert.equal(result.pet.hp, result.pet.maxHp);
+  assert.equal(Object.hasOwn(result.pet, "growthObservation"), false);
+  assert.equal(result.pet.petGrowth.private.privateSeed, before.petGrowth.private.privateSeed);
+  assert.deepEqual(result.pet.petGrowth.private.privateRoll, before.petGrowth.private.privateRoll);
+  assert.deepEqual(result.pet.initialStats, before.initialStats);
+  assert.deepEqual(result.pet.growthSpeciesLevel1Stats, before.growthSpeciesLevel1Stats);
+  assert.deepEqual(result.pet.petGrowth.private.cultivation, nextCultivation);
+  assert.deepEqual(result.pet.petCultivation, nextPetCultivation);
+  assert.deepEqual(validatePetGrowth(result.pet, profile), {ok: true, code: "", errors: []});
+
+  const forged = structuredClone(level140);
+  forged.attack += 1;
+  const forgedBefore = structuredClone(forged);
+  assert.throws(
+    () => restartPetGrowthCycle(forged, profile, {
+      cultivation: nextCultivation,
+      petCultivation: nextPetCultivation,
+    }),
+    (error) => assertRuntimeError(error, ERROR_STATE_INVALID),
+  );
+  assert.deepEqual(forged, forgedBefore);
+  const changedInitialCultivation = structuredClone(nextCultivation);
+  changedInitialCultivation.initialBonus.attack += 1;
+  assert.throws(
+    () => restartPetGrowthCycle(level140, profile, {
+      cultivation: changedInitialCultivation,
+      petCultivation: nextPetCultivation,
+    }),
+    (error) => assertRuntimeError(error, ERROR_INPUT_INVALID),
+  );
 });
 
 test("same-level settlement is idempotent and level rollback or invalid targets fail closed", () => {

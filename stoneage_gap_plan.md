@@ -195,7 +195,8 @@
           - 证据（2026-07-11）：先用隔离服务复现客户端可伪造十只 `rebirth_starter_shadow_cub`、Lv140、`999999` 属性、捕捉率与 EXP；现新增严格 `pet-encounter-authority`，从共享 37 张地图和宠物模板权威决定候选池、权重、数量、等级、属性、捕捉/EXP，客户端只发送区域/分组/交互 ID。普通草地校验服务端区域位置，守卫校验登记交互，队伍全员要求同图、停稳且邻近；生产首位置只能从人物记录点建立，新手乌力特例只读内部任务档案。旧 v2 `encounterZone` 仅兼容标识符，全部事实字段被忽略。定向 67/67、完整 Node 221/221、Godot 4/4 与隔离单人 live 通过；见 `docs/phase_214_server_authoritative_pet_encounter_content.md`。
         - [ ] **P0.2c-3a-2 服务端遇敌资格、频率与一次性许可**
         - [ ] **P0.2c-3a-3 遇敌时私有捕捉候选及成功后原样转移**
-      - [ ] **P0.2c-3b authority-v1 转生成长周期原子重启**
+      - [x] **P0.2c-3b authority-v1 转生成长周期原子重启**
+        - 证据（2026-07-11）：先复现合法 Lv140 v1 宠转生返回成功并吞掉 MM，却形成 `level=1 / settledLevel=140 / public.level=140`、公开/私有转生加成不一致和 invalid marker；现新增纯 `restartPetGrowthCycle` 与严格 `pet-rebirth-growth-cycle` 路由，保留 privateSeed/privateRoll/Lv1 4V/initial bonus，用新累计 growth bonus 从 Lv1 原子重建 continuous/public/root，清除旧观察且最终再次验证。目标与实际确认的 MM 均在开奖前预检；Godot 提交精确 `helperInstanceId`，多材料旧请求失败关闭，不再自动替换。损坏目标/材料不删 MM、不写历史、不增 revision；legacy 不迁移，随机量化抖动已用 30/30 次开奖锁定。定向 54/54、完整 Node 229/229、Godot 6/6 通过；见 `docs/phase_215_authority_pet_rebirth_growth_cycle.md`。
       - [ ] **P0.2c-3c GM 宠物创建/升级服务端化与现有剩余升级入口封口**
   - [ ] **P0.2d 观察证据/区间、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**

@@ -5966,7 +5966,9 @@ static func _pet_rebirth_mm_preview(profile: Dictionary, target_pet: Dictionary)
 			"schemaVersion": PetRebirthMmModel.SCHEMA_VERSION,
 		}
 	var helper := _pet_rebirth_mm_helper_for_target(profile, target_pet)
-	return PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper)
+	var preview := PetRebirthMmModel.rebirth_bonus_preview(target_pet, helper)
+	preview["helperInstanceId"] = str(helper.get("instanceId", helper.get("petId", "")))
+	return preview
 
 
 static func _pet_rebirth_mm_helper_for_target(profile: Dictionary, target_pet: Dictionary) -> Dictionary:

@@ -314,6 +314,7 @@ const growthCatalogText = readText("server/node/src/auth/pet-growth-catalog.js")
 const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
 const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-authority.js");
 const newPetFactoryText = readText("server/node/src/auth/new-pet-factory.js");
+const petRebirthGrowthCycleText = readText("server/node/src/auth/pet-rebirth-growth-cycle.js");
 const profileVisibilityText = readText("server/node/src/auth/profile-visibility.js");
 const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
@@ -339,6 +340,10 @@ const serverAuthority = {
   newLevelOneFactoryWired: authServiceText.includes("createNewPetFactory")
     && newPetFactoryText.includes("resolveNewPetProfile")
     && newPetFactoryText.includes("initializePetGrowth"),
+  petRebirthGrowthCycleWired: authServiceText.includes("createPetRebirthGrowthCycle")
+    && authServiceText.includes("petRebirthGrowthCycle.preflight")
+    && authServiceText.includes("petRebirthGrowthCycle.restart")
+    && petRebirthGrowthCycleText.includes("restartPetGrowthCycle"),
   publicProfileBoundaryWired: authServiceText.includes("projectPublicServiceResult")
     && authServiceText.includes("publicProfile(result.profile)")
     && profileVisibilityText.includes("function publicProfile"),
@@ -358,6 +363,7 @@ if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1E
   issues.warnings.push("Node 宠物经验 dispatcher 已接线但 authority-v1 仍安全关闭；需等待公开投影、客户端不重滚与协议 v2 原子切换");
 }
 if (!serverAuthority.newLevelOneFactoryWired) issues.warnings.push("Node 新 Lv1 宠物尚未统一经过严格成长 factory");
+if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node authority-v1 宠物转生尚未接入严格成长周期重启与材料预检");
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
 if (!serverAuthority.protocolV2) issues.warnings.push("宠物公开成长契约尚未锁定为协议 v2");
 if (!serverAuthority.clientServerPetNoReroll) issues.warnings.push("Godot 联网宠物仍缺少明确的无重掷 normalize 路径");
@@ -457,7 +463,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`4V正式契约: ${summary.formalLv14VContract.present ? "有" : "无"}`);
-  console.log(`服务端成长档/EXP/v1/新宠factory/公开档/v2/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.protocolV2}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/EXP/v1/新宠factory/转生周期/公开档/v2/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.protocolV2}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

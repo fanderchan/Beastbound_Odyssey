@@ -14,12 +14,17 @@ const {
   initializeNewLegacyPetPrivateState,
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
+const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
 const {createPetEncounterAuthority} = require("./auth/pet-encounter-authority");
 const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
 } = require("./auth/pet-exp-settlement");
+const {
+  createPetRebirthGrowthCycle,
+  publicPetRebirthGrowthCycleFailure,
+} = require("./auth/pet-rebirth-growth-cycle");
 const {publicPet, publicProfile} = require("./auth/profile-visibility");
 const {
   createFamilyManorDomain,
@@ -362,6 +367,9 @@ function createAuthService(options = {}) {
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
   const petEncounterAuthority = options.petEncounterAuthority || createPetEncounterAuthority();
+  const petRebirthGrowthCycle = options.petRebirthGrowthCycle || createPetRebirthGrowthCycle({
+    growthCatalog: petGrowthCatalog,
+  });
   // 协议 v2 只公开安全成长投影；所有宠物经验入口在同一原子切换中启用权威成长。
   const petExpSettlement = createPetExpSettlement({
     growthCatalog: petGrowthCatalog,
@@ -1765,7 +1773,7 @@ function createAuthService(options = {}) {
       action,
       params,
       nowFn,
-      {newPetFactory, petExpSettlement},
+      {newPetFactory, petExpSettlement, petRebirthGrowthCycle},
     ),
     bagItemById,
     bagItemIsBound,
@@ -11819,7 +11827,7 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
     case "pet_rebirth_mm_guide_start":
       return applyPetRebirthMmGuideStartAction(profile, now);
     case "pet_cultivation_apply":
-      return applyPetCultivationAction(profile, params, now);
+      return applyPetCultivationAction(profile, params, now, options.petRebirthGrowthCycle);
     case "training_partner_set_count":
       return applyTrainingPartnerSetCountAction(profile, params);
     default:
@@ -12975,7 +12983,7 @@ function applyPetMarkSeenAction(profile, params) {
   return {ok: true, message: "", instanceId: petId};
 }
 
-function applyPetCultivationAction(profile, params, now) {
+function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const mode = String(params.mode || "").trim().toLowerCase();
   const pet = profilePetByInstanceId(profile, petId);
@@ -12989,7 +12997,7 @@ function applyPetCultivationAction(profile, params, now) {
     return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能转强。`, instanceId: petId};
   }
   if (shouldUsePetRebirthMm(pet, mode)) {
-    return applyPetRebirthMmCultivationAction(profile, pet, now);
+    return applyPetRebirthMmCultivationAction(profile, pet, params, now, petRebirthGrowthCycle);
   }
   return applyBasicPetCultivationAction(profile, pet, mode, now);
 }
@@ -13031,7 +13039,7 @@ function applyBasicPetCultivationAction(profile, pet, mode, now) {
   };
 }
 
-function applyPetRebirthMmCultivationAction(profile, pet, now) {
+function applyPetRebirthMmCultivationAction(profile, pet, params, now, petRebirthGrowthCycle) {
   const petId = String(pet.instanceId || pet.petId || "");
   if (petRebirthMmIsHelperPet(pet)) {
     return {ok: false, code: "pet_rebirth_target_is_helper", message: "转生MM不能作为转生目标。", instanceId: petId};
@@ -13044,8 +13052,21 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
   if (Math.max(1, Math.trunc(Number(pet.level || 1))) < PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL) {
     return {ok: false, code: "pet_rebirth_level_low", message: `${profilePetName(pet)} 需要 Lv${PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL} 才能进行宠物转生。`, instanceId: petId};
   }
-  const helper = petRebirthMmHelperForTarget(profile, pet, expectedStage);
+  if (!petRebirthGrowthCycle || typeof petRebirthGrowthCycle.preflight !== "function" || typeof petRebirthGrowthCycle.restart !== "function") {
+    return petRebirthGrowthFailure(petId);
+  }
+  try {
+    petRebirthGrowthCycle.preflight(pet);
+  } catch (error) {
+    return petRebirthGrowthFailure(petId, error);
+  }
+  const requestedHelperId = String(params && (params.helperInstanceId || params.helperPetId) || "").trim();
+  const helperSelection = petRebirthMmHelperSelection(profile, pet, expectedStage, requestedHelperId);
+  const helper = helperSelection.helper;
   if (!helper) {
+    if (helperSelection.selectionRequired) {
+      return {ok: false, code: "pet_rebirth_helper_selection_required", message: "有多只可用的转生MM，请重新确认本次要消耗的那一只。", instanceId: petId};
+    }
     return {ok: false, code: "pet_rebirth_helper_missing", message: `${profilePetName(pet)} 需要 ${petRebirthMmHelperName(expectedStage)}。`, instanceId: petId};
   }
   const helperId = String(helper.instanceId || helper.petId || "");
@@ -13058,6 +13079,11 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
   if (Math.max(1, Math.trunc(Number(helper.level || 1))) < PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL) {
     return {ok: false, code: "pet_rebirth_helper_level_low", message: `${profilePetName(helper)} 需要练到 Lv${PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL}。`, instanceId: petId};
   }
+  try {
+    petRebirthGrowthCycle.preflight(helper);
+  } catch (error) {
+    return petRebirthGrowthFailure(petId, error);
+  }
   const helperRecord = normalizedPetRebirthHelperRecord(helper, expectedStage);
   const nowSec = Math.trunc(now() / 1000);
   const rollSeed = generatePetCultivationRollSeed();
@@ -13065,7 +13091,9 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
   const cumulative = petCultivationGrowthBonus(record.rebirthGrowthBonus);
   const visibleBonus = petCultivationGrowthBonus(bonusPackage.visibleGrowthBonus);
   for (const key of PET_REBIRTH_MM_STAT_KEYS) {
-    cumulative[key] = snapNumber(Number(cumulative[key] || 0) + Number(visibleBonus[key] || 0), 0.001);
+    cumulative[key] = quantizePetGrowth(
+      snapNumber(Number(cumulative[key] || 0) + Number(visibleBonus[key] || 0), 0.001),
+    );
   }
   const nextRecord = normalizedPetCultivationRecord(record);
   nextRecord.rebirthCount = Math.max(0, Math.trunc(Number(record.rebirthCount || 0))) + 1;
@@ -13095,19 +13123,35 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
   };
   event.message = `${profilePetName(pet)}：${event.summary}，成长加成 ${petRebirthMmBonusText(visibleBonus)}。`;
   pushPetCultivationEvent(nextRecord, event);
-  pet.petCultivation = nextRecord;
-  pet.lastCultivationResult = clone(event);
-  const levelOneStats = petLevelOneStats(pet);
-  pet.level = 1;
-  pet.exp = 0;
-  pet.nextExp = battleExpToNextLevel(1);
-  pet.maxHp = Math.max(1, Math.trunc(Number(levelOneStats.maxHp || pet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
-  pet.hp = pet.maxHp;
-  pet.attack = Math.max(1, Math.trunc(Number(levelOneStats.attack || pet.attack || DEFAULT_PET_BATTLE_STATS.attack)));
-  pet.defense = Math.max(1, Math.trunc(Number(levelOneStats.defense || pet.defense || DEFAULT_PET_BATTLE_STATS.defense)));
-  pet.quick = Math.max(1, Math.trunc(Number(levelOneStats.quick || pet.quick || DEFAULT_PET_BATTLE_STATS.quick)));
+  let growthCycleResult;
+  try {
+    growthCycleResult = petRebirthGrowthCycle.restart(pet, nextRecord);
+  } catch (error) {
+    return petRebirthGrowthFailure(petId, error);
+  }
+  const nextPet = growthCycleResult.pet;
+  if (!growthCycleResult.restarted) {
+    const levelOneStats = petLevelOneStats(nextPet);
+    nextPet.level = 1;
+    nextPet.maxHp = Math.max(1, Math.trunc(Number(levelOneStats.maxHp || nextPet.maxHp || DEFAULT_PET_BATTLE_STATS.maxHp)));
+    nextPet.hp = nextPet.maxHp;
+    nextPet.attack = Math.max(1, Math.trunc(Number(levelOneStats.attack || nextPet.attack || DEFAULT_PET_BATTLE_STATS.attack)));
+    nextPet.defense = Math.max(1, Math.trunc(Number(levelOneStats.defense || nextPet.defense || DEFAULT_PET_BATTLE_STATS.defense)));
+    nextPet.quick = Math.max(1, Math.trunc(Number(levelOneStats.quick || nextPet.quick || DEFAULT_PET_BATTLE_STATS.quick)));
+  }
+  nextPet.petCultivation = nextRecord;
+  nextPet.lastCultivationResult = clone(event);
+  nextPet.exp = 0;
+  nextPet.nextExp = battleExpToNextLevel(1);
+  delete nextPet.growthObservation;
+  delete nextPet.growthObservationUnavailableReason;
   const instances = profilePetInstances(profile);
+  const targetIndex = instances.findIndex((entry) => profilePetIdentityValues(entry).includes(petId));
   const helperIndex = instances.findIndex((entry) => profilePetIdentityValues(entry).includes(helperId));
+  if (targetIndex < 0 || helperIndex < 0 || targetIndex === helperIndex) {
+    return petRebirthGrowthFailure(petId);
+  }
+  instances[targetIndex] = nextPet;
   if (helperIndex >= 0) {
     instances.splice(helperIndex, 1);
   }
@@ -13127,6 +13171,11 @@ function applyPetRebirthMmCultivationAction(profile, pet, now) {
     changedCount: 1,
     result: event,
   };
+}
+
+function petRebirthGrowthFailure(petId, error = null) {
+  const failure = publicPetRebirthGrowthCycleFailure(error);
+  return {...failure, instanceId: String(petId || "")};
 }
 
 function normalizedPetCultivationRecord(value) {
@@ -13149,10 +13198,10 @@ function normalizedPetCultivationRecord(value) {
 function petCultivationGrowthBonus(value) {
   const source = objectOrEmpty(value);
   return {
-    maxHp: snapNumber(source.maxHp, 0.001),
-    attack: snapNumber(source.attack, 0.001),
-    defense: snapNumber(source.defense, 0.001),
-    quick: snapNumber(source.quick, 0.001),
+    maxHp: quantizePetGrowth(snapNumber(source.maxHp, 0.001)),
+    attack: quantizePetGrowth(snapNumber(source.attack, 0.001)),
+    defense: quantizePetGrowth(snapNumber(source.defense, 0.001)),
+    quick: quantizePetGrowth(snapNumber(source.quick, 0.001)),
   };
 }
 
@@ -13194,10 +13243,9 @@ function pushPetCultivationEvent(record, event) {
   record.lastResult = clone(event);
 }
 
-function petRebirthMmHelperForTarget(profile, targetPet, expectedStage) {
+function petRebirthMmHelperSelection(profile, targetPet, expectedStage, requestedHelperId = "") {
   const targetId = String(targetPet && (targetPet.instanceId || targetPet.petId) || "");
-  let best = null;
-  let bestScore = -1;
+  const candidates = [];
   for (const pet of profilePetInstances(profile)) {
     if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
       continue;
@@ -13214,16 +13262,19 @@ function petRebirthMmHelperForTarget(profile, targetPet, expectedStage) {
     if (petRebirthMmHelperStage(pet) !== expectedStage) {
       continue;
     }
-    const record = normalizedPetRebirthHelperRecord(pet, expectedStage);
-    const points = objectOrEmpty(record.stonePoints);
-    const totalPoints = PET_REBIRTH_MM_STAT_KEYS.reduce((sum, key) => sum + Math.max(0, Math.trunc(Number(points[key] || 0))), 0);
-    const score = Math.max(1, Math.trunc(Number(pet.level || 1))) * 1000 + totalPoints;
-    if (score > bestScore) {
-      bestScore = score;
-      best = pet;
-    }
+    candidates.push(pet);
   }
-  return best;
+  const normalizedRequestedHelperId = String(requestedHelperId || "").trim();
+  if (normalizedRequestedHelperId) {
+    return {
+      helper: candidates.find((pet) => profilePetIdentityValues(pet).includes(normalizedRequestedHelperId)) || null,
+      selectionRequired: false,
+    };
+  }
+  return {
+    helper: candidates.length === 1 ? candidates[0] : null,
+    selectionRequired: candidates.length > 1,
+  };
 }
 
 function petRebirthMmHelperStage(pet) {

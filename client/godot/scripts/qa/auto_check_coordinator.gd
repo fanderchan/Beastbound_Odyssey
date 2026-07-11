@@ -6060,6 +6060,7 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	var rebirth_bonus = rebirth_record.get("rebirthGrowthBonus", {}) as Dictionary
 	var rebirth_ok = (
 		bool(preview.get("ok", false))
+		and str(preview.get("helperInstanceId", "")) == mm_id
 		and bool(apply_result.get("ok", false))
 		and PlayerProgressModel.pet_instance_by_id(host.player_profile, mm_id).is_empty()
 		and int(reborn_pet.get("level", 0)) == 1
@@ -16657,7 +16658,8 @@ func _run_auto_auth_server_client_check() -> void:
 		"pet_level_max", "pet_locked", "pet_missing", "pet_move_edge", "pet_move_invalid",
 		"pet_name_empty", "pet_name_too_long", "pet_name_unchanged", "pet_not_mm_helper",
 		"pet_not_storage", "pet_party_full", "pet_pickup_level_limit", "pet_rebirth_helper_level_low",
-		"pet_rebirth_helper_locked", "pet_rebirth_helper_missing", "pet_rebirth_helper_required_by_quest",
+		"pet_growth_state_invalid", "pet_rebirth_helper_locked", "pet_rebirth_helper_missing",
+		"pet_rebirth_helper_required_by_quest", "pet_rebirth_helper_selection_required",
 		"pet_rebirth_level_low", "pet_rebirth_requires_mm", "pet_rebirth_stage_max",
 		"pet_rebirth_target_is_helper", "pet_required_by_quest", "pet_riding", "pet_skill_base",
 		"pet_skill_empty", "pet_skill_invalid", "pet_skill_not_offered", "pet_skill_same_slot",

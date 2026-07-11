@@ -23151,7 +23151,12 @@ func _refresh_pet_cultivation_panel() -> void:
 
 func _on_pet_cultivation_confirm_pressed() -> void:
 	if _is_server_account_session():
-		var parsed = await _submit_server_profile_action("pet_cultivation_apply", {"instanceId": pet_selected_instance_id}, "宠物培养失败。")
+		var preview := PlayerProgressModel.pet_cultivation_preview(player_profile, pet_selected_instance_id)
+		var payload := {"instanceId": pet_selected_instance_id}
+		var helper_instance_id := str(preview.get("helperInstanceId", "")).strip_edges()
+		if helper_instance_id != "":
+			payload["helperInstanceId"] = helper_instance_id
+		var parsed = await _submit_server_profile_action("pet_cultivation_apply", payload, "宠物培养失败。")
 		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
 		_refresh_pet_panel()
 		_refresh_pet_cultivation_panel()

@@ -578,6 +578,86 @@ function initializePetGrowth(pet, profile, options = {}) {
   return {pet: next, changed: true};
 }
 
+function restartPetGrowthCycle(pet, profile, options = {}) {
+  throwForValidation(validatePetGrowth(pet, profile));
+  if (!isObjectRecord(options)) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, ["growth cycle options must be an object"]);
+  }
+  if (!hasExactKeys(options, ["cultivation", "petCultivation"])) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, ["growth cycle options have a non-canonical shape"]);
+  }
+  if (!isObjectRecord(options.petCultivation)) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, ["growth cycle petCultivation must be an object"]);
+  }
+  let cultivation;
+  let petCultivation;
+  try {
+    cultivation = canonicalCultivation(options.cultivation);
+    petCultivation = clone(options.petCultivation);
+  } catch (error) {
+    if (error instanceof PetGrowthRuntimeError) {
+      throw error;
+    }
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, ["growth cycle cultivation must be serializable"]);
+  }
+  if (!hasOwn(petCultivation, "rebirthGrowthBonus")) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, [
+      "growth cycle petCultivation requires rebirthGrowthBonus",
+    ]);
+  }
+  const cultivationLinkErrors = [];
+  validateVisibleCultivationLink({petCultivation}, cultivation, cultivationLinkErrors);
+  if (cultivationLinkErrors.length > 0) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, cultivationLinkErrors);
+  }
+
+  const privateState = pet.petGrowth.private;
+  if (!isDeepStrictEqual(cultivation.initialBonus, privateState.cultivation.initialBonus)) {
+    throw new PetGrowthRuntimeError(ERROR_INPUT_INVALID, [
+      "growth cycle initial cultivation must preserve the existing frozen value",
+    ]);
+  }
+  const privateSeed = privateState.privateSeed;
+  const privateRoll = privateState.privateRoll;
+  let continuousStats;
+  let publicSnapshot;
+  try {
+    continuousStats = continuousStatsAtLevel(
+      profile,
+      privateSeed,
+      1,
+      privateRoll,
+      cultivation,
+    );
+    publicSnapshot = buildPublicSnapshot(
+      profile,
+      privateSeed,
+      1,
+      privateRoll,
+      cultivation,
+    );
+  } catch (_error) {
+    throw new PetGrowthRuntimeError(ERROR_STATE_INVALID, ["growth cycle restart failed"]);
+  }
+
+  const next = clone(pet);
+  next.level = 1;
+  for (const key of STAT_KEYS) {
+    next[key] = publicSnapshot.stats[key];
+  }
+  next.hp = next.maxHp;
+  next.petCultivation = petCultivation;
+  delete next.growthObservation;
+  delete next.growthObservationUnavailableReason;
+  next.petGrowth.settledLevel = 1;
+  next.petGrowth.private.cultivation = clone(cultivation);
+  next.petGrowth.private.continuousStats = clone(continuousStats);
+  next.petGrowth.public = clone(publicSnapshot);
+
+  throwForValidation(validatePetGrowth(next, profile));
+  return {pet: next, changed: true};
+}
+
 function settlementEnvelope(profileId, fromLevel, toLevel, levels) {
   return {
     schemaVersion: RUNTIME_SCHEMA_VERSION,
@@ -698,6 +778,7 @@ module.exports = {
   PetGrowthRuntimeError,
   RUNTIME_SCHEMA_VERSION,
   initializePetGrowth,
+  restartPetGrowthCycle,
   settlePetGrowthToLevel,
   validatePetGrowth,
 };
