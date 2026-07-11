@@ -5560,9 +5560,32 @@ func _run_auto_pet_management_check() -> void:
 	egg_profile = tiger_egg_result.get("profile", egg_profile) as Dictionary
 	var egg_forms: Array[String] = []
 	var egg_tame_ready := true
+	var battle_egg_instance_id := ""
+	var tiger_instance_id := ""
 	for egg_pet in PlayerProgressModel.party_pet_instances(egg_profile):
-		egg_forms.append(str(egg_pet.get("formId", "")))
+		var egg_form_id := str(egg_pet.get("formId", ""))
+		egg_forms.append(egg_form_id)
 		egg_tame_ready = egg_tame_ready and bool(egg_pet.get("tameEligible", false))
+		if egg_form_id == "rebirth_starter_four_spirit_cub":
+			battle_egg_instance_id = str(egg_pet.get("instanceId", ""))
+		elif egg_form_id == "novice_tiger_mount":
+			tiger_instance_id = str(egg_pet.get("instanceId", ""))
+	egg_profile = PlayerProgressModel.with_unlocked_ability(egg_profile, PlayerProgressModel.ABILITY_RIDING)
+	var egg_instances: Array = egg_profile.get("petInstances", [])
+	for index in range(egg_instances.size()):
+		if not (egg_instances[index] is Dictionary):
+			continue
+		var egg_instance := (egg_instances[index] as Dictionary).duplicate(true)
+		var egg_instance_id := str(egg_instance.get("instanceId", ""))
+		if egg_instance_id == battle_egg_instance_id:
+			egg_instance["state"] = PlayerProgressModel.PET_STATE_BATTLE
+		elif egg_instance_id == tiger_instance_id:
+			egg_instance["state"] = PlayerProgressModel.PET_STATE_RIDING
+		egg_instances[index] = egg_instance
+	egg_profile["petInstances"] = egg_instances
+	egg_profile["activePetInstanceId"] = battle_egg_instance_id
+	egg_profile[PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY] = tiger_instance_id
+	egg_profile = PlayerProgressModel.normalize_profile(egg_profile)
 	var novice_egg_grant_ok = (
 		bool(battle_egg_result.get("ok", false))
 		and bool(tiger_egg_result.get("ok", false))
@@ -5584,11 +5607,51 @@ func _run_auto_pet_management_check() -> void:
 	for child in host.pet_list_container.get_children():
 		if child is Button:
 			egg_pet_button_count += 1
+	var battle_entry = host.pet_list_buttons.get(battle_egg_instance_id, null)
+	var riding_entry = host.pet_list_buttons.get(tiger_instance_id, null)
+	var battle_accent := Color.TRANSPARENT
+	if battle_entry != null and battle_entry.has_method("state_badge_accent_color"):
+		battle_accent = battle_entry.call("state_badge_accent_color")
+	var battle_name := str(PlayerProgressModel.pet_instance_by_id(egg_profile, battle_egg_instance_id).get("name", "宠物"))
+	var riding_name := str(PlayerProgressModel.pet_instance_by_id(egg_profile, tiger_instance_id).get("name", "宠物"))
+	var pet_badge_layout_ok = (
+		battle_entry != null
+		and battle_entry.has_method("state_badge_text")
+		and str(battle_entry.call("state_badge_text")) == "战斗"
+		and str(battle_entry.call("primary_line_text")) == "战斗 %s" % battle_name
+		and str(battle_entry.call("primary_line_text")).find("[") < 0
+		and str(battle_entry.call("secondary_line_text")).find("战斗") < 0
+		and str(battle_entry.call("secondary_line_text")).begins_with("Lv1")
+		and str(battle_entry.call("state_badge_asset_path")).ends_with("/battle.png")
+		and battle_accent.r >= 0.80
+		and battle_accent.g >= 0.50
+		and battle_accent.b <= 0.25
+		and riding_entry != null
+		and riding_entry.has_method("state_badge_text")
+		and str(riding_entry.call("state_badge_text")) == "骑乘"
+		and str(riding_entry.call("primary_line_text")) == "骑乘 %s" % riding_name
+		and str(riding_entry.call("secondary_line_text")).find("骑乘") < 0
+		and str(riding_entry.call("state_badge_asset_path")).ends_with("/riding.png")
+	)
+	var pet_badge_screenshot_ok := true
+	var pet_badge_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if pet_badge_screenshot_path != "":
+		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(pet_badge_screenshot_path)
+		pet_badge_screenshot_ok = screenshot_error == OK
+		print("pet state badge screenshot: status=%s path=%s" % ["ok" if pet_badge_screenshot_ok else "failed", pet_badge_screenshot_path])
+	var pet_badge_click_ok := false
+	if riding_entry is Button:
+		(riding_entry as Button).pressed.emit()
+		await host.get_tree().process_frame
+		pet_badge_click_ok = host.pet_selected_instance_id == tiger_instance_id
 	var novice_pet_panel_ok = (
 		host.pet_panel != null
 		and host.pet_panel.visible
 		and egg_visible.size() == 2
 		and egg_pet_button_count == 2
+		and pet_badge_layout_ok
+		and pet_badge_screenshot_ok
+		and pet_badge_click_ok
 	)
 	host._close_pet_panel()
 
@@ -5759,7 +5822,7 @@ func _run_auto_pet_management_check() -> void:
 
 func _run_auto_pet_order_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.pet_selected_instance_id = ""
 	host.pet_filter_mode = PET_FILTER_ALL
 	host.pet_sort_mode = PET_SORT_DEFAULT
@@ -6545,7 +6608,7 @@ func _run_auto_pet_rebirth_mm_formula_check() -> void:
 
 func _run_auto_pet_rename_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.pet_selected_instance_id = ""
 	host._open_pet_panel()
 	await host.get_tree().process_frame
@@ -6568,7 +6631,9 @@ func _run_auto_pet_rename_check() -> void:
 	var speed = PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_bui_speed")
 	var list_text = ""
 	var speed_button = host.pet_list_buttons.get("pet_bui_speed", null)
-	if speed_button is Button:
+	if speed_button != null and speed_button.has_method("pet_name_text"):
+		list_text = str(speed_button.call("pet_name_text"))
+	elif speed_button is Button:
 		list_text = (speed_button as Button).text
 	var renamed_speed = (
 		str(speed.get("name", "")) == "小风布伊"

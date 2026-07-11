@@ -206,6 +206,7 @@
       - [x] **P0.2c-3c GM 宠物创建/升级服务端化与现有剩余升级入口封口**
         - 证据（2026-07-11）：联网 GM 创建/升级现只提交成长档或实例 ID，由新 `gm-pets` 域统一执行权限、容量、factory、canonical dispatcher、图鉴、revision、参战锁与审计，响应不含 raw pet/私密成长；Godot 非幂等请求不自动重试，联网会话不能回退本地改档。真实 auth1373 点击已证实服务端成功创建 4 只蓝人龙，界面失败来自三只旧 Lv1 宠的 `observedLevels=0` 空观察 map 阻断整档；现仅兼容该合法未观察状态，非空残缺统计仍失败关闭，并把异常提示改为“服务器已完成、请勿重复”。演示 seed 同步收口为拒绝 MySQL、默认不覆盖的一次性 memory/JSON factory 夹具。完整 Node 274/274、Godot 核心 4/4、真实 revision123 公开档 14 条宠物路径投影通过、skill inspector `errors=0`；GM 面板新增项全真，既有 `stable=false` 留待独立处理。见 `docs/phase_218_server_authoritative_gm_pets.md`。
         - 后续修正（2026-07-11）：确认“按 Lv1→当前实测成长外推 Lv140”属于核心养成反馈，不是隐藏品质泄露。联网 authority 宠恢复“预测140”：Lv1 待观察，Lv2 起按公开四项线性外推，Lv140 等于当前；注入 private seed/roll canary 不改变结果。Godot 3/3、真实 Metal 截图和性能/输入门禁通过，见 `docs/phase_219_observed_lv140_forecast.md`。
+        - 列表反馈修正（2026-07-11）：宠物状态从第二行普通文字移到第一行独立异形徽章，形成“黄色战斗徽章＋宠物名 / 第二行 Lv＋战力”和“青色骑乘徽章＋新手老虎”的层级；不是字面方括号。新增聚焦 badge/entry 组件并预留五个自动纹理槽，正式美术可直接覆盖底板；整行左键/右键、筛选排序和存档契约不变。Godot 管理检查、真实 Metal 截图及性能门禁通过，见 `docs/phase_220_pet_state_badges.md`。
   - [ ] **P0.2d 观察证据/区间、24 个 unlinked 形态（含普通乌力）正式成长接档、全物种万人模拟与旧档迁移报告**
 - [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
 - [ ] **P0.4 服务端权威被动、反击、闪避、幸运一击对齐**

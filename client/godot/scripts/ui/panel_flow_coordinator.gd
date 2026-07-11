@@ -40,6 +40,7 @@ const NumericExperimentModel := preload("res://scripts/progression/numeric_exper
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
+const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
@@ -23001,6 +23002,11 @@ func _pet_state_button_label(state: String) -> String:
 		_:
 			return ""
 
+func _pet_state_badge_label(state: String) -> String:
+	if state == PlayerProgressModel.PET_STATE_STORAGE:
+		return "兽栏"
+	return _pet_state_button_label(state)
+
 func _set_pet_detail_mode(mode: String) -> void:
 	if mode != PET_DETAIL_MODE_INSTANCE and mode != PET_DETAIL_MODE_CODEX and mode != PET_DETAIL_MODE_GROWTH:
 		return
@@ -23017,25 +23023,19 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 	var instance_id = str(instance.get("instanceId", ""))
 	if instance_id == "":
 		return
-	var button = Button.new()
-	var marker = "▶ " if instance_id == pet_selected_instance_id else ""
-	var tame_marker = "游 " if host.pet_follow_enabled and host.pet_follow_instance_id == instance_id else ""
-	var active_marker = "主 " if str(instance.get("state", "")) == PlayerProgressModel.PET_STATE_BATTLE else ""
-	var new_marker = "新 " if bool(instance.get("isNew", false)) else ""
-	var lock_marker = "锁 " if bool(instance.get("locked", false)) else ""
-	button.text = "%s%s%s%s%s%s\nLv%d  %s  战力%d" % [
-		marker,
-		tame_marker,
-		active_marker,
-		new_marker,
-		lock_marker,
-		str(instance.get("name", "宠物")),
-		int(instance.get("level", 1)),
-		PlayerProgressModel.state_label(str(instance.get("state", ""))),
-		PetPowerModel.combat_power_for_pet(instance),
-	]
-	button.custom_minimum_size = Vector2(196, 58)
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var button = PetListEntryButton.new()
+	var state_id := str(instance.get("state", PlayerProgressModel.PET_STATE_STANDBY))
+	button.configure({
+		"stateId": state_id,
+		"stateText": _pet_state_badge_label(state_id),
+		"name": str(instance.get("name", "宠物")),
+		"level": int(instance.get("level", 1)),
+		"power": PetPowerModel.combat_power_for_pet(instance),
+		"selected": instance_id == pet_selected_instance_id,
+		"following": host.pet_follow_enabled and host.pet_follow_instance_id == instance_id,
+		"isNew": bool(instance.get("isNew", false)),
+		"locked": bool(instance.get("locked", false)),
+	})
 	button.pressed.connect(func() -> void:
 		_select_pet_instance(instance_id)
 	)
