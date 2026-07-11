@@ -24,6 +24,7 @@ function createBattleRoomDomain(ctx) {
     battleRoomConnectionStateForMutation,
     battleRoomEntryCheck,
     battleRoomResultForLeave,
+    battleRandomAuthority,
     battleStatePayload,
     clampInt,
     clone,
@@ -286,6 +287,7 @@ function createBattleRoomDomain(ctx) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    openPrivateBattleRandomRoom(room);
     battleRoomConnectionStateForMutation(room);
     data.battleRooms[room.roomId] = room;
     recordBattleTrace(data, room, "duel_room_created", {
@@ -425,6 +427,7 @@ function createBattleRoomDomain(ctx) {
     if (!consumed.ok) {
       return fail(consumed.code, consumed.message);
     }
+    openPrivateBattleRandomRoom(room);
     if (partyPresencePreview) {
       data.parties = partyPresencePreview.parties;
       data.partyInvites = partyPresencePreview.partyInvites;
@@ -457,6 +460,18 @@ function createBattleRoomDomain(ctx) {
       room: publicBattleRoom(room, resolved.account.accountId),
       message: skippedOfflineCount > 0 ? "队伍遭遇了野生宠物，离线队员未参战。" : (memberAccountIds.length > 1 ? "队伍遭遇了野生宠物。" : "遭遇了野生宠物。"),
     });
+  }
+
+  function openPrivateBattleRandomRoom(room) {
+    if (
+      !battleRandomAuthority
+      || typeof battleRandomAuthority.openRoom !== "function"
+      || battleRandomAuthority.openRoom(room && room.roomId) !== true
+    ) {
+      const error = new Error("battle random room could not be opened");
+      error.code = "battle_random_room_unavailable";
+      throw error;
+    }
   }
 
   function declineBattleInvite(token, inviteId) {

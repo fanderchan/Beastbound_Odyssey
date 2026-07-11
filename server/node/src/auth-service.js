@@ -24,6 +24,8 @@ const {createPetEncounterAuthority, zoneContainsCell} = require("./auth/pet-enco
 const {createPetEncounterPermitAuthority} = require("./auth/pet-encounter-permit-authority");
 const {createManualEncounterAccess} = require("./auth/manual-encounter-access");
 const {loadBattlePassiveCatalog} = require("./auth/battle-passive-catalog");
+const {createBattleActorRules} = require("./auth/battle-actor-rules");
+const {createBattleRandomAuthority} = require("./auth/battle-random-authority");
 const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
@@ -434,8 +436,13 @@ function createAuthService(options = {}) {
   const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
   const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
-  // P0.4 先以严格目录启动；战斗效果接线在下一小步完成，禁止缺档时静默退化。
+  // P0.4 以严格目录启动，并在 actor 进入房间时一次性派生被动事实；缺档禁止静默退化。
   const battlePassiveCatalog = options.battlePassiveCatalog || loadBattlePassiveCatalog();
+  const battleActorRules = options.battleActorRules || createBattleActorRules({
+    passiveCatalog: battlePassiveCatalog,
+    templateResolver: petTemplateForFormId,
+  });
+  const battleRandomAuthority = options.battleRandomAuthority || createBattleRandomAuthority();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
   const petCaptureCandidateAuthority = options.petCaptureCandidateAuthority || createPetCaptureCandidateAuthority({
     growthCatalog: petGrowthCatalog,
@@ -1966,6 +1973,8 @@ function createAuthService(options = {}) {
       petExpSettlement,
       petCaptureCandidateAuthority,
       randomId,
+      battleActorRules,
+      battleRandomAuthority,
     });
     if (timeoutEvents.length > 0) {
       save(data);
@@ -2281,7 +2290,11 @@ function createAuthService(options = {}) {
     battleInviteIsExpired,
     battleParticipantSnapshot,
     battleRecordSummaryAgainst,
-    battleRoomBattleStateForMutation,
+    battleRoomBattleStateForMutation: (roomValue, nowFn) => battleRoomBattleStateForMutation(
+      roomValue,
+      nowFn,
+      {battleActorRules},
+    ),
     battleRoomConnectionStateForMutation,
     battleRoomEntryCheck,
     battleRoomResultForLeave,
@@ -2296,12 +2309,16 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId},
+      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
     consumeBackpackItem,
-    createBattleRoomBattleState,
+    createBattleRoomBattleState: (roomValue, nowFn) => createBattleRoomBattleState(
+      roomValue,
+      nowFn,
+      {battleActorRules},
+    ),
     createPartyForLeader,
     currentProfileQuestId,
     emitServiceEvent,
@@ -2383,7 +2400,9 @@ function createAuthService(options = {}) {
     partyForAccount,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
+    battleActorRules,
     battlePassiveCatalog,
+    battleRandomAuthority,
     manorEntries,
     persistProfileForAccount,
     petExpSettlement,
@@ -2436,7 +2455,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement, petCaptureCandidateAuthority},
+      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     requiredBattleCommandAccountIds,
@@ -2446,7 +2465,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority},
+      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -6086,7 +6105,7 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
     return result;
   }
   const timestamp = isoNow(nowFn);
-  const battle = battleRoomBattleStateForMutation(room, nowFn);
+  const battle = battleRoomBattleStateForMutation(room, nowFn, options);
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
   result.escapedActorIds = actors
     .filter((actor) => battleActorBelongsToAnyAccount(actor, removedSet))
@@ -6378,8 +6397,11 @@ function battleCommandDeadlineAt(now, extraMs = 0) {
   return new Date(now() + BATTLE_COMMAND_TIMEOUT_MS + Math.max(0, Number(extraMs || 0))).toISOString();
 }
 
-function createBattleRoomBattleState(room, now) {
-  const actors = battleRoomActors(room);
+function createBattleRoomBattleState(room, now, options = {}) {
+  const rawActors = battleRoomActors(room);
+  const actors = options.battleActorRules && typeof options.battleActorRules.materializeActors === "function"
+    ? options.battleActorRules.materializeActors(rawActors).actors
+    : rawActors;
   return {
     round: 1,
     phase: BATTLE_PHASE_COMMAND,
@@ -6399,12 +6421,15 @@ function createBattleRoomBattleState(room, now) {
   };
 }
 
-function battleRoomBattleStateForMutation(room, now) {
+function battleRoomBattleStateForMutation(room, now, options = {}) {
   if (!room.battle || typeof room.battle !== "object" || Array.isArray(room.battle)) {
-    room.battle = createBattleRoomBattleState(room, now);
+    room.battle = createBattleRoomBattleState(room, now, options);
   }
   if (!Array.isArray(room.battle.actors) || room.battle.actors.length === 0) {
-    room.battle.actors = battleRoomActors(room);
+    const rawActors = battleRoomActors(room);
+    room.battle.actors = options.battleActorRules && typeof options.battleActorRules.materializeActors === "function"
+      ? options.battleActorRules.materializeActors(rawActors).actors
+      : rawActors;
   }
   if (!room.battle.commands || typeof room.battle.commands !== "object" || Array.isArray(room.battle.commands)) {
     room.battle.commands = {};
@@ -7403,7 +7428,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_SWITCH_PET) {
-      events.push(battleSwitchPetEvent(room, battle, command, actor, round, sequence));
+      events.push(battleSwitchPetEvent(room, battle, command, actor, round, sequence, options));
       sequence += 1;
       commandIndex += 1;
       continue;
@@ -8649,7 +8674,7 @@ function battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now)
 }
 
 function closeBattleRoomWithResult(data, room, result, now, options = {}) {
-  const battle = battleRoomBattleStateForMutation(room, now);
+  const battle = battleRoomBattleStateForMutation(room, now, options);
   const recordId = `battle_record_${String(room.roomId || "").replace(/^battle_room_/, "")}`;
   room.status = BATTLE_ROOM_CLOSED;
   room.closeReason = String(result.reason || "closed");
@@ -8699,6 +8724,9 @@ function closeBattleRoomWithResult(data, room, result, now, options = {}) {
     reason: String(result.reason || ""),
     battleReturnCount: battleReturns.length,
   }, now);
+  if (options.battleRandomAuthority && typeof options.battleRandomAuthority.closeRoom === "function") {
+    options.battleRandomAuthority.closeRoom(room.roomId);
+  }
   return room;
 }
 
@@ -14983,7 +15011,7 @@ function expireBattleTimeouts(data, now, options = {}) {
     if (!room || room.status === BATTLE_ROOM_CLOSED) {
       continue;
     }
-    const battle = battleRoomBattleStateForMutation(room, now);
+    const battle = battleRoomBattleStateForMutation(room, now, options);
     const partyPveOfflineAccountIds = offlinePartyPveBattleParticipantAccountIds(data, room, {now, runtimeActiveSessionIds});
     if (partyPveOfflineAccountIds.length > 0) {
       const update = removeOfflinePartyPveParticipantsFromRoom(data, room, partyPveOfflineAccountIds, {
@@ -16207,7 +16235,7 @@ function battleCaptureStatusBonusForActor(actor) {
   return bonus;
 }
 
-function battleSwitchPetEvent(room, battle, command, actor, round, sequence) {
+function battleSwitchPetEvent(room, battle, command, actor, round, sequence, options = {}) {
   const participant = battleParticipantByAccountId(room, actor.accountId);
   const battlePets = participantBattlePets(participant);
   const nextPetId = String(command.petId || "").trim();
@@ -16218,7 +16246,10 @@ function battleSwitchPetEvent(room, battle, command, actor, round, sequence) {
   }
   const previousPetId = previousPetActor ? String(previousPetActor.petId || "") : "";
   updateParticipantPetAfterSwitch(participant, previousPetActor, nextPetId);
-  const nextPetActor = battlePetActorFromParticipant(participant, String(actor.side || ""), nextPet, 0);
+  const rawNextPetActor = battlePetActorFromParticipant(participant, String(actor.side || ""), nextPet, 0);
+  const nextPetActor = options.battleActorRules && typeof options.battleActorRules.materializeActor === "function"
+    ? options.battleActorRules.materializeActor(rawNextPetActor).actor
+    : rawNextPetActor;
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
   const previousIndex = previousPetActor ? actors.findIndex((entry) => entry && String(entry.actorId || "") === String(previousPetActor.actorId || "")) : -1;
   if (previousIndex >= 0) {

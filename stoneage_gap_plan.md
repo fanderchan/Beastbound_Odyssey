@@ -239,13 +239,19 @@
     - 风险：数据 schema 变化但不改 HTTP 协议、稳定技能 ID 或旧实例字段；正式联网被动尚未接线，因此本项不能改变战斗数值。验收为合成第八技能仍通过目录、恰有七个唯一装备槽、未装备技能不在服务端可用集合、五被动好/坏目录定向测试及既有战斗回归。
     - 证据（2026-07-11）：工具输出 `extensibleCatalogSkills=8 fixtureEquipped=7`；Godot 目录夹具 `catalog_skills=8 equipped=7`，宠技训练/菜单保持通过；Node loadout+被动 8/8、定向组合 66/66、完整服务端 304/304。严格服务端目录已加载但尚未应用到联网 actor，完整边界见 `docs/phase_232_extensible_pet_skill_and_passive_catalogs.md`。
   - [ ] **P0.4b 服务端应用五被动并权威结算闪避、幸运一击与单层反击**
-    - 问题/原因：联网 actor 当前只携带被动 ID，不携带服务端派生元素/抗性；攻击事件没有闪避、幸运一击或反击事实，公开房间 seed 也不能继续承担可预测竞技随机。
-    - 方案/涉及文件：在 focused battle rule 中从 `formId`/共享模板派生元素与被动，一次性写入 actor；使用不公开的房间私有随机种子和固定 purpose 域计算回避、幸运一击、反击，反击链深固定为 1；`auth-service.js` 只负责接线，事件输出最终伤害/HP/原因。
-    - 风险/验收：启用后会真实改变布伊/乌力状态命中与 PVP 胜负，必须固定种子覆盖五被动、免疫/抵抗、守护/阻断、击杀不反击、反击不递归；私有种子不得进入 room/event/trace，1v1 与 10v10 事件量有界。
+    - [x] **P0.4b-1 服务端宠物被动物化、私有随机生命周期与 legacy 反应 parity 纯规则**
+      - 问题/原因：联网 actor 只有被动 ID，没有服务端派生元素/抗性/免疫；公开 `room.seed` 不能承担竞技秘密；直接照 `combat_v1` 注释接入又会误用当前未生效的 3%/5%/1.35 倍字段，暗改手感。
+      - 方案/文件：新增 `battle-actor-rules.js`，只由服务端 `formId`/模板物化玩家宠、野宠、伙伴宠和换入宠；新增闭包式 `battle-random-authority.js`，房间 32 字节 secret 只存在内存 Map；新增 `battle-reaction-rules.js` 严格复刻当前闪避/幸运一击/单层反击概率、伤害和阻断条件。涉及 `auth-service.js`、`battle-room.js`、`family-manor.js` 和 focused tests。
+      - 风险/验收：本项已让布伊/乌力被动真实影响联网状态结算，但尚不发送反应新事件；真实地 10 乌力石化免疫与换宠通过，私有 secret 不进入 room/event/trace/snapshot，focused 17/17、战斗房间 59/59、完整 Node 317/317、Godot 相关 5/5。完整边界见 `docs/phase_233_authoritative_pet_passives_and_private_battle_random.md`。
+    - [ ] **P0.4b-2 服务端启用最终闪避、幸运一击和反击事件**
+      - 方案/风险/验收：用私有 authority 结算，普通伤害事件输出 `dodged/critical/damage/hpBefore/hpAfter`，反击为独立事件且最多一层；与 P0.4c 协议 v4 客户端纯回放作为同一部署组启用，不允许先发布会被 v3 错放的半套服务端。
   - [ ] **P0.4c Godot 纯回放服务端战斗事实与 N 对 N 回归**
     - 问题/原因：当前服务器事件映射显式关闭本地三项反应，且不认识 `counter_attack`；对手状态技能的本地应用器还可能因 ally-only 判断漏掉中间表现，最终 actor 快照会掩盖漏回放。
     - 方案/涉及文件：扩展 `server_battle_room_model.gd` 与 focused 回放检查，服务端事件标记 `serverResolved`，客户端不重掷闪避/暴击/状态、不二次乘伤害、不生成额外反击；支持双方状态事件和独立反击事件，回合末快照只作一致性校准。
     - 风险/验收：协调事件兼容后再启用服务端结果；固定向量证明同一事件只应用一次，1v1/5v5/10v10、换宠、击飞、状态、断线重连和事件 ledger 均保持一致，真实 1280×720 观察动画/浮字/日志无遗漏。
+  - [ ] **P0.4d 联网异常状态回合生命周期补全**
+    - 问题/原因：联网服务端当前会施加/免疫/抵抗中毒，但没有生成持续伤害 `status_tick`；Godot 在 server-authority 回合又不会本地补算，导致中毒可能只有图标没有后续伤害。
+    - 方案/风险/验收：由服务端权威生成中毒 tick、睡眠/石化递减与解除事件，双方纯回放且不重复结算；固定回合覆盖施加、免疫、持续伤害、致死、净化和重连，事件与最终 actor 在应用校准快照前一致。
 - [ ] **P0.5 版本化档案迁移 + 全面 GM QA 账号**
 - [ ] **P0.6 200 人同地图容量与安全基线**
 - [ ] **P0.7 退役虚构训练伙伴并保留真实快照伙伴边界**

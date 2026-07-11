@@ -35,11 +35,15 @@ const {
 const {createPetEncounterAuthority, loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 const {scaledForRecipientLevel} = require("../src/auth/battle-exp-catalog");
+const {createBattleRandomAuthority} = require("../src/auth/battle-random-authority");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
 test("players can invite and accept duel battle rooms", () => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
+  const battleRandomAuthority = createBattleRandomAuthority({
+    randomBytes: (size) => Buffer.alloc(size, 0x41),
+  });
+  const service = createAuthService({"store": createMemoryAuthStore(), battleRandomAuthority});
   const events = [];
   service.onEvent((event) => events.push(event));
   const challenger = service.register({"username": "battlea", "password": "test1234", "displayName": "挑战甲"});
@@ -83,6 +87,12 @@ test("players can invite and accept duel battle rooms", () => {
   assert.equal(accept.room.status, "ready");
   assert.equal(accept.room.mode, "duel");
   assert.equal(Boolean(accept.room.seed), true);
+  assert.equal(battleRandomAuthority.hasRoom(accept.room.roomId), true);
+  assert.equal(JSON.stringify(accept.room).includes("4141414141414141"), false);
+  assert.deepEqual(
+    Object.keys(service.snapshot().battleRooms[accept.room.roomId]).filter((key) => /private|secret|random/i.test(key)),
+    [],
+  );
   assert.equal(accept.room.entry.distanceCells, 1);
   assert.deepEqual(accept.room.participants.map((player) => player.username), ["battlea", "battleb"]);
   assert.equal(accept.room.participants[0].teamSnapshot.playerLevel, 1);
@@ -95,6 +105,8 @@ test("players can invite and accept duel battle rooms", () => {
   const busyInvite = service.inviteToBattle(outsider.session.token, {"username": "battleb"});
   assert.equal(busyInvite.ok, false);
   assert.equal(busyInvite.code, "battle_target_busy");
+  assert.equal(service.leaveBattleRoom(challenger.session.token, accept.room.roomId).ok, true);
+  assert.equal(battleRandomAuthority.hasRoom(accept.room.roomId), false);
 });
 
 test("duel battle rooms resolve turn commands into event lists", () => {
@@ -4154,8 +4166,8 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(service.saveProfile(challenger.session.token, {
     "expectedRevision": 0,
     "profile": battleProfileWithPets("换宠甲", {"level": 12, "hp": 150, "maxHp": 150, "attack": 20, "defense": 8, "quick": 50}, [
-      {"petId": "pet_a_active", "name": "甲首发布伊", "state": "battle", "hp": 60, "maxHp": 90, "attack": 17, "defense": 7, "quick": 42},
-      {"petId": "pet_a_standby", "name": "甲候补布伊", "state": "standby", "hp": 85, "maxHp": 92, "attack": 24, "defense": 9, "quick": 70},
+      {"petId": "pet_a_active", "formId": "bui_normal_red_fire10", "name": "甲首发布伊", "state": "battle", "hp": 60, "maxHp": 90, "attack": 17, "defense": 7, "quick": 42},
+      {"petId": "pet_a_standby", "formId": "wuli_normal_tough_earth10", "name": "甲候补乌力", "state": "standby", "hp": 85, "maxHp": 92, "attack": 24, "defense": 9, "quick": 70},
     ]),
   }).ok, true);
   assert.equal(service.saveProfile(opponent.session.token, {
@@ -4180,6 +4192,8 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "swapb" && actor.kind === "player");
   const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "swapb" && actor.kind === "pet");
   assert.equal(challengerPet.petId, "pet_a_active");
+  assert.equal(challengerPet.statusResist.confusion, 0.1);
+  assert.deepEqual(challengerPet.statusImmune, {});
 
   const switchCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
@@ -4212,8 +4226,12 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(switchEvent.petId, "pet_a_standby");
   assert.equal(switchEvent.previousPetId, "pet_a_active");
   assert.equal(switchEvent.nextPet.petId, "pet_a_standby");
+  assert.equal(switchEvent.nextPet.statusResist.stone, 1);
+  assert.equal(switchEvent.nextPet.statusImmune.stone, true);
   const switchedPet = resolveCommand.room.battle.actors.find((actor) => actor.username === "swapa" && actor.kind === "pet");
   assert.equal(switchedPet.petId, "pet_a_standby");
+  assert.equal(switchedPet.statusResist.stone, 1);
+  assert.equal(switchedPet.statusImmune.stone, true);
   assert.equal(resolveCommand.room.battle.requiredActorIds.includes(switchedPet.actorId), true);
   assert.equal(resolveCommand.room.battle.requiredActorIds.includes(challengerPet.actorId), false);
 
@@ -4516,6 +4534,72 @@ test("duel battle rooms resolve expanded battle items and pet status skills", ()
   assert.equal(cleanseEvent.itemId, "item_cleanse_single_5");
   assert.equal(cleanseEvent.targetActorId, opponentPlayer.actorId);
   assert.equal(cleanseEvent.remainingItemCount, 0);
+});
+
+test("server-materialized pet passives decide status immunity in a real room", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "passivea", "password": "test1234", "displayName": "被动甲"});
+  const opponent = service.register({"username": "passiveb", "password": "test1234", "displayName": "被动乙"});
+  const challengerProfile = battleProfile("被动甲", {"level": 18, "hp": 160, "maxHp": 160, "quick": 90}, {
+    "petId": "passive_source_pet",
+    "formId": "bui_normal_red_fire10",
+    "name": "石化施术宠",
+    "hp": 90,
+    "maxHp": 90,
+    "quick": 80,
+  });
+  challengerProfile.petInstances[0].activeSkillIds = ["pet_attack", "pet_defend", "pet_stone_gaze"];
+  challengerProfile.petInstances[0].petSkillSlots = ["pet_attack", "pet_defend", "pet_stone_gaze", "", "", "", ""];
+  const opponentProfile = battleProfile("被动乙", {"level": 18, "hp": 160, "maxHp": 160, "quick": 70}, {
+    "petId": "passive_target_pet",
+    "formId": "wuli_normal_tough_earth10",
+    "name": "厚甲乌力",
+    "hp": 90,
+    "maxHp": 90,
+    "quick": 60,
+  });
+  assert.equal(service.saveProfile(challenger.session.token, {"expectedRevision": 0, "profile": challengerProfile}).ok, true);
+  assert.equal(service.saveProfile(opponent.session.token, {"expectedRevision": 0, "profile": opponentProfile}).ok, true);
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "passiveb"});
+  const accept = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accept.ok, true);
+  const challengerPlayer = accept.room.battle.actors.find((actor) => actor.username === "passivea" && actor.kind === "player");
+  const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "passivea" && actor.kind === "pet");
+  const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "passiveb" && actor.kind === "player");
+  const opponentPet = accept.room.battle.actors.find((actor) => actor.username === "passiveb" && actor.kind === "pet");
+  assert.equal(opponentPet.statusResist.stone, 1);
+  assert.equal(opponentPet.statusImmune.stone, true);
+
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": challengerPet.actorId,
+    "actionId": "pet_stone_gaze",
+    "targetActorId": opponentPet.actorId,
+  }).ok, true);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPlayer.actorId,
+    "actionId": "defend",
+  }).ok, true);
+  const resolved = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    "round": 1,
+    "actorId": opponentPet.actorId,
+    "actionId": "pet_defend",
+  });
+  assert.equal(resolved.ok, true);
+  const statusEvent = resolved.turn.events.find((event) => event.eventType === "skill_status");
+  assert.equal(statusEvent.statusId, "stone");
+  assert.equal(statusEvent.statusResult, "immune");
+  const updatedTarget = resolved.room.battle.actors.find((actor) => actor.actorId === opponentPet.actorId);
+  assert.equal(Boolean(updatedTarget.statuses.stone), false);
 });
 
 test("duel battle rooms snapshot and resolve equipment spirits", () => {

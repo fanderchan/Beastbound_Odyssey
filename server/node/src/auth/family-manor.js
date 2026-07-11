@@ -23,6 +23,7 @@ function createFamilyManorDomain(ctx) {
     accountRuntimeActivity = () => ({online: false, lastSeenMs: null}),
     activeBattleRoomForAccount,
     battleParticipantSnapshot,
+    battleRandomAuthority,
     battleRoomConnectionStateForMutation,
     createBattleRoomBattleState,
     emitServiceEvent,
@@ -420,6 +421,15 @@ function createFamilyManorDomain(ctx) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    if (
+      !battleRandomAuthority
+      || typeof battleRandomAuthority.openRoom !== "function"
+      || battleRandomAuthority.openRoom(room.roomId) !== true
+    ) {
+      const error = new Error("battle random room could not be opened");
+      error.code = "battle_random_room_unavailable";
+      throw error;
+    }
     battleRoomConnectionStateForMutation(room);
     data.battleRooms[room.roomId] = room;
     war.battleRoomId = room.roomId;
