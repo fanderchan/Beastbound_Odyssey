@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {migrateProfile} = require("../src/auth/profile-migrations");
+const {snapshotExternalEquipmentConflicts} = require("../src/auth/equipment-profile-migration");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 loadEnvFile(path.resolve(repoRoot, "server/node/.local/mysql.env"));
@@ -26,6 +27,7 @@ function main() {
   const requestedRole = String(args.role || process.env.BEASTBOUND_MIGRATE_ROLE || "");
   const profilePath = args.profilePath || bestProfilePath(userdataRoot, username);
   const profile = readJsonFile(profilePath);
+  requireSafeProfileMigration(profile);
   const nowIso = new Date().toISOString();
   const store = createMysqlAuthStore({readOnly: !apply, ensureSchema: apply});
   const sourceData = cloneJson(store.load());
@@ -70,11 +72,14 @@ function buildLocalUserdataMigration(options = {}) {
   const username = normalizeUsername(options.username);
   const password = String(options.password || "");
   const sourceProfile = cloneJson(options.profile || {});
-  const profileMigration = migrateProfile(sourceProfile);
-  if (!profileMigration.ok) {
-    const codes = profileMigration.errors.map((error) => error.code).join(", ");
-    throw new Error(`Local profile schema migration is not safe: ${codes}`);
+  const externalEquipmentConflicts = snapshotExternalEquipmentConflicts(sourceData);
+  if (externalEquipmentConflicts.length > 0) {
+    const error = new Error("Persistent snapshot contains equipment outside player profiles; instance envelopes are required first.");
+    error.code = "snapshot_external_equipment_unsafe";
+    error.externalEquipmentConflicts = cloneJson(externalEquipmentConflicts);
+    throw error;
   }
+  const profileMigration = requireSafeProfileMigration(sourceProfile);
   const profile = profileMigration.profile;
   const profilePath = String(options.profilePath || "");
   const localAccount = objectOrEmpty(options.localAccount);
@@ -205,18 +210,60 @@ function buildLocalUserdataMigration(options = {}) {
       afterCounts: persistentBucketCounts(data),
       targetAssetsBefore: profileAssetSummary(objectOrEmpty(objectOrEmpty(sourceData.profiles)[playerId]).profile),
       targetAssetsAfter: profileAssetSummary(profile),
-      profileMigration: {
-        fromVersion: profileMigration.fromVersion,
-        toVersion: profileMigration.toVersion,
-        changed: profileMigration.changed,
-        assetsUnchanged: profileMigration.assetsUnchanged,
-        steps: profileMigration.steps.map((step) => step.id),
-      },
+      profileMigration: publicProfileMigrationReport(profileMigration),
       unrelatedDigest: integrityBefore,
       unrelatedStatePreserved: true,
     },
     targetProfileDigest: stableDigest(profile),
     verificationContext,
+  };
+}
+
+function requireSafeProfileMigration(profile) {
+  const migration = migrateProfile(cloneJson(profile || {}));
+  if (!migration.ok) {
+    const codes = migration.errors.map((error) => error.code).join(", ");
+    const error = new Error(`Local profile schema migration is not safe: ${codes}`);
+    error.code = "local_profile_migration_unsafe";
+    error.profileMigration = publicProfileMigrationReport(migration);
+    throw error;
+  }
+  return migration;
+}
+
+function publicProfileMigrationReport(migration) {
+  const beforeAssets = objectOrEmpty(migration && migration.beforeAssets);
+  const afterAssets = objectOrEmpty(migration && migration.afterAssets);
+  return {
+    applySafe: Boolean(migration && migration.ok),
+    fromVersion: migration && migration.fromVersion,
+    toVersion: migration && migration.toVersion,
+    changed: Boolean(migration && migration.changed),
+    wouldChange: Boolean(migration && migration.wouldChange),
+    assetsUnchanged: Boolean(migration && migration.assetsUnchanged),
+    contentUnchanged: Boolean(migration && migration.contentUnchanged),
+    planDigest: String(migration && migration.planDigest || ""),
+    beforeLogicalDigest: String(beforeAssets.digest || ""),
+    afterLogicalDigest: String(afterAssets.digest || ""),
+    beforeRepresentationDigest: String(beforeAssets.representationDigest || ""),
+    afterRepresentationDigest: String(afterAssets.representationDigest || ""),
+    steps: Array.isArray(migration && migration.steps)
+      ? migration.steps.map((step) => String(step && step.id || "")).filter(Boolean)
+      : [],
+    stepReports: Array.isArray(migration && migration.steps)
+      ? migration.steps.map((step) => ({
+        id: String(step && step.id || ""),
+        fromVersion: step && step.fromVersion,
+        toVersion: step && step.toVersion,
+        ok: step && step.ok !== false,
+        assetsUnchanged: step && step.assetsUnchanged,
+        contentUnchanged: step && step.contentUnchanged,
+        equipment: step && step.equipment ? cloneJson(step.equipment) : undefined,
+      }))
+      : [],
+    errors: Array.isArray(migration && migration.errors)
+      ? migration.errors.map((error) => cloneJson(error))
+      : [],
   };
 }
 
@@ -710,7 +757,24 @@ function unquoteShellValue(value) {
 }
 
 if (require.main === module) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    if (error && (error.profileMigration || error.externalEquipmentConflicts)) {
+      console.log(JSON.stringify({
+        ok: false,
+        mode: process.argv.includes("--apply") ? "apply" : "dry-run",
+        applied: false,
+        code: String(error.code || "local_profile_migration_unsafe"),
+        message: String(error.message || "Local profile migration is not safe."),
+        profileMigration: error.profileMigration,
+        externalEquipmentConflicts: error.externalEquipmentConflicts,
+      }, null, 2));
+    } else {
+      console.error(error && error.stack ? error.stack : String(error));
+    }
+    process.exitCode = 1;
+  }
 }
 
 module.exports = {
@@ -723,6 +787,8 @@ module.exports = {
   parseArgs,
   persistentBucketCounts,
   profileAssetSummary,
+  publicProfileMigrationReport,
+  requireSafeProfileMigration,
   resolveMigrationRole,
   restoreTargetScope,
   stableDigest,

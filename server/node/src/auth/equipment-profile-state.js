@@ -13,6 +13,10 @@ function isPlainRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function sortedEntries(value) {
+  return Object.keys(record(value)).sort().map((key) => [key, value[key]]);
+}
+
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
@@ -51,7 +55,7 @@ function invalidCompatibilityField(field, slotId = "") {
 function validateEquipmentCompatibilityState(profile, catalog) {
   const rawProfile = record(profile);
   const slots = record(rawProfile.equipmentSlots);
-  for (const [slotId, itemIdValue] of Object.entries(slots)) {
+  for (const [slotId, itemIdValue] of sortedEntries(slots)) {
     if (typeof itemIdValue !== "string" || itemIdValue === "" || itemIdValue !== itemIdValue.trim()) {
       return invalidCompatibilityField("equipmentSlots", slotId);
     }
@@ -60,19 +64,19 @@ function validateEquipmentCompatibilityState(profile, catalog) {
       return invalidCompatibilityField("equipmentSlots", slotId);
     }
   }
-  for (const [slotId, instanceId] of Object.entries(record(rawProfile.equipmentSlotInstanceIds))) {
+  for (const [slotId, instanceId] of sortedEntries(rawProfile.equipmentSlotInstanceIds)) {
     if (typeof instanceId !== "string" || instanceId === "" || instanceId !== instanceId.trim()) {
       return invalidCompatibilityField("equipmentSlotInstanceIds", slotId);
     }
   }
-  for (const [slotId, durability] of Object.entries(record(rawProfile.equipmentDurability))) {
+  for (const [slotId, durability] of sortedEntries(rawProfile.equipmentDurability)) {
     const item = catalogItem(catalog, slots[slotId]);
     const maxDurability = item && item.usesDurability !== false ? positiveInteger(item.durabilityMax, 30) : 0;
     if (!item || maxDurability <= 0 || !Number.isSafeInteger(durability) || durability < 0 || durability > maxDurability) {
       return invalidCompatibilityField("equipmentDurability", slotId);
     }
   }
-  for (const [slotId, enhancement] of Object.entries(record(rawProfile.equipmentEnhancement))) {
+  for (const [slotId, enhancement] of sortedEntries(rawProfile.equipmentEnhancement)) {
     const item = catalogItem(catalog, slots[slotId]);
     const maxEnhancement = item && item.expPill !== true ? nonNegativeInteger(item.enhanceMax, 5) : 0;
     if (
@@ -94,7 +98,7 @@ function validateEquipmentCompatibilityState(profile, catalog) {
       return invalidCompatibilityField("equipmentEnhancement", slotId);
     }
   }
-  for (const [slotId, wearCounters] of Object.entries(record(rawProfile.equipmentWearCounters))) {
+  for (const [slotId, wearCounters] of sortedEntries(rawProfile.equipmentWearCounters)) {
     const item = catalogItem(catalog, slots[slotId]);
     const maxDurability = item && item.usesDurability !== false ? positiveInteger(item.durabilityMax, 30) : 0;
     if (
@@ -192,7 +196,7 @@ function readEquipmentInstanceState(profile, catalog) {
     "equipmentWearCounters",
   ]) {
     const container = record(rawProfile[field]);
-    const unknownSlotId = Object.keys(container).find((slotId) => !knownSlotIds.has(slotId));
+    const unknownSlotId = Object.keys(container).sort().find((slotId) => !knownSlotIds.has(slotId));
     if (unknownSlotId) {
       return fail("equipment_profile_slot_unknown", "装备档案含当前版本无法识别的槽位，请联系GM处理。", {
         field,
@@ -218,7 +222,7 @@ function readEquipmentInstanceState(profile, catalog) {
     return fail("equipment_instance_state_invalid", "装备实例档案异常，请联系GM处理。", {reason: "instances_not_object"});
   }
   const instances = Object.create(null);
-  for (const [key, value] of Object.entries(record(rawInstances))) {
+  for (const [key, value] of sortedEntries(rawInstances)) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return fail("equipment_instance_state_invalid", "装备实例档案异常，请联系GM处理。", {reason: "instance_not_object", instanceId: key});
     }
@@ -335,7 +339,7 @@ function nextEquipmentInstanceSerial(profile, instances) {
     return fail("equipment_instance_serial_invalid", "装备实例序号异常，请联系GM处理。", {serial: rawSerial});
   }
   let serial = rawSerial;
-  for (const instanceId of Object.keys(record(instances))) {
+  for (const instanceId of Object.keys(record(instances)).sort()) {
     const match = String(instanceId).match(/^equip_(\d+)$/);
     if (match) {
       const numericId = Number(match[1]);
@@ -674,7 +678,7 @@ function auditEquipmentProfileState(profile, catalog) {
   const slots = record(profile && profile.equipmentSlots);
   const mappings = record(profile && profile.equipmentSlotInstanceIds);
   const referenced = new Map();
-  for (const slotId of Object.keys(slots)) {
+  for (const slotId of Object.keys(slots).sort()) {
     if (!Array.isArray(catalog && catalog.slotIds) || !catalog.slotIds.includes(slotId)) {
       conflicts.push({code: "unknown_equipment_slot", slotId, itemId: String(slots[slotId] || "")});
     }
@@ -700,7 +704,7 @@ function auditEquipmentProfileState(profile, catalog) {
     }
     referenced.set(instanceId, slotId);
   }
-  for (const [slotId, instanceIdValue] of Object.entries(mappings)) {
+  for (const [slotId, instanceIdValue] of sortedEntries(mappings)) {
     if (!Array.isArray(catalog && catalog.slotIds) || !catalog.slotIds.includes(slotId)) {
       conflicts.push({code: "unknown_slot_mapping", slotId, instanceId: String(instanceIdValue || "")});
     }
@@ -745,9 +749,12 @@ function auditEquipmentProfileState(profile, catalog) {
 module.exports = {
   EQUIPMENT_INSTANCE_SCHEMA_VERSION,
   EQUIPMENT_SLOTS_VERSION,
+  MAX_EQUIPMENT_INSTANCE_SERIAL,
   auditEquipmentProfileState,
   containsEquipmentTransfer,
   consumeBackpackEquipmentInstances,
+  createFreshEquipmentInstance: createFreshInstance,
+  equipmentInstanceIdForSerial: instanceIdForSerial,
   equipmentTransferEntries,
   firstEquipmentTransferEntry,
   grantFreshBackpackEquipmentInstances,

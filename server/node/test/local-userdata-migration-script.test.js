@@ -67,6 +67,79 @@ process.stdin.on("end", () => {
   }
 });
 
+test("unsafe equipment migration returns a structured apply conflict before database access or backup", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-migration-conflict-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const mysqlLogPath = path.join(tempDir, "mysql.jsonl");
+  const profilePath = path.join(tempDir, "profile.json");
+  const backupPath = path.join(tempDir, "must-not-exist.json");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+});
+`, {mode: 0o755});
+  const unsafe = importedProfile();
+  unsafe.schemaVersion = 2;
+  unsafe.equipmentInstances.equip_000001 = {
+    schemaVersion: 1,
+    instanceId: "equip_000001",
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 30,
+    enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+    expPillCharge: {},
+    source: "unsafe_fixture",
+  };
+  unsafe.nextEquipmentInstanceSerial = 2;
+  fs.writeFileSync(profilePath, JSON.stringify(unsafe));
+  try {
+    const result = spawnSync(process.execPath, [
+      scriptPath,
+      "--username", "newqa",
+      "--profile-path", profilePath,
+      "--backup-path", backupPath,
+      "--apply",
+    ], {
+      cwd: path.resolve(__dirname, "../../.."),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FAKE_MYSQL_LOG: mysqlLogPath,
+        BEASTBOUND_MYSQL_BIN: fakeMysqlPath,
+        BEASTBOUND_MYSQL_HOST: "127.0.0.1",
+        BEASTBOUND_MYSQL_PORT: "3306",
+        BEASTBOUND_MYSQL_USER: "reader",
+        BEASTBOUND_MYSQL_PASSWORD: "mysql-secret",
+        BEASTBOUND_MYSQL_DATABASE: "beastbound_test",
+        BEASTBOUND_MYSQL_CREATE_DATABASE: "0",
+        BEASTBOUND_MIGRATE_PASSWORD: "account-secret",
+      },
+    });
+    assert.equal(result.status, 1);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.ok, false);
+    assert.equal(report.mode, "apply");
+    assert.equal(report.applied, false);
+    assert.equal(report.profileMigration.applySafe, false);
+    assert.equal(report.profileMigration.errors.some((entry) => (
+      entry.code === "equipment_backpack_instance_surplus"
+    )), true);
+    assert.equal(report.profileMigration.planDigest.length, 64);
+    assert.equal(result.stdout.includes("account-secret"), false);
+    assert.equal(result.stdout.includes("mysql-secret"), false);
+    assert.equal(fs.existsSync(backupPath), false);
+    assert.equal(fs.existsSync(mysqlLogPath), false);
+  } finally {
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
 test("local userdata migration preserves every unrelated persistent bucket and existing credentials", () => {
   const source = persistentFixture();
   const before = structuredClone(source);
@@ -92,15 +165,21 @@ test("local userdata migration preserves every unrelated persistent bucket and e
   assert.equal(migration.data.profileBindings.acc_target.profileRevision, 5);
   assert.deepEqual(migration.data.profiles.player_target.profile, {
     ...importedProfile(),
-    schemaVersion: 2,
+    schemaVersion: 3,
   });
-  assert.deepEqual(migration.report.profileMigration, {
-    fromVersion: 1,
-    toVersion: 2,
-    changed: true,
-    assetsUnchanged: true,
-    steps: ["profile_v1_to_v2"],
-  });
+  assert.equal(migration.report.profileMigration.applySafe, true);
+  assert.equal(migration.report.profileMigration.fromVersion, 1);
+  assert.equal(migration.report.profileMigration.toVersion, 3);
+  assert.equal(migration.report.profileMigration.changed, true);
+  assert.equal(migration.report.profileMigration.assetsUnchanged, true);
+  assert.equal(migration.report.profileMigration.contentUnchanged, true);
+  assert.equal(migration.report.profileMigration.planDigest.length, 64);
+  assert.equal(migration.report.profileMigration.beforeLogicalDigest, migration.report.profileMigration.afterLogicalDigest);
+  assert.deepEqual(migration.report.profileMigration.steps, [
+    "profile_v1_to_v2",
+    "profile_v2_to_v3_equipment_instances",
+  ]);
+  assert.equal(migration.report.profileMigration.stepReports[1].equipment.conflicts.length, 0);
   assert.equal(migration.data.gmCommandGrants.acc_target.length, 1);
   assert.equal(migration.data.gmCommandGrants.acc_target[0].commandId, "*");
 
@@ -138,6 +217,27 @@ test("migration verification fails closed when a non-target asset changes", () =
   const verification = verifyAppliedMigration(damaged, migration);
   assert.equal(verification.ok, false);
   assert.deepEqual(verification.reasons, ["unrelated_state_changed"]);
+});
+
+test("single-account import refuses a snapshot that still has equipment in external containers", () => {
+  const source = persistentFixture();
+  source.marketListings.listing_keep.itemId = "weapon_wooden_club";
+  assert.throws(() => buildLocalUserdataMigration({
+    sourceData: source,
+    username: "auth1373",
+    profile: importedProfile(),
+    profilePath: "/tmp/player_profile.json",
+    role: "gm",
+    nowIso: NOW,
+    randomUuid: sequence(["event_uuid"]),
+  }), (error) => {
+    assert.equal(error.code, "snapshot_external_equipment_unsafe");
+    assert.equal(error.externalEquipmentConflicts.some((entry) => (
+      entry.code === "equipment_external_container_blocked"
+      && entry.path === "marketListings.listing_keep[0]"
+    )), true);
+    return true;
+  });
 });
 
 test("apply failure restores only the target scope and preserves concurrent non-target writes", () => {
@@ -324,7 +424,7 @@ function persistentFixture() {
       player_peer: {playerId: "player_peer", accountId: "acc_peer", profileRevision: 9, profile: otherProfile},
     },
     mailMessages: {mail_keep: {mailId: "mail_keep", recipientAccountId: "acc_peer"}},
-    marketListings: {listing_keep: {listingId: "listing_keep", sellerAccountId: "acc_peer", itemId: "item_meat_small"}},
+    marketListings: {listing_keep: {listingId: "listing_keep", sellerAccountId: "acc_peer", itemId: "item_meat_small", count: 1}},
     marketConfig: {taxRate: 0.08},
     offlineHangConfig: {rewardRate: 0.5},
     tradeOffers: {},
@@ -361,8 +461,15 @@ function importedProfile() {
     diamonds: 993899,
     petInstances: [{instanceId: "pet_keep", formId: "blue_man_dragon_water10"}],
     backpackSlots: [{itemId: "item_meat_small", count: 5}],
-    equipmentInstances: {equip_000001: {instanceId: "equip_000001", itemId: "weapon_wood_club"}},
-    equipmentSlots: {right_hand_weapon: "weapon_wood_club"},
+    equipmentInstances: {},
+    equipmentSlots: {},
+    equipmentSlotInstanceIds: {},
+    nextEquipmentInstanceSerial: 1,
+    equipmentDurability: {},
+    equipmentEnhancement: {},
+    equipmentWearCounters: {},
+    equipmentExpPillCharge: {},
+    equipmentSlotsVersion: 5,
     rebirthCount: 5,
   };
 }

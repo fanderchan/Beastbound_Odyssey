@@ -6,6 +6,7 @@ const test = require("node:test");
 const {
   CURRENT_PROFILE_SCHEMA_VERSION,
   PROFILE_MIGRATION_V1_TO_V2,
+  PROFILE_MIGRATION_V2_TO_V3,
   migrateProfile,
   migrateProfilesSnapshot,
   profileAssetSummary,
@@ -19,16 +20,16 @@ function legacyProfile(schemaVersion = undefined) {
     diamonds: 789,
     bank: {
       stoneCoins: 654321,
-      slots: [{itemId: "capture_net_basic", count: 3}],
-      items: [{itemId: "legacy_bank_item", count: 2}],
+      slots: [{itemId: "item_meat_small", count: 3}],
+      items: [{itemId: "item_meat_small", count: 3}],
       schemaVersion: 1,
     },
     backpackSlots: [
-      {itemId: "capture_net_basic", count: 5},
+      {itemId: "capture_net", count: 5},
       {itemId: "weapon_wooden_club", count: 1},
       {itemId: "", count: 0},
     ],
-    captureTools: {capture_net_basic: 5},
+    captureTools: {capture_net: 5},
     petInstances: [{
       instanceId: "pet_blue_001",
       formId: "blue_man_dragon_water10",
@@ -69,19 +70,25 @@ function legacyProfile(schemaVersion = undefined) {
     equipmentSlots: {right_hand_weapon: "weapon_wooden_club"},
     equipmentInstances: {
       equip_000001: {
+        schemaVersion: 1,
         instanceId: "equip_000001",
         itemId: "weapon_wooden_club",
         location: "equipped",
         slotId: "right_hand_weapon",
         durability: 17,
-        enhancement: {itemId: "weapon_wooden_club", level: 2},
+        enhancement: {itemId: "weapon_wooden_club", level: 2, history: []},
+        wearCounters: {itemId: "weapon_wooden_club", attackCount: 99, hitCount: 0},
+        expPillCharge: {},
+        source: "legacy_fixture",
       },
     },
     equipmentSlotInstanceIds: {right_hand_weapon: "equip_000001"},
+    nextEquipmentInstanceSerial: 2,
     equipmentDurability: {right_hand_weapon: 17},
     equipmentEnhancement: {right_hand_weapon: {itemId: "weapon_wooden_club", level: 2}},
     equipmentWearCounters: {right_hand_weapon: {itemId: "weapon_wooden_club", attackCount: 99, hitCount: 0}},
     equipmentExpPillCharge: {},
+    equipmentSlotsVersion: 5,
   };
   if (schemaVersion !== undefined) {
     profile.schemaVersion = schemaVersion;
@@ -100,7 +107,7 @@ function profileDocument(playerId, profile) {
   };
 }
 
-test("missing and version-1 profiles migrate to version 2 without changing assets or source", () => {
+test("missing and version-1 profiles atomically migrate through v2 to v3 without changing logical assets", () => {
   for (const source of [legacyProfile(), legacyProfile(1)]) {
     const before = structuredClone(source);
     const beforeAssets = profileAssetSummary(source);
@@ -110,9 +117,10 @@ test("missing and version-1 profiles migrate to version 2 without changing asset
     assert.equal(result.changed, true);
     assert.equal(result.fromVersion, 1);
     assert.equal(result.toVersion, CURRENT_PROFILE_SCHEMA_VERSION);
-    assert.equal(result.steps.length, 1);
+    assert.equal(result.steps.length, 2);
     assert.equal(result.steps[0].id, PROFILE_MIGRATION_V1_TO_V2);
-    assert.equal(result.profile.schemaVersion, 2);
+    assert.equal(result.steps[1].id, PROFILE_MIGRATION_V2_TO_V3);
+    assert.equal(result.profile.schemaVersion, 3);
     assert.equal(result.assetsUnchanged, true);
     assert.equal(result.contentUnchanged, true);
     assert.equal(result.beforeAssets.digest, result.afterAssets.digest);
@@ -123,10 +131,12 @@ test("missing and version-1 profiles migrate to version 2 without changing asset
   }
 });
 
-test("version-2 migration is idempotent and always returns a deep clone", () => {
+test("version-3 migration is idempotent, re-audited, and always returns a deep clone", () => {
   const first = migrateProfile(legacyProfile(1));
   const second = migrateProfile(first.profile);
 
+  assert.equal(second.ok, true);
+  assert.equal(first.ok, true);
   assert.equal(second.ok, true);
   assert.equal(second.changed, false);
   assert.deepEqual(second.profile, first.profile);
@@ -150,6 +160,56 @@ test("future and malformed profile versions fail closed without rewriting the pr
   assert.equal(migrateProfile(legacyProfile(99)).errors[0].code, "profile_schema_too_new");
 });
 
+test("equipment conflict reports and plan digests are independent of object insertion order", () => {
+  const futureInstance = (instanceId) => ({
+    schemaVersion: 2,
+    instanceId,
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 30,
+    enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+    expPillCharge: {},
+    source: "future_fixture",
+  });
+  const base = {
+    schemaVersion: 2,
+    backpackSlots: [
+      {itemId: "weapon_wooden_club", count: 1},
+      {itemId: "weapon_wooden_club", count: 1},
+    ],
+    equipmentSlots: {},
+    equipmentSlotInstanceIds: {},
+    nextEquipmentInstanceSerial: 3,
+    equipmentDurability: {},
+    equipmentEnhancement: {},
+    equipmentWearCounters: {},
+    equipmentExpPillCharge: {},
+    equipmentSlotsVersion: 5,
+  };
+  const left = migrateProfile({
+    ...base,
+    equipmentInstances: {
+      equip_000002: futureInstance("equip_000002"),
+      equip_000001: futureInstance("equip_000001"),
+    },
+  });
+  const right = migrateProfile({
+    ...base,
+    equipmentInstances: {
+      equip_000001: futureInstance("equip_000001"),
+      equip_000002: futureInstance("equip_000002"),
+    },
+  });
+  assert.equal(left.ok, false);
+  assert.equal(right.ok, false);
+  assert.equal(left.beforeDigest, right.beforeDigest);
+  assert.equal(left.planDigest, right.planDigest);
+  assert.deepEqual(left.errors, right.errors);
+  assert.equal(left.errors[0].instanceId, "equip_000001");
+});
+
 test("stable digests ignore object key order but retain array order and value types", () => {
   assert.equal(stableDigest({b: 2, a: 1}), stableDigest({a: 1, b: 2}));
   assert.notEqual(stableDigest([1, 2]), stableDigest([2, 1]));
@@ -167,7 +227,7 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
   assert.equal(summary.currencies.stoneCoins, 123456);
   assert.equal(summary.currencies.bankStoneCoins, 654321);
   assert.deepEqual(summary.backpack.itemCounts, {
-    capture_net_basic: 5,
+    capture_net: 5,
     weapon_wooden_club: 1,
   });
   assert.equal(summary.pets.referenceCount, 3);
@@ -180,6 +240,7 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
 });
 
 test("batch migration preserves every existing and unknown bucket plus profile document metadata", () => {
+  const currentProfile = migrateProfile(legacyProfile(2)).profile;
   const snapshot = {
     schemaVersion: 1,
     accounts: {migration: {accountId: "acc_player_migration", username: "migration"}},
@@ -187,9 +248,9 @@ test("batch migration preserves every existing and unknown bucket plus profile d
     profileBindings: {acc_player_migration: {accountId: "acc_player_migration", playerId: "player_migration", profileRevision: 7}},
     profiles: {
       player_migration: profileDocument("player_migration", legacyProfile()),
-      player_current: profileDocument("player_current", legacyProfile(2)),
+      player_current: profileDocument("player_current", currentProfile),
     },
-    marketListings: {listing_1: {listingId: "listing_1", itemId: "capture_net_basic"}},
+    marketListings: {listing_1: {listingId: "listing_1", itemId: "item_meat_small", count: 1}},
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},
     families: {family_1: {familyId: "family_1", name: "迁移家族"}},
@@ -207,8 +268,8 @@ test("batch migration preserves every existing and unknown bucket plus profile d
   assert.equal(result.applySafe, true);
   assert.equal(result.changed, true);
   assert.deepEqual(result.counts, {total: 2, eligible: 2, changed: 1, unchanged: 1, invalid: 0});
-  assert.equal(result.snapshot.profiles.player_migration.profile.schemaVersion, 2);
-  assert.equal(result.snapshot.profiles.player_current.profile.schemaVersion, 2);
+  assert.equal(result.snapshot.profiles.player_migration.profile.schemaVersion, 3);
+  assert.equal(result.snapshot.profiles.player_current.profile.schemaVersion, 3);
   assert.deepEqual(result.snapshot.unknownFutureBucket, snapshot.unknownFutureBucket);
   assert.deepEqual(result.snapshot.marketListings, snapshot.marketListings);
   assert.deepEqual(result.snapshot.families, snapshot.families);
@@ -247,6 +308,38 @@ test("one invalid profile makes the whole snapshot plan non-applicable without d
   assert.equal(result.errors.some((error) => error.code === "profile_document_invalid"), true);
   assert.equal(result.profileKeysPreserved, true);
   assert.equal(result.nonProfileBucketsPreserved, true);
+});
+
+test("equipment in root mail, market, or trade containers blocks the whole snapshot plan", () => {
+  const snapshot = {
+    profiles: {safe: profileDocument("safe", legacyProfile(2))},
+    mailMessages: {
+      mail_equipment: {
+        mailId: "mail_equipment",
+        items: [{itemId: "weapon_wooden_club", count: 1}],
+        schemaVersion: 1,
+      },
+      mail_legacy_attachment: {
+        mailId: "mail_legacy_attachment",
+        attachments: [{itemId: "weapon_wooden_club", count: 1}],
+        schemaVersion: 1,
+      },
+    },
+    marketListings: {},
+    tradeOffers: {},
+  };
+  const before = structuredClone(snapshot);
+  const result = migrateProfilesSnapshot(snapshot);
+  assert.equal(result.ok, false);
+  assert.equal(result.applySafe, false);
+  assert.equal(result.changed, false);
+  assert.equal(result.wouldChange, true);
+  assert.deepEqual(result.snapshot, before);
+  assert.equal(result.errors.some((error) => error.code === "equipment_external_container_blocked"), true);
+  assert.equal(result.errors.some((error) => (
+    error.code === "equipment_external_envelope_unknown"
+    && error.path === "mailMessages.mail_legacy_attachment"
+  )), true);
 });
 
 test("missing profiles bucket is a no-op and an invalid bucket fails closed", () => {

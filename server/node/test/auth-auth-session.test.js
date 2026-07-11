@@ -30,6 +30,10 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {
+  CURRENT_PROFILE_SCHEMA_VERSION,
+  migrateProfile,
+} = require("../src/auth/profile-migrations");
 
 test("register/login/session keeps players away from GM tools", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
@@ -49,6 +53,10 @@ test("register/login/session keeps players away from GM tools", () => {
   assert.match(registered.profileSummary.playerId, /^player_/);
   const initialProfile = service.getProfile(registered.session.token);
   assert.equal(initialProfile.ok, true);
+  assert.equal(initialProfile.profile.schemaVersion, CURRENT_PROFILE_SCHEMA_VERSION);
+  const initialProfileAudit = migrateProfile(initialProfile.profile);
+  assert.equal(initialProfileAudit.ok, true);
+  assert.equal(initialProfileAudit.changed, false);
   assert.deepEqual(
     (initialProfile.profile.backpackSlots || []).filter((slot) => slot && slot.itemId),
     [],

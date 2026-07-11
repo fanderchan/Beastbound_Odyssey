@@ -11,6 +11,7 @@ const {createBattleRoomDomain} = require("./auth/battle-room");
 const {createEconomyDomain} = require("./auth/economy");
 const {createGmPetsDomain} = require("./auth/gm-pets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
+const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
   generatePetCultivationRollSeed,
 } = require("./auth/pet-private-state");
@@ -18473,7 +18474,7 @@ function createDefaultServerProfile(account) {
   const displayName = String(account && (account.displayName || account.username) || "").trim() || "见习猎人";
   const startingEquipmentSlots = {};
   const profile = {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_PROFILE_SCHEMA_VERSION,
     player: {
       name: displayName,
       level: 1,

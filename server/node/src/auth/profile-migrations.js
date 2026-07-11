@@ -1,10 +1,22 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const {
+  auditEquipmentProfileV3,
+  migrateEquipmentProfileV2ToV3,
+  snapshotExternalEquipmentConflicts,
+} = require("./equipment-profile-migration");
 
-const CURRENT_PROFILE_SCHEMA_VERSION = 2;
+const CURRENT_PROFILE_SCHEMA_VERSION = 3;
 const LEGACY_PROFILE_SCHEMA_VERSION = 1;
 const PROFILE_MIGRATION_V1_TO_V2 = "profile_v1_to_v2";
+const PROFILE_MIGRATION_V2_TO_V3 = "profile_v2_to_v3_equipment_instances";
+const EQUIPMENT_MIGRATION_FIELDS = Object.freeze([
+  "equipmentInstances",
+  "equipmentSlotInstanceIds",
+  "nextEquipmentInstanceSerial",
+  "equipmentSlotsVersion",
+]);
 
 function isRecord(value) {
   return Boolean(
@@ -21,6 +33,10 @@ function hasOwn(value, key) {
 
 function deepClone(value) {
   return structuredClone(value);
+}
+
+function compareCanonicalStrings(left, right) {
+  return left < right ? -1 : (left > right ? 1 : 0);
 }
 
 function canonicalValue(value, ancestors = new WeakSet()) {
@@ -68,11 +84,11 @@ function canonicalValue(value, ancestors = new WeakSet()) {
       canonicalValue(key, ancestors),
       canonicalValue(entry, ancestors),
     ]));
-    entries.sort((left, right) => JSON.stringify(left[0]).localeCompare(JSON.stringify(right[0])));
+    entries.sort((left, right) => compareCanonicalStrings(JSON.stringify(left[0]), JSON.stringify(right[0])));
     result = {"$type": "map", entries};
   } else if (value instanceof Set) {
     const entries = Array.from(value.values()).map((entry) => canonicalValue(entry, ancestors));
-    entries.sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+    entries.sort((left, right) => compareCanonicalStrings(JSON.stringify(left), JSON.stringify(right)));
     result = {"$type": "set", entries};
   } else {
     result = Object.create(null);
@@ -143,6 +159,18 @@ function profileContentDigestExcludingSchemaVersion(profile) {
   }
   const content = deepClone(profile);
   delete content.schemaVersion;
+  return stableDigest(content);
+}
+
+function profileContentDigestExcludingEquipmentMigrationFields(profile) {
+  if (!isRecord(profile)) {
+    return stableDigest(profile);
+  }
+  const content = deepClone(profile);
+  delete content.schemaVersion;
+  for (const field of EQUIPMENT_MIGRATION_FIELDS) {
+    delete content[field];
+  }
   return stableDigest(content);
 }
 
@@ -319,7 +347,7 @@ function profileVersionResult(profile) {
       warnings: [],
     };
   }
-  if (![LEGACY_PROFILE_SCHEMA_VERSION, CURRENT_PROFILE_SCHEMA_VERSION].includes(profile.schemaVersion)) {
+  if (![1, 2, CURRENT_PROFILE_SCHEMA_VERSION].includes(profile.schemaVersion)) {
     return {
       ok: false,
       version: profile.schemaVersion,
@@ -342,39 +370,164 @@ function migrateProfile(profileValue) {
   const beforeDigest = stableDigest(source);
   const beforeAssets = profileAssetSummary(source);
   const version = profileVersionResult(source);
-  if (!version.ok) {
+  const failure = (errors, steps = [], candidate = source) => {
+    const candidateAssets = profileAssetSummary(candidate);
+    const planDigest = stableDigest({
+      fromVersion: version.version,
+      toVersion: version.version,
+      beforeDigest,
+      candidateDigest: stableDigest(candidate),
+      steps: steps.map((step) => ({
+        id: step.id,
+        fromVersion: step.fromVersion,
+        toVersion: step.toVersion,
+        ok: step.ok !== false,
+      })),
+      errors: errors.map((error) => ({
+        code: error.code,
+        path: error.path || "",
+        slotId: error.slotId || "",
+        itemId: error.itemId || "",
+        instanceId: error.instanceId || "",
+      })),
+    });
     return {
       ok: false,
+      applySafe: false,
       changed: false,
-      profile: source,
+      wouldChange: stableDigest(candidate) !== beforeDigest,
+      profile: deepClone(source),
       fromVersion: version.version,
       toVersion: version.version,
       assumedLegacy: version.assumedLegacy,
-      steps: [],
-      errors: version.errors,
+      steps,
+      errors,
       warnings: version.warnings,
       beforeDigest,
       afterDigest: beforeDigest,
+      candidateDigest: stableDigest(candidate),
+      planDigest,
       beforeAssets,
       afterAssets: beforeAssets,
+      candidateAssets,
       assetsUnchanged: true,
+      contentUnchanged: true,
     };
+  };
+  if (!version.ok) {
+    return failure(version.errors);
   }
 
-  const migrated = deepClone(source);
+  let migrated = deepClone(source);
+  let currentVersion = version.version;
   const steps = [];
-  if (version.version === LEGACY_PROFILE_SCHEMA_VERSION) {
-    migrated.schemaVersion = CURRENT_PROFILE_SCHEMA_VERSION;
-    steps.push({
+  if (currentVersion === LEGACY_PROFILE_SCHEMA_VERSION) {
+    const stepBefore = deepClone(migrated);
+    migrated.schemaVersion = 2;
+    const stepAssetsBefore = profileAssetSummary(stepBefore);
+    const stepAssetsAfter = profileAssetSummary(migrated);
+    const stepAssetsUnchanged = stepAssetsBefore.digest === stepAssetsAfter.digest;
+    const stepContentUnchanged = profileContentDigestExcludingSchemaVersion(stepBefore)
+      === profileContentDigestExcludingSchemaVersion(migrated);
+    const step = {
       id: PROFILE_MIGRATION_V1_TO_V2,
       fromVersion: LEGACY_PROFILE_SCHEMA_VERSION,
-      toVersion: CURRENT_PROFILE_SCHEMA_VERSION,
-    });
+      toVersion: 2,
+      ok: stepAssetsUnchanged && stepContentUnchanged,
+      assetsUnchanged: stepAssetsUnchanged,
+      contentUnchanged: stepContentUnchanged,
+      beforeDigest: stableDigest(stepBefore),
+      afterDigest: stableDigest(migrated),
+    };
+    steps.push(step);
+    if (!step.ok) {
+      const errors = [];
+      if (!stepAssetsUnchanged) {
+        errors.push({code: "profile_assets_changed", message: "profile v1-to-v2 migration changed the asset summary"});
+      }
+      if (!stepContentUnchanged) {
+        errors.push({
+          code: "profile_content_changed_outside_schema",
+          message: "profile v1-to-v2 migration changed content outside schemaVersion",
+        });
+      }
+      return failure(errors, steps, migrated);
+    }
+    currentVersion = 2;
+  }
+
+  if (currentVersion === 2) {
+    const stepBefore = deepClone(migrated);
+    const equipmentMigration = migrateEquipmentProfileV2ToV3(stepBefore);
+    const step = {
+      id: PROFILE_MIGRATION_V2_TO_V3,
+      fromVersion: 2,
+      toVersion: 3,
+      ok: equipmentMigration.ok,
+      equipment: equipmentMigration.report,
+      beforeDigest: stableDigest(stepBefore),
+      afterDigest: equipmentMigration.ok ? stableDigest(equipmentMigration.profile) : stableDigest(stepBefore),
+    };
+    if (!equipmentMigration.ok) {
+      steps.push(step);
+      const errors = equipmentMigration.conflicts.map((entry) => ({
+        ...entry,
+        message: entry.message || "equipment profile migration conflict",
+      }));
+      return failure(errors, steps, stepBefore);
+    }
+    migrated = equipmentMigration.profile;
+    migrated.schemaVersion = 3;
+    const stepAssetsBefore = profileAssetSummary(stepBefore);
+    const stepAssetsAfter = profileAssetSummary(migrated);
+    const stepAssetsUnchanged = stepAssetsBefore.digest === stepAssetsAfter.digest;
+    const stepContentUnchanged = profileContentDigestExcludingEquipmentMigrationFields(stepBefore)
+      === profileContentDigestExcludingEquipmentMigrationFields(migrated);
+    step.ok = stepAssetsUnchanged && stepContentUnchanged;
+    step.assetsUnchanged = stepAssetsUnchanged;
+    step.contentUnchanged = stepContentUnchanged;
+    step.afterDigest = stableDigest(migrated);
+    steps.push(step);
+    if (!step.ok) {
+      const errors = [];
+      if (!stepAssetsUnchanged) {
+        errors.push({
+          code: "profile_assets_changed",
+          message: "profile v2-to-v3 equipment migration changed logical assets",
+        });
+      }
+      if (!stepContentUnchanged) {
+        errors.push({
+          code: "profile_content_changed_outside_equipment_migration",
+          message: "profile v2-to-v3 migration changed content outside its allowed equipment fields",
+        });
+      }
+      return failure(errors, steps, migrated);
+    }
+    currentVersion = 3;
+  }
+
+  if (currentVersion === CURRENT_PROFILE_SCHEMA_VERSION && steps.length === 0) {
+    const audit = auditEquipmentProfileV3(migrated);
+    if (!audit.ok) {
+      return failure(audit.conflicts.map((entry) => ({
+        ...entry,
+        message: entry.message || "version-3 equipment profile is not canonical",
+      })), [{
+        id: "profile_v3_equipment_audit",
+        fromVersion: 3,
+        toVersion: 3,
+        ok: false,
+        equipment: audit.report,
+        beforeDigest,
+        afterDigest: beforeDigest,
+      }]);
+    }
   }
   const afterAssets = profileAssetSummary(migrated);
   const assetsUnchanged = beforeAssets.digest === afterAssets.digest;
-  const contentUnchanged = beforeAssets.contentDigestExcludingSchemaVersion
-    === afterAssets.contentDigestExcludingSchemaVersion;
+  const contentUnchanged = profileContentDigestExcludingEquipmentMigrationFields(source)
+    === profileContentDigestExcludingEquipmentMigrationFields(migrated);
   const errors = [];
   if (!assetsUnchanged) {
     errors.push({
@@ -384,32 +537,32 @@ function migrateProfile(profileValue) {
   }
   if (!contentUnchanged) {
     errors.push({
-      code: "profile_content_changed_outside_schema",
-      message: "profile v1-to-v2 migration changed content outside schemaVersion",
+      code: "profile_content_changed_outside_migration",
+      message: "profile migration changed content outside schema and equipment representation fields",
     });
   }
   if (errors.length > 0) {
-    return {
-      ok: false,
-      changed: false,
-      profile: source,
-      fromVersion: version.version,
-      toVersion: version.version,
-      assumedLegacy: version.assumedLegacy,
-      steps: [],
-      errors,
-      warnings: version.warnings,
-      beforeDigest,
-      afterDigest: beforeDigest,
-      beforeAssets,
-      afterAssets: beforeAssets,
-      assetsUnchanged: true,
-      contentUnchanged: true,
-    };
+    return failure(errors, steps, migrated);
   }
+  const afterDigest = stableDigest(migrated);
+  const planDigest = stableDigest({
+    fromVersion: version.version,
+    toVersion: CURRENT_PROFILE_SCHEMA_VERSION,
+    beforeDigest,
+    afterDigest,
+    steps: steps.map((step) => ({
+      id: step.id,
+      fromVersion: step.fromVersion,
+      toVersion: step.toVersion,
+      beforeDigest: step.beforeDigest,
+      afterDigest: step.afterDigest,
+    })),
+  });
   return {
     ok: true,
-    changed: steps.length > 0,
+    applySafe: true,
+    changed: afterDigest !== beforeDigest,
+    wouldChange: afterDigest !== beforeDigest,
     profile: migrated,
     fromVersion: version.version,
     toVersion: CURRENT_PROFILE_SCHEMA_VERSION,
@@ -418,7 +571,9 @@ function migrateProfile(profileValue) {
     errors,
     warnings: version.warnings,
     beforeDigest,
-    afterDigest: stableDigest(migrated),
+    afterDigest,
+    candidateDigest: afterDigest,
+    planDigest,
     beforeAssets,
     afterAssets,
     assetsUnchanged,
@@ -577,12 +732,20 @@ function migrateProfilesSnapshot(snapshotValue) {
       warnings: migration.warnings,
       beforeDigest: migration.beforeDigest,
       afterDigest: migration.afterDigest,
+      candidateDigest: migration.candidateDigest,
+      planDigest: migration.planDigest,
       beforeAssetDigest: migration.beforeAssets.digest,
       afterAssetDigest: migration.afterAssets.digest,
+      beforeRepresentationDigest: migration.beforeAssets.representationDigest,
+      afterRepresentationDigest: migration.afterAssets.representationDigest,
       assetsUnchanged: migration.assetsUnchanged,
       contentUnchanged: migration.contentUnchanged,
       documentMetadataPreserved: stableDigest(metadataBefore) === stableDigest(metadataAfter),
     });
+  }
+
+  for (const externalConflict of snapshotExternalEquipmentConflicts(source)) {
+    errors.push(externalConflict);
   }
 
   const candidateBucketDigests = rootBucketDigests(candidate);
@@ -603,6 +766,11 @@ function migrateProfilesSnapshot(snapshotValue) {
   const planFacts = {
     currentProfileSchemaVersion: CURRENT_PROFILE_SCHEMA_VERSION,
     beforeDigest,
+    errors: errors.map((error) => ({
+      code: error.code,
+      path: error.path || "",
+      playerId: error.playerId || "",
+    })),
     profiles: profileReports.map((report) => ({
       playerId: report.playerId,
       ok: report.ok,
@@ -645,9 +813,11 @@ module.exports = {
   CURRENT_PROFILE_SCHEMA_VERSION,
   LEGACY_PROFILE_SCHEMA_VERSION,
   PROFILE_MIGRATION_V1_TO_V2,
+  PROFILE_MIGRATION_V2_TO_V3,
   migrateProfile,
   migrateProfilesSnapshot,
   profileAssetSummary,
+  profileContentDigestExcludingEquipmentMigrationFields,
   profileContentDigestExcludingSchemaVersion,
   stableDigest,
 };
