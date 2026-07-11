@@ -31,6 +31,7 @@ const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -64,7 +65,7 @@ const ServerAuthClientModel := preload("res://scripts/progression/server_auth_cl
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
@@ -12910,6 +12911,8 @@ func _run_auto_capture_settings_preview() -> void:
 
 func _run_auto_hang_settings_check() -> void:
 	host.profile_save_enabled = false
+	var original_account_session: Dictionary = host.current_account_session.duplicate(true)
+	host.current_account_session = {}
 	host.world_log_history.clear()
 	host.world_log_message = ""
 	host.player_profile = PlayerProgressModel.default_profile()
@@ -12919,6 +12922,21 @@ func _run_auto_hang_settings_check() -> void:
 	custom_settings[HangSettingsModel.LOW_HP_STOP_PERCENT_KEY] = 30
 	host.player_profile = PlayerProgressModel.with_hang_settings(host.player_profile, custom_settings)
 	var custom_ok = int(PlayerProgressModel.hang_settings(host.player_profile).get(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY, 0)) == 30
+	var offline_profile: Dictionary = host.player_profile.duplicate(true)
+	offline_profile["offlineHang"] = {
+		"session": {"sessionId": "offline_ui_test", "status": "active", "startedAt": "2026-07-11T00:00:00.000Z"},
+		"ledger": [],
+	}
+	var offline_view := OfflineHangClientModel.view(offline_profile, {
+		"config": {"rewardRatePercent": 50, "maxMinutes": 480, "battleIntervalSeconds": 30},
+		"offlineHang": {"creditedMinutes": 95, "capped": false},
+	})
+	var offline_model_ok := (
+		bool(offline_view.get("active", false))
+		and str(offline_view.get("sessionId", "")) == "offline_ui_test"
+		and OfflineHangClientModel.duration_text(95) == "1 小时 35 分钟"
+		and OfflineHangClientModel.login_notice(offline_profile).find("内挂") >= 0
+	)
 
 	host.auto_settings_active_tab = "hang"
 	host._open_auto_settings_panel()
@@ -12930,8 +12948,36 @@ func _run_auto_hang_settings_check() -> void:
 		and host.auto_settings_hang_tab_button.button_pressed
 		and host.auto_settings_controls.has(HangSettingsModel.LOW_HP_STOP_PERCENT_KEY)
 		and host.auto_settings_controls.has("hangStartButton")
+		and host.auto_settings_controls.has("offlineHangStatusLabel")
+		and host.auto_settings_controls.has("offlineHangStartButton")
 		and not host.auto_settings_controls.has(AutoBattleSettingsModel.HEALING_ENABLED_KEY)
 	)
+	host._close_auto_settings_panel()
+
+	host.player_profile = PlayerProgressModel.normalize_profile(offline_profile)
+	host._open_auto_settings_panel()
+	await host.get_tree().process_frame
+	var active_panel_ok: bool = (
+		host.auto_settings_controls.has("offlineHangClaimButton")
+		and host.auto_settings_controls.has("offlineHangCancelButton")
+		and not host.auto_settings_controls.has("offlineHangStartButton")
+	)
+	var offline_screenshot_ok := true
+	var offline_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if offline_screenshot_path != "":
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(offline_screenshot_path)
+		offline_screenshot_ok = screenshot_error == OK
+		print("offline hang panel screenshot: status=%s path=%s" % ["ok" if offline_screenshot_ok else "failed", offline_screenshot_path])
+	host._panel_flow()._add_offline_hang_gm_config({
+		"rewardRatePercent": 50,
+		"maxMinutes": 480,
+		"battleIntervalSeconds": 30,
+		"minClaimMinutes": 5,
+	})
+	var gm_panel_ok: bool = host.auto_settings_controls.has("offlineHangGmSaveButton")
 	host._close_auto_settings_panel()
 
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
@@ -13089,12 +13135,15 @@ func _run_auto_hang_settings_check() -> void:
 		host.auth_auto_bypass = saved_auth_auto_bypass
 		host.world_log_message = saved_world_log_message
 
-	var status = "ok" if default_ok and custom_ok and panel_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok and battle_manual_stop_ok and party_member_hang_block else "failed"
-	print("hang settings check ready: status=%s default=%s custom=%s panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s battle_manual_stop=%s member_hang=%s hp=%d" % [
+	var status = "ok" if default_ok and custom_ok and offline_model_ok and panel_ok and active_panel_ok and gm_panel_ok and offline_screenshot_ok and zone_found and death_stop_ok and pet_ignored_ok and low_stop_ok and never_ok and manual_stop_ok and battle_manual_stop_ok and party_member_hang_block else "failed"
+	print("hang settings check ready: status=%s default=%s custom=%s offline=%s panel=%s active_panel=%s gm_panel=%s zone=%s death_stop=%s pet_ignored=%s low_stop=%s never=%s manual_stop=%s battle_manual_stop=%s member_hang=%s hp=%d" % [
 		status,
 		str(default_ok),
 		str(custom_ok),
+		str(offline_model_ok),
 		str(panel_ok),
+		str(active_panel_ok),
+		str(gm_panel_ok),
 		str(zone_found),
 		str(death_stop_ok),
 		str(pet_ignored_ok),
@@ -13105,6 +13154,7 @@ func _run_auto_hang_settings_check() -> void:
 		str(party_member_hang_block),
 		PlayerProgressModel.player_hp(host.player_profile),
 	])
+	host.current_account_session = original_account_session
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_quest_chain_check() -> void:

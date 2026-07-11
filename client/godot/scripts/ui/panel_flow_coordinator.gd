@@ -31,6 +31,7 @@ const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -67,7 +68,7 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
 const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
@@ -21155,7 +21156,8 @@ func _refresh_auto_battle_settings_tab() -> void:
 
 func _refresh_hang_settings_tab() -> void:
 	var settings = PlayerProgressModel.hang_settings(player_profile)
-	_add_auto_settings_section("挂机")
+	_add_offline_hang_settings_section()
+	_add_auto_settings_section("在线挂机")
 	_add_auto_settings_option(
 		"低血停止",
 		HangSettingsModel.LOW_HP_STOP_PERCENT_KEY,
@@ -21198,6 +21200,8 @@ func _refresh_hang_settings_tab() -> void:
 	auto_settings_controls["hangSaveButton"] = save_button
 	var start_button = Button.new()
 	start_button.text = "开始挂机"
+	start_button.disabled = OfflineHangClientModel.active_session(player_profile)
+	start_button.tooltip_text = "请先领取或取消离线收益。" if start_button.disabled else ""
 	start_button.custom_minimum_size = Vector2(0, 44)
 	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	start_button.pressed.connect(func() -> void:
@@ -21213,6 +21217,110 @@ func _refresh_hang_settings_tab() -> void:
 	close_button.pressed.connect(_close_auto_settings_panel)
 	button_row.add_child(close_button)
 	auto_settings_controls["hangCloseButton"] = close_button
+
+
+func _add_offline_hang_settings_section() -> void:
+	_add_auto_settings_section("离线修行")
+	var cached_status: Dictionary = host._cached_offline_hang_status()
+	var view := OfflineHangClientModel.view(player_profile, cached_status)
+	var status_label := Label.new()
+	status_label.text = "\n".join(view.get("lines", []))
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_settings_content.add_child(status_label)
+	auto_settings_controls["offlineHangStatusLabel"] = status_label
+
+	var action_row := HBoxContainer.new()
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_theme_constant_override("separation", 8)
+	auto_settings_content.add_child(action_row)
+	var refresh_button := Button.new()
+	refresh_button.text = "刷新累计"
+	refresh_button.custom_minimum_size = Vector2(0, 44)
+	refresh_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	refresh_button.pressed.connect(func() -> void:
+		await host._request_offline_hang_status(true)
+	)
+	action_row.add_child(refresh_button)
+	auto_settings_controls["offlineHangRefreshButton"] = refresh_button
+
+	if bool(view.get("active", false)):
+		var claim_button := Button.new()
+		claim_button.text = "领取收益"
+		claim_button.custom_minimum_size = Vector2(0, 44)
+		claim_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		claim_button.pressed.connect(func() -> void:
+			await host._submit_offline_hang_action("claim")
+		)
+		action_row.add_child(claim_button)
+		auto_settings_controls["offlineHangClaimButton"] = claim_button
+		var cancel_button := Button.new()
+		cancel_button.text = "取消离线"
+		cancel_button.custom_minimum_size = Vector2(0, 44)
+		cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cancel_button.pressed.connect(func() -> void:
+			await host._submit_offline_hang_action("cancel")
+		)
+		action_row.add_child(cancel_button)
+		auto_settings_controls["offlineHangCancelButton"] = cancel_button
+	else:
+		var start_offline_button := Button.new()
+		start_offline_button.text = "开始离线"
+		start_offline_button.custom_minimum_size = Vector2(0, 44)
+		start_offline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		start_offline_button.pressed.connect(func() -> void:
+			await host._submit_offline_hang_action("start")
+		)
+		action_row.add_child(start_offline_button)
+		auto_settings_controls["offlineHangStartButton"] = start_offline_button
+
+	if cached_status.is_empty() and host._server_hang_session_enabled():
+		host._request_offline_hang_status(false)
+	if GmToolRuntimeModel.session_can_open_tools(current_account_session) and host._server_hang_session_enabled():
+		_add_offline_hang_gm_config(cached_status.get("config", {}) as Dictionary if cached_status.get("config", {}) is Dictionary else {})
+
+
+func _add_offline_hang_gm_config(config: Dictionary) -> void:
+	_add_auto_settings_section("本服 GM 参数")
+	var ratio := _offline_hang_gm_spinbox("收益比例", float(config.get("rewardRatePercent", 50.0)), 0.0, 100.0, 1.0, "%")
+	var max_minutes := _offline_hang_gm_spinbox("累计封顶", float(config.get("maxMinutes", 480)), 60.0, 1440.0, 60.0, "分钟")
+	var interval := _offline_hang_gm_spinbox("在线场次基准", float(config.get("battleIntervalSeconds", 30)), 10.0, 300.0, 5.0, "秒")
+	var minimum := _offline_hang_gm_spinbox("最短领取", float(config.get("minClaimMinutes", 5)), 1.0, 60.0, 1.0, "分钟")
+	var save_button := Button.new()
+	save_button.text = "保存本服参数"
+	save_button.custom_minimum_size = Vector2(0, 44)
+	save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_button.pressed.connect(func() -> void:
+		await host._update_offline_hang_gm_config({
+			"rewardRateBps": int(round(ratio.value * 100.0)),
+			"maxMinutes": int(round(max_minutes.value)),
+			"battleIntervalSeconds": int(round(interval.value)),
+			"minClaimMinutes": int(round(minimum.value)),
+		})
+	)
+	auto_settings_content.add_child(save_button)
+	auto_settings_controls["offlineHangGmSaveButton"] = save_button
+
+
+func _offline_hang_gm_spinbox(label_text: String, value: float, minimum: float, maximum: float, step: float, suffix: String) -> SpinBox:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 8)
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(138, 0)
+	row.add_child(label)
+	var spinbox := SpinBox.new()
+	spinbox.min_value = minimum
+	spinbox.max_value = maximum
+	spinbox.step = step
+	spinbox.value = clampf(value, minimum, maximum)
+	spinbox.suffix = suffix
+	spinbox.custom_minimum_size = Vector2(180, 40)
+	spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spinbox)
+	auto_settings_content.add_child(row)
+	return spinbox
 
 func _refresh_auto_capture_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)

@@ -63,7 +63,7 @@ const AUTH_SERVER_ONLY := true
 const DEV_ENTRYPOINT_FEATURE := "beastbound_dev_tools"
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
@@ -12184,6 +12184,22 @@ func _request_server_hang_session_start(mode: String, cell: Vector2i, item_id: S
 
 func _request_server_hang_session_stop(reason: String = "manual", pending_resume: bool = false) -> void:
 	await _server_sync().request_server_hang_session_stop(reason, pending_resume)
+
+
+func _cached_offline_hang_status() -> Dictionary:
+	return _server_sync().cached_offline_hang_status()
+
+
+func _request_offline_hang_status(emit_message: bool = false) -> Dictionary:
+	return await _server_sync().request_offline_hang_status(emit_message)
+
+
+func _submit_offline_hang_action(action: String) -> Dictionary:
+	return await _server_sync().submit_offline_hang_action(action)
+
+
+func _update_offline_hang_gm_config(config: Dictionary) -> Dictionary:
+	return await _server_sync().update_offline_hang_gm_config(config)
 
 
 func _on_hang_button_pressed() -> void:

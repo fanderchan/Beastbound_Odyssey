@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
 const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
@@ -9,6 +10,9 @@ const AUTH_SERVER_ONLY := true
 const PROFILE_PULL_DEFER_TIMEOUT_SECONDS := 8.0
 
 var host
+var offline_hang_status_cache: Dictionary = {}
+var offline_hang_request_active: bool = false
+var offline_hang_notice_session_id: String = ""
 
 
 func _init(main_host = null) -> void:
@@ -279,6 +283,7 @@ func apply_server_profile_payload(parsed: Dictionary) -> bool:
 	var projected_profile := (projection.get("profile", {}) as Dictionary).duplicate(true)
 	var normalized_profile := PlayerProgressModel.normalize_profile(projected_profile)
 	host.player_profile = normalized_profile
+	_notify_pending_offline_hang_once(host.player_profile)
 	host._apply_auth_profile_metadata_fields(str(host.current_account_session.get("displayName", "")))
 	var summary = parsed.get("profileSummary", {})
 	if summary is Dictionary:
@@ -538,6 +543,110 @@ func request_server_hang_session_stop(reason: String = "manual", pending_resume:
 	var summary = parsed.get("profileSummary", {})
 	if summary is Dictionary:
 		apply_server_profile_summary(summary as Dictionary)
+
+
+func cached_offline_hang_status() -> Dictionary:
+	return offline_hang_status_cache.duplicate(true)
+
+
+func request_offline_hang_status(emit_message: bool = false) -> Dictionary:
+	if not server_hang_session_enabled():
+		return {"ok": false, "message": "请先登录服务器。"}
+	if offline_hang_request_active:
+		return {"ok": false, "message": "离线挂机同步中，请稍候。"}
+	offline_hang_request_active = true
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.offline_hang_status_request(
+		server_profile_base_url(),
+		server_profile_token()
+	))
+	offline_hang_request_active = false
+	var parsed := ServerAuthClientModel.parse_offline_hang_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		offline_hang_status_cache = {
+			"config": (parsed.get("config", {}) as Dictionary).duplicate(true) if parsed.get("config", {}) is Dictionary else {},
+			"offlineHang": (parsed.get("offlineHang", {}) as Dictionary).duplicate(true) if parsed.get("offlineHang", {}) is Dictionary else {},
+		}
+	elif handle_session_invalid_response(parsed):
+		return parsed
+	if emit_message:
+		host._set_world_log_message(ServerAuthClientModel.player_message_from_parsed(parsed, "离线挂机状态已刷新。"))
+	if host.auto_settings_panel != null and host.auto_settings_panel.visible:
+		host._refresh_auto_settings_panel()
+	return parsed
+
+
+func submit_offline_hang_action(action: String) -> Dictionary:
+	if not server_hang_session_enabled():
+		return {"ok": false, "message": "请先登录服务器。"}
+	if offline_hang_request_active:
+		return {"ok": false, "message": "离线挂机同步中，请稍候。"}
+	var normalized_action := action.strip_edges()
+	var spec := {}
+	match normalized_action:
+		"start":
+			spec = ServerAuthClientModel.offline_hang_start_request(server_profile_base_url(), server_profile_token(), host.current_map_id, host.player_cell)
+		"claim":
+			spec = ServerAuthClientModel.offline_hang_claim_request(
+				server_profile_base_url(),
+				server_profile_token(),
+				OfflineHangClientModel.active_session_id(host.player_profile)
+			)
+		"cancel":
+			spec = ServerAuthClientModel.offline_hang_cancel_request(server_profile_base_url(), server_profile_token())
+		_:
+			return {"ok": false, "message": "离线挂机操作不正确。"}
+	offline_hang_request_active = true
+	var response: Dictionary = await host._auto_http_request_spec(spec)
+	offline_hang_request_active = false
+	var parsed := ServerAuthClientModel.parse_offline_hang_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		apply_server_profile_payload(parsed)
+		offline_hang_status_cache = {
+			"config": (parsed.get("config", {}) as Dictionary).duplicate(true) if parsed.get("config", {}) is Dictionary else offline_hang_status_cache.get("config", {}),
+			"offlineHang": (parsed.get("offlineHang", {}) as Dictionary).duplicate(true) if parsed.get("offlineHang", {}) is Dictionary else {},
+		}
+		if normalized_action == "start":
+			host._stop_hang_activity("", true, false)
+	elif handle_session_invalid_response(parsed):
+		return parsed
+	host._set_world_log_message(ServerAuthClientModel.player_message_from_parsed(parsed, "离线挂机操作已完成。"))
+	if host.auto_settings_panel != null and host.auto_settings_panel.visible:
+		host._refresh_auto_settings_panel()
+	return parsed
+
+
+func update_offline_hang_gm_config(config: Dictionary) -> Dictionary:
+	if not server_hang_session_enabled():
+		return {"ok": false, "message": "请先登录服务器。"}
+	if offline_hang_request_active:
+		return {"ok": false, "message": "离线挂机同步中，请稍候。"}
+	offline_hang_request_active = true
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.gm_offline_hang_config_request(
+		server_profile_base_url(),
+		server_profile_token(),
+		config
+	))
+	offline_hang_request_active = false
+	var parsed := ServerAuthClientModel.parse_offline_hang_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
+	if bool(parsed.get("ok", false)):
+		offline_hang_status_cache["config"] = (parsed.get("config", {}) as Dictionary).duplicate(true) if parsed.get("config", {}) is Dictionary else {}
+	elif handle_session_invalid_response(parsed):
+		return parsed
+	host._set_world_log_message(ServerAuthClientModel.player_message_from_parsed(parsed, "离线挂机参数已更新。"))
+	if host.auto_settings_panel != null and host.auto_settings_panel.visible:
+		host._refresh_auto_settings_panel()
+	return parsed
+
+
+func _notify_pending_offline_hang_once(profile: Dictionary) -> void:
+	var session_id := OfflineHangClientModel.active_session_id(profile)
+	if session_id == "":
+		offline_hang_notice_session_id = ""
+		return
+	if session_id == offline_hang_notice_session_id:
+		return
+	offline_hang_notice_session_id = session_id
+	host._set_world_log_message(OfflineHangClientModel.login_notice(profile))
 
 
 func _packed_string_array(value) -> PackedStringArray:
