@@ -11,20 +11,37 @@ function clampRate(value) {
 
 function freezeStatusSourceCredit(actor) {
   const source = record(actor);
+  const kind = String(source.kind || "player");
+  const ridePetInstanceId = String(source.ridePetInstanceId || "");
+  const rawRidePetMaxHp = Number(source.ridePetMaxHp || 0);
+  const ridePetMaxHp = Math.max(0, Number.isFinite(rawRidePetMaxHp) ? Math.trunc(rawRidePetMaxHp) : 0);
+  const rawRidePetHp = Number(source.ridePetHp || 0);
+  const ridePetHp = Math.max(0, Math.min(ridePetMaxHp, Number.isFinite(rawRidePetHp) ? Math.trunc(rawRidePetHp) : 0));
+  const ridePetBattleState = String(source.ridePetBattleState || "");
   return Object.freeze({
     actorId: String(source.actorId || ""),
     accountId: String(source.accountId || ""),
     ownerAccountId: String(source.ownerAccountId || ""),
     partnerId: String(source.partnerId || ""),
-    kind: String(source.kind || "player"),
+    kind,
     petId: String(source.petId || ""),
     displayName: String(source.displayName || source.username || ""),
     username: String(source.username || ""),
     level: Math.max(1, Math.trunc(Number(source.level || 1))),
-    ridePetInstanceId: String(source.ridePetInstanceId || ""),
+    ridePetInstanceId,
     ridePetName: String(source.ridePetName || ""),
     ridePetLevel: Math.max(0, Math.trunc(Number(source.ridePetLevel || 0))),
-    ridePetMaxHp: Math.max(0, Math.trunc(Number(source.ridePetMaxHp || 0))),
+    ridePetHp,
+    ridePetMaxHp,
+    ridePetBattleState,
+    rideActiveAtApply: Boolean(
+      kind === "player" &&
+      ridePetInstanceId !== "" &&
+      ridePetMaxHp > 0 &&
+      ridePetHp > 0 &&
+      ridePetBattleState === "riding" &&
+      !Boolean(source.ridePetKnocked)
+    ),
   });
 }
 

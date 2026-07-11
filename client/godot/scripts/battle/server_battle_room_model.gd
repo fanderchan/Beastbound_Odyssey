@@ -321,20 +321,22 @@ static func _apply_server_ride_fields(actor: Dictionary, server_actor: Dictionar
 		return
 	var ride_max_hp := maxi(1, int(server_actor.get("ridePetMaxHp", 1)))
 	var ride_hp := clampi(int(server_actor.get("ridePetHp", ride_max_hp)), 0, ride_max_hp)
-	if ride_hp <= 0:
-		_clear_server_ride_fields(actor)
-		return
 	actor["ridePetInstanceId"] = ride_pet_id
 	actor["ridePetName"] = str(server_actor.get("ridePetName", "骑宠"))
 	actor["ridePetFormId"] = str(server_actor.get("ridePetFormId", ""))
 	actor["ridePetLevel"] = maxi(1, int(server_actor.get("ridePetLevel", 1)))
 	actor["ridePetHp"] = ride_hp
 	actor["ridePetMaxHp"] = ride_max_hp
-	actor["ridePetBattleState"] = str(server_actor.get("ridePetBattleState", "riding"))
+	actor["ridePetBattleState"] = str(server_actor.get("ridePetBattleState", BattleModel.PET_STATE_REST if ride_hp <= 0 else "riding"))
+	actor["ridePetKnocked"] = bool(server_actor.get("ridePetKnocked", server_actor.get("rideKnocked", ride_hp <= 0)))
+	if ride_hp > 0:
+		actor["ridePetKnocked"] = false
+		actor.erase("ridePetDamage")
+		actor.erase("ridePetHpBefore")
 
 
 static func _clear_server_ride_fields(actor: Dictionary) -> void:
-	for key in ["ridePetInstanceId", "ridePetName", "ridePetFormId", "ridePetLevel", "ridePetHp", "ridePetMaxHp", "ridePetBattleState"]:
+	for key in ["ridePetInstanceId", "ridePetName", "ridePetFormId", "ridePetLevel", "ridePetHp", "ridePetMaxHp", "ridePetBattleState", "ridePetKnocked", "ridePetDamage", "ridePetHpBefore"]:
 		actor.erase(key)
 
 
@@ -642,7 +644,7 @@ static func _dictionary_value(value) -> Dictionary:
 
 
 static func _with_server_status_replay_fields(local_event: Dictionary, state: Dictionary, server_event: Dictionary) -> Dictionary:
-	var next_event := local_event.duplicate(true)
+	var next_event := _with_server_ride_replay_fields(local_event, server_event)
 	for key in ["statusId", "statusResult", "fromTurns", "toTurns"]:
 		if server_event.has(key):
 			next_event[str(key)] = server_event.get(key)
@@ -663,6 +665,43 @@ static func _with_server_status_replay_fields(local_event: Dictionary, state: Di
 		next_event["serverSourceActorId"] = server_source_actor_id
 		next_event["sourceActorId"] = local_source_actor_id if local_source_actor_id != "" else server_source_actor_id
 	next_event["serverTargetFacts"] = _local_server_target_facts(state, server_event.get("targets", []))
+	return next_event
+
+
+static func _with_server_ride_replay_fields(local_event: Dictionary, server_event: Dictionary) -> Dictionary:
+	var next_event := local_event.duplicate(true)
+	var integer_fields := {
+		"actorDamage": "serverActorDamage",
+		"rideDamage": "serverRideDamage",
+		"rideHpBefore": "serverRideHpBefore",
+		"rideHpAfter": "serverRideHpAfter",
+		"attackAfter": "serverAttackAfter",
+		"defenseAfter": "serverDefenseAfter",
+		"speedAfter": "serverQuickAfter",
+		"actorAttackAfter": "serverAttackAfter",
+		"actorDefenseAfter": "serverDefenseAfter",
+		"actorSpeedAfter": "serverQuickAfter",
+	}
+	for source_key in integer_fields.keys():
+		if server_event.has(source_key):
+			next_event[str(integer_fields.get(source_key))] = int(server_event.get(source_key, 0))
+	var string_fields := {
+		"ridePetInstanceId": "serverRidePetInstanceId",
+		"ridePetName": "serverRidePetName",
+		"ridePetFormId": "serverRidePetFormId",
+		"ridePetBattleStateAfter": "serverRidePetBattleStateAfter",
+	}
+	for source_key in string_fields.keys():
+		if server_event.has(source_key):
+			next_event[str(string_fields.get(source_key))] = str(server_event.get(source_key, ""))
+	if server_event.has("ridePetLevel"):
+		next_event["serverRidePetLevel"] = int(server_event.get("ridePetLevel", 0))
+	if server_event.has("ridePetMaxHp"):
+		next_event["serverRidePetMaxHp"] = int(server_event.get("ridePetMaxHp", 0))
+	if server_event.has("ridePetKnocked") or server_event.has("rideKnocked"):
+		next_event["serverRidePetKnocked"] = bool(server_event.get("ridePetKnocked", server_event.get("rideKnocked", false)))
+	if server_event.has("rideActiveAfter"):
+		next_event["serverRideActiveAfter"] = bool(server_event.get("rideActiveAfter", false))
 	return next_event
 
 

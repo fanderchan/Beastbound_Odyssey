@@ -16,6 +16,7 @@ const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coo
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
 const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_battle_status_replay_check.gd")
+const ServerBattleRideReplayCheck := preload("res://scripts/battle/server_battle_ride_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
@@ -743,8 +744,8 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
-	var protocol_v5_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 5
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v5_ok else "failed"
+	var protocol_v6_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 6
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v6_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -8226,6 +8227,10 @@ func _run_auto_riding_system_check() -> void:
 		and int(damaged_player.get("ridePetHp", ride_hp_before)) == ride_hp_before - ride_damage
 		and int(damaged_player.get("hp", player_hp_before)) == player_hp_before - actor_damage
 	)
+	var odd_damage_state = BattleModel.apply_attack(battle_state.duplicate(true), "enemy_0", BattleModel.PLAYER_ACTOR_ID, 5)
+	var odd_ride_damage = int((odd_damage_state.get("lastRideDamagePerTarget", {}) as Dictionary).get(BattleModel.PLAYER_ACTOR_ID, -1))
+	var odd_actor_damage = int((odd_damage_state.get("lastActorDamagePerTarget", {}) as Dictionary).get(BattleModel.PLAYER_ACTOR_ID, -1))
+	var odd_damage_ok = odd_ride_damage == 3 and odd_actor_damage == 2 and odd_ride_damage + odd_actor_damage == 5
 	var sync_result = PlayerProgressModel.apply_battle_result(ride_profile, damaged_state, "escape")
 	var sync_profile = sync_result.get("profile", ride_profile) as Dictionary
 	var synced_ride_pet = PlayerProgressModel.pet_instance_by_id(sync_profile, "pet_ride_tiger_check")
@@ -8243,6 +8248,9 @@ func _run_auto_riding_system_check() -> void:
 	var mount_down_result = PlayerProgressModel.apply_battle_result(ride_profile, mount_down_state, "escape")
 	var mount_down_profile = mount_down_result.get("profile", ride_profile) as Dictionary
 	var mount_down_pet = PlayerProgressModel.pet_instance_by_id(mount_down_profile, "pet_ride_tiger_check")
+	var overflow_ride_damage = int((mount_down_state.get("lastRideDamagePerTarget", {}) as Dictionary).get(BattleModel.PLAYER_ACTOR_ID, -1))
+	var overflow_actor_damage = int((mount_down_state.get("lastActorDamagePerTarget", {}) as Dictionary).get(BattleModel.PLAYER_ACTOR_ID, -1))
+	var overflow_damage_ok = overflow_ride_damage == 1 and overflow_actor_damage == 39 and overflow_ride_damage + overflow_actor_damage == 40
 	var ride_knock_ok = (
 		int(mount_down_player.get("ridePetHp", -1)) == 0
 		and bool(mount_down_player.get("ridePetKnocked", false))
@@ -8257,8 +8265,8 @@ func _run_auto_riding_system_check() -> void:
 		and str(clear_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")) == ""
 		and str(PlayerProgressModel.pet_instance_by_id(clear_profile, "pet_ride_tiger_check").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 	)
-	var status = "ok" if no_ability_ok and mount_state_ok and standby_to_riding_ready and riding_to_battle_ready and cycle_to_battle_ok and party_excludes_mount and protection_ok and summary_formula_ok and battle_formula_ok and ride_damage_ok and ride_sync_ok and ride_knock_ok and clear_ok else "failed"
-	print("riding system check ready: status=%s no_ability=%s mount=%s standby_to_riding=%s riding_to_battle=%s cycle_battle=%s party=%s protect=%s formula=%s battle=%s ride_damage=%s ride_sync=%s ride_knock=%s clear=%s atk=%d def=%d quick=%d ride_hp=%d ride_damage_value=%d actor_damage=%d" % [
+	var status = "ok" if no_ability_ok and mount_state_ok and standby_to_riding_ready and riding_to_battle_ready and cycle_to_battle_ok and party_excludes_mount and protection_ok and summary_formula_ok and battle_formula_ok and ride_damage_ok and odd_damage_ok and overflow_damage_ok and ride_sync_ok and ride_knock_ok and clear_ok else "failed"
+	print("riding system check ready: status=%s no_ability=%s mount=%s standby_to_riding=%s riding_to_battle=%s cycle_battle=%s party=%s protect=%s formula=%s battle=%s ride_damage=%s odd_split=%s overflow=%s ride_sync=%s ride_knock=%s clear=%s atk=%d def=%d quick=%d ride_hp=%d ride_damage_value=%d actor_damage=%d" % [
 		status,
 		str(no_ability_ok),
 		str(mount_state_ok),
@@ -8270,6 +8278,8 @@ func _run_auto_riding_system_check() -> void:
 		str(summary_formula_ok),
 		str(battle_formula_ok),
 		str(ride_damage_ok),
+		str(odd_damage_ok),
+		str(overflow_damage_ok),
 		str(ride_sync_ok),
 		str(ride_knock_ok),
 		str(clear_ok),
@@ -15647,7 +15657,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 5
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 6
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -20446,6 +20456,36 @@ func _run_auto_server_battle_status_replay_check() -> void:
 	print("server battle status replay check ready: status=%s checks=%s" % [
 		"ok" if ok else "failed",
 		JSON.stringify(report.get("checks", {})),
+	])
+	host.get_tree().quit(0 if ok else 1)
+
+
+func _run_auto_server_battle_ride_replay_check() -> void:
+	var report := ServerBattleRideReplayCheck.run()
+	var checks := (report.get("checks", {}) as Dictionary).duplicate(true)
+	host.battle_state = BattleModel.create_stat_formula_test_battle({
+		"id": "server_ride_feedback_check",
+		"name": "骑宠分伤浮字检查",
+	})
+	host.battle_float_texts.clear()
+	host._add_battle_event_feedback({
+		"type": "attack",
+		"targetId": BattleModel.PLAYER_ACTOR_ID,
+	}, {
+		"resolvedTargetId": BattleModel.PLAYER_ACTOR_ID,
+		"damage": 11,
+		"actorDamagePerTarget": {BattleModel.PLAYER_ACTOR_ID: 5},
+		"rideDamagePerTarget": {BattleModel.PLAYER_ACTOR_ID: 6},
+	})
+	var feedback_texts: Array[String] = []
+	for value in host.battle_float_texts:
+		if value is Dictionary:
+			feedback_texts.append(str((value as Dictionary).get("text", "")))
+	checks["feedback_shows_split_without_total_double_count"] = feedback_texts == ["-5", "骑 -6"]
+	var ok := bool(report.get("ok", false)) and bool(checks.get("feedback_shows_split_without_total_double_count", false))
+	print("server battle ride replay check ready: status=%s checks=%s" % [
+		"ok" if ok else "failed",
+		JSON.stringify(checks),
 	])
 	host.get_tree().quit(0 if ok else 1)
 

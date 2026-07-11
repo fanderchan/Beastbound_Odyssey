@@ -827,6 +827,7 @@ var auto_server_battle_item_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
 var auto_server_battle_reaction_replay_check: bool = false
 var auto_server_battle_status_replay_check: bool = false
+var auto_server_battle_ride_replay_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
 var auto_server_solo_pve_live_check: bool = false
 var auto_server_party_pve_sync_live_check: bool = false
@@ -1272,6 +1273,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_reaction_replay_check")
 	elif auto_server_battle_status_replay_check:
 		call_deferred("_run_auto_server_battle_status_replay_check")
+	elif auto_server_battle_ride_replay_check:
+		call_deferred("_run_auto_server_battle_ride_replay_check")
 	elif auto_server_battle_stale_room_check:
 		call_deferred("_run_auto_server_battle_stale_room_check")
 	elif auto_server_solo_pve_live_check:
@@ -2160,6 +2163,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_reaction_replay_check = true
 		elif arg == "--auto-server-battle-status-replay-check":
 			auto_server_battle_status_replay_check = true
+		elif arg == "--auto-server-battle-ride-replay-check":
+			auto_server_battle_ride_replay_check = true
 		elif arg == "--auto-server-battle-stale-room-check":
 			auto_server_battle_stale_room_check = true
 		elif arg == "--auto-server-solo-pve-live-check":
@@ -4898,6 +4903,10 @@ func _run_auto_server_battle_reaction_replay_check() -> void:
 
 func _run_auto_server_battle_status_replay_check() -> void:
 	await _auto_checks()._run_auto_server_battle_status_replay_check()
+
+
+func _run_auto_server_battle_ride_replay_check() -> void:
+	await _auto_checks()._run_auto_server_battle_ride_replay_check()
 
 
 func _auto_fetch_server_profile_for_session(session: Dictionary) -> Dictionary:
@@ -10700,7 +10709,11 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 		var status_id := str(ledger.get("statusId", event.get("statusId", "")))
 		var tick_damage := int(ledger.get("damage", 0))
 		if status_id == BattleModel.STATUS_POISON and tick_damage > 0:
-			_add_battle_float_text(target_id, "毒 -%d" % tick_damage, Color(0.68, 0.95, 0.34, 0.98))
+			var tick_split := _battle_damage_split_for_ledger(ledger, target_id, tick_damage)
+			var tick_actor_damage := int(tick_split.get("actorDamage", tick_damage))
+			if tick_actor_damage > 0:
+				_add_battle_float_text(target_id, "毒 -%d" % tick_actor_damage, Color(0.68, 0.95, 0.34, 0.98))
+			_add_battle_ride_damage_feedback(target_id, int(tick_split.get("rideDamage", 0)))
 		return
 	if event_type == "status_skip":
 		var skip_status_id := str(ledger.get("statusId", event.get("statusId", "")))
@@ -10750,16 +10763,24 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 	if event_type == "spirit_poison":
 		var poison_damage := int(ledger.get("damage", 0))
 		if poison_damage > 0:
+			var poison_split := _battle_damage_split_for_ledger(ledger, target_id, poison_damage)
+			var poison_actor_damage := int(poison_split.get("actorDamage", poison_damage))
 			var poison_status_result := str(ledger.get("statusResult", ""))
-			var poison_text := "中毒 -%d" % poison_damage if poison_status_result == "applied" else (("免疫 -%d" % poison_damage) if poison_status_result == "immune" else "抵抗 -%d" % poison_damage)
-			_add_battle_float_text(target_id, poison_text, Color(0.72, 0.95, 0.36, 0.98))
+			if poison_actor_damage > 0:
+				var poison_text := "中毒 -%d" % poison_actor_damage if poison_status_result == "applied" else (("免疫 -%d" % poison_actor_damage) if poison_status_result == "immune" else "抵抗 -%d" % poison_actor_damage)
+				_add_battle_float_text(target_id, poison_text, Color(0.72, 0.95, 0.36, 0.98))
+			_add_battle_ride_damage_feedback(target_id, int(poison_split.get("rideDamage", 0)))
 		return
 	if event_type == "item_poison":
 		var item_poison_damage := int(ledger.get("damage", 0))
 		if item_poison_damage > 0:
+			var item_poison_split := _battle_damage_split_for_ledger(ledger, target_id, item_poison_damage)
+			var item_poison_actor_damage := int(item_poison_split.get("actorDamage", item_poison_damage))
 			var item_poison_status_result := str(ledger.get("statusResult", ""))
-			var item_poison_text := "毒粉 -%d" % item_poison_damage if item_poison_status_result == "applied" else (("免疫 -%d" % item_poison_damage) if item_poison_status_result == "immune" else "抵抗 -%d" % item_poison_damage)
-			_add_battle_float_text(target_id, item_poison_text, Color(0.80, 0.92, 0.34, 0.98))
+			if item_poison_actor_damage > 0:
+				var item_poison_text := "毒粉 -%d" % item_poison_actor_damage if item_poison_status_result == "applied" else (("免疫 -%d" % item_poison_actor_damage) if item_poison_status_result == "immune" else "抵抗 -%d" % item_poison_actor_damage)
+				_add_battle_float_text(target_id, item_poison_text, Color(0.80, 0.92, 0.34, 0.98))
+			_add_battle_ride_damage_feedback(target_id, int(item_poison_split.get("rideDamage", 0)))
 		return
 	if event_type == "spirit_poison_all":
 		var poison_effects := ledger.get("effectPerTarget", {}) as Dictionary
@@ -10767,9 +10788,14 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 		for poison_target_id in ledger.get("targetIds", []):
 			var poison_value := int(poison_effects.get(str(poison_target_id), 0))
 			if poison_value > 0:
+				var resolved_poison_target_id := str(poison_target_id)
+				var poison_split := _battle_damage_split_for_ledger(ledger, resolved_poison_target_id, poison_value)
+				var poison_actor_damage := int(poison_split.get("actorDamage", poison_value))
 				var poison_result := str(poison_results.get(str(poison_target_id), "applied"))
-				var poison_all_text := "中毒 -%d" % poison_value if poison_result == "applied" else (("免疫 -%d" % poison_value) if poison_result == "immune" else "抵抗 -%d" % poison_value)
-				_add_battle_float_text(str(poison_target_id), poison_all_text, Color(0.72, 0.95, 0.36, 0.98))
+				if poison_actor_damage > 0:
+					var poison_all_text := "中毒 -%d" % poison_actor_damage if poison_result == "applied" else (("免疫 -%d" % poison_actor_damage) if poison_result == "immune" else "抵抗 -%d" % poison_actor_damage)
+					_add_battle_float_text(resolved_poison_target_id, poison_all_text, Color(0.72, 0.95, 0.36, 0.98))
+				_add_battle_ride_damage_feedback(resolved_poison_target_id, int(poison_split.get("rideDamage", 0)))
 		return
 	if event_type == "item_poison_all":
 		var item_poison_effects := ledger.get("effectPerTarget", {}) as Dictionary
@@ -10777,9 +10803,14 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 		for item_poison_target_id in ledger.get("targetIds", []):
 			var item_poison_value := int(item_poison_effects.get(str(item_poison_target_id), 0))
 			if item_poison_value > 0:
+				var resolved_item_poison_target_id := str(item_poison_target_id)
+				var item_poison_split := _battle_damage_split_for_ledger(ledger, resolved_item_poison_target_id, item_poison_value)
+				var item_poison_actor_damage := int(item_poison_split.get("actorDamage", item_poison_value))
 				var item_poison_result := str(item_poison_results.get(str(item_poison_target_id), "applied"))
-				var item_poison_all_text := "毒粉 -%d" % item_poison_value if item_poison_result == "applied" else (("免疫 -%d" % item_poison_value) if item_poison_result == "immune" else "抵抗 -%d" % item_poison_value)
-				_add_battle_float_text(str(item_poison_target_id), item_poison_all_text, Color(0.80, 0.92, 0.34, 0.98))
+				if item_poison_actor_damage > 0:
+					var item_poison_all_text := "毒粉 -%d" % item_poison_actor_damage if item_poison_result == "applied" else (("免疫 -%d" % item_poison_actor_damage) if item_poison_result == "immune" else "抵抗 -%d" % item_poison_actor_damage)
+					_add_battle_float_text(resolved_item_poison_target_id, item_poison_all_text, Color(0.80, 0.92, 0.34, 0.98))
+				_add_battle_ride_damage_feedback(resolved_item_poison_target_id, int(item_poison_split.get("rideDamage", 0)))
 		return
 	if event_type == "multi_attack":
 		var multi_effects := ledger.get("effectPerTarget", {}) as Dictionary
@@ -10795,13 +10826,14 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 			var multi_damage := int(multi_effects.get(resolved_multi_target_id, 0))
 			if multi_damage <= 0:
 				continue
-			var multi_text := "-%d" % multi_damage
-			if bool(critical_map.get(resolved_multi_target_id, false)):
-				multi_text = "暴击 %s" % multi_text
-			_add_battle_float_text(resolved_multi_target_id, multi_text, Color(1.0, 0.82, 0.30, 0.98), multi_delay)
-			var ride_damage := int(multi_ride_effects.get(resolved_multi_target_id, 0))
-			if ride_damage > 0:
-				_add_battle_float_text(resolved_multi_target_id, "骑 -%d" % ride_damage, Color(0.50, 0.86, 1.0, 0.98), multi_delay + 0.10)
+			var multi_split := _battle_damage_split_for_ledger(ledger, resolved_multi_target_id, multi_damage)
+			var multi_actor_damage := int(multi_split.get("actorDamage", multi_damage))
+			if multi_actor_damage > 0:
+				var multi_text := "-%d" % multi_actor_damage
+				if bool(critical_map.get(resolved_multi_target_id, false)):
+					multi_text = "暴击 %s" % multi_text
+				_add_battle_float_text(resolved_multi_target_id, multi_text, Color(1.0, 0.82, 0.30, 0.98), multi_delay)
+			_add_battle_ride_damage_feedback(resolved_multi_target_id, int(multi_split.get("rideDamage", multi_ride_effects.get(resolved_multi_target_id, 0))), multi_delay + 0.10)
 		return
 	if event_type == "defend":
 		return
@@ -10812,23 +10844,39 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 	var damage := int(ledger.get("damage", 0))
 	if damage <= 0:
 		return
-	var text := "-%d" % damage
+	var damage_split := _battle_damage_split_for_ledger(ledger, target_id, damage)
+	var actor_damage := int(damage_split.get("actorDamage", damage))
+	var ride_damage := int(damage_split.get("rideDamage", 0))
 	var feedback_delay := _battle_event_duration(event) * _battle_event_result_reveal_progress(event) if _battle_event_delays_result(event) else 0.0
-	if bool(ledger.get("launch", false)):
-		text = "击飞 %s" % text
-	if event_type == "combo_attack":
-		text = "合击 %s" % text
-	elif event_type == "skill_attack":
-		text = "技能 %s" % text
-	elif event_type == "counter_attack":
-		text = "反击 %s" % text
-	if bool(ledger.get("critical", false)):
-		text = "暴击 %s" % text
-	_add_battle_float_text(target_id, text, Color(1.0, 0.82, 0.30, 0.98), feedback_delay)
-	var ride_damage_map := ledger.get("rideDamagePerTarget", {}) as Dictionary
-	var ride_damage := int(ride_damage_map.get(target_id, 0))
-	if ride_damage > 0:
-		_add_battle_float_text(target_id, "骑 -%d" % ride_damage, Color(0.50, 0.86, 1.0, 0.98), feedback_delay + 0.10)
+	if actor_damage > 0:
+		var text := "-%d" % actor_damage
+		if bool(ledger.get("launch", false)):
+			text = "击飞 %s" % text
+		if event_type == "combo_attack":
+			text = "合击 %s" % text
+		elif event_type == "skill_attack":
+			text = "技能 %s" % text
+		elif event_type == "counter_attack":
+			text = "反击 %s" % text
+		if bool(ledger.get("critical", false)):
+			text = "暴击 %s" % text
+		_add_battle_float_text(target_id, text, Color(1.0, 0.82, 0.30, 0.98), feedback_delay)
+	_add_battle_ride_damage_feedback(target_id, ride_damage, feedback_delay + 0.10)
+
+
+func _battle_damage_split_for_ledger(ledger: Dictionary, target_id: String, total_damage: int) -> Dictionary:
+	var actor_damage_map := ledger.get("actorDamagePerTarget", {}) as Dictionary if ledger.get("actorDamagePerTarget", {}) is Dictionary else {}
+	var ride_damage_map := ledger.get("rideDamagePerTarget", {}) as Dictionary if ledger.get("rideDamagePerTarget", {}) is Dictionary else {}
+	return {
+		"actorDamage": maxi(0, int(actor_damage_map.get(target_id, total_damage))),
+		"rideDamage": maxi(0, int(ride_damage_map.get(target_id, 0))),
+	}
+
+
+func _add_battle_ride_damage_feedback(actor_id: String, ride_damage: int, delay: float = 0.10) -> void:
+	if ride_damage <= 0:
+		return
+	_add_battle_float_text(actor_id, "骑 -%d" % ride_damage, Color(0.50, 0.86, 1.0, 0.98), delay)
 
 
 func _add_battle_float_text(actor_id: String, text: String, color: Color, delay: float = 0.0) -> void:

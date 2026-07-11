@@ -1803,6 +1803,11 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastHeal"] = 0
 	state["lastTargetIds"] = []
 	state["lastEffectPerTarget"] = {}
+	state["lastActorDamagePerTarget"] = {}
+	state["lastRideDamagePerTarget"] = {}
+	state["lastRideHpBeforePerTarget"] = {}
+	state["lastRideHpAfterPerTarget"] = {}
+	state["lastRideKnockedPerTarget"] = {}
 	state["lastCaptureSuccess"] = false
 	state["lastCaptureToolId"] = CAPTURE_TOOL_EMPTY_HAND
 	state["lastCaptureChance"] = -1.0
@@ -2022,6 +2027,94 @@ static func _apply_server_item_count_if_owned(state: Dictionary, event: Dictiona
 	return state
 
 
+static func _server_fact_has_any(facts: Dictionary, keys: Array[String]) -> bool:
+	for key in keys:
+		if facts.has(key):
+			return true
+	return false
+
+
+static func _server_fact_value(facts: Dictionary, keys: Array[String], fallback):
+	for key in keys:
+		if facts.has(key):
+			return facts.get(key)
+	return fallback
+
+
+static func _actor_with_server_ride_result(actor: Dictionary, facts: Dictionary, total_damage: int) -> Dictionary:
+	var next_actor := actor.duplicate(true)
+	var actor_damage := maxi(0, int(_server_fact_value(facts, ["serverActorDamage", "actorDamage"], total_damage)))
+	var ride_damage := maxi(0, int(_server_fact_value(facts, ["serverRideDamage", "rideDamage"], 0)))
+	var ride_hp_before := maxi(0, int(_server_fact_value(
+		facts,
+		["serverRideHpBefore", "rideHpBefore"],
+		next_actor.get("ridePetHp", 0)
+	)))
+	var ride_hp_after := maxi(0, int(_server_fact_value(
+		facts,
+		["serverRideHpAfter", "rideHpAfter"],
+		next_actor.get("ridePetHp", ride_hp_before)
+	)))
+	var ride_pet_id := str(_server_fact_value(
+		facts,
+		["serverRidePetInstanceId", "ridePetInstanceId"],
+		next_actor.get("ridePetInstanceId", "")
+	)).strip_edges()
+	if ride_pet_id != "":
+		next_actor["ridePetInstanceId"] = ride_pet_id
+	if _server_fact_has_any(facts, ["serverRidePetName", "ridePetName"]):
+		next_actor["ridePetName"] = str(_server_fact_value(facts, ["serverRidePetName", "ridePetName"], "骑宠"))
+	if _server_fact_has_any(facts, ["serverRidePetFormId", "ridePetFormId"]):
+		next_actor["ridePetFormId"] = str(_server_fact_value(facts, ["serverRidePetFormId", "ridePetFormId"], ""))
+	if _server_fact_has_any(facts, ["serverRidePetLevel", "ridePetLevel"]):
+		next_actor["ridePetLevel"] = maxi(1, int(_server_fact_value(facts, ["serverRidePetLevel", "ridePetLevel"], 1)))
+	if _server_fact_has_any(facts, ["serverRidePetMaxHp", "ridePetMaxHp"]):
+		next_actor["ridePetMaxHp"] = maxi(0, int(_server_fact_value(facts, ["serverRidePetMaxHp", "ridePetMaxHp"], 0)))
+	var has_ride_hp_result := _server_fact_has_any(facts, ["serverRideHpBefore", "rideHpBefore", "serverRideHpAfter", "rideHpAfter"])
+	if has_ride_hp_result:
+		var ride_max_hp := maxi(ride_hp_before, maxi(ride_hp_after, int(next_actor.get("ridePetMaxHp", 0))))
+		if ride_max_hp > 0:
+			next_actor["ridePetMaxHp"] = ride_max_hp
+		next_actor["ridePetHpBefore"] = ride_hp_before
+		next_actor["ridePetHp"] = mini(ride_hp_after, ride_max_hp) if ride_max_hp > 0 else ride_hp_after
+		next_actor["ridePetDamage"] = ride_damage
+	var ride_knocked := bool(_server_fact_value(
+		facts,
+		["serverRidePetKnocked", "ridePetKnocked", "rideKnocked"],
+		next_actor.get("ridePetKnocked", false)
+	))
+	if _server_fact_has_any(facts, ["serverRidePetKnocked", "ridePetKnocked", "rideKnocked"]):
+		next_actor["ridePetKnocked"] = ride_knocked
+	var ride_state_after := str(_server_fact_value(
+		facts,
+		["serverRidePetBattleStateAfter", "ridePetBattleStateAfter"],
+		""
+	)).strip_edges()
+	if ride_state_after != "":
+		next_actor["ridePetBattleState"] = ride_state_after
+	elif ride_knocked:
+		next_actor["ridePetBattleState"] = PET_STATE_REST
+	for stat_entry in [
+		["attack", ["serverAttackAfter", "attackAfter", "actorAttackAfter"]],
+		["defense", ["serverDefenseAfter", "defenseAfter", "actorDefenseAfter"]],
+		["quick", ["serverQuickAfter", "speedAfter", "actorSpeedAfter"]],
+	]:
+		var stat_key := str(stat_entry[0])
+		var fact_keys: Array[String] = []
+		for fact_key in stat_entry[1]:
+			fact_keys.append(str(fact_key))
+		if _server_fact_has_any(facts, fact_keys):
+			next_actor[stat_key] = maxi(1, int(_server_fact_value(facts, fact_keys, next_actor.get(stat_key, 1))))
+	return {
+		"actor": next_actor,
+		"actorDamage": actor_damage,
+		"rideDamage": ride_damage,
+		"rideHpBefore": ride_hp_before,
+		"rideHpAfter": ride_hp_after,
+		"ridePetKnocked": ride_knocked,
+	}
+
+
 static func _apply_server_resolved_status_tick_event(state: Dictionary, event: Dictionary) -> Dictionary:
 	var target_id := str(event.get("targetId", ""))
 	var actors: Array = state.get("actors", [])
@@ -2031,6 +2124,10 @@ static func _apply_server_resolved_status_tick_event(state: Dictionary, event: D
 	var target := actors[target_index] as Dictionary
 	var damage := maxi(0, int(event.get("damage", 0)))
 	var hp_after := maxi(0, int(event.get("serverHpAfter", target.get("hp", 0))))
+	var ride_result := _actor_with_server_ride_result(target, event, damage)
+	target = ride_result.get("actor", target) as Dictionary
+	var actor_damage := maxi(0, int(ride_result.get("actorDamage", damage)))
+	var ride_damage := maxi(0, int(ride_result.get("rideDamage", 0)))
 	target["hp"] = hp_after
 	target = _actor_with_server_status_after(target, event, target_id)
 	target["actionState"] = "down" if hp_after <= 0 else "hit"
@@ -2046,16 +2143,20 @@ static func _apply_server_resolved_status_tick_event(state: Dictionary, event: D
 	state["lastTargetIds"] = [target_id]
 	state["lastDamage"] = damage
 	state["lastEffectPerTarget"] = {target_id: damage}
-	state["lastActorDamagePerTarget"] = {target_id: damage}
-	state["lastRideDamagePerTarget"] = {target_id: 0}
+	state["lastActorDamagePerTarget"] = {target_id: actor_damage}
+	state["lastRideDamagePerTarget"] = {target_id: ride_damage}
+	state["lastRideHpBeforePerTarget"] = {target_id: int(ride_result.get("rideHpBefore", 0))}
+	state["lastRideHpAfterPerTarget"] = {target_id: int(ride_result.get("rideHpAfter", 0))}
+	state["lastRideKnockedPerTarget"] = {target_id: bool(ride_result.get("ridePetKnocked", false))}
 	state["lastParticipants"] = [str(event.get("sourceActorId", event.get("attackerId", target_id)))]
 	state["lastStatusId"] = str(event.get("statusId", STATUS_POISON))
 	state["lastStatusResult"] = str(event.get("statusResult", "tick"))
 	state["lastStatusChanges"] = _server_status_changes(event)
-	state["message"] = "%s 因%s受到 %d 点伤害。" % [
+	state["message"] = "%s 因%s受到 %d 点伤害%s。" % [
 		str(target.get("name", "目标")),
 		BattleStatusModel.status_label(str(event.get("statusId", STATUS_POISON))),
 		damage,
+		_ride_damage_message_suffix(target, ride_damage, actor_damage),
 	]
 	if hp_after <= 0:
 		state["message"] += " %s 倒下了。" % str(target.get("name", "目标"))
@@ -2161,16 +2262,40 @@ static func _apply_server_resolved_poison_event(state: Dictionary, event: Dictio
 	actors[attacker_index] = attacker
 	var target_facts: Array = event.get("serverTargetFacts", []) if event.get("serverTargetFacts", []) is Array else []
 	if target_facts.is_empty() and str(event.get("targetId", "")) != "":
-		target_facts = [{
+		var fallback_fact := {
 			"targetId": str(event.get("targetId", "")),
 			"hpBefore": int(event.get("serverHpBefore", 0)),
 			"hpAfter": int(event.get("serverHpAfter", 0)),
 			"damage": int(event.get("damage", 0)),
 			"defeated": bool(event.get("serverDefeated", false)),
 			"statusResult": str(event.get("statusResult", event.get("forcedStatusResult", ""))),
-		}]
+		}
+		for ride_key in [
+			"serverActorDamage",
+			"serverRideDamage",
+			"serverRideHpBefore",
+			"serverRideHpAfter",
+			"serverRidePetInstanceId",
+			"serverRidePetName",
+			"serverRidePetFormId",
+			"serverRidePetLevel",
+			"serverRidePetMaxHp",
+			"serverRidePetBattleStateAfter",
+			"serverRidePetKnocked",
+			"serverAttackAfter",
+			"serverDefenseAfter",
+			"serverQuickAfter",
+		]:
+			if event.has(ride_key):
+				fallback_fact[ride_key] = event.get(ride_key)
+		target_facts = [fallback_fact]
 	var target_ids: Array[String] = []
 	var effect_per_target := {}
+	var actor_damage_per_target := {}
+	var ride_damage_per_target := {}
+	var ride_hp_before_per_target := {}
+	var ride_hp_after_per_target := {}
+	var ride_knocked_per_target := {}
 	var status_result_per_target := {}
 	var total_damage := 0
 	for value in target_facts:
@@ -2184,6 +2309,8 @@ static func _apply_server_resolved_poison_event(state: Dictionary, event: Dictio
 		var target := actors[target_index] as Dictionary
 		var damage := maxi(0, int(fact.get("damage", event.get("damage", 0))))
 		var hp_after := maxi(0, int(fact.get("hpAfter", target.get("hp", 0))))
+		var ride_result := _actor_with_server_ride_result(target, fact, damage)
+		target = ride_result.get("actor", target) as Dictionary
 		target["hp"] = hp_after
 		target = _actor_with_server_status_after(target, event, target_id)
 		target["actionState"] = "down" if hp_after <= 0 else "hit"
@@ -2191,6 +2318,11 @@ static func _apply_server_resolved_poison_event(state: Dictionary, event: Dictio
 		actors[target_index] = target
 		target_ids.append(target_id)
 		effect_per_target[target_id] = damage
+		actor_damage_per_target[target_id] = maxi(0, int(ride_result.get("actorDamage", damage)))
+		ride_damage_per_target[target_id] = maxi(0, int(ride_result.get("rideDamage", 0)))
+		ride_hp_before_per_target[target_id] = maxi(0, int(ride_result.get("rideHpBefore", 0)))
+		ride_hp_after_per_target[target_id] = maxi(0, int(ride_result.get("rideHpAfter", 0)))
+		ride_knocked_per_target[target_id] = bool(ride_result.get("ridePetKnocked", false))
 		status_result_per_target[target_id] = str(fact.get("statusResult", ""))
 		total_damage += damage
 	state["actors"] = actors
@@ -2206,8 +2338,11 @@ static func _apply_server_resolved_poison_event(state: Dictionary, event: Dictio
 	state["lastTargetIds"] = target_ids
 	state["lastDamage"] = total_damage
 	state["lastEffectPerTarget"] = effect_per_target
-	state["lastActorDamagePerTarget"] = effect_per_target.duplicate(true)
-	state["lastRideDamagePerTarget"] = {}
+	state["lastActorDamagePerTarget"] = actor_damage_per_target
+	state["lastRideDamagePerTarget"] = ride_damage_per_target
+	state["lastRideHpBeforePerTarget"] = ride_hp_before_per_target
+	state["lastRideHpAfterPerTarget"] = ride_hp_after_per_target
+	state["lastRideKnockedPerTarget"] = ride_knocked_per_target
 	state["lastParticipants"] = [attacker_id]
 	state["lastStatusId"] = str(event.get("statusId", STATUS_POISON))
 	state["lastStatusResult"] = str(event.get("statusResult", event.get("forcedStatusResult", "")))
@@ -2554,6 +2689,10 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	var critical := bool(event.get("critical", false)) and not dodged
 	var damage := 0 if dodged else maxi(0, int(event.get("damage", 0)))
 	var launched := bool(event.get("serverLaunched", event.get("launched", false))) and not dodged
+	var ride_result := _actor_with_server_ride_result(target, event, damage)
+	target = ride_result.get("actor", target) as Dictionary
+	var actor_damage := maxi(0, int(ride_result.get("actorDamage", damage)))
+	var ride_damage := maxi(0, int(ride_result.get("rideDamage", 0)))
 	target["hp"] = hp_after
 	target = _actor_with_server_status_after(target, event, target_id)
 	target["launched"] = launched
@@ -2586,8 +2725,11 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	state["lastTargetIds"] = [target_id]
 	state["lastDamage"] = damage
 	state["lastEffectPerTarget"] = {target_id: damage}
-	state["lastActorDamagePerTarget"] = {target_id: damage}
-	state["lastRideDamagePerTarget"] = {target_id: 0}
+	state["lastActorDamagePerTarget"] = {target_id: actor_damage}
+	state["lastRideDamagePerTarget"] = {target_id: ride_damage}
+	state["lastRideHpBeforePerTarget"] = {target_id: int(ride_result.get("rideHpBefore", 0))}
+	state["lastRideHpAfterPerTarget"] = {target_id: int(ride_result.get("rideHpAfter", 0))}
+	state["lastRideKnockedPerTarget"] = {target_id: bool(ride_result.get("ridePetKnocked", false))}
 	state["lastParticipants"] = participant_ids
 	state["lastLaunch"] = launched
 	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
@@ -2606,6 +2748,7 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 
 	var attacker_name := str(attacker.get("name", "我方"))
 	var target_name := str(target.get("name", "目标"))
+	var ride_message_suffix := _ride_damage_message_suffix(target, ride_damage, actor_damage)
 	if dodged:
 		if event_type == "counter_attack":
 			state["message"] = "%s 反击 %s，%s 回避了。" % [attacker_name, target_name, target_name]
@@ -2620,13 +2763,13 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 				var participant_actor := actor_by_id(state, participant_id)
 				if not participant_actor.is_empty():
 					participant_names.append(str(participant_actor.get("name", "我方")))
-			state["message"] = "%s 合击了 %s，造成 %d 点伤害。" % ["、".join(participant_names), target_name, damage]
+			state["message"] = "%s 合击了 %s，造成 %d 点伤害%s。" % ["、".join(participant_names), target_name, damage, ride_message_suffix]
 		elif event_type == "skill_attack":
-			state["message"] = "%s 使用%s，造成 %d 点伤害。" % [attacker_name, str(event.get("skillName", "技能")), damage]
+			state["message"] = "%s 使用%s，造成 %d 点伤害%s。" % [attacker_name, str(event.get("skillName", "技能")), damage, ride_message_suffix]
 		elif event_type == "counter_attack":
-			state["message"] = "%s 反击了 %s，造成 %d 点伤害。" % [attacker_name, target_name, damage]
+			state["message"] = "%s 反击了 %s，造成 %d 点伤害%s。" % [attacker_name, target_name, damage, ride_message_suffix]
 		else:
-			state["message"] = "%s 攻击了 %s，造成 %d 点伤害。" % [attacker_name, target_name, damage]
+			state["message"] = "%s 攻击了 %s，造成 %d 点伤害%s。" % [attacker_name, target_name, damage, ride_message_suffix]
 		if critical:
 			state["message"] += " 触发幸运一击。"
 		if launched:
@@ -2953,9 +3096,6 @@ static func _apply_ride_damage_share(actor: Dictionary, damage: int) -> Dictiona
 	var mount_share := clampi(int(round(float(total_damage) * RIDE_DAMAGE_TO_MOUNT_RATIO)), 1, total_damage)
 	var mount_damage := mini(ride_hp_before, mount_share)
 	var actor_damage := total_damage - mount_damage
-	var overflow := mount_share - mount_damage
-	if overflow > 0:
-		actor_damage += overflow
 	var ride_hp_after := maxi(0, ride_hp_before - mount_damage)
 	target["ridePetHp"] = ride_hp_after
 	target["ridePetDamage"] = mount_damage

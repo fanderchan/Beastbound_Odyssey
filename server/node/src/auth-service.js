@@ -39,6 +39,11 @@ const {
   statusSourceActor,
 } = require("./auth/battle-status-rules");
 const {
+  activeRideFacts,
+  resolveRideDamageShare,
+  resolveRidingBattleStats,
+} = require("./auth/battle-riding-rules");
+const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
 } = require("./auth/pet-skill-loadout");
@@ -187,7 +192,7 @@ const BATTLE_DEFEND_REDUCTION = 8;
 const BATTLE_PLAYER_COMBO_BASE_RATE = 0.50;
 const BATTLE_MONSTER_COMBO_BASE_RATE = 0.20;
 const BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR = 8;
-const BATTLE_EVENT_CONTRACT_VERSION = 2;
+const BATTLE_EVENT_CONTRACT_VERSION = 3;
 const BATTLE_TARGET_RULE_SLOT_ORDER = "slot_order";
 const BATTLE_TARGET_RULE_REVERSE_SLOT_ORDER = "reverse_slot_order";
 const BATTLE_TARGET_RULE_WILD_RANDOM = "wild_random";
@@ -3365,6 +3370,7 @@ function publicBattleProfileWritebackEntry(entry) {
     accountId: String(entry.accountId || ""),
     profileRevision: Number(entry.profileRevision || 0),
     playerHp: entry.playerHp && typeof entry.playerHp === "object" ? clone(entry.playerHp) : null,
+    ridePetHp: entry.ridePetHp && typeof entry.ridePetHp === "object" ? clone(entry.ridePetHp) : null,
     petHps: Array.isArray(entry.petHps) ? clone(entry.petHps) : [],
     battleItemBag: entry.battleItemBag && typeof entry.battleItemBag === "object" ? clone(entry.battleItemBag) : null,
     captureToolBag: entry.captureToolBag && typeof entry.captureToolBag === "object" ? clone(entry.captureToolBag) : null,
@@ -3440,6 +3446,11 @@ function publicBattleActor(actor) {
     ridePetHp: Number(actor.ridePetHp || 0),
     ridePetMaxHp: Number(actor.ridePetMaxHp || 0),
     ridePetBattleState: String(actor.ridePetBattleState || ""),
+    ridePetKnocked: Boolean(actor.ridePetKnocked),
+    rideBaseStats: actor.rideBaseStats && typeof actor.rideBaseStats === "object" && !Array.isArray(actor.rideBaseStats)
+      ? clone(actor.rideBaseStats)
+      : {},
+    rideAttackStyle: String(actor.rideAttackStyle || ""),
     hp: Number(actor.hp || 0),
     maxHp: Number(actor.maxHp || BATTLE_ACTOR_MAX_HP),
     speed: Number(actor.speed || 0),
@@ -5343,20 +5354,63 @@ function battlePlayerSnapshotFromProfile(profile, account) {
   const baseStats = player.baseStats && typeof player.baseStats === "object" ? player.baseStats : {};
   const maxHp = positiveNumber(player.maxHp, positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp));
   const ride = ridingPetSnapshotFromProfile(profile);
+  const rideBaseStats = {
+    attack: positiveNumber(baseStats.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
+    defense: positiveNumber(baseStats.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    quick: positiveNumber(baseStats.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+  };
+  const rideAttackStyle = ridingAttackStyleFromProfile(profile);
+  const ridingStats = String(ride.ridePetInstanceId || "") !== ""
+    ? resolveRidingBattleStats(rideBaseStats, {
+      attack: ride.ridePetAttack,
+      defense: ride.ridePetDefense,
+      quick: ride.ridePetQuick,
+    }, rideAttackStyle)
+    : {...rideBaseStats, speed: rideBaseStats.quick};
   return {
     kind: BATTLE_ACTOR_KIND_PLAYER,
     name: String(player.name || account.displayName || account.username || "猎人"),
     level: positiveNumber(player.level, 1),
     hp: clampNumber(player.hp, 1, maxHp, maxHp),
     maxHp,
-    attack: positiveNumber(baseStats.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
-    defense: positiveNumber(baseStats.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
-    quick: positiveNumber(baseStats.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+    attack: ridingStats.attack,
+    defense: ridingStats.defense,
+    quick: ridingStats.quick,
+    rideBaseStats,
+    rideAttackStyle: String(ride.ridePetInstanceId || "") !== "" ? rideAttackStyle : "",
     ...ride,
     spiritIds: equipmentSpiritIdsFromProfile(profile),
     comboRateOverride: battleComboRateOverrideValue(player.comboRateOverride),
     schemaVersion: 1,
   };
+}
+
+function ridingAttackStyleFromProfile(profile) {
+  const slots = equipmentSlotsFromProfile(profile);
+  const durability = equipmentDurabilityFromProfile(profile);
+  const player = profile && profile.player && typeof profile.player === "object" && !Array.isArray(profile.player)
+    ? profile.player
+    : {};
+  const playerLevel = Math.max(1, Math.trunc(Number(player.level || 1)));
+  const playerRebirth = Math.max(0, Math.trunc(Number(profile && profile.rebirthCount || 0)));
+  for (const slotId of ["right_hand_weapon", "left_hand_weapon"]) {
+    const itemId = String(slots[slotId] || "").trim();
+    if (
+      itemId === "" ||
+      equipmentSlotIsBroken(slotId, itemId, durability)
+    ) {
+      continue;
+    }
+    const item = equipmentItemById(itemId);
+    if (!equipmentItemMeetsRequirements(item, playerLevel, playerRebirth)) {
+      continue;
+    }
+    const actionId = String(item && item.attackActionId || "").trim().toLowerCase();
+    if (actionId !== "" && battleActionById(actionId) && (actionId.includes("bow") || actionId.includes("shot") || actionId.includes("throw"))) {
+      return "ranged";
+    }
+  }
+  return "melee";
 }
 
 function ridingPetSnapshotFromProfile(profile) {
@@ -5401,6 +5455,9 @@ function ridingPetSnapshotFromProfile(profile) {
     ridePetHp: hp,
     ridePetMaxHp: maxHp,
     ridePetBattleState: BATTLE_PET_STATE_RIDING,
+    ridePetAttack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
+    ridePetDefense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    ridePetQuick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
   };
 }
 
@@ -6132,6 +6189,11 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
   if (!room.departedParticipantsByAccountId || typeof room.departedParticipantsByAccountId !== "object" || Array.isArray(room.departedParticipantsByAccountId)) {
     room.departedParticipantsByAccountId = {};
   }
+  for (const actor of actors) {
+    if (battleActorBelongsToAnyAccount(actor, removedSet)) {
+      syncParticipantBattleActorSnapshot(room, actor);
+    }
+  }
   for (const participant of Array.isArray(room.participants) ? room.participants : []) {
     const participantAccountId = String(participant && participant.accountId || "");
     if (removedSet.has(participantAccountId)) {
@@ -6622,6 +6684,18 @@ function battleActorRideFieldsFromPlayerSnapshot(player) {
     ridePetHp,
     ridePetMaxHp,
     ridePetBattleState: String(player.ridePetBattleState || BATTLE_PET_STATE_RIDING),
+    ridePetKnocked: false,
+    ridePetAttack: positiveNumber(player.ridePetAttack, DEFAULT_PET_BATTLE_STATS.attack),
+    ridePetDefense: positiveNumber(player.ridePetDefense, DEFAULT_PET_BATTLE_STATS.defense),
+    ridePetQuick: positiveNumber(player.ridePetQuick, DEFAULT_PET_BATTLE_STATS.quick),
+    rideBaseStats: player.rideBaseStats && typeof player.rideBaseStats === "object" && !Array.isArray(player.rideBaseStats)
+      ? clone(player.rideBaseStats)
+      : {
+        attack: positiveNumber(player.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
+        defense: positiveNumber(player.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+        quick: positiveNumber(player.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+      },
+    rideAttackStyle: String(player.rideAttackStyle || "melee"),
   };
 }
 
@@ -7589,15 +7663,13 @@ function battleRoundEndPoisonEvents(room, battle, round, sequence, now) {
     const sourceActor = statusSourceActor(status);
     const hpBefore = Math.max(0, Math.trunc(Number(target.hp || 0)));
     const damage = Math.max(1, Math.trunc(Number(statusBefore.potency || 0)));
-    const hpAfter = Math.max(0, hpBefore - damage);
-    target.hp = hpAfter;
-    target.defeated = hpAfter <= 0;
-    target.actionState = hpAfter <= 0 ? "down" : "hit";
-    target.launched = false;
-    target.revivable = true;
-    delete target.launchHpBefore;
+    const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
+      shareWithRide: false,
+      canLaunch: false,
+    });
+    const hpAfter = damageResult.hpAfter;
     const turns = battleDecrementActorStatus(target, BATTLE_STATUS_POISON);
-    syncParticipantPetSnapshotHp(room, target);
+    syncParticipantBattleActorSnapshot(room, target);
     const expCredits = sourceActor
       ? battleExpCreditsForDefeat(room, battle, sourceActor, target, hpBefore, hpAfter)
       : [];
@@ -7633,6 +7705,7 @@ function battleRoundEndPoisonEvents(room, battle, round, sequence, now) {
         schemaVersion: 1,
       }],
       damage,
+      ...battleDamageEventFields(damageResult),
       hpBefore,
       hpAfter,
       defeated: hpAfter <= 0,
@@ -7791,12 +7864,13 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     baseDamage: resolved.damage,
   });
   const hpBefore = Number(resolved.target.hp || 0);
-  const hpAfter = Math.max(0, hpBefore - reaction.damage);
-  const launched = reaction.dodged
-    ? applyBattleActorDodgeResult(room, resolved.target)
-    : applyBattleActorDamageResult(room, resolved.target, hpBefore, hpAfter, reaction.damage, {
-      canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
-    });
+  const damageResult = applyBattleActorResolvedDamage(room, resolved.target, hpBefore, reaction.damage, {
+    dodged: reaction.dodged,
+    shareWithRide: true,
+    canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+  });
+  const hpAfter = damageResult.hpAfter;
+  const launched = damageResult.launched;
   const statusChanges = battleWakeFromDirectDamage(resolved.target, reaction.damage, reaction.dodged);
   syncParticipantPetSnapshotHp(room, resolved.target);
   const expCredits = battleExpCreditsForDefeat(room, battle, resolved.actor, resolved.target, hpBefore, hpAfter);
@@ -7814,7 +7888,7 @@ function battleSingleAttackEvents(room, battle, resolved, round, sequence, optio
     reaction.damage,
     expCredits,
     launched,
-    {...reaction, statusChanges},
+    {...reaction, statusChanges, damageResult},
   );
   const events = [attackEvent];
   const counterTriggered = resolveCounterTrigger({
@@ -7877,12 +7951,13 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     baseDamage: counterDamageFor(normalAttackDamage),
   });
   const hpBefore = Number(target.hp || 0);
-  const hpAfter = Math.max(0, hpBefore - reaction.damage);
-  const launched = reaction.dodged
-    ? applyBattleActorDodgeResult(room, target)
-    : applyBattleActorDamageResult(room, target, hpBefore, hpAfter, reaction.damage, {
-      canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
-    });
+  const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, reaction.damage, {
+    dodged: reaction.dodged,
+    shareWithRide: true,
+    canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
+  });
+  const hpAfter = damageResult.hpAfter;
+  const launched = damageResult.launched;
   const statusChanges = battleWakeFromDirectDamage(target, reaction.damage, reaction.dodged);
   syncParticipantPetSnapshotHp(room, target);
   const expCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
@@ -7900,7 +7975,7 @@ function battleCounterAttackEvent(room, battle, actor, target, round, sequence, 
     reaction.damage,
     expCredits,
     launched,
-    {...reaction, eventType: "counter_attack", counterSourceEventId, statusChanges},
+    {...reaction, eventType: "counter_attack", counterSourceEventId, statusChanges, damageResult},
   );
 }
 
@@ -7995,10 +8070,12 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
   const baseDamage = group.reduce((sum, entry) => sum + Math.max(0, Math.trunc(Number(entry.damage || 0))), 0);
   const comboBonus = Math.max(0, group.length - 1) * BATTLE_COMBO_BONUS_DAMAGE_PER_EXTRA_ACTOR;
   const damage = Math.max(1, baseDamage + comboBonus);
-  const hpAfter = Math.max(0, hpBefore - damage);
-  const launched = applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, {
+  const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
+    shareWithRide: true,
     canLaunch: String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE,
   });
+  const hpAfter = damageResult.hpAfter;
+  const launched = damageResult.launched;
   const statusChanges = battleWakeFromDirectDamage(target, damage, false);
   syncParticipantPetSnapshotHp(room, target);
   const actors = group.map((entry) => entry.actor);
@@ -8051,13 +8128,14 @@ function battleComboAttackEvent(room, battle, group, round, sequence) {
     hpAfter,
     defeated: hpAfter <= 0,
     launched,
+    ...battleDamageEventFields(damageResult),
     statusChanges,
     animation: {
       actor: "combo_attack",
       targetReaction: launched ? "launched" : (hpAfter <= 0 ? "knockdown" : "hurt"),
       observer: "watch_target",
     },
-    message: battleDamageMessage(`${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害。`, target, hpAfter, launched),
+    message: battleDamageMessage(`${participantNames.join("、")} 合击了 ${target.displayName || target.username || "目标"}，造成 ${damage} 点伤害${battleRideDamageMessageSuffix(damageResult)}。`, target, hpAfter, launched),
     schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
   if (expCredits.length > 0) {
@@ -9076,6 +9154,8 @@ function battleRecordProfileWritebackSummary(writeback) {
       accountId: String(entry && entry.accountId || ""),
       playerId: String(entry && entry.playerId || ""),
       profileRevision: Math.max(0, Math.trunc(Number(entry && entry.profileRevision || 0))),
+	      playerHp: entry && entry.playerHp && typeof entry.playerHp === "object" && !Array.isArray(entry.playerHp) ? clone(entry.playerHp) : null,
+	      ridePetHp: entry && entry.ridePetHp && typeof entry.ridePetHp === "object" && !Array.isArray(entry.ridePetHp) ? clone(entry.ridePetHp) : null,
 	      exp: entry && entry.exp && typeof entry.exp === "object" && !Array.isArray(entry.exp) ? clone(entry.exp) : null,
 	      rewards: entry && entry.rewards && typeof entry.rewards === "object" && !Array.isArray(entry.rewards) ? clone(entry.rewards) : null,
 	      quests: entry && entry.quests && typeof entry.quests === "object" && !Array.isArray(entry.quests) ? clone(entry.quests) : null,
@@ -9222,6 +9302,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       playerId: String(binding.playerId || ""),
       profileRevision: Number(binding.profileRevision || profileDoc.profileRevision || 0),
       playerHp: null,
+      ridePetHp: null,
       petHps: [],
       battleItemBag: null,
       captureToolBag: null,
@@ -9235,11 +9316,32 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       schemaVersion: 1,
     };
     let changed = false;
-    const playerActor = accountActors.find((actor) => String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER) || null;
+    const participant = battleSettlementParticipantByAccountId(room, accountId);
+    const participantPlayer = participant && participant.teamSnapshot && participant.teamSnapshot.player && typeof participant.teamSnapshot.player === "object" && !Array.isArray(participant.teamSnapshot.player)
+      ? participant.teamSnapshot.player
+      : null;
+    const livePlayerActor = accountActors.find((actor) => String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER) || null;
+    const playerActor = livePlayerActor || (participantPlayer ? {
+      ...participantPlayer,
+      actorId: `team_snapshot:player:${String(accountId || "")}`,
+      accountId: String(accountId || ""),
+      kind: BATTLE_ACTOR_KIND_PLAYER,
+    } : null);
     if (playerActor) {
       const applied = applyBattleActorHpToProfilePlayer(profile, playerActor);
       changed = changed || applied.changed;
       summary.playerHp = applied.publicHp;
+      const rideApplied = applyBattleActorRideHpToProfile(profile, playerActor);
+      if (String(playerActor.ridePetInstanceId || "").trim() !== "" && !rideApplied.found) {
+        writeback.skippedProfiles.push({
+          accountId: String(accountId || ""),
+          playerId: String(binding.playerId || ""),
+          petId: String(playerActor.ridePetInstanceId || ""),
+          reason: "ride_pet_instance_missing",
+        });
+      }
+      changed = changed || rideApplied.changed;
+      summary.ridePetHp = rideApplied.publicHp;
     }
     const petActors = accountActors.filter((actor) => String(actor.kind || "") === BATTLE_ACTOR_KIND_PET);
     const writtenPetIds = new Set();
@@ -9258,7 +9360,6 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       summary.petHps.push(applied.publicHp);
       writtenPetIds.add(String(petActor.petId || ""));
     }
-    const participant = battleSettlementParticipantByAccountId(room, accountId);
     for (const petSnapshot of participantBattlePets(participant)) {
       const petId = String(petSnapshot.petId || "").trim();
       if (petId === "" || writtenPetIds.has(petId)) {
@@ -11651,8 +11752,7 @@ function battleExpRecipientsForActor(room, actor, target) {
   const recipients = [primary];
   if (
     primary.type === "player" &&
-    String(actor.ridePetInstanceId || "").trim() !== "" &&
-    Number(actor.ridePetMaxHp || 0) > 0
+    battleActorRideEligibleForExp(actor)
   ) {
     const rideScaledAmount = Math.max(0, Math.trunc(Number(primary.scaledAmount || 0) * BATTLE_RIDE_PET_EXP_RATE));
     if (rideScaledAmount > 0) {
@@ -11673,6 +11773,16 @@ function battleExpRecipientsForActor(room, actor, target) {
     }
   }
   return recipients;
+}
+
+function battleActorRideEligibleForExp(actor) {
+  if (!actor || typeof actor !== "object" || Array.isArray(actor)) {
+    return false;
+  }
+  if (Object.prototype.hasOwnProperty.call(actor, "rideActiveAtApply")) {
+    return Boolean(actor.rideActiveAtApply);
+  }
+  return activeRideFacts(actor).active;
 }
 
 function battlePrimaryExpRecipientForActor(room, actor, target) {
@@ -11886,7 +11996,7 @@ function battleExpRewardForProfile(room, battle, accountId) {
     }
     if (String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER) {
       const petId = String(actor.ridePetInstanceId || "").trim();
-      if (petId !== "" && !ridePetAwards.has(petId)) {
+      if (petId !== "" && battleActorRideEligibleForExp(actor) && !ridePetAwards.has(petId)) {
         ridePetAwards.set(petId, battleZeroExpAward({
           ...zeroContext,
           name: String(actor.ridePetName || "骑宠"),
@@ -12264,7 +12374,7 @@ function activeRidingPetIdsForAccount(battle, accountId) {
       continue;
     }
     const petId = String(actor.ridePetInstanceId || "").trim();
-    if (petId !== "" && !ids.includes(petId)) {
+    if (petId !== "" && battleActorRideEligibleForExp(actor) && !ids.includes(petId)) {
       ids.push(petId);
     }
   }
@@ -12437,6 +12547,47 @@ function applyBattleActorHpToProfilePet(profile, actor) {
       petId: actorPetId,
       hp,
       maxHp,
+      schemaVersion: 1,
+    },
+  };
+}
+
+function applyBattleActorRideHpToProfile(profile, actor) {
+  const petId = String(actor && actor.ridePetInstanceId || "").trim();
+  if (petId === "") {
+    return {found: false, changed: false, publicHp: null};
+  }
+  const pet = profilePetById(profile, petId);
+  if (!pet) {
+    return {found: false, changed: false, publicHp: null};
+  }
+  const maxHp = Math.max(1, Math.trunc(Number(actor.ridePetMaxHp || pet.maxHp || 1)));
+  const hp = clampInt(actor.ridePetHp, 0, maxHp, maxHp);
+  const knocked = Boolean(actor.ridePetKnocked) || hp <= 0 || String(actor.ridePetBattleState || "") === "rest";
+  const state = knocked ? "rest" : BATTLE_PET_STATE_RIDING;
+  let changed = false;
+  if (Number(pet.hp) !== hp) {
+    pet.hp = hp;
+    changed = true;
+  }
+  if (String(pet.state || pet.status || pet.battleState || "") !== state) {
+    pet.state = state;
+    changed = true;
+  }
+  if (knocked && String(profile.ridePetInstanceId || "") === petId) {
+    profile.ridePetInstanceId = "";
+    changed = true;
+  }
+  return {
+    found: true,
+    changed,
+    publicHp: {
+      actorId: String(actor.actorId || ""),
+      petId,
+      hp,
+      maxHp,
+      state,
+      knocked,
       schemaVersion: 1,
     },
   };
@@ -15782,9 +15933,11 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence, op
   const statusChanges = [];
   for (const target of validTargets) {
     const hpBefore = Number(target.hp || 0);
-    const hpAfter = Math.max(0, hpBefore - damage);
-    target.hp = hpAfter;
-    target.defeated = hpAfter <= 0;
+    const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
+      shareWithRide: false,
+      canLaunch: false,
+    });
+    const hpAfter = damageResult.hpAfter;
     let statusCheck = {hit: false, result: "target_down", chance: -1, roll: -1, resistance: battleStatusResistance(target, statusId), immune: false};
     let removedStatusIds = [];
     if (hpAfter > 0) {
@@ -15793,7 +15946,7 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence, op
         removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor);
       }
     }
-    syncParticipantPetSnapshotHp(room, target);
+    syncParticipantBattleActorSnapshot(room, target);
     const targetExpCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
     expCredits.push(...targetExpCredits);
     const targetActorId = String(target.actorId || "");
@@ -15826,9 +15979,10 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence, op
       hpBefore,
       hpAfter,
       damage,
+      ...battleDamageEventFields(damageResult),
       defeated: hpAfter <= 0,
       statusResult: String(statusCheck.result || "resisted"),
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   }
   appendBattleExpCredits(battle, expCredits);
@@ -15854,6 +16008,7 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence, op
     itemId,
     itemName,
     damage,
+    ...battleDamageEventFields(targetSummaries[0]),
     hpBefore: Number(targetSummaries[0].hpBefore || 0),
     hpAfter: Number(targetSummaries[0].hpAfter || 0),
     defeated: Boolean(targetSummaries[0].defeated),
@@ -15877,7 +16032,7 @@ function battleItemPoisonEvent(room, battle, command, actor, round, sequence, op
     message: isAll
       ? `${actor.displayName || actor.username} 使用${itemName}，对方全体受到 ${damage} 点伤害。`
       : `${actor.displayName || actor.username} 使用${itemName}，${target.displayName || target.username} 受到 ${damage} 点伤害。`,
-    schemaVersion: 1,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
   if (expCredits.length > 0) {
     event.expCredits = clone(expCredits);
@@ -16216,9 +16371,11 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
   const expCredits = [];
   for (const target of validTargets) {
     const hpBefore = Number(target.hp || 0);
-    const hpAfter = Math.max(0, hpBefore - damage);
-    target.hp = hpAfter;
-    target.defeated = hpAfter <= 0;
+    const damageResult = applyBattleActorResolvedDamage(room, target, hpBefore, damage, {
+      shareWithRide: false,
+      canLaunch: false,
+    });
+    const hpAfter = damageResult.hpAfter;
     let statusCheck = {hit: false, result: "target_down", chance: -1, roll: -1, resistance: battleStatusResistance(target, statusId), immune: false};
     let removedStatusIds = [];
     if (hpAfter > 0) {
@@ -16227,7 +16384,7 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
         removedStatusIds = battleApplyStatus(target, statusId, statusTurns, statusPotency, actor);
       }
     }
-    syncParticipantPetSnapshotHp(room, target);
+    syncParticipantBattleActorSnapshot(room, target);
     const targetExpCredits = battleExpCreditsForDefeat(room, battle, actor, target, hpBefore, hpAfter);
     expCredits.push(...targetExpCredits);
     const targetActorId = String(target.actorId || "");
@@ -16260,9 +16417,10 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
       hpBefore,
       hpAfter,
       damage,
+      ...battleDamageEventFields(damageResult),
       defeated: hpAfter <= 0,
       statusResult: String(statusCheck.result || "resisted"),
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   }
   appendBattleExpCredits(battle, expCredits);
@@ -16289,6 +16447,7 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
     spiritId,
     skillName: spiritName,
     damage,
+    ...battleDamageEventFields(targetSummaries[0]),
     hpBefore: Number(targetSummaries[0].hpBefore || 0),
     hpAfter: Number(targetSummaries[0].hpAfter || 0),
     defeated: Boolean(targetSummaries[0].defeated),
@@ -16311,7 +16470,7 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
     message: isAll
       ? `${actor.displayName || actor.username} 使用${spiritName}，对方全体受到 ${damage} 点伤害。`
       : `${actor.displayName || actor.username} 使用${spiritName}，${target.displayName || target.username} 受到 ${damage} 点伤害。`,
-    schemaVersion: 1,
+    schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
   };
   if (expCredits.length > 0) {
     event.expCredits = clone(expCredits);
@@ -16592,11 +16751,48 @@ function updateParticipantPetAfterSwitch(participant, previousPetActor, nextPetI
   }
 }
 
-function syncParticipantPetSnapshotHp(room, actor) {
-  if (!actor || String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
+function syncParticipantBattleActorSnapshot(room, actor) {
+  if (!actor) {
     return;
   }
   const participant = battleParticipantByAccountId(room, actor.accountId);
+  if (!participant || !participant.teamSnapshot || typeof participant.teamSnapshot !== "object" || Array.isArray(participant.teamSnapshot)) {
+    return;
+  }
+  if (String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PLAYER) {
+    const player = participant.teamSnapshot.player && typeof participant.teamSnapshot.player === "object" && !Array.isArray(participant.teamSnapshot.player)
+      ? participant.teamSnapshot.player
+      : {};
+    player.hp = battleActorWritebackHp(actor);
+    player.maxHp = battleActorWritebackMaxHp(actor);
+    player.attack = positiveNumber(actor.attack, player.attack);
+    player.defense = positiveNumber(actor.defense, player.defense);
+    player.quick = positiveNumber(actor.speed, player.quick);
+    for (const key of [
+      "ridePetInstanceId",
+      "ridePetName",
+      "ridePetFormId",
+      "ridePetLevel",
+      "ridePetHp",
+      "ridePetMaxHp",
+      "ridePetBattleState",
+      "ridePetKnocked",
+      "ridePetAttack",
+      "ridePetDefense",
+      "ridePetQuick",
+      "rideBaseStats",
+      "rideAttackStyle",
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(actor, key)) {
+        player[key] = clone(actor[key]);
+      }
+    }
+    participant.teamSnapshot.player = player;
+    return;
+  }
+  if (String(actor.kind || "") !== BATTLE_ACTOR_KIND_PET) {
+    return;
+  }
   for (const pet of participantBattlePets(participant)) {
     if (String(pet.petId || "") !== String(actor.petId || "")) {
       continue;
@@ -16606,6 +16802,95 @@ function syncParticipantPetSnapshotHp(room, actor) {
     pet.state = pet.hp > 0 ? (pet.activeInBattle ? BATTLE_PET_STATE_BATTLE : BATTLE_PET_STATE_STANDBY) : "rest";
     return;
   }
+}
+
+function syncParticipantPetSnapshotHp(room, actor) {
+  syncParticipantBattleActorSnapshot(room, actor);
+}
+
+function battleActorOnlyDamageFacts(target, damageValue) {
+  const damage = Math.max(0, Math.trunc(Number(damageValue || 0)));
+  const ride = activeRideFacts(target);
+  const ridePetInstanceId = String(target && target.ridePetInstanceId || "").trim();
+  const ridePetMaxHp = Math.max(0, Math.trunc(Number(target && target.ridePetMaxHp || 0)));
+  const rideHpBefore = clampNumber(target && target.ridePetHp, 0, ridePetMaxHp, ridePetMaxHp);
+  return {
+    damage,
+    actorDamage: damage,
+    rideDamage: 0,
+    ridePetInstanceId,
+    rideHpBefore,
+    rideHpAfter: rideHpBefore,
+    ridePetKnocked: Boolean(target && target.ridePetKnocked) || Boolean(ridePetInstanceId && ridePetMaxHp > 0 && rideHpBefore <= 0),
+    ridePetBattleStateAfter: String(target && target.ridePetBattleState || ""),
+    rideActiveBefore: ride.active,
+    rideActiveAfter: ride.active,
+  };
+}
+
+function applyBattleActorResolvedDamage(room, target, hpBeforeValue, damageValue, options = {}) {
+  const hpBefore = Math.max(0, Math.trunc(Number(hpBeforeValue || 0)));
+  const dodged = Boolean(options.dodged);
+  const totalDamage = dodged ? 0 : Math.max(0, Math.trunc(Number(damageValue || 0)));
+  const damageFacts = options.shareWithRide === false
+    ? battleActorOnlyDamageFacts(target, totalDamage)
+    : resolveRideDamageShare(target, totalDamage);
+  if (String(damageFacts.ridePetInstanceId || "") !== "") {
+    target.ridePetHp = Math.max(0, Math.trunc(Number(damageFacts.rideHpAfter || 0)));
+    target.ridePetBattleState = String(damageFacts.ridePetBattleStateAfter || target.ridePetBattleState || BATTLE_PET_STATE_RIDING);
+    target.ridePetKnocked = Boolean(damageFacts.ridePetKnocked);
+  }
+  if (Boolean(damageFacts.ridePetKnocked)) {
+    const baseStats = target.rideBaseStats && typeof target.rideBaseStats === "object" && !Array.isArray(target.rideBaseStats)
+      ? target.rideBaseStats
+      : {};
+    target.attack = positiveNumber(baseStats.attack, target.attack);
+    target.defense = positiveNumber(baseStats.defense, target.defense);
+    target.speed = positiveNumber(baseStats.quick ?? baseStats.speed, target.speed);
+  }
+  const actorDamage = Math.max(0, Math.trunc(Number(damageFacts.actorDamage || 0)));
+  const hpAfter = Math.max(0, hpBefore - actorDamage);
+  const launched = dodged
+    ? applyBattleActorDodgeResult(room, target)
+    : applyBattleActorDamageResult(room, target, hpBefore, hpAfter, actorDamage, {
+      canLaunch: Boolean(options.canLaunch),
+    });
+  syncParticipantBattleActorSnapshot(room, target);
+  return {
+    ...damageFacts,
+    ridePetName: String(target && target.ridePetName || ""),
+    ridePetFormId: String(target && target.ridePetFormId || ""),
+    ridePetLevel: Math.max(0, Math.trunc(Number(target && target.ridePetLevel || 0))),
+    ridePetMaxHp: Math.max(0, Math.trunc(Number(target && target.ridePetMaxHp || 0))),
+    hpBefore,
+    hpAfter,
+    launched,
+    attackAfter: Math.max(0, Math.trunc(Number(target.attack || 0))),
+    defenseAfter: Math.max(0, Math.trunc(Number(target.defense || 0))),
+    speedAfter: Math.max(0, Math.trunc(Number(target.speed || 0))),
+  };
+}
+
+function battleDamageEventFields(damageResult) {
+  const result = damageResult && typeof damageResult === "object" && !Array.isArray(damageResult) ? damageResult : {};
+  return {
+    actorDamage: Math.max(0, Math.trunc(Number(result.actorDamage || 0))),
+    rideDamage: Math.max(0, Math.trunc(Number(result.rideDamage || 0))),
+    ridePetInstanceId: String(result.ridePetInstanceId || ""),
+    ridePetName: String(result.ridePetName || ""),
+    ridePetFormId: String(result.ridePetFormId || ""),
+    ridePetLevel: Math.max(0, Math.trunc(Number(result.ridePetLevel || 0))),
+    ridePetMaxHp: Math.max(0, Math.trunc(Number(result.ridePetMaxHp || 0))),
+    rideHpBefore: Math.max(0, Math.trunc(Number(result.rideHpBefore || 0))),
+    rideHpAfter: Math.max(0, Math.trunc(Number(result.rideHpAfter || 0))),
+    ridePetKnocked: Boolean(result.ridePetKnocked),
+    ridePetBattleStateAfter: String(result.ridePetBattleStateAfter || ""),
+    rideActiveBefore: Boolean(result.rideActiveBefore),
+    rideActiveAfter: Boolean(result.rideActiveAfter),
+    attackAfter: Math.max(0, Math.trunc(Number(result.attackAfter || 0))),
+    defenseAfter: Math.max(0, Math.trunc(Number(result.defenseAfter || 0))),
+    speedAfter: Math.max(0, Math.trunc(Number(result.speedAfter || 0))),
+  };
 }
 
 function applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, options = {}) {
@@ -16627,7 +16912,7 @@ function applyBattleActorDamageResult(room, target, hpBefore, hpAfter, damage, o
   } else {
     delete target.launchHpBefore;
   }
-  syncParticipantPetSnapshotHp(room, target);
+  syncParticipantBattleActorSnapshot(room, target);
   return launched;
 }
 
@@ -16643,6 +16928,18 @@ function battleDamageMessage(baseMessage, target, hpAfter, launched) {
     return `${baseMessage} ${targetName} 倒下了。`;
   }
   return baseMessage;
+}
+
+function battleRideDamageMessageSuffix(damageResult) {
+  const result = damageResult && typeof damageResult === "object" && !Array.isArray(damageResult) ? damageResult : {};
+  const rideDamage = Math.max(0, Math.trunc(Number(result.rideDamage || 0)));
+  if (rideDamage <= 0) {
+    return "";
+  }
+  const actorDamage = Math.max(0, Math.trunc(Number(result.actorDamage || 0)));
+  const ridePetName = String(result.ridePetName || "骑宠").trim() || "骑宠";
+  const knockedNow = Boolean(result.rideActiveBefore) && Boolean(result.ridePetKnocked);
+  return `，其中${ridePetName}承受${rideDamage}，人物承受${actorDamage}${knockedNow ? `，${ridePetName}倒下并解除骑乘` : ""}`;
 }
 
 function battleAttackEvent(room, battle, command, actor, target, round, sequence, hpBefore, hpAfter, damage, expCredits = [], launched = false, reaction = {}) {
@@ -16666,7 +16963,7 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
   } else {
     const actionLabel = eventType === "counter_attack" ? "反击了" : (actionKind === "pet_skill" ? "使用技能攻击了" : "攻击了");
     const criticalMessage = critical ? " 触发幸运一击。" : "";
-    message = battleDamageMessage(`${actorName} ${actionLabel} ${targetName}，造成 ${damage} 点伤害。${criticalMessage}`, target, hpAfter, launched);
+    message = battleDamageMessage(`${actorName} ${actionLabel} ${targetName}，造成 ${damage} 点伤害${battleRideDamageMessageSuffix(reaction.damageResult)}。${criticalMessage}`, target, hpAfter, launched);
   }
   const event = {
     eventId: `${room.roomId}:r${round}:e${sequence}`,
@@ -16695,6 +16992,7 @@ function battleAttackEvent(room, battle, command, actor, target, round, sequence
     hpAfter,
     defeated: hpAfter <= 0,
     launched,
+    ...battleDamageEventFields(reaction.damageResult),
     statusChanges: Array.isArray(reaction.statusChanges) ? clone(reaction.statusChanges) : [],
     animation: {
       actor: eventType === "counter_attack" ? "counter_attack" : "attack",

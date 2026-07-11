@@ -145,7 +145,7 @@ test("sleep wakes on direct positive damage while stone keeps its exact action-o
   const stoneAttack = stoneHitRound.turn.events.find((event) => event.eventType === "basic_attack" && event.targetActorId === actors.opponentPet.actorId);
   assert.deepEqual(stoneAttack.statusChanges, []);
   const stoneSkip = stoneHitRound.turn.events.find((event) => event.eventType === "status_skip" && event.actorId === actors.opponentPet.actorId);
-  assert.equal(stoneSkip.schemaVersion, 2);
+  assert.equal(stoneSkip.schemaVersion, 3);
   assert.equal(stoneSkip.fromTurns, 2);
   assert.equal(stoneSkip.toTurns, 1);
   assert.equal(stoneSkip.statusBefore.turns, 2);
@@ -210,7 +210,7 @@ test("new poison ticks in its apply round, expires 3 to 0, and cleanse suppresse
   assert.equal(applyEvent.hpAfter, 228);
   assert.equal(applyEvent.sourceActorId, source.actorId);
   assert.equal(applyEvent.statusChanges.find((change) => change.change === "apply").sourceId, source.actorId);
-  assert.equal(firstTick.schemaVersion, 2);
+  assert.equal(firstTick.schemaVersion, 3);
   assert.equal(firstTick.sourceActorId, source.actorId);
   assert.equal(firstTick.hpBefore, 228);
   assert.equal(firstTick.hpAfter, 222);

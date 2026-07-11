@@ -517,11 +517,11 @@ test("authoritative dodge can still trigger exactly one independently resolved c
     targetActorId: roles.challengerPlayer.actorId,
   });
   assert.equal(resolved.ok, true);
-  assert.equal(resolved.turn.schemaVersion, 2);
+  assert.equal(resolved.turn.schemaVersion, 3);
   const source = resolved.turn.events.find((event) => event.eventType === "basic_attack" && event.actorId === roles.challengerPlayer.actorId);
   const counters = resolved.turn.events.filter((event) => event.eventType === "counter_attack");
   assert.equal(Boolean(source), true);
-  assert.equal(source.schemaVersion, 2);
+  assert.equal(source.schemaVersion, 3);
   assert.equal(source.dodged, true);
   assert.equal(source.critical, false);
   assert.equal(source.damage, 0);
@@ -529,7 +529,7 @@ test("authoritative dodge can still trigger exactly one independently resolved c
   assert.equal(source.animation.targetReaction, "dodge");
   assert.equal(source.counterTriggered, true);
   assert.equal(counters.length, 1);
-  assert.equal(counters[0].schemaVersion, 2);
+  assert.equal(counters[0].schemaVersion, 3);
   assert.equal(counters[0].counterSourceEventId, source.eventId);
   assert.equal(counters[0].actorId, roles.opponentPlayer.actorId);
   assert.equal(counters[0].targetActorId, roles.challengerPlayer.actorId);
@@ -3367,7 +3367,9 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
     "maxHp": 95,
     "attack": 12,
     "defense": 7,
-    "quick": 72,
+    // Keep the mounted player ahead of their battle pet so this fixture still
+    // proves separate player/ride and battle-pet last-hit awards.
+    "quick": 100,
     "activeSkillIds": ["pet_attack", "pet_defend"],
     "petSkillSlots": ["pet_attack", "pet_defend", "", "", "", "", ""],
     "passiveSkillIds": [],
@@ -3492,7 +3494,7 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
     (({maxHp, attack, defense, quick}) => ({maxHp, attack, defense, quick}))(
       leaderAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_ride_pet"),
     ),
-    {maxHp: 95, attack: 12, defense: 7, quick: 72},
+    {maxHp: 95, attack: 12, defense: 7, quick: 100},
   );
   assert.equal(memberAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_member_pet").level, 1);
   assert.equal(leaderAfter.profile.trainingPartners[0].level, 1);
@@ -4113,10 +4115,10 @@ test("party pve collapses adjacent same-target attacks into combo events and sha
   });
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
-  assert.equal(resolved.turn.schemaVersion, 2);
+  assert.equal(resolved.turn.schemaVersion, 3);
   const comboEvent = resolved.turn.events.find((event) => event.eventType === "combo_attack");
   assert.equal(Boolean(comboEvent), true);
-  assert.equal(comboEvent.schemaVersion, 2);
+  assert.equal(comboEvent.schemaVersion, 3);
   assert.deepEqual(comboEvent.participantActorIds, [leaderPlayer.actorId, leaderPet.actorId]);
   assert.equal(comboEvent.targetActorId, enemy.actorId);
   assert.equal(comboEvent.dodged, false);

@@ -145,6 +145,8 @@ static func _effect_per_target_for_state(state: Dictionary, target_ids: Array[St
 
 static func _target_results(state: Dictionary, before_snapshots: Dictionary, target_ids: Array[String], effect_per_target: Dictionary) -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
+	var actor_damage_per_target := _duplicate_dict(state.get("lastActorDamagePerTarget", {}))
+	var ride_damage_per_target := _duplicate_dict(state.get("lastRideDamagePerTarget", {}))
 	for target_id in target_ids:
 		var before := _snapshot_for(before_snapshots, target_id)
 		var after := _actor_by_id(state, target_id)
@@ -157,6 +159,17 @@ static func _target_results(state: Dictionary, before_snapshots: Dictionary, tar
 			"statusesBefore": _duplicate_dict(before.get("statuses", {})),
 			"statusesAfter": _duplicate_dict(after.get("statuses", {})),
 			"effect": int(effect_per_target.get(target_id, 0)),
+			"actorDamage": int(actor_damage_per_target.get(target_id, 0)),
+			"rideDamage": int(ride_damage_per_target.get(target_id, 0)),
+			"ridePetInstanceIdBefore": str(before.get("ridePetInstanceId", "")),
+			"ridePetInstanceIdAfter": str(after.get("ridePetInstanceId", "")),
+			"rideHpBefore": int(before.get("ridePetHp", 0)),
+			"rideHpAfter": int(after.get("ridePetHp", 0)),
+			"rideMaxHpBefore": int(before.get("ridePetMaxHp", 0)),
+			"rideMaxHpAfter": int(after.get("ridePetMaxHp", 0)),
+			"rideStateBefore": str(before.get("ridePetBattleState", "")),
+			"rideStateAfter": str(after.get("ridePetBattleState", "")),
+			"ridePetKnockedAfter": bool(after.get("ridePetKnocked", false)),
 			"revivableAfter": bool(after.get("revivable", true)),
 			"petBattleStateAfter": str(after.get("petBattleState", "")),
 		})
