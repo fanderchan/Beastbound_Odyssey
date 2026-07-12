@@ -34,6 +34,7 @@ const {
 } = require("./auth/bank-profile-state");
 const {createGmPetsDomain} = require("./auth/gm-pets");
 const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
+const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
@@ -434,6 +435,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "grantGmPet",
   "levelUpGmPet",
   "prepareGmQaProfile",
+  "prepareGmQaPetSamples",
 ]);
 const OFFLINE_HANG_LOCKED_SERVICE_MUTATIONS = new Set([
   ...BATTLE_LOCKED_SERVICE_MUTATIONS,
@@ -2690,6 +2692,7 @@ function createAuthService(options = {}) {
     MAIL_TITLE_MAX_LENGTH,
     MAX_CHAT_MESSAGES,
     MAX_PET_LEVEL,
+    CURRENT_PROFILE_SCHEMA_VERSION,
     PARTY_MAX_MEMBERS,
     PROFILE_ACTION_IDS,
     accountById,
@@ -2944,6 +2947,7 @@ function createAuthService(options = {}) {
   const familyManor = createFamilyManorDomain(domainContext);
   const gmPets = createGmPetsDomain(domainContext);
   const gmQaProfile = createGmQaProfileDomain(domainContext);
+  const gmQaPets = createGmQaPetsDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -3033,6 +3037,7 @@ function createAuthService(options = {}) {
     grantGmPet: gmPets.grantGmPet,
     levelUpGmPet: gmPets.levelUpGmPet,
     prepareGmQaProfile: gmQaProfile.prepareGmQaProfile,
+    prepareGmQaPetSamples: gmQaPets.prepareGmQaPetSamples,
     snapshot,
   };
   for (const [name, method] of Object.entries(serviceApi)) {

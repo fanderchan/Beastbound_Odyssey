@@ -31,6 +31,7 @@ const CombatFormulaShadowModel := preload("res://scripts/progression/combat_form
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
+const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
@@ -72,7 +73,7 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
 const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
@@ -111,6 +112,8 @@ var party_partner_clear_button: Button
 var qa_profile_identity_label: Label
 var qa_profile_status_state: Dictionary = {}
 var qa_profile_status_username: String = ""
+var qa_pet_samples_status_state: Dictionary = {}
+var qa_pet_samples_status_username: String = ""
 
 var item_stack_split_panel: PanelContainer
 var item_stack_split_title_label: Label
@@ -21019,6 +21022,9 @@ func _refresh_qa_panel() -> void:
 	if qa_profile_status_username != "" and qa_profile_status_username != current_username:
 		qa_profile_status_state.clear()
 		qa_profile_status_username = ""
+	if qa_pet_samples_status_username != "" and qa_pet_samples_status_username != current_username:
+		qa_pet_samples_status_state.clear()
+		qa_pet_samples_status_username = ""
 	if qa_profile_identity_label != null:
 		qa_profile_identity_label.text = GmQaProfileClientModel.identity_text(current_account_session)
 	QaPanelPresenter.rebuild_entry_buttons(
@@ -21036,8 +21042,17 @@ func _refresh_qa_panel() -> void:
 			or not _is_server_account_session()
 		)
 		prepare_button.tooltip_text = "只补齐当前GM账号缺少的核心测试内容，不会清空现有进度。"
-	qa_detail_label.text = "%s\n\n%s" % [
+	var prepare_pet_samples_button := qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
+	if prepare_pet_samples_button != null:
+		prepare_pet_samples_button.disabled = (
+			profile_action_request_pending
+			or bool(qa_pet_samples_status_state.get("pending", false))
+			or not _is_server_account_session()
+		)
+		prepare_pet_samples_button.tooltip_text = "一次准备固定宠物测试样本；不会覆盖、补发或重抽已经领取的样本。"
+	qa_detail_label.text = "%s\n\n%s\n\n%s" % [
 		GmQaProfileClientModel.status_text(qa_profile_status_state),
+		GmQaPetSamplesClientModel.status_text(qa_pet_samples_status_state),
 		_qa_command_summary_text(),
 	]
 
@@ -21109,6 +21124,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 	match entry_id:
 		"gm_prepare_qa_profile":
 			_prepare_current_gm_qa_profile()
+		"gm_prepare_qa_pet_samples":
+			_prepare_current_gm_qa_pet_samples()
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
 		"gm_10v10_grass":
@@ -21179,6 +21196,49 @@ func _prepare_current_gm_qa_profile() -> void:
 	if log_lines.is_empty():
 		log_lines.append(str(parsed.get("message", "核心测试档已检查。")))
 	_set_world_log_message("\n".join(log_lines))
+	_refresh_qa_panel()
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
+
+func _prepare_current_gm_qa_pet_samples() -> void:
+	if not _is_server_account_session():
+		_set_world_log_message("准备宠物测试样本需要连接服务器。")
+		return
+	if profile_action_request_pending:
+		_set_world_log_message("档案操作同步中，请稍候。")
+		return
+	qa_pet_samples_status_username = str(current_account_session.get("username", "")).strip_edges()
+	qa_pet_samples_status_state = {"pending": true}
+	_refresh_qa_panel()
+	var parsed := await _submit_server_gm_command(
+		GmQaPetSamplesClientModel.COMMAND_ID,
+		GmQaPetSamplesClientModel.request_payload(),
+		"宠物测试样本准备失败。"
+	)
+	qa_pet_samples_status_state = GmQaPetSamplesClientModel.status_state_from_parsed(parsed)
+	if bool(qa_pet_samples_status_state.get("ok", false)):
+		var primary_instance_id := GmQaPetSamplesClientModel.primary_instance_id(qa_pet_samples_status_state)
+		if primary_instance_id != "":
+			var primary_pet := PlayerProgressModel.pet_instance_by_id(player_profile, primary_instance_id)
+			if primary_pet.is_empty():
+				qa_pet_samples_status_state = {
+					"ok": false,
+					"message": "宠物样本已提交，但客户端未找到首只样本；请勿重复操作，正在重新拉取。",
+				}
+			else:
+				qa_pet_level_instance_id = primary_instance_id
+				pet_selected_instance_id = primary_instance_id
+				var growth_profile_id := str(primary_pet.get("growthSpeciesProfileId", "")).strip_edges()
+				if growth_profile_id != "":
+					qa_pet_growth_profile_id = growth_profile_id
+				pet_detail_mode = PET_DETAIL_MODE_GROWTH if growth_profile_id != "" else PET_DETAIL_MODE_INSTANCE
+	if bool(qa_pet_samples_status_state.get("ok", false)):
+		var log_lines := _string_array_values(parsed.get("logLines", []))
+		if log_lines.is_empty():
+			log_lines.append(str(parsed.get("message", "宠物测试样本已检查。")))
+		_set_world_log_message("\n".join(log_lines))
+	else:
+		_set_world_log_message(str(qa_pet_samples_status_state.get("message", "宠物测试样本准备失败。")))
 	_refresh_qa_panel()
 	if qa_detail_scroll != null:
 		qa_detail_scroll.scroll_vertical = 0

@@ -34,6 +34,7 @@ const CombatFormulaShadowModel := preload("res://scripts/progression/combat_form
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
+const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
@@ -72,7 +73,7 @@ const ServerAuthClientModel := preload("res://scripts/progression/server_auth_cl
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
@@ -358,6 +359,142 @@ func _gm_qa_profile_client_contract_ok() -> bool:
 		and str(unapplied_state.get("message", "")).find("请勿重复") >= 0
 		and not bool(wrong_manifest_state.get("ok", true))
 		and not bool(broken_revision_state.get("ok", true))
+	)
+
+
+func _gm_qa_pet_samples_client_contract_ok() -> bool:
+	var payload := GmQaPetSamplesClientModel.request_payload()
+	var spec := ServerAuthClientModel.gm_command_request(
+		"http://127.0.0.1:8787/",
+		"token_contract_test",
+		GmQaPetSamplesClientModel.COMMAND_ID,
+		payload
+	)
+	var body_value = JSON.parse_string(str(spec.get("body", "")))
+	var body := body_value as Dictionary if body_value is Dictionary else {}
+	var changed_state := GmQaPetSamplesClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": true,
+		"result": {"summary": {
+			"manifestId": GmQaPetSamplesClientModel.MANIFEST_ID,
+			"changed": true,
+			"alreadyPrepared": false,
+			"sampleCount": 13,
+			"presentCount": 13,
+			"missingCount": 0,
+			"blueManDragonLv1Count": 10,
+			"comparisonLv20Count": 3,
+			"partyAdded": 5,
+			"storageAdded": 8,
+			"reservedCaptureSlots": 1,
+			"primaryInstanceId": "pet_primary_contract_secret",
+			"profileRevisionBefore": 20,
+			"profileRevisionAfter": 21,
+			"privateSecret": "qa_pet_contract_secret",
+			"schemaVersion": 1,
+		}},
+	})
+	var changed_status := GmQaPetSamplesClientModel.status_text(changed_state)
+	var missing_state := GmQaPetSamplesClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": true,
+		"result": {"summary": {
+			"manifestId": GmQaPetSamplesClientModel.MANIFEST_ID,
+			"changed": false,
+			"alreadyPrepared": true,
+			"sampleCount": 13,
+			"presentCount": 12,
+			"missingCount": 1,
+			"blueManDragonLv1Count": 10,
+			"comparisonLv20Count": 3,
+			"partyAdded": 0,
+			"storageAdded": 0,
+			"reservedCaptureSlots": 0,
+			"primaryInstanceId": "pet_existing_contract_secret",
+			"profileRevisionBefore": 21,
+			"profileRevisionAfter": 21,
+			"schemaVersion": 1,
+		}},
+	})
+	var missing_status := GmQaPetSamplesClientModel.status_text(missing_state)
+	var unapplied_state := GmQaPetSamplesClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": false,
+		"result": {},
+	})
+	var wrong_manifest_state := GmQaPetSamplesClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": true,
+		"result": {"summary": {
+			"manifestId": "qa_pet_samples_v2",
+			"changed": true,
+			"alreadyPrepared": false,
+			"sampleCount": 13,
+			"presentCount": 13,
+			"missingCount": 0,
+			"blueManDragonLv1Count": 10,
+			"comparisonLv20Count": 3,
+			"partyAdded": 5,
+			"storageAdded": 8,
+			"reservedCaptureSlots": 1,
+			"primaryInstanceId": "pet_wrong_manifest",
+			"profileRevisionBefore": 1,
+			"profileRevisionAfter": 2,
+			"schemaVersion": 1,
+		}},
+	})
+	var broken_count_state := GmQaPetSamplesClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": true,
+		"result": {"summary": {
+			"manifestId": GmQaPetSamplesClientModel.MANIFEST_ID,
+			"changed": true,
+			"alreadyPrepared": false,
+			"sampleCount": 13,
+			"presentCount": 12,
+			"missingCount": 0,
+			"blueManDragonLv1Count": 10,
+			"comparisonLv20Count": 3,
+			"partyAdded": 5,
+			"storageAdded": 8,
+			"reservedCaptureSlots": 1,
+			"primaryInstanceId": "pet_broken_count",
+			"profileRevisionBefore": 1,
+			"profileRevisionAfter": 2,
+			"schemaVersion": 1,
+		}},
+	})
+	return (
+		payload.size() == 1
+		and body.size() == 1
+		and str(body.get("manifestId", "")) == GmQaPetSamplesClientModel.MANIFEST_ID
+		and str(spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_prepare_qa_pet_samples"
+		and int(spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and bool(spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_is_idempotent(spec)
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(spec))
+		and not body.has("username")
+		and not body.has("accountId")
+		and not body.has("quantity")
+		and not body.has("formId")
+		and not body.has("level")
+		and bool(changed_state.get("ok", false))
+		and bool(changed_state.get("changed", false))
+		and not bool(changed_state.get("alreadyPrepared", true))
+		and GmQaPetSamplesClientModel.primary_instance_id(changed_state) == "pet_primary_contract_secret"
+		and changed_status.find("13 只正式工厂样本") >= 0
+		and changed_status.find("绑定并锁定") >= 0
+		and changed_status.find("pet_primary_contract_secret") < 0
+		and not bool(missing_state.get("changed", true))
+		and bool(missing_state.get("alreadyPrepared", false))
+		and missing_status.find("目前缺少 1 只") >= 0
+		and missing_status.find("不会自动补发") >= 0
+		and missing_status.find("pet_existing_contract_secret") < 0
+		and JSON.stringify(changed_state).find("qa_pet_contract_secret") < 0
+		and not bool(unapplied_state.get("ok", true))
+		and str(unapplied_state.get("message", "")).find("请勿重复") >= 0
+		and not bool(wrong_manifest_state.get("ok", true))
+		and not bool(broken_count_state.get("ok", true))
 	)
 
 
@@ -16298,15 +16435,22 @@ func _run_auto_auth_check() -> void:
 	var gm_identity_text: String = str(host._panel_flow().qa_profile_identity_label.text) if host._panel_flow().qa_profile_identity_label != null else ""
 	var gm_prepare_button := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	var gm_prepare_initial_ok := gm_prepare_button != null and not gm_prepare_button.disabled
+	var gm_pet_samples_button := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
+	var gm_pet_samples_initial_ok := gm_pet_samples_button != null and not gm_pet_samples_button.disabled
 	host.profile_action_request_pending = true
 	host._refresh_qa_panel()
 	var gm_prepare_pending_button := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	var gm_prepare_pending_ok := gm_prepare_pending_button != null and gm_prepare_pending_button.disabled
+	var gm_pet_samples_pending_button := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
+	var gm_pet_samples_pending_ok := gm_pet_samples_pending_button != null and gm_pet_samples_pending_button.disabled
 	host.profile_action_request_pending = false
 	host._refresh_qa_panel()
 	var gm_prepare_ready_button := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	var gm_prepare_ready_ok := gm_prepare_ready_button != null and not gm_prepare_ready_button.disabled
+	var gm_pet_samples_ready_button := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
+	var gm_pet_samples_ready_ok := gm_pet_samples_ready_button != null and not gm_pet_samples_ready_button.disabled
 	var gm_qa_client_contract_ok := _gm_qa_profile_client_contract_ok()
+	var gm_qa_pet_samples_contract_ok := _gm_qa_pet_samples_client_contract_ok()
 	var gm_identity_safe = (
 		gm_identity_text.find("测试GM") >= 0
 		and gm_identity_text.find("codex_auth_gm") >= 0
@@ -16317,6 +16461,9 @@ func _run_auto_auth_check() -> void:
 		and gm_prepare_initial_ok
 		and gm_prepare_pending_ok
 		and gm_prepare_ready_ok
+		and gm_pet_samples_initial_ok
+		and gm_pet_samples_pending_ok
+		and gm_pet_samples_ready_ok
 	)
 	var restricted_install_ok = AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"], ["gm_map"])
 	host.current_account_session = {
@@ -16347,8 +16494,8 @@ func _run_auto_auth_check() -> void:
 	host._restore_auth_check_account_store(original_store_exists, original_store_text)
 	host._restore_auth_check_audit_log(original_audit_exists, original_audit_text)
 	var auth_password_ui_ok = mismatch_blocks_register_ok and confirm_visible_ok and password_eye_ok and confirm_eye_ok and confirm_hides_on_login_ok and password_icon_only_ok and text_input_blocks_movement_ok
-	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and gm_plugin_unlocks and gm_identity_safe and gm_qa_client_contract_ok and restricted_denies_command and restricted_allows_command else "fail"
-	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s icon_only=%s text_focus_blocks_move=%s gm_unlocked=%s gm_identity_safe=%s gm_qa_contract=%s restricted_denies=%s restricted_allows=%s" % [
+	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and gm_plugin_unlocks and gm_identity_safe and gm_qa_client_contract_ok and gm_qa_pet_samples_contract_ok and restricted_denies_command and restricted_allows_command else "fail"
+	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s icon_only=%s text_focus_blocks_move=%s gm_unlocked=%s gm_identity_safe=%s gm_qa_contract=%s gm_pet_samples_contract=%s restricted_denies=%s restricted_allows=%s" % [
 		status,
 		str(player_session_ok),
 		str(remember_ok),
@@ -16364,6 +16511,7 @@ func _run_auto_auth_check() -> void:
 		str(gm_plugin_unlocks),
 		str(gm_identity_safe),
 		str(gm_qa_client_contract_ok),
+		str(gm_qa_pet_samples_contract_ok),
 		str(restricted_denies_command),
 		str(restricted_allows_command),
 	])
@@ -23275,6 +23423,7 @@ func _run_auto_qa_panel_check() -> void:
 		host.qa_panel != null
 		and host.qa_panel.visible
 		and host.qa_entry_buttons.has("gm_prepare_qa_profile")
+		and host.qa_entry_buttons.has("gm_prepare_qa_pet_samples")
 		and host.qa_entry_buttons.has("gm_10v10_grass")
 		and host.qa_entry_buttons.has("gm_capture_grass")
 		and host.qa_entry_buttons.has("open_backpack")
@@ -23291,15 +23440,21 @@ func _run_auto_qa_panel_check() -> void:
 	)
 	var qa_profile_identity_text: String = str(host._panel_flow().qa_profile_identity_label.text) if host._panel_flow().qa_profile_identity_label != null else ""
 	var qa_profile_entry := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
+	var qa_pet_samples_entry := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
 	var qa_profile_ui_ok = (
 		qa_profile_identity_text.find("开发GM") >= 0
 		and qa_profile_identity_text.find("dev_gm") >= 0
 		and qa_profile_identity_text.find("GM") >= 0
 		and command_text.find("只补齐") >= 0
 		and command_text.find("不会清空") >= 0
+		and command_text.find("10 只 Lv1 蓝人龙") >= 0
+		and command_text.find("13 个空位") >= 0
 		and qa_profile_entry != null
 		and qa_profile_entry.text.find("补齐核心测试档") >= 0
 		and qa_profile_entry.disabled
+		and qa_pet_samples_entry != null
+		and qa_pet_samples_entry.text.find("准备宠物样本档") >= 0
+		and qa_pet_samples_entry.disabled
 	)
 	var pet_tool_options_ok = (
 		host.qa_pet_species_option != null

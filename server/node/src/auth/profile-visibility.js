@@ -7,6 +7,7 @@ const {publicEquipmentTransferSummary} = require("./equipment-transfer-envelope"
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
 const UNSAFE_OBJECT_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const PRIVATE_PROFILE_FIELD_KEYS = new Set(["gmQaPetSampleManifests"]);
 const PET_ARRAY_CONTAINER_KEYS = new Set(["petInstances", "pets"]);
 const GROWTH_AUTHORITY_SCHEMA_VERSION = 1;
 const GROWTH_AUTHORITY_SOURCE_SERVER = "server";
@@ -872,7 +873,7 @@ function publicProfile(profile, options = {}) {
   }
   const result = {};
   for (const [key, value] of Object.entries(profile)) {
-    if (UNSAFE_OBJECT_KEYS.has(key)) {
+    if (UNSAFE_OBJECT_KEYS.has(key) || PRIVATE_PROFILE_FIELD_KEYS.has(key)) {
       continue;
     }
     if (PET_ARRAY_CONTAINER_KEYS.has(key) && Array.isArray(value)) {

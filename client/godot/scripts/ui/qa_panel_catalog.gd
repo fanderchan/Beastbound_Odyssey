@@ -5,6 +5,7 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
 	entries.append({"section": "核心测试档"})
 	entries.append({"id": "gm_prepare_qa_profile", "label": "补齐核心测试档", "description": "只补齐缺少的货币与物资，不会清空现有进度"})
+	entries.append({"id": "gm_prepare_qa_pet_samples", "label": "准备宠物样本档", "description": "10只Lv1蓝人龙 + 3只Lv20对照；需13空位"})
 	entries.append({"section": "GM地图"})
 	entries.append({"id": "gm_map", "label": "进入GM测试场", "description": "完整客户端 + 三块专用测试草丛"})
 	entries.append({"id": "gm_10v10_grass", "label": "10V10草丛", "description": "固定10只，测练级、合击、自动战斗"})
