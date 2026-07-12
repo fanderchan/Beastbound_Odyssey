@@ -747,15 +747,83 @@ func _run_auto_client_version_check() -> void:
 		query.find("clientVersion=%s" % ServerAuthClientModel.CLIENT_VERSION.uri_encode()) >= 0
 		and query.find("clientProtocolVersion=%d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION) >= 0
 	)
+	var fixed_key := "bbo_client_prepare_contract_0001"
+	var replacement_key := "bbo_client_prepare_contract_0002"
+	var fixed_spec := ServerAuthClientModel.prepare_request_with_idempotency_key({
+		"url": "http://127.0.0.1:8787/test/durable",
+		"headers": ["Content-Type: application/json"],
+		"method": HTTPClient.METHOD_POST,
+		"body": "{}",
+		"durableMutation": true,
+	}, fixed_key)
+	var fixed_reprepared := ServerAuthClientModel.prepare_request_with_idempotency_key(fixed_spec, replacement_key)
+	var fixed_headers: PackedStringArray = host._packed_string_array(fixed_reprepared.get("headers", []))
+	var pure_prepare_ok = (
+		ServerAuthClientModel.request_idempotency_key(fixed_spec) == fixed_key
+		and ServerAuthClientModel.request_idempotency_key(fixed_reprepared) == fixed_key
+		and fixed_headers.count("%s: %s" % [ServerAuthClientModel.IDEMPOTENCY_HEADER_NAME, fixed_key]) == 1
+		and ServerAuthClientModel.request_retry_policy(fixed_reprepared) == ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
+	)
+	var durable_specs: Array[Dictionary] = [
+		ServerAuthClientModel.shop_transaction_request("http://127.0.0.1:8787", "token", "buy", "shop", "item", 1),
+		ServerAuthClientModel.market_buy_listing_request("http://127.0.0.1:8787", "token", "listing"),
+		ServerAuthClientModel.trade_accept_request("http://127.0.0.1:8787", "token", "trade"),
+		ServerAuthClientModel.party_invite_accept_request("http://127.0.0.1:8787", "token", "invite"),
+		ServerAuthClientModel.offline_hang_claim_request("http://127.0.0.1:8787", "token", "session"),
+		ServerAuthClientModel.battle_command_submit_request("http://127.0.0.1:8787", "token", "room", {"round": 1}),
+		ServerAuthClientModel.battle_room_leave_request("http://127.0.0.1:8787", "token", "room"),
+		ServerAuthClientModel.mail_claim_request("http://127.0.0.1:8787", "token", "mail"),
+		ServerAuthClientModel.chat_send_request("http://127.0.0.1:8787", "token", "world", "hello"),
+		ServerAuthClientModel.gm_offline_hang_config_request("http://127.0.0.1:8787", "token", {"rewardRatio": 0.5}),
+	]
+	var durable_specs_ok := true
+	var durable_keys: Dictionary = {}
+	for durable_spec in durable_specs:
+		var durable_key := ServerAuthClientModel.request_idempotency_key(durable_spec)
+		var durable_headers: PackedStringArray = host._packed_string_array(durable_spec.get("headers", []))
+		if (
+			not bool(durable_spec.get("durableMutation", false))
+			or not ServerAuthClientModel.idempotency_key_is_valid(durable_key)
+			or durable_headers.count("%s: %s" % [ServerAuthClientModel.IDEMPOTENCY_HEADER_NAME, durable_key]) != 1
+			or ServerAuthClientModel.request_retry_policy(durable_spec) != ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
+			or durable_keys.has(durable_key)
+		):
+			durable_specs_ok = false
+		durable_keys[durable_key] = true
+	var runtime_specs: Array[Dictionary] = [
+		ServerAuthClientModel.player_position_update_request("http://127.0.0.1:8787", "token", {"mapId": "map"}),
+		ServerAuthClientModel.movement_step_request("http://127.0.0.1:8787", "token", {"mapId": "map"}),
+		ServerAuthClientModel.trade_propose_request("http://127.0.0.1:8787", "token", "friend", [], 0),
+		ServerAuthClientModel.trade_cancel_request("http://127.0.0.1:8787", "token", "trade"),
+		ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787", "token", "friend"),
+		ServerAuthClientModel.party_invite_decline_request("http://127.0.0.1:8787", "token", "invite"),
+		ServerAuthClientModel.battle_invite_request("http://127.0.0.1:8787", "token", "friend"),
+		ServerAuthClientModel.battle_invite_accept_request("http://127.0.0.1:8787", "token", "invite"),
+		ServerAuthClientModel.party_battle_encounter_request("http://127.0.0.1:8787", "token", {"id": "zone"}, 1),
+	]
+	var runtime_boundaries_ok := true
+	for runtime_spec in runtime_specs:
+		var prepared_runtime_spec := ServerAuthClientModel.prepare_request_with_idempotency_key(runtime_spec, fixed_key)
+		if (
+			bool(prepared_runtime_spec.get("durableMutation", false))
+			or ServerAuthClientModel.request_idempotency_key(prepared_runtime_spec) != ""
+			or ServerAuthClientModel.request_retry_policy(prepared_runtime_spec) != ServerAuthClientModel.RETRY_POLICY_NONE
+		):
+			runtime_boundaries_ok = false
+	var idempotency_ok := pure_prepare_ok and durable_specs_ok and runtime_boundaries_ok
 	var protocol_v7_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 7
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and protocol_v7_ok else "failed"
-	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s protocol=%d" % [
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v7_ok else "failed"
+	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s idempotency=%s pure_prepare=%s durable=%s runtime_boundaries=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
 		str(auth_label_ok),
 		host.version_label.text if host.version_label != null else "",
 		str(headers_ok),
 		str(query_ok),
+		str(idempotency_ok),
+		str(pure_prepare_ok),
+		str(durable_specs_ok),
+		str(runtime_boundaries_ok),
 		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -16319,7 +16387,9 @@ func _run_auto_auth_server_client_check() -> void:
 		str(gm_grant_spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_grant_pet"
 		and int(gm_grant_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and host._packed_string_array(gm_grant_spec.get("headers", [])).has("Authorization: Bearer token_test")
-		and not ServerAuthClientModel.request_is_idempotent(gm_grant_spec)
+		and bool(gm_grant_spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_is_idempotent(gm_grant_spec)
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(gm_grant_spec))
 		and gm_grant_body.size() == 1
 		and str(gm_grant_body.get("growthSpeciesProfileId", "")) == "rebirth_starter_fire_cub_v1"
 		and str(gm_grant_spec.get("body", "")).find("privateSeed") < 0
@@ -16327,7 +16397,10 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(gm_grant_spec.get("body", "")).find("\"level\"") < 0
 		and str(gm_level_spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_level_pet"
 		and int(gm_level_spec.get("method", -1)) == HTTPClient.METHOD_POST
-		and not ServerAuthClientModel.request_is_idempotent(gm_level_spec)
+		and bool(gm_level_spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_is_idempotent(gm_level_spec)
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(gm_level_spec))
+		and ServerAuthClientModel.request_idempotency_key(gm_level_spec) != ServerAuthClientModel.request_idempotency_key(gm_grant_spec)
 		and gm_level_body.size() == 1
 		and str(gm_level_body.get("instanceId", "")) == "pet_gm_test"
 	)
@@ -17064,9 +17137,13 @@ func _run_auto_auth_server_client_check() -> void:
 		and ServerAuthClientModel.request_retry_attempts(battle_state_spec) == ServerAuthClientModel.DEFAULT_RETRY_ATTEMPTS
 		and ServerAuthClientModel.request_should_retry(battle_state_spec, HTTPRequest.RESULT_CANT_CONNECT, 0, 1)
 		and retry_delay_second > retry_delay_first
-		and ServerAuthClientModel.request_retry_policy(battle_command_spec) == ServerAuthClientModel.RETRY_POLICY_NONE
-		and ServerAuthClientModel.request_retry_attempts(battle_command_spec) == 1
-		and not ServerAuthClientModel.request_should_retry(battle_command_spec, HTTPRequest.RESULT_CANT_CONNECT, 0, 1)
+		and bool(battle_command_spec.get("durableMutation", false))
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(battle_command_spec))
+		and ServerAuthClientModel.request_retry_policy(battle_command_spec) == ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
+		and ServerAuthClientModel.request_retry_attempts(battle_command_spec) == ServerAuthClientModel.DEFAULT_RETRY_ATTEMPTS
+		and ServerAuthClientModel.request_should_retry(battle_command_spec, HTTPRequest.RESULT_CANT_CONNECT, 0, 1)
+		and bool(battle_leave_spec.get("durableMutation", false))
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(battle_leave_spec))
 	)
 	var parsed_retry_network = ServerAuthClientModel.parse_battle_state_response(0, ServerAuthClientModel.network_failure_body(
 		battle_state_spec,
@@ -17079,16 +17156,16 @@ func _run_auto_auth_server_client_check() -> void:
 		battle_command_spec,
 		HTTPRequest.RESULT_CANT_CONNECT,
 		OK,
-		1,
-		false
+		ServerAuthClientModel.DEFAULT_RETRY_ATTEMPTS,
+		true
 	))
 	var network_failure_parse_ok = (
 		ServerAuthClientModel.is_network_failure_response(parsed_retry_network)
 		and str(parsed_retry_network.get("code", "")) == ServerAuthClientModel.NETWORK_RETRY_FAILED_CODE
 		and str(parsed_retry_network.get("message", "")).find("已重试") >= 0
 		and ServerAuthClientModel.is_network_failure_response(parsed_command_network)
-		and str(parsed_command_network.get("code", "")) == ServerAuthClientModel.NETWORK_FAILED_CODE
-		and str(parsed_command_network.get("message", "")).find("确认状态") >= 0
+		and str(parsed_command_network.get("code", "")) == ServerAuthClientModel.NETWORK_RETRY_FAILED_CODE
+		and str(parsed_command_network.get("message", "")).find("已重试") >= 0
 	)
 	var previous_battle_active: bool = host.battle_active
 	var previous_battle_state: Dictionary = host.battle_state.duplicate(true)

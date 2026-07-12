@@ -19,6 +19,7 @@ const PERSISTENT_OBJECT_FIELDS = new Set([
   "manors",
   "marketConfig",
   "marketListings",
+  "mutationReceipts",
   "offlineHangConfig",
   "parties",
   "partyInvites",
@@ -44,6 +45,7 @@ const OBJECT_ENTITY_ID_FIELDS = Object.freeze({
   sessions: "sessionId",
   mailMessages: "mailId",
   marketListings: "listingId",
+  mutationReceipts: "operationId",
   parties: "partyId",
   partyInvites: "inviteId",
   families: "familyId",
@@ -329,6 +331,9 @@ function auditPersistentEntityIdentities(root, errors) {
         errors.push(errorEntry("batch_entity_id_duplicate", path, "persistent entity id is duplicated"));
       }
       seenIds.add(entityId);
+      if (bucket === "mutationReceipts") {
+        auditMutationReceipt(document, path, knownAccountIds, errors);
+      }
     }
   }
 
@@ -421,6 +426,30 @@ function auditPersistentEntityIdentities(root, errors) {
         seenCompoundIds.add(compoundId);
       }
     }
+  }
+}
+
+function auditMutationReceipt(receipt, path, knownAccountIds, errors) {
+  const committedAtMs = Date.parse(String(receipt.committedAt || ""));
+  const expiresAtMs = Date.parse(String(receipt.expiresAt || ""));
+  const accountId = String(receipt.accountId || "");
+  if (
+    receipt.schemaVersion !== 1
+    || !/^[A-Za-z0-9._:-]{16,160}$/.test(String(receipt.operationId || ""))
+    || !/^[a-f0-9]{64}$/.test(String(receipt.requestHash || ""))
+    || String(receipt.actionId || "").trim() === ""
+    || String(receipt.actionId || "").length > 160
+    || !Number.isFinite(committedAtMs)
+    || !Number.isFinite(expiresAtMs)
+    || expiresAtMs <= committedAtMs
+    || !isRecord(receipt.response)
+    || (accountId !== "" && !knownAccountIds.has(accountId))
+  ) {
+    errors.push(errorEntry(
+      "batch_mutation_receipt_invalid",
+      path,
+      "durable mutation receipt is malformed or references an unknown account",
+    ));
   }
 }
 

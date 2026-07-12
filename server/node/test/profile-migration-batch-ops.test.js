@@ -70,6 +70,7 @@ function completeSnapshot() {
     },
     mailMessages: {},
     marketListings: {},
+    mutationReceipts: {},
     consumedEquipmentEnvelopes: {},
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},
@@ -164,6 +165,36 @@ test("root coverage fails closed for persistence gaps, runtime state, battle eve
     {
       patch(root) { root.sessions.wrong_key = {sessionId: "session_real", accountId: "acc_batch"}; },
       code: "batch_entity_map_key_mismatch",
+    },
+    {
+      patch(root) {
+        root.mutationReceipts.operation_wrong = {
+          schemaVersion: 1,
+          operationId: "operation_real",
+          requestHash: "a".repeat(64),
+          actionId: "profile.action",
+          accountId: "acc_batch",
+          committedAt: "2026-07-12T08:00:00.000Z",
+          expiresAt: "2026-07-13T08:00:00.000Z",
+          response: {ok: true},
+        };
+      },
+      code: "batch_entity_map_key_mismatch",
+    },
+    {
+      patch(root) {
+        root.mutationReceipts.bbo_batch_receipt_invalid_0001 = {
+          schemaVersion: 1,
+          operationId: "bbo_batch_receipt_invalid_0001",
+          requestHash: "not-a-sha256",
+          actionId: "market.buy",
+          accountId: "acc_batch",
+          committedAt: "2026-07-12T08:00:00.000Z",
+          expiresAt: "2026-07-13T08:00:00.000Z",
+          response: {ok: true},
+        };
+      },
+      code: "batch_mutation_receipt_invalid",
     },
     {
       patch(root) {

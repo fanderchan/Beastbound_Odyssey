@@ -3,6 +3,25 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const {isDeepStrictEqual} = require("node:util");
+const {createDurableMutationCoordinator} = require("./auth/durable-mutation-coordinator");
+const {
+  RUNTIME_ROOT_FIELDS,
+  DURABLE_RECEIPT_TTL_MS,
+  DURABLE_OPERATION_ID_PATTERN,
+  DURABLE_REQUEST_HASH_PATTERN,
+  DURABLE_RECEIPT_EXCLUDED_METHODS,
+  durableBusinessChanged,
+  restorePublishedPersistentData,
+  mergeRuntimeObject,
+  normalizeDurableMutationReceipts,
+  activeDurableReceipt,
+  pruneDurableMutationReceipts,
+  durableCommitResult,
+  durableReceiptReplayResult,
+  durableMutationAccountId,
+  durableMutationToken,
+} = require("./auth/durable-mutation-state");
 const {createProfileActionsDomain} = require("./auth/profile-actions");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
@@ -549,22 +568,50 @@ function createAuthService(options = {}) {
   const movementStepRateByAccountId = new Map();
   const runtimeActiveSessionIds = new Map();
   const serverStartedAtMs = now();
+  const asyncWriteStore = Boolean(store && (store.asyncWrites === true || String(store.mode || "").startsWith("async:")));
+  const durableMutationCoordinator = options.durableMutationCoordinator || createDurableMutationCoordinator({
+    maxPending: options.durableMutationMaxPending,
+    responseTimeoutMs: options.durableCommitTimeoutMs,
+  });
   let cachedData = null;
+  let lastPublishedPersistentData = null;
+  let activeDurableMutation = null;
   let battleMaintenanceTimer = null;
+  let durableAdmissionsStopped = false;
+  let durableDrainPromise = null;
 
   function load() {
+    if (activeDurableMutation) {
+      return activeDurableMutation.data;
+    }
     if (!cachedData) {
       cachedData = normalizeData(store.load());
       cachedData.playerPositions = {};
       cachedData.battleInvites = {};
       cachedData.battleRooms = {};
       cachedData.tradeOffers = {};
+      lastPublishedPersistentData = persistentDataForStore(cachedData);
     }
     return cachedData;
   }
 
   function save(data) {
     const normalized = normalizeData(data);
+    if (activeDurableMutation) {
+      activeDurableMutation.data = normalized;
+      activeDurableMutation.saveRequested = true;
+      return null;
+    }
+    if (asyncWriteStore) {
+      // Production async stores may only be mutated through invokeDurable().
+      // Most domains edit load()'s object in place, so rebuild the published
+      // root before throwing to prevent an uncovered caller from leaking an
+      // uncommitted asset mutation into later requests.
+      cachedData = restorePublishedPersistentData(normalized, lastPublishedPersistentData, {normalizeData});
+      const error = new Error("异步持久化写入缺少 durable 请求边界。");
+      error.code = "durable_context_required";
+      throw error;
+    }
     const pendingSaveError = typeof store.lastSaveError === "function" ? store.lastSaveError() : null;
     if (pendingSaveError) {
       if (typeof store.clearSaveError === "function") {
@@ -579,6 +626,7 @@ function createAuthService(options = {}) {
     }
     store.save(persistentDataForStore(normalized));
     cachedData = normalized;
+    lastPublishedPersistentData = persistentDataForStore(cachedData);
     scheduleBattleMaintenance(cachedData);
   }
 
@@ -600,6 +648,14 @@ function createAuthService(options = {}) {
       }
       save(data);
     }
+    if (activeDurableMutation) {
+      activeDurableMutation.events.push(clone(payload));
+    } else {
+      publishServiceEvent(payload);
+    }
+  }
+
+  function publishServiceEvent(payload) {
     for (const listener of serviceEventListeners) {
       listener(payload);
     }
@@ -2160,18 +2216,21 @@ function createAuthService(options = {}) {
       clearTimeout(battleMaintenanceTimer);
       battleMaintenanceTimer = null;
     }
+    if (durableAdmissionsStopped) {
+      return;
+    }
     const nextDelay = nextBattleMaintenanceDelayMs(data || cachedData, now);
     if (nextDelay === null) {
       return;
     }
     battleMaintenanceTimer = setTimeout(() => {
       battleMaintenanceTimer = null;
-      try {
-        runBattleMaintenance();
-      } catch (error) {
-        // 存储写失败会从 save() 冒泡；定时器路径只记录日志，下一次成功写入会重新排程维护。
+      invokeDurable("runBattleMaintenance", [], {
+        actionId: "battle_maintenance",
+      }).catch((error) => {
+        // 定时结算与玩家请求共用 durable 边界；失败不得发布结算事件。
         console.error(`Beastbound battle maintenance save failed: ${error.message}`);
-      }
+      });
     }, Math.max(10, nextDelay + 25));
     if (typeof battleMaintenanceTimer.unref === "function") {
       battleMaintenanceTimer.unref();
@@ -2282,6 +2341,180 @@ function createAuthService(options = {}) {
 
   function snapshot() {
     return clone(load());
+  }
+
+  function invokeDurable(methodName, args = [], operation = {}) {
+    const normalizedMethodName = String(methodName || "");
+    const normalizedArgs = Array.isArray(args) ? args : [];
+    return durableMutationCoordinator.run(
+      () => executeDurableMutation(normalizedMethodName, normalizedArgs, operation),
+      operation && operation.timeoutMs !== undefined ? {timeoutMs: operation.timeoutMs} : {},
+    );
+  }
+
+  async function executeDurableMutation(methodName, args, operation) {
+    const method = serviceApi && serviceApi[methodName];
+    if (typeof method !== "function" || methodName === "invokeDurable") {
+      return fail("durable_method_invalid", "服务器持久化操作不存在。");
+    }
+    const operationId = String(operation && operation.operationId || "").trim();
+    const requestHash = String(operation && operation.requestHash || "").trim().toLowerCase();
+    const actionId = String(operation && operation.actionId || methodName).trim().slice(0, 160) || methodName;
+    if (operationId !== "" && !DURABLE_OPERATION_ID_PATTERN.test(operationId)) {
+      return fail("idempotency_key_invalid", "操作标识格式不正确，请重新发起操作。");
+    }
+    if (operationId !== "" && !DURABLE_REQUEST_HASH_PATTERN.test(requestHash)) {
+      return fail("idempotency_request_invalid", "操作校验信息不完整，请重新发起操作。");
+    }
+
+    refreshPublishedDataAfterStorageFailure();
+
+    const receiptOperationId = DURABLE_RECEIPT_EXCLUDED_METHODS.has(methodName) ? "" : operationId;
+    const before = clone(load());
+    const existingReceipt = receiptOperationId === "" ? null : activeDurableReceipt(before, receiptOperationId, now());
+    if (existingReceipt) {
+      const currentSession = resolveServiceSession(before, durableMutationToken(args));
+      if (!currentSession.ok) {
+        return fail(currentSession.code, currentSession.message);
+      }
+      if (
+        String(existingReceipt.accountId || "") === ""
+        || String(existingReceipt.accountId) !== String(currentSession.account.accountId || "")
+      ) {
+        return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
+      }
+      if (existingReceipt.requestHash !== requestHash || existingReceipt.actionId !== actionId) {
+        return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
+      }
+      return durableReceiptReplayResult(existingReceipt);
+    }
+
+    const transaction = {
+      before,
+      data: clone(before),
+      events: [],
+      saveRequested: false,
+    };
+    activeDurableMutation = transaction;
+    let result;
+    try {
+      result = method(...args);
+      if (result && typeof result.then === "function") {
+        throw new Error("durable service methods must remain synchronous");
+      }
+    } finally {
+      activeDurableMutation = null;
+    }
+
+    let candidate = normalizeData(transaction.data);
+    const beforePersistent = persistentDataForStore(before);
+    let candidatePersistent = persistentDataForStore(candidate);
+    const businessPersistentChanged = durableBusinessChanged(beforePersistent, candidatePersistent, {
+      persistentDataForStore,
+      normalizeEventSeq,
+    });
+    let response = result;
+    if (businessPersistentChanged && result && result.ok && receiptOperationId !== "") {
+      const committedAt = isoNow(now);
+      response = durableCommitResult(result, {
+        operationId: receiptOperationId,
+        actionId,
+        committedAt,
+        replayed: false,
+      });
+      candidate.mutationReceipts = pruneDurableMutationReceipts(candidate.mutationReceipts, now());
+      candidate.mutationReceipts[receiptOperationId] = {
+        schemaVersion: 1,
+        operationId: receiptOperationId,
+        requestHash,
+        actionId,
+        accountId: durableMutationAccountId(before, args, hashToken),
+        committedAt,
+        expiresAt: new Date(now() + DURABLE_RECEIPT_TTL_MS).toISOString(),
+        response: clone(response),
+      };
+      candidate = normalizeData(candidate);
+      candidatePersistent = persistentDataForStore(candidate);
+    }
+
+    if (!businessPersistentChanged) {
+      publishDurableCandidate(before, candidate, transaction.events);
+      return response;
+    }
+
+    try {
+      await Promise.resolve(store.save(candidatePersistent));
+    } catch (cause) {
+      const error = new Error("服务器存档暂时不可用，请稍后使用同一操作重试。");
+      error.code = "storage_write_failed";
+      error.cause = cause;
+      throw error;
+    }
+    lastPublishedPersistentData = clone(candidatePersistent);
+    publishDurableCandidate(before, candidate, transaction.events);
+    return response;
+  }
+
+  function refreshPublishedDataAfterStorageFailure() {
+    const priorError = typeof store.lastSaveError === "function" ? store.lastSaveError() : null;
+    if (!priorError) {
+      return;
+    }
+    try {
+      const current = cachedData ? clone(cachedData) : normalizeData({});
+      const reloaded = normalizeData(store.load());
+      for (const field of RUNTIME_ROOT_FIELDS) {
+        reloaded[field] = clone(current[field]);
+      }
+      cachedData = reloaded;
+      lastPublishedPersistentData = persistentDataForStore(reloaded);
+      if (typeof store.clearSaveError === "function") {
+        store.clearSaveError();
+      }
+      scheduleBattleMaintenance(cachedData);
+    } catch (cause) {
+      const error = new Error("上一次操作结果仍在确认中，请使用原操作标识稍后重试。");
+      error.code = "storage_outcome_unknown";
+      error.cause = cause;
+      throw error;
+    }
+  }
+
+  function publishDurableCandidate(before, candidate, events) {
+    const current = cachedData ? clone(cachedData) : clone(before);
+    const next = normalizeData(candidate);
+    for (const field of RUNTIME_ROOT_FIELDS) {
+      next[field] = mergeRuntimeObject(before[field], candidate[field], current[field]);
+    }
+    cachedData = next;
+    lastPublishedPersistentData = persistentDataForStore(cachedData);
+    scheduleBattleMaintenance(cachedData);
+    for (const event of events) {
+      publishServiceEvent(event);
+    }
+  }
+
+  function durableMutationMetrics() {
+    return durableMutationCoordinator.metrics();
+  }
+
+  function waitForDurableIdle() {
+    return durableMutationCoordinator.waitForIdle();
+  }
+
+  function stopDurableAdmissionsAndDrain() {
+    if (durableDrainPromise !== null) {
+      return durableDrainPromise;
+    }
+    durableAdmissionsStopped = true;
+    if (battleMaintenanceTimer) {
+      clearTimeout(battleMaintenanceTimer);
+      battleMaintenanceTimer = null;
+    }
+    durableDrainPromise = typeof durableMutationCoordinator.stopAdmissionAndDrain === "function"
+      ? durableMutationCoordinator.stopAdmissionAndDrain()
+      : durableMutationCoordinator.waitForIdle();
+    return durableDrainPromise;
   }
 
   function equipmentEnvelopeDuplicateMutationResult(methodName, args) {
@@ -2752,6 +2985,13 @@ function createAuthService(options = {}) {
       return projectPublicServiceResult(locked || method(...args));
     };
   }
+  // HTTP/WS production transports use this facade so synchronous domain code
+  // can run against an isolated candidate and only publish after durability.
+  // Direct memory-store tests and offline tools keep the existing sync API.
+  serviceApi.invokeDurable = invokeDurable;
+  serviceApi.waitForDurableIdle = waitForDurableIdle;
+  serviceApi.stopDurableAdmissionsAndDrain = stopDurableAdmissionsAndDrain;
+  serviceApi.durableMutationMetrics = durableMutationMetrics;
   return serviceApi;
 }
 
@@ -2831,20 +3071,40 @@ function createJsonAuthStore(filePath) {
 function createAsyncWriteAuthStore(store, options = {}) {
   let writeQueue = Promise.resolve();
   let lastSaveError = null;
+  let ambiguousCommitRecoveries = 0;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
   return {
     mode: store.mode ? `async:${store.mode}` : "async",
+    asyncWrites: true,
     load() {
       return store.load();
     },
     save(nextData) {
       const snapshot = clone(nextData);
-      const writeJob = writeQueue.then(() => saveStoreSnapshot(store, snapshot));
-      writeQueue = writeJob.catch((error) => {
-        lastSaveError = error;
-        onError(error);
+      const writeJob = writeQueue.then(async () => {
+        try {
+          return await saveStoreSnapshot(store, snapshot);
+        } catch (error) {
+          if (durableStoreSnapshotMatches(store, snapshot)) {
+            ambiguousCommitRecoveries += 1;
+            return {committed: true, ambiguousCommitRecovered: true};
+          }
+          throw error;
+        }
       });
-      return writeQueue;
+      // Keep the FIFO alive after failure, but return the original writeJob so
+      // the request that owns this exact write observes its own rejection.
+      writeQueue = writeJob.then(
+        (value) => {
+          lastSaveError = null;
+          return value;
+        },
+        (error) => {
+          lastSaveError = error;
+          onError(error);
+        },
+      );
+      return writeJob;
     },
     async flush() {
       await writeQueue;
@@ -2858,7 +3118,34 @@ function createAsyncWriteAuthStore(store, options = {}) {
     clearSaveError() {
       lastSaveError = null;
     },
+    metrics() {
+      return {
+        ambiguousCommitRecoveries,
+        failed: lastSaveError !== null,
+        underlying: typeof store.metrics === "function" ? store.metrics() : null,
+      };
+    },
+    async close() {
+      await writeQueue;
+      if (typeof store.close === "function") {
+        await store.close();
+      }
+    },
   };
+}
+
+function durableStoreSnapshotMatches(store, snapshot) {
+  if (!store || typeof store.load !== "function") {
+    return false;
+  }
+  try {
+    return isDeepStrictEqual(
+      persistentDataForStore(normalizeData(store.load())),
+      persistentDataForStore(normalizeData(snapshot)),
+    );
+  } catch {
+    return false;
+  }
 }
 
 function saveStoreSnapshot(store, snapshot) {
@@ -2898,6 +3185,7 @@ function normalizeData(raw) {
     mailMessages: objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
     marketListings: objectOrEmpty(data.marketListings),
+    mutationReceipts: normalizeDurableMutationReceipts(data.mutationReceipts),
     consumedEquipmentEnvelopes: Object.hasOwn(data, "consumedEquipmentEnvelopes")
       ? (data.consumedEquipmentEnvelopes === undefined
         ? undefined

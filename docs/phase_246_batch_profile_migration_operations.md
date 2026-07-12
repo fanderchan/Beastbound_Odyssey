@@ -19,7 +19,7 @@ Phase239/241 已有确定性的纯档案 registry，但 `migrateProfilesSnapshot
 
 `mysqlAuthStoreRootContract()` 从真实 store 空快照派生字段库存，并固定三类边界：
 
-- 25 个持久字段（包含根 `schemaVersion`、24 个实体/配置/事件字段）；
+- Phase246 建立时为 25 个持久字段；Phase247 新增同事务 `mutationReceipts` 后，当前合同为 26 个；
 - `tradeOffers/playerPositions/battleInvites/battleRooms` 四个运行时字段；
 - MySQL profile wrapper 允许的五个字段。
 
@@ -110,7 +110,7 @@ read-only load + plan/rehearsal
 - 逻辑 JSON 备份不是 `mysqldump` 物理备份，也不恢复表结构。正式运维仍应在维护窗口先执行既有数据库备份流程。
 - 不提供“服务器继续运营一段时间后，用旧备份强推整根回退”的命令；那会覆盖新资产。当前回滚只属于同一次 apply 的失败路径，并由每次 dry-run 做零写演练。
 - MySQL store 仍没有 CAS。维护窗口和写前二次摘要是本阶段门槛；多 Node/在线迁移属于 P0.6。
-- 普通游戏请求仍可能早于 async MySQL durable commit 返回；这是独立的 P0.5c-2，本阶段没有混入修复。
+- Phase246 当时普通请求仍可能早于 async MySQL durable commit 返回；该历史风险已由 Phase247/P0.5c-2 的请求私有 candidate、COMMIT gate 与 operation receipt 修复。
 - 全面 GM QA 档案属于 P0.5d。
 
 ## 验证证据

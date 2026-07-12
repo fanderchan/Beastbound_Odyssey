@@ -53,6 +53,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
     "manors",
     "marketConfig",
     "marketListings",
+    "mutationReceipts",
     "offlineHangConfig",
     "parties",
     "partyInvites",
@@ -73,7 +74,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   assert.deepEqual(contract.persistentFields, expectedPersistentFields);
   assert.deepEqual(contract.runtimeOnlyFields, expectedRuntimeOnlyFields);
   assert.deepEqual(contract.snapshotFields, [...expectedPersistentFields, ...expectedRuntimeOnlyFields].sort());
-  assert.equal(contract.persistentFields.length, 25);
+  assert.equal(contract.persistentFields.length, 26);
   assert.equal(new Set([...contract.persistentFields, ...contract.runtimeOnlyFields]).size, contract.snapshotFields.length);
   assert.deepEqual(contract.profileDocumentFields, [
     "playerId",
@@ -89,7 +90,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   assert.equal(Object.isFrozen(contract.profileDocumentFields), true);
 });
 
-test("strict mysql loader fails closed when persistent SQL keys disagree with JSON identities", () => {
+test("mysql loader fails closed when protected SQL keys disagree with JSON identities", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-row-identity-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
@@ -105,10 +106,12 @@ process.stdin.on("end", () => {
   const document = process.env.FAKE_IDENTITY_ARRAY === "1"
     ? []
     : bucket === "accounts"
-    ? {accountId: "acc_document", username: "mismatch"}
-    : bucket === "profile_bindings"
-      ? {accountId: "acc_document", playerId: "player_mismatch", profileRevision: 1}
-      : {eventId: "event_document", type: "login", username: "mismatch"};
+      ? {accountId: "acc_document", username: "mismatch"}
+      : bucket === "profile_bindings"
+        ? {accountId: "acc_document", playerId: "player_mismatch", profileRevision: 1}
+        : bucket === "mutation_receipts"
+          ? {operationId: "operation_document", schemaVersion: 1}
+          : {eventId: "event_document", type: "login", username: "mismatch"};
   const rows = [
     ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
     [bucket, process.env.FAKE_IDENTITY_ROW_KEY, document],
@@ -120,11 +123,14 @@ process.stdin.on("end", () => {
   const previousRowKey = process.env.FAKE_IDENTITY_ROW_KEY;
   const previousArray = process.env.FAKE_IDENTITY_ARRAY;
   try {
-    for (const [bucket, rowKey, arrayDocument] of [
-      ["accounts", "acc_sql", false],
-      ["profile_bindings", "acc_sql", false],
-      ["auth_events", "event_sql", false],
-      ["auth_events", "event_array", true],
+    for (const [bucket, rowKey, arrayDocument, strictRowIdentity] of [
+      ["accounts", "acc_sql", false, true],
+      ["profile_bindings", "acc_sql", false, true],
+      // Durable receipts always validate their SQL/document identity, even on
+      // the normal startup loader where the broader migration audit is off.
+      ["mutation_receipts", "operation_sql", false, false],
+      ["auth_events", "event_sql", false, true],
+      ["auth_events", "event_array", true, true],
     ]) {
       process.env.FAKE_IDENTITY_BUCKET = bucket;
       process.env.FAKE_IDENTITY_ROW_KEY = rowKey;
@@ -139,7 +145,7 @@ process.stdin.on("end", () => {
         createDatabase: false,
         readOnly: true,
         ensureSchema: false,
-        strictRowIdentity: true,
+        strictRowIdentity,
       });
       assert.throws(
         () => store.load(),
@@ -187,6 +193,7 @@ process.stdin.on("end", () => {
       stdinLength: stdin.length,
       hasExecuteArg: process.argv.slice(2).includes("-e"),
       hasServerState: stdin.includes("INSERT INTO server_state"),
+      hasMutationReceipts: stdin.includes("INSERT INTO mutation_receipts"),
       hasBattleRecords: stdin.includes("INSERT INTO battle_records"),
       hasFamilies: stdin.includes("INSERT INTO families"),
       hasManors: stdin.includes("INSERT INTO manors"),
@@ -221,6 +228,18 @@ process.stdin.on("end", () => {
       "sessions": {},
       "profileBindings": {},
       "profiles": {},
+      "mutationReceipts": {
+        "operation_mysqlprobe_0001": {
+          "schemaVersion": 1,
+          "operationId": "operation_mysqlprobe_0001",
+          "requestHash": "a".repeat(64),
+          "actionId": "profile.action",
+          "accountId": "acc_mysqlprobe",
+          "committedAt": "2026-06-30T00:00:00.000Z",
+          "expiresAt": "2026-07-01T00:00:00.000Z",
+          "response": {"ok": true},
+        },
+      },
       "battleRecords": [
         {
           "recordId": "battle_record_mysqlprobe",
@@ -305,12 +324,15 @@ process.stdin.on("end", () => {
     assert.ok(calls.length >= 2);
     assert.ok(calls.every((call) => call.hasExecuteArg === false));
     assert.ok(calls.some((call) => call.hasServerState));
+    assert.ok(calls.some((call) => call.hasMutationReceipts));
     assert.ok(calls.some((call) => call.hasBattleRecords));
     assert.ok(calls.some((call) => call.hasFamilies));
     assert.ok(calls.some((call) => call.hasManors));
     assert.ok(calls.some((call) => call.hasManorWars));
     assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mutation_receipts/.test(call.stdin)));
+    assert.ok(calls.some((call) => /operation_id VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => /VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
     const saveCall = calls.find((call) => String(call.stdin || "").includes("START TRANSACTION"));
@@ -362,10 +384,12 @@ process.stdin.on("end", () => {
     assert.throws(() => store.save({}), /Read-only MySQL auth store cannot save/);
     await assert.rejects(store.saveAsync({}), /Read-only MySQL auth store cannot save/);
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.match(calls[0].stdin, /information_schema\.tables/);
-    assert.match(calls[1].stdin, /SELECT 'server_state'/);
-    assert.doesNotMatch(calls[1].stdin, /consumed_equipment_envelopes/);
+    assert.match(calls[1].stdin, /information_schema\.tables/);
+    assert.match(calls[2].stdin, /SELECT 'server_state'/);
+    assert.doesNotMatch(calls[2].stdin, /consumed_equipment_envelopes/);
+    assert.doesNotMatch(calls[2].stdin, /mutation_receipts/);
     assert.equal(calls.some((call) => /CREATE TABLE|CREATE DATABASE|START TRANSACTION/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
@@ -421,9 +445,11 @@ process.stdin.on("end", () => {
       envelopeId: "eqx_store_read_only_0001",
     });
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.match(calls[0].stdin, /information_schema\.tables/);
-    assert.match(calls[1].stdin, /FROM consumed_equipment_envelopes ORDER BY envelope_id/);
+    assert.match(calls[1].stdin, /information_schema\.tables/);
+    assert.match(calls[2].stdin, /FROM consumed_equipment_envelopes ORDER BY envelope_id/);
+    assert.match(calls[2].stdin, /FROM mutation_receipts ORDER BY operation_id/);
     assert.equal(calls.some((call) => /CREATE TABLE|START TRANSACTION/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
@@ -569,6 +595,16 @@ process.stdin.on("end", () => {
         }],
       },
     }],
+    ["mutation_receipts", "operation_entity_0001", {
+      schemaVersion: 1,
+      operationId: "operation_entity_0001",
+      requestHash: "b".repeat(64),
+      actionId: "market.buy",
+      accountId: "acc_entity",
+      committedAt: "2026-07-04T00:01:30.000Z",
+      expiresAt: "2026-07-05T00:01:30.000Z",
+      response: {ok: true, listingId: "market_entity"},
+    }],
     ["mail_messages", "mail_entity", {
       mailId: "mail_entity",
       senderAccountId: "acc_entity",
@@ -681,6 +717,10 @@ process.stdin.on("end", () => {
       defense: 24,
       quick: 36,
     });
+    assert.deepEqual(loaded.mutationReceipts.operation_entity_0001.response, {
+      ok: true,
+      listingId: "market_entity",
+    });
     assert.equal(loaded.mailMessages.mail_entity.title, "实体邮件");
     assert.equal(loaded.mailMessages.mail_entity.equipmentEnvelopes[0].instanceState.enhancement.level, 3);
     assert.equal(loaded.marketListings.market_entity.equipmentEnvelope.instanceState.durability, 11);
@@ -749,6 +789,28 @@ process.stdin.on("end", () => {
       "sessions": {},
       "profileBindings": {},
       "profiles": {},
+      "mutationReceipts": {
+        "operation_incremental_keep_0001": {
+          "schemaVersion": 1,
+          "operationId": "operation_incremental_keep_0001",
+          "requestHash": "c".repeat(64),
+          "actionId": "market.buy",
+          "accountId": "acc_incremental",
+          "committedAt": "2026-07-04T00:00:00.000Z",
+          "expiresAt": "2026-07-05T00:00:00.000Z",
+          "response": {"ok": true, "kind": "keep"},
+        },
+        "operation_incremental_remove_0002": {
+          "schemaVersion": 1,
+          "operationId": "operation_incremental_remove_0002",
+          "requestHash": "d".repeat(64),
+          "actionId": "mail.claim",
+          "accountId": "acc_incremental",
+          "committedAt": "2026-07-04T00:00:00.000Z",
+          "expiresAt": "2026-07-05T00:00:00.000Z",
+          "response": {"ok": true, "kind": "remove"},
+        },
+      },
       "mailMessages": {
         "mail_incremental": {
           "mailId": "mail_incremental",
@@ -794,6 +856,17 @@ process.stdin.on("end", () => {
     secondState.accounts.incuser.displayName = "增量用户改名";
     secondState.accounts.incuser.updatedAt = "2026-07-04T00:01:00.000Z";
     secondState.mailMessages = {};
+    delete secondState.mutationReceipts.operation_incremental_remove_0002;
+    secondState.mutationReceipts.operation_incremental_add_0003 = {
+      schemaVersion: 1,
+      operationId: "operation_incremental_add_0003",
+      requestHash: "e".repeat(64),
+      actionId: "bank.withdraw",
+      accountId: "acc_incremental",
+      committedAt: "2026-07-04T00:01:00.000Z",
+      expiresAt: "2026-07-05T00:01:00.000Z",
+      response: {ok: true, kind: "add"},
+    };
     secondState.consumedEquipmentEnvelopes.eqx_store_consumed_second_0002 = {
       schemaVersion: 1,
       envelopeId: "eqx_store_consumed_second_0002",
@@ -812,6 +885,9 @@ process.stdin.on("end", () => {
     assert.ok(secondSave.includes("INSERT INTO accounts"));
     assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
     assert.ok(secondSave.includes("DELETE FROM mail_messages WHERE mail_id = 'mail_incremental'"));
+    assert.ok(secondSave.includes("DELETE FROM mutation_receipts WHERE operation_id = 'operation_incremental_remove_0002'"));
+    assert.match(secondSave, /INSERT INTO mutation_receipts \(operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json\) VALUES \('operation_incremental_add_0003'/);
+    assert.equal(secondSave.includes("operation_incremental_keep_0001"), false);
     assert.match(secondSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_second_0002'\)/);
     assert.equal(secondSave.includes("eqx_store_consumed_first_0001"), false);
     assert.equal(/DELETE FROM consumed_equipment_envelopes/.test(secondSave), false);
@@ -824,6 +900,31 @@ process.stdin.on("end", () => {
     assert.equal(secondSave.includes("INSERT INTO battle_invites"), false);
     assert.equal(secondSave.includes("room_incremental"), false);
     assert.equal(secondSave.includes("invite_incremental"), false);
+
+    const invalidReceiptState = structuredClone(secondState);
+    invalidReceiptState.mutationReceipts.operation_wrong_key = {
+      ...invalidReceiptState.mutationReceipts.operation_incremental_add_0003,
+      operationId: "operation_different_document_id",
+    };
+    assert.throws(
+      () => store.save(invalidReceiptState),
+      /持久操作回执身份不一致/,
+    );
+    const rewrittenReceiptState = structuredClone(secondState);
+    rewrittenReceiptState.mutationReceipts.operation_incremental_keep_0001.response = {
+      ok: true,
+      kind: "rewritten",
+    };
+    assert.throws(
+      () => store.save(rewrittenReceiptState),
+      /不能改写既有结果/,
+    );
+    const callsAfterInvalidReceipt = fs.readFileSync(logPath, "utf8").trim()
+      .split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.equal(
+      callsAfterInvalidReceipt.filter((call) => call.stdin.includes("START TRANSACTION")).length,
+      saveCalls.length,
+    );
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -831,6 +932,266 @@ process.stdin.on("end", () => {
       process.env.FAKE_MYSQL_LOG = previousLogPath;
     }
     fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql store skips spawning mysql for synchronous and asynchronous no-op saves", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-noop-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+    });
+    const state = {
+      schemaVersion: 1,
+      accounts: {
+        noop: {
+          accountId: "acc_noop",
+          username: "noop",
+          displayName: "无变化",
+          role: "player",
+          createdAt: "2026-07-12T00:00:00.000Z",
+          updatedAt: "2026-07-12T00:00:00.000Z",
+        },
+      },
+      mutationReceipts: {},
+      serviceEventSeq: 0,
+      serviceEvents: [],
+    };
+    store.save(state);
+    const callsAfterInitialSave = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;
+
+    store.save(structuredClone(state));
+    const runtimeOnlyChange = structuredClone(state);
+    runtimeOnlyChange.playerPositions = {
+      acc_noop: {accountId: "acc_noop", mapId: "firebud_village_gate"},
+    };
+    runtimeOnlyChange.battleInvites = {
+      invite_noop: {inviteId: "invite_noop", status: "pending"},
+    };
+    for (let index = 0; index < 1000; index += 1) {
+      await store.saveAsync(runtimeOnlyChange);
+    }
+
+    const callsAfterNoOps = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;
+    assert.equal(callsAfterNoOps, callsAfterInitialSave);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("async mysql writes reuse a persistent pool transaction without spawning mysql", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-pool-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const cliLogPath = path.join(tempDir, "cli-calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = cliLogPath;
+    const events = [];
+    const queriedStatements = [];
+    let failNextQuery = false;
+    let poolFactoryCalls = 0;
+    let poolOptions = null;
+    let endCalls = 0;
+    const connection = {
+      async beginTransaction() {
+        events.push("begin");
+      },
+      async query(statement) {
+        events.push("query");
+        queriedStatements.push(statement);
+        if (failNextQuery) {
+          failNextQuery = false;
+          throw new Error("injected pool query failure");
+        }
+      },
+      async commit() {
+        events.push("commit");
+      },
+      async rollback() {
+        events.push("rollback");
+      },
+      release() {
+        events.push("release");
+      },
+    };
+    const pool = {
+      async getConnection() {
+        events.push("acquire");
+        return connection;
+      },
+      async end() {
+        endCalls += 1;
+      },
+    };
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+      usePool: true,
+      poolFactory(options) {
+        poolFactoryCalls += 1;
+        poolOptions = options;
+        return pool;
+      },
+    });
+    store.load();
+    fs.writeFileSync(cliLogPath, "");
+    const state = (displayName) => ({
+      schemaVersion: 1,
+      accounts: {
+        pooluser: {
+          accountId: "acc_pooluser",
+          username: "pooluser",
+          displayName,
+          role: "player",
+          createdAt: "2026-07-12T00:00:00.000Z",
+          updatedAt: "2026-07-12T00:00:00.000Z",
+        },
+      },
+      mutationReceipts: {},
+      serviceEventSeq: 0,
+      serviceEvents: [],
+    });
+
+    await store.saveAsync(state("连接池一"));
+    await store.saveAsync(state("连接池二"));
+    failNextQuery = true;
+    await assert.rejects(
+      store.saveAsync(state("事务回滚")),
+      (error) => error.message === "MySQL 异步存档失败。"
+        && error.cause
+        && error.cause.message === "injected pool query failure",
+    );
+    await store.saveAsync(state("事务回滚"));
+    await store.close();
+    await store.close();
+    await assert.rejects(store.saveAsync(state("关闭后禁止写入")), /持久连接池已关闭/);
+
+    assert.equal(poolFactoryCalls, 1);
+    assert.equal(poolOptions.connectionLimit, 2);
+    assert.equal(poolOptions.multipleStatements, false);
+    assert.equal(poolOptions.waitForConnections, true);
+    assert.equal(endCalls, 1);
+    assert.equal(fs.readFileSync(cliLogPath, "utf8"), "");
+    assert.equal(events.filter((event) => event === "acquire").length, 4);
+    assert.equal(events.filter((event) => event === "begin").length, 4);
+    assert.equal(events.filter((event) => event === "commit").length, 3);
+    assert.equal(events.filter((event) => event === "rollback").length, 1);
+    assert.equal(events.filter((event) => event === "release").length, 4);
+    assert.ok(queriedStatements.some((statement) => statement.includes("INSERT INTO accounts")));
+    assert.equal(queriedStatements.some((statement) => statement === "START TRANSACTION"), false);
+    assert.equal(queriedStatements.some((statement) => statement === "COMMIT"), false);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("async mysql save failure stays non-blocking and does not spawn synchronous diagnosis", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-async-failure-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("START TRANSACTION")) {
+    process.stderr.write("sensitive mysql failure detail");
+    process.exitCode = 1;
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+    });
+    store.load();
+    fs.writeFileSync(logPath, "");
+
+    await assert.rejects(
+      store.saveAsync({
+        accounts: {
+          async_failure: {
+            accountId: "acc_async_failure",
+            username: "async_failure",
+            displayName: "异步失败",
+            role: "player",
+            createdAt: "2026-07-12T00:00:00.000Z",
+            updatedAt: "2026-07-12T00:00:00.000Z",
+          },
+        },
+      }),
+      (error) => error.message === "MySQL 异步存档失败。"
+        && !error.message.includes("sensitive mysql failure detail"),
+    );
+
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].stdin, /START TRANSACTION/);
+    assert.match(calls[0].stdin, /COMMIT/);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
 
@@ -1121,7 +1482,7 @@ test("JSON auth store refuses to load corrupted files instead of silently resett
   }
 });
 
-test("async store write failures bubble up as storage_write_failed and self-heal", async () => {
+test("async store rejects the owning durable request, rolls back cache, and self-heals", async () => {
   const base = createMemoryAuthStore();
   let failing = false;
   const flaky = {
@@ -1138,32 +1499,36 @@ test("async store write failures bubble up as storage_write_failed and self-heal
   const store = createAsyncWriteAuthStore(flaky, {"onError": (error) => asyncErrors.push(error)});
   const service = createAuthService({store});
 
-  const healthy = service.register({"username": "storagefaila", "password": "test1234", "displayName": "写失败A"});
+  const healthy = await service.invokeDurable("register", [{"username": "storagefaila", "password": "test1234", "displayName": "写失败A"}], {
+    actionId: "test register",
+  });
   assert.equal(healthy.ok, true);
-  await store.flush();
 
   failing = true;
-  const doomed = service.register({"username": "storagefailb", "password": "test1234", "displayName": "写失败B"});
-  assert.equal(doomed.ok, true);
+  await assert.rejects(
+    service.invokeDurable("register", [{"username": "storagefailb", "password": "test1234", "displayName": "写失败B"}], {
+      actionId: "test register",
+    }),
+    (error) => error.code === "storage_write_failed" && error.cause && /disk full/.test(error.cause.message),
+  );
   await assert.rejects(store.flush(), /disk full/);
   assert.equal(asyncErrors.length, 1);
+  assert.equal(Boolean(service.snapshot().accounts.storagefailb), false);
+  assert.equal(Boolean(base.load().accounts.storagefailb), false);
 
   failing = false;
-  assert.throws(
-    () => service.register({"username": "storagefailc", "password": "test1234", "displayName": "写失败C"}),
-    (error) => error.code === "storage_write_failed"
-  );
-  await store.flush();
-
-  const recovered = service.register({"username": "storagefaild", "password": "test1234", "displayName": "写失败D"});
+  const recovered = await service.invokeDurable("register", [{"username": "storagefaild", "password": "test1234", "displayName": "写失败D"}], {
+    actionId: "test register",
+  });
   assert.equal(recovered.ok, true);
   await store.flush();
   const persisted = base.load();
   assert.equal(Boolean(persisted.accounts.storagefaila), true);
+  assert.equal(Boolean(persisted.accounts.storagefailb), false);
   assert.equal(Boolean(persisted.accounts.storagefaild), true);
 });
 
-test("HTTP endpoints return 503 with a player-facing message after async write failure", async (t) => {
+test("HTTP endpoint waits for its own commit and returns 503 for that failed write", async (t) => {
   const base = createMemoryAuthStore();
   let failing = false;
   const flaky = {
@@ -1191,28 +1556,23 @@ test("HTTP endpoints return 503 with a player-facing message after async write f
   });
   assert.equal(first.ok, true);
   failing = true;
-  const doomed = await fetchJson(`${base503}/auth/register`, {
-    "method": "POST",
-    "body": JSON.stringify({"username": "http503b", "password": "test1234", "displayName": "接口写失败B"}),
-  });
-  assert.equal(doomed.ok, true);
-  await assert.rejects(store.flush(), /disk full/);
-  failing = false;
-
-  const rejectedResponse = await fetch(`${base503}/auth/register`, {
+  const doomedResponse = await fetch(`${base503}/auth/register`, {
     "method": "POST",
     "headers": {
       "content-type": "application/json",
       [CLIENT_VERSION_HEADER]: SERVER_VERSION,
       [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
     },
-    "body": JSON.stringify({"username": "http503c", "password": "test1234", "displayName": "接口写失败C"}),
+    "body": JSON.stringify({"username": "http503b", "password": "test1234", "displayName": "接口写失败B"}),
   });
-  assert.equal(rejectedResponse.status, 503);
-  const rejected = await rejectedResponse.json();
-  assert.equal(rejected.ok, false);
-  assert.equal(rejected.code, "storage_write_failed");
-  assert.match(String(rejected.message || ""), /存档暂时不可用/);
+  assert.equal(doomedResponse.status, 503);
+  const doomed = await doomedResponse.json();
+  assert.equal(doomed.ok, false);
+  assert.equal(doomed.code, "storage_write_failed");
+  await assert.rejects(store.flush(), /disk full/);
+  assert.equal(Boolean(service.snapshot().accounts.http503b), false);
+  assert.equal(Boolean(base.load().accounts.http503b), false);
+  failing = false;
 
   const recovered = await fetchJson(`${base503}/auth/register`, {
     "method": "POST",

@@ -11,11 +11,17 @@ const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 function createEventHub(service) {
   const clients = new Set();
+  let closing = false;
+  let closePromise = null;
   const unsubscribe = service && typeof service.onEvent === "function"
     ? service.onEvent((event) => publish(event))
     : () => {};
 
-  function handleUpgrade(req, socket) {
+  async function handleUpgrade(req, socket) {
+    if (closing) {
+      writeHttpError(socket, 503, "server shutting down");
+      return true;
+    }
     const url = new URL(req.url || "/", "http://127.0.0.1");
     if (url.pathname !== "/events") {
       writeHttpError(socket, 404, "not found");
@@ -27,7 +33,11 @@ function createEventHub(service) {
       return true;
     }
     const token = url.searchParams.get("token") || "";
-    const session = service.getSession(token);
+    const session = await invokeEventService(service, "getSession", [token], "ws_session");
+    if (closing) {
+      writeHttpError(socket, 503, "server shutting down");
+      return true;
+    }
     if (!session.ok) {
       writeHttpError(socket, 401, "unauthorized");
       return true;
@@ -77,7 +87,12 @@ function createEventHub(service) {
       createdAt: new Date().toISOString(),
       ...protocolMetadata(),
     });
-    const online = service.listOnlinePlayers(token, {"scope": "aoi"});
+    const online = await invokeEventService(
+      service,
+      "listOnlinePlayers",
+      [token, {"scope": "aoi"}],
+      "ws_online_snapshot",
+    );
     if (online.ok) {
       sendEvent(client, {
         type: "online.snapshot",
@@ -149,11 +164,23 @@ function createEventHub(service) {
   }
 
   function close() {
-    unsubscribe();
-    for (const client of clients) {
+    if (closePromise !== null) {
+      return closePromise;
+    }
+    closing = true;
+    try {
+      unsubscribe();
+    } catch {
+      // Shutdown must still disconnect and drain the accepted clients.
+    }
+    const disconnects = [];
+    for (const client of Array.from(clients)) {
+      clients.delete(client);
+      disconnects.push(markBattleConnection(service, client.token, false));
       client.socket.destroy();
     }
-    clients.clear();
+    closePromise = Promise.allSettled(disconnects).then(() => undefined);
+    return closePromise;
   }
 
   function clientCount() {
@@ -168,14 +195,29 @@ function createEventHub(service) {
   };
 }
 
+function invokeEventService(service, methodName, args, actionId) {
+  if (service && typeof service.invokeDurable === "function") {
+    return service.invokeDurable(methodName, args, {actionId});
+  }
+  return Promise.resolve(service[methodName](...args));
+}
+
 function markBattleConnection(service, token, connected) {
   if (!service || typeof service.markBattleConnection !== "function") {
-    return;
+    return Promise.resolve();
   }
   try {
-    service.markBattleConnection(token, connected);
+    if (typeof service.invokeDurable === "function") {
+      return service.invokeDurable("markBattleConnection", [token, connected], {
+        actionId: connected ? "ws_battle_connect" : "ws_battle_disconnect",
+      }).then(() => undefined, () => {
+        // Socket lifecycle cleanup must not tear down the HTTP server.
+      });
+    }
+    return Promise.resolve(service.markBattleConnection(token, connected)).then(() => undefined, () => undefined);
   } catch {
     // Socket lifecycle cleanup must not tear down the HTTP server.
+    return Promise.resolve();
   }
 }
 

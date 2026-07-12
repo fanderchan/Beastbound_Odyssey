@@ -5021,29 +5021,30 @@ func _chat_message_list_contains(messages: Array, text: String) -> bool:
 
 
 func _auto_http_request_spec(spec: Dictionary) -> Dictionary:
-	var max_attempts := ServerAuthClientModel.request_retry_attempts(spec)
+	var prepared_spec := ServerAuthClientModel.prepare_request_for_send(spec)
+	var max_attempts := ServerAuthClientModel.request_retry_attempts(prepared_spec)
 	var attempt := 0
 	var response: Dictionary = {}
 	while attempt < max_attempts:
 		attempt += 1
-		response = await _auto_http_request_spec_once(spec)
+		response = await _auto_http_request_spec_once(prepared_spec)
 		response["attempts"] = attempt
-		response["retryPolicy"] = ServerAuthClientModel.request_retry_policy(spec)
-		response["idempotent"] = ServerAuthClientModel.request_is_idempotent(spec)
+		response["retryPolicy"] = ServerAuthClientModel.request_retry_policy(prepared_spec)
+		response["idempotent"] = ServerAuthClientModel.request_is_idempotent(prepared_spec)
 		if not ServerAuthClientModel.request_should_retry(
-			spec,
+			prepared_spec,
 			int(response.get("result", HTTPRequest.RESULT_SUCCESS)),
 			int(response.get("responseCode", 0)),
 			attempt
 		):
 			break
-		var delay_seconds := ServerAuthClientModel.request_retry_delay_seconds(spec, attempt)
+		var delay_seconds := ServerAuthClientModel.request_retry_delay_seconds(prepared_spec, attempt)
 		if delay_seconds > 0.0:
 			await get_tree().create_timer(delay_seconds).timeout
 	response["retried"] = attempt > 1
 	if int(response.get("result", HTTPRequest.RESULT_SUCCESS)) != HTTPRequest.RESULT_SUCCESS:
 		response["body"] = ServerAuthClientModel.network_failure_body(
-			spec,
+			prepared_spec,
 			int(response.get("result", -1)),
 			int(response.get("error", OK)),
 			attempt,

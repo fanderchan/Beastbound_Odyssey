@@ -1,7 +1,9 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const http = require("node:http");
 const path = require("node:path");
+const {AsyncLocalStorage} = require("node:async_hooks");
 const {
   createAuthService,
   createAsyncWriteAuthStore,
@@ -28,16 +30,85 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
 ];
 
+const DURABLE_HTTP_SERVICE_METHODS = new Set([
+  "register",
+  "login",
+  "refreshSession",
+  "logout",
+  "getSession",
+  "getProfile",
+  "listOnlinePlayers",
+  "updatePlayerPosition",
+  "grantGmPet",
+  "levelUpGmPet",
+  "authorizeGmCommand",
+  "updateMarketConfig",
+  "getOfflineHangConfig",
+  "updateOfflineHangConfig",
+  "offlineHangStatus",
+  "startOfflineHang",
+  "claimOfflineHang",
+  "cancelOfflineHang",
+  "profileAction",
+  "shopTransaction",
+  "bankDeposit",
+  "bankWithdraw",
+  "createMarketListing",
+  "buyMarketListing",
+  "cancelMarketListing",
+  "acceptTrade",
+  "equipmentEquip",
+  "equipmentUnequip",
+  "equipmentEnhance",
+  "equipmentRepairAll",
+  "equipmentSynthesize",
+  "playerRebirth",
+  "questRecord",
+  "questClaim",
+  "startHangSession",
+  "stopHangSession",
+  "sendMail",
+  "markMailRead",
+  "claimMailAttachments",
+  "sendChatMessage",
+  "createFamily",
+  "joinFamily",
+  "leaveFamily",
+  "challengeManor",
+  "startManorWarBattleRoom",
+  "enterManorWar",
+  "leaveManorWar",
+  "resolveManorWar",
+  "getBattleState",
+  "inviteToBattle",
+  "startPartyEncounter",
+  "acceptBattleInvite",
+  "declineBattleInvite",
+  "cancelBattleInvite",
+  "submitBattleCommand",
+  "leaveBattleRoom",
+  "getPartyState",
+  "inviteToParty",
+  "applyToParty",
+  "acceptPartyInvite",
+  "declinePartyInvite",
+  "leaveParty",
+]);
+
 function createHttpServer(options = {}) {
-  const service = options.service || createAuthService();
+  const baseService = options.service || createAuthService();
+  const requestContexts = new AsyncLocalStorage();
+  const service = createDurableHttpServiceProxy(baseService, requestContexts);
   const commandCatalog = options.commandCatalog || DEFAULT_COMMAND_CATALOG;
-  const eventHub = options.eventHub || createEventHub(service);
+  const eventHub = options.eventHub || createEventHub(baseService);
   const store = options.store || null;
   const logger = createStructuredLogger(options.logger);
   const qaAdvanceClock = typeof options.qaAdvanceClock === "function" ? options.qaAdvanceClock : null;
-  const unsubscribeServiceLogger = installServiceEventLogger(service, logger);
+  const unsubscribeServiceLogger = installServiceEventLogger(baseService, logger);
 
-  const server = http.createServer(async (req, res) => {
+  const server = http.createServer((req, res) => requestContexts.run({req}, () => handleRequest(req, res)));
+
+  async function handleRequest(req, res) {
     const startedAt = process.hrtime.bigint();
     const url = new URL(req.url || "/", "http://127.0.0.1");
     res.beastboundLogger = logger;
@@ -58,7 +129,7 @@ function createHttpServer(options = {}) {
     });
     try {
       if (req.method === "GET" && url.pathname === "/health") {
-        const health = healthPayload(store, eventHub);
+        const health = healthPayload(store, eventHub, baseService);
         return sendJson(res, health.ok ? 200 : 503, health);
       }
       if (req.method === "POST" && url.pathname === "/__qa/clock/advance" && qaAdvanceClock) {
@@ -85,7 +156,7 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.getSession(bearerToken(req)));
       }
       if (req.method === "GET" && url.pathname === "/events/latest") {
-        const session = service.getSession(bearerToken(req));
+        const session = await Promise.resolve(service.getSession(bearerToken(req)));
         if (!session.ok) {
           return sendResult(res, session);
         }
@@ -342,35 +413,109 @@ function createHttpServer(options = {}) {
       }
       return sendJson(res, 404, {"ok": false, "code": "not_found", "message": "接口不存在。"});
     } catch (error) {
-      if (error && error.code === "storage_write_failed") {
-        return sendJson(res, 503, {"ok": false, "code": "storage_write_failed", "message": error.message || "服务器存档暂时不可用，请稍后再试。"});
-      }
-      return sendJson(res, 500, {"ok": false, "code": "server_error", "message": error.message});
+      return sendServiceError(res, error);
     }
-  });
+  }
   server.on("close", unsubscribeServiceLogger);
   server.on("upgrade", (req, socket, head) => {
-    try {
-      const handled = eventHub.handleUpgrade(req, socket, head);
+    Promise.resolve(eventHub.handleUpgrade(req, socket, head)).then((handled) => {
       if (!handled && !socket.destroyed) {
         socket.destroy();
       }
-    } catch (error) {
+    }).catch((error) => {
       // 存储写失败等异常不允许击穿升级回调导致进程崩溃；直接断开该连接。
       console.error(`Beastbound websocket upgrade failed: ${error.message}`);
       if (!socket.destroyed) {
         socket.destroy();
       }
-    }
+    });
   });
   server.eventHub = eventHub;
+  server.authService = baseService;
   if (options.store) {
     server.authStore = options.store;
   }
   return server;
 }
 
-function sendResult(res, result) {
+function createDurableHttpServiceProxy(service, requestContexts) {
+  return new Proxy(service, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      if (
+        typeof value !== "function"
+        || !DURABLE_HTTP_SERVICE_METHODS.has(String(property))
+        || typeof target.invokeDurable !== "function"
+      ) {
+        return typeof value === "function" ? value.bind(target) : value;
+      }
+      return (...args) => {
+        const context = requestContexts.getStore() || {};
+        const req = context.req || null;
+        const method = String(req && req.method || "").toUpperCase();
+        const pathName = String(req && new URL(req.url || "/", "http://127.0.0.1").pathname || "");
+        const actionId = `${method || "INTERNAL"} ${pathName || String(property)}`;
+        const operationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
+        const authToken = req ? bearerToken(req) : "";
+        return target.invokeDurable(String(property), args, {
+          operationId,
+          actionId,
+          requestHash: durableRequestHash(method, pathName, property, args, authToken),
+        });
+      };
+    },
+  });
+}
+
+function durableRequestHash(method, pathName, serviceMethod, args, authToken = "") {
+  return crypto.createHash("sha256").update(stableJson({
+    method: String(method || ""),
+    path: String(pathName || ""),
+    serviceMethod: String(serviceMethod || ""),
+    args: durableIntentArgs(args, authToken),
+  })).digest("hex");
+}
+
+function durableIntentArgs(args, authToken) {
+  const values = Array.isArray(args) ? args : [];
+  const token = String(authToken || "");
+  // Authenticated service methods receive bearerToken(req) as their first
+  // argument. The token proves who may execute/replay the intent, but it is not
+  // part of what the player asked to do and may rotate between safe retries.
+  if (token !== "" && values[0] === token) {
+    return values.slice(1);
+  }
+  if (
+    token !== ""
+    && values[0]
+    && typeof values[0] === "object"
+    && !Array.isArray(values[0])
+    && values[0].token === token
+  ) {
+    const credentialPayload = {...values[0]};
+    delete credentialPayload.token;
+    return [credentialPayload, ...values.slice(1)];
+  }
+  return values;
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value === undefined ? null : value);
+}
+
+async function sendResult(res, resultValue) {
+  let result;
+  try {
+    result = await Promise.resolve(resultValue);
+  } catch (error) {
+    return sendServiceError(res, error);
+  }
   let status = 200;
   if (result.ok) {
     logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
@@ -381,13 +526,32 @@ function sendResult(res, result) {
     status = 429;
   } else if (result.code && result.code.includes("denied")) {
     status = 403;
-  } else if (result.code === "revision_conflict") {
+  } else if (result.code === "revision_conflict" || result.code === "idempotency_key_conflict") {
     status = 409;
   } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {
     status = 426;
   }
   logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
   return sendJson(res, status, result);
+}
+
+function sendServiceError(res, error) {
+  const code = String(error && error.code || "");
+  if ([
+    "storage_write_failed",
+    "storage_commit_timeout",
+    "storage_queue_full",
+    "storage_outcome_unknown",
+    "storage_shutting_down",
+    "durable_context_required",
+  ].includes(code)) {
+    const publicCode = code === "durable_context_required" ? "storage_write_failed" : code;
+    const fallback = code === "storage_commit_timeout"
+      ? "服务器正在确认存档，请使用同一操作重试。"
+      : "服务器存档暂时不可用，请稍后使用同一操作重试。";
+    return sendJson(res, 503, {ok: false, code: publicCode, message: String(error && error.message || fallback)});
+  }
+  return sendJson(res, 500, {ok: false, code: "server_error", message: "服务器暂时异常，请稍后重试。"});
 }
 
 function sendJson(res, status, body) {
@@ -441,7 +605,7 @@ function requestClientIp(req) {
   return String(req.socket && req.socket.remoteAddress || "");
 }
 
-function healthPayload(store, eventHub) {
+function healthPayload(store, eventHub, service = null) {
   const storage = storageHealth(store);
   return {
     ok: storage.ok !== false,
@@ -450,6 +614,9 @@ function healthPayload(store, eventHub) {
     eventStream: {
       clients: eventHub && typeof eventHub.clientCount === "function" ? eventHub.clientCount() : 0,
     },
+    durableMutations: service && typeof service.durableMutationMetrics === "function"
+      ? service.durableMutationMetrics()
+      : {checked: false},
   };
 }
 
@@ -609,31 +776,78 @@ function installShutdownFlush(server, store) {
       return;
     }
     shuttingDown = true;
-    server.close(async () => {
+    drainServerForShutdown(server, store).then(() => undefined, (error) => {
+      console.error(`Beastbound auth store flush failed during ${signal}: ${error.message}`);
+      process.exitCode = 1;
+    }).finally(async () => {
       try {
-        if (store && typeof store.flush === "function") {
-          await store.flush();
+        if (store && typeof store.close === "function") {
+          await store.close();
         }
       } catch (error) {
-        console.error(`Beastbound auth store flush failed during ${signal}: ${error.message}`);
+        console.error(`Beastbound auth store close failed during ${signal}: ${error.message}`);
         process.exitCode = 1;
-      } finally {
-        if (server.eventHub && typeof server.eventHub.close === "function") {
-          server.eventHub.close();
-        }
-        process.exit();
       }
+      process.exit();
     });
+    // Default durable response timeout is 10s; graceful shutdown must leave a
+    // wider window for the accepted transaction and store FIFO to settle.
     setTimeout(() => {
       process.exit(1);
-    }, 5000).unref();
+    }, 15000).unref();
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+async function drainServerForShutdown(server, store) {
+  // server.close() must be called first to stop new TCP admission, but its
+  // callback waits for upgraded WebSocket sockets. Invoke eventHub.close()
+  // immediately (not from that callback), enqueue disconnect cleanup, then
+  // atomically seal durable admission and wait for all three drains together.
+  const serverClosed = shutdownStep(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const eventHubDrained = shutdownStep(() => (
+    server.eventHub && typeof server.eventHub.close === "function"
+      ? server.eventHub.close()
+      : undefined
+  ));
+  const durableDrained = shutdownStep(() => {
+    if (server.authService && typeof server.authService.stopDurableAdmissionsAndDrain === "function") {
+      return server.authService.stopDurableAdmissionsAndDrain();
+    }
+    if (server.authService && typeof server.authService.waitForDurableIdle === "function") {
+      return server.authService.waitForDurableIdle();
+    }
+    return undefined;
+  });
+  const drainResults = await Promise.allSettled([serverClosed, eventHubDrained, durableDrained]);
+  let flushError = null;
+  try {
+    if (store && typeof store.flush === "function") {
+      await store.flush();
+    }
+  } catch (error) {
+    flushError = error;
+  }
+  const drainFailure = drainResults.find((result) => result.status === "rejected");
+  if (drainFailure || flushError) {
+    throw (drainFailure ? drainFailure.reason : flushError);
+  }
+}
+
+function shutdownStep(run) {
+  try {
+    return Promise.resolve(run());
+  } catch (error) {
+    return Promise.reject(error);
+  }
 }
 
 module.exports = {
   createHttpServer,
   DEFAULT_COMMAND_CATALOG,
   createDefaultStore,
+  drainServerForShutdown,
 };

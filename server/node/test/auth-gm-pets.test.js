@@ -6,6 +6,7 @@ const {
   once,
   createAuthService,
   createMemoryAuthStore,
+  createAsyncWriteAuthStore,
   createHttpServer,
   fetchJson,
   isValidPetPrivateSeed,
@@ -266,4 +267,70 @@ test("existing HTTP GM command paths execute pet mutations without exposing raw 
   const genericAuthorize = await fetchJson(`${base}/gm/commands/gm_map`, {method: "POST", headers});
   assert.equal(genericAuthorize.ok, true);
   assert.equal(genericAuthorize.commandId, "gm_map");
+});
+
+test("generic HTTP GM commands commit durably through the production async store", async (t) => {
+  const base = createMemoryAuthStore();
+  const seedService = createAuthService({store: base});
+  const gm = registerGm(seedService, "httpgmgenericdurable", ["gm_map"]);
+  let saveCount = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "memory",
+    load: () => base.load(),
+    async saveAsync(nextData) {
+      saveCount += 1;
+      base.save(nextData);
+    },
+  }, {onError: () => {}});
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await service.waitForDurableIdle();
+    if (server.listening) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const operationId = "bbo_generic_gm_command_0001";
+  const requestOptions = {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${gm.session.token}`,
+      "Idempotency-Key": operationId,
+    },
+  };
+
+  const first = await fetchJson(`${baseUrl}/gm/commands/gm_map`, requestOptions);
+  assert.equal(first.ok, true);
+  assert.equal(first.commandId, "gm_map");
+  assert.equal(first.durableCommit.operationId, operationId);
+  assert.equal(first.durableCommit.replayed, false);
+  assert.equal(saveCount, 1);
+  assert.equal(base.load().gmCommandAudit.length, 1);
+  assert.equal(base.load().gmCommandAudit[0].commandId, "gm_map");
+  assert.equal(base.load().mutationReceipts[operationId].accountId, gm.account.accountId);
+
+  const relogin = await fetchJson(`${baseUrl}/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({username: "httpgmgenericdurable", password: "test1234"}),
+  });
+  assert.equal(relogin.ok, true);
+  assert.notEqual(relogin.session.token, gm.session.token);
+  const savesAfterLogin = saveCount;
+
+  const replay = await fetchJson(`${baseUrl}/gm/commands/gm_map`, {
+    ...requestOptions,
+    headers: {
+      ...requestOptions.headers,
+      authorization: `Bearer ${relogin.session.token}`,
+    },
+  });
+  assert.equal(replay.ok, true);
+  assert.equal(replay.auditId, first.auditId);
+  assert.equal(replay.durableCommit.operationId, operationId);
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(saveCount, savesAfterLogin);
+  assert.equal(base.load().gmCommandAudit.length, 1);
 });

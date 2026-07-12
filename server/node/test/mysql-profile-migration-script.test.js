@@ -369,6 +369,7 @@ function completeSnapshot() {
     },
     mailMessages: {},
     marketListings: {},
+    mutationReceipts: {},
     consumedEquipmentEnvelopes: {},
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},

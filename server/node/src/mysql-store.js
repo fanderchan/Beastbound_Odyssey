@@ -12,6 +12,23 @@ function createMysqlAuthStore(options = {}) {
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
   let lastPersistentData = null;
+  let writePool = null;
+  let closePromise = null;
+  let closed = false;
+
+  function persistentWritePool() {
+    if (closed) {
+      throw new Error("MySQL 持久连接池已关闭。");
+    }
+    if (writePool === null) {
+      const candidate = config.poolFactory(mysqlPoolOptions(config));
+      if (!candidate || typeof candidate.getConnection !== "function" || typeof candidate.end !== "function") {
+        throw new Error("MySQL 持久连接池工厂返回了无效对象。");
+      }
+      writePool = candidate;
+    }
+    return writePool;
+  }
 
   function ensureSchema() {
     if (schemaReady) {
@@ -65,6 +82,17 @@ function createMysqlAuthStore(options = {}) {
         updated_at VARCHAR(40) NOT NULL,
         profile_json JSON NOT NULL,
         INDEX idx_profiles_account_id (account_id)
+      );
+      CREATE TABLE IF NOT EXISTS mutation_receipts (
+        operation_id VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+        request_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        action_id VARCHAR(160) NOT NULL,
+        account_id VARCHAR(80) NULL,
+        committed_at VARCHAR(40) NOT NULL,
+        expires_at VARCHAR(40) NOT NULL,
+        document_json JSON NOT NULL,
+        INDEX idx_mutation_receipts_account_expires (account_id, expires_at),
+        INDEX idx_mutation_receipts_expires (expires_at)
       );
       CREATE TABLE IF NOT EXISTS mail_messages (
         mail_id VARCHAR(96) PRIMARY KEY,
@@ -276,40 +304,70 @@ function createMysqlAuthStore(options = {}) {
       ensureSchema();
       const loaded = loadPersistentData(config, config.database, {
         includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+        includeMutationReceipts: ensureSchemaEnabled,
         strictRowIdentity,
       });
       lastPersistentData = mysqlPersistentData(loaded);
       return loaded;
     },
     save(nextData) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
       if (readOnly) {
         throw new Error("Read-only MySQL auth store cannot save.");
       }
-      ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
+        ensureSchema();
         lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+          includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
         }));
       }
-      runMysqlSaveStatements(config, config.database, buildSaveStatements(data, lastPersistentData));
+      const statements = buildSaveStatements(data, lastPersistentData);
+      if (statements.length > 0) {
+        runMysqlSaveStatements(config, config.database, statements);
+      }
       lastPersistentData = data;
     },
     async saveAsync(nextData) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
       if (readOnly) {
         throw new Error("Read-only MySQL auth store cannot save.");
       }
-      ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
+        ensureSchema();
         lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+          includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
         }));
       }
-      await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(data, lastPersistentData));
+      const statements = buildSaveStatements(data, lastPersistentData);
+      if (statements.length > 0) {
+        if (config.usePool) {
+          await runMysqlPoolSaveStatements(persistentWritePool(), statements);
+        } else {
+          await runMysqlSaveStatementsAsync(config, config.database, statements);
+        }
+      }
       lastPersistentData = data;
+    },
+    async close() {
+      if (closePromise !== null) {
+        return closePromise;
+      }
+      closed = true;
+      if (writePool === null) {
+        return undefined;
+      }
+      closePromise = Promise.resolve(writePool.end());
+      return closePromise;
     },
   };
 }
@@ -318,12 +376,14 @@ function buildSaveStatements(nextData, previousData = null) {
   const data = mysqlPersistentData(nextData);
   const previous = previousData ? mysqlPersistentData(previousData) : emptyPersistentData();
   const statements = [];
-  statements.push("START TRANSACTION");
-  statements.push(upsertStateStatement(data));
+  if (entityChanged(stateMetadata(previous), stateMetadata(data))) {
+    statements.push(upsertStateStatement(data));
+  }
   appendObjectEntityDiff(statements, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
   appendObjectEntityDiff(statements, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
   appendObjectEntityDiff(statements, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
   appendObjectEntityDiff(statements, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
+  appendMutationReceiptDiff(statements, previous.mutationReceipts, data.mutationReceipts);
   appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
   appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
   appendConsumedEquipmentEnvelopeDiff(
@@ -345,17 +405,21 @@ function buildSaveStatements(nextData, previousData = null) {
   appendArrayEntityDiff(statements, "gm_command_audit", "audit_id", previous.gmCommandAudit, data.gmCommandAudit, gmCommandAuditEntityKey, insertGmCommandAuditStatement);
   appendArrayEntityDiff(statements, "auth_events", "event_id", previous.authEvents, data.authEvents, authEventEntityKey, insertAuthEventStatement);
   appendArrayEntityDiff(statements, "service_events", "event_seq", previous.serviceEvents, data.serviceEvents, serviceEventEntityKey, insertServiceEventStatement);
-  statements.push("COMMIT");
-  return statements;
+  if (statements.length === 0) {
+    return [];
+  }
+  return ["START TRANSACTION", ...statements, "COMMIT"];
 }
 
 function loadPersistentData(config, database, options = {}) {
   const includeConsumedEquipmentEnvelopes = options.includeConsumedEquipmentEnvelopes === true
     || mysqlTableExists(config, database, "consumed_equipment_envelopes");
+  const includeMutationReceipts = options.includeMutationReceipts === true
+    || mysqlTableExists(config, database, "mutation_receipts");
   const output = runMysql(
     config,
     database,
-    loadPersistentDataSql({includeConsumedEquipmentEnvelopes}),
+    loadPersistentDataSql({includeConsumedEquipmentEnvelopes, includeMutationReceipts}),
   );
   return parsePersistentDataRows(output, options);
 }
@@ -401,6 +465,11 @@ function loadPersistentDataSql(options = {}) {
   if (options.includeConsumedEquipmentEnvelopes === true) {
     statements.splice(7, 0,
       "SELECT 'consumed_equipment_envelopes', envelope_id, CAST(JSON_OBJECT('schemaVersion', 1, 'envelopeId', envelope_id) AS CHAR) FROM consumed_equipment_envelopes ORDER BY envelope_id",
+    );
+  }
+  if (options.includeMutationReceipts === true) {
+    statements.splice(7, 0,
+      "SELECT 'mutation_receipts', operation_id, CAST(document_json AS CHAR) FROM mutation_receipts ORDER BY operation_id",
     );
   }
   return statements.join(";\n");
@@ -463,7 +532,7 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
     }
     return;
   }
-  if (options.strictRowIdentity === true) {
+  if (options.strictRowIdentity === true || bucket === "mutation_receipts") {
     assertPersistentRowIdentity(bucket, rowKey, persistentDocumentIdentity(bucket, document));
   }
   switch (bucket) {
@@ -478,6 +547,11 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
       break;
     case "profiles":
       data.profiles[String(document.playerId || rowKey || "")] = document;
+      break;
+    case "mutation_receipts":
+      // Keep the SQL operation id authoritative so a malformed document
+      // cannot collapse two durable retry records onto the same map entry.
+      data.mutationReceipts[String(rowKey || "")] = document;
       break;
     case "mail_messages":
       // Keep the SQL primary key authoritative. A mismatched document identity
@@ -555,6 +629,7 @@ function persistentDocumentIdentity(bucket, document) {
     sessions: "sessionId",
     profile_bindings: "accountId",
     profiles: "playerId",
+    mutation_receipts: "operationId",
     mail_messages: "mailId",
     market_listings: "listingId",
     consumed_equipment_envelopes: "envelopeId",
@@ -608,6 +683,7 @@ function emptyPersistentData() {
     sessions: {},
     profileBindings: {},
     profiles: {},
+    mutationReceipts: {},
     mailMessages: {},
     marketListings: {},
     consumedEquipmentEnvelopes: {},
@@ -683,6 +759,51 @@ function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArr
     entityMapFromArray(nextArray, keyFn),
     insertFn
   );
+}
+
+function appendMutationReceiptDiff(statements, previousValue, nextValue) {
+  const previous = mutationReceiptMap(previousValue);
+  const next = mutationReceiptMap(nextValue);
+  for (const operationId of Object.keys(previous).sort()) {
+    if (!Object.hasOwn(next, operationId)) {
+      statements.push(deleteEntityStatement("mutation_receipts", "operation_id", operationId));
+    }
+  }
+  for (const operationId of Object.keys(next).sort()) {
+    if (Object.hasOwn(previous, operationId)) {
+      if (entityChanged(previous[operationId], next[operationId])) {
+        throw new Error("持久化操作回执只能按过期策略删除，不能改写既有结果。");
+      }
+      continue;
+    }
+    // Plain INSERT makes a database-side duplicate roll back the transaction
+    // instead of overwriting the first committed outcome.
+    statements.push(insertMutationReceiptStatement(next[operationId]));
+  }
+}
+
+function mutationReceiptMap(value) {
+  if (value === undefined) {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("持久操作回执必须是对象。");
+  }
+  const result = {};
+  for (const operationId of Object.keys(value).sort()) {
+    const receipt = value[operationId];
+    if (
+      operationId === ""
+      || !receipt
+      || typeof receipt !== "object"
+      || Array.isArray(receipt)
+      || receipt.operationId !== operationId
+    ) {
+      throw new Error("持久操作回执身份不一致。");
+    }
+    result[operationId] = receipt;
+  }
+  return result;
 }
 
 function appendConsumedEquipmentEnvelopeDiff(statements, previousValue, nextValue) {
@@ -945,6 +1066,8 @@ function serviceEventEntityKey(event) {
 }
 
 function mysqlConfig(options) {
+  const mysqlPathExplicit = Object.prototype.hasOwnProperty.call(options, "mysqlPath")
+    || String(process.env.BEASTBOUND_MYSQL_BIN || "").trim() !== "";
   return {
     mysqlPath: options.mysqlPath || process.env.BEASTBOUND_MYSQL_BIN || "mysql",
     host: options.host || process.env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
@@ -954,7 +1077,50 @@ function mysqlConfig(options) {
     database: options.database || process.env.BEASTBOUND_MYSQL_DATABASE || DEFAULT_DATABASE,
     createDatabase: boolConfig(options.createDatabase, process.env.BEASTBOUND_MYSQL_CREATE_DATABASE),
     outputMaxBufferBytes: Number(options.outputMaxBufferBytes || process.env.BEASTBOUND_MYSQL_OUTPUT_MAX_BUFFER_BYTES || DEFAULT_OUTPUT_MAX_BUFFER_BYTES),
+    usePool: mysqlPoolEnabled(options, mysqlPathExplicit),
+    poolFactory: typeof options.poolFactory === "function" ? options.poolFactory : defaultMysqlPoolFactory,
+    poolConnectionLimit: positiveIntegerConfig(
+      options.poolConnectionLimit,
+      process.env.BEASTBOUND_MYSQL_POOL_CONNECTION_LIMIT,
+      2,
+    ),
   };
+}
+
+function mysqlPoolEnabled(options, mysqlPathExplicit) {
+  if (Object.prototype.hasOwnProperty.call(options, "usePool")) {
+    return Boolean(options.usePool);
+  }
+  if (String(process.env.BEASTBOUND_MYSQL_USE_POOL || "").trim() !== "") {
+    return boolConfig(undefined, process.env.BEASTBOUND_MYSQL_USE_POOL);
+  }
+  if (typeof options.poolFactory === "function") {
+    return true;
+  }
+  // A caller that supplies a mysql executable is normally a migration tool or
+  // a fake-CLI test. Keep that established path unless it explicitly opts in.
+  return !mysqlPathExplicit;
+}
+
+function mysqlPoolOptions(config) {
+  return {
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: config.database,
+    waitForConnections: true,
+    connectionLimit: config.poolConnectionLimit,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    multipleStatements: false,
+  };
+}
+
+function defaultMysqlPoolFactory(options) {
+  const mysql = require("mysql2/promise");
+  return mysql.createPool(options);
 }
 
 function runMysql(config, database, sql, options = {}) {
@@ -1042,6 +1208,9 @@ function mysqlArgs(config, database) {
 }
 
 function runMysqlSaveStatements(config, database, statements) {
+  if (!Array.isArray(statements) || statements.length === 0) {
+    return "";
+  }
   try {
     return runMysql(config, database, `${statements.join(";\n")};`);
   } catch (error) {
@@ -1054,14 +1223,59 @@ function runMysqlSaveStatements(config, database, statements) {
 }
 
 async function runMysqlSaveStatementsAsync(config, database, statements) {
+  if (!Array.isArray(statements) || statements.length === 0) {
+    return "";
+  }
   try {
     return await runMysqlAsync(config, database, `${statements.join(";\n")};`);
   } catch (error) {
-    const diagnosis = diagnoseMysqlSaveFailure(config, database, statements);
-    if (diagnosis !== "") {
-      throw new Error(`${error.message} (${diagnosis})`);
+    // An async request path must never fall back to synchronous statement-by-
+    // statement mysql spawns: that blocks the event loop and can replay an
+    // ambiguous transaction. Keep the public failure bounded and retain the
+    // original error only as a non-rendered cause for local diagnostics.
+    const saveError = new Error("MySQL 异步存档失败。");
+    saveError.cause = error;
+    throw saveError;
+  }
+}
+
+async function runMysqlPoolSaveStatements(pool, statements) {
+  if (!Array.isArray(statements) || statements.length === 0) {
+    return;
+  }
+  const transactionStatements = statements[0] === "START TRANSACTION"
+    && statements[statements.length - 1] === "COMMIT"
+    ? statements.slice(1, -1)
+    : statements.slice();
+  let connection = null;
+  let transactionStarted = false;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    transactionStarted = true;
+    for (const statement of transactionStatements) {
+      await connection.query(statement);
     }
-    throw error;
+    await connection.commit();
+  } catch (error) {
+    let rollbackError = null;
+    if (connection !== null && transactionStarted) {
+      try {
+        await connection.rollback();
+      } catch (caughtRollbackError) {
+        rollbackError = caughtRollbackError;
+      }
+    }
+    const saveError = new Error("MySQL 异步存档失败。");
+    saveError.cause = error;
+    if (rollbackError !== null) {
+      saveError.rollbackCause = rollbackError;
+    }
+    throw saveError;
+  } finally {
+    if (connection !== null && typeof connection.release === "function") {
+      connection.release();
+    }
   }
 }
 
@@ -1099,6 +1313,7 @@ function stateMetadata(data) {
       sessions: Object.keys(objectOrEmpty(persistent.sessions)).length,
       profileBindings: Object.keys(objectOrEmpty(persistent.profileBindings)).length,
       profiles: Object.keys(objectOrEmpty(persistent.profiles)).length,
+      mutationReceipts: Object.keys(objectOrEmpty(persistent.mutationReceipts)).length,
       mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
       marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
       consumedEquipmentEnvelopes: Object.keys(objectOrEmpty(persistent.consumedEquipmentEnvelopes)).length,
@@ -1137,6 +1352,10 @@ function insertProfileBindingStatement(binding) {
 
 function insertProfileStatement(profile) {
   return `INSERT INTO profiles (player_id, account_id, profile_revision, updated_at, profile_json) VALUES (${sqlString(profile.playerId)}, ${sqlString(profile.accountId)}, ${Number(profile.profileRevision || 0)}, ${sqlString(profile.updatedAt)}, ${sqlJson(profile.profile || {})})`;
+}
+
+function insertMutationReceiptStatement(receipt) {
+  return `INSERT INTO mutation_receipts (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json) VALUES (${sqlString(receipt.operationId)}, ${sqlString(receipt.requestHash)}, ${sqlString(receipt.actionId)}, ${sqlNullable(receipt.accountId)}, ${sqlString(receipt.committedAt)}, ${sqlString(receipt.expiresAt)}, ${sqlJson(receipt)})`;
 }
 
 function insertMailStatement(mail) {
@@ -1246,6 +1465,15 @@ function boolConfig(optionValue, envValue) {
   }
   const value = String(envValue || "").trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes";
+}
+
+function positiveIntegerConfig(optionValue, envValue, fallback) {
+  const raw = optionValue !== undefined ? optionValue : envValue;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    return fallback;
+  }
+  return value;
 }
 
 module.exports = {

@@ -8,6 +8,11 @@ const CLIENT_VERSION := "0.1.0"
 const CLIENT_PROTOCOL_VERSION := 7
 const RETRY_POLICY_NONE := "none"
 const RETRY_POLICY_IDEMPOTENT := "idempotent"
+const IDEMPOTENCY_HEADER_NAME := "Idempotency-Key"
+const IDEMPOTENCY_KEY_PREFIX := "bbo_"
+const IDEMPOTENCY_KEY_MIN_LENGTH := 16
+const IDEMPOTENCY_KEY_MAX_LENGTH := 160
+const IDEMPOTENCY_RANDOM_BYTES := 24
 const DEFAULT_RETRY_ATTEMPTS := 3
 const DEFAULT_RETRY_BASE_DELAY_MS := 250
 const DEFAULT_RETRY_MAX_DELAY_MS := 1000
@@ -55,6 +60,8 @@ const ERROR_CODE_MESSAGES := {
 	"invalid_shop_action": "商店操作不正确。",
 	"invalid_title": "标题不能为空。",
 	"invalid_username": "账号格式不正确。",
+	"idempotency_key_conflict": "操作状态已变化，请刷新后重新操作。",
+	"idempotency_key_invalid": "操作标识失效，请重新操作。",
 	"battle_profile_mutation_locked": "战斗中暂不能整理资产或宠物，请在战斗结束后重试。",
 	"battle_capture_capacity_full": "宠物栏和兽栏都满了，请先清理位置再捕捉。",
 	"battle_capture_candidate_invalid": "这只野生宠物暂时无法捕捉，请重新遇敌。",
@@ -73,6 +80,9 @@ const ERROR_CODE_MESSAGES := {
 	"recipient_self": "不能给自己发送邮件。",
 	"revision_conflict": "服务器档案已更新，请重新拉取。",
 	"server_error": "服务器暂时异常，请稍后重试。",
+	"storage_commit_timeout": "服务器仍在确认本次操作，正在使用原操作重试。",
+	"storage_queue_full": "服务器正在保存较多操作，请稍后重试。",
+	"storage_write_failed": "服务器存档暂时不可用，请稍后使用原操作重试。",
 	"session_cancelled": "服务器档案同步已取消。",
 	"session_expired": "登录会话已过期，请重新登录。",
 	"session_missing": "登录会话不存在，请重新登录。",
@@ -141,6 +151,92 @@ static func request_headers(extra: Array[String] = []) -> Array[String]:
 	]
 	headers.append_array(extra)
 	return headers
+
+
+static func new_idempotency_key() -> String:
+	var random_bytes := Crypto.new().generate_random_bytes(IDEMPOTENCY_RANDOM_BYTES)
+	if random_bytes.size() != IDEMPOTENCY_RANDOM_BYTES:
+		return ""
+	return "%s%s" % [IDEMPOTENCY_KEY_PREFIX, random_bytes.hex_encode()]
+
+
+static func idempotency_key_is_valid(value: String) -> bool:
+	var key := value.strip_edges()
+	if not key.begins_with(IDEMPOTENCY_KEY_PREFIX) or key.length() < IDEMPOTENCY_KEY_MIN_LENGTH:
+		return false
+	if key.length() > IDEMPOTENCY_KEY_MAX_LENGTH:
+		return false
+	for index in range(IDEMPOTENCY_KEY_PREFIX.length(), key.length()):
+		var codepoint := key.unicode_at(index)
+		var is_digit := codepoint >= 0x30 and codepoint <= 0x39
+		var is_upper := codepoint >= 0x41 and codepoint <= 0x5a
+		var is_lower := codepoint >= 0x61 and codepoint <= 0x7a
+		if not is_digit and not is_upper and not is_lower and not [0x2d, 0x2e, 0x3a, 0x5f].has(codepoint):
+			return false
+	return true
+
+
+static func request_idempotency_key(spec: Dictionary) -> String:
+	var declared_key := str(spec.get("idempotencyKey", "")).strip_edges()
+	if idempotency_key_is_valid(declared_key):
+		return declared_key
+	var raw_headers = spec.get("headers", [])
+	if not (raw_headers is Array or raw_headers is PackedStringArray):
+		return ""
+	for raw_header in raw_headers:
+		var header := str(raw_header)
+		var separator := header.find(":")
+		if separator < 0:
+			continue
+		if header.substr(0, separator).strip_edges().to_lower() != IDEMPOTENCY_HEADER_NAME.to_lower():
+			continue
+		var header_key := header.substr(separator + 1).strip_edges()
+		if idempotency_key_is_valid(header_key):
+			return header_key
+	return ""
+
+
+# Pure preparation helper: callers may inject a deterministic key in focused tests.
+# An already prepared spec always keeps its first valid key, so later retries cannot
+# accidentally turn one logical mutation into multiple idempotency operations.
+static func prepare_request_with_idempotency_key(spec: Dictionary, candidate_key: String) -> Dictionary:
+	var prepared := spec.duplicate(true)
+	if not bool(prepared.get("durableMutation", false)):
+		return prepared
+	var stable_key := request_idempotency_key(prepared)
+	if stable_key == "":
+		stable_key = candidate_key.strip_edges()
+	if not idempotency_key_is_valid(stable_key):
+		return prepared
+	var headers: Array[String] = []
+	var raw_headers = prepared.get("headers", [])
+	if raw_headers is Array or raw_headers is PackedStringArray:
+		for raw_header in raw_headers:
+			var header := str(raw_header)
+			var separator := header.find(":")
+			if separator >= 0 and header.substr(0, separator).strip_edges().to_lower() == IDEMPOTENCY_HEADER_NAME.to_lower():
+				continue
+			headers.append(header)
+	headers.append("%s: %s" % [IDEMPOTENCY_HEADER_NAME, stable_key])
+	prepared["headers"] = headers
+	prepared["idempotencyKey"] = stable_key
+	prepared["retryPolicy"] = RETRY_POLICY_IDEMPOTENT
+	return prepared
+
+
+static func prepare_request_for_send(spec: Dictionary) -> Dictionary:
+	if not bool(spec.get("durableMutation", false)):
+		return spec.duplicate(true)
+	var stable_key := request_idempotency_key(spec)
+	if stable_key == "":
+		stable_key = new_idempotency_key()
+	return prepare_request_with_idempotency_key(spec, stable_key)
+
+
+static func _durable_mutation_request(spec: Dictionary) -> Dictionary:
+	var marked := spec.duplicate(true)
+	marked["durableMutation"] = true
+	return prepare_request_for_send(marked)
 
 
 static func request_retry_policy(spec: Dictionary) -> String:
@@ -316,7 +412,7 @@ static func profile_upload_request(base_url: String, session_token: String, _pro
 
 
 static func profile_action_request(base_url: String, session_token: String, action: String, payload: Dictionary = {}) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/profile/action" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -324,21 +420,20 @@ static func profile_action_request(base_url: String, session_token: String, acti
 			"action": action,
 			"payload": payload,
 		}),
-	}
+	})
 
 
 static func gm_command_request(base_url: String, session_token: String, command_id: String, payload: Dictionary = {}) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/gm/commands/%s" % [normalized_base_url(base_url), command_id.strip_edges().uri_encode()],
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
-		"retryPolicy": RETRY_POLICY_NONE,
-	}
+	})
 
 
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/shops/transaction" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -348,7 +443,7 @@ static func shop_transaction_request(base_url: String, session_token: String, mo
 			"itemId": item_id,
 			"amount": maxi(1, amount),
 		}),
-	}
+	})
 
 
 static func bank_deposit_request(base_url: String, session_token: String, items: Array[Dictionary], stone_coins: int = 0) -> Dictionary:
@@ -360,7 +455,7 @@ static func bank_withdraw_request(base_url: String, session_token: String, items
 
 
 static func _bank_transaction_request(base_url: String, session_token: String, path: String, items: Array[Dictionary], stone_coins: int) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s%s" % [normalized_base_url(base_url), path],
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -368,7 +463,7 @@ static func _bank_transaction_request(base_url: String, session_token: String, p
 			"items": bank_transfer_request_items(items),
 			"stoneCoins": maxi(0, stone_coins),
 		}),
-	}
+	})
 
 
 static func bank_transfer_request_items(items: Array[Dictionary]) -> Array[Dictionary]:
@@ -411,7 +506,7 @@ static func market_listings_request(base_url: String, session_token: String) -> 
 
 
 static func market_create_listing_request(base_url: String, session_token: String, item_id: String, count: int, unit_price: int, currency: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/market/list" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -421,7 +516,7 @@ static func market_create_listing_request(base_url: String, session_token: Strin
 			"unitPrice": maxi(1, unit_price),
 			"currency": currency,
 		}),
-	}
+	})
 
 
 static func market_create_equipment_listing_request(
@@ -435,7 +530,7 @@ static func market_create_equipment_listing_request(
 ) -> Dictionary:
 	# Equipment state is display-only on the client.  The request carries only a
 	# concrete selection intent; the server resolves and escrows the instance.
-	return {
+	return _durable_mutation_request({
 		"url": "%s/market/list" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -447,25 +542,25 @@ static func market_create_equipment_listing_request(
 			"unitPrice": maxi(1, unit_price),
 			"currency": currency,
 		}),
-	}
+	})
 
 
 static func market_buy_listing_request(base_url: String, session_token: String, listing_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/market/buy" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"listingId": listing_id}),
-	}
+	})
 
 
 static func market_cancel_listing_request(base_url: String, session_token: String, listing_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/market/cancel" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"listingId": listing_id}),
-	}
+	})
 
 
 static func trade_propose_request(base_url: String, session_token: String, target_username: String, items: Array[Dictionary], stone_coins: int = 0) -> Dictionary:
@@ -482,7 +577,7 @@ static func trade_propose_request(base_url: String, session_token: String, targe
 
 
 static func trade_accept_request(base_url: String, session_token: String, trade_id: String, items: Array[Dictionary] = [], stone_coins: int = 0) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/trade/accept" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -491,7 +586,7 @@ static func trade_accept_request(base_url: String, session_token: String, trade_
 			"items": trade_transfer_request_items(items),
 			"stoneCoins": maxi(0, stone_coins),
 		}),
-	}
+	})
 
 
 static func trade_transfer_request_items(items: Array[Dictionary]) -> Array[Dictionary]:
@@ -539,65 +634,65 @@ static func trade_cancel_request(base_url: String, session_token: String, trade_
 
 
 static func equipment_equip_request(base_url: String, session_token: String, item_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/equipment/equip" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"itemId": item_id,
 		}),
-	}
+	})
 
 
 static func equipment_unequip_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/equipment/unequip" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"slotId": slot_id,
 		}),
-	}
+	})
 
 
 static func equipment_enhance_request(base_url: String, session_token: String, slot_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/equipment/enhance" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"slotId": slot_id,
 		}),
-	}
+	})
 
 
 static func equipment_repair_all_request(base_url: String, session_token: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/equipment/repair-all" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func equipment_synthesize_request(base_url: String, session_token: String, recipe_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/equipment/synthesize" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"recipeId": recipe_id,
 		}),
-	}
+	})
 
 
 static func player_rebirth_request(base_url: String, session_token: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/player/rebirth" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func quest_record_request(base_url: String, session_token: String, event: Dictionary, quest_id: String = "") -> Dictionary:
@@ -606,12 +701,12 @@ static func quest_record_request(base_url: String, session_token: String, event:
 	}
 	if quest_id.strip_edges() != "":
 		payload["questId"] = quest_id.strip_edges()
-	return {
+	return _durable_mutation_request({
 		"url": "%s/quests/record" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
-	}
+	})
 
 
 static func quest_claim_request(base_url: String, session_token: String, quest_id: String = "", reward_choice_id: String = "") -> Dictionary:
@@ -620,12 +715,12 @@ static func quest_claim_request(base_url: String, session_token: String, quest_i
 		payload["questId"] = quest_id.strip_edges()
 	if reward_choice_id.strip_edges() != "":
 		payload["rewardChoiceId"] = reward_choice_id.strip_edges()
-	return {
+	return _durable_mutation_request({
 		"url": "%s/quests/claim" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
-	}
+	})
 
 
 static func player_search_request(base_url: String, session_token: String, username: String) -> Dictionary:
@@ -736,12 +831,12 @@ static func party_invite_decline_request(base_url: String, session_token: String
 
 
 static func party_leave_request(base_url: String, session_token: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/party/leave" % normalized_base_url(base_url),
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func family_state_request(base_url: String, session_token: String) -> Dictionary:
@@ -763,30 +858,30 @@ static func family_list_request(base_url: String, session_token: String) -> Dict
 
 
 static func family_create_request(base_url: String, session_token: String, family_name: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/families/create" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"name": family_name}),
-	}
+	})
 
 
 static func family_join_request(base_url: String, session_token: String, family_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/families/join" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"familyId": family_id}),
-	}
+	})
 
 
 static func family_leave_request(base_url: String, session_token: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/families/leave" % normalized_base_url(base_url),
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func manor_list_request(base_url: String, session_token: String) -> Dictionary:
@@ -799,48 +894,48 @@ static func manor_list_request(base_url: String, session_token: String) -> Dicti
 
 
 static func manor_challenge_request(base_url: String, session_token: String, manor_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/manors/challenge" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"manorId": manor_id}),
-	}
+	})
 
 
 static func manor_enter_request(base_url: String, session_token: String, war_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/manors/enter" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"warId": war_id}),
-	}
+	})
 
 
 static func manor_battle_room_request(base_url: String, session_token: String, war_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/manors/battle-room" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"warId": war_id}),
-	}
+	})
 
 
 static func manor_leave_request(base_url: String, session_token: String, war_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/manors/leave" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"warId": war_id}),
-	}
+	})
 
 
 static func manor_resolve_request(base_url: String, session_token: String, war_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/manors/resolve" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"warId": war_id}),
-	}
+	})
 
 
 static func battle_state_request(base_url: String, session_token: String) -> Dictionary:
@@ -905,16 +1000,16 @@ static func hang_session_start_request(base_url: String, session_token: String, 
 	}
 	if item_id.strip_edges() != "":
 		body["itemId"] = item_id.strip_edges()
-	return {
+	return _durable_mutation_request({
 		"url": "%s/hang/session/start" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(body),
-	}
+	})
 
 
 static func hang_session_stop_request(base_url: String, session_token: String, reason: String = "manual", pending_resume: bool = false) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/hang/session/stop" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -922,7 +1017,7 @@ static func hang_session_stop_request(base_url: String, session_token: String, r
 			"reason": reason,
 			"pendingResume": pending_resume,
 		}),
-	}
+	})
 
 
 static func offline_hang_status_request(base_url: String, session_token: String) -> Dictionary:
@@ -935,40 +1030,41 @@ static func offline_hang_status_request(base_url: String, session_token: String)
 
 
 static func offline_hang_start_request(base_url: String, session_token: String, map_id: String, cell: Vector2i) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/hang/offline/start" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"mapId": map_id, "cellX": cell.x, "cellY": cell.y}),
-	}
+	})
 
 
 static func offline_hang_claim_request(base_url: String, session_token: String, session_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/hang/offline/claim" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({"sessionId": session_id}),
-	}
+	})
 
 
 static func offline_hang_cancel_request(base_url: String, session_token: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/hang/offline/cancel" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "{}",
-	}
+	})
 
 
 static func gm_offline_hang_config_request(base_url: String, session_token: String, config: Dictionary = {}) -> Dictionary:
 	var read_only := config.is_empty()
-	return {
+	var spec := {
 		"url": "%s/gm/hang/offline/config" % normalized_base_url(base_url),
 		"headers": _auth_headers(session_token) if read_only else _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET if read_only else HTTPClient.METHOD_PUT,
 		"body": "" if read_only else JSON.stringify(config),
 	}
+	return spec if read_only else _durable_mutation_request(spec)
 
 
 static func battle_invite_accept_request(base_url: String, session_token: String, invite_id: String) -> Dictionary:
@@ -984,21 +1080,21 @@ static func battle_invite_cancel_request(base_url: String, session_token: String
 
 
 static func battle_room_leave_request(base_url: String, session_token: String, room_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/battle/rooms/%s/leave" % [normalized_base_url(base_url), room_id.uri_encode()],
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func battle_command_submit_request(base_url: String, session_token: String, room_id: String, command: Dictionary) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/battle/rooms/%s/commands" % [normalized_base_url(base_url), room_id.uri_encode()],
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(command),
-	}
+	})
 
 
 static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
@@ -1011,7 +1107,7 @@ static func mail_inbox_request(base_url: String, session_token: String) -> Dicti
 
 
 static func mail_send_request(base_url: String, session_token: String, recipient_username: String, title: String, body: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/mail/send" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -1020,25 +1116,25 @@ static func mail_send_request(base_url: String, session_token: String, recipient
 			"title": title,
 			"body": body,
 		}),
-	}
+	})
 
 
 static func mail_read_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/mail/%s/read" % [normalized_base_url(base_url), mail_id.uri_encode()],
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func mail_claim_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/mail/%s/claim" % [normalized_base_url(base_url), mail_id.uri_encode()],
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
-	}
+	})
 
 
 static func chat_messages_request(base_url: String, session_token: String, channel: String, limit: int = 50) -> Dictionary:
@@ -1051,7 +1147,7 @@ static func chat_messages_request(base_url: String, session_token: String, chann
 
 
 static func chat_send_request(base_url: String, session_token: String, channel: String, text: String) -> Dictionary:
-	return {
+	return _durable_mutation_request({
 		"url": "%s/chat/send" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
@@ -1059,7 +1155,7 @@ static func chat_send_request(base_url: String, session_token: String, channel: 
 			"channel": channel,
 			"text": text,
 		}),
-	}
+	})
 
 
 static func parse_auth_response(response_code: int, body: PackedByteArray) -> Dictionary:
@@ -1703,12 +1799,13 @@ static func _auth_request(base_url: String, endpoint: String, payload: Dictionar
 
 
 static func _party_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
-	return {
+	var spec := {
 		"url": "%s/party/invites/%s/%s" % [normalized_base_url(base_url), invite_id.uri_encode(), action],
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
 	}
+	return _durable_mutation_request(spec) if action == "accept" else spec
 
 
 static func _battle_invite_action_request(base_url: String, session_token: String, invite_id: String, action: String) -> Dictionary:
