@@ -33,6 +33,7 @@ const {
   readBankProfileState,
 } = require("./auth/bank-profile-state");
 const {createGmPetsDomain} = require("./auth/gm-pets");
+const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
@@ -140,6 +141,8 @@ const AUTH_FAILURE_BACKOFF_START = 5;
 const AUTH_FAILURE_BACKOFF_BASE_MS = 30 * 1000;
 const AUTH_FAILURE_BACKOFF_MAX_MS = 5 * 60 * 1000;
 const MAX_AUDIT_ROWS = 500;
+const GM_DENIAL_AUDIT_WINDOW_MS = 60 * 1000;
+const GM_DENIAL_AUDIT_MAX_KEYS = 2048;
 const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAX_SERVICE_EVENTS = 500;
 const MAX_BATTLE_RECORDS = 10000;
@@ -430,6 +433,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "claimMailAttachments",
   "grantGmPet",
   "levelUpGmPet",
+  "prepareGmQaProfile",
 ]);
 const OFFLINE_HANG_LOCKED_SERVICE_MUTATIONS = new Set([
   ...BATTLE_LOCKED_SERVICE_MUTATIONS,
@@ -565,6 +569,15 @@ function createAuthService(options = {}) {
     : battleVictoryRewardForRoom;
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
+  const gmDenialAuditAtByKey = new Map();
+  const gmDenialAuditWindowMs = positiveIntegerOption(
+    options.gmDenialAuditWindowMs,
+    GM_DENIAL_AUDIT_WINDOW_MS,
+  );
+  const gmDenialAuditMaxKeys = positiveIntegerOption(
+    options.gmDenialAuditMaxKeys,
+    GM_DENIAL_AUDIT_MAX_KEYS,
+  );
   const movementStepRateByAccountId = new Map();
   const runtimeActiveSessionIds = new Map();
   const serverStartedAtMs = now();
@@ -2298,7 +2311,9 @@ function createAuthService(options = {}) {
     const data = load();
     const access = gmCommandAccess(data, payload.token, payload.commandId);
     const audit = recordGmCommandAudit(data, access, access.ok, access.ok ? "" : access.message);
-    save(data);
+    if (audit.recorded !== false) {
+      save(data);
+    }
     if (!access.ok) {
       return fail(access.code, access.message, {"auditId": audit.auditId});
     }
@@ -2327,8 +2342,13 @@ function createAuthService(options = {}) {
     return {ok: true, commandId, username: resolved.account.username, resolved};
   }
 
-  function recordGmCommandAudit(data, access, okValue, message) {
-    return recordGmAudit(
+  function recordGmCommandAudit(data, access, okValue, message, details = {}) {
+    const accessDenied = !okValue && access && access.ok === false;
+    const denialKey = accessDenied ? gmDenialAuditKey(access) : "";
+    if (accessDenied && (denialKey === "" || !gmDenialAuditAllowed(data, denialKey))) {
+      return {auditId: "", recorded: false};
+    }
+    const audit = recordGmAudit(
       data,
       String(access && access.username || ""),
       String(access && access.commandId || ""),
@@ -2336,7 +2356,45 @@ function createAuthService(options = {}) {
       String(message || ""),
       now,
       randomId,
+      details,
     );
+    if (denialKey !== "") {
+      rememberGmDenialAudit(denialKey, audit.auditId);
+    }
+    return audit;
+  }
+
+  function gmDenialAuditKey(access) {
+    const accountId = String(access && access.resolved && access.resolved.account && access.resolved.account.accountId || "");
+    if (accountId === "") {
+      return "";
+    }
+    return `${accountId}|${String(access && access.code || "gm_denied")}`;
+  }
+
+  function gmDenialAuditAllowed(data, denialKey) {
+    const currentMs = now();
+    const previous = gmDenialAuditAtByKey.get(denialKey);
+    if (previous && Number.isFinite(previous.atMs) && currentMs - previous.atMs < gmDenialAuditWindowMs) {
+      const rows = Array.isArray(data && data.gmCommandAudit) ? data.gmCommandAudit : [];
+      if (rows.some((row) => row && row.auditId === previous.auditId)) {
+        return false;
+      }
+    }
+    gmDenialAuditAtByKey.delete(denialKey);
+    return true;
+  }
+
+  function rememberGmDenialAudit(denialKey, auditId) {
+    gmDenialAuditAtByKey.delete(denialKey);
+    gmDenialAuditAtByKey.set(denialKey, {auditId, atMs: now()});
+    while (gmDenialAuditAtByKey.size > gmDenialAuditMaxKeys) {
+      const oldestDenialKey = gmDenialAuditAtByKey.keys().next().value;
+      if (oldestDenialKey === undefined) {
+        break;
+      }
+      gmDenialAuditAtByKey.delete(oldestDenialKey);
+    }
   }
 
   function snapshot() {
@@ -2805,6 +2863,7 @@ function createAuthService(options = {}) {
     playerLevelRuntime,
     playerPositionHasCell,
     profileActionLogLines,
+    profileBackpackSlotLimit,
     profileBackpackSlots,
     rawBackpackAssetConflict,
     profileBindingForAccount,
@@ -2884,6 +2943,7 @@ function createAuthService(options = {}) {
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
   const gmPets = createGmPetsDomain(domainContext);
+  const gmQaProfile = createGmQaProfileDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -2972,6 +3032,7 @@ function createAuthService(options = {}) {
     authorizeGmCommand,
     grantGmPet: gmPets.grantGmPet,
     levelUpGmPet: gmPets.levelUpGmPet,
+    prepareGmQaProfile: gmQaProfile.prepareGmQaProfile,
     snapshot,
   };
   for (const [name, method] of Object.entries(serviceApi)) {
@@ -18939,7 +19000,7 @@ function commandAllowed(data, accountId, commandId) {
   return grants.some((grant) => grant.enabled && (grant.commandId === "*" || grant.commandId === commandId));
 }
 
-function recordGmAudit(data, username, commandId, okValue, message, now, randomId) {
+function recordGmAudit(data, username, commandId, okValue, message, now, randomId, details = {}) {
   const audit = {
     auditId: `audit_${randomId()}`,
     username,
@@ -18949,11 +19010,14 @@ function recordGmAudit(data, username, commandId, okValue, message, now, randomI
     createdAt: isoNow(now),
     schemaVersion: 1,
   };
+  if (details && typeof details === "object" && !Array.isArray(details) && Object.keys(details).length > 0) {
+    audit.details = clone(details);
+  }
   data.gmCommandAudit.push(audit);
   while (data.gmCommandAudit.length > MAX_AUDIT_ROWS) {
     data.gmCommandAudit.shift();
   }
-  return audit;
+  return {...audit, recorded: true};
 }
 
 function recordAuthEvent(data, type, username, okValue, message, now) {
@@ -19200,6 +19264,14 @@ function normalizeCommandIds(commandIds) {
     }
   }
   return result.length > 0 ? result : ["*"];
+}
+
+function positiveIntegerOption(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return fallback;
+  }
+  return Math.max(1, Math.trunc(number));
 }
 
 function normalizeMailText(value, maxLength) {

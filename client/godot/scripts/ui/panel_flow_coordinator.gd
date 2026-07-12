@@ -30,6 +30,7 @@ const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_fo
 const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
+const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
@@ -71,7 +72,7 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
 const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
@@ -106,6 +107,10 @@ var party_partner_add_button: Button
 var party_partner_remove_button: Button
 var party_partner_fill_button: Button
 var party_partner_clear_button: Button
+
+var qa_profile_identity_label: Label
+var qa_profile_status_state: Dictionary = {}
+var qa_profile_status_username: String = ""
 
 var item_stack_split_panel: PanelContainer
 var item_stack_split_title_label: Label
@@ -7868,11 +7873,21 @@ func _build_hud() -> void:
 	var qa_header = HBoxContainer.new()
 	qa_header.add_theme_constant_override("separation", 10)
 	qa_column.add_child(qa_header)
+	var qa_title_stack := VBoxContainer.new()
+	qa_title_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_title_stack.add_theme_constant_override("separation", 0)
+	qa_header.add_child(qa_title_stack)
 	var qa_title = Label.new()
 	qa_title.text = "GM/QA"
 	qa_title.add_theme_font_size_override("font_size", 21)
 	qa_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	qa_header.add_child(qa_title)
+	qa_title_stack.add_child(qa_title)
+	qa_profile_identity_label = Label.new()
+	qa_profile_identity_label.clip_text = true
+	qa_profile_identity_label.add_theme_font_size_override("font_size", 13)
+	qa_profile_identity_label.add_theme_color_override("font_color", Color(0.82, 0.84, 0.80, 0.92))
+	qa_profile_identity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_title_stack.add_child(qa_profile_identity_label)
 	qa_close_button = Button.new()
 	qa_close_button.text = "关闭"
 	qa_close_button.custom_minimum_size = Vector2(92, 44)
@@ -21000,6 +21015,12 @@ func _set_numeric_workbench_result(result: Dictionary) -> void:
 func _refresh_qa_panel() -> void:
 	if qa_panel == null or qa_entry_container == null or qa_detail_label == null:
 		return
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	if qa_profile_status_username != "" and qa_profile_status_username != current_username:
+		qa_profile_status_state.clear()
+		qa_profile_status_username = ""
+	if qa_profile_identity_label != null:
+		qa_profile_identity_label.text = GmQaProfileClientModel.identity_text(current_account_session)
 	QaPanelPresenter.rebuild_entry_buttons(
 		qa_entry_container,
 		qa_entry_buttons,
@@ -21007,7 +21028,18 @@ func _refresh_qa_panel() -> void:
 		Callable(self, "_on_qa_entry_pressed")
 	)
 	_refresh_qa_pet_tool_controls()
-	qa_detail_label.text = _qa_command_summary_text()
+	var prepare_button := qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
+	if prepare_button != null:
+		prepare_button.disabled = (
+			profile_action_request_pending
+			or bool(qa_profile_status_state.get("pending", false))
+			or not _is_server_account_session()
+		)
+		prepare_button.tooltip_text = "只补齐当前GM账号缺少的核心测试内容，不会清空现有进度。"
+	qa_detail_label.text = "%s\n\n%s" % [
+		GmQaProfileClientModel.status_text(qa_profile_status_state),
+		_qa_command_summary_text(),
+	]
 
 func _refresh_qa_pet_tool_controls() -> void:
 	var result = QaPanelPresenter.refresh_pet_tool_controls(
@@ -21066,8 +21098,8 @@ func _authorize_gm_command(command_id: String) -> bool:
 	var ok = bool(result.get("ok", false))
 	if not ok:
 		_set_world_log_message(str(result.get("message", "当前账号没有GM权限。")))
-	var server_authoritative_pet_command := ok and _is_server_account_session() and GM_TOOL_EXTRA_COMMAND_IDS.has(command_id)
-	if not server_authoritative_pet_command:
+	var server_authoritative_command := ok and _is_server_account_session() and GM_TOOL_EXTRA_COMMAND_IDS.has(command_id)
+	if not server_authoritative_command:
 		GmToolRuntimeModel.audit_command(current_account_session, command_id, ok, str(result.get("message", "")))
 	return ok
 
@@ -21075,6 +21107,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 	if not _authorize_gm_command(entry_id):
 		return
 	match entry_id:
+		"gm_prepare_qa_profile":
+			_prepare_current_gm_qa_profile()
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
 		"gm_10v10_grass":
@@ -21124,6 +21158,30 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 		"open_codex":
 			_close_qa_panel(false)
 			_open_codex_panel()
+
+func _prepare_current_gm_qa_profile() -> void:
+	if not _is_server_account_session():
+		_set_world_log_message("补齐核心测试档需要连接服务器。")
+		return
+	if profile_action_request_pending:
+		_set_world_log_message("档案操作同步中，请稍候。")
+		return
+	qa_profile_status_username = str(current_account_session.get("username", "")).strip_edges()
+	qa_profile_status_state = {"pending": true}
+	_refresh_qa_panel()
+	var parsed := await _submit_server_gm_command(
+		GmQaProfileClientModel.COMMAND_ID,
+		GmQaProfileClientModel.request_payload(),
+		"核心测试档补齐失败。"
+	)
+	qa_profile_status_state = GmQaProfileClientModel.status_state_from_parsed(parsed)
+	var log_lines := _string_array_values(parsed.get("logLines", []))
+	if log_lines.is_empty():
+		log_lines.append(str(parsed.get("message", "核心测试档已检查。")))
+	_set_world_log_message("\n".join(log_lines))
+	_refresh_qa_panel()
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
 
 func _on_qa_pet_grant_pressed() -> void:
 	if not _authorize_gm_command("gm_grant_pet"):

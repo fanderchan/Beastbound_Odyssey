@@ -297,6 +297,11 @@
     - [x] **P0.5c-2 请求成功必须晚于 durable commit**：修复 async store 仅排队就返回成功的边界；成交、领取和其他资产写入只有在 MySQL COMMIT 确认后才向玩家返回成功，并覆盖超时、模糊提交、重试幂等与进程崩溃恢复。
       - 证据（2026-07-12）：生产 HTTP/WS 资产入口在请求私有 candidate 上同步计算，MySQL COMMIT 后才发布共享缓存、事件和成功；原 write rejection 精确归属原请求，失败 cache 回滚，超时保持后台 settlement，有界队列默认 128/10s。WebSocket 握手补档、在线快照与通用 GM 审计也进入同一 durable 队列。客户端 durable mutation 使用稳定 `Idempotency-Key` 同 key 重试；第 26 个持久根 `mutationReceipts` 与资产同事务，重启可重放、改请求 409、既有回执不可改写，未知提交在能 reload receipt 前禁止重算；意图摘要排除会话 token，但回放强校验当前账号归属，因此同账号换 token 可恢复、跨账号不可读取。停服先停止 HTTP 新连接、封闭 WS 并排入断开清理，再原子关闭 admission 和 drain 后 flush/close。MySQL `saveAsync` 默认复用 `mysql2@3.22.6` 小型连接池并保留单 writer；1000 次 runtime/no-op 为 0 SQL，普通战斗邀请为 0 store save。Node 跨域聚焦 `295/295`、Godot `2/2`、依赖审计 0 漏洞通过；未连接真实 MySQL/玩家数据，多 Node CAS、持久 inbox/outbox 与大规模 receipt/墓碑压力仍留 P0.6。完整合同见 `docs/phase_247_durable_asset_commit_boundary.md`。
   - [ ] **P0.5d 幂等全面 GM QA 档案与玩家拒绝边界**
+    - [x] **P0.5d-1 当前 GM 核心 QA 档案**：固定服务端 `qa_core_v1`，只给当前已授权 GM 按差额补齐货币、背包容量和高频物资；普通玩家、目标账号注入、坏档案和失败 COMMIT 全部拒绝。
+      - 证据（2026-07-12）：新增 `POST /gm/commands/gm_prepare_qa_profile`，payload 只接受固定 manifest，不接受账号、数量或整档；只增不删地补至石币 100 万、钻石 10 万、额外 5 格及 15 种共 330 件物资。20 格放不下、未知捕捉工具、档案缺失/错绑/非法 revision 均整笔失败并保留原档；同 key 重放一次结果，新 key 收敛为资产 no-op，跨账号/改请求冲突，写失败时缓存不发布且原 key 可恢复。GM 拒绝审计按账号+原因 60 秒限流并限制 2048 key；`GET /gm/market/config` 等审计 COMMIT 但不创建 mutation receipt。客户端 GM/QA 面板显示脱敏的当前身份，非服务器会话/pending 禁用；只有权威档案实际应用且 `qa_core_v1` 摘要完整才显示成功，旧服务端空响应失败关闭。Node 定向跨域 `132/132`、追加 durable 回归 `19/19`、Godot parse+focused auth `2/2` 通过；1280×720 截图人工检查通过，未连接真实 MySQL/玩家数据。完整合同见 `docs/phase_248_gm_qa_core_profile.md`。
+    - [ ] **P0.5d-2 正式工厂生成的宠物样本档案**：在 25 只容量内提供可重复识别的宠物样本批次（含约 10 只 Lv1 蓝人龙和代表性成长档），只能走服务端新宠工厂、权威升级与公开成长观察；重复执行不得无限复制，现有宠物不得被覆盖。
+    - [ ] **P0.5d-3 装备、全物品与银行测试档案**：用正式装备实例/私有 envelope 与银行容量承载代表性装备和目录物品；覆盖穿戴、强化、耐久、商店、市场、邮件与银行，但不伪造实例、不删除现有资产。
+    - [ ] **P0.5d-4 GM 初始化、授权收紧与全面验收**：提供不硬编码密码的本地 QA 账号初始化/状态检查，严格显式 command grant 与有效期；验证当前 GM 可进入全部核心面板、普通玩家直调全部拒绝，并形成最终截图/短视频验收证据。
 - [ ] **P0.6 200 人同地图容量与安全基线**：除地图/事件/战斗压力外，加入 200 档案与 5万/10万永久装备墓碑门槛；把全根扫描改为增量索引/dirty cache，战斗和普通资产写入不得随历史墓碑线性退化；横向多 Node 前补数据库 CAS/行锁。
 - [ ] **P0.7 退役虚构训练伙伴并保留真实快照伙伴边界**
 

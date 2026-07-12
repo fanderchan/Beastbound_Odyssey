@@ -39,7 +39,9 @@ function createGmPetsDomain(ctx) {
 
   function auditedFailure(data, access, code, message) {
     const audit = recordGmCommandAudit(data, access, false, message);
-    save(data);
+    if (audit.recorded !== false) {
+      save(data);
+    }
     return fail(code, message, {auditId: audit.auditId});
   }
 

@@ -309,7 +309,9 @@ function createOfflineHangDomain(ctx) {
     const access = gmCommandAccess(data, token, GM_COMMAND_ID);
     if (!access.ok) {
       const audit = recordGmCommandAudit(data, access, false, access.message);
-      save(data);
+      if (audit.recorded !== false) {
+        save(data);
+      }
       return {ok: false, result: fail(access.code, access.message, {auditId: audit.auditId})};
     }
     return {ok: true, data, access};

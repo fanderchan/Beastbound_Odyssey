@@ -28,6 +28,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_battle_speed_gear", "label": "变速齿轮"},
   {"id": "gm_market_tax", "label": "交易所税率配置"},
   {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
+  {"id": "gm_prepare_qa_profile", "label": "补齐GM核心测试档案"},
 ];
 
 const DURABLE_HTTP_SERVICE_METHODS = new Set([
@@ -41,7 +42,9 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "updatePlayerPosition",
   "grantGmPet",
   "levelUpGmPet",
+  "prepareGmQaProfile",
   "authorizeGmCommand",
+  "getMarketConfig",
   "updateMarketConfig",
   "getOfflineHangConfig",
   "updateOfflineHangConfig",
@@ -190,6 +193,13 @@ function createHttpServer(options = {}) {
         }
         if (commandId === "gm_level_pet") {
           return sendResult(res, service.levelUpGmPet(bearerToken(req), await readJson(req)));
+        }
+        if (commandId === "gm_prepare_qa_profile") {
+          const idempotencyFailure = requiredIdempotencyKeyFailure(req);
+          if (idempotencyFailure) {
+            return sendResult(res, idempotencyFailure);
+          }
+          return sendResult(res, service.prepareGmQaProfile(bearerToken(req), await readJson(req)));
         }
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }
@@ -587,6 +597,15 @@ function bearerToken(req) {
     return "";
   }
   return header.slice("bearer ".length).trim();
+}
+
+function requiredIdempotencyKeyFailure(req) {
+  const operationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
+  return operationId === "" ? {
+    ok: false,
+    code: "idempotency_key_required",
+    message: "本操作需要有效的操作标识，请刷新后重试。",
+  } : null;
 }
 
 function authPayload(req, payload) {

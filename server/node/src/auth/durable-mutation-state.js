@@ -12,7 +12,12 @@ const DURABLE_RECEIPT_TTL_MS = 72 * 60 * 60 * 1000;
 const DURABLE_RECEIPT_MAX_COUNT = 20000;
 const DURABLE_OPERATION_ID_PATTERN = /^[A-Za-z0-9._:-]{16,160}$/;
 const DURABLE_REQUEST_HASH_PATTERN = /^[a-f0-9]{64}$/;
-const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set(["register", "login", "refreshSession"]);
+const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
+  "register",
+  "login",
+  "refreshSession",
+  "getMarketConfig",
+]);
 
 function durableBusinessChanged(beforeValue, candidateValue, options) {
   return !isDeepStrictEqual(
