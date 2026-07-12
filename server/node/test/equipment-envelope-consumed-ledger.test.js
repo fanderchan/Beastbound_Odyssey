@@ -5,8 +5,11 @@ const test = require("node:test");
 
 const {
   backfillConsumedEquipmentEnvelopeLedger,
+  commitConsumedEquipmentEnvelopeLedger,
   collectMaterializedEquipmentEnvelopeTraces,
+  consumedEquipmentEnvelopeLedgerDeltaFrom,
   ensureConsumedEquipmentEnvelopeIds,
+  materializeConsumedEquipmentEnvelopeLedger,
   readConsumedEquipmentEnvelopeLedger,
   readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
@@ -137,6 +140,50 @@ test("validated ledgers are immutable and reuse their membership index on no-op 
   assert.equal(unchanged.ok, true);
   assert.equal(unchanged.ledger, first.ledger);
   assert.deepEqual(unchanged.addedIds, []);
+});
+
+test("a 100k tombstone append stages only the touched row and publishes after commit", () => {
+  const raw = {};
+  for (let index = 0; index < 100000; index += 1) {
+    const envelopeId = `eqx_capacity_${String(index).padStart(10, "0")}`;
+    raw[envelopeId] = {schemaVersion: 1, envelopeId};
+  }
+  const baseline = readConsumedEquipmentEnvelopeLedgerIndex(raw);
+  assert.equal(baseline.ok, true);
+  const originalObjectKeys = Object.keys;
+  let baselineScans = 0;
+  Object.keys = function countedObjectKeys(value) {
+    if (value === baseline.ledger) {
+      baselineScans += 1;
+    }
+    return originalObjectKeys(value);
+  };
+  let staged;
+  try {
+    staged = ensureConsumedEquipmentEnvelopeIds(
+      baseline.ledger,
+      "eqx_capacity_append_100001",
+    );
+  } finally {
+    Object.keys = originalObjectKeys;
+  }
+  assert.equal(staged.ok, true);
+  assert.equal(baselineScans, 0);
+  assert.equal(Object.hasOwn(baseline.ledger, "eqx_capacity_append_100001"), false);
+  assert.equal(Object.hasOwn(staged.ledger, "eqx_capacity_append_100001"), true);
+  assert.deepEqual(consumedEquipmentEnvelopeLedgerDeltaFrom(baseline.ledger, staged.ledger).addedIds, [
+    "eqx_capacity_append_100001",
+  ]);
+
+  const committed = commitConsumedEquipmentEnvelopeLedger(staged.ledger);
+  assert.equal(committed.ok, true);
+  assert.deepEqual(committed.addedIds, ["eqx_capacity_append_100001"]);
+  assert.deepEqual(commitConsumedEquipmentEnvelopeLedger(staged.ledger).addedIds, []);
+  assert.equal(Object.hasOwn(baseline.ledger, "eqx_capacity_append_100001"), false);
+  assert.equal(Object.hasOwn(staged.ledger, "eqx_capacity_append_100001"), true);
+  const materialized = materializeConsumedEquipmentEnvelopeLedger(staged.ledger);
+  assert.equal(materialized.ok, true);
+  assert.equal(Object.keys(materialized.ledger).length, 100001);
 });
 
 test("invalid materialized origins fail closed instead of disappearing during backfill", () => {

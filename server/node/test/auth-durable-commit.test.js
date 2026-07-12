@@ -48,6 +48,56 @@ function seedShopAccount(base, username) {
   return registered;
 }
 
+function seedEquipmentBankAccount(base, username) {
+  const service = createAuthService({store: base});
+  const registered = service.register({
+    username,
+    password: "test1234",
+    displayName: username,
+  });
+  const current = service.getProfile(registered.session.token);
+  const profile = current.profile;
+  profile.backpackSlots = [
+    {itemId: "weapon_wooden_club", count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {
+    equip_durable_journal_0001: {
+      schemaVersion: 1,
+      instanceId: "equip_durable_journal_0001",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 30,
+      enhancement: {itemId: "weapon_wooden_club", level: 2, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      source: "durable_journal_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 2;
+  assert.equal(service.saveProfile(registered.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile,
+  }).ok, true);
+  const deposited = service.bankDeposit(registered.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_durable_journal_0001",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 1,
+    }],
+  });
+  assert.equal(deposited.ok, true);
+  return {
+    ...registered,
+    envelopeId: deposited.bank.slots[1].equipmentEnvelopes[0].envelopeId,
+  };
+}
+
 async function listen(service) {
   const server = createHttpServer({service});
   server.listen(0, "127.0.0.1");
@@ -369,6 +419,121 @@ test("durable receipt follows its account across token rotation and rejects anot
   assert.equal(replay.profile.stoneCoins, 12);
   assert.equal(profileItemCount(replay.profile, "item_meat_small"), 1);
   assert.equal(saveCount, savesAfterLogin);
+});
+
+test("an expired durable operation ID is atomically replaced instead of blocking the next asset write", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "durableexpiredreuse");
+  const operationId = "bbo_expired_reuse_asset_0001";
+  const requestHash = "e".repeat(64);
+  const expired = base.load();
+  expired.mutationReceipts[operationId] = {
+    schemaVersion: 1,
+    operationId,
+    requestHash: "d".repeat(64),
+    actionId: "bank.deposit",
+    accountId: owner.account.accountId,
+    committedAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: "2026-07-04T00:00:00.000Z",
+    response: {ok: true, generation: 1},
+  };
+  base.save(expired);
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+
+  const result = await service.invokeDurable(
+    "bankDeposit",
+    [owner.session.token, {stoneCoins: 1}],
+    {operationId, requestHash, actionId: "bank.deposit"},
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.durableCommit.replayed, false);
+  assert.equal(saveCount, 1);
+  const stored = base.load().mutationReceipts[operationId];
+  assert.equal(stored.requestHash, requestHash);
+  assert.equal(stored.response.durableCommit.operationId, operationId);
+  assert.equal(stored.response.generation, undefined);
+
+  const replay = await service.invokeDurable(
+    "bankDeposit",
+    [owner.session.token, {stoneCoins: 1}],
+    {operationId, requestHash, actionId: "bank.deposit"},
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(saveCount, 1);
+});
+
+test("failed commit publishes neither the staged tombstone nor its receipt and same-key retry settles once", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedEquipmentBankAccount(base, "durjrrollback");
+  const before = base.load();
+  let saveAttempts = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "memory",
+    load: () => base.load(),
+    async saveAsync(nextData) {
+      saveAttempts += 1;
+      if (saveAttempts === 1) {
+        throw new Error("injected journal commit failure");
+      }
+      base.save(nextData);
+    },
+  }, {onError: () => {}});
+  const service = createAuthService({store});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const operation = {
+    operationId: "bbo_journal_rollback_retry_0001",
+    requestHash: "f".repeat(64),
+    actionId: "bank.withdraw",
+  };
+  const args = [owner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      envelopeId: owner.envelopeId,
+      bankSlotIndex: 1,
+      targetSlotIndex: 5,
+    }],
+  }];
+
+  await assert.rejects(
+    service.invokeDurable("bankWithdraw", args, operation),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(saveAttempts, 1);
+  assert.deepEqual(service.snapshot(), before);
+  assert.deepEqual(base.load(), before);
+  assert.equal(events.length, 0);
+  assert.equal(Object.hasOwn(before.consumedEquipmentEnvelopes, owner.envelopeId), false);
+  assert.equal(Object.hasOwn(before.mutationReceipts, operation.operationId), false);
+
+  const settled = await service.invokeDurable("bankWithdraw", args, operation);
+  assert.equal(settled.ok, true);
+  assert.equal(settled.durableCommit.replayed, false);
+  assert.equal(saveAttempts, 2);
+  const after = base.load();
+  assert.equal(Object.hasOwn(after.consumedEquipmentEnvelopes, owner.envelopeId), true);
+  assert.equal(Object.hasOwn(after.mutationReceipts, operation.operationId), true);
+  assert.equal(after.profiles[owner.profileBinding.playerId].profileRevision, (
+    before.profiles[owner.profileBinding.playerId].profileRevision + 1
+  ));
+
+  const replay = await service.invokeDurable("bankWithdraw", args, operation);
+  assert.equal(replay.ok, true);
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(saveAttempts, 2);
+  assert.deepEqual(base.load(), after);
 });
 
 test("ambiguous commit is reconciled from the durable snapshot before success", async (t) => {

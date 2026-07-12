@@ -4,6 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
+  materializeAuthorityRootLargeCollections,
+} = require("../src/auth/authority-root-materialization");
+const {
   buildBatchProfileMigration,
   buildBatchProfileRollback,
   rehearseBatchProfileMigration,
@@ -54,7 +57,7 @@ function runMysqlProfileMigration(options = {}) {
     : writeBatchMigrationBackup;
 
   const readStore = createReadStore();
-  const sourceSnapshot = clone(readStore.load());
+  const sourceSnapshot = materializeAuthorityRootLargeCollections(readStore.load());
   const rehearsal = rehearseBatchProfileMigration(sourceSnapshot);
   const plan = rehearsal.plan || buildBatchProfileMigration(sourceSnapshot);
   const baseReport = {
@@ -172,7 +175,7 @@ function applyBatchProfileMigration(store, plan, options = {}) {
 
   let currentSnapshot;
   try {
-    currentSnapshot = clone(store.load());
+    currentSnapshot = materializeAuthorityRootLargeCollections(store.load());
   } catch (reloadError) {
     throw migrationError(
       "batch_profile_migration_reload_failed",
@@ -213,7 +216,7 @@ function applyBatchProfileMigration(store, plan, options = {}) {
 
   let restoredSnapshot;
   try {
-    restoredSnapshot = clone(store.load());
+    restoredSnapshot = materializeAuthorityRootLargeCollections(store.load());
   } catch (reloadError) {
     throw migrationError(
       "batch_profile_migration_rollback_reload_failed",

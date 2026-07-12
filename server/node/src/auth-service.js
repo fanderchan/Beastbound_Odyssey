@@ -5,7 +5,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
 const {createDurableMutationCoordinator} = require("./auth/durable-mutation-coordinator");
-const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  isTrustedAuthorityRoot,
+  markAuthorityRootTrusted,
+} = require("./auth/authority-root-clone");
+const {
+  materializeAuthorityRootLargeCollections,
+} = require("./auth/authority-root-materialization");
 const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
@@ -17,7 +24,8 @@ const {
   mergeRuntimeObject,
   normalizeDurableMutationReceipts,
   activeDurableReceipt,
-  pruneDurableMutationReceipts,
+  stageDurableMutationReceipt,
+  commitDurableMutationReceiptDelta,
   durableCommitResult,
   durableReceiptReplayResult,
   durableMutationAccountId,
@@ -98,6 +106,9 @@ const {
 } = require("./auth/equipment-envelope-registry");
 const {
   backfillConsumedEquipmentEnvelopeLedger,
+  commitConsumedEquipmentEnvelopeLedger,
+  consumedEquipmentEnvelopeLedgerSignature,
+  readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("./auth/equipment-envelope-consumed-ledger");
 const {
   comboDamageFor,
@@ -641,14 +652,19 @@ function createAuthService(options = {}) {
         store.clearSaveError();
       }
       // 用最新内存快照重试持久化：后端恢复后自动补齐整份状态；本次请求以 503 拒绝，禁止继续静默丢写。
-      store.save(persistentDataForStore(normalized));
+      const persistent = persistentDataForStore(normalized);
+      store.save(persistent);
+      commitAuthorityRootLargeCollections(normalized);
+      commitAuthorityRootLargeCollections(persistent);
       const error = new Error("服务器存档暂时不可用，请稍后再试。");
       error.code = "storage_write_failed";
       error.cause = pendingSaveError;
       throw error;
     }
-    store.save(persistentDataForStore(normalized));
-    cachedData = normalized;
+    const persistent = persistentDataForStore(normalized);
+    store.save(persistent);
+    cachedData = commitAuthorityRootLargeCollections(normalized);
+    commitAuthorityRootLargeCollections(persistent);
     lastPublishedPersistentData = persistentDataForStore(cachedData);
     scheduleBattleMaintenance(cachedData);
   }
@@ -2435,7 +2451,7 @@ function createAuthService(options = {}) {
   }
 
   function snapshot() {
-    return clone(load());
+    return clone(materializeAuthorityRootLargeCollections(load()));
   }
 
   function invokeDurable(methodName, args = [], operation = {}) {
@@ -2465,10 +2481,12 @@ function createAuthService(options = {}) {
     refreshPublishedDataAfterStorageFailure();
 
     const receiptOperationId = DURABLE_RECEIPT_EXCLUDED_METHODS.has(methodName) ? "" : operationId;
-    const before = cloneAuthorityRoot(load());
-    const existingReceipt = receiptOperationId === "" ? null : activeDurableReceipt(before, receiptOperationId, now());
+    const published = load();
+    const existingReceipt = receiptOperationId === ""
+      ? null
+      : activeDurableReceipt(published, receiptOperationId, now());
     if (existingReceipt) {
-      const currentSession = resolveServiceSession(before, durableMutationToken(args));
+      const currentSession = resolveServiceSession(published, durableMutationToken(args));
       if (!currentSession.ok) {
         return fail(currentSession.code, currentSession.message);
       }
@@ -2483,6 +2501,7 @@ function createAuthService(options = {}) {
       }
       return durableReceiptReplayResult(existingReceipt);
     }
+    const before = cloneAuthorityRoot(published);
 
     const transaction = {
       before,
@@ -2507,6 +2526,7 @@ function createAuthService(options = {}) {
     const businessPersistentChanged = durableBusinessChanged(beforePersistent, candidatePersistent, {
       persistentDataForStore,
       normalizeEventSeq,
+      consumedEquipmentEnvelopeLedgerSignature,
     });
     let response = result;
     if (businessPersistentChanged && result && result.ok && receiptOperationId !== "") {
@@ -2517,8 +2537,7 @@ function createAuthService(options = {}) {
         committedAt,
         replayed: false,
       });
-      candidate.mutationReceipts = pruneDurableMutationReceipts(candidate.mutationReceipts, now());
-      candidate.mutationReceipts[receiptOperationId] = {
+      candidate.mutationReceipts = stageDurableMutationReceipt(candidate.mutationReceipts, {
         schemaVersion: 1,
         operationId: receiptOperationId,
         requestHash,
@@ -2527,7 +2546,7 @@ function createAuthService(options = {}) {
         committedAt,
         expiresAt: new Date(now() + DURABLE_RECEIPT_TTL_MS).toISOString(),
         response: clone(response),
-      };
+      }, {nowMs: now()});
       candidate = normalizeData(candidate);
       candidatePersistent = persistentDataForStore(candidate);
     }
@@ -2545,6 +2564,8 @@ function createAuthService(options = {}) {
       error.cause = cause;
       throw error;
     }
+    candidate = commitAuthorityRootLargeCollections(candidate);
+    candidatePersistent = commitAuthorityRootLargeCollections(candidatePersistent);
     lastPublishedPersistentData = cloneAuthorityRoot(candidatePersistent);
     publishDurableCandidate(before, candidate, transaction.events);
     return response;
@@ -3139,10 +3160,10 @@ function createMemoryAuthStore(initialData = null) {
   return {
     mode: "memory",
     load() {
-      return clone(data);
+      return clone(materializeAuthorityRootLargeCollections(data));
     },
     save(nextData) {
-      data = normalizeData(clone(nextData));
+      data = normalizeData(materializeAuthorityRootLargeCollections(nextData));
     },
   };
 }
@@ -3166,11 +3187,13 @@ function createJsonAuthStore(filePath) {
     },
     save(nextData) {
       fs.mkdirSync(path.dirname(filePath), {"recursive": true});
-      fs.writeFileSync(filePath, JSON.stringify(normalizeData(nextData), null, 2));
+      const materialized = materializeAuthorityRootLargeCollections(normalizeData(nextData));
+      fs.writeFileSync(filePath, JSON.stringify(materialized, null, 2));
     },
     async saveAsync(nextData) {
       await fs.promises.mkdir(path.dirname(filePath), {"recursive": true});
-      await fs.promises.writeFile(filePath, JSON.stringify(normalizeData(nextData), null, 2));
+      const materialized = materializeAuthorityRootLargeCollections(normalizeData(nextData));
+      await fs.promises.writeFile(filePath, JSON.stringify(materialized, null, 2));
     },
   };
 }
@@ -3253,8 +3276,8 @@ function durableStoreSnapshotMatches(store, snapshot) {
   }
   try {
     return isDeepStrictEqual(
-      persistentDataForStore(normalizeData(store.load())),
-      persistentDataForStore(normalizeData(snapshot)),
+      materializeAuthorityRootLargeCollections(persistentDataForStore(normalizeData(store.load()))),
+      materializeAuthorityRootLargeCollections(persistentDataForStore(normalizeData(snapshot))),
     );
   } catch {
     return false;
@@ -3281,7 +3304,22 @@ function defaultAsyncStoreErrorHandler(error) {
   console.error(`Beastbound auth store async save failed: ${error.message}`);
 }
 
+function commitAuthorityRootLargeCollections(data) {
+  const committedReceipts = commitDurableMutationReceiptDelta(data.mutationReceipts);
+  const committedLedger = commitConsumedEquipmentEnvelopeLedger(data.consumedEquipmentEnvelopes);
+  if (!committedLedger.ok) {
+    const error = new Error(committedLedger.message || "装备转运消费账本提交失败。");
+    error.code = committedLedger.code || "equipment_consumed_ledger_commit_failed";
+    throw error;
+  }
+  data.mutationReceipts = committedReceipts;
+  data.consumedEquipmentEnvelopes = committedLedger.ledger;
+  markAuthorityRootTrusted(data);
+  return data;
+}
+
 function normalizeData(raw) {
+  const trustedInput = isTrustedAuthorityRoot(raw);
   const data = raw && typeof raw === "object" ? cloneAuthorityRoot(raw) : {};
   const serviceEvents = normalizeServiceEvents(data.serviceEvents);
   const serviceEventSeq = Math.max(
@@ -3325,13 +3363,16 @@ function normalizeData(raw) {
     serviceEventSeq,
     serviceEvents,
   };
-  const ledger = backfillConsumedEquipmentEnvelopeLedger(
-    normalized,
-    normalized.consumedEquipmentEnvelopes,
-  );
+  const ledger = trustedInput
+    ? readConsumedEquipmentEnvelopeLedgerIndex(normalized.consumedEquipmentEnvelopes)
+    : backfillConsumedEquipmentEnvelopeLedger(
+      normalized,
+      normalized.consumedEquipmentEnvelopes,
+    );
   if (ledger.ok) {
     normalized.consumedEquipmentEnvelopes = ledger.ledger;
   }
+  markAuthorityRootTrusted(normalized);
   return normalized;
 }
 

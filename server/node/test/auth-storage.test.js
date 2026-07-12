@@ -1083,10 +1083,12 @@ process.stdin.on("end", () => {
     assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0001"), false);
     assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0002"), false);
 
-    const deleted = structuredClone(withAppend);
+    // Canonical large-ledger views are immutable Proxy values; JSON is the
+    // explicit full materialization boundary used by backup/migration paths.
+    const deleted = JSON.parse(JSON.stringify(withAppend));
     delete deleted.consumedEquipmentEnvelopes.eqx_health_baseline_0001;
     assert.throws(() => store.save(deleted), /只能追加/);
-    const mutated = structuredClone(withAppend);
+    const mutated = JSON.parse(JSON.stringify(withAppend));
     mutated.consumedEquipmentEnvelopes.eqx_health_baseline_0001.schemaVersion = 2;
     assert.throws(() => store.save(mutated), /非规范记录/);
     const callsAfterInvalid = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;

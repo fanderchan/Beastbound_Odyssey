@@ -3,9 +3,19 @@
 const {execFileSync, spawn} = require("node:child_process");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
+  commitConsumedEquipmentEnvelopeLedger,
+  consumedEquipmentEnvelopeLedgerCount,
+  consumedEquipmentEnvelopeLedgerDeltaFrom,
   isCanonicalConsumedEquipmentEnvelopeLedger,
   readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("./auth/equipment-envelope-consumed-ledger");
+const {
+  canonicalDurableMutationReceipts,
+  commitDurableMutationReceiptDelta,
+  durableMutationReceiptCount,
+  durableMutationReceiptDeltaFrom,
+  isCanonicalDurableMutationReceipts,
+} = require("./auth/durable-mutation-state");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
@@ -315,7 +325,7 @@ function createMysqlAuthStore(options = {}) {
     },
     load() {
       ensureSchema();
-      const loaded = canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
+      const loaded = canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
         includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
         includeMutationReceipts: ensureSchemaEnabled,
         strictRowIdentity,
@@ -333,7 +343,7 @@ function createMysqlAuthStore(options = {}) {
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         ensureSchema();
-        lastPersistentData = mysqlPersistentData(canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
+        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
           includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
@@ -343,7 +353,7 @@ function createMysqlAuthStore(options = {}) {
       if (statements.length > 0) {
         runMysqlSaveStatements(config, config.database, statements);
       }
-      lastPersistentData = data;
+      lastPersistentData = committedMysqlPersistentData(data);
     },
     async saveAsync(nextData) {
       if (closed) {
@@ -355,7 +365,7 @@ function createMysqlAuthStore(options = {}) {
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         ensureSchema();
-        lastPersistentData = mysqlPersistentData(canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
+        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
           includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
@@ -369,7 +379,7 @@ function createMysqlAuthStore(options = {}) {
           await runMysqlSaveStatementsAsync(config, config.database, statements);
         }
       }
-      lastPersistentData = data;
+      lastPersistentData = committedMysqlPersistentData(data);
     },
     async close() {
       if (closePromise !== null) {
@@ -396,16 +406,14 @@ function buildSaveStatements(nextData, previousData = null) {
   appendObjectEntityDiff(statements, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
   appendObjectEntityDiff(statements, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
   appendObjectEntityDiff(statements, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
-  appendMutationReceiptDiff(statements, previous.mutationReceipts, data.mutationReceipts);
+  appendMutationReceiptDeltaOrDiff(statements, previous.mutationReceipts, data.mutationReceipts);
   appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
   appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
-  if (previous.consumedEquipmentEnvelopes !== data.consumedEquipmentEnvelopes) {
-    appendConsumedEquipmentEnvelopeDiff(
-      statements,
-      previous.consumedEquipmentEnvelopes,
-      data.consumedEquipmentEnvelopes,
-    );
-  }
+  appendConsumedEquipmentEnvelopeDeltaOrDiff(
+    statements,
+    previous.consumedEquipmentEnvelopes,
+    data.consumedEquipmentEnvelopes,
+  );
   appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
   appendObjectEntityDiff(statements, "party_invites", "invite_id", previous.partyInvites, data.partyInvites, partyInviteEntityKey, insertPartyInviteStatement);
   appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
@@ -691,17 +699,39 @@ function mysqlPersistentData(nextData) {
   return data;
 }
 
-function canonicalizeLoadedConsumedEquipmentLedger(data) {
-  if (!data || !Object.hasOwn(data, "consumedEquipmentEnvelopes")) {
-    return data;
-  }
-  const read = readConsumedEquipmentEnvelopeLedgerIndex(data && data.consumedEquipmentEnvelopes);
-  if (!read.ok) {
-    const error = new Error(read.message || "装备转运消费账本加载失败。");
-    error.code = read.code || "equipment_consumed_ledger_invalid";
+function committedMysqlPersistentData(nextData) {
+  const data = mysqlPersistentData(nextData);
+  data.mutationReceipts = commitDurableMutationReceiptDelta(
+    canonicalDurableMutationReceipts(data.mutationReceipts),
+  );
+  const committedLedger = commitConsumedEquipmentEnvelopeLedger(
+    data.consumedEquipmentEnvelopes,
+  );
+  if (!committedLedger.ok) {
+    const error = new Error(committedLedger.message || "装备转运消费账本提交失败。");
+    error.code = committedLedger.code || "equipment_consumed_ledger_commit_failed";
     throw error;
   }
-  data.consumedEquipmentEnvelopes = read.ledger;
+  data.consumedEquipmentEnvelopes = committedLedger.ledger;
+  return data;
+}
+
+function canonicalizeLoadedAuthorityCollections(data) {
+  if (!data) {
+    return data;
+  }
+  if (Object.hasOwn(data, "consumedEquipmentEnvelopes")) {
+    const read = readConsumedEquipmentEnvelopeLedgerIndex(data.consumedEquipmentEnvelopes);
+    if (!read.ok) {
+      const error = new Error(read.message || "装备转运消费账本加载失败。");
+      error.code = read.code || "equipment_consumed_ledger_invalid";
+      throw error;
+    }
+    data.consumedEquipmentEnvelopes = read.ledger;
+  }
+  if (Object.hasOwn(data, "mutationReceipts")) {
+    data.mutationReceipts = canonicalDurableMutationReceipts(data.mutationReceipts);
+  }
   return data;
 }
 
@@ -811,6 +841,26 @@ function appendMutationReceiptDiff(statements, previousValue, nextValue) {
   }
 }
 
+function appendMutationReceiptDeltaOrDiff(statements, previousValue, nextValue) {
+  const delta = durableMutationReceiptDeltaFrom(previousValue, nextValue);
+  if (!delta.ok) {
+    appendMutationReceiptDiff(statements, previousValue, nextValue);
+    return;
+  }
+  for (const deletion of delta.deletes) {
+    statements.push(deleteEntityStatement(
+      "mutation_receipts",
+      "operation_id",
+      deletion.operationId,
+    ));
+  }
+  for (const receipt of delta.upserts) {
+    // Keep plain INSERT: a duplicate operation ID rolls the whole transaction
+    // back instead of overwriting the first committed outcome.
+    statements.push(insertMutationReceiptStatement(receipt));
+  }
+}
+
 function mutationReceiptMap(value) {
   if (value === undefined) {
     return {};
@@ -847,6 +897,17 @@ function appendConsumedEquipmentEnvelopeDiff(statements, previousValue, nextValu
     if (!Object.hasOwn(previous, envelopeId)) {
       statements.push(insertConsumedEquipmentEnvelopeStatement(envelopeId));
     }
+  }
+}
+
+function appendConsumedEquipmentEnvelopeDeltaOrDiff(statements, previousValue, nextValue) {
+  const delta = consumedEquipmentEnvelopeLedgerDeltaFrom(previousValue, nextValue);
+  if (!delta.ok) {
+    appendConsumedEquipmentEnvelopeDiff(statements, previousValue, nextValue);
+    return;
+  }
+  for (const envelopeId of delta.addedIds) {
+    statements.push(insertConsumedEquipmentEnvelopeStatement(envelopeId));
   }
 }
 
@@ -1342,7 +1403,9 @@ function stateMetadata(data) {
       sessions: Object.keys(objectOrEmpty(persistent.sessions)).length,
       profileBindings: Object.keys(objectOrEmpty(persistent.profileBindings)).length,
       profiles: Object.keys(objectOrEmpty(persistent.profiles)).length,
-      mutationReceipts: Object.keys(objectOrEmpty(persistent.mutationReceipts)).length,
+      mutationReceipts: isCanonicalDurableMutationReceipts(persistent.mutationReceipts)
+        ? durableMutationReceiptCount(persistent.mutationReceipts)
+        : Object.keys(objectOrEmpty(persistent.mutationReceipts)).length,
       mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
       marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
       consumedEquipmentEnvelopes: consumedEquipmentEnvelopeCount(persistent.consumedEquipmentEnvelopes),
@@ -1368,14 +1431,10 @@ function stateMetadata(data) {
 }
 
 function consumedEquipmentEnvelopeCount(value) {
-  if (!isCanonicalConsumedEquipmentEnvelopeLedger(value)) {
-    return Object.keys(objectOrEmpty(value)).length;
+  if (isCanonicalConsumedEquipmentEnvelopeLedger(value)) {
+    return consumedEquipmentEnvelopeLedgerCount(value);
   }
-  const read = readConsumedEquipmentEnvelopeLedgerIndex(value);
-  if (!read.ok) {
-    throw new Error(read.message || "装备转运消费账本计数失败。");
-  }
-  return read.index.count;
+  return Object.keys(objectOrEmpty(value)).length;
 }
 
 function insertAccountStatement(account) {
