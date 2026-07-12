@@ -444,7 +444,7 @@ func _sync_server_position_for_dialog_quest() -> Dictionary:
 		host._apply_server_step_move_authority_position(own_position, true)
 	elif host._server_step_move_should_report_authority_cell():
 		host._apply_server_step_move_authority_position(own_position)
-	if parsed.has("players"):
+	if bool(parsed.get("hasPlayersSnapshot", false)):
 		host._apply_online_position_players(parsed.get("players", []))
 	return {"ok": true}
 
@@ -466,7 +466,7 @@ func _sync_server_position_for_dialog_quest_after_correction() -> Dictionary:
 			host._apply_server_step_move_authority_position(own_position, true)
 		elif host._server_step_move_should_report_authority_cell():
 			host._apply_server_step_move_authority_position(own_position)
-		if parsed.has("players"):
+		if bool(parsed.get("hasPlayersSnapshot", false)):
 			host._apply_online_position_players(parsed.get("players", []))
 		return {"ok": true}
 	return {"ok": false, "message": str(parsed.get("message", "位置已按服务器纠正，请走近后再试。"))}

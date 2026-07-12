@@ -5482,6 +5482,34 @@ test("battle rooms are runtime-only and are not restored from the auth store", (
   assert.equal(restartedState.room, null);
 });
 
+test("a replaced event-stream session can still finish its trusted battle disconnect", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const challenger = service.register({"username": "replacebattlea", "password": "test1234"});
+  const opponent = service.register({"username": "replacebattleb", "password": "test1234"});
+  service.updatePlayerPosition(challenger.session.token, {"mapId": "village", "cellX": 10, "cellY": 10});
+  service.updatePlayerPosition(opponent.session.token, {"mapId": "village", "cellX": 11, "cellY": 10});
+  const invite = service.inviteToBattle(challenger.session.token, {"username": "replacebattleb"});
+  const accepted = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+
+  const oldIdentity = {
+    accountId: challenger.account.accountId,
+    sessionId: challenger.session.sessionId,
+  };
+  const replacement = service.login({"username": "replacebattlea", "password": "test1234"});
+  assert.equal(replacement.ok, true);
+  assert.equal(service.markBattleConnection(challenger.session.token, false).code, "session_replaced");
+
+  const disconnected = service.markBattleConnectionForEventConnection(oldIdentity, false);
+  assert.equal(disconnected.ok, true);
+  assert.equal(disconnected.changed, true);
+  assert.equal(disconnected.room.roomId, accepted.room.roomId);
+  const connection = service.snapshot().battleRooms[accepted.room.roomId]
+    .connectionState[challenger.account.accountId];
+  assert.equal(connection.connected, false);
+  assert.notEqual(connection.disconnectedAt, "");
+});
+
 test("battle rooms preserve short reconnects and close after disconnect grace", () => {
   let nowMs = Date.parse("2026-01-01T00:00:00.000Z");
   const structuredLogs = [];

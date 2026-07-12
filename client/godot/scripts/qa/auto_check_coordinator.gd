@@ -18,6 +18,7 @@ const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_ba
 const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_battle_status_replay_check.gd")
 const ServerBattleRideReplayCheck := preload("res://scripts/battle/server_battle_ride_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -1197,8 +1198,8 @@ func _run_auto_client_version_check() -> void:
 		):
 			runtime_boundaries_ok = false
 	var idempotency_ok := pure_prepare_ok and durable_specs_ok and runtime_boundaries_ok
-	var protocol_v7_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 7
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v7_ok else "failed"
+	var protocol_v8_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 8
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v8_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s idempotency=%s pure_prepare=%s durable=%s runtime_boundaries=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -16885,7 +16886,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 7
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 8
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -17562,6 +17563,7 @@ func _run_auto_auth_server_client_check() -> void:
 	}).to_utf8_buffer())
 	var online_parse_ok = (
 		bool(parsed_online.get("ok", false))
+		and bool(parsed_online.get("hasPlayersSnapshot", false))
 		and (parsed_online.get("players", []) as Array).size() == 1
 		and str(((parsed_online.get("players", []) as Array)[0] as Dictionary).get("partyRole", "")) == "leader"
 		and str((parsed_online.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
@@ -17617,6 +17619,7 @@ func _run_auto_auth_server_client_check() -> void:
 	}).to_utf8_buffer())
 	var position_parse_ok = (
 		bool(parsed_position.get("ok", false))
+		and bool(parsed_position.get("hasPlayersSnapshot", false))
 		and int((parsed_position.get("position", {}) as Dictionary).get("cellX", -1)) == 8
 		and (parsed_position.get("players", []) as Array).size() == 1
 		and str((parsed_position.get("aoi", {}) as Dictionary).get("scope", "")) == "aoi"
@@ -17638,6 +17641,7 @@ func _run_auto_auth_server_client_check() -> void:
 	}).to_utf8_buffer())
 	position_parse_ok = position_parse_ok and (
 		not bool(parsed_position_desync.get("ok", true))
+		and not bool(parsed_position_desync.get("hasPlayersSnapshot", true))
 		and str(parsed_position_desync.get("code", "")) == "position_desync"
 		and int((parsed_position_desync.get("position", {}) as Dictionary).get("cellX", -1)) == 5
 		and str((parsed_position_desync.get("movement", {}) as Dictionary).get("reason", "")) == "position_desync"
@@ -17668,7 +17672,6 @@ func _run_auto_auth_server_client_check() -> void:
 			"schemaVersion": 1,
 		},
 		"authority": "server_step",
-		"players": [],
 		"aoi": {"scope": "aoi", "radius": 18},
 	}).to_utf8_buffer())
 	var parsed_encounter_permit := parsed_movement.get("encounterPermit", {}) as Dictionary if parsed_movement.get("encounterPermit", {}) is Dictionary else {}
@@ -17687,6 +17690,8 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var movement_parse_ok = (
 		bool(parsed_movement.get("ok", false))
+		and not bool(parsed_movement.get("hasPlayersSnapshot", true))
+		and (parsed_movement.get("players", []) as Array).is_empty()
 		and str(parsed_movement.get("authority", "")) == "server_step"
 		and int((parsed_movement.get("position", {}) as Dictionary).get("movementSeq", 0)) == 1
 		and bool((parsed_movement.get("movement", {}) as Dictionary).get("stepAccepted", false))
@@ -17695,6 +17700,23 @@ func _run_auto_auth_server_client_check() -> void:
 		and ServerEncounterPermitModel.matches_visual_cell(normalized_encounter_permit, "firebud_training_yard", Vector2i(9, 12))
 		and rejected_mismatched_permit.is_empty()
 	)
+	var parsed_position_without_players = ServerAuthClientModel.parse_player_position_update_response(200, JSON.stringify({
+		"ok": true,
+		"position": {
+			"mapId": "firebud_training_yard",
+			"cellX": 10,
+			"cellY": 12,
+			"movementSeq": 2,
+			"authority": "server_step",
+		},
+		"aoi": {"scope": "aoi", "radius": 18},
+	}).to_utf8_buffer())
+	var http_missing_players_ok = (
+		bool(parsed_position_without_players.get("ok", false))
+		and not bool(parsed_position_without_players.get("hasPlayersSnapshot", true))
+		and (parsed_position_without_players.get("players", []) as Array).is_empty()
+		and not bool(parsed_movement.get("hasPlayersSnapshot", true))
+	)
 	var event_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
 	var event_wss_url = ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
 	var event_replay_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test", 42)
@@ -17702,8 +17724,24 @@ func _run_auto_auth_server_client_check() -> void:
 	var event_latest_spec = ServerAuthClientModel.event_latest_request("http://127.0.0.1:8787/", "token_test")
 	var parsed_event = ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
 		"type": "online.position",
-		"eventSeq": 43,
-		"players": [{"username": "remoteuser"}],
+		"change": "rebase",
+		"accountId": "account_self",
+		"presenceRevision": 43,
+		"presenceRebase": {
+			"removedAccountIds": ["account_old"],
+			"upserts": [{
+				"accountId": "account_remote",
+				"username": "remoteuser",
+				"presenceRevision": 42,
+				"position": {
+					"mapId": "firebud_training_yard",
+					"cellX": 9,
+					"cellY": 12,
+					"hasCell": true,
+					"precision": "cell",
+				},
+			}],
+		},
 	}).to_utf8_buffer())
 	var parsed_event_latest = ServerAuthClientModel.parse_event_latest_response(200, JSON.stringify({
 		"ok": true,
@@ -17718,9 +17756,18 @@ func _run_auto_auth_server_client_check() -> void:
 		and host._packed_string_array(event_latest_spec.get("headers", [])).has("Authorization: Bearer token_test")
 		and bool(parsed_event.get("ok", false))
 		and str(parsed_event.get("type", "")) == "online.position"
-		and int((parsed_event.get("event", {}) as Dictionary).get("eventSeq", 0)) == 43
+		and str((parsed_event.get("event", {}) as Dictionary).get("change", "")) == "rebase"
+		and int((parsed_event.get("event", {}) as Dictionary).get("presenceRevision", 0)) == 43
+		and ((parsed_event.get("event", {}) as Dictionary).get("presenceRebase", {}) as Dictionary).get("upserts", []) is Array
+		and not (parsed_event.get("event", {}) as Dictionary).has("players")
 		and bool(parsed_event_latest.get("ok", false))
 		and int(parsed_event_latest.get("latestEventSeq", 0)) == 43
+	)
+	var presence_cache_check: Dictionary = OnlinePresenceCacheModel.new(ONLINE_POSITION_MAX_REMOTE_PLAYERS).self_check()
+	var presence_cache_ok = (
+		bool(presence_cache_check.get("ok", false))
+		and int(presence_cache_check.get("caseCount", 0)) >= 7
+		and int(presence_cache_check.get("maxPlayers", 0)) == ONLINE_POSITION_MAX_REMOTE_PLAYERS
 	)
 	var party_state_spec = ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec = ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
@@ -18458,7 +18505,7 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_rebirth_request_ok and player_rebirth_parse_ok else "failed"
 	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_record_dialog_close_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and movement_request_ok and movement_parse_ok and event_contract_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok and party_pve_run_payload_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and http_missing_players_ok and movement_request_ok and movement_parse_ok and event_contract_ok and presence_cache_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok and party_pve_run_payload_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
@@ -18490,9 +18537,9 @@ func _run_auto_auth_server_client_check() -> void:
 		str(mail_read_parse_ok),
 		str(mail_claim_request_ok and mail_claim_parse_ok),
 		str(online_request_ok and online_parse_ok),
-		str(position_request_ok and position_parse_ok),
+		str(position_request_ok and position_parse_ok and http_missing_players_ok),
 		str(movement_request_ok and movement_parse_ok),
-				str(event_contract_ok),
+		str(event_contract_ok and presence_cache_ok),
 				str(party_request_ok and party_parse_ok),
 				str(battle_request_ok and battle_parse_ok),
 				str(server_battle_locked_leave_guard_ok),
@@ -19356,6 +19403,9 @@ func _run_auto_chat_live_check() -> void:
 
 func _run_auto_online_position_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var live_map_id := "level_grass_trial_ground"
 	var live_map_loaded = host._load_map(live_map_id, "from_firebud_village")
 	var cell_seed = int(Time.get_ticks_usec() % 1000000)
@@ -19364,13 +19414,13 @@ func _run_auto_online_position_live_check() -> void:
 	var leader_username = host._live_check_username("opla")
 	var member_username = host._live_check_username("oplb")
 	var leader_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		leader_username,
 		"test1234",
 		"同步甲"
 	))
 	var member_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		member_username,
 		"test1234",
 		"同步乙"
@@ -19381,7 +19431,7 @@ func _run_auto_online_position_live_check() -> void:
 	var member_session = member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
 	var member_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(member_session.get("serverSessionToken", "")),
 		{
 			"mapId": live_map_id,
@@ -19397,7 +19447,7 @@ func _run_auto_online_position_live_check() -> void:
 	)
 	var member_position_ok = bool(member_position_parsed.get("ok", false)) and int((member_position_parsed.get("position", {}) as Dictionary).get("cellX", -1)) == member_cell.x
 	host.current_account_session = leader_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, leader_cell)
@@ -19405,6 +19455,7 @@ func _run_auto_online_position_live_check() -> void:
 	host.last_checked_player_cell = leader_cell
 	host.online_position_remote_players.clear()
 	host.online_position_draw_signature_cache = ""
+	host.server_event_seen.clear()
 	host._request_online_position_snapshot({
 		"mapId": live_map_id,
 		"cellX": leader_cell.x,
@@ -19417,23 +19468,43 @@ func _run_auto_online_position_live_check() -> void:
 	while frames < 720 and host.online_position_request_pending:
 		frames += 1
 		await host.get_tree().process_frame
+	var http_roster_absent = not bool(member_position_parsed.get("hasPlayersSnapshot", false))
+	host._start_server_event_stream_if_needed()
+	frames = 0
+	while frames < 720 and not host._server_event_type_seen("events.ready"):
+		frames += 1
+		await host.get_tree().process_frame
+	var ready_ok = host._server_event_type_seen("events.ready")
+	frames = 0
+	while frames < 720 and not host._server_event_type_seen("online.snapshot"):
+		frames += 1
+		await host.get_tree().process_frame
+	var snapshot_ok = host._server_event_type_seen("online.snapshot")
 	var remote_ok = host._online_remote_player_at(member_username, host.current_map_id, member_cell)
 	var self_hidden_ok = not host._online_remote_player_at(leader_username, host.current_map_id, leader_cell)
 	var member_account_id = str(member_session.get("accountId", ""))
 	var draw_signature_ok = host.online_position_draw_signature_cache.find(member_username) >= 0 or (member_account_id != "" and host.online_position_draw_signature_cache.find(member_account_id) >= 0)
-	var status = "ok" if live_map_loaded and register_ok and member_position_ok and remote_ok and self_hidden_ok and draw_signature_ok else "failed"
-	print("online position live check ready: status=%s map_loaded=%s register=%s member_position=%s remote=%s self_hidden=%s draw_signature=%s leader=%s member=%s cell=%s" % [
+	var revision_ok = member_account_id != "" and host._panel_flow().online_presence_cache_model.revision_for(member_account_id) > 0
+	var cache_bound_ok = host.online_position_remote_players.size() <= 24
+	var status = "ok" if live_map_loaded and register_ok and member_position_ok and http_roster_absent and ready_ok and snapshot_ok and remote_ok and self_hidden_ok and draw_signature_ok and revision_ok and cache_bound_ok else "failed"
+	print("online position live check ready: status=%s map_loaded=%s register=%s member_position=%s http_roster_absent=%s ready=%s snapshot=%s remote=%s self_hidden=%s revision=%s cache_bound=%s draw_signature=%s leader=%s member=%s cell=%s" % [
 		status,
 		str(live_map_loaded),
 		str(register_ok),
 		str(member_position_ok),
+		str(http_roster_absent),
+		str(ready_ok),
+		str(snapshot_ok),
 		str(remote_ok),
 		str(self_hidden_ok),
+		str(revision_ok),
+		str(cache_bound_ok),
 		str(draw_signature_ok),
 		leader_username,
 		member_username,
 		str(member_cell),
 	])
+	host._stop_server_event_stream()
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_server_movement_live_check() -> void:
@@ -19812,6 +19883,9 @@ func _run_auto_server_click_move_reject_live_check() -> void:
 
 func _run_auto_online_aoi_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var suffix = str(Time.get_ticks_usec() % 1000000)
 	var watcher_username = "0000000000a%s" % suffix
 	var near_username = "0000000000b%s" % suffix
@@ -19820,19 +19894,19 @@ func _run_auto_online_aoi_live_check() -> void:
 	near_username = near_username.substr(0, mini(20, near_username.length()))
 	far_username = far_username.substr(0, mini(20, far_username.length()))
 	var watcher_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		watcher_username,
 		"test1234",
 		"视野甲"
 	))
 	var near_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		near_username,
 		"test1234",
 		"视野乙"
 	))
 	var far_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		far_username,
 		"test1234",
 		"远处丙"
@@ -19857,8 +19931,20 @@ func _run_auto_online_aoi_live_check() -> void:
 	var near_cell = watcher_cell
 	var far_cell = watcher_cell + Vector2i(ONLINE_POSITION_AOI_RADIUS_CELLS + 8, ONLINE_POSITION_AOI_RADIUS_CELLS + 8)
 	var moved_near_cell = watcher_cell
+	var watcher_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
+		base_url,
+		str(watcher_session.get("serverSessionToken", "")),
+		{
+			"mapId": host.current_map_id,
+			"cellX": watcher_cell.x,
+			"cellY": watcher_cell.y,
+			"facing": "east",
+			"moving": false,
+			"aoiRadius": ONLINE_POSITION_AOI_RADIUS_CELLS,
+		}
+	))
 	var near_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(near_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -19869,7 +19955,7 @@ func _run_auto_online_aoi_live_check() -> void:
 		}
 	))
 	var far_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(far_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -19879,11 +19965,12 @@ func _run_auto_online_aoi_live_check() -> void:
 			"moving": false,
 		}
 	))
+	var watcher_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(watcher_position_response.get("responseCode", 0)), watcher_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var near_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(near_position_response.get("responseCode", 0)), near_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var far_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(far_position_response.get("responseCode", 0)), far_position_response.get("body", PackedByteArray()) as PackedByteArray)
-	var seed_positions_ok = bool(near_position_parsed.get("ok", false)) and bool(far_position_parsed.get("ok", false))
+	var seed_positions_ok = bool(watcher_position_parsed.get("ok", false)) and bool(near_position_parsed.get("ok", false)) and bool(far_position_parsed.get("ok", false))
 	host.current_account_session = watcher_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, watcher_cell)
@@ -19891,17 +19978,25 @@ func _run_auto_online_aoi_live_check() -> void:
 	host.last_checked_player_cell = watcher_cell
 	host.online_position_remote_players.clear()
 	host.online_position_draw_signature_cache = ""
-	host._request_online_position_snapshot()
+	host.server_event_seen.clear()
+	host._start_server_event_stream_if_needed()
 	var frames = 0
-	while frames < 720 and host.online_position_request_pending:
+	while frames < 720 and not host._server_event_type_seen("events.ready"):
+		frames += 1
+		await host.get_tree().process_frame
+	var ready_ok = host._server_event_type_seen("events.ready")
+	frames = 0
+	while frames < 720 and not host._server_event_type_seen("online.snapshot"):
 		frames += 1
 		await host.get_tree().process_frame
 	var near_visible = host._online_remote_player_at(near_username, host.current_map_id, near_cell)
 	var far_hidden = not host._online_remote_player_at(far_username, host.current_map_id, far_cell)
-	var snapshot_ready = true
+	var snapshot_ready = host._server_event_type_seen("online.snapshot")
+	var far_account_id = str(far_session.get("accountId", ""))
+	host.server_event_seen.clear()
 	var far_still_outside = far_cell + Vector2i(1, 0)
 	var far_outside_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(far_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -19912,14 +20007,19 @@ func _run_auto_online_aoi_live_check() -> void:
 		}
 	))
 	var far_outside_parsed = ServerAuthClientModel.parse_player_position_update_response(int(far_outside_response.get("responseCode", 0)), far_outside_response.get("body", PackedByteArray()) as PackedByteArray)
-	host._request_online_position_snapshot()
 	frames = 0
-	while frames < 720 and host.online_position_request_pending:
+	while frames < 30:
 		frames += 1
 		await host.get_tree().process_frame
-	var outside_event_hidden = bool(far_outside_parsed.get("ok", false)) and not host._online_remote_player_at(far_username, host.current_map_id, far_still_outside)
+	var outside_delta_seen = false
+	for seen_event in host.server_event_seen:
+		if seen_event is Dictionary and str((seen_event as Dictionary).get("type", "")) == "online.position" and str((seen_event as Dictionary).get("accountId", "")) == far_account_id:
+			outside_delta_seen = true
+			break
+	var outside_event_hidden = bool(far_outside_parsed.get("ok", false)) and not outside_delta_seen and not host._online_remote_player_at(far_username, host.current_map_id, far_still_outside)
+	host.server_event_seen.clear()
 	var far_near_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(far_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -19930,22 +20030,41 @@ func _run_auto_online_aoi_live_check() -> void:
 		}
 	))
 	var far_near_parsed = ServerAuthClientModel.parse_player_position_update_response(int(far_near_response.get("responseCode", 0)), far_near_response.get("body", PackedByteArray()) as PackedByteArray)
-	host._request_online_position_snapshot()
 	frames = 0
-	while frames < 720 and host.online_position_request_pending:
+	while frames < 720 and not host._online_remote_player_at(far_username, host.current_map_id, moved_near_cell):
 		frames += 1
 		await host.get_tree().process_frame
-	var moved_in_visible = bool(far_near_parsed.get("ok", false)) and host._online_remote_player_at(far_username, host.current_map_id, moved_near_cell)
-	var status = "ok" if register_ok and seed_positions_ok and near_visible and far_hidden and snapshot_ready and outside_event_hidden and moved_in_visible else "failed"
-	print("online aoi live check ready: status=%s register=%s seed=%s near=%s far_hidden=%s snapshot=%s outside_hidden=%s moved_in=%s watcher=%s near=%s far=%s" % [
+	var moved_in_delta_ok = false
+	for seen_event in host.server_event_seen:
+		if not (seen_event is Dictionary):
+			continue
+		var position_event := seen_event as Dictionary
+		if str(position_event.get("type", "")) != "online.position" or str(position_event.get("accountId", "")) != far_account_id:
+			continue
+		var event_player = position_event.get("player", {}) as Dictionary if position_event.get("player", {}) is Dictionary else {}
+		var event_position = event_player.get("position", {}) as Dictionary if event_player.get("position", {}) is Dictionary else {}
+		moved_in_delta_ok = (
+			str(position_event.get("change", "")) == "upsert"
+			and int(position_event.get("presenceRevision", 0)) > 0
+			and not position_event.has("players")
+			and int(event_position.get("cellX", -1)) == moved_near_cell.x
+			and int(event_position.get("cellY", -1)) == moved_near_cell.y
+		)
+		if moved_in_delta_ok:
+			break
+	var moved_in_visible = bool(far_near_parsed.get("ok", false)) and moved_in_delta_ok and host._online_remote_player_at(far_username, host.current_map_id, moved_near_cell)
+	var status = "ok" if register_ok and seed_positions_ok and ready_ok and near_visible and far_hidden and snapshot_ready and outside_event_hidden and moved_in_visible else "failed"
+	print("online aoi live check ready: status=%s register=%s seed=%s ready=%s near=%s far_hidden=%s snapshot=%s outside_hidden=%s moved_in=%s moved_in_delta=%s watcher=%s near=%s far=%s" % [
 		status,
 		str(register_ok),
 		str(seed_positions_ok),
+		str(ready_ok),
 		str(near_visible),
 		str(far_hidden),
 		str(snapshot_ready),
 		str(outside_event_hidden),
 		str(moved_in_visible),
+		str(moved_in_delta_ok),
 		watcher_username,
 		near_username,
 		far_username,
@@ -19955,19 +20074,22 @@ func _run_auto_online_aoi_live_check() -> void:
 
 func _run_auto_server_event_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var suffix = str(Time.get_ticks_usec() % 1000000)
 	var watcher_username = "000001a%s" % suffix
 	var actor_username = "000001b%s" % suffix
 	watcher_username = watcher_username.substr(0, mini(20, watcher_username.length()))
 	actor_username = actor_username.substr(0, mini(20, actor_username.length()))
 	var watcher_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		watcher_username,
 		"test1234",
 		"事件甲"
 	))
 	var actor_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		actor_username,
 		"test1234",
 		"事件乙"
@@ -19976,11 +20098,12 @@ func _run_auto_server_event_live_check() -> void:
 	var actor_parsed = ServerAuthClientModel.parse_auth_response(int(actor_register.get("responseCode", 0)), actor_register.get("body", PackedByteArray()) as PackedByteArray)
 	var watcher_session = watcher_parsed.get("session", {}) as Dictionary if watcher_parsed.get("session", {}) is Dictionary else {}
 	var actor_session = actor_parsed.get("session", {}) as Dictionary if actor_parsed.get("session", {}) is Dictionary else {}
+	var actor_account_id = str(actor_session.get("accountId", ""))
 	var register_ok = bool(watcher_parsed.get("ok", false)) and bool(actor_parsed.get("ok", false))
 	var watcher_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(1, -1)
 	var actor_cell = watcher_cell + Vector2i(2, 0)
 	var watcher_position = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(watcher_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -19996,7 +20119,7 @@ func _run_auto_server_event_live_check() -> void:
 	)
 	var watcher_position_ok = bool(watcher_position_parsed.get("ok", false))
 	var latest_response = await host._auto_http_request_spec(ServerAuthClientModel.event_latest_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(watcher_session.get("serverSessionToken", ""))
 	))
 	var latest_parsed = ServerAuthClientModel.parse_event_latest_response(
@@ -20005,7 +20128,7 @@ func _run_auto_server_event_live_check() -> void:
 	)
 	var latest_ok = bool(latest_parsed.get("ok", false))
 	host.current_account_session = watcher_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, watcher_cell)
@@ -20032,7 +20155,7 @@ func _run_auto_server_event_live_check() -> void:
 		await host.get_tree().process_frame
 	host.server_event_seen.clear()
 	var actor_position = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(actor_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -20051,27 +20174,40 @@ func _run_auto_server_event_live_check() -> void:
 		frames += 1
 		await host.get_tree().process_frame
 	var position_seen = host._server_event_type_seen("online.position")
-	var position_event_username = ""
-	var position_event_player_count = 0
+	var position_event_change = ""
+	var position_event_revision = 0
 	var position_event_has_actor = false
+	var position_event_has_roster = false
 	for seen_event in host.server_event_seen:
-		if seen_event is Dictionary and str((seen_event as Dictionary).get("type", "")) == "online.position":
-			position_event_username = str((seen_event as Dictionary).get("username", ""))
-			var event_players: Array = (seen_event as Dictionary).get("players", []) if (seen_event as Dictionary).get("players", []) is Array else []
-			position_event_player_count = event_players.size()
-			for event_player in event_players:
-				if event_player is Dictionary and str((event_player as Dictionary).get("username", "")) == actor_username:
-					position_event_has_actor = true
-					break
+		if not (seen_event is Dictionary):
+			continue
+		var position_event := seen_event as Dictionary
+		if str(position_event.get("type", "")) != "online.position" or str(position_event.get("accountId", "")) != actor_account_id:
+			continue
+		position_event_change = str(position_event.get("change", ""))
+		position_event_revision = int(position_event.get("presenceRevision", 0))
+		position_event_has_roster = position_event.has("players")
+		var event_player = position_event.get("player", {}) as Dictionary if position_event.get("player", {}) is Dictionary else {}
+		var event_position = event_player.get("position", {}) as Dictionary if event_player.get("position", {}) is Dictionary else {}
+		position_event_has_actor = (
+			str(event_player.get("accountId", "")) == actor_account_id
+			and str(event_player.get("username", "")) == actor_username
+			and int(event_position.get("cellX", -1)) == actor_cell.x
+			and int(event_position.get("cellY", -1)) == actor_cell.y
+		)
+		break
 	var position_event_ok = (
 		bool(actor_position_parsed.get("ok", false))
 		and position_seen
-		and position_event_username == actor_username
+		and position_event_change == "upsert"
+		and position_event_revision > 0
 		and position_event_has_actor
+		and not position_event_has_roster
+		and host._panel_flow().online_presence_cache_model.revision_for(actor_account_id) == position_event_revision
 	)
 	var chat_text = "事件消息%s" % suffix
 	var actor_chat = await host._auto_http_request_spec(ServerAuthClientModel.chat_send_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(actor_session.get("serverSessionToken", "")),
 		CHAT_CHANNEL_NEARBY,
 		chat_text
@@ -20083,7 +20219,7 @@ func _run_auto_server_event_live_check() -> void:
 		await host.get_tree().process_frame
 	var chat_event_ok = bool(actor_chat_parsed.get("ok", false)) and host._server_event_type_seen("chat.message") and host._chat_message_text_seen(chat_text)
 	var status = "ok" if register_ok and watcher_position_ok and latest_ok and ready_ok and snapshot_ok and position_event_ok and chat_event_ok else "failed"
-	print("server event live check ready: status=%s register=%s watcher_position=%s latest=%s ready=%s snapshot=%s position=%s actor_http=%s position_seen=%s position_user=%s event_players=%d event_has_actor=%s chat=%s state=%s watcher=%s actor=%s" % [
+	print("server event live check ready: status=%s register=%s watcher_position=%s latest=%s ready=%s snapshot=%s position=%s actor_http=%s position_seen=%s change=%s revision=%d roster_absent=%s event_has_actor=%s chat=%s state=%s watcher=%s actor=%s" % [
 		status,
 		str(register_ok),
 		str(watcher_position_ok),
@@ -20093,8 +20229,9 @@ func _run_auto_server_event_live_check() -> void:
 		str(position_event_ok),
 		str(bool(actor_position_parsed.get("ok", false))),
 		str(position_seen),
-		position_event_username,
-		position_event_player_count,
+		position_event_change,
+		position_event_revision,
+		str(not position_event_has_roster),
 		str(position_event_has_actor),
 		str(chat_event_ok),
 		host.server_event_state,

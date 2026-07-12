@@ -15,6 +15,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -158,6 +159,8 @@ const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
 const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
 const SERVER_EVENT_SEEN_MAX := 40
+
+var online_presence_cache_model = OnlinePresenceCacheModel.new(ONLINE_POSITION_MAX_REMOTE_PLAYERS)
 const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
@@ -9045,8 +9048,10 @@ func _handle_server_event(event: Dictionary) -> void:
 		"session.replaced":
 			var message := str(event.get("message", "你的账号已在其他地方登录，你已被踢出游戏。")).strip_edges()
 			_handle_server_session_expired(message)
-		"online.snapshot", "online.position":
+		"online.snapshot":
 			_apply_online_position_players(event.get("players", []))
+		"online.position":
+			_apply_online_position_event(event)
 		"chat.message":
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
@@ -10013,6 +10018,7 @@ func _stop_online_position_sync() -> void:
 		online_position_http_request.cancel_request()
 	online_position_request_pending = false
 	online_position_queued_payload.clear()
+	online_presence_cache_model.clear()
 	online_position_remote_players.clear()
 	online_position_draw_signature_cache = ""
 	host.queue_redraw()
@@ -10090,36 +10096,44 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 		_apply_server_step_move_authority_position(own_position)
 	if parsed.has("party"):
 		_apply_server_party_snapshot(parsed.get("party", null))
-	_apply_online_position_players(parsed.get("players", []))
+	if bool(parsed.get("hasPlayersSnapshot", false)):
+		_apply_online_position_players(parsed.get("players", []))
 	if not online_position_queued_payload.is_empty():
 		var queued_payload: Dictionary = online_position_queued_payload.duplicate(true)
 		online_position_queued_payload.clear()
 		call_deferred("_request_online_position_snapshot", queued_payload)
 
 func _apply_online_position_players(players) -> void:
-	var current_username = str(current_account_session.get("username", "")).strip_edges()
-	var current_account_id = str(current_account_session.get("accountId", "")).strip_edges()
-	var next_remote_players: Array[Dictionary] = []
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var current_account_id := str(current_account_session.get("accountId", "")).strip_edges()
 	if players is Array:
 		for value in players:
 			if not (value is Dictionary):
 				continue
-			var online_player = (value as Dictionary).duplicate(true)
-			var username = str(online_player.get("username", "")).strip_edges()
-			var account_id = str(online_player.get("accountId", "")).strip_edges()
+			var online_player := value as Dictionary
+			var username := str(online_player.get("username", "")).strip_edges()
+			var account_id := str(online_player.get("accountId", "")).strip_edges()
 			if (current_username != "" and username == current_username) or (current_account_id != "" and account_id == current_account_id):
 				var self_position = online_player.get("position", {}) as Dictionary if online_player.get("position", {}) is Dictionary else {}
 				if _should_apply_online_self_position(self_position):
 					_apply_server_step_move_authority_position(self_position, true)
-				continue
-			var position = online_player.get("position", null)
-			if not (position is Dictionary):
-				continue
-			if not _online_position_has_cell(position):
-				continue
-			next_remote_players.append(online_player)
-			if next_remote_players.size() >= ONLINE_POSITION_MAX_REMOTE_PLAYERS:
-				break
+	online_presence_cache_model.apply_snapshot(players, current_account_id, current_username)
+	_sync_online_presence_cache_players()
+
+
+func _apply_online_position_event(event: Dictionary) -> void:
+	var result: Dictionary = online_presence_cache_model.apply_position_event(
+		event,
+		str(current_account_session.get("accountId", "")).strip_edges(),
+		str(current_account_session.get("username", "")).strip_edges(),
+	)
+	if not bool(result.get("ok", false)) or not bool(result.get("changed", false)):
+		return
+	_sync_online_presence_cache_players()
+
+
+func _sync_online_presence_cache_players() -> void:
+	var next_remote_players: Array[Dictionary] = online_presence_cache_model.players()
 	online_position_remote_players = next_remote_players
 	var next_signature = _online_position_draw_signature(next_remote_players)
 	if next_signature != online_position_draw_signature_cache:
@@ -10548,7 +10562,8 @@ func _publish_current_position_once_to_server() -> bool:
 		_apply_server_step_move_authority_position(position)
 	if parsed.has("party"):
 		_apply_server_party_snapshot(parsed.get("party", null))
-	_apply_online_position_players(parsed.get("players", []))
+	if bool(parsed.get("hasPlayersSnapshot", false)):
+		_apply_online_position_players(parsed.get("players", []))
 	return true
 
 func _handle_server_session_expired(message: String = "") -> void:
@@ -11857,7 +11872,8 @@ func _request_next_server_step_move(plan_id: int) -> void:
 	if not _apply_server_step_move_authority_position(position):
 		_handle_server_step_move_failure({"code": "movement_position_missing", "message": "服务器位置缺失。"})
 		return
-	_apply_online_position_players(parsed.get("players", []))
+	if bool(parsed.get("hasPlayersSnapshot", false)):
+		_apply_online_position_players(parsed.get("players", []))
 	server_step_move_ack_count += 1
 	server_step_move_last_error_code = ""
 	var ack_cell = server_step_move_authority_cell
@@ -11976,7 +11992,8 @@ func _seed_server_step_move_position(plan_id: int) -> bool:
 		_cancel_server_step_move()
 		return false
 	var position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
-	_apply_online_position_players(parsed.get("players", []))
+	if bool(parsed.get("hasPlayersSnapshot", false)):
+		_apply_online_position_players(parsed.get("players", []))
 	if not _apply_server_step_move_authority_position(position):
 		server_step_move_last_error_code = "movement_seed_missing_position"
 		_cancel_server_step_move()
@@ -12047,7 +12064,8 @@ func _publish_server_step_move_stop(plan_id: int) -> void:
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if bool(parsed.get("ok", false)):
 		_apply_server_step_move_authority_position(parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {})
-		_apply_online_position_players(parsed.get("players", []))
+		if bool(parsed.get("hasPlayersSnapshot", false)):
+			_apply_online_position_players(parsed.get("players", []))
 	else:
 		_apply_server_position_correction_from_response(parsed)
 		_handle_session_invalid_response(parsed)

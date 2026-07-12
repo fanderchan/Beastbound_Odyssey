@@ -1141,7 +1141,12 @@ test("party members follow the leader and cannot move independently", () => {
   assert.equal(followerPosition.cellX, 29);
   assert.equal(followerPosition.cellY, 27);
   assert.equal(followerPosition.authority, "party_follow");
-  const followerOnline = leaderStep.players.find((player) => player.accountId === member.account.accountId);
+  assert.equal(Object.hasOwn(leaderStep, "players"), false);
+  const leaderOnlineAfterStep = service.listOnlinePlayers(leader.session.token, {
+    scope: "map",
+    mapId: "firebud_training_yard",
+  });
+  const followerOnline = leaderOnlineAfterStep.players.find((player) => player.accountId === member.account.accountId);
   assert.equal(followerOnline.position.cellX, 29);
   assert.equal(followerOnline.position.authority, "party_follow");
 
@@ -1162,7 +1167,12 @@ test("party members follow the leader and cannot move independently", () => {
   assert.equal(switchedFollowerPosition.cellX, 3);
   assert.equal(switchedFollowerPosition.cellY, 15);
   assert.equal(switchedFollowerPosition.authority, "party_follow");
-  const switchedFollowerOnline = leaderMapSwitch.players.find((player) => player.accountId === member.account.accountId);
+  assert.equal(Object.hasOwn(leaderMapSwitch, "players"), false);
+  const leaderOnlineAfterSwitch = service.listOnlinePlayers(leader.session.token, {
+    scope: "map",
+    mapId: "firebud_village_gate",
+  });
+  const switchedFollowerOnline = leaderOnlineAfterSwitch.players.find((player) => player.accountId === member.account.accountId);
   assert.equal(switchedFollowerOnline.position.mapId, "firebud_village_gate");
   assert.equal(switchedFollowerOnline.position.cellX, 3);
   assert.equal(switchedFollowerOnline.position.authority, "party_follow");
@@ -1306,6 +1316,276 @@ test("online positions are runtime-only and do not trigger store writes", () => 
   assert.equal(store.snapshot().playerPositions[scout.account.accountId], undefined);
 });
 
+test("online position events project one-account AOI deltas without rebuilding rosters", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    allowPositionTeleport: true,
+  });
+  const watcher = service.register({username: "deltaa", password: "test1234", displayName: "增量甲"});
+  const actor = service.register({username: "deltab", password: "test1234", displayName: "增量乙"});
+  const distant = service.register({username: "deltac", password: "test1234", displayName: "增量丙"});
+  assert.equal(watcher.ok && actor.ok && distant.ok, true);
+  service.updatePlayerPosition(watcher.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(actor.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10});
+  service.updatePlayerPosition(distant.session.token, {mapId: "firebud_training_yard", cellX: 50, cellY: 50});
+
+  const events = [];
+  service.onEvent((event) => {
+    if (event.type === "online.position" && event.accountId === actor.account.accountId) {
+      events.push(event);
+    }
+  });
+  const moved = service.updatePlayerPosition(actor.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 12,
+    cellY: 10,
+    moving: true,
+  });
+  assert.equal(moved.ok, true);
+  assert.equal(Object.hasOwn(moved, "players"), false);
+  const baseEvent = events.at(-1);
+  assert.equal(Object.hasOwn(baseEvent, "players"), false);
+  assert.equal(baseEvent.player.accountId, actor.account.accountId);
+  assert.equal(baseEvent.presenceRevision > 0, true);
+
+  const watcherDelta = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, baseEvent);
+  assert.equal(watcherDelta.ok, true);
+  assert.equal(watcherDelta.visible, true);
+  assert.equal(watcherDelta.event.change, "upsert");
+  assert.equal(watcherDelta.event.player.accountId, actor.account.accountId);
+  assert.equal(Object.hasOwn(watcherDelta.event, "players"), false);
+
+  const actorRebase = service.eventForConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, baseEvent);
+  assert.equal(actorRebase.ok, true);
+  assert.equal(actorRebase.visible, true);
+  assert.equal(actorRebase.event.change, "rebase");
+  assert.deepEqual(actorRebase.event.presenceRebase.upserts, []);
+  assert.deepEqual(actorRebase.event.presenceRebase.removedAccountIds, []);
+  assert.equal(Object.hasOwn(actorRebase.event, "players"), false);
+
+  const distantDelta = service.eventForConnection({
+    accountId: distant.account.accountId,
+    sessionId: distant.session.sessionId,
+  }, baseEvent);
+  assert.equal(distantDelta.ok, true);
+  assert.equal(distantDelta.visible, false);
+
+  const movedAway = service.updatePlayerPosition(actor.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 50,
+    cellY: 50,
+  });
+  assert.equal(movedAway.ok, true);
+  const removeEvent = events.at(-1);
+  assert.equal(removeEvent.presenceRevision > baseEvent.presenceRevision, true);
+  const watcherRemove = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, removeEvent);
+  assert.equal(watcherRemove.ok, true);
+  assert.equal(watcherRemove.visible, true);
+  assert.equal(watcherRemove.event.change, "remove");
+  assert.equal(watcherRemove.event.accountId, actor.account.accountId);
+  assert.equal(Object.hasOwn(watcherRemove.event, "player"), false);
+});
+
+test("authoritative movement rebases the moving viewer across exact AOI boundaries", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    allowPositionTeleport: true,
+  });
+  const actor = service.register({username: "rebaseact", password: "test1234"});
+  const leaving = service.register({username: "rebaseleft", password: "test1234"});
+  const entering = service.register({username: "rebasenew", password: "test1234"});
+  service.updatePlayerPosition(actor.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(leaving.session.token, {mapId: "firebud_training_yard", cellX: -8, cellY: 10});
+  service.updatePlayerPosition(entering.session.token, {mapId: "firebud_training_yard", cellX: 29, cellY: 10});
+
+  const events = [];
+  service.onEvent((event) => {
+    if (event.type === "online.position" && event.accountId === actor.account.accountId) {
+      events.push(event);
+    }
+  });
+  const moved = service.movePlayerStep(actor.session.token, {
+    mapId: "firebud_training_yard",
+    fromCellX: 10,
+    fromCellY: 10,
+    toCellX: 11,
+    toCellY: 10,
+    facing: "east",
+    moving: true,
+    aoiRadius: 18,
+  });
+  assert.equal(moved.ok, true);
+  const baseEvent = events.at(-1);
+  assert.equal(baseEvent.aoi.scope, "aoi");
+  assert.equal(baseEvent.aoi.cellX, 11);
+  assert.equal(baseEvent.aoi.cellY, 10);
+
+  const projected = service.eventForConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, baseEvent);
+  assert.equal(projected.ok, true);
+  assert.equal(projected.event.change, "rebase");
+  assert.deepEqual(projected.event.presenceRebase.removedAccountIds, [leaving.account.accountId]);
+  assert.deepEqual(
+    projected.event.presenceRebase.upserts.map((player) => player.accountId),
+    [entering.account.accountId],
+  );
+  assert.equal(projected.event.presenceRebase.upserts[0].presenceRevision > 0, true);
+});
+
+test("connection projection preserves the viewer's advertised AOI radius", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    allowPositionTeleport: true,
+  });
+  const watcher = service.register({username: "radiuswatch", password: "test1234"});
+  const actor = service.register({username: "radiusactor", password: "test1234"});
+  service.updatePlayerPosition(actor.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 41,
+    cellY: 10,
+  });
+  const watcherPosition = service.updatePlayerPosition(watcher.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 10,
+    cellY: 10,
+    aoiRadius: 48,
+  });
+  assert.equal(watcherPosition.aoi.radius, 48);
+
+  const events = [];
+  service.onEvent((event) => {
+    if (event.type === "online.position" && event.accountId === actor.account.accountId) {
+      events.push(event);
+    }
+  });
+  service.updatePlayerPosition(actor.session.token, {
+    mapId: "firebud_training_yard",
+    cellX: 41,
+    cellY: 10,
+    facing: "east",
+  });
+  const baseEvent = events.at(-1);
+  const defaultRadius = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, baseEvent);
+  assert.equal(defaultRadius.visible, false);
+
+  const advertisedRadius = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+    aoi: watcherPosition.aoi,
+  }, baseEvent);
+  assert.equal(advertisedRadius.ok, true);
+  assert.equal(advertisedRadius.visible, true);
+  assert.equal(advertisedRadius.event.change, "upsert");
+  assert.equal(advertisedRadius.event.player.accountId, actor.account.accountId);
+});
+
+test("presence maintenance keeps connected sessions online and emits a bounded idle removal", () => {
+  let nowMs = Date.parse("2026-07-12T10:00:00.000Z");
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => nowMs,
+    allowPositionTeleport: true,
+  });
+  const watcher = service.register({username: "idlea", password: "test1234", displayName: "在线甲"});
+  const actor = service.register({username: "idleb", password: "test1234", displayName: "离线乙"});
+  service.updatePlayerPosition(watcher.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(actor.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10});
+  assert.equal(service.markEventConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, true).ok, true);
+  assert.equal(service.markEventConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, true).ok, true);
+
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  nowMs += 30_000;
+  const connectedSweep = service.runPresenceMaintenance();
+  assert.equal(connectedSweep.expiredSessionCount, 0);
+
+  assert.equal(service.markEventConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, false).ok, true);
+  nowMs += 26_000;
+  const idleSweep = service.runPresenceMaintenance();
+  assert.equal(idleSweep.expiredSessionCount, 1);
+  assert.equal(idleSweep.removedAccountCount, 1);
+  const removal = events.find((event) => (
+    event.type === "online.position"
+    && event.accountId === actor.account.accountId
+    && event.position === null
+  ));
+  assert.notEqual(removal, undefined);
+  assert.equal(removal.authority, "session_idle_timeout");
+  const projected = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, removal);
+  assert.equal(projected.ok, true);
+  assert.equal(projected.visible, true);
+  assert.equal(projected.event.change, "remove");
+});
+
+test("presence maintenance removes an expired session even while its websocket was connected", () => {
+  let nowMs = Date.parse("2026-07-01T00:00:00.000Z");
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => nowMs,
+    allowPositionTeleport: true,
+  });
+  const actor = service.register({username: "expireda", password: "test1234"});
+  nowMs += 6 * 24 * 60 * 60 * 1000;
+  const watcher = service.register({username: "expiredw", password: "test1234"});
+  service.updatePlayerPosition(actor.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(watcher.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10});
+  service.markEventConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, true);
+  service.markEventConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, true);
+
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  nowMs += 2 * 24 * 60 * 60 * 1000;
+  const sweep = service.runPresenceMaintenance();
+  assert.equal(sweep.expiredSessionCount, 1);
+  assert.equal(sweep.removedAccountCount, 1);
+  const removal = events.find((event) => (
+    event.type === "online.position"
+    && event.accountId === actor.account.accountId
+    && event.position === null
+  ));
+  assert.notEqual(removal, undefined);
+  const roster = service.listOnlinePlayers(watcher.session.token, {scope: "map", mapId: "firebud_training_yard"});
+  assert.equal(roster.players.some((player) => player.accountId === actor.account.accountId), false);
+  const projected = service.eventForConnection({
+    accountId: watcher.account.accountId,
+    sessionId: watcher.session.sessionId,
+  }, removal);
+  assert.equal(projected.ok, true);
+  assert.equal(projected.event.change, "remove");
+});
+
 test("players can publish map positions into the online roster", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const scout = service.register({"username": "posa", "password": "test1234", "displayName": "同步甲"});
@@ -1356,6 +1636,9 @@ test("map-only presence keeps internal cells private but preserves movement anch
   const mapOnly = service.updatePlayerPosition(scout.session.token, {
     "mapId": "firebud_training_yard",
     "scope": "map",
+    "cellX": 12,
+    "cellY": 8,
+    "facing": "east",
   });
   assert.equal(mapOnly.ok, true);
   assert.equal(mapOnly.position.mapId, "firebud_training_yard");
@@ -1388,6 +1671,34 @@ test("map-only presence keeps internal cells private but preserves movement anch
   });
   assert.equal(aoi.ok, true);
   assert.equal(aoi.players.some((player) => player.username === "mapa"), false);
+});
+
+test("an explicit AOI snapshot without a position anchor fails closed instead of exposing every map", () => {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    allowPositionTeleport: true,
+  });
+  const actor = service.register({username: "anchored", password: "test1234"});
+  service.updatePlayerPosition(actor.session.token, {
+    mapId: "secret_map",
+    cellX: 123,
+    cellY: 456,
+  });
+  const viewer = service.register({username: "unanchored", password: "test1234"});
+
+  const bounded = service.listOnlinePlayers(viewer.session.token, {scope: "aoi"});
+  assert.equal(bounded.ok, true);
+  assert.equal(bounded.aoi.scope, "none");
+  assert.equal(bounded.aoi.mapId, "");
+  assert.equal(bounded.players.some((player) => player.accountId === actor.account.accountId), false);
+  assert.equal(bounded.players.every((player) => player.accountId === viewer.account.accountId), true);
+
+  const explicitNone = service.listOnlinePlayers(viewer.session.token, {scope: "none"});
+  assert.equal(explicitNone.aoi.scope, "none");
+  assert.equal(explicitNone.players.some((player) => player.accountId === actor.account.accountId), false);
+
+  const explicitAll = service.listOnlinePlayers(viewer.session.token);
+  assert.equal(explicitAll.players.some((player) => player.accountId === actor.account.accountId), true);
 });
 
 test("online roster can be filtered by map area of interest", () => {

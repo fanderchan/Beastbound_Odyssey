@@ -40,8 +40,6 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "logout",
   "getSession",
   "getProfile",
-  "listOnlinePlayers",
-  "updatePlayerPosition",
   "grantGmPet",
   "levelUpGmPet",
   "prepareGmQaProfile",
@@ -163,7 +161,11 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.getSession(bearerToken(req)));
       }
       if (req.method === "GET" && url.pathname === "/events/latest") {
-        const session = await Promise.resolve(service.getSession(bearerToken(req)));
+        const session = await Promise.resolve(
+          typeof baseService.getEventSession === "function"
+            ? baseService.getEventSession(bearerToken(req))
+            : service.getSession(bearerToken(req)),
+        );
         if (!session.ok) {
           return sendResult(res, session);
         }
@@ -644,12 +646,16 @@ function requestClientIp(req) {
 
 function healthPayload(store, eventHub, service = null) {
   const storage = storageHealth(store);
+  const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
+    ? eventHub.metrics()
+    : {};
   return {
     ok: storage.ok !== false,
     service: "beastbound-auth",
     storage,
     eventStream: {
       clients: eventHub && typeof eventHub.clientCount === "function" ? eventHub.clientCount() : 0,
+      ...eventStreamMetrics,
     },
     durableMutations: service && typeof service.durableMutationMetrics === "function"
       ? service.durableMutationMetrics()

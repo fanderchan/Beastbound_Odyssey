@@ -84,6 +84,13 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(health.storage.checked, true);
   assert.equal(health.storage.mode, "memory");
   assert.equal(health.eventStream.clients, 0);
+  assert.equal(health.eventStream.connections, 0);
+  assert.equal(health.eventStream.backpressureConnections, 0);
+  assert.equal(health.eventStream.queuedFrames, 0);
+  assert.equal(health.eventStream.queuedBytes, 0);
+  assert.equal(health.eventStream.maxClientQueuedFrames, 0);
+  assert.equal(health.eventStream.maxClientQueuedBytes, 0);
+  assert.equal(health.eventStream.slowConsumerDisconnects, 0);
 
   const registered = await fetchJson(`${base}/auth/register`, {
     "method": "POST",
@@ -1911,8 +1918,12 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(position.ok, true);
   const positionEvent = await reader.next("online.position");
   assert.equal(positionEvent.username, "httpwsb");
-  assert.equal(positionEvent.position.cellX, 18);
-  assert.equal(positionEvent.players.some((player) => player.username === "httpwsc"), false);
+  assert.equal(positionEvent.change, "upsert");
+  assert.equal(positionEvent.player.username, "httpwsb");
+  assert.equal(positionEvent.player.position.cellX, 18);
+  assert.equal(Object.hasOwn(positionEvent, "position"), false);
+  assert.equal(Object.hasOwn(positionEvent, "previousPosition"), false);
+  assert.equal(Object.hasOwn(positionEvent, "players"), false);
 
   const distantStillFar = await fetchJson(`${base}/movement/step`, {
     "method": "POST",
@@ -1951,7 +1962,9 @@ test("HTTP server exposes websocket event stream", async (t) => {
   }
   const movedNearEvent = await reader.next("online.position");
   assert.equal(movedNearEvent.username, "httpwsc");
-  assert.equal(movedNearEvent.players.some((player) => player.username === "httpwsc"), true);
+  assert.equal(movedNearEvent.change, "upsert");
+  assert.equal(movedNearEvent.player.username, "httpwsc");
+  assert.equal(Object.hasOwn(movedNearEvent, "players"), false);
 
   const chat = await fetchJson(`${base}/chat/send`, {
     "method": "POST",

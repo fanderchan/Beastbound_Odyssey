@@ -253,7 +253,7 @@ test("runtime battle invitation does not open a durable store transaction", asyn
   assert.equal(saveCount, 0);
 });
 
-test("websocket handshake durably repairs a missing profile before accepting the player", async (t) => {
+test("websocket handshake durably repairs a malformed profile before accepting the player", async (t) => {
   const base = createMemoryAuthStore();
   const seedService = createAuthService({store: base});
   const registered = seedService.register({
@@ -262,8 +262,7 @@ test("websocket handshake durably repairs a missing profile before accepting the
     displayName: "握手补档",
   });
   const damaged = base.load();
-  delete damaged.profileBindings[registered.account.accountId];
-  delete damaged.profiles[registered.profileBinding.playerId];
+  damaged.profiles[registered.profileBinding.playerId].profile = [];
   base.save(damaged);
 
   let saveCount = 0;
@@ -291,7 +290,166 @@ test("websocket handshake durably repairs a missing profile before accepting the
   assert.equal(ready.account.username, "durablewsrepair");
   assert.equal(saveCount, 1);
   assert.ok(base.load().profileBindings[registered.account.accountId]);
+  assert.equal(Array.isArray(base.load().profiles[registered.profileBinding.playerId].profile), false);
   ws.close();
+});
+
+test("logout blocks same-account runtime movement until its durable commit publishes removal", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const actor = seed.register({username: "logoutbarriera", password: "test1234"});
+  const watcher = seed.register({username: "logoutbarrierw", password: "test1234"});
+  const partyInvite = seed.inviteToParty(watcher.session.token, {username: "logoutbarriera"});
+  assert.equal(seed.acceptPartyInvite(actor.session.token, partyInvite.invite.inviteId).ok, true);
+  const writeStarted = deferred();
+  const releaseWrite = deferred();
+  const service = createAuthService({
+    allowPositionTeleport: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        writeStarted.resolve();
+        await releaseWrite.promise;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  service.updatePlayerPosition(actor.session.token, {mapId: "map_a", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(watcher.session.token, {mapId: "map_a", cellX: 11, cellY: 10});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+
+  const logoutPromise = service.invokeDurable("logout", [actor.session.token], {actionId: "test_logout"});
+  await writeStarted.promise;
+  const concurrentMove = service.updatePlayerPosition(actor.session.token, {
+    mapId: "map_b",
+    cellX: 101,
+    cellY: 100,
+  });
+  assert.equal(concurrentMove.ok, false);
+  assert.equal(concurrentMove.code, "movement_account_committing");
+  assert.equal(concurrentMove.movement.retryable, true);
+  const leaderMove = service.movePlayerStep(watcher.session.token, {
+    mapId: "map_a",
+    fromCellX: 11,
+    fromCellY: 10,
+    toCellX: 12,
+    toCellY: 10,
+    moving: true,
+  });
+  assert.equal(leaderMove.ok, true);
+  assert.equal(service.snapshot().playerPositions[actor.account.accountId].cellX, 10);
+  assert.equal(events.some((event) => (
+    event.type === "online.position" && event.accountId === actor.account.accountId
+  )), false);
+
+  releaseWrite.resolve();
+  const loggedOut = await logoutPromise;
+  assert.equal(loggedOut.ok, true);
+  const removal = events.find((event) => (
+    event.type === "online.position"
+    && event.accountId === actor.account.accountId
+    && event.position === null
+  ));
+  assert.notEqual(removal, undefined);
+  const roster = service.listOnlinePlayers(watcher.session.token, {scope: "map", mapId: "map_a"});
+  assert.equal(roster.players.some((player) => player.accountId === actor.account.accountId), false);
+});
+
+test("failed logout and replacement login preserve published runtime presence", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const actor = seed.register({username: "authrollbacka", password: "test1234"});
+  const watcher = seed.register({username: "authrollbackw", password: "test1234"});
+  let failWrites = true;
+  const service = createAuthService({
+    allowPositionTeleport: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        if (failWrites) {
+          throw new Error("forced auth commit failure");
+        }
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  service.updatePlayerPosition(actor.session.token, {mapId: "map_a", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(watcher.session.token, {mapId: "map_a", cellX: 11, cellY: 10});
+  service.markEventConnection({
+    accountId: actor.account.accountId,
+    sessionId: actor.session.sessionId,
+  }, true);
+  const events = [];
+  service.onEvent((event) => events.push(event));
+
+  await assert.rejects(
+    service.invokeDurable("logout", [actor.session.token], {actionId: "test_logout_failure"}),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(service.getSession(actor.session.token).ok, true);
+  let roster = service.listOnlinePlayers(watcher.session.token, {scope: "map", mapId: "map_a"});
+  assert.equal(roster.players.some((player) => player.accountId === actor.account.accountId), true);
+  assert.equal(events.some((event) => event.type === "online.position" && event.position === null), false);
+
+  await assert.rejects(
+    service.invokeDurable("login", [{username: "authrollbacka", password: "test1234"}], {actionId: "test_login_failure"}),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(service.getSession(actor.session.token).ok, true);
+  roster = service.listOnlinePlayers(watcher.session.token, {scope: "map", mapId: "map_a"});
+  assert.equal(roster.players.some((player) => player.accountId === actor.account.accountId), true);
+  assert.equal(events.some((event) => event.type === "session.replaced"), false);
+
+  failWrites = false;
+  await service.waitForDurableIdle();
+});
+
+test("successful async replacement login keeps its party member prospectively online", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const leader = seed.register({username: "loginpartyleader", password: "test1234"});
+  const member = seed.register({username: "loginpartymember", password: "test1234"});
+  const invite = seed.inviteToParty(leader.session.token, {username: "loginpartymember"});
+  const accepted = seed.acceptPartyInvite(member.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  service.markEventConnection({
+    accountId: member.account.accountId,
+    sessionId: member.session.sessionId,
+  }, true);
+  const events = [];
+  service.onEvent((event) => events.push(event));
+
+  const login = await service.invokeDurable("login", [{
+    username: "loginpartymember",
+    password: "test1234",
+  }], {actionId: "test_party_login"});
+  assert.equal(login.ok, true);
+  const partyEvent = events.find((event) => event.type === "party.update" && event.party);
+  if (partyEvent) {
+    const publicMember = partyEvent.party.members.find((row) => row.accountId === member.account.accountId);
+    assert.equal(publicMember.online, true);
+    assert.equal(publicMember.connectionState, "online");
+    assert.equal(publicMember.autoKickAt, null);
+  }
+  const party = service.snapshot().parties[accepted.party.partyId];
+  const presence = party.memberPresence[member.account.accountId];
+  assert.equal(presence.online, true);
+  assert.equal(presence.connectionState, "online");
+  assert.equal(presence.offlineSince, null);
+  assert.equal(presence.autoKickAt, null);
 });
 
 test("durable receipt replays across restart and rejects key reuse with another request", async (t) => {

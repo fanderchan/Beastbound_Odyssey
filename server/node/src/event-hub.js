@@ -6,11 +6,38 @@ const {
   protocolMetadata,
   protocolMismatchResult,
 } = require("./protocol");
+const {
+  createEventSubscriptionIndex,
+} = require("./event-hub-subscriptions");
+const {
+  createEventHubWriter,
+  encodeFrame,
+} = require("./event-hub-writer");
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-function createEventHub(service) {
+function createEventHub(service, options = {}) {
   const clients = new Set();
+  const subscriptions = createEventSubscriptionIndex({
+    bucketSize: options.bucketSize,
+    maxAoiRadius: options.maxAoiRadius,
+  });
+  const battleAcknowledgedAccounts = new Set();
+  const battleDesiredStates = new Map();
+  const battleTransitions = new Map();
+  const eventConnectionCounts = new Map();
+  const totals = {
+    currentQueuedFrames: 0,
+    currentBufferedBytes: 0,
+    peakQueuedFrames: 0,
+    peakQueuedBytes: 0,
+    maxClientQueuedFrames: 0,
+    maxClientQueuedBytes: 0,
+    sentFrames: 0,
+    sentBytes: 0,
+    presenceCoalesced: 0,
+    slowConsumerDisconnects: 0,
+  };
   let closing = false;
   let closePromise = null;
   const unsubscribe = service && typeof service.onEvent === "function"
@@ -33,12 +60,13 @@ function createEventHub(service) {
       return true;
     }
     const token = url.searchParams.get("token") || "";
-    const session = await invokeEventService(service, "getSession", [token], "ws_session");
+    const modernSessionBoundary = Boolean(service && typeof service.getEventSession === "function");
+    const authorized = await authorizeEventSession(service, token, modernSessionBoundary);
     if (closing) {
       writeHttpError(socket, 503, "server shutting down");
       return true;
     }
-    if (!session.ok) {
+    if (!authorized.ok) {
       writeHttpError(socket, 401, "unauthorized");
       return true;
     }
@@ -48,7 +76,7 @@ function createEventHub(service) {
       return true;
     }
     const accept = crypto.createHash("sha1").update(key + WS_GUID).digest("base64");
-    socket.write([
+    const handshakeWritable = socket.write([
       "HTTP/1.1 101 Switching Protocols",
       "Upgrade: websocket",
       "Connection: Upgrade",
@@ -56,111 +84,389 @@ function createEventHub(service) {
       "",
       "",
     ].join("\r\n"));
-    const account = session.account || {};
+    const account = authorized.account || {};
+    const session = authorized.session && typeof authorized.session === "object" ? authorized.session : {};
     const lastEventSeq = normalizeEventSeq(url.searchParams.get("lastEventSeq") || url.searchParams.get("afterSeq") || "0");
     const client = {
       socket,
-      accountId: account.accountId || "",
-      username: account.username || "",
+      writer: null,
+      accountId: String(account.accountId || session.accountId || ""),
+      sessionId: String(session.sessionId || authorized.sessionId || ""),
+      username: String(account.username || ""),
       token,
       buffer: Buffer.alloc(0),
       lastSentEventSeq: lastEventSeq,
-      pendingLiveEvents: [],
-      replaying: true,
+      queuedEventSeqs: new Set(),
+      initializing: true,
+      modernSessionBoundary,
+      cleanup: null,
+      dataHandler: null,
+      closeHandler: null,
+      errorHandler: null,
+      reportedQueuedFrames: 0,
+      reportedBufferedBytes: 0,
     };
+    client.writer = createEventHubWriter(socket, {
+      paused: true,
+      initiallyBlocked: handshakeWritable === false,
+      maxQueuedFrames: options.maxQueuedFrames,
+      maxQueuedBytes: options.maxQueuedBytes,
+      backpressureTimeoutMs: options.backpressureTimeoutMs,
+      onFrameSent(bytes, event) {
+        totals.sentFrames += 1;
+        totals.sentBytes += bytes;
+        const eventSeq = normalizeEventSeq(event && event.eventSeq);
+        if (eventSeq > 0) {
+          client.queuedEventSeqs.delete(eventSeq);
+          client.lastSentEventSeq = Math.max(client.lastSentEventSeq, eventSeq);
+        }
+      },
+      onPresenceCoalesced(_accountId, previousEvent) {
+        totals.presenceCoalesced += 1;
+        const previousSeq = normalizeEventSeq(previousEvent && previousEvent.eventSeq);
+        if (previousSeq > 0) {
+          client.queuedEventSeqs.delete(previousSeq);
+        }
+      },
+      onQueuedFramesChanged(frames) {
+        const nextFrames = Math.max(0, Number(frames || 0));
+        totals.currentQueuedFrames = Math.max(
+          0,
+          totals.currentQueuedFrames - client.reportedQueuedFrames + nextFrames,
+        );
+        client.reportedQueuedFrames = nextFrames;
+        totals.peakQueuedFrames = Math.max(totals.peakQueuedFrames, totals.currentQueuedFrames);
+        totals.maxClientQueuedFrames = Math.max(totals.maxClientQueuedFrames, nextFrames);
+      },
+      onBufferedBytesChanged(bytes) {
+        const nextBytes = Math.max(0, Number(bytes || 0));
+        totals.currentBufferedBytes = Math.max(
+          0,
+          totals.currentBufferedBytes - client.reportedBufferedBytes + nextBytes,
+        );
+        client.reportedBufferedBytes = nextBytes;
+        totals.peakQueuedBytes = Math.max(totals.peakQueuedBytes, totals.currentBufferedBytes);
+        totals.maxClientQueuedBytes = Math.max(totals.maxClientQueuedBytes, nextBytes);
+      },
+      onSlowConsumer() {
+        totals.slowConsumerDisconnects += 1;
+        queueMicrotask(() => cleanupClient(client));
+      },
+    });
     clients.add(client);
-    markBattleConnection(service, token, true);
-    socket.on("data", (chunk) => handleSocketData(client, chunk));
-    const cleanup = () => {
-      if (!clients.has(client)) {
-        return;
-      }
-      clients.delete(client);
-      markBattleConnection(service, token, false);
-    };
-    socket.on("close", cleanup);
-    socket.on("error", cleanup);
-    sendEvent(client, {
+    subscriptions.register(client);
+    client.dataHandler = (chunk) => handleSocketData(client, chunk);
+    client.closeHandler = () => cleanupClient(client);
+    client.errorHandler = () => terminateClient(client);
+    client.cleanup = client.closeHandler;
+    socket.on("data", client.dataHandler);
+    socket.on("close", client.closeHandler);
+    socket.on("error", client.errorHandler);
+
+    if (!markEventStreamConnection(client, true)) {
+      terminateClient(client);
+      return true;
+    }
+    const initialBattleRoom = Boolean(authorized.activeBattleRoom || !modernSessionBoundary);
+    const battleConnectionReady = await setBattleConnectionState(client, initialBattleRoom);
+    if (initialBattleRoom && !battleConnectionReady) {
+      terminateClient(client);
+      return true;
+    }
+
+    const online = modernSessionBoundary
+      ? await Promise.resolve(service.listOnlinePlayers(token, {scope: "aoi"}))
+      : await invokeEventService(service, "listOnlinePlayers", [token, {scope: "aoi"}], "ws_online_snapshot");
+    if (!clients.has(client) || socket.destroyed) {
+      return true;
+    }
+    if (!online || !online.ok) {
+      terminateClient(client);
+      return true;
+    }
+    subscriptions.update(client, online.aoi);
+
+    const ready = {
       type: "events.ready",
       account,
       schemaVersion: 1,
       createdAt: new Date().toISOString(),
       ...protocolMetadata(),
-    });
-    const online = await invokeEventService(
-      service,
-      "listOnlinePlayers",
-      [token, {"scope": "aoi"}],
-      "ws_online_snapshot",
-    );
-    if (online.ok) {
-      sendEvent(client, {
-        type: "online.snapshot",
-        players: online.players,
-        party: online.party,
-        aoi: online.aoi,
-        schemaVersion: 1,
-        createdAt: new Date().toISOString(),
-      });
+    };
+    const snapshot = {
+      type: "online.snapshot",
+      players: online.players,
+      party: online.party,
+      aoi: online.aoi,
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+    };
+    const replay = replayEventsForClient(client, lastEventSeq);
+    if (!replay.ok) {
+      terminateClient(client);
+      return true;
     }
-    replayEventsForClient(client, lastEventSeq);
-    client.replaying = false;
-    drainPendingLiveEvents(client);
+    const bootstrap = [ready, snapshot, ...replay.events];
+    for (const event of replay.events) {
+      const eventSeq = normalizeEventSeq(event && event.eventSeq);
+      if (eventSeq > 0) {
+        client.queuedEventSeqs.add(eventSeq);
+      }
+    }
+    client.initializing = false;
+    if (!client.writer.startBootstrap(bootstrap)) {
+      terminateClient(client);
+      return true;
+    }
     return true;
   }
 
   function publish(event) {
-    for (const client of clients) {
-      if (!eventVisibleToClient(event, client)) {
+    const candidates = subscriptions.candidates(event, clients);
+    for (const client of candidates) {
+      if (!clients.has(client) || client.closing || !client.socket || client.socket.destroyed) {
+        continue;
+      }
+      if (!subscriptions.positionEventMayBeVisible(client, event)) {
         continue;
       }
       const prepared = eventForClient(client, event);
+      if (!prepared.ok) {
+        terminateClient(client);
+        continue;
+      }
+      if (prepared.hasActiveBattleRoom) {
+        setBattleConnectionState(client, prepared.activeBattleRoom);
+      }
       if (!prepared.visible) {
         continue;
       }
-      if (client.replaying) {
-        queuePendingLiveEvent(client, prepared.event);
-      } else {
-        sendSequencedEvent(client, prepared.event);
+      const outgoing = prepared.event || event;
+      if (isPositionEvent(outgoing) && String(client.accountId || "") === String(outgoing.accountId || "")) {
+        subscriptions.update(client, outgoing.aoi || event && event.aoi || outgoing.position);
+      }
+      queueClientEvent(client, outgoing);
+      if (sessionReplacementTargetsClient(outgoing, client)) {
+        client.closing = true;
+        subscriptions.unregister(client);
+        client.writer.requestCloseAfterFlush();
       }
     }
   }
 
   function eventForClient(client, event) {
-    if (!service || typeof service.eventForSession !== "function") {
-      return {visible: true, event};
+    let result;
+    if (service && typeof service.eventForConnection === "function") {
+      result = service.eventForConnection(eventConnectionIdentity(client), event);
+    } else if (service && typeof service.eventForSession === "function") {
+      result = service.eventForSession(client.token, event);
+    } else {
+      result = {ok: true, visible: true, event};
     }
-    const result = service.eventForSession(client.token, event);
-    if (!result.ok) {
-      client.socket.destroy();
-      return {visible: false, event};
+    if (!result || typeof result.then === "function" || result.ok === false) {
+      return {ok: false, visible: false, event};
     }
     return {
+      ok: true,
       visible: result.visible !== false,
       event: result.event || event,
+      hasActiveBattleRoom: Object.hasOwn(result, "activeBattleRoom"),
+      activeBattleRoom: Boolean(result.activeBattleRoom),
     };
-  }
-
-  function eventVisibleToClient(event, client) {
-    const targetAccountIds = event && Array.isArray(event.targetAccountIds) ? event.targetAccountIds : null;
-    if (!targetAccountIds) {
-      return true;
-    }
-    return targetAccountIds.includes(client.accountId);
   }
 
   function replayEventsForClient(client, lastEventSeq) {
     if (!service || typeof service.listEventsForSession !== "function") {
-      return;
+      return {ok: true, events: []};
     }
-    const replay = service.listEventsForSession(client.token, {"afterSeq": lastEventSeq});
-    if (!replay.ok || !Array.isArray(replay.events)) {
-      client.socket.destroy();
-      return;
+    const replay = service.listEventsForSession(client.token, {afterSeq: lastEventSeq});
+    if (!replay || !replay.ok || !Array.isArray(replay.events)) {
+      return {ok: false, events: []};
     }
+    const events = [];
     for (const event of replay.events) {
-      sendSequencedEvent(client, event);
+      const eventSeq = normalizeEventSeq(event && event.eventSeq);
+      if (eventSeq > 0 && (
+        eventSeq <= normalizeEventSeq(client.lastSentEventSeq)
+        || client.queuedEventSeqs.has(eventSeq)
+      )) {
+        continue;
+      }
+      events.push(event);
     }
+    return {ok: true, events};
+  }
+
+  function queueClientEvent(client, event) {
+    if (!client || !client.writer) {
+      return false;
+    }
+    const eventSeq = normalizeEventSeq(event && event.eventSeq);
+    if (eventSeq > 0) {
+      if (eventSeq <= normalizeEventSeq(client.lastSentEventSeq) || client.queuedEventSeqs.has(eventSeq)) {
+        return true;
+      }
+      client.queuedEventSeqs.add(eventSeq);
+    }
+    const coalesceKey = isCoalesciblePositionEvent(event) ? String(event.accountId || "") : "";
+    const queued = client.writer.enqueue(event, {coalesceKey});
+    if (!queued && eventSeq > 0) {
+      client.queuedEventSeqs.delete(eventSeq);
+    }
+    return queued;
+  }
+
+  function setBattleConnectionState(client, activeBattleRoom) {
+    const accountId = String(client && client.accountId || "");
+    if (!accountId) {
+      return true;
+    }
+    const requestedState = Boolean(activeBattleRoom);
+    const existingDesired = battleDesiredStates.get(accountId);
+    if (
+      existingDesired
+      && existingDesired.connected === requestedState
+      && !battleTransitions.has(accountId)
+      && battleAcknowledgedAccounts.has(accountId) === requestedState
+    ) {
+      return true;
+    }
+    battleDesiredStates.set(accountId, {
+      connected: requestedState,
+      identity: clientIdentity(client),
+      token: client.token,
+    });
+    if (battleTransitions.has(accountId)) {
+      return battleTransitions.get(accountId);
+    }
+    if (battleAcknowledgedAccounts.has(accountId) === requestedState) {
+      return true;
+    }
+    const transition = Promise.resolve().then(async () => {
+      while (true) {
+        const desired = battleDesiredStates.get(accountId);
+        if (!desired) {
+          return true;
+        }
+        const acknowledged = battleAcknowledgedAccounts.has(accountId);
+        if (acknowledged === desired.connected) {
+          return true;
+        }
+        const applied = await markBattleConnection(
+          service,
+          desired.identity,
+          desired.token,
+          desired.connected,
+        );
+        if (!applied) {
+          return false;
+        }
+        if (desired.connected) {
+          battleAcknowledgedAccounts.add(accountId);
+        } else {
+          battleAcknowledgedAccounts.delete(accountId);
+        }
+      }
+    }).finally(() => {
+      battleTransitions.delete(accountId);
+      const hasConnection = Array.from(clients).some((candidate) => candidate.accountId === accountId);
+      if (!hasConnection && !battleAcknowledgedAccounts.has(accountId)) {
+        battleDesiredStates.delete(accountId);
+      }
+    });
+    battleTransitions.set(accountId, transition);
+    return transition;
+  }
+
+  function cleanupClient(client) {
+    if (!client || !clients.delete(client)) {
+      return Promise.resolve();
+    }
+    subscriptions.unregister(client);
+    detachClientSocketListeners(client);
+    if (client.writer) {
+      client.writer.dispose();
+    }
+    markEventStreamConnection(client, false);
+    const accountId = String(client.accountId || "");
+    const hasAnotherConnection = Array.from(clients).some((candidate) => candidate.accountId === accountId);
+    if (hasAnotherConnection) {
+      return Promise.resolve();
+    }
+    let activeBattleRoom = battleAcknowledgedAccounts.has(accountId)
+      || battleTransitions.has(accountId)
+      || Boolean(battleDesiredStates.get(accountId) && battleDesiredStates.get(accountId).connected);
+    if (!activeBattleRoom && service && typeof service.eventConnectionState === "function") {
+      try {
+        const state = service.eventConnectionState(clientIdentity(client));
+        activeBattleRoom = Boolean(state && state.ok && state.activeBattleRoom);
+      } catch {
+        activeBattleRoom = false;
+      }
+    }
+    if (!activeBattleRoom) {
+      battleDesiredStates.delete(accountId);
+      return Promise.resolve();
+    }
+    return Promise.resolve(setBattleConnectionState(client, false)).finally(() => {
+      const connectionRemains = Array.from(clients).some((candidate) => candidate.accountId === accountId);
+      if (
+        !connectionRemains
+        && !battleTransitions.has(accountId)
+        && !battleAcknowledgedAccounts.has(accountId)
+      ) {
+        battleDesiredStates.delete(accountId);
+      }
+    });
+  }
+
+  function terminateClient(client) {
+    const cleanup = cleanupClient(client);
+    try {
+      if (client && client.socket && !client.socket.destroyed) {
+        client.socket.destroy();
+      }
+    } catch {
+      // A failed socket destroy must not leak the indexes or shutdown drain.
+    }
+    return cleanup;
+  }
+
+  function markEventStreamConnection(client, connected) {
+    if (!service || typeof service.markEventConnection !== "function") {
+      return true;
+    }
+    const sessionId = String(client && client.sessionId || "");
+    if (!sessionId) {
+      return false;
+    }
+    const previousCount = Number(eventConnectionCounts.get(sessionId) || 0);
+    if (connected) {
+      eventConnectionCounts.set(sessionId, previousCount + 1);
+      if (previousCount > 0) {
+        return true;
+      }
+    } else if (previousCount > 1) {
+      eventConnectionCounts.set(sessionId, previousCount - 1);
+      return true;
+    } else {
+      eventConnectionCounts.delete(sessionId);
+      if (previousCount <= 0) {
+        return true;
+      }
+    }
+    try {
+      const result = service.markEventConnection(clientIdentity(client), connected);
+      if (result && typeof result.then !== "function" && result.ok !== false) {
+        return true;
+      }
+    } catch {
+      // Roll back the local reference transition below.
+    }
+    if (connected) {
+      eventConnectionCounts.delete(sessionId);
+    }
+    return false;
   }
 
   function close() {
@@ -173,12 +479,7 @@ function createEventHub(service) {
     } catch {
       // Shutdown must still disconnect and drain the accepted clients.
     }
-    const disconnects = [];
-    for (const client of Array.from(clients)) {
-      clients.delete(client);
-      disconnects.push(markBattleConnection(service, client.token, false));
-      client.socket.destroy();
-    }
+    const disconnects = Array.from(clients).map((client) => terminateClient(client));
     closePromise = Promise.allSettled(disconnects).then(() => undefined);
     return closePromise;
   }
@@ -187,12 +488,57 @@ function createEventHub(service) {
     return clients.size;
   }
 
+  function metrics() {
+    let backpressureConnections = 0;
+    let queuedFrames = 0;
+    let queuedBytes = 0;
+    for (const client of clients) {
+      const writerMetrics = client.writer ? client.writer.metrics() : {};
+      if (writerMetrics.blocked) {
+        backpressureConnections += 1;
+      }
+      queuedFrames += Number(writerMetrics.queuedFrames || 0);
+      queuedBytes += Number(writerMetrics.queuedBytes || 0);
+    }
+    return Object.freeze({
+      connections: clients.size,
+      backpressureConnections,
+      queuedFrames,
+      queuedBytes,
+      peakQueuedFrames: totals.peakQueuedFrames,
+      peakQueuedBytes: totals.peakQueuedBytes,
+      maxClientQueuedFrames: totals.maxClientQueuedFrames,
+      maxClientQueuedBytes: totals.maxClientQueuedBytes,
+      sentFrames: totals.sentFrames,
+      sentBytes: totals.sentBytes,
+      presenceCoalesced: totals.presenceCoalesced,
+      slowConsumerDisconnects: totals.slowConsumerDisconnects,
+    });
+  }
+
   return {
     handleUpgrade,
     publish,
     close,
     clientCount,
+    metrics,
   };
+}
+
+async function authorizeEventSession(service, token, modernSessionBoundary) {
+  if (!modernSessionBoundary) {
+    return invokeEventService(service, "getSession", [token], "ws_session");
+  }
+  let result = await Promise.resolve(service.getEventSession(token));
+  if (!result || !result.ok || !result.needsRepair) {
+    return result;
+  }
+  const repaired = await invokeEventService(service, "getSession", [token], "ws_session_repair");
+  if (!repaired || !repaired.ok) {
+    return repaired;
+  }
+  result = await Promise.resolve(service.getEventSession(token));
+  return result;
 }
 
 function invokeEventService(service, methodName, args, actionId) {
@@ -202,66 +548,29 @@ function invokeEventService(service, methodName, args, actionId) {
   return Promise.resolve(service[methodName](...args));
 }
 
-function markBattleConnection(service, token, connected) {
-  if (!service || typeof service.markBattleConnection !== "function") {
-    return Promise.resolve();
+function markBattleConnection(service, identity, token, connected) {
+  const modernMethod = "markBattleConnectionForEventConnection";
+  const useModernMethod = Boolean(service && typeof service[modernMethod] === "function");
+  const methodName = useModernMethod ? modernMethod : "markBattleConnection";
+  if (!service || typeof service[methodName] !== "function") {
+    return Promise.resolve(true);
   }
+  const args = useModernMethod ? [identity, connected] : [token, connected];
   try {
-    if (typeof service.invokeDurable === "function") {
-      return service.invokeDurable("markBattleConnection", [token, connected], {
+    const result = typeof service.invokeDurable === "function"
+      ? service.invokeDurable(methodName, args, {
         actionId: connected ? "ws_battle_connect" : "ws_battle_disconnect",
-      }).then(() => undefined, () => {
-        // Socket lifecycle cleanup must not tear down the HTTP server.
-      });
-    }
-    return Promise.resolve(service.markBattleConnection(token, connected)).then(() => undefined, () => undefined);
+      })
+      : service[methodName](...args);
+    return Promise.resolve(result).then(
+      (value) => Boolean(value && value.ok),
+      () => false,
+    );
   } catch {
-    // Socket lifecycle cleanup must not tear down the HTTP server.
-    return Promise.resolve();
+    // A later connection transition retries because failed results are not
+    // committed into the local acknowledged-account set.
+    return Promise.resolve(false);
   }
-}
-
-function queuePendingLiveEvent(client, event) {
-  const eventSeq = normalizeEventSeq(event && event.eventSeq);
-  if (eventSeq > 0 && eventSeq <= normalizeEventSeq(client.lastSentEventSeq)) {
-    return;
-  }
-  if (eventSeq > 0 && client.pendingLiveEvents.some((pending) => normalizeEventSeq(pending && pending.eventSeq) === eventSeq)) {
-    return;
-  }
-  client.pendingLiveEvents.push(event);
-}
-
-function drainPendingLiveEvents(client) {
-  client.pendingLiveEvents.sort((a, b) => pendingEventSortSeq(a) - pendingEventSortSeq(b));
-  for (const event of client.pendingLiveEvents) {
-    sendSequencedEvent(client, event);
-  }
-  client.pendingLiveEvents = [];
-}
-
-function pendingEventSortSeq(event) {
-  const eventSeq = normalizeEventSeq(event && event.eventSeq);
-  return eventSeq > 0 ? eventSeq : Number.MAX_SAFE_INTEGER;
-}
-
-function sendSequencedEvent(client, event) {
-  const eventSeq = normalizeEventSeq(event && event.eventSeq);
-  if (eventSeq > 0) {
-    if (eventSeq <= normalizeEventSeq(client.lastSentEventSeq)) {
-      return;
-    }
-    client.lastSentEventSeq = eventSeq;
-  }
-  sendEvent(client, event);
-}
-
-function sendEvent(client, event) {
-  if (!client || !client.socket || client.socket.destroyed) {
-    return;
-  }
-  const text = JSON.stringify(event);
-  client.socket.write(encodeFrame(0x1, Buffer.from(text, "utf8")));
 }
 
 function handleSocketData(client, chunk) {
@@ -276,8 +585,8 @@ function handleSocketData(client, chunk) {
       client.socket.end(encodeFrame(0x8, Buffer.alloc(0)));
       return;
     }
-    if (parsed.opcode === 0x9) {
-      client.socket.write(encodeFrame(0xA, parsed.payload));
+    if (parsed.opcode === 0x9 && client.writer) {
+      client.writer.enqueueRaw(encodeFrame(0xA, parsed.payload));
     }
   }
 }
@@ -331,31 +640,68 @@ function readFrame(buffer) {
   };
 }
 
-function encodeFrame(opcode, payload) {
-  const data = Buffer.isBuffer(payload) ? payload : Buffer.from(payload || "");
-  let header;
-  if (data.length < 126) {
-    header = Buffer.from([0x80 | opcode, data.length]);
-  } else if (data.length < 65536) {
-    header = Buffer.alloc(4);
-    header[0] = 0x80 | opcode;
-    header[1] = 126;
-    header.writeUInt16BE(data.length, 2);
-  } else {
-    header = Buffer.alloc(10);
-    header[0] = 0x80 | opcode;
-    header[1] = 127;
-    header.writeBigUInt64BE(BigInt(data.length), 2);
-  }
-  return Buffer.concat([header, data]);
-}
-
 function normalizeEventSeq(value) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) {
     return 0;
   }
   return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number));
+}
+
+function clientIdentity(client) {
+  return Object.freeze({
+    accountId: String(client && client.accountId || ""),
+    sessionId: String(client && client.sessionId || ""),
+  });
+}
+
+function eventConnectionIdentity(client) {
+  return Object.freeze({
+    ...clientIdentity(client),
+    aoi: client && client.presenceSubscription
+      ? {...client.presenceSubscription}
+      : null,
+  });
+}
+
+function isPositionEvent(event) {
+  return Boolean(event && String(event.type || "") === "online.position");
+}
+
+function isCoalesciblePositionEvent(event) {
+  if (!isPositionEvent(event)) {
+    return false;
+  }
+  const change = String(event.change || "").trim().toLowerCase();
+  return change === "upsert" || change === "remove";
+}
+
+function sessionReplacementTargetsClient(event, client) {
+  if (!event || event.type !== "session.replaced" || !Array.isArray(event.targetSessionIds)) {
+    return false;
+  }
+  return event.targetSessionIds.map((value) => String(value || "")).includes(String(client && client.sessionId || ""));
+}
+
+function detachClientSocketListeners(client) {
+  const socket = client && client.socket;
+  if (!socket) {
+    return;
+  }
+  removeSocketListener(socket, "data", client.dataHandler);
+  removeSocketListener(socket, "close", client.closeHandler);
+  removeSocketListener(socket, "error", client.errorHandler);
+}
+
+function removeSocketListener(socket, eventName, listener) {
+  if (typeof listener !== "function") {
+    return;
+  }
+  if (typeof socket.off === "function") {
+    socket.off(eventName, listener);
+  } else if (typeof socket.removeListener === "function") {
+    socket.removeListener(eventName, listener);
+  }
 }
 
 function writeHttpError(socket, status, message, body = null) {

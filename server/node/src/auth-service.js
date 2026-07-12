@@ -46,6 +46,11 @@ const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
+const {
+  buildPresenceRebase,
+  createPresenceRevisionTracker,
+  projectOnlinePositionDelta,
+} = require("./auth/online-presence");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
   generatePetCultivationRollSeed,
@@ -186,9 +191,13 @@ const POSITION_MAP_ID_MAX_LENGTH = 64;
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 const ONLINE_AOI_SCOPE = "aoi";
 const ONLINE_MAP_SCOPE = "map";
+const ONLINE_NONE_SCOPE = "none";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
+const PRESENCE_MAINTENANCE_INTERVAL_MS = 5 * 1000;
+const ACCOUNT_USERNAME_BY_ID_INDEX = new WeakMap();
+const SESSION_ID_BY_TOKEN_HASH_INDEX = new WeakMap();
 const MOVEMENT_MAX_STEP_CELLS = 1;
 const MOVEMENT_STEP_RATE_INTERVAL_MS = 100;
 const MOVEMENT_STEP_RATE_BURST = 4;
@@ -600,7 +609,10 @@ function createAuthService(options = {}) {
     GM_DENIAL_AUDIT_MAX_KEYS,
   );
   const movementStepRateByAccountId = new Map();
+  const runtimePositionBarrierCounts = new Map();
   const runtimeActiveSessionIds = new Map();
+  runtimeActiveSessionIds.connectedSessionIds = new Set();
+  const presenceRevisions = createPresenceRevisionTracker();
   const serverStartedAtMs = now();
   const asyncWriteStore = Boolean(store && (store.asyncWrites === true || String(store.mode || "").startsWith("async:")));
   const durableMutationCoordinator = options.durableMutationCoordinator || createDurableMutationCoordinator({
@@ -611,6 +623,7 @@ function createAuthService(options = {}) {
   let lastPublishedPersistentData = null;
   let activeDurableMutation = null;
   let battleMaintenanceTimer = null;
+  let presenceMaintenanceTimer = null;
   let durableAdmissionsStopped = false;
   let durableDrainPromise = null;
 
@@ -631,6 +644,7 @@ function createAuthService(options = {}) {
 
   function save(data) {
     const normalized = normalizeData(data);
+    inheritAuthorityIdentityIndexes(data, normalized);
     if (activeDurableMutation) {
       activeDurableMutation.data = normalized;
       activeDurableMutation.saveRequested = true;
@@ -641,7 +655,9 @@ function createAuthService(options = {}) {
       // Most domains edit load()'s object in place, so rebuild the published
       // root before throwing to prevent an uncovered caller from leaking an
       // uncommitted asset mutation into later requests.
-      cachedData = restorePublishedPersistentData(normalized, lastPublishedPersistentData, {normalizeData});
+      const restored = restorePublishedPersistentData(normalized, lastPublishedPersistentData, {normalizeData});
+      inheritAuthorityIdentityIndexes(cachedData, restored);
+      cachedData = restored;
       const error = new Error("异步持久化写入缺少 durable 请求边界。");
       error.code = "durable_context_required";
       throw error;
@@ -710,32 +726,107 @@ function createAuthService(options = {}) {
 
   function markRuntimeSession(session) {
     if (session && session.sessionId) {
-      markRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId, now());
+      applyAfterDurableCommit(() => {
+        markRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId, now());
+        schedulePresenceMaintenance();
+      });
     }
   }
 
+  function applyAfterDurableCommit(effect) {
+    if (typeof effect !== "function") {
+      return;
+    }
+    if (activeDurableMutation) {
+      activeDurableMutation.runtimeEffects.push(effect);
+      return;
+    }
+    effect();
+  }
+
+  function removeRuntimeSessionsAfterCommit(sessionIds) {
+    const ids = Array.from(new Set((Array.isArray(sessionIds) ? sessionIds : [])
+      .map((value) => String(value || ""))
+      .filter(Boolean)));
+    if (ids.length <= 0) {
+      return;
+    }
+    applyAfterDurableCommit(() => {
+      for (const sessionId of ids) {
+        runtimeActiveSessionIds.delete(sessionId);
+        runtimeActiveSessionIds.connectedSessionIds.delete(sessionId);
+      }
+      schedulePresenceMaintenance();
+    });
+  }
+
+  function resetRuntimeAccountStateAfterCommit(accountId, reason) {
+    const normalizedAccountId = String(accountId || "");
+    if (normalizedAccountId === "") {
+      return;
+    }
+    applyAfterDurableCommit(() => {
+      clearRuntimeSessionsForAccount(load(), normalizedAccountId, runtimeActiveSessionIds);
+      movementStepRateByAccountId.delete(normalizedAccountId);
+      invalidateEncounterPermitForAccount(normalizedAccountId, reason);
+      schedulePresenceMaintenance();
+    });
+  }
+
+  function resetRuntimeMovementAuthorityAfterCommit(accountId, reason) {
+    const normalizedAccountId = String(accountId || "");
+    if (normalizedAccountId === "") {
+      return;
+    }
+    applyAfterDurableCommit(() => {
+      movementStepRateByAccountId.delete(normalizedAccountId);
+      invalidateEncounterPermitForAccount(normalizedAccountId, reason);
+    });
+  }
+
+  function projectedRuntimeActivityForSessionTransition(removedSessionIds, nextSession) {
+    const projected = new Map(runtimeActiveSessionIds);
+    projected.connectedSessionIds = new Set(runtimeActiveSessionIds.connectedSessionIds);
+    for (const sessionId of Array.isArray(removedSessionIds) ? removedSessionIds : []) {
+      const normalizedSessionId = String(sessionId || "");
+      if (normalizedSessionId === "") {
+        continue;
+      }
+      projected.delete(normalizedSessionId);
+      projected.connectedSessionIds.delete(normalizedSessionId);
+    }
+    if (nextSession && nextSession.sessionId) {
+      markRuntimeSessionActive(projected, nextSession.sessionId, now());
+    }
+    return projected;
+  }
+
   function resolveServiceSession(data, token, options = {}) {
-    return resolveSession(data, token, now, {
+    const resolved = resolveSession(data, token, now, {
       ...options,
       runtimeActiveSessionIds,
       serverStartedAtMs,
     });
+    if (resolved.ok) {
+      schedulePresenceMaintenance();
+    }
+    return resolved;
   }
 
-  function partyPresenceUpdateEventForAccount(data, accountId) {
+  function partyPresenceUpdateEventForAccount(data, accountId, activity = runtimeActiveSessionIds) {
     const accountParty = partyForAccount(data, accountId);
     if (!accountParty) {
       return null;
     }
     const partyId = accountParty.partyId;
-    const refreshed = refreshPartyPresence(data, accountParty, now, runtimeActiveSessionIds);
+    const refreshed = refreshPartyPresence(data, accountParty, now, activity);
     if (!refreshed.changed) {
       return null;
     }
     return {
       type: "party.update",
       targetAccountIds: refreshed.targetAccountIds,
-      party: refreshed.party ? publicParty(refreshed.party, data, {now, runtimeActiveSessionIds}) : null,
+      party: refreshed.party ? publicParty(refreshed.party, data, {now, runtimeActiveSessionIds: activity}) : null,
       partyId,
       removedAccountIds: refreshed.removedAccountIds,
     };
@@ -826,15 +917,20 @@ function createAuthService(options = {}) {
     }
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
-    const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
-    movementStepRateByAccountId.delete(account.accountId);
-    invalidateEncounterPermitForAccount(account.accountId, "session_replaced");
+    const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, null);
+    const replacedSessionIds = replacement.revokedSessions.map((session) => session.sessionId);
+    removeRuntimeSessionsAfterCommit(replacedSessionIds);
+    resetRuntimeMovementAuthorityAfterCommit(account.accountId, "session_replaced");
     markRuntimeSession(sessionResult.session);
     recordAuthEvent(data, "login", username, true, "", now);
     if (replacement.revokedSessions.length > 0) {
       recordAuthEvent(data, "session_replaced", username, true, `${replacement.revokedSessions.length} old session(s) revoked.`, now);
     }
-    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, account.accountId);
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(
+      data,
+      account.accountId,
+      projectedRuntimeActivityForSessionTransition(replacedSessionIds, sessionResult.session),
+    );
     const replacementEvent = sessionReplacementEvent(account, sessionResult.session, replacement.revokedSessions);
     save(data);
     if (replacementEvent) {
@@ -864,16 +960,24 @@ function createAuthService(options = {}) {
     }
     const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
     resolved.session.revokedAt = isoNow(now);
-    const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, runtimeActiveSessionIds);
-    movementStepRateByAccountId.delete(resolved.account.accountId);
-    invalidateEncounterPermitForAccount(resolved.account.accountId, "session_refreshed");
+    const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, null);
+    const replacedSessionIds = [
+      resolved.session.sessionId,
+      ...replacement.revokedSessions.map((session) => session.sessionId),
+    ];
+    removeRuntimeSessionsAfterCommit(replacedSessionIds);
+    resetRuntimeMovementAuthorityAfterCommit(resolved.account.accountId, "session_refreshed");
     markRuntimeSession(sessionResult.session);
     const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
     if (replacement.revokedSessions.length > 0) {
       recordAuthEvent(data, "session_replaced", resolved.account.username, true, `${replacement.revokedSessions.length} old session(s) revoked.`, now);
     }
-    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
+    const partyPresenceEvent = partyPresenceUpdateEventForAccount(
+      data,
+      resolved.account.accountId,
+      projectedRuntimeActivityForSessionTransition(replacedSessionIds, sessionResult.session),
+    );
     const replacementEvent = sessionReplacementEvent(resolved.account, sessionResult.session, replacement.revokedSessions);
     save(data);
     if (replacementEvent) {
@@ -897,13 +1001,15 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    const previousPosition = data.playerPositions[resolved.account.accountId] || null;
     const partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
-    clearRuntimeSessionsForAccount(data, resolved.account.accountId, runtimeActiveSessionIds);
-    movementStepRateByAccountId.delete(resolved.account.accountId);
-    invalidateEncounterPermitForAccount(resolved.account.accountId, "logout");
+    resetRuntimeAccountStateAfterCommit(resolved.account.accountId, "logout");
     resolved.session.revokedAt = isoNow(now);
     recordAuthEvent(data, "logout", resolved.account.username, true, "", now);
     save(data);
+    if (previousPosition) {
+      emitOnlinePresenceRemovalEvent(data, resolved.account, previousPosition, "logout");
+    }
     if (partyRemoval.changed) {
       emitServiceEvent({
         type: "party.update",
@@ -936,6 +1042,35 @@ function createAuthService(options = {}) {
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       recovery: sessionRecoveryPayload(data, resolved.account, resolved.recovered),
+      runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
+    });
+  }
+
+  function getEventSession(token) {
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const binding = data.profileBindings[resolved.account.accountId] || null;
+    const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+    const needsRepair = (
+      !binding
+      || !profileDoc
+      || !profileDoc.profile
+      || typeof profileDoc.profile !== "object"
+      || Array.isArray(profileDoc.profile)
+    );
+    return ok({
+      account: publicAccount(resolved.account),
+      session: {
+        sessionId: String(resolved.session.sessionId || ""),
+        accountId: String(resolved.session.accountId || ""),
+        expiresAt: String(resolved.session.expiresAt || ""),
+        schemaVersion: 1,
+      },
+      activeBattleRoom: Boolean(activeBattleRoomForAccount(data, resolved.account.accountId)),
+      needsRepair,
       runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
     });
   }
@@ -1579,14 +1714,11 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
-    if (partyPresenceEvent) {
-      save(data);
-      emitServiceEvent(partyPresenceEvent);
-    }
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
     const aoi = normalizeOnlineAoiPayload(payload, viewerPosition);
-    const players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds);
+    const players = withPresenceRevisions(
+      publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds),
+    );
     return ok({
       players,
       party: publicPartyForAccount(data, resolved.account.accountId, {now, runtimeActiveSessionIds}),
@@ -1602,6 +1734,14 @@ function createAuthService(options = {}) {
     }
     const party = partyForAccount(data, resolved.account.accountId);
     const currentPosition = data.playerPositions[resolved.account.accountId] || null;
+    if (runtimePositionBarrierCounts.has(resolved.account.accountId)) {
+      return rejectMovementStep(
+        "movement_account_committing",
+        "账号状态正在提交，请稍后重试移动。",
+        currentPosition,
+        {movement: {retryable: true, requiresSync: false}},
+      );
+    }
     if (party && party.leaderAccountId !== resolved.account.accountId) {
       const position = partyMemberFollowSnapshotPosition(data, resolved.account, payload, now);
       if (!position) {
@@ -1616,11 +1756,6 @@ function createAuthService(options = {}) {
         ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
         : null;
       data.playerPositions[resolved.account.accountId] = position;
-      const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
-      if (partyPresenceEvent) {
-        save(data);
-        emitServiceEvent(partyPresenceEvent);
-      }
       return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
         authority: "party_follow",
         movement: {
@@ -1656,15 +1791,19 @@ function createAuthService(options = {}) {
     }
     position.authority = "client_snapshot";
     data.playerPositions[resolved.account.accountId] = position;
-    applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
+    const relatedPositionUpdates = applyPartyFollowForLeaderPositionChange(
+      data,
+      party,
+      resolved.account.accountId,
+      previousPosition,
+      position,
+      now,
+      {blockedAccountIds: runtimePositionBarrierCounts},
+    );
     const previousPublicPosition = previousPosition ? publicPlayerPosition(previousPosition) : null;
-    const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
-    if (partyPresenceEvent) {
-      save(data);
-      emitServiceEvent(partyPresenceEvent);
-    }
     return publishPositionUpdate(data, resolved.account, position, previousPublicPosition, payload, {
       authority: "client_snapshot",
+      relatedPositionUpdates,
     });
   }
 
@@ -1675,6 +1814,14 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const currentPosition = data.playerPositions[resolved.account.accountId] || null;
+    if (runtimePositionBarrierCounts.has(resolved.account.accountId)) {
+      return rejectMovementStep(
+        "movement_account_committing",
+        "账号状态正在提交，请稍后重试移动。",
+        currentPosition,
+        {movement: {retryable: true, requiresSync: false}},
+      );
+    }
     const party = partyForAccount(data, resolved.account.accountId);
     if (party && party.leaderAccountId !== resolved.account.accountId) {
       return rejectMovementStep("movement_party_member_locked", "队伍中由队长带队移动。", currentPosition, {
@@ -1747,7 +1894,15 @@ function createAuthService(options = {}) {
     position.authority = "server_step";
     const previousPosition = publicPlayerPosition(currentPosition);
     data.playerPositions[resolved.account.accountId] = position;
-    applyPartyFollowForLeaderPositionChange(data, party, resolved.account.accountId, previousPosition, position, now);
+    const relatedPositionUpdates = applyPartyFollowForLeaderPositionChange(
+      data,
+      party,
+      resolved.account.accountId,
+      previousPosition,
+      position,
+      now,
+      {blockedAccountIds: runtimePositionBarrierCounts},
+    );
     const permitBinding = partyEncounterPermitBinding(
       data,
       resolved.account.accountId,
@@ -1777,6 +1932,7 @@ function createAuthService(options = {}) {
         movementSeq: position.movementSeq,
         maxStepCells: MOVEMENT_MAX_STEP_CELLS,
       },
+      relatedPositionUpdates,
     });
   }
 
@@ -1804,28 +1960,34 @@ function createAuthService(options = {}) {
   function publishPositionUpdate(data, account, position, previousPosition, payload = {}, extra = {}) {
     const aoi = normalizeOnlineAoiPayload({
       scope: payload.scope || payload.viewScope || ONLINE_AOI_SCOPE,
-      mapId: payload.mapId || payload.map,
-      cellX: payload.cellX ?? payload.x,
-      cellY: payload.cellY ?? payload.y,
+      mapId: position.mapId,
+      cellX: position.cellX,
+      cellY: position.cellY,
+      publicPrecision: position.publicPrecision,
+      precision: position.precision,
+      hasCell: playerPositionHasCell(position),
       radius: payload.aoiRadius ?? payload.viewRadius ?? payload.radius,
     }, position);
-    const players = publicOnlinePlayersForViewer(data, account, aoi, now, runtimeActiveSessionIds);
-    emitServiceEvent({
-      type: "online.position",
-      accountId: account.accountId,
-      username: account.username,
-      position: publicPlayerPosition(position),
-      previousPosition,
-      players,
-      aoi: publicOnlineAoi(aoi),
+    const presenceRevision = emitOnlinePositionEvent(data, account, position, previousPosition, aoi, {
       authority: extra.authority || "client_snapshot",
       movement: extra.movement || null,
     });
+    for (const update of Array.isArray(extra.relatedPositionUpdates) ? extra.relatedPositionUpdates : []) {
+      const relatedAccount = accountById(data, update.accountId);
+      if (!relatedAccount || !update.position) {
+        continue;
+      }
+      const relatedAoi = normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, update.position);
+      emitOnlinePositionEvent(data, relatedAccount, update.position, update.previousPosition, relatedAoi, {
+        authority: "party_follow",
+        movement: null,
+      });
+    }
     const response = {
       position: publicPlayerPosition(position),
-      players,
       party: publicPartyForAccount(data, account.accountId, {now, runtimeActiveSessionIds}),
       aoi: publicOnlineAoi(aoi),
+      presenceRevision,
       authority: extra.authority || "client_snapshot",
       movement: extra.movement || null,
     };
@@ -1834,6 +1996,51 @@ function createAuthService(options = {}) {
       response.encounterPermit = clone(extra.encounterPermit);
     }
     return ok(response);
+  }
+
+  function emitOnlinePositionEvent(data, account, position, previousPosition, aoi, extra = {}) {
+    const presenceRevision = presenceRevisions.next(account.accountId);
+    const player = publicOnlinePlayer(account, data);
+    player.presenceRevision = presenceRevision;
+    emitServiceEvent({
+      type: "online.position",
+      accountId: account.accountId,
+      username: account.username,
+      position: publicPlayerPosition(position),
+      previousPosition,
+      player,
+      presenceRevision,
+      aoi: publicOnlineAoi(aoi),
+      authority: extra.authority || "client_snapshot",
+      movement: extra.movement || null,
+    });
+    return presenceRevision;
+  }
+
+  function withPresenceRevisions(players) {
+    return (Array.isArray(players) ? players : []).map((player) => ({
+      ...player,
+      presenceRevision: presenceRevisions.ensure(player && player.accountId),
+    }));
+  }
+
+  function emitOnlinePresenceRemovalEvent(data, account, previousPosition, authority) {
+    const publicPreviousPosition = publicPlayerPosition(previousPosition);
+    const aoi = normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, publicPreviousPosition);
+    const presenceRevision = presenceRevisions.next(account.accountId);
+    emitServiceEvent({
+      type: "online.position",
+      accountId: account.accountId,
+      username: account.username,
+      position: null,
+      previousPosition: publicPreviousPosition,
+      player: publicOnlinePlayer(account, data),
+      presenceRevision,
+      aoi: publicOnlineAoi(aoi),
+      authority: String(authority || "session_offline"),
+      movement: null,
+    });
+    return presenceRevision;
   }
 
   function resolveHangOrigin(data, accountId, payload = {}) {
@@ -2106,6 +2313,126 @@ function createAuthService(options = {}) {
     return eventForResolvedSession(data, resolved, event);
   }
 
+  function eventForConnection(connection = {}, event = {}) {
+    const data = load();
+    const sessionId = String(connection.sessionId || "");
+    const accountId = String(connection.accountId || "");
+    if (event && event.type === "session.replaced") {
+      const targetSessionIds = Array.isArray(event.targetSessionIds)
+        ? event.targetSessionIds.map((value) => String(value || ""))
+        : [];
+      return ok({
+        visible: targetSessionIds.includes(sessionId),
+        event,
+        activeBattleRoom: Boolean(activeBattleRoomForAccount(data, accountId)),
+      });
+    }
+    const session = sessionId !== "" ? data.sessions[sessionId] || null : null;
+    if (
+      !session
+      || String(session.accountId || "") !== accountId
+      || session.revokedAt
+      || Date.parse(session.expiresAt) <= now()
+    ) {
+      return fail("session_revoked", "登录会话已失效。");
+    }
+    const account = accountById(data, accountId);
+    if (!account) {
+      return fail("account_missing", "账号不存在。");
+    }
+    markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
+    const prepared = eventForResolvedSession(data, {session, account}, event, {
+      viewerAoi: connection.aoi,
+    });
+    return {
+      ...prepared,
+      activeBattleRoom: Boolean(activeBattleRoomForAccount(data, accountId)),
+    };
+  }
+
+  function eventConnectionState(connection = {}) {
+    const data = load();
+    const accountId = String(connection.accountId || "");
+    return ok({
+      accountId,
+      activeBattleRoom: Boolean(accountId && activeBattleRoomForAccount(data, accountId)),
+    });
+  }
+
+  function markEventConnection(connection = {}, connected = true) {
+    const data = load();
+    const sessionId = String(connection.sessionId || "");
+    const accountId = String(connection.accountId || "");
+    const session = sessionId !== "" ? data.sessions[sessionId] || null : null;
+    if (!session || String(session.accountId || "") !== accountId) {
+      return fail("session_missing", "登录会话不存在。");
+    }
+    const connectedSessionIds = runtimeActiveSessionIds.connectedSessionIds;
+    if (connected) {
+      if (session.revokedAt || Date.parse(session.expiresAt) <= now()) {
+        return fail("session_revoked", "登录会话已失效。");
+      }
+      connectedSessionIds.add(sessionId);
+      markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
+    } else {
+      connectedSessionIds.delete(sessionId);
+      if (session.revokedAt || Date.parse(session.expiresAt) <= now()) {
+        runtimeActiveSessionIds.delete(sessionId);
+      } else {
+        markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
+      }
+    }
+    schedulePresenceMaintenance();
+    return ok({accountId, sessionId, connected: Boolean(connected)});
+  }
+
+  function runPresenceMaintenance() {
+    const data = load();
+    const currentMs = now();
+    const expiredAccountIds = new Set();
+    let expiredSessionCount = 0;
+    for (const [sessionId, lastSeenValue] of Array.from(runtimeActiveSessionIds.entries())) {
+      const session = data.sessions[sessionId] || null;
+      const lastSeenMs = Number(lastSeenValue);
+      const sessionIsValid = Boolean(
+        session
+        && !session.revokedAt
+        && Date.parse(session.expiresAt) > currentMs
+      );
+      if (runtimeActiveSessionIds.connectedSessionIds.has(sessionId) && sessionIsValid) {
+        continue;
+      }
+      if (
+        sessionIsValid
+        && Number.isFinite(lastSeenMs)
+        && currentMs - lastSeenMs <= ONLINE_SESSION_IDLE_TTL_MS
+      ) {
+        continue;
+      }
+      runtimeActiveSessionIds.delete(sessionId);
+      runtimeActiveSessionIds.connectedSessionIds.delete(sessionId);
+      expiredSessionCount += 1;
+      if (session && session.accountId) {
+        expiredAccountIds.add(String(session.accountId));
+      }
+    }
+    let removedAccountCount = 0;
+    for (const accountId of expiredAccountIds) {
+      if (accountHasActiveRuntimeSession(data, accountId, now, runtimeActiveSessionIds)) {
+        continue;
+      }
+      const account = accountById(data, accountId);
+      const previousPosition = data.playerPositions[accountId] || null;
+      if (!account || !previousPosition) {
+        continue;
+      }
+      emitOnlinePresenceRemovalEvent(data, account, previousPosition, "session_idle_timeout");
+      removedAccountCount += 1;
+    }
+    schedulePresenceMaintenance();
+    return ok({expiredSessionCount, removedAccountCount});
+  }
+
   function listEventsForSession(token, payload = {}) {
     const data = load();
     const resolved = resolveServiceSession(data, token);
@@ -2139,7 +2466,7 @@ function createAuthService(options = {}) {
     return normalizeEventSeq(data.serviceEventSeq);
   }
 
-  function eventForResolvedSession(data, resolved, event = {}) {
+  function eventForResolvedSession(data, resolved, event = {}, options = {}) {
     if (event && event.type === "session.replaced") {
       const targetSessionIds = Array.isArray(event.targetSessionIds) ? event.targetSessionIds.map((value) => String(value || "")) : [];
       return ok({
@@ -2148,7 +2475,7 @@ function createAuthService(options = {}) {
       });
     }
     if (event && event.type === "online.position") {
-      return onlinePositionEventForResolvedSession(data, resolved, event);
+      return onlinePositionEventForResolvedSession(data, resolved, event, options);
     }
     if (event && String(event.type || "").startsWith("battle.")) {
       return battleEventForResolvedSession(data, resolved, event);
@@ -2174,26 +2501,79 @@ function createAuthService(options = {}) {
     });
   }
 
-  function onlinePositionEventForResolvedSession(data, resolved, event = {}) {
+  function onlinePositionEventForResolvedSession(data, resolved, event = {}, options = {}) {
     const viewerPosition = data.playerPositions[resolved.account.accountId] || null;
-    const aoi = normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, viewerPosition);
+    const aoi = options.viewerAoi && typeof options.viewerAoi === "object" && !Array.isArray(options.viewerAoi)
+      ? normalizeOnlineAoiPayload(options.viewerAoi, viewerPosition)
+      : normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, viewerPosition);
     const isSelf = resolved.account.accountId === event.accountId;
+    if (isSelf) {
+      const eventAoi = event.aoi && typeof event.aoi === "object" && !Array.isArray(event.aoi)
+        ? event.aoi
+        : {};
+      const currentAoi = normalizeOnlineAoiPayload({
+        scope: eventAoi.scope || aoi.scope,
+        mapId: eventAoi.mapId || (viewerPosition && viewerPosition.mapId),
+        cellX: eventAoi.cellX ?? (viewerPosition && viewerPosition.cellX),
+        cellY: eventAoi.cellY ?? (viewerPosition && viewerPosition.cellY),
+        radius: eventAoi.radius ?? aoi.radius,
+      }, viewerPosition);
+      const currentPlayers = withPresenceRevisions(publicOnlinePlayersForViewer(
+        data,
+        resolved.account,
+        currentAoi,
+        now,
+        runtimeActiveSessionIds,
+      ));
+      const previousPosition = event.previousPosition && typeof event.previousPosition === "object"
+        ? event.previousPosition
+        : null;
+      let previousPlayers = [];
+      if (previousPosition && String(previousPosition.mapId || "") !== "") {
+        const previousAoi = normalizeOnlineAoiPayload({
+          scope: currentAoi.scope,
+          mapId: previousPosition.mapId,
+          cellX: previousPosition.cellX,
+          cellY: previousPosition.cellY,
+          radius: currentAoi.radius,
+          hasCell: previousPosition.hasCell,
+          precision: previousPosition.precision,
+        }, previousPosition);
+        previousPlayers = withPresenceRevisions(publicOnlinePlayersForViewer(
+          data,
+          resolved.account,
+          previousAoi,
+          now,
+          runtimeActiveSessionIds,
+          {viewerPosition: previousPosition},
+        ));
+      }
+      const projectedEvent = {
+        ...event,
+        change: "rebase",
+        presenceRebase: buildPresenceRebase(
+          currentPlayers,
+          previousPlayers,
+          resolved.account.accountId,
+        ),
+        aoi: publicOnlineAoi(currentAoi),
+      };
+      delete projectedEvent.players;
+      return ok({visible: true, event: projectedEvent});
+    }
     const currentVisible = isSelf || onlinePositionVisibleToAoi(event.position, aoi);
     const previousVisible = onlinePositionVisibleToAoi(event.previousPosition, aoi);
-    if (aoi.enabled && !currentVisible && !previousVisible) {
-      return ok({visible: false});
-    }
-    let players = publicOnlinePlayersForViewer(data, resolved.account, aoi, now, runtimeActiveSessionIds);
-    if (currentVisible) {
-      players = withPinnedPublicOnlinePlayer(players, data, event.accountId);
-    }
+    const projected = projectOnlinePositionDelta({
+      event,
+      viewerAccountId: resolved.account.accountId,
+      currentVisible,
+      previousVisible,
+    });
     return ok({
-      visible: true,
-      event: {
-        ...event,
-        players,
-        aoi: publicOnlineAoi(aoi),
-      },
+      visible: projected.visible,
+      event: projected.visible
+        ? {...projected.event, aoi: publicOnlineAoi(aoi)}
+        : projected.event,
     });
   }
 
@@ -2235,6 +2615,27 @@ function createAuthService(options = {}) {
     return ok(applyBattleConnectionState(data, resolved.account.accountId, connected, connected ? "ws_open" : "ws_close"));
   }
 
+  function markBattleConnectionForEventConnection(connection = {}, connected = true) {
+    let data = load();
+    const sessionId = String(connection.sessionId || "");
+    const accountId = String(connection.accountId || "");
+    const session = sessionId !== "" ? data.sessions[sessionId] || null : null;
+    // Event hub 已在握手时完成 token 授权。session.replaced 会先撤销旧
+    // token 再关闭旧 socket，因此断线清理必须按这条已认证连接的固定
+    // account/session 身份完成，不能重新要求已撤销 token 通过登录校验。
+    if (!session || accountId === "" || String(session.accountId || "") !== accountId) {
+      return fail("session_missing", "登录会话不存在。");
+    }
+    expireBattleTimeoutsAndEmit(data);
+    data = load();
+    return ok(applyBattleConnectionState(
+      data,
+      accountId,
+      connected,
+      connected ? "ws_event_open" : "ws_event_close",
+    ));
+  }
+
   function applyBattleConnectionState(data, accountId, connected, source = "") {
     const normalizedAccountId = String(accountId || "");
     const changed = markBattleConnectionForAccount(data, normalizedAccountId, connected, now);
@@ -2273,6 +2674,28 @@ function createAuthService(options = {}) {
     }, Math.max(10, nextDelay + 25));
     if (typeof battleMaintenanceTimer.unref === "function") {
       battleMaintenanceTimer.unref();
+    }
+  }
+
+  function schedulePresenceMaintenance() {
+    if (
+      presenceMaintenanceTimer
+      || durableAdmissionsStopped
+      || runtimeActiveSessionIds.size <= 0
+    ) {
+      return;
+    }
+    presenceMaintenanceTimer = setTimeout(() => {
+      presenceMaintenanceTimer = null;
+      try {
+        runPresenceMaintenance();
+      } catch (error) {
+        console.error(`Beastbound presence maintenance failed: ${error.message}`);
+        schedulePresenceMaintenance();
+      }
+    }, PRESENCE_MAINTENANCE_INTERVAL_MS);
+    if (typeof presenceMaintenanceTimer.unref === "function") {
+      presenceMaintenanceTimer.unref();
     }
   }
 
@@ -2458,9 +2881,39 @@ function createAuthService(options = {}) {
     const normalizedMethodName = String(methodName || "");
     const normalizedArgs = Array.isArray(args) ? args : [];
     return durableMutationCoordinator.run(
-      () => executeDurableMutation(normalizedMethodName, normalizedArgs, operation),
+      () => executeDurableMutationWithRuntimeBarrier(normalizedMethodName, normalizedArgs, operation),
       operation && operation.timeoutMs !== undefined ? {timeoutMs: operation.timeoutMs} : {},
     );
+  }
+
+  async function executeDurableMutationWithRuntimeBarrier(methodName, args, operation) {
+    const accountId = durableRuntimeBarrierAccountId(methodName, args);
+    if (accountId !== "") {
+      runtimePositionBarrierCounts.set(
+        accountId,
+        Number(runtimePositionBarrierCounts.get(accountId) || 0) + 1,
+      );
+    }
+    try {
+      return await executeDurableMutation(methodName, args, operation);
+    } finally {
+      if (accountId !== "") {
+        const remaining = Number(runtimePositionBarrierCounts.get(accountId) || 0) - 1;
+        if (remaining > 0) {
+          runtimePositionBarrierCounts.set(accountId, remaining);
+        } else {
+          runtimePositionBarrierCounts.delete(accountId);
+        }
+      }
+    }
+  }
+
+  function durableRuntimeBarrierAccountId(methodName, args) {
+    if (methodName !== "logout") {
+      return "";
+    }
+    const session = sessionByToken(load(), durableMutationToken(args));
+    return String(session && session.accountId || "");
   }
 
   async function executeDurableMutation(methodName, args, operation) {
@@ -2507,6 +2960,7 @@ function createAuthService(options = {}) {
       before,
       data: cloneAuthorityRoot(before),
       events: [],
+      runtimeEffects: [],
       saveRequested: false,
     };
     activeDurableMutation = transaction;
@@ -2552,7 +3006,7 @@ function createAuthService(options = {}) {
     }
 
     if (!businessPersistentChanged) {
-      publishDurableCandidate(before, candidate, transaction.events);
+      publishDurableCandidate(before, candidate, transaction.events, transaction.runtimeEffects);
       return response;
     }
 
@@ -2567,7 +3021,7 @@ function createAuthService(options = {}) {
     candidate = commitAuthorityRootLargeCollections(candidate);
     candidatePersistent = commitAuthorityRootLargeCollections(candidatePersistent);
     lastPublishedPersistentData = cloneAuthorityRoot(candidatePersistent);
-    publishDurableCandidate(before, candidate, transaction.events);
+    publishDurableCandidate(before, candidate, transaction.events, transaction.runtimeEffects);
     return response;
   }
 
@@ -2579,6 +3033,7 @@ function createAuthService(options = {}) {
     try {
       const current = cachedData ? cloneAuthorityRoot(cachedData) : normalizeData({});
       const reloaded = normalizeData(store.load());
+      inheritAuthorityIdentityIndexes(cachedData, reloaded);
       for (const field of RUNTIME_ROOT_FIELDS) {
         reloaded[field] = clone(current[field]);
       }
@@ -2596,14 +3051,22 @@ function createAuthService(options = {}) {
     }
   }
 
-  function publishDurableCandidate(before, candidate, events) {
+  function publishDurableCandidate(before, candidate, events, runtimeEffects = []) {
     const current = cachedData ? cloneAuthorityRoot(cachedData) : cloneAuthorityRoot(before);
     const next = normalizeData(candidate);
+    inheritAuthorityIdentityIndexes(cachedData || before, next);
     for (const field of RUNTIME_ROOT_FIELDS) {
       next[field] = mergeRuntimeObject(before[field], candidate[field], current[field]);
     }
     cachedData = next;
     lastPublishedPersistentData = persistentDataForStore(cachedData);
+    for (const effect of Array.isArray(runtimeEffects) ? runtimeEffects : []) {
+      try {
+        effect();
+      } catch (error) {
+        console.error(`Beastbound committed runtime effect failed: ${error.message}`);
+      }
+    }
     scheduleBattleMaintenance(cachedData);
     for (const event of events) {
       publishServiceEvent(event);
@@ -2626,6 +3089,10 @@ function createAuthService(options = {}) {
     if (battleMaintenanceTimer) {
       clearTimeout(battleMaintenanceTimer);
       battleMaintenanceTimer = null;
+    }
+    if (presenceMaintenanceTimer) {
+      clearTimeout(presenceMaintenanceTimer);
+      presenceMaintenanceTimer = null;
     }
     durableDrainPromise = typeof durableMutationCoordinator.stopAdmissionAndDrain === "function"
       ? durableMutationCoordinator.stopAdmissionAndDrain()
@@ -3017,6 +3484,7 @@ function createAuthService(options = {}) {
     refreshSession,
     logout,
     getSession,
+    getEventSession,
     getProfile,
     saveProfile,
     profileAction: profileActions.profileAction,
@@ -3059,9 +3527,14 @@ function createAuthService(options = {}) {
     movePlayerStep,
     onEvent,
     eventForSession,
+    eventForConnection,
+    eventConnectionState,
+    markEventConnection,
     listEventsForSession,
     latestEventSeq,
     markBattleConnection,
+    markBattleConnectionForEventConnection,
+    runPresenceMaintenance,
     runBattleMaintenance,
     getPartyState: party.getPartyState,
     inviteToParty: party.inviteToParty,
@@ -3476,6 +3949,7 @@ function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds
   for (const session of Object.values(data.sessions)) {
     if (session && String(session.accountId || "") === normalizedAccountId && session.sessionId) {
       runtimeActiveSessionIds.delete(session.sessionId);
+      runtimeActiveSessionIds.connectedSessionIds?.delete(session.sessionId);
     }
   }
 }
@@ -3503,6 +3977,7 @@ function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runt
     session.revokedMessage = SESSION_REPLACED_MESSAGE;
     if (runtimeActiveSessionIds && typeof runtimeActiveSessionIds.delete === "function" && session.sessionId) {
       runtimeActiveSessionIds.delete(session.sessionId);
+      runtimeActiveSessionIds.connectedSessionIds?.delete(session.sessionId);
     }
     revokedSessions.push({
       sessionId: String(session.sessionId || ""),
@@ -3557,7 +4032,31 @@ function sessionReplacementEventForToken(data, token, event = {}) {
 
 function sessionByToken(data, token) {
   const tokenHash = hashToken(String(token || ""));
-  return Object.values(data.sessions).find((value) => value && value.tokenHash === tokenHash) || null;
+  const sessions = data && data.sessions && typeof data.sessions === "object" ? data.sessions : {};
+  let index = SESSION_ID_BY_TOKEN_HASH_INDEX.get(sessions);
+  if (!index) {
+    index = new Map();
+    for (const [sessionId, session] of Object.entries(sessions)) {
+      const storedHash = String(session && session.tokenHash || "");
+      if (storedHash !== "") {
+        index.set(storedHash, sessionId);
+      }
+    }
+    SESSION_ID_BY_TOKEN_HASH_INDEX.set(sessions, index);
+  }
+  const cachedSessionId = index.get(tokenHash);
+  const cached = cachedSessionId ? sessions[cachedSessionId] || null : null;
+  if (cached && cached.tokenHash === tokenHash) {
+    return cached;
+  }
+  for (const [sessionId, session] of Object.entries(sessions)) {
+    if (session && session.tokenHash === tokenHash) {
+      index.set(tokenHash, sessionId);
+      return session;
+    }
+  }
+  index.delete(tokenHash);
+  return null;
 }
 
 function runtimeSessionWasRecorded(runtimeActiveSessionIds, sessionId) {
@@ -3570,6 +4069,9 @@ function runtimeSessionIsActive(runtimeActiveSessionIds, sessionId, nowMs) {
   }
   if (!sessionId || !runtimeActiveSessionIds.has(sessionId)) {
     return false;
+  }
+  if (runtimeActiveSessionIds.connectedSessionIds?.has(sessionId)) {
+    return true;
   }
   if (typeof runtimeActiveSessionIds.get !== "function") {
     return true;
@@ -3599,7 +4101,7 @@ function resolveSession(data, token, now, options = {}) {
       return {"ok": false, "code": "session_refresh_expired", "message": "登录已过期，请重新登录。"};
     }
   }
-  const account = Object.values(data.accounts).find((value) => value.accountId === session.accountId);
+  const account = accountById(data, session.accountId);
   if (!account) {
     return {"ok": false, "code": "account_missing", "message": "账号不存在。"};
   }
@@ -6544,6 +7046,8 @@ function partyMemberFollowSnapshotPosition(data, account, payload, now) {
   } else if (!POSITION_FACING_VALUES.has(facing)) {
     facing = "south";
   }
+  const requestedScope = String(payload.scope || payload.viewScope || "").trim().toLowerCase();
+  const mapOnlyPresence = requestedScope === ONLINE_MAP_SCOPE || requestedScope === "same_map" || requestedScope === "same-map";
   return {
     accountId: account.accountId,
     username: account.username,
@@ -6554,13 +7058,14 @@ function partyMemberFollowSnapshotPosition(data, account, payload, now) {
     facing,
     moving: false,
     movementSeq: Math.max(0, Math.trunc(Number(basePosition.movementSeq || 0))),
+    publicPrecision: mapOnlyPresence ? "map" : playerPositionPublicPrecision(basePosition),
     authority: "party_follow",
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
 }
 
-function applyPartyFollowForLeaderPositionChange(data, party, leaderAccountId, previousLeaderPosition, leaderPosition, now) {
+function applyPartyFollowForLeaderPositionChange(data, party, leaderAccountId, previousLeaderPosition, leaderPosition, now, options = {}) {
   if (!party || party.leaderAccountId !== leaderAccountId || !Array.isArray(party.memberAccountIds)) {
     return [];
   }
@@ -6570,8 +7075,14 @@ function applyPartyFollowForLeaderPositionChange(data, party, leaderAccountId, p
   const leaderChangedMap = String(previousLeaderPosition.mapId || "") !== String(leaderPosition.mapId || "");
   let trailPosition = leaderChangedMap ? leaderPosition : previousLeaderPosition;
   const updated = [];
+  const blockedAccountIds = options.blockedAccountIds && typeof options.blockedAccountIds.has === "function"
+    ? options.blockedAccountIds
+    : null;
   for (const memberAccountId of party.memberAccountIds) {
     if (memberAccountId === leaderAccountId) {
+      continue;
+    }
+    if (blockedAccountIds && blockedAccountIds.has(memberAccountId)) {
       continue;
     }
     const account = accountById(data, memberAccountId);
@@ -6584,7 +7095,11 @@ function applyPartyFollowForLeaderPositionChange(data, party, leaderAccountId, p
       continue;
     }
     data.playerPositions[memberAccountId] = nextPosition;
-    updated.push(nextPosition);
+    updated.push({
+      accountId: memberAccountId,
+      previousPosition: previousFollowerPosition ? publicPlayerPosition(previousFollowerPosition) : null,
+      position: nextPosition,
+    });
     if (!leaderChangedMap) {
       trailPosition = previousFollowerPosition ? publicPlayerPosition(previousFollowerPosition) : publicPlayerPosition(nextPosition);
     }
@@ -6607,6 +7122,7 @@ function partyFollowPositionFromTrail(account, trailPosition, previousFollowerPo
     facing: partyFollowFacing(previousFollowerPosition, trailPosition),
     moving: false,
     movementSeq: Math.max(0, Math.trunc(Number(previousFollowerPosition && previousFollowerPosition.movementSeq || 0))) + (moved ? 1 : 0),
+    publicPrecision: playerPositionPublicPrecision(trailPosition),
     authority: "party_follow",
     updatedAt: isoNow(now),
     schemaVersion: 1,
@@ -18522,15 +19038,54 @@ function battleAttackDamage(room, battle, command, actor, target) {
   return battleAttackDamageResult(room, battle, command, actor, target).damage;
 }
 
+function inheritAuthorityIdentityIndexes(source, target) {
+  if (!source || !target || typeof source !== "object" || typeof target !== "object") {
+    return;
+  }
+  const accountIndex = source.accounts && ACCOUNT_USERNAME_BY_ID_INDEX.get(source.accounts);
+  if (accountIndex && target.accounts && typeof target.accounts === "object") {
+    ACCOUNT_USERNAME_BY_ID_INDEX.set(target.accounts, accountIndex);
+  }
+  const sessionIndex = source.sessions && SESSION_ID_BY_TOKEN_HASH_INDEX.get(source.sessions);
+  if (sessionIndex && target.sessions && typeof target.sessions === "object") {
+    SESSION_ID_BY_TOKEN_HASH_INDEX.set(target.sessions, sessionIndex);
+  }
+}
+
 function accountById(data, accountId) {
-  return Object.values(data.accounts).find((account) => account && account.accountId === accountId) || null;
+  const normalizedAccountId = String(accountId || "");
+  const accounts = data && data.accounts && typeof data.accounts === "object" ? data.accounts : {};
+  let index = ACCOUNT_USERNAME_BY_ID_INDEX.get(accounts);
+  if (!index) {
+    index = new Map();
+    for (const [username, account] of Object.entries(accounts)) {
+      const storedAccountId = String(account && account.accountId || "");
+      if (storedAccountId !== "") {
+        index.set(storedAccountId, username);
+      }
+    }
+    ACCOUNT_USERNAME_BY_ID_INDEX.set(accounts, index);
+  }
+  const cachedUsername = index.get(normalizedAccountId);
+  const cached = cachedUsername ? accounts[cachedUsername] || null : null;
+  if (cached && String(cached.accountId || "") === normalizedAccountId) {
+    return cached;
+  }
+  for (const [username, account] of Object.entries(accounts)) {
+    if (account && String(account.accountId || "") === normalizedAccountId) {
+      index.set(normalizedAccountId, username);
+      return account;
+    }
+  }
+  index.delete(normalizedAccountId);
+  return null;
 }
 
 function accountRuntimeActivity(data, accountId, now, runtimeActiveSessionIds = null) {
   const nowMs = now();
   let online = false;
   let lastSeenMs = NaN;
-  for (const session of Object.values(data.sessions)) {
+  for (const session of runtimeSessionCandidates(data, runtimeActiveSessionIds)) {
     if (!session || session.accountId !== accountId || session.revokedAt || Date.parse(session.expiresAt) <= nowMs) {
       continue;
     }
@@ -18563,7 +19118,7 @@ function accountHasActiveRuntimeSession(data, accountId, now, runtimeActiveSessi
 
 function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
   const nowMs = now();
-  const activeSessions = Object.values(data.sessions)
+  const activeSessions = runtimeSessionCandidates(data, runtimeActiveSessionIds)
     .filter((session) => (
       session &&
       !session.revokedAt &&
@@ -18588,14 +19143,29 @@ function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
   return players;
 }
 
+function runtimeSessionCandidates(data, runtimeActiveSessionIds = null) {
+  const sessions = data && data.sessions && typeof data.sessions === "object" ? data.sessions : {};
+  if (!runtimeActiveSessionIds || typeof runtimeActiveSessionIds.keys !== "function") {
+    return Object.values(sessions);
+  }
+  const result = [];
+  for (const sessionId of runtimeActiveSessionIds.keys()) {
+    const session = sessions[String(sessionId || "")] || null;
+    if (session) {
+      result.push(session);
+    }
+  }
+  return result;
+}
+
 function onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null) {
   return activeOnlinePlayers(data, now, runtimeActiveSessionIds).filter((account) => (
     onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)
   ));
 }
 
-function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null) {
-  const viewerPosition = viewerAccount ? data.playerPositions[viewerAccount.accountId] || null : null;
+function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null, options = {}) {
+  const viewerPosition = options.viewerPosition || (viewerAccount ? data.playerPositions[viewerAccount.accountId] || null : null);
   const players = onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds).map((account) => publicOnlinePlayer(account, data));
   players.sort((a, b) => {
     const distanceDelta = onlinePlayerDistanceRank(a, viewerPosition) - onlinePlayerDistanceRank(b, viewerPosition);
@@ -18605,18 +19175,6 @@ function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActi
     return String(a.username).localeCompare(String(b.username));
   });
   return players.slice(0, ONLINE_PLAYERS_RESPONSE_LIMIT);
-}
-
-function withPinnedPublicOnlinePlayer(players, data, accountId) {
-  if (!accountId || players.some((player) => player.accountId === accountId)) {
-    return players;
-  }
-  const account = accountById(data, accountId);
-  if (!account) {
-    return players;
-  }
-  const pinned = publicOnlinePlayer(account, data);
-  return [pinned, ...players].slice(0, ONLINE_PLAYERS_RESPONSE_LIMIT);
 }
 
 function onlinePlayerDistanceRank(player, viewerPosition) {
@@ -18648,6 +19206,7 @@ function onlineAccountVisibleToViewer(data, viewerAccount, account, aoi) {
 function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
   const scope = String(payload.scope || payload.viewScope || "").trim().toLowerCase();
   const sameMapScope = scope === ONLINE_MAP_SCOPE || scope === "same_map" || scope === "same-map";
+  const explicitlyBoundedScope = sameMapScope || scope === ONLINE_AOI_SCOPE || scope === "nearby" || scope === ONLINE_NONE_SCOPE;
   const hasExplicitPosition = (
     String(payload.mapId || payload.map || "").trim() !== "" ||
     payload.cellX !== undefined ||
@@ -18655,7 +19214,13 @@ function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
     payload.x !== undefined ||
     payload.y !== undefined
   );
-  if (!sameMapScope && scope !== ONLINE_AOI_SCOPE && scope !== "nearby" && !hasExplicitPosition) {
+  if (
+    !sameMapScope
+    && scope !== ONLINE_AOI_SCOPE
+    && scope !== "nearby"
+    && scope !== ONLINE_NONE_SCOPE
+    && !hasExplicitPosition
+  ) {
     return {
       enabled: false,
       scope: "all",
@@ -18668,6 +19233,17 @@ function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
   const source = hasExplicitPosition ? payload : (fallbackPosition || {});
   const mapId = String(source.mapId || source.map || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH);
   if (!mapId) {
+    if (explicitlyBoundedScope) {
+      return {
+        enabled: true,
+        scope: ONLINE_NONE_SCOPE,
+        mapId: "",
+        cellX: 0,
+        cellY: 0,
+        radius: 0,
+        sameMapOnly: false,
+      };
+    }
     return {
       enabled: false,
       scope: "all",
@@ -19518,6 +20094,8 @@ function normalizeChatText(value) {
 
 function normalizePlayerPositionPayload(payload, account, now, previousPosition = null) {
   const mapId = String(payload.mapId || payload.map || "").trim().slice(0, POSITION_MAP_ID_MAX_LENGTH);
+  const requestedScope = String(payload.scope || payload.viewScope || "").trim().toLowerCase();
+  const mapOnlyPresence = requestedScope === ONLINE_MAP_SCOPE || requestedScope === "same_map" || requestedScope === "same-map";
   const hasPayloadCellX = payload.cellX !== undefined || payload.x !== undefined;
   const hasPayloadCellY = payload.cellY !== undefined || payload.y !== undefined;
   const hasPayloadCell = hasPayloadCellX && hasPayloadCellY;
@@ -19554,7 +20132,7 @@ function normalizePlayerPositionPayload(payload, account, now, previousPosition 
     moving: hasPayloadCell ? Boolean(payload.moving) : false,
     movementSeq: canReusePreviousMovementSeq ? Math.max(0, Math.trunc(Number(previousPosition.movementSeq || 0))) : 0,
     hasCell: hasPayloadCell || canReusePreviousCell,
-    publicPrecision: hasPayloadCell ? "cell" : "map",
+    publicPrecision: hasPayloadCell && !mapOnlyPresence ? "cell" : "map",
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };

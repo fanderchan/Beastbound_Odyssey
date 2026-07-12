@@ -24,10 +24,10 @@ function requestForProtocol(protocolVersion) {
   };
 }
 
-test("protocol 7 is the only supported client window", () => {
-  assert.equal(PROTOCOL_VERSION, 7);
-  assert.equal(MIN_CLIENT_PROTOCOL_VERSION, 7);
-  assert.equal(MAX_CLIENT_PROTOCOL_VERSION, 7);
+test("protocol 8 is the only supported client window", () => {
+  assert.equal(PROTOCOL_VERSION, 8);
+  assert.equal(MIN_CLIENT_PROTOCOL_VERSION, 8);
+  assert.equal(MAX_CLIENT_PROTOCOL_VERSION, 8);
   assert.deepEqual(
     {
       protocolVersion: protocolMetadata().protocolVersion,
@@ -35,34 +35,34 @@ test("protocol 7 is the only supported client window", () => {
       maxClientProtocolVersion: protocolMetadata().maxClientProtocolVersion,
     },
     {
-      protocolVersion: 7,
-      minClientProtocolVersion: 7,
-      maxClientProtocolVersion: 7,
+      protocolVersion: 8,
+      minClientProtocolVersion: 8,
+      maxClientProtocolVersion: 8,
     },
   );
-  assert.equal(protocolCompatibility(requestForProtocol(7)).ok, true);
+  assert.equal(protocolCompatibility(requestForProtocol(8)).ok, true);
 });
 
-test("legacy protocol 6 receives an explicit incompatible-upgrade result", () => {
-  const compatibility = protocolCompatibility(requestForProtocol(6));
+test("legacy protocol 7 receives an explicit incompatible-upgrade result", () => {
+  const compatibility = protocolCompatibility(requestForProtocol(7));
   assert.equal(compatibility.ok, false);
   assert.equal(compatibility.code, "protocol_version_mismatch");
-  assert.equal(compatibility.clientProtocolVersion, 6);
+  assert.equal(compatibility.clientProtocolVersion, 7);
 
   const result = protocolMismatchResult(compatibility);
   assert.equal(result.ok, false);
   assert.equal(result.code, "protocol_version_mismatch");
-  assert.equal(result.clientProtocolVersion, 6);
-  assert.equal(result.protocolVersion, 7);
-  assert.equal(result.minClientProtocolVersion, 7);
-  assert.equal(result.maxClientProtocolVersion, 7);
+  assert.equal(result.clientProtocolVersion, 7);
+  assert.equal(result.protocolVersion, 8);
+  assert.equal(result.minClientProtocolVersion, 8);
+  assert.equal(result.maxClientProtocolVersion, 8);
   assert.equal(result.upgrade.required, true);
   assert.match(result.upgrade.message, /更新客户端/);
 });
 
-test("future protocols remain outside the exact protocol 7 window", () => {
-  const compatibility = protocolCompatibility(requestForProtocol(8));
+test("future protocols remain outside the exact protocol 8 window", () => {
+  const compatibility = protocolCompatibility(requestForProtocol(9));
   assert.equal(compatibility.ok, false);
   assert.equal(compatibility.code, "protocol_version_mismatch");
-  assert.equal(compatibility.clientProtocolVersion, 8);
+  assert.equal(compatibility.clientProtocolVersion, 9);
 });

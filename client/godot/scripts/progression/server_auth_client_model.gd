@@ -6,7 +6,7 @@ const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_p
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
 const CLIENT_VERSION := "0.1.0"
-const CLIENT_PROTOCOL_VERSION := 7
+const CLIENT_PROTOCOL_VERSION := 8
 const RETRY_POLICY_NONE := "none"
 const RETRY_POLICY_IDEMPOTENT := "idempotent"
 const IDEMPOTENCY_HEADER_NAME := "Idempotency-Key"
@@ -1243,7 +1243,9 @@ static func parse_online_players_response(response_code: int, body: PackedByteAr
 	if not bool(parsed.get("ok", false)):
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
-	parsed["players"] = _dictionary_array(response.get("players", []))
+	var has_players_snapshot := response.has("players") and response.get("players", null) is Array
+	parsed["hasPlayersSnapshot"] = has_players_snapshot
+	parsed["players"] = _dictionary_array(response.get("players", [])) if has_players_snapshot else []
 	parsed["party"] = response.get("party", null)
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	return parsed
@@ -1252,8 +1254,10 @@ static func parse_online_players_response(response_code: int, body: PackedByteAr
 static func parse_player_position_update_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "位置同步失败。")
 	var response := parsed.get("response", {}) as Dictionary
+	var has_players_snapshot := response.has("players") and response.get("players", null) is Array
 	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
-	parsed["players"] = _dictionary_array(response.get("players", []))
+	parsed["hasPlayersSnapshot"] = has_players_snapshot
+	parsed["players"] = _dictionary_array(response.get("players", [])) if has_players_snapshot else []
 	parsed["party"] = response.get("party", null)
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	parsed["movement"] = response.get("movement", {}) if response.get("movement", {}) is Dictionary else {}
@@ -1263,8 +1267,10 @@ static func parse_player_position_update_response(response_code: int, body: Pack
 static func parse_movement_step_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "移动提交失败。")
 	var response := parsed.get("response", {}) as Dictionary
+	var has_players_snapshot := response.has("players") and response.get("players", null) is Array
 	parsed["position"] = response.get("position", {}) if response.get("position", {}) is Dictionary else {}
-	parsed["players"] = _dictionary_array(response.get("players", []))
+	parsed["hasPlayersSnapshot"] = has_players_snapshot
+	parsed["players"] = _dictionary_array(response.get("players", [])) if has_players_snapshot else []
 	parsed["party"] = response.get("party", null)
 	parsed["aoi"] = response.get("aoi", {}) if response.get("aoi", {}) is Dictionary else {}
 	parsed["authority"] = str(response.get("authority", ""))
