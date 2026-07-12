@@ -32,6 +32,141 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {mysqlAuthStoreRootContract} = require("../src/mysql-store");
+
+test("mysql auth store root contract classifies every snapshot field exactly once", () => {
+  const contract = mysqlAuthStoreRootContract();
+  const expectedPersistentFields = [
+    "accounts",
+    "authEvents",
+    "battleRecords",
+    "battleTrace",
+    "chatMessages",
+    "consumedEquipmentEnvelopes",
+    "families",
+    "gmCommandAudit",
+    "gmCommandGrants",
+    "gmUserGrants",
+    "mailMessages",
+    "manorBattles",
+    "manorWars",
+    "manors",
+    "marketConfig",
+    "marketListings",
+    "offlineHangConfig",
+    "parties",
+    "partyInvites",
+    "profileBindings",
+    "profiles",
+    "schemaVersion",
+    "serviceEventSeq",
+    "serviceEvents",
+    "sessions",
+  ];
+  const expectedRuntimeOnlyFields = [
+    "battleInvites",
+    "battleRooms",
+    "playerPositions",
+    "tradeOffers",
+  ];
+
+  assert.deepEqual(contract.persistentFields, expectedPersistentFields);
+  assert.deepEqual(contract.runtimeOnlyFields, expectedRuntimeOnlyFields);
+  assert.deepEqual(contract.snapshotFields, [...expectedPersistentFields, ...expectedRuntimeOnlyFields].sort());
+  assert.equal(contract.persistentFields.length, 25);
+  assert.equal(new Set([...contract.persistentFields, ...contract.runtimeOnlyFields]).size, contract.snapshotFields.length);
+  assert.deepEqual(contract.profileDocumentFields, [
+    "playerId",
+    "accountId",
+    "profileRevision",
+    "updatedAt",
+    "profile",
+  ]);
+  assert.equal(Object.isFrozen(contract), true);
+  assert.equal(Object.isFrozen(contract.snapshotFields), true);
+  assert.equal(Object.isFrozen(contract.persistentFields), true);
+  assert.equal(Object.isFrozen(contract.runtimeOnlyFields), true);
+  assert.equal(Object.isFrozen(contract.profileDocumentFields), true);
+});
+
+test("strict mysql loader fails closed when persistent SQL keys disagree with JSON identities", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-row-identity-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  const bucket = process.env.FAKE_IDENTITY_BUCKET;
+  const document = process.env.FAKE_IDENTITY_ARRAY === "1"
+    ? []
+    : bucket === "accounts"
+    ? {accountId: "acc_document", username: "mismatch"}
+    : bucket === "profile_bindings"
+      ? {accountId: "acc_document", playerId: "player_mismatch", profileRevision: 1}
+      : {eventId: "event_document", type: "login", username: "mismatch"};
+  const rows = [
+    ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    [bucket, process.env.FAKE_IDENTITY_ROW_KEY, document],
+  ];
+  process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+});
+  `, {mode: 0o755});
+  const previousBucket = process.env.FAKE_IDENTITY_BUCKET;
+  const previousRowKey = process.env.FAKE_IDENTITY_ROW_KEY;
+  const previousArray = process.env.FAKE_IDENTITY_ARRAY;
+  try {
+    for (const [bucket, rowKey, arrayDocument] of [
+      ["accounts", "acc_sql", false],
+      ["profile_bindings", "acc_sql", false],
+      ["auth_events", "event_sql", false],
+      ["auth_events", "event_array", true],
+    ]) {
+      process.env.FAKE_IDENTITY_BUCKET = bucket;
+      process.env.FAKE_IDENTITY_ROW_KEY = rowKey;
+      process.env.FAKE_IDENTITY_ARRAY = arrayDocument ? "1" : "0";
+      const store = createMysqlAuthStore({
+        mysqlPath: fakeMysqlPath,
+        host: "127.0.0.1",
+        port: 3306,
+        user: "reader",
+        password: "secret",
+        database: "beastbound_test",
+        createDatabase: false,
+        readOnly: true,
+        ensureSchema: false,
+        strictRowIdentity: true,
+      });
+      assert.throws(
+        () => store.load(),
+        new RegExp(arrayDocument
+          ? `MySQL持久化行文档非法：${bucket}/${rowKey}`
+          : `MySQL持久化行身份不一致：${bucket}/${rowKey}`),
+      );
+    }
+  } finally {
+    if (previousBucket === undefined) {
+      delete process.env.FAKE_IDENTITY_BUCKET;
+    } else {
+      process.env.FAKE_IDENTITY_BUCKET = previousBucket;
+    }
+    if (previousRowKey === undefined) {
+      delete process.env.FAKE_IDENTITY_ROW_KEY;
+    } else {
+      process.env.FAKE_IDENTITY_ROW_KEY = previousRowKey;
+    }
+    if (previousArray === undefined) {
+      delete process.env.FAKE_IDENTITY_ARRAY;
+    } else {
+      process.env.FAKE_IDENTITY_ARRAY = previousArray;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
 
 test("mysql store sends generated SQL through stdin", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-"));

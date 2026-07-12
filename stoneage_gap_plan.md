@@ -292,7 +292,8 @@
       - [x] **P0.5b-3d legacy 面对面交易协议兼容**：仅补隐藏协议的实例预约、接受时复核和双档原子交换，不重新开放普通玩家面对面交易 UI；普通玩家入口继续统一到交易所。
         - 证据（2026-07-12）：装备报价只保存源实例/格子/服务端状态指纹的运行时预约，不移走资产；接受时在整份候选根中复核双方位置、战斗/离线挂机、资产、币值、容量与指纹，先双向导出再交叉导入，补旧来源和本次永久墓碑，registry 通过后双方 revision 各加一次并只保存一次。同步 save 抛错不再污染缓存，字符串/NaN/浮点/负数/超安全整数石币、根/行私有字段、双别名和坏/future 预约均失败且报价保留；proposal/cancel 持久写从 1 次降为 0。服务端聚焦 `160/160`、HTTP `1/1`、Godot `3/3` 与 `git diff --check` 通过，请求白名单为真且 `old_trade_removed=true`；普通玩家仍只见交易所，legacy session 路由的零税经济边界转入 P1.6。完整合同见 `docs/phase_245_legacy_direct_trade_equipment.md`。
   - [ ] **P0.5c 批量档案与持久化提交门槛**
-    - [ ] **P0.5c-1 批量档案备份/预演/应用/回滚演练与根字段覆盖审计**
+    - [x] **P0.5c-1 批量档案备份/预演/应用/回滚演练与根字段覆盖审计**
+      - 证据（2026-07-12）：新增独立 MySQL 全量 profile 运维入口；默认 read-only 同时完成 candidate/回滚内存演练，正式 apply 必须确认维护窗口并绑定 dry-run 的 source/plan 双摘要。写 writer/DDL 前生成 0600、create-once、完整逻辑快照与三重摘要备份，写前二次 load 防漂移，写后 reload 精确核对；模糊响应只有完整候选命中才成功。真实 store 根合同把 25 个持久字段、4 个运行时字段和 5 个 profile wrapper 字段全部分类；unknown/缺失/非空 runtime、battle event、全持久实体内部 ID/物理 SQL row key、账号-binding-profile 身份/revision 冲突整批失败关闭。回滚只恢复可识别 changed profile，保留非目标 current，并对永久装备墓碑只增不删；聚焦 `52/52`，未触真实 MySQL。完整合同见 `docs/phase_246_batch_profile_migration_operations.md`。
     - [ ] **P0.5c-2 请求成功必须晚于 durable commit**：修复 async store 仅排队就返回成功的边界；成交、领取和其他资产写入只有在 MySQL COMMIT 确认后才向玩家返回成功，并覆盖超时、模糊提交、重试幂等与进程崩溃恢复。
   - [ ] **P0.5d 幂等全面 GM QA 档案与玩家拒绝边界**
 - [ ] **P0.6 200 人同地图容量与安全基线**：除地图/事件/战斗压力外，加入 200 档案与 5万/10万永久装备墓碑门槛；把全根扫描改为增量索引/dirty cache，战斗和普通资产写入不得随历史墓碑线性退化；横向多 Node 前补数据库 CAS/行锁。

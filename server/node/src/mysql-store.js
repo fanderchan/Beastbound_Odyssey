@@ -8,6 +8,7 @@ const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
   const readOnly = options.readOnly === true;
+  const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
   let lastPersistentData = null;
@@ -275,6 +276,7 @@ function createMysqlAuthStore(options = {}) {
       ensureSchema();
       const loaded = loadPersistentData(config, config.database, {
         includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+        strictRowIdentity,
       });
       lastPersistentData = mysqlPersistentData(loaded);
       return loaded;
@@ -288,6 +290,7 @@ function createMysqlAuthStore(options = {}) {
       if (lastPersistentData === null) {
         lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+          strictRowIdentity,
         }));
       }
       runMysqlSaveStatements(config, config.database, buildSaveStatements(data, lastPersistentData));
@@ -302,6 +305,7 @@ function createMysqlAuthStore(options = {}) {
       if (lastPersistentData === null) {
         lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+          strictRowIdentity,
         }));
       }
       await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(data, lastPersistentData));
@@ -353,7 +357,7 @@ function loadPersistentData(config, database, options = {}) {
     database,
     loadPersistentDataSql({includeConsumedEquipmentEnvelopes}),
   );
-  return parsePersistentDataRows(output);
+  return parsePersistentDataRows(output, options);
 }
 
 function mysqlTableExists(config, database, tableName) {
@@ -402,7 +406,7 @@ function loadPersistentDataSql(options = {}) {
   return statements.join(";\n");
 }
 
-function parsePersistentDataRows(output) {
+function parsePersistentDataRows(output, options = {}) {
   const data = emptyPersistentData();
   let legacyDocument = null;
   let stateDocument = null;
@@ -424,7 +428,7 @@ function parsePersistentDataRows(output) {
       continue;
     }
     entityRows += 1;
-    appendLoadedEntity(data, bucket, rowKey, document);
+    appendLoadedEntity(data, bucket, rowKey, document, options);
   }
   const entityTableState = Boolean(stateDocument && stateDocument.storage === "mysql_entity_tables");
   if (entityRows > 0 || entityTableState) {
@@ -452,9 +456,15 @@ function parsePersistentRowJson(bucket, rowKey, jsonText) {
   }
 }
 
-function appendLoadedEntity(data, bucket, rowKey, document) {
+function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
   if (!document || typeof document !== "object" || Array.isArray(document)) {
+    if (options.strictRowIdentity === true) {
+      throw new Error(`MySQL持久化行文档非法：${bucket}/${String(rowKey || "<empty>")}`);
+    }
     return;
+  }
+  if (options.strictRowIdentity === true) {
+    assertPersistentRowIdentity(bucket, rowKey, persistentDocumentIdentity(bucket, document));
   }
   switch (bucket) {
     case "accounts":
@@ -539,6 +549,44 @@ function appendLoadedEntity(data, bucket, rowKey, document) {
   }
 }
 
+function persistentDocumentIdentity(bucket, document) {
+  const fieldByBucket = {
+    accounts: "accountId",
+    sessions: "sessionId",
+    profile_bindings: "accountId",
+    profiles: "playerId",
+    mail_messages: "mailId",
+    market_listings: "listingId",
+    consumed_equipment_envelopes: "envelopeId",
+    parties: "partyId",
+    party_invites: "inviteId",
+    families: "familyId",
+    manors: "manorId",
+    manor_battles: "battleId",
+    manor_wars: "warId",
+    chat_messages: "messageId",
+    battle_records: "recordId",
+    battle_trace: "traceId",
+    gm_user_grants: "accountId",
+    gm_command_audit: "auditId",
+    auth_events: "eventId",
+    service_events: "eventSeq",
+  };
+  if (bucket === "gm_command_grants") {
+    return `${String(document.accountId || "")}/${String(document.commandId || "")}`;
+  }
+  const field = fieldByBucket[bucket];
+  return field ? document[field] : "";
+}
+
+function assertPersistentRowIdentity(bucket, rowKey, documentIdentity) {
+  const sqlIdentity = String(rowKey || "");
+  const jsonIdentity = String(documentIdentity || "");
+  if (sqlIdentity === "" || jsonIdentity === "" || sqlIdentity !== jsonIdentity) {
+    throw new Error(`MySQL持久化行身份不一致：${bucket}/${sqlIdentity || "<empty>"}`);
+  }
+}
+
 function mysqlPersistentData(nextData) {
   const data = cloneJson(nextData || {});
   data.playerPositions = {};
@@ -584,6 +632,35 @@ function emptyPersistentData() {
     serviceEventSeq: 0,
     serviceEvents: [],
   };
+}
+
+function mysqlAuthStoreRootContract() {
+  const runtimeOnlyFields = Object.freeze([
+    "battleInvites",
+    "battleRooms",
+    "playerPositions",
+    "tradeOffers",
+  ]);
+  const runtimeOnlyFieldSet = new Set(runtimeOnlyFields);
+  const snapshotFields = Object.freeze([
+    ...new Set([
+      ...Object.keys(emptyPersistentData()),
+      ...runtimeOnlyFields,
+    ]),
+  ].sort());
+  const persistentFields = Object.freeze(snapshotFields.filter((field) => !runtimeOnlyFieldSet.has(field)));
+  return Object.freeze({
+    snapshotFields,
+    persistentFields,
+    runtimeOnlyFields,
+    profileDocumentFields: Object.freeze([
+      "playerId",
+      "accountId",
+      "profileRevision",
+      "updatedAt",
+      "profile",
+    ]),
+  });
 }
 
 function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn) {
@@ -1173,4 +1250,5 @@ function boolConfig(optionValue, envValue) {
 
 module.exports = {
   createMysqlAuthStore,
+  mysqlAuthStoreRootContract,
 };
