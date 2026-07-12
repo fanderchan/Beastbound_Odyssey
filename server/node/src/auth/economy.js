@@ -18,7 +18,13 @@ const {
 const {
   exportBackpackEquipmentEnvelope,
   importBackpackEquipmentEnvelope,
+  previewBackpackEquipmentTransfer,
 } = require("./equipment-transfer-envelope");
+const {
+  buildEquipmentTradeReservation,
+  equipmentReservationSummaryConflict,
+  readEquipmentTradeReservationBatch,
+} = require("./equipment-trade-reservation");
 const {
   OWNER_KIND_BANK,
   OWNER_KIND_MARKET,
@@ -36,6 +42,9 @@ const {
 const TRADE_OFFER_TTL_MS = 2 * 60 * 1000;
 const TRADE_MAX_DISTANCE_CELLS = 2;
 const TRADE_MAX_ITEM_LINES = 8;
+const TRADE_MAX_ACTIVE_OFFERS = 256;
+const TRADE_MAX_SENT_OFFERS_PER_ACCOUNT = 8;
+const TRADE_MAX_RECEIVED_OFFERS_PER_ACCOUNT = 16;
 const MARKET_MAX_LISTINGS = 120;
 const MARKET_MAX_LISTING_COUNT = 999;
 const MARKET_MAX_UNIT_PRICE = 999999999;
@@ -924,15 +933,15 @@ function createEconomyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const offerItems = normalizeLimitedItems(payload.items || payload.offerItems || []);
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(offerItems);
-    if (unsupportedEquipment) {
-      return fail(
-        "trade_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能用于面对面交易，请先留在背包。`,
-      );
+    const intent = readTradeProposalIntent(payload);
+    if (!intent.ok) {
+      return fail(intent.code, intent.message);
     }
-    const targetUsername = normalizeUsername(payload.targetUsername || payload.username || payload.toUsername || "");
+    const parsedItems = parseTradeTransferItems(intent.items);
+    if (!parsedItems.ok) {
+      return fail(parsedItems.code, parsedItems.message);
+    }
+    const targetUsername = normalizeUsername(intent.targetUsername);
     const target = data.accounts[targetUsername];
     if (!target) {
       return fail("trade_target_missing", "交易对象不存在。");
@@ -944,7 +953,8 @@ function createEconomyDomain(ctx) {
     if (!positionCheck.ok) {
       return positionCheck;
     }
-    const offerStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.offerStoneCoins || 0);
+    const offerItems = parsedItems.items;
+    const offerStoneCoins = intent.stoneCoins;
     const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
     if (boundOfferItem) {
       return fail("trade_item_bound", `${bagItemLabel(boundOfferItem.itemId)} 已绑定，不能与其他玩家交易。`);
@@ -960,24 +970,56 @@ function createEconomyDomain(ctx) {
     if (offerStoneCoins > profileStoneCoins(profile)) {
       return fail("trade_stone_coins_not_enough", "石币不足，无法发起交易。", profilePayload(prepared, profile));
     }
-    const missing = firstMissingBackpackItem(profileBackpackSlots(profile), offerItems);
+    const reservedEquipment = prepareTradeEquipmentReservations(
+      data,
+      prepared.binding,
+      profile,
+      parsedItems.equipmentIntents,
+    );
+    if (!reservedEquipment.ok) {
+      return fail(reservedEquipment.code, reservedEquipment.message, profilePayload(prepared, profile));
+    }
+    const missing = firstMissingBackpackItem(
+      profileBackpackSlots(reservedEquipment.profile),
+      parsedItems.ordinaryItems,
+    );
     if (missing) {
       return fail("trade_item_not_enough", `${missing.label} 数量不够，无法发起交易。`, profilePayload(prepared, profile));
     }
-    const tradeId = `trade_${randomId()}`;
+    expireTradeOffers(data);
+    const capacity = tradeOfferCapacityCheck(data, resolved.account.accountId, target.accountId);
+    if (!capacity.ok) {
+      return capacity;
+    }
+    const duplicateReservation = firstDuplicateActiveEquipmentReservation(
+      data,
+      resolved.account.accountId,
+      reservedEquipment.reservations,
+    );
+    if (duplicateReservation) {
+      return fail(
+        "trade_equipment_already_reserved",
+        `${bagItemLabel(duplicateReservation.itemId)} 已用于另一笔待确认交易，请先取消或等待过期。`,
+      );
+    }
+    const tradeIdentity = nextTradeId(data.tradeOffers);
+    if (!tradeIdentity.ok) {
+      return fail(tradeIdentity.code, tradeIdentity.message);
+    }
+    const tradeId = tradeIdentity.tradeId;
+    const schemaVersion = reservedEquipment.reservations.length > 0 ? 2 : 1;
     const offer = {
       tradeId,
       fromAccountId: resolved.account.accountId,
       toAccountId: target.accountId,
       offerItems,
       offerStoneCoins,
+      ...(schemaVersion === 2 ? {offerEquipmentReservations: reservedEquipment.reservations} : {}),
       createdAt: isoNow(now),
       expiresAt: new Date(now() + TRADE_OFFER_TTL_MS).toISOString(),
-      schemaVersion: 1,
+      schemaVersion,
     };
-    expireTradeOffers(data);
     data.tradeOffers[tradeId] = offer;
-    save(data);
     return ok({
       trade: publicTradeOffer(offer, data),
       message: "交易请求已发出。",
@@ -990,19 +1032,23 @@ function createEconomyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const tradeId = String(payload.tradeId || payload.id || "").trim();
-    const offer = data.tradeOffers[tradeId];
-    if (!offer || offer.toAccountId !== resolved.account.accountId || tradeOfferIsExpired(offer)) {
+    const intent = readTradeAcceptIntent(payload);
+    if (!intent.ok) {
+      return fail(intent.code, intent.message);
+    }
+    const tradeId = intent.tradeId;
+    const rawOffer = data.tradeOffers[tradeId];
+    if (!rawOffer || rawOffer.toAccountId !== resolved.account.accountId || tradeOfferIsExpired(rawOffer)) {
       return fail("trade_offer_missing", "交易请求不存在或已过期。");
     }
-    const counterItems = normalizeLimitedItems(payload.items || payload.counterItems || []);
-    const offerItems = normalizeLimitedItems(offer.offerItems || []);
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer([...offerItems, ...counterItems]);
-    if (unsupportedEquipment) {
-      return fail(
-        "trade_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能用于面对面交易，本次交易不会扣除任何资产。`,
-      );
+    const checkedOffer = readStoredTradeOffer(rawOffer, tradeId);
+    if (!checkedOffer.ok) {
+      return fail(checkedOffer.code, checkedOffer.message);
+    }
+    const offer = checkedOffer.offer;
+    const parsedCounter = parseTradeTransferItems(intent.items);
+    if (!parsedCounter.ok) {
+      return fail(parsedCounter.code, parsedCounter.message);
     }
     const initiator = accountById(data, offer.fromAccountId);
     if (!initiator) {
@@ -1024,7 +1070,9 @@ function createEconomyDomain(ctx) {
     if (!positionCheck.ok) {
       return positionCheck;
     }
-    const counterStoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.counterStoneCoins || 0);
+    const counterItems = parsedCounter.items;
+    const offerItems = offer.offerItems;
+    const counterStoneCoins = intent.stoneCoins;
     const boundCounterItem = counterItems.find((item) => bagItemIsBound(item.itemId));
     if (boundCounterItem) {
       return fail("trade_item_bound", `${bagItemLabel(boundCounterItem.itemId)} 已绑定，不能与其他玩家交易。`);
@@ -1039,16 +1087,69 @@ function createEconomyDomain(ctx) {
     }
     const initiatorProfile = clone(initiatorPrepared.profile);
     const accepterProfile = clone(accepterPrepared.profile);
+    if (tradeProfileOfflineHangActive(initiatorProfile) || tradeProfileOfflineHangActive(accepterProfile)) {
+      return fail(
+        "offline_hang_profile_mutation_locked",
+        "任一方正在离线挂机时不能完成交易，请先结束离线挂机。",
+      );
+    }
     const offerStoneCoins = normalizeCoinAmount(offer.offerStoneCoins || 0);
     const boundOfferItem = offerItems.find((item) => bagItemIsBound(item.itemId));
     if (boundOfferItem) {
       return fail("trade_item_bound", `${bagItemLabel(boundOfferItem.itemId)} 已绑定，不能与其他玩家交易。`);
     }
-    const initiatorCheck = canPayProfile(initiatorProfile, offerItems, offerStoneCoins, "trade_initiator");
+    const initiatorCoinCheck = canPayProfile(initiatorProfile, [], offerStoneCoins, "trade_initiator");
+    if (!initiatorCoinCheck.ok) {
+      return initiatorCoinCheck;
+    }
+    const accepterCoinCheck = canPayProfile(accepterProfile, [], counterStoneCoins, "trade_acceptor");
+    if (!accepterCoinCheck.ok) {
+      return accepterCoinCheck;
+    }
+    const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(data);
+    if (envelopeRegistry.conflicts.length > 0) {
+      return fail(
+        "equipment_transfer_envelope_duplicate",
+        "装备转运归属异常，本次交易已取消；双方资产会原样保留，请联系GM处理。",
+      );
+    }
+    const allocatedEnvelopeIds = new Set();
+    const initiatorEquipment = exportReservedTradeEquipment(
+      initiatorProfile,
+      initiatorPrepared.binding,
+      offer.offerEquipmentReservations,
+      envelopeRegistry,
+      allocatedEnvelopeIds,
+    );
+    if (!initiatorEquipment.ok) {
+      return fail(initiatorEquipment.code, initiatorEquipment.message);
+    }
+    const accepterEquipment = exportSelectedTradeEquipment(
+      accepterProfile,
+      accepterPrepared.binding,
+      parsedCounter.equipmentIntents,
+      envelopeRegistry,
+      allocatedEnvelopeIds,
+    );
+    if (!accepterEquipment.ok) {
+      return fail(accepterEquipment.code, accepterEquipment.message);
+    }
+    const offerOrdinaryItems = offerItems.filter((item) => !isBankEquipmentItem(item.itemId));
+    const initiatorCheck = canPayProfile(
+      initiatorEquipment.profile,
+      offerOrdinaryItems,
+      offerStoneCoins,
+      "trade_initiator",
+    );
     if (!initiatorCheck.ok) {
       return initiatorCheck;
     }
-    const accepterCheck = canPayProfile(accepterProfile, counterItems, counterStoneCoins, "trade_acceptor");
+    const accepterCheck = canPayProfile(
+      accepterEquipment.profile,
+      parsedCounter.ordinaryItems,
+      counterStoneCoins,
+      "trade_acceptor",
+    );
     if (!accepterCheck.ok) {
       return accepterCheck;
     }
@@ -1060,19 +1161,88 @@ function createEconomyDomain(ctx) {
     if (!accepterReceiveCheck.ok) {
       return accepterReceiveCheck;
     }
-    const nextInitiator = applyTradePayment(initiatorProfile, offerItems, offerStoneCoins, counterItems, counterStoneCoins);
+    const nextInitiator = applyTradePayment(
+      initiatorEquipment.profile,
+      offerOrdinaryItems,
+      offerStoneCoins,
+      parsedCounter.ordinaryItems,
+      counterStoneCoins,
+    );
     if (!nextInitiator.ok) {
       return fail("trade_initiator_backpack_full", "对方背包空间不足，交易无法完成。");
     }
-    const nextAccepter = applyTradePayment(accepterProfile, counterItems, counterStoneCoins, offerItems, offerStoneCoins);
+    const nextAccepter = applyTradePayment(
+      accepterEquipment.profile,
+      parsedCounter.ordinaryItems,
+      counterStoneCoins,
+      offerOrdinaryItems,
+      offerStoneCoins,
+    );
     if (!nextAccepter.ok) {
       return fail("trade_acceptor_backpack_full", "你的背包空间不足，交易无法完成。");
     }
-    expireTradeOffers(data);
-    const initiatorPersisted = persistProfileForAccount(data, initiator, initiatorPrepared.binding, nextInitiator.profile, now);
-    const accepterPersisted = persistProfileForAccount(data, resolved.account, accepterPrepared.binding, nextAccepter.profile, now);
-    delete data.tradeOffers[tradeId];
-    save(data);
+    const initiatorImported = importTradeEquipmentBatch(
+      nextInitiator.profile,
+      accepterEquipment.envelopes,
+      "trade_initiator_backpack_full",
+      "对方背包空间不足，交易无法完成。",
+    );
+    if (!initiatorImported.ok) {
+      return fail(initiatorImported.code, initiatorImported.message);
+    }
+    const accepterImported = importTradeEquipmentBatch(
+      nextAccepter.profile,
+      initiatorEquipment.envelopes,
+      "trade_acceptor_backpack_full",
+      "你的背包空间不足，交易无法完成。",
+    );
+    if (!accepterImported.ok) {
+      return fail(accepterImported.code, accepterImported.message);
+    }
+    initiatorImported.profile.captureTools = captureToolBagFromProfile(initiatorImported.profile);
+    accepterImported.profile.captureTools = captureToolBagFromProfile(accepterImported.profile);
+    const consumed = ensureConsumedEquipmentEnvelopeIds(
+      data.consumedEquipmentEnvelopes,
+      [
+        ...initiatorEquipment.priorOriginEnvelopeIds,
+        ...accepterEquipment.priorOriginEnvelopeIds,
+        ...initiatorEquipment.envelopes.map((envelope) => envelope.envelopeId),
+        ...accepterEquipment.envelopes.map((envelope) => envelope.envelopeId),
+      ],
+    );
+    if (!consumed.ok) {
+      return fail(consumed.code, consumed.message);
+    }
+    const candidateData = clone(data);
+    candidateData.consumedEquipmentEnvelopes = consumed.ledger;
+    const candidateInitiator = accountById(candidateData, initiator.accountId);
+    const candidateAccepter = accountById(candidateData, resolved.account.accountId);
+    const initiatorPersisted = persistProfileForAccount(
+      candidateData,
+      candidateInitiator,
+      clone(initiatorPrepared.binding),
+      initiatorImported.profile,
+      now,
+    );
+    const accepterPersisted = persistProfileForAccount(
+      candidateData,
+      candidateAccepter,
+      clone(accepterPrepared.binding),
+      accepterImported.profile,
+      now,
+    );
+    delete candidateData.tradeOffers[tradeId];
+    const candidateRegistry = createEquipmentEnvelopeOwnershipRegistry(candidateData);
+    if (candidateRegistry.conflicts.length > 0) {
+      return fail(
+        "equipment_transfer_envelope_duplicate",
+        "装备转运归属异常，本次交易已取消；双方资产会原样保留，请联系GM处理。",
+      );
+    }
+    save(candidateData);
+    const receiptSchemaVersion = initiatorEquipment.envelopes.length > 0 || accepterEquipment.envelopes.length > 0
+      ? 2
+      : 1;
     return ok({
       trade: {
         tradeId,
@@ -1082,13 +1252,13 @@ function createEconomyDomain(ctx) {
         offerStoneCoins,
         counterItems,
         counterStoneCoins,
-        schemaVersion: 1,
+        schemaVersion: receiptSchemaVersion,
       },
-      account: publicAccount(resolved.account),
+      account: publicAccount(candidateAccepter),
       profileBinding: accepterPersisted.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: clone(nextAccepter.profile),
-      otherProfileSummary: profileSummaryForAccount(initiator, data),
+      profileSummary: profileSummaryForAccount(candidateAccepter, candidateData),
+      profile: clone(accepterImported.profile),
+      otherProfileSummary: profileSummaryForAccount(candidateInitiator, candidateData),
       otherProfileBinding: initiatorPersisted.binding,
       message: "交易已完成。",
     });
@@ -1137,7 +1307,6 @@ function createEconomyDomain(ctx) {
       return fail("trade_offer_missing", "交易请求不存在或已过期。");
     }
     delete data.tradeOffers[tradeId];
-    save(data);
     return ok({
       tradeId,
       message: "交易已取消。",
@@ -1590,6 +1759,560 @@ function createEconomyDomain(ctx) {
       }
     }
     return null;
+  }
+
+  function parseTradeTransferItems(value) {
+    if (!Array.isArray(value)) {
+      return {
+        ok: false,
+        code: "trade_items_invalid",
+        message: "交易物品选择格式异常，请刷新后重试。",
+      };
+    }
+    if (value.length > TRADE_MAX_ITEM_LINES) {
+      return {
+        ok: false,
+        code: "trade_item_line_limit",
+        message: `一次最多交易${TRADE_MAX_ITEM_LINES}种物品。`,
+      };
+    }
+    const summaryEntries = [];
+    const equipmentIntents = [];
+    const selectedInstanceIds = new Set();
+    for (const rawItem of value) {
+      if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) {
+        return {
+          ok: false,
+          code: "trade_item_invalid",
+          message: "交易物品选择格式异常，请刷新后重试。",
+        };
+      }
+      const hasPrimaryItemId = Object.hasOwn(rawItem, "itemId");
+      const hasLegacyItemId = Object.hasOwn(rawItem, "id");
+      if (
+        !hasPrimaryItemId && !hasLegacyItemId
+        || (hasPrimaryItemId && hasLegacyItemId && rawItem.itemId !== rawItem.id)
+      ) {
+        return {
+          ok: false,
+          code: "trade_item_invalid",
+          message: "交易物品编号冲突，请刷新后重试。",
+        };
+      }
+      const rawItemId = hasPrimaryItemId ? rawItem.itemId : rawItem.id;
+      const itemId = typeof rawItemId === "string" ? rawItemId.trim() : "";
+      if (itemId === "" || rawItemId !== itemId || !bagItemById(itemId)) {
+        return {
+          ok: false,
+          code: "trade_item_invalid",
+          message: "选择的交易物品无法识别，请刷新后重试。",
+        };
+      }
+      const hasPrimaryCount = Object.hasOwn(rawItem, "count");
+      const hasLegacyCount = Object.hasOwn(rawItem, "amount");
+      if (
+        !hasPrimaryCount && !hasLegacyCount
+        || (hasPrimaryCount && hasLegacyCount && rawItem.count !== rawItem.amount)
+      ) {
+        return {
+          ok: false,
+          code: "trade_item_invalid",
+          message: "交易物品数量冲突，请刷新后重试。",
+        };
+      }
+      const count = hasPrimaryCount ? rawItem.count : rawItem.amount;
+      if (!Number.isSafeInteger(count) || count < 1 || count > 999999999) {
+        return {
+          ok: false,
+          code: "trade_item_invalid",
+          message: "交易物品数量异常，请刷新后重试。",
+        };
+      }
+      if (isBankEquipmentItem(itemId)) {
+        const allowedFields = new Set(["itemId", "count", "instanceId", "sourceSlotIndex"]);
+        const instanceId = typeof rawItem.instanceId === "string" ? rawItem.instanceId.trim() : "";
+        if (
+          Object.keys(rawItem).some((key) => !allowedFields.has(key))
+          || rawItem.itemId !== itemId
+          || rawItem.count !== 1
+          || instanceId === ""
+          || rawItem.instanceId !== instanceId
+          || !Number.isSafeInteger(rawItem.sourceSlotIndex)
+          || rawItem.sourceSlotIndex < 0
+        ) {
+          return {
+            ok: false,
+            code: "trade_equipment_selection_required",
+            message: "请选择背包中的具体装备实例和格子后再交易。",
+          };
+        }
+        if (selectedInstanceIds.has(instanceId)) {
+          return {
+            ok: false,
+            code: "trade_equipment_instance_duplicate",
+            message: "同一装备实例不能在一笔交易中重复选择。",
+          };
+        }
+        selectedInstanceIds.add(instanceId);
+        equipmentIntents.push({
+          itemId,
+          count: 1,
+          instanceId,
+          sourceSlotIndex: rawItem.sourceSlotIndex,
+        });
+        summaryEntries.push({itemId, count: 1});
+        continue;
+      }
+      const allowedFields = new Set(["itemId", "id", "count", "amount"]);
+      if (Object.keys(rawItem).some((key) => !allowedFields.has(key))) {
+        return {
+          ok: false,
+          code: "trade_item_intent_invalid",
+          message: "交易物品请求含未授权字段，请刷新后重试。",
+        };
+      }
+      summaryEntries.push({itemId, count});
+    }
+    const items = normalizeMailItems(summaryEntries);
+    return {
+      ok: true,
+      items,
+      ordinaryItems: items.filter((item) => !isBankEquipmentItem(item.itemId)),
+      equipmentIntents,
+    };
+  }
+
+  function parseTradeStoneCoinIntent(payloadValue, legacyField) {
+    const payload = payloadValue && typeof payloadValue === "object" && !Array.isArray(payloadValue)
+      ? payloadValue
+      : {};
+    const fields = ["stoneCoins", legacyField].filter((field) => Object.hasOwn(payload, field));
+    if (fields.length === 0) {
+      return {ok: true, amount: 0};
+    }
+    if (fields.length > 1 && payload.stoneCoins !== payload[legacyField]) {
+      return {
+        ok: false,
+        code: "trade_stone_coins_invalid",
+        message: "交易石币数量冲突，请刷新后重试。",
+      };
+    }
+    const amount = payload[fields[0]];
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > profileStoneCoinLimit) {
+      return {
+        ok: false,
+        code: "trade_stone_coins_invalid",
+        message: "交易石币数量异常，请重新输入。",
+      };
+    }
+    return {ok: true, amount};
+  }
+
+  function readTradeProposalIntent(payloadValue) {
+    const checked = readTradeRootIntent(payloadValue, {
+      allowedFields: [
+        "targetUsername", "username", "toUsername", "items", "offerItems", "stoneCoins", "offerStoneCoins",
+      ],
+      stringAliases: ["targetUsername", "username", "toUsername"],
+      itemAliases: ["items", "offerItems"],
+      coinAlias: "offerStoneCoins",
+    });
+    if (!checked.ok) {
+      return checked;
+    }
+    return {
+      ok: true,
+      targetUsername: String(checked.stringValue || ""),
+      items: checked.items,
+      stoneCoins: checked.stoneCoins,
+    };
+  }
+
+  function readTradeAcceptIntent(payloadValue) {
+    const checked = readTradeRootIntent(payloadValue, {
+      allowedFields: ["tradeId", "id", "items", "counterItems", "stoneCoins", "counterStoneCoins"],
+      stringAliases: ["tradeId", "id"],
+      itemAliases: ["items", "counterItems"],
+      coinAlias: "counterStoneCoins",
+    });
+    if (!checked.ok) {
+      return checked;
+    }
+    const tradeId = typeof checked.stringValue === "string" ? checked.stringValue.trim() : "";
+    if (tradeId === "" || checked.stringValue !== tradeId) {
+      return {
+        ok: false,
+        code: "trade_offer_id_invalid",
+        message: "交易请求编号异常，请刷新后重试。",
+      };
+    }
+    return {ok: true, tradeId, items: checked.items, stoneCoins: checked.stoneCoins};
+  }
+
+  function readTradeRootIntent(payloadValue, options) {
+    if (!payloadValue || typeof payloadValue !== "object" || Array.isArray(payloadValue)) {
+      return {
+        ok: false,
+        code: "trade_intent_invalid",
+        message: "交易请求格式异常，请刷新后重试。",
+      };
+    }
+    const allowedFields = new Set(options.allowedFields);
+    if (Object.keys(payloadValue).some((key) => !allowedFields.has(key))) {
+      return {
+        ok: false,
+        code: "trade_intent_invalid",
+        message: "交易请求含未授权字段，请刷新后重试。",
+      };
+    }
+    const stringFields = options.stringAliases.filter((field) => Object.hasOwn(payloadValue, field));
+    if (stringFields.length > 1) {
+      return {
+        ok: false,
+        code: "trade_intent_alias_conflict",
+        message: "交易身份字段重复，请刷新后重试。",
+      };
+    }
+    if (stringFields.length === 1 && typeof payloadValue[stringFields[0]] !== "string") {
+      return {
+        ok: false,
+        code: "trade_intent_invalid",
+        message: "交易身份字段格式异常，请刷新后重试。",
+      };
+    }
+    const itemFields = options.itemAliases.filter((field) => Object.hasOwn(payloadValue, field));
+    if (itemFields.length > 1) {
+      return {
+        ok: false,
+        code: "trade_intent_alias_conflict",
+        message: "交易物品字段重复，请刷新后重试。",
+      };
+    }
+    const coins = parseTradeStoneCoinIntent(payloadValue, options.coinAlias);
+    if (!coins.ok) {
+      return coins;
+    }
+    return {
+      ok: true,
+      stringValue: stringFields.length === 1 ? payloadValue[stringFields[0]] : "",
+      items: itemFields.length === 1 ? payloadValue[itemFields[0]] : [],
+      stoneCoins: coins.amount,
+    };
+  }
+
+  function prepareTradeEquipmentReservations(data, binding, profileValue, equipmentIntents) {
+    let profile = clone(profileValue);
+    const reservations = [];
+    const registry = createEquipmentEnvelopeOwnershipRegistry(data);
+    if (registry.conflicts.length > 0) {
+      return {
+        ok: false,
+        code: "equipment_transfer_envelope_duplicate",
+        message: "装备转运归属异常，本次交易已取消；资产会原样保留，请联系GM处理。",
+      };
+    }
+    for (const intent of equipmentIntents) {
+      const ownership = registry.requireMaterializedInstanceOrigin(binding.playerId, intent.instanceId);
+      if (!ownership.ok) {
+        return ownership;
+      }
+      const preview = previewBackpackEquipmentTransfer(
+        profile,
+        battleEquipmentCatalog,
+        intent.itemId,
+        intent.instanceId,
+        equipmentEnvelopeOptions(profile, intent.itemId, {sourceSlotIndex: intent.sourceSlotIndex}),
+      );
+      if (!preview.ok) {
+        return preview;
+      }
+      const built = buildEquipmentTradeReservation(intent, preview);
+      if (!built.ok) {
+        return built;
+      }
+      profile = preview.profile;
+      reservations.push(built.reservation);
+    }
+    return {ok: true, profile, reservations};
+  }
+
+  function readStoredTradeOffer(value, expectedTradeId) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {
+        ok: false,
+        code: "trade_offer_state_invalid",
+        message: "交易请求状态异常，本次操作已取消。",
+      };
+    }
+    const schemaVersion = value.schemaVersion;
+    const expectedFields = new Set([
+      "tradeId",
+      "fromAccountId",
+      "toAccountId",
+      "offerItems",
+      "offerStoneCoins",
+      "createdAt",
+      "expiresAt",
+      "schemaVersion",
+      ...(schemaVersion === 2 ? ["offerEquipmentReservations"] : []),
+    ]);
+    if (
+      ![1, 2].includes(schemaVersion)
+      || Object.keys(value).some((key) => !expectedFields.has(key))
+      || value.tradeId !== expectedTradeId
+      || typeof value.tradeId !== "string" || value.tradeId === "" || value.tradeId !== value.tradeId.trim()
+      || typeof value.fromAccountId !== "string" || value.fromAccountId === "" || value.fromAccountId !== value.fromAccountId.trim()
+      || typeof value.toAccountId !== "string" || value.toAccountId === "" || value.toAccountId !== value.toAccountId.trim()
+      || !Number.isSafeInteger(value.offerStoneCoins) || value.offerStoneCoins < 0
+      || !Number.isFinite(Date.parse(value.createdAt || ""))
+      || !Number.isFinite(Date.parse(value.expiresAt || ""))
+      || Date.parse(value.expiresAt) <= Date.parse(value.createdAt)
+      || !Array.isArray(value.offerItems)
+      || value.offerItems.length > TRADE_MAX_ITEM_LINES
+    ) {
+      return {
+        ok: false,
+        code: "trade_offer_state_invalid",
+        message: "交易请求状态异常，本次操作已取消。",
+      };
+    }
+    const offerItems = [];
+    const itemIds = new Set();
+    for (const item of value.offerItems) {
+      if (
+        !item || typeof item !== "object" || Array.isArray(item)
+        || Object.keys(item).length !== 2
+        || !Object.hasOwn(item, "itemId") || !Object.hasOwn(item, "count")
+        || typeof item.itemId !== "string" || item.itemId === "" || item.itemId !== item.itemId.trim()
+        || !bagItemById(item.itemId)
+        || !Number.isSafeInteger(item.count) || item.count < 1
+        || itemIds.has(item.itemId)
+      ) {
+        return {
+          ok: false,
+          code: "trade_offer_state_invalid",
+          message: "交易请求中的物品摘要异常，本次操作已取消。",
+        };
+      }
+      itemIds.add(item.itemId);
+      offerItems.push({itemId: item.itemId, count: item.count});
+    }
+    let reservations = [];
+    if (schemaVersion === 2) {
+      const read = readEquipmentTradeReservationBatch(value.offerEquipmentReservations, {
+        maxReservations: TRADE_MAX_ITEM_LINES,
+      });
+      if (!read.ok) {
+        return read;
+      }
+      const summaryConflict = equipmentReservationSummaryConflict(
+        offerItems,
+        read.reservations,
+        (itemId) => isBankEquipmentItem(itemId),
+      );
+      if (summaryConflict) {
+        return {
+          ok: false,
+          code: "trade_equipment_reservation_summary_conflict",
+          message: "交易请求中的装备数量与预约不一致，本次操作已取消。",
+        };
+      }
+      reservations = read.reservations;
+    } else if (offerItems.some((item) => isBankEquipmentItem(item.itemId))) {
+      return {
+        ok: false,
+        code: "trade_equipment_transfer_unsupported",
+        message: "历史交易请求没有具体装备预约，本次操作已取消。",
+      };
+    }
+    return {
+      ok: true,
+      offer: {
+        tradeId: value.tradeId,
+        fromAccountId: value.fromAccountId,
+        toAccountId: value.toAccountId,
+        offerItems,
+        offerStoneCoins: value.offerStoneCoins,
+        offerEquipmentReservations: reservations,
+        createdAt: value.createdAt,
+        expiresAt: value.expiresAt,
+        schemaVersion,
+      },
+    };
+  }
+
+  function tradeOfferCapacityCheck(data, fromAccountId, toAccountId) {
+    const offers = Object.values(objectMap(data.tradeOffers)).filter((offer) => (
+      offer && typeof offer === "object" && !Array.isArray(offer) && !tradeOfferIsExpired(offer)
+    ));
+    if (offers.length >= TRADE_MAX_ACTIVE_OFFERS) {
+      return fail("trade_offer_capacity", "当前待确认交易过多，请稍后再试。");
+    }
+    if (offers.filter((offer) => offer.fromAccountId === fromAccountId).length >= TRADE_MAX_SENT_OFFERS_PER_ACCOUNT) {
+      return fail("trade_offer_sender_limit", "你发出的待确认交易过多，请先取消或等待过期。");
+    }
+    if (offers.filter((offer) => offer.toAccountId === toAccountId).length >= TRADE_MAX_RECEIVED_OFFERS_PER_ACCOUNT) {
+      return fail("trade_offer_recipient_limit", "对方当前收到的交易请求过多，请稍后再试。");
+    }
+    if (offers.some((offer) => offer.fromAccountId === fromAccountId && offer.toAccountId === toAccountId)) {
+      return fail("trade_offer_pair_pending", "你已向对方发出一笔待确认交易，请先取消或等待过期。");
+    }
+    return ok();
+  }
+
+  function firstDuplicateActiveEquipmentReservation(data, fromAccountId, reservations) {
+    const requestedIds = new Set(reservations.map((reservation) => reservation.instanceId));
+    if (requestedIds.size === 0) {
+      return null;
+    }
+    for (const offer of Object.values(objectMap(data.tradeOffers))) {
+      if (!offer || typeof offer !== "object" || Array.isArray(offer) || offer.fromAccountId !== fromAccountId) {
+        continue;
+      }
+      for (const reservation of Array.isArray(offer.offerEquipmentReservations) ? offer.offerEquipmentReservations : []) {
+        const instanceId = String(reservation && reservation.instanceId || "").trim();
+        if (requestedIds.has(instanceId)) {
+          return reservations.find((entry) => entry.instanceId === instanceId) || null;
+        }
+      }
+    }
+    return null;
+  }
+
+  function nextTradeId(tradeOffersValue) {
+    const offers = objectMap(tradeOffersValue);
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 88);
+      const tradeId = `trade_${randomPart}`;
+      if (randomPart !== "" && tradeId.length <= 96 && !Object.hasOwn(offers, tradeId)) {
+        return {ok: true, tradeId};
+      }
+    }
+    return {
+      ok: false,
+      code: "trade_offer_id_unavailable",
+      message: "交易请求编号暂时不可用，请稍后重试。",
+    };
+  }
+
+  function nextTradeEquipmentEnvelopeId(registry, reservedEnvelopeIds) {
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 144);
+      const envelopeId = `eqx_trade_${randomPart}`;
+      if (
+        /^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId)
+        && envelopeId.length <= 160
+        && registry.isAvailable(envelopeId)
+        && !reservedEnvelopeIds.has(envelopeId)
+      ) {
+        return {ok: true, envelopeId};
+      }
+    }
+    return {
+      ok: false,
+      code: "trade_equipment_envelope_id_unavailable",
+      message: "装备交易转运编号暂时不可用，本次操作已取消，请重试。",
+    };
+  }
+
+  function exportReservedTradeEquipment(profileValue, binding, reservations, registry, allocatedEnvelopeIds) {
+    let profile = clone(profileValue);
+    const envelopes = [];
+    const priorOriginEnvelopeIds = [];
+    for (const reservation of reservations) {
+      const ownership = registry.requireMaterializedInstanceOrigin(binding.playerId, reservation.instanceId);
+      if (!ownership.ok) {
+        return ownership;
+      }
+      const envelopeIdentity = nextTradeEquipmentEnvelopeId(registry, allocatedEnvelopeIds);
+      if (!envelopeIdentity.ok) {
+        return envelopeIdentity;
+      }
+      const exported = exportBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        reservation.itemId,
+        reservation.instanceId,
+        equipmentEnvelopeOptions(profile, reservation.itemId, {
+          envelopeId: envelopeIdentity.envelopeId,
+          sourceSlotIndex: reservation.sourceSlotIndex,
+        }),
+      );
+      if (!exported.ok || exported.stateFingerprint !== reservation.stateFingerprint) {
+        return {
+          ok: false,
+          code: "trade_equipment_reservation_changed",
+          message: `${bagItemLabel(reservation.itemId)} 的位置或状态已变化，请重新发起交易。`,
+        };
+      }
+      if (ownership.hasOrigin) {
+        priorOriginEnvelopeIds.push(ownership.envelopeId);
+      }
+      profile = exported.profile;
+      envelopes.push(exported.envelope);
+      allocatedEnvelopeIds.add(exported.envelope.envelopeId);
+    }
+    return {ok: true, profile, envelopes, priorOriginEnvelopeIds};
+  }
+
+  function exportSelectedTradeEquipment(profileValue, binding, equipmentIntents, registry, allocatedEnvelopeIds) {
+    let profile = clone(profileValue);
+    const envelopes = [];
+    const priorOriginEnvelopeIds = [];
+    for (const intent of equipmentIntents) {
+      const ownership = registry.requireMaterializedInstanceOrigin(binding.playerId, intent.instanceId);
+      if (!ownership.ok) {
+        return ownership;
+      }
+      const envelopeIdentity = nextTradeEquipmentEnvelopeId(registry, allocatedEnvelopeIds);
+      if (!envelopeIdentity.ok) {
+        return envelopeIdentity;
+      }
+      const exported = exportBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        intent.itemId,
+        intent.instanceId,
+        equipmentEnvelopeOptions(profile, intent.itemId, {
+          envelopeId: envelopeIdentity.envelopeId,
+          sourceSlotIndex: intent.sourceSlotIndex,
+        }),
+      );
+      if (!exported.ok) {
+        return exported;
+      }
+      if (ownership.hasOrigin) {
+        priorOriginEnvelopeIds.push(ownership.envelopeId);
+      }
+      profile = exported.profile;
+      envelopes.push(exported.envelope);
+      allocatedEnvelopeIds.add(exported.envelope.envelopeId);
+    }
+    return {ok: true, profile, envelopes, priorOriginEnvelopeIds};
+  }
+
+  function importTradeEquipmentBatch(profileValue, envelopes, capacityCode, capacityMessage) {
+    let profile = clone(profileValue);
+    for (const envelope of envelopes) {
+      const imported = importBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        envelope,
+        equipmentEnvelopeOptions(profile, envelope.itemId, {trustedServerEnvelope: true}),
+      );
+      if (!imported.ok) {
+        return imported.code === "equipment_transfer_backpack_full"
+          ? {ok: false, code: capacityCode, message: capacityMessage}
+          : imported;
+      }
+      profile = imported.profile;
+    }
+    return {ok: true, profile};
+  }
+
+  function tradeProfileOfflineHangActive(profile) {
+    return String(profile && profile.offlineHang && profile.offlineHang.session
+      && profile.offlineHang.session.status || "") === "active";
   }
 
   function parseBankTransferItems(value, mode) {
@@ -2362,7 +3085,7 @@ function createEconomyDomain(ctx) {
       offerStoneCoins: normalizeCoinAmount(offer.offerStoneCoins || 0),
       createdAt: String(offer.createdAt || ""),
       expiresAt: String(offer.expiresAt || ""),
-      schemaVersion: 1,
+      schemaVersion: offer && offer.schemaVersion === 2 ? 2 : 1,
     };
   }
 

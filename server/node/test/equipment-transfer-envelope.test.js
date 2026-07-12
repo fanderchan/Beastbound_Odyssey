@@ -10,6 +10,7 @@ const {
   equipmentTransferStateFingerprint,
   exportBackpackEquipmentEnvelope,
   importBackpackEquipmentEnvelope,
+  previewBackpackEquipmentTransfer,
   publicEquipmentTransferSummary,
   validateEquipmentTransferEnvelope,
   validateEquipmentTransferEnvelopeBatch,
@@ -118,6 +119,26 @@ test("export selects one canonical backpack instance, exact slot, and preserves 
   assert.equal(result.envelope.stateFingerprint, equipmentTransferStateFingerprint(result.envelope));
   assert.equal(result.publicSummary.stateFingerprint, result.envelope.stateFingerprint);
   assert.equal(Object.hasOwn(result.publicSummary, "provenance"), false);
+});
+
+test("trade reservation preview validates and removes only on a candidate copy", () => {
+  const {source, result: exported} = exportRareClub();
+  const before = structuredClone(source);
+  const preview = previewBackpackEquipmentTransfer(
+    source,
+    catalog,
+    "weapon_club",
+    "equip_000009",
+    {...capacity, sourceSlotIndex: 1},
+  );
+  assert.equal(preview.ok, true);
+  assert.deepEqual(source, before);
+  assert.deepEqual(preview.profile, exported.profile);
+  assert.equal(preview.itemId, "weapon_club");
+  assert.equal(preview.instanceId, "equip_000009");
+  assert.equal(preview.stateFingerprint, exported.stateFingerprint);
+  assert.equal(Object.hasOwn(preview, "envelope"), false);
+  assert.equal(Object.hasOwn(preview, "instanceState"), false);
 });
 
 test("import allocates a target-local id, adds one template, and records private provenance", () => {

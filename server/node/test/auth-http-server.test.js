@@ -144,6 +144,100 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
   assert.equal(tools.code, "gm_denied");
 });
 
+test("HTTP legacy trade routes exchange exact equipment without exposing reservation secrets", async (t) => {
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  const alpha = await fetchJson(`${base}/auth/register`, {
+    method: "POST",
+    body: JSON.stringify({username: "httptradeequip_a", password: "test1234", displayName: "接口交易甲"}),
+  });
+  const beta = await fetchJson(`${base}/auth/register`, {
+    method: "POST",
+    body: JSON.stringify({username: "httptradeequip_b", password: "test1234", displayName: "接口交易乙"}),
+  });
+  assert.equal(alpha.ok, true);
+  assert.equal(beta.ok, true);
+  const profile = battleProfile("接口交易甲", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [
+    {itemId: "weapon_wooden_club", count: 1},
+    ...Array.from({length: 14}, () => ({})),
+  ];
+  profile.equipmentInstances = {
+    equip_http_trade_1: {
+      schemaVersion: 1,
+      instanceId: "equip_http_trade_1",
+      itemId: "weapon_wooden_club",
+      location: "backpack",
+      slotId: "",
+      durability: 21,
+      enhancement: {itemId: "weapon_wooden_club", level: 2, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 3, hitCount: 0},
+      expPillCharge: {},
+      source: "http_trade_test",
+    },
+  };
+  profile.equipmentSlotInstanceIds = {};
+  profile.equipmentSlotsVersion = 5;
+  profile.nextEquipmentInstanceSerial = 2;
+  assert.equal(service.saveProfile(alpha.session.token, {expectedRevision: 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {
+    mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {
+    mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false,
+  }).ok, true);
+
+  const unauthenticated = await fetchJson(`${base}/trade/propose`, {
+    method: "POST",
+    body: JSON.stringify({targetUsername: "httptradeequip_b", stoneCoins: 1}),
+  });
+  assert.equal(unauthenticated.ok, false);
+  assert.equal(unauthenticated.code, "session_missing");
+
+  const proposal = await fetchJson(`${base}/trade/propose`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${alpha.session.token}`},
+    body: JSON.stringify({
+      targetUsername: "httptradeequip_b",
+      items: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: "equip_http_trade_1",
+        sourceSlotIndex: 0,
+      }],
+    }),
+  });
+  assert.equal(proposal.ok, true);
+  assert.equal(proposal.trade.schemaVersion, 2);
+  assert.equal(JSON.stringify(proposal).includes("equip_http_trade_1"), false);
+  assert.equal(JSON.stringify(proposal).includes("stateFingerprint"), false);
+
+  const state = await fetchJson(`${base}/trade/state`, {
+    headers: {authorization: `Bearer ${beta.session.token}`},
+  });
+  assert.equal(state.ok, true);
+  assert.equal(state.trades.received[0].tradeId, proposal.trade.tradeId);
+  assert.equal(state.trades.received[0].schemaVersion, 2);
+  assert.equal(JSON.stringify(state).includes("offerEquipmentReservations"), false);
+
+  const accepted = await fetchJson(`${base}/trade/accept`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${beta.session.token}`},
+    body: JSON.stringify({tradeId: proposal.trade.tradeId}),
+  });
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.trade.schemaVersion, 2);
+  assert.equal(profileItemCount(accepted.profile, "weapon_wooden_club"), 1);
+  assert.equal(JSON.stringify(accepted).includes("transferProvenance"), false);
+});
+
 test("HTTP GM market config routes are command-scoped", async (t) => {
   const store = createMemoryAuthStore();
   const service = createAuthService({store});

@@ -17,6 +17,10 @@ const {
 } = require("./equipment-profile-state");
 const {readBankProfileState} = require("./bank-profile-state");
 const {createEquipmentEnvelopeOwnershipRegistry} = require("./equipment-envelope-registry");
+const {
+  equipmentReservationSummaryConflict,
+  readEquipmentTradeReservationBatch,
+} = require("./equipment-trade-reservation");
 const {readMailAttachmentState} = require("./mail-attachment-state");
 const {auditMarketListingBook} = require("./market-listing-state");
 const {loadPlayerLevelRuntime} = require("./player-level-runtime");
@@ -639,19 +643,89 @@ function snapshotExternalEquipmentConflicts(snapshotValue, options = {}) {
       }));
       return;
     }
-    validateExternalSchema(offer, basePath, conflicts);
+    const schemaVersion = hasOwn(offer, "schemaVersion") ? offer.schemaVersion : 1;
+    if (![1, 2].includes(schemaVersion)) {
+      conflicts.push(conflict(
+        "equipment_external_schema_unsupported",
+        "a trade offer uses an unsupported schema version",
+        {path: basePath, schemaVersion},
+      ));
+    }
     validateNoUnknownEquipmentEnvelope(
       offer,
       basePath,
       [
         "tradeId", "fromAccountId", "toAccountId", "offerItems", "counterItems", "offerStoneCoins",
-        "counterStoneCoins", "createdAt", "expiresAt", "schemaVersion",
+        "counterStoneCoins", "offerEquipmentReservations", "createdAt", "expiresAt", "schemaVersion",
       ],
       conflicts,
     );
+    let reservations = [];
+    if (schemaVersion === 2) {
+      const read = readEquipmentTradeReservationBatch(offer.offerEquipmentReservations, {maxReservations: 8});
+      if (!read.ok) {
+        conflicts.push(conflict(
+          read.code || "trade_equipment_reservations_invalid",
+          read.message || "trade equipment reservations are invalid",
+          {path: `${basePath}.offerEquipmentReservations`, reason: String(read.reason || "invalid")},
+        ));
+      } else {
+        reservations = read.reservations;
+      }
+    } else if (hasOwn(offer, "offerEquipmentReservations")) {
+      conflicts.push(conflict(
+        "equipment_external_schema_unsupported",
+        "legacy trade offers cannot contain equipment reservations",
+        {path: `${basePath}.offerEquipmentReservations`, schemaVersion},
+      ));
+    }
     for (const field of ["offerItems", "counterItems"]) {
-      if (hasOwn(offer, field)) {
-        scanItemEntries(offer[field], `${basePath}.${field}`, catalog, bagCatalog, conflicts);
+      if (!hasOwn(offer, field)) {
+        continue;
+      }
+      const entries = offer[field];
+      if (!Array.isArray(entries)) {
+        scanItemEntries(entries, `${basePath}.${field}`, catalog, bagCatalog, conflicts);
+        continue;
+      }
+      for (const [index, entry] of entries.entries()) {
+        const itemId = String(entry && entry.itemId || "").trim();
+        const equipmentReserved = (
+          field === "offerItems"
+          && schemaVersion === 2
+          && catalog.itemById.has(itemId)
+        );
+        if (equipmentReserved) {
+          if (
+            !isRecord(entry)
+            || Object.keys(entry).some((key) => !["itemId", "count"].includes(key))
+            || !bagCatalog.itemById.has(itemId)
+            || !Number.isSafeInteger(entry.count)
+            || entry.count < 1
+          ) {
+            conflicts.push(conflict(
+              "equipment_external_container_invalid",
+              "a reserved trade equipment summary is invalid",
+              {path: `${basePath}.${field}[${index}]`, itemId, count: entry && entry.count},
+            ));
+          }
+          continue;
+        }
+        scanItemEntries([entry], `${basePath}.${field}`, catalog, bagCatalog, conflicts);
+      }
+    }
+    if (schemaVersion === 2 && Array.isArray(offer.offerItems)) {
+      const summaryConflict = equipmentReservationSummaryConflict(
+        offer.offerItems,
+        reservations,
+        (itemId) => catalog.itemById.has(itemId),
+      );
+      if (summaryConflict) {
+        conflicts.push(conflict(
+          "trade_equipment_reservation_summary_conflict",
+          "trade equipment summary and reservations disagree",
+          {path: basePath, ...summaryConflict},
+        ));
       }
     }
   });

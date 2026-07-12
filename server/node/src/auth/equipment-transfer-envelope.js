@@ -563,7 +563,7 @@ function addOneTemplate(slotsValue, itemId, slotLimit, stackLimit) {
   return fail("equipment_transfer_backpack_full", "背包空间不足，无法接收装备实例。", {itemId});
 }
 
-function exportBackpackEquipmentEnvelope(profileValue, catalog, itemIdValue, instanceIdValue, options = {}) {
+function inspectBackpackEquipmentExport(profileValue, catalog, itemIdValue, instanceIdValue, options = {}) {
   const profileJsonConflict = jsonSafeConflict(profileValue, "profile");
   if (profileJsonConflict) {
     return jsonUnsafeFailure(profileJsonConflict);
@@ -571,7 +571,6 @@ function exportBackpackEquipmentEnvelope(profileValue, catalog, itemIdValue, ins
   const source = clone(profileValue);
   const itemId = String(itemIdValue || "").trim();
   const instanceId = String(instanceIdValue || "").trim();
-  const envelopeId = typeof options.envelopeId === "string" ? options.envelopeId : "";
   if (itemId === "" || !catalogItem(catalog, itemId)) {
     return fail("equipment_transfer_item_invalid", "请选择有效装备后再转运。", {itemId});
   }
@@ -604,29 +603,31 @@ function exportBackpackEquipmentEnvelope(profileValue, catalog, itemIdValue, ins
   if (!canonical.ok) {
     return canonical;
   }
-  const envelope = {
-    schemaVersion: EQUIPMENT_TRANSFER_ENVELOPE_SCHEMA_VERSION,
-    envelopeId,
+  return {
+    ok: true,
+    source,
     itemId,
+    instanceId,
+    backpack,
+    selection,
     instanceState: canonical.state,
     stateFingerprint: equipmentTransferStateFingerprint(canonical.state),
-    provenance: {
-      schemaVersion: 1,
-      sourceInstanceId: instanceId,
-    },
   };
-  const validatedEnvelope = validateEquipmentTransferEnvelope(envelope, catalog, options);
-  if (!validatedEnvelope.ok) {
-    return validatedEnvelope;
-  }
+}
+
+function finalizeBackpackEquipmentExport(inspected, catalog, options = {}) {
   const sourceSlotIndex = Object.hasOwn(options, "sourceSlotIndex") ? options.sourceSlotIndex : -1;
-  const removedTemplate = removeOneTemplate(backpack.slots, itemId, sourceSlotIndex);
+  const removedTemplate = removeOneTemplate(
+    inspected.backpack.slots,
+    inspected.itemId,
+    sourceSlotIndex,
+  );
   if (!removedTemplate.ok) {
     return removedTemplate;
   }
-  const candidate = clone(source);
-  const instances = clone(selection.state.instances);
-  delete instances[instanceId];
+  const candidate = clone(inspected.source);
+  const instances = clone(inspected.selection.state.instances);
+  delete instances[inspected.instanceId];
   candidate.backpackSlots = removedTemplate.slots;
   candidate.equipmentInstances = instances;
   candidate.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
@@ -636,9 +637,67 @@ function exportBackpackEquipmentEnvelope(profileValue, catalog, itemIdValue, ins
       conflicts: clone(candidateAudit.conflicts || []),
     });
   }
+  return {ok: true, profile: candidate};
+}
+
+function previewBackpackEquipmentTransfer(profileValue, catalog, itemIdValue, instanceIdValue, options = {}) {
+  const inspected = inspectBackpackEquipmentExport(
+    profileValue,
+    catalog,
+    itemIdValue,
+    instanceIdValue,
+    options,
+  );
+  if (!inspected.ok) {
+    return inspected;
+  }
+  const finalized = finalizeBackpackEquipmentExport(inspected, catalog, options);
+  if (!finalized.ok) {
+    return finalized;
+  }
   return {
     ok: true,
-    profile: candidate,
+    profile: finalized.profile,
+    itemId: inspected.itemId,
+    instanceId: inspected.instanceId,
+    stateFingerprint: inspected.stateFingerprint,
+  };
+}
+
+function exportBackpackEquipmentEnvelope(profileValue, catalog, itemIdValue, instanceIdValue, options = {}) {
+  const inspected = inspectBackpackEquipmentExport(
+    profileValue,
+    catalog,
+    itemIdValue,
+    instanceIdValue,
+    options,
+  );
+  if (!inspected.ok) {
+    return inspected;
+  }
+  const envelopeId = typeof options.envelopeId === "string" ? options.envelopeId : "";
+  const envelope = {
+    schemaVersion: EQUIPMENT_TRANSFER_ENVELOPE_SCHEMA_VERSION,
+    envelopeId,
+    itemId: inspected.itemId,
+    instanceState: inspected.instanceState,
+    stateFingerprint: inspected.stateFingerprint,
+    provenance: {
+      schemaVersion: 1,
+      sourceInstanceId: inspected.instanceId,
+    },
+  };
+  const validatedEnvelope = validateEquipmentTransferEnvelope(envelope, catalog, options);
+  if (!validatedEnvelope.ok) {
+    return validatedEnvelope;
+  }
+  const finalized = finalizeBackpackEquipmentExport(inspected, catalog, options);
+  if (!finalized.ok) {
+    return finalized;
+  }
+  return {
+    ok: true,
+    profile: finalized.profile,
     envelope: validatedEnvelope.envelope,
     stateFingerprint: validatedEnvelope.stateFingerprint,
     publicSummary: publicEquipmentTransferSummary(validatedEnvelope.envelope, catalog, options),
@@ -838,6 +897,7 @@ module.exports = {
   equipmentTransferStateFingerprint,
   exportBackpackEquipmentEnvelope,
   importBackpackEquipmentEnvelope,
+  previewBackpackEquipmentTransfer,
   publicEquipmentTransferSummary,
   validateEquipmentTransferEnvelope,
   validateEquipmentTransferEnvelopeBatch,

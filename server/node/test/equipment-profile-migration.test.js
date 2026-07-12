@@ -492,6 +492,66 @@ test("snapshot external equipment scanner reports mail, market, and trade paths 
   ]);
 });
 
+test("snapshot equipment scanner accepts exact runtime trade reservations and rejects drift", () => {
+  const reservation = {
+    schemaVersion: 1,
+    itemId: "boots_grass",
+    instanceId: "equip_trade_runtime_1",
+    sourceSlotIndex: 0,
+    stateFingerprint: "a".repeat(64),
+  };
+  const valid = snapshotExternalEquipmentConflicts({
+    tradeOffers: {
+      trade_runtime_1: {
+        tradeId: "trade_runtime_1",
+        fromAccountId: "account_trade_a",
+        toAccountId: "account_trade_b",
+        offerItems: [{itemId: "boots_grass", count: 1}],
+        offerStoneCoins: 0,
+        offerEquipmentReservations: [reservation],
+        createdAt: "2026-07-12T00:00:00.000Z",
+        expiresAt: "2026-07-12T00:02:00.000Z",
+        schemaVersion: 2,
+      },
+    },
+  });
+  assert.deepEqual(valid, []);
+
+  const summaryDrift = snapshotExternalEquipmentConflicts({
+    tradeOffers: {
+      trade_runtime_1: {
+        tradeId: "trade_runtime_1",
+        fromAccountId: "account_trade_a",
+        toAccountId: "account_trade_b",
+        offerItems: [{itemId: "boots_grass", count: 2}],
+        offerStoneCoins: 0,
+        offerEquipmentReservations: [reservation],
+        createdAt: "2026-07-12T00:00:00.000Z",
+        expiresAt: "2026-07-12T00:02:00.000Z",
+        schemaVersion: 2,
+      },
+    },
+  });
+  assert.equal(summaryDrift.some((entry) => entry.code === "trade_equipment_reservation_summary_conflict"), true);
+
+  const injectedEnvelope = snapshotExternalEquipmentConflicts({
+    tradeOffers: {
+      trade_runtime_1: {
+        tradeId: "trade_runtime_1",
+        fromAccountId: "account_trade_a",
+        toAccountId: "account_trade_b",
+        offerItems: [{itemId: "boots_grass", count: 1}],
+        offerStoneCoins: 0,
+        offerEquipmentReservations: [{...reservation, equipmentEnvelope: {schemaVersion: 1}}],
+        createdAt: "2026-07-12T00:00:00.000Z",
+        expiresAt: "2026-07-12T00:02:00.000Z",
+        schemaVersion: 2,
+      },
+    },
+  });
+  assert.equal(injectedEnvelope.some((entry) => entry.code === "trade_equipment_reservation_invalid"), true);
+});
+
 test("future mail and market schemas plus unsupported listing fields fail closed", () => {
   const futureConflicts = snapshotExternalEquipmentConflicts({
     mailMessages: {

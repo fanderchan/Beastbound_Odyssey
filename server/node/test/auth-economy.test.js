@@ -4,6 +4,7 @@ const {
   assert,
   test,
   createAuthService,
+  createCountingAuthStore,
   createMemoryAuthStore,
   profileItemCount,
 } = require("../test-support/auth-service-test-context");
@@ -1688,9 +1689,9 @@ test("trade accept atomically exchanges both player offers", () => {
   assert.equal(service.updatePlayerPosition(beta.session.token, {"mapId": "firebud_training_yard", "cellX": 11, "cellY": 10, "facing": "west", "moving": false}).ok, true);
 
   const proposal = service.proposeTrade(alpha.session.token, {
-    "targetUsername": "tradeok_b",
-    "stoneCoins": 30,
-    "items": [{"itemId": "item_meat_small", "count": 2}],
+    "username": "tradeok_b",
+    "offerStoneCoins": 30,
+    "offerItems": [{"itemId": "item_meat_small", "count": 2}],
   });
   assert.equal(proposal.ok, true);
   assert.equal(proposal.trade.offerStoneCoins, 30);
@@ -1702,9 +1703,9 @@ test("trade accept atomically exchanges both player offers", () => {
   assert.equal(betaState.trades.received[0].fromUsername, "tradeok_a");
 
   const accepted = service.acceptTrade(beta.session.token, {
-    "tradeId": proposal.trade.tradeId,
-    "stoneCoins": 10,
-    "items": [{"itemId": "capture_rope_basic", "count": 1}],
+    "id": proposal.trade.tradeId,
+    "counterStoneCoins": 10,
+    "counterItems": [{"itemId": "capture_rope_basic", "count": 1}],
   });
   assert.equal(accepted.ok, true);
   assert.equal(accepted.profile.stoneCoins, 140);
@@ -1722,7 +1723,90 @@ test("trade accept atomically exchanges both player offers", () => {
   assert.equal(duplicate.code, "trade_offer_missing");
 });
 
-test("equipment trade offers and counters fail before offer or profile mutation", () => {
+test("trade coin intents reject non-integers and aliases before any state change", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradecoin_a", password: "test1234", displayName: "币值校验甲"});
+  const beta = service.register({username: "tradecoin_b", password: "test1234", displayName: "币值校验乙"});
+  seedBackpack(service, alpha.session.token, [{itemId: "item_meat_small", count: 2}]);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+
+  const invalidProposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradecoin_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+    stoneCoins: "not-a-number",
+  });
+  assert.equal(invalidProposal.ok, false);
+  assert.equal(invalidProposal.code, "trade_stone_coins_invalid");
+  assert.deepEqual(service.snapshot().tradeOffers, {});
+  for (const invalidAmount of [Number.NaN, 1.5, -1, Number.MAX_SAFE_INTEGER + 1]) {
+    const rejected = service.proposeTrade(alpha.session.token, {
+      targetUsername: "tradecoin_b",
+      items: [{itemId: "item_meat_small", count: 1}],
+      stoneCoins: invalidAmount,
+    });
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.code, "trade_stone_coins_invalid");
+    assert.deepEqual(service.snapshot().tradeOffers, {});
+  }
+  const duplicateItemAliases = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradecoin_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+    offerItems: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(duplicateItemAliases.ok, false);
+  assert.equal(duplicateItemAliases.code, "trade_intent_alias_conflict");
+  const injectedRoot = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradecoin_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+    equipmentEnvelope: {schemaVersion: 1},
+  });
+  assert.equal(injectedRoot.ok, false);
+  assert.equal(injectedRoot.code, "trade_intent_invalid");
+  assert.deepEqual(service.snapshot().tradeOffers, {});
+
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradecoin_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(proposal.ok, true);
+  const beforeAlpha = service.getProfile(alpha.session.token);
+  const beforeBeta = service.getProfile(beta.session.token);
+  const ledgerBefore = structuredClone(service.snapshot().consumedEquipmentEnvelopes);
+  const invalidAccept = service.acceptTrade(beta.session.token, {
+    tradeId: proposal.trade.tradeId,
+    stoneCoins: "not-a-number",
+  });
+  assert.equal(invalidAccept.ok, false);
+  assert.equal(invalidAccept.code, "trade_stone_coins_invalid");
+  assert.deepEqual(service.getProfile(alpha.session.token), beforeAlpha);
+  assert.deepEqual(service.getProfile(beta.session.token), beforeBeta);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes, ledgerBefore);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+
+  const injectedAcceptRoot = service.acceptTrade(beta.session.token, {
+    tradeId: proposal.trade.tradeId,
+    equipmentEnvelope: {schemaVersion: 1},
+  });
+  assert.equal(injectedAcceptRoot.ok, false);
+  assert.equal(injectedAcceptRoot.code, "trade_intent_invalid");
+  assert.deepEqual(service.getProfile(alpha.session.token), beforeAlpha);
+  assert.deepEqual(service.getProfile(beta.session.token), beforeBeta);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+
+  const conflictingAliases = service.acceptTrade(beta.session.token, {
+    tradeId: proposal.trade.tradeId,
+    stoneCoins: 1,
+    counterStoneCoins: 2,
+  });
+  assert.equal(conflictingAliases.ok, false);
+  assert.equal(conflictingAliases.code, "trade_stone_coins_invalid");
+  assert.deepEqual(service.getProfile(alpha.session.token), beforeAlpha);
+  assert.deepEqual(service.getProfile(beta.session.token), beforeBeta);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+});
+
+test("equipment trades require exact instance selection and keep reservations private", () => {
   const seedService = createAuthService({store: createMemoryAuthStore()});
   const alpha = seedService.register({username: "tradeequip_a", password: "test1234", displayName: "装备交易甲"});
   const beta = seedService.register({username: "tradeequip_b", password: "test1234", displayName: "装备交易乙"});
@@ -1736,13 +1820,48 @@ test("equipment trade offers and counters fail before offer or profile mutation"
     items: [{itemId: "weapon_wooden_club", count: 1}],
   });
   assert.equal(proposal.ok, false);
-  assert.equal(proposal.code, "trade_equipment_transfer_unsupported");
+  assert.equal(proposal.code, "trade_equipment_selection_required");
   const alphaAfterProposal = seedService.getProfile(alpha.session.token);
   assert.equal(alphaAfterProposal.profileSummary.profileRevision, alphaBeforeProposal.profileSummary.profileRevision);
   assert.equal(alphaAfterProposal.profile.stoneCoins, alphaBeforeProposal.profile.stoneCoins);
   assert.equal(profileItemCount(alphaAfterProposal.profile, "weapon_wooden_club"), 1);
   assert.deepEqual(alphaAfterProposal.profile.equipmentInstances, alphaBeforeProposal.profile.equipmentInstances);
   assert.deepEqual(seedService.snapshot().tradeOffers, {});
+
+  const injectedEnvelope = seedService.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeequip_b",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      equipmentEnvelope: {schemaVersion: 1},
+    }],
+  });
+  assert.equal(injectedEnvelope.ok, false);
+  assert.equal(injectedEnvelope.code, "trade_equipment_selection_required");
+  assert.deepEqual(seedService.snapshot().tradeOffers, {});
+
+  const exactProposal = seedService.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeequip_b",
+    stoneCoins: 10,
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(exactProposal.ok, true);
+  assert.equal(exactProposal.trade.schemaVersion, 2);
+  assert.deepEqual(exactProposal.trade.offerItems, [{itemId: "weapon_wooden_club", count: 1}]);
+  assert.equal(Object.hasOwn(exactProposal.trade, "offerEquipmentReservations"), false);
+  assert.equal(JSON.stringify(exactProposal).includes("equip_transfer_guard_1"), false);
+  assert.equal(JSON.stringify(exactProposal).includes("stateFingerprint"), false);
+  const privateOffer = seedService.snapshot().tradeOffers[exactProposal.trade.tradeId];
+  assert.equal(privateOffer.offerEquipmentReservations.length, 1);
+  assert.equal(privateOffer.offerEquipmentReservations[0].instanceId, "equip_transfer_guard_1");
+  assert.match(privateOffer.offerEquipmentReservations[0].stateFingerprint, /^[a-f0-9]{64}$/);
 
   const counterSeedService = createAuthService({store: createMemoryAuthStore()});
   const giver = counterSeedService.register({username: "tradeequip_offer", password: "test1234", displayName: "普通报价方"});
@@ -1764,7 +1883,7 @@ test("equipment trade offers and counters fail before offer or profile mutation"
     items: [{itemId: "weapon_wooden_club", count: 1}],
   });
   assert.equal(counterAccept.ok, false);
-  assert.equal(counterAccept.code, "trade_equipment_transfer_unsupported");
+  assert.equal(counterAccept.code, "trade_equipment_selection_required");
   const giverAfterCounter = counterSeedService.getProfile(giver.session.token);
   const accepterAfterCounter = counterSeedService.getProfile(accepter.session.token);
   assert.equal(giverAfterCounter.profileSummary.profileRevision, giverBeforeCounter.profileSummary.profileRevision);
@@ -1772,4 +1891,512 @@ test("equipment trade offers and counters fail before offer or profile mutation"
   assert.equal(profileItemCount(giverAfterCounter.profile, "item_meat_small"), 2);
   assert.equal(profileItemCount(accepterAfterCounter.profile, "weapon_wooden_club"), 1);
   assert.ok(counterSeedService.snapshot().tradeOffers[normalProposal.trade.tradeId]);
+});
+
+test("equipment trade accept atomically swaps exact states, ordinary items, and coins", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({store});
+  const alpha = service.register({username: "tradeequipmix_a", password: "test1234", displayName: "装备混合甲"});
+  const beta = service.register({username: "tradeequipmix_b", password: "test1234", displayName: "装备混合乙"});
+  seedBackpackEquipment(service, alpha.session.token, "weapon_wooden_club", {
+    durability: 23,
+    enhancement: {itemId: "weapon_wooden_club", level: 3, history: [{level: 3}]},
+    futureAffixes: [{id: "alpha_affix", value: 7}],
+  });
+  seedBackpackEquipment(service, beta.session.token, "weapon_stone_dagger", {
+    durability: 17,
+    enhancement: {itemId: "weapon_stone_dagger", level: 1, history: [{level: 1}]},
+    futureAffixes: [{id: "beta_affix", value: 4}],
+  });
+  for (const token of [alpha.session.token, beta.session.token]) {
+    const current = service.getProfile(token);
+    const profile = current.profile;
+    profile.backpackSlots[1] = token === alpha.session.token
+      ? {itemId: "item_meat_small", count: 3}
+      : {itemId: "capture_rope_basic", count: 2};
+    assert.equal(service.saveProfile(token, {
+      expectedRevision: current.profileSummary.profileRevision,
+      profile,
+    }).ok, true);
+  }
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 30, cellY: 30, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 31, cellY: 30, facing: "west", moving: false}).ok, true);
+
+  const beforeAlpha = service.getProfile(alpha.session.token);
+  const beforeBeta = service.getProfile(beta.session.token);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeequipmix_b",
+    stoneCoins: 30,
+    items: [
+      {itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0},
+      {itemId: "item_meat_small", count: 2},
+    ],
+  });
+  assert.equal(proposal.ok, true);
+  const writesBeforeAccept = store.counts.saves;
+
+  const accepted = service.acceptTrade(beta.session.token, {
+    tradeId: proposal.trade.tradeId,
+    stoneCoins: 10,
+    items: [
+      {itemId: "weapon_stone_dagger", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0},
+      {itemId: "capture_rope_basic", count: 1},
+    ],
+  });
+  assert.equal(accepted.ok, true);
+  assert.equal(store.counts.saves, writesBeforeAccept + 1);
+  assert.equal(accepted.trade.schemaVersion, 2);
+  assert.equal(accepted.profileSummary.profileRevision, beforeBeta.profileSummary.profileRevision + 1);
+  assert.equal(accepted.otherProfileSummary.profileRevision, beforeAlpha.profileSummary.profileRevision + 1);
+  assert.equal(accepted.profile.stoneCoins, beforeBeta.profile.stoneCoins + 20);
+  assert.equal(profileItemCount(accepted.profile, "item_meat_small"), 2);
+  assert.equal(profileItemCount(accepted.profile, "capture_rope_basic"), 1);
+  assert.equal(JSON.stringify(accepted).includes("offerEquipmentReservations"), false);
+  assert.equal(JSON.stringify(accepted).includes("stateFingerprint"), false);
+  assert.equal(JSON.stringify(accepted).includes("transferProvenance"), false);
+
+  const snapshot = service.snapshot();
+  assert.equal(Object.hasOwn(snapshot.tradeOffers, proposal.trade.tradeId), false);
+  const alphaInternal = snapshotProfileDocument(snapshot, alpha.account.accountId).profile;
+  const betaInternal = snapshotProfileDocument(snapshot, beta.account.accountId).profile;
+  assert.equal(Object.hasOwn(alphaInternal.equipmentInstances, "equip_transfer_guard_1"), false);
+  assert.equal(Object.hasOwn(betaInternal.equipmentInstances, "equip_transfer_guard_1"), false);
+  const alphaReceived = Object.values(alphaInternal.equipmentInstances).find((entry) => entry.itemId === "weapon_stone_dagger");
+  const betaReceived = Object.values(betaInternal.equipmentInstances).find((entry) => entry.itemId === "weapon_wooden_club");
+  assert.ok(alphaReceived);
+  assert.ok(betaReceived);
+  assert.notEqual(alphaReceived.instanceId, "equip_transfer_guard_1");
+  assert.notEqual(betaReceived.instanceId, "equip_transfer_guard_1");
+  assert.equal(alphaReceived.durability, 17);
+  assert.equal(alphaReceived.enhancement.level, 1);
+  assert.deepEqual(alphaReceived.futureAffixes, [{id: "beta_affix", value: 4}]);
+  assert.equal(betaReceived.durability, 23);
+  assert.equal(betaReceived.enhancement.level, 3);
+  assert.deepEqual(betaReceived.futureAffixes, [{id: "alpha_affix", value: 7}]);
+  assert.match(alphaReceived.transferProvenance.originEnvelopeId, /^eqx_trade_/);
+  assert.match(betaReceived.transferProvenance.originEnvelopeId, /^eqx_trade_/);
+  assert.equal(Object.hasOwn(snapshot.consumedEquipmentEnvelopes, alphaReceived.transferProvenance.originEnvelopeId), true);
+  assert.equal(Object.hasOwn(snapshot.consumedEquipmentEnvelopes, betaReceived.transferProvenance.originEnvelopeId), true);
+
+  const duplicate = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "trade_offer_missing");
+});
+
+test("equipment trade preserves a prior consumed origin and consumes the new transfer envelope", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradeorigin_a", password: "test1234", displayName: "来源延续甲"});
+  const beta = service.register({username: "tradeorigin_b", password: "test1234", displayName: "来源延续乙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  const deposited = service.bankDeposit(alpha.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(deposited.ok, true);
+  const priorEnvelopeId = deposited.bank.slots[0].equipmentEnvelopes[0].envelopeId;
+  const withdrawn = service.bankWithdraw(alpha.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      envelopeId: priorEnvelopeId,
+      bankSlotIndex: 0,
+      targetSlotIndex: 0,
+    }],
+  });
+  assert.equal(withdrawn.ok, true);
+  const afterWithdraw = service.snapshot();
+  const alphaProfile = snapshotProfileDocument(afterWithdraw, alpha.account.accountId).profile;
+  const imported = Object.values(alphaProfile.equipmentInstances).find((entry) => (
+    entry.transferProvenance && entry.transferProvenance.originEnvelopeId === priorEnvelopeId
+  ));
+  assert.ok(imported);
+  assert.equal(Object.hasOwn(afterWithdraw.consumedEquipmentEnvelopes, priorEnvelopeId), true);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeorigin_b",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: imported.instanceId,
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(proposal.ok, true);
+  assert.equal(service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId}).ok, true);
+
+  const settled = service.snapshot();
+  const betaProfile = snapshotProfileDocument(settled, beta.account.accountId).profile;
+  const received = Object.values(betaProfile.equipmentInstances).find((entry) => entry.itemId === "weapon_wooden_club");
+  assert.ok(received);
+  const currentEnvelopeId = received.transferProvenance.originEnvelopeId;
+  assert.notEqual(currentEnvelopeId, priorEnvelopeId);
+  assert.deepEqual(Object.keys(settled.consumedEquipmentEnvelopes).sort(), [
+    priorEnvelopeId,
+    currentEnvelopeId,
+  ].sort());
+});
+
+test("equipment trade reservation becomes stale without consuming or deleting the offer", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradestale_a", password: "test1234", displayName: "预约变化甲"});
+  const beta = service.register({username: "tradestale_b", password: "test1234", displayName: "预约变化乙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradestale_b",
+    items: [{itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0}],
+  });
+  assert.equal(proposal.ok, true);
+  const moved = service.bankDeposit(alpha.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(moved.ok, true);
+  const beforeAlpha = service.getProfile(alpha.session.token);
+  const beforeBeta = service.getProfile(beta.session.token);
+  const ledgerBefore = structuredClone(service.snapshot().consumedEquipmentEnvelopes);
+
+  const accepted = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(accepted.ok, false);
+  assert.equal(accepted.code, "trade_equipment_reservation_changed");
+  const afterAlpha = service.getProfile(alpha.session.token);
+  const afterBeta = service.getProfile(beta.session.token);
+  assert.deepEqual(afterAlpha.profile, beforeAlpha.profile);
+  assert.deepEqual(afterBeta.profile, beforeBeta.profile);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes, ledgerBefore);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+});
+
+test("equipment trade reservation fingerprint detects state changes", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradefinger_a", password: "test1234", displayName: "指纹变化甲"});
+  const beta = service.register({username: "tradefinger_b", password: "test1234", displayName: "指纹变化乙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradefinger_b",
+    items: [{itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0}],
+  });
+  assert.equal(proposal.ok, true);
+  const current = service.getProfile(alpha.session.token);
+  const changedProfile = current.profile;
+  changedProfile.equipmentInstances.equip_transfer_guard_1.durability = 29;
+  assert.equal(service.saveProfile(alpha.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: changedProfile,
+  }).ok, true);
+  const alphaBeforeAccept = service.getProfile(alpha.session.token);
+  const betaBeforeAccept = service.getProfile(beta.session.token);
+
+  const accepted = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(accepted.ok, false);
+  assert.equal(accepted.code, "trade_equipment_reservation_changed");
+  assert.deepEqual(service.getProfile(alpha.session.token).profile, alphaBeforeAccept.profile);
+  assert.deepEqual(service.getProfile(beta.session.token).profile, betaBeforeAccept.profile);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+});
+
+test("one equipment instance cannot back two active trade offers", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradereserve_a", password: "test1234", displayName: "单实例预约甲"});
+  const beta = service.register({username: "tradereserve_b", password: "test1234", displayName: "单实例预约乙"});
+  const gamma = service.register({username: "tradereserve_c", password: "test1234", displayName: "单实例预约丙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  for (const [token, cellX] of [
+    [alpha.session.token, 10],
+    [beta.session.token, 11],
+    [gamma.session.token, 9],
+  ]) {
+    assert.equal(service.updatePlayerPosition(token, {
+      mapId: "firebud_training_yard", cellX, cellY: 10, facing: "east", moving: false,
+    }).ok, true);
+  }
+  const selection = [{
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+  }];
+  const first = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradereserve_b",
+    items: selection,
+  });
+  assert.equal(first.ok, true);
+  const duplicate = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradereserve_c",
+    items: selection,
+  });
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "trade_equipment_already_reserved");
+  assert.equal(service.cancelTrade(alpha.session.token, {tradeId: first.trade.tradeId}).ok, true);
+  const released = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradereserve_c",
+    items: selection,
+  });
+  assert.equal(released.ok, true);
+});
+
+test("trade accept rechecks the initiator offline hang lock", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradeoffline_a", password: "test1234", displayName: "离线锁甲"});
+  const beta = service.register({username: "tradeoffline_b", password: "test1234", displayName: "离线锁乙"});
+  seedBackpack(service, alpha.session.token, [{itemId: "item_meat_small", count: 2}]);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeoffline_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(proposal.ok, true);
+  const current = service.getProfile(alpha.session.token);
+  const activeProfile = current.profile;
+  activeProfile.offlineHang = {
+    session: {status: "active", schemaVersion: 1},
+    ledger: [],
+    schemaVersion: 1,
+  };
+  assert.equal(service.saveProfile(alpha.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: activeProfile,
+  }).ok, true);
+
+  const accepted = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(accepted.ok, false);
+  assert.equal(accepted.code, "offline_hang_profile_mutation_locked");
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+});
+
+test("equipment trade target capacity failure rolls back both profiles and ledger", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const alpha = service.register({username: "tradefull_a", password: "test1234", displayName: "容量回滚甲"});
+  const beta = service.register({username: "tradefull_b", password: "test1234", displayName: "容量回滚乙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  seedBackpack(service, beta.session.token, Array.from({length: 15}, () => ({itemId: "item_meat_small", count: 99})));
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradefull_b",
+    items: [{itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0}],
+  });
+  assert.equal(proposal.ok, true);
+  const beforeAlpha = service.getProfile(alpha.session.token);
+  const beforeBeta = service.getProfile(beta.session.token);
+  const ledgerBefore = structuredClone(service.snapshot().consumedEquipmentEnvelopes);
+
+  const accepted = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(accepted.ok, false);
+  assert.equal(accepted.code, "trade_acceptor_backpack_full");
+  assert.deepEqual(service.getProfile(alpha.session.token).profile, beforeAlpha.profile);
+  assert.deepEqual(service.getProfile(beta.session.token).profile, beforeBeta.profile);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes, ledgerBefore);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+});
+
+test("runtime trade proposal and cancellation do not create persistent writes", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({store});
+  const alpha = service.register({username: "tradewrite_a", password: "test1234", displayName: "运行时报价甲"});
+  const beta = service.register({username: "tradewrite_b", password: "test1234", displayName: "运行时报价乙"});
+  seedBackpack(service, alpha.session.token, [{itemId: "item_meat_small", count: 2}]);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const beforeProposalWrites = store.counts.saves;
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradewrite_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(proposal.ok, true);
+  assert.equal(store.counts.saves, beforeProposalWrites);
+  const pairDuplicate = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradewrite_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(pairDuplicate.ok, false);
+  assert.equal(pairDuplicate.code, "trade_offer_pair_pending");
+  assert.equal(store.counts.saves, beforeProposalWrites);
+  const cancelled = service.cancelTrade(alpha.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(cancelled.ok, true);
+  assert.equal(store.counts.saves, beforeProposalWrites);
+});
+
+test("synchronous trade save failure leaves cache, ledger, and pending offer retryable", () => {
+  const durableStore = createMemoryAuthStore();
+  let failSaves = false;
+  const store = {
+    load: () => durableStore.load(),
+    save(nextData) {
+      if (failSaves) {
+        throw new Error("forced synchronous trade save failure");
+      }
+      durableStore.save(nextData);
+    },
+  };
+  const service = createAuthService({store});
+  const alpha = service.register({username: "tradefail_a", password: "test1234", displayName: "保存失败甲"});
+  const beta = service.register({username: "tradefail_b", password: "test1234", displayName: "保存失败乙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  assert.equal(service.updatePlayerPosition(alpha.session.token, {mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false}).ok, true);
+  assert.equal(service.updatePlayerPosition(beta.session.token, {mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false}).ok, true);
+  const proposal = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradefail_b",
+    items: [{itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0}],
+  });
+  assert.equal(proposal.ok, true);
+  const alphaBefore = service.getProfile(alpha.session.token);
+  const betaBefore = service.getProfile(beta.session.token);
+  const ledgerBefore = structuredClone(service.snapshot().consumedEquipmentEnvelopes);
+  const durableBefore = durableStore.load();
+
+  failSaves = true;
+  assert.throws(
+    () => service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId}),
+    /forced synchronous trade save failure/,
+  );
+  failSaves = false;
+  assert.deepEqual(service.getProfile(alpha.session.token).profile, alphaBefore.profile);
+  assert.deepEqual(service.getProfile(beta.session.token).profile, betaBefore.profile);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes, ledgerBefore);
+  assert.ok(service.snapshot().tradeOffers[proposal.trade.tradeId]);
+  assert.deepEqual(durableStore.load(), durableBefore);
+
+  const retried = service.acceptTrade(beta.session.token, {tradeId: proposal.trade.tradeId});
+  assert.equal(retried.ok, true);
+  assert.equal(Object.hasOwn(service.snapshot().tradeOffers, proposal.trade.tradeId), false);
+});
+
+test("trade offer ids fail closed after bounded collision retries", () => {
+  let collisionMode = false;
+  let serial = 0;
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    randomId: () => (collisionMode ? "fixed" : `setup_${++serial}`),
+  });
+  const alpha = service.register({username: "tradeid_a", password: "test1234", displayName: "编号碰撞甲"});
+  const beta = service.register({username: "tradeid_b", password: "test1234", displayName: "编号碰撞乙"});
+  const gamma = service.register({username: "tradeid_c", password: "test1234", displayName: "编号碰撞丙"});
+  seedBackpack(service, alpha.session.token, [{itemId: "item_meat_small", count: 2}]);
+  for (const [token, cellX] of [[alpha.session.token, 10], [beta.session.token, 11], [gamma.session.token, 9]]) {
+    assert.equal(service.updatePlayerPosition(token, {
+      mapId: "firebud_training_yard", cellX, cellY: 10, facing: "east", moving: false,
+    }).ok, true);
+  }
+  collisionMode = true;
+  const first = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeid_b",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(first.ok, true);
+  assert.equal(first.trade.tradeId, "trade_fixed");
+  const before = service.getProfile(alpha.session.token);
+  const collision = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeid_c",
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(collision.ok, false);
+  assert.equal(collision.code, "trade_offer_id_unavailable");
+  assert.deepEqual(service.getProfile(alpha.session.token), before);
+  assert.deepEqual(Object.keys(service.snapshot().tradeOffers), [first.trade.tradeId]);
+});
+
+test("consumed trade envelope ids fail closed after bounded collision retries", () => {
+  let collisionMode = false;
+  let serial = 0;
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    randomId: () => (collisionMode ? "fixed" : `setup_${++serial}`),
+  });
+  const alpha = service.register({username: "tradeeqx_a", password: "test1234", displayName: "信封碰撞甲"});
+  const beta = service.register({username: "tradeeqx_b", password: "test1234", displayName: "信封碰撞乙"});
+  const gamma = service.register({username: "tradeeqx_c", password: "test1234", displayName: "信封碰撞丙"});
+  seedBackpackEquipment(service, alpha.session.token);
+  for (const [token, cellX] of [[alpha.session.token, 10], [beta.session.token, 11], [gamma.session.token, 9]]) {
+    assert.equal(service.updatePlayerPosition(token, {
+      mapId: "firebud_training_yard", cellX, cellY: 10, facing: "east", moving: false,
+    }).ok, true);
+  }
+  collisionMode = true;
+  const first = service.proposeTrade(alpha.session.token, {
+    targetUsername: "tradeeqx_b",
+    items: [{itemId: "weapon_wooden_club", count: 1, instanceId: "equip_transfer_guard_1", sourceSlotIndex: 0}],
+  });
+  assert.equal(first.ok, true);
+  assert.equal(service.acceptTrade(beta.session.token, {tradeId: first.trade.tradeId}).ok, true);
+  const afterFirst = service.snapshot();
+  assert.deepEqual(Object.keys(afterFirst.consumedEquipmentEnvelopes), ["eqx_trade_fixed"]);
+  const betaProfile = snapshotProfileDocument(afterFirst, beta.account.accountId).profile;
+  const betaInstance = Object.values(betaProfile.equipmentInstances).find((entry) => entry.itemId === "weapon_wooden_club");
+  const betaSourceSlotIndex = betaProfile.backpackSlots.findIndex((slot) => slot.itemId === "weapon_wooden_club");
+  assert.ok(betaInstance);
+  assert.equal(betaSourceSlotIndex >= 0, true);
+  const second = service.proposeTrade(beta.session.token, {
+    targetUsername: "tradeeqx_c",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: betaInstance.instanceId,
+      sourceSlotIndex: betaSourceSlotIndex,
+    }],
+  });
+  assert.equal(second.ok, true);
+  const betaBefore = service.getProfile(beta.session.token);
+  const gammaBefore = service.getProfile(gamma.session.token);
+  const ledgerBefore = structuredClone(service.snapshot().consumedEquipmentEnvelopes);
+  const collision = service.acceptTrade(gamma.session.token, {tradeId: second.trade.tradeId});
+  assert.equal(collision.ok, false);
+  assert.equal(collision.code, "trade_equipment_envelope_id_unavailable");
+  assert.deepEqual(service.getProfile(beta.session.token), betaBefore);
+  assert.deepEqual(service.getProfile(gamma.session.token), gammaBefore);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes, ledgerBefore);
+  assert.ok(service.snapshot().tradeOffers[second.trade.tradeId]);
+});
+
+test("trade sender capacity bounds runtime offers without persistent writes", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({store});
+  const sender = service.register({username: "tradecap_sender", password: "test1234", displayName: "报价上限号"});
+  seedBackpack(service, sender.session.token, [{itemId: "item_meat_small", count: 1}]);
+  assert.equal(service.updatePlayerPosition(sender.session.token, {
+    mapId: "firebud_training_yard", cellX: 10, cellY: 10, facing: "east", moving: false,
+  }).ok, true);
+  const targets = [];
+  for (let index = 0; index < 9; index += 1) {
+    const target = service.register({
+      username: `tradecap_target_${index}`,
+      password: "test1234",
+      displayName: `上限目标${index}`,
+    });
+    assert.equal(service.updatePlayerPosition(target.session.token, {
+      mapId: "firebud_training_yard", cellX: 11, cellY: 10, facing: "west", moving: false,
+    }).ok, true);
+    targets.push(target);
+  }
+  const writesBeforeOffers = store.counts.saves;
+  for (const target of targets.slice(0, 8)) {
+    const proposal = service.proposeTrade(sender.session.token, {
+      targetUsername: target.account.username,
+      items: [{itemId: "item_meat_small", count: 1}],
+    });
+    assert.equal(proposal.ok, true);
+  }
+  const rejected = service.proposeTrade(sender.session.token, {
+    targetUsername: targets[8].account.username,
+    items: [{itemId: "item_meat_small", count: 1}],
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "trade_offer_sender_limit");
+  assert.equal(Object.keys(service.snapshot().tradeOffers).length, 8);
+  assert.equal(store.counts.saves, writesBeforeOffers);
 });

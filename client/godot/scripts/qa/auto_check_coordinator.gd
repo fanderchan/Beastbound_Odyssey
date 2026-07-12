@@ -11078,6 +11078,42 @@ func _run_auto_equipment_instance_check() -> void:
 	var request_body = JSON.parse_string(str(request_spec.get("body", "")))
 	var request_items = (request_body as Dictionary).get("items", []) if request_body is Dictionary else []
 	var request_item := ((request_items as Array)[0] as Dictionary) if request_items is Array and not (request_items as Array).is_empty() and (request_items as Array)[0] is Dictionary else {}
+	var trade_request_source: Array[Dictionary] = [{
+		"itemId": "weapon_wooden_club",
+		"count": 99,
+		"instanceId": "equip_000002",
+		"sourceSlotIndex": 1,
+		"equipmentEnvelope": {"mustNeverSend": true},
+		"stateFingerprint": "mustNeverSend",
+		"instanceState": {"mustNeverSend": true},
+		"provenance": {"mustNeverSend": true},
+	}]
+	var trade_propose_spec := ServerAuthClientModel.trade_propose_request(
+		"http://127.0.0.1:1234", "token", "trade_peer", trade_request_source, 7
+	)
+	var trade_accept_spec := ServerAuthClientModel.trade_accept_request(
+		"http://127.0.0.1:1234", "token", "trade_runtime_1", trade_request_source, 3
+	)
+	var trade_propose_body = JSON.parse_string(str(trade_propose_spec.get("body", "")))
+	var trade_accept_body = JSON.parse_string(str(trade_accept_spec.get("body", "")))
+	var trade_propose_items = (trade_propose_body as Dictionary).get("items", []) if trade_propose_body is Dictionary else []
+	var trade_accept_items = (trade_accept_body as Dictionary).get("items", []) if trade_accept_body is Dictionary else []
+	var trade_propose_item := ((trade_propose_items as Array)[0] as Dictionary) if trade_propose_items is Array and not (trade_propose_items as Array).is_empty() and (trade_propose_items as Array)[0] is Dictionary else {}
+	var trade_accept_item := ((trade_accept_items as Array)[0] as Dictionary) if trade_accept_items is Array and not (trade_accept_items as Array).is_empty() and (trade_accept_items as Array)[0] is Dictionary else {}
+	var trade_request_whitelist_ok := (
+		trade_propose_item == trade_accept_item
+		and trade_propose_item.size() == 4
+		and str(trade_propose_item.get("itemId", "")) == "weapon_wooden_club"
+		and int(trade_propose_item.get("count", 0)) == 1
+		and str(trade_propose_item.get("instanceId", "")) == "equip_000002"
+		and int(trade_propose_item.get("sourceSlotIndex", -1)) == 1
+		and not trade_propose_item.has("equipmentEnvelope")
+		and not trade_propose_item.has("stateFingerprint")
+		and not trade_propose_item.has("instanceState")
+		and not trade_propose_item.has("provenance")
+		and int((trade_propose_body as Dictionary).get("stoneCoins", -1)) == 7
+		and int((trade_accept_body as Dictionary).get("stoneCoins", -1)) == 3
+	)
 	var request_whitelist_ok := (
 		request_item.size() == 5
 		and str(request_item.get("itemId", "")) == "weapon_wooden_club"
@@ -11088,6 +11124,7 @@ func _run_auto_equipment_instance_check() -> void:
 		and not request_item.has("envelope")
 		and not request_item.has("instanceState")
 		and not request_item.has("provenance")
+		and trade_request_whitelist_ok
 	)
 	var saved_profile: Dictionary = host.player_profile.duplicate(true)
 	var saved_session: Dictionary = host.current_account_session.duplicate(true)

@@ -475,7 +475,7 @@ static func trade_propose_request(base_url: String, session_token: String, targe
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"targetUsername": target_username,
-			"items": items,
+			"items": trade_transfer_request_items(items),
 			"stoneCoins": maxi(0, stone_coins),
 		}),
 	}
@@ -488,10 +488,36 @@ static func trade_accept_request(base_url: String, session_token: String, trade_
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
 			"tradeId": trade_id,
-			"items": items,
+			"items": trade_transfer_request_items(items),
 			"stoneCoins": maxi(0, stone_coins),
 		}),
 	}
+
+
+static func trade_transfer_request_items(items: Array[Dictionary]) -> Array[Dictionary]:
+	# Legacy direct trade stays hidden from normal UI.  Compatibility callers may
+	# select a concrete backpack instance, but never send an envelope, fingerprint,
+	# instance state, or provenance back to the authority server.
+	var result: Array[Dictionary] = []
+	for raw_item in items:
+		var item_id := str(raw_item.get("itemId", "")).strip_edges()
+		if item_id == "":
+			continue
+		var instance_id := str(raw_item.get("instanceId", "")).strip_edges()
+		var count := 1 if instance_id != "" else maxi(0, int(raw_item.get("count", 0)))
+		if count <= 0:
+			continue
+		var item := {
+			"itemId": item_id,
+			"count": count,
+		}
+		if instance_id != "":
+			item["instanceId"] = instance_id
+			var source_slot_index := int(raw_item.get("sourceSlotIndex", -1))
+			if source_slot_index >= 0:
+				item["sourceSlotIndex"] = source_slot_index
+		result.append(item)
+	return result
 
 
 static func trade_state_request(base_url: String, session_token: String) -> Dictionary:
