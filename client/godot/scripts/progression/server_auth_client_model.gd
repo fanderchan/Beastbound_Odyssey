@@ -1,6 +1,7 @@
 extends RefCounted
 
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
+const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
 
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
@@ -430,6 +431,15 @@ static func gm_command_request(base_url: String, session_token: String, command_
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify(payload),
 	})
+
+
+static func gm_tools_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/gm/tools" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
 
 
 static func shop_transaction_request(base_url: String, session_token: String, mode: String, shop_id: String, item_id: String, amount: int) -> Dictionary:
@@ -1589,6 +1599,68 @@ static func parse_gm_command_response(response_code: int, body: PackedByteArray)
 	parsed["auditId"] = str(response.get("auditId", ""))
 	parsed.erase("response")
 	return parsed
+
+
+static func parse_gm_tools_response(response_code: int, body: PackedByteArray, now_sec: int = -1) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "GM 授权状态读取失败。")
+	if not bool(parsed.get("ok", false)):
+		parsed.erase("response")
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	var allowed_response_keys := [
+		"ok",
+		"schemaVersion",
+		"effectiveRole",
+		"policyId",
+		"expiresAt",
+		"commandIds",
+		"protocolVersion",
+		"minClientProtocolVersion",
+		"maxClientProtocolVersion",
+		"serverVersion",
+		"hotUpdate",
+	]
+	for key in response.keys():
+		if not allowed_response_keys.has(str(key)):
+			return {"ok": false, "message": "服务器授权状态无法确认，请重新初始化后再试。", "code": "gm_tools_invalid"}
+	if (
+		not GmQaAccessPolicyModel.integer_value_is_exact(response.get("schemaVersion", null), 2)
+		or str(response.get("effectiveRole", "")) != "gm"
+		or not (response.get("policyId", null) is String)
+		or str(response.get("policyId", "")) != GmQaAccessPolicyModel.policy_id()
+		or not (response.get("expiresAt", null) is String)
+		or not GmQaAccessPolicyModel.future_expiry_is_valid(str(response.get("expiresAt", "")), now_sec)
+		or not (response.get("commandIds", null) is Array)
+	):
+		return {"ok": false, "message": "服务器授权状态无法确认，请重新初始化后再试。", "code": "gm_tools_invalid"}
+	var seen: Array[String] = []
+	for raw_command_id in response.get("commandIds", []) as Array:
+		if not (raw_command_id is String):
+			return {"ok": false, "message": "服务器授权状态无法确认，请重新初始化后再试。", "code": "gm_tools_invalid"}
+		var command_id := str(raw_command_id)
+		if (
+			command_id == ""
+			or command_id == "*"
+			or command_id != command_id.strip_edges().to_lower()
+			or seen.has(command_id)
+			or not GmQaAccessPolicyModel.server_command_ids().has(command_id)
+		):
+			return {"ok": false, "message": "服务器授权状态无法确认，请重新初始化后再试。", "code": "gm_tools_invalid"}
+		seen.append(command_id)
+	var ordered_commands: Array[String] = []
+	for command_id in GmQaAccessPolicyModel.server_command_ids():
+		if seen.has(command_id):
+			ordered_commands.append(command_id)
+	return {
+		"ok": true,
+		"message": "",
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": str(response.get("expiresAt", "")),
+		"expiresAtUnix": GmQaAccessPolicyModel.expires_at_unix(str(response.get("expiresAt", ""))),
+		"commandIds": ordered_commands,
+	}
 
 
 static func parse_hang_session_response(response_code: int, body: PackedByteArray) -> Dictionary:

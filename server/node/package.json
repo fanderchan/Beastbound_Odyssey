@@ -8,6 +8,7 @@
     "start": "node src/http-server.js",
     "test": "node --test",
     "ops": "node scripts/server-ops.js",
+    "qa:gm": "node scripts/local-qa-gm-account.js",
     "mysql:smoke": "node scripts/mysql-live-smoke.js",
     "profiles:migrate": "node scripts/migrate-mysql-profiles.js",
     "seed:demo": "node scripts/seed-demo-data.js"

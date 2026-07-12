@@ -1,5 +1,7 @@
 extends RefCounted
 
+const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
+
 
 static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
@@ -33,6 +35,41 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	entries.append({"id": "open_rebirth_preview", "label": "转生预览", "description": "查看人物转生资格和能力预览"})
 	entries.append({"id": "open_codex", "label": "图鉴", "description": "已见、可捕、捕获记录"})
 	return entries
+
+
+static func client_command_ids() -> Array[String]:
+	return GmQaAccessPolicyModel.client_command_ids()
+
+
+static func server_authoritative_command_ids() -> Array[String]:
+	return GmQaAccessPolicyModel.server_authoritative_client_command_ids()
+
+
+static func extra_command_ids() -> Array[String]:
+	var entry_ids := entry_command_ids()
+	var result: Array[String] = []
+	for command_id in client_command_ids():
+		if not entry_ids.has(command_id):
+			result.append(command_id)
+	return result
+
+
+static func entry_command_ids() -> Array[String]:
+	var result: Array[String] = []
+	for entry in entry_definitions(1):
+		var command_id := str(entry.get("id", "")).strip_edges()
+		if command_id != "":
+			result.append(command_id)
+	return result
+
+
+static func validation_errors() -> Array[String]:
+	var errors := GmQaAccessPolicyModel.validation_errors()
+	var combined := entry_command_ids()
+	combined.append_array(extra_command_ids())
+	if combined != client_command_ids():
+		errors.append("GM/QA 客户端入口与共享授权策略不一致。")
+	return errors
 
 
 static func command_summary_text() -> String:

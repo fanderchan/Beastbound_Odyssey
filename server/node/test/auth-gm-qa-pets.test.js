@@ -45,7 +45,13 @@ const SUMMARY_KEYS = [
 function registerGm(service, username, commandIds = [COMMAND_ID]) {
   const registered = service.register({username, password: "test1234", displayName: username});
   assert.equal(registered.ok, true);
-  assert.equal(service.grantGm({username, commandIds, grantedBy: "gm_qa_pets_test"}).ok, true);
+  assert.equal(service.grantGm({
+    username,
+    commandIds,
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_qa_pets_test",
+  }).ok, true);
   return registered;
 }
 
@@ -129,12 +135,16 @@ test("GM QA pet samples require current-account authorization and the exact fixe
   assert.equal(service.grantGm({
     username: "qapetplayer",
     commandIds: ["gm_map"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_pets_test",
   }).ok, true);
   assert.equal(service.prepareGmQaPetSamples(player.session.token, {manifestId: MANIFEST_ID}).code, "command_denied");
   assert.equal(service.grantGm({
     username: "qapetplayer",
     commandIds: [COMMAND_ID],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_pets_test",
   }).ok, true);
 
@@ -155,10 +165,21 @@ test("GM QA pet samples require current-account authorization and the exact fixe
   assert.equal(after.profileSummary.profileRevision, before.profileSummary.profileRevision);
   assert.deepEqual(after.profile, before.profile);
 
-  const wildcard = registerGm(service, "qapetwildcard", ["*"]);
-  const allowed = service.prepareGmQaPetSamples(wildcard.session.token, {manifestId: MANIFEST_ID});
-  assert.equal(allowed.ok, true);
-  assert.equal(allowed.result.summary.sampleCount, QA_PET_SAMPLE_COUNT);
+  const wildcard = service.register({username: "qapetwildcard", password: "test1234"});
+  assert.equal(wildcard.ok, true);
+  const wildcardGrant = service.grantGm({
+    username: "qapetwildcard",
+    commandIds: ["*"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_qa_pets_test",
+  });
+  assert.equal(wildcardGrant.ok, false);
+  assert.equal(wildcardGrant.code, "gm_grant_commands_invalid");
+  assert.equal(
+    service.prepareGmQaPetSamples(wildcard.session.token, {manifestId: MANIFEST_ID}).code,
+    "gm_denied",
+  );
 });
 
 test("fixed manifest creates ten random Lv1 blue dragons and three canonical Lv20 comparisons once", () => {

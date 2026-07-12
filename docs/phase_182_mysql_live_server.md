@@ -80,7 +80,9 @@ BEASTBOUND_MYSQL_ROOT_PASSWORD='...' node server/node/scripts/setup-local-mysql.
 Migrate the local GM account and its profile:
 
 ```sh
-BEASTBOUND_MIGRATE_PASSWORD='...' node server/node/scripts/migrate-local-userdata-to-mysql.js --username auth1373
+read -s MIGRATE_PASSWORD
+printf '%s\n' "$MIGRATE_PASSWORD" | node server/node/scripts/migrate-local-userdata-to-mysql.js --username auth1373 --password-stdin
+unset MIGRATE_PASSWORD
 ```
 
 Smoke check the migrated account:
@@ -102,10 +104,10 @@ With `BEASTBOUND_AUTH_HOST=0.0.0.0`, friends on the same LAN can connect to:
 http://<your-lan-ip>:8787
 ```
 
-The Godot client can still be launched with an explicit server URL and login:
+The Godot client can still be launched with an explicit server URL. Enter the account and password in the client login panel; do not place a password in startup arguments:
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://<your-lan-ip>:8787 --login auth1373 '...'
+godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://<your-lan-ip>:8787
 ```
 
 ## Operational Notes

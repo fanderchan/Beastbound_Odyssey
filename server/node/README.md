@@ -41,7 +41,9 @@ The repeatable local setup flow is:
 
 ```sh
 BEASTBOUND_MYSQL_ROOT_PASSWORD='...' node scripts/setup-local-mysql.js
-BEASTBOUND_MIGRATE_PASSWORD='...' node scripts/migrate-local-userdata-to-mysql.js --username auth1373
+read -s MIGRATE_PASSWORD
+printf '%s\n' "$MIGRATE_PASSWORD" | node scripts/migrate-local-userdata-to-mysql.js --username auth1373 --password-stdin
+unset MIGRATE_PASSWORD
 BEASTBOUND_SMOKE_PASSWORD='...' node scripts/mysql-live-smoke.js --username auth1373
 ```
 

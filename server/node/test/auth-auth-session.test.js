@@ -35,6 +35,9 @@ const {
   migrateProfile,
 } = require("../src/auth/profile-migrations");
 
+const TEST_GM_POLICY_ID = "test_explicit_gm_v1";
+const TEST_GM_EXPIRES_AT = "2099-01-01T00:00:00.000Z";
+
 test("register/login/session keeps players away from GM tools", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
 
@@ -271,16 +274,36 @@ test("GM grants are command-scoped and audited", () => {
   const grant = service.grantGm({
     "username": "gmtester",
     "commandIds": ["gm_map"],
+    "policyId": TEST_GM_POLICY_ID,
+    "expiresAt": TEST_GM_EXPIRES_AT,
     "grantedBy": "unit_test",
   });
   assert.equal(grant.ok, true);
+  assert.equal(grant.gmGrant.policyId, TEST_GM_POLICY_ID);
+  assert.equal(grant.gmGrant.expiresAt, TEST_GM_EXPIRES_AT);
+  assert.deepEqual(grant.commandGrants.map((row) => ({
+    commandId: row.commandId,
+    policyId: row.policyId,
+    expiresAt: row.expiresAt,
+  })), [{
+    commandId: "gm_map",
+    policyId: TEST_GM_POLICY_ID,
+    expiresAt: TEST_GM_EXPIRES_AT,
+  }]);
 
   const session = service.getSession(token);
   assert.equal(session.ok, true);
   assert.equal(session.session.effectiveRole, "gm");
 
   const tools = service.listGmTools(token, DEFAULT_COMMAND_CATALOG);
-  assert.deepEqual(tools.commandIds, ["gm_map"]);
+  assert.deepEqual(tools, {
+    ok: true,
+    effectiveRole: "gm",
+    commandIds: ["gm_map"],
+    policyId: TEST_GM_POLICY_ID,
+    expiresAt: TEST_GM_EXPIRES_AT,
+    schemaVersion: 2,
+  });
 
   const allowed = service.authorizeGmCommand({"token": token, "commandId": "gm_map"});
   assert.equal(allowed.ok, true);
@@ -292,6 +315,149 @@ test("GM grants are command-scoped and audited", () => {
   const snapshot = service.snapshot();
   assert.equal(snapshot.gmCommandAudit.length, 3);
   assert.deepEqual(snapshot.gmCommandAudit.map((row) => row.ok), [false, true, false]);
+});
+
+test("new GM grants reject implicit, wildcard, malformed, and expired authority atomically", () => {
+  const nowMs = Date.parse("2026-07-12T08:00:00.000Z");
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => nowMs,
+  });
+  const registered = service.register({username: "gmgrantstrict", password: "test1234"});
+  assert.equal(registered.ok, true);
+  const before = service.snapshot();
+  const invalidPayloads = [
+    {policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: "gm_map", policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: [], policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: ["*"], policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: ["gm_map", ""], policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: ["gm_map"], policyId: "", expiresAt: "2026-07-12T09:00:00.000Z"},
+    {commandIds: ["gm_map"], policyId: TEST_GM_POLICY_ID},
+    {commandIds: ["gm_map"], policyId: TEST_GM_POLICY_ID, expiresAt: "not-a-time"},
+    {commandIds: ["gm_map"], policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T09:00:00Z"},
+    {commandIds: ["gm_map"], policyId: TEST_GM_POLICY_ID, expiresAt: "2026-07-12T08:00:00.000Z"},
+  ];
+  for (const payload of invalidPayloads) {
+    const denied = service.grantGm({
+      username: "gmgrantstrict",
+      grantedBy: "strict_grant_test",
+      ...payload,
+    });
+    assert.equal(denied.ok, false);
+    assert.deepEqual(service.snapshot(), before);
+  }
+
+  const granted = service.grantGm({
+    username: "gmgrantstrict",
+    commandIds: [" GM_MAP ", "gm_map", "GM_LEVEL_PET"],
+    policyId: " TEST_EXPLICIT_GM_V1 ",
+    expiresAt: "2026-07-12T09:00:00.000Z",
+    grantedBy: "strict_grant_test",
+  });
+  assert.equal(granted.ok, true);
+  assert.equal(granted.gmGrant.policyId, TEST_GM_POLICY_ID);
+  assert.equal(granted.gmGrant.expiresAt, "2026-07-12T09:00:00.000Z");
+  assert.deepEqual(granted.commandGrants.map((row) => row.commandId), ["gm_map", "gm_level_pet"]);
+  assert.equal(granted.commandGrants.every((row) => (
+    row.policyId === TEST_GM_POLICY_ID
+    && row.expiresAt === granted.gmGrant.expiresAt
+    && row.schemaVersion === 2
+  )), true);
+});
+
+test("GM authority fails closed on expiry and user or command binding drift", () => {
+  let nowMs = Date.parse("2026-07-12T08:00:00.000Z");
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store, now: () => nowMs});
+  const registered = service.register({username: "gmbindingstrict", password: "test1234"});
+  const token = registered.session.token;
+  assert.equal(service.grantGm({
+    username: "gmbindingstrict",
+    commandIds: ["gm_map"],
+    policyId: TEST_GM_POLICY_ID,
+    expiresAt: "2026-07-12T09:00:00.000Z",
+    grantedBy: "strict_binding_test",
+  }).ok, true);
+  assert.equal(service.authorizeGmCommand({token, commandId: "gm_map"}).ok, true);
+
+  const authoritative = service.snapshot();
+  const accountId = registered.account.accountId;
+  const denialFrom = (mutate) => {
+    const candidate = structuredClone(authoritative);
+    mutate(candidate, accountId);
+    const candidateService = createAuthService({
+      store: createMemoryAuthStore(candidate),
+      now: () => nowMs,
+    });
+    return {
+      access: candidateService.authorizeGmCommand({token, commandId: "gm_map"}),
+      tools: candidateService.listGmTools(token, DEFAULT_COMMAND_CATALOG),
+    };
+  };
+
+  for (const mutate of [
+    (candidate) => { candidate.accounts.gmbindingstrict.username = "GmBindingStrict"; },
+    (candidate, id) => { candidate.gmUserGrants[id].accountId = "acc_wrong"; },
+    (candidate, id) => { candidate.gmUserGrants[id].username = "wrong_user"; },
+    (candidate, id) => { candidate.gmUserGrants[id].enabled = false; },
+    (candidate, id) => { candidate.gmUserGrants[id].schemaVersion = 1; },
+    (candidate, id) => { candidate.gmUserGrants[id].expiresAt = "not-a-time"; },
+  ]) {
+    const denied = denialFrom(mutate);
+    assert.equal(denied.access.code, "gm_denied");
+    assert.equal(denied.tools.code, "gm_denied");
+  }
+
+  for (const mutate of [
+    (candidate, id) => { candidate.gmCommandGrants[id][0].accountId = "acc_wrong"; },
+    (candidate, id) => { candidate.gmCommandGrants[id][0].enabled = false; },
+    (candidate, id) => { candidate.gmCommandGrants[id][0].schemaVersion = 1; },
+    (candidate, id) => { candidate.gmCommandGrants[id][0].expiresAt = "2026-07-12T08:30:00.000Z"; },
+    (candidate, id) => { candidate.gmCommandGrants[id][0].policyId = "different_policy_v1"; },
+    (candidate, id) => { candidate.gmCommandGrants[id].push({
+      ...candidate.gmCommandGrants[id][0],
+      commandId: "*",
+    }); },
+  ]) {
+    const denied = denialFrom(mutate);
+    assert.equal(denied.access.code, "command_denied");
+    assert.deepEqual(denied.tools.commandIds, []);
+  }
+
+  nowMs = Date.parse("2026-07-12T09:00:00.000Z");
+  assert.equal(service.authorizeGmCommand({token, commandId: "gm_map"}).code, "gm_denied");
+  assert.equal(service.listGmTools(token, DEFAULT_COMMAND_CATALOG).code, "gm_denied");
+  assert.equal(service.getSession(token).session.effectiveRole, "player");
+});
+
+test("legacy GM grants without policy or expiry stay readable but never authorize", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "gmlegacyreadonly", password: "test1234"});
+  const snapshot = service.snapshot();
+  const accountId = registered.account.accountId;
+  snapshot.accounts.gmlegacyreadonly.role = "gm";
+  snapshot.gmUserGrants[accountId] = {
+    accountId,
+    username: "gmlegacyreadonly",
+    enabled: true,
+    expiresAt: null,
+    schemaVersion: 1,
+  };
+  snapshot.gmCommandGrants[accountId] = [{
+    accountId,
+    commandId: "gm_map",
+    enabled: true,
+    schemaVersion: 1,
+  }];
+  const legacyStore = createMemoryAuthStore(snapshot);
+  const restarted = createAuthService({store: legacyStore});
+  const before = restarted.snapshot();
+  assert.deepEqual(before.gmUserGrants[accountId], snapshot.gmUserGrants[accountId]);
+  assert.deepEqual(before.gmCommandGrants[accountId], snapshot.gmCommandGrants[accountId]);
+  assert.equal(restarted.getSession(registered.session.token).session.effectiveRole, "player");
+  assert.equal(restarted.listGmTools(registered.session.token, DEFAULT_COMMAND_CATALOG).code, "gm_denied");
+  assert.deepEqual(restarted.snapshot(), before);
 });
 
 test("server restart recovers sessions without stale online positions", () => {

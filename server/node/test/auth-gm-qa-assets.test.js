@@ -56,7 +56,13 @@ const equipmentCatalog = loadBattleEquipmentCatalog();
 function registerGm(service, username, commandIds = [COMMAND_ID]) {
   const registered = service.register({username, password: "test1234", displayName: username});
   assert.equal(registered.ok, true);
-  assert.equal(service.grantGm({username, commandIds, grantedBy: "gm_qa_assets_test"}).ok, true);
+  assert.equal(service.grantGm({
+    username,
+    commandIds,
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_qa_assets_test",
+  }).ok, true);
   return registered;
 }
 
@@ -139,12 +145,16 @@ test("GM QA asset command requires current-account authorization and exact fixed
   assert.equal(service.grantGm({
     username: "qaassetplayer",
     commandIds: ["gm_map"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_assets_test",
   }).ok, true);
   assert.equal(service.prepareGmQaAssets(player.session.token, {manifestId: MANIFEST_ID}).code, "command_denied");
   assert.equal(service.grantGm({
     username: "qaassetplayer",
     commandIds: [COMMAND_ID],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_assets_test",
   }).ok, true);
 

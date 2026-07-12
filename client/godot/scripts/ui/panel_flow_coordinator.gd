@@ -74,7 +74,6 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples", "gm_prepare_qa_assets"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
 const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
@@ -10214,6 +10213,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	var previous_server_token = _server_profile_token()
 	var next_server_token = str(session.get("serverSessionToken", "")).strip_edges()
 	if previous_server_token != next_server_token:
+		host._server_sync().clear_gm_tool_access()
 		server_event_last_seq = 0
 		server_event_seen.clear()
 		server_battle_pending_closed_room.clear()
@@ -10273,6 +10273,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	if _is_server_account_session():
 		_start_server_event_stream_if_needed()
 		_start_online_position_sync_if_needed()
+		host._server_sync().request_gm_tool_access()
 		_request_party_state()
 		_request_server_profile_pull()
 		_request_server_battle_state_restore()
@@ -10426,15 +10427,18 @@ func _refresh_account_panel() -> void:
 	var profile_line = "档案：等待服务器绑定"
 	if AUTH_SERVER_ONLY or source == ServerAuthClientModel.SOURCE_SERVER:
 		var summary = current_account_session.get("serverProfileSummary", {}) as Dictionary if current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
-		var player_id = str(summary.get("playerId", "")).strip_edges()
 		var revision = int(summary.get("profileRevision", 0))
 		var sync_label = "同步中" if server_profile_sync_state == "loading" or server_profile_sync_state == "uploading" else ("冲突" if server_profile_sync_state == "conflict" else "已连接")
-		profile_line = "档案：%s r%d %s" % [player_id if player_id != "" else "服务器绑定", revision, sync_label]
-	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s\n登出会回到记录点；原地登出会保留当前位置。" % [
+		profile_line = "档案：r%d %s" % [revision, sync_label]
+	var access_line := ""
+	if str(current_account_session.get("role", "")) == AccountAuthModel.ROLE_GM or str(current_account_session.get("effectiveRole", "")) == AccountAuthModel.EFFECTIVE_ROLE_GM:
+		access_line = "\n%s" % GmToolRuntimeModel.safe_access_text(current_account_session, host.gm_tool_server_access_state)
+	account_info_label.text = "当前角色：%s\n账号：%s\n通道：%s\n%s%s\n登出会回到记录点；原地登出会保留当前位置。" % [
 		display_name,
 		username if username != "" else "-",
 		source_label,
 		profile_line,
+		access_line,
 	]
 
 func _logout_to_record_point() -> void:
@@ -10473,6 +10477,7 @@ func _switch_account_to_login(save_before_logout: bool = true) -> void:
 			host._flush_profile_save_now()
 			host._save_player_profile_now()
 	account_authenticated = false
+	host._server_sync().clear_gm_tool_access()
 	current_account_session = {}
 	server_profile_sync_state = "off"
 	server_profile_sync_pending_kind = ""
@@ -20804,6 +20809,12 @@ func _open_qa_panel() -> void:
 		return
 	if battle_active:
 		return
+	if (
+		_is_server_account_session()
+		and not host.gm_tool_server_access_request_pending
+		and not GmToolRuntimeModel.server_access_snapshot_is_valid(current_account_session, host.gm_tool_server_access_state)
+	):
+		host._server_sync().request_gm_tool_access()
 	host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
@@ -21039,17 +21050,35 @@ func _refresh_qa_panel() -> void:
 		if qa_active_status_command_id == GmQaAssetsClientModel.COMMAND_ID:
 			qa_active_status_command_id = ""
 	if qa_profile_identity_label != null:
-		qa_profile_identity_label.text = GmQaProfileClientModel.identity_text(current_account_session)
+		qa_profile_identity_label.text = "%s · %s" % [
+			GmQaProfileClientModel.identity_text(current_account_session),
+			GmToolRuntimeModel.safe_access_text(current_account_session, host.gm_tool_server_access_state),
+		]
 	QaPanelPresenter.rebuild_entry_buttons(
 		qa_entry_container,
 		qa_entry_buttons,
 		_qa_entry_definitions(),
 		Callable(self, "_on_qa_entry_pressed")
 	)
+	for command_id in _gm_allowed_command_ids():
+		var command_button := qa_entry_buttons.get(command_id, null) as Button
+		if command_button == null:
+			continue
+		var command_allowed := GmToolRuntimeModel.command_available(
+			current_account_session,
+			command_id,
+			_gm_allowed_command_ids(),
+			host.gm_tool_server_access_state
+		)
+		command_button.disabled = not command_allowed
+		if not command_allowed:
+			command_button.tooltip_text = "当前测试授权尚未包含此功能。"
 	_refresh_qa_pet_tool_controls()
 	var prepare_button := qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	if prepare_button != null:
 		prepare_button.disabled = (
+			prepare_button.disabled
+			or
 			profile_action_request_pending
 			or bool(qa_profile_status_state.get("pending", false))
 			or not _is_server_account_session()
@@ -21058,6 +21087,8 @@ func _refresh_qa_panel() -> void:
 	var prepare_pet_samples_button := qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
 	if prepare_pet_samples_button != null:
 		prepare_pet_samples_button.disabled = (
+			prepare_pet_samples_button.disabled
+			or
 			profile_action_request_pending
 			or bool(qa_pet_samples_status_state.get("pending", false))
 			or not _is_server_account_session()
@@ -21066,6 +21097,8 @@ func _refresh_qa_panel() -> void:
 	var prepare_assets_button := qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
 	if prepare_assets_button != null:
 		prepare_assets_button.disabled = (
+			prepare_assets_button.disabled
+			or
 			_qa_assets_request_pending()
 			or not _is_server_account_session()
 		)
@@ -21112,6 +21145,26 @@ func _refresh_qa_pet_tool_controls() -> void:
 	)
 	qa_pet_growth_profile_id = str(result.get("profileId", qa_pet_growth_profile_id))
 	qa_pet_level_instance_id = str(result.get("instanceId", qa_pet_level_instance_id))
+	if qa_pet_grant_button != null:
+		qa_pet_grant_button.disabled = (
+			qa_pet_grant_button.disabled
+			or not GmToolRuntimeModel.command_available(
+				current_account_session,
+				"gm_grant_pet",
+				_gm_allowed_command_ids(),
+				host.gm_tool_server_access_state
+			)
+		)
+	if qa_pet_level_up_button != null:
+		qa_pet_level_up_button.disabled = (
+			qa_pet_level_up_button.disabled
+			or not GmToolRuntimeModel.command_available(
+				current_account_session,
+				"gm_level_pet",
+				_gm_allowed_command_ids(),
+				host.gm_tool_server_access_state
+			)
+		)
 	if profile_action_request_pending:
 		if qa_pet_grant_button != null:
 			qa_pet_grant_button.disabled = true
@@ -21131,11 +21184,7 @@ func _qa_command_summary_text() -> String:
 	return QaPanelCatalog.command_summary_text()
 
 func _gm_allowed_command_ids() -> Array[String]:
-	var command_ids = GmToolRuntimeModel.command_ids_from_entries(_qa_entry_definitions())
-	for command_id in GM_TOOL_EXTRA_COMMAND_IDS:
-		if not command_ids.has(command_id):
-			command_ids.append(command_id)
-	return command_ids
+	return QaPanelCatalog.client_command_ids()
 
 func _gm_pet_command_route() -> String:
 	return _gm_pet_command_route_for_state(_is_server_account_session(), auth_auto_bypass)
@@ -21153,11 +21202,16 @@ func _authorize_gm_command(command_id: String) -> bool:
 		return false
 	if auth_auto_bypass:
 		return true
-	var result = GmToolRuntimeModel.authorize_command(current_account_session, command_id, _gm_allowed_command_ids())
+	var result = GmToolRuntimeModel.authorize_command(
+		current_account_session,
+		command_id,
+		_gm_allowed_command_ids(),
+		host.gm_tool_server_access_state
+	)
 	var ok = bool(result.get("ok", false))
 	if not ok:
 		_set_world_log_message(str(result.get("message", "当前账号没有GM权限。")))
-	var server_authoritative_command := ok and _is_server_account_session() and GM_TOOL_EXTRA_COMMAND_IDS.has(command_id)
+	var server_authoritative_command := ok and _is_server_account_session() and QaPanelCatalog.server_authoritative_command_ids().has(command_id)
 	if not server_authoritative_command:
 		GmToolRuntimeModel.audit_command(current_account_session, command_id, ok, str(result.get("message", "")))
 	return ok
@@ -21673,7 +21727,15 @@ func _add_offline_hang_settings_section() -> void:
 
 	if cached_status.is_empty() and host._server_hang_session_enabled():
 		host._request_offline_hang_status(false)
-	if GmToolRuntimeModel.session_can_open_tools(current_account_session) and host._server_hang_session_enabled():
+	if (
+		host._server_hang_session_enabled()
+		and GmToolRuntimeModel.command_available(
+			current_account_session,
+			"gm_offline_hang_config",
+			_gm_allowed_command_ids(),
+			host.gm_tool_server_access_state
+		)
+	):
 		_add_offline_hang_gm_config(cached_status.get("config", {}) as Dictionary if cached_status.get("config", {}) is Dictionary else {})
 
 

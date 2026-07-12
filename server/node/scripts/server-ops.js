@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
-const {spawn, execFileSync} = require("node:child_process");
+const {spawn, spawnSync, execFileSync} = require("node:child_process");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const serverRoot = path.resolve(repoRoot, "server/node");
@@ -197,23 +197,75 @@ function backupMysql(env) {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   const database = env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey";
   const filePath = path.resolve(backupDir, `${database}-${stamp}.sql`);
+  const partialPath = `${filePath}.partial-${process.pid}`;
+  const authOptionPath = path.resolve(localDir, `.mysqldump-auth-${process.pid}-${Date.now()}.cnf`);
   const dumpPath = process.env.BEASTBOUND_MYSQLDUMP_BIN || "mysqldump";
-  const output = execFileSync(dumpPath, [
-    "--protocol=tcp",
-    "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
-    "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
-    "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
-    `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
-    "--skip-lock-tables",
-    "--skip-add-locks",
-    "--no-tablespaces",
-    "--skip-masking-policies",
-    "--skip-add-drop-masking-policy",
-    "--set-gtid-purged=OFF",
-    database,
-  ], {"encoding": "buffer"});
-  fs.writeFileSync(filePath, output);
-  console.log(JSON.stringify({"ok": true, "backupPath": filePath, "bytes": output.length}, null, 2));
+  let outputFd = null;
+  try {
+    fs.writeFileSync(
+      authOptionPath,
+      [
+        "[client]",
+        `user=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_USER || "beastbound_app")}`,
+        `host=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_HOST || "127.0.0.1")}`,
+        `port=${mysqlPortOptionValue(env.BEASTBOUND_MYSQL_PORT)}`,
+        `password=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_PASSWORD || "")}`,
+        "protocol=tcp",
+        "",
+      ].join("\n"),
+      {"encoding": "utf8", "flag": "wx", "mode": 0o600},
+    );
+    outputFd = fs.openSync(partialPath, "wx", 0o600);
+    const result = spawnSync(dumpPath, [
+      `--defaults-extra-file=${authOptionPath}`,
+      "--skip-lock-tables",
+      "--skip-add-locks",
+      "--no-tablespaces",
+      "--skip-masking-policies",
+      "--skip-add-drop-masking-policy",
+      "--set-gtid-purged=OFF",
+      database,
+    ], {
+      env: process.env,
+      stdio: ["ignore", outputFd, "pipe"],
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    fs.fsyncSync(outputFd);
+    fs.closeSync(outputFd);
+    outputFd = null;
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.status !== 0) {
+      throw new Error(String(result.stderr || `mysqldump exited with status ${result.status}`).trim());
+    }
+    fs.renameSync(partialPath, filePath);
+    fs.chmodSync(filePath, 0o600);
+    fs.rmSync(authOptionPath, {"force": true});
+    const bytes = fs.statSync(filePath).size;
+    console.log(JSON.stringify({"ok": true, "backupPath": filePath, bytes}, null, 2));
+  } catch (error) {
+    if (outputFd !== null) {
+      try { fs.closeSync(outputFd); } catch {}
+    }
+    fs.rmSync(partialPath, {"force": true});
+    fs.rmSync(authOptionPath, {"force": true});
+    throw error;
+  }
+}
+
+function mysqlPortOptionValue(value) {
+  const port = String(value || "3306").trim();
+  return /^\d{1,5}$/.test(port) ? port : "3306";
+}
+
+function mysqlOptionFileValue(value) {
+  return `"${String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, "\\\"")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")}"`;
 }
 
 function mysqlCounts(env) {

@@ -1,6 +1,8 @@
 extends RefCounted
 
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
+const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
@@ -66,6 +68,85 @@ func server_profile_base_url() -> String:
 
 func server_profile_token() -> String:
 	return str(host.current_account_session.get("serverSessionToken", "")).strip_edges()
+
+
+func clear_gm_tool_access() -> void:
+	if host == null:
+		return
+	host.gm_tool_server_access_generation += 1
+	host.gm_tool_server_access_request_pending = false
+	host.gm_tool_server_access_state.clear()
+
+
+func request_gm_tool_access() -> void:
+	if host == null:
+		return
+	if (
+		not is_server_account_session()
+		or str(host.current_account_session.get("effectiveRole", "")) != "gm"
+	):
+		clear_gm_tool_access()
+		return
+	if host.gm_tool_server_access_request_pending:
+		return
+	var username := str(host.current_account_session.get("username", "")).strip_edges().to_lower()
+	var token := server_profile_token()
+	host.gm_tool_server_access_generation += 1
+	var generation := int(host.gm_tool_server_access_generation)
+	host.gm_tool_server_access_request_pending = true
+	host.gm_tool_server_access_state = {
+		"pending": true,
+		"username": username,
+	}
+	host._refresh_qa_panel()
+	var response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.gm_tools_request(server_profile_base_url(), token)
+	)
+	if (
+		generation != int(host.gm_tool_server_access_generation)
+		or username != str(host.current_account_session.get("username", "")).strip_edges().to_lower()
+		or token != server_profile_token()
+	):
+		return
+	host.gm_tool_server_access_request_pending = false
+	var parsed := ServerAuthClientModel.parse_gm_tools_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if bool(parsed.get("ok", false)):
+		parsed["username"] = username
+		host.gm_tool_server_access_state = parsed
+		_schedule_gm_tool_access_expiry(generation, username, str(parsed.get("expiresAt", "")))
+	else:
+		host.gm_tool_server_access_state = {
+			"ok": false,
+			"username": username,
+			"message": "服务器授权未确认，高价值操作暂不可用。",
+		}
+		if handle_session_invalid_response(parsed):
+			return
+	host._refresh_gm_visibility()
+	host._refresh_account_panel()
+	host._refresh_qa_panel()
+
+
+func _schedule_gm_tool_access_expiry(generation: int, username: String, expires_at: String) -> void:
+	var expires_at_unix := GmQaAccessPolicyModel.expires_at_unix(expires_at)
+	var remaining := expires_at_unix - int(Time.get_unix_time_from_system())
+	if remaining <= 0:
+		clear_gm_tool_access()
+		host._refresh_gm_visibility()
+		return
+	await host.get_tree().create_timer(float(remaining) + 0.05).timeout
+	if (
+		generation != int(host.gm_tool_server_access_generation)
+		or username != str(host.current_account_session.get("username", "")).strip_edges().to_lower()
+	):
+		return
+	clear_gm_tool_access()
+	host._refresh_gm_visibility()
+	host._refresh_account_panel()
+	host._refresh_qa_panel()
 
 
 func request_profile_pull() -> void:
@@ -628,6 +709,15 @@ func submit_offline_hang_action(action: String) -> Dictionary:
 
 func update_offline_hang_gm_config(config: Dictionary) -> Dictionary:
 	await host.get_tree().process_frame
+	if not GmToolRuntimeModel.command_available(
+		host.current_account_session,
+		"gm_offline_hang_config",
+		GmQaAccessPolicyModel.client_command_ids(),
+		host.gm_tool_server_access_state
+	):
+		var denied := {"ok": false, "message": "当前测试授权不包含本服参数调整。"}
+		host._set_world_log_message(str(denied.get("message", "")))
+		return denied
 	if not server_hang_session_enabled():
 		return {"ok": false, "message": "请先登录服务器。"}
 	if offline_hang_request_active:

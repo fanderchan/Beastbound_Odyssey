@@ -15,7 +15,13 @@ const {
 function registerGm(service, username, commandIds = ["gm_grant_pet", "gm_level_pet"]) {
   const registered = service.register({username, password: "test1234", displayName: username});
   assert.equal(registered.ok, true);
-  assert.equal(service.grantGm({username, commandIds, grantedBy: "gm_pet_test"}).ok, true);
+  assert.equal(service.grantGm({
+    username,
+    commandIds,
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_pet_test",
+  }).ok, true);
   return registered;
 }
 
@@ -35,6 +41,8 @@ test("GM pet commands enforce role, command grants, and exact payloads without c
   assert.equal(service.grantGm({
     username: "gmpetdeny",
     commandIds: ["gm_grant_pet"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_pet_test",
   }).ok, true);
   const beforeRevision = service.getProfile(player.session.token).profileSummary.profileRevision;
@@ -246,6 +254,8 @@ test("existing HTTP GM command paths execute pet mutations without exposing raw 
   assert.equal(service.grantGm({
     username: "httpgmpet",
     commandIds: ["gm_map", "gm_grant_pet", "gm_level_pet"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_pet_http_test",
   }).ok, true);
   const headers = {authorization: `Bearer ${gm.session.token}`};

@@ -220,6 +220,8 @@ test("GM offline hang configuration is authorized, audited, validated, and chang
   assert.equal(service.grantGm({
     username: "offlinegm",
     commandIds: ["gm_offline_hang_config"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "unit_test",
   }).ok, true);
 

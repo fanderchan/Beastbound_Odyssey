@@ -15,22 +15,23 @@ npm run ops -- backup
 
 `status` prints the LAN URL, health check result, and MySQL row counts. `backup` writes a SQL dump under `server/node/.local/backups/`, which is intentionally ignored by git.
 
-## Seeded Test Accounts
+## Test Accounts
 
 GM account:
 
 ```text
-auth1373 / test1234
+auth1373
 ```
 
 - Role: `gm`
 - Profile: Lv131, 5 rebirths, 7 pets
 - Purpose: GM tools, migration verification, high-level battle/profile testing
+- Passwords are never stored in tracked documentation. Because the historical credential was exposed, stop the backend and run `npm --prefix server/node run qa:gm -- init --rotate-password --apply`; the generated replacement is kept only in ignored `server/node/.local/qa-gm-auth1373.credentials.json` with mode `0600`. Restart the backend, then read it locally and enter that password interactively in the client.
 
 Normal account:
 
 ```text
-auth3422 / test1234
+auth3422
 ```
 
 - Role: `player`
@@ -43,15 +44,17 @@ Terminal 1:
 
 ```sh
 cd /Users/fander/projects/Beastbound_Odyssey
-godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://127.0.0.1:8787 --login auth1373 test1234
+godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://127.0.0.1:8787
 ```
 
 Terminal 2:
 
 ```sh
 cd /Users/fander/projects/Beastbound_Odyssey
-godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://127.0.0.1:8787 --login auth3422 test1234
+godot --path client/godot --scene res://scenes/Main.tscn -- --server-url http://127.0.0.1:8787
 ```
+
+Enter each account and password in the client login panel. Do not pass passwords through startup arguments, shell history, environment variables, screenshots, or chat.
 
 For another computer on the same LAN, replace `127.0.0.1` with the host Mac LAN IP shown by:
 

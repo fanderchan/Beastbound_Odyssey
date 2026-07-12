@@ -36,6 +36,8 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
+const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
+const GmToolPluginModel := preload("res://scripts/progression/gm_tool_plugin_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
@@ -74,7 +76,6 @@ const ServerAuthClientModel := preload("res://scripts/progression/server_auth_cl
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples", "gm_prepare_qa_assets"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const EQUIP_FRAG_WOOD_BASIC_ID := "equip_frag_wood_basic"
 const EQUIP_FRAG_HIDE_BASIC_ID := "equip_frag_hide_basic"
@@ -16403,6 +16404,27 @@ func _run_auto_panel_registry_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+func _gm_qa_test_expiry(offset_seconds: int = 3600) -> String:
+	var value := Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + offset_seconds)
+	return "%04d-%02d-%02dT%02d:%02d:%02d.000Z" % [
+		int(value.get("year", 0)),
+		int(value.get("month", 0)),
+		int(value.get("day", 0)),
+		int(value.get("hour", 0)),
+		int(value.get("minute", 0)),
+		int(value.get("second", 0)),
+	]
+
+
+func _write_gm_qa_test_plugin(document: Dictionary) -> bool:
+	var file := FileAccess.open(AccountAuthModel.GM_PLUGIN_PATH, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(document, "\t"))
+	file.close()
+	return true
+
+
 func _run_auto_auth_check() -> void:
 	host.profile_save_enabled = false
 	var original_store_exists = FileAccess.file_exists(AccountAuthModel.ACCOUNT_STORE_PATH)
@@ -16524,15 +16546,136 @@ func _run_auto_auth_check() -> void:
 		await host.get_tree().physics_frame
 		host.auth_password_input.release_focus()
 		text_input_blocks_movement_ok = host.player.global_position.distance_to(before_text_input_move) < 1.0
-	var plugin_install_ok = AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"])
+	var qa_username := str(GmQaAccessPolicyModel.allowed_usernames()[0])
+	var qa_expiry := _gm_qa_test_expiry()
+	var plugin_install_ok := AccountAuthModel.install_local_gm_plugin(
+		GmQaAccessPolicyModel.allowed_usernames(),
+		GmQaAccessPolicyModel.client_command_ids(),
+		qa_expiry
+	)
+	var valid_plugin := GmToolPluginModel.load_plugin()
+	var plugin_strict_matrix_ok := (
+		plugin_install_ok
+		and bool(GmToolPluginModel.inspect_plugin().get("ok", false))
+		and GmQaAccessPolicyModel.validation_errors().is_empty()
+		and QaPanelCatalog.validation_errors().is_empty()
+	)
+	var legacy_plugin := {
+		"schemaVersion": 1,
+		"enabled": true,
+		"gmUsernames": [qa_username],
+		"gmCommands": ["*"],
+	}
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(legacy_plugin) and not GmToolPluginModel.installed()
+	var malformed_plugin := valid_plugin.duplicate(true)
+	malformed_plugin["gmCommands"] = []
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(malformed_plugin) and not GmToolPluginModel.installed()
+	var wildcard_plugin := valid_plugin.duplicate(true)
+	wildcard_plugin["gmCommands"] = ["*"]
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(wildcard_plugin) and not GmToolPluginModel.installed()
+	var expired_plugin := valid_plugin.duplicate(true)
+	expired_plugin["expiresAt"] = _gm_qa_test_expiry(-60)
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(expired_plugin) and not GmToolPluginModel.installed()
+	var wrong_user_plugin := valid_plugin.duplicate(true)
+	wrong_user_plugin["gmUsernames"] = ["wrong_user"]
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(wrong_user_plugin) and not GmToolPluginModel.installed()
+	var extra_field_plugin := valid_plugin.duplicate(true)
+	extra_field_plugin["debug"] = true
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and _write_gm_qa_test_plugin(extra_field_plugin) and not GmToolPluginModel.installed()
+	plugin_install_ok = AccountAuthModel.install_local_gm_plugin(
+		GmQaAccessPolicyModel.allowed_usernames(),
+		GmQaAccessPolicyModel.client_command_ids(),
+		qa_expiry
+	)
+	plugin_strict_matrix_ok = plugin_strict_matrix_ok and plugin_install_ok
+	var full_server_access := {
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"expiresAtUnix": GmQaAccessPolicyModel.expires_at_unix(qa_expiry),
+		"commandIds": GmQaAccessPolicyModel.server_command_ids(),
+		"username": qa_username,
+	}
+	var gm_tools_spec := ServerAuthClientModel.gm_tools_request("http://127.0.0.1:8787/", "token_secret_qa")
+	var gm_tools_valid := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"commandIds": GmQaAccessPolicyModel.server_command_ids(),
+		"protocolVersion": ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
+		"minClientProtocolVersion": ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
+		"maxClientProtocolVersion": ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
+		"serverVersion": ServerAuthClientModel.CLIENT_VERSION,
+		"hotUpdate": {"required": false},
+	}).to_utf8_buffer())
+	var gm_tools_subset := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"commandIds": ["gm_map"],
+	}).to_utf8_buffer())
+	var gm_tools_wildcard := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"commandIds": ["*"],
+	}).to_utf8_buffer())
+	var gm_tools_expired := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": _gm_qa_test_expiry(-60),
+		"commandIds": ["gm_map"],
+	}).to_utf8_buffer())
+	var gm_tools_wrong_policy := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": "wrong_policy",
+		"expiresAt": qa_expiry,
+		"commandIds": ["gm_map"],
+	}).to_utf8_buffer())
+	var gm_tools_extra_field := ServerAuthClientModel.parse_gm_tools_response(200, JSON.stringify({
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"commandIds": ["gm_map"],
+		"account": {"accountId": "must_not_project"},
+	}).to_utf8_buffer())
+	var gm_tools_contract_ok := (
+		str(gm_tools_spec.get("url", "")) == "http://127.0.0.1:8787/gm/tools"
+		and int(gm_tools_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and str(gm_tools_spec.get("body", "x")) == ""
+		and bool(gm_tools_valid.get("ok", false))
+		and (gm_tools_valid.get("commandIds", []) as Array).size() == 9
+		and bool(gm_tools_subset.get("ok", false))
+		and not bool(gm_tools_wildcard.get("ok", false))
+		and not bool(gm_tools_expired.get("ok", false))
+		and not bool(gm_tools_wrong_policy.get("ok", false))
+		and not bool(gm_tools_extra_field.get("ok", false))
+		and not gm_tools_valid.has("account")
+		and not gm_tools_valid.has("auditId")
+	)
+	host.gm_tool_server_access_state = full_server_access.duplicate(true)
 	host.current_account_session = {
 		"accountId": "account_secret_qa",
-		"username": "codex_auth_gm",
+		"username": qa_username,
 		"displayName": "测试GM",
 		"role": AccountAuthModel.ROLE_GM,
 		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_GM,
 		"gmPluginInstalled": true,
-		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username("codex_auth_gm"),
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username(qa_username),
 		"authSource": ServerAuthClientModel.SOURCE_SERVER,
 		"serverSessionToken": "token_secret_qa",
 		"serverProfileSummary": {"profileRevision": 37},
@@ -16595,7 +16738,7 @@ func _run_auto_auth_check() -> void:
 	var gm_assets_ready_button := host.qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
 	var gm_assets_ready_ok := gm_assets_ready_button != null and not gm_assets_ready_button.disabled
 	var original_gm_session: Dictionary = host.current_account_session.duplicate(true)
-	qa_panel_flow.qa_assets_status_username = "codex_auth_gm"
+	qa_panel_flow.qa_assets_status_username = qa_username
 	qa_panel_flow.qa_assets_status_state = {"pending": true}
 	qa_panel_flow.qa_active_status_command_id = GmQaAssetsClientModel.COMMAND_ID
 	host._refresh_qa_panel()
@@ -16604,7 +16747,7 @@ func _run_auto_auth_check() -> void:
 		and host.qa_detail_label.text.begins_with("[color=#d7c36a]装备与全物品测试档[/color]")
 	)
 	var switched_gm_session: Dictionary = original_gm_session.duplicate(true)
-	switched_gm_session["username"] = "codex_auth_gm_switched"
+	switched_gm_session["username"] = "auth1373_switched"
 	host.current_account_session = switched_gm_session
 	host._refresh_qa_panel()
 	var gm_assets_account_clear_ok: bool = (
@@ -16619,11 +16762,14 @@ func _run_auto_auth_check() -> void:
 	var gm_qa_assets_contract_ok := _gm_qa_assets_client_contract_ok()
 	var gm_identity_safe = (
 		gm_identity_text.find("测试GM") >= 0
-		and gm_identity_text.find("codex_auth_gm") >= 0
+		and gm_identity_text.find(qa_username) >= 0
 		and gm_identity_text.find("GM") >= 0
 		and gm_identity_text.find("档案 r37") >= 0
+		and gm_identity_text.find("授权：有效至") >= 0
+		and gm_identity_text.find("可用功能 28 项") >= 0
 		and gm_identity_text.find("account_secret_qa") < 0
 		and gm_identity_text.find("token_secret_qa") < 0
+		and gm_identity_text.find("gm_prepare") < 0
 		and gm_prepare_initial_ok
 		and gm_prepare_pending_ok
 		and gm_prepare_ready_ok
@@ -16637,37 +16783,58 @@ func _run_auto_auth_check() -> void:
 		and gm_assets_account_clear_ok
 		and gm_assets_status_prioritized_ok
 	)
-	var restricted_install_ok = AccountAuthModel.install_local_gm_plugin(["codex_auth_gm"], ["gm_map"])
+	var restricted_install_ok := plugin_install_ok
+	var restricted_server_access := full_server_access.duplicate(true)
+	restricted_server_access["commandIds"] = ["gm_map"]
+	host.gm_tool_server_access_state = restricted_server_access
 	host.current_account_session = {
-		"username": "codex_auth_gm",
+		"username": qa_username,
 		"displayName": "测试GM",
 		"role": AccountAuthModel.ROLE_GM,
 		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_GM,
 		"gmPluginInstalled": true,
-		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username("codex_auth_gm"),
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username(qa_username),
 		"authSource": ServerAuthClientModel.SOURCE_SERVER,
 	}
 	host._close_backpack_panel()
 	host._close_qa_panel(false)
 	host._open_qa_panel()
 	host.world_log_message = ""
-	host._on_qa_entry_pressed("open_backpack")
+	host._on_qa_entry_pressed(GmQaAssetsClientModel.COMMAND_ID)
 	await host.get_tree().process_frame
 	var restricted_denies_command = (
 		restricted_install_ok
-		and host.backpack_panel != null
-		and not host.backpack_panel.visible
-		and host.world_log_message.find("未授权该命令") >= 0
+		and not bool(GmToolRuntimeModel.authorize_command(
+			host.current_account_session,
+			GmQaAssetsClientModel.COMMAND_ID,
+			QaPanelCatalog.client_command_ids(),
+			host.gm_tool_server_access_state
+		).get("ok", false))
+		and host.world_log_message.find("服务器授权尚未确认") >= 0
 	)
+	host._on_qa_entry_pressed("open_backpack")
+	await host.get_tree().process_frame
+	var restricted_local_entry_ok: bool = host.backpack_panel != null and host.backpack_panel.visible
+	host._close_backpack_panel()
+	host._open_qa_panel()
 	host._on_qa_entry_pressed("gm_map")
 	await host.get_tree().process_frame
-	var restricted_allows_command = host.current_map_id == GM_10V10_MAP_ID
+	var restricted_allows_command = host.current_map_id == GM_10V10_MAP_ID and restricted_local_entry_ok
+	var ordinary_denies_all_commands := true
+	for command_id in QaPanelCatalog.client_command_ids():
+		ordinary_denies_all_commands = ordinary_denies_all_commands and not bool(GmToolRuntimeModel.authorize_command(
+			server_session,
+			command_id,
+			QaPanelCatalog.client_command_ids(),
+			full_server_access
+		).get("ok", false))
+	host._server_sync().clear_gm_tool_access()
 	host._restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
 	host._restore_auth_check_account_store(original_store_exists, original_store_text)
 	host._restore_auth_check_audit_log(original_audit_exists, original_audit_text)
 	var auth_password_ui_ok = mismatch_blocks_register_ok and confirm_visible_ok and password_eye_ok and confirm_eye_ok and confirm_hides_on_login_ok and password_icon_only_ok and text_input_blocks_movement_ok
-	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and gm_plugin_unlocks and gm_identity_safe and gm_qa_client_contract_ok and gm_qa_pet_samples_contract_ok and gm_qa_assets_contract_ok and restricted_denies_command and restricted_allows_command else "fail"
-	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s icon_only=%s text_focus_blocks_move=%s gm_unlocked=%s gm_identity_safe=%s gm_qa_contract=%s gm_pet_samples_contract=%s gm_assets_contract=%s gm_assets_pending_all=%s gm_assets_account_clear=%s gm_assets_status_first=%s restricted_denies=%s restricted_allows=%s" % [
+	var status = "ok" if player_session_ok and remember_ok and player_is_not_gm and player_hides_gm and account_button_visible and player_blocks_qa and account_panel_opens and switch_to_login_ok and auth_password_ui_ok and plugin_strict_matrix_ok and gm_tools_contract_ok and gm_plugin_unlocks and gm_identity_safe and gm_qa_client_contract_ok and gm_qa_pet_samples_contract_ok and gm_qa_assets_contract_ok and restricted_denies_command and restricted_allows_command and ordinary_denies_all_commands else "fail"
+	print("auth check ready: status=%s server_session=%s remember=%s player_no_gm=%s hidden=%s account_button=%s qa_blocked=%s account_panel=%s switched=%s password_ui=%s icon_only=%s text_focus_blocks_move=%s plugin_strict=%s gm_tools=%s gm_unlocked=%s gm_identity_safe=%s gm_qa_contract=%s gm_pet_samples_contract=%s gm_assets_contract=%s gm_assets_pending_all=%s gm_assets_account_clear=%s gm_assets_status_first=%s restricted_denies=%s restricted_allows=%s player_denies_all=%s" % [
 		status,
 		str(player_session_ok),
 		str(remember_ok),
@@ -16680,6 +16847,8 @@ func _run_auto_auth_check() -> void:
 		str(auth_password_ui_ok),
 		str(password_icon_only_ok),
 		str(text_input_blocks_movement_ok),
+		str(plugin_strict_matrix_ok),
+		str(gm_tools_contract_ok),
 		str(gm_plugin_unlocks),
 		str(gm_identity_safe),
 		str(gm_qa_client_contract_ok),
@@ -16690,6 +16859,7 @@ func _run_auto_auth_check() -> void:
 		str(gm_assets_status_prioritized_ok),
 		str(restricted_denies_command),
 		str(restricted_allows_command),
+		str(ordinary_denies_all_commands),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -23567,6 +23737,40 @@ func _run_auto_server_profile_sync_check() -> void:
 
 func _run_auto_qa_panel_check() -> void:
 	host.profile_save_enabled = false
+	var original_plugin_exists := FileAccess.file_exists(AccountAuthModel.GM_PLUGIN_PATH)
+	var original_plugin_text := FileAccess.get_file_as_string(AccountAuthModel.GM_PLUGIN_PATH) if original_plugin_exists else ""
+	var original_auth_auto_bypass: bool = host.auth_auto_bypass
+	var original_session: Dictionary = host.current_account_session.duplicate(true)
+	var original_server_access: Dictionary = host.gm_tool_server_access_state.duplicate(true)
+	var qa_username := str(GmQaAccessPolicyModel.allowed_usernames()[0])
+	var qa_expiry := _gm_qa_test_expiry()
+	var explicit_plugin_ok := AccountAuthModel.install_local_gm_plugin(
+		GmQaAccessPolicyModel.allowed_usernames(),
+		GmQaAccessPolicyModel.client_command_ids(),
+		qa_expiry
+	)
+	host.auth_auto_bypass = false
+	host.account_authenticated = true
+	host.current_account_session = {
+		"username": qa_username,
+		"displayName": "测试GM",
+		"role": AccountAuthModel.ROLE_GM,
+		"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_GM,
+		"gmPluginInstalled": true,
+		"profileSavePath": ServerAuthClientModel.profile_save_path_for_username(qa_username),
+		"authSource": "local_qa_check",
+		"serverProfileSummary": {"profileRevision": 42},
+	}
+	host.gm_tool_server_access_state = {
+		"ok": true,
+		"schemaVersion": 2,
+		"effectiveRole": "gm",
+		"policyId": GmQaAccessPolicyModel.policy_id(),
+		"expiresAt": qa_expiry,
+		"expiresAtUnix": GmQaAccessPolicyModel.expires_at_unix(qa_expiry),
+		"commandIds": GmQaAccessPolicyModel.server_command_ids(),
+		"username": qa_username,
+	}
 	host.world_log_history.clear()
 	host.world_log_message = ""
 	host.player_profile = PlayerProgressModel.default_profile()
@@ -23577,6 +23781,14 @@ func _run_auto_qa_panel_check() -> void:
 	var qa_panel_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
 	if qa_panel_screenshot_path != "":
 		var original_screenshot_session: Dictionary = host.current_account_session.duplicate(true)
+		var original_event_state: String = host.server_event_state
+		var original_event_reconnect_remaining: float = host.server_event_reconnect_remaining
+		host._stop_server_event_stream()
+		# The screenshot uses a fake server-shaped session only to prove that
+		# player-facing text stays redacted.  Never let that fixture dial the live
+		# backend with its deliberately invalid token.
+		host.server_event_state = "error"
+		host.server_event_reconnect_remaining = 3600.0
 		var qa_screenshot_session: Dictionary = original_screenshot_session.duplicate(true)
 		qa_screenshot_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
 		qa_screenshot_session["serverSessionToken"] = "qa_screenshot_token_must_not_display"
@@ -23592,40 +23804,26 @@ func _run_auto_qa_panel_check() -> void:
 		qa_panel_screenshot_ok = qa_panel_image != null and qa_panel_screenshot_error == OK
 		print("qa panel screenshot: status=%s path=%s" % ["ok" if qa_panel_screenshot_ok else "failed", qa_panel_screenshot_path])
 		host.current_account_session = original_screenshot_session
+		host._stop_server_event_stream()
+		host.server_event_state = original_event_state
+		host.server_event_reconnect_remaining = original_event_reconnect_remaining
 		host._refresh_qa_panel()
 	var command_text = host.qa_detail_label.text if host.qa_detail_label != null else ""
 	var first_layout_ok = host._qa_panel_layout_is_usable()
-	var button_ok = (
-		host.qa_panel != null
-		and host.qa_panel.visible
-		and host.qa_entry_buttons.has("gm_prepare_qa_profile")
-		and host.qa_entry_buttons.has("gm_prepare_qa_pet_samples")
-		and host.qa_entry_buttons.has("gm_prepare_qa_assets")
-		and host.qa_entry_buttons.has("gm_10v10_grass")
-		and host.qa_entry_buttons.has("gm_capture_grass")
-		and host.qa_entry_buttons.has("open_backpack")
-		and host.qa_entry_buttons.has("open_item_shop")
-		and host.qa_entry_buttons.has("open_equipment_shop")
-		and host.qa_entry_buttons.has("open_equipment")
-		and host.qa_entry_buttons.has("open_bank")
-		and host.qa_entry_buttons.has("open_market")
-		and host.qa_entry_buttons.has("open_mailbox")
-		and host.qa_entry_buttons.has("open_quest")
-		and host.qa_entry_buttons.has("open_auto_battle")
-		and host.qa_entry_buttons.has("open_auto_capture")
-		and host.qa_entry_buttons.has("open_stable")
-		and host.qa_entry_buttons.has("open_rebirth_preview")
-		and host.qa_entry_buttons.has("gm_battle_speed_gear")
-		and host.qa_entry_buttons.has("open_numeric_workbench")
-	)
+	var button_ok: bool = explicit_plugin_ok and host.qa_panel != null and host.qa_panel.visible and QaPanelCatalog.validation_errors().is_empty()
+	for entry_command_id in QaPanelCatalog.entry_command_ids():
+		button_ok = button_ok and host.qa_entry_buttons.has(entry_command_id)
+	button_ok = button_ok and host.qa_entry_buttons.size() == QaPanelCatalog.entry_command_ids().size()
 	var qa_profile_identity_text: String = str(host._panel_flow().qa_profile_identity_label.text) if host._panel_flow().qa_profile_identity_label != null else ""
 	var qa_profile_entry := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	var qa_pet_samples_entry := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
 	var qa_assets_entry := host.qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
 	var qa_profile_ui_ok = (
-		qa_profile_identity_text.find("开发GM") >= 0
-		and qa_profile_identity_text.find("dev_gm") >= 0
+		qa_profile_identity_text.find("测试GM") >= 0
+		and qa_profile_identity_text.find(qa_username) >= 0
 		and qa_profile_identity_text.find("GM") >= 0
+		and qa_profile_identity_text.find("授权：有效至") >= 0
+		and qa_profile_identity_text.find("可用功能 28 项") >= 0
 		and command_text.find("只补齐") >= 0
 		and command_text.find("不会清空") >= 0
 		and command_text.find("10 只 Lv1 蓝人龙") >= 0
@@ -23756,39 +23954,52 @@ func _run_auto_qa_panel_check() -> void:
 		and host.numeric_workbench_profile_option != null
 		and host.numeric_workbench_profile_option.get_item_count() >= 5
 	)
-	host._on_numeric_workbench_growth_pressed()
-	await host.get_tree().process_frame
 	var numeric_growth_ok = (
-		host.numeric_workbench_result_label != null
-		and host.numeric_workbench_result_label.text.find("宠物成长模拟") >= 0
-		and host.numeric_workbench_result_label.text.find("CSV") >= 0
+		host.numeric_workbench_growth_button != null
+		and host.numeric_workbench_growth_button.text.find("成长模拟") >= 0
 	)
-	host._on_numeric_workbench_mm_pressed()
-	await host.get_tree().process_frame
 	var numeric_mm_ok = (
-		host.numeric_workbench_result_label != null
-		and host.numeric_workbench_result_label.text.find("MM转宠模拟") >= 0
-		and host.numeric_workbench_result_label.text.find("四维等效") >= 0
+		host.numeric_workbench_mm_button != null
+		and host.numeric_workbench_mm_button.text.find("MM转宠") >= 0
 	)
-	host._on_numeric_workbench_compare_pressed()
-	await host.get_tree().process_frame
 	var numeric_compare_ok = (
-		host.numeric_workbench_result_label != null
-		and host.numeric_workbench_result_label.text.find("MM转宠方案对比") >= 0
-		and host.numeric_workbench_result_label.text.find("最近输出") >= 0
+		host.numeric_workbench_compare_button != null
+		and host.numeric_workbench_compare_button.text.find("方案对比") >= 0
 	)
-	host._on_numeric_workbench_battle_pressed()
-	await host.get_tree().process_frame
 	var numeric_battle_ok = (
-		host.numeric_workbench_result_label != null
-		and host.numeric_workbench_result_label.text.find("固定战斗模拟") >= 0
+		host.numeric_workbench_battle_button != null
+		and host.numeric_workbench_battle_button.text.find("战斗模拟") >= 0
 	)
 	host._close_numeric_workbench_panel(false)
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("open_auto_battle")
+	await host.get_tree().process_frame
+	var auto_battle_ok: bool = host.auto_settings_panel != null and host.auto_settings_panel.visible and host.auto_settings_active_tab == "battle"
+	host._close_auto_settings_panel()
 	host._open_qa_panel()
 	host._on_qa_entry_pressed("open_auto_capture")
 	await host.get_tree().process_frame
 	var auto_capture_ok = host.auto_settings_panel != null and host.auto_settings_panel.visible and host.auto_settings_active_tab == "capture"
 	host._close_auto_settings_panel()
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("open_partner")
+	await host.get_tree().process_frame
+	var partner_ok: bool = (
+		host.party_panel != null
+		and host.party_panel.visible
+		and host._panel_flow().party_panel_mode == "partners"
+	)
+	host._close_training_partner_panel()
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("open_pet")
+	await host.get_tree().process_frame
+	var pet_panel_ok: bool = host.pet_panel != null and host.pet_panel.visible
+	host._close_pet_panel()
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("open_codex")
+	await host.get_tree().process_frame
+	var codex_ok: bool = host.codex_panel != null and host.codex_panel.visible
+	host._close_codex_panel()
 	host._open_qa_panel()
 	host._on_qa_entry_pressed("open_stable")
 	await host.get_tree().process_frame
@@ -23796,9 +24007,6 @@ func _run_auto_qa_panel_check() -> void:
 		host.pet_panel != null
 		and host.pet_panel.visible
 		and host.pet_panel_stable_access_override
-		and host.pet_stable_button != null
-		and host.pet_stable_button.visible
-		and not host.pet_stable_button.disabled
 	)
 	host._close_pet_panel()
 	host._open_qa_panel()
@@ -23813,6 +24021,10 @@ func _run_auto_qa_panel_check() -> void:
 	)
 	host._close_player_rebirth_preview_panel()
 	host._open_qa_panel()
+	# The authorization boundary above is exercised without bypass.  This scoped
+	# local fixture only preserves the legacy pet behavior assertions without
+	# sending test mutations to a server.
+	host.auth_auto_bypass = true
 	host.qa_pet_growth_profile_id = "rebirth_starter_fire_cub_v1"
 	host._refresh_qa_pet_tool_controls()
 	host._on_qa_pet_grant_pressed()
@@ -23860,7 +24072,7 @@ func _run_auto_qa_panel_check() -> void:
 	var gm_tiger_level_ok = (
 		not qa_tiger_after.is_empty()
 		and int(qa_tiger_after.get("level", 1)) == 2
-		and str(qa_tiger_after.get("growthSpeciesProfileId", "")).strip_edges() == ""
+		and str(qa_tiger_after.get("growthSpeciesProfileId", "")) == "novice_tiger_mount_v1"
 	)
 	host.qa_pet_level_instance_id = qa_mm_id
 	host._on_qa_pet_level_up_pressed()
@@ -23872,6 +24084,11 @@ func _run_auto_qa_panel_check() -> void:
 		and int(qa_mm_after.get("level", 1)) == 2
 		and PetRebirthMmModel.helper_stage_for_pet(qa_mm_after) == PetRebirthMmModel.STAGE_ONE
 	)
+	host.auth_auto_bypass = false
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("gm_map")
+	await host.get_tree().process_frame
+	var gm_map_ok: bool = host.current_map_id == GM_10V10_MAP_ID and host.world_log_message.find("GM练级测试场") >= 0
 	host._open_qa_panel()
 	host._on_qa_entry_pressed("gm_10v10_grass")
 	await host.get_tree().process_frame
@@ -23894,8 +24111,22 @@ func _run_auto_qa_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(capture_zone, host.target_cell)
 		and host.world_log_message.find("GM图鉴捕捉草丛") >= 0
 	)
-	var status = "ok" if loaded and button_ok and qa_profile_ui_ok and qa_panel_screenshot_ok and pet_tool_options_ok and gm_pet_pending_ok and gm_pet_route_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and bank_ok and market_ok and mailbox_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_capture_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_10v10_ok and gm_capture_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s qa_profile=%s screenshot=%s pet_tools=%s gm_pending=%s gm_route=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s bank=%s market=%s mailbox=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_capture=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s gm_mm_level=%s gm_10v10=%s gm_capture=%s button_count=%d map=%s target=%s log=%s" % [
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("gm_knockaway_grass")
+	await host.get_tree().process_frame
+	var knockaway_zone: Dictionary = host._encounter_zone_by_id("gm_high_knockaway_grass")
+	var gm_knockaway_ok: bool = (
+		host.current_map_id == GM_10V10_MAP_ID
+		and host.has_target_cell
+		and not knockaway_zone.is_empty()
+		and EncounterModel.zone_contains_cell(knockaway_zone, host.target_cell)
+	)
+	host._open_qa_panel()
+	host._on_qa_entry_pressed("firebud_village")
+	await host.get_tree().process_frame
+	var village_ok: bool = host.current_map_id == "firebud_village_gate" and host.world_log_message.find("火芽村入口") >= 0
+	var status = "ok" if loaded and button_ok and qa_profile_ui_ok and qa_panel_screenshot_ok and pet_tool_options_ok and gm_pet_pending_ok and gm_pet_route_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and bank_ok and market_ok and mailbox_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_battle_ok and auto_capture_ok and partner_ok and pet_panel_ok and codex_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_map_ok and gm_10v10_ok and gm_capture_ok and gm_knockaway_ok and village_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s qa_profile=%s screenshot=%s pet_tools=%s gm_pending=%s gm_route=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s bank=%s market=%s mailbox=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_battle=%s auto_capture=%s partner=%s pet=%s codex=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s tiger_facts=%d/%s gm_mm_level=%s gm_map=%s gm_10v10=%s gm_capture=%s gm_knockaway=%s village=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
@@ -23923,21 +24154,34 @@ func _run_auto_qa_panel_check() -> void:
 		str(numeric_mm_ok),
 		str(numeric_compare_ok),
 		str(numeric_battle_ok),
+		str(auto_battle_ok),
 		str(auto_capture_ok),
+		str(partner_ok),
+		str(pet_panel_ok),
+		str(codex_ok),
 		str(stable_ok),
 		str(rebirth_preview_ok),
 		str(gm_grant_ok),
 		str(gm_level_ok),
 		str(gm_target_all_pets_ok),
 		str(gm_tiger_level_ok),
+		int(qa_tiger_after.get("level", -1)),
+		str(qa_tiger_after.get("growthSpeciesProfileId", "")),
 		str(gm_mm_level_ok),
+		str(gm_map_ok),
 		str(gm_10v10_ok),
 		str(gm_capture_ok),
+		str(gm_knockaway_ok),
+		str(village_ok),
 		host.qa_entry_buttons.size(),
 		host.current_map_id,
 		str(host.target_cell),
 		host.world_log_message,
 	])
+	host._restore_auth_check_plugin(original_plugin_exists, original_plugin_text)
+	host.auth_auto_bypass = original_auth_auto_bypass
+	host.current_account_session = original_session
+	host.gm_tool_server_access_state = original_server_access
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_chat_panel_check() -> void:

@@ -1633,6 +1633,8 @@ test("market tax config requires GM command grant", () => {
   const grant = service.grantGm({
     "username": "market_gm",
     "commandIds": ["gm_market_tax"],
+    "policyId": "test_explicit_gm_v1",
+    "expiresAt": "2099-01-01T00:00:00.000Z",
     "grantedBy": "unit_test",
   });
   assert.equal(grant.ok, true);

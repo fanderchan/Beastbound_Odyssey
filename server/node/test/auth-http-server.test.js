@@ -263,6 +263,8 @@ test("HTTP GM market config routes are command-scoped", async (t) => {
   const grant = service.grantGm({
     "username": "httpmarketgm",
     "commandIds": ["gm_market_tax"],
+    "policyId": "test_explicit_gm_v1",
+    "expiresAt": "2099-01-01T00:00:00.000Z",
     "grantedBy": "unit_test",
   });
   assert.equal(grant.ok, true);
@@ -272,6 +274,11 @@ test("HTTP GM market config routes are command-scoped", async (t) => {
   });
   assert.equal(tools.ok, true);
   assert.deepEqual(tools.commandIds, ["gm_market_tax"]);
+  assert.equal(tools.effectiveRole, "gm");
+  assert.equal(tools.policyId, "test_explicit_gm_v1");
+  assert.equal(tools.expiresAt, "2099-01-01T00:00:00.000Z");
+  assert.equal(tools.schemaVersion, 2);
+  assert.equal(tools.account, undefined);
 
   const updated = await fetchJson(`${base}/gm/market/config`, {
     "method": "PUT",
@@ -319,6 +326,8 @@ test("HTTP offline hang status and GM configuration routes enforce authenticatio
   assert.equal(service.grantGm({
     username: "httpofflinegm",
     commandIds: ["gm_offline_hang_config"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "unit_test",
   }).ok, true);
   const updated = await fetchJson(`${base}/gm/hang/offline/config`, {

@@ -17,7 +17,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const apply = args.apply === true;
   const username = normalizeUsername(args.username || process.env.BEASTBOUND_MIGRATE_USERNAME || "auth1373");
-  const password = String(args.password || process.env.BEASTBOUND_MIGRATE_PASSWORD || "");
+  const password = args.passwordStdin === true ? readPasswordFromStdin() : "";
   if (!username) {
     throw new Error("Missing --username.");
   }
@@ -111,7 +111,7 @@ function buildLocalUserdataMigration(options = {}) {
   const playerId = String(existingBinding.playerId || `player_${accountId.slice(4, 16)}`);
   validateTargetIdentityGraph(data, {username, accountId, playerId});
   const role = resolveMigrationRole({
-    requestedRole: options.requestedRole ?? options.role,
+    requestedRole: options.requestedRole,
     existingRole: account.role,
     localRole: localAccount.role,
     username,
@@ -134,7 +134,7 @@ function buildLocalUserdataMigration(options = {}) {
     role,
     passwordSalt: salt,
     passwordHash,
-    passwordPolicyVersion: Math.max(1, Math.trunc(Number(account.passwordPolicyVersion || 1))),
+    passwordPolicyVersion: Math.max(2, Math.trunc(Number(account.passwordPolicyVersion || 2))),
     passwordUpdatedAt: password ? nowIso : String(account.passwordUpdatedAt || nowIso),
     createdAt: isoFromLocalCreatedAt(localAccount.createdAt) || account.createdAt || nowIso,
     updatedAt: nowIso,
@@ -182,30 +182,8 @@ function buildLocalUserdataMigration(options = {}) {
     error.externalEquipmentConflicts = cloneJson(candidateEquipmentConflicts);
     throw error;
   }
-  if (role === "gm") {
-    data.gmUserGrants[accountId] = {
-      accountId,
-      username,
-      enabled: true,
-      grantedBy: "local_migration",
-      expiresAt: null,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      schemaVersion: 1,
-    };
-    data.gmCommandGrants[accountId] = [{
-      accountId,
-      commandId: "*",
-      enabled: true,
-      grantedBy: "local_migration",
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      schemaVersion: 1,
-    }];
-  } else {
-    delete data.gmUserGrants[accountId];
-    delete data.gmCommandGrants[accountId];
-  }
+  // Profile migration never creates, widens, deletes, or renews GM authority.
+  // Local QA access is a separate short-lived lease managed by `npm run qa:gm`.
   const eventId = `auth_${randomUuid()}`;
   data.authEvents.push({
     eventId,
@@ -241,7 +219,8 @@ function buildLocalUserdataMigration(options = {}) {
       playerId,
       profileRevision: nextRevision,
       role,
-      effectiveRole: role,
+      effectiveRole: role === "gm" ? "server_grant_required" : "player",
+      gmAuthorizationChanged: false,
       profilePath,
       playerLevel: Number(objectOrEmpty(profile.player).level || 1),
       rebirthCount: Number(profile.rebirthCount || 0),
@@ -471,12 +450,19 @@ function validateTargetIdentityGraph(data, context) {
 }
 
 function resolveMigrationRole(options = {}) {
-  for (const value of [options.requestedRole, options.existingRole, options.localRole]) {
-    if (String(value || "").trim() !== "") {
-      return normalizedRole(value);
+  const requested = String(options.requestedRole || "").trim();
+  if (requested !== "") {
+    const role = normalizedRole(requested);
+    if (role === "gm") {
+      throw new Error("Local userdata migration cannot grant GM; migrate as player, then use npm run qa:gm.");
     }
+    return role;
   }
-  return options.username === "auth1373" ? "gm" : "player";
+  const existing = String(options.existingRole || "").trim();
+  if (existing !== "") {
+    return normalizedRole(existing);
+  }
+  return "player";
 }
 
 function bestProfilePath(userdataRoot, username) {
@@ -617,13 +603,6 @@ function verifyAppliedMigration(value, migration) {
   if (!data.authEvents.some((event) => String(event && event.eventId || "") === context.eventId)) {
     reasons.push("migration_audit_missing");
   }
-  if (migration.report.role === "gm") {
-    const userGrant = objectOrEmpty(data.gmUserGrants[context.accountId]);
-    const commandGrants = Array.isArray(data.gmCommandGrants[context.accountId]) ? data.gmCommandGrants[context.accountId] : [];
-    if (!userGrant.enabled || !commandGrants.some((grant) => grant && grant.enabled && grant.commandId === "*")) {
-      reasons.push("gm_grant_mismatch");
-    }
-  }
   return {
     ok: reasons.length === 0,
     reasons,
@@ -728,7 +707,9 @@ function parseArgs(argv) {
     if (arg === "--username") {
       result.username = argv[++index] || "";
     } else if (arg === "--password") {
-      throw new Error("Do not place passwords in process arguments; use BEASTBOUND_MIGRATE_PASSWORD.");
+      throw new Error("Do not place passwords in process arguments; use --password-stdin.");
+    } else if (arg === "--password-stdin") {
+      result.passwordStdin = true;
     } else if (arg === "--role") {
       result.role = argv[++index] || "";
     } else if (arg === "--profile-path") {
@@ -761,6 +742,19 @@ function loadEnvFile(filePath) {
 
 function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function readPasswordFromStdin() {
+  const input = fs.readFileSync(0, "utf8");
+  const lines = input.split(/\r?\n/);
+  const password = String(lines.shift() || "");
+  if (lines.some((line) => line !== "")) {
+    throw new Error("Password stdin must contain exactly one line.");
+  }
+  if (password.length < 8) {
+    throw new Error("A password of at least 8 characters is required for a new account.");
+  }
+  return password;
 }
 
 function readJsonIfExists(filePath) {

@@ -21,7 +21,13 @@ const MANIFEST_ID = "qa_core_v1";
 function registerGm(service, username, commandIds = [COMMAND_ID]) {
   const registered = service.register({username, password: "test1234", displayName: username});
   assert.equal(registered.ok, true);
-  assert.equal(service.grantGm({username, commandIds, grantedBy: "gm_qa_profile_test"}).ok, true);
+  assert.equal(service.grantGm({
+    username,
+    commandIds,
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_qa_profile_test",
+  }).ok, true);
   return registered;
 }
 
@@ -46,6 +52,8 @@ test("GM QA profile command enforces current-account grants and exact payloads",
   assert.equal(service.grantGm({
     username: "qaprofileplayer",
     commandIds: ["gm_map"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_profile_test",
   }).ok, true);
   const commandDenied = service.prepareGmQaProfile(player.session.token, {manifestId: MANIFEST_ID});
@@ -56,6 +64,8 @@ test("GM QA profile command enforces current-account grants and exact payloads",
   assert.equal(service.grantGm({
     username: "qaprofileplayer",
     commandIds: [COMMAND_ID],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
     grantedBy: "gm_qa_profile_test",
   }).ok, true);
   const targetInjection = service.prepareGmQaProfile(player.session.token, {
@@ -74,10 +84,21 @@ test("GM QA profile command enforces current-account grants and exact payloads",
   assert.equal(service.prepareGmQaProfile("", {manifestId: MANIFEST_ID}).code, "session_missing");
   assert.equal(service.snapshot().gmCommandAudit.filter((row) => row.username === "").length, 0);
 
-  const wildcardGm = registerGm(service, "qaprofilewildcard", ["*"]);
-  const wildcardAllowed = service.prepareGmQaProfile(wildcardGm.session.token, {manifestId: MANIFEST_ID});
-  assert.equal(wildcardAllowed.ok, true);
-  assert.equal(wildcardAllowed.result.summary.manifestId, MANIFEST_ID);
+  const wildcardGm = service.register({username: "qaprofilewildcard", password: "test1234"});
+  assert.equal(wildcardGm.ok, true);
+  const wildcardGrant = service.grantGm({
+    username: "qaprofilewildcard",
+    commandIds: ["*"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "gm_qa_profile_test",
+  });
+  assert.equal(wildcardGrant.ok, false);
+  assert.equal(wildcardGrant.code, "gm_grant_commands_invalid");
+  assert.equal(
+    service.prepareGmQaProfile(wildcardGm.session.token, {manifestId: MANIFEST_ID}).code,
+    "gm_denied",
+  );
 });
 
 test("GM QA core manifest tops up once and preserves values already above its targets", () => {

@@ -36,9 +36,15 @@ process.stdin.on("end", () => {
 `, {mode: 0o755});
   fs.writeFileSync(profilePath, JSON.stringify(importedProfile()));
   try {
-    const result = spawnSync(process.execPath, [scriptPath, "--username", "newqa", "--profile-path", profilePath], {
+    const result = spawnSync(process.execPath, [
+      scriptPath,
+      "--username", "newqa",
+      "--profile-path", profilePath,
+      "--password-stdin",
+    ], {
       cwd: path.resolve(__dirname, "../../.."),
       encoding: "utf8",
+      input: "account-secret\n",
       env: {
         ...process.env,
         FAKE_MYSQL_LOG: mysqlLogPath,
@@ -49,7 +55,6 @@ process.stdin.on("end", () => {
         BEASTBOUND_MYSQL_PASSWORD: "mysql-secret",
         BEASTBOUND_MYSQL_DATABASE: "beastbound_test",
         BEASTBOUND_MYSQL_CREATE_DATABASE: "0",
-        BEASTBOUND_MIGRATE_PASSWORD: "account-secret",
       },
     });
     assert.equal(result.status, 0, result.stderr);
@@ -59,10 +64,10 @@ process.stdin.on("end", () => {
     assert.equal(result.stdout.includes("account-secret"), false);
     assert.equal(result.stdout.includes("mysql-secret"), false);
     const calls = fs.readFileSync(mysqlLogPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 2);
-    assert.match(calls[0].stdin, /information_schema\.tables/);
-    assert.match(calls[1].stdin, /SELECT 'server_state'/);
-    assert.doesNotMatch(calls[1].stdin, /consumed_equipment_envelopes/);
+    assert.equal(calls.filter((call) => /information_schema\.tables/.test(call.stdin)).length >= 1, true);
+    const loadCall = calls.find((call) => /SELECT 'server_state'/.test(call.stdin));
+    assert.ok(loadCall);
+    assert.doesNotMatch(loadCall.stdin, /consumed_equipment_envelopes/);
     for (const call of calls) {
       assert.doesNotMatch(call.stdin, /CREATE TABLE|CREATE DATABASE|START TRANSACTION|INSERT INTO|DELETE FROM/);
     }
@@ -122,7 +127,6 @@ process.stdin.on("end", () => {
         BEASTBOUND_MYSQL_PASSWORD: "mysql-secret",
         BEASTBOUND_MYSQL_DATABASE: "beastbound_test",
         BEASTBOUND_MYSQL_CREATE_DATABASE: "0",
-        BEASTBOUND_MIGRATE_PASSWORD: "account-secret",
       },
     });
     assert.equal(result.status, 1);
@@ -184,8 +188,9 @@ test("local userdata migration preserves every unrelated persistent bucket and e
     "profile_v2_to_v3_equipment_instances",
   ]);
   assert.equal(migration.report.profileMigration.stepReports[1].equipment.conflicts.length, 0);
-  assert.equal(migration.data.gmCommandGrants.acc_target.length, 1);
-  assert.equal(migration.data.gmCommandGrants.acc_target[0].commandId, "*");
+  assert.deepEqual(migration.data.gmUserGrants.acc_target, source.gmUserGrants.acc_target);
+  assert.deepEqual(migration.data.gmCommandGrants.acc_target, source.gmCommandGrants.acc_target);
+  assert.equal(migration.report.gmAuthorizationChanged, false);
 
   for (const key of [
     "marketListings",
@@ -473,6 +478,22 @@ test("new account import requires a password while an existing account may prese
     nowIso: NOW,
     randomUuid: sequence(["account_uuid"]),
   }), /password is required/i);
+
+  const migration = buildLocalUserdataMigration({
+    sourceData: persistentFixture(),
+    username: "new_account",
+    password: "stdin-only-password",
+    profile: importedProfile(),
+    localAccount: {role: "gm", displayName: "旧本地GM标记"},
+    nowIso: NOW,
+    randomUuid: sequence(["account_uuid", "event_uuid"]),
+    randomBytes: () => Buffer.alloc(16, 7),
+  });
+  const accountId = migration.data.accounts.new_account.accountId;
+  assert.equal(migration.data.accounts.new_account.role, "player");
+  assert.equal(migration.data.gmUserGrants[accountId], undefined);
+  assert.equal(migration.data.gmCommandGrants[accountId], undefined);
+  assert.equal(migration.report.gmAuthorizationChanged, false);
 });
 
 test("migration command is dry-run by default and apply is explicit", () => {
@@ -484,8 +505,11 @@ test("migration command is dry-run by default and apply is explicit", () => {
   });
   assert.throws(() => parseArgs(["--force"]), /Unknown argument/);
   assert.throws(() => parseArgs(["--password", "secret"]), /Do not place passwords/);
+  assert.deepEqual(parseArgs(["--password-stdin"]), {passwordStdin: true});
   assert.equal(resolveMigrationRole({existingRole: "gm", localRole: "player", username: "auth1373"}), "gm");
   assert.throws(() => resolveMigrationRole({requestedRole: "gmn", existingRole: "gm"}), /must be gm or player/);
+  assert.throws(() => resolveMigrationRole({requestedRole: "gm"}), /cannot grant GM/);
+  assert.equal(resolveMigrationRole({localRole: "gm", username: "auth1373"}), "player");
 });
 
 test("migration backup is a complete owner-only JSON snapshot", () => {

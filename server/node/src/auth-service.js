@@ -132,6 +132,11 @@ const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_POLICY_VERSION = 2;
 const ROLE_PLAYER = "player";
 const ROLE_GM = "gm";
+const GM_GRANT_SCHEMA_VERSION = 2;
+const GM_COMMAND_ID_PATTERN = /^gm_[a-z0-9_]+$/;
+const GM_POLICY_ID_PATTERN = /^[a-z][a-z0-9_]+$/;
+const GM_COMMAND_ID_MAX_LENGTH = 80;
+const GM_POLICY_ID_MAX_LENGTH = 80;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REPLACED_CODE = "session_replaced";
@@ -774,7 +779,7 @@ function createAuthService(options = {}) {
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
       account: publicAccount(account),
-      session: publicSession(sessionResult.session, account, data, sessionResult.token),
+      session: publicSession(sessionResult.session, account, data, sessionResult.token, {now}),
       profileBinding: data.profileBindings[accountId],
       profileSummary: profileSummaryForAccount(account, data),
       runtimePosition: publicRuntimePositionForAccount(data, accountId),
@@ -824,7 +829,7 @@ function createAuthService(options = {}) {
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
       account: publicAccount(account),
-      session: publicSession(sessionResult.session, account, data, sessionResult.token),
+      session: publicSession(sessionResult.session, account, data, sessionResult.token, {now}),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(account, data),
       runtimePosition: publicRuntimePositionForAccount(data, account.accountId),
@@ -862,7 +867,7 @@ function createAuthService(options = {}) {
     }
     return ok({
       account: publicAccount(resolved.account),
-      session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token),
+      session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token, {now}),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
@@ -910,7 +915,7 @@ function createAuthService(options = {}) {
     }
     return ok({
       account: publicAccount(resolved.account),
-      session: publicSession(resolved.session, resolved.account, data, "", {"recovered": resolved.recovered}),
+      session: publicSession(resolved.session, resolved.account, data, "", {"recovered": resolved.recovered, now}),
       profileBinding: ensured.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       recovery: sessionRecoveryPayload(data, resolved.account, resolved.recovered),
@@ -2261,27 +2266,43 @@ function createAuthService(options = {}) {
     if (!account) {
       return fail("account_missing", "账号不存在。");
     }
+    const commandIdsResult = normalizeExplicitGmCommandIds(payload.commandIds);
+    if (!commandIdsResult.ok) {
+      return fail("gm_grant_commands_invalid", "GM授权必须提供非空且不含通配符的明确命令列表。");
+    }
+    const policyId = normalizeGmPolicyId(payload.policyId);
+    if (!policyId) {
+      return fail("gm_grant_policy_invalid", "GM授权策略标识不正确。");
+    }
+    const expiry = canonicalFutureGmGrantExpiry(payload.expiresAt, now());
+    if (!expiry.ok) {
+      return fail("gm_grant_expiry_invalid", "GM授权必须提供规范且尚未到期的有效时间。");
+    }
     account.role = ROLE_GM;
     account.updatedAt = isoNow(now);
-    const commandIds = normalizeCommandIds(payload.commandIds || ["*"]);
+    const commandIds = commandIdsResult.commandIds;
+    const grantedAt = isoNow(now);
     data.gmUserGrants[account.accountId] = {
       accountId: account.accountId,
       username,
       enabled: true,
       grantedBy: String(payload.grantedBy || "system"),
-      expiresAt: payload.expiresAt || null,
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
+      policyId,
+      expiresAt: expiry.expiresAt,
+      createdAt: grantedAt,
+      updatedAt: grantedAt,
+      schemaVersion: GM_GRANT_SCHEMA_VERSION,
     };
     data.gmCommandGrants[account.accountId] = commandIds.map((commandId) => ({
       accountId: account.accountId,
       commandId,
       enabled: true,
       grantedBy: String(payload.grantedBy || "system"),
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
+      policyId,
+      expiresAt: expiry.expiresAt,
+      createdAt: grantedAt,
+      updatedAt: grantedAt,
+      schemaVersion: GM_GRANT_SCHEMA_VERSION,
     }));
     recordAuthEvent(data, "gm_grant", username, true, commandIds.join(","), now);
     save(data);
@@ -2298,16 +2319,27 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    if (!effectiveRoleIsGm(data, resolved.account, now)) {
+    const userGrantAccess = activeGmUserGrant(data, resolved.account, now);
+    if (!userGrantAccess.ok) {
       return fail("gm_denied", "当前账号没有GM权限。");
     }
-    const allowed = commandCatalog
-      .map((entry) => String(entry.id || "").trim())
-      .filter((commandId) => commandId && commandAllowed(data, resolved.account.accountId, commandId));
+    const catalogCommandIds = [];
+    for (const entry of commandCatalog) {
+      const commandId = normalizeCommandId(entry && entry.id);
+      if (!validExplicitGmCommandId(commandId) || catalogCommandIds.includes(commandId)) {
+        continue;
+      }
+      catalogCommandIds.push(commandId);
+    }
+    const allowed = catalogCommandIds.filter((commandId) => (
+      commandAllowed(data, resolved.account.accountId, commandId, now)
+    ));
     return ok({
-      account: publicAccount(resolved.account),
       effectiveRole: ROLE_GM,
       commandIds: allowed,
+      policyId: userGrantAccess.policyId,
+      expiresAt: userGrantAccess.expiresAt,
+      schemaVersion: GM_GRANT_SCHEMA_VERSION,
     });
   }
 
@@ -2337,10 +2369,10 @@ function createAuthService(options = {}) {
     if (!commandId) {
       return {ok: false, code: "empty_command", message: "GM命令为空。", commandId, username: resolved.account.username, resolved};
     }
-    if (!effectiveRoleIsGm(data, resolved.account, now)) {
+    if (!activeGmUserGrant(data, resolved.account, now).ok) {
       return {ok: false, code: "gm_denied", message: "当前账号没有GM权限。", commandId, username: resolved.account.username, resolved};
     }
-    if (!commandAllowed(data, resolved.account.accountId, commandId)) {
+    if (!commandAllowed(data, resolved.account.accountId, commandId, now)) {
       return {ok: false, code: "command_denied", message: "GM命令未授权。", commandId, username: resolved.account.username, resolved};
     }
     return {ok: true, commandId, username: resolved.account.username, resolved};
@@ -3547,7 +3579,7 @@ function publicSession(session, account, data, token = "", options = {}) {
   const result = {
     sessionId: session.sessionId,
     username: account.username,
-    effectiveRole: effectiveRoleIsGm(data, account, () => Date.now()) ? ROLE_GM : ROLE_PLAYER,
+    effectiveRole: effectiveRoleIsGm(data, account, options.now) ? ROLE_GM : ROLE_PLAYER,
     expiresAt: session.expiresAt,
   };
   if (options.recovered) {
@@ -18994,22 +19026,94 @@ function profileBindingForAccount(data, account, now) {
 }
 
 function effectiveRoleIsGm(data, account, now) {
-  if (!account || account.role !== ROLE_GM) {
-    return false;
-  }
-  const grant = data.gmUserGrants[account.accountId];
-  if (!grant || !grant.enabled) {
-    return false;
-  }
-  if (grant.expiresAt && Date.parse(grant.expiresAt) <= now()) {
-    return false;
-  }
-  return true;
+  return activeGmUserGrant(data, account, now).ok;
 }
 
-function commandAllowed(data, accountId, commandId) {
-  const grants = Array.isArray(data.gmCommandGrants[accountId]) ? data.gmCommandGrants[accountId] : [];
-  return grants.some((grant) => grant.enabled && (grant.commandId === "*" || grant.commandId === commandId));
+function activeGmUserGrant(data, account, now) {
+  if (!account || account.role !== ROLE_GM) {
+    return {ok: false};
+  }
+  const accountId = String(account.accountId || "");
+  const username = normalizeUsername(account.username);
+  const grant = data && data.gmUserGrants ? data.gmUserGrants[accountId] : null;
+  if (
+    !accountId
+    || !username
+    || String(account.username || "") !== username
+    || !grant
+    || typeof grant !== "object"
+    || Array.isArray(grant)
+    || grant.enabled !== true
+    || grant.schemaVersion !== GM_GRANT_SCHEMA_VERSION
+    || String(grant.accountId || "") !== accountId
+    || String(grant.username || "") !== username
+  ) {
+    return {ok: false};
+  }
+  const policyId = canonicalStoredGmPolicyId(grant.policyId);
+  const expiry = canonicalActiveGmGrantExpiry(grant.expiresAt, currentTimeMs(now));
+  if (!policyId || !expiry.ok) {
+    return {ok: false};
+  }
+  return {
+    ok: true,
+    grant,
+    policyId,
+    expiresAt: expiry.expiresAt,
+    expiresAtMs: expiry.expiresAtMs,
+  };
+}
+
+function commandAllowed(data, accountIdValue, commandIdValue, now) {
+  const accountId = String(accountIdValue || "");
+  const commandId = normalizeCommandId(commandIdValue);
+  if (!accountId || !validExplicitGmCommandId(commandId)) {
+    return false;
+  }
+  const grants = Array.isArray(data && data.gmCommandGrants && data.gmCommandGrants[accountId])
+    ? data.gmCommandGrants[accountId]
+    : [];
+  // A wildcard anywhere in this account's command document is an unsafe
+  // legacy grant. Preserve it for read-only status tooling, but never use it
+  // to authorize either itself or an otherwise explicit sibling grant.
+  if (grants.some((grant) => grant && String(grant.commandId || "") === "*")) {
+    return false;
+  }
+  const matches = grants.filter((grant) => grant && String(grant.commandId || "") === commandId);
+  if (matches.length !== 1) {
+    return false;
+  }
+  const grant = matches[0];
+  if (
+    typeof grant !== "object"
+    || Array.isArray(grant)
+    || grant.enabled !== true
+    || grant.schemaVersion !== GM_GRANT_SCHEMA_VERSION
+    || String(grant.accountId || "") !== accountId
+  ) {
+    return false;
+  }
+  const userGrant = data && data.gmUserGrants ? data.gmUserGrants[accountId] : null;
+  if (
+    !userGrant
+    || typeof userGrant !== "object"
+    || Array.isArray(userGrant)
+    || userGrant.schemaVersion !== GM_GRANT_SCHEMA_VERSION
+  ) {
+    return false;
+  }
+  const policyId = canonicalStoredGmPolicyId(grant.policyId);
+  const userPolicyId = canonicalStoredGmPolicyId(userGrant.policyId);
+  const expiry = canonicalActiveGmGrantExpiry(grant.expiresAt, currentTimeMs(now));
+  const userExpiry = canonicalActiveGmGrantExpiry(userGrant.expiresAt, currentTimeMs(now));
+  return Boolean(
+    policyId
+    && userPolicyId
+    && policyId === userPolicyId
+    && expiry.ok
+    && userExpiry.ok
+    && expiry.expiresAt === userExpiry.expiresAt
+  );
 }
 
 function recordGmAudit(data, username, commandId, okValue, message, now, randomId, details = {}) {
@@ -19267,15 +19371,76 @@ function normalizeCommandId(commandId) {
   return String(commandId || "").trim().toLowerCase();
 }
 
-function normalizeCommandIds(commandIds) {
+function normalizeExplicitGmCommandIds(commandIds) {
+  if (!Array.isArray(commandIds) || commandIds.length <= 0) {
+    return {ok: false, commandIds: []};
+  }
   const result = [];
   for (const value of commandIds) {
+    if (typeof value !== "string") {
+      return {ok: false, commandIds: []};
+    }
     const commandId = normalizeCommandId(value);
-    if (commandId && !result.includes(commandId)) {
+    if (!validExplicitGmCommandId(commandId)) {
+      return {ok: false, commandIds: []};
+    }
+    if (!result.includes(commandId)) {
       result.push(commandId);
     }
   }
-  return result.length > 0 ? result : ["*"];
+  return result.length > 0
+    ? {ok: true, commandIds: result}
+    : {ok: false, commandIds: []};
+}
+
+function validExplicitGmCommandId(commandId) {
+  const value = String(commandId || "");
+  return value !== "*"
+    && value.length <= GM_COMMAND_ID_MAX_LENGTH
+    && GM_COMMAND_ID_PATTERN.test(value);
+}
+
+function normalizeGmPolicyId(policyId) {
+  const value = String(policyId || "").trim().toLowerCase();
+  if (value.length > GM_POLICY_ID_MAX_LENGTH || !GM_POLICY_ID_PATTERN.test(value)) {
+    return "";
+  }
+  return value;
+}
+
+function canonicalStoredGmPolicyId(policyId) {
+  if (typeof policyId !== "string") {
+    return "";
+  }
+  const value = policyId.trim();
+  const normalized = normalizeGmPolicyId(value);
+  return normalized !== "" && normalized === value ? normalized : "";
+}
+
+function canonicalFutureGmGrantExpiry(value, nowMs) {
+  if (typeof value !== "string") {
+    return {ok: false, expiresAt: "", expiresAtMs: 0};
+  }
+  const expiresAt = value.trim();
+  const expiresAtMs = Date.parse(expiresAt);
+  if (
+    !Number.isFinite(expiresAtMs)
+    || expiresAtMs <= Number(nowMs)
+    || new Date(expiresAtMs).toISOString() !== expiresAt
+  ) {
+    return {ok: false, expiresAt: "", expiresAtMs: 0};
+  }
+  return {ok: true, expiresAt, expiresAtMs};
+}
+
+function canonicalActiveGmGrantExpiry(value, nowMs) {
+  // Missing/null legacy expiries remain loadable in the persistent snapshot so
+  // local status tooling can diagnose them. They never authorize a request.
+  return canonicalFutureGmGrantExpiry(value, nowMs);
+}
+
+function currentTimeMs(now) {
+  return typeof now === "function" ? Number(now()) : Date.now();
 }
 
 function positiveIntegerOption(value, fallback) {
