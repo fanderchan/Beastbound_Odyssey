@@ -32,7 +32,7 @@ function seedDiamonds(service, token, diamonds) {
   assert.equal(saved.ok, true);
 }
 
-function seedBackpackEquipment(service, token, itemId = "weapon_wooden_club") {
+function seedBackpackEquipment(service, token, itemId = "weapon_wooden_club", instanceOverrides = {}) {
   const current = service.getProfile(token);
   assert.equal(current.ok, true);
   const profile = current.profile;
@@ -52,6 +52,7 @@ function seedBackpackEquipment(service, token, itemId = "weapon_wooden_club") {
       wearCounters: {itemId, attackCount: 3, hitCount: 0},
       expPillCharge: {},
       source: "transfer_guard_test",
+      ...structuredClone(instanceOverrides),
     },
   };
   profile.equipmentSlotInstanceIds = {};
@@ -135,7 +136,7 @@ test("equipment bank deposits and withdrawals preserve exact instance state thro
   assert.equal(deposit.bank.slots[1].itemId, "weapon_wooden_club");
   assert.equal(deposit.bank.slots[1].count, 1);
   const publicEnvelope = deposit.bank.slots[1].equipmentEnvelopes[0];
-  assert.match(publicEnvelope.envelopeId, /^eqx_/);
+  assert.match(publicEnvelope.envelopeId, /^eqx_bank_/);
   assert.equal(Object.hasOwn(publicEnvelope, "provenance"), false);
   assert.equal(Object.hasOwn(publicEnvelope.instanceState, "source"), false);
   assert.equal(Object.hasOwn(publicEnvelope.instanceState, "transferProvenance"), false);
@@ -189,6 +190,10 @@ test("equipment bank deposits and withdrawals preserve exact instance state thro
   assert.deepEqual(withdraw.profile.backpackSlots[5], {itemId: "weapon_wooden_club", count: 1});
   assert.equal(profileItemCount(withdraw.profile, "item_meat_small"), 2);
   const storedAfterWithdraw = snapshotProfileDocument(service.snapshot(), account.account.accountId).profile;
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes[publicEnvelope.envelopeId], {
+    schemaVersion: 1,
+    envelopeId: publicEnvelope.envelopeId,
+  });
   const imported = Object.values(storedAfterWithdraw.equipmentInstances).find((instance) => (
     instance.itemId === "weapon_wooden_club"
   ));
@@ -712,30 +717,197 @@ test("market listings sell through with default tax", () => {
   assert.equal(claimed.mail, null);
 });
 
-test("equipment market create, buy, and cancel preserve all assets and historical listings", () => {
-  const seedService = createAuthService({store: createMemoryAuthStore()});
-  const seller = seedService.register({username: "marketequip_seller", password: "test1234", displayName: "装备卖家"});
-  const buyer = seedService.register({username: "marketequip_buyer", password: "test1234", displayName: "装备买家"});
-  seedBackpackEquipment(seedService, seller.session.token);
+test("market sale mail id exhaustion cancels normal and tutorial settlement without changing any asset", () => {
+  function collisionMail(mailId, recipient) {
+    return {
+      mailId,
+      senderAccountId: "system_market",
+      senderUsername: "auction_house",
+      senderDisplayName: "拍卖行",
+      recipientAccountId: recipient.account.accountId,
+      recipientUsername: recipient.account.username,
+      recipientDisplayName: recipient.account.displayName,
+      title: "占用编号",
+      body: "用于验证编号冲突不会覆盖已有邮件。",
+      items: [],
+      currency: {},
+      createdAt: "2026-07-12T00:00:00.000Z",
+      readAt: null,
+      schemaVersion: 1,
+    };
+  }
 
-  const sellerBeforeCreate = seedService.getProfile(seller.session.token);
-  const create = seedService.createMarketListing(seller.session.token, {
-    itemId: "weapon_wooden_club",
+  const saleSeedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = saleSeedService.register({username: "mailid_seller", password: "test1234", displayName: "编号卖家"});
+  const buyer = saleSeedService.register({username: "mailid_buyer", password: "test1234", displayName: "编号买家"});
+  seedBackpack(saleSeedService, seller.session.token, [{itemId: "item_meat_small", count: 1}]);
+  const listed = saleSeedService.createMarketListing(seller.session.token, {
+    itemId: "item_meat_small",
     count: 1,
     unitPrice: 20,
     currency: "stoneCoins",
   });
-  assert.equal(create.ok, false);
-  assert.equal(create.code, "market_equipment_transfer_unsupported");
-  const sellerAfterCreate = seedService.getProfile(seller.session.token);
-  assert.equal(sellerAfterCreate.profileSummary.profileRevision, sellerBeforeCreate.profileSummary.profileRevision);
-  assert.equal(profileItemCount(sellerAfterCreate.profile, "weapon_wooden_club"), 1);
-  assert.deepEqual(sellerAfterCreate.profile.equipmentInstances, sellerBeforeCreate.profile.equipmentInstances);
-  assert.deepEqual(seedService.snapshot().marketListings, {});
+  assert.equal(listed.ok, true);
+  const saleSeed = saleSeedService.snapshot();
+  saleSeed.mailMessages.mail_market_collision = collisionMail("mail_market_collision", seller);
+  const saleService = createAuthService({
+    store: createMemoryAuthStore(saleSeed),
+    randomId: () => "collision",
+  });
+  const saleBefore = saleService.snapshot();
+  const bought = saleService.buyMarketListing(buyer.session.token, {listingId: listed.listing.listingId});
+  assert.equal(bought.ok, false);
+  assert.equal(bought.code, "market_sale_mail_id_unavailable");
+  assert.deepEqual(saleService.snapshot(), saleBefore);
+
+  const tutorialSeedService = createAuthService({store: createMemoryAuthStore()});
+  const player = tutorialSeedService.register({username: "mailid_tutorial", password: "test1234", displayName: "编号学员"});
+  const current = tutorialSeedService.getProfile(player.session.token);
+  const profile = current.profile;
+  profile.stoneCoins = 10;
+  profile.backpackSlots = [{itemId: "tutorial_worn_hide", count: 1}];
+  profile.activeQuestId = "quest_market_sell_player";
+  profile.questStates = {
+    quest_market_sell_player: {questId: "quest_market_sell_player", status: "active", progress: 0},
+  };
+  assert.equal(tutorialSeedService.saveProfile(player.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile,
+  }).ok, true);
+  const tutorialSeed = tutorialSeedService.snapshot();
+  tutorialSeed.mailMessages.mail_tutorial_market_collision = collisionMail(
+    "mail_tutorial_market_collision",
+    player,
+  );
+  const tutorialService = createAuthService({
+    store: createMemoryAuthStore(tutorialSeed),
+    randomId: () => "collision",
+  });
+  const tutorialBefore = tutorialService.snapshot();
+  const tutorialSale = tutorialService.createMarketListing(player.session.token, {
+    itemId: "tutorial_worn_hide",
+    count: 1,
+    unitPrice: 7,
+    currency: "stoneCoins",
+  });
+  assert.equal(tutorialSale.ok, false);
+  assert.equal(tutorialSale.code, "tutorial_market_sale_mail_id_unavailable");
+  assert.deepEqual(tutorialService.snapshot(), tutorialBefore);
+});
+
+test("equipment market create and buy preserve private state, allocate a buyer-local id, and expose only public facts", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const seller = service.register({username: "marketequip_seller", password: "test1234", displayName: "装备卖家"});
+  const buyer = service.register({username: "marketequip_buyer", password: "test1234", displayName: "装备买家"});
+  seedBackpackEquipment(service, seller.session.token, "weapon_wooden_club", {
+    durability: 17,
+    enhancement: {itemId: "weapon_wooden_club", level: 4, history: [{level: 4, roll: 88}]},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 37, hitCount: 0},
+    futureAffixes: [{id: "market_power", value: 7}],
+  });
+  const sellerBefore = service.getProfile(seller.session.token);
+  const buyerBefore = service.getProfile(buyer.session.token);
+
+  const created = service.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(created.ok, true);
+  assert.equal(created.listing.schemaVersion, 2);
+  assert.equal(created.listing.count, 1);
+  assert.match(created.listing.equipmentEnvelope.envelopeId, /^eqx_market_/);
+  assert.equal(created.listing.equipmentEnvelope.instanceState.durability, 17);
+  assert.equal(created.listing.equipmentEnvelope.instanceState.enhancement.level, 4);
+  assert.deepEqual(created.listing.equipmentEnvelope.instanceState.futureAffixes, [{id: "market_power", value: 7}]);
+  assert.equal(Object.hasOwn(created.listing.equipmentEnvelope, "provenance"), false);
+  assert.equal(Object.hasOwn(created.listing.equipmentEnvelope.instanceState, "source"), false);
+  assert.equal(Object.hasOwn(created.listing.equipmentEnvelope.instanceState, "transferProvenance"), false);
+  assert.equal(profileItemCount(created.profile, "weapon_wooden_club"), 0);
+  assert.equal(Object.hasOwn(created.profile.equipmentInstances, "equip_transfer_guard_1"), false);
+  assert.equal(created.profileBinding.profileRevision, sellerBefore.profileSummary.profileRevision + 1);
+
+  const storedListing = service.snapshot().marketListings[created.listing.listingId];
+  assert.equal(storedListing.schemaVersion, 2);
+  assert.equal(storedListing.equipmentEnvelope.provenance.sourceInstanceId, "equip_transfer_guard_1");
+  assert.equal(storedListing.equipmentEnvelope.instanceState.source, "transfer_guard_test");
+  assert.deepEqual(storedListing.equipmentEnvelope.instanceState.futureAffixes, [{id: "market_power", value: 7}]);
+  const listed = service.marketListings(buyer.session.token).market.listings[0];
+  assert.equal(Object.hasOwn(listed.equipmentEnvelope, "provenance"), false);
+  assert.equal(Object.hasOwn(listed.equipmentEnvelope.instanceState, "source"), false);
+
+  const bought = service.buyMarketListing(buyer.session.token, {listingId: created.listing.listingId});
+  assert.equal(bought.ok, true);
+  assert.equal(bought.profile.stoneCoins, buyerBefore.profile.stoneCoins - 20);
+  assert.equal(profileItemCount(bought.profile, "weapon_wooden_club"), 1);
+  assert.equal(service.snapshot().marketListings[created.listing.listingId], undefined);
+  const buyerStored = snapshotProfileDocument(service.snapshot(), buyer.account.accountId).profile;
+  const imported = Object.values(buyerStored.equipmentInstances).find((instance) => (
+    instance.itemId === "weapon_wooden_club" && instance.location === "backpack"
+  ));
+  assert.ok(imported);
+  assert.notEqual(imported.instanceId, "equip_transfer_guard_1");
+  assert.equal(imported.durability, 17);
+  assert.equal(imported.enhancement.level, 4);
+  assert.equal(imported.wearCounters.attackCount, 37);
+  assert.deepEqual(imported.futureAffixes, [{id: "market_power", value: 7}]);
+  assert.equal(imported.transferProvenance.originEnvelopeId, storedListing.equipmentEnvelope.envelopeId);
+  assert.equal(imported.transferProvenance.originStateFingerprint, storedListing.equipmentEnvelope.stateFingerprint);
+  assert.deepEqual(service.snapshot().consumedEquipmentEnvelopes[storedListing.equipmentEnvelope.envelopeId], {
+    schemaVersion: 1,
+    envelopeId: storedListing.equipmentEnvelope.envelopeId,
+  });
+  const sellerStored = snapshotProfileDocument(service.snapshot(), seller.account.accountId).profile;
+  assert.equal(profileItemCount(sellerStored, "weapon_wooden_club"), 0);
+  assert.equal(Object.keys(sellerStored.equipmentInstances).length, 0);
+  const saleMail = service.listInbox(seller.session.token).messages.find((mail) => mail.title === "拍卖行成交通知");
+  assert.ok(saleMail);
+  assert.equal(saleMail.currency.stoneCoins, 19);
+  const replay = service.buyMarketListing(buyer.session.token, {listingId: created.listing.listingId});
+  assert.equal(replay.ok, false);
+  assert.equal(replay.code, "market_listing_missing");
+});
+
+test("equipment market cancel imports the escrow as a new local instance and legacy template-only listings remain blocked", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "marketequip_cancel", password: "test1234", displayName: "装备下架号"});
+  const buyer = seedService.register({username: "mktequipoldbuyer", password: "test1234", displayName: "旧挂单买家"});
+  seedBackpackEquipment(seedService, seller.session.token, "weapon_wooden_club", {
+    durability: 11,
+    enhancement: {itemId: "weapon_wooden_club", level: 3, history: [{level: 3, roll: 77}]},
+  });
+  const created = seedService.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 30,
+    currency: "diamonds",
+  });
+  assert.equal(created.ok, true);
+  const envelopeId = created.listing.equipmentEnvelope.envelopeId;
+  const cancelled = seedService.cancelMarketListing(seller.session.token, {listingId: created.listing.listingId});
+  assert.equal(cancelled.ok, true);
+  assert.equal(profileItemCount(cancelled.profile, "weapon_wooden_club"), 1);
+  assert.equal(seedService.snapshot().marketListings[created.listing.listingId], undefined);
+  const sellerAfterCancel = snapshotProfileDocument(seedService.snapshot(), seller.account.accountId).profile;
+  const returned = Object.values(sellerAfterCancel.equipmentInstances).find((instance) => instance.itemId === "weapon_wooden_club");
+  assert.ok(returned);
+  assert.notEqual(returned.instanceId, "equip_transfer_guard_1");
+  assert.equal(returned.durability, 11);
+  assert.equal(returned.enhancement.level, 3);
+  assert.equal(returned.transferProvenance.originEnvelopeId, envelopeId);
+  assert.deepEqual(seedService.snapshot().consumedEquipmentEnvelopes[envelopeId], {
+    schemaVersion: 1,
+    envelopeId,
+  });
 
   const seed = seedService.snapshot();
   const sellerDoc = snapshotProfileDocument(seed, seller.account.accountId);
-  sellerDoc.profile.backpackSlots = Array.from({length: 15}, () => ({}));
+  sellerDoc.profile.backpackSlots = Array.from({length: sellerDoc.profile.backpackSlots.length}, () => ({}));
   sellerDoc.profile.equipmentInstances = {};
   seed.marketListings.legacy_equipment_listing = {
     listingId: "legacy_equipment_listing",
@@ -750,24 +922,448 @@ test("equipment market create, buy, and cancel preserve all assets and historica
   const service = createAuthService({store: createMemoryAuthStore(seed)});
   const buyerBefore = service.getProfile(buyer.session.token);
   const sellerBefore = service.getProfile(seller.session.token);
-
   const buy = service.buyMarketListing(buyer.session.token, {listingId: "legacy_equipment_listing"});
   assert.equal(buy.ok, false);
   assert.equal(buy.code, "market_equipment_transfer_unsupported");
-  const buyerAfter = service.getProfile(buyer.session.token);
-  assert.equal(buyerAfter.profileSummary.profileRevision, buyerBefore.profileSummary.profileRevision);
-  assert.equal(buyerAfter.profile.stoneCoins, buyerBefore.profile.stoneCoins);
-  assert.equal(profileItemCount(buyerAfter.profile, "weapon_wooden_club"), 0);
-  assert.ok(service.snapshot().marketListings.legacy_equipment_listing);
-
   const cancel = service.cancelMarketListing(seller.session.token, {listingId: "legacy_equipment_listing"});
   assert.equal(cancel.ok, false);
   assert.equal(cancel.code, "market_equipment_transfer_unsupported");
-  const sellerAfter = service.getProfile(seller.session.token);
-  assert.equal(sellerAfter.profileSummary.profileRevision, sellerBefore.profileSummary.profileRevision);
-  assert.equal(profileItemCount(sellerAfter.profile, "weapon_wooden_club"), 0);
-  assert.deepEqual(sellerAfter.profile.equipmentInstances, {});
+  assert.equal(service.getProfile(buyer.session.token).profileSummary.profileRevision, buyerBefore.profileSummary.profileRevision);
+  assert.equal(service.getProfile(seller.session.token).profileSummary.profileRevision, sellerBefore.profileSummary.profileRevision);
   assert.ok(service.snapshot().marketListings.legacy_equipment_listing);
+});
+
+test("equipment market create accepts only an exact instance intent and stale selection failures are atomic", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const seller = service.register({username: "marketequip_intent", password: "test1234", displayName: "装备意图号"});
+  seedBackpackEquipment(service, seller.session.token);
+  const before = service.getProfile(seller.session.token);
+  const baseIntent = {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  };
+  const missingSelection = service.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(missingSelection.ok, false);
+  assert.equal(missingSelection.code, "market_equipment_selection_required");
+  const forgedEnvelope = service.createMarketListing(seller.session.token, {
+    ...baseIntent,
+    equipmentEnvelope: {schemaVersion: 1},
+  });
+  assert.equal(forgedEnvelope.ok, false);
+  assert.equal(forgedEnvelope.code, "market_equipment_intent_invalid");
+  const staleInstance = service.createMarketListing(seller.session.token, {
+    ...baseIntent,
+    instanceId: "equip_stale_missing",
+  });
+  assert.equal(staleInstance.ok, false);
+  assert.equal(staleInstance.code, "equipment_instance_selection_invalid");
+  const staleSlot = service.createMarketListing(seller.session.token, {
+    ...baseIntent,
+    sourceSlotIndex: 1,
+  });
+  assert.equal(staleSlot.ok, false);
+  assert.equal(staleSlot.code, "equipment_transfer_source_slot_mismatch");
+  const after = service.getProfile(seller.session.token);
+  assert.equal(after.profileSummary.profileRevision, before.profileSummary.profileRevision);
+  assert.deepEqual(after.profile, before.profile);
+  assert.deepEqual(service.snapshot().marketListings, {});
+});
+
+test("equipment market buy and cancel keep wallet, revisions, listing, and private envelope unchanged when backpacks are full", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const seller = service.register({username: "mktequipfullsell", password: "test1234", displayName: "满包卖家"});
+  const buyer = service.register({username: "mktequipfullbuy", password: "test1234", displayName: "满包买家"});
+  seedBackpackEquipment(service, seller.session.token, "weapon_wooden_club", {
+    durability: 13,
+    futureAffixes: [{id: "full_guard", value: 9}],
+  });
+  const created = service.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(created.ok, true);
+  const listingId = created.listing.listingId;
+
+  for (const account of [buyer, seller]) {
+    const current = service.getProfile(account.session.token);
+    const profile = current.profile;
+    profile.backpackSlots = Array.from({length: profile.backpackSlots.length}, () => ({
+      itemId: "item_meat_small",
+      count: 99,
+    }));
+    const saved = service.saveProfile(account.session.token, {
+      expectedRevision: current.profileSummary.profileRevision,
+      profile,
+    });
+    assert.equal(saved.ok, true);
+  }
+
+  const beforeBuy = service.snapshot();
+  const buyerBindingBefore = beforeBuy.profileBindings[buyer.account.accountId];
+  const buyerProfileBefore = snapshotProfileDocument(beforeBuy, buyer.account.accountId).profile;
+  const sellerBindingBefore = beforeBuy.profileBindings[seller.account.accountId];
+  const sellerProfileBefore = snapshotProfileDocument(beforeBuy, seller.account.accountId).profile;
+  const listingBefore = structuredClone(beforeBuy.marketListings[listingId]);
+  const mailCountBefore = Object.keys(beforeBuy.mailMessages).length;
+  const taxBefore = structuredClone(beforeBuy.marketConfig);
+  const buy = service.buyMarketListing(buyer.session.token, {listingId});
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "market_backpack_full");
+  let after = service.snapshot();
+  assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, buyerBindingBefore.profileRevision);
+  assert.equal(after.profileBindings[seller.account.accountId].profileRevision, sellerBindingBefore.profileRevision);
+  assert.deepEqual(snapshotProfileDocument(after, buyer.account.accountId).profile, buyerProfileBefore);
+  assert.deepEqual(snapshotProfileDocument(after, seller.account.accountId).profile, sellerProfileBefore);
+  assert.deepEqual(after.marketListings[listingId], listingBefore);
+  assert.equal(Object.keys(after.mailMessages).length, mailCountBefore);
+  assert.deepEqual(after.marketConfig, taxBefore);
+
+  const cancel = service.cancelMarketListing(seller.session.token, {listingId});
+  assert.equal(cancel.ok, false);
+  assert.equal(cancel.code, "market_backpack_full");
+  after = service.snapshot();
+  assert.equal(after.profileBindings[buyer.account.accountId].profileRevision, buyerBindingBefore.profileRevision);
+  assert.equal(after.profileBindings[seller.account.accountId].profileRevision, sellerBindingBefore.profileRevision);
+  assert.deepEqual(snapshotProfileDocument(after, buyer.account.accountId).profile, buyerProfileBefore);
+  assert.deepEqual(snapshotProfileDocument(after, seller.account.accountId).profile, sellerProfileBefore);
+  assert.deepEqual(after.marketListings[listingId], listingBefore);
+  assert.equal(after.marketListings[listingId].equipmentEnvelope.instanceState.durability, 13);
+  assert.deepEqual(after.marketListings[listingId].equipmentEnvelope.instanceState.futureAffixes, [{id: "full_guard", value: 9}]);
+  assert.equal(Object.keys(after.mailMessages).length, mailCountBefore);
+  assert.deepEqual(after.marketConfig, taxBefore);
+});
+
+test("duplicate or damaged equipment escrow makes market reads and mutations fail without hiding or consuming listings", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "mktequipdamage", password: "test1234", displayName: "托管保护卖家"});
+  const buyer = seedService.register({username: "mktequipdamgbuy", password: "test1234", displayName: "托管保护买家"});
+  seedBackpackEquipment(seedService, seller.session.token);
+  const created = seedService.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(created.ok, true);
+  const listingId = created.listing.listingId;
+  const baseSeed = seedService.snapshot();
+
+  const duplicateSeed = structuredClone(baseSeed);
+  const duplicateId = "market_duplicate_equipment";
+  duplicateSeed.marketListings[duplicateId] = structuredClone(duplicateSeed.marketListings[listingId]);
+  duplicateSeed.marketListings[duplicateId].listingId = duplicateId;
+  const duplicateService = createAuthService({store: createMemoryAuthStore(duplicateSeed)});
+  const duplicateBefore = duplicateService.snapshot();
+  const readDuplicate = duplicateService.marketListings(buyer.session.token);
+  assert.equal(readDuplicate.ok, false);
+  assert.equal(readDuplicate.code, "market_equipment_envelope_duplicate");
+  const buyDuplicate = duplicateService.buyMarketListing(buyer.session.token, {listingId});
+  assert.equal(buyDuplicate.ok, false);
+  assert.equal(buyDuplicate.code, "equipment_transfer_envelope_duplicate");
+  const cancelDuplicate = duplicateService.cancelMarketListing(seller.session.token, {listingId});
+  assert.equal(cancelDuplicate.ok, false);
+  assert.equal(cancelDuplicate.code, "equipment_transfer_envelope_duplicate");
+  assert.deepEqual(duplicateService.snapshot(), duplicateBefore);
+
+  for (const scenario of [
+    {
+      code: "equipment_transfer_fingerprint_mismatch",
+      mutate(listing) {
+        listing.equipmentEnvelope.instanceState.durability -= 1;
+      },
+    },
+    {
+      code: "equipment_transfer_envelope_schema_future",
+      mutate(listing) {
+        listing.equipmentEnvelope.schemaVersion = 2;
+      },
+    },
+    {
+      code: "market_listing_schema_future",
+      mutate(listing) {
+        listing.schemaVersion = 3;
+      },
+    },
+  ]) {
+    const seed = structuredClone(baseSeed);
+    scenario.mutate(seed.marketListings[listingId]);
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+    const before = service.snapshot();
+    const read = service.marketListings(buyer.session.token);
+    assert.equal(read.ok, false);
+    assert.equal(read.code, scenario.code);
+    const buy = service.buyMarketListing(buyer.session.token, {listingId});
+    assert.equal(buy.ok, false);
+    assert.equal(buy.code, scenario.code);
+    const cancel = service.cancelMarketListing(seller.session.token, {listingId});
+    assert.equal(cancel.ok, false);
+    assert.equal(cancel.code, scenario.code);
+    assert.deepEqual(service.snapshot(), before);
+  }
+});
+
+test("bank withdraw and market buy or cancel reject one envelope owned by multiple persistent roots atomically", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const seller = seedService.register({username: "eqown_seller", password: "test1234", displayName: "归属卖家"});
+  const buyer = seedService.register({username: "eqown_buyer", password: "test1234", displayName: "归属买家"});
+  const bankOwner = seedService.register({username: "eqown_bank", password: "test1234", displayName: "归属银行号"});
+
+  seedBackpackEquipment(seedService, seller.session.token);
+  const listed = seedService.createMarketListing(seller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 20,
+    currency: "stoneCoins",
+  });
+  assert.equal(listed.ok, true);
+
+  seedBackpackEquipment(seedService, bankOwner.session.token);
+  const deposited = seedService.bankDeposit(bankOwner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(deposited.ok, true);
+
+  const seed = seedService.snapshot();
+  const listingId = listed.listing.listingId;
+  const duplicateEnvelope = structuredClone(seed.marketListings[listingId].equipmentEnvelope);
+  const bankProfile = snapshotProfileDocument(seed, bankOwner.account.accountId).profile;
+  bankProfile.bank.slots[0].equipmentEnvelopes = [duplicateEnvelope];
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const before = service.snapshot();
+
+  const withdraw = service.bankWithdraw(bankOwner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      envelopeId: duplicateEnvelope.envelopeId,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(withdraw.ok, false);
+  assert.equal(withdraw.code, "equipment_transfer_envelope_duplicate");
+  assert.deepEqual(service.snapshot(), before);
+
+  const buy = service.buyMarketListing(buyer.session.token, {listingId});
+  assert.equal(buy.ok, false);
+  assert.equal(buy.code, "equipment_transfer_envelope_duplicate");
+  assert.deepEqual(service.snapshot(), before);
+
+  const cancel = service.cancelMarketListing(seller.session.token, {listingId});
+  assert.equal(cancel.ok, false);
+  assert.equal(cancel.code, "equipment_transfer_envelope_duplicate");
+  assert.deepEqual(service.snapshot(), before);
+});
+
+test("bank, market, and mail exports cannot launder a duplicated materialized envelope origin", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const owner = seedService.register({username: "eqorigin_owner", password: "test1234", displayName: "来源持有人"});
+  const recipient = seedService.register({username: "eqorigin_recv", password: "test1234", displayName: "来源收件人"});
+  const escrowSeller = seedService.register({username: "eqorigin_escrow", password: "test1234", displayName: "来源托管号"});
+
+  seedBackpackEquipment(seedService, owner.session.token);
+  const deposited = seedService.bankDeposit(owner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(deposited.ok, true);
+  const originEnvelope = structuredClone(
+    snapshotProfileDocument(seedService.snapshot(), owner.account.accountId).profile.bank.slots[0].equipmentEnvelopes[0],
+  );
+  const withdrawn = seedService.bankWithdraw(owner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      envelopeId: originEnvelope.envelopeId,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(withdrawn.ok, true);
+  const ownerProfile = snapshotProfileDocument(seedService.snapshot(), owner.account.accountId).profile;
+  const imported = Object.values(ownerProfile.equipmentInstances).find((instance) => (
+    instance.transferProvenance
+    && instance.transferProvenance.originEnvelopeId === originEnvelope.envelopeId
+  ));
+  assert.ok(imported);
+  const sourceSlotIndex = ownerProfile.backpackSlots.findIndex((slot) => slot.itemId === imported.itemId);
+  assert.notEqual(sourceSlotIndex, -1);
+
+  seedBackpackEquipment(seedService, escrowSeller.session.token);
+  const escrow = seedService.createMarketListing(escrowSeller.session.token, {
+    itemId: "weapon_wooden_club",
+    count: 1,
+    instanceId: "equip_transfer_guard_1",
+    sourceSlotIndex: 0,
+    unitPrice: 1,
+    currency: "stoneCoins",
+  });
+  assert.equal(escrow.ok, true);
+  const baseSeed = seedService.snapshot();
+  baseSeed.marketListings[escrow.listing.listingId].equipmentEnvelope = originEnvelope;
+
+  const actions = [
+    (service) => service.bankDeposit(owner.session.token, {
+      items: [{
+        itemId: imported.itemId,
+        count: 1,
+        instanceId: imported.instanceId,
+        sourceSlotIndex,
+        bankSlotIndex: 0,
+      }],
+    }),
+    (service) => service.createMarketListing(owner.session.token, {
+      itemId: imported.itemId,
+      count: 1,
+      instanceId: imported.instanceId,
+      sourceSlotIndex,
+      unitPrice: 1,
+      currency: "stoneCoins",
+    }),
+    (service) => service.sendMail(owner.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "禁止洗凭证",
+      body: "重复来源不能再次托管。",
+      items: [{
+        itemId: imported.itemId,
+        count: 1,
+        instanceId: imported.instanceId,
+        sourceSlotIndex,
+      }],
+    }),
+  ];
+  for (const action of actions) {
+    const service = createAuthService({store: createMemoryAuthStore(structuredClone(baseSeed))});
+    const before = service.snapshot();
+    const result = action(service);
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "equipment_transfer_envelope_duplicate");
+    assert.deepEqual(service.snapshot(), before);
+  }
+});
+
+test("consumed ledger blocks an E1 replay after E1 to E2 to E3 multi-hop transfer", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const owner = service.register({username: "eqmultihop", password: "test1234", displayName: "多跳持有人"});
+  seedBackpackEquipment(service, owner.session.token);
+
+  function currentImportedInstance(originEnvelopeId) {
+    const profile = snapshotProfileDocument(service.snapshot(), owner.account.accountId).profile;
+    const instance = Object.values(profile.equipmentInstances).find((entry) => (
+      entry.transferProvenance
+      && entry.transferProvenance.originEnvelopeId === originEnvelopeId
+    ));
+    assert.ok(instance);
+    const sourceSlotIndex = profile.backpackSlots.findIndex((slot) => slot.itemId === instance.itemId);
+    assert.notEqual(sourceSlotIndex, -1);
+    return {instance, sourceSlotIndex};
+  }
+
+  const firstDeposit = service.bankDeposit(owner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_transfer_guard_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(firstDeposit.ok, true);
+  const e1 = structuredClone(
+    snapshotProfileDocument(service.snapshot(), owner.account.accountId).profile.bank.slots[0].equipmentEnvelopes[0],
+  );
+  assert.equal(service.bankWithdraw(owner.session.token, {
+    items: [{itemId: e1.itemId, count: 1, envelopeId: e1.envelopeId, bankSlotIndex: 0}],
+  }).ok, true);
+
+  const importedE1 = currentImportedInstance(e1.envelopeId);
+  const secondDeposit = service.bankDeposit(owner.session.token, {
+    items: [{
+      itemId: importedE1.instance.itemId,
+      count: 1,
+      instanceId: importedE1.instance.instanceId,
+      sourceSlotIndex: importedE1.sourceSlotIndex,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(secondDeposit.ok, true);
+  const e2 = structuredClone(
+    snapshotProfileDocument(service.snapshot(), owner.account.accountId).profile.bank.slots[0].equipmentEnvelopes[0],
+  );
+  assert.notEqual(e2.envelopeId, e1.envelopeId);
+  assert.equal(service.bankWithdraw(owner.session.token, {
+    items: [{itemId: e2.itemId, count: 1, envelopeId: e2.envelopeId, bankSlotIndex: 0}],
+  }).ok, true);
+
+  const importedE2 = currentImportedInstance(e2.envelopeId);
+  const thirdDeposit = service.bankDeposit(owner.session.token, {
+    items: [{
+      itemId: importedE2.instance.itemId,
+      count: 1,
+      instanceId: importedE2.instance.instanceId,
+      sourceSlotIndex: importedE2.sourceSlotIndex,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(thirdDeposit.ok, true);
+  const e3 = snapshotProfileDocument(service.snapshot(), owner.account.accountId)
+    .profile.bank.slots[0].equipmentEnvelopes[0];
+  assert.notEqual(e3.envelopeId, e2.envelopeId);
+  const multiHopSnapshot = service.snapshot();
+  assert.deepEqual(Object.keys(multiHopSnapshot.consumedEquipmentEnvelopes).sort(), [
+    e1.envelopeId,
+    e2.envelopeId,
+  ].sort());
+
+  multiHopSnapshot.mailMessages.mail_e1_stale_replay = {
+    mailId: "mail_e1_stale_replay",
+    senderAccountId: "system_replay_test",
+    senderUsername: "system_replay_test",
+    senderDisplayName: "回放测试",
+    recipientAccountId: owner.account.accountId,
+    recipientUsername: owner.account.username,
+    recipientDisplayName: owner.account.displayName,
+    title: "旧信封回放",
+    body: "已消费的E1不能再次领取。",
+    items: [{itemId: e1.itemId, count: 1}],
+    equipmentEnvelopes: [e1],
+    currency: {},
+    createdAt: "2026-07-12T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 2,
+  };
+  const replayService = createAuthService({store: createMemoryAuthStore(multiHopSnapshot)});
+  const beforeReplay = replayService.snapshot();
+  const replay = replayService.claimMailAttachments(owner.session.token, "mail_e1_stale_replay");
+  assert.equal(replay.ok, false);
+  assert.equal(replay.code, "equipment_transfer_envelope_duplicate");
+  assert.deepEqual(replayService.snapshot(), beforeReplay);
 });
 
 test("unknown market listings cannot charge buyers or disappear on buy and cancel", () => {
@@ -818,7 +1414,8 @@ test("future and malformed market listing schemas preserve listings and wallets"
   const baseSeed = seedService.snapshot();
 
   for (const scenario of [
-    {schemaVersion: 2, expectedCode: "market_listing_schema_future"},
+    {schemaVersion: 3, expectedCode: "market_listing_schema_future"},
+    {schemaVersion: 2, expectedCode: "market_listing_schema_unsupported"},
     {schemaVersion: "not-a-version", expectedCode: "market_listing_schema_invalid"},
   ]) {
     const seed = structuredClone(baseSeed);

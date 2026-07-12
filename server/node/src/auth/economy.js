@@ -19,6 +19,19 @@ const {
   exportBackpackEquipmentEnvelope,
   importBackpackEquipmentEnvelope,
 } = require("./equipment-transfer-envelope");
+const {
+  OWNER_KIND_BANK,
+  OWNER_KIND_MARKET,
+  createEquipmentEnvelopeOwnershipRegistry,
+} = require("./equipment-envelope-registry");
+const {
+  ensureConsumedEquipmentEnvelopeIds,
+} = require("./equipment-envelope-consumed-ledger");
+const {
+  auditMarketListingBook,
+  buildEquipmentMarketListing,
+  publicMarketListingFacts,
+} = require("./market-listing-state");
 
 const TRADE_OFFER_TTL_MS = 2 * 60 * 1000;
 const TRADE_MAX_DISTANCE_CELLS = 2;
@@ -116,9 +129,26 @@ function createEconomyDomain(ctx) {
       return fail("bank_stone_coin_limit", `银行石币最多存放${bankStoneCoinLimit}。`, profilePayload(prepared, profile, bank));
     }
     let nextProfile = clone(profile);
+    const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(prepared.data);
+    let nextConsumedLedger = prepared.data.consumedEquipmentEnvelopes;
+    const reservedEnvelopeIds = new Set();
     for (const item of items) {
       if (isBankEquipmentItem(item.itemId)) {
-        const envelopeId = nextBankEquipmentEnvelopeId(bank);
+        const sourceOwnership = envelopeRegistry.requireMaterializedInstanceOrigin(
+          prepared.binding.playerId,
+          item.instanceId,
+        );
+        if (!sourceOwnership.ok) {
+          return fail(sourceOwnership.code, sourceOwnership.message, profilePayload(prepared, profile, originalBank));
+        }
+        if (sourceOwnership.hasOrigin) {
+          const consumed = ensureConsumedEquipmentEnvelopeIds(nextConsumedLedger, sourceOwnership.envelopeId);
+          if (!consumed.ok) {
+            return fail(consumed.code, consumed.message, profilePayload(prepared, profile, originalBank));
+          }
+          nextConsumedLedger = consumed.ledger;
+        }
+        const envelopeId = nextBankEquipmentEnvelopeId(envelopeRegistry, reservedEnvelopeIds);
         if (!envelopeId.ok) {
           return fail(envelopeId.code, envelopeId.message, profilePayload(prepared, profile, originalBank));
         }
@@ -147,6 +177,7 @@ function createEconomyDomain(ctx) {
         }
         nextProfile = exported.profile;
         bank = added.bank;
+        reservedEnvelopeIds.add(exported.envelope.envelopeId);
         item.envelopeId = exported.envelope.envelopeId;
         item.bankSlotIndex = added.bankSlotIndex;
         continue;
@@ -174,6 +205,7 @@ function createEconomyDomain(ctx) {
     nextProfile.stoneCoins = profileStoneCoins(nextProfile) - stoneCoins;
     bank.stoneCoins += stoneCoins;
     nextProfile.bank = bank;
+    prepared.data.consumedEquipmentEnvelopes = nextConsumedLedger;
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, nextProfile, now);
     save(prepared.data);
     return ok({
@@ -215,6 +247,8 @@ function createEconomyDomain(ctx) {
       return fail("wallet_stone_coin_limit", `身上石币上限为${profileStoneCoinLimit}，请先存入银行。`, profilePayload(prepared, profile, bank));
     }
     let nextProfile = clone(profile);
+    const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(prepared.data);
+    const consumedEnvelopeIds = [];
     const withdrawItems = [];
     for (const item of items) {
       if (isBankEquipmentItem(item.itemId)) {
@@ -228,6 +262,13 @@ function createEconomyDomain(ctx) {
         );
         if (!removed.ok) {
           return fail(removed.code, removed.message, profilePayload(prepared, profile, originalBank));
+        }
+        const ownership = envelopeRegistry.requireUnique(removed.envelope.envelopeId, {
+          kind: OWNER_KIND_BANK,
+          id: prepared.binding.playerId,
+        });
+        if (!ownership.ok) {
+          return fail(ownership.code, ownership.message, profilePayload(prepared, profile, originalBank));
         }
         const beforeSlots = profileBackpackSlots(nextProfile);
         const imported = importBackpackEquipmentEnvelope(
@@ -250,6 +291,7 @@ function createEconomyDomain(ctx) {
         }
         nextProfile = targeted.profile;
         bank = removed.bank;
+        consumedEnvelopeIds.push(removed.envelope.envelopeId);
         item.instanceId = imported.instanceId;
         continue;
       }
@@ -277,6 +319,14 @@ function createEconomyDomain(ctx) {
     nextProfile.stoneCoins = profileStoneCoins(nextProfile) + stoneCoins;
     bank.stoneCoins -= stoneCoins;
     nextProfile.bank = bank;
+    const consumed = ensureConsumedEquipmentEnvelopeIds(
+      prepared.data.consumedEquipmentEnvelopes,
+      consumedEnvelopeIds,
+    );
+    if (!consumed.ok) {
+      return fail(consumed.code, consumed.message, profilePayload(prepared, profile, originalBank));
+    }
+    prepared.data.consumedEquipmentEnvelopes = consumed.ledger;
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, nextProfile, now);
     save(prepared.data);
     return ok({
@@ -295,6 +345,14 @@ function createEconomyDomain(ctx) {
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    const marketBook = auditMarketListingBook(
+      objectMap(data.marketListings),
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!marketBook.ok) {
+      return fail(marketBook.code, marketBook.message);
     }
     return ok({
       ...marketStatePayload(data, resolved.account, payload),
@@ -344,21 +402,30 @@ function createEconomyDomain(ctx) {
     if (!prepared.ok) {
       return prepared;
     }
+    const marketBook = auditMarketListingBook(
+      objectMap(prepared.data.marketListings),
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!marketBook.ok) {
+      return fail(marketBook.code, marketBook.message, profilePayload(prepared, prepared.profile));
+    }
     const itemId = String(payload.itemId || payload.item || "").trim();
-    const count = normalizeListingCount(payload.count || payload.amount || 0);
-    const unitPrice = normalizeUnitPrice(payload.unitPrice || payload.price || 0);
-    const currency = normalizeMarketCurrency(payload.currency || payload.priceCurrency || MARKET_CURRENCY_STONE_COINS);
+    const isEquipment = isMarketEquipmentItem(itemId);
+    const equipmentIntent = isEquipment ? parseMarketEquipmentListingIntent(payload, itemId) : null;
+    if (equipmentIntent && !equipmentIntent.ok) {
+      return fail(equipmentIntent.code, equipmentIntent.message, profilePayload(prepared, prepared.profile));
+    }
+    const count = isEquipment ? 1 : normalizeListingCount(payload.count || payload.amount || 0);
+    const unitPrice = isEquipment
+      ? equipmentIntent.unitPrice
+      : normalizeUnitPrice(payload.unitPrice || payload.price || 0);
+    const currency = isEquipment
+      ? equipmentIntent.currency
+      : normalizeMarketCurrency(payload.currency || payload.priceCurrency || MARKET_CURRENCY_STONE_COINS);
     const items = normalizeLimitedItems([{itemId, count}]);
     if (items.length <= 0 || items[0].itemId !== itemId) {
       return fail("market_item_invalid", "请选择可以上架的物品。", profilePayload(prepared, prepared.profile));
-    }
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
-    if (unsupportedEquipment) {
-      return fail(
-        "market_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能上架交易所，请先留在背包。`,
-        profilePayload(prepared, prepared.profile),
-      );
     }
     if (bagItemIsBound(itemId)) {
       return fail("market_item_bound", `${bagItemLabel(itemId)} 已绑定，不能上架交易所。`, profilePayload(prepared, prepared.profile));
@@ -369,35 +436,115 @@ function createEconomyDomain(ctx) {
     if (unitPrice <= 0) {
       return fail("market_price_invalid", "单价需要大于0。", profilePayload(prepared, prepared.profile));
     }
-    const activeListings = activeMarketListings(prepared.data);
+    const activeListings = marketBook.listings;
     if (activeListings.filter((listing) => listing.sellerAccountId === prepared.account.accountId).length >= 20) {
       return fail("market_listing_limit", "你的挂单太多，请先卖出或取消一些。", profilePayload(prepared, prepared.profile));
     }
     if (activeListings.length >= MARKET_MAX_LISTINGS) {
       return fail("market_full", "交易所挂单已满，请稍后再试。", profilePayload(prepared, prepared.profile));
     }
-    const profile = clone(prepared.profile);
-    const slots = profileBackpackSlots(profile);
-    const missing = firstMissingBackpackItem(slots, items);
-    if (missing) {
-      return fail("market_item_not_enough", `${missing.label} 数量不够，无法上架。`, profilePayload(prepared, profile));
+    const listingIdentity = nextMarketListingId(prepared.data.marketListings);
+    if (!listingIdentity.ok) {
+      return fail(listingIdentity.code, listingIdentity.message, profilePayload(prepared, prepared.profile));
     }
-    profile.backpackSlots = consumeBackpackItem(slots, itemId, count);
-    profile.captureTools = captureToolBagFromProfile(profile);
-    const listingId = `market_${randomId()}`;
-    const listing = {
-      listingId,
-      sellerAccountId: prepared.account.accountId,
-      itemId,
-      count,
-      unitPrice,
-      currency,
-      createdAt: isoNow(now),
-      schemaVersion: 1,
-    };
-    prepared.data.marketListings = objectMap(prepared.data.marketListings);
-    prepared.data.marketListings[listingId] = listing;
-    const tutorialSale = tutorialSaleIsEligible(currentProfileQuestId(profile), listing);
+    const listingId = listingIdentity.listingId;
+    let profile = clone(prepared.profile);
+    let listing;
+    let nextConsumedLedger = prepared.data.consumedEquipmentEnvelopes;
+    if (isEquipment) {
+      const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(prepared.data);
+      const sourceOwnership = envelopeRegistry.requireMaterializedInstanceOrigin(
+        prepared.binding.playerId,
+        equipmentIntent.instanceId,
+      );
+      if (!sourceOwnership.ok) {
+        return fail(sourceOwnership.code, sourceOwnership.message, profilePayload(prepared, prepared.profile));
+      }
+      if (sourceOwnership.hasOrigin) {
+        const consumed = ensureConsumedEquipmentEnvelopeIds(nextConsumedLedger, sourceOwnership.envelopeId);
+        if (!consumed.ok) {
+          return fail(consumed.code, consumed.message, profilePayload(prepared, prepared.profile));
+        }
+        nextConsumedLedger = consumed.ledger;
+      }
+      const envelopeIdentity = nextMarketEquipmentEnvelopeId(envelopeRegistry);
+      if (!envelopeIdentity.ok) {
+        return fail(envelopeIdentity.code, envelopeIdentity.message, profilePayload(prepared, prepared.profile));
+      }
+      const exported = exportBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        itemId,
+        equipmentIntent.instanceId,
+        equipmentEnvelopeOptions(profile, itemId, {
+          sourceSlotIndex: equipmentIntent.sourceSlotIndex,
+          envelopeId: envelopeIdentity.envelopeId,
+        }),
+      );
+      if (!exported.ok) {
+        return fail(exported.code, exported.message, profilePayload(prepared, prepared.profile));
+      }
+      const built = buildEquipmentMarketListing({
+        listingId,
+        sellerAccountId: prepared.account.accountId,
+        itemId,
+        count: 1,
+        unitPrice,
+        currency,
+        createdAt: isoNow(now),
+      }, exported.envelope, battleEquipmentCatalog, marketListingStateOptions());
+      if (!built.ok) {
+        return fail(built.code, built.message, profilePayload(prepared, prepared.profile));
+      }
+      profile = exported.profile;
+      profile.captureTools = captureToolBagFromProfile(profile);
+      listing = built.listing;
+    } else {
+      const slots = profileBackpackSlots(profile);
+      const missing = firstMissingBackpackItem(slots, items);
+      if (missing) {
+        return fail("market_item_not_enough", `${missing.label} 数量不够，无法上架。`, profilePayload(prepared, profile));
+      }
+      profile.backpackSlots = consumeBackpackItem(slots, itemId, count);
+      profile.captureTools = captureToolBagFromProfile(profile);
+      listing = {
+        listingId,
+        sellerAccountId: prepared.account.accountId,
+        itemId,
+        count,
+        unitPrice,
+        currency,
+        createdAt: isoNow(now),
+        schemaVersion: 1,
+      };
+    }
+    const tutorialSale = !isEquipment && tutorialSaleIsEligible(currentProfileQuestId(profile), listing);
+    const tutorialSaleMailIdentity = tutorialSale
+      ? nextEconomyMailId(
+        prepared.data,
+        "mail_tutorial_market_",
+        "tutorial_market_sale_mail_id_unavailable",
+        "教学成交邮件编号暂时不可用，本次上架已取消，请重试。",
+      )
+      : {ok: true, mailId: ""};
+    if (!tutorialSaleMailIdentity.ok) {
+      return fail(
+        tutorialSaleMailIdentity.code,
+        tutorialSaleMailIdentity.message,
+        profilePayload(prepared, prepared.profile),
+      );
+    }
+    const nextListings = {...objectMap(prepared.data.marketListings), [listingId]: listing};
+    const nextMarketBook = auditMarketListingBook(
+      nextListings,
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!nextMarketBook.ok) {
+      return fail(nextMarketBook.code, nextMarketBook.message, profilePayload(prepared, prepared.profile));
+    }
+    prepared.data.consumedEquipmentEnvelopes = nextConsumedLedger;
+    prepared.data.marketListings = nextListings;
     const questMessages = recordAndClaimQuest(profile, {
       type: "market_list",
       itemId,
@@ -408,7 +555,12 @@ function createEconomyDomain(ctx) {
     });
     let saleMail = null;
     if (tutorialSale && questMessages.length > 0) {
-      saleMail = createTutorialMarketSaleMail(prepared.data, prepared.account, listing);
+      saleMail = createTutorialMarketSaleMail(
+        prepared.data,
+        prepared.account,
+        listing,
+        tutorialSaleMailIdentity.mailId,
+      );
       delete prepared.data.marketListings[listingId];
     }
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
@@ -433,23 +585,24 @@ function createEconomyDomain(ctx) {
       return fail(resolved.code, resolved.message);
     }
     const listingId = String(payload.listingId || payload.id || "").trim();
+    const marketBook = auditMarketListingBook(
+      objectMap(data.marketListings),
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!marketBook.ok) {
+      return fail(marketBook.code, marketBook.message);
+    }
     if (isTutorialBuyListingForAccount(listingId, resolved.account.accountId)) {
       return buyTutorialMarketListing(data, resolved.account, listingId);
     }
     const rawListing = data.marketListings && data.marketListings[listingId];
-    const rawListingConflict = rawMarketListingAssetConflict(rawListing);
-    if (rawListingConflict) {
-      return fail(rawListingConflict.code, rawListingConflict.message);
-    }
-    const listing = normalizeMarketListing(rawListing);
-    if (!listing || !listing.listingId) {
+    if (!rawListing) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
     }
-    if (firstUnsupportedEquipmentTransfer([listing])) {
-      return fail(
-        "market_equipment_transfer_unsupported",
-        `${bagItemLabel(listing.itemId)} 暂不能通过交易所购买，挂单会原样保留。`,
-      );
+    const listing = marketBook.listingById[listingId];
+    if (!listing) {
+      return fail("market_listing_missing", "这条挂单已经不存在。");
     }
     if (bagItemIsBound(listing.itemId)) {
       return fail("market_item_bound", `${bagItemLabel(listing.itemId)} 已绑定，不能继续交易。`);
@@ -457,9 +610,33 @@ function createEconomyDomain(ctx) {
     if (listing.sellerAccountId === resolved.account.accountId) {
       return fail("market_buy_self", "不能购买自己的挂单。");
     }
+    if (listing.equipmentEnvelope) {
+      const ownership = createEquipmentEnvelopeOwnershipRegistry(data).requireUnique(
+        listing.equipmentEnvelope.envelopeId,
+        {kind: OWNER_KIND_MARKET, id: listingId},
+      );
+      if (!ownership.ok) {
+        return fail(ownership.code, ownership.message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+    }
     const seller = accountById(data, listing.sellerAccountId);
     if (!seller) {
       return fail("market_seller_missing", "卖家账号档案异常，挂单会原样保留，请联系GM处理。");
+    }
+    const saleMailIdentity = nextEconomyMailId(
+      data,
+      "mail_market_",
+      "market_sale_mail_id_unavailable",
+      "成交邮件编号暂时不可用，本次购买已取消，请重试。",
+    );
+    if (!saleMailIdentity.ok) {
+      return fail(saleMailIdentity.code, saleMailIdentity.message, {
+        listing: publicMarketListing(listing, data),
+        ...marketStatePayload(data, resolved.account),
+      });
     }
     const buyerPrepared = profileForAccount(data, resolved.account);
     if (!buyerPrepared.ok) {
@@ -470,23 +647,58 @@ function createEconomyDomain(ctx) {
       return sellerPrepared;
     }
     const totalPrice = marketListingTotalPrice(listing);
-    const buyerProfile = clone(buyerPrepared.profile);
+    let buyerProfile = clone(buyerPrepared.profile);
+    let nextConsumedLedger = data.consumedEquipmentEnvelopes;
     if (profileCurrencyAmount(buyerProfile, listing.currency) < totalPrice) {
       return fail("market_not_enough_currency", `${shopCurrencyLabel(listing.currency)}不足，无法购买。`, {
         listing: publicMarketListing(listing, data),
         ...marketStatePayload(data, resolved.account),
       });
     }
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(buyerProfile), [{itemId: listing.itemId, count: listing.count}]);
-    if (normalizeMailItems(addResult.lostItems || []).length > 0) {
-      return fail("market_backpack_full", "背包空间不足，无法购买。", {
-        listing: publicMarketListing(listing, data),
-        ...marketStatePayload(data, resolved.account),
-      });
+    if (listing.equipmentEnvelope) {
+      const imported = importBackpackEquipmentEnvelope(
+        buyerProfile,
+        battleEquipmentCatalog,
+        listing.equipmentEnvelope,
+        equipmentEnvelopeOptions(buyerProfile, listing.itemId, {trustedServerEnvelope: true}),
+      );
+      if (!imported.ok) {
+        const code = imported.code === "equipment_transfer_backpack_full"
+          ? "market_backpack_full"
+          : imported.code;
+        const message = code === "market_backpack_full" ? "背包空间不足，无法购买。" : imported.message;
+        return fail(code, message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      buyerProfile = imported.profile;
+      const consumed = ensureConsumedEquipmentEnvelopeIds(
+        nextConsumedLedger,
+        listing.equipmentEnvelope.envelopeId,
+      );
+      if (!consumed.ok) {
+        return fail(consumed.code, consumed.message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      nextConsumedLedger = consumed.ledger;
+    } else {
+      const addResult = addRewardItemsToBackpack(
+        profileBackpackSlots(buyerProfile),
+        [{itemId: listing.itemId, count: listing.count}],
+      );
+      if (normalizeMailItems(addResult.lostItems || []).length > 0) {
+        return fail("market_backpack_full", "背包空间不足，无法购买。", {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      buyerProfile.backpackSlots = addResult.slots;
     }
     const tax = marketTaxForListing(data, listing);
     const sellerReceives = Math.max(0, totalPrice - tax);
-    buyerProfile.backpackSlots = addResult.slots;
     buyerProfile.captureTools = captureToolBagFromProfile(buyerProfile);
     setProfileCurrencyAmount(buyerProfile, listing.currency, profileCurrencyAmount(buyerProfile, listing.currency) - totalPrice);
     const questMessages = recordAndClaimQuest(buyerProfile, {
@@ -500,9 +712,17 @@ function createEconomyDomain(ctx) {
     });
     const config = normalizeMarketConfig(data.marketConfig);
     config.taxCollected[listing.currency] = normalizeCoinAmount(config.taxCollected[listing.currency]) + tax;
+    data.consumedEquipmentEnvelopes = nextConsumedLedger;
     data.marketConfig = config;
     const buyerPersisted = persistProfileForAccount(data, resolved.account, buyerPrepared.binding, buyerProfile, now);
-    const saleMail = createMarketSaleMail(data, seller, listing, tax, sellerReceives);
+    const saleMail = createMarketSaleMail(
+      data,
+      seller,
+      listing,
+      tax,
+      sellerReceives,
+      saleMailIdentity.mailId,
+    );
     delete data.marketListings[listingId];
     save(data);
     return ok({
@@ -535,34 +755,80 @@ function createEconomyDomain(ctx) {
     if (!rawListing || rawSellerAccountId !== resolved.account.accountId) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
     }
-    const rawListingConflict = rawMarketListingAssetConflict(rawListing);
-    if (rawListingConflict) {
-      return fail(rawListingConflict.code, rawListingConflict.message);
+    const marketBook = auditMarketListingBook(
+      objectMap(data.marketListings),
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!marketBook.ok) {
+      return fail(marketBook.code, marketBook.message);
     }
-    const listing = normalizeMarketListing(rawListing);
+    const listing = marketBook.listingById[listingId];
     if (!listing) {
       return fail("market_listing_missing", "这条挂单已经不存在。");
     }
-    if (firstUnsupportedEquipmentTransfer([listing])) {
-      return fail(
-        "market_equipment_transfer_unsupported",
-        `${bagItemLabel(listing.itemId)} 暂不能从交易所下架，挂单会原样保留，请联系GM处理。`,
+    if (listing.equipmentEnvelope) {
+      const ownership = createEquipmentEnvelopeOwnershipRegistry(data).requireUnique(
+        listing.equipmentEnvelope.envelopeId,
+        {kind: OWNER_KIND_MARKET, id: listingId},
       );
+      if (!ownership.ok) {
+        return fail(ownership.code, ownership.message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
     }
     const prepared = profileForAccount(data, resolved.account);
     if (!prepared.ok) {
       return prepared;
     }
-    const profile = clone(prepared.profile);
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), [{itemId: listing.itemId, count: listing.count}]);
-    if (normalizeMailItems(addResult.lostItems || []).length > 0) {
-      return fail("market_backpack_full", "背包空间不足，暂时不能下架。", {
-        listing: publicMarketListing(listing, data),
-        ...marketStatePayload(data, resolved.account),
-      });
+    let profile = clone(prepared.profile);
+    let nextConsumedLedger = data.consumedEquipmentEnvelopes;
+    if (listing.equipmentEnvelope) {
+      const imported = importBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        listing.equipmentEnvelope,
+        equipmentEnvelopeOptions(profile, listing.itemId, {trustedServerEnvelope: true}),
+      );
+      if (!imported.ok) {
+        const code = imported.code === "equipment_transfer_backpack_full"
+          ? "market_backpack_full"
+          : imported.code;
+        const message = code === "market_backpack_full" ? "背包空间不足，暂时不能下架。" : imported.message;
+        return fail(code, message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      profile = imported.profile;
+      const consumed = ensureConsumedEquipmentEnvelopeIds(
+        nextConsumedLedger,
+        listing.equipmentEnvelope.envelopeId,
+      );
+      if (!consumed.ok) {
+        return fail(consumed.code, consumed.message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      nextConsumedLedger = consumed.ledger;
+    } else {
+      const addResult = addRewardItemsToBackpack(
+        profileBackpackSlots(profile),
+        [{itemId: listing.itemId, count: listing.count}],
+      );
+      if (normalizeMailItems(addResult.lostItems || []).length > 0) {
+        return fail("market_backpack_full", "背包空间不足，暂时不能下架。", {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      profile.backpackSlots = addResult.slots;
     }
-    profile.backpackSlots = addResult.slots;
     profile.captureTools = captureToolBagFromProfile(profile);
+    data.consumedEquipmentEnvelopes = nextConsumedLedger;
     const persisted = persistProfileForAccount(data, resolved.account, prepared.binding, profile, now);
     delete data.marketListings[listingId];
     save(data);
@@ -952,17 +1218,131 @@ function createEconomyDomain(ctx) {
     };
   }
 
-  function nextBankEquipmentEnvelopeId(bank) {
-    const existingIds = new Set();
-    for (const slot of Array.isArray(bank && bank.slots) ? bank.slots : []) {
-      for (const envelope of Array.isArray(slot && slot.equipmentEnvelopes) ? slot.equipmentEnvelopes : []) {
-        existingIds.add(String(envelope && envelope.envelopeId || ""));
+  function isMarketEquipmentItem(itemId) {
+    return isBankEquipmentItem(itemId);
+  }
+
+  function marketListingStateOptions() {
+    return {
+      itemById: (itemId) => bagItemById(itemId),
+      isEquipmentItemId: (itemId) => isMarketEquipmentItem(itemId),
+      maxCount: MARKET_MAX_LISTING_COUNT,
+      maxUnitPrice: MARKET_MAX_UNIT_PRICE,
+      currencies: [MARKET_CURRENCY_STONE_COINS, MARKET_CURRENCY_DIAMONDS],
+      equipmentTransferOptions,
+    };
+  }
+
+  function parseMarketEquipmentListingIntent(payload, expectedItemId) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return {
+        ok: false,
+        code: "market_equipment_intent_invalid",
+        message: "装备上架请求格式异常，请刷新后重新选择。",
+      };
+    }
+    const allowedFields = new Set([
+      "itemId",
+      "count",
+      "instanceId",
+      "sourceSlotIndex",
+      "unitPrice",
+      "currency",
+    ]);
+    if (Object.keys(payload).some((key) => !allowedFields.has(key))) {
+      return {
+        ok: false,
+        code: "market_equipment_intent_invalid",
+        message: "装备上架请求含未授权或无效字段，请刷新后重新选择。",
+      };
+    }
+    if (
+      typeof payload.itemId !== "string"
+      || payload.itemId !== expectedItemId
+      || payload.itemId !== payload.itemId.trim()
+      || payload.count !== 1
+      || !Number.isSafeInteger(payload.unitPrice)
+      || payload.unitPrice < 1
+      || payload.unitPrice > MARKET_MAX_UNIT_PRICE
+      || ![MARKET_CURRENCY_STONE_COINS, MARKET_CURRENCY_DIAMONDS].includes(payload.currency)
+    ) {
+      return {
+        ok: false,
+        code: "market_equipment_intent_invalid",
+        message: "装备上架请求含未授权或无效字段，请刷新后重新选择。",
+      };
+    }
+    const instanceId = typeof payload.instanceId === "string" ? payload.instanceId.trim() : "";
+    const sourceSlotIndex = payload.sourceSlotIndex;
+    if (
+      !Object.hasOwn(payload, "instanceId")
+      || !Object.hasOwn(payload, "sourceSlotIndex")
+      || instanceId === ""
+      || !Number.isSafeInteger(sourceSlotIndex)
+      || sourceSlotIndex < 0
+    ) {
+      return {
+        ok: false,
+        code: "market_equipment_selection_required",
+        message: "请选择背包中的具体装备实例和格子后再上架。",
+      };
+    }
+    return {
+      ok: true,
+      itemId: expectedItemId,
+      count: 1,
+      instanceId,
+      sourceSlotIndex,
+      unitPrice: payload.unitPrice,
+      currency: payload.currency,
+    };
+  }
+
+  function nextMarketListingId(listingsValue) {
+    const listings = objectMap(listingsValue);
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+      const listingId = `market_${randomPart}`;
+      if (randomPart !== "" && listingId.length <= 96 && !Object.hasOwn(listings, listingId)) {
+        return {ok: true, listingId};
       }
     }
+    return {
+      ok: false,
+      code: "market_listing_id_unavailable",
+      message: "交易所挂单编号暂时不可用，本次操作已取消，请重试。",
+    };
+  }
+
+  function nextMarketEquipmentEnvelopeId(envelopeRegistry) {
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 145);
+      const envelopeId = `eqx_market_${randomPart}`;
+      if (
+        /^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId)
+        && envelopeId.length <= 160
+        && envelopeRegistry.isAvailable(envelopeId)
+      ) {
+        return {ok: true, envelopeId};
+      }
+    }
+    return {
+      ok: false,
+      code: "market_equipment_envelope_id_unavailable",
+      message: "装备托管编号暂时不可用，本次操作已取消，请重试。",
+    };
+  }
+
+  function nextBankEquipmentEnvelopeId(envelopeRegistry, reservedEnvelopeIds) {
     for (let attempt = 0; attempt < 16; attempt += 1) {
       const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "");
-      const envelopeId = `eqx_${randomPart}`;
-      if (/^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId) && !existingIds.has(envelopeId)) {
+      const envelopeId = `eqx_bank_${randomPart}`;
+      if (
+        /^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId)
+        && envelopeId.length <= 160
+        && envelopeRegistry.isAvailable(envelopeId)
+        && !reservedEnvelopeIds.has(envelopeId)
+      ) {
         return {ok: true, envelopeId};
       }
     }
@@ -1045,60 +1425,6 @@ function createEconomyDomain(ctx) {
   function rawBankAssetConflict(value) {
     const read = readBankProfileState(value, battleEquipmentCatalog, bankProfileStateOptions());
     return read.ok ? null : read;
-  }
-
-  function rawMarketListingAssetConflict(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return null;
-    }
-    const schemaStatus = rawSchemaVersionStatus(value, 1);
-    if (schemaStatus === "invalid") {
-      return {
-        code: "market_listing_schema_invalid",
-        message: "这条挂单的数据版本无法识别，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
-      };
-    }
-    if (schemaStatus === "future") {
-      return {
-        code: "market_listing_schema_future",
-        message: "这条挂单来自更高版本，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
-      };
-    }
-    const itemId = String(value.itemId || "").trim();
-    if (itemId !== "" && !bagItemById(itemId)) {
-      return {
-        code: "market_item_unknown",
-        message: "这条挂单含当前版本无法识别的物品，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
-      };
-    }
-    if (itemId !== "" && (!equipmentItemPredicate || equipmentItemPredicate(itemId))) {
-      return {
-        code: "market_equipment_transfer_unsupported",
-        message: `${bagItemLabel(itemId)} 暂不能通过交易所流转，挂单会原样保留，请联系GM处理。`,
-      };
-    }
-    const allowedFields = new Set(["listingId", "sellerAccountId", "itemId", "count", "unitPrice", "currency", "createdAt", "schemaVersion"]);
-    if (Object.keys(value).some((key) => !allowedFields.has(key))) {
-      return {
-        code: "market_listing_schema_unsupported",
-        message: "这条挂单含当前版本无法安全读取的数据，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
-      };
-    }
-    const count = Number(value.count);
-    const unitPrice = Number(value.unitPrice);
-    const currency = String(value.currency || MARKET_CURRENCY_STONE_COINS).trim();
-    if (
-      itemId === ""
-      || !Number.isSafeInteger(count) || count < 1 || count > MARKET_MAX_LISTING_COUNT
-      || !Number.isSafeInteger(unitPrice) || unitPrice < 1 || unitPrice > MARKET_MAX_UNIT_PRICE
-      || ![MARKET_CURRENCY_STONE_COINS, MARKET_CURRENCY_DIAMONDS].includes(currency)
-    ) {
-      return {
-        code: "market_listing_asset_invalid",
-        message: "这条挂单的物品或价格档案异常，暂不能操作；挂单和货币会原样保留，请联系GM处理。",
-      };
-    }
-    return null;
   }
 
   function rawBankEntryConflict(entries) {
@@ -1774,35 +2100,17 @@ function createEconomyDomain(ctx) {
   }
 
   function activeMarketListings(data) {
-    return Object.values(objectMap(data.marketListings))
-      .map(normalizeMarketListing)
-      .filter((listing) => listing && listing.listingId)
+    const book = auditMarketListingBook(
+      objectMap(data.marketListings),
+      battleEquipmentCatalog,
+      marketListingStateOptions(),
+    );
+    if (!book.ok) {
+      return [];
+    }
+    return book.listings
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
       .slice(0, MARKET_MAX_LISTINGS);
-  }
-
-  function normalizeMarketListing(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return null;
-    }
-    const listingId = String(value.listingId || "").trim();
-    const sellerAccountId = String(value.sellerAccountId || "").trim();
-    const itemId = String(value.itemId || "").trim();
-    const count = normalizeListingCount(value.count || 0);
-    const unitPrice = normalizeUnitPrice(value.unitPrice || 0);
-    if (!listingId || !sellerAccountId || !itemId || count <= 0 || unitPrice <= 0) {
-      return null;
-    }
-    return {
-      listingId,
-      sellerAccountId,
-      itemId,
-      count,
-      unitPrice,
-      currency: normalizeMarketCurrency(value.currency),
-      createdAt: String(value.createdAt || ""),
-      schemaVersion: 1,
-    };
   }
 
   function normalizeMarketConfig(value) {
@@ -1913,6 +2221,9 @@ function createEconomyDomain(ctx) {
     const totalPrice = marketListingTotalPrice(listing);
     const taxBps = marketTaxBpsForListing(data, listing);
     const tax = marketTaxForListing(data, listing);
+    const equipmentFacts = listing.equipmentEnvelope
+      ? publicMarketListingFacts(listing, battleEquipmentCatalog, marketListingStateOptions())
+      : null;
     return {
       listingId: listing.listingId,
       sellerAccountId: listing.sellerAccountId,
@@ -1930,7 +2241,8 @@ function createEconomyDomain(ctx) {
       estimatedTax: tax,
       sellerReceives: Math.max(0, totalPrice - tax),
       createdAt: listing.createdAt,
-      schemaVersion: 1,
+      ...(equipmentFacts && equipmentFacts.ok ? {equipmentEnvelope: equipmentFacts.equipmentEnvelope} : {}),
+      schemaVersion: Number(listing.schemaVersion || 1),
     };
   }
 
@@ -1951,13 +2263,29 @@ function createEconomyDomain(ctx) {
     };
   }
 
-  function createMarketSaleMail(data, seller, listing, tax, sellerReceives) {
+  function nextEconomyMailId(data, prefix, code, message) {
+    const mailMessages = objectMap(data && data.mailMessages);
+    const maxRandomLength = Math.max(8, 96 - prefix.length);
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "")
+        .trim()
+        .replace(/[^A-Za-z0-9_-]/g, "")
+        .slice(0, maxRandomLength);
+      const mailId = `${prefix}${randomPart}`;
+      if (randomPart !== "" && mailId.length <= 96 && !Object.hasOwn(mailMessages, mailId)) {
+        return {ok: true, mailId};
+      }
+    }
+    return {ok: false, code, message};
+  }
+
+  function createMarketSaleMail(data, seller, listing, tax, sellerReceives, mailId) {
     data.mailMessages = objectMap(data.mailMessages);
     const currencyLabel = shopCurrencyLabel(listing.currency);
     const itemText = itemAmountText([{itemId: listing.itemId, count: listing.count}]);
     const totalPrice = marketListingTotalPrice(listing);
     const mail = {
-      mailId: `mail_market_${randomId()}`,
+      mailId,
       senderAccountId: "system_market",
       senderUsername: "auction_house",
       senderDisplayName: "拍卖行",
@@ -1983,11 +2311,11 @@ function createEconomyDomain(ctx) {
     return mail;
   }
 
-  function createTutorialMarketSaleMail(data, seller, listing) {
+  function createTutorialMarketSaleMail(data, seller, listing, mailId) {
     data.mailMessages = objectMap(data.mailMessages);
     const sellerReceives = marketListingTotalPrice(listing);
     const mail = {
-      mailId: `mail_tutorial_market_${randomId()}`,
+      mailId,
       mailKind: "tutorial_market_sale",
       senderAccountId: TUTORIAL_SELLER_ACCOUNT_ID,
       senderUsername: "tutorial_buyer",

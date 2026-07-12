@@ -424,6 +424,32 @@ static func market_create_listing_request(base_url: String, session_token: Strin
 	}
 
 
+static func market_create_equipment_listing_request(
+	base_url: String,
+	session_token: String,
+	item_id: String,
+	instance_id: String,
+	source_slot_index: int,
+	unit_price: int,
+	currency: String
+) -> Dictionary:
+	# Equipment state is display-only on the client.  The request carries only a
+	# concrete selection intent; the server resolves and escrows the instance.
+	return {
+		"url": "%s/market/list" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"itemId": item_id,
+			"count": 1,
+			"instanceId": instance_id,
+			"sourceSlotIndex": source_slot_index,
+			"unitPrice": maxi(1, unit_price),
+			"currency": currency,
+		}),
+	}
+
+
 static func market_buy_listing_request(base_url: String, session_token: String, listing_id: String) -> Dictionary:
 	return {
 		"url": "%s/market/buy" % normalized_base_url(base_url),

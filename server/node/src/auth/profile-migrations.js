@@ -6,6 +6,9 @@ const {
   migrateEquipmentProfileV2ToV3,
   snapshotExternalEquipmentConflicts,
 } = require("./equipment-profile-migration");
+const {
+  backfillConsumedEquipmentEnvelopeLedger,
+} = require("./equipment-envelope-consumed-ledger");
 
 const CURRENT_PROFILE_SCHEMA_VERSION = 3;
 const LEGACY_PROFILE_SCHEMA_VERSION = 1;
@@ -789,8 +792,31 @@ function migrateProfilesSnapshot(snapshotValue) {
     errors.push(externalConflict);
   }
 
+  const ledgerBackfill = backfillConsumedEquipmentEnvelopeLedger(
+    candidate,
+    candidate.consumedEquipmentEnvelopes,
+  );
+  if (!ledgerBackfill.ok) {
+    if (!errors.some((entry) => entry.code === ledgerBackfill.code && entry.path === ledgerBackfill.path)) {
+      errors.push({
+        code: ledgerBackfill.code,
+        message: ledgerBackfill.message,
+        path: ledgerBackfill.path || "consumedEquipmentEnvelopes",
+      });
+    }
+  } else if (
+    hasOwn(candidate, "consumedEquipmentEnvelopes")
+    || ledgerBackfill.addedIds.length > 0
+  ) {
+    candidate.consumedEquipmentEnvelopes = ledgerBackfill.ledger;
+  }
+
   const candidateBucketDigests = rootBucketDigests(candidate);
-  const sourceBucketDigests = rootBucketDigests(source);
+  const expectedSource = deepClone(source);
+  if (ledgerBackfill.ok && hasOwn(candidate, "consumedEquipmentEnvelopes")) {
+    expectedSource.consumedEquipmentEnvelopes = ledgerBackfill.ledger;
+  }
+  const sourceBucketDigests = rootBucketDigests(expectedSource);
   const nonProfileBucketsPreserved = stableDigest(candidateBucketDigests) === stableDigest(sourceBucketDigests);
   const profileKeysPreserved = sameStringKeys(source.profiles, candidate.profiles);
   if (!nonProfileBucketsPreserved) {
@@ -812,6 +838,7 @@ function migrateProfilesSnapshot(snapshotValue) {
       path: error.path || "",
       playerId: error.playerId || "",
     })),
+    consumedEnvelopeIdsAdded: ledgerBackfill.ok ? ledgerBackfill.addedIds : [],
     profiles: profileReports.map((report) => ({
       playerId: report.playerId,
       ok: report.ok,
@@ -826,8 +853,8 @@ function migrateProfilesSnapshot(snapshotValue) {
   return {
     ok: applySafe,
     applySafe,
-    changed: applySafe && changed > 0,
-    wouldChange: changed > 0,
+    changed: applySafe && (changed > 0 || (ledgerBackfill.ok && ledgerBackfill.addedIds.length > 0)),
+    wouldChange: changed > 0 || (ledgerBackfill.ok && ledgerBackfill.addedIds.length > 0),
     snapshot: output,
     currentProfileSchemaVersion: CURRENT_PROFILE_SCHEMA_VERSION,
     counts: {
@@ -847,6 +874,7 @@ function migrateProfilesSnapshot(snapshotValue) {
     profileKeysPreserved,
     nonProfileBucketsPreserved,
     nonProfileBucketDigests: sourceBucketDigests,
+    consumedEnvelopeBackfillCount: ledgerBackfill.ok ? ledgerBackfill.addedIds.length : 0,
   };
 }
 

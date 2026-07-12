@@ -1,5 +1,22 @@
 "use strict";
 
+const {
+  buildMailAttachmentState,
+  readMailAttachmentState,
+  updateMailAttachmentState,
+} = require("./mail-attachment-state");
+const {
+  exportBackpackEquipmentEnvelope,
+  importBackpackEquipmentEnvelope,
+} = require("./equipment-transfer-envelope");
+const {
+  OWNER_KIND_MAIL,
+  createEquipmentEnvelopeOwnershipRegistry,
+} = require("./equipment-envelope-registry");
+const {
+  ensureConsumedEquipmentEnvelopeIds,
+} = require("./equipment-envelope-consumed-ledger");
+
 function createMailChatDomain(ctx) {
   const {
     CHAT_CHANNEL_NEARBY,
@@ -14,13 +31,16 @@ function createMailChatDomain(ctx) {
     bagItemById,
     bagItemIsBound,
     bagItemLabel,
+    bagItemStackLimit,
     backpackItemCount,
+    battleEquipmentCatalog,
     captureToolBagFromProfile,
     clampInt,
     clone,
     claimActiveQuestToProfile,
     consumeBackpackItem,
     emitServiceEvent,
+    equipmentTransferOptions = {},
     fail,
     isoNow,
     itemAmountText,
@@ -80,25 +100,24 @@ function createMailChatDomain(ctx) {
     if (!body) {
       return fail("invalid_body", "邮件正文不能为空。");
     }
-    const rawAttachments = payload.items || payload.attachments || [];
-    const rawAttachmentConflict = rawMailItemConflict(rawAttachments);
-    if (rawAttachmentConflict) {
-      return fail(rawAttachmentConflict.code, rawAttachmentConflict.message);
+    const parsedAttachments = parseMailSendAttachments(payload);
+    if (!parsedAttachments.ok) {
+      return fail(parsedAttachments.code, parsedAttachments.message, parsedAttachments.details || {});
     }
-    const attachments = normalizeMailItems(rawAttachments);
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(attachments);
-    if (unsupportedEquipment) {
-      return fail(
-        "mail_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能作为邮件附件发送，请先留在背包。`,
-      );
+    const attachments = parsedAttachments.items;
+    const ordinaryAttachments = parsedAttachments.ordinaryItems;
+    const equipmentAttachments = parsedAttachments.equipmentItems;
+    const mailIdResult = nextMailId(data);
+    if (!mailIdResult.ok) {
+      return fail(mailIdResult.code, mailIdResult.message);
     }
-    let senderProfileDoc = null;
+    const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(data);
+    let nextConsumedLedger = data.consumedEquipmentEnvelopes;
     let senderProfile = null;
     let senderBinding = null;
     if (attachments.length > 0) {
       senderBinding = profileBindingForAccount(data, resolved.account, now);
-      senderProfileDoc = data.profiles[senderBinding.playerId] || null;
+      const senderProfileDoc = data.profiles[senderBinding.playerId] || null;
       if (!senderProfileDoc || !senderProfileDoc.profile || typeof senderProfileDoc.profile !== "object" || Array.isArray(senderProfileDoc.profile)) {
         return fail("profile_missing", "请先创建角色档案。", {
           profileBinding: senderBinding,
@@ -116,12 +135,14 @@ function createMailChatDomain(ctx) {
       }
       senderProfile = clone(senderProfileDoc.profile);
       const senderSlots = normalizeBackpackSlots(profileBackpackSlots(senderProfile));
-      for (const item of attachments) {
+      for (const item of [...ordinaryAttachments, ...equipmentAttachments]) {
         if (bagItemIsBound(item.itemId)) {
           return fail("mail_attachment_bound", `${bagItemLabel(item.itemId)} 已绑定，不能作为邮件附件发送。`, {
             itemId: item.itemId,
           });
         }
+      }
+      for (const item of ordinaryAttachments) {
         if (backpackItemCount(senderSlots, item.itemId) < item.count) {
           return fail("mail_attachment_not_enough", `${bagItemLabel(item.itemId)} 数量不够。`, {
             itemId: item.itemId,
@@ -129,28 +150,67 @@ function createMailChatDomain(ctx) {
           });
         }
       }
-      let nextSlots = senderSlots;
-      for (const item of attachments) {
+      const reservedEnvelopeIds = new Set();
+      const equipmentEnvelopes = [];
+      for (const item of equipmentAttachments) {
+        const sourceOwnership = envelopeRegistry.requireMaterializedInstanceOrigin(
+          senderBinding.playerId,
+          item.instanceId,
+        );
+        if (!sourceOwnership.ok) {
+          return fail(sourceOwnership.code, sourceOwnership.message, {
+            profileSummary: profileSummaryForAccount(resolved.account, data),
+          });
+        }
+        if (sourceOwnership.hasOrigin) {
+          const consumed = ensureConsumedEquipmentEnvelopeIds(nextConsumedLedger, sourceOwnership.envelopeId);
+          if (!consumed.ok) {
+            return fail(consumed.code, consumed.message, {
+              profileSummary: profileSummaryForAccount(resolved.account, data),
+            });
+          }
+          nextConsumedLedger = consumed.ledger;
+        }
+        const envelopeId = nextMailEquipmentEnvelopeId(envelopeRegistry, reservedEnvelopeIds);
+        if (!envelopeId.ok) {
+          return fail(envelopeId.code, envelopeId.message, {
+            profileSummary: profileSummaryForAccount(resolved.account, data),
+          });
+        }
+        const exported = exportBackpackEquipmentEnvelope(
+          senderProfile,
+          battleEquipmentCatalog,
+          item.itemId,
+          item.instanceId,
+          {
+            ...equipmentTransferOptions,
+            backpackSlotLimit: Math.max(1, normalizeBackpackSlots(profileBackpackSlots(senderProfile)).length),
+            stackLimit: Math.max(1, Number(bagItemStackLimit(item.itemId) || 1)),
+            sourceSlotIndex: item.sourceSlotIndex,
+            envelopeId: envelopeId.envelopeId,
+          },
+        );
+        if (!exported.ok) {
+          return fail(exported.code, exported.message, {
+            itemId: item.itemId,
+            instanceId: item.instanceId,
+            profileSummary: profileSummaryForAccount(resolved.account, data),
+          });
+        }
+        senderProfile = exported.profile;
+        equipmentEnvelopes.push(exported.envelope);
+        reservedEnvelopeIds.add(exported.envelope.envelopeId);
+      }
+      let nextSlots = normalizeBackpackSlots(profileBackpackSlots(senderProfile));
+      for (const item of ordinaryAttachments) {
         nextSlots = consumeBackpackItem(nextSlots, item.itemId, item.count);
       }
       senderProfile.backpackSlots = normalizeBackpackSlots(nextSlots);
       senderProfile.captureTools = captureToolBagFromProfile(senderProfile);
-      const updatedAt = isoNow(now);
-      const nextRevision = Number(senderBinding.profileRevision || 0) + 1;
-      senderBinding.profileRevision = nextRevision;
-      senderBinding.updatedAt = updatedAt;
-      data.profileBindings[resolved.account.accountId] = senderBinding;
-      data.profiles[senderBinding.playerId] = {
-        playerId: senderBinding.playerId,
-        accountId: resolved.account.accountId,
-        profileRevision: nextRevision,
-        profile: senderProfile,
-        updatedAt,
-        schemaVersion: 1,
-      };
+      parsedAttachments.equipmentEnvelopes = equipmentEnvelopes;
     }
-    const mail = {
-      mailId: `mail_${randomId()}`,
+    const builtMail = buildMailAttachmentState({
+      mailId: mailIdResult.mailId,
       senderAccountId: resolved.account.accountId,
       senderUsername: resolved.account.username,
       senderDisplayName: resolved.account.displayName,
@@ -160,10 +220,19 @@ function createMailChatDomain(ctx) {
       title,
       body,
       items: attachments,
+      equipmentEnvelopes: parsedAttachments.equipmentEnvelopes || [],
+      currency: {},
       createdAt: isoNow(now),
       readAt: null,
-      schemaVersion: 1,
-    };
+    }, battleEquipmentCatalog, mailAttachmentStateOptions());
+    if (!builtMail.ok) {
+      return fail(builtMail.code, builtMail.message);
+    }
+    const mail = builtMail.mail;
+    data.consumedEquipmentEnvelopes = nextConsumedLedger;
+    if (senderProfile && senderBinding) {
+      persistProfileForAccount(data, resolved.account, senderBinding, senderProfile, now);
+    }
     data.mailMessages[mail.mailId] = mail;
     save(data);
     return ok({
@@ -179,6 +248,21 @@ function createMailChatDomain(ctx) {
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    for (const [mailKey, mail] of Object.entries(data.mailMessages || {})) {
+      const rawRecipientAccountId = mail && typeof mail === "object" && !Array.isArray(mail)
+        ? mail.recipientAccountId
+        : null;
+      if (
+        typeof rawRecipientAccountId !== "string"
+        || rawRecipientAccountId.trim() !== resolved.account.accountId
+      ) {
+        continue;
+      }
+      const identityConflict = mailRuntimeIdentityConflict(mailKey, mail);
+      if (identityConflict) {
+        return fail(identityConflict.code, identityConflict.message);
+      }
     }
     const messages = Object.values(data.mailMessages)
       .filter((mail) => mail && mail.recipientAccountId === resolved.account.accountId)
@@ -198,7 +282,14 @@ function createMailChatDomain(ctx) {
     }
     const normalizedMailId = String(mailId || "").trim();
     const mail = data.mailMessages[normalizedMailId];
-    if (!mail || mail.recipientAccountId !== resolved.account.accountId) {
+    if (!mail) {
+      return fail("mail_missing", "邮件不存在。");
+    }
+    const identityConflict = mailRuntimeIdentityConflict(normalizedMailId, mail);
+    if (identityConflict) {
+      return fail(identityConflict.code, identityConflict.message);
+    }
+    if (mail.recipientAccountId !== resolved.account.accountId) {
       return fail("mail_missing", "邮件不存在。");
     }
     if (!mail.readAt) {
@@ -220,22 +311,38 @@ function createMailChatDomain(ctx) {
     }
     const normalizedMailId = String(mailId || "").trim();
     const mail = data.mailMessages[normalizedMailId];
-    if (!mail || mail.recipientAccountId !== resolved.account.accountId) {
+    if (!mail) {
       return fail("mail_missing", "邮件不存在。");
     }
-    const rawMailConflict = rawStoredMailAssetConflict(mail);
-    if (rawMailConflict) {
-      return fail(rawMailConflict.code, rawMailConflict.message);
+    const identityConflict = mailRuntimeIdentityConflict(normalizedMailId, mail);
+    if (identityConflict) {
+      return fail(identityConflict.code, identityConflict.message);
     }
-    const attachments = normalizeMailItems(mail.items || []);
-    const currency = normalizeMailCurrency(mail.currency || mail.currencies || {});
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(attachments);
-    if (unsupportedEquipment) {
-      return fail("mail_equipment_transfer_unsupported", `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能从邮件领取，附件和货币会原样保留，请联系GM处理。`, {
+    if (mail.recipientAccountId !== resolved.account.accountId) {
+      return fail("mail_missing", "邮件不存在。");
+    }
+    const attachmentState = readMailAttachmentState(
+      mail,
+      battleEquipmentCatalog,
+      mailAttachmentStateOptions(),
+    );
+    if (!attachmentState.ok) {
+      return fail(attachmentState.code, attachmentState.message, {
         mail: publicMail(mail),
       });
     }
-    if (attachments.length <= 0 && mailCurrencyTotal(currency) <= 0) {
+    const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(data);
+    for (const envelope of attachmentState.equipmentEnvelopes) {
+      const ownership = envelopeRegistry.requireUnique(envelope.envelopeId, {
+        kind: OWNER_KIND_MAIL,
+        id: normalizedMailId,
+      });
+      if (!ownership.ok) {
+        return fail(ownership.code, ownership.message, {mail: publicMail(mail)});
+      }
+    }
+    const currency = attachmentState.currency;
+    if (attachmentState.items.length <= 0 && mailCurrencyTotal(currency) <= 0) {
       return fail("mail_no_attachments", "邮件没有可领取附件。", {
         mail: publicMail(mail),
       });
@@ -257,7 +364,7 @@ function createMailChatDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
-    const profile = clone(profileDoc.profile);
+    let profile = clone(profileDoc.profile);
     const stoneCoinAmount = Math.max(0, Math.trunc(Number(currency.stoneCoins || 0)));
     if (stoneCoinAmount > 0 && profileCurrencyAmount(profile, "stoneCoins") + stoneCoinAmount > profileStoneCoinLimit) {
       return fail("wallet_stone_coin_limit", `身上石币上限为${profileStoneCoinLimit}，请先存入银行后再领取。`, {
@@ -265,15 +372,43 @@ function createMailChatDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const claimedEnvelopeIds = [];
+    const importedEquipmentItems = [];
+    for (const envelope of attachmentState.equipmentEnvelopes) {
+      const imported = importBackpackEquipmentEnvelope(
+        profile,
+        battleEquipmentCatalog,
+        envelope,
+        {
+          ...equipmentTransferOptions,
+          backpackSlotLimit: Math.max(1, normalizeBackpackSlots(profileBackpackSlots(profile)).length),
+          stackLimit: Math.max(1, Number(bagItemStackLimit(envelope.itemId) || 1)),
+          trustedServerEnvelope: true,
+        },
+      );
+      if (!imported.ok) {
+        if (imported.code === "equipment_transfer_backpack_full") {
+          continue;
+        }
+        return fail(imported.code, imported.message, {
+          mail: publicMail(mail),
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      profile = imported.profile;
+      claimedEnvelopeIds.push(envelope.envelopeId);
+      importedEquipmentItems.push({itemId: envelope.itemId, count: 1});
+    }
     let addResult = {
       slots: profileBackpackSlots(profile),
       addedItems: [],
-      lostItems: attachments,
+      lostItems: attachmentState.ordinaryItems,
     };
-    if (attachments.length > 0) {
-      addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), attachments);
+    if (attachmentState.ordinaryItems.length > 0) {
+      addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), attachmentState.ordinaryItems);
     }
-    if (addResult.addedItems.length <= 0 && mailCurrencyTotal(currency) <= 0) {
+    const addedItems = normalizeMailItems([...importedEquipmentItems, ...addResult.addedItems]);
+    if (addedItems.length <= 0 && mailCurrencyTotal(currency) <= 0) {
       return fail("backpack_full", "背包已满，无法领取邮件附件。", {
         mail: publicMail(mail),
         profileSummary: profileSummaryForAccount(resolved.account, data),
@@ -284,11 +419,35 @@ function createMailChatDomain(ctx) {
     }
     profile.backpackSlots = addResult.slots;
     profile.captureTools = captureToolBagFromProfile(profile);
-    const remaining = normalizeMailItems(addResult.lostItems);
-    if (remaining.length > 0) {
-      mail.items = remaining;
-      mail.currency = {};
-      data.mailMessages[normalizedMailId] = mail;
+    const updatedMail = updateMailAttachmentState(
+      mail,
+      {
+        claimedOrdinaryItems: addResult.addedItems,
+        claimedEnvelopeIds,
+        claimCurrency: true,
+      },
+      battleEquipmentCatalog,
+      mailAttachmentStateOptions(),
+    );
+    if (!updatedMail.ok) {
+      return fail(updatedMail.code, updatedMail.message, {
+        mail: publicMail(mail),
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const consumed = ensureConsumedEquipmentEnvelopeIds(
+      data.consumedEquipmentEnvelopes,
+      claimedEnvelopeIds,
+    );
+    if (!consumed.ok) {
+      return fail(consumed.code, consumed.message, {
+        mail: publicMail(mail),
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    data.consumedEquipmentEnvelopes = consumed.ledger;
+    if (!updatedMail.empty) {
+      data.mailMessages[normalizedMailId] = updatedMail.mail;
     } else {
       delete data.mailMessages[normalizedMailId];
     }
@@ -300,28 +459,36 @@ function createMailChatDomain(ctx) {
     });
     const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
     const battleRoom = addClaimedMailItemsToActiveBattleRoom
-      ? addClaimedMailItemsToActiveBattleRoom(data, resolved.account.accountId, addResult.addedItems)
+      ? addClaimedMailItemsToActiveBattleRoom(data, resolved.account.accountId, addedItems)
       : null;
     save(data);
-    const message = "领取邮件附件：%s。".replace("%s", mailAttachmentText(currency, addResult.addedItems));
+    const message = "领取邮件附件：%s。".replace("%s", mailAttachmentText(currency, addedItems));
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: persisted.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
-      mail: remaining.length > 0 ? publicMail(mail) : null,
+      mail: updatedMail.empty ? null : publicMail(updatedMail.mail),
       battleRoom: battleRoom && publicBattleRoom
         ? publicBattleRoom(battleRoom, resolved.account.accountId)
         : null,
       claim: {
         mailId: normalizedMailId,
-        addedItems: addResult.addedItems,
+        addedItems,
+        importedEquipmentInstanceIds: claimedEnvelopeIds.map((envelopeId) => {
+          const instance = Object.values(profile.equipmentInstances || {}).find((entry) => (
+            entry
+            && entry.transferProvenance
+            && entry.transferProvenance.originEnvelopeId === envelopeId
+          ));
+          return String(instance && instance.instanceId || "");
+        }).filter(Boolean),
         currency,
-        remainingItems: remaining,
-        schemaVersion: 1,
+        remainingItems: updatedMail.remaining.items,
+        schemaVersion: 2,
       },
       questMessages,
-      message: remaining.length > 0 ? `${message} 背包空间不足，剩余附件留在邮箱。` : message,
+      message: updatedMail.empty ? message : `${message} 背包空间不足，剩余附件留在邮箱。`,
     });
   }
 
@@ -329,165 +496,176 @@ function createMailChatDomain(ctx) {
     return Object.values(currency || {}).reduce((total, value) => total + Math.max(0, Math.trunc(Number(value || 0))), 0);
   }
 
-  function firstUnsupportedEquipmentTransfer(items) {
-    for (const item of Array.isArray(items) ? items : []) {
-      const itemId = String(item && item.itemId || "").trim();
-      if (itemId === "") {
-        continue;
-      }
-      // Missing catalog authority must not silently reopen template-only equipment transfers.
-      if (!equipmentItemPredicate || equipmentItemPredicate(itemId)) {
-        return {itemId};
-      }
-    }
-    return null;
-  }
-
-  function rawStoredMailAssetConflict(mail) {
-    const schemaStatus = rawMailSchemaVersionStatus(mail, 1);
-    if (schemaStatus === "invalid") {
-      return {
-        code: "mail_schema_invalid",
-        message: "这封邮件的数据版本无法识别，暂不能领取；附件和货币会原样保留，请联系GM处理。",
-      };
-    }
-    if (schemaStatus === "future") {
-      return {
-        code: "mail_schema_future",
-        message: "这封邮件来自更高版本，暂不能领取；附件和货币会原样保留，请联系GM处理。",
-      };
-    }
-    if (mail && ["attachments", "itemAmounts"].some((field) => Object.hasOwn(mail, field))) {
-      return {
-        code: "mail_representation_conflict",
-        message: "这封邮件含当前版本无法安全读取的附件档案，附件和货币会原样保留，请联系GM处理。",
-      };
-    }
-    const allowedFields = new Set([
-      "mailId", "mailKind",
-      "senderAccountId", "senderUsername", "senderDisplayName",
-      "recipientAccountId", "recipientUsername", "recipientDisplayName",
-      "title", "body", "items", "currency", "currencies",
-      "createdAt", "readAt", "schemaVersion",
-    ]);
-    if (mail && Object.keys(mail).some((key) => !allowedFields.has(key))) {
-      return {
-        code: "mail_schema_unsupported",
-        message: "这封邮件含当前版本无法安全读取的数据，暂不能领取；附件和货币会原样保留，请联系GM处理。",
-      };
-    }
-    const rawItems = mail && Object.hasOwn(mail, "items") ? mail.items : [];
-    return rawMailItemConflict(rawItems) || rawMailCurrencyConflict(mail);
-  }
-
-  function rawMailItemConflict(items) {
-    if (!Array.isArray(items)) {
-      return {
-        code: "mail_item_invalid",
-        message: "邮件附件档案异常，本次操作已取消；附件和货币会原样保留，请联系GM处理。",
-      };
-    }
-    const totals = new Map();
-    for (const entry of items) {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-        return {
-          code: "mail_item_invalid",
-          message: "邮件附件档案异常，本次操作已取消；附件和货币会原样保留，请联系GM处理。",
-        };
-      }
-      const itemId = String(entry.itemId || "").trim();
-      if (itemId === "" || typeof bagItemById !== "function" || !bagItemById(itemId)) {
-        return {
-          code: itemId === "" ? "mail_item_invalid" : "mail_item_unknown",
-          message: itemId === ""
-            ? "邮件附件档案异常，本次操作已取消；附件和货币会原样保留，请联系GM处理。"
-            : "邮件含当前版本无法识别的物品，本次操作已取消；附件和货币会原样保留，请联系GM处理。",
-        };
-      }
-      if (!equipmentItemPredicate || equipmentItemPredicate(itemId)) {
-        return {
-          code: "mail_equipment_transfer_unsupported",
-          message: `${bagItemLabel(itemId)} 暂不能通过邮件流转；附件和货币会原样保留，请联系GM处理。`,
-        };
-      }
-      const count = Number(entry.count);
-      if (!Number.isSafeInteger(count) || count < 1 || Object.keys(entry).some((key) => !["itemId", "count"].includes(key))) {
-        return {
-          code: "mail_item_invalid",
-          message: "邮件附件档案异常，本次操作已取消；附件和货币会原样保留，请联系GM处理。",
-        };
-      }
-      const nextTotal = Number(totals.get(itemId) || 0) + count;
-      if (!Number.isSafeInteger(nextTotal)) {
-        return {
-          code: "mail_item_invalid",
-          message: "邮件附件档案异常，本次操作已取消；附件和货币会原样保留，请联系GM处理。",
-        };
-      }
-      totals.set(itemId, nextTotal);
-    }
-    return null;
-  }
-
-  function rawMailCurrencyConflict(mail) {
-    if (!mail || typeof mail !== "object" || Array.isArray(mail)) {
-      return null;
-    }
-    const representations = [];
-    for (const field of ["currency", "currencies"]) {
-      if (!Object.hasOwn(mail, field)) {
-        continue;
-      }
-      const value = mail[field];
-      if (!value || typeof value !== "object" || Array.isArray(value)) {
-        return rawMailCurrencyInvalid();
-      }
-      const allowed = new Set(["stoneCoins", "coins", "diamonds", "diamond"]);
-      if (Object.keys(value).some((key) => !allowed.has(key))) {
-        return {
-          code: "mail_currency_unknown",
-          message: "邮件含当前版本无法识别的货币，暂不能领取；附件和货币会原样保留，请联系GM处理。",
-        };
-      }
-      for (const key of Object.keys(value)) {
-        const amount = Number(value[key]);
-        if (!Number.isSafeInteger(amount) || amount < 0) {
-          return rawMailCurrencyInvalid();
-        }
-      }
-      if (
-        (Object.hasOwn(value, "stoneCoins") && Object.hasOwn(value, "coins") && Number(value.stoneCoins) !== Number(value.coins))
-        || (Object.hasOwn(value, "diamonds") && Object.hasOwn(value, "diamond") && Number(value.diamonds) !== Number(value.diamond))
-      ) {
-        return rawMailCurrencyInvalid();
-      }
-      representations.push(JSON.stringify({
-        diamonds: Number(value.diamonds ?? value.diamond ?? 0),
-        stoneCoins: Number(value.stoneCoins ?? value.coins ?? 0),
-      }));
-    }
-    if (representations.length > 1 && representations.some((value) => value !== representations[0])) {
-      return rawMailCurrencyInvalid();
-    }
-    return null;
-  }
-
-  function rawMailCurrencyInvalid() {
+  function mailAttachmentStateOptions() {
     return {
-      code: "mail_currency_invalid",
-      message: "邮件货币档案异常，暂不能领取；附件和货币会原样保留，请联系GM处理。",
+      itemById: (itemId) => typeof bagItemById === "function" ? bagItemById(itemId) : null,
+      isEquipmentItemId: (itemId) => Boolean(equipmentItemPredicate && equipmentItemPredicate(itemId)),
+      equipmentTransferOptions,
     };
   }
 
-  function rawMailSchemaVersionStatus(container, currentVersion) {
-    if (!container || !Object.hasOwn(container, "schemaVersion")) {
-      return "legacy";
+  function parseMailSendAttachments(payload) {
+    const fullEnvelopeField = ["equipmentEnvelope", "equipmentEnvelopes", "envelope", "envelopes"]
+      .find((field) => Object.hasOwn(payload, field));
+    if (fullEnvelopeField) {
+      return {
+        ok: false,
+        code: "mail_equipment_envelope_untrusted",
+        message: "客户端不能提交完整装备信封，请只选择背包中的具体装备。",
+        details: {field: fullEnvelopeField},
+      };
     }
-    const version = Number(container.schemaVersion);
-    if (!Number.isInteger(version) || version < 1) {
-      return "invalid";
+    if (Object.hasOwn(payload, "items") && Object.hasOwn(payload, "attachments")) {
+      return {
+        ok: false,
+        code: "mail_representation_conflict",
+        message: "邮件附件请求存在两份表示，请刷新后重试。",
+      };
     }
-    return version > currentVersion ? "future" : "current";
+    const rawItems = Object.hasOwn(payload, "items")
+      ? payload.items
+      : (Object.hasOwn(payload, "attachments") ? payload.attachments : []);
+    if (!Array.isArray(rawItems)) {
+      return {ok: false, code: "mail_item_invalid", message: "请选择有效的邮件附件。"};
+    }
+    if (rawItems.length > 0 && !equipmentItemPredicate) {
+      return {
+        ok: false,
+        code: "mail_equipment_authority_missing",
+        message: "邮件附件安全校验暂不可用，本次发送已取消，请联系GM处理。",
+      };
+    }
+    const ordinaryItems = [];
+    const equipmentItems = [];
+    const selectedInstanceIds = new Set();
+    for (const [index, rawItem] of rawItems.entries()) {
+      if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) {
+        return {ok: false, code: "mail_item_invalid", message: "请选择有效的邮件附件。", details: {index}};
+      }
+      const itemId = typeof rawItem.itemId === "string" ? rawItem.itemId.trim() : "";
+      if (itemId === "" || typeof bagItemById !== "function" || !bagItemById(itemId)) {
+        return {
+          ok: false,
+          code: itemId === "" ? "mail_item_invalid" : "mail_item_unknown",
+          message: itemId === "" ? "请选择有效的邮件附件。" : "邮件附件含当前版本无法识别的物品。",
+          details: {index, itemId},
+        };
+      }
+      const equipment = equipmentItemPredicate(itemId);
+      const allowedFields = equipment
+        ? new Set(["itemId", "count", "instanceId", "sourceSlotIndex"])
+        : new Set(["itemId", "count"]);
+      const unknownField = Object.keys(rawItem).sort().find((key) => !allowedFields.has(key));
+      if (unknownField) {
+        const untrustedEnvelope = ["envelope", "envelopeId", "equipmentEnvelope", "equipmentEnvelopes", "instanceState", "provenance", "stateFingerprint"]
+          .includes(unknownField);
+        return {
+          ok: false,
+          code: untrustedEnvelope ? "mail_equipment_envelope_untrusted" : "mail_item_invalid",
+          message: untrustedEnvelope
+            ? "客户端不能提交完整装备信封，请只选择背包中的具体装备。"
+            : "邮件附件请求含当前版本无法识别的字段。",
+          details: {index, field: unknownField},
+        };
+      }
+      const count = Number(rawItem.count);
+      if (!Number.isSafeInteger(count) || count < 1) {
+        return {ok: false, code: "mail_item_invalid", message: "邮件附件数量无效。", details: {index, itemId}};
+      }
+      if (!equipment) {
+        ordinaryItems.push({itemId, count});
+        continue;
+      }
+      const instanceId = typeof rawItem.instanceId === "string" ? rawItem.instanceId.trim() : "";
+      const sourceSlotIndex = Number(rawItem.sourceSlotIndex);
+      if (
+        count !== 1
+        || instanceId === ""
+        || rawItem.instanceId !== instanceId
+        || !Number.isSafeInteger(sourceSlotIndex)
+        || sourceSlotIndex < 0
+      ) {
+        return {
+          ok: false,
+          code: "mail_equipment_selection_invalid",
+          message: "请选择背包中的具体装备实例后再发送。",
+          details: {index, itemId},
+        };
+      }
+      if (selectedInstanceIds.has(instanceId)) {
+        return {
+          ok: false,
+          code: "mail_equipment_selection_duplicate",
+          message: "同一件装备不能在一封邮件中重复选择。",
+          details: {index, itemId, instanceId},
+        };
+      }
+      selectedInstanceIds.add(instanceId);
+      equipmentItems.push({itemId, count: 1, instanceId, sourceSlotIndex});
+    }
+    const normalizedOrdinaryItems = normalizeMailItems(ordinaryItems);
+    return {
+      ok: true,
+      items: normalizeMailItems([
+        ...normalizedOrdinaryItems,
+        ...equipmentItems.map((item) => ({itemId: item.itemId, count: 1})),
+      ]),
+      ordinaryItems: normalizedOrdinaryItems,
+      equipmentItems,
+      equipmentEnvelopes: [],
+    };
+  }
+
+  function nextMailEquipmentEnvelopeId(registry, reservedIds = new Set()) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const envelopeId = `eqx_mail_${String(randomId() || "").trim()}`;
+      if (
+        /^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId)
+        && !reservedIds.has(envelopeId)
+        && registry.isAvailable(envelopeId)
+      ) {
+        return {ok: true, envelopeId};
+      }
+    }
+    return {
+      ok: false,
+      code: "mail_equipment_envelope_id_unavailable",
+      message: "暂时无法生成装备邮件凭证，请稍后重试。",
+    };
+  }
+
+  function nextMailId(data) {
+    const mailMessages = data && data.mailMessages && typeof data.mailMessages === "object"
+      ? data.mailMessages
+      : {};
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const mailId = `mail_${String(randomId() || "").trim()}`;
+      if (mailId !== "mail_" && !Object.hasOwn(mailMessages, mailId)) {
+        return {ok: true, mailId};
+      }
+    }
+    return {ok: false, code: "mail_id_unavailable", message: "暂时无法生成邮件编号，请稍后重试。"};
+  }
+
+  function mailRuntimeIdentityConflict(mailKeyValue, mail) {
+    const rawMailKey = typeof mailKeyValue === "string" ? mailKeyValue : "";
+    if (!mail || typeof mail !== "object" || Array.isArray(mail)) {
+      return {code: "mail_identity_invalid", message: "邮箱中存在身份异常的邮件，请联系GM处理。"};
+    }
+    const rawDeclaredMailId = typeof mail.mailId === "string" ? mail.mailId : "";
+    const rawRecipientAccountId = typeof mail.recipientAccountId === "string" ? mail.recipientAccountId : "";
+    if (
+      rawMailKey === ""
+      || rawMailKey !== rawMailKey.trim()
+      || rawDeclaredMailId === ""
+      || rawDeclaredMailId !== rawDeclaredMailId.trim()
+      || rawDeclaredMailId !== rawMailKey
+      || rawRecipientAccountId === ""
+      || rawRecipientAccountId !== rawRecipientAccountId.trim()
+    ) {
+      return {code: "mail_identity_invalid", message: "邮箱中存在身份异常的邮件，请联系GM处理。"};
+    }
+    return null;
   }
 
   function mailCurrencyText(currency) {

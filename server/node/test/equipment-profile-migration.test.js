@@ -11,6 +11,7 @@ const {
   auditEquipmentProfileState,
   createFreshEquipmentInstance,
 } = require("../src/auth/equipment-profile-state");
+const {equipmentTransferStateFingerprint} = require("../src/auth/equipment-transfer-envelope");
 const {
   EQUIPMENT_PROFILE_MIGRATION_SOURCE,
   auditEquipmentProfileV3,
@@ -456,10 +457,23 @@ test("valid v3 is audited as an idempotent clone while corrupt v3 is rejected", 
 test("snapshot external equipment scanner reports mail, market, and trade paths deterministically", () => {
   const snapshot = {
     mailMessages: {
-      mail_1: {items: [{itemId: "weapon_wooden_club", count: 1}]},
+      mail_1: {
+        mailId: "mail_1",
+        recipientAccountId: "account_recipient",
+        items: [{itemId: "weapon_wooden_club", count: 1}],
+      },
     },
     marketListings: {
-      listing_1: {itemId: "weapon_stone_dagger", count: 1},
+      listing_1: {
+        listingId: "listing_1",
+        sellerAccountId: "account_seller",
+        itemId: "weapon_stone_dagger",
+        count: 1,
+        unitPrice: 99,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T00:00:00.000Z",
+        schemaVersion: 1,
+      },
     },
     tradeOffers: {
       trade_1: {offerItems: [{itemId: "boots_grass", count: 1}]},
@@ -467,28 +481,158 @@ test("snapshot external equipment scanner reports mail, market, and trade paths 
   };
   const conflicts = snapshotExternalEquipmentConflicts(snapshot);
   assert.deepEqual(conflicts.map((entry) => entry.path), [
-    "mailMessages.mail_1.items[0]",
-    "marketListings.listing_1[0]",
+    "mailMessages.mail_1",
+    "marketListings.listing_1",
     "tradeOffers.trade_1.offerItems[0]",
   ]);
-  assert.equal(conflicts.every((entry) => entry.code === "equipment_external_container_blocked"), true);
+  assert.deepEqual(conflicts.map((entry) => entry.code), [
+    "mail_equipment_transfer_unsupported",
+    "market_equipment_transfer_unsupported",
+    "equipment_external_container_blocked",
+  ]);
 });
 
-test("future external schemas and unknown equipment envelopes fail closed", () => {
-  const conflicts = snapshotExternalEquipmentConflicts({
+test("future mail and market schemas plus unsupported listing fields fail closed", () => {
+  const futureConflicts = snapshotExternalEquipmentConflicts({
     mailMessages: {
-      mail_future: {schemaVersion: 2, items: []},
+      mail_future: {
+        mailId: "mail_future",
+        recipientAccountId: "account_recipient",
+        schemaVersion: 3,
+        items: [],
+      },
     },
     marketListings: {
       listing_future: {
-        schemaVersion: 1,
+        listingId: "listing_future",
+        sellerAccountId: "account_seller",
         itemId: "item_meat_small",
         count: 1,
+        unitPrice: 9,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T00:00:00.000Z",
+        schemaVersion: 3,
+      },
+    },
+    tradeOffers: {},
+  });
+  assert.equal(futureConflicts.some((entry) => entry.code === "mail_schema_future"), true);
+  assert.equal(futureConflicts.some((entry) => entry.code === "market_listing_schema_future"), true);
+
+  const unsupportedConflicts = snapshotExternalEquipmentConflicts({
+    marketListings: {
+      listing_unknown: {
+        listingId: "listing_unknown",
+        sellerAccountId: "account_seller",
+        itemId: "item_meat_small",
+        count: 1,
+        unitPrice: 9,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T00:00:00.000Z",
+        schemaVersion: 1,
         equipmentEnvelope: {instanceId: "future_instance"},
       },
     },
     tradeOffers: {},
   });
-  assert.equal(conflicts.some((entry) => entry.code === "equipment_external_schema_unsupported"), true);
-  assert.equal(conflicts.some((entry) => entry.code === "equipment_external_envelope_unknown"), true);
+  assert.equal(unsupportedConflicts.some((entry) => entry.code === "market_listing_schema_unsupported"), true);
+});
+
+test("snapshot scanner accepts complete mail and market equipment escrows but rejects cross-container replay", () => {
+  const mailEnvelope = structuredClone(equipmentTransferVectors.vectors[0].internalEnvelope);
+  mailEnvelope.envelopeId = "eqx_snapshot_mail_0001";
+  mailEnvelope.provenance.sourceInstanceId = "equip_snapshot_mail_0001";
+  mailEnvelope.instanceState.transferProvenance.originEnvelopeId = "eqx_snapshot_mail_prior_0001";
+  mailEnvelope.stateFingerprint = equipmentTransferStateFingerprint(mailEnvelope.instanceState);
+  const marketEnvelope = structuredClone(equipmentTransferVectors.vectors[0].internalEnvelope);
+  marketEnvelope.envelopeId = "eqx_snapshot_market_0001";
+  marketEnvelope.provenance.sourceInstanceId = "equip_snapshot_market_0001";
+  marketEnvelope.instanceState.transferProvenance.originEnvelopeId = "eqx_snapshot_market_prior_0001";
+  marketEnvelope.stateFingerprint = equipmentTransferStateFingerprint(marketEnvelope.instanceState);
+  const snapshot = {
+    mailMessages: {
+      mail_equipment: {
+        mailId: "mail_equipment",
+        recipientAccountId: "account_recipient",
+        items: [{itemId: "weapon_wooden_club", count: 1}],
+        equipmentEnvelopes: [mailEnvelope],
+        currency: {},
+        schemaVersion: 2,
+      },
+    },
+    marketListings: {
+      listing_equipment: {
+        listingId: "listing_equipment",
+        sellerAccountId: "account_seller",
+        itemId: "weapon_wooden_club",
+        count: 1,
+        unitPrice: 199,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T00:00:00.000Z",
+        equipmentEnvelope: marketEnvelope,
+        schemaVersion: 2,
+      },
+    },
+    tradeOffers: {},
+  };
+  assert.deepEqual(snapshotExternalEquipmentConflicts(snapshot), []);
+
+  const replayed = structuredClone(snapshot);
+  replayed.marketListings.listing_equipment.equipmentEnvelope = structuredClone(mailEnvelope);
+  const conflicts = snapshotExternalEquipmentConflicts(replayed);
+  assert.equal(conflicts.some((entry) => (
+    entry.code === "equipment_external_envelope_duplicate"
+    && entry.envelopeId === mailEnvelope.envelopeId
+  )), true);
+
+  const materializedReplay = structuredClone(snapshot);
+  materializedReplay.profiles = {
+    player_replay: {
+      playerId: "player_replay",
+      profile: {
+        equipmentInstances: {
+          equip_replay: {
+            transferProvenance: {originEnvelopeId: mailEnvelope.envelopeId},
+          },
+        },
+      },
+    },
+  };
+  const materializedConflicts = snapshotExternalEquipmentConflicts(materializedReplay);
+  assert.equal(materializedConflicts.some((entry) => (
+    entry.code === "equipment_external_envelope_duplicate"
+    && entry.envelopeId === mailEnvelope.envelopeId
+    && entry.path.includes("equipmentInstances.equip_replay")
+  )), true);
+});
+
+test("snapshot scanner rejects mismatched mail keys, missing recipients, and absent recipient accounts", () => {
+  const conflicts = snapshotExternalEquipmentConflicts({
+    accounts: {
+      known: {accountId: "account_known"},
+    },
+    mailMessages: {
+      mail_missing_recipient: {
+        mailId: "mail_missing_recipient",
+        items: [{itemId: "item_meat_small", count: 1}],
+      },
+      mail_wrong_key: {
+        mailId: "mail_inner_id",
+        recipientAccountId: "account_known",
+        items: [{itemId: "item_meat_small", count: 1}],
+      },
+      mail_unknown_recipient: {
+        mailId: "mail_unknown_recipient",
+        recipientAccountId: "account_absent",
+        items: [{itemId: "item_meat_small", count: 1}],
+      },
+    },
+  });
+  assert.equal(conflicts.some((entry) => (
+    entry.code === "mail_identity_conflict" && entry.reason === "recipient_missing"
+  )), true);
+  assert.equal(conflicts.some((entry) => (
+    entry.code === "mail_identity_conflict" && entry.reason === "mail_id_mismatch"
+  )), true);
+  assert.equal(conflicts.some((entry) => entry.code === "mail_recipient_missing"), true);
 });

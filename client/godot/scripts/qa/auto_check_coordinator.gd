@@ -51,6 +51,7 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
+const EquipmentEscrowClientModel := preload("res://scripts/progression/equipment_escrow_client_model.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -8183,18 +8184,34 @@ func _run_auto_mailbox_check() -> void:
 	)
 	host._set_mailbox_tab("inbox")
 	await host.get_tree().process_frame
+	var mail_equipment_fixture := EquipmentInstancePresenter.schema3_fixture_for_check()
+	var mail_bank := mail_equipment_fixture.get("bank", {}) as Dictionary
+	var mail_bank_slots := mail_bank.get("slots", []) as Array
+	var mail_equipment_envelope := (((mail_bank_slots[0] as Dictionary).get("equipmentEnvelopes", []) as Array)[0] as Dictionary).duplicate(true)
 	var server_messages: Array[Dictionary] = [{
 		"mailId": "mail_server_item_check",
 		"senderUsername": "serverfriend",
 		"senderDisplayName": "远方猎人",
 			"title": "补给",
 			"body": "带上肉。",
-			"items": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2}],
+			"items": [
+				{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2},
+				{"itemId": "weapon_wooden_club", "count": 1},
+			],
+			"equipmentEnvelopes": [mail_equipment_envelope],
 			"currency": {"stoneCoins": 39},
 			"createdAt": "2099-01-01T00:00:00.000Z",
 			"readAt": null,
 		}]
-	host.mailbox_server_messages = server_messages
+	host.mailbox_server_messages.clear()
+	host.mailbox_server_messages.append(server_messages[0].duplicate(true))
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "mailbox-check-token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	if host.mailbox_status_label != null:
+		host.mailbox_status_label.text = ""
 	host.mailbox_selected_mail_id = "server:mail_server_item_check"
 	host.mailbox_selected_source = "server"
 	host._refresh_mailbox_panel()
@@ -8205,10 +8222,67 @@ func _run_auto_mailbox_check() -> void:
 				and host.mailbox_detail_label.text.find("附件") >= 0
 				and host.mailbox_detail_label.text.find("39石币") >= 0
 				and host.mailbox_detail_label.text.find("肉 x2") >= 0
+				and host.mailbox_detail_label.text.find("装备附件") >= 0
+				and host.mailbox_detail_label.text.find("+3") >= 0
+				and host.mailbox_detail_label.text.find("耐久18/") >= 0
 			)
+	var mailbox_screenshot_ok := true
+	var mailbox_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if mailbox_screenshot_path != "":
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error: int = screenshot_image.save_png(mailbox_screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		mailbox_screenshot_ok = screenshot_image != null and screenshot_error == OK
+		print("mailbox equipment escrow screenshot: status=%s path=%s" % ["ok" if mailbox_screenshot_ok else "failed", mailbox_screenshot_path])
+	var claim_spec := ServerAuthClientModel.mail_claim_request(ServerAuthClientModel.DEFAULT_BASE_URL, "mail-check-token", "mail_server_item_check")
+	var claim_id_only_ok := (
+		str(claim_spec.get("url", "")).ends_with("/mail/mail_server_item_check/claim")
+		and str(claim_spec.get("body", "")) == ""
+	)
+	var duplicate_mail := server_messages[0].duplicate(true)
+	duplicate_mail["equipmentEnvelopes"] = [mail_equipment_envelope.duplicate(true), mail_equipment_envelope.duplicate(true)]
+	host.mailbox_server_messages.clear()
+	host.mailbox_server_messages.append(duplicate_mail)
+	host._refresh_mailbox_panel()
+	var duplicate_mail_guard_ok: bool = (
+		host.mailbox_claim_button.disabled
+		and host.mailbox_detail_label.text.find("重复") >= 0
+		and host.mailbox_claim_button.tooltip_text.find("暂不能领取") >= 0
+	)
+	var malformed_mail := server_messages[0].duplicate(true)
+	malformed_mail["equipmentEnvelopes"] = [42]
+	host.mailbox_server_messages.clear()
+	host.mailbox_server_messages.append(malformed_mail)
+	host._refresh_mailbox_panel()
+	var malformed_mail_guard_ok: bool = (
+		host.mailbox_claim_button.disabled
+		and host.mailbox_detail_label.text.find("资料不是对象") >= 0
+	)
+	var legacy_equipment_mail := server_messages[0].duplicate(true)
+	legacy_equipment_mail.erase("equipmentEnvelopes")
+	host.mailbox_server_messages.clear()
+	host.mailbox_server_messages.append(legacy_equipment_mail)
+	host._refresh_mailbox_panel()
+	var legacy_equipment_mail_guard_ok: bool = (
+		host.mailbox_claim_button.disabled
+		and host.mailbox_detail_label.text.find("缺少实例信封") >= 0
+	)
+	var drifted_equipment_mail := server_messages[0].duplicate(true)
+	drifted_equipment_mail["items"] = [
+		{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2},
+		{"itemId": "weapon_wooden_club", "count": 2},
+	]
+	host.mailbox_server_messages.clear()
+	host.mailbox_server_messages.append(drifted_equipment_mail)
+	host._refresh_mailbox_panel()
+	var drifted_equipment_mail_guard_ok: bool = (
+		host.mailbox_claim_button.disabled
+		and host.mailbox_detail_label.text.find("数量不一致") >= 0
+	)
 	host._close_mailbox_panel()
-	var status = "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok else "failed"
-	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s messages=%d" % [
+	var status = "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok else "failed"
+	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s messages=%d" % [
 		status,
 		str(mailbox_ok),
 		str(claim_full_ok),
@@ -8216,6 +8290,12 @@ func _run_auto_mailbox_check() -> void:
 		str(ui_ok),
 		str(compose_tab_ok),
 		str(server_ui_ok),
+		str(mailbox_screenshot_ok),
+		str(claim_id_only_ok),
+		str(duplicate_mail_guard_ok),
+		str(malformed_mail_guard_ok),
+		str(legacy_equipment_mail_guard_ok),
+		str(drifted_equipment_mail_guard_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -10959,6 +11039,8 @@ func _run_auto_equipment_instance_check() -> void:
 	)
 	var bank_model_result := BankProfileModel.self_check()
 	var bank_model_ok := bool(bank_model_result.get("ok", false))
+	var escrow_model_result := EquipmentEscrowClientModel.self_check()
+	var escrow_model_ok := bool(escrow_model_result.get("ok", false))
 	var bank_fixture := EquipmentInstancePresenter.schema3_fixture_for_check()
 	var bank_fixture_slots := PlayerProgressModel.backpack_slots(bank_fixture)
 	var bank_backpack_rows := BankProfileModel.backpack_transfer_rows(bank_fixture_slots, EquipmentInstancePresenter.backpack_rows(bank_fixture))
@@ -11071,8 +11153,8 @@ func _run_auto_equipment_instance_check() -> void:
 		host.bank_panel.visible = saved_bank_visible
 	if host.bank_status_label != null:
 		host.bank_status_label.text = saved_bank_status
-	var status = "ok" if starter_instance_ok and buy_instance_ok and equip_instance_ok and enhance_instance_ok and unequip_instance_ok and re_equip_instance_ok and bank_model_ok and bank_rows_ok and request_whitelist_ok and bank_panel_instances_ok and bank_screenshot_ok else "failed"
-	print("equipment instance check ready: status=%s starter=%s buy=%s equip=%s enhance=%s unequip=%s reequip=%s bank_model=%s bank_rows=%s request_whitelist=%s bank_panel=%s screenshot=%s equipped_instance=%s backpack_instances=%d bank_errors=%s" % [
+	var status = "ok" if starter_instance_ok and buy_instance_ok and equip_instance_ok and enhance_instance_ok and unequip_instance_ok and re_equip_instance_ok and bank_model_ok and escrow_model_ok and bank_rows_ok and request_whitelist_ok and bank_panel_instances_ok and bank_screenshot_ok else "failed"
+	print("equipment instance check ready: status=%s starter=%s buy=%s equip=%s enhance=%s unequip=%s reequip=%s bank_model=%s escrow_model=%s bank_rows=%s request_whitelist=%s bank_panel=%s screenshot=%s equipped_instance=%s backpack_instances=%d bank_errors=%s escrow_errors=%s" % [
 		status,
 		str(starter_instance_ok),
 		str(buy_instance_ok),
@@ -11081,6 +11163,7 @@ func _run_auto_equipment_instance_check() -> void:
 		str(unequip_instance_ok),
 		str(re_equip_instance_ok),
 		str(bank_model_ok),
+		str(escrow_model_ok),
 		str(bank_rows_ok),
 		str(request_whitelist_ok),
 		str(bank_panel_instances_ok),
@@ -11088,6 +11171,7 @@ func _run_auto_equipment_instance_check() -> void:
 		equipped_instance_id,
 		PlayerProgressModel.backpack_equipment_instance_ids(re_equip_profile, "weapon_wooden_club").size(),
 		";".join(bank_model_result.get("errors", []) as Array),
+		";".join(escrow_model_result.get("errors", []) as Array),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -11690,8 +11774,147 @@ func _run_auto_market_panel_check() -> void:
 		and host.click_move_screen_resolve_count == before_resolve_count
 		and host.click_move_repath_apply_count == before_apply_count
 	)
-	var status = "ok" if panel_ok and ui_blocks_ok and click_blocked_ok else "failed"
-	print("market panel check ready: status=%s panel=%s sell_form=%s status_label=%s wallet_label=%s detail_wallet_removed=%s empty_guidance=%s ui_blocks=%s click_blocked=%s" % [
+
+	var equipment_fixture := EquipmentInstancePresenter.schema3_fixture_for_check()
+	(equipment_fixture.get("backpackSlots", []) as Array).append({"itemId": "item_meat_small", "count": 5})
+	(equipment_fixture.get("backpackSlots", []) as Array).append({"itemId": "item_meat_small", "count": 3})
+	host.player_profile = equipment_fixture
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "market-panel-check-token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+		"accountId": "market-panel-check-self",
+	}
+	host.market_request_pending = false
+	host.market_mode = "sell"
+	host._refresh_market_panel()
+	var equipment_option_index := -1
+	var ordinary_sell_option_ok := false
+	for option_index in range(host.market_sell_item_option.item_count):
+		var option_metadata = host.market_sell_item_option.get_item_metadata(option_index)
+		if not (option_metadata is Dictionary):
+			continue
+		var option_row := option_metadata as Dictionary
+		if str(option_row.get("instanceId", "")) == "equip_000002":
+			equipment_option_index = option_index
+		if str(option_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_STACK and str(option_row.get("itemId", "")) == "item_meat_small" and int(option_row.get("count", 0)) == 8:
+			ordinary_sell_option_ok = true
+	if equipment_option_index >= 0:
+		host.market_sell_item_option.select(equipment_option_index)
+		host._panel_flow()._refresh_market_sell_form()
+	var selected_equipment_row: Dictionary = host._panel_flow()._market_sell_row()
+	var equipment_sell_option_ok: bool = (
+		equipment_option_index >= 0
+		and str(selected_equipment_row.get("instanceId", "")) == "equip_000002"
+		and str(host.market_sell_item_option.get_item_text(host.market_sell_item_option.selected)).find("+4") >= 0
+		and int(host.market_sell_count_spinbox.value) == 1
+		and not host.market_sell_count_spinbox.editable
+		and host.market_sell_summary_label.text.find("耐久12/") >= 0
+	)
+	var intent_result := EquipmentEscrowClientModel.market_equipment_listing_intent(selected_equipment_row)
+	var intent := intent_result.get("intent", {}) as Dictionary
+	var equipment_list_spec := ServerAuthClientModel.market_create_equipment_listing_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL,
+		"market-panel-check-token",
+		str(intent.get("itemId", "")),
+		str(intent.get("instanceId", "")),
+		int(intent.get("sourceSlotIndex", -1)),
+		77,
+		"stoneCoins"
+	)
+	var equipment_list_body = JSON.parse_string(str(equipment_list_spec.get("body", "")))
+	var equipment_request_whitelist_ok := (
+		bool(intent_result.get("ok", false))
+		and equipment_list_body is Dictionary
+		and (equipment_list_body as Dictionary).size() == 6
+		and str((equipment_list_body as Dictionary).get("itemId", "")) == "weapon_wooden_club"
+		and int((equipment_list_body as Dictionary).get("count", 0)) == 1
+		and str((equipment_list_body as Dictionary).get("instanceId", "")) == "equip_000002"
+		and int((equipment_list_body as Dictionary).get("sourceSlotIndex", -1)) == 1
+		and int((equipment_list_body as Dictionary).get("unitPrice", 0)) == 77
+		and str((equipment_list_body as Dictionary).get("currency", "")) == "stoneCoins"
+		and not (equipment_list_body as Dictionary).has("envelope")
+		and not (equipment_list_body as Dictionary).has("instanceState")
+		and not (equipment_list_body as Dictionary).has("provenance")
+	)
+	var bank = equipment_fixture.get("bank", {}) as Dictionary
+	var bank_slots = bank.get("slots", []) as Array
+	var envelope := (((bank_slots[0] as Dictionary).get("equipmentEnvelopes", []) as Array)[0] as Dictionary).duplicate(true)
+	var public_listing := {
+		"listingId": "market_equipment_public_check",
+		"sellerAccountId": "market-panel-check-other",
+		"sellerDisplayName": "装备卖家",
+		"itemId": "weapon_wooden_club",
+		"itemLabel": "木棒",
+		"count": 1,
+		"unitPrice": 77,
+		"totalPrice": 77,
+		"currency": "stoneCoins",
+		"equipmentEnvelope": envelope,
+	}
+	host.market_listings.clear()
+	host.market_listings.append(public_listing)
+	host.market_my_listings.clear()
+	host.market_mode = "buy"
+	host.market_selected_listing_id = str(public_listing.get("listingId", ""))
+	if host.market_status_label != null:
+		host.market_status_label.text = ""
+	host._refresh_market_panel()
+	var public_listing_button = host.market_listing_buttons.get("market_equipment_public_check", null)
+	var public_listing_ui_ok: bool = (
+		host.market_detail_label.text.find("装备状态：+3") >= 0
+		and host.market_detail_label.text.find("耐久18/") >= 0
+		and not host.market_buy_button.disabled
+		and public_listing_button is Button
+		and str((public_listing_button as Button).text).find("+3") >= 0
+	)
+	var market_screenshot_ok := true
+	var market_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if market_screenshot_path != "":
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error: int = screenshot_image.save_png(market_screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		market_screenshot_ok = screenshot_image != null and screenshot_error == OK
+		print("market equipment escrow screenshot: status=%s path=%s" % ["ok" if market_screenshot_ok else "failed", market_screenshot_path])
+	var duplicate_listing_a := public_listing.duplicate(true)
+	var duplicate_listing_b := public_listing.duplicate(true)
+	duplicate_listing_b["listingId"] = "market_equipment_public_check_2"
+	host.market_listings.clear()
+	host.market_listings.append(duplicate_listing_a)
+	host.market_listings.append(duplicate_listing_b)
+	host.market_selected_listing_id = str(duplicate_listing_a.get("listingId", ""))
+	host._refresh_market_panel()
+	var duplicate_listing_guard_ok: bool = host.market_buy_button.disabled and host.market_detail_label.text.find("重复") >= 0
+	var legacy_listing := public_listing.duplicate(true)
+	legacy_listing["listingId"] = "market_equipment_legacy_check"
+	legacy_listing.erase("equipmentEnvelope")
+	host.market_listings.clear()
+	host.market_listings.append(legacy_listing)
+	host.market_selected_listing_id = str(legacy_listing.get("listingId", ""))
+	host._refresh_market_panel()
+	var legacy_listing_guard_ok: bool = host.market_buy_button.disabled and host.market_detail_label.text.find("历史装备挂单") >= 0
+	var bad_mine_listing := public_listing.duplicate(true)
+	bad_mine_listing["listingId"] = "market_equipment_bad_mine"
+	bad_mine_listing["sellerAccountId"] = "market-panel-check-self"
+	bad_mine_listing["equipmentEnvelope"] = 42
+	host.market_my_listings.clear()
+	host.market_my_listings.append(bad_mine_listing)
+	host.market_mode = "mine"
+	host.market_selected_listing_id = str(bad_mine_listing.get("listingId", ""))
+	host._refresh_market_panel()
+	var bad_cancel_guard_ok: bool = host.market_cancel_button.disabled and host.market_detail_label.text.find("资料不是对象") >= 0
+	var buy_spec := ServerAuthClientModel.market_buy_listing_request(ServerAuthClientModel.DEFAULT_BASE_URL, "token", "listing-only")
+	var cancel_spec := ServerAuthClientModel.market_cancel_listing_request(ServerAuthClientModel.DEFAULT_BASE_URL, "token", "listing-only")
+	var buy_body = JSON.parse_string(str(buy_spec.get("body", "")))
+	var cancel_body = JSON.parse_string(str(cancel_spec.get("body", "")))
+	var listing_id_only_ok := (
+		buy_body is Dictionary and (buy_body as Dictionary) == {"listingId": "listing-only"}
+		and cancel_body is Dictionary and (cancel_body as Dictionary) == {"listingId": "listing-only"}
+	)
+	host.current_account_session = {}
+	var status = "ok" if panel_ok and ui_blocks_ok and click_blocked_ok and ordinary_sell_option_ok and equipment_sell_option_ok and equipment_request_whitelist_ok and public_listing_ui_ok and market_screenshot_ok and duplicate_listing_guard_ok and legacy_listing_guard_ok and bad_cancel_guard_ok and listing_id_only_ok else "failed"
+	print("market panel check ready: status=%s panel=%s sell_form=%s status_label=%s wallet_label=%s detail_wallet_removed=%s empty_guidance=%s ui_blocks=%s click_blocked=%s ordinary_sell=%s equipment_sell=%s equipment_request=%s public_equipment=%s screenshot=%s duplicate_guard=%s legacy_guard=%s cancel_guard=%s listing_id_only=%s" % [
 		status,
 		str(panel_ok),
 		str(sell_form_ok),
@@ -11701,6 +11924,15 @@ func _run_auto_market_panel_check() -> void:
 		str(empty_guidance_ok),
 		str(ui_blocks_ok),
 		str(click_blocked_ok),
+		str(ordinary_sell_option_ok),
+		str(equipment_sell_option_ok),
+		str(equipment_request_whitelist_ok),
+		str(public_listing_ui_ok),
+		str(market_screenshot_ok),
+		str(duplicate_listing_guard_ok),
+		str(legacy_listing_guard_ok),
+		str(bad_cancel_guard_ok),
+		str(listing_id_only_ok),
 	])
 	await host.get_tree().create_timer(0.6).timeout
 	host.get_tree().quit(0 if status == "ok" else 1)

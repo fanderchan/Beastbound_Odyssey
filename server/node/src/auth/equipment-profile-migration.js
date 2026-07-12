@@ -16,6 +16,9 @@ const {
   readEquipmentInstanceState,
 } = require("./equipment-profile-state");
 const {readBankProfileState} = require("./bank-profile-state");
+const {createEquipmentEnvelopeOwnershipRegistry} = require("./equipment-envelope-registry");
+const {readMailAttachmentState} = require("./mail-attachment-state");
+const {auditMarketListingBook} = require("./market-listing-state");
 const {loadPlayerLevelRuntime} = require("./player-level-runtime");
 
 const EQUIPMENT_PROFILE_MIGRATION_SOURCE = "profile_v2_to_v3_backfill";
@@ -362,6 +365,21 @@ function bankProfileStateConflict(result) {
   );
 }
 
+function externalEscrowStateConflict(result, basePath) {
+  const details = Object.fromEntries(Object.entries(result || {}).filter(([key]) => (
+    !["ok", "code", "message", "mail", "listing", "listings", "listingById"].includes(key)
+  )));
+  const relativePath = String(details.path || details.listingKey || "").trim();
+  return conflict(
+    String(result && result.code || "equipment_external_container_invalid"),
+    String(result && result.message || "external equipment escrow failed authoritative validation"),
+    {
+      ...details,
+      path: relativePath === "" ? basePath : `${basePath}.${relativePath}`,
+    },
+  );
+}
+
 function profileExternalEquipmentConflicts(profile, catalog, bagCatalog, levelRuntime, wearRules) {
   const conflicts = [];
   if (hasOwn(profile, "bank")) {
@@ -482,8 +500,76 @@ function profileExternalEquipmentConflicts(profile, catalog, bagCatalog, levelRu
 
 function snapshotExternalEquipmentConflicts(snapshotValue, options = {}) {
   const snapshot = record(snapshotValue);
-  const {catalog, bagCatalog} = dependencies(options);
+  const {catalog, bagCatalog, levelRuntime, wearRules} = dependencies(options);
+  const escrowOptions = bankProfileStateOptions(catalog, bagCatalog, levelRuntime, wearRules);
   const conflicts = [];
+  const snapshotAccountIds = new Set(
+    Object.values(record(snapshot.accounts))
+      .map((account) => String(account && account.accountId || "").trim())
+      .filter(Boolean),
+  );
+  const accountBucketDeclared = hasOwn(snapshot, "accounts") && isRecord(snapshot.accounts);
+  const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(snapshot);
+  for (const duplicate of envelopeRegistry.duplicates) {
+    const ownerships = Array.isArray(duplicate.ownerships) ? duplicate.ownerships : [];
+    const firstPath = String(ownerships[0] && ownerships[0].path || "");
+    for (const ownership of ownerships.slice(1)) {
+      conflicts.push(conflict(
+        "equipment_external_envelope_duplicate",
+        "an equipment escrow envelope is referenced by more than one persistent container or materialized instance",
+        {
+          path: String(ownership && ownership.path || "equipmentEnvelope"),
+          envelopeId: String(duplicate.envelopeId || ""),
+          firstPath,
+        },
+      ));
+    }
+  }
+  for (const registryConflict of envelopeRegistry.conflicts) {
+    if (registryConflict.code === "equipment_transfer_envelope_duplicate") {
+      continue;
+    }
+    if (registryConflict.code === "equipment_materialized_origin_active") {
+      for (const trace of Array.isArray(registryConflict.traces) ? registryConflict.traces : []) {
+        conflicts.push(conflict(
+          "equipment_external_envelope_duplicate",
+          "a consumed or materialized equipment envelope reappears in a persistent escrow container",
+          {
+            path: String(trace && trace.path || "equipmentEnvelope"),
+            envelopeId: String(registryConflict.originEnvelopeId || ""),
+            firstPath: String(registryConflict.ownerships && registryConflict.ownerships[0]
+              && registryConflict.ownerships[0].path || "consumedEquipmentEnvelopes"),
+          },
+        ));
+      }
+      continue;
+    }
+    if (registryConflict.code === "equipment_materialized_origin_duplicate") {
+      const traces = Array.isArray(registryConflict.traces) ? registryConflict.traces : [];
+      const firstPath = String(traces[0] && traces[0].path || "equipmentEnvelope");
+      for (const trace of traces.slice(1)) {
+        conflicts.push(conflict(
+          "equipment_external_envelope_duplicate",
+          "a consumed equipment envelope is referenced by more than one materialized state",
+          {
+            path: String(trace && trace.path || "equipmentEnvelope"),
+            envelopeId: String(registryConflict.originEnvelopeId || ""),
+            firstPath,
+          },
+        ));
+      }
+      continue;
+    }
+    conflicts.push(conflict(
+      registryConflict.code || "equipment_external_envelope_registry_conflict",
+      registryConflict.message || "equipment envelope registry conflict",
+      {
+        path: String(registryConflict.path || registryConflict.originEnvelopeId || "consumedEquipmentEnvelopes"),
+        originEnvelopeId: String(registryConflict.originEnvelopeId || ""),
+        reason: String(registryConflict.reason || ""),
+      },
+    ));
+  }
   const scanObjectBucket = (bucketName, visit) => {
     if (!hasOwn(snapshot, bucketName)) {
       return;
@@ -498,11 +584,11 @@ function snapshotExternalEquipmentConflicts(snapshotValue, options = {}) {
       return;
     }
     for (const key of Object.keys(bucket).sort()) {
-      visit(bucket[key], `${bucketName}.${key}`);
+      visit(bucket[key], `${bucketName}.${key}`, key);
     }
   };
 
-  scanObjectBucket("mailMessages", (message, basePath) => {
+  scanObjectBucket("mailMessages", (message, basePath, mailKey) => {
     if (!isRecord(message)) {
       conflicts.push(conflict("equipment_external_container_invalid", "mail message must be an object", {
         path: basePath,
@@ -510,41 +596,41 @@ function snapshotExternalEquipmentConflicts(snapshotValue, options = {}) {
       }));
       return;
     }
-    validateExternalSchema(message, basePath, conflicts);
-    validateNoUnknownEquipmentEnvelope(
-      message,
-      basePath,
-      [
-        "mailId", "mailKind", "senderAccountId", "senderUsername", "senderDisplayName",
-        "recipientAccountId", "recipientUsername", "recipientDisplayName", "title", "body",
-        "items", "currency", "currencies", "createdAt", "readAt", "schemaVersion",
-      ],
-      conflicts,
-    );
-    if (hasOwn(message, "items")) {
-      scanItemEntries(message.items, `${basePath}.items`, catalog, bagCatalog, conflicts);
+    const mailId = typeof message.mailId === "string" ? message.mailId : "";
+    const recipientAccountId = typeof message.recipientAccountId === "string"
+      ? message.recipientAccountId
+      : "";
+    if (mailId === "" || mailId !== mailId.trim() || mailId !== mailKey) {
+      conflicts.push(conflict(
+        "mail_identity_conflict",
+        "mail storage key and mail identity are inconsistent; attachments must remain untouched",
+        {path: basePath, mailKey, mailId, reason: "mail_id_mismatch"},
+      ));
+    }
+    if (recipientAccountId === "" || recipientAccountId !== recipientAccountId.trim()) {
+      conflicts.push(conflict(
+        "mail_identity_conflict",
+        "mail recipient identity is missing or non-canonical; attachments must remain untouched",
+        {path: basePath, mailKey, recipientAccountId, reason: "recipient_missing"},
+      ));
+    } else if (accountBucketDeclared && !snapshotAccountIds.has(recipientAccountId)) {
+      conflicts.push(conflict(
+        "mail_recipient_missing",
+        "mail recipient account is absent from the persistent snapshot; attachments must remain untouched",
+        {path: basePath, mailKey, recipientAccountId},
+      ));
+    }
+    const checked = readMailAttachmentState(message, catalog, escrowOptions);
+    if (!checked.ok) {
+      conflicts.push(externalEscrowStateConflict(checked, basePath));
     }
   });
-  scanObjectBucket("marketListings", (listing, basePath) => {
-    if (!isRecord(listing)) {
-      conflicts.push(conflict("equipment_external_container_invalid", "market listing must be an object", {
-        path: basePath,
-        reason: "listing_not_object",
-      }));
-      return;
+  if (hasOwn(snapshot, "marketListings")) {
+    const checked = auditMarketListingBook(snapshot.marketListings, catalog, escrowOptions);
+    if (!checked.ok) {
+      conflicts.push(externalEscrowStateConflict(checked, "marketListings"));
     }
-    validateExternalSchema(listing, basePath, conflicts);
-    validateNoUnknownEquipmentEnvelope(
-      listing,
-      basePath,
-      ["listingId", "sellerAccountId", "itemId", "count", "unitPrice", "currency", "createdAt", "schemaVersion"],
-      conflicts,
-    );
-    scanItemEntries([{
-      itemId: listing.itemId,
-      count: listing.count,
-    }], basePath, catalog, bagCatalog, conflicts);
-  });
+  }
   scanObjectBucket("tradeOffers", (offer, basePath) => {
     if (!isRecord(offer)) {
       conflicts.push(conflict("equipment_external_container_invalid", "trade offer must be an object", {

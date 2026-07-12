@@ -59,9 +59,13 @@ process.stdin.on("end", () => {
     assert.equal(result.stdout.includes("account-secret"), false);
     assert.equal(result.stdout.includes("mysql-secret"), false);
     const calls = fs.readFileSync(mysqlLogPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 1);
-    assert.match(calls[0].stdin, /SELECT 'server_state'/);
-    assert.doesNotMatch(calls[0].stdin, /CREATE TABLE|CREATE DATABASE|START TRANSACTION|INSERT INTO|DELETE FROM/);
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].stdin, /information_schema\.tables/);
+    assert.match(calls[1].stdin, /SELECT 'server_state'/);
+    assert.doesNotMatch(calls[1].stdin, /consumed_equipment_envelopes/);
+    for (const call of calls) {
+      assert.doesNotMatch(call.stdin, /CREATE TABLE|CREATE DATABASE|START TRANSACTION|INSERT INTO|DELETE FROM/);
+    }
   } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
@@ -185,6 +189,7 @@ test("local userdata migration preserves every unrelated persistent bucket and e
 
   for (const key of [
     "marketListings",
+    "consumedEquipmentEnvelopes",
     "marketConfig",
     "offlineHangConfig",
     "families",
@@ -199,6 +204,95 @@ test("local userdata migration preserves every unrelated persistent bucket and e
   assert.deepEqual(migration.data.futurePersistentBucket, source.futurePersistentBucket);
   assert.equal(migration.report.beforeCounts.marketListings, 1);
   assert.equal(migration.report.afterCounts.marketListings, 1);
+  assert.equal(migration.report.beforeCounts.consumedEquipmentEnvelopes, 1);
+  assert.equal(migration.report.afterCounts.consumedEquipmentEnvelopes, 1);
+  assert.equal(verifyAppliedMigration(migration.data, migration).ok, true);
+});
+
+test("local userdata migration persists a v3 materialized origin and its tombstone in one candidate", () => {
+  const profile = importedProfile();
+  profile.schemaVersion = 3;
+  profile.backpackSlots.push({itemId: "weapon_wooden_club", count: 1});
+  profile.equipmentInstances.equip_000001 = {
+    schemaVersion: 1,
+    instanceId: "equip_000001",
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 30,
+    enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+    expPillCharge: {},
+    source: "migration_materialized_fixture",
+    transferProvenance: {
+      schemaVersion: 1,
+      originEnvelopeId: "eqx_mail_local_migration_0001",
+      originStateFingerprint: "a".repeat(64),
+      sourceInstanceId: "equip_source_0001",
+    },
+  };
+  profile.nextEquipmentInstanceSerial = 2;
+  const migration = buildLocalUserdataMigration({
+    sourceData: persistentFixture(),
+    username: "auth1373",
+    profile,
+    role: "gm",
+    nowIso: NOW,
+    randomUuid: sequence(["event_uuid"]),
+  });
+  assert.equal(migration.report.consumedEnvelopeBackfillCount, 1);
+  assert.deepEqual(migration.data.consumedEquipmentEnvelopes.eqx_mail_local_migration_0001, {
+    schemaVersion: 1,
+    envelopeId: "eqx_mail_local_migration_0001",
+  });
+  assert.equal(verifyAppliedMigration(migration.data, migration).ok, true);
+});
+
+test("local userdata migration tombstones the old target origin before replacing that profile", () => {
+  const source = persistentFixture();
+  const oldTargetProfile = importedProfile();
+  oldTargetProfile.schemaVersion = 3;
+  oldTargetProfile.backpackSlots.push({itemId: "weapon_wooden_club", count: 1});
+  oldTargetProfile.equipmentInstances.equip_000001 = {
+    schemaVersion: 1,
+    instanceId: "equip_000001",
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 30,
+    enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+    expPillCharge: {},
+    source: "old_mysql_target_fixture",
+    transferProvenance: {
+      schemaVersion: 1,
+      originEnvelopeId: "eqx_mail_old_mysql_target_0001",
+      originStateFingerprint: "b".repeat(64),
+      sourceInstanceId: "equip_old_source_0001",
+    },
+  };
+  oldTargetProfile.nextEquipmentInstanceSerial = 2;
+  source.profiles.player_target.profile = oldTargetProfile;
+  const before = structuredClone(source);
+
+  const migration = buildLocalUserdataMigration({
+    sourceData: source,
+    username: "auth1373",
+    profile: importedProfile(),
+    role: "gm",
+    nowIso: NOW,
+    randomUuid: sequence(["event_uuid"]),
+  });
+
+  assert.deepEqual(source, before);
+  assert.equal(migration.data.profiles.player_target.profile.equipmentInstances.equip_000001, undefined);
+  assert.deepEqual(migration.data.consumedEquipmentEnvelopes.eqx_mail_old_mysql_target_0001, {
+    schemaVersion: 1,
+    envelopeId: "eqx_mail_old_mysql_target_0001",
+  });
+  assert.equal(migration.report.consumedEnvelopeBackfillCount, 1);
+  assert.equal(migration.report.beforeCounts.consumedEquipmentEnvelopes, 1);
+  assert.equal(migration.report.afterCounts.consumedEquipmentEnvelopes, 2);
   assert.equal(verifyAppliedMigration(migration.data, migration).ok, true);
 });
 
@@ -233,8 +327,8 @@ test("single-account import refuses a snapshot that still has equipment in exter
   }), (error) => {
     assert.equal(error.code, "snapshot_external_equipment_unsafe");
     assert.equal(error.externalEquipmentConflicts.some((entry) => (
-      entry.code === "equipment_external_container_blocked"
-      && entry.path === "marketListings.listing_keep[0]"
+      entry.code === "market_equipment_transfer_unsupported"
+      && entry.path === "marketListings.listing_keep"
     )), true);
     return true;
   });
@@ -265,6 +359,11 @@ test("apply failure restores only the target scope and preserves concurrent non-
           listingId: "concurrent_listing",
           sellerAccountId: "acc_peer",
           itemId: "item_meat_small",
+          count: 1,
+          unitPrice: 12,
+          currency: "stoneCoins",
+          createdAt: "2026-07-12T08:01:00.000Z",
+          schemaVersion: 1,
         };
       }
     },
@@ -324,6 +423,16 @@ test("malformed known buckets and conflicting identity graphs fail closed", () =
     role: "gm",
     nowIso: NOW,
   }), /marketListings must be an object/);
+
+  const malformedLedger = persistentFixture();
+  malformedLedger.consumedEquipmentEnvelopes = [];
+  assert.throws(() => buildLocalUserdataMigration({
+    sourceData: malformedLedger,
+    username: "auth1373",
+    profile: importedProfile(),
+    role: "gm",
+    nowIso: NOW,
+  }), /consumedEquipmentEnvelopes must be an object/);
 
   const duplicateAccount = persistentFixture();
   duplicateAccount.accounts.alias = {accountId: "acc_target", username: "alias", role: "player"};
@@ -424,7 +533,24 @@ function persistentFixture() {
       player_peer: {playerId: "player_peer", accountId: "acc_peer", profileRevision: 9, profile: otherProfile},
     },
     mailMessages: {mail_keep: {mailId: "mail_keep", recipientAccountId: "acc_peer"}},
-    marketListings: {listing_keep: {listingId: "listing_keep", sellerAccountId: "acc_peer", itemId: "item_meat_small", count: 1}},
+    marketListings: {
+      listing_keep: {
+        listingId: "listing_keep",
+        sellerAccountId: "acc_peer",
+        itemId: "item_meat_small",
+        count: 1,
+        unitPrice: 10,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T08:00:00.000Z",
+        schemaVersion: 1,
+      },
+    },
+    consumedEquipmentEnvelopes: {
+      eqx_mail_existing_consumed_0001: {
+        schemaVersion: 1,
+        envelopeId: "eqx_mail_existing_consumed_0001",
+      },
+    },
     marketConfig: {taxRate: 0.08},
     offlineHangConfig: {rewardRate: 0.5},
     tradeOffers: {},

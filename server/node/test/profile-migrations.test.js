@@ -264,7 +264,18 @@ test("batch migration preserves every existing and unknown bucket plus profile d
       player_migration: profileDocument("player_migration", legacyProfile()),
       player_current: profileDocument("player_current", currentProfile),
     },
-    marketListings: {listing_1: {listingId: "listing_1", itemId: "item_meat_small", count: 1}},
+    marketListings: {
+      listing_1: {
+        listingId: "listing_1",
+        sellerAccountId: "acc_player_migration",
+        itemId: "item_meat_small",
+        count: 1,
+        unitPrice: 10,
+        currency: "stoneCoins",
+        createdAt: "2026-07-12T00:00:00.000Z",
+        schemaVersion: 1,
+      },
+    },
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},
     families: {family_1: {familyId: "family_1", name: "迁移家族"}},
@@ -296,6 +307,69 @@ test("batch migration preserves every existing and unknown bucket plus profile d
   assert.equal(result.profileKeysPreserved, true);
   assert.equal(result.nonProfileBucketsPreserved, true);
   assert.deepEqual(snapshot, before);
+});
+
+test("batch migration backfills a v3 materialized envelope origin into the same snapshot plan", () => {
+  const currentProfile = migrateProfile(legacyProfile(2)).profile;
+  const originEnvelopeId = "eqx_mail_snapshot_origin_0001";
+  currentProfile.equipmentInstances.equip_000001.transferProvenance = {
+    schemaVersion: 1,
+    originEnvelopeId,
+    originStateFingerprint: "a".repeat(64),
+    sourceInstanceId: "equip_source_0001",
+  };
+  const snapshot = {
+    schemaVersion: 1,
+    profiles: {
+      player_current: profileDocument("player_current", currentProfile),
+    },
+  };
+  const before = structuredClone(snapshot);
+  const result = migrateProfilesSnapshot(snapshot);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.applySafe, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.consumedEnvelopeBackfillCount, 1);
+  assert.deepEqual(result.snapshot.consumedEquipmentEnvelopes, {
+    [originEnvelopeId]: {schemaVersion: 1, envelopeId: originEnvelopeId},
+  });
+  assert.deepEqual(result.snapshot.profiles, snapshot.profiles);
+  assert.equal(result.nonProfileBucketsPreserved, true);
+  assert.deepEqual(snapshot, before);
+});
+
+test("batch migration rejects malformed consumed ledgers and materialized origins without rewriting source", () => {
+  const currentProfile = migrateProfile(legacyProfile(2)).profile;
+  const scenarios = [
+    {
+      consumedEquipmentEnvelopes: null,
+      expectedCode: "equipment_consumed_ledger_invalid",
+    },
+    {
+      patchProfile(profile) {
+        profile.equipmentInstances.equip_000001.transferProvenance = {};
+      },
+      expectedCode: "equipment_materialized_origin_invalid",
+    },
+  ];
+  for (const scenario of scenarios) {
+    const profile = structuredClone(currentProfile);
+    if (scenario.patchProfile) {
+      scenario.patchProfile(profile);
+    }
+    const snapshot = {
+      profiles: {player_current: profileDocument("player_current", profile)},
+      ...(Object.hasOwn(scenario, "consumedEquipmentEnvelopes")
+        ? {consumedEquipmentEnvelopes: scenario.consumedEquipmentEnvelopes}
+        : {}),
+    };
+    const before = structuredClone(snapshot);
+    const result = migrateProfilesSnapshot(snapshot);
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.some((entry) => entry.code === scenario.expectedCode), true);
+    assert.deepEqual(result.snapshot, before);
+  }
 });
 
 test("one invalid profile makes the whole snapshot plan non-applicable without deleting any profile", () => {
@@ -349,9 +423,9 @@ test("equipment in root mail, market, or trade containers blocks the whole snaps
   assert.equal(result.changed, false);
   assert.equal(result.wouldChange, true);
   assert.deepEqual(result.snapshot, before);
-  assert.equal(result.errors.some((error) => error.code === "equipment_external_container_blocked"), true);
+  assert.equal(result.errors.some((error) => error.code === "mail_equipment_transfer_unsupported"), true);
   assert.equal(result.errors.some((error) => (
-    error.code === "equipment_external_envelope_unknown"
+    error.code === "mail_representation_conflict"
     && error.path === "mailMessages.mail_legacy_attachment"
   )), true);
 });

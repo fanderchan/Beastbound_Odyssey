@@ -69,6 +69,13 @@ const {
   readEquipmentInstanceState,
   requireEquippedEquipmentInstance,
 } = require("./auth/equipment-profile-state");
+const {publicEquipmentTransferSummary} = require("./auth/equipment-transfer-envelope");
+const {
+  createEquipmentEnvelopeOwnershipRegistry,
+} = require("./auth/equipment-envelope-registry");
+const {
+  backfillConsumedEquipmentEnvelopeLedger,
+} = require("./auth/equipment-envelope-consumed-ledger");
 const {
   comboDamageFor,
   loadBattleCombatFormula,
@@ -883,28 +890,31 @@ function createAuthService(options = {}) {
     if (equipmentAudit) {
       return fail(equipmentAudit.code, equipmentAudit.message);
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
-    const currentProfileDoc = data.profiles[binding.playerId] || null;
+    // 整档写入只用于 QA/运维，但仍必须先在候选快照中完成全局托管归属审计。
+    // 避免先改 cachedData 再发现冲突，导致失败请求污染后续权威状态。
+    const candidateData = clone(data);
+    const binding = profileBindingForAccount(candidateData, resolved.account, now);
+    const currentProfileDoc = candidateData.profiles[binding.playerId] || null;
     if (currentProfileDoc && currentProfileDoc.profile) {
       const currentBackpackConflict = rawBackpackAssetConflict(currentProfileDoc.profile);
       if (currentBackpackConflict) {
         return fail(currentBackpackConflict.code, currentBackpackConflict.message, {
           profileBinding: binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
+          profileSummary: profileSummaryForAccount(resolved.account, candidateData),
         });
       }
       const currentBankConflict = rawProfileBankAssetConflict(currentProfileDoc.profile.bank);
       if (currentBankConflict) {
         return fail(currentBankConflict.code, currentBankConflict.message, {
           profileBinding: binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
+          profileSummary: profileSummaryForAccount(resolved.account, candidateData),
         });
       }
       const currentEquipmentAudit = fullSaveEquipmentAuditConflict(currentProfileDoc.profile);
       if (currentEquipmentAudit) {
         return fail(currentEquipmentAudit.code, currentEquipmentAudit.message, {
           profileBinding: binding,
-          profileSummary: profileSummaryForAccount(resolved.account, data),
+          profileSummary: profileSummaryForAccount(resolved.account, candidateData),
         });
       }
     }
@@ -913,16 +923,16 @@ function createAuthService(options = {}) {
     if (expectedRevision !== currentRevision) {
       return fail("revision_conflict", "服务器档案已更新，请重新登录或重新拉取档案。", {
         profileBinding: binding,
-        profileSummary: profileSummaryForAccount(resolved.account, data),
+        profileSummary: profileSummaryForAccount(resolved.account, candidateData),
       });
     }
     const nextRevision = currentRevision + 1;
     binding.profileRevision = nextRevision;
     binding.updatedAt = isoNow(now);
-    data.profileBindings[resolved.account.accountId] = binding;
+    candidateData.profileBindings[resolved.account.accountId] = binding;
     const storedProfile = clone(profile);
     synchronizeProfileEquipmentStats(storedProfile);
-    data.profiles[binding.playerId] = {
+    candidateData.profiles[binding.playerId] = {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
@@ -930,11 +940,15 @@ function createAuthService(options = {}) {
       updatedAt: binding.updatedAt,
       schemaVersion: 1,
     };
-    save(data);
+    const candidateEnvelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(candidateData);
+    if (candidateEnvelopeRegistry.conflicts.length > 0) {
+      return equipmentEnvelopeRegistryMutationFailure(candidateEnvelopeRegistry.conflicts[0]);
+    }
+    save(candidateData);
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profileSummary: profileSummaryForAccount(resolved.account, candidateData),
       message: "角色档案已同步。",
     });
   }
@@ -2270,6 +2284,22 @@ function createAuthService(options = {}) {
     return clone(load());
   }
 
+  function equipmentEnvelopeDuplicateMutationResult(methodName, args) {
+    if (!BATTLE_LOCKED_SERVICE_MUTATIONS.has(String(methodName || ""))) {
+      return null;
+    }
+    const token = Array.isArray(args) ? args[0] : "";
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return null;
+    }
+    const registry = createEquipmentEnvelopeOwnershipRegistry(data);
+    return registry.conflicts.length > 0
+      ? equipmentEnvelopeRegistryMutationFailure(registry.conflicts[0])
+      : null;
+  }
+
   function battleLockedMutationResult(methodName, args) {
     if (!BATTLE_LOCKED_SERVICE_MUTATIONS.has(String(methodName || ""))) {
       return null;
@@ -2716,7 +2746,9 @@ function createAuthService(options = {}) {
       continue;
     }
     serviceApi[name] = (...args) => {
-      const locked = battleLockedMutationResult(name, args) || offlineHangLockedMutationResult(name, args);
+      const locked = equipmentEnvelopeDuplicateMutationResult(name, args)
+        || battleLockedMutationResult(name, args)
+        || offlineHangLockedMutationResult(name, args);
       return projectPublicServiceResult(locked || method(...args));
     };
   }
@@ -2857,7 +2889,7 @@ function normalizeData(raw) {
     0,
     ...serviceEvents.map((event) => normalizeEventSeq(event.eventSeq))
   );
-  return {
+  const normalized = {
     schemaVersion: 1,
     accounts: objectOrEmpty(data.accounts),
     sessions: objectOrEmpty(data.sessions),
@@ -2866,6 +2898,11 @@ function normalizeData(raw) {
     mailMessages: objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
     marketListings: objectOrEmpty(data.marketListings),
+    consumedEquipmentEnvelopes: Object.hasOwn(data, "consumedEquipmentEnvelopes")
+      ? (data.consumedEquipmentEnvelopes === undefined
+        ? undefined
+        : clone(data.consumedEquipmentEnvelopes))
+      : {},
     marketConfig: objectOrEmpty(data.marketConfig),
     offlineHangConfig: objectOrEmpty(data.offlineHangConfig),
     parties: objectOrEmpty(data.parties),
@@ -2887,6 +2924,14 @@ function normalizeData(raw) {
     serviceEventSeq,
     serviceEvents,
   };
+  const ledger = backfillConsumedEquipmentEnvelopeLedger(
+    normalized,
+    normalized.consumedEquipmentEnvelopes,
+  );
+  if (ledger.ok) {
+    normalized.consumedEquipmentEnvelopes = ledger.ledger;
+  }
+  return normalized;
 }
 
 function normalizeFamilies(value) {
@@ -2935,7 +2980,10 @@ function normalizeManorWars(value) {
 }
 
 function persistentDataForStore(data) {
-  const persistent = normalizeData(data);
+  // createAuthService.save() passes the already-normalized authoritative root.
+  // Cloning here keeps runtime buckets isolated without repeating the global
+  // equipment-ledger audit and sort a second time for every successful write.
+  const persistent = clone(data);
   persistent.playerPositions = {};
   persistent.battleInvites = {};
   persistent.battleRooms = {};
@@ -3237,7 +3285,7 @@ function playerPositionPublicPrecision(position) {
 }
 
 function publicMail(mail) {
-  return {
+  const result = {
     mailId: mail.mailId,
     mailKind: String(mail.mailKind || ""),
     senderUsername: mail.senderUsername,
@@ -3250,8 +3298,19 @@ function publicMail(mail) {
     currency: normalizeMailCurrency(mail.currency || mail.currencies || {}),
     createdAt: mail.createdAt,
     readAt: mail.readAt || null,
-    schemaVersion: 1,
+    schemaVersion: Number(mail.schemaVersion) === 2 ? 2 : 1,
   };
+  if (result.schemaVersion === 2 || Object.hasOwn(mail, "equipmentEnvelopes")) {
+    const equipmentOptions = {
+      ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+      expToNextLevel: battleExpToNextLevel,
+      maxPlayerLevel: MAX_PLAYER_LEVEL,
+    };
+    result.equipmentEnvelopes = (Array.isArray(mail.equipmentEnvelopes) ? mail.equipmentEnvelopes : []).map((envelope) => (
+      publicEquipmentTransferSummary(envelope, battleEquipmentCatalog, equipmentOptions)
+    ));
+  }
+  return result;
 }
 
 function normalizeMailItems(value) {
@@ -19088,6 +19147,14 @@ function ok(payload = {}) {
 
 function fail(code, message, extra = {}) {
   return {"ok": false, code, message, ...extra};
+}
+
+function equipmentEnvelopeRegistryMutationFailure(conflict = null) {
+  void conflict;
+  return fail(
+    "equipment_transfer_envelope_duplicate",
+    "装备托管档案存在重复归属，相关资产操作已暂停，请联系GM处理。",
+  );
 }
 
 function clone(value) {

@@ -175,6 +175,8 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => call.hasManors));
     assert.ok(calls.some((call) => call.hasManorWars));
     assert.ok(calls.some((call) => call.hasManorBattles));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes/.test(call.stdin)));
+    assert.ok(calls.some((call) => /VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
     const saveCall = calls.find((call) => String(call.stdin || "").includes("START TRANSACTION"));
     assert.ok(saveCall);
@@ -225,9 +227,69 @@ process.stdin.on("end", () => {
     assert.throws(() => store.save({}), /Read-only MySQL auth store cannot save/);
     await assert.rejects(store.saveAsync({}), /Read-only MySQL auth store cannot save/);
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 1);
-    assert.match(calls[0].stdin, /SELECT 'server_state'/);
-    assert.doesNotMatch(calls[0].stdin, /CREATE TABLE|CREATE DATABASE|START TRANSACTION/);
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].stdin, /information_schema\.tables/);
+    assert.match(calls[1].stdin, /SELECT 'server_state'/);
+    assert.doesNotMatch(calls[1].stdin, /consumed_equipment_envelopes/);
+    assert.equal(calls.some((call) => /CREATE TABLE|CREATE DATABASE|START TRANSACTION/.test(call.stdin)), false);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("read-only mysql store loads consumed tombstones when the optional table exists", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-read-only-ledger-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("1\\n");
+    return;
+  }
+  if (stdin.includes("SELECT 'server_state'")) {
+    const rows = [
+      ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+      ["consumed_equipment_envelopes", "eqx_store_read_only_0001", {schemaVersion: 1, envelopeId: "eqx_store_read_only_0001"}],
+    ];
+    process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "reader",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      readOnly: true,
+      ensureSchema: false,
+    });
+    const loaded = store.load();
+    assert.deepEqual(loaded.consumedEquipmentEnvelopes.eqx_store_read_only_0001, {
+      schemaVersion: 1,
+      envelopeId: "eqx_store_read_only_0001",
+    });
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].stdin, /information_schema\.tables/);
+    assert.match(calls[1].stdin, /FROM consumed_equipment_envelopes ORDER BY envelope_id/);
+    assert.equal(calls.some((call) => /CREATE TABLE|START TRANSACTION/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -377,8 +439,71 @@ process.stdin.on("end", () => {
       senderAccountId: "acc_entity",
       recipientAccountId: "acc_entity",
       title: "实体邮件",
+      items: [{itemId: "weapon_wooden_club", count: 1}],
+      equipmentEnvelopes: [{
+        envelopeId: "eqx_store_mail_0001",
+        itemId: "weapon_wooden_club",
+        instanceState: {durability: 17, enhancement: {level: 3}},
+      }],
+      currency: {},
       createdAt: "2026-07-04T00:02:00.000Z",
       readAt: null,
+      schemaVersion: 2,
+    }],
+    ["market_listings", "market_entity", {
+      listingId: "market_entity",
+      sellerAccountId: "acc_entity",
+      itemId: "weapon_wooden_club",
+      currency: "stoneCoins",
+      unitPrice: 88,
+      count: 1,
+      createdAt: "2026-07-04T00:02:30.000Z",
+      equipmentEnvelope: {
+        envelopeId: "eqx_store_market_0001",
+        itemId: "weapon_wooden_club",
+        instanceState: {durability: 11, enhancement: {level: 4}},
+      },
+      schemaVersion: 2,
+    }],
+    ["consumed_equipment_envelopes", "eqx_store_consumed_0001", {
+      schemaVersion: 99,
+      envelopeId: "ignored_inner_identity",
+    }],
+    ["mail_messages", "mail_row_a", {
+      mailId: "mail_inner_shared",
+      senderAccountId: "acc_entity",
+      recipientAccountId: "acc_entity",
+      title: "错位邮件甲",
+      createdAt: "2026-07-04T00:02:40.000Z",
+      readAt: null,
+    }],
+    ["mail_messages", "mail_row_b", {
+      mailId: "mail_inner_shared",
+      senderAccountId: "acc_entity",
+      recipientAccountId: "acc_entity",
+      title: "错位邮件乙",
+      createdAt: "2026-07-04T00:02:41.000Z",
+      readAt: null,
+    }],
+    ["market_listings", "market_row_a", {
+      listingId: "market_inner_shared",
+      sellerAccountId: "acc_entity",
+      itemId: "item_meat_small",
+      currency: "stoneCoins",
+      unitPrice: 10,
+      count: 1,
+      createdAt: "2026-07-04T00:02:42.000Z",
+      schemaVersion: 1,
+    }],
+    ["market_listings", "market_row_b", {
+      listingId: "market_inner_shared",
+      sellerAccountId: "acc_entity",
+      itemId: "item_meat_small",
+      currency: "stoneCoins",
+      unitPrice: 11,
+      count: 1,
+      createdAt: "2026-07-04T00:02:43.000Z",
+      schemaVersion: 1,
     }],
     ["gm_command_grants", "acc_entity/*", {
       accountId: "acc_entity",
@@ -422,6 +547,18 @@ process.stdin.on("end", () => {
       quick: 36,
     });
     assert.equal(loaded.mailMessages.mail_entity.title, "实体邮件");
+    assert.equal(loaded.mailMessages.mail_entity.equipmentEnvelopes[0].instanceState.enhancement.level, 3);
+    assert.equal(loaded.marketListings.market_entity.equipmentEnvelope.instanceState.durability, 11);
+    assert.deepEqual(loaded.consumedEquipmentEnvelopes.eqx_store_consumed_0001, {
+      schemaVersion: 1,
+      envelopeId: "eqx_store_consumed_0001",
+    });
+    assert.equal(loaded.mailMessages.mail_row_a.title, "错位邮件甲");
+    assert.equal(loaded.mailMessages.mail_row_b.title, "错位邮件乙");
+    assert.equal(loaded.mailMessages.mail_inner_shared, undefined);
+    assert.equal(loaded.marketListings.market_row_a.unitPrice, 10);
+    assert.equal(loaded.marketListings.market_row_b.unitPrice, 11);
+    assert.equal(loaded.marketListings.market_inner_shared, undefined);
     assert.equal(loaded.gmCommandGrants.acc_entity[0].commandId, "*");
     assert.equal(loaded.battleTrace[0].traceId, "trace_entity");
     assert.equal(loaded.serviceEventSeq, 7);
@@ -487,6 +624,12 @@ process.stdin.on("end", () => {
           "readAt": null,
         },
       },
+      "consumedEquipmentEnvelopes": {
+        "eqx_store_consumed_first_0001": {
+          "schemaVersion": 1,
+          "envelopeId": "eqx_store_consumed_first_0001",
+        },
+      },
       "families": {
         "family_incremental": {
           "familyId": "family_incremental",
@@ -516,17 +659,27 @@ process.stdin.on("end", () => {
     secondState.accounts.incuser.displayName = "增量用户改名";
     secondState.accounts.incuser.updatedAt = "2026-07-04T00:01:00.000Z";
     secondState.mailMessages = {};
+    secondState.consumedEquipmentEnvelopes.eqx_store_consumed_second_0002 = {
+      schemaVersion: 1,
+      envelopeId: "eqx_store_consumed_second_0002",
+    };
     store.save(firstState);
     store.save(secondState);
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
     const saveCalls = calls.filter((call) => call.stdin.includes("START TRANSACTION"));
     assert.equal(saveCalls.length, 2);
+    const firstSave = saveCalls[0].stdin;
     const secondSave = saveCalls[1].stdin;
+    assert.match(firstSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_first_0001'\)/);
+    assert.match(firstSave, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
     assert.ok(secondSave.includes("INSERT INTO server_state"));
     assert.ok(secondSave.includes("mysql_entity_tables"));
     assert.ok(secondSave.includes("INSERT INTO accounts"));
     assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
     assert.ok(secondSave.includes("DELETE FROM mail_messages WHERE mail_id = 'mail_incremental'"));
+    assert.match(secondSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_second_0002'\)/);
+    assert.equal(secondSave.includes("eqx_store_consumed_first_0001"), false);
+    assert.equal(/DELETE FROM consumed_equipment_envelopes/.test(secondSave), false);
     assert.equal(/\bDELETE FROM accounts\b/.test(secondSave), false);
     assert.equal(/\bDELETE FROM sessions\b/.test(secondSave), false);
     assert.equal(secondSave.includes("INSERT INTO families"), false);
@@ -543,6 +696,131 @@ process.stdin.on("end", () => {
       process.env.FAKE_MYSQL_LOG = previousLogPath;
     }
     fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql consumed equipment ledger rejects deletion or mutation before opening a transaction", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-consumed-immutable-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+    });
+    const envelopeId = "eqx_store_immutable_0001";
+    const state = {
+      consumedEquipmentEnvelopes: {
+        [envelopeId]: {schemaVersion: 1, envelopeId},
+      },
+    };
+    store.save(state);
+    const transactionCount = () => fs.readFileSync(logPath, "utf8")
+      .trim().split(/\r?\n/)
+      .filter((line) => JSON.parse(line).stdin.includes("START TRANSACTION")).length;
+    const beforeFailures = transactionCount();
+    assert.throws(() => store.save({consumedEquipmentEnvelopes: {}}), /只能追加/);
+    assert.throws(() => store.save({
+      consumedEquipmentEnvelopes: {
+        [envelopeId]: {schemaVersion: 2, envelopeId},
+      },
+    }), /非规范记录/);
+    assert.equal(transactionCount(), beforeFailures);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql consumed equipment insert is idempotent after an ambiguous commit response", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-consumed-retry-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const failedOncePath = path.join(tempDir, "failed-once");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  const previousFailedOncePath = process.env.FAKE_MYSQL_FAILED_ONCE;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (
+    stdin.includes("START TRANSACTION")
+    && stdin.includes("INSERT INTO consumed_equipment_envelopes")
+    && stdin.includes("COMMIT")
+    && !fs.existsSync(process.env.FAKE_MYSQL_FAILED_ONCE)
+  ) {
+    fs.writeFileSync(process.env.FAKE_MYSQL_FAILED_ONCE, "committed-but-response-lost");
+    process.stderr.write("ambiguous commit response");
+    process.exitCode = 1;
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    process.env.FAKE_MYSQL_FAILED_ONCE = failedOncePath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+    });
+    const envelopeId = "eqx_store_ambiguous_retry_0001";
+    const state = {
+      consumedEquipmentEnvelopes: {
+        [envelopeId]: {schemaVersion: 1, envelopeId},
+      },
+    };
+    assert.throws(() => store.save(state), /ambiguous commit response/);
+    assert.doesNotThrow(() => store.save(state));
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const completeAttempts = calls.filter((call) => (
+      call.stdin.includes("START TRANSACTION")
+      && call.stdin.includes("INSERT INTO consumed_equipment_envelopes")
+      && call.stdin.includes("COMMIT")
+    ));
+    assert.equal(completeAttempts.length, 2);
+    for (const attempt of completeAttempts) {
+      assert.match(attempt.stdin, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
+      assert.equal(/DELETE FROM consumed_equipment_envelopes/.test(attempt.stdin), false);
+    }
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    if (previousFailedOncePath === undefined) {
+      delete process.env.FAKE_MYSQL_FAILED_ONCE;
+    } else {
+      process.env.FAKE_MYSQL_FAILED_ONCE = previousFailedOncePath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
 

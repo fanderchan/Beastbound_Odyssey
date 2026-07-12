@@ -147,7 +147,74 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
 });
 
-test("equipment mail send and historical claim fail atomically without deleting attachments", () => {
+test("mail runtime identity rejects addressed key, inner id, and recipient drift without letting another mailbox cause a global denial", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mid_sender", password: "test1234", displayName: "身份寄件人"});
+  const recipient = seedService.register({username: "mid_recipient", password: "test1234", displayName: "身份收件人"});
+  const sent = seedService.sendMail(sender.session.token, {
+    recipientUsername: "mid_recipient",
+    title: "身份保护",
+    body: "键、内层编号与收件账号必须一致。",
+  });
+  assert.equal(sent.ok, true);
+  const mailId = sent.mail.mailId;
+  const baseSeed = seedService.snapshot();
+
+  for (const mutate of [
+    (seed) => { seed.mailMessages[mailId].mailId = `${mailId}_inner_drift`; },
+    (seed) => { seed.mailMessages[mailId].mailId = ` ${mailId} `; },
+    (seed) => { seed.mailMessages[mailId].recipientAccountId = ` ${recipient.account.accountId} `; },
+  ]) {
+    const seed = structuredClone(baseSeed);
+    mutate(seed);
+    const service = createAuthService({store: createMemoryAuthStore(seed)});
+    const before = service.snapshot();
+    for (const result of [
+      service.listInbox(recipient.session.token),
+      service.markMailRead(recipient.session.token, mailId),
+      service.claimMailAttachments(recipient.session.token, mailId),
+    ]) {
+      assert.equal(result.ok, false);
+      assert.equal(result.code, "mail_identity_invalid");
+    }
+    assert.deepEqual(service.snapshot(), before);
+  }
+
+  const whitespaceKeySeed = structuredClone(baseSeed);
+  const whitespaceKey = ` ${mailId} `;
+  whitespaceKeySeed.mailMessages[whitespaceKey] = whitespaceKeySeed.mailMessages[mailId];
+  delete whitespaceKeySeed.mailMessages[mailId];
+  const whitespaceKeyService = createAuthService({store: createMemoryAuthStore(whitespaceKeySeed)});
+  const whitespaceKeyBefore = whitespaceKeyService.snapshot();
+  const whitespaceKeyList = whitespaceKeyService.listInbox(recipient.session.token);
+  assert.equal(whitespaceKeyList.ok, false);
+  assert.equal(whitespaceKeyList.code, "mail_identity_invalid");
+  for (const result of [
+    whitespaceKeyService.markMailRead(recipient.session.token, mailId),
+    whitespaceKeyService.claimMailAttachments(recipient.session.token, mailId),
+  ]) {
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "mail_missing");
+  }
+  assert.deepEqual(whitespaceKeyService.snapshot(), whitespaceKeyBefore);
+
+  const isolatedSeed = structuredClone(baseSeed);
+  const otherMailboxId = `${mailId}_other_mailbox`;
+  const otherMailboxMail = structuredClone(isolatedSeed.mailMessages[mailId]);
+  otherMailboxMail.mailId = `${otherMailboxId}_inner_drift`;
+  otherMailboxMail.recipientAccountId = sender.account.accountId;
+  isolatedSeed.mailMessages[otherMailboxId] = otherMailboxMail;
+  const isolatedService = createAuthService({store: createMemoryAuthStore(isolatedSeed)});
+  const recipientInbox = isolatedService.listInbox(recipient.session.token);
+  assert.equal(recipientInbox.ok, true);
+  assert.equal(recipientInbox.messages.length, 1);
+  assert.equal(recipientInbox.messages[0].mailId, mailId);
+  const senderInbox = isolatedService.listInbox(sender.session.token);
+  assert.equal(senderInbox.ok, false);
+  assert.equal(senderInbox.code, "mail_identity_invalid");
+});
+
+test("equipment mail selects one instance, preserves its state, and keeps historical template-only mail blocked", () => {
   const seedService = createAuthService({store: createMemoryAuthStore()});
   const sender = seedService.register({username: "mailequip_sender", password: "test1234", displayName: "装备寄件人"});
   const recipient = seedService.register({username: "mailequip_recipient", password: "test1234", displayName: "装备收件人"});
@@ -157,17 +224,58 @@ test("equipment mail send and historical claim fail atomically without deleting 
   const sent = seedService.sendMail(sender.session.token, {
     recipientUsername: "mailequip_recipient",
     title: "装备附件",
-    body: "这件装备应被安全拦截。",
-    items: [{itemId: "weapon_wooden_club", count: 1}],
+    body: "这件强化木棒必须保持原样。",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_mail_guard_1",
+      sourceSlotIndex: 0,
+    }],
   });
-  assert.equal(sent.ok, false);
-  assert.equal(sent.code, "mail_equipment_transfer_unsupported");
+  assert.equal(sent.ok, true, JSON.stringify(sent));
+  assert.equal(sent.mail.schemaVersion, 2);
+  assert.equal(sent.mail.items[0].itemId, "weapon_wooden_club");
+  assert.equal(sent.mail.equipmentEnvelopes.length, 1);
+  assert.equal(Object.hasOwn(sent.mail.equipmentEnvelopes[0], "provenance"), false);
+  assert.equal(Object.hasOwn(sent.mail.equipmentEnvelopes[0].instanceState, "source"), false);
   const senderAfter = seedService.getProfile(sender.session.token);
-  assert.equal(senderAfter.profileSummary.profileRevision, senderBefore.profileSummary.profileRevision);
+  assert.equal(senderAfter.profileSummary.profileRevision, senderBefore.profileSummary.profileRevision + 1);
   assert.equal(senderAfter.profile.stoneCoins, senderBefore.profile.stoneCoins);
-  assert.equal(profileItemCount(senderAfter.profile, "weapon_wooden_club"), 1);
-  assert.deepEqual(senderAfter.profile.equipmentInstances, senderBefore.profile.equipmentInstances);
-  assert.equal(seedService.listInbox(recipient.session.token).messages.length, 0);
+  assert.equal(profileItemCount(senderAfter.profile, "weapon_wooden_club"), 0);
+  assert.equal(senderAfter.profile.equipmentInstances.equip_mail_guard_1, undefined);
+  const internalMail = seedService.snapshot().mailMessages[sent.mail.mailId];
+  const internalEnvelope = internalMail.equipmentEnvelopes[0];
+  assert.match(internalEnvelope.envelopeId, /^eqx_mail_/);
+  assert.equal(internalEnvelope.instanceState.durability, 30);
+  assert.equal(internalEnvelope.instanceState.enhancement.level, 2);
+  assert.equal(internalEnvelope.instanceState.wearCounters.attackCount, 3);
+  assert.equal(internalEnvelope.instanceState.source, "mail_guard_test");
+  assert.equal(internalEnvelope.provenance.sourceInstanceId, "equip_mail_guard_1");
+
+  const inboxBeforeClaim = seedService.listInbox(recipient.session.token);
+  assert.equal(inboxBeforeClaim.messages.length, 1);
+  assert.equal(inboxBeforeClaim.messages[0].equipmentEnvelopes[0].instanceState.enhancement.level, 2);
+  const claimedModern = seedService.claimMailAttachments(recipient.session.token, sent.mail.mailId);
+  assert.equal(claimedModern.ok, true, JSON.stringify(claimedModern));
+  assert.equal(claimedModern.mail, null);
+  assert.equal(profileItemCount(claimedModern.profile, "weapon_wooden_club"), 1);
+  assert.equal(claimedModern.claim.importedEquipmentInstanceIds.length, 1);
+  const importedId = claimedModern.claim.importedEquipmentInstanceIds[0];
+  const imported = claimedModern.profile.equipmentInstances[importedId];
+  assert.ok(imported);
+  assert.notEqual(imported.instanceId, "equip_mail_guard_1");
+  assert.equal(imported.durability, 30);
+  assert.equal(imported.enhancement.level, 2);
+  assert.equal(imported.wearCounters.attackCount, 3);
+  const afterModernClaim = seedService.snapshot();
+  const recipientBinding = afterModernClaim.profileBindings[recipient.account.accountId];
+  const privateImported = afterModernClaim.profiles[recipientBinding.playerId].profile.equipmentInstances[importedId];
+  assert.equal(privateImported.transferProvenance.originEnvelopeId, internalEnvelope.envelopeId);
+  assert.deepEqual(afterModernClaim.consumedEquipmentEnvelopes[internalEnvelope.envelopeId], {
+    schemaVersion: 1,
+    envelopeId: internalEnvelope.envelopeId,
+  });
+  assert.equal(afterModernClaim.mailMessages[sent.mail.mailId], undefined);
 
   const seed = seedService.snapshot();
   seed.mailMessages.legacy_equipment_mail = {
@@ -195,13 +303,216 @@ test("equipment mail send and historical claim fail atomically without deleting 
   const recipientAfter = service.getProfile(recipient.session.token);
   assert.equal(recipientAfter.profileSummary.profileRevision, recipientBefore.profileSummary.profileRevision);
   assert.equal(recipientAfter.profile.stoneCoins, recipientBefore.profile.stoneCoins);
-  assert.equal(profileItemCount(recipientAfter.profile, "weapon_wooden_club"), 0);
+  assert.equal(profileItemCount(recipientAfter.profile, "weapon_wooden_club"), 1);
   assert.deepEqual(service.snapshot().mailMessages.legacy_equipment_mail, mailBefore);
   const inbox = service.listInbox(recipient.session.token);
   const historical = inbox.messages.find((mail) => mail.mailId === "legacy_equipment_mail");
   assert.ok(historical);
   assert.equal(historical.items[0].itemId, "weapon_wooden_club");
   assert.equal(historical.currency.stoneCoins, 17);
+});
+
+test("equipment mail rejects client envelopes and rolls back a mixed send when any selected instance is stale", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const sender = service.register({username: "mailintent_sender", password: "test1234", displayName: "意图寄件人"});
+  service.register({username: "mailintent_recipient", password: "test1234", displayName: "意图收件人"});
+  seedMailBackpackEquipment(service, sender.session.token);
+  const current = service.getProfile(sender.session.token);
+  const profile = current.profile;
+  profile.backpackSlots[1] = {itemId: "item_meat_small", count: 2};
+  assert.equal(service.saveProfile(sender.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile,
+  }).ok, true);
+
+  const before = service.snapshot();
+  const untrusted = service.sendMail(sender.session.token, {
+    recipientUsername: "mailintent_recipient",
+    title: "伪造信封",
+    body: "客户端不能提交这个字段。",
+    equipmentEnvelopes: [{envelopeId: "eqx_mail_client_forged"}],
+  });
+  assert.equal(untrusted.ok, false);
+  assert.equal(untrusted.code, "mail_equipment_envelope_untrusted");
+  assert.deepEqual(service.snapshot(), before);
+
+  const stale = service.sendMail(sender.session.token, {
+    recipientUsername: "mailintent_recipient",
+    title: "混合附件",
+    body: "任何一个实例过期都必须整封回滚。",
+    items: [
+      {itemId: "item_meat_small", count: 1},
+      {itemId: "weapon_wooden_club", count: 1, instanceId: "equip_mail_guard_1", sourceSlotIndex: 0},
+      {itemId: "weapon_wooden_club", count: 1, instanceId: "equip_mail_missing", sourceSlotIndex: 2},
+    ],
+  });
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "equipment_instance_missing");
+  assert.deepEqual(service.snapshot(), before);
+});
+
+test("equipment mail claim keeps capacity leftovers and rejects corrupt, future, duplicate, or cross-mail envelopes atomically", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mailatomic_sender", password: "test1234", displayName: "原子寄件人"});
+  const recipient = seedService.register({username: "mailatomic_recipient", password: "test1234", displayName: "原子收件人"});
+  seedMailBackpackEquipment(seedService, sender.session.token);
+
+  const senderCurrent = seedService.getProfile(sender.session.token);
+  const senderProfile = senderCurrent.profile;
+  senderProfile.backpackSlots[1] = {itemId: "weapon_wooden_club", count: 1};
+  senderProfile.backpackSlots[2] = {itemId: "item_meat_small", count: 2};
+  senderProfile.equipmentInstances.equip_mail_guard_2 = {
+    schemaVersion: 1,
+    instanceId: "equip_mail_guard_2",
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 18,
+    enhancement: {itemId: "weapon_wooden_club", level: 4, history: [{result: "success"}]},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 7, hitCount: 0},
+    expPillCharge: {},
+    source: "mail_capacity_test",
+  };
+  senderProfile.nextEquipmentInstanceSerial = 3;
+  assert.equal(seedService.saveProfile(sender.session.token, {
+    expectedRevision: senderCurrent.profileSummary.profileRevision,
+    profile: senderProfile,
+  }).ok, true);
+
+  const recipientCurrent = seedService.getProfile(recipient.session.token);
+  const recipientProfile = recipientCurrent.profile;
+  recipientProfile.backpackSlots = [
+    {itemId: "item_meat_small", count: 98},
+    ...Array.from({length: 13}, () => ({itemId: "item_meat_small", count: 99})),
+    {},
+  ];
+  assert.equal(seedService.saveProfile(recipient.session.token, {
+    expectedRevision: recipientCurrent.profileSummary.profileRevision,
+    profile: recipientProfile,
+  }).ok, true);
+
+  const sent = seedService.sendMail(sender.session.token, {
+    recipientUsername: "mailatomic_recipient",
+    title: "容量与坏档",
+    body: "先领一件装备和部分普通附件。",
+    items: [
+      {itemId: "weapon_wooden_club", count: 1, instanceId: "equip_mail_guard_1", sourceSlotIndex: 0},
+      {itemId: "weapon_wooden_club", count: 1, instanceId: "equip_mail_guard_2", sourceSlotIndex: 1},
+      {itemId: "item_meat_small", count: 2},
+    ],
+  });
+  assert.equal(sent.ok, true, JSON.stringify(sent));
+  const seed = seedService.snapshot();
+  seed.mailMessages[sent.mail.mailId].currency = {stoneCoins: 17};
+
+  const corruptionScenarios = [
+    {
+      code: "equipment_transfer_fingerprint_mismatch",
+      mutate(snapshot) { snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[0].stateFingerprint = "0".repeat(64); },
+    },
+    {
+      code: "equipment_transfer_envelope_schema_future",
+      mutate(snapshot) { snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[0].schemaVersion = 2; },
+    },
+    {
+      code: "equipment_transfer_envelope_duplicate",
+      mutate(snapshot) {
+        snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[1] = structuredClone(
+          snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[0],
+        );
+      },
+    },
+    {
+      code: "equipment_transfer_envelope_duplicate",
+      mutate(snapshot) {
+        const duplicate = structuredClone(snapshot.mailMessages[sent.mail.mailId]);
+        duplicate.mailId = "mail_cross_recipient_duplicate";
+        duplicate.recipientAccountId = sender.account.accountId;
+        duplicate.recipientUsername = sender.account.username;
+        duplicate.recipientDisplayName = sender.account.displayName;
+        snapshot.mailMessages[duplicate.mailId] = duplicate;
+      },
+    },
+    {
+      code: "equipment_transfer_envelope_duplicate",
+      mutate(snapshot) {
+        const envelope = structuredClone(snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[0]);
+        const binding = snapshot.profileBindings[recipient.account.accountId];
+        snapshot.profiles[binding.playerId].profile.bank = {
+          stoneCoins: 0,
+          items: [{itemId: envelope.itemId, count: 1}],
+          slots: [
+            {itemId: envelope.itemId, count: 1, equipmentEnvelopes: [envelope]},
+            ...Array.from({length: 89}, () => ({})),
+          ],
+          unlockedTabs: 1,
+          schemaVersion: 2,
+        };
+      },
+    },
+    {
+      code: "equipment_transfer_envelope_duplicate",
+      mutate(snapshot) {
+        const envelope = structuredClone(snapshot.mailMessages[sent.mail.mailId].equipmentEnvelopes[0]);
+        snapshot.marketListings.market_cross_mail_duplicate = {
+          listingId: "market_cross_mail_duplicate",
+          sellerAccountId: sender.account.accountId,
+          itemId: envelope.itemId,
+          count: 1,
+          unitPrice: 1,
+          currency: "stoneCoins",
+          createdAt: "2026-07-12T00:00:00.000Z",
+          equipmentEnvelope: envelope,
+          schemaVersion: 2,
+        };
+      },
+    },
+  ];
+  for (const scenario of corruptionScenarios) {
+    const corruptSeed = structuredClone(seed);
+    scenario.mutate(corruptSeed);
+    const service = createAuthService({store: createMemoryAuthStore(corruptSeed)});
+    const before = service.snapshot();
+    const profileBefore = service.getProfile(recipient.session.token);
+    const claimed = service.claimMailAttachments(recipient.session.token, sent.mail.mailId);
+    assert.equal(claimed.ok, false, scenario.code);
+    assert.equal(claimed.code, scenario.code);
+    const profileAfter = service.getProfile(recipient.session.token);
+    assert.equal(profileAfter.profileSummary.profileRevision, profileBefore.profileSummary.profileRevision);
+    assert.equal(profileAfter.profile.stoneCoins, profileBefore.profile.stoneCoins);
+    assert.deepEqual(service.snapshot(), before, scenario.code);
+  }
+
+  const partialService = createAuthService({store: createMemoryAuthStore(seed)});
+  const beforePartial = partialService.getProfile(recipient.session.token);
+  const partial = partialService.claimMailAttachments(recipient.session.token, sent.mail.mailId);
+  assert.equal(partial.ok, true, JSON.stringify(partial));
+  assert.equal(partial.profile.stoneCoins, beforePartial.profile.stoneCoins + 17);
+  assert.equal(profileItemCount(partial.profile, "weapon_wooden_club"), 1);
+  assert.deepEqual(partial.claim.addedItems, [
+    {itemId: "weapon_wooden_club", count: 1},
+    {itemId: "item_meat_small", count: 1},
+  ]);
+  assert.deepEqual(partial.claim.remainingItems, [
+    {itemId: "item_meat_small", count: 1},
+    {itemId: "weapon_wooden_club", count: 1},
+  ]);
+  assert.ok(partial.mail);
+  assert.deepEqual(partial.mail.currency, {});
+  assert.equal(partial.mail.equipmentEnvelopes.length, 1);
+  assert.equal(partial.mail.equipmentEnvelopes[0].instanceState.durability, 18);
+  assert.equal(partial.mail.equipmentEnvelopes[0].instanceState.enhancement.level, 4);
+  const storedRemaining = partialService.snapshot().mailMessages[sent.mail.mailId];
+  const partialSnapshot = partialService.snapshot();
+  const claimedEnvelopeId = seed.mailMessages[sent.mail.mailId].equipmentEnvelopes[0].envelopeId;
+  const remainingEnvelopeId = storedRemaining.equipmentEnvelopes[0].envelopeId;
+  assert.deepEqual(partialSnapshot.consumedEquipmentEnvelopes[claimedEnvelopeId], {
+    schemaVersion: 1,
+    envelopeId: claimedEnvelopeId,
+  });
+  assert.equal(partialSnapshot.consumedEquipmentEnvelopes[remainingEnvelopeId], undefined);
+  assert.equal(storedRemaining.equipmentEnvelopes.length, 1);
+  assert.equal(storedRemaining.equipmentEnvelopes[0].instanceState.source, "mail_capacity_test");
 });
 
 test("unknown mail attachments preserve the whole mail and currency atomically", () => {

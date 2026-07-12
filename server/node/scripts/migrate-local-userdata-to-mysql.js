@@ -6,6 +6,9 @@ const path = require("node:path");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {migrateProfile} = require("../src/auth/profile-migrations");
 const {snapshotExternalEquipmentConflicts} = require("../src/auth/equipment-profile-migration");
+const {
+  backfillConsumedEquipmentEnvelopeLedger,
+} = require("../src/auth/equipment-envelope-consumed-ledger");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 loadEnvFile(path.resolve(repoRoot, "server/node/.local/mysql.env"));
@@ -67,7 +70,19 @@ function main() {
 }
 
 function buildLocalUserdataMigration(options = {}) {
-  const sourceData = cloneJson(options.sourceData || {});
+  const originalSourceData = ensureServerDocumentCollections(cloneJson(options.sourceData || {}));
+  const sourceLedger = backfillConsumedEquipmentEnvelopeLedger(
+    originalSourceData,
+    originalSourceData.consumedEquipmentEnvelopes,
+  );
+  if (!sourceLedger.ok) {
+    const error = new Error(sourceLedger.message || "Existing consumed equipment envelope ledger backfill is unsafe.");
+    error.code = sourceLedger.code || "equipment_consumed_ledger_backfill_unsafe";
+    error.externalEquipmentConflicts = [cloneJson(sourceLedger)];
+    throw error;
+  }
+  const sourceData = cloneJson(originalSourceData);
+  sourceData.consumedEquipmentEnvelopes = sourceLedger.ledger;
   const data = ensureServerDocumentCollections(cloneJson(sourceData));
   const username = normalizeUsername(options.username);
   const password = String(options.password || "");
@@ -149,6 +164,24 @@ function buildLocalUserdataMigration(options = {}) {
     updatedAt: nowIso,
     schemaVersion: 1,
   };
+  const consumedLedger = backfillConsumedEquipmentEnvelopeLedger(
+    data,
+    data.consumedEquipmentEnvelopes,
+  );
+  if (!consumedLedger.ok) {
+    const error = new Error(consumedLedger.message || "Consumed equipment envelope ledger backfill is unsafe.");
+    error.code = consumedLedger.code || "equipment_consumed_ledger_backfill_unsafe";
+    error.externalEquipmentConflicts = [cloneJson(consumedLedger)];
+    throw error;
+  }
+  data.consumedEquipmentEnvelopes = consumedLedger.ledger;
+  const candidateEquipmentConflicts = snapshotExternalEquipmentConflicts(data);
+  if (candidateEquipmentConflicts.length > 0) {
+    const error = new Error("Migration candidate contains conflicting equipment envelope custody.");
+    error.code = "snapshot_external_equipment_unsafe";
+    error.externalEquipmentConflicts = cloneJson(candidateEquipmentConflicts);
+    throw error;
+  }
   if (role === "gm") {
     data.gmUserGrants[accountId] = {
       accountId,
@@ -184,8 +217,18 @@ function buildLocalUserdataMigration(options = {}) {
     schemaVersion: 1,
   });
 
-  const verificationContext = {username, accountId, playerId, eventId};
-  const integrityBefore = migrationUnrelatedDigest(sourceData, verificationContext);
+  const consumedEnvelopeIdsAdded = Array.from(new Set([
+    ...sourceLedger.addedIds,
+    ...consumedLedger.addedIds,
+  ])).sort();
+  const verificationContext = {
+    username,
+    accountId,
+    playerId,
+    eventId,
+    consumedEnvelopeIdsAdded,
+  };
+  const integrityBefore = migrationUnrelatedDigest(originalSourceData, verificationContext);
   const integrityAfter = migrationUnrelatedDigest(data, verificationContext);
   if (integrityBefore !== integrityAfter) {
     throw new Error("Local userdata migration changed unrelated persistent state.");
@@ -206,11 +249,12 @@ function buildLocalUserdataMigration(options = {}) {
       activePetInstanceId: String(profile.activePetInstanceId || ""),
       stoneCoins: Number(profile.stoneCoins || profile.coins || 0),
       passwordChanged: Boolean(password),
-      beforeCounts: persistentBucketCounts(sourceData),
+      beforeCounts: persistentBucketCounts(originalSourceData),
       afterCounts: persistentBucketCounts(data),
-      targetAssetsBefore: profileAssetSummary(objectOrEmpty(objectOrEmpty(sourceData.profiles)[playerId]).profile),
+      targetAssetsBefore: profileAssetSummary(objectOrEmpty(objectOrEmpty(originalSourceData.profiles)[playerId]).profile),
       targetAssetsAfter: profileAssetSummary(profile),
       profileMigration: publicProfileMigrationReport(profileMigration),
+      consumedEnvelopeBackfillCount: consumedEnvelopeIdsAdded.length,
       unrelatedDigest: integrityBefore,
       unrelatedStatePreserved: true,
     },
@@ -466,6 +510,7 @@ const OBJECT_BUCKETS = Object.freeze([
   "profiles",
   "mailMessages",
   "marketListings",
+  "consumedEquipmentEnvelopes",
   "marketConfig",
   "offlineHangConfig",
   "tradeOffers",
@@ -539,6 +584,11 @@ function migrationUnrelatedDigest(value, context) {
     }
   }
   data.authEvents = data.authEvents.filter((event) => String(event && event.eventId || "") !== eventId);
+  for (const envelopeId of Array.isArray(context.consumedEnvelopeIdsAdded)
+    ? context.consumedEnvelopeIdsAdded
+    : []) {
+    delete data.consumedEquipmentEnvelopes[envelopeId];
+  }
   return stableDigest(data);
 }
 
@@ -601,6 +651,12 @@ function appliedTargetFacts(value, context) {
     gmCommandGrants: Object.prototype.hasOwnProperty.call(data.gmCommandGrants, context.accountId) ? data.gmCommandGrants[context.accountId] : null,
     sessions,
     migrationEvent: data.authEvents.find((event) => String(event && event.eventId || "") === context.eventId) || null,
+    consumedEquipmentEnvelopes: Object.fromEntries(
+      (Array.isArray(context.consumedEnvelopeIdsAdded) ? context.consumedEnvelopeIdsAdded : [])
+        .filter((envelopeId) => Object.hasOwn(data.consumedEquipmentEnvelopes, envelopeId))
+        .sort()
+        .map((envelopeId) => [envelopeId, data.consumedEquipmentEnvelopes[envelopeId]]),
+    ),
   };
 }
 

@@ -47,6 +47,7 @@ const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
+const EquipmentEscrowClientModel := preload("res://scripts/progression/equipment_escrow_client_model.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -18988,6 +18989,7 @@ func _refresh_market_panel() -> void:
 	if market_wallet_label != null:
 		market_wallet_label.text = _market_wallet_text()
 	var visible_listings := _market_visible_listings()
+	var listing_display_rows := EquipmentEscrowClientModel.market_listing_rows(visible_listings)
 	var selected_exists = false
 	for listing in visible_listings:
 		if str(listing.get("listingId", "")) == market_selected_listing_id:
@@ -19004,10 +19006,12 @@ func _refresh_market_panel() -> void:
 		empty_label.text = _market_empty_list_text()
 		market_list_container.add_child(empty_label)
 	else:
-		for listing in visible_listings:
+		for listing_index in range(visible_listings.size()):
+			var listing := visible_listings[listing_index]
+			var display_row := listing_display_rows[listing_index] if listing_index < listing_display_rows.size() else {}
 			var listing_id = str(listing.get("listingId", ""))
 			var button = Button.new()
-			button.text = _market_listing_button_text(listing)
+			button.text = _market_listing_button_text(listing, display_row)
 			button.toggle_mode = true
 			button.button_pressed = listing_id == market_selected_listing_id
 			button.custom_minimum_size = Vector2(0, 78)
@@ -19020,15 +19024,21 @@ func _refresh_market_panel() -> void:
 			market_list_container.add_child(button)
 			market_listing_buttons[listing_id] = button
 	var selected := _market_selected_listing()
-	market_detail_label.text = _market_detail_text(selected)
+	var selected_display: Dictionary = {}
+	for listing_index in range(visible_listings.size()):
+		if str(visible_listings[listing_index].get("listingId", "")) == market_selected_listing_id:
+			selected_display = listing_display_rows[listing_index] if listing_index < listing_display_rows.size() else {}
+			break
+	market_detail_label.text = _market_detail_text(selected, selected_display)
+	var selected_is_safe := not selected.is_empty() and bool(selected_display.get("valid", false))
 	if market_sell_form_container != null:
 		market_sell_form_container.visible = market_mode == "sell"
 	if market_buy_button != null:
 		market_buy_button.visible = market_mode == "buy"
-		market_buy_button.disabled = market_request_pending or not has_server or selected.is_empty() or _market_listing_is_mine(selected)
+		market_buy_button.disabled = market_request_pending or not has_server or not selected_is_safe or _market_listing_is_mine(selected)
 	if market_cancel_button != null:
 		market_cancel_button.visible = market_mode != "buy"
-		market_cancel_button.disabled = market_request_pending or not has_server or selected.is_empty() or not _market_listing_is_mine(selected)
+		market_cancel_button.disabled = market_request_pending or not has_server or not selected_is_safe or not _market_listing_is_mine(selected)
 	if market_refresh_button != null:
 		market_refresh_button.disabled = market_request_pending or not has_server
 	if market_close_button != null:
@@ -19083,7 +19093,7 @@ func _market_listing_is_mine(listing: Dictionary) -> bool:
 	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
 	return self_account_id != "" and str(listing.get("sellerAccountId", "")) == self_account_id
 
-func _market_listing_button_text(listing: Dictionary) -> String:
+func _market_listing_button_text(listing: Dictionary, display_row: Dictionary = {}) -> String:
 	var label = str(listing.get("itemLabel", BackpackModel.label_for(str(listing.get("itemId", "")))))
 	var count = maxi(1, int(listing.get("count", 1)))
 	var total = maxi(0, int(listing.get("totalPrice", int(listing.get("unitPrice", 0)) * count)))
@@ -19091,18 +19101,29 @@ func _market_listing_button_text(listing: Dictionary) -> String:
 	var seller = str(listing.get("sellerDisplayName", "")).strip_edges()
 	if seller == "":
 		seller = str(listing.get("sellerUsername", "")).strip_edges()
+	if not display_row.is_empty() and not bool(display_row.get("valid", false)):
+		return "⚠ %s\n装备挂单资料异常" % str(display_row.get("itemLabel", label))
+	if str(display_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_EQUIPMENT_ENVELOPE:
+		return "%s｜%s\n%d%s  %s" % [
+			str(display_row.get("itemLabel", label)),
+			str(display_row.get("stateSummary", "基础状态")),
+			total,
+			currency_label,
+			seller,
+		]
 	return "%s x%d\n%d%s  %s" % [label, count, total, currency_label, seller]
 
 func _market_wallet_text() -> String:
 	return "持有：%d石币 / %d钻石" % [PlayerProgressModel.stone_coins(player_profile), PlayerProgressModel.diamonds(player_profile)]
 
-func _market_detail_text(listing: Dictionary) -> String:
+func _market_detail_text(listing: Dictionary, display_row: Dictionary = {}) -> String:
 	if market_mode == "sell":
 		var lines: Array[String] = []
 		lines.append("出售物品会立即从背包移到挂单。")
 		if not listing.is_empty():
 			lines.append("")
 			lines.append(_market_listing_summary_text(listing))
+			_append_market_equipment_detail(lines, display_row)
 		return "\n".join(lines)
 	if listing.is_empty():
 		if market_mode == "buy":
@@ -19110,7 +19131,25 @@ func _market_detail_text(listing: Dictionary) -> String:
 				return "暂无可购买商品。\n登录服务器账号后可刷新交易所。"
 			return "暂无可购买商品。\n切换到「出售」可上架背包物品。"
 		return "暂无自己的在售商品。\n切换到「出售」可上架背包物品。"
-	return _market_listing_summary_text(listing)
+	var lines: Array[String] = [_market_listing_summary_text(listing)]
+	_append_market_equipment_detail(lines, display_row)
+	return "\n".join(lines)
+
+func _append_market_equipment_detail(lines: Array[String], display_row: Dictionary) -> void:
+	if display_row.is_empty():
+		return
+	if not bool(display_row.get("valid", false)):
+		lines.append("")
+		lines.append("挂单异常：%s" % str(display_row.get("error", "装备实例资料异常。")))
+		return
+	if str(display_row.get("rowKind", "")) != EquipmentEscrowClientModel.ROW_EQUIPMENT_ENVELOPE:
+		return
+	lines.append("")
+	lines.append("装备状态：%s" % str(display_row.get("stateSummary", "基础状态")))
+	var detail_lines = display_row.get("detailLines", [])
+	if detail_lines is Array:
+		for index in range(1, (detail_lines as Array).size()):
+			lines.append(str((detail_lines as Array)[index]))
 
 func _market_listing_summary_text(listing: Dictionary) -> String:
 	var label = str(listing.get("itemLabel", BackpackModel.label_for(str(listing.get("itemId", "")))))
@@ -19139,37 +19178,53 @@ func _refresh_market_sell_form() -> void:
 	if market_sell_item_option == null or market_sell_count_spinbox == null or market_sell_unit_price_spinbox == null:
 		return
 	var has_server = _is_server_account_session()
-	var selected_id = _market_sell_item_id()
+	var previous_row := _market_sell_row()
+	var previous_key := str(previous_row.get("selectionKey", ""))
 	market_sell_item_option.set_block_signals(true)
 	market_sell_item_option.clear()
-	var selected_index = -1
-	for item_id in _market_sell_item_ids():
-		var count = _bank_backpack_item_count(item_id)
-		market_sell_item_option.add_item("%s x%d" % [BackpackModel.menu_label_for(item_id), count])
+	var selected_index := -1
+	var first_valid_index := -1
+	var source_rows := EquipmentEscrowClientModel.market_sell_rows(player_profile)
+	for source_row in source_rows:
+		var valid := bool(source_row.get("valid", false))
+		var option_text := str(source_row.get("selectionLabel", "")).strip_edges()
+		if option_text == "":
+			option_text = str(source_row.get("error", "物品资料异常"))
+		if not valid:
+			option_text = "⚠ %s" % option_text
+		market_sell_item_option.add_item(option_text)
 		var index = market_sell_item_option.item_count - 1
-		market_sell_item_option.set_item_metadata(index, item_id)
-		if item_id == selected_id:
+		market_sell_item_option.set_item_metadata(index, source_row.duplicate(true))
+		market_sell_item_option.set_item_disabled(index, not valid)
+		if valid and first_valid_index < 0:
+			first_valid_index = index
+		if valid and previous_key != "" and str(source_row.get("selectionKey", "")) == previous_key:
 			selected_index = index
-	if market_sell_item_option.item_count <= 0:
+	if first_valid_index < 0:
 		market_sell_item_option.add_item("背包没有可出售物品")
-		market_sell_item_option.set_item_metadata(0, "")
-		selected_index = 0
+		var empty_index: int = int(market_sell_item_option.item_count) - 1
+		market_sell_item_option.set_item_metadata(empty_index, {})
+		market_sell_item_option.set_item_disabled(empty_index, true)
+		selected_index = empty_index
 	elif selected_index < 0:
-		selected_index = 0
+		selected_index = first_valid_index
 	market_sell_item_option.select(selected_index)
-	market_sell_item_option.disabled = market_request_pending or not has_server or market_sell_item_option.item_count <= 0
+	market_sell_item_option.disabled = market_request_pending or not has_server or first_valid_index < 0
 	market_sell_item_option.set_block_signals(false)
-	var item_id = _market_sell_item_id()
-	var max_count = _bank_backpack_item_count(item_id)
+	var selected_row := _market_sell_row()
+	var source_valid := bool(selected_row.get("valid", false))
+	var item_id := str(selected_row.get("itemId", ""))
+	var is_equipment := str(selected_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_EQUIPMENT_INSTANCE
+	var max_count := maxi(0, int(selected_row.get("count", 0)))
 	market_sell_count_spinbox.set_block_signals(true)
-	market_sell_count_spinbox.max_value = maxf(1.0, float(max_count))
-	market_sell_count_spinbox.value = clampf(market_sell_count_spinbox.value, 1.0, market_sell_count_spinbox.max_value)
-	market_sell_count_spinbox.editable = not market_request_pending and has_server and item_id != "" and max_count > 0
+	market_sell_count_spinbox.max_value = 1.0 if is_equipment else maxf(1.0, float(max_count))
+	market_sell_count_spinbox.value = 1.0 if is_equipment else clampf(market_sell_count_spinbox.value, 1.0, market_sell_count_spinbox.max_value)
+	market_sell_count_spinbox.editable = not is_equipment and not market_request_pending and has_server and source_valid and max_count > 0
 	market_sell_count_spinbox.set_block_signals(false)
 	if market_sell_currency_option != null:
-		market_sell_currency_option.disabled = market_request_pending or not has_server or item_id == ""
-	market_sell_unit_price_spinbox.editable = not market_request_pending and has_server and item_id != ""
-	var count = int(market_sell_count_spinbox.value)
+		market_sell_currency_option.disabled = market_request_pending or not has_server or not source_valid
+	market_sell_unit_price_spinbox.editable = not market_request_pending and has_server and source_valid
+	var count := 1 if is_equipment else int(market_sell_count_spinbox.value)
 	var unit_price = int(market_sell_unit_price_spinbox.value)
 	var total = count * unit_price
 	var currency = _market_sell_currency()
@@ -19178,25 +19233,34 @@ func _refresh_market_sell_form() -> void:
 	var tax = _market_tax_for_total(total, tax_bps)
 	var receives = maxi(0, total - tax)
 	if market_sell_summary_label != null:
-		market_sell_summary_label.text = "合计 %d%s，税 %d%s，到手 %d%s" % [total, currency_label, tax, currency_label, receives, currency_label]
+		if not source_valid:
+			market_sell_summary_label.text = str(selected_row.get("error", "请选择可出售物品。"))
+		elif is_equipment:
+			market_sell_summary_label.text = "%s\n合计 %d%s，税 %d%s，到手 %d%s" % [
+				str(selected_row.get("selectionLabel", "装备实例")),
+				total,
+				currency_label,
+				tax,
+				currency_label,
+				receives,
+				currency_label,
+			]
+		else:
+			market_sell_summary_label.text = "合计 %d%s，税 %d%s，到手 %d%s" % [total, currency_label, tax, currency_label, receives, currency_label]
 	if market_sell_button != null:
-		market_sell_button.disabled = market_request_pending or not has_server or item_id == "" or max_count <= 0 or unit_price <= 0
+		market_sell_button.disabled = market_request_pending or not has_server or not source_valid or max_count <= 0 or unit_price <= 0
 
-func _market_sell_item_ids() -> Array[String]:
-	var order: Array[String] = []
-	for slot in PlayerProgressModel.backpack_slots(player_profile):
-		var item_id = str(slot.get("itemId", ""))
-		if item_id != "" and not BackpackModel.item_is_bound(item_id) and _bank_backpack_item_count(item_id) > 0 and not order.has(item_id):
-			order.append(item_id)
-	return order
+func _market_sell_row() -> Dictionary:
+	if market_sell_item_option == null:
+		return {}
+	var selected_index: int = int(market_sell_item_option.selected)
+	if selected_index < 0 or selected_index >= market_sell_item_option.item_count:
+		return {}
+	var metadata = market_sell_item_option.get_item_metadata(selected_index)
+	return (metadata as Dictionary).duplicate(true) if metadata is Dictionary else {}
 
 func _market_sell_item_id() -> String:
-	if market_sell_item_option == null:
-		return ""
-	var selected_index = market_sell_item_option.selected
-	if selected_index < 0 or selected_index >= market_sell_item_option.item_count:
-		return ""
-	return str(market_sell_item_option.get_item_metadata(selected_index))
+	return str(_market_sell_row().get("itemId", ""))
 
 func _market_sell_currency() -> String:
 	if market_sell_currency_option == null:
@@ -19228,17 +19292,37 @@ func _market_tax_rate_text(tax_bps: int) -> String:
 	return "%.2f%%" % (float(tax_bps) / 100.0)
 
 func _on_market_sell_pressed() -> void:
-	var item_id = _market_sell_item_id()
-	if item_id == "" or not _is_server_account_session():
+	var source_row := _market_sell_row()
+	var item_id := str(source_row.get("itemId", ""))
+	if item_id == "" or not bool(source_row.get("valid", false)) or not _is_server_account_session():
 		return
-	_start_market_request("list", ServerAuthClientModel.market_create_listing_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		item_id,
-		int(market_sell_count_spinbox.value),
-		int(market_sell_unit_price_spinbox.value),
-		_market_sell_currency()
-	))
+	var request_spec: Dictionary
+	if str(source_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_EQUIPMENT_INSTANCE:
+		var intent_result := EquipmentEscrowClientModel.market_equipment_listing_intent(source_row)
+		if not bool(intent_result.get("ok", false)):
+			if market_status_label != null:
+				market_status_label.text = str(intent_result.get("error", "该装备暂不能上架。"))
+			return
+		var intent := intent_result.get("intent", {}) as Dictionary
+		request_spec = ServerAuthClientModel.market_create_equipment_listing_request(
+			_server_profile_base_url(),
+			_server_profile_token(),
+			str(intent.get("itemId", "")),
+			str(intent.get("instanceId", "")),
+			int(intent.get("sourceSlotIndex", -1)),
+			int(market_sell_unit_price_spinbox.value),
+			_market_sell_currency()
+		)
+	else:
+		request_spec = ServerAuthClientModel.market_create_listing_request(
+			_server_profile_base_url(),
+			_server_profile_token(),
+			item_id,
+			int(market_sell_count_spinbox.value),
+			int(market_sell_unit_price_spinbox.value),
+			_market_sell_currency()
+		)
+	_start_market_request("list", request_spec)
 
 func _on_market_buy_pressed() -> void:
 	var listing = _market_selected_listing()
@@ -19446,9 +19530,10 @@ func _refresh_mailbox_panel() -> void:
 	if selected_source == "server":
 		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
 		var server_has_attachments := _mailbox_has_attachments(selected_message)
-		mailbox_claim_button.disabled = mailbox_request_pending or not server_has_attachments
+		var equipment_attachments_safe := _mailbox_equipment_attachments_safe(selected_message)
+		mailbox_claim_button.disabled = mailbox_request_pending or not server_has_attachments or not equipment_attachments_safe
 		mailbox_claim_button.visible = true
-		mailbox_claim_button.tooltip_text = _mailbox_claim_tooltip(selected_message) if server_has_attachments else ""
+		mailbox_claim_button.tooltip_text = _mailbox_claim_tooltip(selected_message) if server_has_attachments or not equipment_attachments_safe else ""
 		_refresh_mailbox_request_controls()
 		return
 	var items = _mailbox_item_entries(selected_message)
@@ -19557,6 +19642,19 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 		lines.append(body)
 	lines.append("")
 	lines.append("附件：%s" % _mailbox_attachment_text(message))
+	var equipment_rows := EquipmentEscrowClientModel.mail_equipment_rows(message)
+	if not equipment_rows.is_empty():
+		lines.append("")
+		lines.append("装备附件：")
+		for equipment_row in equipment_rows:
+			if not bool(equipment_row.get("valid", false)):
+				lines.append("• 资料异常：%s" % str(equipment_row.get("error", "装备实例资料异常。")))
+				continue
+			lines.append("• %s" % str(equipment_row.get("selectionLabel", "装备实例")))
+			var detail_lines = equipment_row.get("detailLines", [])
+			if detail_lines is Array:
+				for index in range(1, (detail_lines as Array).size()):
+					lines.append("  %s" % str((detail_lines as Array)[index]))
 	return "\n".join(lines)
 
 func _server_mailbox_message_by_key(key: String) -> Dictionary:
@@ -20414,9 +20512,24 @@ func _mailbox_attachment_text(message: Dictionary) -> String:
 	return "、".join(parts) if not parts.is_empty() else "无"
 
 func _mailbox_has_attachments(message: Dictionary) -> bool:
-	return _mailbox_currency_entries(message).size() > 0 or not _mailbox_item_entries(message).is_empty()
+	return (
+		_mailbox_currency_entries(message).size() > 0
+		or not _mailbox_item_entries(message).is_empty()
+		or not EquipmentEscrowClientModel.mail_equipment_rows(message).is_empty()
+	)
+
+func _mailbox_equipment_attachments_safe(message: Dictionary) -> bool:
+	var rows := EquipmentEscrowClientModel.mail_equipment_rows(message)
+	if rows.is_empty():
+		return true
+	for row in rows:
+		if not bool(row.get("valid", false)):
+			return false
+	return true
 
 func _mailbox_claim_tooltip(message: Dictionary) -> String:
+	if not _mailbox_equipment_attachments_safe(message):
+		return "装备附件资料异常，暂不能领取；请刷新后重试或联系GM处理。"
 	if _mailbox_currency_entries(message).size() > 0 and not _mailbox_item_entries(message).is_empty():
 		return "货币会直接入账，物品会放入背包。背包空间不足时，剩余物品会保留在邮箱。"
 	if _mailbox_currency_entries(message).size() > 0:

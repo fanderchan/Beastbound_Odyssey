@@ -87,6 +87,9 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_market_item_currency_price (item_id, currency, unit_price),
         INDEX idx_market_seller_created (seller_account_id, created_at)
       );
+      CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes (
+        envelope_id VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY
+      );
       CREATE TABLE IF NOT EXISTS parties (
         party_id VARCHAR(96) PRIMARY KEY,
         leader_account_id VARCHAR(80) NOT NULL,
@@ -270,7 +273,9 @@ function createMysqlAuthStore(options = {}) {
     mode: "mysql",
     load() {
       ensureSchema();
-      const loaded = loadPersistentData(config, config.database);
+      const loaded = loadPersistentData(config, config.database, {
+        includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+      });
       lastPersistentData = mysqlPersistentData(loaded);
       return loaded;
     },
@@ -281,7 +286,9 @@ function createMysqlAuthStore(options = {}) {
       ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
-        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database));
+        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
+          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+        }));
       }
       runMysqlSaveStatements(config, config.database, buildSaveStatements(data, lastPersistentData));
       lastPersistentData = data;
@@ -293,7 +300,9 @@ function createMysqlAuthStore(options = {}) {
       ensureSchema();
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
-        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database));
+        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
+          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+        }));
       }
       await runMysqlSaveStatementsAsync(config, config.database, buildSaveStatements(data, lastPersistentData));
       lastPersistentData = data;
@@ -313,6 +322,11 @@ function buildSaveStatements(nextData, previousData = null) {
   appendObjectEntityDiff(statements, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
   appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
   appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
+  appendConsumedEquipmentEnvelopeDiff(
+    statements,
+    previous.consumedEquipmentEnvelopes,
+    data.consumedEquipmentEnvelopes,
+  );
   appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
   appendObjectEntityDiff(statements, "party_invites", "invite_id", previous.partyInvites, data.partyInvites, partyInviteEntityKey, insertPartyInviteStatement);
   appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
@@ -331,13 +345,33 @@ function buildSaveStatements(nextData, previousData = null) {
   return statements;
 }
 
-function loadPersistentData(config, database) {
-  const output = runMysql(config, database, loadPersistentDataSql());
+function loadPersistentData(config, database, options = {}) {
+  const includeConsumedEquipmentEnvelopes = options.includeConsumedEquipmentEnvelopes === true
+    || mysqlTableExists(config, database, "consumed_equipment_envelopes");
+  const output = runMysql(
+    config,
+    database,
+    loadPersistentDataSql({includeConsumedEquipmentEnvelopes}),
+  );
   return parsePersistentDataRows(output);
 }
 
-function loadPersistentDataSql() {
-  return [
+function mysqlTableExists(config, database, tableName) {
+  const schema = String(database || "").trim();
+  const table = String(tableName || "").trim();
+  if (schema === "" || table === "") {
+    return false;
+  }
+  const output = runMysql(
+    config,
+    "",
+    `SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = ${sqlString(schema)} AND table_name = ${sqlString(table)})`,
+  );
+  return Number(String(output || "").trim()) === 1;
+}
+
+function loadPersistentDataSql(options = {}) {
+  const statements = [
     "SELECT 'server_state', state_key, CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth'",
     "SELECT 'accounts', account_id, CAST(document_json AS CHAR) FROM accounts ORDER BY account_id",
     "SELECT 'sessions', session_id, CAST(document_json AS CHAR) FROM sessions ORDER BY session_id",
@@ -359,7 +393,13 @@ function loadPersistentDataSql() {
     "SELECT 'gm_command_audit', audit_id, CAST(document_json AS CHAR) FROM gm_command_audit ORDER BY audit_id",
     "SELECT 'auth_events', event_id, CAST(document_json AS CHAR) FROM auth_events ORDER BY event_id",
     "SELECT 'service_events', CAST(event_seq AS CHAR), CAST(document_json AS CHAR) FROM service_events ORDER BY event_seq",
-  ].join(";\n");
+  ];
+  if (options.includeConsumedEquipmentEnvelopes === true) {
+    statements.splice(7, 0,
+      "SELECT 'consumed_equipment_envelopes', envelope_id, CAST(JSON_OBJECT('schemaVersion', 1, 'envelopeId', envelope_id) AS CHAR) FROM consumed_equipment_envelopes ORDER BY envelope_id",
+    );
+  }
+  return statements.join(";\n");
 }
 
 function parsePersistentDataRows(output) {
@@ -430,11 +470,21 @@ function appendLoadedEntity(data, bucket, rowKey, document) {
       data.profiles[String(document.playerId || rowKey || "")] = document;
       break;
     case "mail_messages":
-      data.mailMessages[String(document.mailId || rowKey || "")] = document;
+      // Keep the SQL primary key authoritative. A mismatched document identity
+      // must survive loading so domain audits can fail closed instead of
+      // deleting the wrong row and allowing its assets to reappear on restart.
+      data.mailMessages[String(rowKey || "")] = document;
       break;
     case "market_listings":
-      data.marketListings[String(document.listingId || rowKey || "")] = document;
+      data.marketListings[String(rowKey || "")] = document;
       break;
+    case "consumed_equipment_envelopes": {
+      // The SQL primary key is the entire tombstone. There is deliberately no
+      // mutable JSON payload that an idempotent retry could overwrite.
+      const envelopeId = String(rowKey || "");
+      data.consumedEquipmentEnvelopes[envelopeId] = {schemaVersion: 1, envelopeId};
+      break;
+    }
     case "parties":
       data.parties[String(document.partyId || rowKey || "")] = document;
       break;
@@ -512,6 +562,7 @@ function emptyPersistentData() {
     profiles: {},
     mailMessages: {},
     marketListings: {},
+    consumedEquipmentEnvelopes: {},
     marketConfig: {},
     offlineHangConfig: {},
     parties: {},
@@ -555,6 +606,51 @@ function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArr
     entityMapFromArray(nextArray, keyFn),
     insertFn
   );
+}
+
+function appendConsumedEquipmentEnvelopeDiff(statements, previousValue, nextValue) {
+  const previous = consumedEquipmentEnvelopeMap(previousValue);
+  const next = consumedEquipmentEnvelopeMap(nextValue);
+  for (const envelopeId of Object.keys(previous).sort()) {
+    if (!Object.hasOwn(next, envelopeId)) {
+      throw new Error("装备转运消费账本只能追加，不能删除已有凭证。");
+    }
+  }
+  for (const envelopeId of Object.keys(next).sort()) {
+    if (!Object.hasOwn(previous, envelopeId)) {
+      statements.push(insertConsumedEquipmentEnvelopeStatement(envelopeId));
+    }
+  }
+}
+
+function consumedEquipmentEnvelopeMap(value) {
+  if (value === undefined) {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("装备转运消费账本必须是对象。");
+  }
+  const result = {};
+  for (const envelopeId of Object.keys(value).sort()) {
+    const record = value[envelopeId];
+    if (
+      typeof envelopeId !== "string"
+      || envelopeId === ""
+      || envelopeId !== envelopeId.trim()
+      || envelopeId.length > 160
+      || !/^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId)
+      || !record
+      || typeof record !== "object"
+      || Array.isArray(record)
+      || Object.keys(record).length !== 2
+      || record.schemaVersion !== 1
+      || record.envelopeId !== envelopeId
+    ) {
+      throw new Error("装备转运消费账本含非规范记录。");
+    }
+    result[envelopeId] = record;
+  }
+  return result;
 }
 
 function appendEntityDiff(statements, tableName, primaryColumn, previousMap, nextMap, insertFn) {
@@ -928,6 +1024,7 @@ function stateMetadata(data) {
       profiles: Object.keys(objectOrEmpty(persistent.profiles)).length,
       mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
       marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
+      consumedEquipmentEnvelopes: Object.keys(objectOrEmpty(persistent.consumedEquipmentEnvelopes)).length,
       parties: Object.keys(objectOrEmpty(persistent.parties)).length,
       partyInvites: Object.keys(objectOrEmpty(persistent.partyInvites)).length,
       families: Object.keys(objectOrEmpty(persistent.families)).length,
@@ -971,6 +1068,10 @@ function insertMailStatement(mail) {
 
 function insertMarketListingStatement(listing) {
   return `INSERT INTO market_listings (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json) VALUES (${sqlString(listing.listingId)}, ${sqlString(listing.sellerAccountId)}, ${sqlString(listing.itemId)}, ${sqlString(listing.currency)}, ${Number(listing.unitPrice || 0)}, ${Number(listing.count || 0)}, ${sqlString(listing.createdAt)}, ${sqlJson(listing)})`;
+}
+
+function insertConsumedEquipmentEnvelopeStatement(envelopeId) {
+  return `INSERT INTO consumed_equipment_envelopes (envelope_id) VALUES (${sqlString(envelopeId)}) ON DUPLICATE KEY UPDATE envelope_id = VALUES(envelope_id)`;
 }
 
 function insertPartyStatement(party) {
