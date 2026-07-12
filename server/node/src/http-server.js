@@ -30,6 +30,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
   {"id": "gm_prepare_qa_profile", "label": "补齐GM核心测试档案"},
   {"id": "gm_prepare_qa_pet_samples", "label": "准备GM宠物样本档"},
+  {"id": "gm_prepare_qa_assets", "label": "准备GM装备与银行档"},
 ];
 
 const DURABLE_HTTP_SERVICE_METHODS = new Set([
@@ -45,6 +46,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "levelUpGmPet",
   "prepareGmQaProfile",
   "prepareGmQaPetSamples",
+  "prepareGmQaAssets",
   "authorizeGmCommand",
   "getMarketConfig",
   "updateMarketConfig",
@@ -209,6 +211,13 @@ function createHttpServer(options = {}) {
             return sendResult(res, idempotencyFailure);
           }
           return sendResult(res, service.prepareGmQaPetSamples(bearerToken(req), await readJson(req)));
+        }
+        if (commandId === "gm_prepare_qa_assets") {
+          const idempotencyFailure = requiredIdempotencyKeyFailure(req);
+          if (idempotencyFailure) {
+            return sendResult(res, idempotencyFailure);
+          }
+          return sendResult(res, service.prepareGmQaAssets(bearerToken(req), await readJson(req)));
         }
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }

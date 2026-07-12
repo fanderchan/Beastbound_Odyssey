@@ -32,6 +32,7 @@ const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
+const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
@@ -73,7 +74,7 @@ const ServerProfileCacheModel := preload("res://scripts/progression/server_profi
 const AUTH_SERVER_ONLY := true
 const START_MAP_ID := "firebud_training_yard"
 const GM_10V10_MAP_ID := "gm_10v10_training_ground"
-const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples"]
+const GM_TOOL_EXTRA_COMMAND_IDS: Array[String] = ["gm_grant_pet", "gm_level_pet", "gm_offline_hang_config", "gm_prepare_qa_profile", "gm_prepare_qa_pet_samples", "gm_prepare_qa_assets"]
 const FIREBUD_EQUIPMENT_SHOP_ID := "firebud_equipment_shop"
 const FIREBUD_FIRST_GRASS_GROUP_ID := "firebud_grass_01"
 const QUEST_FIRST_VICTORY_ID := "quest_first_victory"
@@ -114,6 +115,9 @@ var qa_profile_status_state: Dictionary = {}
 var qa_profile_status_username: String = ""
 var qa_pet_samples_status_state: Dictionary = {}
 var qa_pet_samples_status_username: String = ""
+var qa_assets_status_state: Dictionary = {}
+var qa_assets_status_username: String = ""
+var qa_active_status_command_id: String = ""
 
 var item_stack_split_panel: PanelContainer
 var item_stack_split_title_label: Label
@@ -21022,9 +21026,18 @@ func _refresh_qa_panel() -> void:
 	if qa_profile_status_username != "" and qa_profile_status_username != current_username:
 		qa_profile_status_state.clear()
 		qa_profile_status_username = ""
+		if qa_active_status_command_id == GmQaProfileClientModel.COMMAND_ID:
+			qa_active_status_command_id = ""
 	if qa_pet_samples_status_username != "" and qa_pet_samples_status_username != current_username:
 		qa_pet_samples_status_state.clear()
 		qa_pet_samples_status_username = ""
+		if qa_active_status_command_id == GmQaPetSamplesClientModel.COMMAND_ID:
+			qa_active_status_command_id = ""
+	if qa_assets_status_username != "" and qa_assets_status_username != current_username:
+		qa_assets_status_state.clear()
+		qa_assets_status_username = ""
+		if qa_active_status_command_id == GmQaAssetsClientModel.COMMAND_ID:
+			qa_active_status_command_id = ""
 	if qa_profile_identity_label != null:
 		qa_profile_identity_label.text = GmQaProfileClientModel.identity_text(current_account_session)
 	QaPanelPresenter.rebuild_entry_buttons(
@@ -21050,11 +21063,42 @@ func _refresh_qa_panel() -> void:
 			or not _is_server_account_session()
 		)
 		prepare_pet_samples_button.tooltip_text = "一次准备固定宠物测试样本；不会覆盖、补发或重抽已经领取的样本。"
-	qa_detail_label.text = "%s\n\n%s\n\n%s" % [
-		GmQaProfileClientModel.status_text(qa_profile_status_state),
-		GmQaPetSamplesClientModel.status_text(qa_pet_samples_status_state),
-		_qa_command_summary_text(),
+	var prepare_assets_button := qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
+	if prepare_assets_button != null:
+		prepare_assets_button.disabled = (
+			_qa_assets_request_pending()
+			or not _is_server_account_session()
+		)
+		prepare_assets_button.tooltip_text = "准备完整目录和正式装备样本；高价值资产使用或转移后不会补发。"
+	var status_text_by_command := {
+		GmQaProfileClientModel.COMMAND_ID: GmQaProfileClientModel.status_text(qa_profile_status_state),
+		GmQaPetSamplesClientModel.COMMAND_ID: GmQaPetSamplesClientModel.status_text(qa_pet_samples_status_state),
+		GmQaAssetsClientModel.COMMAND_ID: GmQaAssetsClientModel.status_text(qa_assets_status_state),
+	}
+	var status_command_order: Array[String] = [
+		GmQaProfileClientModel.COMMAND_ID,
+		GmQaPetSamplesClientModel.COMMAND_ID,
+		GmQaAssetsClientModel.COMMAND_ID,
 	]
+	if status_command_order.has(qa_active_status_command_id):
+		status_command_order.erase(qa_active_status_command_id)
+		status_command_order.push_front(qa_active_status_command_id)
+	var detail_sections: Array[String] = []
+	for command_id in status_command_order:
+		detail_sections.append(str(status_text_by_command.get(command_id, "")))
+	detail_sections.append(_qa_command_summary_text())
+	qa_detail_label.text = "\n\n".join(detail_sections)
+
+func _qa_assets_request_pending() -> bool:
+	return (
+		profile_action_request_pending
+		or equipment_action_request_pending
+		or shop_action_request_pending
+		or bank_request_pending
+		or market_request_pending
+		or mailbox_request_pending
+		or bool(qa_assets_status_state.get("pending", false))
+	)
 
 func _refresh_qa_pet_tool_controls() -> void:
 	var result = QaPanelPresenter.refresh_pet_tool_controls(
@@ -21126,6 +21170,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_prepare_current_gm_qa_profile()
 		"gm_prepare_qa_pet_samples":
 			_prepare_current_gm_qa_pet_samples()
+		"gm_prepare_qa_assets":
+			_prepare_current_gm_qa_assets()
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
 		"gm_10v10_grass":
@@ -21152,6 +21198,15 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 		"open_equipment":
 			_close_qa_panel(false)
 			_open_equipment_panel()
+		"open_bank":
+			_close_qa_panel(false)
+			_open_bank_panel()
+		"open_market":
+			_close_qa_panel(false)
+			_open_market_panel()
+		"open_mailbox":
+			_close_qa_panel(false)
+			_open_mailbox_panel()
 		"open_quest":
 			_close_qa_panel(false)
 			_open_quest_panel()
@@ -21185,6 +21240,7 @@ func _prepare_current_gm_qa_profile() -> void:
 		return
 	qa_profile_status_username = str(current_account_session.get("username", "")).strip_edges()
 	qa_profile_status_state = {"pending": true}
+	qa_active_status_command_id = GmQaProfileClientModel.COMMAND_ID
 	_refresh_qa_panel()
 	var parsed := await _submit_server_gm_command(
 		GmQaProfileClientModel.COMMAND_ID,
@@ -21209,6 +21265,7 @@ func _prepare_current_gm_qa_pet_samples() -> void:
 		return
 	qa_pet_samples_status_username = str(current_account_session.get("username", "")).strip_edges()
 	qa_pet_samples_status_state = {"pending": true}
+	qa_active_status_command_id = GmQaPetSamplesClientModel.COMMAND_ID
 	_refresh_qa_panel()
 	var parsed := await _submit_server_gm_command(
 		GmQaPetSamplesClientModel.COMMAND_ID,
@@ -21239,6 +21296,34 @@ func _prepare_current_gm_qa_pet_samples() -> void:
 		_set_world_log_message("\n".join(log_lines))
 	else:
 		_set_world_log_message(str(qa_pet_samples_status_state.get("message", "宠物测试样本准备失败。")))
+	_refresh_qa_panel()
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
+
+func _prepare_current_gm_qa_assets() -> void:
+	if not _is_server_account_session():
+		_set_world_log_message("准备装备与全物品测试档需要连接服务器。")
+		return
+	if _qa_assets_request_pending():
+		_set_world_log_message("资产操作同步中，请稍候。")
+		return
+	qa_assets_status_username = str(current_account_session.get("username", "")).strip_edges()
+	qa_assets_status_state = {"pending": true}
+	qa_active_status_command_id = GmQaAssetsClientModel.COMMAND_ID
+	_refresh_qa_panel()
+	var parsed := await _submit_server_gm_command(
+		GmQaAssetsClientModel.COMMAND_ID,
+		GmQaAssetsClientModel.request_payload(),
+		"装备与全物品测试档准备失败。"
+	)
+	qa_assets_status_state = GmQaAssetsClientModel.status_state_from_parsed(parsed)
+	if bool(qa_assets_status_state.get("ok", false)):
+		var log_lines := _string_array_values(parsed.get("logLines", []))
+		if log_lines.is_empty():
+			log_lines.append(str(parsed.get("message", "装备与全物品测试档已检查。")))
+		_set_world_log_message("\n".join(log_lines))
+	else:
+		_set_world_log_message(str(qa_assets_status_state.get("message", "装备与全物品测试档准备失败。")))
 	_refresh_qa_panel()
 	if qa_detail_scroll != null:
 		qa_detail_scroll.scroll_vertical = 0

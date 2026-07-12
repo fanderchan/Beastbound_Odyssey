@@ -878,7 +878,12 @@ function publicEquipmentTransferSummary(envelopeValue, catalog = null, options =
   }
   const publicState = {};
   for (const [key, value] of Object.entries(state)) {
-    if (key === "source" || key === "transferProvenance" || UNSAFE_JSON_KEYS.has(key)) {
+    if (
+      key === "source"
+      || key === "transferProvenance"
+      || key === "qaAssetSample"
+      || UNSAFE_JSON_KEYS.has(key)
+    ) {
       continue;
     }
     publicState[key] = clone(value);

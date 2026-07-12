@@ -35,6 +35,7 @@ const {
 const {createGmPetsDomain} = require("./auth/gm-pets");
 const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
+const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
@@ -436,6 +437,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "levelUpGmPet",
   "prepareGmQaProfile",
   "prepareGmQaPetSamples",
+  "prepareGmQaAssets",
 ]);
 const OFFLINE_HANG_LOCKED_SERVICE_MUTATIONS = new Set([
   ...BATTLE_LOCKED_SERVICE_MUTATIONS,
@@ -2733,6 +2735,7 @@ function createAuthService(options = {}) {
     bagItemIsBound,
     bagItemLabel,
     bagItemStackLimit,
+    bagItems,
     backpackItemCount,
     battleEquipmentCatalog,
     battleInviteIsExpired,
@@ -2868,7 +2871,9 @@ function createAuthService(options = {}) {
     profileActionLogLines,
     profileBackpackSlotLimit,
     profileBackpackSlots,
+    profileBankStateOptions,
     rawBackpackAssetConflict,
+    readProfileBankState,
     profileBindingForAccount,
     profilePartyVisiblePetCount,
     profilePetIndexById,
@@ -2948,6 +2953,7 @@ function createAuthService(options = {}) {
   const gmPets = createGmPetsDomain(domainContext);
   const gmQaProfile = createGmQaProfileDomain(domainContext);
   const gmQaPets = createGmQaPetsDomain(domainContext);
+  const gmQaAssets = createGmQaAssetsDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -3038,6 +3044,7 @@ function createAuthService(options = {}) {
     levelUpGmPet: gmPets.levelUpGmPet,
     prepareGmQaProfile: gmQaProfile.prepareGmQaProfile,
     prepareGmQaPetSamples: gmQaPets.prepareGmQaPetSamples,
+    prepareGmQaAssets: gmQaAssets.prepareGmQaAssets,
     snapshot,
   };
   for (const [name, method] of Object.entries(serviceApi)) {
