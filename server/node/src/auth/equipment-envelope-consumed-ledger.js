@@ -3,6 +3,7 @@
 const CONSUMED_EQUIPMENT_ENVELOPE_SCHEMA_VERSION = 1;
 const MAX_EQUIPMENT_ENVELOPE_ID_LENGTH = 160;
 const LEDGER_RECORD_FIELDS = new Set(["schemaVersion", "envelopeId"]);
+const LEDGER_INDEX_BY_CANONICAL_VALUE = new WeakMap();
 
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -34,9 +35,9 @@ function exactLedgerRecord(value) {
   );
 }
 
-function readConsumedEquipmentEnvelopeLedger(value) {
+function readConsumedEquipmentEnvelopeLedgerIndex(value) {
   if (value === undefined) {
-    return {ok: true, ledger: {}};
+    value = {};
   }
   if (!isRecord(value)) {
     return fail(
@@ -45,7 +46,12 @@ function readConsumedEquipmentEnvelopeLedger(value) {
       {path: "consumedEquipmentEnvelopes", reason: "not_object"},
     );
   }
+  const cached = LEDGER_INDEX_BY_CANONICAL_VALUE.get(value);
+  if (cached) {
+    return {ok: true, ledger: value, index: cached.publicIndex};
+  }
   const ledger = {};
+  const envelopeIds = new Set();
   for (const envelopeId of Object.keys(value).sort()) {
     const record = value[envelopeId];
     if (!validEnvelopeId(envelopeId)) {
@@ -83,20 +89,42 @@ function readConsumedEquipmentEnvelopeLedger(value) {
         },
       );
     }
-    ledger[envelopeId] = clone(record);
+    ledger[envelopeId] = Object.freeze(clone(record));
+    envelopeIds.add(envelopeId);
   }
-  return {ok: true, ledger};
+  return canonicalLedgerResult(ledger, envelopeIds);
+}
+
+function readConsumedEquipmentEnvelopeLedger(value) {
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(value);
+  return read.ok ? {ok: true, ledger: read.ledger} : read;
+}
+
+function canonicalLedgerResult(ledger, envelopeIds) {
+  Object.freeze(ledger);
+  const publicIndex = Object.freeze({
+    count: envelopeIds.size,
+    has(envelopeIdValue) {
+      return envelopeIds.has(String(envelopeIdValue || "").trim());
+    },
+  });
+  LEDGER_INDEX_BY_CANONICAL_VALUE.set(ledger, {envelopeIds, publicIndex});
+  return {ok: true, ledger, index: publicIndex};
+}
+
+function isCanonicalConsumedEquipmentEnvelopeLedger(value) {
+  return isRecord(value) && LEDGER_INDEX_BY_CANONICAL_VALUE.has(value);
 }
 
 function ensureConsumedEquipmentEnvelopeIds(ledgerValue, envelopeIdsValue) {
-  const read = readConsumedEquipmentEnvelopeLedger(ledgerValue);
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(ledgerValue);
   if (!read.ok) {
     return read;
   }
-  return ensureIdsOnCanonicalLedger(read.ledger, envelopeIdsValue);
+  return ensureIdsOnCanonicalLedger(read, envelopeIdsValue);
 }
 
-function ensureIdsOnCanonicalLedger(canonicalLedger, envelopeIdsValue) {
+function ensureIdsOnCanonicalLedger(canonicalRead, envelopeIdsValue) {
   const ids = Array.isArray(envelopeIdsValue) ? envelopeIdsValue : [envelopeIdsValue];
   const normalizedIds = new Set();
   for (const rawId of ids) {
@@ -109,19 +137,31 @@ function ensureIdsOnCanonicalLedger(canonicalLedger, envelopeIdsValue) {
     }
     normalizedIds.add(rawId);
   }
-  const ledger = {...canonicalLedger};
   const addedIds = [];
   for (const envelopeId of Array.from(normalizedIds).sort()) {
-    if (Object.hasOwn(ledger, envelopeId)) {
+    if (canonicalRead.index.has(envelopeId)) {
       continue;
     }
-    ledger[envelopeId] = {
-      schemaVersion: CONSUMED_EQUIPMENT_ENVELOPE_SCHEMA_VERSION,
-      envelopeId,
-    };
     addedIds.push(envelopeId);
   }
-  return {ok: true, ledger, addedIds};
+  if (addedIds.length === 0) {
+    return {ok: true, ledger: canonicalRead.ledger, addedIds};
+  }
+  // New tombstones are intentionally uncommon compared with ordinary battle,
+  // shop and inventory traffic. Keep this write copy-on-write for rollback
+  // safety; the P0.6 hot path reuses the immutable canonical value whenever no
+  // tombstone is added.
+  const ledger = {...canonicalRead.ledger};
+  const envelopeIds = new Set(Object.keys(canonicalRead.ledger));
+  for (const envelopeId of addedIds) {
+    ledger[envelopeId] = Object.freeze({
+      schemaVersion: CONSUMED_EQUIPMENT_ENVELOPE_SCHEMA_VERSION,
+      envelopeId,
+    });
+    envelopeIds.add(envelopeId);
+  }
+  const canonical = canonicalLedgerResult(ledger, envelopeIds);
+  return {ok: true, ledger: canonical.ledger, addedIds};
 }
 
 function originTrace(target, rawOriginEnvelopeId, path, details = {}, invalidReason = "") {
@@ -238,7 +278,7 @@ function collectMaterializedEquipmentEnvelopeTraces(rootValue) {
 
 function backfillConsumedEquipmentEnvelopeLedger(rootValue, ledgerValue = undefined) {
   const root = isRecord(rootValue) ? rootValue : {};
-  const read = readConsumedEquipmentEnvelopeLedger(
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(
     ledgerValue === undefined ? root.consumedEquipmentEnvelopes : ledgerValue,
   );
   if (!read.ok) {
@@ -255,7 +295,7 @@ function backfillConsumedEquipmentEnvelopeLedger(rootValue, ledgerValue = undefi
     }
   }
   const ensured = ensureIdsOnCanonicalLedger(
-    read.ledger,
+    read,
     traces.map((trace) => trace.originEnvelopeId),
   );
   return ensured.ok ? {...ensured, traces} : ensured;
@@ -267,6 +307,8 @@ module.exports = {
   backfillConsumedEquipmentEnvelopeLedger,
   collectMaterializedEquipmentEnvelopeTraces,
   ensureConsumedEquipmentEnvelopeIds,
+  isCanonicalConsumedEquipmentEnvelopeLedger,
   readConsumedEquipmentEnvelopeLedger,
+  readConsumedEquipmentEnvelopeLedgerIndex,
   validEnvelopeId,
 };

@@ -73,6 +73,7 @@ function createEconomyDomain(ctx) {
     captureToolBagFromProfile,
     clampInt,
     clone,
+    cloneAuthorityRoot = clone,
     claimActiveQuestToProfile,
     consumeBackpackItem,
     currentProfileQuestId,
@@ -1213,7 +1214,7 @@ function createEconomyDomain(ctx) {
     if (!consumed.ok) {
       return fail(consumed.code, consumed.message);
     }
-    const candidateData = clone(data);
+    const candidateData = cloneAuthorityRoot(data);
     candidateData.consumedEquipmentEnvelopes = consumed.ledger;
     const candidateInitiator = accountById(candidateData, initiator.accountId);
     const candidateAccepter = accountById(candidateData, resolved.account.accountId);

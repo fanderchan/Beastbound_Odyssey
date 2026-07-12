@@ -2,7 +2,7 @@
 
 const {
   collectMaterializedEquipmentEnvelopeTraces,
-  readConsumedEquipmentEnvelopeLedger,
+  readConsumedEquipmentEnvelopeLedgerIndex,
   validEnvelopeId,
 } = require("./equipment-envelope-consumed-ledger");
 
@@ -114,12 +114,12 @@ function scanMarketOwnerships(root, ownerships) {
 }
 
 function scanConsumedEnvelopeIds(root, conflicts) {
-  const read = readConsumedEquipmentEnvelopeLedger(root.consumedEquipmentEnvelopes);
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(root.consumedEquipmentEnvelopes);
   if (!read.ok) {
     conflicts.push(clone(read));
-    return new Set();
+    return Object.freeze({count: 0, has: () => false});
   }
-  return new Set(Object.keys(read.ledger));
+  return read.index;
 }
 
 function ownershipFailure(code, message, details = {}) {
@@ -355,7 +355,7 @@ function createEquipmentEnvelopeOwnershipRegistry(rootValue) {
     duplicates: clone(duplicates),
     conflicts: clone(conflicts),
     materializedTraces: clone(materializedTraces),
-    consumedEnvelopeCount: consumedEnvelopeIds.size,
+    consumedEnvelopeCount: consumedEnvelopeIds.count,
     ownershipsFor,
     isAvailable,
     isConsumed,

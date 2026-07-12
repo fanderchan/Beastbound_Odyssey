@@ -10,6 +10,7 @@ const {
   once,
   createAuthService,
   createMemoryAuthStore,
+  createAsyncWriteAuthStore,
   createHttpServer,
   createDefaultStore,
   DEFAULT_COMMAND_CATALOG,
@@ -34,6 +35,36 @@ const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority")
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
+
+test("health uses the non-mutating storage probe when the store provides one", async (t) => {
+  const serviceStore = createMemoryAuthStore();
+  const service = createAuthService({store: serviceStore});
+  let healthChecks = 0;
+  let fullLoads = 0;
+  const healthStore = {
+    mode: "health-probe",
+    checkHealth() {
+      healthChecks += 1;
+      return {ok: true};
+    },
+    load() {
+      fullLoads += 1;
+      throw new Error("health must not reload the authoritative root");
+    },
+  };
+  const wrappedHealthStore = createAsyncWriteAuthStore(healthStore, {onError: () => {}});
+  const server = createHttpServer({service, store: wrappedHealthStore});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+
+  const health = await fetchJson(`http://127.0.0.1:${server.address().port}/health`);
+  assert.equal(health.ok, true);
+  assert.equal(health.storage.ok, true);
+  assert.equal(health.storage.mode, "async:health-probe");
+  assert.equal(healthChecks, 1);
+  assert.equal(fullLoads, 0);
+});
 
 test("HTTP server exposes auth and session endpoints", async (t) => {
   const store = createMemoryAuthStore();

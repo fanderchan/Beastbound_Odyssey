@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
 const {createDurableMutationCoordinator} = require("./auth/durable-mutation-coordinator");
+const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
@@ -970,7 +971,7 @@ function createAuthService(options = {}) {
     }
     // 整档写入只用于 QA/运维，但仍必须先在候选快照中完成全局托管归属审计。
     // 避免先改 cachedData 再发现冲突，导致失败请求污染后续权威状态。
-    const candidateData = clone(data);
+    const candidateData = cloneAuthorityRoot(data);
     const binding = profileBindingForAccount(candidateData, resolved.account, now);
     const currentProfileDoc = candidateData.profiles[binding.playerId] || null;
     if (currentProfileDoc && currentProfileDoc.profile) {
@@ -2464,7 +2465,7 @@ function createAuthService(options = {}) {
     refreshPublishedDataAfterStorageFailure();
 
     const receiptOperationId = DURABLE_RECEIPT_EXCLUDED_METHODS.has(methodName) ? "" : operationId;
-    const before = clone(load());
+    const before = cloneAuthorityRoot(load());
     const existingReceipt = receiptOperationId === "" ? null : activeDurableReceipt(before, receiptOperationId, now());
     if (existingReceipt) {
       const currentSession = resolveServiceSession(before, durableMutationToken(args));
@@ -2485,7 +2486,7 @@ function createAuthService(options = {}) {
 
     const transaction = {
       before,
-      data: clone(before),
+      data: cloneAuthorityRoot(before),
       events: [],
       saveRequested: false,
     };
@@ -2544,7 +2545,7 @@ function createAuthService(options = {}) {
       error.cause = cause;
       throw error;
     }
-    lastPublishedPersistentData = clone(candidatePersistent);
+    lastPublishedPersistentData = cloneAuthorityRoot(candidatePersistent);
     publishDurableCandidate(before, candidate, transaction.events);
     return response;
   }
@@ -2555,7 +2556,7 @@ function createAuthService(options = {}) {
       return;
     }
     try {
-      const current = cachedData ? clone(cachedData) : normalizeData({});
+      const current = cachedData ? cloneAuthorityRoot(cachedData) : normalizeData({});
       const reloaded = normalizeData(store.load());
       for (const field of RUNTIME_ROOT_FIELDS) {
         reloaded[field] = clone(current[field]);
@@ -2575,7 +2576,7 @@ function createAuthService(options = {}) {
   }
 
   function publishDurableCandidate(before, candidate, events) {
-    const current = cachedData ? clone(cachedData) : clone(before);
+    const current = cachedData ? cloneAuthorityRoot(cachedData) : cloneAuthorityRoot(before);
     const next = normalizeData(candidate);
     for (const field of RUNTIME_ROOT_FIELDS) {
       next[field] = mergeRuntimeObject(before[field], candidate[field], current[field]);
@@ -2787,6 +2788,7 @@ function createAuthService(options = {}) {
     claimQuestByIdToProfile,
     clampInt,
     clone,
+    cloneAuthorityRoot,
     createDefaultServerPet,
     closeBattleRoomWithResult: (serviceData, roomValue, result, nowFn) => closeBattleRoomWithResult(
       serviceData,
@@ -3181,11 +3183,17 @@ function createAsyncWriteAuthStore(store, options = {}) {
   return {
     mode: store.mode ? `async:${store.mode}` : "async",
     asyncWrites: true,
+    checkHealth() {
+      if (typeof store.checkHealth === "function") {
+        return store.checkHealth();
+      }
+      return store.load();
+    },
     load() {
       return store.load();
     },
     save(nextData) {
-      const snapshot = clone(nextData);
+      const snapshot = cloneAuthorityRoot(nextData);
       const writeJob = writeQueue.then(async () => {
         try {
           return await saveStoreSnapshot(store, snapshot);
@@ -3274,7 +3282,7 @@ function defaultAsyncStoreErrorHandler(error) {
 }
 
 function normalizeData(raw) {
-  const data = raw && typeof raw === "object" ? clone(raw) : {};
+  const data = raw && typeof raw === "object" ? cloneAuthorityRoot(raw) : {};
   const serviceEvents = normalizeServiceEvents(data.serviceEvents);
   const serviceEventSeq = Math.max(
     normalizeEventSeq(data.serviceEventSeq),
@@ -3294,7 +3302,7 @@ function normalizeData(raw) {
     consumedEquipmentEnvelopes: Object.hasOwn(data, "consumedEquipmentEnvelopes")
       ? (data.consumedEquipmentEnvelopes === undefined
         ? undefined
-        : clone(data.consumedEquipmentEnvelopes))
+        : data.consumedEquipmentEnvelopes)
       : {},
     marketConfig: objectOrEmpty(data.marketConfig),
     offlineHangConfig: objectOrEmpty(data.offlineHangConfig),
@@ -3376,7 +3384,7 @@ function persistentDataForStore(data) {
   // createAuthService.save() passes the already-normalized authoritative root.
   // Cloning here keeps runtime buckets isolated without repeating the global
   // equipment-ledger audit and sort a second time for every successful write.
-  const persistent = clone(data);
+  const persistent = cloneAuthorityRoot(data);
   persistent.playerPositions = {};
   persistent.battleInvites = {};
   persistent.battleRooms = {};

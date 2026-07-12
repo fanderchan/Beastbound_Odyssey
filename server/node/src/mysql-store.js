@@ -1,6 +1,11 @@
 "use strict";
 
 const {execFileSync, spawn} = require("node:child_process");
+const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
+const {
+  isCanonicalConsumedEquipmentEnvelopeLedger,
+  readConsumedEquipmentEnvelopeLedgerIndex,
+} = require("./auth/equipment-envelope-consumed-ledger");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
@@ -300,13 +305,21 @@ function createMysqlAuthStore(options = {}) {
 
   return {
     mode: "mysql",
+    checkHealth() {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      ensureSchema();
+      runMysql(config, config.database, "SELECT 1");
+      return {ok: true};
+    },
     load() {
       ensureSchema();
-      const loaded = loadPersistentData(config, config.database, {
+      const loaded = canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
         includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
         includeMutationReceipts: ensureSchemaEnabled,
         strictRowIdentity,
-      });
+      }));
       lastPersistentData = mysqlPersistentData(loaded);
       return loaded;
     },
@@ -320,11 +333,11 @@ function createMysqlAuthStore(options = {}) {
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         ensureSchema();
-        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
+        lastPersistentData = mysqlPersistentData(canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
           includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
-        }));
+        })));
       }
       const statements = buildSaveStatements(data, lastPersistentData);
       if (statements.length > 0) {
@@ -342,11 +355,11 @@ function createMysqlAuthStore(options = {}) {
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         ensureSchema();
-        lastPersistentData = mysqlPersistentData(loadPersistentData(config, config.database, {
+        lastPersistentData = mysqlPersistentData(canonicalizeLoadedConsumedEquipmentLedger(loadPersistentData(config, config.database, {
           includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
           includeMutationReceipts: ensureSchemaEnabled,
           strictRowIdentity,
-        }));
+        })));
       }
       const statements = buildSaveStatements(data, lastPersistentData);
       if (statements.length > 0) {
@@ -386,11 +399,13 @@ function buildSaveStatements(nextData, previousData = null) {
   appendMutationReceiptDiff(statements, previous.mutationReceipts, data.mutationReceipts);
   appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
   appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
-  appendConsumedEquipmentEnvelopeDiff(
-    statements,
-    previous.consumedEquipmentEnvelopes,
-    data.consumedEquipmentEnvelopes,
-  );
+  if (previous.consumedEquipmentEnvelopes !== data.consumedEquipmentEnvelopes) {
+    appendConsumedEquipmentEnvelopeDiff(
+      statements,
+      previous.consumedEquipmentEnvelopes,
+      data.consumedEquipmentEnvelopes,
+    );
+  }
   appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
   appendObjectEntityDiff(statements, "party_invites", "invite_id", previous.partyInvites, data.partyInvites, partyInviteEntityKey, insertPartyInviteStatement);
   appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
@@ -663,7 +678,7 @@ function assertPersistentRowIdentity(bucket, rowKey, documentIdentity) {
 }
 
 function mysqlPersistentData(nextData) {
-  const data = cloneJson(nextData || {});
+  const data = cloneAuthorityRoot(nextData || {});
   data.playerPositions = {};
   data.battleInvites = {};
   data.battleRooms = {};
@@ -673,6 +688,20 @@ function mysqlPersistentData(nextData) {
       return !type.startsWith("battle.");
     });
   }
+  return data;
+}
+
+function canonicalizeLoadedConsumedEquipmentLedger(data) {
+  if (!data || !Object.hasOwn(data, "consumedEquipmentEnvelopes")) {
+    return data;
+  }
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(data && data.consumedEquipmentEnvelopes);
+  if (!read.ok) {
+    const error = new Error(read.message || "装备转运消费账本加载失败。");
+    error.code = read.code || "equipment_consumed_ledger_invalid";
+    throw error;
+  }
+  data.consumedEquipmentEnvelopes = read.ledger;
   return data;
 }
 
@@ -1316,7 +1345,7 @@ function stateMetadata(data) {
       mutationReceipts: Object.keys(objectOrEmpty(persistent.mutationReceipts)).length,
       mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
       marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
-      consumedEquipmentEnvelopes: Object.keys(objectOrEmpty(persistent.consumedEquipmentEnvelopes)).length,
+      consumedEquipmentEnvelopes: consumedEquipmentEnvelopeCount(persistent.consumedEquipmentEnvelopes),
       parties: Object.keys(objectOrEmpty(persistent.parties)).length,
       partyInvites: Object.keys(objectOrEmpty(persistent.partyInvites)).length,
       families: Object.keys(objectOrEmpty(persistent.families)).length,
@@ -1336,6 +1365,17 @@ function stateMetadata(data) {
     marketConfig: objectOrEmpty(persistent.marketConfig),
     offlineHangConfig: objectOrEmpty(persistent.offlineHangConfig),
   };
+}
+
+function consumedEquipmentEnvelopeCount(value) {
+  if (!isCanonicalConsumedEquipmentEnvelopeLedger(value)) {
+    return Object.keys(objectOrEmpty(value)).length;
+  }
+  const read = readConsumedEquipmentEnvelopeLedgerIndex(value);
+  if (!read.ok) {
+    throw new Error(read.message || "装备转运消费账本计数失败。");
+  }
+  return read.index.count;
 }
 
 function insertAccountStatement(account) {

@@ -8,6 +8,7 @@ const {
   collectMaterializedEquipmentEnvelopeTraces,
   ensureConsumedEquipmentEnvelopeIds,
   readConsumedEquipmentEnvelopeLedger,
+  readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
 
 function rootWithOrigins() {
@@ -108,6 +109,34 @@ test("consumed ledger writes are idempotent but never normalize malformed identi
     assert.equal(read.ok, false);
     assert.equal(read.code, code);
   }
+});
+
+test("validated ledgers are immutable and reuse their membership index on no-op traffic", () => {
+  const raw = {
+    eqx_capacity_cache_0001: {
+      schemaVersion: 1,
+      envelopeId: "eqx_capacity_cache_0001",
+    },
+  };
+  const first = readConsumedEquipmentEnvelopeLedgerIndex(raw);
+  assert.equal(first.ok, true);
+  assert.equal(first.index.count, 1);
+  assert.equal(first.index.has("eqx_capacity_cache_0001"), true);
+  assert.equal(Object.isFrozen(first.ledger), true);
+  assert.equal(Object.isFrozen(first.ledger.eqx_capacity_cache_0001), true);
+
+  const repeated = readConsumedEquipmentEnvelopeLedgerIndex(first.ledger);
+  assert.equal(repeated.ok, true);
+  assert.equal(repeated.ledger, first.ledger);
+  assert.equal(repeated.index, first.index);
+
+  const unchanged = ensureConsumedEquipmentEnvelopeIds(
+    first.ledger,
+    "eqx_capacity_cache_0001",
+  );
+  assert.equal(unchanged.ok, true);
+  assert.equal(unchanged.ledger, first.ledger);
+  assert.deepEqual(unchanged.addedIds, []);
 });
 
 test("invalid materialized origins fail closed instead of disappearing during backfill", () => {

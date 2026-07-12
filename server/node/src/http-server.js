@@ -659,7 +659,12 @@ function healthPayload(store, eventHub, service = null) {
 
 function storageHealth(store) {
   const mode = storeMode(store);
-  if (!store || typeof store.load !== "function") {
+  const check = store && typeof store.checkHealth === "function"
+    ? () => store.checkHealth()
+    : store && typeof store.load === "function"
+      ? () => store.load()
+      : null;
+  if (check === null) {
     return {
       ok: null,
       checked: false,
@@ -669,7 +674,7 @@ function storageHealth(store) {
   }
   const startedAt = process.hrtime.bigint();
   try {
-    store.load();
+    check();
     return {
       ok: true,
       checked: true,

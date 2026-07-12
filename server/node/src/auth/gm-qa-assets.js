@@ -143,6 +143,7 @@ function createGmQaAssetsDomain(ctx) {
     bagItems,
     battleEquipmentCatalog,
     clone,
+    cloneAuthorityRoot = clone,
     equipmentTransferOptions,
     expToNextLevel,
     fail,
@@ -494,7 +495,7 @@ function createGmQaAssetsDomain(ctx) {
       );
     }
 
-    const candidateData = clone(data);
+    const candidateData = cloneAuthorityRoot(data);
     candidateData.profiles[playerId] = {
       ...clone(existing.profileDoc),
       profile: clone(profile),

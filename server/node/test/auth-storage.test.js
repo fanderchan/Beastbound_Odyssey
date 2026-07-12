@@ -33,6 +33,10 @@ const {
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
 const {mysqlAuthStoreRootContract} = require("../src/mysql-store");
+const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
+const {
+  ensureConsumedEquipmentEnvelopeIds,
+} = require("../src/auth/equipment-envelope-consumed-ledger");
 
 test("mysql auth store root contract classifies every snapshot field exactly once", () => {
   const contract = mysqlAuthStoreRootContract();
@@ -993,6 +997,100 @@ process.stdin.on("end", () => {
 
     const callsAfterNoOps = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;
     assert.equal(callsAfterNoOps, callsAfterInitialSave);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql health probes preserve the canonical ledger baseline and append-only diff", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-ledger-health-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    const rows = [
+      ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+      ["consumed_equipment_envelopes", "eqx_health_baseline_0001", "{}"],
+      ["consumed_equipment_envelopes", "eqx_health_baseline_0002", "{}"],
+    ];
+    process.stdout.write(rows.map((row) => row.join("\\t")).join("\\n") + "\\n");
+  } else if (stdin.includes("SELECT 1")) {
+    process.stdout.write("1\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+    });
+    const loaded = store.load();
+    const canonicalLedger = loaded.consumedEquipmentEnvelopes;
+    assert.equal(Object.isFrozen(canonicalLedger), true);
+    assert.equal(Object.isFrozen(canonicalLedger.eqx_health_baseline_0001), true);
+
+    store.checkHealth();
+    const ordinary = cloneAuthorityRoot(loaded);
+    ordinary.marketConfig = {schemaVersion: 1, defaultTaxBps: 125};
+    const originalObjectKeys = Object.keys;
+    let canonicalLedgerScans = 0;
+    Object.keys = function countedObjectKeys(value) {
+      if (value === canonicalLedger) {
+        canonicalLedgerScans += 1;
+      }
+      return originalObjectKeys(value);
+    };
+    try {
+      store.save(ordinary);
+    } finally {
+      Object.keys = originalObjectKeys;
+    }
+    assert.equal(canonicalLedgerScans, 0);
+
+    const appended = ensureConsumedEquipmentEnvelopeIds(
+      canonicalLedger,
+      "eqx_health_appended_0003",
+    );
+    assert.equal(appended.ok, true);
+    const withAppend = cloneAuthorityRoot(ordinary);
+    withAppend.consumedEquipmentEnvelopes = appended.ledger;
+    store.save(withAppend);
+    const calls = fs.readFileSync(logPath, "utf8").trim()
+      .split(/\r?\n/).map((line) => JSON.parse(line));
+    const transactionCalls = calls.filter((call) => call.stdin.includes("START TRANSACTION"));
+    assert.equal(transactionCalls.length, 2);
+    assert.equal(transactionCalls[0].stdin.includes("consumed_equipment_envelopes"), false);
+    assert.equal(transactionCalls[1].stdin.includes("eqx_health_appended_0003"), true);
+    assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0001"), false);
+    assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0002"), false);
+
+    const deleted = structuredClone(withAppend);
+    delete deleted.consumedEquipmentEnvelopes.eqx_health_baseline_0001;
+    assert.throws(() => store.save(deleted), /只能追加/);
+    const mutated = structuredClone(withAppend);
+    mutated.consumedEquipmentEnvelopes.eqx_health_baseline_0001.schemaVersion = 2;
+    assert.throws(() => store.save(mutated), /非规范记录/);
+    const callsAfterInvalid = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;
+    assert.equal(callsAfterInvalid, calls.length);
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
