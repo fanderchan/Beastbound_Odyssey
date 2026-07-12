@@ -365,10 +365,40 @@ static func _bank_transaction_request(base_url: String, session_token: String, p
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": JSON.stringify({
-			"items": items,
+			"items": bank_transfer_request_items(items),
 			"stoneCoins": maxi(0, stone_coins),
 		}),
 	}
+
+
+static func bank_transfer_request_items(items: Array[Dictionary]) -> Array[Dictionary]:
+	# The server re-reads the trusted equipment envelope.  The client may select
+	# an instance/envelope identity, but it must never echo the envelope body or
+	# instance state back as transfer authority.
+	var result: Array[Dictionary] = []
+	for raw_item in items:
+		var item_id := str(raw_item.get("itemId", "")).strip_edges()
+		var instance_id := str(raw_item.get("instanceId", "")).strip_edges()
+		var envelope_id := str(raw_item.get("envelopeId", "")).strip_edges()
+		if item_id == "" or (instance_id != "" and envelope_id != ""):
+			continue
+		var count := 1 if instance_id != "" or envelope_id != "" else maxi(0, int(raw_item.get("count", 0)))
+		if count <= 0:
+			continue
+		var item := {
+			"itemId": item_id,
+			"count": count,
+		}
+		if instance_id != "":
+			item["instanceId"] = instance_id
+		if envelope_id != "":
+			item["envelopeId"] = envelope_id
+		for key in ["sourceSlotIndex", "targetSlotIndex", "bankSlotIndex"]:
+			var index := int(raw_item.get(key, -1))
+			if index >= 0:
+				item[key] = index
+		result.append(item)
+	return result
 
 
 static func market_listings_request(base_url: String, session_token: String) -> Dictionary:

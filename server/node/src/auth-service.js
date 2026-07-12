@@ -9,6 +9,10 @@ const {createMailChatDomain} = require("./auth/mail-chat");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {createEconomyDomain} = require("./auth/economy");
+const {
+  BANK_PROFILE_SCHEMA_VERSION,
+  readBankProfileState,
+} = require("./auth/bank-profile-state");
 const {createGmPetsDomain} = require("./auth/gm-pets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
@@ -2406,6 +2410,7 @@ function createAuthService(options = {}) {
     bagItemLabel,
     bagItemStackLimit,
     backpackItemCount,
+    battleEquipmentCatalog,
     battleInviteIsExpired,
     battleBackpackEntryCheck,
     battleParticipantSnapshot,
@@ -2444,6 +2449,11 @@ function createAuthService(options = {}) {
     emitServiceEvent,
     ensureProfileForAccount,
     expToNextLevel: battleExpToNextLevel,
+    equipmentTransferOptions: {
+      ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+      expToNextLevel: battleExpToNextLevel,
+      maxPlayerLevel: MAX_PLAYER_LEVEL,
+    },
     encounterStoneConfigForItem,
     executePlayerRebirthToProfile: (profile) => executePlayerRebirthToProfile(profile, {newPetFactory}),
     expireBattleInvite,
@@ -2718,15 +2728,19 @@ function projectPublicServiceResult(value) {
     return value;
   }
   const result = {...value};
+  const profileProjectionOptions = {
+    equipmentCatalog: battleEquipmentCatalog,
+    equipmentOptions: {
+      ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+      expToNextLevel: battleExpToNextLevel,
+      maxPlayerLevel: MAX_PLAYER_LEVEL,
+    },
+  };
   if (result.profile && typeof result.profile === "object" && !Array.isArray(result.profile)) {
-    result.profile = publicProfile(result.profile, {
-      equipmentCatalog: battleEquipmentCatalog,
-      equipmentOptions: {
-        ...equipmentWearRulesFromDocument(playerGrowthDocument()),
-        expToNextLevel: battleExpToNextLevel,
-        maxPlayerLevel: MAX_PLAYER_LEVEL,
-      },
-    });
+    result.profile = publicProfile(result.profile, profileProjectionOptions);
+  }
+  if (result.bank && typeof result.bank === "object" && !Array.isArray(result.bank)) {
+    result.bank = publicProfile({bank: result.bank}, profileProjectionOptions).bank || {};
   }
   if (result.rebirth && typeof result.rebirth === "object" && !Array.isArray(result.rebirth)) {
     result.rebirth = {...result.rebirth};
@@ -12012,206 +12026,45 @@ function emptyItemSlots(slotCount) {
   return Array.from({length: Math.max(0, Math.trunc(Number(slotCount || 0)))}, () => ({}));
 }
 
-function normalizeProfileBankData(value) {
-  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const sourceItems = normalizeMailItems(raw.items || raw.itemAmounts || []);
-  const hasSlots = Array.isArray(raw.slots) && raw.slots.length > 0;
-  const slots = hasSlots ? normalizeBankItemSlots(raw.slots) : bankItemSlotsFromAmounts(sourceItems);
-  const requiredTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.ceil((lastFilledBankSlotIndex(slots) + 1) / BANK_SLOTS_PER_TAB));
-  const rawUnlockedTabs = Math.trunc(Number(raw.unlockedTabs || raw.tabs || BANK_DEFAULT_UNLOCKED_TABS));
+function profileBankStateOptions() {
   return {
-    stoneCoins: Math.min(BANK_STONE_COIN_LIMIT, Math.max(0, Math.trunc(Number(raw.stoneCoins || raw.coins || 0)))),
-    items: mergeItemAmounts(bankItemAmountsFromSlots(slots)),
-    slots,
-    unlockedTabs: Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.min(BANK_TAB_COUNT, Math.max(rawUnlockedTabs, requiredTabs))),
-    schemaVersion: 1,
+    tabCount: BANK_TAB_COUNT,
+    slotsPerTab: BANK_SLOTS_PER_TAB,
+    defaultUnlockedTabs: BANK_DEFAULT_UNLOCKED_TABS,
+    stoneCoinLimit: BANK_STONE_COIN_LIMIT,
+    itemById: bagItemById,
+    isEquipmentItemId: isEquipmentAssetItemId,
+    itemStackLimit: bagItemStackLimit,
+    equipmentTransferOptions: {
+      ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+      expToNextLevel: battleExpToNextLevel,
+      maxPlayerLevel: MAX_PLAYER_LEVEL,
+    },
   };
+}
+
+function readProfileBankState(value) {
+  return readBankProfileState(value, battleEquipmentCatalog, profileBankStateOptions());
+}
+
+function normalizeProfileBankData(value) {
+  const state = readProfileBankState(value);
+  return state.ok ? state.bank : null;
 }
 
 function rawProfileBankAssetConflict(value) {
-  if (value !== undefined && (!value || typeof value !== "object" || Array.isArray(value))) {
-    return {
-      ok: false,
-      code: "bank_schema_invalid",
-      message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-    };
+  const state = readProfileBankState(value);
+  if (state.ok) {
+    return null;
   }
-  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const schemaStatus = rawProfileSchemaVersionStatus(raw, 1);
-  if (schemaStatus === "invalid") {
-    return {
-      ok: false,
-      code: "bank_schema_invalid",
-      message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-    };
-  }
-  if (schemaStatus === "future") {
-    return {
-      ok: false,
-      code: "bank_schema_future",
-      message: "银行数据来自更高版本，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-    };
-  }
-  for (const field of ["slots", "items", "itemAmounts"]) {
-    if (Object.hasOwn(raw, field) && !Array.isArray(raw[field])) {
-      return rawProfileBankRepresentationConflict();
-    }
-  }
-  if (Array.isArray(raw.slots) && raw.slots.length > BANK_SLOT_LIMIT) {
-    return rawProfileBankRepresentationConflict();
-  }
-  const entries = [
-    ...(Array.isArray(raw.slots) ? raw.slots : []),
-    ...(Array.isArray(raw.items) ? raw.items : []),
-    ...(Array.isArray(raw.itemAmounts) ? raw.itemAmounts : []),
-  ];
-  for (const entry of entries) {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      return rawProfileBankRepresentationConflict();
-    }
-    const itemId = String(entry.itemId || "").trim();
-    const count = Number(entry.count ?? 0);
-    if (itemId === "") {
-      if (
-        !Number.isSafeInteger(count)
-        || count !== 0
-        || Object.keys(entry).some((key) => !["itemId", "count"].includes(key))
-      ) {
-        return rawProfileBankRepresentationConflict();
-      }
-      continue;
-    }
-    if (!bagItemById(itemId)) {
-      return {
-        ok: false,
-        code: "bank_item_unknown",
-        message: "银行内有当前版本无法识别的物品，本次操作已取消；全部资产会原样保留，请联系GM处理。",
-      };
-    }
-    if (isEquipmentAssetItemId(itemId)) {
-      return {
-        ok: false,
-        code: "bank_equipment_transfer_unsupported",
-        message: `${bagItemLabel(itemId)} 暂不能由银行操作整理；本次操作已取消，全部资产会原样保留，请联系GM处理。`,
-      };
-    }
-    if (!Number.isSafeInteger(count) || count < 1) {
-      return rawProfileBankRepresentationConflict();
-    }
-    if (Object.keys(entry).some((key) => !["itemId", "count"].includes(key))) {
-      return rawProfileBankRepresentationConflict();
-    }
-  }
-  const itemRepresentations = [];
-  if (Array.isArray(raw.items)) {
-    itemRepresentations.push(rawProfileBankItemCounts(raw.items));
-  }
-  if (Array.isArray(raw.itemAmounts)) {
-    itemRepresentations.push(rawProfileBankItemCounts(raw.itemAmounts));
-  }
-  if (itemRepresentations.length > 1 && itemRepresentations.some((counts) => counts !== itemRepresentations[0])) {
-    return rawProfileBankRepresentationConflict();
-  }
-  if (Array.isArray(raw.slots) && raw.slots.length > 0 && itemRepresentations.length > 0) {
-    const slotCounts = rawProfileBankItemCounts(raw.slots);
-    if (itemRepresentations.some((counts) => counts !== slotCounts)) {
-      return rawProfileBankRepresentationConflict();
-    }
-  }
-  if (Array.isArray(raw.slots)) {
-    for (const slot of raw.slots) {
-      const itemId = String(slot && slot.itemId || "").trim();
-      if (itemId !== "" && Number(slot.count) > bagItemStackLimit(itemId)) {
-        return rawProfileBankRepresentationConflict();
-      }
-    }
-  }
-  for (const entriesValue of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
-    if (rawProfileBankRequiredSlotCount(entriesValue) > BANK_SLOT_LIMIT) {
-      return rawProfileBankRepresentationConflict();
-    }
-  }
-  if (
-    rawProfileAliasedIntegerConflict(raw, "stoneCoins", "coins", 0, BANK_STONE_COIN_LIMIT)
-    || rawProfileAliasedIntegerConflict(raw, "unlockedTabs", "tabs", BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT)
-  ) {
-    return rawProfileBankRepresentationConflict();
-  }
-  const unlockedTabs = Number(raw.unlockedTabs ?? raw.tabs ?? BANK_DEFAULT_UNLOCKED_TABS);
-  const unlockedSlots = unlockedTabs * BANK_SLOTS_PER_TAB;
-  if (Array.isArray(raw.slots) && raw.slots.some((slot, index) => index >= unlockedSlots && String(slot && slot.itemId || "").trim() !== "")) {
-    return rawProfileBankRepresentationConflict();
-  }
-  if (!Array.isArray(raw.slots) || raw.slots.length === 0) {
-    for (const entriesValue of [raw.items, raw.itemAmounts].filter(Array.isArray)) {
-      if (rawProfileBankRequiredSlotCount(entriesValue) > unlockedSlots) {
-        return rawProfileBankRepresentationConflict();
-      }
-    }
-  }
-  const allowedRootFields = new Set(["stoneCoins", "coins", "items", "itemAmounts", "slots", "unlockedTabs", "tabs", "schemaVersion"]);
-  if (Object.keys(raw).some((key) => !allowedRootFields.has(key))) {
-    return rawProfileBankRepresentationConflict();
-  }
-  return null;
-}
-
-function rawProfileBankItemCounts(entries) {
-  const counts = new Map();
-  for (const entry of entries) {
-    const itemId = String(entry && entry.itemId || "").trim();
-    if (itemId === "") {
-      continue;
-    }
-    counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
-  }
-  return JSON.stringify(Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right)));
-}
-
-function rawProfileBankRequiredSlotCount(entries) {
-  const counts = new Map();
-  for (const entry of entries) {
-    const itemId = String(entry && entry.itemId || "").trim();
-    if (itemId === "") {
-      continue;
-    }
-    counts.set(itemId, Number(counts.get(itemId) || 0) + Number(entry.count));
-  }
-  let required = 0;
-  for (const [itemId, count] of counts) {
-    required += Math.ceil(count / bagItemStackLimit(itemId));
-  }
-  return required;
-}
-
-function rawProfileAliasedIntegerConflict(raw, primaryField, legacyField, minimum, maximum) {
-  const fields = [primaryField, legacyField].filter((field) => Object.hasOwn(raw, field));
-  for (const field of fields) {
-    const value = Number(raw[field]);
-    if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-      return true;
-    }
-  }
-  return fields.length > 1 && Number(raw[primaryField]) !== Number(raw[legacyField]);
-}
-
-function rawProfileBankRepresentationConflict() {
   return {
     ok: false,
-    code: "bank_representation_conflict",
-    message: "银行物品或石币的两份档案不一致，本次操作已取消；全部资产会原样保留，请联系GM处理。",
+    code: String(state.code || "bank_schema_invalid"),
+    message: String(state.message || "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。"),
+    ...Object.fromEntries(Object.entries(state).filter(([key]) => (
+      !["ok", "code", "message", "bank"].includes(key)
+    ))),
   };
-}
-
-function rawProfileSchemaVersionStatus(container, currentVersion) {
-  if (!container || !Object.hasOwn(container, "schemaVersion")) {
-    return "legacy";
-  }
-  const version = Number(container.schemaVersion);
-  if (!Number.isInteger(version) || version < 1) {
-    return "invalid";
-  }
-  return version > currentVersion ? "future" : "current";
 }
 
 function profileBankItemCount(profile, itemId) {
@@ -12220,88 +12073,11 @@ function profileBankItemCount(profile, itemId) {
     return 0;
   }
   const bank = normalizeProfileBankData(profile && profile.bank);
-  return (Array.isArray(bank.items) ? bank.items : []).reduce((sum, item) => (
+  return (bank && Array.isArray(bank.items) ? bank.items : []).reduce((sum, item) => (
     String(item && item.itemId || "") === normalizedItemId
       ? sum + Math.max(0, Math.trunc(Number(item.count || 0)))
       : sum
   ), 0);
-}
-
-function normalizeBankItemSlots(value) {
-  const result = [];
-  if (Array.isArray(value)) {
-    for (const rawSlot of value) {
-      if (result.length >= BANK_SLOT_LIMIT) {
-        break;
-      }
-      const slot = rawSlot && typeof rawSlot === "object" && !Array.isArray(rawSlot) ? rawSlot : {};
-      const itemId = String(slot.itemId || "").trim();
-      if (!bagItemById(itemId)) {
-        result.push({});
-        continue;
-      }
-      let remaining = Math.max(0, Math.trunc(Number(slot.count || 0)));
-      if (remaining <= 0) {
-        result.push({});
-        continue;
-      }
-      const stackLimit = bagItemStackLimit(itemId);
-      while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
-        const stackCount = Math.min(remaining, stackLimit);
-        result.push({itemId, count: stackCount});
-        remaining -= stackCount;
-      }
-    }
-  }
-  while (result.length < BANK_SLOT_LIMIT) {
-    result.push({});
-  }
-  return result;
-}
-
-function bankItemSlotsFromAmounts(items) {
-  const result = [];
-  for (const item of mergeItemAmounts(items)) {
-    const itemId = String(item.itemId || "").trim();
-    if (!bagItemById(itemId)) {
-      continue;
-    }
-    let remaining = Math.max(0, Math.trunc(Number(item.count || 0)));
-    const stackLimit = bagItemStackLimit(itemId);
-    while (remaining > 0 && result.length < BANK_SLOT_LIMIT) {
-      const stackCount = Math.min(remaining, stackLimit);
-      result.push({itemId, count: stackCount});
-      remaining -= stackCount;
-    }
-  }
-  while (result.length < BANK_SLOT_LIMIT) {
-    result.push({});
-  }
-  return result;
-}
-
-function bankItemAmountsFromSlots(slots) {
-  const counts = {};
-  for (const slot of normalizeBankItemSlots(slots)) {
-    const itemId = String(slot.itemId || "").trim();
-    const count = Math.max(0, Math.trunc(Number(slot.count || 0)));
-    if (itemId === "" || count <= 0) {
-      continue;
-    }
-    counts[itemId] = Math.max(0, Math.trunc(Number(counts[itemId] || 0))) + count;
-  }
-  return Object.entries(counts).map(([itemId, count]) => ({itemId, count}));
-}
-
-function lastFilledBankSlotIndex(slots) {
-  const normalized = normalizeBankItemSlots(slots);
-  for (let index = normalized.length - 1; index >= 0; index -= 1) {
-    const slot = normalized[index] || {};
-    if (String(slot.itemId || "").trim() !== "" && Math.max(0, Math.trunc(Number(slot.count || 0))) > 0) {
-      return index;
-    }
-  }
-  return -1;
 }
 
 function backpackSlotLimitFromValue(value, explicitSlotLimit = -1) {
@@ -18501,7 +18277,7 @@ function createDefaultServerProfile(account) {
       items: [],
       slots: emptyItemSlots(BANK_SLOT_LIMIT),
       unlockedTabs: BANK_DEFAULT_UNLOCKED_TABS,
-      schemaVersion: 1,
+      schemaVersion: BANK_PROFILE_SCHEMA_VERSION,
     },
     diamonds: DEFAULT_DIAMONDS,
     devDiamondsGrantVersion: DEV_DIAMONDS_GRANT_VERSION,

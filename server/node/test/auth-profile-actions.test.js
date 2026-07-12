@@ -32,6 +32,7 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const equipmentTransferVectors = require("../../../tools/fixtures/equipment_transfer_public_v1_vectors.json");
 const {loadPetGrowthCatalog} = require("../src/auth/pet-growth-catalog");
 const {
   initializePetGrowth,
@@ -870,6 +871,43 @@ test("server bank tab unlock consumes diamonds and opens next bank page", () => 
   const skipped = service.profileAction(token, {"action": "bank_unlock_tab", "payload": {"tabIndex": 3}});
   assert.equal(skipped.ok, false);
   assert.equal(skipped.code, "bank_tab_order");
+});
+
+test("bank tab unlock preserves private schema-v2 equipment envelopes and only exposes their public projection", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const registered = seedService.register({username: "bankunlockv2", password: "test1234", displayName: "实例银行开页"});
+  const token = registered.session.token;
+  const seed = seedService.snapshot();
+  const binding = seed.profileBindings[registered.account.accountId];
+  const profile = seed.profiles[binding.playerId].profile;
+  const vector = equipmentTransferVectors.vectors[0];
+  const slots = Array.from({length: 90}, () => ({}));
+  slots[0] = {
+    itemId: vector.internalEnvelope.itemId,
+    count: 1,
+    equipmentEnvelopes: [structuredClone(vector.internalEnvelope)],
+  };
+  profile.diamonds = 200;
+  profile.bank = {
+    stoneCoins: 37,
+    items: [{itemId: vector.internalEnvelope.itemId, count: 1}],
+    slots,
+    unlockedTabs: 1,
+    schemaVersion: 2,
+  };
+  const expectedInternalBank = structuredClone(profile.bank);
+  expectedInternalBank.unlockedTabs = 2;
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const unlock = service.profileAction(token, {action: "bank_unlock_tab", payload: {tabIndex: 1}});
+
+  assert.equal(unlock.ok, true);
+  assert.equal(unlock.profile.bank.unlockedTabs, 2);
+  assert.deepEqual(unlock.profile.bank.slots[0].equipmentEnvelopes, [vector.expectedPublic]);
+  assert.deepEqual(
+    internalProfileForAccount(service, registered.account.accountId).bank,
+    expectedInternalBank,
+  );
 });
 
 test("bank tab unlock preserves unknown and equipment raw assets atomically", () => {

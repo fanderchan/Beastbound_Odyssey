@@ -129,6 +129,39 @@ function itemCountsFromEntries(value) {
   return sortedCountObject(result);
 }
 
+function bankEquipmentEnvelopeSummary(bankValue) {
+  const bank = isRecord(bankValue) ? bankValue : {};
+  const itemCounts = {};
+  const envelopeIds = new Set();
+  let envelopeCount = 0;
+  for (const slot of Array.isArray(bank.slots) ? bank.slots : []) {
+    if (!isRecord(slot) || !Array.isArray(slot.equipmentEnvelopes)) {
+      continue;
+    }
+    const slotItemId = String(slot.itemId || "").trim() || "<missing>";
+    for (const envelope of slot.equipmentEnvelopes) {
+      if (!isRecord(envelope)) {
+        continue;
+      }
+      envelopeCount += 1;
+      const itemId = String(envelope.itemId || "").trim() || slotItemId;
+      itemCounts[itemId] = (itemCounts[itemId] || 0) + 1;
+      const envelopeId = String(envelope.envelopeId || "").trim();
+      if (envelopeId !== "") {
+        envelopeIds.add(envelopeId);
+      }
+    }
+  }
+  return {
+    envelopeCount,
+    uniqueEnvelopeIdCount: envelopeIds.size,
+    itemCounts: sortedCountObject(itemCounts),
+    rawDigest: stableDigest((Array.isArray(bank.slots) ? bank.slots : []).map((slot) => (
+      isRecord(slot) ? slot.equipmentEnvelopes : undefined
+    ))),
+  };
+}
+
 function petReferences(profile) {
   const result = [];
   const appendPets = (value, prefix) => {
@@ -184,6 +217,7 @@ function profileAssetSummary(profileValue) {
   }
   const profile = profileValue;
   const bank = isRecord(profile.bank) ? profile.bank : {};
+  const bankEquipmentEnvelopes = bankEquipmentEnvelopeSummary(bank);
   const references = petReferences(profile);
   const petFormCounts = {};
   const petStateCounts = {};
@@ -240,6 +274,10 @@ function profileAssetSummary(profileValue) {
       unlockedTabs: hasOwn(bank, "unlockedTabs") ? bank.unlockedTabs : null,
       slotItemCounts: itemCountsFromEntries(bank.slots),
       legacyItemCounts: itemCountsFromEntries(bank.items),
+      equipmentEnvelopeCount: bankEquipmentEnvelopes.envelopeCount,
+      uniqueEquipmentEnvelopeIdCount: bankEquipmentEnvelopes.uniqueEnvelopeIdCount,
+      equipmentEnvelopeItemCounts: bankEquipmentEnvelopes.itemCounts,
+      equipmentEnvelopeDigest: bankEquipmentEnvelopes.rawDigest,
       rawDigest: stableDigest(bank),
     },
     pets: {
@@ -280,6 +318,9 @@ function profileAssetSummary(profileValue) {
       unlockedTabs: core.bank.unlockedTabs,
       slotItemCounts: core.bank.slotItemCounts,
       legacyItemCounts: core.bank.legacyItemCounts,
+      equipmentEnvelopeCount: core.bank.equipmentEnvelopeCount,
+      uniqueEquipmentEnvelopeIdCount: core.bank.uniqueEquipmentEnvelopeIdCount,
+      equipmentEnvelopeItemCounts: core.bank.equipmentEnvelopeItemCounts,
     },
     pets: {
       referenceCount: core.pets.referenceCount,

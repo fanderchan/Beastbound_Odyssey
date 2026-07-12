@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+const equipmentTransferVectors = require("../../../tools/fixtures/equipment_transfer_public_v1_vectors.json");
 const {loadBattleEquipmentCatalog} = require("../src/auth/battle-equipment-rules");
 const {
   EQUIPMENT_SLOTS_VERSION,
@@ -49,6 +50,27 @@ function freshInstance(itemId, instanceId, location = "backpack", slotId = "") {
   instance.location = location;
   instance.slotId = slotId;
   return instance;
+}
+
+function bankV2WithEquipment(envelopesValue) {
+  const envelopes = structuredClone(envelopesValue);
+  const slots = Array.from({length: 90}, () => ({}));
+  for (const [index, envelope] of envelopes.entries()) {
+    slots[index] = {
+      itemId: envelope.itemId,
+      count: 1,
+      equipmentEnvelopes: [envelope],
+    };
+  }
+  return {
+    stoneCoins: 123,
+    items: envelopes.length > 0
+      ? [{itemId: envelopes[0].itemId, count: envelopes.length}]
+      : [],
+    slots,
+    unlockedTabs: 1,
+    schemaVersion: 2,
+  };
 }
 
 test("v2 equipment migration deterministically creates equipped and backpack deficits", () => {
@@ -301,6 +323,33 @@ test("legacy same-item backpack ownership and equipment in external containers a
   const ordinaryBank = migrateEquipmentProfileV2ToV3(legacyBankAmounts);
   assert.equal(ordinaryBank.ok, true);
   assert.deepEqual(ordinaryBank.profile.bank, legacyBankAmounts.bank);
+});
+
+test("schema-v2 bank equipment envelopes survive migration while malformed, duplicate, and future banks fail closed", () => {
+  const envelope = equipmentTransferVectors.vectors[0].internalEnvelope;
+  const bank = bankV2WithEquipment([envelope]);
+  const source = profileV2({bank});
+  const migrated = migrateEquipmentProfileV2ToV3(source);
+
+  assert.equal(migrated.ok, true);
+  assert.deepEqual(migrated.profile.bank, bank);
+  assert.equal(auditEquipmentProfileV3(migrated.profile).ok, true);
+
+  const malformedEnvelope = structuredClone(envelope);
+  malformedEnvelope.stateFingerprint = "0".repeat(64);
+  const cases = [
+    [profileV2({bank: bankV2WithEquipment([envelope, envelope])}), "equipment_transfer_envelope_duplicate"],
+    [profileV2({bank: bankV2WithEquipment([malformedEnvelope])}), "equipment_transfer_fingerprint_mismatch"],
+    [profileV2({bank: {...bank, schemaVersion: 3}}), "bank_schema_future"],
+  ];
+  for (const [invalidSource, expectedCode] of cases) {
+    const before = structuredClone(invalidSource);
+    const result = migrateEquipmentProfileV2ToV3(invalidSource);
+    assert.equal(result.ok, false, expectedCode);
+    assert.equal(result.changed, false, expectedCode);
+    assert.deepEqual(result.profile, before, expectedCode);
+    assert.equal(result.conflicts.some((entry) => entry.code === expectedCode), true, expectedCode);
+  }
 });
 
 test("migration rejects non-canonical instance identity, locked backpack overflow, and invalid exp-pill progress", () => {

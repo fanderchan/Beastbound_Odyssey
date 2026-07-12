@@ -15,6 +15,7 @@ const {
   equipmentInstanceIdForSerial,
   readEquipmentInstanceState,
 } = require("./equipment-profile-state");
+const {readBankProfileState} = require("./bank-profile-state");
 const {loadPlayerLevelRuntime} = require("./player-level-runtime");
 
 const EQUIPMENT_PROFILE_MIGRATION_SOURCE = "profile_v2_to_v3_backfill";
@@ -330,7 +331,38 @@ function bankRepresentationConflict(conflicts, reason, details = {}) {
   ));
 }
 
-function profileExternalEquipmentConflicts(profile, catalog, bagCatalog) {
+function bankProfileStateOptions(catalog, bagCatalog, levelRuntime, wearRules) {
+  return {
+    itemById: (itemId) => bagCatalog.itemById.get(String(itemId || "").trim()) || null,
+    isEquipmentItemId: (itemId) => catalog.itemById.has(String(itemId || "").trim()),
+    itemStackLimit: (itemId) => positiveInteger(
+      bagCatalog.itemById.get(String(itemId || "").trim())?.stackLimit,
+      1,
+    ),
+    equipmentTransferOptions: {
+      ...wearRules,
+      expToNextLevel: levelRuntime.expToNextLevel,
+      maxPlayerLevel: positiveInteger(levelRuntime.maxPlayerLevel, 140),
+    },
+  };
+}
+
+function bankProfileStateConflict(result) {
+  const details = Object.fromEntries(Object.entries(result || {}).filter(([key]) => (
+    !["ok", "code", "message", "bank"].includes(key)
+  )));
+  const relativePath = String(details.path || "").trim();
+  return conflict(
+    String(result && result.code || "equipment_external_container_invalid"),
+    String(result && result.message || "bank instance envelopes failed authoritative validation"),
+    {
+      ...details,
+      path: relativePath === "" ? "bank" : `bank.${relativePath}`,
+    },
+  );
+}
+
+function profileExternalEquipmentConflicts(profile, catalog, bagCatalog, levelRuntime, wearRules) {
   const conflicts = [];
   if (hasOwn(profile, "bank")) {
     if (!isRecord(profile.bank)) {
@@ -341,64 +373,75 @@ function profileExternalEquipmentConflicts(profile, catalog, bagCatalog) {
       ));
     } else {
       const bank = profile.bank;
-      const allowedFields = [
-        "stoneCoins", "coins", "slots", "items", "itemAmounts", "unlockedTabs", "tabs", "schemaVersion",
-      ];
-      validateExternalSchema(bank, "bank", conflicts);
-      const unknownFields = Object.keys(bank).filter((key) => !allowedFields.includes(key)).sort();
-      if (unknownFields.length > 0) {
-        bankRepresentationConflict(conflicts, "unknown_fields", {fields: unknownFields});
-      }
-      for (const field of ["slots", "items", "itemAmounts"]) {
-        if (hasOwn(bank, field)) {
-          scanItemEntries(bank[field], `bank.${field}`, catalog, bagCatalog, conflicts);
+      if (hasOwn(bank, "schemaVersion") && bank.schemaVersion !== 1) {
+        const checked = readBankProfileState(
+          bank,
+          catalog,
+          bankProfileStateOptions(catalog, bagCatalog, levelRuntime, wearRules),
+        );
+        if (!checked.ok) {
+          conflicts.push(bankProfileStateConflict(checked));
         }
-      }
-      const representations = ["items", "itemAmounts"]
-        .filter((field) => Array.isArray(bank[field]))
-        .map((field) => externalItemCounts(bank[field]));
-      if (representations.length > 1 && representations.some((value) => value !== representations[0])) {
-        bankRepresentationConflict(conflicts, "item_representations_disagree");
-      }
-      if (Array.isArray(bank.slots) && bank.slots.length > 0 && representations.length > 0) {
-        const slotCounts = externalItemCounts(bank.slots);
-        if (representations.some((value) => value !== slotCounts)) {
-          bankRepresentationConflict(conflicts, "slot_representation_disagrees");
+      } else {
+        const allowedFields = [
+          "stoneCoins", "coins", "slots", "items", "itemAmounts", "unlockedTabs", "tabs", "schemaVersion",
+        ];
+        validateExternalSchema(bank, "bank", conflicts);
+        const unknownFields = Object.keys(bank).filter((key) => !allowedFields.includes(key)).sort();
+        if (unknownFields.length > 0) {
+          bankRepresentationConflict(conflicts, "unknown_fields", {fields: unknownFields});
         }
-      }
-      if (Array.isArray(bank.slots) && bank.slots.length > 90) {
-        bankRepresentationConflict(conflicts, "slot_limit", {slotCount: bank.slots.length, slotLimit: 90});
-      }
-      for (const [index, slot] of (Array.isArray(bank.slots) ? bank.slots : []).entries()) {
-        const itemId = String(slot && slot.itemId || "").trim();
-        const item = bagCatalog.itemById.get(itemId);
-        if (item && Number(slot.count) > item.stackLimit) {
-          bankRepresentationConflict(conflicts, "slot_stack_limit", {index, itemId, count: slot.count, stackLimit: item.stackLimit});
+        for (const field of ["slots", "items", "itemAmounts"]) {
+          if (hasOwn(bank, field)) {
+            scanItemEntries(bank[field], `bank.${field}`, catalog, bagCatalog, conflicts);
+          }
         }
-      }
-      const aliasedInteger = (primary, legacy, minimum, maximum, fallback) => {
-        const fields = [primary, legacy].filter((field) => hasOwn(bank, field));
-        const invalid = fields.some((field) => (
-          !Number.isSafeInteger(bank[field]) || bank[field] < minimum || bank[field] > maximum
-        ));
-        const disagree = fields.length > 1 && bank[primary] !== bank[legacy];
-        return {invalid: invalid || disagree, value: fields.length > 0 ? bank[fields[0]] : fallback};
-      };
-      const coins = aliasedInteger("stoneCoins", "coins", 0, 100000000, 0);
-      const tabs = aliasedInteger("unlockedTabs", "tabs", 1, 6, 1);
-      if (coins.invalid || tabs.invalid) {
-        bankRepresentationConflict(conflicts, "numeric_alias_conflict");
-      }
-      const unlockedSlots = Number.isSafeInteger(tabs.value) ? tabs.value * 15 : 15;
-      if (Array.isArray(bank.slots) && bank.slots.some((slot, index) => (
-        index >= unlockedSlots && String(slot && slot.itemId || "").trim() !== ""
-      ))) {
-        bankRepresentationConflict(conflicts, "locked_slot_filled", {unlockedSlots});
-      }
-      if (!Array.isArray(bank.slots) || bank.slots.length === 0) {
-        for (const field of ["items", "itemAmounts"]) {
-          if (Array.isArray(bank[field]) && requiredBankSlots(bank[field], bagCatalog) > unlockedSlots) {
-            bankRepresentationConflict(conflicts, "unlocked_capacity", {field, unlockedSlots});
+        const representations = ["items", "itemAmounts"]
+          .filter((field) => Array.isArray(bank[field]))
+          .map((field) => externalItemCounts(bank[field]));
+        if (representations.length > 1 && representations.some((value) => value !== representations[0])) {
+          bankRepresentationConflict(conflicts, "item_representations_disagree");
+        }
+        if (Array.isArray(bank.slots) && bank.slots.length > 0 && representations.length > 0) {
+          const slotCounts = externalItemCounts(bank.slots);
+          if (representations.some((value) => value !== slotCounts)) {
+            bankRepresentationConflict(conflicts, "slot_representation_disagrees");
+          }
+        }
+        if (Array.isArray(bank.slots) && bank.slots.length > 90) {
+          bankRepresentationConflict(conflicts, "slot_limit", {slotCount: bank.slots.length, slotLimit: 90});
+        }
+        for (const [index, slot] of (Array.isArray(bank.slots) ? bank.slots : []).entries()) {
+          const itemId = String(slot && slot.itemId || "").trim();
+          const item = bagCatalog.itemById.get(itemId);
+          if (item && Number(slot.count) > item.stackLimit) {
+            bankRepresentationConflict(conflicts, "slot_stack_limit", {index, itemId, count: slot.count, stackLimit: item.stackLimit});
+          }
+        }
+        const aliasedInteger = (primary, legacy, minimum, maximum, fallback) => {
+          const fields = [primary, legacy].filter((field) => hasOwn(bank, field));
+          const invalid = fields.some((field) => (
+            !Number.isSafeInteger(bank[field]) || bank[field] < minimum || bank[field] > maximum
+          ));
+          const disagree = fields.length > 1 && bank[primary] !== bank[legacy];
+          return {invalid: invalid || disagree, value: fields.length > 0 ? bank[fields[0]] : fallback};
+        };
+        const coins = aliasedInteger("stoneCoins", "coins", 0, 100000000, 0);
+        const tabs = aliasedInteger("unlockedTabs", "tabs", 1, 6, 1);
+        if (coins.invalid || tabs.invalid) {
+          bankRepresentationConflict(conflicts, "numeric_alias_conflict");
+        }
+        const unlockedSlots = Number.isSafeInteger(tabs.value) ? tabs.value * 15 : 15;
+        if (Array.isArray(bank.slots) && bank.slots.some((slot, index) => (
+          index >= unlockedSlots && String(slot && slot.itemId || "").trim() !== ""
+        ))) {
+          bankRepresentationConflict(conflicts, "locked_slot_filled", {unlockedSlots});
+        }
+        if (!Array.isArray(bank.slots) || bank.slots.length === 0) {
+          for (const field of ["items", "itemAmounts"]) {
+            if (Array.isArray(bank[field]) && requiredBankSlots(bank[field], bagCatalog) > unlockedSlots) {
+              bankRepresentationConflict(conflicts, "unlocked_capacity", {field, unlockedSlots});
+            }
           }
         }
       }
@@ -890,7 +933,7 @@ function migrateEquipmentProfileV2ToV3(profileValue, options = {}) {
   const backpack = validateBackpackAndCountEquipment(source, catalog, bagCatalog);
   const conflicts = [
     ...backpack.conflicts,
-    ...profileExternalEquipmentConflicts(source, catalog, bagCatalog),
+    ...profileExternalEquipmentConflicts(source, catalog, bagCatalog, levelRuntime, wearRules),
     ...rawInstanceCanonicalConflicts(source, catalog, levelRuntime, wearRules),
   ];
   const slots = record(source.equipmentSlots);
@@ -1169,7 +1212,7 @@ function auditEquipmentProfileV3(profileValue, options = {}) {
     ));
   }
   conflicts.push(...validateBackpackAndCountEquipment(source, catalog, bagCatalog).conflicts);
-  conflicts.push(...profileExternalEquipmentConflicts(source, catalog, bagCatalog));
+  conflicts.push(...profileExternalEquipmentConflicts(source, catalog, bagCatalog, levelRuntime, wearRules));
   conflicts.push(...rawInstanceCanonicalConflicts(source, catalog, levelRuntime, wearRules));
   const audit = auditEquipmentProfileState(source, catalog);
   if (!audit.ok) {

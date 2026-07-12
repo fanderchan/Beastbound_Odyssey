@@ -22,6 +22,7 @@ const BattleResultReceiptModel := preload("res://scripts/progression/battle_resu
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const CombatFormulaCandidateModel := preload("res://scripts/progression/combat_formula_candidate_model.gd")
@@ -45,6 +46,7 @@ const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
+const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -10935,12 +10937,16 @@ func _item_slot_context_quantity_label(slot_data: Dictionary) -> String:
 	return ""
 
 func _item_slot_context_supports_quantity(slot_data: Dictionary) -> bool:
+	if [BankProfileModel.TRANSFER_EQUIPMENT_INSTANCE, BankProfileModel.TRANSFER_EQUIPMENT_ENVELOPE].has(str(slot_data.get("transferKind", ""))):
+		return false
 	if str(slot_data.get("context", "")) == "backpack":
 		return int(slot_data.get("count", 0)) > 1
 	return ["shop_buy", "shop_sell", "bank_backpack", "bank_storage"].has(str(slot_data.get("context", "")))
 
 func _on_item_slot_context_requested(slot_data: Dictionary, screen_position: Vector2) -> void:
 	if item_slot_context_panel == null:
+		return
+	if slot_data.has("valid") and not bool(slot_data.get("valid", false)):
 		return
 	var item_id := str(slot_data.get("itemId", ""))
 	if item_id == "":
@@ -10987,6 +10993,12 @@ func _select_item_slot_context_item(slot_data: Dictionary) -> void:
 			_select_bank_slot(slot_data)
 
 func _item_slot_detail_lines(slot_data: Dictionary) -> Array[String]:
+	var provided_lines = slot_data.get("detailLines", [])
+	if provided_lines is Array and not (provided_lines as Array).is_empty():
+		var result: Array[String] = []
+		for line_value in provided_lines as Array:
+			result.append(str(line_value))
+		return result
 	var context := str(slot_data.get("context", ""))
 	var item_id := str(slot_data.get("itemId", ""))
 	var count := maxi(0, int(slot_data.get("count", 0)))
@@ -11087,6 +11099,8 @@ func _item_drag_label(item_id: String, count: int) -> String:
 	return label
 
 func _on_item_slot_double_clicked(slot_data: Dictionary) -> void:
+	if slot_data.has("valid") and not bool(slot_data.get("valid", false)):
+		return
 	var context := str(slot_data.get("context", ""))
 	var item_id := str(slot_data.get("itemId", ""))
 	match context:
@@ -11102,6 +11116,8 @@ func _on_item_slot_double_clicked(slot_data: Dictionary) -> void:
 			_start_bank_item_transaction("withdraw")
 
 func _on_item_slot_dropped(source_data: Dictionary, target_data: Dictionary) -> void:
+	if source_data.has("valid") and not bool(source_data.get("valid", false)):
+		return
 	var source_context := str(source_data.get("context", ""))
 	var target_context := str(target_data.get("context", ""))
 	var item_id := str(source_data.get("itemId", ""))
@@ -11300,28 +11316,61 @@ func _begin_bank_drag_transfer_from_slots(mode: String, source_data: Dictionary,
 		if bank_status_label != null:
 			bank_status_label.text = "需要服务器账号登录。"
 		return
-	var item_id := str(source_data.get("itemId", ""))
-	var source_count := maxi(0, int(source_data.get("count", 0)))
+	var transfer_source := source_data.duplicate(true)
+	var item_id := str(transfer_source.get("itemId", ""))
+	var source_count := maxi(0, int(transfer_source.get("count", 0)))
 	if item_id == "" or source_count <= 0:
 		return
-	_select_bank_slot(source_data)
-	var max_quantity := source_count
+	if mode == "deposit" and str(transfer_source.get("context", "")) == "backpack":
+		if EquipmentModel.is_equipment(item_id):
+			var matching_instances: Array[Dictionary] = []
+			var source_slot_index := int(transfer_source.get("slotIndex", -1))
+			for equipment_row in EquipmentInstancePresenter.backpack_rows(player_profile):
+				if int(equipment_row.get("slotIndex", -1)) == source_slot_index and bool(equipment_row.get("valid", false)):
+					matching_instances.append(equipment_row)
+			if matching_instances.size() != 1:
+				if bank_status_label != null:
+					bank_status_label.text = "请在银行界面选择具体装备实例。"
+				return
+			transfer_source = BankProfileModel.backpack_transfer_rows([{"itemId": item_id, "count": 1}], [{
+				"valid": true,
+				"itemId": item_id,
+				"instanceId": str(matching_instances[0].get("instanceId", "")),
+				"slotIndex": 0,
+				"selectionKey": str(matching_instances[0].get("selectionKey", "")),
+			}])[0]
+			transfer_source["slotIndex"] = source_slot_index
+		else:
+			transfer_source["context"] = BankProfileModel.CONTEXT_BACKPACK
+			transfer_source["valid"] = true
+			transfer_source["locked"] = false
+			transfer_source["transferKind"] = BankProfileModel.TRANSFER_STACK
+	var preview := BankProfileModel.transfer_item(mode, transfer_source, 1, target_data)
+	if not bool(preview.get("ok", false)):
+		if bank_status_label != null:
+			bank_status_label.text = str(preview.get("error", "该物品暂不可操作。"))
+		return
+	_select_bank_slot(transfer_source)
+	var request_item := preview.get("item", {}) as Dictionary
+	var is_equipment := request_item.has("instanceId") or request_item.has("envelopeId")
+	var max_quantity := 1 if is_equipment else source_count
 	var action_label := "存入银行" if mode == "deposit" else "取回背包"
 	var request := {
 		"kind": "bank",
 		"mode": mode,
 		"itemId": item_id,
+		"transferKind": str(transfer_source.get("transferKind", BankProfileModel.TRANSFER_STACK)),
 	}
-	if mode == "deposit":
-		request["sourceSlotIndex"] = int(source_data.get("slotIndex", -1))
-		request["bankSlotIndex"] = int(target_data.get("bankSlotIndex", -1))
-	else:
-		request["bankSlotIndex"] = int(source_data.get("bankSlotIndex", -1))
-		request["targetSlotIndex"] = int(target_data.get("slotIndex", -1))
+	for key in ["instanceId", "envelopeId", "sourceSlotIndex", "targetSlotIndex", "bankSlotIndex"]:
+		if request_item.has(key):
+			request[key] = request_item.get(key)
 	_begin_item_stack_split_request({
 		"kind": "bank",
 		"mode": mode,
 		"itemId": item_id,
+		"transferKind": str(request.get("transferKind", BankProfileModel.TRANSFER_STACK)),
+		"instanceId": str(request.get("instanceId", "")),
+		"envelopeId": str(request.get("envelopeId", "")),
 		"sourceSlotIndex": int(request.get("sourceSlotIndex", -1)),
 		"targetSlotIndex": int(request.get("targetSlotIndex", -1)),
 		"bankSlotIndex": int(request.get("bankSlotIndex", -1)),
@@ -19793,6 +19842,15 @@ func _refresh_bank_panel() -> void:
 		lines.append("背包合计：%d" % backpack_count)
 		lines.append("银行合计：%d" % bank_count)
 		lines.append("数量：%d" % bank_quantity)
+		var state_summary := str(bank_selected_slot_data.get("stateSummary", "")).strip_edges()
+		if state_summary != "":
+			lines.append("实例：%s" % state_summary)
+		var detail_lines = bank_selected_slot_data.get("detailLines", [])
+		if detail_lines is Array:
+			for detail_value in detail_lines as Array:
+				var detail := str(detail_value).strip_edges()
+				if detail != "" and detail != state_summary:
+					lines.append(detail)
 	bank_detail_label.text = "\n".join(lines)
 	var has_server = _is_server_account_session()
 	if bank_unlock_tab_button != null:
@@ -19809,8 +19867,10 @@ func _refresh_bank_panel() -> void:
 		else:
 			bank_unlock_tab_button.text = "已解锁当前页"
 			bank_unlock_tab_button.disabled = true
+	var action_context := str(bank_selected_slot_data.get("context", ""))
+	var selected_valid := bool(bank_selected_slot_data.get("valid", false)) and not bool(bank_selected_slot_data.get("locked", false))
 	if bank_deposit_button != null:
-		var deposit_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or backpack_count <= 0 or not active_page_unlocked
+		var deposit_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or action_context != BankProfileModel.CONTEXT_BACKPACK or not selected_valid or selected_count <= 0 or not active_page_unlocked
 		if bank_deposit_button is ItemSlotButton:
 			(bank_deposit_button as ItemSlotButton).configure({
 				"context": "bank_deposit_action",
@@ -19824,7 +19884,7 @@ func _refresh_bank_panel() -> void:
 		else:
 			bank_deposit_button.disabled = deposit_disabled
 	if bank_withdraw_button != null:
-		var withdraw_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or bank_count <= 0
+		var withdraw_disabled = bank_request_pending or not has_server or bank_selected_item_id == "" or action_context != BankProfileModel.CONTEXT_STORAGE or not selected_valid or selected_count <= 0
 		if bank_withdraw_button is ItemSlotButton:
 			(bank_withdraw_button as ItemSlotButton).configure({
 				"context": "bank_withdraw_action",
@@ -19860,7 +19920,7 @@ func _select_bank_item(item_id: String) -> void:
 
 func _select_bank_slot(slot_data: Dictionary) -> void:
 	var item_id := str(slot_data.get("itemId", ""))
-	if item_id == "":
+	if item_id == "" or not bool(slot_data.get("valid", false)) or bool(slot_data.get("locked", false)) or _bank_slot_selection_key(slot_data) == "":
 		return
 	var previous_key := _bank_slot_selection_key(bank_selected_slot_data)
 	var next_data := slot_data.duplicate(true)
@@ -19930,19 +19990,20 @@ func _start_bank_item_transaction(mode: String) -> void:
 	if not ["deposit", "withdraw"].has(mode) or bank_selected_item_id == "" or bank_request_pending:
 		return
 	var selected_context := str(bank_selected_slot_data.get("context", ""))
+	var expected_context := BankProfileModel.CONTEXT_BACKPACK if mode == "deposit" else BankProfileModel.CONTEXT_STORAGE
+	if selected_context != expected_context:
+		return
 	var selected_count := maxi(0, int(bank_selected_slot_data.get("count", 0)))
-	var max_quantity = selected_count if selected_count > 0 else (_bank_backpack_item_count(bank_selected_item_id) if mode == "deposit" else _bank_stored_item_count(bank_selected_item_id))
+	var max_quantity := selected_count
 	var quantity = clampi(bank_quantity, 1, maxi(1, max_quantity))
 	if max_quantity <= 0:
 		return
-	var item := {
-		"itemId": bank_selected_item_id,
-		"count": quantity,
-	}
-	if mode == "deposit" and selected_context == "bank_backpack":
-		item["sourceSlotIndex"] = int(bank_selected_slot_data.get("slotIndex", -1))
-	elif mode == "withdraw" and selected_context == "bank_storage":
-		item["bankSlotIndex"] = int(bank_selected_slot_data.get("bankSlotIndex", -1))
+	var transfer := BankProfileModel.transfer_item(mode, bank_selected_slot_data, quantity)
+	if not bool(transfer.get("ok", false)):
+		if bank_status_label != null:
+			bank_status_label.text = str(transfer.get("error", "该物品暂不可操作。"))
+		return
+	var item := transfer.get("item", {}) as Dictionary
 	var items: Array[Dictionary] = [item]
 	_start_bank_request(mode, _bank_request_spec(mode, items, 0))
 
@@ -19952,19 +20013,34 @@ func _start_bank_item_transaction_from_request(request: Dictionary, quantity: in
 	var item_id := str(request.get("itemId", ""))
 	if not ["deposit", "withdraw"].has(mode) or item_id == "" or quantity <= 0:
 		return
-	var item := {
+	var source_row := {
+		"context": BankProfileModel.CONTEXT_BACKPACK if mode == "deposit" else BankProfileModel.CONTEXT_STORAGE,
 		"itemId": item_id,
 		"count": quantity,
+		"valid": true,
+		"locked": false,
+		"transferKind": str(request.get("transferKind", BankProfileModel.TRANSFER_STACK)),
+		"instanceId": str(request.get("instanceId", "")),
+		"envelopeId": str(request.get("envelopeId", "")),
 	}
 	var source_slot_index := int(request.get("sourceSlotIndex", -1))
 	var target_slot_index := int(request.get("targetSlotIndex", -1))
 	var bank_slot_index := int(request.get("bankSlotIndex", -1))
 	if source_slot_index >= 0:
-		item["sourceSlotIndex"] = source_slot_index
-	if target_slot_index >= 0:
-		item["targetSlotIndex"] = target_slot_index
+		source_row["slotIndex"] = source_slot_index
 	if bank_slot_index >= 0:
-		item["bankSlotIndex"] = bank_slot_index
+		source_row["bankSlotIndex"] = bank_slot_index
+	var target_row := {}
+	if mode == "deposit" and bank_slot_index >= 0:
+		target_row["bankSlotIndex"] = bank_slot_index
+	elif mode == "withdraw" and target_slot_index >= 0:
+		target_row["slotIndex"] = target_slot_index
+	var transfer := BankProfileModel.transfer_item(mode, source_row, quantity, target_row)
+	if not bool(transfer.get("ok", false)):
+		if bank_status_label != null:
+			bank_status_label.text = str(transfer.get("error", "该物品暂不可操作。"))
+		return
+	var item := transfer.get("item", {}) as Dictionary
 	var items: Array[Dictionary] = [item]
 	bank_selected_item_id = item_id
 	bank_quantity = quantity
@@ -20033,50 +20109,37 @@ func _bank_profile_data() -> Dictionary:
 	return PlayerProgressModel.bank_data(player_profile)
 
 func _bank_backpack_slots_for_ui() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
 	var slots := PlayerProgressModel.backpack_slots(player_profile)
-	for index in range(slots.size()):
-		var slot := (slots[index] as Dictionary).duplicate(true) if slots[index] is Dictionary else {}
-		var item_id := str(slot.get("itemId", "")).strip_edges()
-		var count := maxi(0, int(slot.get("count", 0)))
-		result.append({
-			"context": "bank_backpack",
-			"itemId": item_id,
-			"count": count,
-			"slotIndex": index,
-			"locked": false,
-		})
-	return result
+	return BankProfileModel.backpack_transfer_rows(slots, EquipmentInstancePresenter.backpack_rows(player_profile))
 
 
 func _bank_storage_slots_for_active_tab() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
 	var slots := PlayerProgressModel.bank_slots(player_profile)
 	var unlocked_slot_count := PlayerProgressModel.bank_unlocked_slot_count(player_profile)
 	var start_index := bank_active_tab_index * PlayerProgressModel.BANK_SLOTS_PER_TAB
-	for offset in range(PlayerProgressModel.BANK_SLOTS_PER_TAB):
-		var slot_index := start_index + offset
-		var slot := (slots[slot_index] as Dictionary).duplicate(true) if slot_index >= 0 and slot_index < slots.size() and slots[slot_index] is Dictionary else {}
-		var item_id := str(slot.get("itemId", "")).strip_edges()
-		var count := maxi(0, int(slot.get("count", 0)))
-		result.append({
-			"context": "bank_storage",
-			"itemId": item_id,
-			"count": count,
-			"bankSlotIndex": slot_index,
-			"bankTabIndex": bank_active_tab_index,
-			"locked": slot_index >= unlocked_slot_count,
-		})
+	var envelope_rows: Array[Dictionary] = []
+	var profile_schema = player_profile.get("schemaVersion")
+	if (profile_schema is int or profile_schema is float) and float(profile_schema) == float(PlayerProgressModel.SERVER_PROFILE_SCHEMA_VERSION):
+		envelope_rows = EquipmentInstancePresenter.bank_envelope_rows(player_profile)
+	var result := BankProfileModel.storage_transfer_rows(
+		slots,
+		envelope_rows,
+		start_index,
+		PlayerProgressModel.BANK_SLOTS_PER_TAB,
+		unlocked_slot_count
+	)
+	for row in result:
+		row["bankTabIndex"] = bank_active_tab_index
 	return result
 
 
 func _bank_selectable_slot_data_for_ui() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for slot_data in _bank_backpack_slots_for_ui():
-		if str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
+		if bool(slot_data.get("valid", false)) and not bool(slot_data.get("locked", false)) and str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
 			result.append(slot_data)
 	for slot_data in _bank_storage_slots_for_active_tab():
-		if str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
+		if bool(slot_data.get("valid", false)) and not bool(slot_data.get("locked", false)) and str(slot_data.get("itemId", "")) != "" and maxi(0, int(slot_data.get("count", 0))) > 0:
 			result.append(slot_data)
 	return result
 
@@ -20099,10 +20162,7 @@ func _bank_slot_selection_still_valid(selectable_slots: Array[Dictionary]) -> bo
 
 
 func _bank_slot_selection_key(slot_data: Dictionary) -> String:
-	var context := str(slot_data.get("context", ""))
-	if context == "bank_storage":
-		return "%s:%d" % [context, int(slot_data.get("bankSlotIndex", -1))]
-	return "%s:%d" % [context, int(slot_data.get("slotIndex", -1))]
+	return BankProfileModel.selection_key(slot_data)
 
 
 func _add_bank_side_slots(parent: Container, title: String, context: String, slots: Array[Dictionary], accepts: Array[String]) -> void:
@@ -20145,15 +20205,27 @@ func _add_bank_side_slots(parent: Container, title: String, context: String, slo
 		var captured_id := str(slot_data.get("itemId", "")).strip_edges()
 		var count := maxi(0, int(slot_data.get("count", 0)))
 		var locked := bool(slot_data.get("locked", false))
+		var valid := bool(slot_data.get("valid", true))
 		var has_item := captured_id != "" and count > 0
-		var slot_text := "%s\nx%d" % [BackpackModel.menu_label_for(captured_id), count] if has_item else ("未解锁" if locked else "空")
-		slot_data["label"] = _item_drag_label(captured_id, count) if has_item else title
-		slot_data["dragEnabled"] = has_item and count > 0 and not locked
-		slot_data["dropEnabled"] = not locked
-		slot_data["highlightDropTarget"] = not has_item and not locked
+		var is_equipment_identity := [BankProfileModel.TRANSFER_EQUIPMENT_INSTANCE, BankProfileModel.TRANSFER_EQUIPMENT_ENVELOPE].has(str(slot_data.get("transferKind", "")))
+		var state_summary := str(slot_data.get("stateSummary", "")).strip_edges()
+		var slot_text := ""
+		if not valid:
+			slot_text = "%s\n资料异常" % BackpackModel.menu_label_for(captured_id) if has_item else "资料异常"
+		elif has_item and is_equipment_identity:
+			slot_text = "%s\n%s" % [BackpackModel.menu_label_for(captured_id), state_summary if state_summary != "" else "实例装备"]
+		elif has_item:
+			slot_text = "%s\nx%d" % [BackpackModel.menu_label_for(captured_id), count]
+		else:
+			slot_text = "未解锁" if locked else "空"
+		var operable := has_item and valid and not locked and _bank_slot_selection_key(slot_data) != ""
+		slot_data["label"] = str(slot_data.get("selectionLabel", _item_drag_label(captured_id, count))) if has_item else title
+		slot_data["dragEnabled"] = operable
+		slot_data["dropEnabled"] = valid and not locked
+		slot_data["highlightDropTarget"] = not has_item and valid and not locked
 		slot_data["accepts"] = accepts
-		slot_data["tooltip"] = "%s x%d" % [BackpackModel.label_for(captured_id), count] if has_item else ("先解锁这个银行页" if locked else "可拖放到这里")
-		var button := _new_item_slot_button({
+		slot_data["tooltip"] = str(slot_data.get("error", "资料异常，暂不可操作。")) if not valid else (str(slot_data.get("selectionLabel", "%s x%d" % [BackpackModel.label_for(captured_id), count])) if has_item else ("先解锁这个银行页" if locked else "可拖放到这里"))
+		var button_data := {
 			"context": context,
 			"itemId": captured_id,
 			"count": count,
@@ -20167,19 +20239,31 @@ func _add_bank_side_slots(parent: Container, title: String, context: String, slo
 			"bankSlotIndex": int(slot_data.get("bankSlotIndex", -1)),
 			"bankTabIndex": int(slot_data.get("bankTabIndex", -1)),
 			"locked": locked,
-		}, slot_text, has_item and _bank_slot_selection_key(slot_data) == _bank_slot_selection_key(bank_selected_slot_data), bank_request_pending, has_item)
+			"valid": valid,
+			"error": str(slot_data.get("error", "")),
+			"transferKind": str(slot_data.get("transferKind", BankProfileModel.TRANSFER_STACK)),
+			"selectionKey": str(slot_data.get("selectionKey", "")),
+			"instanceId": str(slot_data.get("instanceId", "")),
+			"envelopeId": str(slot_data.get("envelopeId", "")),
+			"stateSummary": state_summary,
+			"detailLines": slot_data.get("detailLines", []).duplicate(true) if slot_data.get("detailLines", []) is Array else [],
+		}
+		var button := _new_item_slot_button(button_data, slot_text, operable and _bank_slot_selection_key(slot_data) == _bank_slot_selection_key(bank_selected_slot_data), bank_request_pending or (has_item and not operable), has_item)
 		button.custom_minimum_size = Vector2(86, 74)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		button.add_theme_font_size_override("font_size", 13)
-		if has_item:
-			var captured_slot_data := slot_data.duplicate(true)
+		if operable:
+			var captured_slot_data := button_data.duplicate(true)
 			button.pressed.connect(func() -> void:
 				_select_bank_slot(captured_slot_data)
 			)
 			var item_key := "%s:%s" % [context, captured_id]
 			if not bank_item_buttons.has(item_key):
 				bank_item_buttons[item_key] = button
+			var selection_key := _bank_slot_selection_key(slot_data)
+			if selection_key != "":
+				bank_item_buttons["selection:%s" % selection_key] = button
 		var slot_key := "%s:slot:%d" % [context, int(slot_data.get("bankSlotIndex", slot_data.get("slotIndex", slot_index)))]
 		bank_item_buttons[slot_key] = button
 		grid.add_child(button)
@@ -20221,10 +20305,7 @@ func _bank_backpack_item_count(item_id: String) -> int:
 	return PlayerProgressModel.backpack_item_count(player_profile, item_id)
 
 func _bank_stored_item_count(item_id: String) -> int:
-	for item in _bank_profile_data().get("items", []):
-		if item is Dictionary and str((item as Dictionary).get("itemId", "")) == item_id:
-			return maxi(0, int((item as Dictionary).get("count", 0)))
-	return 0
+	return PlayerProgressModel.bank_item_count(player_profile, item_id)
 
 func _bank_quantity_max(item_id: String) -> int:
 	if item_id == "":

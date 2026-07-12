@@ -6,6 +6,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
@@ -2983,7 +2984,13 @@ static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 
 
 static func bank_data(profile: Dictionary) -> Dictionary:
-	return _normalize_bank_data(normalize_profile(profile).get(BANK_KEY, {}))
+	var normalized := normalize_profile(profile)
+	if _exact_profile_schema_version(normalized) == SERVER_PROFILE_SCHEMA_VERSION:
+		# Server schema v3 owns bank schema v2.  Do not send it through the
+		# legacy schema1 normalizer, which would erase equipment envelopes and
+		# unknown future instance fields.
+		return BankProfileModel.server_bank_data(normalized)
+	return _normalize_bank_data(normalized.get(BANK_KEY, {}))
 
 
 static func bank_stone_coins(profile: Dictionary) -> int:
@@ -2991,6 +2998,8 @@ static func bank_stone_coins(profile: Dictionary) -> int:
 
 
 static func bank_item_count(profile: Dictionary, item_id: String) -> int:
+	if _exact_profile_schema_version(profile) == SERVER_PROFILE_SCHEMA_VERSION:
+		return BankProfileModel.item_count(bank_data(profile), item_id)
 	var count := 0
 	for item in bank_data(profile).get("items", []):
 		if item is Dictionary and str((item as Dictionary).get("itemId", "")) == item_id:
@@ -3000,6 +3009,8 @@ static func bank_item_count(profile: Dictionary, item_id: String) -> int:
 
 static func bank_slots(profile: Dictionary) -> Array[Dictionary]:
 	var bank := bank_data(profile)
+	if _exact_profile_schema_version(profile) == SERVER_PROFILE_SCHEMA_VERSION:
+		return BankProfileModel.slots(bank, BANK_SLOT_LIMIT)
 	var slots: Array[Dictionary] = []
 	var raw_slots = bank.get("slots", [])
 	if raw_slots is Array:
@@ -3009,6 +3020,8 @@ static func bank_slots(profile: Dictionary) -> Array[Dictionary]:
 
 
 static func bank_unlocked_tabs(profile: Dictionary) -> int:
+	if _exact_profile_schema_version(profile) == SERVER_PROFILE_SCHEMA_VERSION:
+		return BankProfileModel.unlocked_tabs(bank_data(profile), BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT)
 	return int(bank_data(profile).get("unlockedTabs", BANK_DEFAULT_UNLOCKED_TABS))
 
 

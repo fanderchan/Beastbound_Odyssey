@@ -8,6 +8,17 @@ const {
   tutorialBuyListing,
   tutorialSaleIsEligible,
 } = require("./tutorial-market");
+const {
+  addEquipmentEnvelopeToBank,
+  addOrdinaryItemToBank,
+  readBankProfileState,
+  removeEquipmentEnvelopeFromBank,
+  removeOrdinaryItemFromBank,
+} = require("./bank-profile-state");
+const {
+  exportBackpackEquipmentEnvelope,
+  importBackpackEquipmentEnvelope,
+} = require("./equipment-transfer-envelope");
 
 const TRADE_OFFER_TTL_MS = 2 * 60 * 1000;
 const TRADE_MAX_DISTANCE_CELLS = 2;
@@ -36,6 +47,7 @@ function createEconomyDomain(ctx) {
     bagItemLabel,
     bagItemStackLimit,
     backpackItemCount,
+    battleEquipmentCatalog,
     captureToolBagFromProfile,
     clampInt,
     clone,
@@ -43,6 +55,7 @@ function createEconomyDomain(ctx) {
     consumeBackpackItem,
     currentProfileQuestId,
     fail,
+    equipmentTransferOptions = {},
     isoNow,
     itemAmountText,
     isEquipmentItemId,
@@ -85,55 +98,89 @@ function createEconomyDomain(ctx) {
     if (rawBankConflict) {
       return fail(rawBankConflict.code, rawBankConflict.message, rawBankProfilePayload(prepared, profile));
     }
-    const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
-    const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
-    if (unsupportedEquipment) {
-      return fail(
-        "bank_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能存入银行，请先留在背包。`,
-        profilePayload(prepared, profile),
-      );
+    const parsedItems = parseBankTransferItems(payload.items || payload.itemAmounts || [], "deposit");
+    if (!parsedItems.ok) {
+      return fail(parsedItems.code, parsedItems.message, profilePayload(prepared, profile));
     }
+    const items = parsedItems.items;
+    const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_deposit_empty", "请选择要存入的石币或物品。", profilePayload(prepared, profile));
     }
     if (stoneCoins > profileStoneCoins(profile)) {
       return fail("bank_stone_coins_not_enough", "石币不足，无法存入。", profilePayload(prepared, profile));
     }
-    const bank = normalizeBank(profile.bank);
+    const originalBank = normalizeBank(profile.bank);
+    let bank = clone(originalBank);
     if (bank.stoneCoins + stoneCoins > bankStoneCoinLimit) {
       return fail("bank_stone_coin_limit", `银行石币最多存放${bankStoneCoinLimit}。`, profilePayload(prepared, profile, bank));
     }
-    let nextSlots = profileBackpackSlots(profile);
-    let nextBankSlots = normalizeBankSlots(bank.slots);
-    const unlockedBankSlots = bankUnlockedSlotCount(bank);
+    let nextProfile = clone(profile);
     for (const item of items) {
+      if (isBankEquipmentItem(item.itemId)) {
+        const envelopeId = nextBankEquipmentEnvelopeId(bank);
+        if (!envelopeId.ok) {
+          return fail(envelopeId.code, envelopeId.message, profilePayload(prepared, profile, originalBank));
+        }
+        const exported = exportBackpackEquipmentEnvelope(
+          nextProfile,
+          battleEquipmentCatalog,
+          item.itemId,
+          item.instanceId,
+          equipmentEnvelopeOptions(nextProfile, item.itemId, {
+            envelopeId: envelopeId.envelopeId,
+            sourceSlotIndex: item.sourceSlotIndex,
+          }),
+        );
+        if (!exported.ok) {
+          return fail(exported.code, exported.message, profilePayload(prepared, profile, originalBank));
+        }
+        const added = addEquipmentEnvelopeToBank(
+          bank,
+          exported.envelope,
+          item.bankSlotIndex,
+          battleEquipmentCatalog,
+          bankProfileStateOptions(),
+        );
+        if (!added.ok) {
+          return fail(added.code, added.message, profilePayload(prepared, profile, originalBank));
+        }
+        nextProfile = exported.profile;
+        bank = added.bank;
+        item.envelopeId = exported.envelope.envelopeId;
+        item.bankSlotIndex = added.bankSlotIndex;
+        continue;
+      }
+      const nextSlots = profileBackpackSlots(nextProfile);
       const missing = bankTransferMissingBackpackItem(nextSlots, item);
       if (missing) {
-        return fail("bank_item_not_enough", `${missing.label} 数量不够，无法存入。`, profilePayload(prepared, profile, bank));
+        return fail("bank_item_not_enough", `${missing.label} 数量不够，无法存入。`, profilePayload(prepared, profile, originalBank));
       }
-      const addResult = addItemToBankSlots(nextBankSlots, item.itemId, item.count, unlockedBankSlots, item.bankSlotIndex);
-      if (addResult.lostCount > 0) {
-        return fail("bank_storage_full", "银行格子不足，请先整理或解锁更多银行页。", profilePayload(prepared, profile, bank));
+      const added = addOrdinaryItemToBank(
+        bank,
+        item.itemId,
+        item.count,
+        item.bankSlotIndex,
+        battleEquipmentCatalog,
+        bankProfileStateOptions(),
+      );
+      if (!added.ok) {
+        return fail(added.code, added.message, profilePayload(prepared, profile, originalBank));
       }
-      nextSlots = consumeBankTransferBackpackItem(nextSlots, item);
-      nextBankSlots = addResult.slots;
+      nextProfile.backpackSlots = consumeBankTransferBackpackItem(nextSlots, item);
+      bank = added.bank;
     }
-    profile.backpackSlots = nextSlots;
-    profile.captureTools = captureToolBagFromProfile(profile);
-    profile.stoneCoins = profileStoneCoins(profile) - stoneCoins;
+    nextProfile.captureTools = captureToolBagFromProfile(nextProfile);
+    nextProfile.stoneCoins = profileStoneCoins(nextProfile) - stoneCoins;
     bank.stoneCoins += stoneCoins;
-    bank.slots = nextBankSlots;
-    bank.items = bankItemsFromSlots(nextBankSlots);
-    profile.bank = bank;
-    const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
+    nextProfile.bank = bank;
+    const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, nextProfile, now);
     save(prepared.data);
     return ok({
       account: publicAccount(prepared.account),
       profileBinding: persisted.binding,
       profileSummary: profileSummaryForAccount(prepared.account, prepared.data),
-      profile: clone(profile),
+      profile: clone(nextProfile),
       bank: clone(bank),
       transaction: publicBankTransaction("deposit", stoneCoins, items),
       message: bankTransactionMessage("存入", stoneCoins, items),
@@ -150,55 +197,93 @@ function createEconomyDomain(ctx) {
     if (rawBankConflict) {
       return fail(rawBankConflict.code, rawBankConflict.message, rawBankProfilePayload(prepared, profile));
     }
-    const items = normalizeBankTransferItems(payload.items || payload.itemAmounts || []);
-    const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
-    const unsupportedEquipment = firstUnsupportedEquipmentTransfer(items);
-    if (unsupportedEquipment) {
-      return fail(
-        "bank_equipment_transfer_unsupported",
-        `${bagItemLabel(unsupportedEquipment.itemId)} 暂不能从银行取出，物品会安全保留，请联系GM处理。`,
-        profilePayload(prepared, profile),
-      );
+    const parsedItems = parseBankTransferItems(payload.items || payload.itemAmounts || [], "withdraw");
+    if (!parsedItems.ok) {
+      return fail(parsedItems.code, parsedItems.message, profilePayload(prepared, profile));
     }
+    const items = parsedItems.items;
+    const stoneCoins = normalizeCoinAmount(payload.stoneCoins || payload.coins || 0);
     if (stoneCoins <= 0 && items.length <= 0) {
       return fail("bank_withdraw_empty", "请选择要取出的石币或物品。", profilePayload(prepared, profile));
     }
-    const bank = normalizeBank(profile.bank);
+    const originalBank = normalizeBank(profile.bank);
+    let bank = clone(originalBank);
     if (stoneCoins > bank.stoneCoins) {
       return fail("bank_stone_coins_not_enough", "银行石币不足，无法取出。", profilePayload(prepared, profile, bank));
     }
     if (profileStoneCoins(profile) + stoneCoins > profileStoneCoinLimit) {
       return fail("wallet_stone_coin_limit", `身上石币上限为${profileStoneCoinLimit}，请先存入银行。`, profilePayload(prepared, profile, bank));
     }
-    let nextBankSlots = normalizeBankSlots(bank.slots);
+    let nextProfile = clone(profile);
     const withdrawItems = [];
     for (const item of items) {
-      const missing = bankTransferMissingBankItem(nextBankSlots, item);
-      if (missing) {
-        return fail("bank_item_not_enough", `${missing.label} 数量不够，无法取出。`, profilePayload(prepared, profile, bank));
+      if (isBankEquipmentItem(item.itemId)) {
+        const removed = removeEquipmentEnvelopeFromBank(
+          bank,
+          item.envelopeId,
+          item.bankSlotIndex,
+          item.itemId,
+          battleEquipmentCatalog,
+          bankProfileStateOptions(),
+        );
+        if (!removed.ok) {
+          return fail(removed.code, removed.message, profilePayload(prepared, profile, originalBank));
+        }
+        const beforeSlots = profileBackpackSlots(nextProfile);
+        const imported = importBackpackEquipmentEnvelope(
+          nextProfile,
+          battleEquipmentCatalog,
+          removed.envelope,
+          equipmentEnvelopeOptions(nextProfile, item.itemId, {trustedServerEnvelope: true}),
+        );
+        if (!imported.ok) {
+          return fail(imported.code, imported.message, profilePayload(prepared, profile, originalBank));
+        }
+        const targeted = moveImportedTemplateToRequestedSlot(
+          beforeSlots,
+          imported.profile,
+          item.itemId,
+          item.targetSlotIndex,
+        );
+        if (!targeted.ok) {
+          return fail(targeted.code, targeted.message, profilePayload(prepared, profile, originalBank));
+        }
+        nextProfile = targeted.profile;
+        bank = removed.bank;
+        item.instanceId = imported.instanceId;
+        continue;
       }
-      const consumeResult = consumeBankTransferBankItem(nextBankSlots, item);
-      nextBankSlots = consumeResult.slots;
+      const removed = removeOrdinaryItemFromBank(
+        bank,
+        item.itemId,
+        item.count,
+        item.bankSlotIndex,
+        battleEquipmentCatalog,
+        bankProfileStateOptions(),
+      );
+      if (!removed.ok) {
+        const label = itemAmountText([item]);
+        return fail(removed.code, removed.code === "bank_item_not_enough" ? `${label} 数量不够，无法取出。` : removed.message, profilePayload(prepared, profile, originalBank));
+      }
+      bank = removed.bank;
       withdrawItems.push({itemId: item.itemId, count: item.count});
     }
-    const addResult = addRewardItemsToBackpack(profileBackpackSlots(profile), withdrawItems);
+    const addResult = addRewardItemsToBackpack(profileBackpackSlots(nextProfile), withdrawItems);
     if (normalizeMailItems(addResult.lostItems || []).length > 0) {
-      return fail("bank_backpack_full", "背包空间不足，无法取出这些物品。", profilePayload(prepared, profile, bank));
+      return fail("bank_backpack_full", "背包空间不足，无法取出这些物品。", profilePayload(prepared, profile, originalBank));
     }
-    profile.backpackSlots = addResult.slots;
-    profile.captureTools = captureToolBagFromProfile(profile);
-    profile.stoneCoins = profileStoneCoins(profile) + stoneCoins;
+    nextProfile.backpackSlots = addResult.slots;
+    nextProfile.captureTools = captureToolBagFromProfile(nextProfile);
+    nextProfile.stoneCoins = profileStoneCoins(nextProfile) + stoneCoins;
     bank.stoneCoins -= stoneCoins;
-    bank.slots = nextBankSlots;
-    bank.items = bankItemsFromSlots(nextBankSlots);
-    profile.bank = bank;
-    const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
+    nextProfile.bank = bank;
+    const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, nextProfile, now);
     save(prepared.data);
     return ok({
       account: publicAccount(prepared.account),
       profileBinding: persisted.binding,
       profileSummary: profileSummaryForAccount(prepared.account, prepared.data),
-      profile: clone(profile),
+      profile: clone(nextProfile),
       bank: clone(bank),
       transaction: publicBankTransaction("withdraw", stoneCoins, items),
       message: bankTransactionMessage("取出", stoneCoins, items),
@@ -830,65 +915,136 @@ function createEconomyDomain(ctx) {
     };
   }
 
-  function normalizeBank(value) {
-    const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    const rawItems = normalizeMailItems(raw.items || raw.itemAmounts || []);
-    const hasRawSlots = Array.isArray(raw.slots) && raw.slots.length > 0;
-    const slots = hasRawSlots ? normalizeBankSlots(raw.slots) : bankSlotsFromItems(rawItems);
-    const requiredTabs = Math.max(BANK_DEFAULT_UNLOCKED_TABS, Math.ceil((lastFilledBankSlotIndex(slots) + 1) / BANK_SLOTS_PER_TAB));
-    const rawUnlockedTabs = Math.trunc(Number(raw.unlockedTabs || raw.tabs || BANK_DEFAULT_UNLOCKED_TABS));
+  function isBankEquipmentItem(itemId) {
+    const normalized = String(itemId || "").trim();
+    if (normalized === "") {
+      return false;
+    }
+    if (equipmentItemPredicate) {
+      return equipmentItemPredicate(normalized);
+    }
+    // Missing catalog authority must fail closed rather than reopening template-only transfers.
+    return !battleEquipmentCatalog
+      || !(battleEquipmentCatalog.itemById instanceof Map)
+      || battleEquipmentCatalog.itemById.has(normalized);
+  }
+
+  function bankProfileStateOptions() {
     return {
-      stoneCoins: Math.min(bankStoneCoinLimit, normalizeCoinAmount(raw.stoneCoins || raw.coins || 0)),
-      items: bankItemsFromSlots(slots),
-      slots,
-      unlockedTabs: clampInt(Math.max(rawUnlockedTabs, requiredTabs), BANK_DEFAULT_UNLOCKED_TABS, BANK_TAB_COUNT),
-      schemaVersion: 1,
+      tabCount: BANK_TAB_COUNT,
+      slotsPerTab: BANK_SLOTS_PER_TAB,
+      defaultUnlockedTabs: BANK_DEFAULT_UNLOCKED_TABS,
+      stoneCoinLimit: bankStoneCoinLimit,
+      itemById: (itemId) => bagItemById(itemId),
+      isEquipmentItemId: (itemId) => isBankEquipmentItem(itemId),
+      itemStackLimit: (itemId) => bankItemStackLimit(itemId),
+      equipmentTransferOptions,
+    };
+  }
+
+  function equipmentEnvelopeOptions(profile, itemId, overrides = {}) {
+    const slots = profileBackpackSlots(profile);
+    return {
+      ...equipmentTransferOptions,
+      backpackSlotLimit: Math.max(1, slots.length),
+      stackLimit: Math.max(1, bankItemStackLimit(itemId)),
+      ...overrides,
+    };
+  }
+
+  function nextBankEquipmentEnvelopeId(bank) {
+    const existingIds = new Set();
+    for (const slot of Array.isArray(bank && bank.slots) ? bank.slots : []) {
+      for (const envelope of Array.isArray(slot && slot.equipmentEnvelopes) ? slot.equipmentEnvelopes : []) {
+        existingIds.add(String(envelope && envelope.envelopeId || ""));
+      }
+    }
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const randomPart = String(randomId() || "").trim().replace(/[^A-Za-z0-9_-]/g, "");
+      const envelopeId = `eqx_${randomPart}`;
+      if (/^eqx_[A-Za-z0-9_-]{8,156}$/.test(envelopeId) && !existingIds.has(envelopeId)) {
+        return {ok: true, envelopeId};
+      }
+    }
+    return {
+      ok: false,
+      code: "bank_equipment_envelope_id_unavailable",
+      message: "装备转运编号暂时不可用，本次操作已取消，请重试。",
+    };
+  }
+
+  function moveImportedTemplateToRequestedSlot(beforeSlotsValue, importedProfileValue, itemId, targetSlotIndexValue) {
+    const targetSlotIndex = Number(targetSlotIndexValue);
+    if (targetSlotIndex === -1) {
+      return {ok: true, profile: importedProfileValue};
+    }
+    const beforeSlots = normalizeBackpackSlots(beforeSlotsValue);
+    const afterSlots = normalizeBackpackSlots(profileBackpackSlots(importedProfileValue));
+    if (!Number.isSafeInteger(targetSlotIndex) || targetSlotIndex < 0 || targetSlotIndex >= afterSlots.length) {
+      return {
+        ok: false,
+        code: "bank_backpack_target_stale",
+        message: "背包目标格已经变化，请刷新后重新选择。",
+      };
+    }
+    let addedIndex = -1;
+    for (let index = 0; index < afterSlots.length; index += 1) {
+      const before = beforeSlots[index] || {};
+      const after = afterSlots[index] || {};
+      const beforeCount = String(before.itemId || "") === itemId ? Number(before.count || 0) : 0;
+      const afterCount = String(after.itemId || "") === itemId ? Number(after.count || 0) : 0;
+      if (afterCount === beforeCount + 1) {
+        addedIndex = index;
+        break;
+      }
+    }
+    if (addedIndex < 0) {
+      return {
+        ok: false,
+        code: "bank_equipment_import_invariant_failed",
+        message: "装备取出后的背包表示异常，本次操作已取消。",
+      };
+    }
+    if (addedIndex === targetSlotIndex) {
+      return {ok: true, profile: importedProfileValue};
+    }
+    const targetBefore = beforeSlots[targetSlotIndex] || {};
+    const targetItemId = String(targetBefore.itemId || "");
+    const targetCount = Number(targetBefore.count || 0);
+    const stackLimit = Math.max(1, bankItemStackLimit(itemId));
+    if ((targetItemId !== "" && targetItemId !== itemId) || targetCount >= stackLimit) {
+      return {
+        ok: false,
+        code: "bank_backpack_target_stale",
+        message: "背包目标格已经变化，请刷新后重新选择。",
+      };
+    }
+    const profile = clone(importedProfileValue);
+    const slots = normalizeBackpackSlots(profileBackpackSlots(profile));
+    const sourceCount = Number(slots[addedIndex] && slots[addedIndex].count || 0);
+    slots[addedIndex] = sourceCount > 1 ? {itemId, count: sourceCount - 1} : {};
+    slots[targetSlotIndex] = {itemId, count: targetCount + 1};
+    profile.backpackSlots = slots;
+    return {ok: true, profile};
+  }
+
+  function normalizeBank(value) {
+    const read = readBankProfileState(value, battleEquipmentCatalog, bankProfileStateOptions());
+    if (read.ok) {
+      return read.bank;
+    }
+    return {
+      stoneCoins: 0,
+      items: [],
+      slots: Array.from({length: BANK_SLOT_LIMIT}, () => ({})),
+      unlockedTabs: BANK_DEFAULT_UNLOCKED_TABS,
+      schemaVersion: 2,
     };
   }
 
   function rawBankAssetConflict(value) {
-    if (value !== undefined && (!value || typeof value !== "object" || Array.isArray(value))) {
-      return {
-        code: "bank_schema_invalid",
-        message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-      };
-    }
-    const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    const schemaStatus = rawSchemaVersionStatus(raw, 1);
-    if (schemaStatus === "invalid") {
-      return {
-        code: "bank_schema_invalid",
-        message: "银行数据版本无法识别，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-      };
-    }
-    if (schemaStatus === "future") {
-      return {
-        code: "bank_schema_future",
-        message: "银行数据来自更高版本，本次操作已取消；石币和物品会原样保留，请联系GM处理。",
-      };
-    }
-    for (const field of ["slots", "items", "itemAmounts"]) {
-      if (Object.hasOwn(raw, field) && !Array.isArray(raw[field])) {
-        return rawBankRepresentationConflict();
-      }
-    }
-    if (Array.isArray(raw.slots) && raw.slots.length > BANK_SLOT_LIMIT) {
-      return rawBankRepresentationConflict();
-    }
-    const rawEntries = [
-      ...(Array.isArray(raw.slots) ? raw.slots : []),
-      ...(Array.isArray(raw.items) ? raw.items : []),
-      ...(Array.isArray(raw.itemAmounts) ? raw.itemAmounts : []),
-    ];
-    const entryConflict = rawBankEntryConflict(rawEntries);
-    if (entryConflict) {
-      return entryConflict;
-    }
-    const representationConflict = rawBankRepresentationStateConflict(raw);
-    if (representationConflict) {
-      return representationConflict;
-    }
-    return null;
+    const read = readBankProfileState(value, battleEquipmentCatalog, bankProfileStateOptions());
+    return read.ok ? null : read;
   }
 
   function rawMarketListingAssetConflict(value) {
@@ -1108,6 +1264,110 @@ function createEconomyDomain(ctx) {
       }
     }
     return null;
+  }
+
+  function parseBankTransferItems(value, mode) {
+    if (!Array.isArray(value)) {
+      return {
+        ok: false,
+        code: "bank_transfer_items_invalid",
+        message: "银行物品选择格式异常，请刷新后重试。",
+      };
+    }
+    if (value.length > TRADE_MAX_ITEM_LINES) {
+      return {
+        ok: false,
+        code: "bank_transfer_line_limit",
+        message: `一次最多操作${TRADE_MAX_ITEM_LINES}种银行物品，请分批处理。`,
+      };
+    }
+    const items = [];
+    for (const rawItem of value) {
+      if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) {
+        return {
+          ok: false,
+          code: "bank_transfer_item_invalid",
+          message: "银行物品选择格式异常，请刷新后重试。",
+        };
+      }
+      const itemId = String(rawItem.itemId || rawItem.id || "").trim();
+      if (itemId === "" || !bagItemById(itemId)) {
+        return {
+          ok: false,
+          code: "bank_item_unknown",
+          message: "选择的银行物品无法识别，请刷新后重试。",
+        };
+      }
+      if (isBankEquipmentItem(itemId)) {
+        const depositFields = new Set(["itemId", "count", "instanceId", "sourceSlotIndex", "bankSlotIndex"]);
+        const withdrawFields = new Set(["itemId", "count", "envelopeId", "bankSlotIndex", "targetSlotIndex"]);
+        const allowed = mode === "deposit" ? depositFields : withdrawFields;
+        if (Object.keys(rawItem).some((key) => !allowed.has(key))) {
+          return {
+            ok: false,
+            code: "bank_equipment_intent_invalid",
+            message: "装备银行请求含未授权字段，请刷新后重新选择。",
+          };
+        }
+        if (rawItem.itemId !== itemId || rawItem.count !== 1) {
+          return {
+            ok: false,
+            code: "bank_equipment_intent_invalid",
+            message: "装备每次只能按一个具体实例存取。",
+          };
+        }
+        if (mode === "deposit") {
+          const instanceId = typeof rawItem.instanceId === "string" ? rawItem.instanceId.trim() : "";
+          const sourceSlotIndex = rawItem.sourceSlotIndex;
+          const bankSlotIndex = Object.hasOwn(rawItem, "bankSlotIndex") ? rawItem.bankSlotIndex : -1;
+          if (
+            instanceId === ""
+            || !Number.isSafeInteger(sourceSlotIndex) || sourceSlotIndex < 0
+            || !Number.isSafeInteger(bankSlotIndex) || bankSlotIndex < -1
+          ) {
+            return {
+              ok: false,
+              code: "bank_equipment_selection_required",
+              message: "请选择背包中的具体装备实例和格子后再存入。",
+            };
+          }
+          items.push({itemId, count: 1, instanceId, sourceSlotIndex, bankSlotIndex});
+        } else {
+          const envelopeId = typeof rawItem.envelopeId === "string" ? rawItem.envelopeId.trim() : "";
+          const bankSlotIndex = rawItem.bankSlotIndex;
+          const targetSlotIndex = Object.hasOwn(rawItem, "targetSlotIndex") ? rawItem.targetSlotIndex : -1;
+          if (
+            envelopeId === ""
+            || !Number.isSafeInteger(bankSlotIndex) || bankSlotIndex < 0
+            || !Number.isSafeInteger(targetSlotIndex) || targetSlotIndex < -1
+          ) {
+            return {
+              ok: false,
+              code: "bank_equipment_selection_required",
+              message: "请选择银行中的具体装备信封和格子后再取出。",
+            };
+          }
+          items.push({itemId, count: 1, envelopeId, bankSlotIndex, targetSlotIndex});
+        }
+      } else {
+        const count = normalizeCoinAmount(rawItem.count || rawItem.amount || 0);
+        if (count <= 0) {
+          return {
+            ok: false,
+            code: "bank_transfer_item_invalid",
+            message: "银行物品数量异常，请刷新后重试。",
+          };
+        }
+        items.push({
+          itemId,
+          count,
+          sourceSlotIndex: normalizeOptionalIndex(rawItem.sourceSlotIndex ?? rawItem.slotIndex ?? rawItem.sourceIndex),
+          targetSlotIndex: normalizeOptionalIndex(rawItem.targetSlotIndex ?? rawItem.targetIndex),
+          bankSlotIndex: normalizeOptionalIndex(rawItem.bankSlotIndex ?? rawItem.targetBankSlotIndex ?? rawItem.sourceBankSlotIndex),
+        });
+      }
+    }
+    return {ok: true, items};
   }
 
   function normalizeBankTransferItems(value) {

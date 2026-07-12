@@ -25,6 +25,7 @@ const BattleResultReceiptModel := preload("res://scripts/progression/battle_resu
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const CombatFormulaCandidateModel := preload("res://scripts/progression/combat_formula_candidate_model.gd")
@@ -10956,8 +10957,122 @@ func _run_auto_equipment_instance_check() -> void:
 		and PlayerProgressModel.backpack_item_count(re_equip_profile, "weapon_wooden_club") == 1
 		and PlayerProgressModel.backpack_equipment_instance_ids(re_equip_profile, "weapon_wooden_club").size() == 1
 	)
-	var status = "ok" if starter_instance_ok and buy_instance_ok and equip_instance_ok and enhance_instance_ok and unequip_instance_ok and re_equip_instance_ok else "failed"
-	print("equipment instance check ready: status=%s starter=%s buy=%s equip=%s enhance=%s unequip=%s reequip=%s equipped_instance=%s backpack_instances=%d" % [
+	var bank_model_result := BankProfileModel.self_check()
+	var bank_model_ok := bool(bank_model_result.get("ok", false))
+	var bank_fixture := EquipmentInstancePresenter.schema3_fixture_for_check()
+	var bank_fixture_slots := PlayerProgressModel.backpack_slots(bank_fixture)
+	var bank_backpack_rows := BankProfileModel.backpack_transfer_rows(bank_fixture_slots, EquipmentInstancePresenter.backpack_rows(bank_fixture))
+	var bank_storage_rows := BankProfileModel.storage_transfer_rows(
+		PlayerProgressModel.bank_slots(bank_fixture),
+		EquipmentInstancePresenter.bank_envelope_rows(bank_fixture),
+		0,
+		PlayerProgressModel.BANK_SLOTS_PER_TAB,
+		PlayerProgressModel.bank_unlocked_slot_count(bank_fixture)
+	)
+	var distinct_instance_rows := true
+	var instance_selection_keys := {}
+	for row in bank_backpack_rows:
+		if str(row.get("transferKind", "")) != BankProfileModel.TRANSFER_EQUIPMENT_INSTANCE:
+			continue
+		var selection_key := BankProfileModel.selection_key(row)
+		distinct_instance_rows = distinct_instance_rows and selection_key != "" and not instance_selection_keys.has(selection_key)
+		instance_selection_keys[selection_key] = true
+	var envelope_row := bank_storage_rows[0] if not bank_storage_rows.is_empty() else {}
+	var bank_rows_ok := instance_selection_keys.size() == 4 \
+		and distinct_instance_rows \
+		and str(envelope_row.get("transferKind", "")) == BankProfileModel.TRANSFER_EQUIPMENT_ENVELOPE \
+		and str(envelope_row.get("envelopeId", "")) != ""
+	var request_source: Array[Dictionary] = [{
+		"itemId": "weapon_wooden_club",
+		"count": 99,
+		"instanceId": "equip_000002",
+		"sourceSlotIndex": 1,
+		"bankSlotIndex": 8,
+		"envelope": {"mustNeverSend": true},
+		"instanceState": {"mustNeverSend": true},
+		"provenance": {"mustNeverSend": true},
+	}]
+	var request_spec := ServerAuthClientModel.bank_deposit_request("http://127.0.0.1:1234", "token", request_source)
+	var request_body = JSON.parse_string(str(request_spec.get("body", "")))
+	var request_items = (request_body as Dictionary).get("items", []) if request_body is Dictionary else []
+	var request_item := ((request_items as Array)[0] as Dictionary) if request_items is Array and not (request_items as Array).is_empty() and (request_items as Array)[0] is Dictionary else {}
+	var request_whitelist_ok := (
+		request_item.size() == 5
+		and str(request_item.get("itemId", "")) == "weapon_wooden_club"
+		and int(request_item.get("count", 0)) == 1
+		and str(request_item.get("instanceId", "")) == "equip_000002"
+		and int(request_item.get("sourceSlotIndex", -1)) == 1
+		and int(request_item.get("bankSlotIndex", -1)) == 8
+		and not request_item.has("envelope")
+		and not request_item.has("instanceState")
+		and not request_item.has("provenance")
+	)
+	var saved_profile: Dictionary = host.player_profile.duplicate(true)
+	var saved_session: Dictionary = host.current_account_session.duplicate(true)
+	var saved_authenticated: bool = host.account_authenticated
+	var saved_bank_pending: bool = host.bank_request_pending
+	var saved_bank_selected_item_id: String = host.bank_selected_item_id
+	var saved_bank_quantity: int = host.bank_quantity
+	var saved_bank_coin_quantity: int = host.bank_coin_quantity
+	var saved_bank_active_tab: int = host._panel_flow().bank_active_tab_index
+	var saved_bank_selected_slot: Dictionary = host._panel_flow().bank_selected_slot_data.duplicate(true)
+	var saved_bank_visible: bool = host.bank_panel != null and host.bank_panel.visible
+	var saved_bank_status: String = host.bank_status_label.text if host.bank_status_label != null else ""
+	host.player_profile = bank_fixture.duplicate(true)
+	host.account_authenticated = true
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "equipment-bank-check-token",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	host.bank_request_pending = false
+	host._open_bank_panel()
+	await host.get_tree().process_frame
+	var instance_a_button = host.bank_item_buttons.get("selection:instance:equip_000001", null)
+	var instance_b_button = host.bank_item_buttons.get("selection:instance:equip_000002", null)
+	var envelope_button = host.bank_item_buttons.get("selection:%s" % BankProfileModel.selection_key(envelope_row), null)
+	var instance_a_data := (instance_a_button as Button).get("slot_data") as Dictionary if instance_a_button is Button else {}
+	var instance_b_data := (instance_b_button as Button).get("slot_data") as Dictionary if instance_b_button is Button else {}
+	var envelope_data := (envelope_button as Button).get("slot_data") as Dictionary if envelope_button is Button else {}
+	var bank_panel_instances_ok := (
+		instance_a_button is Button
+		and instance_b_button is Button
+		and envelope_button is Button
+		and str(instance_a_data.get("instanceId", "")) == "equip_000001"
+		and str(instance_b_data.get("instanceId", "")) == "equip_000002"
+		and str(instance_a_data.get("selectionKey", "")) != str(instance_b_data.get("selectionKey", ""))
+		and int(instance_a_data.get("count", 0)) == 1
+		and int(instance_b_data.get("count", 0)) == 1
+		and str((instance_a_button as Button).text).find("耐久30/") >= 0
+		and str((instance_b_button as Button).text).find("+4") >= 0
+		and str(envelope_data.get("envelopeId", "")) == str(envelope_row.get("envelopeId", ""))
+		and int(envelope_data.get("count", 0)) == 1
+	)
+	var bank_screenshot_ok := true
+	var bank_screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if bank_screenshot_path != "":
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error: int = screenshot_image.save_png(bank_screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		bank_screenshot_ok = screenshot_image != null and screenshot_error == OK
+		print("equipment bank instance screenshot: status=%s path=%s" % ["ok" if bank_screenshot_ok else "failed", bank_screenshot_path])
+	host._close_bank_panel()
+	host.player_profile = saved_profile
+	host.current_account_session = saved_session
+	host.account_authenticated = saved_authenticated
+	host.bank_request_pending = saved_bank_pending
+	host.bank_selected_item_id = saved_bank_selected_item_id
+	host.bank_quantity = saved_bank_quantity
+	host.bank_coin_quantity = saved_bank_coin_quantity
+	host._panel_flow().bank_active_tab_index = saved_bank_active_tab
+	host._panel_flow().bank_selected_slot_data = saved_bank_selected_slot
+	if host.bank_panel != null:
+		host.bank_panel.visible = saved_bank_visible
+	if host.bank_status_label != null:
+		host.bank_status_label.text = saved_bank_status
+	var status = "ok" if starter_instance_ok and buy_instance_ok and equip_instance_ok and enhance_instance_ok and unequip_instance_ok and re_equip_instance_ok and bank_model_ok and bank_rows_ok and request_whitelist_ok and bank_panel_instances_ok and bank_screenshot_ok else "failed"
+	print("equipment instance check ready: status=%s starter=%s buy=%s equip=%s enhance=%s unequip=%s reequip=%s bank_model=%s bank_rows=%s request_whitelist=%s bank_panel=%s screenshot=%s equipped_instance=%s backpack_instances=%d bank_errors=%s" % [
 		status,
 		str(starter_instance_ok),
 		str(buy_instance_ok),
@@ -10965,8 +11080,14 @@ func _run_auto_equipment_instance_check() -> void:
 		str(enhance_instance_ok),
 		str(unequip_instance_ok),
 		str(re_equip_instance_ok),
+		str(bank_model_ok),
+		str(bank_rows_ok),
+		str(request_whitelist_ok),
+		str(bank_panel_instances_ok),
+		str(bank_screenshot_ok),
 		equipped_instance_id,
 		PlayerProgressModel.backpack_equipment_instance_ids(re_equip_profile, "weapon_wooden_club").size(),
+		";".join(bank_model_result.get("errors", []) as Array),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

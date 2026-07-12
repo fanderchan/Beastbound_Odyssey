@@ -221,11 +221,25 @@ test("stable digests ignore object key order but retain array order and value ty
 });
 
 test("asset summary covers currencies, backpack, pets, and equipment deterministically", () => {
-  const summary = profileAssetSummary(legacyProfile(1));
+  const profile = legacyProfile(1);
+  profile.bank.schemaVersion = 2;
+  profile.bank.slots.push({
+    itemId: "weapon_wooden_club",
+    count: 2,
+    equipmentEnvelopes: [
+      {schemaVersion: 1, envelopeId: "eqx_summary_0001", itemId: "weapon_wooden_club"},
+      {schemaVersion: 1, envelopeId: "eqx_summary_0002", itemId: "weapon_wooden_club"},
+    ],
+  });
+  profile.bank.items.push({itemId: "weapon_wooden_club", count: 2});
+  const summary = profileAssetSummary(profile);
 
   assert.equal(summary.validProfileRoot, true);
   assert.equal(summary.currencies.stoneCoins, 123456);
   assert.equal(summary.currencies.bankStoneCoins, 654321);
+  assert.equal(summary.bank.equipmentEnvelopeCount, 2);
+  assert.equal(summary.bank.uniqueEquipmentEnvelopeIdCount, 2);
+  assert.deepEqual(summary.bank.equipmentEnvelopeItemCounts, {weapon_wooden_club: 2});
   assert.deepEqual(summary.backpack.itemCounts, {
     capture_net: 5,
     weapon_wooden_club: 1,
@@ -236,7 +250,7 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
   assert.deepEqual(summary.equipment.equippedItemCounts, {weapon_wooden_club: 1});
   assert.equal(summary.equipment.instanceCount, 1);
   assert.equal(summary.equipment.slotMappingCount, 1);
-  assert.equal(summary.digest, profileAssetSummary(structuredClone(legacyProfile(1))).digest);
+  assert.equal(summary.digest, profileAssetSummary(structuredClone(profile)).digest);
 });
 
 test("batch migration preserves every existing and unknown bucket plus profile document metadata", () => {
