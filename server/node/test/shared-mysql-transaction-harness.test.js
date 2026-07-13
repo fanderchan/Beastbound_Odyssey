@@ -152,6 +152,104 @@ test("primary-key lock waiters are granted in strict FIFO order", async () => {
   assert.equal(harness.assertIdle(), true);
 });
 
+test("two shared locks coexist and a queued exclusive lock waits for both releases", async (t) => {
+  const harness = createSharedMysqlTransactionHarness({
+    seed: {profiles: {player_a: profileRow(1, "initial")}},
+  });
+  const poolA = harness.poolFor("reader_a");
+  const poolB = harness.poolFor("reader_b");
+  const poolC = harness.poolFor("writer_c");
+  const connectionA = await poolA.getConnection();
+  const connectionB = await poolB.getConnection();
+  const connectionC = await poolC.getConnection();
+  let exclusiveWait = Promise.resolve();
+  let exclusiveSettlement = Promise.resolve([]);
+  t.after(async () => {
+    await Promise.allSettled([
+      connectionA.rollback(),
+      connectionB.rollback(),
+      connectionC.rollback(),
+    ]);
+    await exclusiveSettlement;
+    connectionA.release();
+    connectionB.release();
+    connectionC.release();
+    await Promise.allSettled([poolA.end(), poolB.end(), poolC.end()]);
+  });
+
+  await Promise.all([
+    connectionA.beginTransaction(),
+    connectionB.beginTransaction(),
+    connectionC.beginTransaction(),
+  ]);
+  const [[rowsA], [rowsB]] = await Promise.all([
+    connectionA.query(sharedMysqlOperation.selectForShare("profiles", "player_a")),
+    connectionB.query(sharedMysqlOperation.selectForShare("profiles", "player_a")),
+  ]);
+  assert.deepEqual(rowsA, [profileRow(1, "initial")]);
+  assert.deepEqual(rowsB, [profileRow(1, "initial")]);
+  assert.deepEqual(
+    harness.events()
+      .filter((event) => (
+        event.type === "lock_acquired"
+        && event.table === "profiles"
+        && event.key === "player_a"
+        && event.lockMode === "shared"
+      ))
+      .map((event) => event.writerId)
+      .sort(),
+    ["reader_a", "reader_b"],
+  );
+
+  exclusiveWait = connectionC.query(sharedMysqlOperation.selectForUpdate("profiles", "player_a"));
+  exclusiveSettlement = Promise.allSettled([exclusiveWait]);
+  await harness.waitForEvent({
+    type: "lock_wait",
+    writerId: "writer_c",
+    table: "profiles",
+    key: "player_a",
+    lockMode: "exclusive",
+  });
+
+  await connectionA.commit();
+  assert.equal(
+    harness.events().some((event) => (
+      event.type === "lock_granted"
+      && event.writerId === "writer_c"
+      && event.lockMode === "exclusive"
+    )),
+    false,
+  );
+
+  await connectionB.commit();
+  await exclusiveWait;
+  const events = harness.events();
+  const sharedReleases = events.filter((event) => (
+    event.type === "lock_released"
+    && event.table === "profiles"
+    && event.key === "player_a"
+    && event.lockMode === "shared"
+  ));
+  const exclusiveGrant = events.find((event) => (
+    event.type === "lock_granted"
+    && event.writerId === "writer_c"
+    && event.lockMode === "exclusive"
+  ));
+  assert.deepEqual(
+    sharedReleases.map((event) => event.writerId).sort(),
+    ["reader_a", "reader_b"],
+  );
+  assert.ok(exclusiveGrant);
+  assert.ok(exclusiveGrant.sequence > Math.max(...sharedReleases.map((event) => event.sequence)));
+
+  await connectionC.commit();
+  connectionA.release();
+  connectionB.release();
+  connectionC.release();
+  await Promise.all([poolA.end(), poolB.end(), poolC.end()]);
+  assert.equal(harness.assertIdle(), true);
+});
+
 test("two stores really overlap and the waiter evaluates affectedRows after the winner commits", async (t) => {
   const harness = createSharedMysqlTransactionHarness({
     seed: {profiles: {player_a: profileRow(1, "initial")}},

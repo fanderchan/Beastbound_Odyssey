@@ -3517,6 +3517,45 @@ function createAuthService(options = {}) {
     return String(session && session.accountId || "");
   }
 
+  function durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt) {
+    if (methodName !== "profileAction" || !receipt || typeof receipt !== "object") {
+      return null;
+    }
+    const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+    const action = normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command);
+    if (action !== "record_point_save") {
+      return null;
+    }
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const beforeBinding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    const playerId = String(beforeBinding.playerId || "");
+    const beforeProfile = objectOrEmpty(before && before.profiles && before.profiles[playerId]);
+    const nextBinding = objectOrEmpty(candidate && candidate.profileBindings && candidate.profileBindings[accountId]);
+    const nextProfile = objectOrEmpty(candidate && candidate.profiles && candidate.profiles[playerId]);
+    if (
+      accountId === ""
+      || playerId === ""
+      || String(beforeBinding.accountId || "") !== accountId
+      || String(beforeProfile.accountId || "") !== accountId
+      || String(beforeProfile.playerId || "") !== playerId
+      || String(nextBinding.accountId || "") !== accountId
+      || String(nextBinding.playerId || "") !== playerId
+      || String(nextProfile.accountId || "") !== accountId
+      || String(nextProfile.playerId || "") !== playerId
+    ) {
+      return null;
+    }
+    return {
+      kind: "row_local_profile_v1",
+      accountId,
+      playerId,
+      operationId: String(receipt.operationId || ""),
+      requestHash: String(receipt.requestHash || ""),
+      actionId: String(receipt.actionId || ""),
+    };
+  }
+
   async function executeDurableMutation(methodName, args, operation) {
     const method = serviceApi && serviceApi[methodName];
     if (typeof method !== "function" || methodName === "invokeDurable") {
@@ -3707,16 +3746,54 @@ function createAuthService(options = {}) {
         ["persistent_snapshot", runtimeDeltaFinishedAt, persistentSnapshotFinishedAt],
       ],
     });
+    const stagedReceipt = receiptOperationId === ""
+      ? null
+      : objectOrEmpty(candidate.mutationReceipts && candidate.mutationReceipts[receiptOperationId]);
+    const consistencyScope = durableRowLocalProfileConsistencyScope(
+      methodName,
+      args,
+      before,
+      candidatePersistent,
+      stagedReceipt,
+    );
+    const saveOptions = consistencyScope === null ? {} : {consistencyScope};
+    let durableSaveResult = null;
     try {
       const saveResult = typeof store.saveOwned === "function"
-        ? store.saveOwned(candidatePersistent)
-        : store.save(candidatePersistent);
-      await Promise.resolve(saveResult);
+        ? store.saveOwned(candidatePersistent, saveOptions)
+        : store.save(candidatePersistent, saveOptions);
+      durableSaveResult = await Promise.resolve(saveResult);
     } catch (cause) {
       const error = new Error("服务器存档暂时不可用，请稍后使用同一操作重试。");
       error.code = "storage_write_failed";
       error.cause = cause;
       throw error;
+    }
+    if (
+      durableSaveResult
+      && durableSaveResult.reloadedPersistentData
+      && typeof durableSaveResult.reloadedPersistentData === "object"
+    ) {
+      const recovered = normalizeData(durableSaveResult.reloadedPersistentData);
+      inheritAuthorityIdentityIndexes(candidate, recovered);
+      for (const field of RUNTIME_ROOT_FIELDS) {
+        recovered[field] = clone(candidate[field]);
+      }
+      recovered.battleTrace = mergeRuntimeBattleTrace(
+        recovered.battleTrace,
+        candidate.battleTrace,
+      );
+      recovered.serviceEvents = mergePublishedServiceEventWindows(
+        recovered.serviceEvents,
+        candidate.serviceEvents,
+      );
+      recovered.serviceEventSeq = Math.max(
+        normalizeEventSeq(recovered.serviceEventSeq),
+        normalizeEventSeq(candidate.serviceEventSeq),
+        ...recovered.serviceEvents.map((event) => normalizeEventSeq(event && event.eventSeq)),
+      );
+      candidate = recovered;
+      candidatePersistent = persistentDataForStore(recovered);
     }
     const postcommitStartedAt = process.hrtime.bigint();
     candidate = commitAuthorityRootLargeCollections(candidate);
@@ -4725,23 +4802,31 @@ function createAsyncWriteAuthStore(store, options = {}) {
   let ambiguousCommitRecoveries = 0;
   let revisionConflicts = 0;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
-  function enqueueSave(nextData, owned = false) {
+  function enqueueSave(nextData, owned = false, saveOptions = {}) {
     // saveOwned() is an internal ownership-transfer boundary used only by the
     // durable coordinator. It shallow-copies the root so post-COMMIT ledger
     // replacement cannot race the queued write, while certified nested
     // snapshots remain untouched until this exact write settles.
     const snapshot = owned ? {...nextData} : cloneAuthorityRoot(nextData);
+    const snapshotOptions = saveOptions && typeof saveOptions === "object"
+      ? clone(saveOptions)
+      : {};
     const writeJob = writeQueue.then(async () => {
       try {
-        return await saveStoreSnapshot(store, snapshot, {owned});
+        return await saveStoreSnapshot(store, snapshot, {owned, ...snapshotOptions});
       } catch (error) {
         if (isMysqlStoreRevisionConflict(error)) {
           revisionConflicts += 1;
           throw error;
         }
-        if (durableStoreSnapshotMatches(store, snapshot)) {
+        const recovery = durableStoreSnapshotRecovery(store, snapshot, snapshotOptions);
+        if (recovery.matched) {
           ambiguousCommitRecoveries += 1;
-          return {committed: true, ambiguousCommitRecovered: true};
+          return {
+            committed: true,
+            ambiguousCommitRecovered: true,
+            reloadedPersistentData: recovery.scoped ? recovery.reloadedPersistentData : null,
+          };
         }
         throw error;
       }
@@ -4781,11 +4866,11 @@ function createAsyncWriteAuthStore(store, options = {}) {
     load() {
       return store.load();
     },
-    save(nextData) {
-      return enqueueSave(nextData, false);
+    save(nextData, saveOptions = {}) {
+      return enqueueSave(nextData, false, saveOptions);
     },
-    saveOwned(nextData) {
-      return enqueueSave(nextData, true);
+    saveOwned(nextData, saveOptions = {}) {
+      return enqueueSave(nextData, true, saveOptions);
     },
     async flush() {
       await writeQueue;
@@ -4828,31 +4913,85 @@ function isMysqlStoreRevisionConflict(error) {
   return false;
 }
 
-function durableStoreSnapshotMatches(store, snapshot) {
+function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
   if (!store || typeof store.load !== "function") {
-    return false;
+    return {matched: false, scoped: false, reloadedPersistentData: null};
   }
   try {
-    return isDeepStrictEqual(
-      materializeAuthorityRootLargeCollections(persistentDataForStore(normalizeData(store.load()))),
-      materializeAuthorityRootLargeCollections(persistentDataForStore(normalizeData(snapshot))),
-    );
+    const reloaded = normalizeData(store.load());
+    const expected = normalizeData(snapshot);
+    const reloadedPersistent = persistentDataForStore(reloaded);
+    const expectedPersistent = persistentDataForStore(expected);
+    if (isDeepStrictEqual(
+      materializeAuthorityRootLargeCollections(reloadedPersistent),
+      materializeAuthorityRootLargeCollections(expectedPersistent),
+    )) {
+      return {matched: true, scoped: false, reloadedPersistentData: null};
+    }
+    const scope = options && options.consistencyScope && typeof options.consistencyScope === "object"
+      ? options.consistencyScope
+      : null;
+    if (!rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)) {
+      return {matched: false, scoped: false, reloadedPersistentData: null};
+    }
+    return {
+      matched: true,
+      scoped: true,
+      reloadedPersistentData: cloneAuthorityRoot(reloadedPersistent),
+    };
   } catch {
+    return {matched: false, scoped: false, reloadedPersistentData: null};
+  }
+}
+
+function rowLocalProfileRecoveryMatches(reloaded, expected, scope) {
+  if (!scope || String(scope.kind || "") !== "row_local_profile_v1") {
     return false;
   }
+  const accountId = String(scope.accountId || "");
+  const playerId = String(scope.playerId || "");
+  const operationId = String(scope.operationId || "");
+  const requestHash = String(scope.requestHash || "");
+  const actionId = String(scope.actionId || "");
+  if (accountId === "" || playerId === "" || operationId === "" || requestHash === "" || actionId === "") {
+    return false;
+  }
+  const reloadedBinding = reloaded.profileBindings && reloaded.profileBindings[accountId];
+  const expectedBinding = expected.profileBindings && expected.profileBindings[accountId];
+  const reloadedProfile = reloaded.profiles && reloaded.profiles[playerId];
+  const expectedProfile = expected.profiles && expected.profiles[playerId];
+  const reloadedReceipt = reloaded.mutationReceipts && reloaded.mutationReceipts[operationId];
+  const expectedReceipt = expected.mutationReceipts && expected.mutationReceipts[operationId];
+  if (
+    !reloadedBinding
+    || !expectedBinding
+    || !reloadedProfile
+    || !expectedProfile
+    || !reloadedReceipt
+    || !expectedReceipt
+    || String(reloadedReceipt.operationId || "") !== operationId
+    || String(reloadedReceipt.requestHash || "") !== requestHash
+    || String(reloadedReceipt.actionId || "") !== actionId
+    || String(reloadedReceipt.accountId || "") !== accountId
+  ) {
+    return false;
+  }
+  return isDeepStrictEqual(reloadedBinding, expectedBinding)
+    && isDeepStrictEqual(reloadedProfile, expectedProfile)
+    && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
 }
 
 function saveStoreSnapshot(store, snapshot, options = {}) {
   if (options.owned === true && typeof store.saveAsyncOwned === "function") {
-    return store.saveAsyncOwned(snapshot);
+    return store.saveAsyncOwned(snapshot, options);
   }
   if (typeof store.saveAsync === "function") {
-    return store.saveAsync(snapshot);
+    return store.saveAsync(snapshot, options);
   }
   return new Promise((resolve, reject) => {
     setImmediate(() => {
       try {
-        store.save(snapshot);
+        store.save(snapshot, options);
         resolve();
       } catch (error) {
         reject(error);

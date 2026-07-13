@@ -36,6 +36,9 @@ function authorityState(displayName, stoneCoins, profileRevision = 2) {
       },
     },
     mutationReceipts: {},
+    // This suite validates the legacy whole-root CAS contract. Keep a
+    // non-profile durable change so a profile-only v2 plan cannot be selected.
+    marketConfig: {revisionCasFixture: displayName},
     serviceEventSeq: 0,
     serviceEvents: [],
   };
@@ -98,8 +101,14 @@ function createRetryableRevisionPool(options = {}) {
         async query(statement) {
           const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
           transaction.queries.push(sql);
-          if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+          if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
             return [[{storeRevision: shared.revision}], []];
+          }
+          if (/FROM\s+profile_bindings\s+ORDER\s+BY\s+account_id\s+FOR\s+UPDATE/i.test(sql)) {
+            return [[], []];
+          }
+          if (/FROM\s+profiles\s+ORDER\s+BY\s+player_id\s+FOR\s+UPDATE/i.test(sql)) {
+            return [[], []];
           }
           if (/UPDATE\s+auth_store_revisions\s+SET\s+revision\s*=\s*revision\s*\+\s*1/i.test(sql)) {
             shared.updateAttempts += 1;
@@ -167,11 +176,28 @@ function createSharedRevisionPool(shared, writerId, statePath) {
         async query(statement, params = []) {
           const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
           shared.queries.push({writerId, sql, params: Array.isArray(params) ? params.slice() : params});
-          if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+          if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
             shared.events.push(`${writerId}:lock:${shared.storeRevision}`);
             return [[{storeRevision: shared.storeRevision}], []];
           }
+          if (/FROM\s+profile_bindings\s+ORDER\s+BY\s+account_id\s+FOR\s+UPDATE/i.test(sql)) {
+            assert.deepEqual(params, []);
+            return [[{
+              account_id: "acc_multi_store",
+              player_id: "player_multi_store",
+              profile_revision: shared.storeRevision + 1,
+            }], []];
+          }
+          if (/FROM\s+profiles\s+ORDER\s+BY\s+player_id\s+FOR\s+UPDATE/i.test(sql)) {
+            assert.deepEqual(params, []);
+            return [[{
+              player_id: "player_multi_store",
+              account_id: "acc_multi_store",
+              profile_revision: shared.storeRevision + 1,
+            }], []];
+          }
           if (/SELECT[\s\S]+FROM\s+profile_bindings[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+            assert.deepEqual(params, ["acc_multi_store"]);
             return [[{
               account_id: "acc_multi_store",
               player_id: "player_multi_store",
@@ -179,6 +205,7 @@ function createSharedRevisionPool(shared, writerId, statePath) {
             }], []];
           }
           if (/SELECT[\s\S]+FROM\s+profiles[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+            assert.deepEqual(params, ["player_multi_store"]);
             return [[{
               player_id: "player_multi_store",
               account_id: "acc_multi_store",
@@ -342,9 +369,10 @@ process.stdin.on("end", () => {
     assert.match(retrySql, /节点B基于新根/);
     const retryProfileWrite = shared.queries.find((entry) => (
       entry.writerId === "node_b"
-      && /^UPDATE\s+profiles\b/i.test(entry.sql.trim())
+      && /^INSERT\s+INTO\s+profiles\b/i.test(entry.sql.trim())
     ));
-    assert.equal(JSON.parse(retryProfileWrite.params[3]).stoneCoins, 90);
+    assert.match(retryProfileWrite.sql, /"displayName":"节点B基于新根"/);
+    assert.match(retryProfileWrite.sql, /"stoneCoins":90/);
 
     assert.throws(
       () => storeA.save(authorityState("同步写应拒绝", 90, 3)),

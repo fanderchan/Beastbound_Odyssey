@@ -95,7 +95,7 @@ assert.ok(
 assert.ok(serviceRows.every((entry) => entry.replayP95Ms <= 30), "receipt replay p95 exceeded 30ms");
 assert.ok(mysql.p95Ms <= 50, "MySQL planner/recording transaction p95 exceeded 50ms");
 assert.ok(mysql.maxBusinessSqlRows <= 5, "MySQL touched-row transaction emitted unexpected business SQL");
-assert.ok(mysql.maxSqlRows <= 7, "MySQL revision fence emitted unexpected fixed SQL");
+assert.ok(mysql.maxSqlRows <= 9, "MySQL revision/profile snapshot guards emitted unexpected fixed SQL");
 assert.ok(
   results.every((entry) => entry.heapDeltaMiB <= 32),
   "online measurement heap delta exceeded 32MiB",
@@ -374,6 +374,7 @@ async function mysqlWorker() {
   let activeQueries = null;
   let storeRevision = 0;
   let pendingStoreRevision = null;
+  let current = null;
   const connection = {
     async beginTransaction() {
       activeQueries = [];
@@ -383,6 +384,20 @@ async function mysqlWorker() {
       activeQueries.push(statement);
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
+      }
+      if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[...Object.values(current && current.profileBindings || {}).map((binding) => ({
+          account_id: binding.accountId,
+          player_id: binding.playerId,
+          profile_revision: binding.profileRevision,
+        }))], []];
+      }
+      if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[...Object.values(current && current.profiles || {}).map((profile) => ({
+          player_id: profile.playerId,
+          account_id: profile.accountId,
+          profile_revision: profile.profileRevision,
+        }))], []];
       }
       if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
         pendingStoreRevision = storeRevision + 1;
@@ -417,7 +432,7 @@ async function mysqlWorker() {
       usePool: true,
       poolFactory: () => pool,
     });
-    let current = store.load();
+    current = store.load();
     assert.equal(Object.keys(current.profiles).length, 200);
     assert.equal(Object.keys(current.mutationReceipts).length, 20000);
     assert.equal(Object.keys(current.consumedEquipmentEnvelopes).length, 100000);
@@ -485,9 +500,13 @@ async function mysqlWorker() {
       const businessStatements = statements.filter((statement) => (
         !statement.startsWith("SELECT revision AS storeRevision")
         && !statement.startsWith("UPDATE auth_store_revisions")
+        && !statement.startsWith("SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY")
+        && !statement.startsWith("SELECT player_id, account_id, profile_revision FROM profiles ORDER BY")
       ));
       assert.equal(revisionLocks.length, 1);
       assert.equal(revisionUpdates.length, 1);
+      assert.equal(statements.filter((statement) => statement.includes("profile_bindings ORDER BY account_id FOR UPDATE")).length, 1);
+      assert.equal(statements.filter((statement) => statement.includes("profiles ORDER BY player_id FOR UPDATE")).length, 1);
       assert.ok(businessStatements.length <= 5);
       assert.equal(statements.some((statement) => statement.includes(untouchedReceipt)), false);
       assert.equal(statements.some((statement) => statement.includes(untouchedTombstone)), false);
@@ -508,6 +527,8 @@ async function mysqlWorker() {
       maxBusinessSqlRows: Math.max(...transactions.map((entry) => entry.filter((statement) => (
         !statement.startsWith("SELECT revision AS storeRevision")
         && !statement.startsWith("UPDATE auth_store_revisions")
+        && !statement.startsWith("SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY")
+        && !statement.startsWith("SELECT player_id, account_id, profile_revision FROM profiles ORDER BY")
       )).length)),
       historicalObjectKeyScans,
       ...resources,

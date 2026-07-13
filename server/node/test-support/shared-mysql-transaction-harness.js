@@ -69,7 +69,7 @@ function createSharedMysqlTransactionHarness(options = {}) {
           connectionId: connectionState.connectionId,
           writerId: connectionState.writerId,
           state: "active",
-          heldLocks: new Set(),
+          heldLocks: new Map(),
           waitingLocks: new Set(),
           writes: new Map(),
           queryCount: 0,
@@ -151,16 +151,33 @@ function createSharedMysqlTransactionHarness(options = {}) {
   async function executeOperation(transaction, operation) {
     switch (operation.type) {
       case "select_for_update": {
-        await acquirePrimaryKeyLock(transaction, operation.table, operation.key);
+        await acquirePrimaryKeyLock(transaction, operation.table, operation.key, "exclusive");
         const row = visibleRow(transaction, operation.table, operation.key);
         return [[...(row === null ? [] : [cloneValue(row)])], []];
+      }
+      case "select_for_share": {
+        await acquirePrimaryKeyLock(transaction, operation.table, operation.key, "shared");
+        const row = visibleRow(transaction, operation.table, operation.key);
+        return [[...(row === null ? [] : [cloneValue(row)])], []];
+      }
+      case "select_all_for_update": {
+        const keys = visibleTableKeys(transaction, operation.table);
+        const rows = [];
+        for (const key of keys) {
+          await acquirePrimaryKeyLock(transaction, operation.table, key, "exclusive");
+          const row = visibleRow(transaction, operation.table, key);
+          if (row !== null) {
+            rows.push(cloneValue(row));
+          }
+        }
+        return [rows, []];
       }
       case "read": {
         const row = visibleRow(transaction, operation.table, operation.key);
         return [[...(row === null ? [] : [cloneValue(row)])], []];
       }
       case "insert": {
-        await acquirePrimaryKeyLock(transaction, operation.table, operation.key);
+        await acquirePrimaryKeyLock(transaction, operation.table, operation.key, "exclusive");
         if (visibleRow(transaction, operation.table, operation.key) !== null) {
           const duplicate = harnessError(
             "ER_DUP_ENTRY",
@@ -174,7 +191,7 @@ function createSharedMysqlTransactionHarness(options = {}) {
         return [{affectedRows: 1}, []];
       }
       case "update": {
-        await acquirePrimaryKeyLock(transaction, operation.table, operation.key);
+        await acquirePrimaryKeyLock(transaction, operation.table, operation.key, "exclusive");
         const current = visibleRow(transaction, operation.table, operation.key);
         if (current === null || !matchesWhere(current, operation.where)) {
           recordEvent("write_condition_missed", {
@@ -189,7 +206,7 @@ function createSharedMysqlTransactionHarness(options = {}) {
         return [{affectedRows: 1}, []];
       }
       case "delete": {
-        await acquirePrimaryKeyLock(transaction, operation.table, operation.key);
+        await acquirePrimaryKeyLock(transaction, operation.table, operation.key, "exclusive");
         const current = visibleRow(transaction, operation.table, operation.key);
         if (current === null || !matchesWhere(current, operation.where)) {
           recordEvent("write_condition_missed", {
@@ -207,32 +224,47 @@ function createSharedMysqlTransactionHarness(options = {}) {
     }
   }
 
-  async function acquirePrimaryKeyLock(transaction, tableValue, keyValue) {
+  async function acquirePrimaryKeyLock(transaction, tableValue, keyValue, modeValue) {
     assertActive(transaction);
     const table = requiredIdentity(tableValue, "table");
     const key = requiredIdentity(keyValue, "primaryKey");
+    const mode = modeValue === "shared" ? "shared" : "exclusive";
     const encoded = encodeRowKey(table, key);
     let lock = locks.get(encoded);
     if (!lock) {
-      lock = {table, key, ownerTransactionId: null, waiters: []};
+      lock = {
+        table,
+        key,
+        exclusiveOwnerTransactionId: null,
+        sharedOwnerTransactionIds: new Set(),
+        waiters: [],
+      };
       locks.set(encoded, lock);
     }
-    if (lock.ownerTransactionId === transaction.transactionId) {
-      recordEvent("lock_reentered", {...transaction, table, key});
+    const heldMode = transaction.heldLocks.get(encoded) || "";
+    if (heldMode !== "") {
+      if (heldMode === "exclusive" || heldMode === mode) {
+        recordEvent("lock_reentered", {...transaction, table, key, lockMode: heldMode});
+        return;
+      }
+      throw harnessError(
+        "shared_mysql_lock_upgrade_unsupported",
+        `共享 MySQL harness 不支持锁升级：${table}/${key}`,
+      );
+    }
+    if (lock.waiters.length === 0 && lockModeCompatible(lock, mode)) {
+      grantLockOwner(lock, encoded, transaction, mode, "lock_acquired");
       return;
     }
-    if (lock.ownerTransactionId === null) {
-      lock.ownerTransactionId = transaction.transactionId;
-      transaction.heldLocks.add(encoded);
-      recordEvent("lock_acquired", {...transaction, table, key});
-      return;
-    }
-
-    const owner = transactions.get(lock.ownerTransactionId) || null;
+    const ownerTransactionId = lock.exclusiveOwnerTransactionId
+      || [...lock.sharedOwnerTransactionIds][0]
+      || 0;
+    const owner = transactions.get(ownerTransactionId) || null;
     const deferred = createDeferred();
     const waiter = {
       sequence: nextWaitSequence++,
       transactionId: transaction.transactionId,
+      mode,
       resolve: deferred.resolve,
       reject: deferred.reject,
     };
@@ -242,12 +274,36 @@ function createSharedMysqlTransactionHarness(options = {}) {
       ...transaction,
       table,
       key,
-      ownerTransactionId: lock.ownerTransactionId,
+      ownerTransactionId,
       ownerWriterId: owner ? owner.writerId : "",
       waitSequence: waiter.sequence,
+      lockMode: mode,
     });
     await deferred.promise;
     assertActive(transaction);
+  }
+
+  function lockModeCompatible(lock, mode) {
+    if (mode === "shared") {
+      return lock.exclusiveOwnerTransactionId === null;
+    }
+    return lock.exclusiveOwnerTransactionId === null && lock.sharedOwnerTransactionIds.size === 0;
+  }
+
+  function grantLockOwner(lock, encoded, transaction, mode, eventType, waitSequence = 0) {
+    if (mode === "shared") {
+      lock.sharedOwnerTransactionIds.add(transaction.transactionId);
+    } else {
+      lock.exclusiveOwnerTransactionId = transaction.transactionId;
+    }
+    transaction.heldLocks.set(encoded, mode);
+    recordEvent(eventType, {
+      ...transaction,
+      table: lock.table,
+      key: lock.key,
+      waitSequence,
+      lockMode: mode,
+    });
   }
 
   async function commitTransaction(transaction) {
@@ -312,44 +368,71 @@ function createSharedMysqlTransactionHarness(options = {}) {
   }
 
   function releaseAllLocks(transaction) {
-    const encodedKeys = [...transaction.heldLocks].sort();
+    const encodedKeys = [...transaction.heldLocks.keys()].sort();
+    const heldModes = new Map(transaction.heldLocks);
     transaction.heldLocks.clear();
     for (const encoded of encodedKeys) {
       const lock = locks.get(encoded);
-      if (!lock || lock.ownerTransactionId !== transaction.transactionId) {
+      const mode = heldModes.get(encoded) || "";
+      if (!lock) {
         continue;
       }
-      lock.ownerTransactionId = null;
+      if (mode === "shared") {
+        lock.sharedOwnerTransactionIds.delete(transaction.transactionId);
+      } else if (mode === "exclusive" && lock.exclusiveOwnerTransactionId === transaction.transactionId) {
+        lock.exclusiveOwnerTransactionId = null;
+      } else {
+        continue;
+      }
       recordEvent("lock_released", {
         ...transaction,
         table: lock.table,
         key: lock.key,
+        lockMode: mode,
       });
       grantNextWaiter(lock, encoded);
     }
   }
 
   function grantNextWaiter(lock, encoded) {
+    if (lock.waiters.length === 0) {
+      if (lock.exclusiveOwnerTransactionId === null && lock.sharedOwnerTransactionIds.size === 0) {
+        locks.delete(encoded);
+      }
+      return;
+    }
+    if (lock.exclusiveOwnerTransactionId !== null) {
+      return;
+    }
+    if (lock.sharedOwnerTransactionIds.size > 0 && lock.waiters[0].mode !== "shared") {
+      return;
+    }
     while (lock.waiters.length > 0) {
-      const waiter = lock.waiters.shift();
+      const waiter = lock.waiters[0];
+      if (!lockModeCompatible(lock, waiter.mode)) {
+        return;
+      }
+      lock.waiters.shift();
       const next = transactions.get(waiter.transactionId) || null;
       if (next === null || next.state !== "active") {
         waiter.reject(harnessError("shared_mysql_waiter_cancelled", "等待锁的测试事务已取消。"));
         continue;
       }
-      lock.ownerTransactionId = next.transactionId;
       next.waitingLocks.delete(encoded);
-      next.heldLocks.add(encoded);
-      recordEvent("lock_granted", {
-        ...next,
-        table: lock.table,
-        key: lock.key,
-        waitSequence: waiter.sequence,
-      });
+      grantLockOwner(lock, encoded, next, waiter.mode, "lock_granted", waiter.sequence);
       waiter.resolve();
-      return;
+      if (waiter.mode === "exclusive") {
+        return;
+      }
+      if (lock.waiters.length === 0 || lock.waiters[0].mode !== "shared") {
+        return;
+      }
     }
-    locks.delete(encoded);
+    if (lock.exclusiveOwnerTransactionId === null
+      && lock.sharedOwnerTransactionIds.size === 0
+      && lock.waiters.length === 0) {
+      locks.delete(encoded);
+    }
   }
 
   function cancelWaitingLocks(transaction) {
@@ -367,8 +450,12 @@ function createSharedMysqlTransactionHarness(options = {}) {
         }
       }
       lock.waiters = retained;
-      if (lock.ownerTransactionId === null && lock.waiters.length === 0) {
-        locks.delete(encoded);
+      if (lock.exclusiveOwnerTransactionId === null && lock.sharedOwnerTransactionIds.size === 0) {
+        if (lock.waiters.length === 0) {
+          locks.delete(encoded);
+        } else {
+          grantNextWaiter(lock, encoded);
+        }
       }
     }
     transaction.waitingLocks.clear();
@@ -386,6 +473,21 @@ function createSharedMysqlTransactionHarness(options = {}) {
     return committedTable && committedTable.has(key)
       ? cloneValue(committedTable.get(key))
       : null;
+  }
+
+  function visibleTableKeys(transaction, tableValue) {
+    const table = requiredIdentity(tableValue, "table");
+    const keys = new Set();
+    const committedTable = committedTables.get(table);
+    for (const key of committedTable ? committedTable.keys() : []) {
+      keys.add(key);
+    }
+    for (const write of transaction.writes.values()) {
+      if (write.table === table) {
+        keys.add(write.key);
+      }
+    }
+    return [...keys].filter((key) => visibleRow(transaction, table, key) !== null).sort();
   }
 
   function stageSet(transaction, tableValue, keyValue, rowValue, source) {
@@ -442,6 +544,7 @@ function createSharedMysqlTransactionHarness(options = {}) {
       ownerTransactionId: Number(source.ownerTransactionId || 0),
       ownerWriterId: String(source.ownerWriterId || ""),
       waitSequence: Number(source.waitSequence || 0),
+      lockMode: String(source.lockMode || ""),
       operationType: String(source.operationType || ""),
       source: String(source.source || ""),
       writeCount: Number(source.writeCount || 0),
@@ -583,7 +686,9 @@ function createSharedMysqlTransactionHarness(options = {}) {
       }
     }
     for (const lock of locks.values()) {
-      if (lock.ownerTransactionId !== null || lock.waiters.length > 0) {
+      if (lock.exclusiveOwnerTransactionId !== null
+        || lock.sharedOwnerTransactionIds.size > 0
+        || lock.waiters.length > 0) {
         problems.push(`lock ${lock.table}/${lock.key} is not idle`);
       }
     }
@@ -619,6 +724,12 @@ function createSharedMysqlTransactionHarness(options = {}) {
 const sharedMysqlOperation = Object.freeze({
   selectForUpdate(table, key) {
     return harnessOperation("select_for_update", {table, key});
+  },
+  selectForShare(table, key) {
+    return harnessOperation("select_for_share", {table, key});
+  },
+  selectAllForUpdate(table) {
+    return harnessOperation("select_all_for_update", {table});
   },
   read(table, key) {
     return harnessOperation("read", {table, key});

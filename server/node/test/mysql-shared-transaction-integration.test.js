@@ -11,65 +11,70 @@ const {stageDurableMutationReceipt} = require("../src/auth/durable-mutation-stat
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
   createSharedMysqlTransactionHarness,
-  sharedMysqlOperation,
 } = require("../test-support/shared-mysql-transaction-harness");
 
-const ACCOUNT_ID = "acc_shared_mysql";
-const PLAYER_ID = "player_shared_mysql";
+const ACTORS = Object.freeze({
+  a: Object.freeze({accountId: "acc_shared_mysql_a", playerId: "player_shared_mysql_a", name: "并行猎人甲"}),
+  b: Object.freeze({accountId: "acc_shared_mysql_b", playerId: "player_shared_mysql_b", name: "并行猎人乙"}),
+});
 const UPDATED_AT_1 = "2026-07-14T02:00:00.000Z";
 const UPDATED_AT_2 = "2026-07-14T02:01:00.000Z";
 const UPDATED_AT_3 = "2026-07-14T02:02:00.000Z";
+const UPDATED_AT_4 = "2026-07-14T02:03:00.000Z";
 
 function baselineAuthority() {
-  return {
+  const authority = {
     schemaVersion: 1,
     accounts: {},
     sessions: {},
-    profileBindings: {
-      [ACCOUNT_ID]: {
-        accountId: ACCOUNT_ID,
-        playerId: PLAYER_ID,
-        profileRevision: 1,
-        updatedAt: UPDATED_AT_1,
-      },
-    },
-    profiles: {
-      [PLAYER_ID]: {
-        playerId: PLAYER_ID,
-        accountId: ACCOUNT_ID,
-        profileRevision: 1,
-        updatedAt: UPDATED_AT_1,
-        profile: {
-          displayName: "共享事务猎人",
-          stoneCoins: 100,
-        },
-      },
-    },
+    profileBindings: {},
+    profiles: {},
     mutationReceipts: {},
     mailMessages: {},
     marketListings: {},
     consumedEquipmentEnvelopes: {},
+    marketConfig: {taxRate: 0.05},
     serviceEventSeq: 0,
     serviceEvents: [],
   };
+  for (const actor of Object.values(ACTORS)) {
+    authority.profileBindings[actor.accountId] = {
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      profileRevision: 1,
+      updatedAt: UPDATED_AT_1,
+    };
+    authority.profiles[actor.playerId] = {
+      playerId: actor.playerId,
+      accountId: actor.accountId,
+      profileRevision: 1,
+      updatedAt: UPDATED_AT_1,
+      profile: {
+        displayName: actor.name,
+        stoneCoins: actor === ACTORS.a ? 100 : 200,
+      },
+    };
+  }
+  return authority;
 }
 
-function nextProfileAuthority(before, options = {}) {
+function nextProfileAuthority(before, actorKey, options = {}) {
+  const actor = ACTORS[actorKey];
   const after = cloneAuthorityRoot(before);
-  const nextRevision = Number(before.profileBindings[ACCOUNT_ID].profileRevision) + 1;
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
   const updatedAt = String(options.updatedAt || UPDATED_AT_2);
-  after.profileBindings[ACCOUNT_ID] = {
-    ...before.profileBindings[ACCOUNT_ID],
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
     profileRevision: nextRevision,
     updatedAt,
   };
-  after.profiles[PLAYER_ID] = {
-    ...before.profiles[PLAYER_ID],
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
     profileRevision: nextRevision,
     updatedAt,
     profile: {
-      ...before.profiles[PLAYER_ID].profile,
-      stoneCoins: Number(options.stoneCoins ?? 90),
+      ...before.profiles[actor.playerId].profile,
+      stoneCoins: Number(options.stoneCoins),
     },
   };
   if (options.operationId) {
@@ -79,11 +84,11 @@ function nextProfileAuthority(before, options = {}) {
       {
         schemaVersion: 1,
         operationId,
-        requestHash: String(options.requestHash || "a".repeat(64)),
-        actionId: "profile_action",
-        accountId: ACCOUNT_ID,
+        requestHash: String(options.requestHash),
+        actionId: "record_point_save",
+        accountId: actor.accountId,
         committedAt: updatedAt,
-        expiresAt: "2026-07-17T02:01:00.000Z",
+        expiresAt: "2026-07-17T02:10:00.000Z",
         response: {ok: true, operationId},
       },
       {nowMs: Date.parse(updatedAt)},
@@ -92,30 +97,64 @@ function nextProfileAuthority(before, options = {}) {
   return after;
 }
 
+function profileSaveOptions(actorKey, operationId, requestHash) {
+  const actor = ACTORS[actorKey];
+  return {
+    consistencyScope: {
+      kind: "row_local_profile_v1",
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      operationId,
+      requestHash,
+      actionId: "record_point_save",
+    },
+  };
+}
+
+function stagedProfileSave(store, before, actorKey, options) {
+  const after = nextProfileAuthority(before, actorKey, options);
+  const saveOptions = profileSaveOptions(actorKey, options.operationId, options.requestHash);
+  return {after, promise: store.saveAsync(after, saveOptions)};
+}
+
+function legacyMarketAuthority(before) {
+  const after = cloneAuthorityRoot(before);
+  after.marketConfig = {...before.marketConfig, taxRate: 0.07};
+  return after;
+}
+
 function sqlSeed(options = {}) {
   const authority = baselineAuthority();
+  const profileBindings = {};
+  const profiles = {};
+  for (const actor of Object.values(ACTORS)) {
+    profileBindings[actor.accountId] = {
+      account_id: actor.accountId,
+      player_id: actor.playerId,
+      profile_revision: 1,
+      updated_at: UPDATED_AT_1,
+      document_json: authority.profileBindings[actor.accountId],
+    };
+    profiles[actor.playerId] = {
+      player_id: actor.playerId,
+      account_id: actor.accountId,
+      profile_revision: 1,
+      updated_at: UPDATED_AT_1,
+      profile_json: authority.profiles[actor.playerId].profile,
+    };
+  }
   return {
     auth_store_revisions: {
       auth: {scope_key: "auth", revision: 0},
     },
-    profile_bindings: {
-      [ACCOUNT_ID]: {
-        account_id: ACCOUNT_ID,
-        player_id: PLAYER_ID,
-        profile_revision: 1,
-        updated_at: UPDATED_AT_1,
-        document_json: authority.profileBindings[ACCOUNT_ID],
+    server_state: {
+      auth: {
+        scope_key: "auth",
+        document_json: {schemaVersion: 2, storage: "mysql_entity_tables", marketConfig: authority.marketConfig},
       },
     },
-    profiles: {
-      [PLAYER_ID]: {
-        player_id: PLAYER_ID,
-        account_id: ACCOUNT_ID,
-        profile_revision: 1,
-        updated_at: UPDATED_AT_1,
-        profile_json: authority.profiles[PLAYER_ID].profile,
-      },
-    },
+    profile_bindings: profileBindings,
+    profiles,
     mutation_receipts: options.mutationReceipts || {},
   };
 }
@@ -148,6 +187,10 @@ function createProductionSqlHandler(queryLog) {
     const normalized = normalizeSql(sql);
     queryLog.push({writerId, sql: normalized, params: Array.isArray(params) ? params.slice() : params});
 
+    if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR SHARE$/i.test(normalized)) {
+      requiredParams(params, 0, sql);
+      return operation.selectForShare("auth_store_revisions", "auth");
+    }
     if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.selectForUpdate("auth_store_revisions", "auth");
@@ -165,11 +208,18 @@ function createProductionSqlHandler(queryLog) {
       });
     }
 
+    if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(normalized)) {
+      requiredParams(params, 0, sql);
+      return operation.selectAllForUpdate("profile_bindings");
+    }
+    if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(normalized)) {
+      requiredParams(params, 0, sql);
+      return operation.selectAllForUpdate("profiles");
+    }
     if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = \? FOR UPDATE$/i.test(normalized)) {
       const [accountId] = requiredParams(params, 1, sql);
       return operation.selectForUpdate("profile_bindings", String(accountId));
     }
-
     if (/^SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = \? FOR UPDATE$/i.test(normalized)) {
       const [playerId] = requiredParams(params, 1, sql);
       return operation.selectForUpdate("profiles", String(playerId));
@@ -225,13 +275,24 @@ function createProductionSqlHandler(queryLog) {
       });
     }
 
+    if (/^INSERT INTO server_state \(state_key, document_json\) VALUES \('auth', CAST\(.+ AS JSON\)\) ON DUPLICATE KEY UPDATE document_json = VALUES\(document_json\)$/i.test(normalized)) {
+      requiredParams(params, 0, sql);
+      return operation.update("server_state", "auth", {
+        where: {scope_key: "auth"},
+        set: {document_json: {schemaVersion: 2, storage: "mysql_entity_tables", marketConfig: {taxRate: 0.07}}},
+      });
+    }
+
     return null;
   };
 }
 
 function loaderRowsFromSqlSnapshot(snapshot) {
+  const serverState = snapshot.server_state && snapshot.server_state.auth
+    ? snapshot.server_state.auth.document_json
+    : {schemaVersion: 2, storage: "mysql_entity_tables"};
   const rows = [
-    ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+    ["server_state", "auth", JSON.stringify(serverState)],
     ["store_revision", "auth", String(snapshot.auth_store_revisions.auth.revision)],
   ];
   for (const [accountId, binding] of Object.entries(snapshot.profile_bindings || {})) {
@@ -252,7 +313,7 @@ function loaderRowsFromSqlSnapshot(snapshot) {
   return rows;
 }
 
-function createSharedLoader(tempDir) {
+function createSharedLoader(tempDir, initialSeed = sqlSeed()) {
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const statePath = path.join(tempDir, "loader-state.json");
   function writeSnapshot(snapshot) {
@@ -260,7 +321,7 @@ function createSharedLoader(tempDir) {
     fs.writeFileSync(temporaryPath, JSON.stringify(loaderRowsFromSqlSnapshot(snapshot)));
     fs.renameSync(temporaryPath, statePath);
   }
-  writeSnapshot(sqlSeed());
+  writeSnapshot(initialSeed);
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
 const fs = require("node:fs");
 let stdin = "";
@@ -295,12 +356,16 @@ function createProductionStore(fakeMysqlPath, pool) {
   });
 }
 
-function isGlobalRevisionConflict(error) {
+function isResourceConflict(error) {
+  return Boolean(error && error.code === "mysql_resource_revision_conflict");
+}
+
+function isGlobalConflict(error) {
   return Boolean(error && error.code === "mysql_store_revision_conflict");
 }
 
-test("two production stores overlap: the global fence commits A and rejects stale B before business SQL", async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-store-"));
+test("different profiles truly overlap, retain both winners, and keep Node-local baselines row-local", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-different-"));
   const queryLog = [];
   const loader = createSharedLoader(tempDir);
   const harness = createSharedMysqlTransactionHarness({
@@ -313,85 +378,90 @@ test("two production stores overlap: the global fence commits A and rejects stal
   const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("node_a"));
   const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("node_b"));
   const gateA = harness.blockNext({writerId: "node_a", phase: "before_commit_apply"});
-  let settledPromise = null;
+  void gateA.entered.catch(() => {});
+  let saveA = null;
 
   try {
     const loadedA = storeA.load();
     const loadedB = storeB.load();
-    assert.deepEqual(loadedA.profileBindings, loadedB.profileBindings, "both stores must load one baseline");
-    assert.deepEqual(loadedA.profiles, loadedB.profiles, "both stores must load one baseline");
-
-    const saveA = storeA.saveAsync(nextProfileAuthority(loadedA, {
+    const stagedA = stagedProfileSave(storeA, loadedA, "a", {
       stoneCoins: 90,
-      operationId: "op_shared_node_a",
+      operationId: "op_parallel_a_1_x",
       requestHash: "a".repeat(64),
-    }));
+      updatedAt: UPDATED_AT_2,
+    });
+    saveA = stagedA.promise;
     await gateA.entered;
 
-    const saveB = storeB.saveAsync(nextProfileAuthority(loadedB, {
-      stoneCoins: 80,
-      operationId: "op_shared_node_b",
+    const stagedB = stagedProfileSave(storeB, loadedB, "b", {
+      stoneCoins: 190,
+      operationId: "op_parallel_b_1_x",
       requestHash: "b".repeat(64),
-    }));
-    settledPromise = Promise.allSettled([saveA, saveB]);
-    await harness.waitForEvent({
-      type: "lock_wait",
-      writerId: "node_b",
-      table: "auth_store_revisions",
-      key: "auth",
+      updatedAt: UPDATED_AT_2,
     });
+    await harness.waitForEvent({type: "commit_completed", writerId: "node_b"});
+    await stagedB.promise;
 
-    const bWhileWaiting = queryLog.filter((entry) => entry.writerId === "node_b");
-    assert.equal(bWhileWaiting.length, 1);
-    assert.match(bWhileWaiting[0].sql, /^SELECT revision AS storeRevision FROM auth_store_revisions/i);
+    const whileABlocked = harness.snapshot();
+    assert.equal(whileABlocked.profiles[ACTORS.a.playerId].profile_revision, 1);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
     assert.equal(
-      harness.events().some((event) => event.type === "write_staged" && event.writerId === "node_b"),
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "node_b"
+        && event.table === "auth_store_revisions"
+      )),
       false,
-      "the stale store must not stage any profile or receipt write while waiting on the global fence",
+      "different profile writers must share the compatibility barrier",
     );
 
     gateA.release();
-    const [resultA, resultB] = await settledPromise;
-    assert.equal(resultA.status, "fulfilled");
-    assert.equal(resultB.status, "rejected");
-    assert.equal(isGlobalRevisionConflict(resultB.reason), true);
+    await saveA;
+    saveA = null;
 
     const committed = harness.snapshot();
-    assert.equal(committed.auth_store_revisions.auth.revision, 1);
-    assert.equal(committed.profile_bindings[ACCOUNT_ID].profile_revision, 2);
-    assert.equal(committed.profiles[PLAYER_ID].profile_revision, 2);
-    assert.equal(committed.profiles[PLAYER_ID].profile_json.stoneCoins, 90);
-    assert.equal(committed.mutation_receipts.op_shared_node_a.document_json.operationId, "op_shared_node_a");
-    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_shared_node_b"), false);
-    assert.equal(queryLog.filter((entry) => entry.writerId === "node_b").length, 1);
-    assert.equal(
-      harness.events().some((event) => event.type === "rollback_applied" && event.writerId === "node_b"),
-      true,
-    );
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 90);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_json.stoneCoins, 190);
+    assert.equal(committed.mutation_receipts.op_parallel_a_1_x.document_json.operationId, "op_parallel_a_1_x");
+    assert.equal(committed.mutation_receipts.op_parallel_b_1_x.document_json.operationId, "op_parallel_b_1_x");
 
-    const reloadedB = storeB.load();
-    assert.equal(reloadedB.profileBindings[ACCOUNT_ID].profileRevision, 2);
-    assert.equal(reloadedB.profiles[PLAYER_ID].profileRevision, 2);
-    assert.equal(reloadedB.profiles[PLAYER_ID].profile.stoneCoins, 90);
-    assert.equal(reloadedB.mutationReceipts.op_shared_node_a.operationId, "op_shared_node_a");
-
-    await storeB.saveAsync(nextProfileAuthority(reloadedB, {
+    const stagedA2 = stagedProfileSave(storeA, stagedA.after, "a", {
       stoneCoins: 80,
-      operationId: "op_shared_node_b",
-      requestHash: "b".repeat(64),
+      operationId: "op_parallel_a_2_x",
+      requestHash: "c".repeat(64),
       updatedAt: UPDATED_AT_3,
-    }));
+    });
+    await stagedA2.promise;
+    assert.equal(harness.snapshot().profiles[ACTORS.a.playerId].profile_revision, 3);
+
+    const staleB = stagedProfileSave(storeA, stagedA2.after, "b", {
+      stoneCoins: 180,
+      operationId: "op_parallel_b_stale",
+      requestHash: "d".repeat(64),
+      updatedAt: UPDATED_AT_4,
+    });
+    await assert.rejects(staleB.promise, isResourceConflict);
+    assert.equal(harness.snapshot().profiles[ACTORS.b.playerId].profile_json.stoneCoins, 190);
+
+    const reloadedA = storeA.load();
+    const retriedB = stagedProfileSave(storeA, reloadedA, "b", {
+      stoneCoins: 180,
+      operationId: "op_parallel_b_retry",
+      requestHash: "e".repeat(64),
+      updatedAt: UPDATED_AT_4,
+    });
+    await retriedB.promise;
     const retried = harness.snapshot();
-    assert.equal(retried.auth_store_revisions.auth.revision, 2);
-    assert.equal(retried.profile_bindings[ACCOUNT_ID].profile_revision, 3);
-    assert.equal(retried.profiles[PLAYER_ID].profile_revision, 3);
-    assert.equal(retried.profiles[PLAYER_ID].profile_json.stoneCoins, 80);
-    assert.equal(retried.mutation_receipts.op_shared_node_a.document_json.operationId, "op_shared_node_a");
-    assert.equal(retried.mutation_receipts.op_shared_node_b.document_json.operationId, "op_shared_node_b");
+    assert.equal(retried.profiles[ACTORS.a.playerId].profile_revision, 3);
+    assert.equal(retried.profiles[ACTORS.b.playerId].profile_revision, 3);
+    assert.equal(retried.profiles[ACTORS.b.playerId].profile_json.stoneCoins, 180);
   } finally {
     gateA.release();
-    if (settledPromise !== null) {
-      await settledPromise;
+    if (saveA !== null) {
+      await Promise.allSettled([saveA]);
     }
     await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
@@ -400,53 +470,193 @@ test("two production stores overlap: the global fence commits A and rejects stal
   assert.equal(harness.assertIdle(), true);
 });
 
-test("one production store persists the conditional profile update through the shared harness", async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-store-single-"));
+test("same profile waits on its binding lock and exactly one conditional writer wins", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-same-"));
   const queryLog = [];
+  const loader = createSharedLoader(tempDir);
   const harness = createSharedMysqlTransactionHarness({
     seed: sqlSeed(),
     statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
   });
-  const loader = createSharedLoader(tempDir);
-  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("single_node"));
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("same_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("same_b"));
+  const gateA = harness.blockNext({writerId: "same_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
 
   try {
-    const loaded = store.load();
-    await store.saveAsync(nextProfileAuthority(loaded, {stoneCoins: 91}));
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedProfileSave(storeA, loadedA, "a", {
+      stoneCoins: 91,
+      operationId: "op_same_a_writer_x",
+      requestHash: "1".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const second = stagedProfileSave(storeB, loadedB, "a", {
+      stoneCoins: 92,
+      operationId: "op_same_b_writer_x",
+      requestHash: "2".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "same_b",
+      table: "profile_bindings",
+      key: ACTORS.a.accountId,
+    });
+    gateA.release();
 
+    const [firstResult, secondResult] = await settled;
+    assert.equal(firstResult.status, "fulfilled");
+    assert.equal(secondResult.status, "rejected");
+    assert.equal(isResourceConflict(secondResult.reason), true);
     const committed = harness.snapshot();
-    assert.equal(committed.auth_store_revisions.auth.revision, 1);
-    assert.equal(committed.profile_bindings[ACCOUNT_ID].profile_revision, 2);
-    assert.equal(committed.profiles[PLAYER_ID].profile_revision, 2);
-    assert.equal(committed.profiles[PLAYER_ID].profile_json.stoneCoins, 91);
-    assert.deepEqual(committed.mutation_receipts, {});
-    assert.equal(
-      queryLog.some((entry) => /^UPDATE profile_bindings\b/i.test(entry.sql)),
-      true,
-    );
-    assert.equal(
-      queryLog.some((entry) => /^UPDATE profiles\b/i.test(entry.sql)),
-      true,
-    );
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 91);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_same_a_writer_x"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_same_b_writer_x"), false);
   } finally {
-    await store.close();
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
 
   assert.equal(harness.assertIdle(), true);
 });
 
-test("duplicate receipt rolls staged binding and profile writes back in the shared committed snapshot", async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-store-rollback-"));
+test("legacy fallback validates the full profile read-set even when it writes only another profile", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-legacy-readset-"));
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir);
+  const harness = createSharedMysqlTransactionHarness({
+    seed: sqlSeed(),
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const profileStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("profile_b"));
+  const legacyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("legacy_a"));
+
+  try {
+    const loadedProfile = profileStore.load();
+    const staleLegacy = legacyStore.load();
+    const profileWrite = stagedProfileSave(profileStore, loadedProfile, "b", {
+      stoneCoins: 175,
+      operationId: "op_readset_b_writer",
+      requestHash: "3".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await profileWrite.promise;
+
+    const legacyCandidate = nextProfileAuthority(staleLegacy, "a", {
+      stoneCoins: 75,
+      operationId: "op_legacy_a_writer",
+      requestHash: "4".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await assert.rejects(legacyStore.saveAsync(legacyCandidate), isResourceConflict);
+
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 1);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    const legacyQueries = queryLog.filter((entry) => entry.writerId === "legacy_a");
+    assert.match(legacyQueries[0].sql, /FOR UPDATE$/i);
+    assert.match(legacyQueries[1].sql, /profile_bindings ORDER BY account_id FOR UPDATE$/i);
+    assert.equal(
+      legacyQueries.some((entry) => /^INSERT INTO profile_bindings\b/i.test(entry.sql)),
+      false,
+      "all guards must pass before any legacy business SQL executes",
+    );
+  } finally {
+    await Promise.allSettled([profileStore.close(), legacyStore.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("legacy exclusive commit makes a waiting profile writer fail at the global barrier before row locks", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-legacy-first-"));
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir);
+  const harness = createSharedMysqlTransactionHarness({
+    seed: sqlSeed(),
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const legacyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("legacy_first"));
+  const profileStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("profile_waiter"));
+  const legacyGate = harness.blockNext({writerId: "legacy_first", phase: "before_commit_apply"});
+  void legacyGate.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const legacyLoaded = legacyStore.load();
+    const profileLoaded = profileStore.load();
+    const legacySave = legacyStore.saveAsync(legacyMarketAuthority(legacyLoaded));
+    await legacyGate.entered;
+    const profileWrite = stagedProfileSave(profileStore, profileLoaded, "a", {
+      stoneCoins: 70,
+      operationId: "op_waits_for_legacy",
+      requestHash: "5".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([legacySave, profileWrite.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "profile_waiter",
+      table: "auth_store_revisions",
+      key: "auth",
+    });
+    legacyGate.release();
+
+    const [legacyResult, profileResult] = await settled;
+    assert.equal(legacyResult.status, "fulfilled");
+    assert.equal(profileResult.status, "rejected");
+    assert.equal(isGlobalConflict(profileResult.reason), true);
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 1);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 1);
+    const profileQueries = queryLog.filter((entry) => entry.writerId === "profile_waiter");
+    assert.equal(profileQueries.length, 1);
+    assert.match(profileQueries[0].sql, /FOR SHARE$/i);
+  } finally {
+    legacyGate.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([legacyStore.close(), profileStore.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("duplicate receipt rolls conditional binding and profile writes back without advancing global revision", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-duplicate-"));
   const operationId = "op_shared_duplicate";
   const duplicateReceipt = {
     schemaVersion: 1,
     operationId,
-    requestHash: "d".repeat(64),
-    actionId: "profile_action",
-    accountId: ACCOUNT_ID,
+    requestHash: "6".repeat(64),
+    actionId: "record_point_save",
+    accountId: ACTORS.a.accountId,
     committedAt: UPDATED_AT_1,
-    expiresAt: "2026-07-17T02:00:00.000Z",
+    expiresAt: "2026-07-17T02:10:00.000Z",
     response: {ok: true, operationId},
   };
   const seed = sqlSeed({
@@ -463,31 +673,29 @@ test("duplicate receipt rolls staged binding and profile writes back in the shar
     },
   });
   const queryLog = [];
+  const loader = createSharedLoader(tempDir);
   const harness = createSharedMysqlTransactionHarness({
     seed,
     statementHandler: createProductionSqlHandler(queryLog),
   });
-  const loader = createSharedLoader(tempDir);
-  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("rollback_node"));
+  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("duplicate_node"));
 
   try {
     const loaded = store.load();
-    await assert.rejects(
-      store.saveAsync(nextProfileAuthority(loaded, {
-        stoneCoins: 75,
-        operationId,
-        requestHash: "e".repeat(64),
-      })),
-      (error) => error && error.code === "mysql_resource_revision_conflict",
-    );
+    const staged = stagedProfileSave(store, loaded, "a", {
+      stoneCoins: 65,
+      operationId,
+      requestHash: "7".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await assert.rejects(staged.promise, isResourceConflict);
     assert.deepEqual(harness.snapshot(), seed);
     assert.equal(
-      harness.events().filter((event) => event.type === "write_staged" && event.writerId === "rollback_node").length,
+      harness.events().filter((event) => event.type === "write_staged" && event.writerId === "duplicate_node").length,
       2,
-      "binding and profile writes must be staged before the duplicate receipt fails",
     );
     assert.equal(
-      harness.events().some((event) => event.type === "rollback_applied" && event.writerId === "rollback_node"),
+      harness.events().some((event) => event.type === "rollback_applied" && event.writerId === "duplicate_node"),
       true,
     );
   } finally {

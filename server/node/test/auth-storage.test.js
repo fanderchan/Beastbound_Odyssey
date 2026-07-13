@@ -43,6 +43,9 @@ const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
+const {
+  stageDurableMutationReceipt,
+} = require("../src/auth/durable-mutation-state");
 
 function mysqlLoadTemporaryDirectoryNames() {
   try {
@@ -57,6 +60,8 @@ function mysqlLoadTemporaryDirectoryNames() {
 function createMysqlCasPoolFixture(options = {}) {
   const state = {
     revision: Number.isSafeInteger(options.revision) ? options.revision : 0,
+    profileBindingRows: structuredClone(options.profileBindingRows || []),
+    profileRows: structuredClone(options.profileRows || []),
     acquireCount: 0,
     endCalls: 0,
     events: [],
@@ -84,7 +89,7 @@ function createMysqlCasPoolFixture(options = {}) {
           transaction.begun = true;
           state.events.push("begin");
         },
-        async query(statement) {
+        async query(statement, params = []) {
           const sql = typeof statement === "string"
             ? statement
             : String(statement && statement.sql || "");
@@ -92,15 +97,32 @@ function createMysqlCasPoolFixture(options = {}) {
           state.queriedStatements.push(sql);
           state.events.push("query");
           if (typeof options.onQuery === "function") {
-            const result = await options.onQuery({sql, state, transaction});
+            const result = await options.onQuery({sql, params, state, transaction});
             if (result !== undefined) {
               return result;
             }
           }
-          if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(sql.trim())) {
+          const normalizedSql = sql.trim();
+          if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR (?:UPDATE|SHARE)$/i.test(normalizedSql)) {
             return [[{storeRevision: state.revision}], []];
           }
-          const revisionUpdateMatch = sql.trim().match(
+          if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(normalizedSql)) {
+            return [structuredClone(state.profileBindingRows), []];
+          }
+          if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(normalizedSql)) {
+            return [structuredClone(state.profileRows), []];
+          }
+          if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = \? FOR UPDATE$/i.test(normalizedSql)) {
+            return [structuredClone(state.profileBindingRows.filter((row) => (
+              String(row.account_id || "") === String(params[0] || "")
+            ))), []];
+          }
+          if (/^SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = \? FOR UPDATE$/i.test(normalizedSql)) {
+            return [structuredClone(state.profileRows.filter((row) => (
+              String(row.player_id || "") === String(params[0] || "")
+            ))), []];
+          }
+          const revisionUpdateMatch = normalizedSql.match(
             /^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = (\d+)$/i,
           );
           if (revisionUpdateMatch) {
@@ -111,7 +133,12 @@ function createMysqlCasPoolFixture(options = {}) {
             pendingRevision = state.revision + 1;
             return [{affectedRows: 1}, []];
           }
-          return [{affectedRows: 1}, []];
+          if (/^(?:INSERT INTO|UPDATE|DELETE FROM) (?:server_state|accounts|profile_bindings|profiles|mail_messages|chat_messages|battle_records|mutation_receipts)\b/i.test(normalizedSql)) {
+            return [{affectedRows: 1}, []];
+          }
+          const error = new Error(`createMysqlCasPoolFixture 未建模 SQL：${normalizedSql}`);
+          error.code = "mysql_cas_fixture_unknown_sql";
+          throw error;
         },
         async commit() {
           if (typeof options.onCommit === "function") {
@@ -2068,7 +2095,16 @@ process.stdin.on("end", () => {
     assert.equal(events.filter((event) => event === "rollback").length, 1);
     assert.equal(events.filter((event) => event === "release").length, 4);
     assert.ok(queriedStatements.some((statement) => statement.includes("INSERT INTO accounts")));
-    assert.equal(queriedStatements.filter((statement) => statement.includes("FOR UPDATE")).length, 4);
+    assert.equal(queriedStatements.filter((statement) => (
+      /auth_store_revisions[\s\S]+FOR UPDATE$/i.test(statement.trim())
+    )).length, 4);
+    assert.equal(queriedStatements.filter((statement) => (
+      /FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(statement.trim())
+    )).length, 3);
+    assert.equal(queriedStatements.filter((statement) => (
+      /FROM profiles ORDER BY player_id FOR UPDATE$/i.test(statement.trim())
+    )).length, 3);
+    assert.equal(queriedStatements.filter((statement) => /FOR SHARE$/i.test(statement.trim())).length, 0);
     assert.equal(queriedStatements.filter((statement) => statement.startsWith("UPDATE auth_store_revisions")).length, 3);
     assert.equal(casFixture.state.revision, 3);
     assert.equal(queriedStatements.some((statement) => statement === "START TRANSACTION"), false);
@@ -2079,6 +2115,144 @@ process.stdin.on("end", () => {
     } else {
       process.env.FAKE_MYSQL_LOG = previousLogPath;
     }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("scoped profile saves take a shared global barrier without advancing the global revision", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-scoped-barrier-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  } else if (stdin.includes("information_schema.tables")) {
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
+  }
+});
+`, {mode: 0o755});
+  const accountId = "acc_scoped_barrier";
+  const playerId = "player_scoped_barrier";
+  const initialUpdatedAt = "2026-07-14T03:00:00.000Z";
+  const nextUpdatedAt = "2026-07-14T03:01:00.000Z";
+  const operationId = "operation_scoped_barrier_0001";
+  const requestHash = "e".repeat(64);
+  const actionId = "POST /profile/action";
+  const initial = {
+    schemaVersion: 1,
+    accounts: {
+      scopedbarrier: {
+        accountId,
+        username: "scopedbarrier",
+        displayName: "共享屏障猎人",
+        role: "player",
+        createdAt: initialUpdatedAt,
+        updatedAt: initialUpdatedAt,
+      },
+    },
+    profileBindings: {
+      [accountId]: {
+        accountId,
+        playerId,
+        profileRevision: 0,
+        createdAt: initialUpdatedAt,
+        updatedAt: initialUpdatedAt,
+      },
+    },
+    profiles: {
+      [playerId]: {
+        playerId,
+        accountId,
+        profileRevision: 0,
+        updatedAt: initialUpdatedAt,
+        profile: {
+          stoneCoins: 100,
+          recordPoint: {mapId: "firebud_village_gate", spawnName: "doctor_record", label: "火芽村"},
+        },
+      },
+    },
+    mutationReceipts: {},
+    serviceEventSeq: 0,
+    serviceEvents: [],
+  };
+  const casFixture = createMysqlCasPoolFixture();
+  try {
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+      usePool: true,
+      poolFactory: () => casFixture.pool,
+    });
+    store.load();
+    await store.saveAsync(initial);
+    assert.equal(casFixture.state.revision, 1);
+
+    casFixture.state.profileBindingRows = [{
+      account_id: accountId,
+      player_id: playerId,
+      profile_revision: 0,
+    }];
+    casFixture.state.profileRows = [{
+      player_id: playerId,
+      account_id: accountId,
+      profile_revision: 0,
+    }];
+    casFixture.state.queriedStatements.length = 0;
+    const next = structuredClone(initial);
+    next.profileBindings[accountId].profileRevision = 1;
+    next.profileBindings[accountId].updatedAt = nextUpdatedAt;
+    next.profiles[playerId].profileRevision = 1;
+    next.profiles[playerId].updatedAt = nextUpdatedAt;
+    next.profiles[playerId].profile.recordPoint = {
+      mapId: "firebud_training_yard",
+      spawnName: "yard",
+      label: "训练场",
+    };
+    next.mutationReceipts = stageDurableMutationReceipt(
+      next.mutationReceipts,
+      {
+        schemaVersion: 1,
+        operationId,
+        requestHash,
+        actionId,
+        accountId,
+        committedAt: nextUpdatedAt,
+        expiresAt: "2026-07-17T03:01:00.000Z",
+        response: {ok: true, operationId},
+      },
+      {nowMs: Date.parse(nextUpdatedAt)},
+    );
+
+    await store.saveAsync(next, {
+      consistencyScope: {
+        kind: "row_local_profile_v1",
+        accountId,
+        playerId,
+        operationId,
+        requestHash,
+        actionId,
+      },
+    });
+
+    const scopedQueries = casFixture.state.queriedStatements;
+    assert.match(scopedQueries[0], /auth_store_revisions[\s\S]+FOR SHARE$/);
+    assert.match(scopedQueries[1], /FROM profile_bindings WHERE account_id = \? FOR UPDATE$/);
+    assert.match(scopedQueries[2], /FROM profiles WHERE player_id = \? FOR UPDATE$/);
+    assert.equal(scopedQueries.some((statement) => (
+      statement.startsWith("UPDATE auth_store_revisions")
+    )), false);
+    assert.equal(casFixture.state.revision, 1);
+    await store.close();
+  } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
@@ -2142,9 +2316,11 @@ process.stdin.on("end", () => {
       }),
       (error) => error.message === "MySQL 异步存档失败。" && error.cause === duplicate,
     );
-    assert.equal(queriedStatements.length, 2);
+    assert.equal(queriedStatements.length, 4);
     assert.match(queriedStatements[0], /auth_store_revisions[\s\S]+FOR UPDATE/);
-    assert.match(queriedStatements[1], /^INSERT INTO battle_records /);
+    assert.match(queriedStatements[1], /FROM profile_bindings ORDER BY account_id FOR UPDATE$/);
+    assert.match(queriedStatements[2], /FROM profiles ORDER BY player_id FOR UPDATE$/);
+    assert.match(queriedStatements[3], /^INSERT INTO battle_records /);
     assert.equal(casFixture.state.revision, 0);
     assert.equal(casFixture.state.transactions[0].begun, true);
     assert.equal(casFixture.state.transactions[0].rolledBack, true);

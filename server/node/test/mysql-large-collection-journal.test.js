@@ -71,6 +71,12 @@ process.stdin.on("end", () => {
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
       }
+      if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[], []];
+      }
+      if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[], []];
+      }
       if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
         pendingStoreRevision = storeRevision + 1;
         return [{affectedRows: 1}, []];
@@ -127,17 +133,32 @@ process.stdin.on("end", () => {
 
     assert.equal(transactions.length, 2);
     const successful = transactions[1];
+    const globalLockIndex = successful.findIndex((statement) => (
+      /^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())
+    ));
+    const bindingSnapshotIndex = successful.findIndex((statement) => (
+      /^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())
+    ));
+    const profileSnapshotIndex = successful.findIndex((statement) => (
+      /^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())
+    ));
     const receiptDeleteIndex = successful.findIndex((statement) => (
       statement.includes(`DELETE FROM mutation_receipts WHERE operation_id = '${oldOperationId}'`)
     ));
     const receiptInsertIndex = successful.findIndex((statement) => (
       statement.includes("INSERT INTO mutation_receipts") && statement.includes(oldOperationId)
     ));
-    assert.ok(receiptDeleteIndex >= 0);
+    assert.ok(globalLockIndex >= 0);
+    assert.ok(bindingSnapshotIndex > globalLockIndex);
+    assert.ok(profileSnapshotIndex > bindingSnapshotIndex);
+    assert.ok(receiptDeleteIndex > profileSnapshotIndex);
     assert.ok(receiptInsertIndex > receiptDeleteIndex);
     assert.equal(successful.filter((statement) => statement.includes(oldOperationId)).length, 2);
     assert.equal(successful.some((statement) => statement.includes("eqx_mysql_journal_append_0002")), true);
     assert.equal(successful.some((statement) => statement.includes("eqx_mysql_journal_baseline_0001")), false);
+    assert.equal(successful.some((statement) => (
+      /^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(String(statement).trim())
+    )), true);
     await store.close();
   } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
@@ -232,6 +253,20 @@ process.stdin.on("end", () => {
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
       }
+      if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{
+          account_id: accountId,
+          player_id: playerId,
+          profile_revision: binding.profileRevision,
+        }], []];
+      }
+      if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{
+          player_id: playerId,
+          account_id: accountId,
+          profile_revision: profileDocument.profileRevision,
+        }], []];
+      }
       if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
         pendingStoreRevision = storeRevision + 1;
         return [{affectedRows: 1}, []];
@@ -277,10 +312,25 @@ process.stdin.on("end", () => {
     assert.equal(first.ok, true);
     assert.equal(first.durableCommit.replayed, false);
     assert.equal(transactions.length, 1);
+    const globalLock = transactions[0].findIndex((statement) => (
+      /^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())
+    ));
+    const bindingSnapshot = transactions[0].findIndex((statement) => (
+      /^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())
+    ));
+    const profileSnapshot = transactions[0].findIndex((statement) => (
+      /^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())
+    ));
     const deletion = transactions[0].findIndex((statement) => statement.startsWith("DELETE FROM mutation_receipts"));
     const insertion = transactions[0].findIndex((statement) => statement.startsWith("INSERT INTO mutation_receipts"));
-    assert.ok(deletion >= 0 && insertion > deletion);
+    assert.ok(globalLock >= 0);
+    assert.ok(bindingSnapshot > globalLock);
+    assert.ok(profileSnapshot > bindingSnapshot);
+    assert.ok(deletion > profileSnapshot && insertion > deletion);
     assert.equal(transactions[0].some((statement) => statement.startsWith("INSERT INTO profiles")), true);
+    assert.equal(transactions[0].some((statement) => (
+      /^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(String(statement).trim())
+    )), true);
 
     const replay = await service.invokeDurable("bankDeposit", [token, {stoneCoins: 1}], operation);
     assert.equal(replay.ok, true);

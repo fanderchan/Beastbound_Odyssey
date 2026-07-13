@@ -1910,6 +1910,188 @@ test("storage failure recovery preserves published replay cursor without leaking
   assert.equal(saveAttempts, 1);
 });
 
+test("only durable record point actions carry a matching row-local profile recovery scope", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const owner = seed.register({
+    username: "recordpointscope",
+    password: "test1234",
+    displayName: "记录点范围猎人",
+  });
+  const saveOptions = [];
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData, options) {
+        saveOptions.push(structuredClone(options));
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  const recordOperation = {
+    operationId: "bbo_record_scope_0001",
+    requestHash: "a".repeat(64),
+    actionId: "POST /profile/action",
+  };
+
+  const recordPoint = await service.invokeDurable("profileAction", [owner.session.token, {
+    action: "record_point_save",
+    payload: {
+      recordPoint: {mapId: "firebud_training_yard", spawnName: "yard", label: "训练场"},
+    },
+  }], recordOperation);
+  assert.equal(recordPoint.ok, true);
+  assert.deepEqual(saveOptions[0].consistencyScope, {
+    kind: "row_local_profile_v1",
+    accountId: owner.account.accountId,
+    playerId: owner.profileBinding.playerId,
+    operationId: recordOperation.operationId,
+    requestHash: recordOperation.requestHash,
+    actionId: recordOperation.actionId,
+  });
+
+  const otherAction = await service.invokeDurable("profileAction", [owner.session.token, {
+    action: "training_partner_set_count",
+    payload: {count: 1},
+  }], {
+    operationId: "bbo_record_scope_other_0002",
+    requestHash: "b".repeat(64),
+    actionId: "POST /profile/action",
+  });
+  assert.equal(otherAction.ok, true);
+  assert.equal(saveOptions.length, 2);
+  assert.equal(Object.hasOwn(saveOptions[1], "consistencyScope"), false);
+});
+
+test("scoped ambiguous record point recovery publishes both target and unrelated profile commits", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const owner = seed.register({
+    username: "recordpointrecovera",
+    password: "test1234",
+    displayName: "记录点恢复甲",
+  });
+  const other = seed.register({
+    username: "recordpointrecoverb",
+    password: "test1234",
+    displayName: "记录点恢复乙",
+  });
+  const operation = {
+    operationId: "bbo_record_scoped_recovery_0001",
+    requestHash: "c".repeat(64),
+    actionId: "POST /profile/action",
+  };
+  const targetRecordPoint = {
+    mapId: "firebud_training_yard",
+    spawnName: "target_yard",
+    label: "甲的训练场",
+  };
+  const unrelatedRecordPoint = {
+    mapId: "firebud_training_yard",
+    spawnName: "other_yard",
+    label: "乙的训练场",
+  };
+  let saveCount = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "memory",
+    load: () => base.load(),
+    async saveAsync(nextData) {
+      saveCount += 1;
+      base.save(nextData);
+      const concurrentService = createAuthService({store: base});
+      const unrelated = concurrentService.profileAction(other.session.token, {
+        action: "record_point_save",
+        payload: {recordPoint: unrelatedRecordPoint},
+      });
+      assert.equal(unrelated.ok, true);
+      throw new Error("connection lost after scoped record point commit");
+    },
+  }, {onError: () => {}});
+  const service = createAuthService({store});
+
+  const result = await service.invokeDurable("profileAction", [owner.session.token, {
+    action: "record_point_save",
+    payload: {recordPoint: targetRecordPoint},
+  }], operation);
+  assert.equal(result.ok, true);
+  assert.equal(result.profile.recordPoint.label, targetRecordPoint.label);
+  assert.equal(saveCount, 1);
+  assert.equal(store.metrics().ambiguousCommitRecoveries, 1);
+
+  const published = service.snapshot();
+  assert.equal(
+    published.profiles[owner.profileBinding.playerId].profile.recordPoint.label,
+    targetRecordPoint.label,
+  );
+  assert.equal(
+    published.profiles[other.profileBinding.playerId].profile.recordPoint.label,
+    unrelatedRecordPoint.label,
+  );
+  assert.deepEqual(published, base.load());
+});
+
+for (const mismatch of ["receipt", "target_profile"]) {
+  test(`scoped ambiguous record point recovery rejects a mismatched ${mismatch}`, async () => {
+    const base = createMemoryAuthStore();
+    const seed = createAuthService({store: base});
+    const owner = seed.register({
+      username: mismatch === "receipt" ? "recmmreceipt" : "recmmprofile",
+      password: "test1234",
+      displayName: "记录点错配猎人",
+    });
+    const operation = {
+      operationId: `bbo_record_mismatch_${mismatch}_0001`,
+      requestHash: "d".repeat(64),
+      actionId: "POST /profile/action",
+    };
+    const beforePublished = base.load();
+    const store = createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        base.save(nextData);
+        if (mismatch === "receipt") {
+          const mismatched = base.load();
+          delete mismatched.mutationReceipts[operation.operationId];
+          base.save(mismatched);
+        } else {
+          const concurrentService = createAuthService({store: base});
+          const replaced = concurrentService.profileAction(owner.session.token, {
+            action: "record_point_save",
+            payload: {
+              recordPoint: {
+                mapId: "firebud_village_gate",
+                spawnName: "replacement_record",
+                label: "后提交的同角色记录点",
+              },
+            },
+          });
+          assert.equal(replaced.ok, true);
+        }
+        throw new Error(`connection lost after ${mismatch} mismatch`);
+      },
+    }, {onError: () => {}});
+    const service = createAuthService({store});
+
+    await assert.rejects(
+      service.invokeDurable("profileAction", [owner.session.token, {
+        action: "record_point_save",
+        payload: {
+          recordPoint: {
+            mapId: "firebud_training_yard",
+            spawnName: "candidate_record",
+            label: "待确认记录点",
+          },
+        },
+      }], operation),
+      (error) => error && error.code === "storage_write_failed",
+    );
+    assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+    assert.deepEqual(service.snapshot(), beforePublished);
+  });
+}
+
 test("ambiguous commit is reconciled from the durable snapshot before success", async (t) => {
   const base = createMemoryAuthStore();
   const registered = seedShopAccount(base, "durableambiguous");

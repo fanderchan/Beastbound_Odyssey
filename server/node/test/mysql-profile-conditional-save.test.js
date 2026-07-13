@@ -22,15 +22,18 @@ const {
 
 const ACCOUNT_ID = "acc_profile_conditional";
 const PLAYER_ID = "player_profile_conditional";
+const ACCOUNT_ID_B = "acc_profile_conditional_b";
+const PLAYER_ID_B = "player_profile_conditional_b";
 const UPDATED_AT_1 = "2026-07-14T01:00:00.000Z";
 const UPDATED_AT_2 = "2026-07-14T01:01:00.000Z";
+const DEFAULT_OPERATION_ID = "op_profile_conditional_0001";
 
 function profileState(options = {}) {
   const revision = Number(options.revision ?? 1);
   const accountId = String(options.accountId || ACCOUNT_ID);
   const playerId = String(options.playerId || PLAYER_ID);
   const updatedAt = String(options.updatedAt || UPDATED_AT_1);
-  return {
+  const state = {
     schemaVersion: 1,
     accounts: {},
     sessions: {},
@@ -61,6 +64,25 @@ function profileState(options = {}) {
     serviceEventSeq: 0,
     serviceEvents: [],
   };
+  if (options.includeSecondProfile === true) {
+    state.profileBindings[ACCOUNT_ID_B] = {
+      accountId: ACCOUNT_ID_B,
+      playerId: PLAYER_ID_B,
+      profileRevision: revision,
+      updatedAt,
+    };
+    state.profiles[PLAYER_ID_B] = {
+      playerId: PLAYER_ID_B,
+      accountId: ACCOUNT_ID_B,
+      profileRevision: revision,
+      updatedAt,
+      profile: {
+        displayName: "条件存档猎人乙",
+        stoneCoins: 200,
+      },
+    };
+  }
+  return state;
 }
 
 function nextProfileState(before, options = {}) {
@@ -86,14 +108,14 @@ function nextProfileState(before, options = {}) {
   if (options.receipt === true) {
     after.mutationReceipts = stageDurableMutationReceipt(
       after.mutationReceipts,
-      mutationReceipt(options.operationId || "op_profile_conditional_0001"),
+      mutationReceipt(options.operationId || DEFAULT_OPERATION_ID),
       {nowMs: Date.parse("2026-07-14T01:01:00.000Z")},
     );
   }
   return after;
 }
 
-function mutationReceipt(operationId) {
+function mutationReceipt(operationId, overrides = {}) {
   return {
     schemaVersion: 1,
     operationId,
@@ -103,16 +125,37 @@ function mutationReceipt(operationId) {
     committedAt: "2026-07-14T01:01:00.000Z",
     expiresAt: "2026-07-17T01:01:00.000Z",
     response: {ok: true, operationId},
+    ...overrides,
   };
 }
 
-function buildPlan(after, before) {
+function rowLocalProfileScope(operationId = DEFAULT_OPERATION_ID, overrides = {}) {
+  return {
+    kind: "row_local_profile_v1",
+    accountId: ACCOUNT_ID,
+    playerId: PLAYER_ID,
+    operationId,
+    requestHash: "a".repeat(64),
+    actionId: "profile_action",
+    ...overrides,
+  };
+}
+
+function eligibleProfileState(before, options = {}) {
+  return nextProfileState(before, {
+    ...options,
+    receipt: true,
+    operationId: options.operationId || DEFAULT_OPERATION_ID,
+  });
+}
+
+function buildPlan(after, before, consistencyScope = null) {
   assert.equal(
     typeof __buildMysqlSavePlanFromPersistentDataForTest,
     "function",
-    "mysql-store must expose the pure P0.6d-2a planner test hook",
+    "mysql-store must expose the pure P0.6d-2b planner test hook",
   );
-  return __buildMysqlSavePlanFromPersistentDataForTest(after, before);
+  return __buildMysqlSavePlanFromPersistentDataForTest(after, before, {consistencyScope});
 }
 
 function operationResource(operation) {
@@ -123,12 +166,13 @@ function planOperations(plan, field) {
   return Array.isArray(plan && plan[field]) ? plan[field] : [];
 }
 
-test("planner selects the conditional path only for one existing bound profile r to r+1", () => {
+test("planner selects v2 only for one scoped profile r to r+1 plus its matching receipt", () => {
   const before = profileState();
-  const plan = buildPlan(nextProfileState(before), before);
+  const plan = buildPlan(eligibleProfileState(before), before, rowLocalProfileScope());
 
-  assert.equal(plan.kind, "profile_conditional_v1");
-  assert.equal(plan.globalRevisionFence, true);
+  assert.equal(plan.kind, "profile_conditional_v2");
+  assert.equal(plan.globalRevisionFence, false);
+  assert.equal(plan.globalCompatibilityBarrier, "shared");
   assert.equal(plan.accountId, ACCOUNT_ID);
   assert.equal(plan.playerId, PLAYER_ID);
   assert.equal(plan.expectedProfileRevision, 1);
@@ -138,28 +182,17 @@ test("planner selects the conditional path only for one existing bound profile r
     ["profile_binding", "profile"],
   );
   const writes = planOperations(plan, "writes");
-  assert.deepEqual(writes.map(operationResource), ["profile_binding", "profile"]);
+  assert.deepEqual(
+    writes.map(operationResource),
+    ["profile_binding", "profile", "mutation_receipt"],
+  );
   assert.equal(writes.every((operation) => operation.expectedAffectedRows === 1), true);
   assert.match(String(writes[0].sql || ""), /^UPDATE profile_bindings\b/i);
   assert.match(String(writes[0].sql || ""), /WHERE[\s\S]+account_id[\s\S]+player_id[\s\S]+profile_revision/i);
   assert.match(String(writes[1].sql || ""), /^UPDATE profiles\b/i);
   assert.match(String(writes[1].sql || ""), /WHERE[\s\S]+player_id[\s\S]+account_id[\s\S]+profile_revision/i);
+  assert.match(String(writes[2].sql || ""), /^INSERT INTO mutation_receipts\b/i);
   assert.equal(writes.some((operation) => /ON DUPLICATE KEY/i.test(String(operation.sql || ""))), false);
-});
-
-test("planner permits exactly one new immutable receipt on the conditional profile path", () => {
-  const before = profileState();
-  const plan = buildPlan(nextProfileState(before, {receipt: true}), before);
-
-  assert.equal(plan.kind, "profile_conditional_v1");
-  assert.equal(plan.globalRevisionFence, true);
-  const receiptWrites = planOperations(plan, "writes").filter((operation) => (
-    operationResource(operation) === "mutation_receipt"
-  ));
-  assert.equal(receiptWrites.length, 1);
-  assert.equal(receiptWrites[0].expectedAffectedRows, 1);
-  assert.match(String(receiptWrites[0].sql || ""), /^INSERT INTO mutation_receipts\b/i);
-  assert.doesNotMatch(String(receiptWrites[0].sql || ""), /ON DUPLICATE KEY UPDATE/i);
   assert.equal(
     [...planOperations(plan, "locks"), ...planOperations(plan, "writes")]
       .some((operation) => /\bserver_state\b/i.test(String(operation.sql || ""))),
@@ -169,17 +202,70 @@ test("planner permits exactly one new immutable receipt on the conditional profi
   assert.equal(Array.isArray(plan.statements), false);
 });
 
+test("planner falls back when row-local scope is missing or does not match the receipt", async (t) => {
+  const cases = [
+    {name: "scope is missing", scope: null},
+    {name: "scope kind is wrong", scope: rowLocalProfileScope(DEFAULT_OPERATION_ID, {kind: "global"})},
+    {name: "scope account differs", scope: rowLocalProfileScope(DEFAULT_OPERATION_ID, {accountId: ACCOUNT_ID_B})},
+    {name: "scope player differs", scope: rowLocalProfileScope(DEFAULT_OPERATION_ID, {playerId: PLAYER_ID_B})},
+    {name: "scope operation differs", scope: rowLocalProfileScope("op_profile_conditional_other")},
+    {name: "scope request hash differs", scope: rowLocalProfileScope(DEFAULT_OPERATION_ID, {requestHash: "b".repeat(64)})},
+    {name: "scope action differs", scope: rowLocalProfileScope(DEFAULT_OPERATION_ID, {actionId: "other_action"})},
+    {
+      name: "receipt account differs",
+      scope: rowLocalProfileScope(),
+      mutate(after) {
+        after.mutationReceipts = {
+          ...after.mutationReceipts,
+          [DEFAULT_OPERATION_ID]: {
+            ...after.mutationReceipts[DEFAULT_OPERATION_ID],
+            accountId: ACCOUNT_ID_B,
+          },
+        };
+      },
+    },
+    {
+      name: "receipt is absent",
+      scope: rowLocalProfileScope(),
+      after(before) {
+        return nextProfileState(before);
+      },
+    },
+  ];
+
+  for (const fixture of cases) {
+    await t.test(fixture.name, () => {
+      const before = profileState();
+      const after = typeof fixture.after === "function"
+        ? fixture.after(before)
+        : eligibleProfileState(before);
+      if (typeof fixture.mutate === "function") {
+        fixture.mutate(after);
+      }
+      const plan = buildPlan(after, before, fixture.scope);
+      assert.equal(plan.kind, "legacy_global_cas");
+      assert.equal(plan.globalRevisionFence, true);
+      assert.deepEqual(
+        planOperations(plan, "resourceLocks").map(operationResource),
+        ["profile_binding_snapshot", "profile_snapshot"],
+      );
+    });
+  }
+});
+
 test("real record_point_save produces the strict profile plus receipt conditional plan", async () => {
   let committedPersistentData = null;
   let latestPlan = null;
+  let latestSaveOptions = null;
   const service = createAuthService({
     store: {
       load() {
         return committedPersistentData === null ? {} : cloneAuthorityRoot(committedPersistentData);
       },
-      save(nextData) {
+      save(nextData, saveOptions = {}) {
         if (committedPersistentData !== null) {
-          latestPlan = buildPlan(nextData, committedPersistentData);
+          latestSaveOptions = saveOptions;
+          latestPlan = buildPlan(nextData, committedPersistentData, saveOptions.consistencyScope);
         }
         const committed = cloneAuthorityRoot(nextData);
         committed.mutationReceipts = commitDurableMutationReceiptDelta(
@@ -209,7 +295,17 @@ test("real record_point_save produces the strict profile plus receipt conditiona
   assert.equal(saved.ok, true);
   assert.equal(saved.profile.recordPoint.mapId, "firebud_training_yard");
 
-  assert.equal(latestPlan.kind, "profile_conditional_v1");
+  assert.deepEqual(latestSaveOptions.consistencyScope, {
+    kind: "row_local_profile_v1",
+    accountId: registered.account.accountId,
+    playerId: registered.profileBinding.playerId,
+    operationId,
+    requestHash: "b".repeat(64),
+    actionId: "POST /profile/action",
+  });
+  assert.equal(latestPlan.kind, "profile_conditional_v2");
+  assert.equal(latestPlan.globalRevisionFence, false);
+  assert.equal(latestPlan.globalCompatibilityBarrier, "shared");
   assert.deepEqual(
     latestPlan.writes.map(operationResource),
     ["profile_binding", "profile", "mutation_receipt"],
@@ -222,13 +318,13 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "revision jump",
       mutate(before) {
-        return nextProfileState(before, {revision: 3});
+        return eligibleProfileState(before, {revision: 3});
       },
     },
     {
       name: "binding and profile revision disagree",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.profileBindings[ACCOUNT_ID] = {...after.profileBindings[ACCOUNT_ID], profileRevision: 3};
         return after;
       },
@@ -236,7 +332,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "identity moves to another player",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.profileBindings[ACCOUNT_ID] = {...after.profileBindings[ACCOUNT_ID], playerId: "player_moved"};
         return after;
       },
@@ -244,7 +340,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "profile is newly created",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         delete before.profiles[PLAYER_ID];
         return after;
       },
@@ -252,7 +348,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "profile is deleted",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         delete after.profiles[PLAYER_ID];
         return after;
       },
@@ -260,7 +356,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "another persistent resource changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.marketListings.listing_extra = {
           listingId: "listing_extra",
           sellerAccountId: ACCOUNT_ID,
@@ -276,7 +372,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "root schema version changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.schemaVersion = Number(before.schemaVersion || 0) + 1;
         return after;
       },
@@ -284,7 +380,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "market config changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.marketConfig = {listingFeeRate: 0.03};
         return after;
       },
@@ -292,7 +388,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "offline hang config changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.offlineHangConfig = {rewardRate: 0.5};
         return after;
       },
@@ -300,7 +396,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "service event sequence changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.serviceEventSeq = 2;
         return after;
       },
@@ -308,7 +404,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "service event journal changes",
       mutate(before) {
-        const after = nextProfileState(before);
+        const after = eligibleProfileState(before);
         after.serviceEventSeq = 1;
         after.serviceEvents = [{
           eventSeq: 1,
@@ -323,7 +419,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     {
       name: "two receipts are inserted",
       mutate(before) {
-        const after = nextProfileState(before, {receipt: true});
+        const after = eligibleProfileState(before);
         after.mutationReceipts = stageDurableMutationReceipt(
           after.mutationReceipts,
           mutationReceipt("op_profile_conditional_0002"),
@@ -334,6 +430,9 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "expired receipt delete and same-key insert",
+      scope: rowLocalProfileScope("op_profile_conditional_expired", {
+        requestHash: "b".repeat(64),
+      }),
       mutate(before) {
         const operationId = "op_profile_conditional_expired";
         before.mutationReceipts = canonicalDurableMutationReceipts({
@@ -363,24 +462,61 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     await t.test(fixture.name, () => {
       const before = profileState();
       const after = fixture.mutate(before);
-      const plan = buildPlan(after, before);
+      const plan = buildPlan(after, before, fixture.scope || rowLocalProfileScope());
       assert.equal(plan.kind, "legacy_global_cas");
       assert.equal(plan.globalRevisionFence, true);
       assert.ok(Array.isArray(plan.statements) && plan.statements.length > 0);
+      assert.deepEqual(
+        planOperations(plan, "resourceLocks").map(operationResource),
+        ["profile_binding_snapshot", "profile_snapshot"],
+      );
     });
   }
+});
+
+test("legacy planner guards the complete profile snapshot even when only profile A is written", () => {
+  const before = profileState({includeSecondProfile: true});
+  const after = eligibleProfileState(before);
+  after.marketListings.listing_extra = {
+    listingId: "listing_extra",
+    sellerAccountId: ACCOUNT_ID,
+    itemId: "item_extra",
+    currency: "stone_coin",
+    unitPrice: 1,
+    count: 1,
+    createdAt: UPDATED_AT_2,
+  };
+
+  const plan = buildPlan(after, before, rowLocalProfileScope());
+  assert.equal(plan.kind, "legacy_global_cas");
+  const locks = planOperations(plan, "resourceLocks");
+  assert.deepEqual(locks.map(operationResource), ["profile_binding_snapshot", "profile_snapshot"]);
+  assert.deepEqual(locks[0].expectedRows, [
+    {account_id: ACCOUNT_ID, player_id: PLAYER_ID, profile_revision: 1},
+    {account_id: ACCOUNT_ID_B, player_id: PLAYER_ID_B, profile_revision: 1},
+  ]);
+  assert.deepEqual(locks[1].expectedRows, [
+    {player_id: PLAYER_ID, account_id: ACCOUNT_ID, profile_revision: 1},
+    {player_id: PLAYER_ID_B, account_id: ACCOUNT_ID_B, profile_revision: 1},
+  ]);
 });
 
 function createLoaderFixture(tempDir, options = {}) {
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const revision = Number(options.revision ?? 0);
-  const before = profileState();
+  const before = profileState({includeSecondProfile: options.includeSecondProfile === true});
   const rows = [
     ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
     ["store_revision", "auth", String(revision)],
     ["profile_bindings", ACCOUNT_ID, JSON.stringify(before.profileBindings[ACCOUNT_ID])],
     ["profiles", PLAYER_ID, JSON.stringify(before.profiles[PLAYER_ID])],
   ];
+  if (options.includeSecondProfile === true) {
+    rows.push(
+      ["profile_bindings", ACCOUNT_ID_B, JSON.stringify(before.profileBindings[ACCOUNT_ID_B])],
+      ["profiles", PLAYER_ID_B, JSON.stringify(before.profiles[PLAYER_ID_B])],
+    );
+  }
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
 let stdin = "";
 process.stdin.setEncoding("utf8");
@@ -424,9 +560,41 @@ function createConditionalPool(options = {}) {
           async query(statement, params = []) {
             const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
             transaction.queries.push({sql, params: Array.isArray(params) ? params.slice() : params});
-            if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+            if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
               assert.deepEqual(params, []);
               return [[{storeRevision: shared.revision}], []];
+            }
+            if (/FROM\s+profile_bindings\s+ORDER\s+BY\s+account_id\s+FOR\s+UPDATE/i.test(sql)) {
+              assert.deepEqual(params, []);
+              const rows = [{
+                account_id: ACCOUNT_ID,
+                player_id: PLAYER_ID,
+                profile_revision: Number(options.snapshotBindingRevisionA ?? 1),
+              }];
+              if (options.includeSecondProfile === true) {
+                rows.push({
+                  account_id: ACCOUNT_ID_B,
+                  player_id: PLAYER_ID_B,
+                  profile_revision: Number(options.snapshotBindingRevisionB ?? 1),
+                });
+              }
+              return [rows, []];
+            }
+            if (/FROM\s+profiles\s+ORDER\s+BY\s+player_id\s+FOR\s+UPDATE/i.test(sql)) {
+              assert.deepEqual(params, []);
+              const rows = [{
+                player_id: PLAYER_ID,
+                account_id: ACCOUNT_ID,
+                profile_revision: Number(options.snapshotProfileRevisionA ?? 1),
+              }];
+              if (options.includeSecondProfile === true) {
+                rows.push({
+                  player_id: PLAYER_ID_B,
+                  account_id: ACCOUNT_ID_B,
+                  profile_revision: Number(options.snapshotProfileRevisionB ?? 1),
+                });
+              }
+              return [rows, []];
             }
             if (/SELECT[\s\S]+FROM\s+profile_bindings[\s\S]+FOR\s+UPDATE/i.test(sql)) {
               assert.deepEqual(params, [ACCOUNT_ID]);
@@ -520,7 +688,10 @@ test("conditional executor pool fails closed on unmodeled SQL", async () => {
 
 async function openConditionalStore(options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-profile-conditional-"));
-  const loader = createLoaderFixture(tempDir, {revision: options.loadedStoreRevision ?? 0});
+  const loader = createLoaderFixture(tempDir, {
+    revision: options.loadedStoreRevision ?? 0,
+    includeSecondProfile: options.includeSecondProfile === true,
+  });
   const harness = createConditionalPool(options);
   const store = createMysqlAuthStore({
     mysqlPath: loader.fakeMysqlPath,
@@ -535,10 +706,15 @@ async function openConditionalStore(options = {}) {
     poolFactory: () => harness.pool,
   });
   const loaded = store.load();
-  const candidate = nextProfileState(loaded, {receipt: options.receipt === true});
+  const operationId = String(options.operationId || DEFAULT_OPERATION_ID);
+  const candidate = eligibleProfileState(loaded, {operationId});
+  const saveOptions = {
+    consistencyScope: rowLocalProfileScope(operationId, options.scopeOverrides || {}),
+  };
   return {
     candidate,
     harness,
+    saveOptions,
     store,
     async close() {
       await store.close();
@@ -555,28 +731,30 @@ function isResourceRevisionConflict(error) {
   return Boolean(error && error.code === "mysql_resource_revision_conflict");
 }
 
-test("pool executor keeps the global fence, validates both locks, and conditionally updates both profile rows", async () => {
+test("pool executor takes a shared compatibility barrier and never advances the global revision", async () => {
   const fixture = await openConditionalStore();
   try {
-    await fixture.store.saveAsync(fixture.candidate);
+    await fixture.store.saveAsync(fixture.candidate, fixture.saveOptions);
     const transaction = fixture.harness.shared.transactions[0];
-    const globalLock = sqlIndex(transaction, /SELECT\s+revision[\s\S]+auth_store_revisions[\s\S]+FOR\s+UPDATE/i);
+    const globalLock = sqlIndex(transaction, /SELECT\s+revision[\s\S]+auth_store_revisions[\s\S]+FOR\s+SHARE/i);
     const bindingLock = sqlIndex(transaction, /SELECT[\s\S]+FROM\s+profile_bindings[\s\S]+FOR\s+UPDATE/i);
     const profileLock = sqlIndex(transaction, /SELECT[\s\S]+FROM\s+profiles[\s\S]+FOR\s+UPDATE/i);
     const bindingUpdate = sqlIndex(transaction, /^UPDATE\s+profile_bindings\b/i);
     const profileUpdate = sqlIndex(transaction, /^UPDATE\s+profiles\b/i);
+    const receiptInsert = sqlIndex(transaction, /^INSERT\s+INTO\s+mutation_receipts\b/i);
     const globalUpdate = sqlIndex(transaction, /^UPDATE\s+auth_store_revisions\b/i);
 
     assert.ok(globalLock >= 0 && globalLock < bindingLock);
     assert.ok(bindingLock >= 0 && bindingLock < profileLock);
     assert.ok(profileLock >= 0 && profileLock < bindingUpdate);
     assert.ok(bindingUpdate >= 0 && bindingUpdate < profileUpdate);
-    assert.ok(profileUpdate >= 0 && profileUpdate < globalUpdate);
+    assert.ok(profileUpdate >= 0 && profileUpdate < receiptInsert);
+    assert.equal(globalUpdate, -1);
     assert.equal(transaction.queries.some((entry) => /ON DUPLICATE KEY UPDATE/i.test(entry.sql) && /\bprofiles?\b/i.test(entry.sql)), false);
     assert.equal(transaction.committed, true);
     assert.equal(transaction.rolledBack, false);
     assert.equal(transaction.released, true);
-    assert.equal(fixture.harness.shared.revision, 1);
+    assert.equal(fixture.harness.shared.revision, 0);
   } finally {
     await fixture.close();
   }
@@ -585,7 +763,10 @@ test("pool executor keeps the global fence, validates both locks, and conditiona
 test("pool executor rejects a mismatched locked profile row before any business write", async () => {
   const fixture = await openConditionalStore({bindingLockRevision: 99});
   try {
-    await assert.rejects(fixture.store.saveAsync(fixture.candidate), isResourceRevisionConflict);
+    await assert.rejects(
+      fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+      isResourceRevisionConflict,
+    );
     const transaction = fixture.harness.shared.transactions[0];
     assert.equal(transaction.queries.some((entry) => /^UPDATE\s+(?:profile_bindings|profiles)\b/i.test(entry.sql)), false);
     assert.equal(transaction.committed, false);
@@ -604,7 +785,10 @@ for (const failure of [
   test(`pool executor rolls the whole transaction back when ${failure.name} affects zero rows`, async () => {
     const fixture = await openConditionalStore(failure.options);
     try {
-      await assert.rejects(fixture.store.saveAsync(fixture.candidate), isResourceRevisionConflict);
+      await assert.rejects(
+        fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+        isResourceRevisionConflict,
+      );
       const transaction = fixture.harness.shared.transactions[0];
       assert.equal(transaction.committed, false);
       assert.equal(transaction.rolledBack, true);
@@ -621,10 +805,13 @@ for (const failure of [
   {name: "duplicate key", options: {receiptDuplicate: true}},
   {name: "zero affected rows", options: {receiptAffectedRows: 0}},
 ]) {
-  test(`receipt ${failure.name} rolls back both profile updates and the global revision`, async () => {
-    const fixture = await openConditionalStore({receipt: true, ...failure.options});
+  test(`receipt ${failure.name} rolls back both profile updates without advancing the global revision`, async () => {
+    const fixture = await openConditionalStore(failure.options);
     try {
-      await assert.rejects(fixture.store.saveAsync(fixture.candidate), isResourceRevisionConflict);
+      await assert.rejects(
+        fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+        isResourceRevisionConflict,
+      );
       const transaction = fixture.harness.shared.transactions[0];
       assert.ok(sqlIndex(transaction, /^UPDATE\s+profile_bindings\b/i) >= 0);
       assert.ok(sqlIndex(transaction, /^UPDATE\s+profiles\b/i) >= 0);
@@ -639,16 +826,59 @@ for (const failure of [
   });
 }
 
-test("a stale global revision still rejects before profile locks or writes", async () => {
+test("legacy execution rejects a stale untouched profile B before writing profile A", async () => {
+  const fixture = await openConditionalStore({
+    includeSecondProfile: true,
+    snapshotBindingRevisionB: 2,
+    snapshotProfileRevisionB: 2,
+  });
+  fixture.candidate.marketListings.listing_extra = {
+    listingId: "listing_extra",
+    sellerAccountId: ACCOUNT_ID,
+    itemId: "item_extra",
+    currency: "stone_coin",
+    unitPrice: 1,
+    count: 1,
+    createdAt: UPDATED_AT_2,
+  };
+  try {
+    await assert.rejects(
+      fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+      isResourceRevisionConflict,
+    );
+    const transaction = fixture.harness.shared.transactions[0];
+    assert.equal(
+      sqlIndex(transaction, /auth_store_revisions[\s\S]+FOR\s+UPDATE/i),
+      0,
+    );
+    assert.equal(
+      sqlIndex(transaction, /FROM\s+profile_bindings\s+ORDER\s+BY\s+account_id\s+FOR\s+UPDATE/i),
+      1,
+    );
+    assert.equal(
+      transaction.queries.some((entry) => /^(?:INSERT|UPDATE|DELETE)\b/i.test(entry.sql.trim())),
+      false,
+      "the complete legacy read-set must fail before any business SQL or global revision UPDATE",
+    );
+    assert.equal(transaction.committed, false);
+    assert.equal(transaction.rolledBack, true);
+    assert.equal(transaction.released, true);
+    assert.equal(fixture.harness.shared.revision, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a stale shared compatibility revision rejects before profile locks or writes", async () => {
   const fixture = await openConditionalStore({loadedStoreRevision: 0, actualStoreRevision: 1});
   try {
     await assert.rejects(
-      fixture.store.saveAsync(fixture.candidate),
+      fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
       (error) => error && error.code === "mysql_store_revision_conflict",
     );
     const transaction = fixture.harness.shared.transactions[0];
     assert.equal(transaction.queries.length, 1);
-    assert.match(transaction.queries[0].sql, /auth_store_revisions[\s\S]+FOR\s+UPDATE/i);
+    assert.match(transaction.queries[0].sql, /auth_store_revisions[\s\S]+FOR\s+SHARE/i);
     assert.equal(transaction.committed, false);
     assert.equal(transaction.rolledBack, true);
     assert.equal(fixture.harness.shared.revision, 1);

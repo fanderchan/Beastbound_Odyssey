@@ -437,7 +437,7 @@ function createMysqlAuthStore(options = {}) {
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
-    async saveAsync(nextData) {
+    async saveAsync(nextData, saveOptions = {}) {
       if (closed) {
         throw new Error("MySQL 持久连接池已关闭。");
       }
@@ -450,6 +450,7 @@ function createMysqlAuthStore(options = {}) {
       }
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
+        consistencyScope: saveOptions.consistencyScope,
       });
       if (plan.kind !== "noop") {
         if (!config.usePool) {
@@ -466,12 +467,15 @@ function createMysqlAuthStore(options = {}) {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
         });
-        lastPersistentRevision = committed.revision;
+        if (committed.globalRevisionAdvanced === true) {
+          lastPersistentRevision = committed.revision;
+        }
         serverStateReady = true;
       }
-      lastPersistentData = committedMysqlPersistentData(data, {owned: true});
+      const committedData = committedMysqlPersistentData(data, {owned: true});
+      lastPersistentData = mergeMysqlSaveBaselineAfterCommit(lastPersistentData, committedData, plan);
     },
-    async saveAsyncOwned(nextData) {
+    async saveAsyncOwned(nextData, saveOptions = {}) {
       if (closed) {
         throw new Error("MySQL 持久连接池已关闭。");
       }
@@ -487,6 +491,7 @@ function createMysqlAuthStore(options = {}) {
       }
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
+        consistencyScope: saveOptions.consistencyScope,
       });
       if (plan.kind !== "noop") {
         if (!config.usePool) {
@@ -503,10 +508,13 @@ function createMysqlAuthStore(options = {}) {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
         });
-        lastPersistentRevision = committed.revision;
+        if (committed.globalRevisionAdvanced === true) {
+          lastPersistentRevision = committed.revision;
+        }
         serverStateReady = true;
       }
-      lastPersistentData = committedMysqlPersistentData(data, {owned: true});
+      const committedData = committedMysqlPersistentData(data, {owned: true});
+      lastPersistentData = mergeMysqlSaveBaselineAfterCommit(lastPersistentData, committedData, plan);
     },
     async close() {
       if (closePromise !== null) {
@@ -628,18 +636,28 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (statements.length === 0) {
     return {kind: "noop"};
   }
-  const conditionalProfilePlan = buildConditionalProfileSavePlan(data, previous, groups);
+  const conditionalProfilePlan = buildConditionalProfileSavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
   if (conditionalProfilePlan !== null) {
     return conditionalProfilePlan;
   }
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
+    resourceLocks: buildLegacyProfileResourceLocks(previous),
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
 }
 
-function buildConditionalProfileSavePlan(data, previous, groups) {
+function buildConditionalProfileSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = rowLocalProfileConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null) {
+    return null;
+  }
   if (Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
     return null;
   }
@@ -707,56 +725,153 @@ function buildConditionalProfileSavePlan(data, previous, groups) {
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length > 1) {
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
     return null;
   }
   const receipt = receiptDelta.upserts[0] || null;
-  if (receipt !== null && String(receipt.accountId || "") !== accountId) {
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+  ) {
     return null;
   }
 
   const locks = [
-    {
-      kind: "lock",
-      resource: "profile_binding",
-      key: accountId,
-      sql: "SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? FOR UPDATE",
-      params: [accountId],
-      expectedRow: {
-        account_id: accountId,
-        player_id: playerId,
-        profile_revision: expectedRevision,
-      },
-    },
-    {
-      kind: "lock",
-      resource: "profile",
-      key: playerId,
-      sql: "SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? FOR UPDATE",
-      params: [playerId],
-      expectedRow: {
-        player_id: playerId,
-        account_id: accountId,
-        profile_revision: expectedRevision,
-      },
-    },
+    profileBindingResourceLock(beforeBinding),
+    profileResourceLock(beforeProfile),
   ];
   const writes = [
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
   ];
-  if (receipt !== null) {
-    writes.push(conditionalMutationReceiptInsert(receipt));
-  }
+  writes.push(conditionalMutationReceiptInsert(receipt));
   return {
-    kind: "profile_conditional_v1",
-    globalRevisionFence: true,
+    kind: "profile_conditional_v2",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
     accountId,
     playerId,
     expectedProfileRevision: expectedRevision,
     nextProfileRevision: expectedRevision + 1,
     locks,
     writes,
+  };
+}
+
+function rowLocalProfileConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const kind = String(value.kind || "");
+  const accountId = String(value.accountId || "");
+  const playerId = String(value.playerId || "");
+  const operationId = String(value.operationId || "");
+  const requestHash = String(value.requestHash || "");
+  const actionId = String(value.actionId || "");
+  if (
+    kind !== "row_local_profile_v1"
+    || accountId === ""
+    || playerId === ""
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return null;
+  }
+  return {kind, accountId, playerId, operationId, requestHash, actionId};
+}
+
+function buildLegacyProfileResourceLocks(previous) {
+  const bindings = canonicalObjectEntityMap(previous.profileBindings, profileBindingEntityKey);
+  const profiles = canonicalObjectEntityMap(previous.profiles, profileEntityKey);
+  if (bindings === null || profiles === null) {
+    const error = new Error("MySQL legacy 档案读集无法从非规范实体建立。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  // A legacy mutation has no certified read-set yet. Once it owns the global
+  // exclusive compatibility barrier, validate the complete profile snapshot
+  // in two canonical locking reads. This catches a profile-v2 commit that did
+  // not advance the global revision even when the legacy write-set does not
+  // contain the profile it previously read.
+  return [
+    {
+      kind: "snapshot_lock",
+      resource: "profile_binding_snapshot",
+      key: "*",
+      keyField: "account_id",
+      sql: "SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE",
+      params: [],
+      expectedRows: [...bindings.values()].map((binding) => ({
+        account_id: String(binding.accountId || ""),
+        player_id: String(binding.playerId || ""),
+        profile_revision: Number(binding.profileRevision),
+      })),
+    },
+    {
+      kind: "snapshot_lock",
+      resource: "profile_snapshot",
+      key: "*",
+      keyField: "player_id",
+      sql: "SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE",
+      params: [],
+      expectedRows: [...profiles.values()].map((profile) => ({
+        player_id: String(profile.playerId || ""),
+        account_id: String(profile.accountId || ""),
+        profile_revision: Number(profile.profileRevision),
+      })),
+    },
+  ];
+}
+
+function profileBindingResourceLock(binding) {
+  const accountId = String(binding && binding.accountId || "");
+  const playerId = String(binding && binding.playerId || "");
+  const revision = Number(binding && binding.profileRevision);
+  if (accountId === "" || playerId === "" || !Number.isSafeInteger(revision) || revision < 0) {
+    const error = new Error("MySQL profile binding 条件锁缺少规范身份或 revision。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    kind: "lock",
+    resource: "profile_binding",
+    key: accountId,
+    sql: "SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? FOR UPDATE",
+    params: [accountId],
+    expectedRow: {
+      account_id: accountId,
+      player_id: playerId,
+      profile_revision: revision,
+    },
+  };
+}
+
+function profileResourceLock(profile) {
+  const playerId = String(profile && profile.playerId || "");
+  const accountId = String(profile && profile.accountId || "");
+  const revision = Number(profile && profile.profileRevision);
+  if (playerId === "" || accountId === "" || !Number.isSafeInteger(revision) || revision < 0) {
+    const error = new Error("MySQL profile 条件锁缺少规范身份或 revision。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    kind: "lock",
+    resource: "profile",
+    key: playerId,
+    sql: "SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? FOR UPDATE",
+    params: [playerId],
+    expectedRow: {
+      player_id: playerId,
+      account_id: accountId,
+      profile_revision: revision,
+    },
   };
 }
 
@@ -1379,6 +1494,36 @@ function committedMysqlPersistentData(nextData, options = {}) {
   }
   data.consumedEquipmentEnvelopes = committedLedger.ledger;
   return data;
+}
+
+function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
+  if (!plan || plan.kind !== "profile_conditional_v2") {
+    return committed;
+  }
+  const accountId = String(plan.accountId || "");
+  const playerId = String(plan.playerId || "");
+  const binding = committed.profileBindings && committed.profileBindings[accountId];
+  const profile = committed.profiles && committed.profiles[playerId];
+  if (!previous || !binding || !profile) {
+    const error = new Error("MySQL profile 条件提交缺少 Node-local 资源基线。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  // A profile-v2 COMMIT proves only its certified row-local resources. Keep
+  // every unrelated resource at this writer's last known baseline instead of
+  // relabelling the request candidate as a fresh database-wide snapshot.
+  return {
+    ...previous,
+    profileBindings: {
+      ...(previous.profileBindings || {}),
+      [accountId]: binding,
+    },
+    profiles: {
+      ...(previous.profiles || {}),
+      [playerId]: profile,
+    },
+    mutationReceipts: committed.mutationReceipts,
+  };
 }
 
 function canonicalizeLoadedAuthorityCollections(data) {
@@ -2077,19 +2222,27 @@ function singleWriterMaintenanceStatements(statements) {
 
 async function runMysqlPoolSavePlan(pool, plan, options = {}) {
   if (!plan || plan.kind === "noop") {
-    return {revision: null};
+    return {revision: null, globalRevisionAdvanced: false};
   }
   if (plan.kind === "legacy_global_cas") {
-    return runMysqlPoolSaveStatements(pool, plan.statements, options);
+    return runMysqlPoolSaveStatements(pool, plan.statements, {
+      ...options,
+      resourceLocks: plan.resourceLocks,
+    });
   }
-  if (plan.kind !== "profile_conditional_v1" || plan.globalRevisionFence !== true) {
-    throw new Error("未知或未受全局围栏保护的 MySQL 存档计划。");
+  if (
+    plan.kind !== "profile_conditional_v2"
+    || plan.globalRevisionFence !== false
+    || plan.globalCompatibilityBarrier !== "shared"
+  ) {
+    throw new Error("未知或缺少兼容屏障的 MySQL 存档计划。");
   }
-  return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
-    for (const lock of plan.locks) {
-      const result = await connection.query(lock.sql, lock.params);
-      assertMysqlResourceLockRow(result, lock);
-    }
+  return runMysqlPoolSaveTransaction(pool, {
+    ...options,
+    revisionCasEnabled: false,
+    globalRevisionBarrier: "shared_expected",
+  }, async (connection) => {
+    await assertMysqlResourceLocks(connection, plan.locks);
     for (const write of plan.writes) {
       let result;
       try {
@@ -2109,13 +2262,14 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
 
 async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   if (!Array.isArray(statements) || statements.length === 0) {
-    return {revision: null};
+    return {revision: null, globalRevisionAdvanced: false};
   }
   const transactionStatements = statements[0] === "START TRANSACTION"
     && statements[statements.length - 1] === "COMMIT"
     ? statements.slice(1, -1)
     : statements.slice();
   return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
+    await assertMysqlResourceLocks(connection, options.resourceLocks);
     for (const statement of transactionStatements) {
       await connection.query(statement);
     }
@@ -2124,8 +2278,15 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
 
 async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites) {
   const revisionCasEnabled = options.revisionCasEnabled === true;
+  const globalRevisionBarrier = String(
+    options.globalRevisionBarrier || (revisionCasEnabled ? "exclusive_cas" : "none"),
+  );
   const expectedRevision = Number(options.expectedRevision);
-  if (revisionCasEnabled && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) {
+  if (
+    !["exclusive_cas", "shared_expected", "none"].includes(globalRevisionBarrier)
+    || (globalRevisionBarrier !== "none"
+      && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0))
+  ) {
     const error = new Error("MySQL本地存档版本缺失，拒绝提交。");
     error.code = MYSQL_STORE_REVISION_MISSING;
     throw error;
@@ -2136,9 +2297,11 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
     connection = await pool.getConnection();
     await connection.beginTransaction();
     transactionStarted = true;
-    if (revisionCasEnabled) {
+    if (globalRevisionBarrier !== "none") {
       const lockResult = await connection.query(
-        "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
+        globalRevisionBarrier === "shared_expected"
+          ? "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR SHARE"
+          : "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
       );
       const actualRevision = mysqlStoreRevisionFromQueryResult(lockResult);
       if (actualRevision === null) {
@@ -2151,7 +2314,7 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
       }
     }
     await executeBusinessWrites(connection);
-    if (revisionCasEnabled) {
+    if (globalRevisionBarrier === "exclusive_cas") {
       const updateResult = await connection.query(
         `UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth' AND revision = ${expectedRevision}`,
       );
@@ -2160,7 +2323,10 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
       }
     }
     await connection.commit();
-    return {revision: revisionCasEnabled ? expectedRevision + 1 : null};
+    return {
+      revision: globalRevisionBarrier === "exclusive_cas" ? expectedRevision + 1 : expectedRevision,
+      globalRevisionAdvanced: globalRevisionBarrier === "exclusive_cas",
+    };
   } catch (error) {
     let rollbackError = null;
     if (connection !== null && transactionStarted) {
@@ -2199,6 +2365,44 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
     if (connection !== null && typeof connection.release === "function") {
       connection.release();
     }
+  }
+}
+
+async function assertMysqlResourceLocks(connection, locks) {
+  for (const lock of Array.isArray(locks) ? locks : []) {
+    const result = await connection.query(lock.sql, lock.params);
+    if (Array.isArray(lock.expectedRows)) {
+      assertMysqlResourceLockRows(result, lock);
+    } else {
+      assertMysqlResourceLockRow(result, lock);
+    }
+  }
+}
+
+function assertMysqlResourceLockRows(result, lock) {
+  const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+  const expectedRows = Array.isArray(lock.expectedRows) ? lock.expectedRows : [];
+  const keyField = String(lock.keyField || "");
+  if (!Array.isArray(rows) || rows.length !== expectedRows.length || keyField === "") {
+    throw mysqlResourceRevisionConflict(lock.resource, lock.key);
+  }
+  const rowsByKey = new Map();
+  for (const row of rows) {
+    const key = String((row && row[keyField]) ?? "");
+    if (key === "" || rowsByKey.has(key)) {
+      throw mysqlResourceRevisionConflict(lock.resource, lock.key);
+    }
+    rowsByKey.set(key, row);
+  }
+  for (const expectedRow of expectedRows) {
+    const expectedKey = String((expectedRow && expectedRow[keyField]) ?? "");
+    if (expectedKey === "" || !rowsByKey.has(expectedKey)) {
+      throw mysqlResourceRevisionConflict(lock.resource, lock.key);
+    }
+    assertMysqlResourceLockRow([rowsByKey.get(expectedKey)], {
+      ...lock,
+      expectedRow,
+    });
   }
 }
 
