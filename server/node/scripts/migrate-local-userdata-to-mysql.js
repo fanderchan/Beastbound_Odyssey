@@ -15,6 +15,7 @@ loadEnvFile(path.resolve(repoRoot, "server/node/.local/mysql.env"));
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  validateApplyGates(args);
   const apply = args.apply === true;
   const username = normalizeUsername(args.username || process.env.BEASTBOUND_MIGRATE_USERNAME || "auth1373");
   const password = args.passwordStdin === true ? readPasswordFromStdin() : "";
@@ -32,7 +33,11 @@ function main() {
   const profile = readJsonFile(profilePath);
   requireSafeProfileMigration(profile);
   const nowIso = new Date().toISOString();
-  const store = createMysqlAuthStore({readOnly: !apply, ensureSchema: apply});
+  const store = createMysqlAuthStore({
+    readOnly: !apply,
+    ensureSchema: apply,
+    singleWriterMaintenance: apply,
+  });
   const sourceData = cloneJson(store.load());
   const migration = buildLocalUserdataMigration({
     sourceData,
@@ -51,7 +56,7 @@ function main() {
       ok: true,
       mode: "dry-run",
       applied: false,
-      message: "仅生成迁移预演；未写 MySQL。使用 --apply 才会先备份再写入。",
+      message: "仅生成迁移预演；未写 MySQL。停服后使用 --apply --maintenance-confirmed 才会先备份再写入。",
     }, null, 2));
     return;
   }
@@ -720,11 +725,21 @@ function parseArgs(argv) {
       result.backupPath = argv[++index] || "";
     } else if (arg === "--apply") {
       result.apply = true;
+    } else if (arg === "--maintenance-confirmed") {
+      result.maintenanceConfirmed = true;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
   return result;
+}
+
+function validateApplyGates(args) {
+  if (args.apply === true && args.maintenanceConfirmed !== true) {
+    const error = new Error("--apply 必须同时提供 --maintenance-confirmed，并确保全部游戏后端 writer 已停止。");
+    error.code = "local_userdata_migration_maintenance_required";
+    throw error;
+  }
 }
 
 function loadEnvFile(filePath) {
@@ -844,6 +859,7 @@ module.exports = {
   stableDigest,
   targetScopeDigest,
   validateTargetIdentityGraph,
+  validateApplyGates,
   verifyAppliedMigration,
   writeBackupSnapshot,
 };

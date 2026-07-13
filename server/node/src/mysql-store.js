@@ -30,6 +30,11 @@ const MYSQL_LOAD_OUTPUT_CHUNK_BYTES = 64 * 1024;
 const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
 const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
 const MYSQL_BATTLE_TRACE_WINDOW_MAX = 1200;
+const MYSQL_STORE_REVISION_SCOPE = "auth";
+const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
+const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
+const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
+const MYSQL_STORE_REVISION_PRESENT = Symbol("beastbound.mysqlStoreRevisionPresent");
 const MYSQL_HISTORY_SEQUENCE_CONTRACTS = Object.freeze([
   Object.freeze({tableName: "battle_records", indexName: "uq_battle_records_history_seq"}),
   Object.freeze({tableName: "battle_trace", indexName: "uq_battle_trace_history_seq"}),
@@ -42,6 +47,8 @@ function createMysqlAuthStore(options = {}) {
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
   let lastPersistentData = null;
+  let lastPersistentRevision = null;
+  let revisionCasEnabled = false;
   let writePool = null;
   let closePromise = null;
   let closed = false;
@@ -79,6 +86,11 @@ function createMysqlAuthStore(options = {}) {
         document_json JSON NOT NULL,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS auth_store_revisions (
+        scope_key VARCHAR(64) PRIMARY KEY,
+        revision BIGINT UNSIGNED NOT NULL
+      );
+      INSERT IGNORE INTO auth_store_revisions (scope_key, revision) VALUES ('auth', 0);
       CREATE TABLE IF NOT EXISTS accounts (
         account_id VARCHAR(80) PRIMARY KEY,
         username VARCHAR(32) NOT NULL UNIQUE,
@@ -345,6 +357,27 @@ function createMysqlAuthStore(options = {}) {
     runMysql(config, config.database, "DELETE FROM party_invites;");
   }
 
+  function loadAuthoritySnapshot() {
+    ensureSchema();
+    const loaded = canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
+      includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+      includeMutationReceipts: ensureSchemaEnabled,
+      includeStoreRevision: ensureSchemaEnabled,
+      detectStoreRevision: !readOnly && (config.usePool || config.singleWriterMaintenance),
+      strictRowIdentity,
+    }));
+    const revisionPresent = mysqlStoreRevisionPresent(loaded);
+    if (!readOnly && (config.usePool || config.singleWriterMaintenance) && !revisionPresent) {
+      const error = new Error("MySQL全局存档版本行缺失，拒绝启动可写服务。");
+      error.code = MYSQL_STORE_REVISION_MISSING;
+      throw error;
+    }
+    lastPersistentRevision = mysqlStoreRevision(loaded);
+    revisionCasEnabled = !readOnly && revisionPresent;
+    lastPersistentData = mysqlPersistentData(loaded);
+    return loaded;
+  }
+
   return {
     mode: "mysql",
     checkHealth() {
@@ -367,14 +400,7 @@ function createMysqlAuthStore(options = {}) {
       return {ok: true};
     },
     load() {
-      ensureSchema();
-      const loaded = canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
-        includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
-        includeMutationReceipts: ensureSchemaEnabled,
-        strictRowIdentity,
-      }));
-      lastPersistentData = mysqlPersistentData(loaded);
-      return loaded;
+      return loadAuthoritySnapshot();
     },
     save(nextData) {
       if (closed) {
@@ -385,16 +411,23 @@ function createMysqlAuthStore(options = {}) {
       }
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
-        ensureSchema();
-        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
-          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
-          includeMutationReceipts: ensureSchemaEnabled,
-          strictRowIdentity,
-        })));
+        loadAuthoritySnapshot();
       }
       const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
       if (statements.length > 0) {
-        runMysqlSaveStatements(config, config.database, statements);
+        if (!config.singleWriterMaintenance) {
+          const error = new Error("同步 MySQL 写入只允许显式停服维护模式。");
+          error.code = "mysql_async_revision_cas_required";
+          throw error;
+        }
+        if (!revisionCasEnabled) {
+          const error = new Error("MySQL全局存档版本行缺失，拒绝停服维护写入。");
+          error.code = MYSQL_STORE_REVISION_MISSING;
+          throw error;
+        }
+        const writeStatements = singleWriterMaintenanceStatements(statements);
+        runMysqlSaveStatements(config, config.database, writeStatements);
+        lastPersistentRevision += 1;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -407,20 +440,25 @@ function createMysqlAuthStore(options = {}) {
       }
       const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
-        ensureSchema();
-        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
-          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
-          includeMutationReceipts: ensureSchemaEnabled,
-          strictRowIdentity,
-        })));
+        loadAuthoritySnapshot();
       }
       const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
       if (statements.length > 0) {
-        if (config.usePool) {
-          await runMysqlPoolSaveStatements(persistentWritePool(), statements);
-        } else {
-          await runMysqlSaveStatementsAsync(config, config.database, statements);
+        if (!config.usePool) {
+          const error = new Error("在线异步 MySQL 写入必须使用带全局版本锁的连接池。");
+          error.code = "mysql_async_revision_cas_required";
+          throw error;
         }
+        if (!revisionCasEnabled) {
+          const error = new Error("MySQL全局存档版本行缺失，拒绝异步写入。");
+          error.code = MYSQL_STORE_REVISION_MISSING;
+          throw error;
+        }
+        const committed = await runMysqlPoolSaveStatements(persistentWritePool(), statements, {
+          expectedRevision: lastPersistentRevision,
+          revisionCasEnabled: true,
+        });
+        lastPersistentRevision = committed.revision;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -436,20 +474,25 @@ function createMysqlAuthStore(options = {}) {
       // post-COMMIT ledger replacement cannot alter this write.
       const data = mysqlPersistentData(nextData, {ownedRoot: true});
       if (lastPersistentData === null) {
-        ensureSchema();
-        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
-          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
-          includeMutationReceipts: ensureSchemaEnabled,
-          strictRowIdentity,
-        })));
+        loadAuthoritySnapshot();
       }
       const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
       if (statements.length > 0) {
-        if (config.usePool) {
-          await runMysqlPoolSaveStatements(persistentWritePool(), statements);
-        } else {
-          await runMysqlSaveStatementsAsync(config, config.database, statements);
+        if (!config.usePool) {
+          const error = new Error("在线异步 MySQL 写入必须使用带全局版本锁的连接池。");
+          error.code = "mysql_async_revision_cas_required";
+          throw error;
         }
+        if (!revisionCasEnabled) {
+          const error = new Error("MySQL全局存档版本行缺失，拒绝异步写入。");
+          error.code = MYSQL_STORE_REVISION_MISSING;
+          throw error;
+        }
+        const committed = await runMysqlPoolSaveStatements(persistentWritePool(), statements, {
+          expectedRevision: lastPersistentRevision,
+          revisionCasEnabled: true,
+        });
+        lastPersistentRevision = committed.revision;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -516,6 +559,9 @@ function loadPersistentData(config, database, options = {}) {
     || mysqlTableExists(config, database, "consumed_equipment_envelopes");
   const includeMutationReceipts = options.includeMutationReceipts === true
     || mysqlTableExists(config, database, "mutation_receipts");
+  const includeStoreRevision = options.includeStoreRevision === true
+    || (options.detectStoreRevision === true
+      && mysqlTableExists(config, database, "auth_store_revisions"));
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), MYSQL_LOAD_TEMP_PREFIX));
   const outputPath = path.join(temporaryDirectory, "persistent-data.tsv");
   let outputFd = null;
@@ -525,7 +571,11 @@ function loadPersistentData(config, database, options = {}) {
     runMysql(
       config,
       database,
-      loadPersistentDataSql({includeConsumedEquipmentEnvelopes, includeMutationReceipts}),
+      loadPersistentDataSql({
+        includeConsumedEquipmentEnvelopes,
+        includeMutationReceipts,
+        includeStoreRevision,
+      }),
       {stdoutFd: outputFd},
     );
     fs.closeSync(outputFd);
@@ -646,6 +696,8 @@ function mysqlHistorySequenceContract(config, database, tableName) {
 
 function loadPersistentDataSql(options = {}) {
   const statements = [
+    "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+    "SET autocommit = 0",
     "SELECT 'server_state', state_key, CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth'",
     "SELECT 'accounts', account_id, CAST(document_json AS CHAR) FROM accounts ORDER BY account_id",
     "SELECT 'sessions', session_id, CAST(document_json AS CHAR) FROM sessions ORDER BY session_id",
@@ -677,6 +729,12 @@ function loadPersistentDataSql(options = {}) {
       "SELECT 'mutation_receipts', operation_id, CAST(document_json AS CHAR) FROM mutation_receipts ORDER BY operation_id",
     );
   }
+  if (options.includeStoreRevision === true) {
+    statements.splice(2, 0,
+      "SELECT 'store_revision', scope_key, CAST(revision AS CHAR) FROM auth_store_revisions WHERE scope_key = 'auth'",
+    );
+  }
+  statements.push("COMMIT");
   return statements.join(";\n");
 }
 
@@ -688,6 +746,8 @@ function parsePersistentDataLines(lines, options = {}) {
   const data = emptyPersistentData();
   let legacyDocument = null;
   let stateDocument = null;
+  let storeRevision = 0;
+  let storeRevisionPresent = false;
   let entityRows = 0;
   for (const line of lines) {
     const columns = line.split("\t");
@@ -699,6 +759,19 @@ function parsePersistentDataLines(lines, options = {}) {
       continue;
     }
     const rowKey = columns[1];
+    if (bucket === "store_revision") {
+      const parsedRevision = Number(columns.slice(2).join("\t"));
+      if (rowKey !== MYSQL_STORE_REVISION_SCOPE
+        || !Number.isSafeInteger(parsedRevision)
+        || parsedRevision < 0) {
+        const error = new Error("MySQL全局存档版本非法，拒绝加载。");
+        error.code = MYSQL_STORE_REVISION_MISSING;
+        throw error;
+      }
+      storeRevision = parsedRevision;
+      storeRevisionPresent = true;
+      continue;
+    }
     const document = parsePersistentRowJson(bucket, rowKey, columns.slice(2).join("\t"));
     if (bucket === "server_state") {
       stateDocument = document;
@@ -722,9 +795,37 @@ function parsePersistentDataLines(lines, options = {}) {
       Number(data.serviceEventSeq || 0),
       ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
     );
-    return data;
+    return attachMysqlStoreRevision(data, storeRevision, storeRevisionPresent);
   }
-  return legacyDocument || {};
+  return attachMysqlStoreRevision(legacyDocument || {}, storeRevision, storeRevisionPresent);
+}
+
+function attachMysqlStoreRevision(data, revision, present) {
+  const target = data && typeof data === "object" && !Array.isArray(data) ? data : {};
+  Object.defineProperties(target, {
+    [MYSQL_STORE_REVISION]: {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: revision,
+    },
+    [MYSQL_STORE_REVISION_PRESENT]: {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: present === true,
+    },
+  });
+  return target;
+}
+
+function mysqlStoreRevision(data) {
+  const revision = Number(data && data[MYSQL_STORE_REVISION]);
+  return Number.isSafeInteger(revision) && revision >= 0 ? revision : 0;
+}
+
+function mysqlStoreRevisionPresent(data) {
+  return Boolean(data && data[MYSQL_STORE_REVISION_PRESENT] === true);
 }
 
 function* persistentDataFileLines(filePath, maxBytes) {
@@ -1505,6 +1606,10 @@ function mysqlConfig(options) {
       process.env.BEASTBOUND_MYSQL_POOL_CONNECTION_LIMIT,
       2,
     ),
+    singleWriterMaintenance: boolConfig(
+      options.singleWriterMaintenance,
+      process.env.BEASTBOUND_MYSQL_SINGLE_WRITER_MAINTENANCE,
+    ),
   };
 }
 
@@ -1671,26 +1776,29 @@ function runMysqlSaveStatements(config, database, statements) {
   }
 }
 
-async function runMysqlSaveStatementsAsync(config, database, statements) {
-  if (!Array.isArray(statements) || statements.length === 0) {
-    return "";
+function singleWriterMaintenanceStatements(statements) {
+  if (!Array.isArray(statements)
+    || statements[0] !== "START TRANSACTION"
+    || statements[statements.length - 1] !== "COMMIT") {
+    throw new Error("停服维护写入缺少完整 MySQL 事务边界。");
   }
-  try {
-    return await runMysqlAsync(config, database, `${statements.join(";\n")};`);
-  } catch (error) {
-    // An async request path must never fall back to synchronous statement-by-
-    // statement mysql spawns: that blocks the event loop and can replay an
-    // ambiguous transaction. Keep the public failure bounded and retain the
-    // original error only as a non-rendered cause for local diagnostics.
-    const saveError = new Error("MySQL 异步存档失败。");
-    saveError.cause = error;
-    throw saveError;
-  }
+  return [
+    ...statements.slice(0, -1),
+    "UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth'",
+    "COMMIT",
+  ];
 }
 
-async function runMysqlPoolSaveStatements(pool, statements) {
+async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   if (!Array.isArray(statements) || statements.length === 0) {
-    return;
+    return {revision: null};
+  }
+  const revisionCasEnabled = options.revisionCasEnabled === true;
+  const expectedRevision = Number(options.expectedRevision);
+  if (revisionCasEnabled && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) {
+    const error = new Error("MySQL本地存档版本缺失，拒绝提交。");
+    error.code = MYSQL_STORE_REVISION_MISSING;
+    throw error;
   }
   const transactionStatements = statements[0] === "START TRANSACTION"
     && statements[statements.length - 1] === "COMMIT"
@@ -1702,10 +1810,33 @@ async function runMysqlPoolSaveStatements(pool, statements) {
     connection = await pool.getConnection();
     await connection.beginTransaction();
     transactionStarted = true;
+    if (revisionCasEnabled) {
+      const lockResult = await connection.query(
+        "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
+      );
+      const actualRevision = mysqlStoreRevisionFromQueryResult(lockResult);
+      if (actualRevision === null) {
+        const error = new Error("MySQL全局存档版本行缺失，拒绝提交。");
+        error.code = MYSQL_STORE_REVISION_MISSING;
+        throw error;
+      }
+      if (actualRevision !== expectedRevision) {
+        throw mysqlStoreRevisionConflict(expectedRevision, actualRevision);
+      }
+    }
     for (const statement of transactionStatements) {
       await connection.query(statement);
     }
+    if (revisionCasEnabled) {
+      const updateResult = await connection.query(
+        `UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth' AND revision = ${expectedRevision}`,
+      );
+      if (mysqlAffectedRows(updateResult) !== 1) {
+        throw mysqlStoreRevisionConflict(expectedRevision, null);
+      }
+    }
     await connection.commit();
+    return {revision: revisionCasEnabled ? expectedRevision + 1 : null};
   } catch (error) {
     let rollbackError = null;
     if (connection !== null && transactionStarted) {
@@ -1715,7 +1846,20 @@ async function runMysqlPoolSaveStatements(pool, statements) {
         rollbackError = caughtRollbackError;
       }
     }
-    const saveError = new Error("MySQL 异步存档失败。");
+    const saveError = new Error(
+      error && error.code === MYSQL_STORE_REVISION_CONFLICT
+        ? "MySQL存档版本已变化，旧快照未写入。"
+        : "MySQL 异步存档失败。",
+    );
+    if (error && typeof error.code === "string" && error.code !== "") {
+      saveError.code = error.code;
+    }
+    if (error && Number.isSafeInteger(error.expectedRevision)) {
+      saveError.expectedRevision = error.expectedRevision;
+    }
+    if (error && Number.isSafeInteger(error.actualRevision)) {
+      saveError.actualRevision = error.actualRevision;
+    }
     saveError.cause = error;
     if (rollbackError !== null) {
       saveError.rollbackCause = rollbackError;
@@ -1726,6 +1870,32 @@ async function runMysqlPoolSaveStatements(pool, statements) {
       connection.release();
     }
   }
+}
+
+function mysqlStoreRevisionFromQueryResult(result) {
+  const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+  if (!Array.isArray(rows) || rows.length !== 1) {
+    return null;
+  }
+  const row = rows[0] || {};
+  const revision = Number(row.storeRevision ?? row.store_revision ?? row.revision);
+  return Number.isSafeInteger(revision) && revision >= 0 ? revision : null;
+}
+
+function mysqlAffectedRows(result) {
+  const header = Array.isArray(result) ? result[0] : result;
+  const affectedRows = Number(header && header.affectedRows);
+  return Number.isSafeInteger(affectedRows) && affectedRows >= 0 ? affectedRows : 0;
+}
+
+function mysqlStoreRevisionConflict(expectedRevision, actualRevision) {
+  const error = new Error("MySQL存档版本冲突，拒绝旧快照覆盖新提交。");
+  error.code = MYSQL_STORE_REVISION_CONFLICT;
+  error.expectedRevision = expectedRevision;
+  if (Number.isSafeInteger(actualRevision)) {
+    error.actualRevision = actualRevision;
+  }
+  return error;
 }
 
 function diagnoseMysqlSaveFailure(config, database, statements) {

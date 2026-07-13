@@ -54,6 +54,93 @@ function mysqlLoadTemporaryDirectoryNames() {
   }
 }
 
+function createMysqlCasPoolFixture(options = {}) {
+  const state = {
+    revision: Number.isSafeInteger(options.revision) ? options.revision : 0,
+    acquireCount: 0,
+    endCalls: 0,
+    events: [],
+    queriedStatements: [],
+    transactions: [],
+  };
+  const pool = {
+    async getConnection() {
+      state.acquireCount += 1;
+      state.events.push("acquire");
+      const transaction = {
+        begun: false,
+        committed: false,
+        rolledBack: false,
+        released: false,
+        queries: [],
+      };
+      state.transactions.push(transaction);
+      if (typeof options.beforeAcquire === "function") {
+        await options.beforeAcquire({state, transaction});
+      }
+      let pendingRevision = null;
+      return {
+        async beginTransaction() {
+          transaction.begun = true;
+          state.events.push("begin");
+        },
+        async query(statement) {
+          const sql = typeof statement === "string"
+            ? statement
+            : String(statement && statement.sql || "");
+          transaction.queries.push(sql);
+          state.queriedStatements.push(sql);
+          state.events.push("query");
+          if (typeof options.onQuery === "function") {
+            const result = await options.onQuery({sql, state, transaction});
+            if (result !== undefined) {
+              return result;
+            }
+          }
+          if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(sql.trim())) {
+            return [[{storeRevision: state.revision}], []];
+          }
+          const revisionUpdateMatch = sql.trim().match(
+            /^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = (\d+)$/i,
+          );
+          if (revisionUpdateMatch) {
+            const expectedRevision = Number(revisionUpdateMatch[1]);
+            if (expectedRevision !== state.revision) {
+              return [{affectedRows: 0}, []];
+            }
+            pendingRevision = state.revision + 1;
+            return [{affectedRows: 1}, []];
+          }
+          return [{affectedRows: 1}, []];
+        },
+        async commit() {
+          if (typeof options.onCommit === "function") {
+            await options.onCommit({state, transaction});
+          }
+          if (pendingRevision !== null) {
+            state.revision = pendingRevision;
+          }
+          transaction.committed = true;
+          state.events.push("commit");
+        },
+        async rollback() {
+          pendingRevision = null;
+          transaction.rolledBack = true;
+          state.events.push("rollback");
+        },
+        release() {
+          transaction.released = true;
+          state.events.push("release");
+        },
+      };
+    },
+    async end() {
+      state.endCalls += 1;
+    },
+  };
+  return {pool, state};
+}
+
 test("MySQL CLI loader default is one shared bounded full-history ceiling", () => {
   assert.equal(DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES, 192 * 1024 * 1024);
   assert.ok(DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES > 105_876_464);
@@ -550,6 +637,9 @@ process.stdin.on("end", () => {
       hasManorWars: stdin.includes("INSERT INTO manor_wars"),
       hasManorBattles: stdin.includes("INSERT INTO manor_battles"),
     }) + "\\n");
+    if (stdin.includes("SELECT 'server_state'")) {
+      process.stdout.write("store_revision\\tauth\\t0\\n");
+    }
 });
 `, {"mode": 0o755});
   try {
@@ -562,6 +652,7 @@ process.stdin.on("end", () => {
       "password": "secret",
       "database": "beastbound_test",
       "createDatabase": false,
+      "singleWriterMaintenance": true,
     });
     store.save({
       "accounts": {
@@ -694,6 +785,7 @@ process.stdin.on("end", () => {
     assert.equal(saveCall.stdin.includes("INSERT INTO battle_rooms"), false);
     assert.equal(saveCall.stdin.includes("INSERT INTO battle_invites"), false);
     assert.ok(saveCall.stdin.includes("mysql_entity_tables"));
+    assert.match(saveCall.stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1 WHERE scope_key = 'auth'/);
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -1048,6 +1140,7 @@ test("full battle history windows preserve durable append order across equal and
   const previousLogPath = process.env.FAKE_MYSQL_LOG;
   const sameTimestamp = "2026-07-13T09:00:00.000Z";
   const state = {
+    revision: 0,
     nextRecordSeq: 10001,
     nextTraceSeq: 1201,
     records: Array.from({length: 10000}, (_, index) => ({
@@ -1084,12 +1177,15 @@ process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
   if (stdin.includes("information_schema.tables")) {
-    process.stdout.write("0\\n");
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
     return;
   }
   const state = JSON.parse(fs.readFileSync(process.env.FAKE_MYSQL_HISTORY_STATE, "utf8"));
   if (stdin.includes("SELECT 'server_state'")) {
-    const rows = [["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}]];
+    const rows = [
+      ["store_revision", "auth", state.revision],
+      ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    ];
     for (const entry of state.records.slice().sort((left, right) => left.seq - right.seq).slice(-10000)) {
       rows.push(["battle_records", entry.document.recordId, entry.document]);
     }
@@ -1100,6 +1196,9 @@ process.stdin.on("end", () => {
     return;
   }
   if (stdin.includes("START TRANSACTION")) {
+    if (stdin.includes("UPDATE auth_store_revisions SET revision = revision + 1")) {
+      state.revision += 1;
+    }
     if (stdin.includes("'battle_record_sequence_backdated_new'")) {
       state.records.push({
         seq: state.nextRecordSeq++,
@@ -1143,6 +1242,7 @@ process.stdin.on("end", () => {
       database: "beastbound_test",
       createDatabase: false,
       ensureSchema: false,
+      singleWriterMaintenance: true,
     };
     const store = createMysqlAuthStore(options);
     const loaded = store.load();
@@ -1203,6 +1303,8 @@ process.stdin.on("end", () => {
     assert.match(saveSql, /INSERT INTO battle_trace/);
     assert.doesNotMatch(saveSql, /DELETE FROM (?:battle_records|battle_trace)/);
     assert.doesNotMatch(saveSql, /ON DUPLICATE KEY UPDATE[^;]*(?:battle_record|battle_trace)_sequence_backdated_new/);
+    assert.match(saveSql, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
+    assert.equal(persisted.revision, 1);
   } finally {
     if (previousStatePath === undefined) {
       delete process.env.FAKE_MYSQL_HISTORY_STATE;
@@ -1231,13 +1333,14 @@ process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
   if (stdin.includes("information_schema.tables")) {
-    process.stdout.write("0\\n");
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
     return;
   }
   if (!stdin.includes("SELECT 'server_state'")) {
     return;
   }
   const rows = [
+    ["store_revision", "auth", 0],
     ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
     ["battle_records", "battle_record_legacy_future", {
       recordId: "battle_record_legacy_future",
@@ -1269,6 +1372,7 @@ process.stdin.on("end", () => {
       database: "beastbound_test",
       createDatabase: false,
       ensureSchema: false,
+      singleWriterMaintenance: true,
     });
     const service = createAuthService({store});
     const normalized = service.snapshot();
@@ -1289,6 +1393,7 @@ process.stdin.on("end", () => {
     assert.doesNotMatch(saveSql[0].stdin, /(?:DELETE FROM|INSERT INTO) battle_records/);
     assert.doesNotMatch(saveSql[0].stdin, /(?:DELETE FROM|INSERT INTO) battle_trace/);
     assert.doesNotMatch(saveSql[0].stdin, /record_sentinel|trace_sentinel|futureServerField/);
+    assert.match(saveSql[0].stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -1508,6 +1613,9 @@ process.stdin.on("end", () => {
     argv: process.argv.slice(2),
     stdin,
   }) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  }
 });
 `, {"mode": 0o755});
   try {
@@ -1520,6 +1628,7 @@ process.stdin.on("end", () => {
       "password": "secret",
       "database": "beastbound_test",
       "createDatabase": false,
+      "singleWriterMaintenance": true,
     });
     const unchangedFamilyMarker = `UNCHANGED_FAMILY_MARKER_${"z".repeat(256)}`;
     const firstState = {
@@ -1647,6 +1756,8 @@ process.stdin.on("end", () => {
     assert.equal(secondSave.includes("INSERT INTO battle_invites"), false);
     assert.equal(secondSave.includes("room_incremental"), false);
     assert.equal(secondSave.includes("invite_incremental"), false);
+    assert.match(firstSave, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
+    assert.match(secondSave, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
 
     const invalidReceiptState = structuredClone(secondState);
     invalidReceiptState.mutationReceipts.operation_wrong_key = {
@@ -1694,6 +1805,9 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  }
 });
 `, {mode: 0o755});
   try {
@@ -1706,6 +1820,7 @@ process.stdin.on("end", () => {
       password: "secret",
       database: "beastbound_test",
       createDatabase: false,
+      singleWriterMaintenance: true,
     });
     const state = {
       schemaVersion: 1,
@@ -1724,6 +1839,9 @@ process.stdin.on("end", () => {
       serviceEvents: [],
     };
     store.save(state);
+    const initialCalls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const initialSave = initialCalls.find((call) => call.stdin.includes("START TRANSACTION"));
+    assert.match(initialSave.stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
     const callsAfterInitialSave = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).length;
 
     store.save(structuredClone(state));
@@ -1766,8 +1884,11 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
-  if (stdin.includes("SELECT 'server_state'")) {
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
+  } else if (stdin.includes("SELECT 'server_state'")) {
     const rows = [
+      ["store_revision", "auth", "0"],
       ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
       ["consumed_equipment_envelopes", "eqx_health_baseline_0001", "{}"],
       ["consumed_equipment_envelopes", "eqx_health_baseline_0002", "{}"],
@@ -1789,6 +1910,7 @@ process.stdin.on("end", () => {
       database: "beastbound_test",
       createDatabase: false,
       ensureSchema: false,
+      singleWriterMaintenance: true,
     });
     const loaded = store.load();
     const canonicalLedger = loaded.consumedEquipmentEnvelopes;
@@ -1829,6 +1951,7 @@ process.stdin.on("end", () => {
     assert.equal(transactionCalls[1].stdin.includes("eqx_health_appended_0003"), true);
     assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0001"), false);
     assert.equal(transactionCalls[1].stdin.includes("eqx_health_baseline_0002"), false);
+    assert.equal(transactionCalls.every((call) => call.stdin.includes("UPDATE auth_store_revisions SET revision = revision + 1")), true);
 
     // Canonical large-ledger views are immutable Proxy values; JSON is the
     // explicit full materialization boundary used by backup/migration paths.
@@ -1862,50 +1985,29 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
-  if (stdin.includes("information_schema.tables")) {
-    process.stdout.write("0\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  } else if (stdin.includes("information_schema.tables")) {
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
   }
 });
 `, {mode: 0o755});
   try {
     process.env.FAKE_MYSQL_LOG = cliLogPath;
-    const events = [];
-    const queriedStatements = [];
     let failNextQuery = false;
     let poolFactoryCalls = 0;
     let poolOptions = null;
-    let endCalls = 0;
-    const connection = {
-      async beginTransaction() {
-        events.push("begin");
-      },
-      async query(statement) {
-        events.push("query");
-        queriedStatements.push(statement);
+    const casFixture = createMysqlCasPoolFixture({
+      onQuery() {
         if (failNextQuery) {
           failNextQuery = false;
           throw new Error("injected pool query failure");
         }
       },
-      async commit() {
-        events.push("commit");
-      },
-      async rollback() {
-        events.push("rollback");
-      },
-      release() {
-        events.push("release");
-      },
-    };
-    const pool = {
-      async getConnection() {
-        events.push("acquire");
-        return connection;
-      },
-      async end() {
-        endCalls += 1;
-      },
-    };
+    });
+    const {pool} = casFixture;
+    const events = casFixture.state.events;
+    const queriedStatements = casFixture.state.queriedStatements;
     const store = createMysqlAuthStore({
       mysqlPath: fakeMysqlPath,
       host: "127.0.0.1",
@@ -1959,7 +2061,7 @@ process.stdin.on("end", () => {
     assert.equal(poolOptions.connectionLimit, 2);
     assert.equal(poolOptions.multipleStatements, false);
     assert.equal(poolOptions.waitForConnections, true);
-    assert.equal(endCalls, 1);
+    assert.equal(casFixture.state.endCalls, 1);
     assert.equal(fs.readFileSync(cliLogPath, "utf8"), "");
     assert.equal(events.filter((event) => event === "acquire").length, 4);
     assert.equal(events.filter((event) => event === "begin").length, 4);
@@ -1967,6 +2069,9 @@ process.stdin.on("end", () => {
     assert.equal(events.filter((event) => event === "rollback").length, 1);
     assert.equal(events.filter((event) => event === "release").length, 4);
     assert.ok(queriedStatements.some((statement) => statement.includes("INSERT INTO accounts")));
+    assert.equal(queriedStatements.filter((statement) => statement.includes("FOR UPDATE")).length, 4);
+    assert.equal(queriedStatements.filter((statement) => statement.startsWith("UPDATE auth_store_revisions")).length, 3);
+    assert.equal(casFixture.state.revision, 3);
     assert.equal(queriedStatements.some((statement) => statement === "START TRANSACTION"), false);
     assert.equal(queriedStatements.some((statement) => statement === "COMMIT"), false);
   } finally {
@@ -1988,43 +2093,28 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   if (stdin.includes("SELECT 'server_state'")) {
-    process.stdout.write(["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})].join("\\t") + "\\n");
+    const rows = [
+      ["store_revision", "auth", "0"],
+      ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+    ];
+    process.stdout.write(rows.map((row) => row.join("\\t")).join("\\n") + "\\n");
   } else if (stdin.includes("information_schema.tables")) {
-    process.stdout.write("0\\n");
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
   }
 });
 `, {mode: 0o755});
-  const events = [];
-  const queriedStatements = [];
   const duplicate = new Error("Duplicate entry 'battle_record_cold_conflict' for key 'PRIMARY'");
   duplicate.code = "ER_DUP_ENTRY";
-  const connection = {
-    async beginTransaction() {
-      events.push("begin");
-    },
-    async query(statement) {
-      queriedStatements.push(statement);
-      if (/^INSERT INTO battle_records /.test(statement)) {
-        assert.doesNotMatch(statement, /ON DUPLICATE KEY UPDATE/);
+  const casFixture = createMysqlCasPoolFixture({
+    onQuery({sql}) {
+      if (/^INSERT INTO battle_records /.test(sql)) {
+        assert.doesNotMatch(sql, /ON DUPLICATE KEY UPDATE/);
         throw duplicate;
       }
     },
-    async commit() {
-      events.push("commit");
-    },
-    async rollback() {
-      events.push("rollback");
-    },
-    release() {
-      events.push("release");
-    },
-  };
-  const pool = {
-    async getConnection() {
-      return connection;
-    },
-    async end() {},
-  };
+  });
+  const {pool} = casFixture;
+  const queriedStatements = casFixture.state.queriedStatements;
   try {
     const store = createMysqlAuthStore({
       mysqlPath: fakeMysqlPath,
@@ -2053,10 +2143,15 @@ process.stdin.on("end", () => {
       }),
       (error) => error.message === "MySQL 异步存档失败。" && error.cause === duplicate,
     );
-    assert.equal(queriedStatements.length, 2);
-    assert.match(queriedStatements[0], /^INSERT INTO server_state /);
-    assert.match(queriedStatements[1], /^INSERT INTO battle_records /);
-    assert.deepEqual(events, ["begin", "rollback", "release"]);
+    assert.equal(queriedStatements.length, 3);
+    assert.match(queriedStatements[0], /auth_store_revisions[\s\S]+FOR UPDATE/);
+    assert.match(queriedStatements[1], /^INSERT INTO server_state /);
+    assert.match(queriedStatements[2], /^INSERT INTO battle_records /);
+    assert.equal(casFixture.state.revision, 0);
+    assert.equal(casFixture.state.transactions[0].begun, true);
+    assert.equal(casFixture.state.transactions[0].rolledBack, true);
+    assert.equal(casFixture.state.transactions[0].committed, false);
+    assert.equal(casFixture.state.transactions[0].released, true);
     await store.close();
   } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
@@ -2075,8 +2170,10 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
-  if (stdin.includes("information_schema.tables")) {
-    process.stdout.write("0\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  } else if (stdin.includes("information_schema.tables")) {
+    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
   }
 });
 `, {mode: 0o755});
@@ -2086,27 +2183,15 @@ process.stdin.on("end", () => {
     const firstAcquireGate = new Promise((resolve) => {
       releaseFirstAcquire = resolve;
     });
-    let acquireCount = 0;
-    const queriedStatements = [];
-    const connection = {
-      async beginTransaction() {},
-      async query(statement) {
-        queriedStatements.push(statement);
-      },
-      async commit() {},
-      async rollback() {},
-      release() {},
-    };
-    const pool = {
-      async getConnection() {
-        acquireCount += 1;
-        if (acquireCount === 1) {
+    const casFixture = createMysqlCasPoolFixture({
+      async beforeAcquire({state}) {
+        if (state.acquireCount === 1) {
           await firstAcquireGate;
         }
-        return connection;
       },
-      async end() {},
-    };
+    });
+    const {pool} = casFixture;
+    const queriedStatements = casFixture.state.queriedStatements;
     const store = createMysqlAuthStore({
       mysqlPath: fakeMysqlPath,
       host: "127.0.0.1",
@@ -2156,21 +2241,22 @@ process.stdin.on("end", () => {
     assert.match(firstSql, /提交前名称/);
     assert.doesNotMatch(firstSql, /调用后篡改|injected_after_call|不应写入/);
     const firstQueryCount = queriedStatements.length;
-    assert.equal(acquireCount, 1);
+    assert.equal(casFixture.state.acquireCount, 1);
 
     // Saving the original value again must be a true no-op. This proves the
     // committed diff baseline also owns the pre-yield snapshot instead of the
     // caller object that was mutated while COMMIT was pending.
     await store.saveAsync(state("提交前名称"));
-    assert.equal(acquireCount, 1);
+    assert.equal(casFixture.state.acquireCount, 1);
     assert.equal(queriedStatements.length, firstQueryCount);
 
     await store.saveAsync(state("第二次真实变化"));
-    assert.equal(acquireCount, 2);
+    assert.equal(casFixture.state.acquireCount, 2);
     assert.match(queriedStatements.slice(firstQueryCount).join("\n"), /第二次真实变化/);
     await store.saveAsyncOwned(state("受托权威快照"));
-    assert.equal(acquireCount, 3);
+    assert.equal(casFixture.state.acquireCount, 3);
     assert.match(queriedStatements.join("\n"), /受托权威快照/);
+    assert.equal(casFixture.state.revision, 3);
     await store.close();
   } finally {
     if (previousLogPath === undefined) {
@@ -2182,7 +2268,7 @@ process.stdin.on("end", () => {
   }
 });
 
-test("async mysql save failure stays non-blocking and does not spawn synchronous diagnosis", async () => {
+test("async mysql CLI writes fail closed without spawning a transaction or diagnosis", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-store-async-failure-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const logPath = path.join(tempDir, "calls.jsonl");
@@ -2194,10 +2280,6 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
-  if (stdin.includes("START TRANSACTION")) {
-    process.stderr.write("sensitive mysql failure detail");
-    process.exitCode = 1;
-  }
 });
 `, {mode: 0o755});
   try {
@@ -2227,14 +2309,12 @@ process.stdin.on("end", () => {
           },
         },
       }),
-      (error) => error.message === "MySQL 异步存档失败。"
-        && !error.message.includes("sensitive mysql failure detail"),
+      (error) => error.code === "mysql_async_revision_cas_required"
+        && error.message === "在线异步 MySQL 写入必须使用带全局版本锁的连接池。",
     );
 
-    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 1);
-    assert.match(calls[0].stdin, /START TRANSACTION/);
-    assert.match(calls[0].stdin, /COMMIT/);
+    assert.equal(fs.readFileSync(logPath, "utf8"), "");
+    await store.close();
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -2257,6 +2337,9 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  }
 });
 `, {mode: 0o755});
   try {
@@ -2269,6 +2352,7 @@ process.stdin.on("end", () => {
       password: "secret",
       database: "beastbound_test",
       createDatabase: false,
+      singleWriterMaintenance: true,
     });
     const envelopeId = "eqx_store_immutable_0001";
     const state = {
@@ -2281,6 +2365,9 @@ process.stdin.on("end", () => {
       .trim().split(/\r?\n/)
       .filter((line) => JSON.parse(line).stdin.includes("START TRANSACTION")).length;
     const beforeFailures = transactionCount();
+    const firstTransaction = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/)
+      .map((line) => JSON.parse(line)).find((call) => call.stdin.includes("START TRANSACTION"));
+    assert.match(firstTransaction.stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
     assert.throws(() => store.save({consumedEquipmentEnvelopes: {}}), /只能追加/);
     assert.throws(() => store.save({
       consumedEquipmentEnvelopes: {
@@ -2312,6 +2399,10 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+    return;
+  }
   if (
     stdin.includes("START TRANSACTION")
     && stdin.includes("INSERT INTO consumed_equipment_envelopes")
@@ -2335,6 +2426,7 @@ process.stdin.on("end", () => {
       password: "secret",
       database: "beastbound_test",
       createDatabase: false,
+      singleWriterMaintenance: true,
     });
     const envelopeId = "eqx_store_ambiguous_retry_0001";
     const state = {
@@ -2353,6 +2445,7 @@ process.stdin.on("end", () => {
     assert.equal(completeAttempts.length, 2);
     for (const attempt of completeAttempts) {
       assert.match(attempt.stdin, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
+      assert.match(attempt.stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
       assert.equal(/DELETE FROM consumed_equipment_envelopes/.test(attempt.stdin), false);
     }
   } finally {
@@ -2386,8 +2479,12 @@ process.stdin.on("end", () => {
     argv: process.argv.slice(2),
     stdin,
   }) + "\\n");
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("store_revision\\tauth\\t0\\n");
+  }
 });
 `, {"mode": 0o755});
+  const casFixture = createMysqlCasPoolFixture();
   try {
     await withEnv({
       "BEASTBOUND_AUTH_STORE": undefined,
@@ -2402,7 +2499,11 @@ process.stdin.on("end", () => {
       "BEASTBOUND_MYSQL_CREATE_DATABASE": "0",
       "FAKE_MYSQL_LOG": logPath,
     }, async () => {
-      const store = createDefaultStore();
+      const store = createDefaultStore({
+        mysqlStoreOptions: {
+          poolFactory: () => casFixture.pool,
+        },
+      });
       assert.equal(typeof store.flush, "function");
       assert.deepEqual(store.load(), {});
       const savePromise = store.save({
@@ -2450,18 +2551,25 @@ process.stdin.on("end", () => {
       });
       assert.equal(typeof savePromise.then, "function");
       await store.flush();
+      await savePromise;
+      await store.close();
     });
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
     assert.ok(calls.some((call) => call.stdin.includes("CREATE TABLE IF NOT EXISTS server_state")));
-    const saveCall = calls.find((call) => call.stdin.includes("INSERT INTO server_state"));
-    assert.ok(saveCall);
-    assert.equal(saveCall.argv.includes("-e"), false);
-    assert.ok(saveCall.stdin.includes("INSERT INTO accounts"));
-    assert.ok(saveCall.stdin.includes("INSERT INTO mail_messages"));
-    assert.ok(saveCall.stdin.includes("INSERT INTO chat_messages"));
-    assert.equal(saveCall.stdin.includes("INSERT INTO player_positions"), false);
-    assert.equal(saveCall.stdin.includes("INSERT INTO battle_rooms"), false);
-    assert.equal(saveCall.stdin.includes("INSERT INTO battle_invites"), false);
+    assert.equal(calls.some((call) => call.stdin.includes("START TRANSACTION") && call.stdin.includes("INSERT INTO server_state")), false);
+    assert.equal(calls.every((call) => call.argv.includes("-e") === false), true);
+    const saveSql = casFixture.state.queriedStatements.join("\n");
+    assert.match(saveSql, /SELECT revision AS storeRevision[\s\S]+FOR UPDATE/);
+    assert.match(saveSql, /INSERT INTO server_state/);
+    assert.match(saveSql, /INSERT INTO accounts/);
+    assert.match(saveSql, /INSERT INTO mail_messages/);
+    assert.match(saveSql, /INSERT INTO chat_messages/);
+    assert.doesNotMatch(saveSql, /INSERT INTO player_positions/);
+    assert.doesNotMatch(saveSql, /INSERT INTO battle_rooms/);
+    assert.doesNotMatch(saveSql, /INSERT INTO battle_invites/);
+    assert.match(saveSql, /UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = 0/);
+    assert.equal(casFixture.state.revision, 1);
+    assert.equal(casFixture.state.endCalls, 1);
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

@@ -3727,6 +3727,8 @@ function createRecordingPoolMetrics() {
     scenarioStartedAt: 0,
     scenarioDurationMs: 0,
     scenarioTransactionBaseline: 0,
+    storeRevision: 0,
+    pendingStoreRevision: null,
   };
 }
 
@@ -3741,12 +3743,23 @@ function createRecordingPool(metrics) {
       metrics.currentTransaction = {startedAtMs: performance.now(), operationIds: new Set()};
     },
     async query(statementValue) {
+      const statement = typeof statementValue === "string"
+        ? statementValue
+        : String(statementValue && statementValue.sql || "");
       metrics.queryCount += 1;
       metrics.currentStatementCount += 1;
       metrics.currentTouchedRows += estimateSqlTouchedRows(statementValue);
       for (const operationId of recordingOperationIdsFromStatement(statementValue)) {
         metrics.currentTransaction && metrics.currentTransaction.operationIds.add(operationId);
       }
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(statement.trim())) {
+        return [[{storeRevision: metrics.storeRevision}], []];
+      }
+      if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(statement.trim())) {
+        metrics.pendingStoreRevision = metrics.storeRevision + 1;
+        return [{affectedRows: 1}, []];
+      }
+      return [{affectedRows: 1}, []];
     },
     async commit() {
       metrics.commitCount += 1;
@@ -3754,6 +3767,10 @@ function createRecordingPool(metrics) {
       metrics.maxTouchedRowsPerTransaction = Math.max(metrics.maxTouchedRowsPerTransaction, metrics.currentTouchedRows);
       const delayMs = metrics.commitCount % 100 === 0 ? 20 : 5;
       metrics.commitDelayMsTotal += delayMs;
+      if (metrics.pendingStoreRevision !== null) {
+        metrics.storeRevision = metrics.pendingStoreRevision;
+      }
+      metrics.pendingStoreRevision = null;
       const operationIds = [...(metrics.currentTransaction && metrics.currentTransaction.operationIds || [])];
       await delay(delayMs);
       const startedAtMs = Number(metrics.currentTransaction && metrics.currentTransaction.startedAtMs || performance.now());
@@ -3763,6 +3780,7 @@ function createRecordingPool(metrics) {
       metrics.currentStatementCount = 0;
       metrics.currentTouchedRows = 0;
       metrics.currentTransaction = null;
+      metrics.pendingStoreRevision = null;
       const completedAtUnixMs = performance.timeOrigin + performance.now();
       for (const operationId of operationIds) {
         metrics.operationCommitCompletedAtUnixMs.set(operationId, completedAtUnixMs);
@@ -3774,6 +3792,7 @@ function createRecordingPool(metrics) {
       metrics.currentStatementCount = 0;
       metrics.currentTouchedRows = 0;
       metrics.currentTransaction = null;
+      metrics.pendingStoreRevision = null;
     },
     release() {},
   };
@@ -4027,7 +4046,10 @@ process.stdin.on("end", () => {
   const createdAt = new Date(nowMs).toISOString();
   const salt = "capacity-fixture-salt-32-bytes";
   const passwordHash = crypto.scryptSync(${JSON.stringify(FIXTURE_PASSWORD)}, salt, 32).toString("hex");
-  const rows = [["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})]];
+  const rows = [
+    ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+    ["store_revision", "auth", "0"],
+  ];
   for (let index = 0; index < ${ACCOUNT_COUNT}; index += 1) {
     const suffix = String(index).padStart(3, "0");
     const accountId = "acc_capacity_" + suffix;

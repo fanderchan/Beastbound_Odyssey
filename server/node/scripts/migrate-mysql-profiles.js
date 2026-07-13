@@ -51,7 +51,12 @@ function runMysqlProfileMigration(options = {}) {
     : () => createMysqlAuthStore({readOnly: true, ensureSchema: false, strictRowIdentity: true});
   const createWriteStore = typeof options.createWriteStore === "function"
     ? options.createWriteStore
-    : () => createMysqlAuthStore({readOnly: false, ensureSchema: true, strictRowIdentity: true});
+    : () => createMysqlAuthStore({
+      readOnly: false,
+      ensureSchema: true,
+      strictRowIdentity: true,
+      singleWriterMaintenance: true,
+    });
   const writeBackup = typeof options.writeBackup === "function"
     ? options.writeBackup
     : writeBatchMigrationBackup;

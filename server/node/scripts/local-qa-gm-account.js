@@ -108,7 +108,11 @@ async function main(argv = process.argv.slice(2)) {
   assertLoopbackMysql();
   assertBackendStopped(runtime);
 
-  const writeStore = createMysqlAuthStore({readOnly: false, ensureSchema: true});
+  const writeStore = createMysqlAuthStore({
+    readOnly: false,
+    ensureSchema: true,
+    singleWriterMaintenance: true,
+  });
   const writeSource = writeStore.load();
   const applyChange = buildLocalQaGmAccountChange(writeSource, {
     operation: args.operation,

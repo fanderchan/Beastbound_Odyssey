@@ -342,13 +342,17 @@ function runCheck(check, options, logStream) {
 }
 
 function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut) {
+  const compileDiagnostic = godotCompileFailureDiagnostic(output);
   const statusLine = output
     .split(/\r?\n/)
     .filter((line) => line.includes("status="))
     .at(-1) || "";
   const statusMatch = statusLine.match(/\bstatus=([^\s]+)/);
-  const status = statusMatch ? statusMatch[1] : "";
-  const ok = !timedOut && exitCode === 0 && (status === "" || status === "ok");
+  const status = compileDiagnostic !== "" ? "compile_error" : (statusMatch ? statusMatch[1] : "");
+  const ok = !timedOut
+    && exitCode === 0
+    && compileDiagnostic === ""
+    && (status === "" || status === "ok");
   return {
     name: check.name,
     flag: check.flag,
@@ -357,11 +361,21 @@ function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut)
     ok,
     status,
     statusLine,
+    compileDiagnostic,
     exitCode,
     signalOrError,
     timedOut,
     elapsedMs,
   };
+}
+
+function godotCompileFailureDiagnostic(output) {
+  const lines = String(output || "").split(/\r?\n/);
+  return lines.find((line) => (
+    /SCRIPT ERROR:\s*(Parse Error|Compile Error):/i.test(line)
+    || /Failed to compile depended scripts/i.test(line)
+    || /Failed to load script .*Compilation failed/i.test(line)
+  )) || "";
 }
 
 function nowStamp() {
@@ -455,7 +469,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message || String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error.stack || error.message || String(error));
+    process.exitCode = 1;
+  });
+}
+
+export {
+  godotCompileFailureDiagnostic,
+  makeResult,
+};

@@ -2,7 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const {createAuthService} = require("../src/auth-service");
+const {createAuthService, createMemoryAuthStore} = require("../src/auth-service");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -16,7 +16,8 @@ function main() {
   if (!password) {
     throw new Error("Missing --password or BEASTBOUND_SMOKE_PASSWORD.");
   }
-  const service = createAuthService({"store": createMysqlAuthStore()});
+  const mysqlStore = createMysqlAuthStore({readOnly: true, ensureSchema: false});
+  const service = createAuthService({store: createMemoryAuthStore(mysqlStore.load())});
   const login = service.login({username, password});
   if (!login.ok) {
     throw new Error(`login failed: ${login.code || ""} ${login.message || ""}`.trim());

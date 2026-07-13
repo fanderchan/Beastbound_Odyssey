@@ -333,7 +333,7 @@ func apply_deferred_server_profile_pull_if_idle(force_apply: bool = false) -> vo
 		host.server_profile_sync_deferred_pull_elapsed = 0.0
 		var summary := parsed.get("profileSummary", {}) as Dictionary if parsed.get("profileSummary", {}) is Dictionary else {}
 		var revision := int(summary.get("profileRevision", 0))
-		if revision <= 0 or revision >= host.server_profile_sync_expected_revision:
+		if revision >= host.server_profile_sync_expected_revision:
 			apply_server_profile_pull_result(parsed, false)
 		continue_pending_server_profile_sync()
 		return
@@ -343,8 +343,14 @@ func apply_deferred_server_profile_pull_if_idle(force_apply: bool = false) -> vo
 func apply_server_profile_summary(summary: Dictionary) -> void:
 	if summary.is_empty():
 		return
-	host.current_account_session["serverProfileSummary"] = summary.duplicate(true)
-	host.server_profile_sync_expected_revision = maxi(0, int(summary.get("profileRevision", host.server_profile_sync_expected_revision)))
+	var incoming_revision := maxi(0, int(summary.get("profileRevision", 0)))
+	if incoming_revision < host.server_profile_sync_expected_revision:
+		return
+	var next_revision := maxi(host.server_profile_sync_expected_revision, incoming_revision)
+	var accepted_summary := summary.duplicate(true)
+	accepted_summary["profileRevision"] = next_revision
+	host.current_account_session["serverProfileSummary"] = accepted_summary
+	host.server_profile_sync_expected_revision = next_revision
 	var sync_state := host.player_profile.get("serverSync", {}) as Dictionary if host.player_profile.get("serverSync", {}) is Dictionary else {}
 	sync_state["profileRevision"] = host.server_profile_sync_expected_revision
 	sync_state["lastServerRevision"] = host.server_profile_sync_expected_revision
@@ -356,6 +362,12 @@ func apply_server_profile_payload(parsed: Dictionary) -> bool:
 	var server_profile = parsed.get("profile", null)
 	if not (server_profile is Dictionary):
 		return false
+	var incoming_summary = parsed.get("profileSummary", {})
+	if incoming_summary is Dictionary:
+		var incoming_revision := maxi(0, int((incoming_summary as Dictionary).get("profileRevision", 0)))
+		if incoming_revision < host.server_profile_sync_expected_revision:
+			parsed["profile"] = host.player_profile.duplicate(true)
+			return true
 	var projection := ServerPetProfileProjectionModel.project_runtime_server_profile(server_profile as Dictionary)
 	if not bool(projection.get("ok", false)):
 		var schema_status := str(projection.get("profileSchemaStatus", "current"))

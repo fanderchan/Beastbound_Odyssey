@@ -43,6 +43,7 @@ process.stdin.on("end", () => {
   if (stdin.includes("SELECT 'server_state'")) {
     const rows = [
       ["server_state", "auth", ${JSON.stringify(JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"}))}],
+      ["store_revision", "auth", "0"],
       ["mutation_receipts", ${JSON.stringify(oldOperationId)}, ${JSON.stringify(JSON.stringify(oldReceipt))}],
       ["consumed_equipment_envelopes", "eqx_mysql_journal_baseline_0001", "{}"],
     ];
@@ -54,6 +55,8 @@ process.stdin.on("end", () => {
   const transactions = [];
   let activeQueries = null;
   let failNextQuery = true;
+  let storeRevision = 0;
+  let pendingStoreRevision = null;
   const connection = {
     async beginTransaction() {
       activeQueries = [];
@@ -65,9 +68,22 @@ process.stdin.on("end", () => {
         failNextQuery = false;
         throw new Error("injected journal rollback");
       }
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{storeRevision}], []];
+      }
+      if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
+        pendingStoreRevision = storeRevision + 1;
+        return [{affectedRows: 1}, []];
+      }
+      return [{affectedRows: 1}, []];
     },
-    async commit() {},
-    async rollback() {},
+    async commit() {
+      if (pendingStoreRevision !== null) storeRevision = pendingStoreRevision;
+      pendingStoreRevision = null;
+    },
+    async rollback() {
+      pendingStoreRevision = null;
+    },
     release() {},
   };
   const pool = {
@@ -183,6 +199,7 @@ test("service replaces an expired receipt through the real mysql planner and the
   };
   const rows = [
     ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    ["store_revision", "auth", 0],
     ["accounts", accountId, account],
     ["sessions", session.sessionId, session],
     ["profile_bindings", accountId, binding],
@@ -203,6 +220,8 @@ process.stdin.on("end", () => {
 
   const transactions = [];
   let current = null;
+  let storeRevision = 0;
+  let pendingStoreRevision = null;
   const connection = {
     async beginTransaction() {
       current = [];
@@ -210,9 +229,22 @@ process.stdin.on("end", () => {
     },
     async query(statement) {
       current.push(statement);
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{storeRevision}], []];
+      }
+      if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
+        pendingStoreRevision = storeRevision + 1;
+        return [{affectedRows: 1}, []];
+      }
+      return [{affectedRows: 1}, []];
     },
-    async commit() {},
-    async rollback() {},
+    async commit() {
+      if (pendingStoreRevision !== null) storeRevision = pendingStoreRevision;
+      pendingStoreRevision = null;
+    },
+    async rollback() {
+      pendingStoreRevision = null;
+    },
     release() {},
   };
   try {

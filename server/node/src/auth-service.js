@@ -4723,6 +4723,7 @@ function createAsyncWriteAuthStore(store, options = {}) {
   let writeQueue = Promise.resolve();
   let lastSaveError = null;
   let ambiguousCommitRecoveries = 0;
+  let revisionConflicts = 0;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
   function enqueueSave(nextData, owned = false) {
     // saveOwned() is an internal ownership-transfer boundary used only by the
@@ -4734,6 +4735,10 @@ function createAsyncWriteAuthStore(store, options = {}) {
       try {
         return await saveStoreSnapshot(store, snapshot, {owned});
       } catch (error) {
+        if (isMysqlStoreRevisionConflict(error)) {
+          revisionConflicts += 1;
+          throw error;
+        }
         if (durableStoreSnapshotMatches(store, snapshot)) {
           ambiguousCommitRecoveries += 1;
           return {committed: true, ambiguousCommitRecovered: true};
@@ -4797,6 +4802,7 @@ function createAsyncWriteAuthStore(store, options = {}) {
     metrics() {
       return {
         ambiguousCommitRecoveries,
+        revisionConflicts,
         failed: lastSaveError !== null,
         underlying: typeof store.metrics === "function" ? store.metrics() : null,
       };
@@ -4808,6 +4814,17 @@ function createAsyncWriteAuthStore(store, options = {}) {
       }
     },
   };
+}
+
+function isMysqlStoreRevisionConflict(error) {
+  let current = error;
+  for (let depth = 0; current && depth < 4; depth += 1) {
+    if (current.code === "mysql_store_revision_conflict") {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
 }
 
 function durableStoreSnapshotMatches(store, snapshot) {

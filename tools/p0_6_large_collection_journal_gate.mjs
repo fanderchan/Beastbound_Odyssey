@@ -94,7 +94,8 @@ assert.ok(
 );
 assert.ok(serviceRows.every((entry) => entry.replayP95Ms <= 30), "receipt replay p95 exceeded 30ms");
 assert.ok(mysql.p95Ms <= 50, "MySQL planner/recording transaction p95 exceeded 50ms");
-assert.ok(mysql.maxSqlRows <= 5, "MySQL touched-row transaction emitted unexpected SQL");
+assert.ok(mysql.maxBusinessSqlRows <= 5, "MySQL touched-row transaction emitted unexpected business SQL");
+assert.ok(mysql.maxSqlRows <= 7, "MySQL revision fence emitted unexpected fixed SQL");
 assert.ok(
   results.every((entry) => entry.heapDeltaMiB <= 32),
   "online measurement heap delta exceeded 32MiB",
@@ -371,6 +372,8 @@ async function mysqlWorker() {
   fs.writeFileSync(fakeMysqlPath, fakeMysqlProgram(), {mode: 0o755});
   const transactions = [];
   let activeQueries = null;
+  let storeRevision = 0;
+  let pendingStoreRevision = null;
   const connection = {
     async beginTransaction() {
       activeQueries = [];
@@ -378,9 +381,22 @@ async function mysqlWorker() {
     },
     async query(statement) {
       activeQueries.push(statement);
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{storeRevision}], []];
+      }
+      if (/^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = \d+$/i.test(String(statement).trim())) {
+        pendingStoreRevision = storeRevision + 1;
+        return [{affectedRows: 1}, []];
+      }
+      return [{affectedRows: 1}, []];
     },
-    async commit() {},
-    async rollback() {},
+    async commit() {
+      if (pendingStoreRevision !== null) storeRevision = pendingStoreRevision;
+      pendingStoreRevision = null;
+    },
+    async rollback() {
+      pendingStoreRevision = null;
+    },
     release() {},
   };
   const pool = {
@@ -464,7 +480,15 @@ async function mysqlWorker() {
     const untouchedReceipt = "operation_mysql_gate_010000";
     const untouchedTombstone = "eqx_mysql_gate_000000050000";
     for (const statements of transactions) {
-      assert.ok(statements.length <= 5);
+      const revisionLocks = statements.filter((statement) => statement.startsWith("SELECT revision AS storeRevision"));
+      const revisionUpdates = statements.filter((statement) => statement.startsWith("UPDATE auth_store_revisions"));
+      const businessStatements = statements.filter((statement) => (
+        !statement.startsWith("SELECT revision AS storeRevision")
+        && !statement.startsWith("UPDATE auth_store_revisions")
+      ));
+      assert.equal(revisionLocks.length, 1);
+      assert.equal(revisionUpdates.length, 1);
+      assert.ok(businessStatements.length <= 5);
       assert.equal(statements.some((statement) => statement.includes(untouchedReceipt)), false);
       assert.equal(statements.some((statement) => statement.includes(untouchedTombstone)), false);
       const receiptDelete = statements.findIndex((statement) => statement.startsWith("DELETE FROM mutation_receipts"));
@@ -481,6 +505,10 @@ async function mysqlWorker() {
       tombstoneCount: 100000,
       p95Ms: round(p95(samples)),
       maxSqlRows: Math.max(...transactions.map((entry) => entry.length)),
+      maxBusinessSqlRows: Math.max(...transactions.map((entry) => entry.filter((statement) => (
+        !statement.startsWith("SELECT revision AS storeRevision")
+        && !statement.startsWith("UPDATE auth_store_revisions")
+      )).length)),
       historicalObjectKeyScans,
       ...resources,
       samplesMs: samples.map(round),
@@ -551,7 +579,10 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   if (!stdin.includes("SELECT 'server_state'")) return;
-  const rows = [["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})]];
+  const rows = [
+    ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+    ["store_revision", "auth", "0"],
+  ];
   for (let index = 0; index < 200; index += 1) {
     const suffix = String(index).padStart(3, "0");
     const playerId = "player_gate_" + suffix;

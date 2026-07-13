@@ -13,6 +13,7 @@ const {
   parseArgs,
   resolveMigrationRole,
   targetScopeDigest,
+  validateApplyGates,
   verifyAppliedMigration,
   writeBackupSnapshot,
 } = require("../scripts/migrate-local-userdata-to-mysql");
@@ -114,6 +115,7 @@ process.stdin.on("end", () => {
       "--profile-path", profilePath,
       "--backup-path", backupPath,
       "--apply",
+      "--maintenance-confirmed",
     ], {
       cwd: path.resolve(__dirname, "../../.."),
       encoding: "utf8",
@@ -496,13 +498,20 @@ test("new account import requires a password while an existing account may prese
   assert.equal(migration.report.gmAuthorizationChanged, false);
 });
 
-test("migration command is dry-run by default and apply is explicit", () => {
+test("migration command is dry-run by default and apply requires a stopped-writer confirmation", () => {
   assert.deepEqual(parseArgs(["--username", "auth1373"]), {username: "auth1373"});
-  assert.deepEqual(parseArgs(["--username", "auth1373", "--apply", "--backup-path", "/tmp/backup.json"]), {
+  assert.deepEqual(parseArgs(["--username", "auth1373", "--apply", "--maintenance-confirmed", "--backup-path", "/tmp/backup.json"]), {
     username: "auth1373",
     apply: true,
+    maintenanceConfirmed: true,
     backupPath: "/tmp/backup.json",
   });
+  assert.doesNotThrow(() => validateApplyGates({apply: false}));
+  assert.throws(
+    () => validateApplyGates({apply: true}),
+    (error) => error && error.code === "local_userdata_migration_maintenance_required",
+  );
+  assert.doesNotThrow(() => validateApplyGates({apply: true, maintenanceConfirmed: true}));
   assert.throws(() => parseArgs(["--force"]), /Unknown argument/);
   assert.throws(() => parseArgs(["--password", "secret"]), /Do not place passwords/);
   assert.deepEqual(parseArgs(["--password-stdin"]), {passwordStdin: true});

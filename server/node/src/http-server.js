@@ -1056,7 +1056,7 @@ function createPreloadedAuthService(store, options = {}) {
   return createAuthService({...options, store, initialData});
 }
 
-function createDefaultStore() {
+function createDefaultStore(options = {}) {
   const storeMode = String(process.env.BEASTBOUND_AUTH_STORE || process.env.BEASTBOUND_STORE || "mysql").trim().toLowerCase();
   if (storeMode === "json") {
     const storePath = process.env.BEASTBOUND_AUTH_STORE_PATH || path.resolve(process.cwd(), ".local/auth-store.json");
@@ -1065,7 +1065,10 @@ function createDefaultStore() {
   if (storeMode !== "mysql") {
     throw new Error(`未知认证存储模式：${storeMode}`);
   }
-  return createAsyncWriteAuthStore(createMysqlAuthStore(), {
+  const mysqlStoreOptions = options.mysqlStoreOptions && typeof options.mysqlStoreOptions === "object"
+    ? options.mysqlStoreOptions
+    : {};
+  return createAsyncWriteAuthStore(createMysqlAuthStore({...mysqlStoreOptions, usePool: true}), {
     onError(error) {
       console.error(`Beastbound MySQL auth store save failed: ${error.message}`);
     },

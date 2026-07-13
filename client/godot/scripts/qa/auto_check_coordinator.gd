@@ -23945,6 +23945,70 @@ func _run_auto_server_profile_sync_check() -> void:
 	host._apply_server_profile_pull_result(pull_response)
 	var pulled_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
 	var pull_ok = str(pulled_player.get("name", "")) == "云端猎人" and host.server_profile_sync_expected_revision == 2
+	var stale_remote_profile := remote_profile.duplicate(true)
+	var stale_remote_player := stale_remote_profile.get("player", {}) as Dictionary
+	stale_remote_player["name"] = "过期响应"
+	stale_remote_profile["player"] = stale_remote_player
+	var stale_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": stale_remote_profile,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 1,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	var stale_payload_accepted := bool(host._server_sync().apply_server_profile_payload(stale_response))
+	host._apply_server_profile_summary(stale_response.get("profileSummary", {}) as Dictionary)
+	var after_stale_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
+	var accepted_session_summary = host.current_account_session.get("serverProfileSummary", {}) as Dictionary if host.current_account_session.get("serverProfileSummary", {}) is Dictionary else {}
+	var stale_response_ignored_ok: bool = (
+		stale_payload_accepted
+		and str(after_stale_player.get("name", "")) == "云端猎人"
+		and host.server_profile_sync_expected_revision == 2
+		and int(accepted_session_summary.get("profileRevision", 0)) == 2
+	)
+	var equal_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": remote_profile,
+		"profileSummary": {
+			"playerId": "player_sync",
+			"profileRevision": 2,
+			"storageMode": "server_document",
+			"serverAuthority": "profile_document",
+		},
+	}).to_utf8_buffer())
+	var equal_payload_accepted := bool(host._server_sync().apply_server_profile_payload(equal_response))
+	host._apply_server_profile_summary(equal_response.get("profileSummary", {}) as Dictionary)
+	var equal_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
+	var equal_revision_ok: bool = (
+		equal_payload_accepted
+		and str(equal_player.get("name", "")) == "云端猎人"
+		and host.server_profile_sync_expected_revision == 2
+	)
+	var zero_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": stale_remote_profile,
+		"profileSummary": {"playerId": "player_sync", "profileRevision": 0},
+	}).to_utf8_buffer())
+	var zero_payload_accepted := bool(host._server_sync().apply_server_profile_payload(zero_response))
+	host._apply_server_profile_summary(zero_response.get("profileSummary", {}) as Dictionary)
+	var missing_revision_response := ServerAuthClientModel.parse_profile_response(200, JSON.stringify({
+		"ok": true,
+		"profile": stale_remote_profile,
+		"profileSummary": {"playerId": "player_sync"},
+	}).to_utf8_buffer())
+	var missing_payload_accepted := bool(host._server_sync().apply_server_profile_payload(missing_revision_response))
+	host._apply_server_profile_summary(missing_revision_response.get("profileSummary", {}) as Dictionary)
+	var after_zero_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
+	var zero_and_missing_ignored_ok: bool = (
+		zero_payload_accepted
+		and missing_payload_accepted
+		and str(after_zero_player.get("name", "")) == "云端猎人"
+		and host.server_profile_sync_expected_revision == 2
+	)
+	var monotonic_response_ok: bool = stale_response_ignored_ok and equal_revision_ok and zero_and_missing_ignored_ok
 	var cache_before_invalid := FileAccess.get_file_as_string(temp_save_path)
 	var invalid_remote_profile := remote_profile.duplicate(true)
 	invalid_remote_profile["petInstances"] = [{
@@ -24072,14 +24136,17 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.auth_username_input.text == "syncuser"
 		and host.world_log_message.find("登录会话已过期") >= 0
 	)
-	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and invalid_pull_rejected_ok and panel_defer_ok and session_expired_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s invalid_rejected=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
+	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and monotonic_response_ok and invalid_pull_rejected_ok and panel_defer_ok and session_expired_ok else "failed"
+	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s monotonic=%s equal=%s zero_missing=%s invalid_rejected=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
 		status,
 		str(revision_zero_ok),
 		str(no_upload_ok),
 		str(upload_denied_ok),
 		str(upload_conflict_disabled_ok),
 		str(pull_ok),
+		str(monotonic_response_ok),
+		str(equal_revision_ok),
+		str(zero_and_missing_ignored_ok),
 		str(invalid_pull_rejected_ok),
 		str(panel_defer_ok),
 		str(panel_deferred_timeout_ok),
